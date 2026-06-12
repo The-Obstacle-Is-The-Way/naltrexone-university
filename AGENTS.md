@@ -226,6 +226,18 @@ Git hooks are installed automatically on `pnpm install` (via the `prepare` scrip
 - `pre-push`: runs `pnpm typecheck && pnpm test --run`
 - `pre-push` is intentionally fast and does **not** run browser/integration/build checks. **The hook passing does NOT mean your code is safe to push.** You MUST run the full quality gate yourself — see "Verify EVERY Change Before Pushing" above.
 
+## Refreshing agent skills
+
+Vendored skills live in `.agents/skills/**`; `.claude/skills/*` and `.codex/skills/*` are committed symlinks to those directories. Do not write to, delete, or recreate the symlinks during a refresh.
+
+Use `.agents/skills/skills.manifest.json` as the source of truth. Refresh one skill at a time with that skill's `refreshCommand`, review `git --no-pager diff -- .agents/skills/<skill>`, then commit the result with the upstream short SHA. Start from a clean skills tree:
+
+```bash
+git diff --quiet -- .agents/skills .claude/skills .codex/skills
+```
+
+Special cases: `agent-browser` is a first-party fork and must be manually merged while preserving Clerk auth, React click-failure / DEBT-323 guidance, and `docs/tooling/agent-browser.md`; `neon-drizzle-setup` and `stripe-subscriptions` are thin pointer skills, so verify their live recipe URLs and do not vendor the full recipe bodies. After refreshing, re-check the `.claude` / `.codex` symlink invariant and confirm there are 15 `SKILL.md` files. See `docs/debt/debt-416-agent-skills-provenance-and-refresh.md` for the detailed execution log and rationale.
+
 ## Non-Interactive Safety (No Vim / No Pagers)
 
 This repo is frequently worked on in non-interactive shells (CI + AI agents). To avoid hard hangs:

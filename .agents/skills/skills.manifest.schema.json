@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "$id": "https://naltrexone-university.local/schemas/skills.manifest.schema.json",
+  "title": "Vendored Agent Skills Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "generatedAt", "skills"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "localPath",
+          "sourceKind",
+          "sourceUrl",
+          "sourcePath",
+          "upstreamCommit",
+          "upstreamVersion",
+          "vendoredCommit",
+          "vendoredVersion",
+          "refreshDate",
+          "license",
+          "selfUpdating",
+          "liveOverlap",
+          "precedence",
+          "refreshMode",
+          "refreshCommand",
+          "localPreservationNotes"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "localPath": {
+            "type": "string",
+            "pattern": "^\\.agents/skills/[^/]+$"
+          },
+          "sourceKind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceUrl": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourcePath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "upstreamCommit": {
+            "type": "string",
+            "minLength": 7
+          },
+          "upstreamVersion": {
+            "type": ["string", "null"]
+          },
+          "vendoredCommit": {
+            "type": "string",
+            "minLength": 7
+          },
+          "vendoredVersion": {
+            "type": ["string", "null"]
+          },
+          "refreshDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "license": {
+            "type": "string",
+            "minLength": 1
+          },
+          "selfUpdating": {
+            "type": "boolean"
+          },
+          "liveOverlap": {
+            "type": "string",
+            "minLength": 1
+          },
+          "precedence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "refreshMode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "refreshCommand": {
+            "type": "string",
+            "minLength": 1
+          },
+          "localPreservationNotes": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

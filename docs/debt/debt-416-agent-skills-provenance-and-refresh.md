@@ -4,18 +4,18 @@
 **Created:** 2026-06-12
 **Source:** Owner asked how the vendored agent skills are kept current: where each came from, whether any have newer upstream versions, and whether `.claude` / `.codex` / `.agents` are aligned for all agents. An adversarial audit found cross-agent alignment is already structurally guaranteed, but the skill set has no manifest, no repeatable refresh process, and multiple material upstream drifts.
 **Related:** [Debt Index](./index.md), [`AGENTS.md`](../../AGENTS.md), [`CLAUDE.md`](../../CLAUDE.md), [`.claude/rules/`](../../.claude/rules), DEBT-393/394 (npm supply-chain maturity gate), DEBT-409 (stale vendored content leaking into product CSS)
-**Status:** **Open - audited and execution-scoped, no skill content mutated.** This filing edited documentation only. No `.agents/skills/*`, `.claude/skills/*`, `.codex/skills/*`, or rule file was changed.
+**Status:** **Open - refresh executed; owner closure pending.** Skill content, the provenance manifest, `AGENTS.md`, and this log were updated on 2026-06-12. `.claude/skills/*`, `.codex/skills/*`, `.claude/rules/*`, package files, and runtime app/source files were not changed.
 
 ---
 
 ## TL;DR
 
 1. **Alignment is solved.** `.agents/skills/` is the real source tree. `.claude/skills/*` and `.codex/skills/*` are committed symlinks, git mode `120000`, with identical blob SHAs pointing to `../../.agents/skills/<name>`. There are exactly 15 skills.
-2. **Provenance was missing, but this audit now resolves it.** No skill needs a hand-wavy "source unknown" label. The four previously-unresolved skills map to concrete sources: `sickn33/antigravity-awesome-skills`, `pproenca/dot-skills`, and Fullstack Recipes (`andrelandgraf/fullstackrecipes` live recipe/renamed skill surfaces).
-3. **Several skills are materially stale.** The sharpest drifts are `stripe-best-practices` (1 file / 31-line local snapshot vs current `stripe/ai` 7-file skill with Stripe MCP-first guidance), `clerk`/`clerk-webhooks` (current Clerk skills include CLI, billing, mobile/framework, sessions/payments, and full `verifyWebhook` examples), `neon-postgres` (official upstream changed from 29-file static references to a live-docs/MCP-oriented router), and `vercel-react-best-practices` (57 local rules vs 70 current rules).
+2. **Provenance was missing, but this audit resolved it and execution added a manifest.** No skill needs a hand-wavy "source unknown" label. The four previously-unresolved skills map to concrete sources: `sickn33/antigravity-awesome-skills`, `pproenca/dot-skills`, and Fullstack Recipes (`andrelandgraf/fullstackrecipes` live recipe/renamed skill surfaces). `.agents/skills/skills.manifest.json` now records the source, commit/version, license, precedence, refresh mode, and refresh command for every skill.
+3. **The material stale copies were refreshed or deliberately preserved.** `stripe-best-practices`, `clerk`, `clerk-webhooks`, `neon-postgres`, `vercel-react-best-practices`, `using-drizzle-queries`, and the low/no-op metadata/license drifts were updated. `agent-browser` was preserved as a first-party fork after a manual diff; `neon-drizzle-setup` and `stripe-subscriptions` were kept as thin live-recipe pointers.
 4. **The old live-plugin claim was overstated for this runtime.** This Codex session has Browser/Chrome/GitHub/Gmail/etc. plugins, but `tool_search` did not expose Stripe or Vercel MCP/plugin tools. The current **upstream** Stripe skill does recommend Stripe MCP (`https://mcp.stripe.com`) and `stripe_implementation_planner`; that is not the same as the MCP being installed here.
 
-The durable fix is a manifest plus a documented refresh workflow. A one-time bump without a manifest would just reset the decay timer.
+The durable fix is now in place: a manifest plus a documented refresh workflow. A scheduled drift-check automation remains future hardening, not part of this execution.
 
 ## Problem
 
@@ -262,7 +262,7 @@ Document this in `AGENTS.md` under "Refreshing agent skills":
 
 ### Cadence
 
-First implementation should be **manual per-skill refresh plus manifest**. A scheduled drift check is in scope as a later hardening task, not required for the first fix. The drift check can be a small script that reads `.agents/skills/skills.manifest.json`, clones/fetches each source, diffs against `.agents/skills/<name>`, and opens a debt issue or PR when upstream changed.
+First implementation was **manual per-skill refresh plus manifest** on 2026-06-12. A scheduled drift check remains in scope as a later hardening task. The drift check can be a small script that reads `.agents/skills/skills.manifest.json`, clones/fetches each source, diffs against `.agents/skills/<name>`, and opens a debt issue or PR when upstream changed.
 
 ## Remediation Options
 
@@ -284,7 +284,7 @@ For Fullstack Recipes and web-design guidelines, prefer thin wrappers that fetch
 
 ## Recommendation
 
-Do **Option A** first. In the same follow-up PR, refresh the material drifts from Option C and record Option B precedence in the manifest. Treat `agent-browser` separately as a local fork: preserve project-specific Clerk/React verification guidance and only merge generic CLI updates.
+Option A was executed on 2026-06-12: the manifest/schema were added, material drifts were refreshed, and precedence/local-preservation notes were recorded. Treat `agent-browser` separately in all future refreshes as a local fork: preserve project-specific Clerk/React verification guidance and only merge generic CLI updates.
 
 Do **not** bulk-overwrite all 15 skills in one unscoped commit. That would erase local intent, especially for `agent-browser`, and would make review harder.
 
@@ -296,24 +296,46 @@ P3 is defensible only if agent guidance is treated as non-blocking reviewer-assi
 
 ## Acceptance Criteria
 
-- [ ] `.agents/skills/skills.manifest.json` and `.agents/skills/skills.manifest.schema.json` exist with one complete entry per skill using the schema in [Manifest](#manifest).
-- [ ] Every manifest row records source repo/path or live URL, upstream commit/version, vendored commit/version, license, self-updating flag, overlap/precedence decision, refresh mode, exact refresh command, and local preservation notes.
-- [ ] The four formerly-unconfirmed sources are resolved exactly as this audit found: `api-security-best-practices` -> `sickn33/antigravity-awesome-skills`; `clean-architecture` -> `pproenca/dot-skills`; `stripe-subscriptions` -> Fullstack Recipes live cookbook; `using-drizzle-queries` -> Fullstack Recipes `drizzle-queries` legacy alias.
-- [ ] Materially drifted skills are refreshed or explicitly deferred in the manifest with a reason: `stripe-best-practices`, `clerk`, `clerk-webhooks`, `neon-postgres`, `vercel-react-best-practices`, `neon-drizzle-setup`, `stripe-subscriptions`, `using-drizzle-queries`.
-- [ ] `agent-browser` refresh preserves local Clerk-auth and React click-failure guidance; no wholesale overwrite.
-- [ ] `using-drizzle-queries` has an explicit alias decision: preserve old local name or rename to `drizzle-queries` and update symlinks/references.
-- [ ] `AGENTS.md` gains a "Refreshing agent skills" section pointing at the manifest and the safe refresh workflow.
-- [ ] The `.claude/skills` and `.codex/skills` symlink invariant is checked after refresh; every pair remains mode `120000`, identical blob SHA, target `../../.agents/skills/<name>`.
-- [ ] `npx skills ls --json` reports the expected project skills after refresh.
-- [ ] No `.claude/rules/*` content is changed as part of this debt unless a separate first-party rule update is intentionally scoped.
+- [x] `.agents/skills/skills.manifest.json` and `.agents/skills/skills.manifest.schema.json` exist with one complete entry per skill using the schema in [Manifest](#manifest).
+- [x] Every manifest row records source repo/path or live URL, upstream commit/version, vendored commit/version, license, self-updating flag, overlap/precedence decision, refresh mode, exact refresh command, and local preservation notes.
+- [x] The four formerly-unconfirmed sources are resolved exactly as this audit found: `api-security-best-practices` -> `sickn33/antigravity-awesome-skills`; `clean-architecture` -> `pproenca/dot-skills`; `stripe-subscriptions` -> Fullstack Recipes live cookbook; `using-drizzle-queries` -> Fullstack Recipes `drizzle-queries` legacy alias.
+- [x] Materially drifted skills are refreshed or explicitly deferred in the manifest with a reason: `stripe-best-practices`, `clerk`, `clerk-webhooks`, `neon-postgres`, `vercel-react-best-practices`, `neon-drizzle-setup`, `stripe-subscriptions`, `using-drizzle-queries`.
+- [x] `agent-browser` refresh preserves local Clerk-auth and React click-failure guidance; no wholesale overwrite.
+- [x] `using-drizzle-queries` has an explicit alias decision: preserve old local name or rename to `drizzle-queries` and update symlinks/references.
+- [x] `AGENTS.md` gains a "Refreshing agent skills" section pointing at the manifest and the safe refresh workflow.
+- [x] The `.claude/skills` and `.codex/skills` symlink invariant is checked after refresh; every pair remains mode `120000`, identical blob SHA, target `../../.agents/skills/<name>`.
+- [x] `npx skills ls --json` reports the expected project skills after refresh.
+- [x] No `.claude/rules/*` content is changed as part of this debt unless a separate first-party rule update is intentionally scoped.
 
 ## Non-Goals / Out of Scope
 
 - Changing the symlink architecture. It is correct.
 - Re-authoring `.claude/rules/*`; those are first-party repo rules governed by `CLAUDE.md`.
 - Installing external MCP servers or plugins in this docs-only audit.
-- Running the full test gate for this docs-only edit.
+- Running build, integration, browser, or E2E gates for this docs/skills-only refresh.
+
+## Execution Log (2026-06-12)
+
+| Skill | Action | Upstream commit | Notable content change |
+|---|---|---:|---|
+| `agent-browser` | Manual merge / no content change | `4449331ed5ae` | Fullstack Recipes generic skill was shorter and would delete local Clerk-authentication notes, React click-failure / DEBT-323 guidance, and `docs/tooling/agent-browser.md`; local fork preserved. |
+| `api-security-best-practices` | Refreshed | `76f1bb6d62d6` | Added upstream community metadata (`risk`, `source`, `date_added`) and `Limitations`; third-party content review passed. |
+| `clean-architecture` | Refreshed | `9c015c68df33` | Added upstream `metadata.json`, `references/_sections.md`, and rule template; `SKILL.md` content remained the same; third-party content review passed. |
+| `clerk` | Refreshed | `a0ef3ed7841d` | Replaced thin old router with current v2.0.0 Clerk router: SDK version detection, CLI, billing, mobile/framework/backend API routing; stale plugin metadata removed. |
+| `clerk-webhooks` | Refreshed | `a0ef3ed7841d` | Updated to v1.2.0 with `verifyWebhook(req)`-first guidance, public route examples, idempotency/retry handling, framework references, and evals; stale plugin metadata removed. |
+| `neon-drizzle-setup` | Pointer check / no content change | `4449331ed5ae` | Live recipe URL returned HTTP 200 and 198 lines; wrapper kept thin and recipe body was not vendored. |
+| `neon-postgres` | Refreshed | `58ec9227d3f2` | Replaced stale 29-file static references with current official single-router skill focused on live docs, `neonctl init --agent`, MCP/CLI setup, branching, Auth, Data API, and platform APIs. Live docs endpoint had minor wording drift from GitHub HEAD. |
+| `security-review` | No-op refresh | `39249a751d30` | Local content already matched upstream; third-party content review passed. |
+| `stripe-best-practices` | Refreshed | `2b60be10f6f8` | Replaced 31-line stale snapshot with official Stripe AI skill plus six reference files: MCP-first planner guidance, API `2026-05-27.dahlia`, restricted keys, Accounts v2, Metronome, Tax, Treasury, and security guidance. |
+| `stripe-subscriptions` | Pointer check / no content change | `4449331ed5ae` | Live cookbook URL returned HTTP 200 and 1,073 lines; wrapper kept thin and cookbook body was not vendored. |
+| `using-drizzle-queries` | Refreshed with alias preserved | `4449331ed5ae` | Copied current Fullstack Recipes `skills/drizzle-queries` content and restored frontmatter `name: using-drizzle-queries` to avoid symlink/reference churn. |
+| `vercel-composition-patterns` | Refreshed | `f8a72b960372` | Added upstream README, metadata, rule sections, and rule template; existing rule content stayed stable. |
+| `vercel-react-best-practices` | Refreshed | `f8a72b960372` | Updated from 57 to 70-rule current Vercel set, adding rules for cheap-condition-before-await, analyzable paths, shared module state, static I/O hoisting, nested fetch parallelism, split hooks, deferred values, resource hints, script defer/async, idle callbacks, and related guidance. |
+| `web-design-guidelines` | Wrapper no-op + live check | `f8a72b960372` | Wrapper already matched Vercel upstream. Live `web-interface-guidelines` `command.md` returned HTTP 200 and 180 lines; live guideline repo HEAD was `4e799d45c17a`. |
+| `webapp-testing` | Refreshed | `575462609294` | Preserved upstream Apache-2.0 license file and filled copyright holder as `Copyright 2026 Anthropic, PBC.`; skill/scripts/examples were unchanged. |
+
+Manifest files added: `.agents/skills/skills.manifest.json` and `.agents/skills/skills.manifest.schema.json`. `AGENTS.md` now documents the safe per-skill refresh process. No `.claude/skills/*`, `.codex/skills/*`, `.claude/rules/*`, package files, or runtime source files were changed.
 
 ## Rollback
 
-This audit update is docs-only (`docs/debt/debt-416-agent-skills-provenance-and-refresh.md` plus possible debt-index summary). Revert with `git revert` if needed. No skill, symlink, rule, schema, package, or runtime surface is touched.
+Revert the refresh commits with `git revert` if needed. The refresh touched only `.agents/skills/**`, `.agents/skills/skills.manifest*.json`, `AGENTS.md`, and DEBT-416/index documentation; symlink architecture, Claude rules, package files, and runtime app/source files were left untouched.
