@@ -135,7 +135,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       );
     }
 
-    this.byUserId.set(input.userId, subscription);
+    this.byUserId.set(input.userId, cloneSubscription(subscription));
     this.externalSubscriptionIdByUserId.set(
       input.userId,
       input.externalSubscriptionId,

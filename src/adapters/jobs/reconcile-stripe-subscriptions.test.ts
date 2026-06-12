@@ -1077,25 +1077,32 @@ describe('reconcileStripeSubscriptions', () => {
   });
 
   it('keeps persisting a different canonical winner over a current entitled row', async () => {
+    const now = new Date('2026-06-12T00:00:00.000Z');
+    const localPeriodEnd = Math.floor(
+      (now.getTime() + 24 * 60 * 60 * 1000) / 1000,
+    );
+    const canonicalPeriodEnd = Math.floor(
+      (now.getTime() + 2 * 24 * 60 * 60 * 1000) / 1000,
+    );
     const local = createUserSubscriptionFixture('sub_local', {
       status: 'active',
-      currentPeriodEnd: 1_700_000_000,
+      currentPeriodEnd: localPeriodEnd,
     });
     const canonical = createUserSubscriptionFixture('sub_canonical', {
       status: 'past_due',
-      currentPeriodEnd: 1_800_000_000,
+      currentPeriodEnd: canonicalPeriodEnd,
     });
 
     const stripe = createStripeFromFixtures({
       fixtures: [{ fixture: local }, { fixture: canonical }],
     });
-    const subscriptions = new FakeSubscriptionRepository();
+    const subscriptions = new FakeSubscriptionRepository([], () => now);
     await subscriptions.upsert({
       userId: primaryUserId,
       externalSubscriptionId: local.id,
       plan: 'monthly',
       status: 'active',
-      currentPeriodEnd: new Date(1_700_000_000 * 1000),
+      currentPeriodEnd: new Date(localPeriodEnd * 1000),
       cancelAtPeriodEnd: false,
     });
 
@@ -1118,7 +1125,7 @@ describe('reconcileStripeSubscriptions', () => {
     ).resolves.toMatchObject({
       userId: primaryUserId,
       status: 'pastDue',
-      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+      currentPeriodEnd: new Date(canonicalPeriodEnd * 1000),
     });
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_local'),

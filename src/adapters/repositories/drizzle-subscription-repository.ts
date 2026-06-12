@@ -76,13 +76,12 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     const stripeStatus = subscriptionStatusToStripeSubscriptionStatus(
       input.status,
     );
-    const updatedAt = this.now();
-
     try {
       return await this.db.transaction(async (tx) => {
         await tx.execute(
           sql`select pg_advisory_xact_lock(hashtext(${input.userId}))`,
         );
+        const updatedAt = this.now();
         const [existingRow] = await tx
           .select()
           .from(stripeSubscriptions)

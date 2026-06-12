@@ -76,7 +76,7 @@ describe('FakeSubscriptionRepository', () => {
           currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         }),
       );
-      await repo.upsert(
+      const write = await repo.upsert(
         makeUpsertInput({
           externalSubscriptionId: 'sub_superseded',
           status: 'canceled',
@@ -84,6 +84,13 @@ describe('FakeSubscriptionRepository', () => {
         }),
       );
 
+      expect(write).toMatchObject({
+        persisted: false,
+        current: {
+          userId: 'user_1',
+          status: 'active',
+        },
+      });
       await expect(
         repo.findByExternalSubscriptionId('sub_current'),
       ).resolves.toMatchObject({
@@ -105,7 +112,7 @@ describe('FakeSubscriptionRepository', () => {
           currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         }),
       );
-      await repo.upsert(
+      const write = await repo.upsert(
         makeUpsertInput({
           externalSubscriptionId: 'sub_current',
           status: 'canceled',
@@ -113,6 +120,7 @@ describe('FakeSubscriptionRepository', () => {
         }),
       );
 
+      expect(write).toEqual({ persisted: true });
       await expect(
         repo.findByExternalSubscriptionId('sub_current'),
       ).resolves.toMatchObject({
@@ -132,7 +140,7 @@ describe('FakeSubscriptionRepository', () => {
           currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
         }),
       );
-      await repo.upsert(
+      const write = await repo.upsert(
         makeUpsertInput({
           externalSubscriptionId: 'sub_superseded',
           status: 'canceled',
@@ -140,6 +148,13 @@ describe('FakeSubscriptionRepository', () => {
         }),
       );
 
+      expect(write).toMatchObject({
+        persisted: false,
+        current: {
+          userId: 'user_1',
+          status: 'active',
+        },
+      });
       await expect(repo.findByUserId('user_1')).resolves.toMatchObject({
         status: 'active',
         currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
@@ -167,7 +182,7 @@ describe('FakeSubscriptionRepository', () => {
         () => now,
       );
 
-      await repo.upsert(
+      const write = await repo.upsert(
         makeUpsertInput({
           externalSubscriptionId: 'sub_superseded',
           status: 'canceled',
@@ -175,6 +190,13 @@ describe('FakeSubscriptionRepository', () => {
         }),
       );
 
+      expect(write).toMatchObject({
+        persisted: false,
+        current: {
+          userId: 'user_1',
+          status: 'active',
+        },
+      });
       await expect(
         repo.findByExternalSubscriptionId('sub_current'),
       ).resolves.toMatchObject({
@@ -184,6 +206,19 @@ describe('FakeSubscriptionRepository', () => {
       await expect(
         repo.findByExternalSubscriptionId('sub_superseded'),
       ).resolves.toBeNull();
+    });
+
+    it('stores a cloned subscription so caller-owned dates cannot mutate fake state', async () => {
+      const repo = new FakeSubscriptionRepository();
+      const currentPeriodEnd = new Date('2026-12-31T00:00:00.000Z');
+
+      await repo.upsert(makeUpsertInput({ currentPeriodEnd }));
+
+      currentPeriodEnd.setUTCFullYear(1999);
+
+      await expect(repo.findByUserId('user_1')).resolves.toMatchObject({
+        currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+      });
     });
   });
 

@@ -179,6 +179,11 @@ describe('DrizzleSubscriptionRepository', () => {
 
   it('serializes upserts per user before reading the current subscription row', async () => {
     const operations: string[] = [];
+    const now = new Date('2026-02-01T02:03:04.000Z');
+    const nowFn = vi.fn(() => {
+      operations.push('timestamp');
+      return now;
+    });
     const forUpdate = vi.fn(async () => {
       operations.push('row-lock');
       return [];
@@ -202,10 +207,14 @@ describe('DrizzleSubscriptionRepository', () => {
       transaction: vi.fn(async (callback) => callback(tx)),
     } as const;
 
-    const repo = createRepo(db, {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    });
+    const repo = createRepo(
+      db,
+      {
+        monthly: 'price_monthly',
+        annual: 'price_annual',
+      },
+      nowFn,
+    );
 
     await expect(
       repo.upsert({
@@ -220,9 +229,10 @@ describe('DrizzleSubscriptionRepository', () => {
 
     expect(db.transaction).toHaveBeenCalledTimes(1);
     expect(tx.execute).toHaveBeenCalledTimes(1);
+    expect(nowFn).toHaveBeenCalledTimes(1);
     expect(select).toHaveBeenCalledTimes(1);
     expect(forUpdate).toHaveBeenCalledWith('update');
-    expect(operations).toEqual(['user-lock', 'row-lock', 'write']);
+    expect(operations).toEqual(['user-lock', 'timestamp', 'row-lock', 'write']);
   });
 
   it('throws CONFLICT when the DB reports a unique-constraint violation during upsert', async () => {

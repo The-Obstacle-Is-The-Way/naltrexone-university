@@ -1110,6 +1110,7 @@ describe('syncCheckoutSuccess', () => {
   it('does not let a stale success URL downgrade a newer active subscription', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const now = new Date('2026-06-12T00:00:00.000Z');
+    const protectedPeriodEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const subscriptions = new FakeSubscriptionRepository([], () => now);
     const user = {
       id: fixtureUser1Id,
@@ -1122,7 +1123,7 @@ describe('syncCheckoutSuccess', () => {
       externalSubscriptionId: 'sub_current',
       plan: 'annual',
       status: 'active',
-      currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
+      currentPeriodEnd: protectedPeriodEnd,
       cancelAtPeriodEnd: false,
     });
 
@@ -1188,7 +1189,7 @@ describe('syncCheckoutSuccess', () => {
       userId: user.id,
       status: 'active',
       plan: 'annual',
-      currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
+      currentPeriodEnd: protectedPeriodEnd,
     });
     await expect(
       subscriptions.findByExternalSubscriptionId('sub_superseded'),
