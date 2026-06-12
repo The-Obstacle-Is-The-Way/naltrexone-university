@@ -49,9 +49,10 @@ export function resolveLocalTestTarget({
   cwd = process.cwd(),
 }: ResolveLocalTestTargetInput = {}): LocalTestTarget {
   const absoluteCwd = resolve(cwd);
-  const explicitInstance = env.LOCAL_TEST_INSTANCE ?? env.E2E_INSTANCE;
+  const explicitInstance =
+    env.LOCAL_TEST_INSTANCE?.trim() || env.E2E_INSTANCE?.trim();
   const instanceId = explicitInstance
-    ? sanitizeInstanceId(explicitInstance)
+    ? sanitizeExplicitInstanceId(explicitInstance)
     : deriveInstanceIdFromWorktree(absoluteCwd);
   const offset = derivePortOffset(instanceId);
   const dbPort =
@@ -137,6 +138,16 @@ function sanitizeInstanceId(value: string): string {
     .slice(0, 48);
 
   return sanitized || 'local';
+}
+
+function sanitizeExplicitInstanceId(value: string): string {
+  if (!/[a-z0-9]/i.test(value)) {
+    throw new Error(
+      'LOCAL_TEST_INSTANCE/E2E_INSTANCE must include at least one alphanumeric character.',
+    );
+  }
+
+  return sanitizeInstanceId(value);
 }
 
 export function parseOutputFormat(

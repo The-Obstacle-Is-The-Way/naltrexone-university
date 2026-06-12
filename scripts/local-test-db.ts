@@ -40,7 +40,15 @@ export async function ensureLocalTestDatabase({
   });
 
   if (!existingContainerId) {
-    await runRequiredCommand(runCommand, 'pnpm', ['db:test:up']);
+    await runRequiredCommand(runCommand, 'docker', [
+      'compose',
+      '-p',
+      target.composeProjectName,
+      'up',
+      '-d',
+      '--wait',
+      'db',
+    ]);
     await waitForHealthyTestDatabase({ runCommand, sleep, target });
     return 'created';
   }

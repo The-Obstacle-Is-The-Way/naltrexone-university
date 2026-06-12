@@ -89,6 +89,25 @@ describe('createLocalIntegrationCommandPlan', () => {
       },
     ]);
   });
+
+  it('treats whitespace DATABASE_URL as absent for local target selection', () => {
+    const plan = createLocalIntegrationCommandPlan({
+      cwd: '/repo/a',
+      env: {
+        LOCAL_TEST_INSTANCE: 'integration',
+        DB_TEST_PORT: '55439',
+        DATABASE_URL: '   ',
+      },
+      vitestArgs: [],
+    });
+
+    expect(plan[0]?.label).toBe(
+      'Run integration tests against isolated local test database',
+    );
+    expect(plan[0]?.env?.DATABASE_URL).toBe(
+      'postgresql://postgres:postgres@127.0.0.1:55439/addiction_boards_test',
+    );
+  });
 });
 
 describe('runLocalIntegration', () => {

@@ -70,16 +70,30 @@ describe('resolveLocalTestTarget', () => {
     expect(target.dbPort).toBe('55435');
   });
 
-  it('falls back to a safe instance id when an explicit instance sanitizes empty', () => {
+  it('falls back to E2E_INSTANCE when LOCAL_TEST_INSTANCE is blank', () => {
     const target = resolveLocalTestTarget({
       cwd: '/repo/ignored-when-instance-is-explicit',
       env: {
-        LOCAL_TEST_INSTANCE: '!!!',
+        LOCAL_TEST_INSTANCE: '   ',
+        E2E_INSTANCE: 'Clone C',
       },
     });
 
-    expect(target.instanceId).toBe('local');
-    expect(target.composeProjectName).toBe('naltrexone-test-local');
+    expect(target.instanceId).toBe('clone-c');
+    expect(target.composeProjectName).toBe('naltrexone-test-clone-c');
+  });
+
+  it('rejects an explicit instance id that contains no alphanumeric characters', () => {
+    expect(() =>
+      resolveLocalTestTarget({
+        cwd: '/repo/ignored-when-instance-is-explicit',
+        env: {
+          LOCAL_TEST_INSTANCE: '!!!',
+        },
+      }),
+    ).toThrow(
+      'LOCAL_TEST_INSTANCE/E2E_INSTANCE must include at least one alphanumeric character.',
+    );
   });
 });
 

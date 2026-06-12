@@ -26,7 +26,8 @@ type RunLocalIntegrationInput = {
 export function shouldUseLocalIntegrationTarget(
   env: E2ECommandEnv = process.env,
 ): boolean {
-  return !isTruthyEnvFlag(env.CI) && !env.DATABASE_URL;
+  const databaseUrl = env.DATABASE_URL?.trim();
+  return !isTruthyEnvFlag(env.CI) && !databaseUrl;
 }
 
 export function createLocalIntegrationCommandPlan({

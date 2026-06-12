@@ -56,7 +56,15 @@ describe('ensureLocalTestDatabase', () => {
       '-aq',
       'db',
     ]);
-    expect(runCommand).toHaveBeenNthCalledWith(2, 'pnpm', ['db:test:up']);
+    expect(runCommand).toHaveBeenNthCalledWith(2, 'docker', [
+      'compose',
+      '-p',
+      'naltrexone-test-dbtest',
+      'up',
+      '-d',
+      '--wait',
+      'db',
+    ]);
     expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
       'compose',
       '-p',

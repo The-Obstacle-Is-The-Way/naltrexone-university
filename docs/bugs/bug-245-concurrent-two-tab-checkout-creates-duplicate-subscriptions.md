@@ -51,7 +51,7 @@ Tracer bullet:
 
 Options 1+2 are the code fix; 3+4 are durable backstops. A unit/integration test exercising two concurrent `createCheckoutSession` calls (currently absent — zero concurrent-create tests in `stripe-payment-gateway.test.ts` / `billing-controller.test.ts`) should accompany the fix.
 
-## Implemented Decision
+## Resolution State
 
 This PR implements options 1+2 in the checkout creation path only:
 
@@ -67,7 +67,7 @@ Backstops remain outside this PR:
 ## Verification
 
 - [x] Test: two concurrent same-plan `createCheckoutSession` calls with distinct client keys produce **one** Stripe session (deterministic gateway key collapses them).
-- [x] Test: two concurrent different-plan calls end with at most one completable session (serialization / post-create expire).
+- [x] Test: two concurrent different-plan calls end with at most one completable session (reconciliation / post-create expire).
 - [ ] Manual: two-tab monthly+annual repro yields one live subscription after the fix.
 - [x] Sequential multi-tab behavior (open-session reuse / mismatched-plan expire) is unchanged — existing tests stay green.
 - [x] Regression: same-form double-submit with the same client key still dedups through controller-level `executeIdempotent`.

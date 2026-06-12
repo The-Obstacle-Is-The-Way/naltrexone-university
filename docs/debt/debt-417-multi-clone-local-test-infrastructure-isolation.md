@@ -2,6 +2,7 @@
 
 **Priority:** P2
 **Created:** 2026-06-12
+**Last Updated:** 2026-06-12
 **Source:** Discovered live while running the full gate for BUG-245 with a second clone (`naltrexone-university-3`) concurrently running its own E2E suite for BUG-244/246.
 **Related:**
 - [DEBT-411 Local E2E flakiness + masked reset errors](../_archive/debt/debt-411-local-e2e-flakiness-and-error-masking.md) — made local `pnpm test:e2e` hermetic, but single-clone; this debt is the multi-clone follow-on it did not cover.

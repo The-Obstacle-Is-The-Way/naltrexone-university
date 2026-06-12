@@ -15,6 +15,7 @@ It intentionally avoids hard-coding private dashboard values that the repo canno
 | Production | `https://addictionboards.com` | `main` | Clerk live + Stripe live | Isolated production database | Vercel Production deployment |
 | Preview | `https://*.vercel.app` on non-`main` branches | Any non-`main` branch | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
 | Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Whatever `DATABASE_URL` in `.env.local` points to | Should mirror Preview semantics, not Production |
+| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; `.env.local` database is used only with `E2E_USE_EXISTING_DATABASE=true` |
 | Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
 
 ### Core isolation rule
@@ -27,7 +28,7 @@ The current Vercel + Neon setup uses one Neon project with isolated database bra
 
 - Vercel **Production** targets the Neon `main` branch.
 - Vercel **Preview** and **Development** target the Neon `dev` branch.
-- Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment, so local app runtime and authenticated local E2E also target the Neon `dev` branch.
+- Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment for local app runtime. Normal authenticated local E2E uses the resolver-scoped Docker database; use `E2E_USE_EXISTING_DATABASE=true` only for deliberate deploy-target E2E checks.
 
 Do not hard-code branch hostnames, account ids, passwords, or connection strings in the repo. Verify those values through the Vercel Storage dashboard, Vercel environment variables, or a local redacted host check before running migrations.
 
