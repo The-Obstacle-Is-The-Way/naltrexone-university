@@ -206,4 +206,38 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
 
     expect(sessionsExpire).not.toHaveBeenCalled();
   });
+
+  it('ignores inactive listed sessions when choosing the canonical checkout session', async () => {
+    const logger = new FakeLogger();
+    const createdSession = {
+      id: 'checkout-created',
+      url: 'https://stripe/checkout/created',
+      status: 'open' as const,
+      created: 1,
+      expires_at: fixedNowUnix + 3600,
+    };
+    const inactiveListedSession = {
+      id: 'checkout-expired-listed',
+      url: 'https://stripe/checkout/expired-listed',
+      status: 'open' as const,
+      created: 2,
+      expires_at: fixedNowUnix,
+    };
+    const { stripe, sessionsExpire } = createReconciliationStripeMock({
+      createdSession,
+      listedAfterCreate: [inactiveListedSession],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+        nowMs: () => fixedNowMs,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/created' });
+
+    expect(sessionsExpire).not.toHaveBeenCalled();
+  });
 });

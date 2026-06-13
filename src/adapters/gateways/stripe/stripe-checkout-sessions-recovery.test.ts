@@ -15,8 +15,10 @@ type SessionResponse = StripeCheckoutSession & {
   expires_at: number;
 };
 
+type SessionCreateResult = SessionResponse | Error;
+
 function createReplayStripeMock(input: {
-  createdSessions: SessionResponse[];
+  createdSessions: SessionCreateResult[];
   retrievedSessions: SessionResponse[];
 }) {
   let createCallIndex = 0;
@@ -29,6 +31,7 @@ function createReplayStripeMock(input: {
       const session = input.createdSessions[createCallIndex];
       createCallIndex += 1;
       if (!session) throw new Error('Unexpected checkout session create.');
+      if (session instanceof Error) throw session;
       return session;
     },
   );
@@ -80,6 +83,72 @@ describe('createStripeCheckoutSession recovery', () => {
   const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
   const fixedNowMs = 1_700_000_000_000;
   const fixedNowUnix = fixedNowMs / 1000;
+
+  it('recovers with a deterministic request key when Stripe rejects stale primary key parameters', async () => {
+    const stalePrimaryKeyError = Object.assign(
+      new Error(
+        'Keys for idempotent requests can only be used with the same parameters they were first used with.',
+      ),
+      {
+        type: 'StripeIdempotencyError',
+        rawType: 'idempotency_error',
+        statusCode: 400,
+      },
+    );
+    const freshSession = {
+      id: 'cs_fresh',
+      url: 'https://stripe/checkout/fresh',
+      status: 'open' as const,
+      expires_at: fixedNowUnix + 3600,
+    };
+    const { stripe, sessionsCreate } = createReplayStripeMock({
+      createdSessions: [stalePrimaryKeyError, freshSession],
+      retrievedSessions: [freshSession],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input: { ...input, trialPeriodDays: 7 },
+        priceIds,
+        logger: new FakeLogger(),
+        nowMs: () => fixedNowMs,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh' });
+
+    const createOptions = sessionsCreate.mock.calls.map(([, options]) => ({
+      idempotencyKey: options?.idempotencyKey,
+    }));
+    expect(createOptions[0]).toEqual({
+      idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7`,
+    });
+    expect(createOptions[1]?.idempotencyKey).toMatch(
+      new RegExp(
+        `^checkout_session_recovery:${appUserId}:monthly:request:[a-f0-9]{16}:trial:7$`,
+      ),
+    );
+    expect(createOptions[1]).not.toEqual(createOptions[0]);
+  });
+
+  it('does not retry non-idempotency checkout create errors with a new key', async () => {
+    const createError = new Error('Stripe checkout configuration failed');
+    const { stripe, sessionsCreate } = createReplayStripeMock({
+      createdSessions: [createError],
+      retrievedSessions: [],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger: new FakeLogger(),
+        nowMs: () => fixedNowMs,
+      }),
+    ).rejects.toThrow('Stripe checkout configuration failed');
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+  });
 
   it('walks the recovery key chain when deterministic keys replay completed checkout sessions', async () => {
     const { stripe, sessionsCreate, sessionsRetrieve } = createReplayStripeMock(

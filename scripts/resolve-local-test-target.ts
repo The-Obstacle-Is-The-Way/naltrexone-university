@@ -36,7 +36,7 @@ const LOCAL_TEST_DB_NAME = 'addiction_boards_test';
 const LOCAL_TEST_APP_HOST = '127.0.0.1';
 const LOCAL_TEST_APP_BASE_PORT = 3100;
 const LOCAL_TEST_DB_BASE_PORT = 55400;
-const LOCAL_TEST_PORT_SLOTS = 500;
+const LOCAL_TEST_PORT_SLOTS = 10_000;
 const TRUTHY_ENV_VALUES = new Set(['1', 'true', 'yes']);
 
 export function isTruthyEnvFlag(value: string | undefined): boolean {

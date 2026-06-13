@@ -30,6 +30,21 @@ describe('resolveLocalTestTarget', () => {
     expect(first.dbPort).not.toBe('5434');
   });
 
+  it('uses enough deterministic port slots to avoid known nearby clone collisions', () => {
+    const first = resolveLocalTestTarget({
+      cwd: '/repo/naltrexone-university-0',
+      env: {},
+    });
+    const second = resolveLocalTestTarget({
+      cwd: '/repo/naltrexone-university-41',
+      env: {},
+    });
+
+    expect(first.instanceId).not.toBe(second.instanceId);
+    expect(first.appPort).not.toBe(second.appPort);
+    expect(first.dbPort).not.toBe(second.dbPort);
+  });
+
   it('honors explicit local instance and port overrides', () => {
     const target = resolveLocalTestTarget({
       cwd: '/repo/ignored-when-instance-is-explicit',

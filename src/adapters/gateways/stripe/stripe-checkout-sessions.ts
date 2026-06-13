@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
 import type {
@@ -35,6 +36,15 @@ const ALREADY_TERMINAL_CHECKOUT_SESSION_MESSAGE_PATTERNS = [
   'already complete',
   'already expired',
   'cannot be expired',
+] as const;
+const STRIPE_IDEMPOTENCY_PARAMETER_MISMATCH_ERROR_TYPES = new Set([
+  'idempotency_error',
+]);
+const STRIPE_IDEMPOTENCY_PARAMETER_MISMATCH_MESSAGE_PATTERNS = [
+  'same parameters',
+  'does not match',
+  "doesn't match",
+  'idempotency-key is re-used',
 ] as const;
 const CHECKOUT_SESSION_VARIANT_METADATA_KEY = 'checkout_variant';
 const STANDARD_CHECKOUT_SESSION_VARIANT = 'standard';
@@ -92,6 +102,28 @@ function isAlreadyTerminalSessionError(error: unknown): boolean {
   );
 }
 
+function isIdempotencyParameterMismatchError(error: unknown): boolean {
+  const errorTypes = [
+    getStringProp(error, 'type'),
+    getStringProp(error, 'rawType'),
+  ];
+  if (
+    !errorTypes.some(
+      (type) =>
+        type && STRIPE_IDEMPOTENCY_PARAMETER_MISMATCH_ERROR_TYPES.has(type),
+    )
+  ) {
+    return false;
+  }
+
+  const message = getStringProp(error, 'message')?.toLowerCase();
+  if (!message) return true;
+
+  return STRIPE_IDEMPOTENCY_PARAMETER_MISMATCH_MESSAGE_PATTERNS.some(
+    (pattern) => message.includes(pattern),
+  );
+}
+
 function getRequestedCheckoutSessionVariant(
   input: CheckoutSessionInput,
 ): string {
@@ -123,6 +155,40 @@ function fallbackCheckoutSessionIdempotencyKey(
   input: CheckoutSessionInput,
 ): string {
   return `checkout_session:${input.userId}:${input.plan}${trialIdempotencyKeySuffix(input)}`;
+}
+
+function stableJsonStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableJsonStringify(item)).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map(
+        (key) => `${JSON.stringify(key)}:${stableJsonStringify(record[key])}`,
+      )
+      .join(',')}}`;
+  }
+
+  return JSON.stringify(value) ?? 'undefined';
+}
+
+function checkoutSessionRequestFingerprint(
+  params: CheckoutSessionCreateParams,
+): string {
+  return createHash('sha256')
+    .update(stableJsonStringify(params))
+    .digest('hex')
+    .slice(0, 16);
+}
+
+function requestRecoveryCheckoutSessionIdempotencyKey(
+  input: CheckoutSessionInput,
+  params: CheckoutSessionCreateParams,
+): string {
+  return `checkout_session_recovery:${input.userId}:${input.plan}:request:${checkoutSessionRequestFingerprint(params)}${trialIdempotencyKeySuffix(input)}`;
 }
 
 function recoveryCheckoutSessionIdempotencyKey(
@@ -247,15 +313,18 @@ async function reconcileOpenCheckoutSessionsAfterCreate({
     logger,
   });
 
+  const reconciliationNowMs = nowMs();
+  const isInactiveAtReconciliation = (session: StripeCheckoutSession) =>
+    isSessionInactive(session, () => reconciliationNowMs);
+  const listedActiveCandidates = listed.data.filter(
+    (session) =>
+      !ignoredSessionIds.has(session.id) &&
+      !isInactiveAtReconciliation(session),
+  );
   const candidates = withoutDuplicateCheckoutSessions(
-    isSessionInactive(createdSession, nowMs)
-      ? listed.data.filter((session) => !ignoredSessionIds.has(session.id))
-      : [
-          createdSession,
-          ...listed.data.filter(
-            (session) => !ignoredSessionIds.has(session.id),
-          ),
-        ],
+    isInactiveAtReconciliation(createdSession)
+      ? listedActiveCandidates
+      : [createdSession, ...listedActiveCandidates],
   );
   const canonicalSession = getCanonicalOpenCheckoutSession(candidates);
   if (!canonicalSession) return createdSession;
@@ -648,11 +717,42 @@ export async function createStripeCheckoutSession({
     });
   }
 
+  const requestRecoveryIdempotencyKey =
+    requestRecoveryCheckoutSessionIdempotencyKey(input, params);
+  async function createSessionWithIdempotencyParameterRecovery(
+    idempotencyKey: string,
+  ): Promise<StripeCheckoutSession> {
+    try {
+      return await createSession(idempotencyKey);
+    } catch (error) {
+      if (
+        idempotencyKey === requestRecoveryIdempotencyKey ||
+        !isIdempotencyParameterMismatchError(error)
+      ) {
+        throw error;
+      }
+
+      logger.warn(
+        {
+          userId: input.userId,
+          plan: input.plan,
+          idempotencyKey,
+          recoveryIdempotencyKey: requestRecoveryIdempotencyKey,
+        },
+        'Retrying checkout session creation after Stripe idempotency parameter mismatch',
+      );
+
+      return createSession(requestRecoveryIdempotencyKey);
+    }
+  }
+
   const primaryIdempotencyKey =
     replacementIdempotencyKey ?? fallbackCheckoutSessionIdempotencyKey(input);
   let session = await retrieveLiveCheckoutSessionAfterCreate({
     stripe,
-    session: await createSession(primaryIdempotencyKey),
+    session: await createSessionWithIdempotencyParameterRecovery(
+      primaryIdempotencyKey,
+    ),
     logger,
   });
 
@@ -685,7 +785,9 @@ export async function createStripeCheckoutSession({
 
     session = await retrieveLiveCheckoutSessionAfterCreate({
       stripe,
-      session: await createSession(recoveryIdempotencyKey),
+      session: await createSessionWithIdempotencyParameterRecovery(
+        recoveryIdempotencyKey,
+      ),
       logger,
     });
   }

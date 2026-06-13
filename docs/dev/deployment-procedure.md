@@ -71,7 +71,8 @@ DATABASE_URL="<target>" pnpm db:seed
 
 | Environment | How to Connect | DATABASE_URL Source |
 |-------------|---------------|---------------------|
-| **Local app / local E2E** | Direct (already in `.env.local`) | `.env.local`, expected to match Vercel Development and the Neon `dev` branch |
+| **Local app runtime** | Direct (already in `.env.local`) | `.env.local`, expected to match Vercel Development and the Neon `dev` branch |
+| **Local authenticated E2E** | Resolver-scoped Docker Postgres via `pnpm test:e2e` | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL`; use `.env.local` only with `E2E_USE_EXISTING_DATABASE=true` |
 | **Preview / shared non-production** | Use your provider CLI/dashboard to fetch the non-production connection string | Vercel Preview/Development env vars, currently the Neon `dev` branch |
 | **Production** | Use your provider CLI/dashboard to fetch the production connection string | Vercel Production env vars, currently the Neon `main` branch |
 | **Local integration tests** | Resolver-scoped Docker Postgres | `scripts/resolve-local-test-target.ts` supplies the explicit local `DATABASE_URL` |
