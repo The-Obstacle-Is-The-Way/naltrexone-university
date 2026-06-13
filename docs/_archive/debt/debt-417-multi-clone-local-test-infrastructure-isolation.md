@@ -2,13 +2,13 @@
 
 **Priority:** P2
 **Created:** 2026-06-12
-**Last Updated:** 2026-06-12
+**Last Updated:** 2026-06-13
 **Source:** Discovered live while running the full gate for BUG-245 with a second clone (`naltrexone-university-3`) concurrently running its own E2E suite for BUG-244/246.
 **Related:**
-- [DEBT-411 Local E2E flakiness + masked reset errors](../_archive/debt/debt-411-local-e2e-flakiness-and-error-masking.md) — made local `pnpm test:e2e` hermetic, but single-clone; this debt is the multi-clone follow-on it did not cover.
-- [DEBT-391 Local E2E schema-drift preflight](../_archive/debt/debt-391-local-e2e-schema-drift-preflight.md)
+- [DEBT-411 Local E2E flakiness + masked reset errors](./debt-411-local-e2e-flakiness-and-error-masking.md) — made local `pnpm test:e2e` hermetic, but single-clone; this debt is the multi-clone follow-on it did not cover.
+- [DEBT-391 Local E2E schema-drift preflight](./debt-391-local-e2e-schema-drift-preflight.md)
 - **Distinct from** the git "shared remote" concern (a second clone pushes to `main`/`dev` out-of-band). That is a *source-control* coordination problem; this is a *local test-resource isolation* problem. Different axis, same two-clone setup.
-**Status:** Implemented in the BUG-245 branch per owner instruction to combine the DevX fix with the checkout-race PR. Do not archive until merge/close-out.
+**Status:** RESOLVED + archived. Shipped in PR #421 (squash `be50dda7`, `main` fast-forwarded) per owner instruction to combine the DevX fix with the checkout-race PR; owner-graded, full gate green + CodeRabbit approved on the exact head.
 
 ---
 
