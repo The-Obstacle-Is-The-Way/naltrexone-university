@@ -66,7 +66,6 @@ export async function ensureLocalTestDatabase({
     runCommand,
     sleep,
     target,
-    containerId: existingContainerId,
   });
   return 'reused';
 }
@@ -75,16 +74,15 @@ async function waitForHealthyTestDatabase({
   runCommand,
   sleep,
   target,
-  containerId,
 }: Required<
   Pick<EnsureLocalTestDatabaseInput, 'runCommand' | 'sleep' | 'target'>
-> & {
-  containerId?: string;
-}): Promise<void> {
+>): Promise<void> {
   for (let attempt = 1; attempt <= MAX_HEALTH_CHECK_ATTEMPTS; attempt += 1) {
-    const activeContainerId =
-      containerId ??
-      (await findTestDbContainerId({ runCommand, target, all: false }));
+    const activeContainerId = await findTestDbContainerId({
+      runCommand,
+      target,
+      all: false,
+    });
 
     if (!activeContainerId) {
       if (attempt < MAX_HEALTH_CHECK_ATTEMPTS) {

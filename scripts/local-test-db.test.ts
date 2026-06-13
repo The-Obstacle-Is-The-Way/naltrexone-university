@@ -83,8 +83,9 @@ describe('ensureLocalTestDatabase', () => {
 
   it('reuses an existing resolved Compose service instead of inspecting a global container name', async () => {
     const runCommand = createCommandRunner([
-      { exitCode: 0, stdout: 'container_id\n' },
+      { exitCode: 0, stdout: 'old_container_id\n' },
       { exitCode: 0 },
+      { exitCode: 0, stdout: 'new_container_id\n' },
       { exitCode: 0, stdout: 'healthy\n' },
     ]);
 
@@ -110,10 +111,18 @@ describe('ensureLocalTestDatabase', () => {
       'db',
     ]);
     expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
+      'compose',
+      '-p',
+      'naltrexone-test-dbtest',
+      'ps',
+      '-q',
+      'db',
+    ]);
+    expect(runCommand).toHaveBeenNthCalledWith(4, 'docker', [
       'inspect',
       '--format',
       '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}',
-      'container_id',
+      'new_container_id',
     ]);
     expect(runCommand).not.toHaveBeenCalledWith('pnpm', ['db:test:up']);
     expect(JSON.stringify(vi.mocked(runCommand).mock.calls)).not.toContain(
@@ -126,7 +135,9 @@ describe('ensureLocalTestDatabase', () => {
     const runCommand = createCommandRunner([
       { exitCode: 0, stdout: 'container_id\n' },
       { exitCode: 0 },
+      { exitCode: 0, stdout: 'container_id\n' },
       { exitCode: 0, stdout: 'starting\n' },
+      { exitCode: 0, stdout: 'container_id\n' },
       { exitCode: 0, stdout: 'healthy\n' },
     ]);
 
@@ -188,10 +199,10 @@ describe('ensureLocalTestDatabase', () => {
     const runCommand = createCommandRunner([
       { exitCode: 0, stdout: 'container_id\n' },
       { exitCode: 0 },
-      ...Array.from({ length: 60 }, () => ({
-        exitCode: 0,
-        stdout: 'starting\n',
-      })),
+      ...Array.from({ length: 60 }, () => [
+        { exitCode: 0, stdout: 'container_id\n' },
+        { exitCode: 0, stdout: 'starting\n' },
+      ]).flat(),
     ]);
 
     await expect(
