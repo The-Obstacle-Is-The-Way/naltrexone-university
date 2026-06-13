@@ -1,8 +1,10 @@
 # React 19 + Vitest Testing Guide
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-06-13
 
 This document exists because we got burned. Every claim is validated against official sources.
+
+Coverage reports are observational in this repo: do not add or chase numeric coverage thresholds as a quality gate; TDD discipline and behavior assertions are the enforcement mechanism.
 
 ---
 

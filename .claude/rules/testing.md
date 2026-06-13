@@ -20,7 +20,7 @@ ALL code MUST be test-driven. No exceptions.
 
 Use existing fakes from `src/application/test-helpers/fakes/`. NEVER use `vi.mock()` for our own code.
 
-**Available fakes:** `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeClerkEventRepository`, `FakeDeletedClerkUserRepository`, `FakePendingStripeCancellationRepository`, `FakeLogger`, `FakeAuthGateway`, `FakePaymentGateway`, `FakeRateLimiter`. Use-case fakes also exist — check `src/application/test-helpers/fakes/index.ts` for the full list.
+**Available fakes source of truth:** `src/application/test-helpers/fakes/index.ts`. Common examples include `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeQuestionFeedbackRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeClerkEventRepository`, `FakeDeletedClerkUserRepository`, `FakePendingStripeCancellationRepository`, `FakeLogger`, `FakeAuthGateway`, `FakePaymentGateway`, and `FakeRateLimiter`. Use-case fakes also exist — check the barrel before adding or listing a fake.
 
 **Decision tree:**
 - Fake exists? Use it.
