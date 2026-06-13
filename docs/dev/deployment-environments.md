@@ -93,7 +93,7 @@ Vercel stores environment variables per scope. Production, Preview, Development,
 - Use `printf '%s'` when piping values to `vercel env add`.
 - Do not use `echo`, which appends a newline.
 - Do not silently trim secrets in application code; reject or reset the bad value at the provider.
-- After setting a secret, verify only safe metadata: present, length, trim delta, leading/trailing whitespace booleans, and header-unsafe booleans. Never print the value.
+- After setting a secret, verify only safe metadata: present, length, trim delta, leading/trailing/internal whitespace booleans, and header-unsafe booleans. Never print the value.
 - In GitHub Actions, `scripts/validate-header-safe-secret.ts` checks any observable `CRON_SECRET` secret without logging the value. This does not validate Vercel env stores; Vercel Production/Preview/Development still need provider-side verification after changes.
 
 **Safe Vercel reset procedure**

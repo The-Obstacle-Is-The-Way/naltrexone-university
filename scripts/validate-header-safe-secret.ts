@@ -8,6 +8,7 @@ export type HeaderSecretValidation = {
   trimDelta: number;
   leadingWhitespace: boolean;
   trailingWhitespace: boolean;
+  internalWhitespace: boolean;
   headerUnsafe: boolean;
   errors: string[];
 };
@@ -38,6 +39,7 @@ export function validateHeaderSecret(
       trimDelta: 0,
       leadingWhitespace: false,
       trailingWhitespace: false,
+      internalWhitespace: false,
       headerUnsafe: false,
       errors: options.optional ? [] : ['is required'],
     };
@@ -46,6 +48,7 @@ export function validateHeaderSecret(
   const trimmed = value.trim();
   const leadingWhitespace = /^\s/.test(value);
   const trailingWhitespace = /\s$/.test(value);
+  const internalWhitespace = /\s/.test(trimmed);
   const headerUnsafe = hasHttpHeaderUnsafeControlCharacter(value);
   const errors: string[] = [];
 
@@ -54,6 +57,9 @@ export function validateHeaderSecret(
   }
   if (trailingWhitespace) {
     errors.push('must not contain trailing whitespace');
+  }
+  if (internalWhitespace) {
+    errors.push('must not contain internal whitespace');
   }
   if (headerUnsafe) {
     errors.push('must not contain HTTP-header-unsafe control characters');
@@ -67,6 +73,7 @@ export function validateHeaderSecret(
     trimDelta: value.length - trimmed.length,
     leadingWhitespace,
     trailingWhitespace,
+    internalWhitespace,
     headerUnsafe,
     errors,
   };
@@ -75,7 +82,7 @@ export function validateHeaderSecret(
 export function formatHeaderSecretValidation(
   result: HeaderSecretValidation,
 ): string {
-  const base = `${result.name}: ${result.ok ? 'PASS' : 'FAIL'} present=${result.present} length=${result.length} trim_delta=${result.trimDelta} leading_ws=${result.leadingWhitespace} trailing_ws=${result.trailingWhitespace} header_unsafe=${result.headerUnsafe}`;
+  const base = `${result.name}: ${result.ok ? 'PASS' : 'FAIL'} present=${result.present} length=${result.length} trim_delta=${result.trimDelta} leading_ws=${result.leadingWhitespace} trailing_ws=${result.trailingWhitespace} internal_ws=${result.internalWhitespace} header_unsafe=${result.headerUnsafe}`;
   if (result.errors.length === 0) return base;
   return `${base} errors=${result.errors.join('; ')}`;
 }

@@ -28,11 +28,12 @@ describe('validateHeaderSecret', () => {
       trimDelta: 0,
       leadingWhitespace: false,
       trailingWhitespace: false,
+      internalWhitespace: false,
       headerUnsafe: false,
       errors: [],
     });
     expect(formatHeaderSecretValidation(result)).toBe(
-      'CRON_SECRET: PASS present=true length=64 trim_delta=0 leading_ws=false trailing_ws=false header_unsafe=false',
+      'CRON_SECRET: PASS present=true length=64 trim_delta=0 leading_ws=false trailing_ws=false internal_ws=false header_unsafe=false',
     );
   });
 
@@ -53,6 +54,17 @@ describe('validateHeaderSecret', () => {
     expect(formatHeaderSecretValidation(result)).not.toContain('secret');
   });
 
+  it('rejects internal whitespace (a Bearer token cannot contain spaces) without printing the value', () => {
+    const result = validateHeaderSecret('CRON_SECRET', 'abc def');
+
+    expect(result.ok).toBe(false);
+    expect(result.leadingWhitespace).toBe(false);
+    expect(result.trailingWhitespace).toBe(false);
+    expect(result.internalWhitespace).toBe(true);
+    expect(result.errors).toEqual(['must not contain internal whitespace']);
+    expect(formatHeaderSecretValidation(result)).not.toContain('abc def');
+  });
+
   it('allows an optional missing value and rejects a required missing value', () => {
     expect(
       validateHeaderSecret('CRON_SECRET', undefined, { optional: true }),
@@ -64,6 +76,7 @@ describe('validateHeaderSecret', () => {
       trimDelta: 0,
       leadingWhitespace: false,
       trailingWhitespace: false,
+      internalWhitespace: false,
       headerUnsafe: false,
       errors: [],
     });
