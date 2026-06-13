@@ -15,7 +15,7 @@ export async function runManageBillingAction(deps: {
   return runManageBillingActionCore({
     ...deps,
     redirects: {
-      failure: `${ROUTES.PRICING}?checkout=error`,
+      failure: `${ROUTES.PRICING}?portal=error`,
       unauthenticated: ROUTES.SIGN_UP,
     },
   });
