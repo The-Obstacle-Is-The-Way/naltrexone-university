@@ -64,6 +64,7 @@ export async function loadPricingData(
 
 type PricingSearchParams = {
   checkout?: string | string[] | undefined;
+  portal?: string | string[] | undefined;
   reason?: string | string[] | undefined;
   plan?: string;
 };
@@ -77,6 +78,7 @@ export function getPricingBanner(
   trialContext?: PricingTrialContext,
 ): PricingBanner | null {
   const checkout = normalizeSearchParam(searchParams.checkout);
+  const portal = normalizeSearchParam(searchParams.portal);
   const reason = normalizeSearchParam(searchParams.reason);
 
   if (checkout === 'rate_limited') {
@@ -97,6 +99,13 @@ export function getPricingBanner(
     return {
       tone: 'info',
       message: 'Checkout canceled.',
+    };
+  }
+
+  if (portal === 'error') {
+    return {
+      tone: 'error',
+      message: "Couldn't open the billing portal. Please try again.",
     };
   }
 
