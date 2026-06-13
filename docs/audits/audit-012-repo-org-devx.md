@@ -24,19 +24,19 @@ The repo does **not** need a major reorganization before feature work. It needs 
 
 ## Resolution Decisions (Locked — 2026-06-13)
 
-The decision-required findings were resolved from first principles for *this* codebase. The governing principle: **the primary contributor is an AI-agent fleet, and the repo's revealed strategy is "executable, zero-extra-dependency guardrails over convention"** (see `scripts/check-file-size.sh`, `components/theme-token-regression-source-scan.ts`, the E2E skip-policy CI step). For an agent-operated repo, ambiguity is a defect, consistency is a safety feature, and the right fix is almost always a test/scan in an idiom the repo already owns — not a new dependency or a blunt metric. These decisions are locked: the executor implements them as written and does not re-open them.
+The decision-required findings were resolved from first principles for *this* codebase. The governing principle: **the primary contributor is an AI-agent fleet, and the repo's revealed strategy is executable, no-new-dependency guardrails over convention** (see `scripts/check-file-size.sh`, `components/theme-token-regression-source-scan.ts`, the E2E skip-policy CI step, and `tests/ci-workflow.test.ts`). "No-new-dependency" means reusing existing project dependencies such as `fast-glob` is fine; adding another architecture-tool package is not. For an agent-operated repo, ambiguity is a defect, consistency is a safety feature, and the right fix is almost always a test/scan in an idiom the repo already owns — not a new dependency or a blunt metric. These decisions are locked: the executor implements them as written and does not re-open them.
 
-- **ARCH-1 (boundary enforcement) → custom Vitest import-boundary test. Do NOT add `dependency-cruiser`.** The repo already owns this exact idiom (`theme-token-regression-source-scan.ts`), has only four layers (the rules are trivial to hand-write), and SEC-1 just flagged supply-chain surface — adding a dependency now is self-contradictory. Wire the test into the normal `pnpm test` gate.
+- **ARCH-1 (boundary enforcement) → custom Vitest import-boundary test. Do NOT add `dependency-cruiser`.** The repo already owns this exact idiom (`theme-token-regression-source-scan.ts`), has only four layers (the rules are small enough to hand-write), and SEC-1 just flagged supply-chain surface — adding a new architecture dependency now is self-contradictory. Implement the test with existing repo primitives (`fast-glob` is already present) or TypeScript compiler APIs; it must inspect static `import`, `export ... from`, side-effect imports, and dynamic `import()` specifiers. Wire the test into the normal `pnpm test` gate. This audit supersedes ADR-001's old `madge` / `dependency-cruiser` recommendation; keep ADR-001 aligned.
 
-- **ARCH-2 (filename casing) → adopt strict kebab-case and enforce it, as one package.** Rename the 6 PascalCase files **and** the 2 camelCase files (`lib/content/draftTaxonomy.ts`, `lib/content/parseMdxQuestion.ts`) via `git mv` + import updates, and extend the source-scan to fail CI on future drift. **Keep** the 11 multi-dot fixture/setup names — they are a legitimate pattern. Do NOT rename without adding the check (rename-without-enforce just re-drifts). 8 outliers in 880 files is pattern-noise that makes agents guess wrong; the enforcement idiom already exists, so locking it in is cheap.
+- **ARCH-2 (filename casing) → adopt strict kebab-case and enforce it, as one package.** Rename the 6 PascalCase files **and** the 2 camelCase files (`lib/content/draftTaxonomy.ts`, `lib/content/parseMdxQuestion.ts`) via `git mv` + import updates, and extend the source-scan to fail CI on future drift. **Keep** the 11 currently allowed multi-dot names after stripping standard test suffixes (`.test`, `.spec`, `.browser.spec`, `.integration.test`, `.e2e`): `page.manage-billing.test.tsx`, `post-exam-review-view.fixtures.ts`, `practice-session-page-controller.browser.fixtures.ts`, `practice-session-page-controller.browser.probes.tsx`, `practice-session-page-controller.browser.setup.ts`, `use-practice-session-exam-results-continuity.fixtures.ts`, `question-page-controller.browser.fixtures.ts`, `lib/container.skip-clerk.test.ts`, `tests/e2e/global.setup.ts`, `reset-bookmarks-for-e2e-user.default-services.test.ts`, and `actions.stripe.integration.test.ts`. Do NOT rename without adding the check (rename-without-enforce just re-drifts). 8 real casing outliers in 880 scanned files is pattern-noise that makes agents guess wrong; the enforcement idiom already exists, so locking it in is cheap.
 
-- **ARCH-4 ("controller" overload) → keep `src/adapters/controllers/*` as the canonical "controller"; rename the 2 presentation hooks to `use-*-page-model.ts`.** Add a one-line glossary entry to `AGENTS.md` distinguishing adapter controllers (Clean Architecture role) from presentation models (view hooks). An ambiguous architectural noun is the highest-cost defect for agent contributors — it invites wiring a use-case call into a view hook. Two files; do it. (Avoid "presenter" — also a reserved Clean Architecture term.)
+- **ARCH-4 ("controller" overload) → keep `src/adapters/controllers/*` as the canonical "controller"; rename the 2 production presentation hooks to `use-*-page-model.ts`.** Add a one-line glossary entry to `AGENTS.md` distinguishing adapter controllers (Clean Architecture role) from presentation models (view hooks). An ambiguous architectural noun is the highest-cost defect for agent contributors — it invites wiring a use-case call into a view hook. This is not literally a two-file diff: update imports, tests, probes, fixtures, helper names, and non-archived docs that reference the two hooks. Avoid "presenter" — also a reserved Clean Architecture term.
 
 - **CI-3 (coverage) → do NOT add a coverage-threshold gate; document coverage as observational.** Coverage is a tool, not a target; a numeric gate invites assertion-free tests, and agents game blunt metrics harder than humans. The real defense is the mandated TDD + 2,771 tests. Resolution is a one-line note in the testing docs, not a config change.
 
 - **CI-5 (`noUncheckedIndexedAccess` / `exactOptionalPropertyTypes`) → defer to a dedicated DEBT item, flagged "recommended-soon."** Genuinely desirable for an agent-driven repo (a guardrail agents cannot ignore), but a repo-wide flip mid-audit makes an unreviewable diff and is orthogonal to this audit's goal. Its own focused PR — soon, not "someday."
 
-- **Large files (`practice-view.tsx`, `stripe-checkout-sessions.ts`) → document via the existing `check-file-size.sh` mechanism (WHY header + `is_known_exempt`); for `stripe-checkout-sessions.ts` ONLY, attempt one Extract-Function on the inspect/expire-existing-session block** and keep it only if the full gate stays green, else document. The size checker's WHY+allowlist escape hatch already encodes "big is fine if justified and registered." Do NOT split `practice-view.tsx` into shallow pieces (PoSD: deep modules beat shallow ones).
+- **Large files → make the checker inventory truthful, then document or extract exactly as scoped.** A full checker scan currently reports 12 warnings, not just `practice-view.tsx` and `stripe-checkout-sessions.ts`. First update `check-file-size.sh` so non-production support files (`*.browser.probes.tsx` and `src/application/test-helpers/**`) are excluded explicitly rather than allowlisted. Then document the intentional production large files with a WHY header plus `is_known_exempt`. For `stripe-checkout-sessions.ts` ONLY, attempt one Extract-Function on the inspect/expire-existing-session block and keep it only if the full gate stays green; otherwise document it through the same WHY+allowlist mechanism. Do NOT split `practice-view.tsx` into shallow pieces (PoSD: deep modules beat shallow ones).
 
 ---
 
@@ -88,7 +88,7 @@ No repository branch protection, repository ruleset, `CODEOWNERS`, repo webhook,
 
 Required fix:
 
-- Add a GitHub repository ruleset or branch protection rule for `main`.
+- Add a GitHub repository ruleset for `main`.
 - Require pull requests.
 - Require the CI jobs that cover typecheck, lint, unit, integration, browser, build, and E2E policy.
 - Require branches to be up to date before merge unless merge queue is introduced.
@@ -212,7 +212,7 @@ esbuild: Missing binary integrity verification in Deno module enables remote cod
 Required fix:
 
 - Enable GitHub vulnerability alerts.
-- Enable Dependabot security updates or configure security-update entries to create PRs instead of using `open-pull-requests-limit: 0`.
+- Enable Dependabot security updates and remove `open-pull-requests-limit: 0` from security-update entries so security PRs can be created.
 - Enable automated security fixes if the team accepts automated patch PRs.
 - Resolve the current `pnpm audit` findings or document why each remaining advisory is not exploitable in this app.
 - Keep routine version updates targeting `dev` if that is the branch strategy, but security updates need an actual delivery path.
@@ -236,9 +236,9 @@ app/layout.tsx:71:  const nonce = (await headers()).get('x-nonce') ?? undefined;
 
 Required fix:
 
-- Add a staged CSP plan in report-only mode first.
-- Include Clerk, Stripe, Sentry, and Next.js asset requirements.
-- Promote to enforcement only after browser/E2E validation.
+- Add `Content-Security-Policy-Report-Only` in `next.config.ts` for `/:path*` first.
+- Include Next assets plus Clerk, Stripe, Sentry/reporting, and existing nonce requirements.
+- Validate with browser tests/E2E before promoting to enforcement.
 
 ### SEC-3 - LOW - No public security contact file
 
@@ -253,7 +253,7 @@ $ find public app -path '*security*' -o -path '*/.well-known/*' -print
 
 Required fix:
 
-- Add `public/.well-known/security.txt` with the preferred vulnerability contact and disclosure policy, or explicitly decide not to publish one.
+- Add `public/.well-known/security.txt` with the preferred vulnerability contact and disclosure policy.
 
 ### Security checks verified as good
 
@@ -373,7 +373,7 @@ src/application/test-helpers/fakes/index.ts:14:export { FakeQuestionFeedbackRepo
 
 Required fix:
 
-- Add `FakeQuestionFeedbackRepository` to `AGENTS.md` and `.claude/rules/testing.md`, or point both docs at `src/application/test-helpers/fakes/index.ts` as the source of truth and keep only examples inline.
+- Make `src/application/test-helpers/fakes/index.ts` the explicit source of truth in `AGENTS.md` and `.claude/rules/testing.md`; keep inline fake lists as examples only and include `FakeQuestionFeedbackRepository` if an example list remains.
 
 ### DOC-5 - LOW - Agent skill provenance link points to moved debt doc
 
@@ -395,7 +395,7 @@ $ test -e docs/_archive/debt/debt-416-agent-skills-provenance-and-refresh.md; ec
 
 Required fix:
 
-- Update the link to `docs/_archive/debt/debt-416-agent-skills-provenance-and-refresh.md` or route through `docs/debt/index.md`.
+- Update the link directly to `docs/_archive/debt/debt-416-agent-skills-provenance-and-refresh.md`.
 
 ### DOC-6 - LOW - Root README has setup drift risk
 
@@ -455,9 +455,8 @@ Required fix:
 Evidence:
 
 ```bash
-$ rg -n "madge --circular|dependency-cruiser" docs/adr/adr-001-clean-architecture-layers.md
-docs/adr/adr-001-clean-architecture-layers.md:388:1. **Dependency Check:** Run `madge --circular src/` — no circular dependencies
-docs/adr/adr-001-clean-architecture-layers.md:389:2. **Import Enforcement:** Use `dependency-cruiser` with rules preventing inner layers importing outer layers (Biome does not provide import boundary enforcement)
+$ rg -n "AUDIT-012|dependency-cruiser|madge" docs/adr/adr-001-clean-architecture-layers.md
+docs/adr/adr-001-clean-architecture-layers.md:388:1. **Import Boundary Enforcement:** ADR-001's original `madge` / `dependency-cruiser` recommendation is superseded by AUDIT-012. Implement the boundary check as a custom Vitest source scan using existing project dependencies; do not add `dependency-cruiser` or `madge` unless a future ADR explicitly reopens that decision.
 
 $ find . -maxdepth 3 \( -name '.dependency-cruiser*' -o -name '*madge*' \) -print
 # no output
@@ -476,12 +475,12 @@ $ rg -n "from ['\"](@/app|@/components|app/|components/)" src/adapters --glob '!
 exit=1
 ```
 
-**Decision (locked):** Implement as a **custom Vitest import-boundary test**, modeled on `components/theme-token-regression-source-scan.ts`. **Do NOT add `dependency-cruiser`** — the repo owns this scan idiom, has only four layers, and SEC-1 just flagged supply-chain surface. Wire it into the normal `pnpm test` gate. It must fail on:
+**Decision (locked):** Implement as a **custom Vitest import-boundary test**, modeled on `components/theme-token-regression-source-scan.ts`. **Do NOT add `dependency-cruiser`** — the repo owns this scan idiom, has only four layers, and SEC-1 just flagged supply-chain surface. Wire it into the normal `pnpm test` gate. Use existing repo primitives only (`fast-glob` already exists) or TypeScript compiler APIs. The scan must parse static `import`, `export ... from`, side-effect imports, and dynamic `import()` specifiers; regex-only matching is acceptable only if tests cover those four import shapes. It must fail on:
 
 - non-relative production imports in `src/domain`;
-- application importing adapters/framework code;
-- adapters importing `app/**` or `components/**`;
-- outer layers bypassing documented composition/controller entry points where a boundary exists.
+- production `src/application/**` imports from `@/src/adapters/**`, `@/app/**`, `@/components/**`, `@/lib/**`, `@/db/**`, Next/React/Clerk/Stripe/Drizzle, or `server-only`;
+- production `src/adapters/**` imports from `@/app/**`, `@/components/**`, `app/**`, or `components/**`;
+- production outer layers bypassing documented composition/controller entry points where an explicit boundary exists.
 
 ### ARCH-2 - LOW - Naming convention drift remains
 
@@ -506,22 +505,36 @@ components/question/QuestionCard.browser.spec.tsx
 components/question/QuestionCard.test.tsx
 ```
 
-There are exactly 6 PascalCase source/test files. A stricter filename-policy scan over the same 880 files finds 861 strict kebab-case matches and 19 nonmatching names. Those 19 include the 6 PascalCase files above, 2 camelCase utility files:
+There are exactly 6 PascalCase source/test files. A stricter filename-policy scan over the same 880 files finds 861 strict kebab-case matches and 19 nonmatching stems after stripping standard test suffixes (`.test`, `.spec`, `.browser.spec`, `.integration.test`, `.e2e`). Those 19 include the 6 PascalCase files above, 2 camelCase utility files:
 
 ```text
 lib/content/draftTaxonomy.ts
 lib/content/parseMdxQuestion.ts
 ```
 
-and 11 multi-dot fixture/setup/integration names such as `lib/container.skip-clerk.test.ts`, `tests/e2e/global.setup.ts`, and `app/(app)/app/billing/page.manage-billing.test.tsx`.
+and these 11 allowed multi-dot fixture/setup/integration names:
+
+```text
+app/(app)/app/billing/page.manage-billing.test.tsx
+app/(app)/app/practice/[sessionId]/components/post-exam-review-view.fixtures.ts
+app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.fixtures.ts
+app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.probes.tsx
+app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.setup.ts
+app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.fixtures.ts
+app/(app)/app/questions/[slug]/question-page-controller.browser.fixtures.ts
+lib/container.skip-clerk.test.ts
+tests/e2e/global.setup.ts
+tests/e2e/helpers/reset-bookmarks-for-e2e-user.default-services.test.ts
+tests/integration/actions.stripe.integration.test.ts
+```
 
 The old global `~897` file count is stale. The verified source/test file count in the scanned directories is 880.
 
 **Decision (locked):** Adopt strict kebab-case and enforce it, **as one package**:
 
 - Rename the 6 PascalCase files **and** the 2 camelCase files (`lib/content/draftTaxonomy.ts`, `lib/content/parseMdxQuestion.ts`) via `git mv`, updating all imports.
-- Extend the source-scan to fail CI on future filename drift. Do NOT rename without adding the check — rename-without-enforce just re-drifts.
-- **Keep** the 11 multi-dot fixture/setup names (`*.setup.ts`, `*.integration.test.ts`, `*.skip-clerk.test.ts`, etc.) — they are a legitimate pattern, not violations. See Resolution Decisions.
+- Extend the source-scan to fail CI on future filename drift. The policy is: after stripping one standard suffix from `.test`, `.spec`, `.browser.spec`, `.integration.test`, or `.e2e` and then stripping `.ts` / `.tsx`, the remaining stem must be strict kebab-case unless it exactly matches one of the 11 allowed multi-dot names listed above. Do NOT rename without adding the check — rename-without-enforce just re-drifts.
+- **Keep** the 11 listed multi-dot fixture/setup names — they are a legitimate pattern, not violations. See Resolution Decisions.
 
 ### ARCH-3 - LOW - Some routes keep too much implementation at route root
 
@@ -557,7 +570,8 @@ The question slug route has 16 `use-question-page-*` files at route root plus `p
 
 Required fix:
 
-- Move route-local hooks/helpers under `hooks/` or `_lib/` for the question slug route.
+- Move route-local `use-question-page-*` hooks, tests, test helpers, and `question-page-controller.browser.fixtures.ts` under a new `hooks/` directory for the question slug route.
+- Leave `page.tsx`, `question-page-client.*`, and `components/` at route root; do not introduce `_lib/` here.
 - Keep this as organization-only cleanup.
 
 ### ARCH-4 - LOW - "controller" means two different things
@@ -567,23 +581,32 @@ Required fix:
 Evidence:
 
 ```bash
-$ find src/adapters/controllers app -name '*controller*.ts' -o -name '*controller*.tsx' | sort
+$ find app -type f \( -name 'use-*controller.ts' -o -name 'use-*controller.tsx' \) -not -name '*test*' -not -name '*spec*' | sort
 app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts
 app/(app)/app/questions/[slug]/use-question-page-controller.ts
+
+$ find src/adapters/controllers -maxdepth 1 -type f -name '*controller.ts' | sort
+src/adapters/controllers/billing-controller.ts
 src/adapters/controllers/bookmark-controller.ts
-src/adapters/controllers/create-action.ts
+src/adapters/controllers/clerk-webhook-controller.ts
 src/adapters/controllers/practice-controller.ts
+src/adapters/controllers/question-controller.ts
 src/adapters/controllers/question-feedback-controller.ts
 src/adapters/controllers/question-view-controller.ts
-src/adapters/controllers/quiz-controller.ts
 src/adapters/controllers/review-controller.ts
-src/adapters/controllers/session-controller.ts
+src/adapters/controllers/stats-controller.ts
+src/adapters/controllers/stripe-webhook-controller.ts
+src/adapters/controllers/tag-controller.ts
+
+$ rg -n "use-question-page-controller|use-practice-session-page-controller|useQuestionPageController|usePracticeSessionPageController|PracticeSessionPageController|QuestionPageController" app --glob '*.{ts,tsx}' | wc -l | tr -d ' '
+162
 ```
 
 **Decision (locked):**
 
 - Keep `src/adapters/controllers/*` as the canonical "controller" (the Clean Architecture adapter role).
-- Rename the 2 presentation hooks to `use-*-page-model.ts` (Fowler's Presentation Model). Avoid "presenter" — also a reserved Clean Architecture term.
+- Rename the 2 production presentation hooks to `use-*-page-model.ts` (Fowler's Presentation Model). Avoid "presenter" — also a reserved Clean Architecture term.
+- Update the associated imports, test/probe/fixture/helper filenames, exported hook/type names, and non-archived docs that reference the two hooks. Archived docs may keep historical names.
 - Add a one-line glossary entry to `AGENTS.md` distinguishing adapter controllers from presentation models, so the agent fleet stops conflating them. See Resolution Decisions.
 
 ### Agent skill symlink invariant - GOOD
@@ -703,7 +726,7 @@ Required fix:
   - telemetry/reporting/logging failures;
   - rollback/cleanup best effort when the original error is preserved;
   - parse/decode fallback to a safe default.
-- Require a short comment or helper when a catch intentionally suppresses an error.
+- Require a short comment when a catch intentionally suppresses an error. Add a shared helper only after at least three sibling application/adapters files need the same logger-safe wrapper.
 
 ### Source TODO/FIXME/HACK/XXX hygiene - GOOD
 
@@ -754,31 +777,28 @@ Correct statement: production has exactly 2 `as unknown as` casts and zero `as a
 Evidence:
 
 ```bash
-$ find src lib app components scripts db -type f \( -name '*.ts' -o -name '*.tsx' \) \
-  -not -path '*/node_modules/*' -not -path '*/.next/*' \
-  -not -name '*.test.ts' -not -name '*.test.tsx' \
-  -not -name '*.spec.ts' -not -name '*.spec.tsx' -not -name '*.browser.spec.tsx' \
-  -not -path '*/test-helpers/*' -print0 \
-  | xargs -0 wc -l | sort -nr | head
-   38496 total
-     772 db/schema.ts
-     572 app/(app)/app/history/components/history-questions-tab.tsx
-     556 app/(app)/app/questions/[slug]/question-page-client.tsx
-     547 src/adapters/repositories/drizzle-attempt-repository.ts
-     539 app/(app)/app/practice/components/practice-view.tsx
-     495 src/adapters/gateways/stripe/stripe-checkout-sessions.ts
-
-$ sh scripts/check-file-size.sh src/adapters/gateways/stripe/stripe-checkout-sessions.ts app/'(app)'/app/practice/components/practice-view.tsx 2>&1
-⚠ src/adapters/gateways/stripe/stripe-checkout-sessions.ts exceeds 350 lines (495). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+$ find src lib app components db -type f \( -name '*.ts' -o -name '*.tsx' \) -print0 | xargs -0 sh scripts/check-file-size.sh 2>&1 | sort
+⚠ app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.probes.tsx exceeds 350 lines (354). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts exceeds 350 lines (448). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
 ⚠ app/(app)/app/practice/components/practice-view.tsx exceeds 350 lines (539). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ app/(app)/app/questions/[slug]/question-page-logic.ts exceeds 350 lines (429). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ app/(app)/app/questions/[slug]/use-question-page-controller.ts exceeds 350 lines (373). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ components/marketing/marketing-home.tsx exceeds 350 lines (359). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ src/adapters/controllers/clerk-webhook-controller.ts exceeds 350 lines (377). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ src/adapters/controllers/practice-controller.ts exceeds 350 lines (377). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ src/adapters/gateways/stripe/stripe-checkout-sessions.ts exceeds 350 lines (495). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ src/adapters/repositories/drizzle-practice-session-repository.ts exceeds 350 lines (364). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ src/application/test-helpers/fakes/fake-attempt-repository.ts exceeds 350 lines (427). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ src/application/test-helpers/fakes/fake-practice-session-repository.ts exceeds 350 lines (389). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
 ```
 
-Known large files such as `db/schema.ts`, `history-questions-tab.tsx`, `question-page-client.tsx`, and `drizzle-attempt-repository.ts` have documented rationale headers or exemptions. `practice-view.tsx` and `stripe-checkout-sessions.ts` exceed the warning threshold and are not exempted.
+Known large files such as `db/schema.ts`, `history-questions-tab.tsx`, `question-page-client.tsx`, and `drizzle-attempt-repository.ts` have rationale headers or exemptions. The size checker currently exits 0 and runs only through lint-staged, so it is a warning guardrail, not a full-repo blocking gate.
 
 **Decision (locked):**
 
-- `practice-view.tsx`: document via the existing `check-file-size.sh` mechanism (WHY header + `is_known_exempt`). Do NOT split it into shallow pieces (PoSD: deep modules beat shallow ones).
-- `stripe-checkout-sessions.ts`: attempt **one** Extract-Function on the inspect/expire-existing-session block (the billing-critical file is where clarity pays off); keep it only if the full gate stays green, otherwise document via the same mechanism. See Resolution Decisions.
+- Update `scripts/check-file-size.sh` so non-production support files are excluded explicitly: `*.browser.probes.tsx` and `src/application/test-helpers/**` must not be added to `is_known_exempt`.
+- `practice-view.tsx`, `use-practice-session-question-flow.ts`, `question-page-logic.ts`, `use-question-page-controller.ts` / its post-ARCH-4 page-model name, `marketing-home.tsx`, `clerk-webhook-controller.ts`, `practice-controller.ts`, and `drizzle-practice-session-repository.ts`: document via WHY header + `is_known_exempt`. Do not extract these in this audit-resolution pass.
+- `stripe-checkout-sessions.ts`: attempt **one** Extract-Function on the inspect/expire-existing-session block (the billing-critical file is where clarity pays off). The extraction should return a structured decision object rather than exposing shared mutable locals such as `replacementIdempotencyKey` and expire-fatality state. Keep it only if the full gate stays green; otherwise document via the same WHY+allowlist mechanism. See Resolution Decisions.
 
 ---
 
@@ -805,7 +825,7 @@ Correct and highest priority. The repository is public and has no GitHub-side me
 
 Scope:
 
-- Add branch protection or a repository ruleset for `main`.
+- Add a repository ruleset for `main`.
 - Require PRs and successful CI.
 - Block force pushes and deletions.
 - Consider CODEOWNERS for owner review.
@@ -817,7 +837,7 @@ Correct and second priority. This was missing from the earlier positive framing.
 Scope:
 
 - Enable vulnerability alerts/security updates.
-- Remove `open-pull-requests-limit: 0` from security update entries or otherwise create a real security PR flow.
+- Remove `open-pull-requests-limit: 0` from security update entries so a real security PR flow exists.
 - Run `pnpm audit --audit-level=moderate`; patch or document each remaining vulnerability.
 
 ### 3. Add mechanical architecture boundary enforcement (ARCH-1, MEDIUM)
@@ -826,7 +846,7 @@ Correct. Documentation alone is insufficient for a Clean Architecture invariant.
 
 **Locked approach:**
 
-- Implement as a custom Vitest import-boundary test (see Resolution Decisions). Do NOT add `dependency-cruiser` — SEC-1 supply-chain context plus the existing source-scan idiom make a zero-dependency test the correct choice.
+- Implement as a custom Vitest import-boundary test (see Resolution Decisions). Do NOT add `dependency-cruiser` — SEC-1 supply-chain context plus the existing source-scan idiom make a no-new-dependency test the correct choice.
 
 ### 4. Fix stale and duplicated agent docs (DOC-1 through DOC-5)
 
@@ -837,7 +857,7 @@ Scope:
 - Update Node/pnpm requirements.
 - Remove duplicate universal process from `CLAUDE.md`.
 - Keep one canonical full-gate/E2E section in `AGENTS.md`.
-- Add `FakeQuestionFeedbackRepository` or point to the fake barrel file.
+- Make `src/application/test-helpers/fakes/index.ts` the explicit source of truth for available fakes in both `AGENTS.md` and `.claude/rules/testing.md`; keep inline fake lists as examples only and include `FakeQuestionFeedbackRepository` if an example list remains.
 - Fix the archived debt-doc link.
 
 ### 5. Repair README and docs discoverability (DOC-6, DOC-7)
@@ -849,7 +869,7 @@ Scope:
 - Add runtime requirements and a pointer to `AGENTS.md`.
 - Add `docs/dev/index.md` and `docs/frontend/index.md`.
 
-### 6. Decide and enforce file naming policy (ARCH-2)
+### 6. Enforce file naming policy (ARCH-2)
 
 Locked: adopt + enforce strict kebab-case as one package (rename 8 files + extend the source-scan; keep multi-dot fixtures). See Resolution Decisions.
 
@@ -863,8 +883,8 @@ Lower priority, but the vocabulary call is now locked.
 
 Scope:
 
-- ARCH-3: move question-route hooks under `hooks/` or `_lib/` (organization-only).
-- ARCH-4 (locked): rename the 2 presentation hooks to `use-*-page-model.ts` and add the `AGENTS.md` glossary line. See Resolution Decisions.
+- ARCH-3: move question-route `use-question-page-*` files and local hook helpers under `hooks/` (organization-only). Do not use `_lib/` for this route.
+- ARCH-4 (locked): rename the 2 production presentation hooks to `use-*-page-model.ts`, update tests/probes/fixtures/helpers/imports/non-archived docs, and add the `AGENTS.md` glossary line. See Resolution Decisions.
 
 ### 8. Address large-file policy gaps (CODE-2 and large-file correction)
 
@@ -872,9 +892,10 @@ Correct.
 
 Scope (locked):
 
+- Update `scripts/check-file-size.sh` so `*.browser.probes.tsx` and `src/application/test-helpers/**` are excluded as test/support files, not allowlisted.
 - `stripe-checkout-sessions.ts`: attempt one Extract-Function on the inspect/expire block; keep only if the gate stays green, else document.
+- Intentional production files still over 350 lines after that should receive a WHY header + `is_known_exempt`. Do not extract them in this pass except for the scoped Stripe checkout function attempt above.
 - `practice-view.tsx`: document via WHY header + `is_known_exempt` (do not split a deep module).
-- Update `scripts/check-file-size.sh` allowlist only with explicit rationale. See Resolution Decisions.
 
 ### 9. Codify allowed bare catches and logging/reporting helpers (CODE-1, CODE-3)
 
@@ -883,7 +904,7 @@ Correct but low priority.
 Scope:
 
 - Document allowed bare-catch categories.
-- Add helpers only where duplication is real; do not centralize UI reporter code into application services.
+- Do not add a shared helper in this pass. Add one later only after at least three sibling application/adapters files need the same logger-safe wrapper; do not centralize UI reporter code into application services.
 
 ### 10. Add security hardening backlog items (SEC-2, SEC-3)
 
@@ -891,8 +912,8 @@ Correct.
 
 Scope:
 
-- Add CSP in report-only mode first.
-- Add or explicitly decline `/.well-known/security.txt`.
+- Add `Content-Security-Policy-Report-Only` in `next.config.ts` for `/:path*` first, covering Next assets plus Clerk, Stripe, and Sentry/reporting endpoints; validate with browser tests/E2E before enforcement.
+- Add `public/.well-known/security.txt` with the repository's preferred vulnerability contact and disclosure policy. Do not decline this for a public SaaS repo unless the owner explicitly overrides the audit.
 
 ---
 
@@ -904,7 +925,7 @@ Scope:
 4. DOC-1/DOC-4/DOC-5: quick correctness fixes in agent docs.
 5. DOC-2/DOC-3: de-duplicate universal process guidance.
 6. CI-3: document coverage as observational (no gate). CI-5: file `noUncheckedIndexedAccess` as a recommended-soon DEBT item (no repo-wide flip in this pass).
-7. CODE-2/large-file policy: split or document large files.
+7. CODE-2/large-file policy: fix checker exclusions, attempt the one Stripe extraction, then document intentional large production files.
 8. ARCH-2/ARCH-3/ARCH-4: naming and organization cleanup.
 9. CODE-1/CODE-3: error-handling convention doc/helper cleanup.
 10. SEC-2/SEC-3/DOC-6/DOC-7: security/contact/docs discoverability polish.
@@ -948,8 +969,22 @@ rg -n 'as unknown as' src lib app components scripts db --glob '*.{ts,tsx}' --gl
 
 # Naming, symlinks, and file size
 find app components src lib db scripts tests -type f \( -name '*.ts' -o -name '*.tsx' \) -not -path '*/node_modules/*' -not -path '*/.next/*' | awk -F/ '{ name=$NF; sub(/\.(test|spec|browser|integration|e2e)(\.[^.]+)?$/, "", name); sub(/\.(ts|tsx)$/, "", name); if (name ~ /^[A-Z]/) print $0 }'
+node - <<'NODE'
+const { execFileSync } = require('node:child_process');
+const files = execFileSync('find', ['app','components','src','lib','db','scripts','tests','-type','f','(','-name','*.ts','-o','-name','*.tsx',')','-not','-path','*/node_modules/*','-not','-path','*/.next/*'], {encoding:'utf8'}).trim().split('\n').filter(Boolean).sort();
+const out = [];
+for (const p of files) {
+  const raw = p.split('/').pop();
+  let stem = raw.replace(/\.(ts|tsx)$/,'');
+  stem = stem.replace(/\.(browser\.spec|integration\.test|test|spec|e2e)$/,'');
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(stem)) out.push(`${stem}\t${p}`);
+}
+console.log(`total=${files.length}`);
+console.log(`outliers=${out.length}`);
+console.log(out.join('\n'));
+NODE
 git ls-files -s .claude/skills .codex/skills
 find .agents/skills -name SKILL.md | wc -l
 node -e "const m=require('./.agents/skills/skills.manifest.json'); console.log(m.skills.length)"
-sh scripts/check-file-size.sh src/adapters/gateways/stripe/stripe-checkout-sessions.ts app/'(app)'/app/practice/components/practice-view.tsx
+find src lib app components db -type f \( -name '*.ts' -o -name '*.tsx' \) -print0 | xargs -0 sh scripts/check-file-size.sh 2>&1 | sort
 ```

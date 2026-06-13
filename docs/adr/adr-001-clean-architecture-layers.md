@@ -385,8 +385,8 @@ const getDeps = createDepsResolver<TagControllerDeps, TagControllerContainer>(
 
 ### How to Verify
 
-1. **Dependency Check:** Run `madge --circular src/` — no circular dependencies
-2. **Import Enforcement:** Use `dependency-cruiser` with rules preventing inner layers importing outer layers (Biome does not provide import boundary enforcement)
+1. **Import Boundary Enforcement:** ADR-001's original `madge` / `dependency-cruiser` recommendation is superseded by AUDIT-012. Implement the boundary check as a custom Vitest source scan using existing project dependencies; do not add `dependency-cruiser` or `madge` unless a future ADR explicitly reopens that decision.
+2. **Import Shapes:** The custom test must inspect static imports, side-effect imports, `export ... from` re-exports, and dynamic `import()` specifiers so boundary enforcement cannot be bypassed by changing import syntax.
 3. **Testability:** Domain and Use Cases must remain unit-testable without mocks
 
 ### Code Review Checklist
