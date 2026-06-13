@@ -1,10 +1,11 @@
 # BUG-246: Deleted-Account Stripe Cancellation Has No Drain Beyond Svix Retries — Cascade-Deleted Local Rows Make the Leak Invisible
 
-**Status:** In Progress (implemented on `fix/bug-244-246-reconciliation-cron-and-deletion-drain`; pending PR review/merge)
+**Status:** ✅ Resolved
+**Resolution State:** Implemented in PR #420 (squash `fac21601`) as a drain folded into the scheduled billing-maintenance cron, and activated to live mode (`dryRun=false`) in PR #422 (squash `6679cfe2`), both merged 2026-06-12. The same daily production cron (deploy `dpl_GFqkgVoarFVqXbWbsq17Kh6MwtxK` READY) now drains stale `pending_stripe_cancellations` rows from their stored `stripeCustomerId` (independent of the cascade-deleted local subscription row). Owner-graded; full gate green + CodeRabbit approved on the exact head. Archived to `docs/_archive/bugs/`. The `clerk_events → pending_stripe_cancellations` cascade is left unchanged as a tracked operational note (the drain cadence must stay shorter than any future `clerk_events` prune horizon).
 **Priority:** P2 (tail-risk: Stripe keeps charging a customer whose account no longer exists; rare trigger, but no monitoring and no recovery path)
 **Date:** 2026-06-11
 **Family:** Billing / Clerk account deletion / money-moves-wrong tail risk
-**Related:** [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) (same scheduled billing-maintenance run now drives the queue drain), [DEBT-304](../_archive/debt/debt-304-clerk-user-deleted-cancel-idempotency.md) (made the cancel idempotent — did not add a drain), [BUG-023](../_archive/bugs/bug-023-missing-clerk-user-deletion-webhook.md) (original deletion-webhook gap), [BUG-208](../_archive/bugs/bug-208-clerk-webhook-deletion-not-transactional.md) / [BUG-209](../_archive/bugs/bug-209-clerk-webhook-lacks-idempotency.md) (deletion races / replay)
+**Related:** [BUG-244](./bug-244-reconciliation-cron-never-scheduled.md) (same scheduled billing-maintenance run now drives the queue drain), [DEBT-304](../debt/debt-304-clerk-user-deleted-cancel-idempotency.md) (made the cancel idempotent — did not add a drain), [BUG-023](./bug-023-missing-clerk-user-deletion-webhook.md) (original deletion-webhook gap), [BUG-208](./bug-208-clerk-webhook-deletion-not-transactional.md) / [BUG-209](./bug-209-clerk-webhook-lacks-idempotency.md) (deletion races / replay)
 
 ---
 
