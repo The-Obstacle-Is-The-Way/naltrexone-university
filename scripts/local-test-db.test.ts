@@ -3,6 +3,7 @@ import { runEnsureLocalTestDatabase } from './ensure-local-test-db';
 import {
   ensureLocalTestDatabase,
   runTestDbCommand,
+  type TestDbCommandOptions,
   type TestDbCommandRunner,
 } from './local-test-db';
 import { resolveLocalTestTarget } from './resolve-local-test-target';
@@ -12,18 +13,35 @@ function createCommandRunner(
 ): TestDbCommandRunner {
   const queue = [...results];
 
-  return vi.fn(async () => {
-    const next = queue.shift();
-    if (!next) {
-      throw new Error('Unexpected command call.');
-    }
+  return vi.fn(
+    async (
+      _command: string,
+      _args: string[],
+      _options?: TestDbCommandOptions,
+    ) => {
+      const next = queue.shift();
+      if (!next) {
+        throw new Error('Unexpected command call.');
+      }
 
-    return {
-      exitCode: next.exitCode,
-      stdout: next.stdout ?? '',
-      stderr: next.stderr ?? '',
-    };
-  });
+      return {
+        exitCode: next.exitCode,
+        stdout: next.stdout ?? '',
+        stderr: next.stderr ?? '',
+      };
+    },
+  );
+}
+
+function expectCommandCall(
+  runCommand: TestDbCommandRunner,
+  callNumber: number,
+  args: string[],
+): void {
+  const call = vi.mocked(runCommand).mock.calls[callNumber - 1];
+
+  expect(call?.[0]).toBe('docker');
+  expect(call?.[1]).toEqual(args);
 }
 
 describe('ensureLocalTestDatabase', () => {
@@ -48,7 +66,7 @@ describe('ensureLocalTestDatabase', () => {
     );
 
     expect(runCommand).toHaveBeenCalledTimes(4);
-    expect(runCommand).toHaveBeenNthCalledWith(1, 'docker', [
+    expectCommandCall(runCommand, 1, [
       'compose',
       '-p',
       'naltrexone-test-dbtest',
@@ -56,7 +74,7 @@ describe('ensureLocalTestDatabase', () => {
       '-aq',
       'db',
     ]);
-    expect(runCommand).toHaveBeenNthCalledWith(2, 'docker', [
+    expectCommandCall(runCommand, 2, [
       'compose',
       '-p',
       'naltrexone-test-dbtest',
@@ -65,7 +83,7 @@ describe('ensureLocalTestDatabase', () => {
       '--wait',
       'db',
     ]);
-    expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
+    expectCommandCall(runCommand, 3, [
       'compose',
       '-p',
       'naltrexone-test-dbtest',
@@ -73,12 +91,37 @@ describe('ensureLocalTestDatabase', () => {
       '-q',
       'db',
     ]);
-    expect(runCommand).toHaveBeenNthCalledWith(4, 'docker', [
+    expectCommandCall(runCommand, 4, [
       'inspect',
       '--format',
       '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}',
       'container_id',
     ]);
+  });
+
+  it('passes resolver-derived environment to every docker command', async () => {
+    const runCommand = createCommandRunner([
+      { exitCode: 0, stdout: '\n' },
+      { exitCode: 0 },
+      { exitCode: 0, stdout: 'container_id\n' },
+      { exitCode: 0, stdout: 'healthy\n' },
+    ]);
+
+    await expect(ensureLocalTestDatabase({ runCommand, target })).resolves.toBe(
+      'created',
+    );
+
+    for (const call of vi.mocked(runCommand).mock.calls) {
+      expect(call[2]?.env).toMatchObject({
+        COMPOSE_PROJECT_NAME: 'naltrexone-test-dbtest',
+        DB_TEST_PORT: '55437',
+        DATABASE_URL:
+          'postgresql://postgres:postgres@127.0.0.1:55437/addiction_boards_test',
+        LOCAL_TEST_INSTANCE: 'dbtest',
+        NEXT_PUBLIC_APP_URL: target.appUrl,
+        PORT: target.appPort,
+      });
+    }
   });
 
   it('reuses an existing resolved Compose service instead of inspecting a global container name', async () => {
@@ -93,7 +136,7 @@ describe('ensureLocalTestDatabase', () => {
       'reused',
     );
 
-    expect(runCommand).toHaveBeenNthCalledWith(1, 'docker', [
+    expectCommandCall(runCommand, 1, [
       'compose',
       '-p',
       'naltrexone-test-dbtest',
@@ -101,7 +144,7 @@ describe('ensureLocalTestDatabase', () => {
       '-aq',
       'db',
     ]);
-    expect(runCommand).toHaveBeenNthCalledWith(2, 'docker', [
+    expectCommandCall(runCommand, 2, [
       'compose',
       '-p',
       'naltrexone-test-dbtest',
@@ -110,7 +153,7 @@ describe('ensureLocalTestDatabase', () => {
       '--wait',
       'db',
     ]);
-    expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
+    expectCommandCall(runCommand, 3, [
       'compose',
       '-p',
       'naltrexone-test-dbtest',
@@ -118,7 +161,7 @@ describe('ensureLocalTestDatabase', () => {
       '-q',
       'db',
     ]);
-    expect(runCommand).toHaveBeenNthCalledWith(4, 'docker', [
+    expectCommandCall(runCommand, 4, [
       'inspect',
       '--format',
       '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}',
@@ -163,7 +206,7 @@ describe('ensureLocalTestDatabase', () => {
     ).resolves.toBe('created');
 
     expect(sleep).toHaveBeenCalledTimes(1);
-    expect(runCommand).toHaveBeenNthCalledWith(3, 'docker', [
+    expectCommandCall(runCommand, 3, [
       'compose',
       '-p',
       'naltrexone-test-dbtest',
@@ -171,7 +214,7 @@ describe('ensureLocalTestDatabase', () => {
       '-q',
       'db',
     ]);
-    expect(runCommand).toHaveBeenNthCalledWith(4, 'docker', [
+    expectCommandCall(runCommand, 4, [
       'compose',
       '-p',
       'naltrexone-test-dbtest',
@@ -224,6 +267,25 @@ describe('runTestDbCommand', () => {
     ).resolves.toEqual({
       exitCode: 0,
       stdout: 'healthy',
+      stderr: '',
+    });
+  });
+
+  it('passes explicit environment overrides to execFile', async () => {
+    await expect(
+      runTestDbCommand(
+        process.execPath,
+        ['-e', 'process.stdout.write(process.env.DB_TEST_PORT ?? "missing")'],
+        {
+          env: {
+            ...process.env,
+            DB_TEST_PORT: '55437',
+          },
+        },
+      ),
+    ).resolves.toMatchObject({
+      exitCode: 0,
+      stdout: '55437',
       stderr: '',
     });
   });
