@@ -190,7 +190,8 @@ Browser Mode is no longer limited to the original DEBT-141 migration set. It is 
 Representative current hook/browser suites include:
 
 - `app/(app)/app/history/hooks/use-history-sessions.browser.spec.tsx`
-- `app/(app)/app/questions/[slug]/use-question-page-model.browser.spec.tsx`
+- `app/(app)/app/questions/[slug]/hooks/use-question-page-model-bookmarks.browser.spec.tsx`
+- `app/(app)/app/questions/[slug]/hooks/use-question-page-model-session-navigation.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-session-controls.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-question-answer-flow.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-question-bookmarks.browser.spec.tsx`

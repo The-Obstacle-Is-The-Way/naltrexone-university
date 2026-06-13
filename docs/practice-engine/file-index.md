@@ -144,7 +144,9 @@ repositories/
     history-tab-bar.tsx, history-sessions-tab.tsx, history-questions-tab.tsx
 (app)/app/questions/[slug]/
   page.tsx, loading.tsx, error.tsx,
-  question-page-client.tsx, question-page-logic.ts, use-question-page-model.ts
+  question-page-client.tsx, question-page-logic.ts
+  hooks/
+    use-question-page-model.ts
   components/
     review-question-navigator.tsx
 (app)/app/shared/components/

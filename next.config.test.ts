@@ -10,24 +10,18 @@ describe('next.config', () => {
     }
 
     const allHeaders = headers.flatMap((entry) => entry.headers);
-    const enforcedCspValue = allHeaders.find(
-      (header) => header.key === 'Content-Security-Policy',
-    )?.value;
-    const reportOnlyCspValue = allHeaders.find(
-      (header) => header.key === 'Content-Security-Policy-Report-Only',
-    )?.value;
-    const headerKeys = allHeaders.map((header) => header.key);
-
-    expect(headerKeys).toEqual(
-      expect.arrayContaining([
-        'X-Content-Type-Options',
-        'Referrer-Policy',
-        'X-Frame-Options',
-        'Permissions-Policy',
-        'Strict-Transport-Security',
-      ]),
+    const headerValues = Object.fromEntries(
+      allHeaders.map((header) => [header.key, header.value]),
     );
-    expect(enforcedCspValue).toBeUndefined();
-    expect(reportOnlyCspValue).toBeUndefined();
+
+    expect(headerValues).toMatchObject({
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'X-Frame-Options': 'DENY',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    });
+    expect(headerValues['Content-Security-Policy']).toBeUndefined();
+    expect(headerValues['Content-Security-Policy-Report-Only']).toBeUndefined();
   });
 });

@@ -32,6 +32,6 @@ The locked AUDIT-012 decision is to defer this to a dedicated PR rather than fli
 ## Acceptance Criteria
 
 - [ ] `tsconfig.json` sets both flags to `true`.
-- [ ] `pnpm typecheck` is green on Node 24.
+- [ ] `pnpm typecheck` is green on the runtime declared by `.nvmrc` and `package.json` `engines.node`.
 - [ ] Existing test suites remain green.
 - [ ] Any unavoidable API-shape change is documented with the affected boundary and rationale.

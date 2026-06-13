@@ -208,7 +208,7 @@ Entry:     /app/history?tab=sessions → "View breakdown" → click question lin
 Route:     /app/questions/[slug]?from=(summary|history)&mode=review&sessionId={uuid}&historyHref={encoded}
 Server:    app/(app)/app/questions/[slug]/page.tsx
 Client:    app/(app)/app/questions/[slug]/question-page-client.tsx → QuestionView
-Page model: app/(app)/app/questions/[slug]/use-question-page-model.ts
+Page model: app/(app)/app/questions/[slug]/hooks/use-question-page-model.ts
 ```
 
 **Component hierarchy:**
@@ -393,7 +393,7 @@ The codebase has two navigators that look similar but serve different contexts:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    QUESTION REVIEW PAGE                              │
 │                                                                     │
-│  use-question-page-model.ts                                    │
+│  hooks/use-question-page-model.ts                              │
 │    On mount (mode=review):                                          │
 │      1. getQuestionBySlug() → question data                         │
 │      2. loadPreviousAttempt() → one of 4 outcomes:                  │
@@ -462,7 +462,7 @@ The codebase has two navigators that look similar but serve different contexts:
 | `app/(app)/app/practice/practice-page-logic.ts` | `loadNextQuestion`, `submitAnswerForQuestion` | Quick practice async flows (filters-based) |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` | `usePracticeSessionMarkForReview` | Mark-for-review toggle (exam only) |
 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts` | `usePracticeQuestionBookmarks` | Bookmark toggle + status |
-| `app/(app)/app/questions/[slug]/use-question-page-model.ts` | `useQuestionPageModel` | Master page model for question page |
+| `app/(app)/app/questions/[slug]/hooks/use-question-page-model.ts` | `useQuestionPageModel` | Master page model for question page |
 | `app/(app)/app/questions/[slug]/question-page-logic.ts` | `loadPreviousAttempt` | Pure logic for question page (previous attempt hydration) |
 
 ### Route Utilities

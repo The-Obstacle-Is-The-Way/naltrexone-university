@@ -26,16 +26,16 @@ Route-level correctness/explanation exposure rules are centralized in the [Exam 
 
 ```text
 PracticePageClient (/app/practice)
-└── usePracticeSessionControls (69 lines, composite)
-    ├── usePracticeSessionStart (168 lines) ← over 150-line guideline
-    ├── usePracticeAvailableQuestionsCount (53 lines)
-    ├── usePracticeSessionTags (38 lines)
-    └── usePracticeIncompleteSession (66 lines)
+└── usePracticeSessionControls (composite)
+    ├── usePracticeSessionStart ← large-hook watchlist
+    ├── usePracticeAvailableQuestionsCount
+    ├── usePracticeSessionTags
+    └── usePracticeIncompleteSession
 
 QuickPracticeClient (/app/practice/quick)
-└── usePracticeQuestionFlow (63 lines, composite)
-    ├── usePracticeQuestionAnswerFlow (191 lines) ← over 150-line guideline
-    └── usePracticeQuestionBookmarks (131 lines)
+└── usePracticeQuestionFlow (composite)
+    ├── usePracticeQuestionAnswerFlow ← large-hook watchlist
+    └── usePracticeQuestionBookmarks
 ```
 
 Note: Session history was moved to the dedicated `/app/history` route (SPEC-021) and is no longer embedded in the practice landing page.
@@ -46,14 +46,14 @@ Note: Session history was moved to the dedicated `/app/history` route (SPEC-021)
 
 ```text
 PracticeSessionPageClient
-└── usePracticeSessionPageModel (121 lines, composite)
-    ├── usePracticeSessionQuestionFlow (249 lines) ← over 150-line guideline
-    ├── usePracticeQuestionBookmarks (131 lines, reused)
-    ├── usePracticeSessionReviewStage (133 lines)
+└── usePracticeSessionPageModel (composite, large-hook watchlist)
+    ├── usePracticeSessionQuestionFlow ← large-hook watchlist
+    ├── usePracticeQuestionBookmarks (reused)
+    ├── usePracticeSessionReviewStage ← large-hook watchlist
       │   ├── usePracticeSessionReviewStageState (state machine for review stage)
-      │   ├── usePracticeSessionNavigator (70 lines)
-      │   └── usePracticeSessionSummaryReview (52 lines)
-    └── usePracticeSessionMarkForReview (169 lines) ← over 150-line guideline
+      │   ├── usePracticeSessionNavigator
+      │   └── usePracticeSessionSummaryReview
+    └── usePracticeSessionMarkForReview ← large-hook watchlist
 ```
 
 ---

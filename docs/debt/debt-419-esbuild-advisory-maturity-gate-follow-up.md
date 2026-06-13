@@ -40,5 +40,5 @@ Do not bypass the maturity gate for this advisory unless the owner explicitly ac
 ## Acceptance Criteria
 
 - [ ] `pnpm audit --audit-level=moderate` exits 0, or any remaining advisory is documented with a primary-source reachability analysis and an owner-accepted risk decision.
-- [ ] Full quality gate passes on Node 24 after the lockfile change.
+- [ ] Full quality gate passes on the runtime declared by `.nvmrc` and `package.json` `engines.node` after the lockfile change.
 - [ ] No broad dependency replacement, Clerk UI removal, or Solana subtree removal is used as the fix.
