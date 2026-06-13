@@ -30,7 +30,7 @@ The repo does **not** need a major reorganization before feature work. It needs 
 | CI-4 | VERIFIED-ALREADY-RESOLVED | The single CI `|| true` remains limited to the documented E2E skip-policy grep check. |
 | CI-5 | FILED | DEBT-417 tracks `noUncheckedIndexedAccess` / `exactOptionalPropertyTypes` as recommended-soon. |
 | SEC-1 | BLOCKED-NEEDS-HUMAN + FILED | `.github/dependabot.yml` no longer caps security PRs at zero; BUG-249 tracks GitHub vulnerability-alert/security-update settings; DEBT-418 tracks residual esbuild advisories blocked by pnpm's maturity gate. |
-| SEC-2 | FIXED + VERIFIED | `next.config.ts` adds `Content-Security-Policy-Report-Only`; `pnpm test --run next.config.test.ts` passed. |
+| SEC-2 | VERIFIED-ALREADY-RESOLVED / FALSE POSITIVE | CSP is owned by Clerk proxy middleware in `proxy.ts`; `next.config.test.ts` now guards that `next.config.ts` emits only non-CSP static security headers, and `proxy.test.ts` verifies strict report-only CSP. |
 | SEC-3 | FIXED + VERIFIED | `public/.well-known/security.txt` has Contact, Policy, Canonical, Expires, and Preferred-Languages; `pnpm test --run tests/security-txt.test.ts` passed. |
 | DOC-1 | FIXED + VERIFIED | `AGENTS.md` and `README.md` now require Node 24.x / pnpm >=11. |
 | DOC-2 | FIXED + VERIFIED | `CLAUDE.md` now points to AGENTS for universal process instead of duplicating it. |
@@ -247,28 +247,25 @@ Required fix:
 - Resolve the current `pnpm audit` findings or document why each remaining advisory is not exploitable in this app.
 - Keep routine version updates targeting `dev` if that is the branch strategy, but security updates need an actual delivery path.
 
-### SEC-2 - MEDIUM - No Content Security Policy
+### SEC-2 - FALSE POSITIVE - CSP already owned by proxy middleware
 
-**Verdict:** New hardening finding.
+**Verdict:** Refuted after post-resolution verification. The original audit grep omitted `proxy.ts`, where CSP is configured.
 
 Evidence:
 
 ```bash
-$ rg -n "headers\(\)|X-Content-Type-Options|Referrer-Policy|X-Frame-Options|Permissions-Policy|Strict-Transport-Security|Content-Security-Policy|contentSecurityPolicy|csp" next.config.ts app lib
+$ rg -n "Content-Security-Policy|contentSecurityPolicy|headers\(\)" next.config.ts proxy.ts app lib
+proxy.ts:205:      contentSecurityPolicy: {
 next.config.ts:13:  async headers() {
-next.config.ts:19:            key: 'X-Content-Type-Options',
-next.config.ts:23:            key: 'Referrer-Policy',
-next.config.ts:27:            key: 'X-Frame-Options',
-next.config.ts:31:            key: 'Permissions-Policy',
-next.config.ts:35:            key: 'Strict-Transport-Security',
 app/layout.tsx:71:  const nonce = (await headers()).get('x-nonce') ?? undefined;
 ```
 
 Required fix:
 
-- Add `Content-Security-Policy-Report-Only` in `next.config.ts` for `/:path*` first.
-- Include Next assets plus Clerk, Stripe, Sentry/reporting, and existing nonce requirements.
-- Validate with browser tests/E2E before promoting to enforcement.
+- Do not add static CSP to `next.config.ts`; prior BUG-071 / DEBT-198 / DEBT-332 designate Clerk proxy middleware as the CSP owner.
+- Keep `next.config.ts` limited to static non-CSP security headers.
+- Keep regression tests covering both sides of the ownership split: `next.config.test.ts` asserts no static CSP, and `proxy.test.ts` asserts Clerk strict report-only CSP with Sentry reporting.
+- Remaining CSP posture work stays in DEBT-332: billing-flow verification before enforcing, or explicitly accepting the residual report-only posture.
 
 ### SEC-3 - LOW - No public security contact file
 
@@ -942,7 +939,7 @@ Correct.
 
 Scope:
 
-- Add `Content-Security-Policy-Report-Only` in `next.config.ts` for `/:path*` first, covering Next assets plus Clerk, Stripe, and Sentry/reporting endpoints; validate with browser tests/E2E before enforcement.
+- SEC-2: no static CSP change is required. CSP is already owned by `proxy.ts`; preserve the regression guard that keeps `next.config.ts` limited to non-CSP static security headers.
 - Add `public/.well-known/security.txt` with the repository's preferred vulnerability contact and disclosure policy. Do not decline this for a public SaaS repo unless the owner explicitly overrides the audit.
 
 ---
@@ -958,7 +955,7 @@ Scope:
 7. CODE-2/large-file policy: fix checker exclusions, attempt the one Stripe extraction, then document intentional large production files.
 8. ARCH-2/ARCH-3/ARCH-4: naming and organization cleanup.
 9. CODE-1/CODE-3: error-handling convention doc/helper cleanup.
-10. SEC-2/SEC-3/DOC-6/DOC-7: security/contact/docs discoverability polish.
+10. SEC-2 verification plus SEC-3/DOC-6/DOC-7 security/contact/docs discoverability polish.
 
 ---
 
