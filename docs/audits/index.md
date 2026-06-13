@@ -1,8 +1,8 @@
 # Audit Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-19
-**Next ID:** AUDIT-012
+**Last Updated:** 2026-06-13
+**Next ID:** AUDIT-013
 
 ---
 
@@ -12,7 +12,9 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 ## Active Audits
 
-None.
+| ID | Title | Date | Scope | Outcome |
+|----|-------|------|-------|---------|
+| AUDIT-012 | [Repository Organization, Dev Tooling & Agent Documentation](./audit-012-repo-org-devx.md) | 2026-06-13 | CI/CD & dev tooling, AGENTS/CLAUDE/.claude-rules accuracy, file org vs Clean Architecture, code quality vs Clean Code + PoSD | Open — codebase fundamentally sound (no reorg needed); 2 enforcement gaps (no `main` branch protection; no automated dependency-boundary check) + low-severity doc/naming polish. Triage findings into bugs/debt. |
 
 ## Archived Audits
 
