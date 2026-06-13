@@ -4,7 +4,7 @@
 **Priority:** P1 (public repository; direct pushes and merges can bypass CI)
 **Date:** 2026-06-13
 **Family:** CI/CD / repository governance
-**Related:** [AUDIT-012](../audits/audit-012-repo-org-devx.md)
+**Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md)
 
 ---
 

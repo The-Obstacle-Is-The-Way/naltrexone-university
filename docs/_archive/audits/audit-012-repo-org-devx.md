@@ -4,7 +4,7 @@
 **Date:** 2026-06-13
 **Scope:** CI/CD and developer tooling, GitHub enforcement, dependency security automation, `AGENTS.md` / `CLAUDE.md` / `.claude/rules` accuracy, file organization, Clean Architecture boundaries, and code-quality guardrails.
 **Method:** Source re-verification from repository files plus GitHub API checks with `gh`. Counts and absence claims were re-run directly instead of copied from prior audit text.
-**Status:** Active. Decision-required findings are now resolved in **Resolution Decisions (Locked — 2026-06-13)** below; these are not yet implemented. Findings should be triaged into `docs/bugs/` or `docs/debt/`, then this audit should be archived after remediation.
+**Status:** Resolved 2026-06-13. All findings reached a terminal state: fixed and verified, filed as tracked BUG/DEBT, verified already resolved/false, or blocked on human-only GitHub settings. Archived after remediation.
 
 ---
 
@@ -19,6 +19,36 @@ The repository is **not** fully enforced or fully documented. The three highest-
 3. **ARCH-1 / MEDIUM:** Clean Architecture boundaries are documented and currently healthy in high-value scans, but there is no mechanical import-boundary enforcement.
 
 The repo does **not** need a major reorganization before feature work. It needs enforcement and documentation cleanup: protect `main`, enable security automation and resolve the red audit, add boundary enforcement, fix stale agent docs, and codify a few conventions already present in the code.
+
+## Resolution Execution Summary
+
+| Finding | Terminal state | Resolution evidence |
+|---|---|---|
+| CI-1 | BLOCKED-NEEDS-HUMAN, filed as BUG-248 | `gh api repos/:owner/:repo/branches/main/protection --include` returned 404 and `gh api repos/:owner/:repo/rulesets` returned `[]`; human checklist is in `docs/bugs/bug-248-main-branch-has-no-github-merge-gate.md`. |
+| CI-2 | VERIFIED-ALREADY-RESOLVED | Pre-push remains intentionally lightweight; AGENTS documents the mandatory full gate before push. |
+| CI-3 | FIXED + VERIFIED | `docs/dev/react-vitest-testing.md` now states coverage is observational and not a numeric merge gate. |
+| CI-4 | VERIFIED-ALREADY-RESOLVED | The single CI `|| true` remains limited to the documented E2E skip-policy grep check. |
+| CI-5 | FILED | DEBT-417 tracks `noUncheckedIndexedAccess` / `exactOptionalPropertyTypes` as recommended-soon. |
+| SEC-1 | BLOCKED-NEEDS-HUMAN + FILED | `.github/dependabot.yml` no longer caps security PRs at zero; BUG-249 tracks GitHub vulnerability-alert/security-update settings; DEBT-418 tracks residual esbuild advisories blocked by pnpm's maturity gate. |
+| SEC-2 | FIXED + VERIFIED | `next.config.ts` adds `Content-Security-Policy-Report-Only`; `pnpm test --run next.config.test.ts` passed. |
+| SEC-3 | FIXED + VERIFIED | `public/.well-known/security.txt` has Contact, Policy, Canonical, Expires, and Preferred-Languages; `pnpm test --run tests/security-txt.test.ts` passed. |
+| DOC-1 | FIXED + VERIFIED | `AGENTS.md` and `README.md` now require Node 24.x / pnpm >=11. |
+| DOC-2 | FIXED + VERIFIED | `CLAUDE.md` now points to AGENTS for universal process instead of duplicating it. |
+| DOC-3 | FIXED + VERIFIED | `.claude/rules/git-workflow.md` now points to the canonical AGENTS full-gate section. |
+| DOC-4 | FIXED + VERIFIED | Fake guidance now points to `src/application/test-helpers/fakes/index.ts` and includes `FakeQuestionFeedbackRepository`. |
+| DOC-5 | FIXED + VERIFIED | Agent skill provenance link now points to archived DEBT-416. |
+| DOC-6 | FIXED + VERIFIED | `README.md` setup/gate/database guidance now matches AGENTS. |
+| DOC-7 | FIXED + VERIFIED | `docs/dev/index.md` and `docs/frontend/index.md` were added. |
+| ARCH-1 | FIXED + VERIFIED | `tests/architecture-boundaries.test.ts` enforces import boundaries with the TypeScript compiler API and `fast-glob`; targeted test passed. |
+| ARCH-2 | FIXED + VERIFIED | The 8 casing offenders were renamed with `git mv`; filename policy enforcement was added; casing detector now reports `count=0`. |
+| ARCH-3 | FIXED + VERIFIED | Question-route `use-question-page-*` files moved under `hooks/`; root-hook detector now reports `count=0`. |
+| ARCH-4 | FIXED + VERIFIED | Presentation hooks/support files were renamed from page-controller to page-model; live-code/doc grep for old names exits 1; AGENTS glossary was added. |
+| CODE-1 | FIXED + VERIFIED | AGENTS now documents when to add a shared logger-safety helper and keeps UI reporter helpers in app shared code. |
+| CODE-2 / large-file item | FIXED + VERIFIED | `scripts/check-file-size.sh` excludes support files explicitly, production large files have WHY headers/exemptions, and `stripe-checkout-sessions.ts` has one structured extraction; full size scan exits 0. |
+| CODE-3 | FIXED + VERIFIED | AGENTS now documents allowed bare-catch categories and requires comments for intentional suppression. |
+| Source TODO hygiene | VERIFIED-ALREADY-RESOLVED | Production TODO/FIXME/HACK/XXX scan remains empty. |
+| TypeScript suppression inventory | VERIFIED-ALREADY-RESOLVED | Suppression counts were corrected and no production `: any` or broad `as any` drift was found. |
+| Agent skill symlink invariant | VERIFIED-ALREADY-RESOLVED | 15 manifest entries match 15 vendored `SKILL.md` files; `.claude` and `.codex` skill entries remain tracked symlinks. |
 
 ---
 

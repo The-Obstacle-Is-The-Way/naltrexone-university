@@ -3,7 +3,7 @@
 **Priority:** P2 (dependency-security cleanup; current app exploitability is low, but `pnpm audit` remains red)
 **Created:** 2026-06-13
 **Status:** Open
-**Related:** [AUDIT-012](../audits/audit-012-repo-org-devx.md), [BUG-249](../bugs/bug-249-dependency-security-automation-disabled.md)
+**Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md), [BUG-249](../bugs/bug-249-dependency-security-automation-disabled.md)
 
 ---
 

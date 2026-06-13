@@ -4,7 +4,7 @@
 **Priority:** P1 (public repository; known vulnerable dependency signal exists but GitHub security delivery is disabled)
 **Date:** 2026-06-13
 **Family:** Security / dependency automation / repository governance
-**Related:** [AUDIT-012](../audits/audit-012-repo-org-devx.md)
+**Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md)
 
 ---
 
