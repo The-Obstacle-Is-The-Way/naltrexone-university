@@ -43,6 +43,7 @@ export type StripeCheckoutSessionStatus = 'open' | 'complete' | 'expired';
 export type StripeCheckoutSession = {
   id: string;
   url: string | null;
+  created?: number;
   status?: StripeCheckoutSessionStatus | null;
   expires_at?: number;
   metadata?: Record<string, string> | null;

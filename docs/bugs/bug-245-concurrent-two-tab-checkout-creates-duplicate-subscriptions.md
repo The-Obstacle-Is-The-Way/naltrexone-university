@@ -51,12 +51,27 @@ Tracer bullet:
 
 Options 1+2 are the code fix; 3+4 are durable backstops. A unit/integration test exercising two concurrent `createCheckoutSession` calls (currently absent — zero concurrent-create tests in `stripe-payment-gateway.test.ts` / `billing-controller.test.ts`) should accompany the fix.
 
+## Resolution State
+
+This PR implements options 1+2 in the checkout creation path only:
+
+1. **Same-plan collapse:** the client UUID remains load-bearing for controller-level DB idempotency (`executeIdempotent`), but the Stripe checkout-create idempotency key is now deterministic per user, plan, and checkout variant (`checkout_session:${userId}:${plan}[:${variant}]`). The existing replacement/recovery key (`checkout_session_recovery:...`) still takes precedence for the expire-and-replace path.
+2. **Cross-plan race:** the Stripe gateway uses lock-free post-create reconciliation. After a successful primary or recovered checkout create, it re-lists open checkout sessions for the customer and expires every non-canonical open session, choosing the newest session by Stripe `created` timestamp. No DB transaction or advisory lock is held across Stripe I/O.
+3. **Rejected alternatives:** forwarding the per-tab client UUID to Stripe was rejected because it bypasses deterministic collapse; a long DB/advisory lock around Stripe list/create/expire was rejected because it would hold application/database serialization across external network calls.
+
+Backstops remain outside this PR:
+
+- **OWNER action:** enable Stripe Checkout's Dashboard setting to limit customers to one subscription. This is the completion-time-proof guard if more than one checkout URL ever exists.
+- **BUG-244:** scheduled reconciliation is responsible for periodic healing/canceling of duplicate Stripe subscriptions that already exist or slip through later. This PR closes the create-time window but does not replace the reconciler.
+
 ## Verification
 
-- [ ] Test: two concurrent same-plan `createCheckoutSession` calls with distinct client keys produce **one** Stripe session (deterministic gateway key collapses them).
-- [ ] Test: two concurrent different-plan calls end with at most one completable session (serialization / post-create expire).
+- [x] Test: two concurrent same-plan `createCheckoutSession` calls with distinct client keys produce **one** Stripe session (deterministic gateway key collapses them).
+- [x] Test: two concurrent different-plan calls end with at most one completable session (reconciliation / post-create expire).
 - [ ] Manual: two-tab monthly+annual repro yields one live subscription after the fix.
-- [ ] Sequential multi-tab behavior (open-session reuse / mismatched-plan expire) is unchanged — existing tests stay green.
+- [x] Sequential multi-tab behavior (open-session reuse / mismatched-plan expire) is unchanged — existing tests stay green.
+- [x] Regression: same-form double-submit with the same client key still dedups through controller-level `executeIdempotent`.
+- [x] Regression: BUG-148 deterministic recovery / replacement idempotency path remains intact.
 
 ## Surfaces Confirmed
 

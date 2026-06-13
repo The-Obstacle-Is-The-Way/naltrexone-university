@@ -190,6 +190,30 @@ describe('billing-controller', () => {
       expect(deps._calls.clerkCalls).toHaveLength(1);
     });
 
+    it('returns the cached checkout session when same-form double submit races with the same idempotencyKey', async () => {
+      const deps = createDeps();
+
+      const input = {
+        plan: 'monthly',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const [first, second] = await Promise.all([
+        createCheckoutSession(input, deps),
+        createCheckoutSession(input, deps),
+      ]);
+
+      expect(first).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/checkout' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
+      expect(deps.createCheckoutSessionUseCase.inputs[0]).toMatchObject({
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      });
+    });
+
     it('returns ALREADY_SUBSCRIBED when use case throws ApplicationError', async () => {
       const deps = createDeps({
         checkoutThrows: new ApplicationError(
