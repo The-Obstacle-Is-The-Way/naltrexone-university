@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-248
+**Next Bug ID:** BUG-250
 
 **Latest archival (2026-06-12) — Audit #21 BUG-244/246 resolved:**
 - BUG-244 (P2) and BUG-246 (P2) verified fixed and archived to `docs/_archive/bugs/`. PR #420 (squash `fac21601`) wired the reconciliation route to a daily Vercel cron (shared `GET`/`POST`, auth + rate-limit before any work) and folded the deleted-account `pending_stripe_cancellations` drain into the same scheduled run (working from the row's stored `stripeCustomerId`); PR #422 (squash `6679cfe2`, `main` synced) flipped the cron to `dryRun=false` to activate it. Production deploy `dpl_GFqkgVoarFVqXbWbsq17Kh6MwtxK` is READY with the `0 8 * * *` cron registered. `CRON_SECRET` was normalized header-safe across all Vercel scopes (the prior Production value was empty, Preview had trailing whitespace) and is now guarded by `scripts/validate-header-safe-secret.ts` + a CI step. Safe to activate immediately because the connected Stripe account has zero subscriptions (pre-revenue). Owner-graded, full gate green + CodeRabbit approved on the exact head. BUG-245 and BUG-247 from the same Audit #21 sweep remain open.
@@ -146,6 +146,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
+| [BUG-248](./bug-248-main-branch-has-no-github-merge-gate.md) | CI/CD / repository governance | P1 | Public `main` has no GitHub-enforced merge gate: no branch protection and no active repository ruleset. Human-owned GitHub settings change required. |
+| [BUG-249](./bug-249-dependency-security-automation-disabled.md) | Security / dependency automation / repository governance | P1 | GitHub vulnerability alerts and automated security fixes are disabled; local Dependabot config can be repaired, but repository security settings require human action. |
 | [BUG-245](./bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Billing / checkout race / idempotency | P2 | Concurrent two-tab subscribe defeats every duplicate guard (all key on a not-yet-existing subscription) and per-tab random UUIDs bypass the BUG-148 deterministic-key collapse → two live subscriptions on one customer; masked in-app by the single local row. |
 | [BUG-247](./bug-247-pricing-portal-failure-shows-checkout-error-copy.md) | Billing / pricing copy | P3 | Pricing-page "Manage Billing" portal failures redirect to `?checkout=error` and show "Checkout failed. Please try again." for an action that was never a checkout; the app-billing sibling already has correct portal-failure copy. |
 | [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to dev/prod, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |

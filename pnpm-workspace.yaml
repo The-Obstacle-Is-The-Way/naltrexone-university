@@ -2,6 +2,9 @@ minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true # v11-only: fail when no version satisfies the 7-day age threshold.
 minimumReleaseAgeIgnoreMissingTime: false # v11-only: fail when registry metadata lacks package publish time.
 blockExoticSubdeps: true
+overrides:
+  postcss: 8.5.15
+  uuid: 14.0.0
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - semver@6.3.1 # legacy Babel dependency published in 2023; exact exception for no-downgrade provenance gap.
