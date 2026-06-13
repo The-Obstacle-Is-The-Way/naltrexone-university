@@ -16,12 +16,12 @@ import {
   QUESTION_PAGE_QUESTION_1_ID,
   QUESTION_PAGE_QUESTION_2_ID,
   reportClientErrorSpy,
-  setupQuestionPageControllerBrowserSpec,
-} from './use-question-page-controller-test-helpers';
+  setupQuestionPageModelBrowserSpec,
+} from './use-question-page-model-test-helpers';
 
-setupQuestionPageControllerBrowserSpec();
+setupQuestionPageModelBrowserSpec();
 
-describe('useQuestionPageController (browser)', () => {
+describe('useQuestionPageModel (browser)', () => {
   it('fetches the session review when sessionId is provided', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000001';
 
@@ -408,7 +408,7 @@ describe('useQuestionPageController (browser)', () => {
     expect(reportClientErrorSpy).toHaveBeenCalledWith(
       { code: 'INTERNAL_ERROR', message: 'Boom' },
       {
-        component: 'UseQuestionPageController',
+        component: 'UseQuestionPageModel',
         action: 'loadSessionNavigation',
       },
     );

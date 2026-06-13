@@ -28,7 +28,7 @@ The decision-required findings were resolved from first principles for *this* co
 
 - **ARCH-1 (boundary enforcement) → custom Vitest import-boundary test. Do NOT add `dependency-cruiser`.** The repo already owns this exact idiom (`theme-token-regression-source-scan.ts`), has only four layers (the rules are small enough to hand-write), and SEC-1 just flagged supply-chain surface — adding a new architecture dependency now is self-contradictory. Implement the test with existing repo primitives (`fast-glob` is already present) or TypeScript compiler APIs; it must inspect static `import`, `export ... from`, side-effect imports, and dynamic `import()` specifiers. Wire the test into the normal `pnpm test` gate. This audit supersedes ADR-001's old `madge` / `dependency-cruiser` recommendation; keep ADR-001 aligned.
 
-- **ARCH-2 (filename casing) → adopt strict kebab-case and enforce it, as one package.** Rename the 6 PascalCase files **and** the 2 camelCase files (`lib/content/draftTaxonomy.ts`, `lib/content/parseMdxQuestion.ts`) via `git mv` + import updates, and extend the source-scan to fail CI on future drift. **Keep** the 11 currently allowed multi-dot names after stripping standard test suffixes (`.test`, `.spec`, `.browser.spec`, `.integration.test`, `.e2e`): `page.manage-billing.test.tsx`, `post-exam-review-view.fixtures.ts`, `practice-session-page-controller.browser.fixtures.ts`, `practice-session-page-controller.browser.probes.tsx`, `practice-session-page-controller.browser.setup.ts`, `use-practice-session-exam-results-continuity.fixtures.ts`, `question-page-controller.browser.fixtures.ts`, `lib/container.skip-clerk.test.ts`, `tests/e2e/global.setup.ts`, `reset-bookmarks-for-e2e-user.default-services.test.ts`, and `actions.stripe.integration.test.ts`. Do NOT rename without adding the check (rename-without-enforce just re-drifts). 8 real casing outliers in 880 scanned files is pattern-noise that makes agents guess wrong; the enforcement idiom already exists, so locking it in is cheap.
+- **ARCH-2 (filename casing) → adopt strict kebab-case and enforce it, as one package.** Rename the 6 PascalCase files **and** the 2 camelCase files (`lib/content/draftTaxonomy.ts`, `lib/content/parseMdxQuestion.ts`) via `git mv` + import updates, and extend the source-scan to fail CI on future drift. **Keep** the 11 currently allowed multi-dot names after stripping standard test suffixes (`.test`, `.spec`, `.browser.spec`, `.integration.test`, `.e2e`): `page.manage-billing.test.tsx`, `post-exam-review-view.fixtures.ts`, `practice-session-page-model.browser.fixtures.ts`, `practice-session-page-model.browser.probes.tsx`, `practice-session-page-model.browser.setup.ts`, `use-practice-session-exam-results-continuity.fixtures.ts`, `question-page-model.browser.fixtures.ts`, `lib/container.skip-clerk.test.ts`, `tests/e2e/global.setup.ts`, `reset-bookmarks-for-e2e-user.default-services.test.ts`, and `actions.stripe.integration.test.ts`. Do NOT rename without adding the check (rename-without-enforce just re-drifts). 8 real casing outliers in 880 scanned files is pattern-noise that makes agents guess wrong; the enforcement idiom already exists, so locking it in is cheap.
 
 - **ARCH-4 ("controller" overload) → keep `src/adapters/controllers/*` as the canonical "controller"; rename the 2 production presentation hooks to `use-*-page-model.ts`.** Add a one-line glossary entry to `AGENTS.md` distinguishing adapter controllers (Clean Architecture role) from presentation models (view hooks). An ambiguous architectural noun is the highest-cost defect for agent contributors — it invites wiring a use-case call into a view hook. This is not literally a two-file diff: update imports, tests, probes, fixtures, helper names, and non-archived docs that reference the two hooks. Avoid "presenter" — also a reserved Clean Architecture term.
 
@@ -517,11 +517,11 @@ and these 11 allowed multi-dot fixture/setup/integration names:
 ```text
 app/(app)/app/billing/page.manage-billing.test.tsx
 app/(app)/app/practice/[sessionId]/components/post-exam-review-view.fixtures.ts
-app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.fixtures.ts
-app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.probes.tsx
-app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.setup.ts
+app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.fixtures.ts
+app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx
+app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.setup.ts
 app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.fixtures.ts
-app/(app)/app/questions/[slug]/question-page-controller.browser.fixtures.ts
+app/(app)/app/questions/[slug]/question-page-model.browser.fixtures.ts
 lib/container.skip-clerk.test.ts
 tests/e2e/global.setup.ts
 tests/e2e/helpers/reset-bookmarks-for-e2e-user.default-services.test.ts
@@ -551,8 +551,8 @@ app/(app)/app/questions/[slug]/question-page-client.test.tsx
 app/(app)/app/questions/[slug]/question-page-client.tsx
 app/(app)/app/questions/[slug]/use-question-page-actions.browser.spec.tsx
 app/(app)/app/questions/[slug]/use-question-page-actions.ts
-app/(app)/app/questions/[slug]/use-question-page-controller.test.ts
-app/(app)/app/questions/[slug]/use-question-page-controller.ts
+app/(app)/app/questions/[slug]/use-question-page-model.test.ts
+app/(app)/app/questions/[slug]/use-question-page-model.ts
 app/(app)/app/questions/[slug]/use-question-page-data.browser.spec.tsx
 app/(app)/app/questions/[slug]/use-question-page-data.ts
 app/(app)/app/questions/[slug]/use-question-page-derived-state.test.ts
@@ -570,7 +570,7 @@ The question slug route has 16 `use-question-page-*` files at route root plus `p
 
 Required fix:
 
-- Move route-local `use-question-page-*` hooks, tests, test helpers, and `question-page-controller.browser.fixtures.ts` under a new `hooks/` directory for the question slug route.
+- Move route-local `use-question-page-*` hooks, tests, test helpers, and `question-page-model.browser.fixtures.ts` under a new `hooks/` directory for the question slug route.
 - Leave `page.tsx`, `question-page-client.*`, and `components/` at route root; do not introduce `_lib/` here.
 - Keep this as organization-only cleanup.
 
@@ -582,8 +582,8 @@ Evidence:
 
 ```bash
 $ find app -type f \( -name 'use-*controller.ts' -o -name 'use-*controller.tsx' \) -not -name '*test*' -not -name '*spec*' | sort
-app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts
-app/(app)/app/questions/[slug]/use-question-page-controller.ts
+app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts
+app/(app)/app/questions/[slug]/use-question-page-model.ts
 
 $ find src/adapters/controllers -maxdepth 1 -type f -name '*controller.ts' | sort
 src/adapters/controllers/billing-controller.ts
@@ -598,7 +598,7 @@ src/adapters/controllers/stats-controller.ts
 src/adapters/controllers/stripe-webhook-controller.ts
 src/adapters/controllers/tag-controller.ts
 
-$ rg -n "use-question-page-controller|use-practice-session-page-controller|useQuestionPageController|usePracticeSessionPageController|PracticeSessionPageController|QuestionPageController" app --glob '*.{ts,tsx}' | wc -l | tr -d ' '
+$ rg -n "use-question-page-model|use-practice-session-page-model|useQuestionPageModel|usePracticeSessionPageModel|PracticeSessionPageModel|QuestionPageModel" app --glob '*.{ts,tsx}' | wc -l | tr -d ' '
 162
 ```
 
@@ -778,11 +778,11 @@ Evidence:
 
 ```bash
 $ find src lib app components db -type f \( -name '*.ts' -o -name '*.tsx' \) -print0 | xargs -0 sh scripts/check-file-size.sh 2>&1 | sort
-⚠ app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.probes.tsx exceeds 350 lines (354). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx exceeds 350 lines (354). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
 ⚠ app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts exceeds 350 lines (448). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
 ⚠ app/(app)/app/practice/components/practice-view.tsx exceeds 350 lines (539). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
 ⚠ app/(app)/app/questions/[slug]/question-page-logic.ts exceeds 350 lines (429). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
-⚠ app/(app)/app/questions/[slug]/use-question-page-controller.ts exceeds 350 lines (373). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
+⚠ app/(app)/app/questions/[slug]/use-question-page-model.ts exceeds 350 lines (373). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
 ⚠ components/marketing/marketing-home.tsx exceeds 350 lines (359). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
 ⚠ src/adapters/controllers/clerk-webhook-controller.ts exceeds 350 lines (377). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
 ⚠ src/adapters/controllers/practice-controller.ts exceeds 350 lines (377). To suppress: add a WHY comment to the file AND add it to is_known_exempt in scripts/check-file-size.sh.
@@ -797,7 +797,7 @@ Known large files such as `db/schema.ts`, `history-questions-tab.tsx`, `question
 **Decision (locked):**
 
 - Update `scripts/check-file-size.sh` so non-production support files are excluded explicitly: `*.browser.probes.tsx` and `src/application/test-helpers/**` must not be added to `is_known_exempt`.
-- `practice-view.tsx`, `use-practice-session-question-flow.ts`, `question-page-logic.ts`, `use-question-page-controller.ts` / its post-ARCH-4 page-model name, `marketing-home.tsx`, `clerk-webhook-controller.ts`, `practice-controller.ts`, and `drizzle-practice-session-repository.ts`: document via WHY header + `is_known_exempt`. Do not extract these in this audit-resolution pass.
+- `practice-view.tsx`, `use-practice-session-question-flow.ts`, `question-page-logic.ts`, `use-question-page-model.ts` / its post-ARCH-4 page-model name, `marketing-home.tsx`, `clerk-webhook-controller.ts`, `practice-controller.ts`, and `drizzle-practice-session-repository.ts`: document via WHY header + `is_known_exempt`. Do not extract these in this audit-resolution pass.
 - `stripe-checkout-sessions.ts`: attempt **one** Extract-Function on the inspect/expire-existing-session block (the billing-critical file is where clarity pays off). The extraction should return a structured decision object rather than exposing shared mutable locals such as `replacementIdempotencyKey` and expire-fatality state. Keep it only if the full gate stays green; otherwise document via the same WHY+allowlist mechanism. See Resolution Decisions.
 
 ---

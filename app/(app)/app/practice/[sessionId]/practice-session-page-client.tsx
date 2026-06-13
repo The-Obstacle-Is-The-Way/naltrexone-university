@@ -5,7 +5,7 @@ import {
   type PracticeSessionPageViewProps,
 } from './components/practice-session-page-view';
 import { SessionSummaryView } from './components/session-summary-view';
-import { usePracticeSessionPageController } from './hooks/use-practice-session-page-controller';
+import { usePracticeSessionPageModel } from './hooks/use-practice-session-page-model';
 import { isQuestionBookmarked } from './practice-session-page-utils';
 import { PracticeSessionToast } from './practice-session-toast';
 
@@ -23,7 +23,7 @@ export default function PracticeSessionPageClient({
   requestedCount?: string;
   actualCount?: string;
 }) {
-  const props = usePracticeSessionPageController(sessionId);
+  const props = usePracticeSessionPageModel(sessionId);
 
   return (
     <>

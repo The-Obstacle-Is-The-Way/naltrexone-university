@@ -9,7 +9,7 @@ import {
   createQuestionResponse,
   createReviewResponse,
   createReviewRow,
-} from './practice-session-page-controller.browser.fixtures';
+} from './practice-session-page-model.browser.fixtures';
 import {
   BROWSER_QUESTION_1_ID,
   BROWSER_SESSION_ID,
@@ -19,14 +19,14 @@ import {
   getPracticeSessionReviewMock,
   getPracticeSessionSummaryMock,
   mockBookmarksAndReview,
-  PracticeSessionPageControllerHookProbe,
-  PracticeSessionPageControllerSummaryProbe,
-  setupPracticeSessionPageControllerBrowserSpec,
-} from './use-practice-session-page-controller-test-helpers';
+  PracticeSessionPageModelHookProbe,
+  PracticeSessionPageModelSummaryProbe,
+  setupPracticeSessionPageModelBrowserSpec,
+} from './use-practice-session-page-model-test-helpers';
 
-setupPracticeSessionPageControllerBrowserSpec();
+setupPracticeSessionPageModelBrowserSpec();
 
-describe('usePracticeSessionPageController (browser)', () => {
+describe('usePracticeSessionPageModel (browser)', () => {
   it('bootstraps an ended tutor session into summary without loading a question', async () => {
     getNextQuestionMock.mockImplementation(async () => {
       throw new Error('getNextQuestion should not be called');
@@ -59,7 +59,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       ),
     );
 
-    const screen = await render(<PracticeSessionPageControllerSummaryProbe />);
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
 
     await expect
       .element(screen.getByTestId('active-view'))
@@ -105,7 +105,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       ),
     );
 
-    const screen = await render(<PracticeSessionPageControllerSummaryProbe />);
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
 
     await expect
       .element(screen.getByTestId('active-view'))
@@ -150,7 +150,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(<PracticeSessionPageControllerSummaryProbe />);
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
 
     await expect
       .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
@@ -225,7 +225,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       errorResult('CONFLICT', 'Practice session already ended'),
     );
 
-    const screen = await render(<PracticeSessionPageControllerSummaryProbe />);
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
 
     await expect
       .element(screen.getByTestId('active-view'))
@@ -277,7 +277,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(<PracticeSessionPageControllerSummaryProbe />);
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -346,9 +346,7 @@ describe('usePracticeSessionPageController (browser)', () => {
         }),
       );
 
-      const screen = await render(
-        <PracticeSessionPageControllerSummaryProbe />,
-      );
+      const screen = await render(<PracticeSessionPageModelSummaryProbe />);
 
       await expect
         .element(screen.getByTestId('load-status'))
@@ -394,7 +392,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(<PracticeSessionPageControllerHookProbe />);
+    const screen = await render(<PracticeSessionPageModelHookProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))

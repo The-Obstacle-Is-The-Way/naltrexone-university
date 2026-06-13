@@ -422,9 +422,9 @@ The codebase has a systemic pattern: `shouldShowExplanation(session)` gates expl
 |---------|--------------|--------|-----|
 | `runLoadQuestionFlow` | `isMounted()` + `isLatestRequest()` | Correct | — |
 | `runSubmitAnswerFlow` | `isMounted()` + `isLatestRequest()` | Correct (BUG-194 fix) | Fixed |
-| `useQuestionPageController` (load) | `isMounted()` only, no cleanup | Missing guard | BUG-189 |
-| `useQuestionPageController` (hydrate) | `isMounted()` only | Missing guard | BUG-189 |
-| `useQuestionPageController` (session nav) | `isStale` cleanup | Correct | — |
+| `useQuestionPageModel` (load) | `isMounted()` only, no cleanup | Missing guard | BUG-189 |
+| `useQuestionPageModel` (hydrate) | `isMounted()` only | Missing guard | BUG-189 |
+| `useQuestionPageModel` (session nav) | `isStale` cleanup | Correct | — |
 | `useHistorySessions` | sessionId token | Reopen race | BUG-190 |
 
 ## Audit #10 — Exam Secrecy and Cross-Layer Invariant Sweep (2026-03-02)

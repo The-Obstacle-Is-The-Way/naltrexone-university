@@ -852,11 +852,11 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### P2 — Fix during UI/UX refactor
 
-Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageController` was reduced from 737 lines / 8 effects to 357 lines / 2 effects by DEBT-320, but it still exceeds the size cap as a composition root.
+Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageModel` was reduced from 737 lines / 8 effects to 357 lines / 2 effects by DEBT-320, but it still exceeds the size cap as a composition root.
 
 | Hook | Lines | File |
 |------|-------|------|
-| `useQuestionPageController` | 357 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
+| `useQuestionPageModel` | 357 | `app/(app)/app/questions/[slug]/use-question-page-model.ts` |
 | `useQuestionPageBookmarks` | 211 | `app/(app)/app/questions/[slug]/use-question-page-bookmarks.ts` |
 | `useQuestionPageSessionNavigation` | 206 | `app/(app)/app/questions/[slug]/use-question-page-session-navigation.ts` |
 | `usePracticeSessionQuestionFlow` | 254 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |

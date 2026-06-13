@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-type PracticeSessionPageControllerBrowserMocks = {
+type PracticeSessionPageModelBrowserMocks = {
   getNextQuestionMock: ReturnType<typeof vi.fn>;
   submitAnswerMock: ReturnType<typeof vi.fn>;
   getBookmarksMock: ReturnType<typeof vi.fn>;
@@ -14,8 +14,8 @@ type PracticeSessionPageControllerBrowserMocks = {
   setPracticeSessionQuestionMarkMock: ReturnType<typeof vi.fn>;
 };
 
-const practiceSessionPageControllerBrowserMocks =
-  vi.hoisted<PracticeSessionPageControllerBrowserMocks>(() => ({
+const practiceSessionPageModelBrowserMocks =
+  vi.hoisted<PracticeSessionPageModelBrowserMocks>(() => ({
     getNextQuestionMock: vi.fn(),
     submitAnswerMock: vi.fn(),
     getBookmarksMock: vi.fn(),
@@ -30,39 +30,38 @@ const practiceSessionPageControllerBrowserMocks =
   }));
 
 vi.mock('@/src/adapters/controllers/question-controller', () => ({
-  getNextQuestion:
-    practiceSessionPageControllerBrowserMocks.getNextQuestionMock,
-  submitAnswer: practiceSessionPageControllerBrowserMocks.submitAnswerMock,
+  getNextQuestion: practiceSessionPageModelBrowserMocks.getNextQuestionMock,
+  submitAnswer: practiceSessionPageModelBrowserMocks.submitAnswerMock,
 }));
 
 vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
-  getBookmarks: practiceSessionPageControllerBrowserMocks.getBookmarksMock,
-  toggleBookmark: practiceSessionPageControllerBrowserMocks.toggleBookmarkMock,
+  getBookmarks: practiceSessionPageModelBrowserMocks.getBookmarksMock,
+  toggleBookmark: practiceSessionPageModelBrowserMocks.toggleBookmarkMock,
 }));
 
 vi.mock('@/src/adapters/controllers/practice-controller', () => ({
   getPracticeSessionReview:
-    practiceSessionPageControllerBrowserMocks.getPracticeSessionReviewMock,
+    practiceSessionPageModelBrowserMocks.getPracticeSessionReviewMock,
   getCompletedSessionQuestionsWithFeedback:
-    practiceSessionPageControllerBrowserMocks.getCompletedSessionQuestionsWithFeedbackMock,
+    practiceSessionPageModelBrowserMocks.getCompletedSessionQuestionsWithFeedbackMock,
   getPracticeSessionSummary:
-    practiceSessionPageControllerBrowserMocks.getPracticeSessionSummaryMock,
+    practiceSessionPageModelBrowserMocks.getPracticeSessionSummaryMock,
   endPracticeSession:
-    practiceSessionPageControllerBrowserMocks.endPracticeSessionMock,
+    practiceSessionPageModelBrowserMocks.endPracticeSessionMock,
   finalizeExamAnswers:
-    practiceSessionPageControllerBrowserMocks.finalizeExamAnswersMock,
+    practiceSessionPageModelBrowserMocks.finalizeExamAnswersMock,
   saveExamDraftAnswer:
-    practiceSessionPageControllerBrowserMocks.saveExamDraftAnswerMock,
+    practiceSessionPageModelBrowserMocks.saveExamDraftAnswerMock,
   setPracticeSessionQuestionMark:
-    practiceSessionPageControllerBrowserMocks.setPracticeSessionQuestionMarkMock,
+    practiceSessionPageModelBrowserMocks.setPracticeSessionQuestionMarkMock,
 }));
 
-export function getPracticeSessionPageControllerBrowserMocks() {
-  return practiceSessionPageControllerBrowserMocks;
+export function getPracticeSessionPageModelBrowserMocks() {
+  return practiceSessionPageModelBrowserMocks;
 }
 
-export function resetPracticeSessionPageControllerBrowserMocks() {
-  for (const mock of Object.values(practiceSessionPageControllerBrowserMocks)) {
+export function resetPracticeSessionPageModelBrowserMocks() {
+  for (const mock of Object.values(practiceSessionPageModelBrowserMocks)) {
     if (mock && typeof mock.mockReset === 'function') {
       mock.mockReset();
     }

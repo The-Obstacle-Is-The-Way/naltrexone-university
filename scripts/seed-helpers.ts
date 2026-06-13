@@ -1,4 +1,4 @@
-import { canonicalizeMarkdown } from '../lib/content/parseMdxQuestion';
+import { canonicalizeMarkdown } from '../lib/content/parse-mdx-question';
 
 export type ChoiceRef = {
   id: string;

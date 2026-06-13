@@ -46,7 +46,7 @@ Note: Session history was moved to the dedicated `/app/history` route (SPEC-021)
 
 ```text
 PracticeSessionPageClient
-└── usePracticeSessionPageController (121 lines, composite)
+└── usePracticeSessionPageModel (121 lines, composite)
     ├── usePracticeSessionQuestionFlow (249 lines) ← over 150-line guideline
     ├── usePracticeQuestionBookmarks (131 lines, reused)
     ├── usePracticeSessionReviewStage (133 lines)

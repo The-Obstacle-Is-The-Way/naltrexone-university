@@ -9,7 +9,7 @@ import {
   createChoice,
   createQuestionResponse,
   createReviewResponse,
-} from './practice-session-page-controller.browser.fixtures';
+} from './practice-session-page-model.browser.fixtures';
 import {
   BROWSER_ATTEMPT_1_ID,
   BROWSER_CHOICE_1_ID,
@@ -22,16 +22,16 @@ import {
   CHOICE_3,
   getNextQuestionMock,
   mockBookmarksAndReview,
-  PracticeSessionPageControllerHookProbe,
-  PracticeSessionPageControllerNavigationProbe,
+  PracticeSessionPageModelHookProbe,
+  PracticeSessionPageModelNavigationProbe,
   saveExamDraftAnswerMock,
-  setupPracticeSessionPageControllerBrowserSpec,
+  setupPracticeSessionPageModelBrowserSpec,
   submitAnswerMock,
-} from './use-practice-session-page-controller-test-helpers';
+} from './use-practice-session-page-model-test-helpers';
 
-setupPracticeSessionPageControllerBrowserSpec();
+setupPracticeSessionPageModelBrowserSpec();
 
-describe('usePracticeSessionPageController (browser)', () => {
+describe('usePracticeSessionPageModel (browser)', () => {
   it('saves the current exam draft before moving to the next question', async () => {
     getNextQuestionMock
       .mockResolvedValueOnce(
@@ -89,9 +89,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(
-      <PracticeSessionPageControllerNavigationProbe />,
-    );
+    const screen = await render(<PracticeSessionPageModelNavigationProbe />);
 
     await expect
       .element(screen.getByTestId('question-id'))
@@ -140,7 +138,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(<PracticeSessionPageControllerHookProbe />);
+    const screen = await render(<PracticeSessionPageModelHookProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -190,7 +188,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     );
     submitAnswerMock.mockImplementation(async () => deferred.promise);
 
-    const screen = await render(<PracticeSessionPageControllerHookProbe />);
+    const screen = await render(<PracticeSessionPageModelHookProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -281,7 +279,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(<PracticeSessionPageControllerHookProbe />);
+    const screen = await render(<PracticeSessionPageModelHookProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -370,9 +368,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(
-      <PracticeSessionPageControllerNavigationProbe />,
-    );
+    const screen = await render(<PracticeSessionPageModelNavigationProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -532,9 +528,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(
-      <PracticeSessionPageControllerNavigationProbe />,
-    );
+    const screen = await render(<PracticeSessionPageModelNavigationProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -618,7 +612,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(<PracticeSessionPageControllerHookProbe />);
+    const screen = await render(<PracticeSessionPageModelHookProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))

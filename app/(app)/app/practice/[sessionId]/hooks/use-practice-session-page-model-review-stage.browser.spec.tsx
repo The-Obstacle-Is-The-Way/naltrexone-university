@@ -9,7 +9,7 @@ import {
   createQuestionResponse,
   createReviewResponse,
   createReviewRow,
-} from './practice-session-page-controller.browser.fixtures';
+} from './practice-session-page-model.browser.fixtures';
 import {
   BROWSER_ATTEMPT_1_ID,
   BROWSER_CHOICE_1_ID,
@@ -32,16 +32,16 @@ import {
   mockBookmarksAndReview,
   mockExamReviewNavigationSession,
   openExamReviewQuestion,
-  PracticeSessionPageControllerReviewProbe,
-  PracticeSessionPageControllerSubmitDuringReviewProbe,
-  PracticeSessionPageControllerViewProbe,
-  setupPracticeSessionPageControllerBrowserSpec,
+  PracticeSessionPageModelReviewProbe,
+  PracticeSessionPageModelSubmitDuringReviewProbe,
+  PracticeSessionPageModelViewProbe,
+  setupPracticeSessionPageModelBrowserSpec,
   submitAnswerMock,
-} from './use-practice-session-page-controller-test-helpers';
+} from './use-practice-session-page-model-test-helpers';
 
-setupPracticeSessionPageControllerBrowserSpec();
+setupPracticeSessionPageModelBrowserSpec();
 
-describe('usePracticeSessionPageController (browser)', () => {
+describe('usePracticeSessionPageModel (browser)', () => {
   it('finalizes active exam review through finalizeExamAnswers', async () => {
     getPracticeSessionSummaryMock.mockResolvedValue(
       errorResult('CONFLICT', 'Practice session has not ended'),
@@ -142,7 +142,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       }),
     );
 
-    const screen = await render(<PracticeSessionPageControllerReviewProbe />);
+    const screen = await render(<PracticeSessionPageModelReviewProbe />);
 
     await expect
       .element(screen.getByTestId('active-view'))
@@ -178,7 +178,7 @@ describe('usePracticeSessionPageController (browser)', () => {
   it('restores the navigator when opening an exam question from Review & Submit', async () => {
     mockExamReviewNavigationSession();
 
-    const screen = await render(<PracticeSessionPageControllerViewProbe />);
+    const screen = await render(<PracticeSessionPageModelViewProbe />);
 
     await openExamReviewQuestion(screen);
 
@@ -203,7 +203,7 @@ describe('usePracticeSessionPageController (browser)', () => {
   it('navigates to adjacent exam questions after returning from Review & Submit', async () => {
     mockExamReviewNavigationSession();
 
-    const screen = await render(<PracticeSessionPageControllerViewProbe />);
+    const screen = await render(<PracticeSessionPageModelViewProbe />);
 
     await openExamReviewQuestion(screen);
 
@@ -221,7 +221,7 @@ describe('usePracticeSessionPageController (browser)', () => {
   it('returns to Review & Submit after navigating back out of a reopened exam question', async () => {
     mockExamReviewNavigationSession();
 
-    const screen = await render(<PracticeSessionPageControllerViewProbe />);
+    const screen = await render(<PracticeSessionPageModelViewProbe />);
 
     await openExamReviewQuestion(screen);
 
@@ -296,7 +296,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       });
     });
 
-    const screen = await render(<PracticeSessionPageControllerReviewProbe />);
+    const screen = await render(<PracticeSessionPageModelReviewProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -391,7 +391,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     submitAnswerMock.mockImplementation(async () => deferred.promise);
 
     const screen = await render(
-      <PracticeSessionPageControllerSubmitDuringReviewProbe />,
+      <PracticeSessionPageModelSubmitDuringReviewProbe />,
     );
 
     await expect

@@ -21,6 +21,10 @@ import {
   toQuestionRoute,
 } from '@/lib/routes';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import {
+  type QuestionPageBookmarkStatus,
+  useQuestionPageModel,
+} from './hooks/use-question-page-model';
 import type {
   LoadState,
   QuestionPageSubmitResult,
@@ -28,10 +32,6 @@ import type {
   SessionNavigation,
   SessionUnansweredReveal,
 } from './question-page-logic';
-import {
-  type QuestionPageBookmarkStatus,
-  useQuestionPageController,
-} from './use-question-page-controller';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
 // DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
@@ -534,7 +534,7 @@ export default function QuestionPageClient({
     () => parseHistoryIndex(historyIndex),
     [historyIndex],
   );
-  const controller = useQuestionPageController({
+  const controller = useQuestionPageModel({
     slug,
     mode: parsedMode,
     from: origin,

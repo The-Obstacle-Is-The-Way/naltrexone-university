@@ -35,7 +35,7 @@ is_known_exempt() {
       app/\(app\)/app/practice/components/practice-view.tsx | \
       app/\(app\)/app/questions/\[slug\]/question-page-client.tsx | \
       app/\(app\)/app/questions/\[slug\]/question-page-logic.ts | \
-      app/\(app\)/app/questions/\[slug\]/use-question-page-controller.ts | \
+      app/\(app\)/app/questions/\[slug\]/hooks/use-question-page-model.ts | \
       components/marketing/marketing-home.tsx)
       return 0
       ;;

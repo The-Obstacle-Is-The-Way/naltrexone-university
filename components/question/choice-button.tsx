@@ -1,6 +1,6 @@
 'use client';
 
-import { Markdown } from '@/components/markdown/Markdown';
+import { Markdown } from '@/components/markdown/markdown';
 import { cn } from '@/lib/utils';
 
 export type ChoiceButtonProps = {

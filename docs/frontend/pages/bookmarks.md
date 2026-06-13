@@ -181,7 +181,7 @@ For mixed-purpose files, the count below reflects the bookmark-focused cases rat
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.ts` | Unit | 4 | Includes the bookmark-backed quick-practice count path |
 | `app/(app)/app/shared/bookmark-toggle.test.ts` | Unit | 5 | Shared toggle helper covers success rotation, failure preservation, non-ok handling, null-question early return, and unmount safety |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Unit | 4 | Review-page bookmark action-bar presence, hydration gating, and saving-state disablement |
-| `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` | Browser | 5 | Review-page bookmark hydration, loaded state, toggle behavior, in-flight saving state, and per-question idempotency-key rollover after a failed toggle |
+| `app/(app)/app/questions/[slug]/use-question-page-model.browser.spec.tsx` | Browser | 5 | Review-page bookmark hydration, loaded state, toggle behavior, in-flight saving state, and per-question idempotency-key rollover after a failed toggle |
 
 **Direct bookmark coverage total: 89 bookmark-focused tests across 16 files.**
 
@@ -191,7 +191,7 @@ Bookmark assertions also appear in broader consumer suites, including:
 
 - `app/(app)/app/practice/components/practice-view.test.tsx` and `.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/page.test.tsx`
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.browser.spec.tsx`
 - `app/(app)/app/practice/quick/quick-practice-client.test.tsx` and `.browser.spec.tsx`
 - `tests/e2e/bookmarks.spec.ts`
 - `tests/e2e/cross-page-navigation.spec.ts`
@@ -239,7 +239,7 @@ The quick-practice `"bookmarked"` status is implemented end-to-end, but two lowe
 ### 6b. Practice Session (Tutor + Exam) — `/app/practice/[sessionId]`
 
 **Files:**
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` — Composes session question flow + bookmark state
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts` — Composes session question flow + bookmark state
 - `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` — Wires bookmark props to PracticeView
 - `app/(app)/app/practice/components/practice-view.tsx` — Renders bookmark button (lines 345-354)
 - `app/(app)/app/shared/bookmark-toggle.ts` — Shared bookmark toggle helper + 10s timeout wrapper
@@ -286,11 +286,11 @@ The quick-practice `"bookmarked"` status is implemented end-to-end, but two lowe
 
 **Files:**
 - `app/(app)/app/questions/[slug]/question-page-client.tsx` — Renders the bookmark button in the review-mode action bar
-- `app/(app)/app/questions/[slug]/use-question-page-controller.ts` — Loads bookmark state for the current review question and exposes toggle actions
+- `app/(app)/app/questions/[slug]/use-question-page-model.ts` — Loads bookmark state for the current review question and exposes toggle actions
 - `app/(app)/app/shared/bookmark-toggle.ts` — Shared toggle helper reused by practice and review surfaces
 
 **How it works:**
-- In review mode, `useQuestionPageController` looks up the current question's bookmark membership by calling `getBookmarks({})` and filtering the returned rows for the active `questionId`
+- In review mode, `useQuestionPageModel` looks up the current question's bookmark membership by calling `getBookmarks({})` and filtering the returned rows for the active `questionId`
 - The controller exposes `bookmarkStatus`, `isBookmarkHydrated`, `isBookmarked`, and `onToggleBookmark`
 - `bookmarkStatus` distinguishes `loading`, `saving`, `idle`, and `error`, so the view does not collapse "unknown" and "in-flight save" into the same boolean
 - `QuestionView` renders the bookmark button only when the page is in review mode, a question is loaded, and bookmark state for that question has hydrated
@@ -429,7 +429,7 @@ BS-053 landed with the lightest clean-architecture-friendly version of the optio
 
 ### What remains surface-specific
 - `usePracticeQuestionBookmarks` still owns the practice/quick-practice bookmark set, retry scheduling, message state, and bookmark-to-toast handoff
-- `useQuestionPageController` owns the review-page bookmark membership for the current question and exposes:
+- `useQuestionPageModel` owns the review-page bookmark membership for the current question and exposes:
   - `bookmarkStatus`
   - `isBookmarkHydrated`
   - `isBookmarked`
@@ -480,7 +480,7 @@ BS-053 landed with the lightest clean-architecture-friendly version of the optio
     ┌─────────┴─────────┐   ┌─────────┴─────────┐        │
     │ consumed by:       │   │ consumed by:      │        │
     │ - usePracticeQuestionFlow │ - practice hook│        │
-    │ - usePracticeSessionPageController│ - question review│
+    │ - usePracticeSessionPageModel│ - question review│
     └─────────┬─────────┘   └─────────┬─────────┘        │
               │                       │                  │
    ┌──────────┴──────────┐   ┌────────┴──────────────────────────────┐
@@ -545,7 +545,7 @@ Direct implementation/support files with bookmark-specific behavior:
 | `app/(app)/app/practice/hooks/bookmark-message-timeout.ts` | Shared bookmark message auto-clear helper |
 | `app/(app)/app/practice/hooks/use-practice-question-flow.ts` | Quick-practice composition point for bookmark state |
 | `app/(app)/app/practice/components/practice-view.tsx` | Renders bookmark button outside exam mode |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | Session composition point for bookmark state |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts` | Session composition point for bookmark state |
 | `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx` | Wires bookmark props to PracticeView |
 | `app/(app)/app/practice/quick/quick-practice-client.tsx` | Wires bookmark props to PracticeView |
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts` | Loads bookmark-backed quick-practice segmented counts |
@@ -556,7 +556,7 @@ Direct implementation/support files with bookmark-specific behavior:
 |------|---------|
 | `app/(app)/app/questions/[slug]/page.tsx` | Page component (server) |
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | QuestionView — review action bar bookmark button + hydration/saving gating |
-| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | Controller hook — question bookmark hydration, status, and toggle wiring |
+| `app/(app)/app/questions/[slug]/use-question-page-model.ts` | Page model hook — question bookmark hydration, status, and toggle wiring |
 | `app/(app)/app/shared/components/session-breakdown-list.tsx` | Shared breakdown list that links History/Summary rows into question review |
 | `app/(app)/app/history/components/history-questions-tab.tsx` | Links attempted questions into question review |
 | `app/(app)/app/history/components/history-sessions-tab.tsx` | Links session rows into question review; renders breakdown links |
@@ -588,4 +588,4 @@ Direct implementation/support files with bookmark-specific behavior:
 | `app/(app)/app/practice/hooks/use-quick-practice-status-counts.test.ts` | Unit |
 | `app/(app)/app/shared/bookmark-toggle.test.ts` | Unit |
 | `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | Unit |
-| `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx` | Browser |
+| `app/(app)/app/questions/[slug]/use-question-page-model.browser.spec.tsx` | Browser |

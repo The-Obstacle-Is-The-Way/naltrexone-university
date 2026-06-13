@@ -68,6 +68,41 @@ const OUTER_BYPASS_LOCAL_PREFIXES = [
   'src/adapters/repositories/',
 ];
 
+const REPOSITORY_TYPESCRIPT_FILE_GLOBS = [
+  'app/**/*.{ts,tsx}',
+  'components/**/*.{ts,tsx}',
+  'db/**/*.{ts,tsx}',
+  'lib/**/*.{ts,tsx}',
+  'scripts/**/*.{ts,tsx}',
+  'src/**/*.{ts,tsx}',
+  'tests/**/*.{ts,tsx}',
+];
+
+const STANDARD_TEST_SUFFIXES = [
+  '.browser.spec',
+  '.integration.test',
+  '.test',
+  '.spec',
+  '.e2e',
+];
+
+const ALLOWED_MULTI_DOT_BASENAMES = new Set([
+  'app/(app)/app/billing/page.manage-billing.test.tsx',
+  'app/(app)/app/practice/[sessionId]/components/post-exam-review-view.fixtures.ts',
+  'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.fixtures.ts',
+  'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx',
+  'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.setup.ts',
+  'app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.fixtures.ts',
+  'app/(app)/app/questions/[slug]/hooks/question-page-model.browser.fixtures.ts',
+  'lib/container.skip-clerk.test.ts',
+  'tests/e2e/helpers/reset-bookmarks-for-e2e-user.default-services.test.ts',
+  'tests/e2e/global.setup.ts',
+  'tests/integration/actions.stripe.integration.test.ts',
+]);
+
+const QUESTION_ROUTE_ROOT = 'app/(app)/app/questions/[slug]/';
+const QUESTION_ROUTE_HOOKS_ROOT = `${QUESTION_ROUTE_ROOT}hooks/`;
+
 export function readProductionArchitectureSources(): ArchitectureSourceFile[] {
   return fg
     .sync(PRODUCTION_ARCHITECTURE_SOURCE_GLOBS, {
@@ -80,6 +115,15 @@ export function readProductionArchitectureSources(): ArchitectureSourceFile[] {
       filePath,
       contents: readFileSync(path.resolve(process.cwd(), filePath), 'utf-8'),
     }));
+}
+
+export function readRepositoryTypescriptFilePaths(): string[] {
+  return fg
+    .sync(REPOSITORY_TYPESCRIPT_FILE_GLOBS, {
+      cwd: process.cwd(),
+      onlyFiles: true,
+    })
+    .sort();
 }
 
 export function collectArchitectureBoundaryIssues(
@@ -140,6 +184,76 @@ export function collectArchitectureBoundaryIssues(
   }
 
   return issues;
+}
+
+export function collectFilenamePolicyIssues(
+  filePaths: readonly string[],
+): string[] {
+  const issues: string[] = [];
+
+  for (const filePath of filePaths) {
+    const basename = path.posix.basename(filePath);
+    const extension = typescriptExtensionFor(basename);
+    if (!extension) {
+      continue;
+    }
+
+    const stem = basename.slice(0, -extension.length);
+    const { policyStem, suffix } = splitStandardTestSuffix(stem);
+    const hasAllowedMultiDotName = ALLOWED_MULTI_DOT_BASENAMES.has(filePath);
+
+    if (!hasAllowedMultiDotName && policyStem.includes('.')) {
+      issues.push(
+        `${filePath} uses an unapproved multi-dot filename; add a specific allowlist entry or rename it to kebab-case.`,
+      );
+      continue;
+    }
+
+    const expectedPolicyStem = toKebabCase(policyStem);
+    if (policyStem !== expectedPolicyStem) {
+      const suffixDescription = suffix
+        ? 'before the standard test suffix'
+        : 'before the extension';
+      issues.push(
+        `${filePath} must use kebab-case ${suffixDescription}; expected ${expectedPolicyStem}${suffix}${extension}.`,
+      );
+    }
+  }
+
+  return issues;
+}
+
+export function collectQuestionRouteHookOrganizationIssues(
+  filePaths: readonly string[],
+): string[] {
+  return filePaths
+    .filter(
+      (filePath) =>
+        filePath.startsWith(QUESTION_ROUTE_ROOT) &&
+        !filePath.startsWith(QUESTION_ROUTE_HOOKS_ROOT) &&
+        path.posix.basename(filePath).startsWith('use-question-page-'),
+    )
+    .map(
+      (filePath) => `${filePath} must live under ${QUESTION_ROUTE_HOOKS_ROOT}.`,
+    );
+}
+
+export function collectPresentationHookNamingIssues(
+  filePaths: readonly string[],
+): string[] {
+  return filePaths
+    .filter(
+      (filePath) =>
+        filePath.startsWith('app/') &&
+        path.posix.basename(filePath).includes('page-controller'),
+    )
+    .map((filePath) => {
+      const expectedBasename = path.posix
+        .basename(filePath)
+        .replace('page-controller', 'page-model');
+
+      return `${filePath} is presentation state, not an adapter controller; expected ${expectedBasename}.`;
+    });
 }
 
 function collectImportOccurrences(
@@ -279,4 +393,38 @@ function isOuterLayerPath(filePath: string): boolean {
 
 function hasPrefix(value: string | null, prefixes: readonly string[]): boolean {
   return Boolean(value && prefixes.some((prefix) => value.startsWith(prefix)));
+}
+
+function typescriptExtensionFor(basename: string): '.ts' | '.tsx' | null {
+  if (basename.endsWith('.tsx')) {
+    return '.tsx';
+  }
+
+  if (basename.endsWith('.ts')) {
+    return '.ts';
+  }
+
+  return null;
+}
+
+function splitStandardTestSuffix(stem: string): {
+  policyStem: string;
+  suffix: string;
+} {
+  const suffix = STANDARD_TEST_SUFFIXES.find((candidate) =>
+    stem.endsWith(candidate),
+  );
+
+  if (!suffix) {
+    return { policyStem: stem, suffix: '' };
+  }
+
+  return { policyStem: stem.slice(0, -suffix.length), suffix };
+}
+
+function toKebabCase(value: string): string {
+  return value
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase();
 }

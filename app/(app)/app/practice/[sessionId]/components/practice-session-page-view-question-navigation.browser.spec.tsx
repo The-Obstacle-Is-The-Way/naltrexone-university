@@ -4,7 +4,7 @@ import { createNextQuestion } from '@/src/application/test-helpers/create-next-q
 import {
   createReviewResponse,
   createReviewRow,
-} from '../hooks/practice-session-page-controller.browser.fixtures';
+} from '../hooks/practice-session-page-model.browser.fixtures';
 import { PracticeSessionPageView } from './practice-session-page-view';
 import { noop } from './practice-session-page-view-test-helpers';
 

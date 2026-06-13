@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 describe('check-file-size.sh', () => {
   it('excludes oversized non-production support files explicitly', () => {
     const supportFiles = [
-      'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-controller.browser.probes.tsx',
+      'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx',
       'src/application/test-helpers/fakes/fake-attempt-repository.ts',
     ];
 

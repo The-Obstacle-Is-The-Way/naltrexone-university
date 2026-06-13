@@ -126,7 +126,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-327](../_archive/debt/debt-327-interaction-contracts-status-cleanup.md) | Interaction Contracts doc status cleanup — header/current-state framing reconciled so the document now reads as current implementation instead of mixed proposed/shipped state. | P4 | 2026-03-19 | — |
 | [DEBT-322](../_archive/debt/debt-322-exam-action-bar-ux-polish.md) | Exam action bar UX polish — D-1 spacer removal, D-2 "Finish exam"/"Review & Submit" rename, D-3 fixed "Next" label, D-4b Previous visibility stabilization. All frontend-only. | P2 | 2026-03-19 | [PR #235](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/235) |
 | [DEBT-321](../_archive/debt/debt-321-bs055-exam-interaction-model-overhaul.md) | BS-055 Exam Interaction Model Overhaul — all 8 stages complete. Draft fields, save-draft, finalize, draft-aware readers, action bar split, navigation save, review wiring, summary back-target. | P1 | 2026-03-18 | — |
-| [DEBT-320](../_archive/debt/debt-320-useeffect-audit.md) | useEffect audit — resolved the two `use-question-page-controller` anti-patterns and decomposed the question-page flow into focused bookmark, session-navigation, and previous-attempt hooks; broader fetch-abstraction discussion remains informational only | P2 | 2026-03-17 | — |
+| [DEBT-320](../_archive/debt/debt-320-useeffect-audit.md) | useEffect audit — resolved the two `use-question-page-model` anti-patterns and decomposed the question-page flow into focused bookmark, session-navigation, and previous-attempt hooks; broader fetch-abstraction discussion remains informational only | P2 | 2026-03-17 | — |
 | [DEBT-319](../_archive/debt/debt-319-icon-size-shorthand-drift.md) | Lucide icon size shorthand drift in disclosure chevrons — replaced `h-4 w-4` with canonical `size-4` shorthand in both production chevrons and updated the corresponding test assertion | P3 | 2026-03-17 | — |
 | [DEBT-317](../_archive/debt/debt-317-practice-questions-centering-on-narrow-screens.md) | Practice "Questions" block centering on narrow screens — changed the Questions wrapper from `items-center` to `items-start`, kept the existing sibling row structure, and updated the static markup test | P3 | 2026-03-16 | — |
 | [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) | Exam Post-Submit Review Flow — add "Review your answers" CTA to Session Summary, retarget breakdown links to `from=history`, add bottom-bar "Review answers" after last exam question | P2 | 2026-03-16 | — |
@@ -259,7 +259,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 
 | ID | Summary | Resolution |
 |----|---------|------------|
-| FE-001 | God hook: `usePracticeSessionPageController` (was 306 lines, 14 state vars) | Refactored to 102 lines; logic extracted to sub-hooks |
+| FE-001 | God hook: `usePracticeSessionPageModel` (was 306 lines, 14 state vars) | Refactored to 102 lines; logic extracted to sub-hooks |
 | FE-003 | God hook: `usePracticeSessionControls` (was 288 lines, 26 return props) | Refactored to 79 lines; 4 sub-hooks extracted. Still 23 return props (composition hub). |
 | FE-004 | God hook: `usePracticeQuestionFlow` (was 246 lines) | Refactored to 55 lines; 2 sub-hooks extracted |
 | FE-005 | Duplicated logic: 3 copies of loadNextQuestion, submitAnswer | Core logic extracted to shared `question-flow-actions.ts` |

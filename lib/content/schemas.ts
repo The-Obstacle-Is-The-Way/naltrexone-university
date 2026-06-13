@@ -3,7 +3,7 @@ import {
   CANONICAL_SUBSTANCE_SLUGS,
   CANONICAL_TOPIC_SLUGS,
   CANONICAL_TREATMENT_SLUGS,
-} from './draftTaxonomy';
+} from './draft-taxonomy';
 
 const CANONICAL_TOPIC_SLUG_SET = new Set<string>(CANONICAL_TOPIC_SLUGS);
 const CANONICAL_SUBSTANCE_SLUG_SET = new Set<string>(CANONICAL_SUBSTANCE_SLUGS);

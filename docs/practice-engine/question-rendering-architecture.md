@@ -119,7 +119,7 @@ Handled by `getOriginUi()` in `app/(app)/app/questions/[slug]/question-page-clie
 Route:     /app/practice/[sessionId]
 Server:    app/(app)/app/practice/[sessionId]/page.tsx
 Client:    app/(app)/app/practice/[sessionId]/practice-session-page-client.tsx → PracticeSessionPageView → PracticeView
-Controller: app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts
+Page model: app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts
 State core: app/(app)/app/practice/shared/use-question-flow-core.ts
 ```
 
@@ -208,7 +208,7 @@ Entry:     /app/history?tab=sessions → "View breakdown" → click question lin
 Route:     /app/questions/[slug]?from=(summary|history)&mode=review&sessionId={uuid}&historyHref={encoded}
 Server:    app/(app)/app/questions/[slug]/page.tsx
 Client:    app/(app)/app/questions/[slug]/question-page-client.tsx → QuestionView
-Controller: app/(app)/app/questions/[slug]/use-question-page-controller.ts
+Page model: app/(app)/app/questions/[slug]/use-question-page-model.ts
 ```
 
 **Component hierarchy:**
@@ -232,7 +232,7 @@ QuestionPage (server)
 ```
 
 **State management:**
-- `useQuestionPageController` loads question via `getQuestionBySlug()`
+- `useQuestionPageModel` loads question via `getQuestionBySlug()`
 - When `mode=review`, calls `loadPreviousAttempt()` and classifies one of four hydration outcomes:
   - `attempt`
   - `session_unanswered`
@@ -265,7 +265,7 @@ Route:     /app/questions/[slug]?from=history&mode=review&historyHref={encoded}
 Route:     /app/practice/quick
 Server:    app/(app)/app/practice/quick/page.tsx
 Client:    app/(app)/app/practice/quick/quick-practice-client.tsx → PracticeView
-Controller: app/(app)/app/practice/hooks/use-practice-question-flow.ts
+Page model: app/(app)/app/practice/hooks/use-practice-question-flow.ts
 State core: app/(app)/app/practice/shared/use-question-flow-core.ts
 ```
 
@@ -368,7 +368,7 @@ The codebase has two navigators that look similar but serve different contexts:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    ACTIVE PRACTICE SESSION                          │
 │                                                                     │
-│  use-practice-session-page-controller.ts                           │
+│  use-practice-session-page-model.ts                           │
 │    └─ use-question-flow-core.ts (shared state)                     │
 │         ├─ question: NextQuestion | null                            │
 │         ├─ selectedChoiceId: string | null                          │
@@ -393,7 +393,7 @@ The codebase has two navigators that look similar but serve different contexts:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    QUESTION REVIEW PAGE                              │
 │                                                                     │
-│  use-question-page-controller.ts                                    │
+│  use-question-page-model.ts                                    │
 │    On mount (mode=review):                                          │
 │      1. getQuestionBySlug() → question data                         │
 │      2. loadPreviousAttempt() → one of 4 outcomes:                  │
@@ -452,7 +452,7 @@ The codebase has two navigators that look similar but serve different contexts:
 
 | File | Hook/Function | Role |
 |------|---------------|------|
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` | `usePracticeSessionPageController` | Master controller for practice session |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts` | `usePracticeSessionPageModel` | Master page model for practice session |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts` | `usePracticeSessionReviewStage` | Review stage + post-exam review state machine |
 | `app/(app)/app/practice/shared/use-question-flow-core.ts` | `useQuestionFlowCore` | Shared question state (selection, submission, loading) |
 | `app/(app)/app/practice/shared/question-flow-actions.ts` | `runLoadQuestionFlow`, `runSubmitAnswerFlow` | Async action flows with timeout |
@@ -462,7 +462,7 @@ The codebase has two navigators that look similar but serve different contexts:
 | `app/(app)/app/practice/practice-page-logic.ts` | `loadNextQuestion`, `submitAnswerForQuestion` | Quick practice async flows (filters-based) |
 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.ts` | `usePracticeSessionMarkForReview` | Mark-for-review toggle (exam only) |
 | `app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts` | `usePracticeQuestionBookmarks` | Bookmark toggle + status |
-| `app/(app)/app/questions/[slug]/use-question-page-controller.ts` | `useQuestionPageController` | Master controller for question page |
+| `app/(app)/app/questions/[slug]/use-question-page-model.ts` | `useQuestionPageModel` | Master page model for question page |
 | `app/(app)/app/questions/[slug]/question-page-logic.ts` | `loadPreviousAttempt` | Pure logic for question page (previous attempt hydration) |
 
 ### Route Utilities

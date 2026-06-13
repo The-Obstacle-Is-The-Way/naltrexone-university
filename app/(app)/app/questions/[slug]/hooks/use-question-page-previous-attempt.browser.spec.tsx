@@ -17,7 +17,7 @@ import {
   QUESTION_PAGE_CHOICE_1_ID,
   QUESTION_PAGE_CHOICE_2_ID,
   QUESTION_PAGE_QUESTION_1_ID,
-} from './question-page-controller.browser.fixtures';
+} from './question-page-model.browser.fixtures';
 import { useQuestionPagePreviousAttempt } from './use-question-page-previous-attempt';
 
 vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });

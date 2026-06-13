@@ -14,12 +14,12 @@ import {
   QUESTION_PAGE_CHOICE_1_ID,
   QUESTION_PAGE_CHOICE_2_ID,
   QUESTION_PAGE_QUESTION_1_ID,
-  setupQuestionPageControllerBrowserSpec,
-} from './use-question-page-controller-test-helpers';
+  setupQuestionPageModelBrowserSpec,
+} from './use-question-page-model-test-helpers';
 
-setupQuestionPageControllerBrowserSpec();
+setupQuestionPageModelBrowserSpec();
 
-describe('useQuestionPageController (browser)', () => {
+describe('useQuestionPageModel (browser)', () => {
   it('loads previous attempt and pre-populates state in review mode', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({

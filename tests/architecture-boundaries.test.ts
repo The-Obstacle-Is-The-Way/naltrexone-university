@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   type ArchitectureSourceFile,
   collectArchitectureBoundaryIssues,
+  collectFilenamePolicyIssues,
+  collectPresentationHookNamingIssues,
+  collectQuestionRouteHookOrganizationIssues,
   readProductionArchitectureSources,
+  readRepositoryTypescriptFilePaths,
 } from './architecture-boundary-source-scan';
 
 function source(filePath: string, contents: string): ArchitectureSourceFile {
@@ -94,5 +98,59 @@ describe('Clean Architecture import boundaries', () => {
     expect(
       collectArchitectureBoundaryIssues(readProductionArchitectureSources()),
     ).toEqual([]);
+  });
+});
+
+describe('repository filename policy', () => {
+  it('blocks PascalCase and camelCase drift while allowing approved multi-dot support files', () => {
+    expect(
+      collectFilenamePolicyIssues([
+        'components/question/QuestionCard.test.tsx',
+        'lib/content/parseMdxQuestion.ts',
+        'app/(app)/app/practice/[sessionId]/components/post-exam-review-view.fixtures.ts',
+      ]),
+    ).toEqual([
+      'components/question/QuestionCard.test.tsx must use kebab-case before the standard test suffix; expected question-card.test.tsx.',
+      'lib/content/parseMdxQuestion.ts must use kebab-case before the extension; expected parse-mdx-question.ts.',
+    ]);
+  });
+
+  it('keeps the live repository TypeScript filenames within the kebab-case policy', () => {
+    expect(
+      collectFilenamePolicyIssues(readRepositoryTypescriptFilePaths()),
+    ).toEqual([]);
+  });
+});
+
+describe('presentation hook organization policy', () => {
+  it('requires question-route hooks to live under the route hooks directory', () => {
+    expect(
+      collectQuestionRouteHookOrganizationIssues([
+        'app/(app)/app/questions/[slug]/use-question-page-bookmarks.ts',
+        'app/(app)/app/questions/[slug]/hooks/use-question-page-bookmarks.ts',
+      ]),
+    ).toEqual([
+      'app/(app)/app/questions/[slug]/use-question-page-bookmarks.ts must live under app/(app)/app/questions/[slug]/hooks/.',
+    ]);
+  });
+
+  it('reserves controller naming for adapter/controller modules', () => {
+    expect(
+      collectPresentationHookNamingIssues([
+        'app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts',
+        'app/(app)/app/questions/[slug]/hooks/use-question-page-controller.ts',
+        'src/adapters/controllers/practice-controller.ts',
+      ]),
+    ).toEqual([
+      'app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts is presentation state, not an adapter controller; expected use-practice-session-page-model.ts.',
+      'app/(app)/app/questions/[slug]/hooks/use-question-page-controller.ts is presentation state, not an adapter controller; expected use-question-page-model.ts.',
+    ]);
+  });
+
+  it('keeps live question-route hooks and presentation hook names aligned with the glossary', () => {
+    const filePaths = readRepositoryTypescriptFilePaths();
+
+    expect(collectQuestionRouteHookOrganizationIssues(filePaths)).toEqual([]);
+    expect(collectPresentationHookNamingIssues(filePaths)).toEqual([]);
   });
 });

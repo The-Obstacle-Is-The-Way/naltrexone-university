@@ -326,6 +326,8 @@ All layers are implemented. See `docs/specs/index.md` for the full spec register
 - **Composition root:** runtime wiring lives in `lib/container.ts`, focused factories under `lib/container/**`, and controller dependency loaders in `lib/controller-helpers.ts`
 - **Feature slices:** paywall, question loop, practice sessions, review + bookmarks, dashboard, UI integration, practice engine, history, observability (`app/**`, `components/**`)
 
+Glossary: `src/adapters/controllers/**` are server-side adapter controllers; client hooks that compose page state are page models (`use-*-page-model.ts`), not controllers.
+
 Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes
 - `lib/` - Core utilities (auth, Stripe, env, DB). Prefer importing via `@/...`

@@ -9,7 +9,7 @@ import { installReportClientErrorMocks } from '@/tests/test-helpers/report-clien
 import {
   QUESTION_PAGE_CHOICE_1_ID,
   QUESTION_PAGE_QUESTION_1_ID,
-} from './question-page-controller.browser.fixtures';
+} from './question-page-model.browser.fixtures';
 import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
 
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });

@@ -2,10 +2,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-let Markdown: typeof import('./Markdown').Markdown;
+let Markdown: typeof import('./markdown').Markdown;
 
 beforeAll(async () => {
-  ({ Markdown } = await import('./Markdown'));
+  ({ Markdown } = await import('./markdown'));
 });
 
 function findClinicalPearlCallout(doc: Document) {

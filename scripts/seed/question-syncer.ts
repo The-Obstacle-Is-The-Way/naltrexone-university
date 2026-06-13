@@ -4,7 +4,7 @@ import * as schema from '../../db/schema';
 import {
   canonicalJsonString,
   sha256Hex,
-} from '../../lib/content/parseMdxQuestion';
+} from '../../lib/content/parse-mdx-question';
 import { computeChoiceSyncPlan } from '../seed-helpers';
 import type { SeedSourceFile } from './file-reader';
 import { buildSeedRepFromDb, parseSeedQuestionFile } from './question-parser';

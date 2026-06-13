@@ -38,7 +38,7 @@ import {
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
-type PracticeSessionPageControllerOutput = Omit<
+type PracticeSessionPageModelOutput = Omit<
   PracticeSessionPageViewProps,
   'questionFeedback'
 > & {
@@ -49,9 +49,9 @@ type PracticeSessionPageControllerOutput = Omit<
   onSubmit: () => void;
 };
 
-export function usePracticeSessionPageController(
+export function usePracticeSessionPageModel(
   sessionId: string,
-): PracticeSessionPageControllerOutput {
+): PracticeSessionPageModelOutput {
   const isMounted = useIsMounted();
   const bootstrapRequestIdRef = useRef(0);
   const expiryFinalizeInFlightRef = useRef(false);
@@ -160,7 +160,7 @@ export function usePracticeSessionPageController(
       } catch (error) {
         if (isMounted()) {
           reportClientError(error, {
-            component: 'UsePracticeSessionPageController',
+            component: 'UsePracticeSessionPageModel',
             action: 'saveCurrentExamDraftOnTimerExpire',
           });
         }
@@ -230,7 +230,7 @@ export function usePracticeSessionPageController(
       .catch((error: unknown) => {
         if (requestId !== bootstrapRequestIdRef.current || !isMounted()) return;
         reportClientError(error, {
-          component: 'UsePracticeSessionPageController',
+          component: 'UsePracticeSessionPageModel',
           action: 'bootstrapSessionSummary',
         });
         setShouldRetryBootstrap(true);

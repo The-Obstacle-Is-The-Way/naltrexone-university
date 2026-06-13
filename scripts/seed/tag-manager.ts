@@ -5,7 +5,7 @@ import {
   CANONICAL_SUBSTANCE_SLUGS,
   CANONICAL_TOPIC_SLUGS,
   CANONICAL_TREATMENT_SLUGS,
-} from '../../lib/content/draftTaxonomy';
+} from '../../lib/content/draft-taxonomy';
 import type { SeedTag } from './question-parser';
 
 const CANONICAL_TOPIC_SLUG_SET = new Set<string>(CANONICAL_TOPIC_SLUGS);

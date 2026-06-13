@@ -4,8 +4,8 @@ import {
   BROWSER_CHOICE_1_ID,
   BROWSER_QUESTION_1_ID,
   BROWSER_SESSION_ID,
-} from './practice-session-page-controller.browser.fixtures';
-import { usePracticeSessionPageController } from './use-practice-session-page-controller';
+} from './practice-session-page-model.browser.fixtures';
+import { usePracticeSessionPageModel } from './use-practice-session-page-model';
 
 type HookStateValue = string | number | boolean | null | undefined;
 
@@ -40,9 +40,7 @@ function renderActionButtons(actions: readonly ProbeAction[]) {
   ));
 }
 
-function getActiveView(
-  output: ReturnType<typeof usePracticeSessionPageController>,
-) {
+function getActiveView(output: ReturnType<typeof usePracticeSessionPageModel>) {
   if (output.examResultsSubstage === 'session_summary') return 'summary';
   if (output.examResultsSubstage === 'post_exam_review') {
     return 'post-exam-review';
@@ -54,8 +52,8 @@ function getActiveView(
   return '';
 }
 
-export function PracticeSessionPageControllerHookProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelHookProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
   const errorMessage =
     output.loadState.status === 'error' ? output.loadState.message : '';
 
@@ -85,8 +83,8 @@ export function PracticeSessionPageControllerHookProbe() {
   );
 }
 
-export function PracticeSessionPageControllerNavigationProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelNavigationProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
 
   return (
     <>
@@ -129,8 +127,8 @@ export function PracticeSessionPageControllerNavigationProbe() {
   );
 }
 
-export function PracticeSessionPageControllerBookmarkProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelBookmarkProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
   const [bookmarkFeedbackCount, setBookmarkFeedbackCount] = useState(0);
   const bookmarkMessage = output.bookmarkMessage;
   const bookmarkMessageVersion = output.bookmarkMessageVersion ?? 0;
@@ -159,8 +157,8 @@ export function PracticeSessionPageControllerBookmarkProbe() {
   );
 }
 
-export function PracticeSessionPageControllerBookmarkPendingProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelBookmarkPendingProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
 
   return (
     <>
@@ -180,8 +178,8 @@ export function PracticeSessionPageControllerBookmarkPendingProbe() {
   );
 }
 
-export function PracticeSessionPageControllerReviewProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelReviewProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
 
   return (
     <>
@@ -238,8 +236,8 @@ export function PracticeSessionPageControllerReviewProbe() {
   );
 }
 
-export function PracticeSessionPageControllerSubmitDuringReviewProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelSubmitDuringReviewProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
 
   return (
     <>
@@ -274,8 +272,8 @@ export function PracticeSessionPageControllerSubmitDuringReviewProbe() {
   );
 }
 
-export function PracticeSessionPageControllerMarkForReviewProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelMarkForReviewProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
   const isMarkedForReview = output.sessionInfo?.isMarkedForReview ?? null;
 
   return (
@@ -302,8 +300,8 @@ export function PracticeSessionPageControllerMarkForReviewProbe() {
   );
 }
 
-export function PracticeSessionPageControllerSummaryProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelSummaryProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
   const errorMessage =
     output.loadState.status === 'error' ? output.loadState.message : '';
 
@@ -331,8 +329,8 @@ export function PracticeSessionPageControllerSummaryProbe() {
   );
 }
 
-export function PracticeSessionPageControllerViewProbe() {
-  const output = usePracticeSessionPageController(BROWSER_SESSION_ID);
+export function PracticeSessionPageModelViewProbe() {
+  const output = usePracticeSessionPageModel(BROWSER_SESSION_ID);
 
   return (
     <>

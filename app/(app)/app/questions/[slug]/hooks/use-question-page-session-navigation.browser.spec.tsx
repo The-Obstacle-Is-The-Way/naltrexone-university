@@ -9,7 +9,7 @@ import { installReportClientErrorMocks } from '@/tests/test-helpers/report-clien
 import {
   QUESTION_PAGE_QUESTION_1_ID,
   QUESTION_PAGE_QUESTION_2_ID,
-} from './question-page-controller.browser.fixtures';
+} from './question-page-model.browser.fixtures';
 import { useQuestionPageSessionNavigation } from './use-question-page-session-navigation';
 
 vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
