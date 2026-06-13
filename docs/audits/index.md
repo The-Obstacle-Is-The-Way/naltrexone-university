@@ -14,7 +14,7 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 | ID | Title | Date | Scope | Outcome |
 |----|-------|------|-------|---------|
-| AUDIT-012 | [Repository Organization, Dev Tooling & Agent Documentation](./audit-012-repo-org-devx.md) | 2026-06-13 | CI/CD & dev tooling, AGENTS/CLAUDE/.claude-rules accuracy, file org vs Clean Architecture, code quality vs Clean Code + PoSD | Open — codebase fundamentally sound (no reorg needed), but public `main` is unprotected, dependency security automation is disabled/red, architecture boundaries are convention-only, and doc/code-quality drift needs triage into bugs/debt. |
+| AUDIT-012 | [Repository Organization, Dev Tooling & Agent Documentation](./audit-012-repo-org-devx.md) | 2026-06-13 | CI/CD & dev tooling, AGENTS/CLAUDE/.claude-rules accuracy, file org vs Clean Architecture, code quality vs Clean Code + PoSD | Open — codebase fundamentally sound (no reorg needed), but public `main` is unprotected, dependency security automation is disabled/red, architecture boundaries are convention-only, and doc/code-quality drift needs triage into bugs/debt. Decision-required items now locked (see Resolution Decisions); pending re-audit, then execution. |
 
 ## Archived Audits
 

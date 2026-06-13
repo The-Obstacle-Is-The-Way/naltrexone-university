@@ -4,7 +4,7 @@
 **Date:** 2026-06-13
 **Scope:** CI/CD and developer tooling, GitHub enforcement, dependency security automation, `AGENTS.md` / `CLAUDE.md` / `.claude/rules` accuracy, file organization, Clean Architecture boundaries, and code-quality guardrails.
 **Method:** Source re-verification from repository files plus GitHub API checks with `gh`. Counts and absence claims were re-run directly instead of copied from prior audit text.
-**Status:** Active. Findings below should be triaged into `docs/bugs/` or `docs/debt/`, then this audit should be archived after remediation.
+**Status:** Active. Decision-required findings are now resolved in **Resolution Decisions (Locked — 2026-06-13)** below; these are not yet implemented. Findings should be triaged into `docs/bugs/` or `docs/debt/`, then this audit should be archived after remediation.
 
 ---
 
@@ -19,6 +19,24 @@ The repository is **not** fully enforced or fully documented. The three highest-
 3. **ARCH-1 / MEDIUM:** Clean Architecture boundaries are documented and currently healthy in high-value scans, but there is no mechanical import-boundary enforcement.
 
 The repo does **not** need a major reorganization before feature work. It needs enforcement and documentation cleanup: protect `main`, enable security automation and resolve the red audit, add boundary enforcement, fix stale agent docs, and codify a few conventions already present in the code.
+
+---
+
+## Resolution Decisions (Locked — 2026-06-13)
+
+The decision-required findings were resolved from first principles for *this* codebase. The governing principle: **the primary contributor is an AI-agent fleet, and the repo's revealed strategy is "executable, zero-extra-dependency guardrails over convention"** (see `scripts/check-file-size.sh`, `components/theme-token-regression-source-scan.ts`, the E2E skip-policy CI step). For an agent-operated repo, ambiguity is a defect, consistency is a safety feature, and the right fix is almost always a test/scan in an idiom the repo already owns — not a new dependency or a blunt metric. These decisions are locked: the executor implements them as written and does not re-open them.
+
+- **ARCH-1 (boundary enforcement) → custom Vitest import-boundary test. Do NOT add `dependency-cruiser`.** The repo already owns this exact idiom (`theme-token-regression-source-scan.ts`), has only four layers (the rules are trivial to hand-write), and SEC-1 just flagged supply-chain surface — adding a dependency now is self-contradictory. Wire the test into the normal `pnpm test` gate.
+
+- **ARCH-2 (filename casing) → adopt strict kebab-case and enforce it, as one package.** Rename the 6 PascalCase files **and** the 2 camelCase files (`lib/content/draftTaxonomy.ts`, `lib/content/parseMdxQuestion.ts`) via `git mv` + import updates, and extend the source-scan to fail CI on future drift. **Keep** the 11 multi-dot fixture/setup names — they are a legitimate pattern. Do NOT rename without adding the check (rename-without-enforce just re-drifts). 8 outliers in 880 files is pattern-noise that makes agents guess wrong; the enforcement idiom already exists, so locking it in is cheap.
+
+- **ARCH-4 ("controller" overload) → keep `src/adapters/controllers/*` as the canonical "controller"; rename the 2 presentation hooks to `use-*-page-model.ts`.** Add a one-line glossary entry to `AGENTS.md` distinguishing adapter controllers (Clean Architecture role) from presentation models (view hooks). An ambiguous architectural noun is the highest-cost defect for agent contributors — it invites wiring a use-case call into a view hook. Two files; do it. (Avoid "presenter" — also a reserved Clean Architecture term.)
+
+- **CI-3 (coverage) → do NOT add a coverage-threshold gate; document coverage as observational.** Coverage is a tool, not a target; a numeric gate invites assertion-free tests, and agents game blunt metrics harder than humans. The real defense is the mandated TDD + 2,771 tests. Resolution is a one-line note in the testing docs, not a config change.
+
+- **CI-5 (`noUncheckedIndexedAccess` / `exactOptionalPropertyTypes`) → defer to a dedicated DEBT item, flagged "recommended-soon."** Genuinely desirable for an agent-driven repo (a guardrail agents cannot ignore), but a repo-wide flip mid-audit makes an unreviewable diff and is orthogonal to this audit's goal. Its own focused PR — soon, not "someday."
+
+- **Large files (`practice-view.tsx`, `stripe-checkout-sessions.ts`) → document via the existing `check-file-size.sh` mechanism (WHY header + `is_known_exempt`); for `stripe-checkout-sessions.ts` ONLY, attempt one Extract-Function on the inspect/expire-existing-session block** and keep it only if the full gate stays green, else document. The size checker's WHY+allowlist escape hatch already encodes "big is fine if justified and registered." Do NOT split `practice-view.tsx` into shallow pieces (PoSD: deep modules beat shallow ones).
 
 ---
 
@@ -111,7 +129,9 @@ $ rg -n "test:coverage|test:integration:coverage|test:browser:coverage|fail_ci_i
 .github/workflows/ci.yml:135:        run: pnpm build
 ```
 
-The tests are blocking; only coverage upload failure is non-blocking. If coverage thresholds are intended, enforce them in Vitest or a required Codecov status check.
+The tests are blocking; only coverage upload failure is non-blocking.
+
+**Decision (locked):** Do not add a coverage-threshold gate. Document coverage as observational — quality is enforced by the mandated TDD discipline (2,771 unit tests), not a numeric target that invites assertion-free tests. Resolution is a one-line note in the testing docs, not a config change. See Resolution Decisions.
 
 ### CI-4 - LOW - CI has one intentional `|| true`
 
@@ -148,11 +168,10 @@ $ rg -n "noUncheckedIndexedAccess|exactOptionalPropertyTypes" tsconfig.json; ech
 exit=1
 ```
 
-Required fix:
+**Decision (locked):**
 
-- Do not flip these repo-wide casually.
-- Create a staged debt item for `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
-- Enable only after resulting churn is reviewed.
+- Defer to a dedicated DEBT item, flagged **recommended-soon** (not "someday") — stricter index/optional typing is a guardrail agents cannot ignore, so it is genuinely valuable here.
+- Do NOT flip these repo-wide inside the audit-resolution pass; a repo-wide diff is unreviewable mid-audit and is orthogonal to this audit's goal. Land it as its own focused PR. See Resolution Decisions.
 
 ### SEC-1 - HIGH - Dependency security automation is disabled and `pnpm audit` is red
 
@@ -457,13 +476,12 @@ $ rg -n "from ['\"](@/app|@/components|app/|components/)" src/adapters --glob '!
 exit=1
 ```
 
-Required fix:
+**Decision (locked):** Implement as a **custom Vitest import-boundary test**, modeled on `components/theme-token-regression-source-scan.ts`. **Do NOT add `dependency-cruiser`** — the repo owns this scan idiom, has only four layers, and SEC-1 just flagged supply-chain surface. Wire it into the normal `pnpm test` gate. It must fail on:
 
-- Add a fast Vitest import-boundary test or dependency-cruiser rule that fails on:
-  - non-relative production imports in `src/domain`;
-  - application importing adapters/framework code;
-  - adapters importing `app/**` or `components/**`;
-  - outer layers bypassing documented composition/controller entry points where a boundary exists.
+- non-relative production imports in `src/domain`;
+- application importing adapters/framework code;
+- adapters importing `app/**` or `components/**`;
+- outer layers bypassing documented composition/controller entry points where a boundary exists.
 
 ### ARCH-2 - LOW - Naming convention drift remains
 
@@ -499,11 +517,11 @@ and 11 multi-dot fixture/setup/integration names such as `lib/container.skip-cle
 
 The old global `~897` file count is stale. The verified source/test file count in the scanned directories is 880.
 
-Required fix:
+**Decision (locked):** Adopt strict kebab-case and enforce it, **as one package**:
 
-- Decide whether component files may remain PascalCase. If not, rename the 6 files and update imports.
-- Decide whether camelCase utility files are allowed. If not, rename the 2 `lib/content` files.
-- If enforcing strict kebab-case, decide whether multi-dot fixture/setup names are allowed before adding a check.
+- Rename the 6 PascalCase files **and** the 2 camelCase files (`lib/content/draftTaxonomy.ts`, `lib/content/parseMdxQuestion.ts`) via `git mv`, updating all imports.
+- Extend the source-scan to fail CI on future filename drift. Do NOT rename without adding the check — rename-without-enforce just re-drifts.
+- **Keep** the 11 multi-dot fixture/setup names (`*.setup.ts`, `*.integration.test.ts`, `*.skip-clerk.test.ts`, etc.) — they are a legitimate pattern, not violations. See Resolution Decisions.
 
 ### ARCH-3 - LOW - Some routes keep too much implementation at route root
 
@@ -562,10 +580,11 @@ src/adapters/controllers/review-controller.ts
 src/adapters/controllers/session-controller.ts
 ```
 
-Required fix:
+**Decision (locked):**
 
-- Keep `src/adapters/controllers/*` for server-action/API controller adapters.
-- Prefer `use-*-page-model`, `use-*-page-state`, or `use-*-screen-controller` for client hook orchestration, and document the naming rule.
+- Keep `src/adapters/controllers/*` as the canonical "controller" (the Clean Architecture adapter role).
+- Rename the 2 presentation hooks to `use-*-page-model.ts` (Fowler's Presentation Model). Avoid "presenter" — also a reserved Clean Architecture term.
+- Add a one-line glossary entry to `AGENTS.md` distinguishing adapter controllers from presentation models, so the agent fleet stops conflating them. See Resolution Decisions.
 
 ### Agent skill symlink invariant - GOOD
 
@@ -756,9 +775,10 @@ $ sh scripts/check-file-size.sh src/adapters/gateways/stripe/stripe-checkout-ses
 
 Known large files such as `db/schema.ts`, `history-questions-tab.tsx`, `question-page-client.tsx`, and `drizzle-attempt-repository.ts` have documented rationale headers or exemptions. `practice-view.tsx` and `stripe-checkout-sessions.ts` exceed the warning threshold and are not exempted.
 
-Required fix:
+**Decision (locked):**
 
-- Either split those files or add explicit rationale headers/debt references and update the file-size checker allowlist if the size is intentional.
+- `practice-view.tsx`: document via the existing `check-file-size.sh` mechanism (WHY header + `is_known_exempt`). Do NOT split it into shallow pieces (PoSD: deep modules beat shallow ones).
+- `stripe-checkout-sessions.ts`: attempt **one** Extract-Function on the inspect/expire-existing-session block (the billing-critical file is where clarity pays off); keep it only if the full gate stays green, otherwise document via the same mechanism. See Resolution Decisions.
 
 ---
 
@@ -804,10 +824,9 @@ Scope:
 
 Correct. Documentation alone is insufficient for a Clean Architecture invariant.
 
-Recommended approach:
+**Locked approach:**
 
-- Prefer a fast custom Vitest scan first because the rules are repository-specific and easy to express.
-- Use dependency-cruiser later if graph visualization or broader dependency policies become useful.
+- Implement as a custom Vitest import-boundary test (see Resolution Decisions). Do NOT add `dependency-cruiser` — SEC-1 supply-chain context plus the existing source-scan idiom make a zero-dependency test the correct choice.
 
 ### 4. Fix stale and duplicated agent docs (DOC-1 through DOC-5)
 
@@ -832,31 +851,30 @@ Scope:
 
 ### 6. Decide and enforce file naming policy (ARCH-2)
 
-Correct but not urgent.
+Locked: adopt + enforce strict kebab-case as one package (rename 8 files + extend the source-scan; keep multi-dot fixtures). See Resolution Decisions.
 
 Risk:
 
-- Renaming component files can create noisy diffs and import churn.
-- Do this separately from behavior changes.
+- Renaming creates import churn — do it via `git mv` in its own commit, separate from behavior changes, and verify the full gate.
 
 ### 7. Clean up question-route colocation and controller naming (ARCH-3, ARCH-4)
 
-Correct but lower priority.
+Lower priority, but the vocabulary call is now locked.
 
 Scope:
 
-- Move question route hooks under `hooks/` or `_lib/`.
-- Rename client hook "controller" files only if the team agrees on the vocabulary.
+- ARCH-3: move question-route hooks under `hooks/` or `_lib/` (organization-only).
+- ARCH-4 (locked): rename the 2 presentation hooks to `use-*-page-model.ts` and add the `AGENTS.md` glossary line. See Resolution Decisions.
 
 ### 8. Address large-file policy gaps (CODE-2 and large-file correction)
 
 Correct.
 
-Scope:
+Scope (locked):
 
-- Split `stripe-checkout-sessions.ts` around pure construction helpers.
-- Split or document `practice-view.tsx`.
-- Update `scripts/check-file-size.sh` only with explicit rationale.
+- `stripe-checkout-sessions.ts`: attempt one Extract-Function on the inspect/expire block; keep only if the gate stays green, else document.
+- `practice-view.tsx`: document via WHY header + `is_known_exempt` (do not split a deep module).
+- Update `scripts/check-file-size.sh` allowlist only with explicit rationale. See Resolution Decisions.
 
 ### 9. Codify allowed bare catches and logging/reporting helpers (CODE-1, CODE-3)
 
@@ -885,7 +903,7 @@ Scope:
 3. ARCH-1: add boundary enforcement.
 4. DOC-1/DOC-4/DOC-5: quick correctness fixes in agent docs.
 5. DOC-2/DOC-3: de-duplicate universal process guidance.
-6. CI-3/CI-5: decide coverage thresholds and strictness-flag rollout.
+6. CI-3: document coverage as observational (no gate). CI-5: file `noUncheckedIndexedAccess` as a recommended-soon DEBT item (no repo-wide flip in this pass).
 7. CODE-2/large-file policy: split or document large files.
 8. ARCH-2/ARCH-3/ARCH-4: naming and organization cleanup.
 9. CODE-1/CODE-3: error-handling convention doc/helper cleanup.
