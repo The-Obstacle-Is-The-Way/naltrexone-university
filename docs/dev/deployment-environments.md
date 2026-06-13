@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Reviewed (code/docs):** 2026-05-23
+**Last Reviewed (code/docs):** 2026-06-12
 
 This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
@@ -82,15 +82,38 @@ Preview webhook targets must therefore be publicly reachable without Vercel logi
 
 See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md).
 
-### Trailing `\n` in Vercel Dashboard Env Vars
+### Header-Safe `CRON_SECRET` Across Vercel Scopes
 
-When pasting secrets into the Vercel dashboard, invisible trailing newline characters can be stored. This silently breaks authorization headers and signature checks.
+`CRON_SECRET` is used as an HTTP `Authorization: Bearer ...` value for the Vercel cron route. Once a `crons` block exists in `vercel.json`, Vercel validates that raw env value as an HTTP header during deployment. A value with leading/trailing whitespace or control characters fails before `next build` runs, so application code cannot fix it with `.trim()`.
+
+Vercel stores environment variables per scope. Production, Preview, Development, and git-branch-specific Preview overrides can each carry different bytes for the same name. Keep `CRON_SECRET` non-empty, identical, and header-safe in every scope where cron or manual cron calls are expected.
 
 **Prevention**
 
 - Use `printf '%s'` when piping values to `vercel env add`.
 - Do not use `echo`, which appends a newline.
-- After setting a secret, pull it back and inspect it if behavior looks suspicious.
+- Do not silently trim secrets in application code; reject or reset the bad value at the provider.
+- After setting a secret, verify only safe metadata: present, length, trim delta, leading/trailing/internal whitespace booleans, and header-unsafe booleans. Never print the value.
+- In GitHub Actions, `scripts/validate-header-safe-secret.ts` checks any observable `CRON_SECRET` secret without logging the value. This does not validate Vercel env stores; Vercel Production/Preview/Development still need provider-side verification after changes.
+
+**Safe Vercel reset procedure**
+
+The owner supplies the actual secret value. Do not paste it into tickets, docs, shell history, or chat.
+
+```bash
+# Generate a candidate without a trailing newline if rotating the value.
+openssl rand -hex 32
+
+# Set each scope from stdin using printf, not echo.
+printf '%s' "$CRON_SECRET_VALUE" | vercel env add CRON_SECRET production --force
+printf '%s' "$CRON_SECRET_VALUE" | vercel env add CRON_SECRET preview --force
+printf '%s' "$CRON_SECRET_VALUE" | vercel env add CRON_SECRET development --force
+
+# Remove stale branch-specific overrides unless a branch truly needs different bytes.
+vercel env rm CRON_SECRET preview <branch-name> --yes
+```
+
+After resetting, redeploy the affected Preview and Production targets. Env changes do not repair an already-created deployment.
 
 ### `NEXT_PUBLIC_*` Vars Require Fresh Builds
 
