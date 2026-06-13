@@ -55,13 +55,16 @@ export function resolveLocalTestTarget({
     ? sanitizeExplicitInstanceId(explicitInstance)
     : deriveInstanceIdFromWorktree(absoluteCwd);
   const offset = derivePortOffset(instanceId);
-  const dbPort =
-    env.DB_TEST_PORT?.trim() || String(LOCAL_TEST_DB_BASE_PORT + offset);
-  const appPort =
-    env.LOCAL_TEST_APP_PORT?.trim() ||
-    env.E2E_APP_PORT?.trim() ||
-    env.PORT?.trim() ||
-    String(LOCAL_TEST_APP_BASE_PORT + offset);
+  const dbPort = resolvePort({
+    env,
+    keys: ['DB_TEST_PORT'],
+    fallbackPort: LOCAL_TEST_DB_BASE_PORT + offset,
+  });
+  const appPort = resolvePort({
+    env,
+    keys: ['LOCAL_TEST_APP_PORT', 'E2E_APP_PORT', 'PORT'],
+    fallbackPort: LOCAL_TEST_APP_BASE_PORT + offset,
+  });
   const composeProjectName = `naltrexone-test-${instanceId}`;
   const databaseUrl = `postgresql://${LOCAL_TEST_DB_USER}:${LOCAL_TEST_DB_PASSWORD}@${LOCAL_TEST_DB_HOST}:${dbPort}/${LOCAL_TEST_DB_NAME}`;
   const appUrl = `http://${LOCAL_TEST_APP_HOST}:${appPort}`;
@@ -123,6 +126,37 @@ function derivePortOffset(instanceId: string): number {
     Number.parseInt(hashText(instanceId).slice(0, 8), 16) %
     LOCAL_TEST_PORT_SLOTS
   );
+}
+
+function resolvePort({
+  env,
+  keys,
+  fallbackPort,
+}: {
+  env: LocalTestTargetEnv;
+  keys: string[];
+  fallbackPort: number;
+}): string {
+  for (const key of keys) {
+    const value = env[key]?.trim();
+    if (value) return validatePortOverride(key, value);
+  }
+
+  return String(fallbackPort);
+}
+
+function validatePortOverride(key: string, value: string): string {
+  const errorMessage = `${key} must be an integer TCP port between 1 and 65535.`;
+  if (!/^\d+$/.test(value)) {
+    throw new Error(errorMessage);
+  }
+
+  const port = Number(value);
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
+    throw new Error(errorMessage);
+  }
+
+  return String(port);
 }
 
 function hashText(value: string): string {

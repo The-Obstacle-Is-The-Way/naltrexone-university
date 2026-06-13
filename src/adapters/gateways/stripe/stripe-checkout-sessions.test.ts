@@ -20,6 +20,7 @@ function createStripeMock(overrides?: {
   }>;
   shouldThrowOnRetrieve?: boolean;
   shouldThrowOnExpire?: boolean;
+  expireErrors?: unknown[];
   expireError?: unknown;
   createdSessionUrl?: string | null;
   createdSessionResponses?: Array<{
@@ -66,7 +67,14 @@ function createStripeMock(overrides?: {
             },
     };
   });
+  let expireCallIndex = 0;
   const sessionsExpire = vi.fn(async () => {
+    const expireError = overrides?.expireErrors?.[expireCallIndex];
+    expireCallIndex += 1;
+    if (expireError) {
+      throw expireError;
+    }
+
     if (overrides?.expireError) {
       throw overrides.expireError;
     }
@@ -707,14 +715,14 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('continues checkout creation when inspection and expire both fail', async () => {
+  it('retries a failed pre-create expire during post-create reconciliation', async () => {
     const { stripe, sessionsCreate, sessionsRetrieve, sessionsExpire } =
       createStripeMock({
         openSessionsData: [
           { id: 'cs_open', url: 'https://stripe/checkout/open' },
         ],
         shouldThrowOnRetrieve: true,
-        shouldThrowOnExpire: true,
+        expireErrors: [new Error('pre-create expire failed')],
         createdSessionUrl: 'https://stripe/checkout/new',
       });
 
@@ -731,6 +739,7 @@ describe('createStripeCheckoutSession', () => {
     expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
+    expect(sessionsExpire).toHaveBeenCalledTimes(2);
     expect(sessionsCreate).toHaveBeenCalledTimes(1);
     expect(logger.warnCalls).toEqual(
       expect.arrayContaining([
@@ -739,6 +748,31 @@ describe('createStripeCheckoutSession', () => {
         }),
       ]),
     );
+  });
+
+  it('throws when inspection and both expire attempts fail', async () => {
+    const { stripe, sessionsExpire } = createStripeMock({
+      openSessionsData: [
+        { id: 'cs_open', url: 'https://stripe/checkout/open' },
+      ],
+      shouldThrowOnRetrieve: true,
+      shouldThrowOnExpire: true,
+      createdSessionUrl: 'https://stripe/checkout/new',
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Failed to reconcile open checkout sessions',
+    });
+
+    expect(sessionsExpire).toHaveBeenCalledTimes(2);
   });
 
   it('throws STRIPE_ERROR when created session is missing URL', async () => {

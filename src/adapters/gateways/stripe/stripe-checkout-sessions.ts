@@ -576,7 +576,6 @@ export async function createStripeCheckoutSession({
             'Failed to expire existing checkout session',
           );
         } else {
-          ignoredOpenSessionIdsAfterCreate.add(existingSession.id);
           logger.warn(
             {
               sessionId: existingSession.id,

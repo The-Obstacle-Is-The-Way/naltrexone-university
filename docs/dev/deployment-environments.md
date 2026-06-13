@@ -150,22 +150,27 @@ DATABASE_URL="<preview-or-dev-connection-string>" pnpm db:migrate
 DATABASE_URL="<production-connection-string>" pnpm db:migrate
 ```
 
-For local authenticated E2E, the target database is the `DATABASE_URL` in `.env.local`. Confirm that it is a non-production Neon branch first, then run migrations against that file's target:
+For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
+
+Only use `.env.local`'s `DATABASE_URL` for an intentional deploy-target E2E check with `E2E_USE_EXISTING_DATABASE=true`. Confirm that it is a non-production Neon branch first, then run migrations against that explicit target:
 
 ```bash
 # Prints only the host, not the password.
 LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
 
-# Migrate only the target you just verified.
+# Migrate only the deploy target you just verified.
 DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
+
+# Then opt into using that existing database for E2E.
+E2E_USE_EXISTING_DATABASE=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 
 Do not run migrations by relying on implicit `.env.local` resolution. Every database mutation should pass an explicit `DATABASE_URL` for the intended target.
 
 Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
 
-Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migrations `0017` and `0018`; local E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
+Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migrations `0017` and `0018`; deploy-target E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
 
 ### Clerk Development Mode Can Re-Authenticate After Stripe Checkout
 

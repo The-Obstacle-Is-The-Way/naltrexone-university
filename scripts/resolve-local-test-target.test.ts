@@ -83,6 +83,25 @@ describe('resolveLocalTestTarget', () => {
     expect(target.composeProjectName).toBe('naltrexone-test-clone-c');
   });
 
+  it('rejects invalid explicit port overrides before composing target URLs', () => {
+    for (const [key, value] of [
+      ['DB_TEST_PORT', 'postgres'],
+      ['LOCAL_TEST_APP_PORT', '3317/path'],
+      ['E2E_APP_PORT', '70000'],
+      ['PORT', '0'],
+    ] as const) {
+      expect(() =>
+        resolveLocalTestTarget({
+          cwd: '/repo/ignored-when-instance-is-explicit',
+          env: {
+            LOCAL_TEST_INSTANCE: 'ports',
+            [key]: value,
+          },
+        }),
+      ).toThrow(`${key} must be an integer TCP port between 1 and 65535.`);
+    }
+  });
+
   it('rejects an explicit instance id that contains no alphanumeric characters', () => {
     expect(() =>
       resolveLocalTestTarget({
