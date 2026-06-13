@@ -386,6 +386,15 @@ Rules:
 - Prefer importing via `@/...` alias
 - For E2E-specific import/timeout conventions, see `Playwright E2E Conventions` below.
 
+### Error Handling and Bare Catch Policy
+
+Bare `catch {}` blocks are allowed only for intentionally suppressed secondary failures:
+- telemetry, reporting, or logging failures that must not mask the primary user outcome;
+- rollback or cleanup best effort when the original error is preserved and returned/thrown;
+- parse/decode fallback to a safe default.
+
+Add a short nearby comment when suppressing an error intentionally. Keep UI reporter helpers in `app/(app)/app/shared`; add a shared application/adapters logger-safety helper only after at least three sibling files need the same wrapper.
+
 ## Testing
 
 ### Framework: Vitest (NOT Jest)
