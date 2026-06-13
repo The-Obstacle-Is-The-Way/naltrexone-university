@@ -1,11 +1,10 @@
 # BUG-247: Pricing-Page "Manage Billing" Portal Failures Show Checkout-Failure Copy ("Checkout failed. Please try again.")
 
-**Status:** Open
-**Resolution State:** Fixed on branch `fix/bug-247-pricing-portal-failure-copy`; pending PR review, merge verification, and archival.
+**Status:** RESOLVED + archived (2026-06-13). Fixed in PR #424 (squash `424df206`, `main` fast-forwarded): pricing-page billing-portal failures now redirect to `/pricing?portal=error` and render portal-specific copy ("Couldn't open the billing portal. Please try again."), reserving `checkout=error` for actual checkout failures. All portal error codes (`INTERNAL_ERROR`/`STRIPE_ERROR`/`RATE_LIMITED`/`NOT_FOUND`) and raw throws flow through the single configured failure redirect in `manage-billing-core`; `UNAUTHENTICATED` → `/sign-up` is unchanged. Owner-graded, full gate green (typecheck, lint, unit 2815, browser 297, integration 111, build, E2E 36) + CodeRabbit approved on the exact head `c638c376` (after a real `CHANGES_REQUESTED` → `APPROVED` cycle).
 **Priority:** P3 (wrong but recoverable user-facing copy on a real recovery path; the sibling route already has the correct copy)
 **Date:** 2026-06-11
 **Family:** Billing / pricing copy / portal failure handling
-**Related:** [DEBT-180](../_archive/debt/debt-180-duplicated-manage-billing-files.md) (consolidated the two manage-billing actions; recorded the divergent redirects as drift-prone), [BUG-165](../_archive/bugs/bug-165-app-billing-missing-unauthenticated-redirect.md) / [BUG-166](../_archive/bugs/bug-166-manage-billing-core-swallows-errors-silently.md) (manage-billing-core error paths), [BUG-114](../_archive/bugs/bug-114-subscribe-action-leaks-error-codes-to-url.md) (shaped `checkout=error` for *subscribe* failures)
+**Related:** [DEBT-180](../debt/debt-180-duplicated-manage-billing-files.md) (consolidated the two manage-billing actions; recorded the divergent redirects as drift-prone), [BUG-165](./bug-165-app-billing-missing-unauthenticated-redirect.md) / [BUG-166](./bug-166-manage-billing-core-swallows-errors-silently.md) (manage-billing-core error paths), [BUG-114](./bug-114-subscribe-action-leaks-error-codes-to-url.md) (shaped `checkout=error` for *subscribe* failures)
 
 ---
 

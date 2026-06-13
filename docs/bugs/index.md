@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-13 (BUG-245 resolved + archived via PR #421 — the concurrent two-tab checkout duplicate-subscription race is closed at create-time via a deterministic Stripe idempotency key + lock-free post-create reconciliation, shipped together with the DEBT-417 multi-clone test-isolation fix; the Stripe "limit customers to 1 subscription" → Customer portal Dashboard backstop is configured live. BUG-247 remains open from the Audit #21 Stripe sweep; BUG-241 remains open for deploy migration enforcement. Prior: Audit #21 BUG-242/243 resolved + archived via PR #419 — shared subscription write-guard; BUG-244/246 resolved + archived via PR #420 + PR #422 — billing-maintenance cron live in production (`dryRun=false`) with header-safe `CRON_SECRET`)
+**Last Updated:** 2026-06-13 (BUG-247 resolved + archived via PR #424 — pricing-page billing-portal failures now route to `/pricing?portal=error` with portal-specific copy, reserving `checkout=error` for real checkout failures; this closes the last Audit #21 Stripe-sweep item. BUG-241 (deploy migration enforcement) is now the only open active bug. Prior: BUG-245 resolved + archived via PR #421 — concurrent two-tab checkout duplicate-subscription race closed at create-time via a deterministic Stripe idempotency key + lock-free post-create reconciliation, shipped with the DEBT-417 multi-clone test-isolation fix, Stripe "limit to 1 subscription" Dashboard backstop live; Audit #21 BUG-242/243 resolved + archived via PR #419 — shared subscription write-guard; BUG-244/246 resolved + archived via PR #420 + PR #422 — billing-maintenance cron live in production (`dryRun=false`) with header-safe `CRON_SECRET`)
 
 ---
 
@@ -14,6 +14,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 3. **Knowledge Base** — Help future developers understand past issues
 
 **Next Bug ID:** BUG-248
+
+**Latest archival (2026-06-13) — Audit #21 BUG-247 resolved (Stripe sweep complete):**
+- BUG-247 (P3) verified fixed and archived to `docs/_archive/bugs/`. PR #424 (squash `424df206`, `main` fast-forwarded) routes pricing-page billing-portal failures to `/pricing?portal=error` and adds a `getPricingBanner` branch rendering portal-specific copy ("Couldn't open the billing portal. Please try again."), matching the app-billing sibling and reserving `checkout=error` for genuine checkout failures (its BUG-114 origin). All portal error codes (`INTERNAL_ERROR`/`STRIPE_ERROR`/`RATE_LIMITED`/`NOT_FOUND`) and raw throws share the single configured failure redirect in `manage-billing-core`, so the one-line redirect change covers every path; `UNAUTHENTICATED` → `/sign-up` is unchanged. The branch was cut orthogonally to PR #421 (zero file overlap) and rebased onto the post-#421 dev head before merge. Owner-graded, full local + remote gate green (typecheck, lint, unit 2815, browser 297, integration 111, build, E2E 36), CodeRabbit `APPROVED` on the exact head `c638c376` after a real `CHANGES_REQUESTED` → `APPROVED` cycle. This closes the Audit #21 Stripe/billing sweep (BUG-242..247); BUG-241 (deploy migration enforcement) remains the only open active bug.
 
 **Latest archival (2026-06-12) — Audit #21 BUG-244/246 resolved:**
 - BUG-244 (P2) and BUG-246 (P2) verified fixed and archived to `docs/_archive/bugs/`. PR #420 (squash `fac21601`) wired the reconciliation route to a daily Vercel cron (shared `GET`/`POST`, auth + rate-limit before any work) and folded the deleted-account `pending_stripe_cancellations` drain into the same scheduled run (working from the row's stored `stripeCustomerId`); PR #422 (squash `6679cfe2`, `main` synced) flipped the cron to `dryRun=false` to activate it. Production deploy `dpl_GFqkgVoarFVqXbWbsq17Kh6MwtxK` is READY with the `0 8 * * *` cron registered. `CRON_SECRET` was normalized header-safe across all Vercel scopes (the prior Production value was empty, Preview had trailing whitespace) and is now guarded by `scripts/validate-header-safe-secret.ts` + a CI step. Safe to activate immediately because the connected Stripe account has zero subscriptions (pre-revenue). Owner-graded, full gate green + CodeRabbit approved on the exact head. BUG-245 and BUG-247 from the same Audit #21 sweep remain open.
@@ -146,7 +149,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-247](./bug-247-pricing-portal-failure-shows-checkout-error-copy.md) | Billing / pricing copy | P3 | Pricing-page "Manage Billing" portal failures redirect to `?checkout=error` and show "Checkout failed. Please try again." for an action that was never a checkout; the app-billing sibling already has correct portal-failure copy. |
 | [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to dev/prod, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
@@ -168,7 +170,7 @@ Adversarial walk of the **entire Stripe surface** after the DEBT-410…415 free-
 | [BUG-244](../_archive/bugs/bug-244-reconciliation-cron-never-scheduled.md) | Billing / reconciliation / infra | P2 | Reconciliation safety net never runs — no scheduler invokes the POST-only, `dryRun`-default route |
 | [BUG-245](../_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Billing / checkout race | P2 | Concurrent two-tab checkout creates duplicate live subscriptions; per-tab UUIDs bypass the deterministic-key collapse |
 | [BUG-246](../_archive/bugs/bug-246-deleted-account-stripe-cancellation-no-drain.md) | Billing / Clerk deletion | P2 | Deleted-account Stripe cancellation has no drain past Svix retries; cascade-deleted rows hide the orphan |
-| [BUG-247](./bug-247-pricing-portal-failure-shows-checkout-error-copy.md) | Billing / pricing copy | P3 | Pricing portal failures show checkout-failure copy for a non-checkout action |
+| [BUG-247](../_archive/bugs/bug-247-pricing-portal-failure-shows-checkout-error-copy.md) | Billing / pricing copy | P3 | Pricing portal failures show checkout-failure copy for a non-checkout action |
 
 **Two refuted (duplicate refiles, not factually wrong):** a finder independently re-derived the unscheduled-reconciliation gap and the deleted-account drain gap; both are real and now filed once as BUG-244 and BUG-246 respectively (not double-counted).
 
