@@ -1,10 +1,10 @@
 # BUG-247: Pricing-Page "Manage Billing" Portal Failures Show Checkout-Failure Copy ("Checkout failed. Please try again.")
 
-**Status:** Open
+**Status:** RESOLVED + archived (2026-06-13). Fixed in PR #424 (squash `424df206`, `main` fast-forwarded): pricing-page billing-portal failures now redirect to `/pricing?portal=error` and render portal-specific copy ("Couldn't open the billing portal. Please try again."), reserving `checkout=error` for actual checkout failures. All portal error codes (`INTERNAL_ERROR`/`STRIPE_ERROR`/`RATE_LIMITED`/`NOT_FOUND`) and raw throws flow through the single configured failure redirect in `manage-billing-core`; `UNAUTHENTICATED` → `/sign-up` is unchanged. Owner-graded, full gate green (typecheck, lint, unit 2815, browser 297, integration 111, build, E2E 36) + CodeRabbit approved on the exact head `c638c376` (after a real `CHANGES_REQUESTED` → `APPROVED` cycle).
 **Priority:** P3 (wrong but recoverable user-facing copy on a real recovery path; the sibling route already has the correct copy)
 **Date:** 2026-06-11
 **Family:** Billing / pricing copy / portal failure handling
-**Related:** [DEBT-180](../_archive/debt/debt-180-duplicated-manage-billing-files.md) (consolidated the two manage-billing actions; recorded the divergent redirects as drift-prone), [BUG-165](../_archive/bugs/bug-165-app-billing-missing-unauthenticated-redirect.md) / [BUG-166](../_archive/bugs/bug-166-manage-billing-core-swallows-errors-silently.md) (manage-billing-core error paths), [BUG-114](../_archive/bugs/bug-114-subscribe-action-leaks-error-codes-to-url.md) (shaped `checkout=error` for *subscribe* failures)
+**Related:** [DEBT-180](../debt/debt-180-duplicated-manage-billing-files.md) (consolidated the two manage-billing actions; recorded the divergent redirects as drift-prone), [BUG-165](./bug-165-app-billing-missing-unauthenticated-redirect.md) / [BUG-166](./bug-166-manage-billing-core-swallows-errors-silently.md) (manage-billing-core error paths), [BUG-114](./bug-114-subscribe-action-leaks-error-codes-to-url.md) (shaped `checkout=error` for *subscribe* failures)
 
 ---
 
@@ -17,7 +17,7 @@ This lands a payment-troubled user (e.g. an `unpaid`/`paused` subscriber redirec
 ## Steps to Reproduce
 
 1. Be a signed-in user with a non-entitled-but-recoverable subscription (e.g. `unpaid` with an active period) → app layout redirects to `/pricing?reason=manage_billing`.
-2. Click **Manage Billing** while Stripe portal-session creation fails (transient Stripe 5xx → `STRIPE_ERROR`, or `RATE_LIMITED` after >20 portal attempts/min).
+2. Click **Manage Billing** while Stripe portal-session creation fails (`STRIPE_ERROR` from a missing portal-session URL or an already-open Stripe circuit; `INTERNAL_ERROR` from an exhausted raw Stripe/network failure handled by `createAction`; `RATE_LIMITED` after >20 portal attempts/min; or `NOT_FOUND` when no Stripe customer mapping exists).
 3. Observe redirect to `/pricing?checkout=error` and the banner "Checkout failed. Please try again." above the "Subscription needs attention" card.
 
 ## Root Cause
@@ -26,7 +26,7 @@ This lands a payment-troubled user (e.g. an `unpaid`/`paused` subscriber redirec
 2. `app/pricing/page.tsx:175-177` — `buildPricingPresentation` sets `showManageBillingAction = true` for `manage_billing`/`payment_processing`, passing `manageBillingAction` into `PricingView`.
 3. `app/pricing/pricing-view.tsx:62-73` (banner button) and `:103-118` ("Subscription needs attention" card) submit `action={manageBillingAction}`.
 4. `app/pricing/manage-billing-actions.ts` → `app/pricing/manage-billing-action.ts:15-21` — the pricing wrapper hardcodes `redirects.failure = ${ROUTES.PRICING}?checkout=error` (only `UNAUTHENTICATED` is special-cased → `/sign-up`).
-5. `lib/manage-billing/manage-billing-core.ts:46-52` — any thrown error or any non-ok result whose code is not `UNAUTHENTICATED` (`STRIPE_ERROR`; `RATE_LIMITED` from `PORTAL_SESSION_RATE_LIMIT`, `billing-controller.ts:157-166`; `NOT_FOUND` from `create-portal-session.ts:23-25`) redirects to that failure URL.
+5. `lib/manage-billing/manage-billing-core.ts:46-52` — any thrown error redirects to the configured failure URL, and any non-ok result whose code is not `UNAUTHENTICATED` also redirects there. Real production codes that reach this branch include `INTERNAL_ERROR` from raw thrown Stripe/network failures converted by `createAction`/`handleError` (`src/adapters/controllers/create-action.ts:53-69`, `src/adapters/controllers/action-result.ts:51-61`), `STRIPE_ERROR` from a missing portal-session URL (`src/adapters/gateways/stripe/stripe-portal.ts:41-45`) or already-open Stripe circuit (`src/adapters/gateways/stripe/stripe-retry.ts:8-16`, `src/adapters/shared/circuit-breaker.ts:115-119`), `RATE_LIMITED` from `PORTAL_SESSION_RATE_LIMIT` (`billing-controller.ts:157-166`), and `NOT_FOUND` from a missing Stripe customer mapping (`create-portal-session.ts:23-25`).
 6. `app/pricing/page.tsx:89-94` — `getPricingBanner` maps `checkout === 'error'` to the error-tone banner **"Checkout failed. Please try again."**
 7. Contrast (intended copy exists): `app/(app)/app/billing/manage-billing-action.ts:17-19` redirects the identical failure to `/app/billing?error=portal_failed`, and `app/(app)/app/billing/page.tsx:126-130` renders **"Couldn't open the billing portal. Please try again."**
 
@@ -35,16 +35,20 @@ This lands a payment-troubled user (e.g. an `unpaid`/`paused` subscriber redirec
 - A user actively trying to fix a billing problem is told their *checkout* failed — misleading and slightly alarming, on the exact path where clarity matters most (payment recovery).
 - Recoverable in one retry, and only triggers when portal creation actually fails, so impact is bounded — hence P3, not higher.
 
-## Expected Fix (options)
+## Expected Fix
 
-1. **Pricing-specific portal-failure copy (preferred).** Give pricing-side portal failures their own param (e.g. `/pricing?portal=error`) and add a `getPricingBanner` branch rendering "Couldn't open the billing portal. Please try again." Keep `UNAUTHENTICATED → /sign-up` unchanged.
-2. **Redirect pricing portal failures to the app billing error surface.** For users who already have a subscription row, redirect portal failures to `/app/billing?error=portal_failed` (reusing the correct existing copy) instead of `/pricing?checkout=error`.
+Use the pricing-specific portal-failure bucket.
 
-Either way, the `checkout=error` banner should remain reserved for actual subscribe/checkout failures (its BUG-114 origin).
+1. Change the pricing-side manage-billing wrapper's configured failure redirect from `/pricing?checkout=error` to `/pricing?portal=error`.
+2. Extend `PricingSearchParams` in `app/pricing/page.tsx:65-69` with `portal?: string | string[] | undefined`, normalize `searchParams.portal` inside `getPricingBanner` (`:75-94`), and add a branch rendering "Couldn't open the billing portal. Please try again." for `portal === 'error'`.
+3. Keep `UNAUTHENTICATED → /sign-up` unchanged.
+4. Keep `checkout=error` reserved for actual subscribe/checkout failures (its BUG-114 origin).
+
+Do **not** redirect the pricing failure to `/app/billing?error=portal_failed` for this fix. The app-billing route remains the sibling proof of intended portal-failure copy, but the pricing page should own its own portal-failure banner because the failure starts from pricing-page recovery CTAs.
 
 ## Verification
 
-- [ ] Test: pricing Manage Billing failure (`STRIPE_ERROR`/`RATE_LIMITED`/`NOT_FOUND`) renders portal-failure copy, not checkout-failure copy.
+- [ ] Test: pricing Manage Billing failure (`INTERNAL_ERROR`/`STRIPE_ERROR`/`RATE_LIMITED`/`NOT_FOUND`) renders portal-failure copy, not checkout-failure copy.
 - [ ] Test: subscribe-action failures still render "Checkout failed. Please try again." (no regression of the `checkout=error` bucket).
 - [ ] Test: `UNAUTHENTICATED` portal failure still redirects to `/sign-up`.
 - [ ] `pnpm test --run` green.

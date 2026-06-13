@@ -1,4 +1,9 @@
 import { type ChildProcess, spawn } from 'node:child_process';
+import {
+  createLocalTestTargetEnv,
+  isTruthyEnvFlag,
+  resolveLocalTestTarget,
+} from './resolve-local-test-target';
 
 export type E2ECommandEnv = Readonly<Record<string, string | undefined>>;
 
@@ -18,6 +23,7 @@ export type E2ECommandInvocation = {
 
 type CreateE2ECommandPlanInput = {
   env?: E2ECommandEnv;
+  cwd?: string;
   playwrightArgs?: string[];
 };
 
@@ -25,18 +31,6 @@ type RunCommandPlanInput = {
   env?: E2ECommandEnv;
   runCommand?: (invocation: E2ECommandInvocation) => Promise<void>;
 };
-
-const LOCAL_E2E_DB_HOST = '127.0.0.1';
-const LOCAL_E2E_DB_DEFAULT_PORT = '5434';
-const LOCAL_E2E_DB_USER = 'postgres';
-const LOCAL_E2E_DB_PASSWORD = 'postgres';
-const LOCAL_E2E_DB_NAME = 'addiction_boards_test';
-const TRUTHY_ENV_VALUES = new Set(['1', 'true', 'yes']);
-
-function isTruthyEnvFlag(value: string | undefined): boolean {
-  if (!value) return false;
-  return TRUTHY_ENV_VALUES.has(value.trim().toLowerCase());
-}
 
 export function shouldUseHermeticLocalE2E(
   env: E2ECommandEnv = process.env,
@@ -48,13 +42,14 @@ export function shouldUseHermeticLocalE2E(
 
 export function resolveLocalE2EDatabaseUrl(
   env: E2ECommandEnv = process.env,
+  cwd: string = process.cwd(),
 ): string {
-  const port = env.DB_TEST_PORT?.trim() || LOCAL_E2E_DB_DEFAULT_PORT;
-  return `postgresql://${LOCAL_E2E_DB_USER}:${LOCAL_E2E_DB_PASSWORD}@${LOCAL_E2E_DB_HOST}:${port}/${LOCAL_E2E_DB_NAME}`;
+  return resolveLocalTestTarget({ env, cwd }).databaseUrl;
 }
 
 export function createE2ECommandPlan({
   env = process.env,
+  cwd = process.cwd(),
   playwrightArgs = [],
 }: CreateE2ECommandPlanInput = {}): E2ECommandStep[] {
   if (!shouldUseHermeticLocalE2E(env)) {
@@ -67,42 +62,35 @@ export function createE2ECommandPlan({
     ];
   }
 
-  const databaseUrl = resolveLocalE2EDatabaseUrl(env);
+  const target = resolveLocalTestTarget({ env, cwd });
+  const targetEnv = createLocalTestTargetEnv(target);
   return [
     {
-      label: 'Stop stale local Next.js server on :3000',
-      command: 'sh',
-      args: ['-c', 'lsof -ti:3000 | xargs kill -9 2>/dev/null || true'],
-    },
-    {
-      label: 'Start local Docker test database',
+      label: 'Start isolated local Docker test database',
       command: 'pnpm',
       args: ['exec', 'tsx', 'scripts/ensure-local-test-db.ts'],
+      env: targetEnv,
     },
     {
-      label: 'Migrate local Docker test database',
+      label: 'Migrate isolated local Docker test database',
       command: 'pnpm',
       args: ['db:migrate'],
-      env: {
-        DATABASE_URL: databaseUrl,
-      },
+      env: targetEnv,
     },
     {
-      label: 'Seed local Docker test database',
+      label: 'Seed isolated local Docker test database',
       command: 'pnpm',
       args: ['db:seed'],
       env: {
-        DATABASE_URL: databaseUrl,
+        ...targetEnv,
         SEED_INCLUDE_PLACEHOLDERS: 'true',
       },
     },
     {
-      label: 'Run Playwright E2E against local Docker test database',
+      label: 'Run Playwright E2E against isolated local test target',
       command: 'pnpm',
       args: ['exec', 'playwright', 'test', ...playwrightArgs],
-      env: {
-        DATABASE_URL: databaseUrl,
-      },
+      env: targetEnv,
     },
   ];
 }

@@ -146,9 +146,9 @@ That means the full Playwright prereqs documented in `docs/dev/testing-infrastru
 # Quick file check when you rely on .env.local:
 rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
 
-# Local E2E is hermetic by default: it starts Docker Postgres, migrates,
-# seeds placeholder content, kills stale :3000 servers, and runs Playwright
-# with the Docker DATABASE_URL.
+# Local E2E is hermetic by default: it starts an isolated per-clone Docker
+# Postgres, migrates, seeds placeholder content, and runs Playwright against
+# the resolved local app and database target.
 pnpm test:e2e
 ```
 
@@ -246,7 +246,7 @@ This repo is frequently worked on in non-interactive shells (CI + AI agents). To
 - Never rely on an editor opening implicitly: always commit with `git commit -m "…"`.
 - Avoid pager-triggering patterns: use `git --no-pager log`, `git --no-pager diff`, etc.
 - **pnpm gotcha:** Never prefix a pnpm command with `-s`. `pnpm -s <cmd>` runs `<cmd>` as a package script/binary (e.g. `view` → Vim) instead of the pnpm subcommand, which hard-hangs in non-TTY runs.
-- **Port 3000 cleanup:** `pnpm test:e2e` performs stale-server cleanup automatically before Playwright. If you bypass the wrapper and run Playwright directly, first kill stale dev servers that may be orphaned from previous runs: `lsof -ti:3000 | xargs kill -9 2>/dev/null`.
+- **Local test target isolation:** `pnpm test:e2e`, `pnpm test:integration`, and `pnpm db:test:*` resolve a per-clone local target through `scripts/resolve-local-test-target.ts`. Do not blanket-kill `:3000`; if you bypass the wrappers, set `PORT`, `NEXT_PUBLIC_APP_URL`, `DB_TEST_PORT`, `DATABASE_URL`, and `COMPOSE_PROJECT_NAME` from `pnpm exec tsx scripts/resolve-local-test-target.ts env`.
 
 ## Commands
 
@@ -450,21 +450,22 @@ Keep the host exact: `localhost` and `127.0.0.1` are not interchangeable for Cle
 Integration tests require a local Postgres database with migrations **and** seed data. All three setup steps are required:
 
 ```bash
-pnpm db:test:up                                    # Start local Postgres (port 5434)
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:seed
-pnpm test:integration                              # Run integration tests
-pnpm db:test:down                                  # Stop database when done
+pnpm db:test:up
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
+pnpm test:integration
+pnpm db:test:down
 ```
 
 ```bash
 # One-liner: local setup from scratch (matches CI order)
-pnpm db:test:up && DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:seed && pnpm test:integration
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
 ```
 
 - `.env.test` is committed and contains test database config (no secrets)
 - Integration tests auto-load `.env.test` via `tests/integration/setup.ts`
-- Port 5434 avoids conflicts with local Postgres installations
+- The local DB host port is per-clone by default. Use `pnpm exec tsx scripts/resolve-local-test-target.ts env` to inspect the resolved `DB_TEST_PORT`, `DATABASE_URL`, `PORT`, `NEXT_PUBLIC_APP_URL`, and `COMPOSE_PROJECT_NAME`.
 - Migrations require explicit `DATABASE_URL` (drizzle-kit reads `.env.local` first, which points to remote Neon)
 - **Never use `drizzle-kit push`** for the test DB — it skips migration files (missing `pgcrypto`, constraints)
 - **Seeding is required** — `tag-taxonomy-census` tests fail without it (`INTEGRATION_SEED_MISSING`)

@@ -1,4 +1,4 @@
-# DEBT-418: esbuild Advisory Follow-Up After Maturity Gate Allows the Patch
+# DEBT-419: esbuild Advisory Follow-Up After Maturity Gate Allows the Patch
 
 **Priority:** P2 (dependency-security cleanup; current app exploitability is low, but `pnpm audit` remains red)
 **Created:** 2026-06-13

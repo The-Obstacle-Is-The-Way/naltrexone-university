@@ -15,7 +15,8 @@ It intentionally avoids hard-coding private dashboard values that the repo canno
 | Production | `https://addictionboards.com` | `main` | Clerk live + Stripe live | Isolated production database | Vercel Production deployment |
 | Preview | `https://*.vercel.app` on non-`main` branches | Any non-`main` branch | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
 | Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Whatever `DATABASE_URL` in `.env.local` points to | Should mirror Preview semantics, not Production |
-| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Docker Postgres on `localhost:5434` via `.env.test` | Uses `pnpm db:test:*` scripts |
+| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; `.env.local` database is used only with `E2E_USE_EXISTING_DATABASE=true` |
+| Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
 
 ### Core isolation rule
 
@@ -27,7 +28,7 @@ The current Vercel + Neon setup uses one Neon project with isolated database bra
 
 - Vercel **Production** targets the Neon `main` branch.
 - Vercel **Preview** and **Development** target the Neon `dev` branch.
-- Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment, so local app runtime and authenticated local E2E also target the Neon `dev` branch.
+- Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment for local app runtime. Normal authenticated local E2E uses the resolver-scoped Docker database; use `E2E_USE_EXISTING_DATABASE=true` only for deliberate deploy-target E2E checks.
 
 Do not hard-code branch hostnames, account ids, passwords, or connection strings in the repo. Verify those values through the Vercel Storage dashboard, Vercel environment variables, or a local redacted host check before running migrations.
 
@@ -149,22 +150,27 @@ DATABASE_URL="<preview-or-dev-connection-string>" pnpm db:migrate
 DATABASE_URL="<production-connection-string>" pnpm db:migrate
 ```
 
-For local authenticated E2E, the target database is the `DATABASE_URL` in `.env.local`. Confirm that it is a non-production Neon branch first, then run migrations against that file's target:
+For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
+
+Only use `.env.local`'s `DATABASE_URL` for an intentional deploy-target E2E check with `E2E_USE_EXISTING_DATABASE=true`. Confirm that it is a non-production Neon branch first, then run migrations against that explicit target:
 
 ```bash
 # Prints only the host, not the password.
 LOCAL_E2E_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2E_DATABASE_URL"
 
-# Migrate only the target you just verified.
+# Migrate only the deploy target you just verified.
 DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
+
+# Then opt into using that existing database for E2E.
+E2E_USE_EXISTING_DATABASE=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 
 Do not run migrations by relying on implicit `.env.local` resolution. Every database mutation should pass an explicit `DATABASE_URL` for the intended target.
 
 Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
 
-Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migrations `0017` and `0018`; local E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
+Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migrations `0017` and `0018`; deploy-target E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
 
 ### Clerk Development Mode Can Re-Authenticate After Stripe Checkout
 

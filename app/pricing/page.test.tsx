@@ -498,6 +498,13 @@ describe('app/pricing', () => {
     });
   });
 
+  it('builds the portal error banner when portal=error', async () => {
+    expect(getPricingBanner({ portal: 'error' })).toMatchObject({
+      tone: 'error',
+      message: "Couldn't open the billing portal. Please try again.",
+    });
+  });
+
   it('builds the checkout error banner when checkout is a repeated query param', async () => {
     expect(getPricingBanner({ checkout: ['error', 'cancel'] })).toMatchObject({
       tone: 'error',

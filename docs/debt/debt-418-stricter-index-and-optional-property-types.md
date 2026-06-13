@@ -1,4 +1,4 @@
-# DEBT-417: Enable Stricter Index and Optional Property Type Checks
+# DEBT-418: Enable Stricter Index and Optional Property Type Checks
 
 **Priority:** P2 (recommended-soon agent-safety guardrail; deferred only to avoid a repo-wide audit-resolution diff)
 **Created:** 2026-06-13

@@ -28,8 +28,8 @@ The repo does **not** need a major reorganization before feature work. It needs 
 | CI-2 | VERIFIED-ALREADY-RESOLVED | Pre-push remains intentionally lightweight; AGENTS documents the mandatory full gate before push. |
 | CI-3 | FIXED + VERIFIED | `docs/dev/react-vitest-testing.md` now states coverage is observational and not a numeric merge gate. |
 | CI-4 | VERIFIED-ALREADY-RESOLVED | The single CI `|| true` remains limited to the documented E2E skip-policy grep check. |
-| CI-5 | FILED | DEBT-417 tracks `noUncheckedIndexedAccess` / `exactOptionalPropertyTypes` as recommended-soon. |
-| SEC-1 | BLOCKED-NEEDS-HUMAN + FILED | `.github/dependabot.yml` no longer caps security PRs at zero; BUG-249 tracks GitHub vulnerability-alert/security-update settings; DEBT-418 tracks residual esbuild advisories blocked by pnpm's maturity gate. |
+| CI-5 | FILED | DEBT-418 tracks `noUncheckedIndexedAccess` / `exactOptionalPropertyTypes` as recommended-soon. |
+| SEC-1 | BLOCKED-NEEDS-HUMAN + FILED | `.github/dependabot.yml` no longer caps security PRs at zero; BUG-249 tracks GitHub vulnerability-alert/security-update settings; DEBT-419 tracks residual esbuild advisories blocked by pnpm's maturity gate. |
 | SEC-2 | VERIFIED-ALREADY-RESOLVED / FALSE POSITIVE | CSP is owned by Clerk proxy middleware in `proxy.ts`; `next.config.test.ts` now guards that `next.config.ts` emits only non-CSP static security headers, and `proxy.test.ts` verifies strict report-only CSP. |
 | SEC-3 | FIXED + VERIFIED | `public/.well-known/security.txt` has Contact, Policy, Canonical, Expires, and Preferred-Languages; `pnpm test --run tests/security-txt.test.ts` passed. |
 | DOC-1 | FIXED + VERIFIED | `AGENTS.md` and `README.md` now require Node 24.x / pnpm >=11. |

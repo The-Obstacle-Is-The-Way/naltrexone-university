@@ -1,6 +1,6 @@
 # Integration Tests
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-06-12
 
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
@@ -16,12 +16,13 @@ From a fresh local test database, all four steps are required. Skipping any step
 pnpm db:test:up
 ```
 
-This runs `docker compose up -d --wait`, which starts a PostgreSQL 16 container on port **5434** (the canonical local port).
+This resolves the current clone's local test target, then runs Docker Compose with that target's project name and `DB_TEST_PORT`. Different clones get different Compose projects and host ports by default.
 
 ### 2. Run Migrations
 
 ```bash
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 ```
 
 This applies migration files from `db/migrations/` in order, including extensions like `pgcrypto`. **Do not use `drizzle-kit push`** — it creates tables from the schema but skips migration files, so extensions and constraints defined in migrations will be missing (e.g., `pgcrypto` for `gen_random_uuid`).
@@ -29,7 +30,8 @@ This applies migration files from `db/migrations/` in order, including extension
 ### 3. Seed Test Data
 
 ```bash
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 ```
 
 Seeds question content and tags from `content/questions/`. Required for `tag-taxonomy-census.integration.test.ts` which validates that all tags have canonical kinds. Without seeding, that test file fails with `INTEGRATION_SEED_MISSING`.
@@ -37,7 +39,8 @@ Seeds question content and tags from `content/questions/`. Required for `tag-tax
 CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`. Local integration tests pass with plain `pnpm db:seed`, but you can add the flag for exact CI seed parity:
 
 ```bash
-SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 ```
 
 ### 4. Run Tests
@@ -51,7 +54,7 @@ If the database is unreachable, the test setup fails fast with a clear error mes
 ### One-Liner (Full Setup)
 
 ```bash
-pnpm db:test:up && DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed && pnpm test:integration
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
 ```
 
 ### Reset (Nuclear Option)
@@ -62,7 +65,7 @@ If the database gets into a bad state:
 pnpm db:test:reset
 ```
 
-This runs `docker compose down -v && docker compose up -d --wait` — destroys the volume and starts fresh. You'll need to re-run migrations and seeding (steps 2-3) afterward.
+This runs `docker compose -p <resolved-project> down -v` and then starts the resolved `db` service again. You'll need to re-run migrations and seeding (steps 2-3) afterward.
 
 ---
 
@@ -70,12 +73,12 @@ This runs `docker compose down -v && docker compose up -d --wait` — destroys t
 
 | Environment | Port | How Set |
 |-------------|------|---------|
-| **Local** | 5434 | `docker-compose.yml` default (`${DB_TEST_PORT:-5434}:5432`) |
+| **Local** | Per-clone derived port | `scripts/resolve-local-test-target.ts` exports `DB_TEST_PORT` into `pnpm db:test:*` and local integration/E2E wrappers |
 | **CI** | 5432 | GitHub Actions PostgreSQL service (`.github/workflows/ci.yml`) |
 
-The `.env.test` file (committed) hardcodes `localhost:5434`. CI overrides `DATABASE_URL` with its own service on port 5432.
+The `.env.test` file remains a committed fallback, but local wrappers provide `DATABASE_URL` explicitly from the resolver before Vitest loads `.env.test`. CI overrides `DATABASE_URL` with its own service on port 5432.
 
-To use a non-default local port, set `DB_TEST_PORT` before starting Docker and override `DATABASE_URL` on the command line when running migrations/tests. Do not edit committed `.env.test` just for a one-off local port.
+To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. To force a specific DB port, set `DB_TEST_PORT` and use `pnpm exec tsx scripts/resolve-local-test-target.ts database-url` when prefixing migration/seed commands. Do not edit committed `.env.test` just for a one-off local port.
 
 ---
 
@@ -113,25 +116,27 @@ Integration tests are part of every PR and every push to `main`.
 
 ## Troubleshooting
 
-**"Cannot connect to test database at localhost:5434"**
+**"Cannot connect to test database"**
 
 The test setup checks database connectivity before running any tests. If you see this error:
 
 1. Is Docker running? Check with `docker ps`
-2. Is the container on the right port? Should be `0.0.0.0:5434->5432/tcp`
-3. If not, restart: `pnpm db:test:up`
-4. If the container exists but tables are missing: re-run migrations (see above)
+2. Inspect the resolved target with `pnpm exec tsx scripts/resolve-local-test-target.ts env`
+3. Is the Compose service running for that project? Check with `docker compose -p <COMPOSE_PROJECT_NAME> ps`
+4. If not, restart: `pnpm db:test:up`
+5. If the container exists but tables are missing: re-run migrations (see above)
 
-**Stale containers on wrong ports**
+**Stale containers on wrong ports/projects**
 
-If you see a container on a port other than 5434, it may be from an old Docker Compose project. Stop it manually with `docker stop <name> && docker rm <name>`, then run `pnpm db:test:up` to start the correct one.
+If you see an old Compose project, stop it with `COMPOSE_PROJECT_NAME=<old-project> docker compose down` or remove the specific container intentionally. Do not remove another clone's active project. Run `pnpm exec tsx scripts/resolve-local-test-target.ts env` to confirm the project for this clone, then `pnpm db:test:up`.
 
 **Wrong DATABASE_URL (shell overrides .env.test)**
 
 Integration tests load `.env.test` but do **not** override an already-set `DATABASE_URL` (this is required so CI can inject its own database URL). If your shell already exports `DATABASE_URL`, unset it or run tests with an explicit override:
 
 ```bash
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm test:integration
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm test:integration
 ```
 
 **Refused non-local DATABASE_URL**
@@ -146,8 +151,9 @@ Symptoms: `pgcrypto` extension missing (`db.integration.test.ts` fails), `gen_ra
 
 ```bash
 pnpm db:test:reset
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 ```
 
 **`tag-taxonomy-census` fails / `INTEGRATION_SEED_MISSING`**

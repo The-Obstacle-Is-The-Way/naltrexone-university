@@ -3,16 +3,18 @@
 Question feedback is exported through a local-only, read-only script:
 
 ```bash
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm --silent export:feedback > question-feedback.csv
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm --silent export:feedback -- --format json > question-feedback.json
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback > question-feedback.csv
+DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback -- --format json > question-feedback.json
 ```
 
 Default exports redact `user_id` and exclude free-text comments. Raw user identifiers and comment
 bodies require explicit opt-in flags and should only be used for local editorial analysis:
 
 ```bash
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm --silent export:feedback -- --include-user-id > question-feedback-raw-users.csv
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm --silent export:feedback -- --include-comments > question-feedback-comments.csv
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback -- --include-user-id > question-feedback-raw-users.csv
+DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback -- --include-comments > question-feedback-comments.csv
 ```
 
 Never run the export against a production database unless the output location and retention policy

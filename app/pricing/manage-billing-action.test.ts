@@ -53,7 +53,7 @@ describe('runManageBillingAction', () => {
     });
   });
 
-  it('returns redirect to /pricing?checkout=error when portal session creation fails', async () => {
+  it('returns redirect to /pricing?portal=error when portal session creation fails', async () => {
     const redirectFn = (url: string): never => {
       throw new RedirectError(url);
     };
@@ -71,7 +71,7 @@ describe('runManageBillingAction', () => {
       });
 
     await expect(action()).rejects.toMatchObject({
-      url: '/pricing?checkout=error',
+      url: '/pricing?portal=error',
     });
   });
 
@@ -95,7 +95,7 @@ describe('runManageBillingAction', () => {
         });
 
       await expect(action()).rejects.toMatchObject({
-        url: '/pricing?checkout=error',
+        url: '/pricing?portal=error',
       });
     } finally {
       vi.unstubAllEnvs();
@@ -118,7 +118,7 @@ describe('runManageBillingAction', () => {
       });
 
     await expect(action()).rejects.toMatchObject({
-      url: '/pricing?checkout=error',
+      url: '/pricing?portal=error',
     });
     expect(logger.errorCalls).toHaveLength(1);
   });
