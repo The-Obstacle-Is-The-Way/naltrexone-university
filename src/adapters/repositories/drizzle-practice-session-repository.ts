@@ -1,3 +1,4 @@
+// WHY large-file: this repository centralizes practice-session persistence invariants and transaction helpers so session state transitions stay consistent across use cases.
 import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,

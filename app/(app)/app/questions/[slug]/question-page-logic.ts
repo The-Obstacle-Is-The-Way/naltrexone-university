@@ -1,3 +1,4 @@
+// WHY large-file: this module keeps question-page async actions, timeout handling, and user-facing error mapping in one route-local orchestration seam.
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,

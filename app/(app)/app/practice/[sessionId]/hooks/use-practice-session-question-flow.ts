@@ -1,5 +1,6 @@
 'use client';
 
+// WHY large-file: this hook owns the coupled practice-session question flow state machine; splitting it would scatter timing, draft, navigation, and answer-submission invariants.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   createLoadNextQuestionAction,

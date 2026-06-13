@@ -1,5 +1,6 @@
 'use client';
 
+// WHY large-file: this presentation model coordinates the question page's retry, feedback, bookmark, hydration, and navigation state as one UI state machine.
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   canSubmitQuestionAnswer,

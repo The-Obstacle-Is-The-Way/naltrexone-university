@@ -1,3 +1,4 @@
+// WHY large-file: this component is the single marketing homepage composition; keeping the content sections together preserves scan order and avoids shallow section wrappers.
 import { BarChart3, Bookmark, BookOpen, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { type ReactElement, type ReactNode, Suspense } from 'react';

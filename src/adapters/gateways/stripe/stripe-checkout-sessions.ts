@@ -1,3 +1,4 @@
+// WHY large-file: checkout creation is billing-critical and keeps idempotency, existing-session recovery, trial params, and Stripe error mapping in one reviewed adapter seam.
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
 import type {
@@ -130,6 +131,213 @@ function recoveryCheckoutSessionIdempotencyKey(
   return `checkout_session_recovery:${input.userId}:${input.plan}:${sessionId}${trialIdempotencyKeySuffix(input)}`;
 }
 
+type ExistingCheckoutSessionDecision =
+  | {
+      kind: 'reuse';
+      url: string;
+    }
+  | {
+      kind: 'create';
+      replacementIdempotencyKey: string | null;
+    };
+
+async function resolveExistingCheckoutSession({
+  stripe,
+  input,
+  existingSession,
+  existingUrl,
+  priceId,
+  requestedCheckoutVariant,
+  trialRequested,
+  logger,
+  nowMs,
+}: {
+  stripe: StripeClient;
+  input: CheckoutSessionInput;
+  existingSession: StripeCheckoutSession;
+  existingUrl: string;
+  priceId: string;
+  requestedCheckoutVariant: string;
+  trialRequested: boolean;
+  logger: Logger;
+  nowMs: () => number;
+}): Promise<ExistingCheckoutSessionDecision> {
+  let existingPriceId: string | undefined;
+  let existingCheckoutVariant: string | null = null;
+  let retrievedSession: StripeCheckoutSession | null = null;
+  let shouldExpireExistingSession = false;
+  let expireFailureIsFatal = false;
+  let replacementIdempotencyKey: string | null = null;
+  const setRecoveryKeyForTrial = () => {
+    if (trialRequested) {
+      replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
+        input,
+        existingSession.id,
+      );
+    }
+  };
+
+  try {
+    const session = await callStripeWithRetry({
+      operation: 'checkout.sessions.retrieve',
+      fn: () =>
+        stripe.checkout.sessions.retrieve(existingSession.id, {
+          expand: ['line_items'],
+        }),
+      logger,
+    });
+    retrievedSession = session;
+    existingPriceId = session.line_items?.data?.[0]?.price?.id;
+    existingCheckoutVariant = getRetrievedCheckoutSessionVariant(session);
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    setRecoveryKeyForTrial();
+    logger.warn(
+      {
+        sessionId: existingSession.id,
+        error: errorMessage,
+        cause: error,
+      },
+      'Failed to inspect existing checkout session',
+    );
+  }
+
+  if (existingPriceId === priceId) {
+    const checkoutVariantMatches =
+      existingCheckoutVariant === requestedCheckoutVariant;
+
+    if (
+      checkoutVariantMatches &&
+      (!retrievedSession || !isSessionInactive(retrievedSession, nowMs))
+    ) {
+      return { kind: 'reuse', url: existingUrl };
+    }
+
+    if (retrievedSession && !isSessionInactive(retrievedSession, nowMs)) {
+      setRecoveryKeyForTrial();
+      shouldExpireExistingSession = true;
+      expireFailureIsFatal = true;
+      logger.warn(
+        {
+          sessionId: existingSession.id,
+          existingPriceId,
+          requestedPriceId: priceId,
+          existingCheckoutVariant,
+          requestedCheckoutVariant,
+          trialRequested,
+        },
+        'Expiring existing checkout session to enforce requested checkout terms',
+      );
+    } else {
+      logger.info(
+        {
+          sessionId: existingSession.id,
+          existingPriceId,
+          requestedPriceId: priceId,
+          existingCheckoutVariant,
+          requestedCheckoutVariant,
+          status: retrievedSession?.status ?? null,
+          expiresAt: retrievedSession?.expires_at ?? null,
+        },
+        'Existing checkout session matched price but was already inactive; creating a fresh checkout session',
+      );
+    }
+  } else if (existingPriceId) {
+    setRecoveryKeyForTrial();
+    shouldExpireExistingSession = true;
+    expireFailureIsFatal = true;
+    // Avoid reusing a checkout session for a different plan. If the user
+    // changes plans, we expire the old session and create a new one so the
+    // Stripe UI matches their selection.
+    logger.warn(
+      {
+        sessionId: existingSession.id,
+        existingPriceId,
+        requestedPriceId: priceId,
+        trialRequested,
+      },
+      'Expiring mismatched checkout session',
+    );
+  } else {
+    setRecoveryKeyForTrial();
+    shouldExpireExistingSession = true;
+    expireFailureIsFatal = false;
+    logger.warn(
+      {
+        sessionId: existingSession.id,
+      },
+      'Expiring existing checkout session after failed inspection',
+    );
+  }
+
+  if (shouldExpireExistingSession) {
+    try {
+      await callStripeWithRetry({
+        operation: 'checkout.sessions.expire',
+        fn: () =>
+          stripe.checkout.sessions.expire(existingSession.id, undefined, {
+            idempotencyKey: `expire_checkout_session:${existingSession.id}`,
+          }),
+        logger,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      if (isAlreadyTerminalSessionError(error)) {
+        logger.info(
+          {
+            sessionId: existingSession.id,
+            existingPriceId,
+            requestedPriceId: priceId,
+            error: errorMessage,
+          },
+          'Treating already-terminal checkout session expire error as success',
+        );
+        // Stripe already considers the session terminal, so the adapter can
+        // safely continue with fresh checkout creation.
+      } else if (expireFailureIsFatal) {
+        logger.error(
+          {
+            sessionId: existingSession.id,
+            existingPriceId,
+            requestedPriceId: priceId,
+            error: errorMessage,
+          },
+          'Failed to expire mismatched checkout session',
+        );
+        throw new ApplicationError(
+          'STRIPE_ERROR',
+          'Failed to expire existing checkout session',
+        );
+      } else {
+        logger.warn(
+          {
+            sessionId: existingSession.id,
+            existingPriceId,
+            requestedPriceId: priceId,
+            error: errorMessage,
+          },
+          'Failed to expire existing checkout session after failed inspection; continuing with checkout creation',
+        );
+      }
+    }
+  }
+
+  if (replacementIdempotencyKey) {
+    logger.info(
+      {
+        sessionId: existingSession.id,
+        replacementIdempotencyKey,
+        trialRequested,
+      },
+      'Using replacement idempotency key for fresh checkout session',
+    );
+  }
+
+  return { kind: 'create', replacementIdempotencyKey };
+}
+
 export async function createStripeCheckoutSession({
   stripe,
   input,
@@ -205,187 +413,21 @@ export async function createStripeCheckoutSession({
   const existingUrl = existingSession?.url;
   let replacementIdempotencyKey: string | null = null;
   if (existingSession && existingUrl) {
-    let existingPriceId: string | undefined;
-    let existingCheckoutVariant: string | null = null;
-    let retrievedSession: StripeCheckoutSession | null = null;
-    let shouldExpireExistingSession = false;
-    let expireFailureIsFatal = false;
-    try {
-      const session = await callStripeWithRetry({
-        operation: 'checkout.sessions.retrieve',
-        fn: () =>
-          stripe.checkout.sessions.retrieve(existingSession.id, {
-            expand: ['line_items'],
-          }),
-        logger,
-      });
-      retrievedSession = session;
-      existingPriceId = session.line_items?.data?.[0]?.price?.id;
-      existingCheckoutVariant = getRetrievedCheckoutSessionVariant(session);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      if (trialRequested) {
-        replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
-          input,
-          existingSession.id,
-        );
-      }
-      logger.warn(
-        {
-          sessionId: existingSession.id,
-          error: errorMessage,
-          cause: error,
-        },
-        'Failed to inspect existing checkout session',
-      );
+    const decision = await resolveExistingCheckoutSession({
+      stripe,
+      input,
+      existingSession,
+      existingUrl,
+      priceId,
+      requestedCheckoutVariant,
+      trialRequested,
+      logger,
+      nowMs,
+    });
+    if (decision.kind === 'reuse') {
+      return { url: decision.url };
     }
-
-    if (existingPriceId === priceId) {
-      const checkoutVariantMatches =
-        existingCheckoutVariant === requestedCheckoutVariant;
-
-      if (
-        checkoutVariantMatches &&
-        (!retrievedSession || !isSessionInactive(retrievedSession, nowMs))
-      ) {
-        return { url: existingUrl };
-      }
-
-      if (retrievedSession && !isSessionInactive(retrievedSession, nowMs)) {
-        if (trialRequested) {
-          replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
-            input,
-            existingSession.id,
-          );
-        }
-        shouldExpireExistingSession = true;
-        expireFailureIsFatal = true;
-        logger.warn(
-          {
-            sessionId: existingSession.id,
-            existingPriceId,
-            requestedPriceId: priceId,
-            existingCheckoutVariant,
-            requestedCheckoutVariant,
-            trialRequested,
-          },
-          'Expiring existing checkout session to enforce requested checkout terms',
-        );
-      } else {
-        logger.info(
-          {
-            sessionId: existingSession.id,
-            existingPriceId,
-            requestedPriceId: priceId,
-            existingCheckoutVariant,
-            requestedCheckoutVariant,
-            status: retrievedSession?.status ?? null,
-            expiresAt: retrievedSession?.expires_at ?? null,
-          },
-          'Existing checkout session matched price but was already inactive; creating a fresh checkout session',
-        );
-      }
-    } else if (existingPriceId) {
-      if (trialRequested) {
-        replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
-          input,
-          existingSession.id,
-        );
-      }
-      shouldExpireExistingSession = true;
-      expireFailureIsFatal = true;
-      // Avoid reusing a checkout session for a different plan. If the user
-      // changes plans, we expire the old session and create a new one so the
-      // Stripe UI matches their selection.
-      logger.warn(
-        {
-          sessionId: existingSession.id,
-          existingPriceId,
-          requestedPriceId: priceId,
-          trialRequested,
-        },
-        'Expiring mismatched checkout session',
-      );
-    } else {
-      if (trialRequested) {
-        replacementIdempotencyKey = recoveryCheckoutSessionIdempotencyKey(
-          input,
-          existingSession.id,
-        );
-      }
-      shouldExpireExistingSession = true;
-      expireFailureIsFatal = false;
-      logger.warn(
-        {
-          sessionId: existingSession.id,
-        },
-        'Expiring existing checkout session after failed inspection',
-      );
-    }
-
-    if (shouldExpireExistingSession) {
-      try {
-        await callStripeWithRetry({
-          operation: 'checkout.sessions.expire',
-          fn: () =>
-            stripe.checkout.sessions.expire(existingSession.id, undefined, {
-              idempotencyKey: `expire_checkout_session:${existingSession.id}`,
-            }),
-          logger,
-        });
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error';
-        if (isAlreadyTerminalSessionError(error)) {
-          logger.info(
-            {
-              sessionId: existingSession.id,
-              existingPriceId,
-              requestedPriceId: priceId,
-              error: errorMessage,
-            },
-            'Treating already-terminal checkout session expire error as success',
-          );
-          // Stripe already considers the session terminal, so the adapter can
-          // safely continue with fresh checkout creation.
-        } else if (expireFailureIsFatal) {
-          logger.error(
-            {
-              sessionId: existingSession.id,
-              existingPriceId,
-              requestedPriceId: priceId,
-              error: errorMessage,
-            },
-            'Failed to expire mismatched checkout session',
-          );
-          throw new ApplicationError(
-            'STRIPE_ERROR',
-            'Failed to expire existing checkout session',
-          );
-        } else {
-          logger.warn(
-            {
-              sessionId: existingSession.id,
-              existingPriceId,
-              requestedPriceId: priceId,
-              error: errorMessage,
-            },
-            'Failed to expire existing checkout session after failed inspection; continuing with checkout creation',
-          );
-        }
-      }
-    }
-    if (replacementIdempotencyKey) {
-      logger.info(
-        {
-          sessionId: existingSession.id,
-          replacementIdempotencyKey,
-          trialRequested,
-        },
-        'Using replacement idempotency key for fresh checkout session',
-      );
-    }
+    replacementIdempotencyKey = decision.replacementIdempotencyKey;
   }
 
   const baseParams = {
