@@ -82,7 +82,7 @@ export function formatHeaderSecretValidation(
 
 export function runValidateHeaderSafeSecret(
   argv: string[],
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
   stdout: Pick<NodeJS.WriteStream, 'write'> = process.stdout,
   stderr: Pick<NodeJS.WriteStream, 'write'> = process.stderr,
 ): number {
@@ -112,9 +112,11 @@ export function runValidateHeaderSafeSecret(
   return results.every((result) => result.ok) ? 0 : 1;
 }
 
+/* v8 ignore start -- direct-invocation CLI entrypoint, exercised via runValidateHeaderSafeSecret in tests */
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   process.exitCode = runValidateHeaderSafeSecret(process.argv.slice(2));
 }
+/* v8 ignore stop */
