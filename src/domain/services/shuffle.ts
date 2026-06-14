@@ -21,7 +21,11 @@ export function shuffleWithSeed<T>(items: readonly T[], seed: number): T[] {
 
   for (let i = result.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
+    if (i === j) continue;
+
+    const itemsAtJ = result.splice(j, 1);
+    const itemsAtI = result.splice(i - 1, 1, ...itemsAtJ);
+    result.splice(j, 0, ...itemsAtI);
   }
 
   return result;

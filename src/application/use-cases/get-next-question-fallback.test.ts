@@ -586,19 +586,38 @@ describe('GetNextQuestionUseCase', () => {
   it('produces the same shuffle order regardless of initial choice ordering', async () => {
     const questionId = 'q1';
 
-    const choices = [
-      createChoice({ id: 'c1', questionId, label: 'A', sortOrder: 1 }),
-      createChoice({ id: 'c2', questionId, label: 'B', sortOrder: 1 }),
-      createChoice({ id: 'c3', questionId, label: 'C', sortOrder: 1 }),
-      createChoice({ id: 'c4', questionId, label: 'D', sortOrder: 1 }),
-    ];
+    const choiceA = createChoice({
+      id: 'c1',
+      questionId,
+      label: 'A',
+      sortOrder: 1,
+    });
+    const choiceB = createChoice({
+      id: 'c2',
+      questionId,
+      label: 'B',
+      sortOrder: 1,
+    });
+    const choiceC = createChoice({
+      id: 'c3',
+      questionId,
+      label: 'C',
+      sortOrder: 1,
+    });
+    const choiceD = createChoice({
+      id: 'c4',
+      questionId,
+      label: 'D',
+      sortOrder: 1,
+    });
+    const choices = [choiceA, choiceB, choiceC, choiceD];
 
     const baseQuestion = createQuestion({ id: questionId, choices });
 
     const questionOrdered = baseQuestion;
     const questionUnordered = {
       ...baseQuestion,
-      choices: [choices[2], choices[0], choices[3], choices[1]],
+      choices: [choiceC, choiceA, choiceD, choiceB],
     };
 
     const { getNextQuestion: getNextQuestionOrdered } = createTestDeps({
