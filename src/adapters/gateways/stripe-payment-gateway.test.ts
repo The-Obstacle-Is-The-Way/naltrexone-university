@@ -242,7 +242,7 @@ describe('StripePaymentGateway', () => {
 
   it('throws STRIPE_ERROR when a Stripe customer id is missing', async () => {
     const { stripe, customersCreate } = createStripeMock();
-    customersCreate.mockResolvedValue({ id: undefined });
+    customersCreate.mockResolvedValue({});
     const gateway = createGateway(stripe);
 
     await expect(

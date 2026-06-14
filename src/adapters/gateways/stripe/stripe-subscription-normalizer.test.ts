@@ -247,7 +247,11 @@ describe('retrieveAndNormalizeStripeSubscription', () => {
     });
 
     expect(logger.errorCalls).toHaveLength(1);
-    expect(logger.errorCalls[0].msg).toContain(
+    const errorCall = logger.errorCalls[0];
+    if (errorCall === undefined) {
+      throw new Error('Expected Stripe subscription payload error log');
+    }
+    expect(errorCall.msg).toContain(
       'Invalid Stripe subscription payload retrieved',
     );
   });

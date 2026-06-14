@@ -26,7 +26,7 @@ export function normalizeStripeSubscriptionUpdate(input: {
   type: string;
   priceIds: StripePriceIds;
   logger: Logger;
-  webhookE2EOwner?: string;
+  webhookE2EOwner?: string | undefined;
 }): NonNullable<WebhookEventResult['subscriptionUpdate']> {
   const { subscription } = input;
   const userId = subscription.metadata?.user_id;
@@ -77,6 +77,12 @@ export function normalizeStripeSubscriptionUpdate(input: {
   const status = stripeSubscriptionStatusToSubscriptionStatus(stripeStatus);
 
   const subscriptionItem = subscription.items.data[0];
+  if (!subscriptionItem) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe subscription item is required',
+    );
+  }
   const currentPeriodEndSeconds = subscriptionItem.current_period_end;
   const cancelAtPeriodEnd = subscription.cancel_at_period_end;
   const priceId = subscriptionItem.price.id;
@@ -106,7 +112,7 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
   event: { id: string; type: string };
   priceIds: StripePriceIds;
   logger: Logger;
-  webhookE2EOwner?: string;
+  webhookE2EOwner?: string | undefined;
 }): Promise<NonNullable<WebhookEventResult['subscriptionUpdate']>> {
   const stripeSubscriptionId =
     typeof input.subscriptionRef === 'string'

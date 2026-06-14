@@ -30,7 +30,7 @@ export async function createStripeCustomer({
 }: {
   stripe: StripeClient;
   input: CreateCustomerInput;
-  options?: PaymentGatewayRequestOptions;
+  options?: PaymentGatewayRequestOptions | undefined;
   logger: Logger;
 }): Promise<CreateCustomerOutput> {
   const params = {

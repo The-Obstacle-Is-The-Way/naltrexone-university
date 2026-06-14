@@ -43,9 +43,9 @@ export type StripeCheckoutSessionStatus = 'open' | 'complete' | 'expired';
 export type StripeCheckoutSession = {
   id: string;
   url: string | null;
-  created?: number;
-  status?: StripeCheckoutSessionStatus | null;
-  expires_at?: number;
+  created?: number | undefined;
+  status?: StripeCheckoutSessionStatus | null | undefined;
+  expires_at?: number | undefined;
   metadata?: Record<string, string> | null;
   payment_method_collection?: 'always' | 'if_required' | null;
 };

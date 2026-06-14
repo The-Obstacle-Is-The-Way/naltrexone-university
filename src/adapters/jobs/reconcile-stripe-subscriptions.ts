@@ -182,7 +182,7 @@ export async function reconcileStripeSubscriptions(
 
         if (blockingSubscriptionIds.length > 0) {
           // Phase 3: select the canonical subscription via period-end sort + deterministic tie-break.
-          keptSubscriptionId = blockingSubscriptionIds
+          const keptSubscription = blockingSubscriptionIds
             .map((id) => canonicalById.get(id))
             .filter((subscription): subscription is typeof canonical => {
               return subscription !== undefined;
@@ -194,15 +194,18 @@ export async function reconcileStripeSubscriptions(
               return a.externalSubscriptionId.localeCompare(
                 b.externalSubscriptionId,
               );
-            })[0]?.externalSubscriptionId;
+            })[0];
 
-          if (!keptSubscriptionId) {
+          const keptSubscriptionIdCandidate =
+            keptSubscription?.externalSubscriptionId;
+          if (!keptSubscriptionIdCandidate) {
             throw new ApplicationError(
               'STRIPE_ERROR',
               'Unable to determine canonical Stripe subscription',
             );
           }
 
+          keptSubscriptionId = keptSubscriptionIdCandidate;
           const kept = canonicalById.get(keptSubscriptionId);
           if (!kept) {
             throw new ApplicationError(

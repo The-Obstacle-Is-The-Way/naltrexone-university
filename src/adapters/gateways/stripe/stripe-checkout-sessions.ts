@@ -418,10 +418,10 @@ export async function createStripeCheckoutSession({
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
-  options?: PaymentGatewayRequestOptions;
+  options?: PaymentGatewayRequestOptions | undefined;
   priceIds: StripePriceIds;
   logger: Logger;
-  nowMs?: () => number;
+  nowMs?: (() => number) | undefined;
 }): Promise<{ url: string }> {
   const priceId = getStripePriceId(input.plan, priceIds);
   const trialRequested = input.trialPeriodDays !== undefined;

@@ -24,7 +24,7 @@ export type StripePaymentGatewayDeps = {
   webhookSecret: string;
   priceIds: StripePriceIds;
   logger: Logger;
-  webhookE2EOwner?: string;
+  webhookE2EOwner?: string | undefined;
 };
 
 export class StripePaymentGateway implements PaymentGateway {
