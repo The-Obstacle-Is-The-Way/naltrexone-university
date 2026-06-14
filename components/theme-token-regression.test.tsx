@@ -69,11 +69,11 @@ function parseHslToken(value: string): [number, number, number] {
   if (!match) {
     throw new Error(`Invalid HSL token value: "${value}"`);
   }
-  return [
-    Number.parseFloat(match[1]),
-    Number.parseFloat(match[2]),
-    Number.parseFloat(match[3]),
-  ];
+  const [, h, s, l] = match;
+  if (h === undefined || s === undefined || l === undefined) {
+    throw new Error(`Invalid HSL token captures: "${value}"`);
+  }
+  return [Number.parseFloat(h), Number.parseFloat(s), Number.parseFloat(l)];
 }
 
 function hslToRgb(value: [number, number, number]): [number, number, number] {

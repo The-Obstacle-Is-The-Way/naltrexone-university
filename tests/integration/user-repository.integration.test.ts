@@ -28,6 +28,11 @@ function createScriptedNow(...timestamps: Date[]) {
     }
 
     const value = timestamps[index];
+    if (value === undefined) {
+      throw new Error(
+        `Scripted now() exhausted after ${timestamps.length} call(s)`,
+      );
+    }
     index += 1;
     return value;
   };

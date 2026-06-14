@@ -6,6 +6,12 @@ export function parseQuestionProgressCount(progressText: string): number {
       `Could not parse question progress count from "${progressText}"`,
     );
   }
+  const count = match[1];
+  if (count === undefined) {
+    throw new Error(
+      `Could not parse question progress count from "${progressText}"`,
+    );
+  }
 
-  return Number.parseInt(match[1], 10);
+  return Number.parseInt(count, 10);
 }

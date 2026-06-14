@@ -27,7 +27,7 @@ vi.mock('@playwright/test', () => ({
 
       await waitable.waitFor({
         state: 'visible',
-        timeout: options?.timeout,
+        ...(options?.timeout !== undefined ? { timeout: options.timeout } : {}),
       });
     },
     resolves: {

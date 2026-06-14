@@ -64,27 +64,29 @@ function getPracticeSessionIndexes(): Record<
   )(extraConfigColumns);
 }
 
+function getPracticeSessionIndex(name: string): { config: { name: string } } {
+  const index = getPracticeSessionIndexes()[name];
+  if (index === undefined) {
+    throw new Error(`Missing practiceSessions index: ${name}`);
+  }
+  return index;
+}
+
 describe('practiceSessions schema indexes', () => {
   it('defines a user + startedAt index for session ordering', () => {
-    const indexes = getPracticeSessionIndexes();
-
-    expect(indexes.userStartedAtIdx.config.name).toBe(
+    expect(getPracticeSessionIndex('userStartedAtIdx').config.name).toBe(
       'practice_sessions_user_started_at_idx',
     );
   });
 
   it('defines a user + endedAt index for incomplete/completed session filters', () => {
-    const indexes = getPracticeSessionIndexes();
-
-    expect(indexes.userEndedAtIdx.config.name).toBe(
+    expect(getPracticeSessionIndex('userEndedAtIdx').config.name).toBe(
       'practice_sessions_user_ended_at_idx',
     );
   });
 
   it('defines a partial unique index enforcing one incomplete session per user', () => {
-    const indexes = getPracticeSessionIndexes();
-
-    expect(indexes.userIncompleteUq.config.name).toBe(
+    expect(getPracticeSessionIndex('userIncompleteUq').config.name).toBe(
       PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
     );
   });

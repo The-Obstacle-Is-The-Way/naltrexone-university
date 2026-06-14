@@ -483,6 +483,9 @@ describe('runE2ECredentialHealthCheck', () => {
       const topLevelCauses = topLevelError.cause as CredentialValidationError[];
       expect(topLevelCauses).toHaveLength(1);
       const wrappedError = topLevelCauses[0];
+      if (wrappedError === undefined) {
+        throw new Error('Expected wrapped credential validation error');
+      }
       expect(wrappedError.code).toBe('E2E_PREFLIGHT:UNEXPECTED');
       expect(wrappedError.cause).toBe(rootCause);
     }

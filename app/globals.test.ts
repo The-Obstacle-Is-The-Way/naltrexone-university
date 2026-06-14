@@ -42,11 +42,15 @@ function parseHslToken(value: string): HslColor {
   if (!match) {
     throw new Error(`Invalid HSL token value: "${value}"`);
   }
+  const [, h, s, l] = match;
+  if (h === undefined || s === undefined || l === undefined) {
+    throw new Error(`Invalid HSL token captures: "${value}"`);
+  }
 
   return {
-    h: Number.parseFloat(match[1]),
-    s: Number.parseFloat(match[2]) / 100,
-    l: Number.parseFloat(match[3]) / 100,
+    h: Number.parseFloat(h),
+    s: Number.parseFloat(s) / 100,
+    l: Number.parseFloat(l) / 100,
   };
 }
 

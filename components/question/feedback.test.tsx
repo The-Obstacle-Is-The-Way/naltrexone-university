@@ -560,6 +560,9 @@ describe('Feedback', () => {
       const className = card.getAttribute('class') ?? '';
       const classTokens = getClassTokens(className);
       const expectedChoice = expectedWrongChoices[index];
+      if (expectedChoice === undefined) {
+        throw new Error(`Missing expected wrong choice at index ${index}`);
+      }
       const answerRow = findAnswerRow(
         card,
         expectedChoice.label,
