@@ -40,9 +40,9 @@ export type { QuestionPageBookmarkStatus } from './use-question-page-bookmarks';
 export type { QuestionPageFeedbackStatus } from './use-question-page-feedback';
 
 function resolveRetryOrigin(input: {
-  mode?: QuestionMode | null;
-  sessionId?: string;
-  from?: QuestionOrigin | null;
+  mode?: QuestionMode | null | undefined;
+  sessionId?: string | undefined;
+  from?: QuestionOrigin | null | undefined;
 }): AttemptRetryOrigin {
   if (input.mode === 'review' && input.sessionId) return 'session_review';
   if (input.from === 'history') return 'history';
@@ -53,12 +53,12 @@ function resolveRetryOrigin(input: {
 
 export type UseQuestionPageModelInput = {
   slug: string;
-  mode?: QuestionMode | null;
-  from?: QuestionOrigin | null;
-  sessionId?: string;
-  attemptId?: string;
-  historySequence?: readonly string[] | null;
-  historyIndex?: number | null;
+  mode?: QuestionMode | null | undefined;
+  from?: QuestionOrigin | null | undefined;
+  sessionId?: string | undefined;
+  attemptId?: string | undefined;
+  historySequence?: readonly string[] | null | undefined;
+  historyIndex?: number | null | undefined;
 };
 
 export type UseQuestionPageModelOutput = {

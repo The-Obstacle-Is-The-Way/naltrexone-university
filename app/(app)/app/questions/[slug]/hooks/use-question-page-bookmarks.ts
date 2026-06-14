@@ -22,7 +22,7 @@ export type QuestionPageBookmarkStatus =
   | 'error';
 
 export type UseQuestionPageBookmarksInput = {
-  mode?: QuestionMode | null;
+  mode?: QuestionMode | null | undefined;
   question: GetQuestionBySlugOutput | null;
   isMounted: () => boolean;
 };

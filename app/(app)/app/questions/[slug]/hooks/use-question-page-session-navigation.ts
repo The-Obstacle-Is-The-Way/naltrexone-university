@@ -14,10 +14,10 @@ const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
 export type UseQuestionPageSessionNavigationInput = {
   slug: string;
-  sessionId?: string;
-  from?: QuestionOrigin | null;
-  historySequence?: readonly string[] | null;
-  historyIndex?: number | null;
+  sessionId?: string | undefined;
+  from?: QuestionOrigin | null | undefined;
+  historySequence?: readonly string[] | null | undefined;
+  historyIndex?: number | null | undefined;
   isMounted: () => boolean;
   startTransition: (fn: () => void) => void;
 };

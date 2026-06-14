@@ -37,9 +37,9 @@ export type SessionNavigation = {
     wasRetried?: boolean;
   }>;
   currentIndex: number;
-  sessionId?: string;
+  sessionId?: string | undefined;
   from: QuestionOrigin;
-  historySequence?: readonly string[] | null;
+  historySequence?: readonly string[] | null | undefined;
 };
 
 export type SessionUnansweredReveal = {
@@ -63,12 +63,12 @@ export type RetryProvenance = {
 };
 
 export function normalizeReviewIdentifiers(input: {
-  mode?: QuestionMode | null;
-  sessionId?: string;
-  attemptId?: string;
+  mode?: QuestionMode | null | undefined;
+  sessionId?: string | undefined;
+  attemptId?: string | undefined;
 }): {
-  sessionId?: string;
-  attemptId?: string;
+  sessionId?: string | undefined;
+  attemptId?: string | undefined;
   normalized: boolean;
 } {
   if (
@@ -95,8 +95,8 @@ export function canSubmitQuestionAnswer(input: {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: SubmitAnswerOutput | null;
-  mode?: QuestionMode | null;
-  sessionId?: string;
+  mode?: QuestionMode | null | undefined;
+  sessionId?: string | undefined;
 }): boolean {
   if (input.loadState.status === 'loading') return false;
   if (!input.question) return false;
@@ -118,9 +118,11 @@ export async function loadQuestion(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
-  setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
-  isMounted?: () => boolean;
-  isStale?: () => boolean;
+  setSessionUnansweredReveal?:
+    | ((reveal: SessionUnansweredReveal | null) => void)
+    | undefined;
+  isMounted?: (() => boolean) | undefined;
+  isStale?: (() => boolean) | undefined;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
   const isStale = input.isStale ?? (() => false);
@@ -183,9 +185,11 @@ export function createLoadQuestionAction(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
-  setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
-  isMounted?: () => boolean;
-  isStale?: () => boolean;
+  setSessionUnansweredReveal?:
+    | ((reveal: SessionUnansweredReveal | null) => void)
+    | undefined;
+  isMounted?: (() => boolean) | undefined;
+  isStale?: (() => boolean) | undefined;
 }): () => void {
   return () => {
     input.startTransition(() => {
@@ -197,18 +201,18 @@ export function createLoadQuestionAction(input: {
 export async function submitSelectedAnswer(input: {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
-  mode?: QuestionMode | null;
-  sessionId?: string;
+  mode?: QuestionMode | null | undefined;
+  sessionId?: string | undefined;
   questionLoadedAtMs: number | null;
   submitIdempotencyKey: string | null;
-  retryProvenance?: RetryProvenance | null;
+  retryProvenance?: RetryProvenance | null | undefined;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  onSuccess?: (result: SubmitAnswerOutput) => void;
-  isMounted?: () => boolean;
-  isStale?: () => boolean;
+  onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  isMounted?: (() => boolean) | undefined;
+  isStale?: (() => boolean) | undefined;
 }): Promise<void> {
   if (!input.question) return;
   if (!input.selectedChoiceId) return;
@@ -240,8 +244,10 @@ export async function submitSelectedAnswer(input: {
   } = {
     questionId: input.question.questionId,
     choiceId: input.selectedChoiceId,
-    idempotencyKey: input.submitIdempotencyKey ?? undefined,
     timeSpentSeconds,
+    ...(input.submitIdempotencyKey !== null
+      ? { idempotencyKey: input.submitIdempotencyKey }
+      : {}),
   };
 
   if (input.retryProvenance) {
@@ -291,19 +297,19 @@ export function createSubmitSelectedAnswerAction(input: {
   startTransition: (fn: () => void) => void;
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
-  mode?: QuestionMode | null;
-  sessionId?: string;
+  mode?: QuestionMode | null | undefined;
+  sessionId?: string | undefined;
   questionLoadedAtMs: number | null;
   submitIdempotencyKey: string | null;
-  retryProvenance?: RetryProvenance | null;
+  retryProvenance?: RetryProvenance | null | undefined;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  onSuccess?: (result: SubmitAnswerOutput) => void;
-  onUnhandledError?: (error: unknown) => void;
-  isMounted?: () => boolean;
-  isStale?: () => boolean;
+  onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  onUnhandledError?: ((error: unknown) => void) | undefined;
+  isMounted?: (() => boolean) | undefined;
+  isStale?: (() => boolean) | undefined;
 }): () => Promise<void> {
   return () =>
     runTransitionedAsyncAction({
@@ -320,7 +326,9 @@ export function reattemptQuestion(input: {
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number) => void;
-  setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
+  setSessionUnansweredReveal?:
+    | ((reveal: SessionUnansweredReveal | null) => void)
+    | undefined;
 }): void {
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
@@ -331,18 +339,20 @@ export function reattemptQuestion(input: {
 
 export async function loadPreviousAttempt(input: {
   questionId: string;
-  attemptId?: string;
-  sessionId?: string;
+  attemptId?: string | undefined;
+  sessionId?: string | undefined;
   getPreviousAttemptFn: (
     input: unknown,
   ) => Promise<ActionResult<GetPreviousAttemptOutput | null>>;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: QuestionPageSubmitResult | null) => void;
-  setReviewSessionMode?: (mode: 'tutor' | 'exam' | null) => void;
-  setSessionUnansweredReveal?: (reveal: SessionUnansweredReveal | null) => void;
-  setReviewHydrationState?: (state: ReviewHydrationState) => void;
-  isMounted?: () => boolean;
-  isStale?: () => boolean;
+  setReviewSessionMode?: ((mode: 'tutor' | 'exam' | null) => void) | undefined;
+  setSessionUnansweredReveal?:
+    | ((reveal: SessionUnansweredReveal | null) => void)
+    | undefined;
+  setReviewHydrationState?: ((state: ReviewHydrationState) => void) | undefined;
+  isMounted?: (() => boolean) | undefined;
+  isStale?: (() => boolean) | undefined;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
   const isStale = input.isStale ?? (() => false);

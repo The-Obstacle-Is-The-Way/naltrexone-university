@@ -51,7 +51,7 @@ function Probe({
   loadStatus?: 'loading' | 'ready' | 'error';
   question?: GetQuestionBySlugOutput | null;
   onRender?: (snapshot: {
-    mode?: 'review' | null;
+    mode?: 'review' | null | undefined;
     isLoadingPreviousAttempt: boolean;
     reviewHydrationState: string | null;
   }) => void;
@@ -173,7 +173,7 @@ describe('useQuestionPagePreviousAttempt (browser)', () => {
     getPreviousAttempt.mockReturnValue(deferred.promise);
 
     const reviewSnapshots: Array<{
-      mode?: 'review' | null;
+      mode?: 'review' | null | undefined;
       isLoadingPreviousAttempt: boolean;
       reviewHydrationState: string | null;
     }> = [];
