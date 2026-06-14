@@ -23,6 +23,9 @@ export function shuffleWithSeed<T>(items: readonly T[], seed: number): T[] {
     const j = Math.floor(random() * (i + 1));
     if (i === j) continue;
 
+    // Use splice instead of tuple destructuring: strict indexed access types
+    // each read as T | undefined, while these guarded indices are valid and
+    // splice preserves the Fisher-Yates exchange without non-null assertions.
     const itemsAtJ = result.splice(j, 1);
     const itemsAtI = result.splice(i - 1, 1, ...itemsAtJ);
     result.splice(j, 0, ...itemsAtI);
