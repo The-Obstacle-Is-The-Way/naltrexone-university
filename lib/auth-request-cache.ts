@@ -23,7 +23,7 @@ export type RequestAuthState =
     };
 
 type RequestAuthStateOptions = {
-  loadContainer?: LoadContainerFn<AuthDepsContainer>;
+  loadContainer?: LoadContainerFn<AuthDepsContainer> | undefined;
 };
 
 const getAuthCheckDeps = createDepsResolver<AuthCheckDeps, AuthDepsContainer>(
@@ -63,8 +63,8 @@ const getCachedRequestAuthState = createCachedRequestAuthStateReader(() =>
 );
 
 export async function getRequestAuthState(input?: {
-  deps?: AuthCheckDeps;
-  options?: RequestAuthStateOptions;
+  deps?: AuthCheckDeps | undefined;
+  options?: RequestAuthStateOptions | undefined;
 }): Promise<RequestAuthState> {
   if (input?.deps) {
     return loadRequestAuthState(input.deps);
@@ -73,7 +73,9 @@ export async function getRequestAuthState(input?: {
   if (input?.options?.loadContainer) {
     // Custom container loaders are a test seam, not the production path.
     // Skip the cache so those callers always observe the exact injected loader.
-    const deps = await getAuthCheckDeps(undefined, input.options);
+    const deps = await getAuthCheckDeps(undefined, {
+      loadContainer: input.options.loadContainer,
+    });
     return loadRequestAuthState(deps);
   }
 

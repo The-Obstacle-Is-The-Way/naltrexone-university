@@ -43,7 +43,7 @@ export type PricingData = {
 };
 
 export async function loadPricingData(
-  deps?: PricingPageDeps,
+  deps?: PricingPageDeps | undefined,
 ): Promise<PricingData> {
   const authState = await getRequestAuthState({ deps });
   if (!authState.user) {
@@ -194,7 +194,7 @@ export async function DeferredPricingView({
   deps,
 }: {
   searchParams: Promise<PricingSearchParams>;
-  deps?: PricingPageDeps;
+  deps?: PricingPageDeps | undefined;
 }) {
   const [pricingData, resolvedSearchParams] = await Promise.all([
     loadPricingData(deps),
@@ -208,9 +208,7 @@ export async function DeferredPricingView({
       isEntitled={pricingData.isEntitled}
       banner={banner}
       showTrialCtas={showTrialCtas}
-      manageBillingAction={
-        showManageBillingAction ? manageBillingAction : undefined
-      }
+      {...(showManageBillingAction ? { manageBillingAction } : {})}
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
       SubscribeButtonComponent={SubscribeButton}
@@ -220,8 +218,8 @@ export async function DeferredPricingView({
 
 async function renderInjectedPricingPage(input: {
   searchParams: Promise<PricingSearchParams>;
-  deps?: PricingPageDeps;
-  authNavFn?: () => ReactNode | Promise<ReactNode>;
+  deps?: PricingPageDeps | undefined;
+  authNavFn?: (() => ReactNode | Promise<ReactNode>) | undefined;
 }) {
   const resolvedAuthNavFn =
     input.authNavFn ??
@@ -247,9 +245,7 @@ async function renderInjectedPricingPage(input: {
         isEntitled={pricingData.isEntitled}
         banner={banner}
         showTrialCtas={showTrialCtas}
-        manageBillingAction={
-          showManageBillingAction ? manageBillingAction : undefined
-        }
+        {...(showManageBillingAction ? { manageBillingAction } : {})}
         subscribeMonthlyAction={subscribeMonthlyAction}
         subscribeAnnualAction={subscribeAnnualAction}
         SubscribeButtonComponent={SubscribeButton}
@@ -264,8 +260,8 @@ export default async function PricingPage({
   authNavFn,
 }: {
   searchParams: Promise<PricingSearchParams>;
-  deps?: PricingPageDeps;
-  authNavFn?: () => ReactNode | Promise<ReactNode>;
+  deps?: PricingPageDeps | undefined;
+  authNavFn?: (() => ReactNode | Promise<ReactNode>) | undefined;
 }) {
   if (deps || authNavFn) {
     return renderInjectedPricingPage({
