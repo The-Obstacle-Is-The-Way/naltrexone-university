@@ -60,7 +60,7 @@
     "postgres": "^3.4.8",
     "radix-ui": "^1.4.3",
     "react": "19.2.6",
-    "react-dom": "19.2.6",
+    "react-dom": "19.2.7",
     "react-markdown": "^10.1.0",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
