@@ -1,134 +1,192 @@
-# DEBT-420: Promote Clerk Strict CSP from Report-Only to Enforcing (with `form-action` billing hardening)
+# DEBT-420: Promote Clerk Strict CSP from Report-Only to Enforcing
 
 **Priority:** P2
 **Created:** 2026-06-14
-**Status:** Proposed — **documentation only. No code has changed.** This doc exists to be audited *before* any implementation.
-**Source:** Owner request to finally close the last open item of DEBT-332; GitHub issue [#245](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/245).
-**Parent audit:** [DEBT-332 Security Posture Audit](./debt-332-security-posture-audit.md) — this doc is the **execution decision record** for DEBT-332's last unchecked Definition-of-Done item.
-**Related:** [`proxy.ts`](../../proxy.ts), [`proxy.test.ts`](../../proxy.test.ts), the billing redirect flow, issues [#245](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/245) and [#251](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/251).
-**Citations verified:** 2026-06-14 against the `debt/420-csp-enforce-flip` branch base (= `dev` tip) @ `8f5c1c24`, independently re-audited by a second agent, and against the installed `@clerk/nextjs@7.4.3` (constraint `^7.4.1` in `package.json`).
+**Status:** Proposed — **documentation only. No code has changed.** This is the execution contract for the follow-up implementation PR.
+**Source:** Owner request to close the last open item of DEBT-332; GitHub issue [#245](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/245).
+**Parent audit:** [DEBT-332 Security Posture Audit](./debt-332-security-posture-audit.md).
+**Related:** [`proxy.ts`](../../proxy.ts), [`proxy.test.ts`](../../proxy.test.ts), billing server-action forms, issues [#245](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/245) and [#251](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/251).
+**Citations verified:** 2026-06-14 against `debt/420-csp-enforce-flip` @ `94b780fe`, `dev` @ `8f5c1c24`, and installed `@clerk/nextjs@7.4.3` (`package.json` constraint `^7.4.1`).
 
 ---
 
-## TL;DR / Decision
+## Decision
 
-We have run **strict CSP in report-only** in production since ~March 2026 (PR #242) with **zero** reported violations across auth, theme, every authenticated page, and the health endpoint. Turning enforcement on is a **one-line flag flip** in `proxy.ts` (`reportOnly: true` → `false`). It needs **no Vercel/Cloudflare/Clerk dashboard change** — the entire policy is code, owned by the Clerk middleware in `proxy.ts`. It is trivially reversible.
+Promote the existing Clerk strict CSP from report-only to enforcing **only after** adding the Stripe billing redirect origins to `form-action` and verifying the actual Stripe account returns those origins.
 
-There is exactly **one** path that report-only's clean record does **not** clear: the **`form-action 'self'`** directive (a Clerk default) interacting with our **server-side billing redirects to Stripe**. This is the money path. The decision in this doc is:
+The implementation path is intentionally small:
 
-> **Pre-authorize the two Stripe redirect hosts in `form-action`, *then* flip to enforcing.** Verified against the installed Clerk SDK, this makes Subscribe and Manage-Billing safe regardless of browser quirks or whether JavaScript is enabled — and only then do we enforce.
+1. Add `form-action` to `BASE_CLERK_CSP_DIRECTIVES` in `proxy.ts:96-110`.
+2. Flip `contentSecurityPolicy.reportOnly` from `true` to `false` in `proxy.ts:208`.
+3. Update the four stale `proxy.test.ts` `reportOnly` assertions and add the `form-action` assertion.
 
-No optionality: one path, with rejected alternatives recorded below.
+No dashboard toggle is needed for the CSP mode itself; `proxy.ts:205-214` is the code-owned Clerk CSP configuration. The only dashboard/account dependency is verifying Stripe's returned Checkout and Billing Portal hosts before relying on the allowlist.
 
 ---
 
-## Background: what is deployed today
+## Current Evidence Boundary
 
-`proxy.ts` configures Clerk's automatic CSP through `clerkMiddleware(..., { contentSecurityPolicy: ... })`:
+DEBT-332 does **not** prove a continuous three-month clean CSP record. It records a deployed verification on 2026-03-21 with zero CSP violations across production/dev auth, theme, protected/paywall routes, and health checks; it explicitly says Stripe Checkout / Billing Portal was **not** exercised end-to-end (`docs/debt/debt-332-security-posture-audit.md:412`).
+
+Therefore the implementation PR must re-check Sentry immediately before merge:
+
+- Query Sentry Security Header issues/reports for `effective-directive: form-action`.
+- Query for any new CSP issue, not only `form-action`.
+- Time window: from the preview deployment timestamp through the merge decision.
+- A clean Sentry check is required evidence; this doc must not be read as historical proof that billing was already covered.
+
+---
+
+## Current CSP Ownership and SDK Behavior
+
+`proxy.ts` owns the current CSP:
 
 ```ts
-// proxy.ts:205-214 (verbatim)
+// proxy.ts:205-214
 contentSecurityPolicy: {
   directives: CLERK_CSP_DIRECTIVES,
   strict: true,
-  reportOnly: true,          // ← the only thing standing between us and enforcing
+  reportOnly: true,
   ...(sentrySecurityHeaderEndpoint
     ? { reportTo: sentrySecurityHeaderEndpoint }
     : {}),
 },
 ```
 
-What this emits at runtime, today:
+Verified facts:
 
-- Header name **`Content-Security-Policy-Report-Only`** (it logs, it does not block).
-- `script-src` with a per-request **`'nonce-…'`** + **`'strict-dynamic'`** (strict mode strips the broad `http:`/`https:` script sources — see SDK proof below).
-- `report-uri` → Sentry Security Header endpoint, plus `report-to csp-endpoint` and a `Reporting-Endpoints` response header (wired from `NEXT_PUBLIC_SENTRY_DSN` in `proxy.ts:77-85`).
-- `x-nonce` response header, threaded through `app/layout.tsx:71` → `Providers` (`components/providers.tsx:67`, `ClerkProvider dynamic`) → `components/theme-provider.tsx:11` (`next-themes`).
-
-Public routes still traverse this middleware (they only skip `auth.protect()`), so the policy applies site-wide. DEBT-332 verified **zero** report-only violations on production (`addictionboards.com`) and the dev preview across sign-in/out (Clerk + Google), theme toggle, protected/paywall routes, and `/api/health`. **Billing checkout/portal was the one flow never exercised end-to-end.**
+| Fact | Evidence |
+|---|---|
+| `proxy.ts` derives Sentry ingest and Security Header endpoints from `NEXT_PUBLIC_SENTRY_DSN`. | `proxy.ts:77-85` |
+| `BASE_CLERK_CSP_DIRECTIVES` currently has no `form-action` key and uses bare keyword values such as `self` and `none`. | `proxy.ts:96-110` |
+| Preview-only Vercel Toolbar allowances are merged only when `VERCEL_ENV === 'preview'`. | `proxy.ts:87-94`, `proxy.ts:111-117` |
+| Clerk default CSP includes `"form-action": ["self"]`. | `node_modules/.pnpm/.../@clerk/nextjs/dist/esm/server/content-security-policy.js:56-88`, specifically `:67` |
+| Clerk strict mode edits only `script-src`: removes `http:`/`https:`, adds `'strict-dynamic'`, and adds a nonce when one exists. | same SDK file `:139-146` |
+| A custom directive whose key already exists in Clerk defaults is a deduplicating union of default plus custom values. | same SDK file `:89-102`, `:147-156` |
+| `reportTo` appends the CSP `report-to csp-endpoint` directive and emits `Reporting-Endpoints`. | same SDK file `:168-170` |
+| `reportOnly: true` emits `Content-Security-Policy-Report-Only`; `false` emits `Content-Security-Policy`. | same SDK file `:172-176` |
+| `x-nonce` is emitted when strict mode generates a nonce. | same SDK file `:166`, `:177-178` |
+| `report-uri` is not emitted by Clerk's `reportTo`; it comes from our custom directive. | `proxy.ts:107-109` |
 
 ---
 
-## What "turning it on" actually is
+## Exact Enforcing Header Shape
 
-Mechanically verified against the installed SDK at
-`node_modules/.pnpm/@clerk+nextjs@7.4.3_.../@clerk/nextjs/dist/esm/server/content-security-policy.js`:
+This is the production enforcing header shape after the intended `form-action` edit, reconstructed from current `proxy.ts` plus installed Clerk SDK source. Values derived from environment/runtime are marked explicitly:
 
-```js
-// createContentSecurityPolicyHeaders(...) — lines 172-176
-if (options.reportOnly) {
-  headers.push([Headers.ContentSecurityPolicyReportOnly, cspHeader]);  // current
-} else {
-  headers.push([Headers.ContentSecurityPolicy, cspHeader]);            // enforcing
-}
+```http
+Reporting-Endpoints:
+  csp-endpoint="<SENTRY_SECURITY_HEADER_ENDPOINT_FROM_NEXT_PUBLIC_SENTRY_DSN>"
+
+Content-Security-Policy:
+  base-uri 'self';
+  connect-src 'self'
+    https://clerk-telemetry.com
+    https://*.clerk-telemetry.com
+    https://api.stripe.com
+    https://maps.googleapis.com
+    https://img.clerk.com
+    https://images.clerkstage.dev
+    <CLERK_FAPI_HOST>
+    ws:
+    wss:
+    <SENTRY_INGEST_ORIGIN_FROM_NEXT_PUBLIC_SENTRY_DSN>;
+  default-src 'self';
+  font-src 'self' data: https:;
+  form-action 'self' https://checkout.stripe.com https://billing.stripe.com;
+  frame-ancestors 'none';
+  frame-src 'self'
+    https://challenges.cloudflare.com
+    https://*.js.stripe.com
+    https://js.stripe.com
+    https://hooks.stripe.com;
+  img-src 'self' https://img.clerk.com data: blob: https:;
+  object-src 'none';
+  report-uri <SENTRY_SECURITY_HEADER_ENDPOINT_FROM_NEXT_PUBLIC_SENTRY_DSN>;
+  script-src 'self'
+    'unsafe-inline'
+    https://*.js.stripe.com
+    https://js.stripe.com
+    https://maps.googleapis.com
+    'strict-dynamic'
+    'nonce-<per-request-generated>';
+  style-src 'self' 'unsafe-inline';
+  worker-src 'self' blob:;
+  report-to csp-endpoint
+
+x-nonce: <per-request-generated>
 ```
 
-So `reportOnly: false` swaps the header name from `Content-Security-Policy-Report-Only` to `Content-Security-Policy`. **The policy bytes are identical; only enforcement changes.** Reporting is independent of this switch (it comes from `options.reportTo`/the custom `report-uri`, lines 168-171), so **Sentry keeps receiving violation reports in enforcing mode** — exactly the safety net we want during the first weeks of enforcement.
+Notes:
 
-That is the entire change. There is no second system, no dashboard toggle, no env var.
+- Production `script-src` does not include `http:`, `https:`, or dev-only `'unsafe-eval'` after strict mode. Clerk removes `http:`/`https:` in strict mode (`content-security-policy.js:139-146`); `'unsafe-eval'` is conditional on `NODE_ENV !== 'production'` in Clerk defaults (`content-security-policy.js:76-85`).
+- The final production value of `<CLERK_FAPI_HOST>` is runtime-owned by Clerk. DEBT-332's production capture showed `clerk.addictionboards.com` (`docs/debt/debt-332-security-posture-audit.md:99`, `:302`), but the implementation PR must still inspect the preview/prod response header before merge.
+- The final Sentry endpoint and ingest origin come from `NEXT_PUBLIC_SENTRY_DSN` parsing in `proxy.ts:77-85`, `proxy.ts:25-59`, and `proxy.ts:107-110`.
 
 ---
 
-## The one real risk: `form-action 'self'` vs. our Stripe redirects
+## Directive-by-Directive Enforce Sweep
 
-### Clerk's default includes `form-action 'self'`
+| Directive | What current app uses | Allowed under enforcing? | Evidence / action |
+|---|---|---|---|
+| `default-src 'self'` | Fallback only; explicit directives cover the resource classes below. | Yes. | Clerk default at `content-security-policy.js:66`; no implementation action. |
+| `script-src` | Next/React app scripts, Clerk client components, and `next-themes` initialization. No app-owned `next/script`, literal `<script>`, `dangerouslySetInnerHTML`, `eval(`, `new Function`, `new Worker`, or app-owned `<iframe>` matched in `app/`, `components/`, `lib/`, or `src` on 2026-06-14. | Yes, with strict nonce. | Nonce read at `app/layout.tsx:71`, passed to Clerk at `components/providers.tsx:65-68`, and to `next-themes` at `components/theme-provider.tsx:5-11`; Clerk strict script rewrite at `content-security-policy.js:139-146`. |
+| `style-src` | Tailwind/static CSS, Clerk component styles, and `next-themes`. | Yes. | Clerk default includes `unsafe-inline` at `content-security-policy.js:86`; `next-themes` receives nonce at `components/theme-provider.tsx:5-11`. |
+| `img-src` | App has no rendered production image assets under `public/`; Clerk image host is allowed; `data:`, `blob:`, and `https:` are added by `proxy.ts`. | Yes. | `proxy.ts:105`; Clerk default `img-src` at `content-security-policy.js:75`. |
+| `font-src` | Next Google font imports in root layout. | Yes. | Fonts imported via `next/font/google` at `app/layout.tsx:3`; `font-src` includes `self`, `data:`, `https:` at `proxy.ts:103`. |
+| `connect-src` | Clerk FAPI, Clerk telemetry, Sentry client reporting, server-action/fetch traffic to same origin, preview Vercel Toolbar websocket when preview. | Yes. | Sentry client init at `sentry.client.config.ts:3-15`; Sentry origin added at `proxy.ts:77-85`, `proxy.ts:98-102`; preview Vercel `connect-src` at `proxy.ts:87-94`. |
+| `frame-src` | Clerk may use Cloudflare challenge iframe; preview Vercel Toolbar iframe; app does not own an iframe. | Yes. | Clerk default allows `https://challenges.cloudflare.com` at `content-security-policy.js:68-74`; preview Vercel frame allowance at `proxy.ts:91`. |
+| `worker-src` | No app-owned web worker matched in the production app scan; Clerk default allows `self blob:`. | Yes. | Clerk default at `content-security-policy.js:87`. |
+| `form-action` | Real server-action HTML forms for Subscribe and Manage Billing. These forms can degrade to native POST + redirect when JavaScript is disabled. | Yes only after the intended Stripe-origin allowlist is added and verified against the account. | Pricing Manage Billing form at `app/pricing/pricing-view.tsx:63-73`, pricing Subscribe forms at `app/pricing/pricing-view.tsx:144-159` and `:179-194`, app Billing form at `app/(app)/app/billing/page.tsx:85-89`; current Clerk default is only `self` at `content-security-policy.js:67`. |
+| `base-uri` | App should only use same-origin base behavior. | Yes. | Custom directive at `proxy.ts:96-98`. |
+| `object-src` | App does not embed objects. | Yes. | Custom directive at `proxy.ts:106`. |
+| `frame-ancestors` | App is not designed to be embedded. | Yes. | Custom directive at `proxy.ts:104`; `next.config.ts` also sets `X-Frame-Options: DENY` at `next.config.ts:27-29`. |
 
-From the same SDK source, `DEFAULT_DIRECTIVES` (lines 56-88):
+Preview non-regression requirement: issue #251 / WEB-B stays covered because Vercel Toolbar directives are included only for preview (`proxy.ts:87-94`, `proxy.ts:111-117`) and are not present in production.
 
-```js
-"form-action": ["self"],
+Mechanical no-match scans on 2026-06-14: `rg -n "next/script|<Script|<script|dangerouslySetInnerHTML|eval\(|new Function|new Worker|<iframe" app components lib src --glob '!**/*.test.*' --glob '!**/*.spec.*'` returned no matches; `rg -n "@stripe/stripe-js|@stripe/react-stripe-js|loadStripe|getStripe|stripe-js|<iframe|js\.stripe" app components lib src package.json --glob '!**/*.test.*' --glob '!**/*.spec.*'` returned only server-side Stripe imports/usages and no client Stripe.js package.
+
+---
+
+## Billing Path and Stripe Host Verification
+
+The app's billing forms are real server-action forms:
+
+- Pricing Subscribe forms submit to `subscribeMonthlyAction` / `subscribeAnnualAction` from `app/pricing/pricing-view.tsx:144-159` and `app/pricing/pricing-view.tsx:179-194`.
+- Pricing Manage Billing submits to `manageBillingAction` from `app/pricing/pricing-view.tsx:63-73` and `app/pricing/pricing-view.tsx:112-117`.
+- App Billing Manage Billing submits to `manageBillingAction` from `app/(app)/app/billing/page.tsx:85-89`.
+- Subscribe redirects to the URL returned by the controller at `app/pricing/subscribe-action.ts:25-29`.
+- The controller creates Checkout and Portal sessions at `src/adapters/controllers/billing-controller.ts:104-148` and `src/adapters/controllers/billing-controller.ts:150-190`.
+
+The expected default Stripe origins are:
+
+```ts
+'form-action': [
+  'self',
+  'https://checkout.stripe.com',
+  'https://billing.stripe.com',
+],
 ```
 
-Strict mode modifies **only** `script-src` (lines 139-146: it deletes `http:`/`https:`, adds `'strict-dynamic'` + nonce). It does **not** touch `form-action`. So the emitted header is `form-action 'self'` today, and would remain so under enforcing. DEBT-332's captured production header confirms `form-action 'self';`.
+Those hosts are **not** a code fact. Stripe returns opaque hosted URLs:
 
-### Our billing is a server-side redirect to an external origin
+- Checkout session creation calls `stripe.checkout.sessions.create(...)` at `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:708-718`, carries the returned/retrieved `session.url` at `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:350-362`, and returns `canonicalRecoveredSession.url` at `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:806-813`.
+- Billing Portal session creation calls `stripe.billingPortal.sessions.create(...)` at `src/adapters/gateways/stripe/stripe-portal.ts:32-39` and returns `session.url` at `src/adapters/gateways/stripe/stripe-portal.ts:41-48`.
 
-There are no client-side Stripe.js assets on our pages. (`package.json` has only the server SDK `stripe`, no `@stripe/stripe-js` / `@stripe/react-stripe-js`; `lib/stripe.ts` is `import 'server-only'`. A naive grep for `loadStripe`/`getStripe` hits the checkout-success **server** module, not Stripe.js — confirmed not a client asset.) Both money flows are: same-origin HTML `<form>` → same-origin server action → `redirect()` to a Stripe-hosted URL.
+**UNVERIFIED account-specific item:** no Stripe read MCP/tool was exposed in this Codex runtime, so this doc cannot prove the target account has no custom Checkout/Portal domain. The implementation PR must verify before merge:
 
-- **Subscribe:** `app/pricing/page.tsx` forms post to `subscribeMonthlyAction` / `subscribeAnnualAction` (`app/pricing/subscribe-actions.ts`) → `runSubscribeAction` → on success **`app/pricing/subscribe-action.ts:29`**: `return deps.redirectFn(result.data.url)`. The URL comes from `createCheckoutSession` (`src/adapters/controllers/billing-controller.ts:104`) and resolves to **`https://checkout.stripe.com/…`**.
-- **Manage Billing:** `app/(app)/app/billing/manage-billing-actions.ts` and `app/pricing/manage-billing-actions.ts` (each via its sibling `manage-billing-action.ts` wrapper) → `lib/manage-billing/manage-billing-core.ts` → `createPortalSession` (`src/adapters/controllers/billing-controller.ts:150`) → redirect to **`https://billing.stripe.com/…`**.
+1. Generate one real Checkout Session in the target Stripe mode/environment and record `new URL(session.url).origin`.
+2. Generate one real Billing Portal Session in the target Stripe mode/environment and record `new URL(session.url).origin`.
+3. Check Stripe Dashboard for configured custom Checkout/Billing Portal domains.
+4. If either returned origin is not `https://checkout.stripe.com` or `https://billing.stripe.com`, add the observed custom origin to `form-action` and the `proxy.test.ts` assertion.
 
-### Why this is genuinely uncertain
-
-CSP `form-action` restricts the endpoints a form may submit to. [MDN explicitly warns](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/form-action) that **browsers are inconsistent about whether `form-action` also applies to the redirect that occurs *after* a form submission**. Two paths exist here:
-
-1. **JavaScript enabled (the common case):** React intercepts the form, POSTs to the server action via fetch, receives the redirect, and performs a **hard cross-origin navigation** (`window.location`) to Stripe. That is a *navigation*, not a form submission, so `form-action` does **not** apply. → works under enforcing.
-2. **No JavaScript / progressive enhancement (Next.js server actions support this):** the browser does a **native POST** to the same-origin server action (allowed by `'self'`), the server replies **303 → `Location: https://checkout.stripe.com/…`**, and the browser follows it. Chrome has historically applied `form-action` to **the redirect target of a form submission**, which would **block** the checkout redirect.
-
-So enforcing with bare `form-action 'self'` risks breaking checkout for the no-JS / progressive-enhancement path (and any browser that polices post-submit redirects).
+Do not merge enforcing CSP until this UNVERIFIED item is closed.
 
 ---
 
-## Why report-only's clean record does NOT clear this specific risk
+## Exact Implementation Changes
 
-This is the crux, and it is easy to get wrong. Report-only only logs a violation **when the risky code path is actually exercised in a real session.** Real users overwhelmingly have JavaScript, so they take path (1) above and **never hit the `form-action`-governed no-JS redirect.** Therefore 3 months of clean report-only data is strong evidence for *script-src/style-src/everything-else* but is **not** evidence that the no-JS billing redirect is safe — that path simply wasn't traveled. Concluding "zero reports ⇒ safe to enforce billing" would be a sampling error. We resolve it by construction (allowlist the hosts) rather than by hoping the untested path never occurs.
-
----
-
-## Decision: harden `form-action`, then flip
-
-Add the two Stripe redirect origins to `form-action` in `BASE_CLERK_CSP_DIRECTIVES` (`proxy.ts:96-110`), then set `reportOnly: false`.
-
-**Why this works — verified against the SDK merge logic.** Custom directives for keys that exist in `DEFAULT_DIRECTIVES` go through `handleExistingDirective` (`content-security-policy.js:89-102`), which is a **deduplicating union** of the default values and ours. So:
-
-```
-ours:    form-action: ['self', 'https://checkout.stripe.com', 'https://billing.stripe.com']
-emitted: form-action 'self' https://checkout.stripe.com https://billing.stripe.com
-```
-
-That is the **minimal correct allowlist**: exactly the two origins this app legitimately redirects forms to, and nothing more. (We do **not** add `js.stripe.com`, `q.stripe.com`, `r.stripe.com`, etc. — those are Stripe.js/telemetry hosts; we don't load Stripe.js.)
-
-### Rejected alternatives
-
-- **Bare one-line flip (no `form-action` change).** Smallest diff, but leaves the no-JS billing redirect exposed to a hard-to-debug, browser-dependent block on the *revenue* path. Rejected.
-- **Browser-verify the JS path only, add nothing.** Confirms path (1) but proves nothing about path (2); not durable against a future browser tightening `form-action` enforcement. Kept as a *confirmation step*, rejected as the *sole* measure.
-- **Take full manual CSP ownership (drop Clerk automatic CSP).** Would let us trim Clerk's broader defaults (`images.clerkstage.dev`, unused Stripe/Maps hosts), but it is a Medium–Large rewrite that discards Clerk's maintained defaults and nonce wiring. Disproportionate to this task. Rejected (revisit only if a SOC 2 audit demands a hand-owned minimal allowlist — tracked conceptually in DEBT-332).
-
----
-
-## Exact changes (to be made *after* this doc is approved — not done yet)
-
-1. **`proxy.ts`** — add `form-action` to `BASE_CLERK_CSP_DIRECTIVES` (currently `proxy.ts:96-110`), using the bare-keyword style the file already uses (`'self'`, not `"'self'"`; the SDK quotes keywords itself):
+1. **`proxy.ts`** — add `form-action` to `BASE_CLERK_CSP_DIRECTIVES` (`proxy.ts:96-110`), using bare keyword style:
 
    ```ts
    'form-action': [
@@ -138,82 +196,186 @@ That is the **minimal correct allowlist**: exactly the two origins this app legi
    ],
    ```
 
-2. **`proxy.ts:208`** — `reportOnly: true` → `reportOnly: false`.
+   If the mandatory Stripe account-origin verification finds a custom hosted origin, include that origin here too.
 
-3. **`proxy.test.ts`** (TDD, red first) — there are **four** `reportOnly: true` assertions; **all four** must flip to `false`, or the suite breaks (the two type-declaration lines `reportOnly: boolean;` at `:16` and `:792` are *not* assertions and stay):
-   - `proxy.test.ts:233` — directive test (block `195-242`). Also add an assertion here that `directives['form-action']` contains both Stripe origins.
-   - `proxy.test.ts:593` — preview-toolbar test (block `584-663`).
-   - `proxy.test.ts:741` — "includes Sentry ingest origin" test.
-   - `proxy.test.ts:799` — "excludes Sentry ingest origin" test.
+2. **`proxy.ts:208`** — change `reportOnly: true` to `reportOnly: false`.
 
-No other source files change. This is a header-mode + one-directive change.
+3. **`proxy.test.ts`** — update all four real `reportOnly: true` assertions to `false`; leave the two type declarations alone:
 
----
+   - `proxy.test.ts:233` — directive test block. Add an assertion that `directives['form-action']` includes `self`, `https://checkout.stripe.com`, `https://billing.stripe.com`, and any verified custom Stripe origin.
+   - `proxy.test.ts:593` — preview-toolbar test.
+   - `proxy.test.ts:741` — Sentry ingest/reporting test.
+   - `proxy.test.ts:799` — no-Sentry test.
+   - Do not edit the type declarations at `proxy.test.ts:16` or `proxy.test.ts:792`.
 
-## Test plan (TDD)
-
-1. **Red:** update all four `proxy.test.ts` `reportOnly` assertions (`:233`, `:593`, `:741`, `:799`) to expect `reportOnly: false`, and add `form-action` ⊇ `{checkout.stripe.com, billing.stripe.com}`; run `pnpm test proxy` → fails against current code.
-2. **Green:** apply the `proxy.ts` edits → tests pass.
-3. **Full gate before push:** `pnpm typecheck && pnpm lint && pnpm test --run && pnpm build` (per AGENTS.md — `build` catches prerender issues nothing else does).
+No application billing, Stripe, Sentry, Clerk, layout, or provider source files should change for this debt item.
 
 ---
 
-## Rollout & verification runbook
+## TDD and Quality Gate
 
-1. **Land on `dev`** (this doc's branch ships the doc only; the implementation is a follow-up PR after approval).
-2. **Vercel preview enforces it.** On the preview URL, exercise both money flows and inspect:
-   - **Network:** Subscribe and Manage Billing each reach a `https://checkout.stripe.com` / `https://billing.stripe.com` page (redirect followed, not blocked).
-   - **Console:** zero `Refused to … because it violates … form-action` errors.
-   - Repeat **with JavaScript disabled** (DevTools → Disable JavaScript) to exercise the progressive-enhancement path that the host allowlist specifically protects.
-   - Confirm the **Vercel Toolbar** preview allowances still hold under enforcing — `proxy.ts:87-94` adds them only when `VERCEL_ENV === 'preview'`, so issue [#251](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/251) (`WEB-B`, `frame-src vercel.live`) must not regress.
-3. **Check Sentry** for any historical `form-action` reports and for any new CSP issues arriving from the preview.
-4. **Promote `dev` → `main`** via the standard promotion PR (the `main-protection` ruleset blocks direct push and requires the `test` check — see the main↔dev sync note). Merging moves `main` and triggers the production Vercel deploy.
-5. **Post-production:** re-run the Subscribe smoke on `addictionboards.com`, then watch Sentry CSP issues for ~1 week.
+1. **Red:** update the four `proxy.test.ts` `reportOnly` assertions and add the `form-action` assertion. Run the non-watch focused test:
+
+   ```bash
+   pnpm test --run proxy.test.ts
+   ```
+
+   This must fail against current `proxy.ts`.
+
+2. **Green:** apply the `proxy.ts` edits. Re-run:
+
+   ```bash
+   pnpm test --run proxy.test.ts
+   ```
+
+3. **Full gate before every push** — use the canonical AGENTS gate (`AGENTS.md:127-157`):
+
+   ```bash
+   pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
+   ```
+
+4. **Conditional local E2E:** if `.env.local` contains the documented authenticated billing E2E variables (`AGENTS.md:141-152`), also run:
+
+   ```bash
+   pnpm test:e2e
+   ```
+
+`pnpm test` without `--run` is watch mode (`AGENTS.md:266-268`) and is not acceptable for this execution doc.
 
 ---
 
-## Rollback plan
+## Rollout and Verification Runbook
 
-Header-only change; no schema, data, or migration risk. Two options, fastest first:
+### Preview
 
-- **Vercel Instant Rollback** to the previous production deployment (immediate; no code round-trip).
-- **Revert PR** setting `reportOnly` back to `true` (and/or removing the `form-action` hosts), merged via the normal promotion path.
+1. Deploy the implementation branch to Vercel Preview with `VERCEL_ENV=preview`.
+2. Confirm the response header is enforcing, not report-only:
+   - `Content-Security-Policy` is present.
+   - `Content-Security-Policy-Report-Only` is absent.
+   - `Reporting-Endpoints` is present when `NEXT_PUBLIC_SENTRY_DSN` is configured.
+   - `x-nonce` is present.
+   - `form-action` contains `self`, the verified Checkout origin, and the verified Billing Portal origin.
+3. Subscribe flow, JavaScript enabled:
+   - Use a signed-in, non-entitled user.
+   - Open the preview `/pricing` page.
+   - Click Subscribe.
+   - In Network, confirm the same-origin server-action request returns/follows a redirect and the final navigation reaches the verified Checkout origin.
+   - Filter Console for `Content-Security-Policy` and `form-action`; there must be zero violations.
+4. Subscribe flow, JavaScript disabled:
+   - DevTools -> Disable JavaScript.
+   - Reload `/pricing`.
+   - Submit the Subscribe form.
+   - Confirm the native POST / 303 path reaches the verified Checkout origin.
+   - Confirm zero `form-action` console violations.
+5. Manage Billing flow, JavaScript enabled:
+   - Use a signed-in user with an existing Stripe customer/subscription row.
+   - Open a surface that renders Manage Billing (`/pricing?reason=manage_billing` or `/app/billing`).
+   - Submit Manage Billing.
+   - In Network, confirm redirect/final navigation reaches the verified Billing Portal origin.
+   - Confirm zero CSP/form-action console violations.
+6. Manage Billing flow, JavaScript disabled:
+   - DevTools -> Disable JavaScript.
+   - Reload the same Manage Billing surface.
+   - Submit the form.
+   - Confirm the native POST / 303 path reaches the verified Billing Portal origin.
+   - Confirm zero CSP/form-action console violations.
+7. Preview toolbar regression check:
+   - Confirm the Vercel Toolbar still loads/opens in preview.
+   - Confirm no CSP blocks for `vercel.live`; preview-only directives are at `proxy.ts:87-94`.
+8. Sentry check before merge:
+   - Query from preview deployment time through review time.
+   - Required clean result: no `effective-directive: form-action` issue/report and no new CSP issue of any directive.
 
-Either fully restores the current report-only posture.
+Preview should use Stripe test mode unless the preview is intentionally wired to live Stripe. Record which mode was tested.
+
+### Production
+
+1. Promote via the standard `dev` -> `main` path; do not direct-push around branch protection.
+2. After the production Vercel deployment is ready, re-capture headers on `https://addictionboards.com/pricing`:
+   - `Content-Security-Policy` present.
+   - `Content-Security-Policy-Report-Only` absent.
+   - `form-action` contains the verified production Checkout and Billing Portal origins.
+3. Production smoke:
+   - Use the smallest safe live-mode smoke available for the current business state.
+   - If there is no payer/customer to test Manage Billing safely, do not fake confidence; record Manage Billing production live smoke as deferred and keep enforcing rollback criteria active.
+   - If a live test account/customer exists, repeat the Subscribe and Manage Billing checks above.
+4. Sentry watch:
+   - Immediately after production smoke, query the deployment-to-now window for `effective-directive: form-action` and any new CSP issue.
+   - Continue watching CSP issues for 7 days.
+
+### Rollback Triggers
+
+Use **Vercel Instant Rollback** immediately if any of these occur in production:
+
+- Checkout or Billing Portal navigation fails because the browser reports a CSP `form-action` block.
+- Sentry receives a production CSP issue where `effective-directive` is `form-action` and the blocked URI is a legitimate Stripe Checkout/Portal host.
+- A currently working page fails to load required scripts/styles because of the enforcing CSP.
+
+Use a normal revert PR instead of instant rollback only for non-user-blocking cleanup, such as correcting a test assertion or tightening a doc after successful production behavior.
+
+The rollback is header-only: no schema, migration, or data mutation is involved. Reverting `reportOnly` to `true` restores the current non-blocking posture.
+
+---
+
+## Background Aside: Rejected Broader Work
+
+Full manual CSP ownership could remove unused Clerk defaults such as `images.clerkstage.dev`, Stripe JS frame hosts, or Google Maps sources. That is not part of this debt item. Clerk automatic CSP is already integrated with strict-mode nonce generation and provider plumbing; replacing it would be a broader CSP-ownership project, not a minimal enforcing-mode flip.
+
+Rejected implementation shortcuts:
+
+- Flip `reportOnly` without `form-action` hardening: leaves the server-action billing forms exposed to browser-dependent redirect blocking.
+- Verify only the JavaScript-enabled path: does not exercise the no-JS/native POST path the allowlist is meant to protect.
+- Add broad Stripe domains: not justified by current code; this app does not load Stripe.js or embedded Stripe frames from app code.
 
 ---
 
 ## Definition of Done
 
-- [ ] This doc is audited (CodeRabbit + owner) and approved.
-- [ ] `proxy.ts`: `form-action` includes `checkout.stripe.com` + `billing.stripe.com`; `reportOnly: false`.
-- [ ] `proxy.test.ts` updated (TDD) and green; full gate (`typecheck`/`lint`/`test`/`build`) green.
-- [ ] Preview verification passed for Subscribe + Manage Billing, **including JS-disabled**, with zero `form-action` console violations and Vercel Toolbar (`WEB-B`) not regressed.
-- [ ] Promoted to `main`; production Subscribe smoke passed; Sentry watched ~1 week with no new CSP blocks.
-- [ ] DEBT-332's final DoD item (enforcing CSP enabled) checked off, cross-referencing this doc.
+- [ ] This doc is audited and owner-approved.
+- [ ] Stripe Checkout and Billing Portal returned origins are verified for the target account/mode; any custom origin is added to `form-action`.
+- [ ] `proxy.ts`: `form-action` includes `self` plus verified Stripe origins; `reportOnly: false`.
+- [ ] `proxy.test.ts`: four `reportOnly` assertions flipped; type declarations untouched; `form-action` assertion added.
+- [ ] Focused red/green run uses `pnpm test --run proxy.test.ts`.
+- [ ] Full AGENTS gate is green: `typecheck`, `lint`, unit, browser, integration, build.
+- [ ] Conditional local E2E is green when documented billing E2E credentials exist.
+- [ ] Preview header capture confirms enforcing CSP, `Reporting-Endpoints`, `x-nonce`, and expected `form-action`.
+- [ ] Preview Subscribe and Manage Billing pass with JavaScript enabled and disabled, with zero Console/Sentry CSP violations.
+- [ ] Vercel Toolbar preview regression check passes.
+- [ ] Sentry is checked immediately before promotion for `form-action` and any new CSP issue.
+- [ ] Production header capture and safe smoke complete; Sentry watched for 7 days.
+- [ ] DEBT-332's final DoD item is checked off or explicitly risk-accepted with evidence.
 
 ---
 
-## Citations (mechanically verified 2026-06-14)
+## Citations
 
-| Claim | Location | Verified |
-|---|---|---|
-| Clerk CSP config is `strict: true, reportOnly: true` with `reportTo` | `proxy.ts:205-214` (flag at `:208`) | ✅ |
-| Custom directives object + Sentry endpoint wiring | `proxy.ts:77-110` | ✅ |
-| Preview-only Vercel Toolbar allowances | `proxy.ts:87-94` (gated `VERCEL_ENV==='preview'`) | ✅ |
-| Clerk default `form-action: ["self"]` | `@clerk/nextjs@7.4.3 …/server/content-security-policy.js:67` | ✅ |
-| Strict mode edits only `script-src` (nonce + strict-dynamic; strips `http:`/`https:`) | same file, lines 139-146 | ✅ |
-| `reportOnly` toggles header name only; reporting independent | same file, lines 168-176 | ✅ |
-| Custom directive on a default key = deduplicating union | same file, `handleExistingDirective` lines 89-102 | ✅ |
-| Subscribe success redirect to checkout URL | `app/pricing/subscribe-action.ts:29` | ✅ |
-| Checkout / portal controllers | `src/adapters/controllers/billing-controller.ts:104,150` | ✅ |
-| Manage-billing surfaces | `app/pricing/manage-billing-actions.ts`, `app/(app)/app/billing/manage-billing-actions.ts`, `lib/manage-billing/manage-billing-core.ts` | ✅ |
-| Nonce plumbing for strict mode | `app/layout.tsx:71`, `components/providers.tsx:67`, `components/theme-provider.tsx:11` | ✅ |
-| Production header shows `form-action 'self'`; report-only verified clean (sans billing) | DEBT-332 §"Historical Captured CSP Headers (Pre-Strict Baseline)" (line 104), §Definition of Done (line 412) | ✅ |
+| Claim | Location |
+|---|---|
+| Canonical full gate and conditional E2E rule | `AGENTS.md:127-157` |
+| `pnpm test` is watch mode; `pnpm test --run` is CI-style | `AGENTS.md:266-268` |
+| Installed Clerk and Stripe package constraints | `package.json:45`, `package.json:68` |
+| Current Clerk CSP config is `strict: true`, `reportOnly: true`, conditional `reportTo` | `proxy.ts:205-214` |
+| Sentry endpoint/origin parsing | `proxy.ts:25-59`, `proxy.ts:77-85` |
+| Custom directives and missing current `form-action` key | `proxy.ts:96-110` |
+| Preview Vercel Toolbar directives and gating | `proxy.ts:87-94`, `proxy.ts:111-117` |
+| Four real `reportOnly` test assertions | `proxy.test.ts:233`, `proxy.test.ts:593`, `proxy.test.ts:741`, `proxy.test.ts:799` |
+| `reportOnly` type declarations, not assertions | `proxy.test.ts:16`, `proxy.test.ts:792` |
+| Clerk default directives, including `form-action self` | `node_modules/.pnpm/.../@clerk/nextjs/dist/esm/server/content-security-policy.js:56-88` |
+| Clerk existing-directive deduplicating union | same SDK file `:89-102`, `:147-156` |
+| Clerk strict script rewrite and nonce | same SDK file `:139-146`, `:166`, `:177-178` |
+| Clerk `reportTo`, `Reporting-Endpoints`, and enforcing/report-only header selection | same SDK file `:168-176` |
+| DEBT-332 point-in-time verification and billing gap | `docs/debt/debt-332-security-posture-audit.md:412` |
+| Nonce read and provider plumbing | `app/layout.tsx:71`, `components/providers.tsx:65-68`, `components/theme-provider.tsx:5-11` |
+| Sentry client reporting is configured from `NEXT_PUBLIC_SENTRY_DSN` | `sentry.client.config.ts:3-15` |
+| Pricing Subscribe forms | `app/pricing/pricing-view.tsx:144-159`, `app/pricing/pricing-view.tsx:179-194` |
+| Pricing Manage Billing forms | `app/pricing/pricing-view.tsx:63-73`, `app/pricing/pricing-view.tsx:112-117` |
+| App Billing Manage Billing form | `app/(app)/app/billing/page.tsx:85-89` |
+| Subscribe redirects to returned URL | `app/pricing/subscribe-action.ts:25-29` |
+| Billing controller creates Checkout and Portal sessions | `src/adapters/controllers/billing-controller.ts:104-148`, `src/adapters/controllers/billing-controller.ts:150-190` |
+| Checkout returns Stripe `session.url` | `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:350-362`, `:708-718`, `:806-813` |
+| Billing Portal returns Stripe `session.url` | `src/adapters/gateways/stripe/stripe-portal.ts:32-49` |
+| `X-Frame-Options: DENY` also exists | `next.config.ts:27-29` |
 
-### External references
+### External Reference
 
-- MDN — `form-action` (post-submit redirect behavior is inconsistent): <https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/form-action>
-- Clerk CSP guide: <https://clerk.com/docs/guides/secure/best-practices/csp-headers>
-- Next.js CSP (App Router, nonce): <https://nextjs.org/docs/app/guides/content-security-policy>
-- Stripe security guide (no client Stripe.js here): <https://docs.stripe.com/security/guide>
+- MDN — `form-action` restricts form submission targets and browser behavior on post-submit redirects is inconsistent: <https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/form-action>
