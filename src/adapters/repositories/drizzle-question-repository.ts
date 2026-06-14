@@ -43,7 +43,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     const statuses = filters.statuses ?? [];
     const hasStatusFilter = statuses.length > 0;
 
-    const whereParts: SQL[] = [eq(questions.status, 'published')];
+    const whereParts: [SQL, ...SQL[]] = [eq(questions.status, 'published')];
 
     if (hasDifficultyFilter) {
       whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
@@ -61,10 +61,19 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       const statusConditions = statuses.map((status) =>
         this.buildStatusCondition(status, userId),
       );
+      const [firstStatusCondition, ...remainingStatusConditions] =
+        statusConditions;
+      if (firstStatusCondition === undefined) {
+        throw new ApplicationError(
+          'VALIDATION_ERROR',
+          'At least one status filter is required',
+        );
+      }
       const statusCondition =
-        statusConditions.length === 1
-          ? statusConditions[0]
-          : (or(...statusConditions) ?? statusConditions[0]);
+        remainingStatusConditions.length === 0
+          ? firstStatusCondition
+          : (or(firstStatusCondition, ...remainingStatusConditions) ??
+            firstStatusCondition);
       whereParts.push(statusCondition);
     }
 
