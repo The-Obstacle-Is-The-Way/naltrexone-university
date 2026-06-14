@@ -1,5 +1,6 @@
 'use client';
 
+// WHY large-file: this is the cohesive practice surface renderer; shallow splits would separate tightly-coupled tutor/exam/review layout branches without reducing behavior complexity.
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useEffect, useId, useRef } from 'react';

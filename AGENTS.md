@@ -212,7 +212,7 @@ See `docs/_archive/debt/debt-398-design-system-enforcement-gap.md` for the compl
 ## Setup
 
 ```bash
-# Requirements: Node >=20.19.0, pnpm
+# Requirements: Node 24.x, pnpm >=11.0.0
 pnpm install                # Install dependencies
 cp .env.example .env.local  # Create env file (never commit .env.local)
 # Set DATABASE_URL, Clerk keys, and Stripe keys in .env.local
@@ -236,7 +236,7 @@ Use `.agents/skills/skills.manifest.json` as the source of truth. Refresh one sk
 git diff --quiet -- .agents/skills .claude/skills .codex/skills
 ```
 
-Special cases: `agent-browser` is a first-party fork and must be manually merged while preserving Clerk auth, React click-failure / DEBT-323 guidance, and `docs/tooling/agent-browser.md`; `neon-drizzle-setup` and `stripe-subscriptions` are thin pointer skills, so verify their live recipe URLs and do not vendor the full recipe bodies. After refreshing, re-check the `.claude` / `.codex` symlink invariant and confirm there are 15 `SKILL.md` files. See `docs/debt/debt-416-agent-skills-provenance-and-refresh.md` for the detailed execution log and rationale.
+Special cases: `agent-browser` is a first-party fork and must be manually merged while preserving Clerk auth, React click-failure / DEBT-323 guidance, and `docs/tooling/agent-browser.md`; `neon-drizzle-setup` and `stripe-subscriptions` are thin pointer skills, so verify their live recipe URLs and do not vendor the full recipe bodies. After refreshing, re-check the `.claude` / `.codex` symlink invariant and confirm there are 15 `SKILL.md` files. See `docs/_archive/debt/debt-416-agent-skills-provenance-and-refresh.md` for the detailed execution log and rationale.
 
 ## Non-Interactive Safety (No Vim / No Pagers)
 
@@ -326,6 +326,8 @@ All layers are implemented. See `docs/specs/index.md` for the full spec register
 - **Composition root:** runtime wiring lives in `lib/container.ts`, focused factories under `lib/container/**`, and controller dependency loaders in `lib/controller-helpers.ts`
 - **Feature slices:** paywall, question loop, practice sessions, review + bookmarks, dashboard, UI integration, practice engine, history, observability (`app/**`, `components/**`)
 
+Glossary: `src/adapters/controllers/**` are server-side adapter controllers; client hooks that compose page state are page models (`use-*-page-model.ts`), not controllers.
+
 Framework code lives in:
 - `app/` - Next.js App Router pages, layouts, API routes
 - `lib/` - Core utilities (auth, Stripe, env, DB). Prefer importing via `@/...`
@@ -383,6 +385,15 @@ Rules:
 - Avoid non-null assertions (`!`) and unused imports/variables (Biome errors)
 - Prefer importing via `@/...` alias
 - For E2E-specific import/timeout conventions, see `Playwright E2E Conventions` below.
+
+### Error Handling and Bare Catch Policy
+
+Bare `catch {}` blocks are allowed only for intentionally suppressed secondary failures:
+- telemetry, reporting, or logging failures that must not mask the primary user outcome;
+- rollback or cleanup best effort when the original error is preserved and returned/thrown;
+- parse/decode fallback to a safe default.
+
+Add a short nearby comment when suppressing an error intentionally. Keep UI reporter helpers in `app/(app)/app/shared`; add a shared application/adapters logger-safety helper only after at least three sibling files need the same wrapper.
 
 ## Testing
 
@@ -511,26 +522,9 @@ See `docs/dev/react-vitest-testing.md` for full details.
 
 If a fake class exists (e.g., `FakeAttemptRepository`), you MUST use it. Do NOT create inline objects with `vi.fn()`.
 
-**Available Fakes (use these!):**
-- `FakeQuestionRepository`
-- `FakeAttemptRepository`
-- `FakePracticeSessionRepository`
-- `FakeSubscriptionRepository`
-- `FakeUserRepository`
-- `FakeBookmarkRepository`
-- `FakeTagRepository`
-- `FakeStripeCustomerRepository`
-- `FakeStripeEventRepository`
-- `FakeIdempotencyKeyRepository`
-- `FakeClerkEventRepository`
-- `FakeDeletedClerkUserRepository`
-- `FakePendingStripeCancellationRepository`
-- `FakeLogger`
-- `FakeAuthGateway`
-- `FakePaymentGateway`
-- `FakeRateLimiter`
+**Available fakes source of truth:** `src/application/test-helpers/fakes/index.ts`.
 
-Use-case fakes also exist (e.g. `FakeSubmitAnswerUseCase`, `FakeGetNextQuestionUseCase`). Check the barrel export at `src/application/test-helpers/fakes/index.ts` for the full list.
+Common examples include `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeQuestionFeedbackRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeClerkEventRepository`, `FakeDeletedClerkUserRepository`, `FakePendingStripeCancellationRepository`, `FakeLogger`, `FakeAuthGateway`, `FakePaymentGateway`, and `FakeRateLimiter`. Use-case fakes also exist (e.g. `FakeSubmitAnswerUseCase`, `FakeGetNextQuestionUseCase`). Check the barrel export before adding or listing a fake.
 
 **The Decision Tree:**
 ```
@@ -612,28 +606,7 @@ Integration tests run against a real Postgres instance. In CI, a service contain
 - Link any spec/ADR updates in `docs/`
 - Add screenshots/GIFs for UI changes
 
-**Before opening a PR, run:**
-
-```bash
-# Ensure test DB is running for integration tests (see "Running Integration Tests Locally")
-pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
-```
-
-If the local authenticated billing E2E environment is available, also run:
-
-That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`. `DATABASE_URL` is still required in `.env.local` for normal local app development (`pnpm dev`, migrations, and seed commands), but not for the hermetic local E2E workflow unless you intentionally target an existing external database with `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`.
-
-```bash
-# Quick file check when you rely on .env.local:
-rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY)=' .env.local
-
-# Local E2E is hermetic by default: it starts an isolated per-clone Docker
-# Postgres, migrates, seeds placeholder content, and runs Playwright against
-# the resolved local app and database target.
-pnpm test:e2e
-```
-
-Never run E2E migrations by relying on implicit `.env.local` resolution alone. Normal local E2E does not need remote migrations. For an intentional deploy-target E2E check, verify the host and use `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`; migrate a remote target only when you deliberately mean to mutate it.
+Before opening a PR or pushing, run the canonical full quality gate in **"Verify EVERY Change Before Pushing"** above. Do not duplicate the command block here; keep that section as the single source of truth for the gate and E2E credential rules.
 
 ---
 

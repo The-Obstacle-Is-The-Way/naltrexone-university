@@ -7,8 +7,8 @@ import {
   CANONICAL_TOPIC_SLUGS,
   CANONICAL_TREATMENT_DISPLAY_NAMES,
   CANONICAL_TREATMENT_SLUGS,
-} from '../lib/content/draftTaxonomy';
-import { canonicalizeMarkdown } from '../lib/content/parseMdxQuestion';
+} from '../lib/content/draft-taxonomy';
+import { canonicalizeMarkdown } from '../lib/content/parse-mdx-question';
 import { QuestionFrontmatterSchema } from '../lib/content/schemas';
 
 const DraftTagSlugSchema = z

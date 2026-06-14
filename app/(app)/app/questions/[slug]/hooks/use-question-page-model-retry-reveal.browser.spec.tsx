@@ -13,13 +13,13 @@ import {
   QUESTION_PAGE_CHOICE_1_ID,
   QUESTION_PAGE_CHOICE_2_ID,
   QUESTION_PAGE_QUESTION_1_ID,
-  setupQuestionPageControllerBrowserSpec,
+  setupQuestionPageModelBrowserSpec,
   submitAnswer,
-} from './use-question-page-controller-test-helpers';
+} from './use-question-page-model-test-helpers';
 
-setupQuestionPageControllerBrowserSpec();
+setupQuestionPageModelBrowserSpec();
 
-describe('useQuestionPageController (browser)', () => {
+describe('useQuestionPageModel (browser)', () => {
   it('supports inline retry in session review and submits standalone provenance payload', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000010';
 

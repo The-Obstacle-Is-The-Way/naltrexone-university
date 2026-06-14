@@ -1,8 +1,10 @@
 # React 19 + Vitest Testing Guide
 
-**Last Updated:** 2026-03-17
+**Last Updated:** 2026-06-13
 
 This document exists because we got burned. Every claim is validated against official sources.
+
+Coverage reports are observational in this repo: do not add or chase numeric coverage thresholds as a quality gate; TDD discipline and behavior assertions are the enforcement mechanism.
 
 ---
 
@@ -188,14 +190,15 @@ Browser Mode is no longer limited to the original DEBT-141 migration set. It is 
 Representative current hook/browser suites include:
 
 - `app/(app)/app/history/hooks/use-history-sessions.browser.spec.tsx`
-- `app/(app)/app/questions/[slug]/use-question-page-controller.browser.spec.tsx`
+- `app/(app)/app/questions/[slug]/hooks/use-question-page-model-bookmarks.browser.spec.tsx`
+- `app/(app)/app/questions/[slug]/hooks/use-question-page-model-session-navigation.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-session-controls.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-question-answer-flow.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-question-bookmarks.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-question-flow.browser.spec.tsx`
 - `app/(app)/app/practice/hooks/use-practice-session-start.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.browser.spec.tsx`
-- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.browser.spec.tsx`
+- `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.browser.spec.tsx`
 - `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.browser.spec.tsx`
 

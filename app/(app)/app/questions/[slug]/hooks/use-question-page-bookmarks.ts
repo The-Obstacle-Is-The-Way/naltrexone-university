@@ -11,7 +11,7 @@ import {
   toggleBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
-import { STANDARD_READ_TIMEOUT_MS } from '../../shared/timeout-tiers';
+import { STANDARD_READ_TIMEOUT_MS } from '../../../shared/timeout-tiers';
 
 const BOOKMARK_LOOKUP_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 

@@ -1,8 +1,8 @@
 # Audit Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-03-19
-**Next ID:** AUDIT-012
+**Last Updated:** 2026-06-13
+**Next ID:** AUDIT-013
 
 ---
 
@@ -12,12 +12,14 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 ## Active Audits
 
-None.
+| ID | Title | Date | Scope | Outcome |
+|----|-------|------|-------|---------|
 
 ## Archived Audits
 
 | ID | Title | Date | Scope | Outcome |
 |----|-------|------|-------|---------|
+| AUDIT-012 | [Repository Organization, Dev Tooling & Agent Documentation](../_archive/audits/audit-012-repo-org-devx.md) | 2026-06-13 | CI/CD & dev tooling, AGENTS/CLAUDE/.claude/rules accuracy, file org vs Clean Architecture, code quality vs Clean Code + PoSD | Resolved 2026-06-13. Code/doc findings fixed, CI/security platform gaps filed as BUG-248/BUG-249, stricter TS flags and residual esbuild advisories filed as DEBT-418/DEBT-419. |
 | AUDIT-011 | [Error Observability & Defensive Coding Sweep](../_archive/audits/audit-011-error-observability-defensive-coding.md) | 2026-03-07 | Error handling, type safety, array access, concurrency | Resolved 2026-03-19. BUG-201, BUG-202 resolved; BUG-199 invalidated; DEBT-286 resolved (PR #218). |
 | AUDIT-010 | Exam Secrecy and Cross-Layer Invariant Sweep | 2026-03-02 | Exam-answer secrecy invariant enforcement across use cases, controllers, projections, retry/review | Resolved 2026-03-19. All 6 bugs (BUG-180–185) resolved and archived. |
 | AUDIT-009 | Bug Hunt #9 | 2026-03-02 | General sweep | 0 bugs found; reverted as cruft |

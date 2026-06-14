@@ -184,7 +184,7 @@ When both are present in review mode:
 | Repositories | Provenance insert/read mapping + fake parity | `src/adapters/repositories/drizzle-attempt-repository.ts`, `src/adapters/repositories/attempt-row-mappers.ts`, `src/application/test-helpers/fakes/fake-attempt-repository.ts` |
 | Use case | Provenance validation + parent attempt ownership/question checks + `retrySessionId` ownership/question linkage checks | `src/application/use-cases/submit-answer.ts` |
 | Controller | Zod schema + `superRefine` cross-field checks | `src/adapters/controllers/question-controller.ts` |
-| Question page | Inline retry, hydration states, provenance passthrough, local retry indicator | `app/(app)/app/questions/[slug]/question-page-logic.ts`, `use-question-page-controller.ts`, `question-page-client.tsx` |
+| Question page | Inline retry, hydration states, provenance passthrough, local retry indicator | `app/(app)/app/questions/[slug]/question-page-logic.ts`, `app/(app)/app/questions/[slug]/hooks/use-question-page-model.ts`, `app/(app)/app/questions/[slug]/question-page-client.tsx` |
 | Route boundary | Mixed ID normalization (`sessionId` precedence) | `app/(app)/app/questions/[slug]/page.tsx` |
 
 ---

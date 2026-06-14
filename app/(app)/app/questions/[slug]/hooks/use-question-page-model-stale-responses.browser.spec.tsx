@@ -16,13 +16,13 @@ import {
   QUESTION_PAGE_CHOICE_2_ID,
   QUESTION_PAGE_QUESTION_1_ID,
   QUESTION_PAGE_QUESTION_2_ID,
-  setupQuestionPageControllerBrowserSpec,
+  setupQuestionPageModelBrowserSpec,
   submitAnswer,
-} from './use-question-page-controller-test-helpers';
+} from './use-question-page-model-test-helpers';
 
-setupQuestionPageControllerBrowserSpec();
+setupQuestionPageModelBrowserSpec();
 
-describe('useQuestionPageController (browser)', () => {
+describe('useQuestionPageModel (browser)', () => {
   it('discards stale question load response when slug changes mid-flight', async () => {
     const deferredFirst =
       createDeferred<

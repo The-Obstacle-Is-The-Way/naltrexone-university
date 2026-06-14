@@ -1,3 +1,4 @@
+// WHY large-file: this adapter controller keeps Clerk webhook validation, idempotency, tombstone, and Stripe-cancellation coordination in one transactional boundary.
 import { z } from 'zod';
 import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';

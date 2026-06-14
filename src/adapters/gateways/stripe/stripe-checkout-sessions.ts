@@ -1,3 +1,4 @@
+// WHY large-file: checkout creation is billing-critical and keeps idempotency, concurrent-checkout-race handling, existing-session recovery, trial params, and Stripe error mapping in one reviewed adapter seam.
 import { createHash } from 'node:crypto';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';

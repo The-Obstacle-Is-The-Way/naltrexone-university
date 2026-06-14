@@ -25,9 +25,18 @@ is_known_exempt() {
   case "$1" in
     db/schema.ts | \
       src/adapters/repositories/drizzle-attempt-repository.ts | \
+      src/adapters/repositories/drizzle-practice-session-repository.ts | \
+      src/adapters/controllers/clerk-webhook-controller.ts | \
+      src/adapters/controllers/practice-controller.ts | \
+      src/adapters/gateways/stripe/stripe-checkout-sessions.ts | \
       app/\(app\)/app/history/components/history-questions-tab.tsx | \
       app/\(app\)/app/practice/\[sessionId\]/practice-session-page-logic.ts | \
-      app/\(app\)/app/questions/\[slug\]/question-page-client.tsx)
+      app/\(app\)/app/practice/\[sessionId\]/hooks/use-practice-session-question-flow.ts | \
+      app/\(app\)/app/practice/components/practice-view.tsx | \
+      app/\(app\)/app/questions/\[slug\]/question-page-client.tsx | \
+      app/\(app\)/app/questions/\[slug\]/question-page-logic.ts | \
+      app/\(app\)/app/questions/\[slug\]/hooks/use-question-page-model.ts | \
+      components/marketing/marketing-home.tsx)
       return 0
       ;;
     *)
@@ -39,6 +48,17 @@ is_known_exempt() {
 is_test_file() {
   case "$1" in
     *.test.ts | *.test.tsx | *.spec.ts | *.spec.tsx)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+is_non_production_support_file() {
+  case "$1" in
+    *.browser.probes.tsx | src/application/test-helpers/*)
       return 0
       ;;
     *)
@@ -82,6 +102,7 @@ should_check_file() {
 
   is_known_exempt "$1" && return 1
   is_test_file "$1" && return 1
+  is_non_production_support_file "$1" && return 1
   is_script_file "$1" && return 1
   is_root_config_file "$1" && return 1
 

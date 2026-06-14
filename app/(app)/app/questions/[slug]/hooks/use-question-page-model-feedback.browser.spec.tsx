@@ -10,13 +10,13 @@ import {
   QUESTION_PAGE_CHOICE_1_ID,
   QUESTION_PAGE_QUESTION_1_ID,
   rateQuestion,
-  setupQuestionPageControllerBrowserSpec,
+  setupQuestionPageModelBrowserSpec,
   submitQuestionReport,
-} from './use-question-page-controller-test-helpers';
+} from './use-question-page-model-test-helpers';
 
-setupQuestionPageControllerBrowserSpec();
+setupQuestionPageModelBrowserSpec();
 
-describe('useQuestionPageController feedback wiring (browser)', () => {
+describe('useQuestionPageModel feedback wiring (browser)', () => {
   it('hydrates and rates feedback for a standalone review question', async () => {
     getQuestionBySlug.mockResolvedValue(
       ok({

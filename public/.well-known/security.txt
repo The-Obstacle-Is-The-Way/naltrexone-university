@@ -1,3 +1,5 @@
 Contact: https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/security/advisories/new
-Expires: 2027-02-05T00:00:00.000Z
+Policy: https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/security/policy
+Canonical: https://addictionboards.com/.well-known/security.txt
+Expires: 2027-06-13T00:00:00Z
 Preferred-Languages: en

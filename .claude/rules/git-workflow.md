@@ -11,13 +11,7 @@
 - Link spec/ADR updates in `docs/`
 - Add screenshots/GIFs for UI changes
 
-**Before EVERY `git push` (not just PRs):**
-
-```bash
-# Ensure test DB is running first (see AGENTS.md "Running Integration Tests Locally")
-pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
-```
-
+**Before EVERY `git push` (not just PRs):** follow `AGENTS.md` → **"Verify EVERY Change Before Pushing"**. That section is the canonical source for the full gate command, E2E credential check, and deploy-target database cautions.
 
 The pre-push git hook only runs typecheck + unit tests. It does NOT run `pnpm build`. You MUST run the full gate yourself — `pnpm build` catches prerender errors that nothing else catches.
 

@@ -9,7 +9,7 @@ import type {
 import {
   canonicalizeMarkdown,
   parseMdxQuestionBody,
-} from '../../lib/content/parseMdxQuestion';
+} from '../../lib/content/parse-mdx-question';
 import {
   FullQuestionSchema,
   QuestionFrontmatterSchema,

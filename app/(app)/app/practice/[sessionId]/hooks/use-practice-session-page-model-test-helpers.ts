@@ -16,21 +16,21 @@ import {
   createQuestionResponse,
   createReviewResponse,
   createReviewRow,
-} from './practice-session-page-controller.browser.fixtures';
+} from './practice-session-page-model.browser.fixtures';
 import {
-  getPracticeSessionPageControllerBrowserMocks,
-  resetPracticeSessionPageControllerBrowserMocks,
-} from './practice-session-page-controller.browser.setup';
+  getPracticeSessionPageModelBrowserMocks,
+  resetPracticeSessionPageModelBrowserMocks,
+} from './practice-session-page-model.browser.setup';
 
-export let PracticeSessionPageControllerBookmarkPendingProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerBookmarkPendingProbe;
-export let PracticeSessionPageControllerBookmarkProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerBookmarkProbe;
-export let PracticeSessionPageControllerHookProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerHookProbe;
-export let PracticeSessionPageControllerMarkForReviewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerMarkForReviewProbe;
-export let PracticeSessionPageControllerNavigationProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerNavigationProbe;
-export let PracticeSessionPageControllerReviewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerReviewProbe;
-export let PracticeSessionPageControllerSummaryProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerSummaryProbe;
-export let PracticeSessionPageControllerSubmitDuringReviewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerSubmitDuringReviewProbe;
-export let PracticeSessionPageControllerViewProbe: typeof import('./practice-session-page-controller.browser.probes').PracticeSessionPageControllerViewProbe;
+export let PracticeSessionPageModelBookmarkPendingProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelBookmarkPendingProbe;
+export let PracticeSessionPageModelBookmarkProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelBookmarkProbe;
+export let PracticeSessionPageModelHookProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelHookProbe;
+export let PracticeSessionPageModelMarkForReviewProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelMarkForReviewProbe;
+export let PracticeSessionPageModelNavigationProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelNavigationProbe;
+export let PracticeSessionPageModelReviewProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelReviewProbe;
+export let PracticeSessionPageModelSummaryProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelSummaryProbe;
+export let PracticeSessionPageModelSubmitDuringReviewProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelSubmitDuringReviewProbe;
+export let PracticeSessionPageModelViewProbe: typeof import('./practice-session-page-model.browser.probes').PracticeSessionPageModelViewProbe;
 
 export const {
   getNextQuestionMock,
@@ -44,7 +44,7 @@ export const {
   finalizeExamAnswersMock,
   saveExamDraftAnswerMock,
   setPracticeSessionQuestionMarkMock,
-} = getPracticeSessionPageControllerBrowserMocks();
+} = getPracticeSessionPageModelBrowserMocks();
 
 export const EMPTY_BOOKMARKS_RESULT = ok({ rows: [] });
 export const CHOICE_1 = createChoice({ id: BROWSER_CHOICE_1_ID });
@@ -70,7 +70,7 @@ export {
   BROWSER_QUESTION_2_ID,
   BROWSER_QUESTION_3_ID,
   BROWSER_SESSION_ID,
-} from './practice-session-page-controller.browser.fixtures';
+} from './practice-session-page-model.browser.fixtures';
 
 export function errorResult(
   code: ActionErrorCode,
@@ -203,29 +203,27 @@ export async function openExamReviewQuestion(
     .toHaveTextContent(BROWSER_QUESTION_2_ID);
 }
 
-export function setupPracticeSessionPageControllerBrowserSpec() {
+export function setupPracticeSessionPageModelBrowserSpec() {
   beforeAll(async () => {
-    const probes = await import(
-      './practice-session-page-controller.browser.probes'
-    );
-    PracticeSessionPageControllerBookmarkPendingProbe =
-      probes.PracticeSessionPageControllerBookmarkPendingProbe;
-    PracticeSessionPageControllerBookmarkProbe =
-      probes.PracticeSessionPageControllerBookmarkProbe;
-    PracticeSessionPageControllerHookProbe =
-      probes.PracticeSessionPageControllerHookProbe;
-    PracticeSessionPageControllerMarkForReviewProbe =
-      probes.PracticeSessionPageControllerMarkForReviewProbe;
-    PracticeSessionPageControllerNavigationProbe =
-      probes.PracticeSessionPageControllerNavigationProbe;
-    PracticeSessionPageControllerReviewProbe =
-      probes.PracticeSessionPageControllerReviewProbe;
-    PracticeSessionPageControllerSummaryProbe =
-      probes.PracticeSessionPageControllerSummaryProbe;
-    PracticeSessionPageControllerSubmitDuringReviewProbe =
-      probes.PracticeSessionPageControllerSubmitDuringReviewProbe;
-    PracticeSessionPageControllerViewProbe =
-      probes.PracticeSessionPageControllerViewProbe;
+    const probes = await import('./practice-session-page-model.browser.probes');
+    PracticeSessionPageModelBookmarkPendingProbe =
+      probes.PracticeSessionPageModelBookmarkPendingProbe;
+    PracticeSessionPageModelBookmarkProbe =
+      probes.PracticeSessionPageModelBookmarkProbe;
+    PracticeSessionPageModelHookProbe =
+      probes.PracticeSessionPageModelHookProbe;
+    PracticeSessionPageModelMarkForReviewProbe =
+      probes.PracticeSessionPageModelMarkForReviewProbe;
+    PracticeSessionPageModelNavigationProbe =
+      probes.PracticeSessionPageModelNavigationProbe;
+    PracticeSessionPageModelReviewProbe =
+      probes.PracticeSessionPageModelReviewProbe;
+    PracticeSessionPageModelSummaryProbe =
+      probes.PracticeSessionPageModelSummaryProbe;
+    PracticeSessionPageModelSubmitDuringReviewProbe =
+      probes.PracticeSessionPageModelSubmitDuringReviewProbe;
+    PracticeSessionPageModelViewProbe =
+      probes.PracticeSessionPageModelViewProbe;
   });
 
   beforeEach(() => {
@@ -267,6 +265,6 @@ export function setupPracticeSessionPageControllerBrowserSpec() {
 
   afterEach(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
-    resetPracticeSessionPageControllerBrowserMocks();
+    resetPracticeSessionPageModelBrowserMocks();
   });
 }

@@ -1,5 +1,6 @@
 'use server';
 
+// WHY large-file: this controller is the server-action facade for the practice use-case cluster; splitting it would hide shared auth/rate-limit/action-result conventions.
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { ApplicationError } from '@/src/application/errors';

@@ -9,8 +9,8 @@ import * as questionViewController from '@/src/adapters/controllers/question-vie
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
-import { QUESTION_PAGE_CHOICE_1_ID } from './question-page-controller.browser.fixtures';
-import { useQuestionPageController } from './use-question-page-controller';
+import { QUESTION_PAGE_CHOICE_1_ID } from './question-page-model.browser.fixtures';
+import { useQuestionPageModel } from './use-question-page-model';
 
 export {
   getQuestionPageQuestionIdForSlug,
@@ -21,7 +21,7 @@ export {
   QUESTION_PAGE_CHOICE_2_ID,
   QUESTION_PAGE_QUESTION_1_ID,
   QUESTION_PAGE_QUESTION_2_ID,
-} from './question-page-controller.browser.fixtures';
+} from './question-page-model.browser.fixtures';
 
 vi.mock('@/src/adapters/controllers/question-view-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
@@ -61,7 +61,7 @@ const emptyBookmarksResult: { ok: true; data: GetBookmarksOutput } = ok({
   rows: [],
 });
 
-export function setupQuestionPageControllerBrowserSpec() {
+export function setupQuestionPageModelBrowserSpec() {
   beforeEach(() => {
     getBookmarks.mockResolvedValue(emptyBookmarksResult);
     toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
@@ -100,7 +100,7 @@ export function Probe({
     reviewHydrationState: string | null;
   }) => void;
 }) {
-  const output = useQuestionPageController({
+  const output = useQuestionPageModel({
     slug,
     mode,
     sessionId,

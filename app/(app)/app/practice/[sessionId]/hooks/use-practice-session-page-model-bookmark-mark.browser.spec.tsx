@@ -3,7 +3,7 @@ import { render } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
-import { createReviewResponse } from './practice-session-page-controller.browser.fixtures';
+import { createReviewResponse } from './practice-session-page-model.browser.fixtures';
 
 import {
   BROWSER_QUESTION_1_ID,
@@ -12,17 +12,17 @@ import {
   CHOICE_1,
   getNextQuestionMock,
   mockBookmarksAndReview,
-  PracticeSessionPageControllerBookmarkPendingProbe,
-  PracticeSessionPageControllerBookmarkProbe,
-  PracticeSessionPageControllerMarkForReviewProbe,
+  PracticeSessionPageModelBookmarkPendingProbe,
+  PracticeSessionPageModelBookmarkProbe,
+  PracticeSessionPageModelMarkForReviewProbe,
   setPracticeSessionQuestionMarkMock,
-  setupPracticeSessionPageControllerBrowserSpec,
+  setupPracticeSessionPageModelBrowserSpec,
   toggleBookmarkMock,
-} from './use-practice-session-page-controller-test-helpers';
+} from './use-practice-session-page-model-test-helpers';
 
-setupPracticeSessionPageControllerBrowserSpec();
+setupPracticeSessionPageModelBrowserSpec();
 
-describe('usePracticeSessionPageController (browser)', () => {
+describe('usePracticeSessionPageModel (browser)', () => {
   it('emits bookmark feedback for repeated identical success messages', async () => {
     getNextQuestionMock.mockResolvedValue(
       ok({
@@ -53,7 +53,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     );
     toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
 
-    const screen = await render(<PracticeSessionPageControllerBookmarkProbe />);
+    const screen = await render(<PracticeSessionPageModelBookmarkProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -103,7 +103,7 @@ describe('usePracticeSessionPageController (browser)', () => {
     toggleBookmarkMock.mockImplementation(async () => deferred.promise);
 
     const screen = await render(
-      <PracticeSessionPageControllerBookmarkPendingProbe />,
+      <PracticeSessionPageModelBookmarkPendingProbe />,
     );
 
     await expect
@@ -179,9 +179,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       async () => deferred.promise,
     );
 
-    const screen = await render(
-      <PracticeSessionPageControllerMarkForReviewProbe />,
-    );
+    const screen = await render(<PracticeSessionPageModelMarkForReviewProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))
@@ -283,9 +281,7 @@ describe('usePracticeSessionPageController (browser)', () => {
       async () => deferred.promise,
     );
 
-    const screen = await render(
-      <PracticeSessionPageControllerMarkForReviewProbe />,
-    );
+    const screen = await render(<PracticeSessionPageModelMarkForReviewProbe />);
 
     await expect
       .element(screen.getByTestId('load-status'))

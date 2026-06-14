@@ -5,7 +5,7 @@ import { ok } from '@/tests/test-helpers/ok';
 import {
   createQuestionResponse,
   createReviewResponse,
-} from './practice-session-page-controller.browser.fixtures';
+} from './practice-session-page-model.browser.fixtures';
 import {
   BROWSER_QUESTION_1_ID,
   BROWSER_SESSION_ID,
@@ -17,12 +17,12 @@ import {
   getNextQuestionMock,
   getPracticeSessionSummaryMock,
   mockBookmarksAndReview,
-  PracticeSessionPageControllerReviewProbe,
+  PracticeSessionPageModelReviewProbe,
   saveExamDraftAnswerMock,
-  setupPracticeSessionPageControllerBrowserSpec,
-} from './use-practice-session-page-controller-test-helpers';
+  setupPracticeSessionPageModelBrowserSpec,
+} from './use-practice-session-page-model-test-helpers';
 
-setupPracticeSessionPageControllerBrowserSpec();
+setupPracticeSessionPageModelBrowserSpec();
 
 function mockActiveTimedExam(deadlineAt: string) {
   getPracticeSessionSummaryMock.mockResolvedValue(
@@ -74,7 +74,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('usePracticeSessionPageController timer expiry', () => {
+describe('usePracticeSessionPageModel timer expiry', () => {
   it('finalizes once on timer expiry even when the final draft save is rejected', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
@@ -84,7 +84,7 @@ describe('usePracticeSessionPageController timer expiry', () => {
       errorResult('CONFLICT', 'Exam time has expired'),
     );
 
-    const screen = await render(<PracticeSessionPageControllerReviewProbe />);
+    const screen = await render(<PracticeSessionPageModelReviewProbe />);
 
     await expect
       .element(screen.getByTestId('active-view'))
@@ -112,7 +112,7 @@ describe('usePracticeSessionPageController timer expiry', () => {
       errorResult('CONFLICT', 'Exam time has expired'),
     );
 
-    const screen = await render(<PracticeSessionPageControllerReviewProbe />);
+    const screen = await render(<PracticeSessionPageModelReviewProbe />);
 
     await expect
       .element(screen.getByTestId('active-view'))

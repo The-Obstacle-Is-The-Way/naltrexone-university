@@ -126,7 +126,7 @@ repositories/
     practice-session-page-client.tsx, practice-session-page-logic.ts,
     practice-session-page-utils.ts, practice-session-toast.tsx
     hooks/
-      use-practice-session-page-controller.ts
+      use-practice-session-page-model.ts
       use-practice-session-question-flow.ts
       use-practice-session-review-stage.ts
       use-practice-session-review-stage-state.ts
@@ -144,7 +144,9 @@ repositories/
     history-tab-bar.tsx, history-sessions-tab.tsx, history-questions-tab.tsx
 (app)/app/questions/[slug]/
   page.tsx, loading.tsx, error.tsx,
-  question-page-client.tsx, question-page-logic.ts, use-question-page-controller.ts
+  question-page-client.tsx, question-page-logic.ts
+  hooks/
+    use-question-page-model.ts
   components/
     review-question-navigator.tsx
 (app)/app/shared/components/

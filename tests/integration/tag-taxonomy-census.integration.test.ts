@@ -4,7 +4,7 @@ import {
   CANONICAL_SUBSTANCE_SLUGS,
   CANONICAL_TOPIC_SLUGS,
   CANONICAL_TREATMENT_SLUGS,
-} from '@/lib/content/draftTaxonomy';
+} from '@/lib/content/draft-taxonomy';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-13 (BUG-247 resolved + archived via PR #424 — pricing-page billing-portal failures now route to `/pricing?portal=error` with portal-specific copy, reserving `checkout=error` for real checkout failures; this closes the last Audit #21 Stripe-sweep item. BUG-241 (deploy migration enforcement) is now the only open active bug. Prior: BUG-245 resolved + archived via PR #421 — concurrent two-tab checkout duplicate-subscription race closed at create-time via a deterministic Stripe idempotency key + lock-free post-create reconciliation, shipped with the DEBT-417 multi-clone test-isolation fix, Stripe "limit to 1 subscription" Dashboard backstop live; Audit #21 BUG-242/243 resolved + archived via PR #419 — shared subscription write-guard; BUG-244/246 resolved + archived via PR #420 + PR #422 — billing-maintenance cron live in production (`dryRun=false`) with header-safe `CRON_SECRET`)
+**Last Updated:** 2026-06-13 (AUDIT-012 filed BUG-248 and BUG-249 as P1 human-owned repository governance blockers; active bugs are BUG-248, BUG-249, and BUG-241. Prior: BUG-247 resolved + archived via PR #424, closing the Audit #21 Stripe/billing sweep.)
 
 ---
 
@@ -13,10 +13,14 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-248
+**Next Bug ID:** BUG-250
+
+**Latest manual report (2026-06-13) — AUDIT-012 repository governance blockers filed:**
+- BUG-248 (P1) filed: public `main` has no GitHub-enforced merge gate. Requires a human-owned branch-protection/ruleset settings change.
+- BUG-249 (P1) filed: GitHub vulnerability alerts and automated security fixes are disabled. Local Dependabot config was repaired, but repository security settings require human action.
 
 **Latest archival (2026-06-13) — Audit #21 BUG-247 resolved (Stripe sweep complete):**
-- BUG-247 (P3) verified fixed and archived to `docs/_archive/bugs/`. PR #424 (squash `424df206`, `main` fast-forwarded) routes pricing-page billing-portal failures to `/pricing?portal=error` and adds a `getPricingBanner` branch rendering portal-specific copy ("Couldn't open the billing portal. Please try again."), matching the app-billing sibling and reserving `checkout=error` for genuine checkout failures (its BUG-114 origin). All portal error codes (`INTERNAL_ERROR`/`STRIPE_ERROR`/`RATE_LIMITED`/`NOT_FOUND`) and raw throws share the single configured failure redirect in `manage-billing-core`, so the one-line redirect change covers every path; `UNAUTHENTICATED` → `/sign-up` is unchanged. The branch was cut orthogonally to PR #421 (zero file overlap) and rebased onto the post-#421 dev head before merge. Owner-graded, full local + remote gate green (typecheck, lint, unit 2815, browser 297, integration 111, build, E2E 36), CodeRabbit `APPROVED` on the exact head `c638c376` after a real `CHANGES_REQUESTED` → `APPROVED` cycle. This closes the Audit #21 Stripe/billing sweep (BUG-242..247); BUG-241 (deploy migration enforcement) remains the only open active bug.
+- BUG-247 (P3) verified fixed and archived to `docs/_archive/bugs/`. PR #424 (squash `424df206`, `main` fast-forwarded) routes pricing-page billing-portal failures to `/pricing?portal=error` and adds a `getPricingBanner` branch rendering portal-specific copy ("Couldn't open the billing portal. Please try again."), matching the app-billing sibling and reserving `checkout=error` for genuine checkout failures (its BUG-114 origin). All portal error codes (`INTERNAL_ERROR`/`STRIPE_ERROR`/`RATE_LIMITED`/`NOT_FOUND`) and raw throws share the single configured failure redirect in `manage-billing-core`, so the one-line redirect change covers every path; `UNAUTHENTICATED` → `/sign-up` is unchanged. The branch was cut orthogonally to PR #421 (zero file overlap) and rebased onto the post-#421 dev head before merge. Owner-graded, full local + remote gate green (typecheck, lint, unit 2815, browser 297, integration 111, build, E2E 36), CodeRabbit `APPROVED` on the exact head `c638c376` after a real `CHANGES_REQUESTED` → `APPROVED` cycle. This closed the Audit #21 Stripe/billing sweep (BUG-242..247); subsequent AUDIT-012 filing leaves BUG-248, BUG-249, and BUG-241 active.
 
 **Latest archival (2026-06-12) — Audit #21 BUG-244/246 resolved:**
 - BUG-244 (P2) and BUG-246 (P2) verified fixed and archived to `docs/_archive/bugs/`. PR #420 (squash `fac21601`) wired the reconciliation route to a daily Vercel cron (shared `GET`/`POST`, auth + rate-limit before any work) and folded the deleted-account `pending_stripe_cancellations` drain into the same scheduled run (working from the row's stored `stripeCustomerId`); PR #422 (squash `6679cfe2`, `main` synced) flipped the cron to `dryRun=false` to activate it. Production deploy `dpl_GFqkgVoarFVqXbWbsq17Kh6MwtxK` is READY with the `0 8 * * *` cron registered. `CRON_SECRET` was normalized header-safe across all Vercel scopes (the prior Production value was empty, Preview had trailing whitespace) and is now guarded by `scripts/validate-header-safe-secret.ts` + a CI step. Safe to activate immediately because the connected Stripe account has zero subscriptions (pre-revenue). Owner-graded, full gate green + CodeRabbit approved on the exact head. BUG-245 and BUG-247 from the same Audit #21 sweep remain open.
@@ -149,6 +153,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
+| [BUG-248](./bug-248-main-branch-has-no-github-merge-gate.md) | CI/CD / repository governance | P1 | Public `main` has no GitHub-enforced merge gate: no branch protection and no active repository ruleset. Human-owned GitHub settings change required. |
+| [BUG-249](./bug-249-dependency-security-automation-disabled.md) | Security / dependency automation / repository governance | P1 | GitHub vulnerability alerts and automated security fixes are disabled; local Dependabot config can be repaired, but repository security settings require human action. |
 | [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to dev/prod, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
@@ -421,9 +427,9 @@ The codebase has a systemic pattern: `shouldShowExplanation(session)` gates expl
 |---------|--------------|--------|-----|
 | `runLoadQuestionFlow` | `isMounted()` + `isLatestRequest()` | Correct | — |
 | `runSubmitAnswerFlow` | `isMounted()` + `isLatestRequest()` | Correct (BUG-194 fix) | Fixed |
-| `useQuestionPageController` (load) | `isMounted()` only, no cleanup | Missing guard | BUG-189 |
-| `useQuestionPageController` (hydrate) | `isMounted()` only | Missing guard | BUG-189 |
-| `useQuestionPageController` (session nav) | `isStale` cleanup | Correct | — |
+| `useQuestionPageModel` (load) | `isMounted()` only, no cleanup | Missing guard | BUG-189 |
+| `useQuestionPageModel` (hydrate) | `isMounted()` only | Missing guard | BUG-189 |
+| `useQuestionPageModel` (session nav) | `isStale` cleanup | Correct | — |
 | `useHistorySessions` | sessionId token | Reopen race | BUG-190 |
 
 ## Audit #10 — Exam Secrecy and Cross-Layer Invariant Sweep (2026-03-02)

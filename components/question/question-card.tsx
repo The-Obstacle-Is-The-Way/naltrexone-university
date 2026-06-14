@@ -1,7 +1,7 @@
 'use client';
 
 import { useId } from 'react';
-import { Markdown } from '@/components/markdown/Markdown';
+import { Markdown } from '@/components/markdown/markdown';
 import { Card } from '@/components/ui/card';
 import { ChoiceButton } from './choice-button';
 

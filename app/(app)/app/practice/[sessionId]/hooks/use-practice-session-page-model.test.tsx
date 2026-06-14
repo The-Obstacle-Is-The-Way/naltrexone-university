@@ -2,17 +2,15 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
-import { usePracticeSessionPageController } from './use-practice-session-page-controller';
+import { usePracticeSessionPageModel } from './use-practice-session-page-model';
 
-describe('usePracticeSessionPageController', () => {
+describe('usePracticeSessionPageModel', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it('returns the expected initial state contract', () => {
-    const output = renderHook(() =>
-      usePracticeSessionPageController('session-1'),
-    );
+    const output = renderHook(() => usePracticeSessionPageModel('session-1'));
 
     expect(output.sessionInfo).toBeNull();
     expect(output.loadState).toEqual({ status: 'idle' });

@@ -852,15 +852,15 @@ Issues documented below are tracked as tech debt in `docs/debt/index.md` (Fronte
 
 ### P2 — Fix during UI/UX refactor
 
-Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageController` was reduced from 737 lines / 8 effects to 357 lines / 2 effects by DEBT-320, but it still exceeds the size cap as a composition root.
+Five hooks exceed the 200-line "god hook" threshold (§12). `useQuestionPageModel` was reduced from 737 lines / 8 effects by DEBT-320, but it still exceeds the size cap as a composition root.
 
 | Hook | Lines | File |
 |------|-------|------|
-| `useQuestionPageController` | 357 | `app/(app)/app/questions/[slug]/use-question-page-controller.ts` |
-| `useQuestionPageBookmarks` | 211 | `app/(app)/app/questions/[slug]/use-question-page-bookmarks.ts` |
-| `useQuestionPageSessionNavigation` | 206 | `app/(app)/app/questions/[slug]/use-question-page-session-navigation.ts` |
-| `usePracticeSessionQuestionFlow` | 254 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
-| `useQuestionFlowCore` | 263 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
+| `useQuestionPageModel` | 374 | `app/(app)/app/questions/[slug]/hooks/use-question-page-model.ts` |
+| `useQuestionPageBookmarks` | 212 | `app/(app)/app/questions/[slug]/hooks/use-question-page-bookmarks.ts` |
+| `useQuestionPageSessionNavigation` | 207 | `app/(app)/app/questions/[slug]/hooks/use-question-page-session-navigation.ts` |
+| `usePracticeSessionQuestionFlow` | 449 | `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts` |
+| `useQuestionFlowCore` | 290 | `app/(app)/app/practice/shared/use-question-flow-core.ts` |
 
 Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md` and governed by `docs/frontend/contrast-policy.md`.
 

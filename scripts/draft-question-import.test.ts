@@ -1,6 +1,6 @@
 import matter from 'gray-matter';
 import { describe, expect, it } from 'vitest';
-import { parseMdxQuestionBody } from '../lib/content/parseMdxQuestion';
+import { parseMdxQuestionBody } from '../lib/content/parse-mdx-question';
 import {
   FullQuestionSchema,
   QuestionFrontmatterSchema,

@@ -118,7 +118,10 @@ test.describe('cross-page navigation', () => {
         timeout: 15_000,
       });
 
-      await page.getByRole('link', { name: 'Back to Bookmarks' }).click();
+      await page
+        .getByTestId('bottom-action-bar')
+        .getByRole('link', { name: 'Back to Bookmarks' })
+        .click();
       await expect(page).toHaveURL('/app/bookmarks');
     });
   });

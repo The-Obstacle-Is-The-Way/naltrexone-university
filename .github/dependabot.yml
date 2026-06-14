@@ -57,7 +57,6 @@ updates:
       interval: daily
       time: '09:00'
       timezone: America/New_York
-    open-pull-requests-limit: 0
     commit-message:
       prefix: chore(deps)
     groups:
@@ -94,7 +93,6 @@ updates:
       interval: daily
       time: '09:00'
       timezone: America/New_York
-    open-pull-requests-limit: 0
     commit-message:
       prefix: chore(deps)
     groups:

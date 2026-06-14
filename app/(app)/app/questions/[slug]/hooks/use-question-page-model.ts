@@ -1,5 +1,6 @@
 'use client';
 
+// WHY large-file: this presentation model coordinates the question page's retry, feedback, bookmark, hydration, and navigation state as one UI state machine.
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   canSubmitQuestionAnswer,
@@ -50,7 +51,7 @@ function resolveRetryOrigin(input: {
   return 'other';
 }
 
-export type UseQuestionPageControllerInput = {
+export type UseQuestionPageModelInput = {
   slug: string;
   mode?: QuestionMode | null;
   from?: QuestionOrigin | null;
@@ -60,7 +61,7 @@ export type UseQuestionPageControllerInput = {
   historyIndex?: number | null;
 };
 
-export type UseQuestionPageControllerOutput = {
+export type UseQuestionPageModelOutput = {
   loadState: LoadState;
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
@@ -84,9 +85,9 @@ export type UseQuestionPageControllerOutput = {
   onAnswerAsNew: () => void;
 };
 
-export function useQuestionPageController(
-  input: UseQuestionPageControllerInput,
-): UseQuestionPageControllerOutput {
+export function useQuestionPageModel(
+  input: UseQuestionPageModelInput,
+): UseQuestionPageModelOutput {
   const [question, setQuestion] = useState<GetQuestionBySlugOutput | null>(
     null,
   );
@@ -274,7 +275,7 @@ export function useQuestionPageController(
         },
         onUnhandledError: (error) => {
           reportClientError(error, {
-            component: 'UseQuestionPageController',
+            component: 'UseQuestionPageModel',
             action: 'submitAnswer',
           });
         },
