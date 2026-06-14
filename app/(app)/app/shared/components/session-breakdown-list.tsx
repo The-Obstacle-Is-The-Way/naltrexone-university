@@ -20,11 +20,11 @@ export function SessionBreakdownList({
   isQuestionActionPending = false,
 }: {
   rows: PracticeSessionReviewRow[];
-  from?: QuestionOrigin;
-  sessionId?: string;
-  historyHref?: string;
-  onOpenQuestion?: (questionId: string) => void;
-  isQuestionActionPending?: boolean;
+  from?: QuestionOrigin | undefined;
+  sessionId?: string | undefined;
+  historyHref?: string | undefined;
+  onOpenQuestion?: ((questionId: string) => void) | undefined;
+  isQuestionActionPending?: boolean | undefined;
 }) {
   if (rows.length === 0) {
     return (

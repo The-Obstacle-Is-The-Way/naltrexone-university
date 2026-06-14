@@ -42,8 +42,8 @@ type PracticeSessionFinalizationOutput =
 
 export async function loadNextQuestion(input: {
   sessionId: string;
-  questionId?: string;
-  fromIndex?: number;
+  questionId?: string | undefined;
+  fromIndex?: number | undefined;
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
@@ -56,9 +56,9 @@ export async function loadNextQuestion(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
-  createRequestSequenceId?: () => number;
-  isLatestRequest?: (requestId: number) => boolean;
-  isMounted?: () => boolean;
+  createRequestSequenceId?: (() => number) | undefined;
+  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   return runLoadQuestionFlow({
     requestInput: {
@@ -91,7 +91,7 @@ export async function loadNextQuestion(input: {
 
 export function createLoadNextQuestionAction(input: {
   sessionId: string;
-  fromIndex?: number;
+  fromIndex?: number | undefined;
   startTransition: (fn: () => void) => void;
   getNextQuestionFn: (
     input: unknown,
@@ -105,9 +105,9 @@ export function createLoadNextQuestionAction(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
-  createRequestSequenceId?: () => number;
-  isLatestRequest?: (requestId: number) => boolean;
-  isMounted?: () => boolean;
+  createRequestSequenceId?: (() => number) | undefined;
+  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): () => void {
   return createTransitionedLoadAction({
     startTransition: input.startTransition,
@@ -125,10 +125,10 @@ export async function submitAnswerForQuestion(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  onSuccess?: (result: SubmitAnswerOutput) => void;
-  createRequestSequenceId?: () => number;
-  isLatestRequest?: (requestId: number) => boolean;
-  isMounted?: () => boolean;
+  onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  createRequestSequenceId?: (() => number) | undefined;
+  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   return runSubmitAnswerFlow({
     question: input.question,
@@ -170,8 +170,8 @@ export async function endSession(input: {
   setLoadState: (state: LoadState) => void;
   setSummary: (summary: PracticeSessionFinalizationOutput | null) => void;
   resetQuestionState: () => void;
-  rotateIdempotencyKey?: () => void;
-  isMounted?: () => boolean;
+  rotateIdempotencyKey?: (() => void) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   const isMounted = input.isMounted ?? (() => true);
 

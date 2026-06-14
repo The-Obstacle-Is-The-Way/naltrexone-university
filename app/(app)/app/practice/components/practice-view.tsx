@@ -22,16 +22,18 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 import type { LoadState } from '../practice-page-logic';
 
 export type PracticeViewProps = {
-  title?: string;
-  description?: string;
-  backLink?: {
-    href: string;
-    label: string;
-  };
-  topContent?: React.ReactNode;
-  belowHeadingContent?: React.ReactNode;
-  examTimer?: ReactNode;
-  sessionInfo?: NextQuestion['session'];
+  title?: string | undefined;
+  description?: string | undefined;
+  backLink?:
+    | {
+        href: string;
+        label: string;
+      }
+    | undefined;
+  topContent?: React.ReactNode | undefined;
+  belowHeadingContent?: React.ReactNode | undefined;
+  examTimer?: ReactNode | undefined;
+  sessionInfo?: NextQuestion['session'] | undefined;
   loadState: LoadState;
   question: NextQuestion | null;
   selectedChoiceId: string | null;
@@ -40,30 +42,31 @@ export type PracticeViewProps = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
-  isMarkingForReview?: boolean;
-  bookmarkMessage?: string | null;
-  bookmarkMessageVersion?: number;
+  isMarkingForReview?: boolean | undefined;
+  bookmarkMessage?: string | null | undefined;
+  bookmarkMessageVersion?: number | undefined;
   questionFeedback?:
     | (QuestionFeedbackRatingProps & {
         isReportOpen: boolean;
         openReport: (open?: boolean) => void;
         submitReport: QuestionReportDialogProps['submitReport'];
       })
-    | null;
-  endSessionLabel?: string;
-  questionPanelId?: string;
-  questionAreaRef?: React.RefObject<HTMLElement | null>;
-  onEndSession?: () => void;
-  onRetryBookmarks?: () => void;
+    | null
+    | undefined;
+  endSessionLabel?: string | undefined;
+  questionPanelId?: string | undefined;
+  questionAreaRef?: React.RefObject<HTMLElement | null> | undefined;
+  onEndSession?: (() => void) | undefined;
+  onRetryBookmarks?: (() => void) | undefined;
   onTryAgain: () => void;
   onToggleBookmark: () => void;
-  onToggleMarkForReview?: () => void;
+  onToggleMarkForReview?: (() => void) | undefined;
   onSelectChoice: (choiceId: string) => void;
   onNextQuestion: () => void;
-  onPreviousQuestion?: () => void;
-  hasPreviousQuestion?: boolean;
-  canNavigatePrevious?: boolean;
-  hasNextQuestion?: boolean;
+  onPreviousQuestion?: (() => void) | undefined;
+  hasPreviousQuestion?: boolean | undefined;
+  canNavigatePrevious?: boolean | undefined;
+  hasNextQuestion?: boolean | undefined;
 };
 
 export function getBookmarkNotificationTransition(input: {

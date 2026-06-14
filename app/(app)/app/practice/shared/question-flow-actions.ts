@@ -22,12 +22,12 @@ export type RequestSequencingHooks = {
   isLatestRequest: (requestId: number) => boolean;
 };
 
-function assertRequestSequencingHooks(
-  input: Pick<
-    Partial<RequestSequencingHooks>,
-    'createRequestSequenceId' | 'isLatestRequest'
-  >,
-): void {
+function assertRequestSequencingHooks(input: {
+  createRequestSequenceId?:
+    | RequestSequencingHooks['createRequestSequenceId']
+    | undefined;
+  isLatestRequest?: RequestSequencingHooks['isLatestRequest'] | undefined;
+}): void {
   const hasCreateRequestSequenceId =
     typeof input.createRequestSequenceId === 'function';
   const hasIsLatestRequest = typeof input.isLatestRequest === 'function';
@@ -60,10 +60,10 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: TQuestion | null) => void;
-  onLoaded?: (question: TQuestion | null) => void;
-  createRequestSequenceId?: () => number;
-  isLatestRequest?: (requestId: number) => boolean;
-  isMounted?: () => boolean;
+  onLoaded?: ((question: TQuestion | null) => void) | undefined;
+  createRequestSequenceId?: (() => number) | undefined;
+  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   assertRequestSequencingHooks(input);
   const isMounted = input.isMounted ?? (() => true);
@@ -235,10 +235,10 @@ export async function runSubmitAnswerFlow<
     result: SubmitAnswerOutput | null,
     questionId?: string | null,
   ) => void;
-  onSuccess?: (result: SubmitAnswerOutput) => void;
-  createRequestSequenceId?: () => number;
-  isLatestRequest?: (requestId: number) => boolean;
-  isMounted?: () => boolean;
+  onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  createRequestSequenceId?: (() => number) | undefined;
+  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   assertRequestSequencingHooks(input);
   if (!input.question) return;

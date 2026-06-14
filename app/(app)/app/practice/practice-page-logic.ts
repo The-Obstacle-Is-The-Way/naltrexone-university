@@ -59,9 +59,9 @@ export async function loadNextQuestion(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
-  createRequestSequenceId?: () => number;
-  isLatestRequest?: (requestId: number) => boolean;
-  isMounted?: () => boolean;
+  createRequestSequenceId?: (() => number) | undefined;
+  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   const serverFilters = {
     tagSlugs: input.filters.tagSlugs,
@@ -100,9 +100,9 @@ export function createLoadNextQuestionAction(input: {
   setSubmitIdempotencyKey: (key: string | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
-  createRequestSequenceId?: () => number;
-  isLatestRequest?: (requestId: number) => boolean;
-  isMounted?: () => boolean;
+  createRequestSequenceId?: (() => number) | undefined;
+  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): () => void {
   return createTransitionedLoadAction({
     startTransition: input.startTransition,
@@ -119,9 +119,9 @@ export async function submitAnswerForQuestion(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  createRequestSequenceId?: () => number;
-  isLatestRequest?: (requestId: number) => boolean;
-  isMounted?: () => boolean;
+  createRequestSequenceId?: (() => number) | undefined;
+  isLatestRequest?: ((requestId: number) => boolean) | undefined;
+  isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
   return runSubmitAnswerFlow({
     question: input.question,
