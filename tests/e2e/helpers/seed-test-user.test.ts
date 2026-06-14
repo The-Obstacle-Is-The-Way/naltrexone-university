@@ -185,6 +185,70 @@ describe('seedTestSubscription', () => {
     });
   });
 
+  it('throws when the Clerk user cannot be resolved', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify([]), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    await expect(seedTestSubscription()).rejects.toThrow(
+      'No Clerk user found for email e2e-test@addictionboards.com',
+    );
+
+    expect(customersCreate).not.toHaveBeenCalled();
+    expect(subscriptionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('throws when the local E2E user upsert returns no row', async () => {
+    postgresMock.mockReturnValueOnce(createSqlClient([[]]));
+
+    await expect(seedTestSubscription()).rejects.toThrow(
+      'Failed to upsert E2E database user',
+    );
+
+    expect(customersCreate).not.toHaveBeenCalled();
+    expect(subscriptionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('throws when a reused active Stripe subscription has no item', async () => {
+    subscriptionsList.mockReturnValueOnce(
+      createStripeList([
+        {
+          id: 'sub_without_items',
+          status: 'active',
+          metadata: {
+            user_id: fixtureUser123Id,
+            e2e_owner: 'github-ci',
+          },
+          items: {
+            data: [],
+          },
+        },
+      ]),
+    );
+
+    await expect(seedTestSubscription()).rejects.toThrow(
+      'Active Stripe subscription has no items',
+    );
+
+    expect(subscriptionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('throws when a created Stripe subscription has no item', async () => {
+    subscriptionsCreate.mockResolvedValueOnce({
+      id: 'sub_without_items',
+      items: {
+        data: [],
+      },
+    });
+
+    await expect(seedTestSubscription()).rejects.toThrow(
+      'Created Stripe subscription has no items',
+    );
+  });
+
   it('reuses an owner-scoped DB-mapped customer and returns early when local subscription is still active', async () => {
     postgresMock.mockReturnValueOnce(
       createSqlClient([

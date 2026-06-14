@@ -31,6 +31,12 @@ import type { DrizzleDb } from '../shared/database-types';
 import { getActiveExamVisibilityCondition } from './shared/active-exam-visibility';
 import { latestAttemptRankSql } from './shared/latest-attempt-rank-sql';
 
+function isNonEmptyArray<T>(
+  values: readonly T[],
+): values is readonly [T, ...T[]] {
+  return values.length > 0;
+}
+
 export class DrizzleQuestionRepository implements QuestionRepository {
   constructor(private readonly db: DrizzleDb) {}
 
@@ -41,7 +47,6 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     const hasDifficultyFilter = filters.difficulties.length > 0;
     const hasTagFilter = filters.tagSlugs.length > 0;
     const statuses = filters.statuses ?? [];
-    const hasStatusFilter = statuses.length > 0;
 
     const whereParts: [SQL, ...SQL[]] = [eq(questions.status, 'published')];
 
@@ -49,7 +54,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       whereParts.push(inArray(questions.difficulty, [...filters.difficulties]));
     }
 
-    if (hasStatusFilter) {
+    if (isNonEmptyArray(statuses)) {
       if (typeof filters.userId !== 'string') {
         throw new ApplicationError(
           'VALIDATION_ERROR',
@@ -58,17 +63,14 @@ export class DrizzleQuestionRepository implements QuestionRepository {
       }
 
       const userId = filters.userId;
-      const statusConditions = statuses.map((status) =>
+      const [firstStatus, ...remainingStatuses] = statuses;
+      const firstStatusCondition = this.buildStatusCondition(
+        firstStatus,
+        userId,
+      );
+      const remainingStatusConditions = remainingStatuses.map((status) =>
         this.buildStatusCondition(status, userId),
       );
-      const [firstStatusCondition, ...remainingStatusConditions] =
-        statusConditions;
-      if (firstStatusCondition === undefined) {
-        throw new ApplicationError(
-          'VALIDATION_ERROR',
-          'At least one status filter is required',
-        );
-      }
       const statusCondition =
         remainingStatusConditions.length === 0
           ? firstStatusCondition
