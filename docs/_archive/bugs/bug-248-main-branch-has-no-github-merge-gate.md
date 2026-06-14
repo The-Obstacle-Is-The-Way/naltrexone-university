@@ -1,9 +1,9 @@
 # BUG-248: Public Main Branch Has No GitHub Merge Gate
 
-**Status:** Open
+**Status:** Resolved (2026-06-14)
 **Priority:** P1 (public repository; direct pushes and merges can bypass CI)
 **Date:** 2026-06-13
-**Resolution State:** Blocked on human-owned GitHub repository settings. Keep open until `main` is protected by branch protection or an active ruleset and the verification commands below pass.
+**Resolution State:** Resolved — the active `main-protection` ruleset now requires a PR with the `test` status check before merging, blocks force pushes and deletions, and sets required approvals to 0 (so the solo owner is not locked out). Verified via `gh api repos/:owner/:repo/rulesets`: enforcement=active, target=`~DEFAULT_BRANCH`, rules = deletion, non_fast_forward, pull_request, required_status_checks=[`test`].
 **Family:** CI/CD / repository governance
 **Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md)
 

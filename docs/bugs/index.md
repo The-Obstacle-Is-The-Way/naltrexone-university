@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-13 (AUDIT-012 filed BUG-248 and BUG-249 as P1 human-owned repository governance blockers; active bugs are BUG-248, BUG-249, and BUG-241. Prior: BUG-247 resolved + archived via PR #424, closing the Audit #21 Stripe/billing sweep.)
+**Last Updated:** 2026-06-14 (AUDIT-012 BUG-248 and BUG-249 resolved + archived — the `main-protection` ruleset is active and Dependabot vulnerability alerts + automated security fixes are enabled; the only active bug is now BUG-241. Prior: AUDIT-012 filed BUG-248/249 on 2026-06-13; BUG-247 resolved + archived via PR #424.)
 
 ---
 
@@ -153,8 +153,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-248](./bug-248-main-branch-has-no-github-merge-gate.md) | CI/CD / repository governance | P1 | Public `main` has no GitHub-enforced merge gate: no branch protection and no active repository ruleset. Human-owned GitHub settings change required. |
-| [BUG-249](./bug-249-dependency-security-automation-disabled.md) | Security / dependency automation / repository governance | P1 | GitHub vulnerability alerts and automated security fixes are disabled; local Dependabot config can be repaired, but repository security settings require human action. |
 | [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to dev/prod, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
@@ -766,6 +764,8 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-248](../_archive/bugs/bug-248-main-branch-has-no-github-merge-gate.md) | Public `main` had no GitHub merge gate — resolved by creating the active `main-protection` ruleset (PR required, `test` status check required, force-push + deletion blocked, 0 required approvals to avoid solo-owner lockout). Verified via `gh api repos/:owner/:repo/rulesets`. | P1 | 2026-06-14 |
+| [BUG-249](../_archive/bugs/bug-249-dependency-security-automation-disabled.md) | Dependency security automation disabled — resolved by enabling GitHub vulnerability alerts + automated security fixes (`dependabot_security_updates: enabled`) and raising the Dependabot security-update PR cap from 0 to 5. Residual esbuild advisory tracked in DEBT-419. | P1 | 2026-06-14 |
 | [BUG-245](../_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Concurrent Two-Tab Checkout Creates Duplicate Subscriptions — fixed via a deterministic per-(user,plan,variant) Stripe idempotency key + lock-free post-create reconciliation (DB-layer dedup retained); Stripe "limit to 1 subscription" Dashboard backstop configured live; shipped with the DEBT-417 multi-clone test-isolation fix in PR #421. | P2 | 2026-06-13 |
 | [BUG-159](../_archive/bugs/bug-159-review-mode-hydration-flicker.md) | Review-Mode Hydration Flicker — Transient Submit UI Shown in Review Route | P3 | 2026-02-26 |
 | [BUG-158](../_archive/bugs/bug-158-quick-practice-page-ux-polish.md) | Quick Practice Page UX Polish — Back Link Arrow and Filter Tab Affordance | P3 | 2026-02-26 |

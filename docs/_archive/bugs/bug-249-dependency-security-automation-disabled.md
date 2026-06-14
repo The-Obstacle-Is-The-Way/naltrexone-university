@@ -1,9 +1,9 @@
 # BUG-249: Dependency Security Automation Is Disabled
 
-**Status:** Open
+**Status:** Resolved (2026-06-14)
 **Priority:** P1 (public repository; known vulnerable dependency signal exists but GitHub security delivery is disabled)
 **Date:** 2026-06-13
-**Resolution State:** Blocked on human-owned GitHub security settings. Keep open until vulnerability alerts and automated security fixes are enabled and the verification commands below pass.
+**Resolution State:** Resolved — GitHub vulnerability alerts and automated security fixes are now enabled (`gh api .../vulnerability-alerts` → HTTP 204; `automated-security-fixes` → `{"enabled":true}`; `security_and_analysis.dependabot_security_updates: enabled`), and the Dependabot security-update PR cap was raised from 0 to 5. Residual esbuild advisory remains tracked in DEBT-419.
 **Family:** Security / dependency automation / repository governance
 **Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md)
 
