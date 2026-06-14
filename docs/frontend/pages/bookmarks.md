@@ -261,6 +261,7 @@ The quick-practice `"bookmarked"` status is implemented end-to-end, but two lowe
 - Successful toggle messages are `"Question bookmarked."` and `"Bookmark removed."`; failures use `"Failed to save bookmark. Please try again."`
 
 **Button rendering (`TutorActionBar` secondary group):**
+
 ```tsx
 {hasBooleanCorrectness(props.submitResult) ? (
   <Button
@@ -419,7 +420,7 @@ Recent activity rows link into question review with `from=dashboard&mode=review&
 
 ## 9. Shared Infrastructure Used by Practice + Question Review
 
-BS-053 landed with the lightest clean-architecture-friendly version of the options above: **extract the shared toggle logic downward, keep page-specific state in the page controllers.**
+BS-053 landed with the lightest clean-architecture-friendly version of the options above: **extract the shared toggle logic downward, keep page-specific state in the page model hooks.**
 
 ### What is shared
 - `toggleBookmark` controller action — reused unchanged by practice and question review

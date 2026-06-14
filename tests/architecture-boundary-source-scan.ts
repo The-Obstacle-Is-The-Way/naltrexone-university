@@ -64,7 +64,7 @@ const APPLICATION_BANNED_PACKAGE_PREFIXES = [
 const ADAPTER_BANNED_LOCAL_PREFIXES = ['app/', 'components/'];
 const OUTER_BYPASS_LOCAL_PREFIXES = [
   'src/application/use-cases/',
-  'src/application/ports/repositories',
+  'src/application/ports/repositories/',
   'src/adapters/repositories/',
 ];
 

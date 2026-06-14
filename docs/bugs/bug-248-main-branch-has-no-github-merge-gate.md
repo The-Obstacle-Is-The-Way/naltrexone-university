@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P1 (public repository; direct pushes and merges can bypass CI)
 **Date:** 2026-06-13
+**Resolution State:** Blocked on human-owned GitHub repository settings. Keep open until `main` is protected by branch protection or an active ruleset and the verification commands below pass.
 **Family:** CI/CD / repository governance
 **Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md)
 

@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P1 (public repository; known vulnerable dependency signal exists but GitHub security delivery is disabled)
 **Date:** 2026-06-13
+**Resolution State:** Blocked on human-owned GitHub security settings. Keep open until vulnerability alerts and automated security fixes are enabled and the verification commands below pass.
 **Family:** Security / dependency automation / repository governance
 **Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md)
 

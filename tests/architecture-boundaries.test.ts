@@ -94,6 +94,22 @@ describe('Clean Architecture import boundaries', () => {
     ]);
   });
 
+  it('blocks outer layers from bypassing controller entry points with repository port imports only under the repository-port directory', () => {
+    const issues = collectArchitectureBoundaryIssues([
+      source(
+        'components/example.tsx',
+        `
+          import { UserRepository } from '@/src/application/ports/repositories/user-repository';
+          import { report } from '@/src/application/ports/repositories-report';
+        `,
+      ),
+    ]);
+
+    expect(issues).toEqual([
+      "components/example.tsx:1 outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '@/src/application/ports/repositories/user-repository'.",
+    ]);
+  });
+
   it('keeps the live production source tree within enforced import boundaries', () => {
     expect(
       collectArchitectureBoundaryIssues(readProductionArchitectureSources()),

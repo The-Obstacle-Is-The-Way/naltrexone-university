@@ -15,6 +15,12 @@ describe('security.txt', () => {
       'Canonical: https://addictionboards.com/.well-known/security.txt',
     );
     expect(contents).toContain('Preferred-Languages: en');
-    expect(contents).toContain('Expires: 2027-06-13T00:00:00Z');
+
+    const expires = contents.match(/^Expires:\s*(.+)$/m)?.[1];
+    expect(expires).toBeDefined();
+
+    const expiresAt = new Date(expires ?? '');
+    expect(Number.isNaN(expiresAt.getTime())).toBe(false);
+    expect(expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 });

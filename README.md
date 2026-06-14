@@ -38,6 +38,11 @@ pnpm test --run
 pnpm test:browser
 pnpm test:integration
 pnpm build
+```
+
+If the local authenticated billing E2E environment described in `AGENTS.md` is present, also run:
+
+```bash
 pnpm test:e2e
 ```
 
