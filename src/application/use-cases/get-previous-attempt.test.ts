@@ -1256,7 +1256,7 @@ describe('GetPreviousAttemptUseCase', () => {
 
   it('propagates repository failures', async () => {
     class FailingAttemptRepository extends FakeAttemptRepository {
-      async findLatestByUserAndQuestion(): Promise<never> {
+      override async findLatestByUserAndQuestion(): Promise<never> {
         throw new ApplicationError('INTERNAL_ERROR', 'Repository failure');
       }
     }

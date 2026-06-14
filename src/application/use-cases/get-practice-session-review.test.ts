@@ -16,7 +16,7 @@ class MismatchedStatePracticeSessionRepository extends FakePracticeSessionReposi
     super([]);
   }
 
-  async findByIdAndUserId(
+  override async findByIdAndUserId(
     id: string,
     userId: string,
   ): Promise<PracticeSession | null> {
