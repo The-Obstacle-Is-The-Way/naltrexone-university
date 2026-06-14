@@ -262,6 +262,37 @@ describe('DrizzleQuestionRepository', () => {
   });
 
   describe('listPublishedCandidateIds', () => {
+    it('returns candidate ids when difficulty and multiple status filters are provided', async () => {
+      const rows = [{ id: requestedFirstQuestionId }];
+      const orderBy = vi.fn(async (..._args: unknown[]) => rows);
+      const query = {
+        from: vi.fn(() => query),
+        innerJoin: vi.fn(() => query),
+        leftJoin: vi.fn(() => query),
+        where: vi.fn(() => query),
+        groupBy: vi.fn(() => query),
+        orderBy,
+      };
+      const db = {
+        select: vi.fn(() => query),
+        selectDistinct: vi.fn(() => query),
+      } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.listPublishedCandidateIds({
+          tagSlugs: [],
+          difficulties: ['easy'],
+          statuses: ['bookmarked', 'unanswered'],
+          userId,
+        }),
+      ).resolves.toEqual([requestedFirstQuestionId]);
+
+      expect(orderBy).toHaveBeenCalledTimes(1);
+      expect(db.selectDistinct).toHaveBeenCalledTimes(1);
+    });
+
     it('throws VALIDATION_ERROR when statuses are provided without userId', async () => {
       const repo = new DrizzleQuestionRepository({} as unknown as RepoDb);
 

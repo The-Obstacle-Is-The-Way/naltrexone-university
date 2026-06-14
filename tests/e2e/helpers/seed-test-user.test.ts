@@ -185,6 +185,18 @@ describe('seedTestSubscription', () => {
     });
   });
 
+  it('refuses to seed when required environment is missing', async () => {
+    vi.stubEnv('DATABASE_URL', '');
+
+    await expect(seedTestSubscription()).rejects.toThrow(
+      'Missing required env vars for E2E subscription seeding',
+    );
+
+    expect(postgresMock).not.toHaveBeenCalled();
+    expect(customersCreate).not.toHaveBeenCalled();
+    expect(subscriptionsCreate).not.toHaveBeenCalled();
+  });
+
   it('throws when the Clerk user cannot be resolved', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response(JSON.stringify([]), {

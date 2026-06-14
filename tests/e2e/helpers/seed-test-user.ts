@@ -148,9 +148,6 @@ async function resolveClerkUserId(
     throw new Error(`Clerk API error ${res.status}: ${await res.text()}`);
   }
   const users = (await res.json()) as Array<{ id: string }>;
-  if (users.length === 0) {
-    throw new Error(`No Clerk user found for email ${email}`);
-  }
   const [user] = users;
   if (user === undefined) {
     throw new Error(`No Clerk user found for email ${email}`);
