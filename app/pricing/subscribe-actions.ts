@@ -17,9 +17,13 @@ export type SubscribeActionsDeps = {
   logError?: (context: Record<string, unknown>, msg: string) => void;
 };
 
+type ResolvedSubscribeActionsDeps = Omit<SubscribeActionsDeps, 'logError'> & {
+  logError: NonNullable<SubscribeActionsDeps['logError']>;
+};
+
 async function getDeps(
   deps?: Partial<SubscribeActionsDeps>,
-): Promise<SubscribeActionsDeps> {
+): Promise<ResolvedSubscribeActionsDeps> {
   const ctx = createRequestContext();
   const requestLogger = getRequestLogger(ctx);
 
@@ -47,7 +51,10 @@ export async function subscribeMonthlyAction(
   const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
 
   return runSubscribeAction(
-    { plan: 'monthly', idempotencyKey },
+    {
+      plan: 'monthly',
+      ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+    },
     {
       createCheckoutSessionFn: d.createCheckoutSessionFn,
       redirectFn: d.redirectFn,
@@ -65,7 +72,10 @@ export async function subscribeAnnualAction(
   const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
 
   return runSubscribeAction(
-    { plan: 'annual', idempotencyKey },
+    {
+      plan: 'annual',
+      ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+    },
     {
       createCheckoutSessionFn: d.createCheckoutSessionFn,
       redirectFn: d.redirectFn,
