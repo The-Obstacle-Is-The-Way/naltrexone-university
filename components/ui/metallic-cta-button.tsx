@@ -34,7 +34,11 @@ export function MetallicCtaButton({
   );
 
   return (
-    <MetallicBorder borderRadius={9999} borderWidth={2} className={className}>
+    <MetallicBorder
+      borderRadius={9999}
+      borderWidth={2}
+      {...(className !== undefined ? { className } : {})}
+    >
       {content}
     </MetallicBorder>
   );
