@@ -62,10 +62,10 @@ const APPLICATION_BANNED_PACKAGE_PREFIXES = [
 ];
 
 const ADAPTER_BANNED_LOCAL_PREFIXES = ['app/', 'components/'];
-const OUTER_BYPASS_LOCAL_PREFIXES = [
-  'src/application/use-cases/',
-  'src/application/ports/repositories/',
-  'src/adapters/repositories/',
+const OUTER_BYPASS_LOCAL_ROOTS = [
+  'src/application/use-cases',
+  'src/application/ports/repositories',
+  'src/adapters/repositories',
 ];
 
 const REPOSITORY_TYPESCRIPT_FILE_GLOBS = [
@@ -174,7 +174,7 @@ export function collectArchitectureBoundaryIssues(
       if (
         isOuterLayerPath(sourceFile.filePath) &&
         !occurrence.typeOnly &&
-        hasPrefix(localTarget, OUTER_BYPASS_LOCAL_PREFIXES)
+        matchesLocalPathRoot(localTarget, OUTER_BYPASS_LOCAL_ROOTS)
       ) {
         issues.push(
           `${sourceFile.filePath}:${occurrence.lineNumber} outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '${occurrence.specifier}'.`,
@@ -393,6 +393,16 @@ function isOuterLayerPath(filePath: string): boolean {
 
 function hasPrefix(value: string | null, prefixes: readonly string[]): boolean {
   return Boolean(value && prefixes.some((prefix) => value.startsWith(prefix)));
+}
+
+function matchesLocalPathRoot(
+  value: string | null,
+  roots: readonly string[],
+): boolean {
+  return Boolean(
+    value &&
+      roots.some((root) => value === root || value.startsWith(`${root}/`)),
+  );
 }
 
 function typescriptExtensionFor(basename: string): '.ts' | '.tsx' | null {

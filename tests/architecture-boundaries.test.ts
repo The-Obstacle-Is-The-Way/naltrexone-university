@@ -94,19 +94,27 @@ describe('Clean Architecture import boundaries', () => {
     ]);
   });
 
-  it('blocks outer layers from bypassing controller entry points with repository port imports only under the repository-port directory', () => {
+  it('blocks outer layers from exact and nested bypass roots without prefix overreach', () => {
     const issues = collectArchitectureBoundaryIssues([
       source(
         'components/example.tsx',
         `
-          import { UserRepository } from '@/src/application/ports/repositories/user-repository';
+          import { SubmitAnswerUseCase } from '@/src/application/use-cases';
+          import { UserRepository } from '@/src/application/ports/repositories';
+          import { DrizzleUserRepository } from '@/src/adapters/repositories';
+          import { SubmitAnswerUseCase as NestedUseCase } from '@/src/application/use-cases/submit-answer';
+          import { DrizzleUserRepository as NestedRepository } from '@/src/adapters/repositories/drizzle-user-repository';
           import { report } from '@/src/application/ports/repositories-report';
         `,
       ),
     ]);
 
     expect(issues).toEqual([
-      "components/example.tsx:1 outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '@/src/application/ports/repositories/user-repository'.",
+      "components/example.tsx:1 outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '@/src/application/use-cases'.",
+      "components/example.tsx:2 outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '@/src/application/ports/repositories'.",
+      "components/example.tsx:3 outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '@/src/adapters/repositories'.",
+      "components/example.tsx:4 outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '@/src/application/use-cases/submit-answer'.",
+      "components/example.tsx:5 outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '@/src/adapters/repositories/drizzle-user-repository'.",
     ]);
   });
 

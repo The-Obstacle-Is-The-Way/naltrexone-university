@@ -15,20 +15,41 @@ function countNewlineTerminatedLines(contents: string): number {
 describe('check-file-size.sh', () => {
   it('excludes oversized non-production support files explicitly', () => {
     const supportFiles = [
-      'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx',
-      'src/application/test-helpers/fakes/fake-attempt-repository.ts',
+      {
+        filePath:
+          'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx',
+        matchesShellExemption: (filePath: string) =>
+          filePath.endsWith('.browser.probes.tsx'),
+        shellExemptionPattern: '*.browser.probes.tsx',
+      },
+      {
+        filePath:
+          'src/application/test-helpers/fakes/fake-attempt-repository.ts',
+        matchesShellExemption: (filePath: string) =>
+          filePath.startsWith('src/application/test-helpers/'),
+        shellExemptionPattern: 'src/application/test-helpers/*',
+      },
     ];
+    const supportFilePaths = supportFiles.map(({ filePath }) => filePath);
 
-    for (const supportFile of supportFiles) {
+    for (const {
+      filePath,
+      matchesShellExemption,
+      shellExemptionPattern,
+    } of supportFiles) {
+      expect(
+        matchesShellExemption(filePath),
+        `${filePath} must exercise ${shellExemptionPattern}`,
+      ).toBe(true);
       const lineCount = countNewlineTerminatedLines(
-        readFileSync(supportFile, 'utf8'),
+        readFileSync(filePath, 'utf8'),
       );
       expect(lineCount).toBeGreaterThan(MAX_ALLOWED_FILE_LINES);
     }
 
     const result = spawnSync(
       'sh',
-      ['scripts/check-file-size.sh', ...supportFiles],
+      ['scripts/check-file-size.sh', ...supportFilePaths],
       {
         encoding: 'utf8',
       },
