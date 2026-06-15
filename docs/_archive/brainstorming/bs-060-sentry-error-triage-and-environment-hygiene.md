@@ -5,7 +5,7 @@
 **Status:** Implemented on 2026-03-24 in PR #250. Post-deploy verification remains tracked in GitHub issue #251.
 **Historical note:** The Root Cause Analysis section below describes the pre-fix `proxy.ts` state that existed on `main` before PR #250, specifically commit [`e28a3665`](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/blob/e28a3665494ffcaa0711eeec2e37ad60959459e7/proxy.ts).
 **Scope:** Final state after operational cleanup, plus the remaining preview-toolbar/CSP integration debt
-**Related:** [DEBT-310](../debt/debt-310-stripe-stale-price-id-in-production-db.md), [DEBT-240](../debt/debt-240-local-dev-database-url-points-to-production.md), [DEBT-239](../debt/debt-239-env-local-stripe-account-mismatch.md), [DEBT-332](../../debt/debt-332-security-posture-audit.md)
+**Related:** [DEBT-310](../debt/debt-310-stripe-stale-price-id-in-production-db.md), [DEBT-240](../debt/debt-240-local-dev-database-url-points-to-production.md), [DEBT-239](../debt/debt-239-env-local-stripe-account-mismatch.md), [DEBT-332](../debt/debt-332-security-posture-audit.md)
 
 ---
 
