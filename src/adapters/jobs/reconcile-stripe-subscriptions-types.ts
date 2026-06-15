@@ -29,7 +29,7 @@ export type ReconcileStripeSubscriptionsDeps = {
   stripe: StripeClient;
   priceIds: StripePriceIds;
   logger: Logger;
-  webhookE2EOwner?: string;
+  webhookE2EOwner?: string | undefined;
   listLocalSubscriptions: (
     input: ReconcileStripeSubscriptionsInput,
   ) => Promise<readonly StripeSubscriptionRefRow[]>;

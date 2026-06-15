@@ -46,26 +46,30 @@ type ReconciliationTestScenarioInput = {
     limit: number;
     offset: number;
   }) => Promise<LocalSubscriptionRow[]>;
-  stripeCustomers?: FakeStripeCustomerRepository;
+  stripeCustomers?: FakeStripeCustomerRepository | undefined;
   subscriptions?: FakeSubscriptionRepository;
   logger?: FakeLogger;
   transaction?: ReconciliationDeps['transaction'];
-  webhookE2EOwner?: string;
+  webhookE2EOwner?: string | undefined;
 };
 
 function createSubscriptionFixture(input: {
   id: string;
   userId: string;
-  customerId?: string;
-  status?: StripeSubscriptionStatus;
-  currentPeriodEnd?: number;
-  priceId?: string;
-  e2eOwner?: string;
+  customerId?: string | undefined;
+  status?: StripeSubscriptionStatus | undefined;
+  currentPeriodEnd?: number | undefined;
+  priceId?: string | undefined;
+  e2eOwner?: string | undefined;
 }): StripeSubscriptionFixture {
   const subscriptionEvent = loadJsonFixture<{
     data: { object: StripeSubscriptionFixture };
   }>('stripe/customer.subscription.updated.json');
   const base = subscriptionEvent.data.object;
+  const [baseItem] = base.items.data;
+  if (baseItem === undefined) {
+    throw new Error('Expected Stripe subscription fixture item');
+  }
 
   return {
     ...base,
@@ -81,10 +85,10 @@ function createSubscriptionFixture(input: {
       ...base.items,
       data: [
         {
-          ...base.items.data[0],
+          ...baseItem,
           current_period_end: input.currentPeriodEnd ?? 1_700_000_000,
           price: {
-            ...base.items.data[0].price,
+            ...baseItem.price,
             id: input.priceId ?? 'price_m',
           },
         },

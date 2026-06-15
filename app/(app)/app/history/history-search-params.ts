@@ -108,7 +108,7 @@ export function parseQuestionsSort(
 export function buildHistorySessionsHref(input: {
   limit: number;
   offset: number;
-  mode?: SessionModeFilter;
+  mode?: SessionModeFilter | undefined;
 }): string {
   const params = new URLSearchParams();
   params.set('tab', 'sessions');
@@ -123,7 +123,7 @@ export function buildHistorySessionsHref(input: {
 export function buildHistoryQuestionsHref(input: {
   limit: number;
   offset: number;
-  filters?: QuestionsFilters;
+  filters?: QuestionsFilters | undefined;
 }): string {
   const params = new URLSearchParams();
   params.set('tab', 'questions');

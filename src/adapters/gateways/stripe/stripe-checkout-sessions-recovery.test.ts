@@ -200,7 +200,6 @@ describe('createStripeCheckoutSession recovery', () => {
       createStripeCheckoutSession({
         stripe,
         input,
-        options: { idempotencyKey: 'client-tab-key-1' },
         priceIds,
         logger: new FakeLogger(),
         nowMs: () => fixedNowMs,

@@ -13,22 +13,25 @@ import { SessionSummaryView } from './session-summary-view';
 
 type PracticeSessionExamResultsRendererInput = {
   summary: EndPracticeSessionOutput | null;
-  postExamSummary?: EndPracticeSessionOutput | null;
-  examResultsSubstage?: ExamResultsSubstage | null;
-  postExamReview?: GetCompletedSessionQuestionsWithFeedbackOutput | null;
-  postExamReviewLoadState?: LoadState;
-  postExamReviewCurrentQuestionId?: string | null;
-  summaryReview?: GetPracticeSessionReviewOutput | null;
-  summaryReviewLoadState?: LoadState;
+  postExamSummary?: EndPracticeSessionOutput | null | undefined;
+  examResultsSubstage?: ExamResultsSubstage | null | undefined;
+  postExamReview?:
+    | GetCompletedSessionQuestionsWithFeedbackOutput
+    | null
+    | undefined;
+  postExamReviewLoadState?: LoadState | undefined;
+  postExamReviewCurrentQuestionId?: string | null | undefined;
+  summaryReview?: GetPracticeSessionReviewOutput | null | undefined;
+  summaryReviewLoadState?: LoadState | undefined;
   questionPanelId: string;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
   questionFeedback?: PracticeViewProps['questionFeedback'];
   onToggleBookmark: () => void;
-  onRetryPostExamReview?: () => void;
-  onNavigatePostExamReviewQuestion?: (questionId: string) => void;
-  onReenterPostExamReview?: (questionId?: string) => void;
-  onViewSummary?: () => void;
+  onRetryPostExamReview?: (() => void) | undefined;
+  onNavigatePostExamReviewQuestion?: ((questionId: string) => void) | undefined;
+  onReenterPostExamReview?: ((questionId?: string) => void) | undefined;
+  onViewSummary?: (() => void) | undefined;
 };
 
 export function renderPracticeSessionExamResults(

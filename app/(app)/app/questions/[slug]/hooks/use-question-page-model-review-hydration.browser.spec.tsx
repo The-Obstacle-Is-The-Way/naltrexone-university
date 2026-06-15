@@ -164,7 +164,7 @@ describe('useQuestionPageModel (browser)', () => {
     getPreviousAttempt.mockReturnValue(deferred.promise);
 
     const reviewSnapshots: Array<{
-      mode?: 'review' | null;
+      mode?: 'review' | null | undefined;
       isLoadingPreviousAttempt: boolean;
       reviewHydrationState: string | null;
     }> = [];

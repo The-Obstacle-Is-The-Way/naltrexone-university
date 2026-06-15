@@ -74,7 +74,7 @@ function MobileNavLinks({
                 ? 'block rounded-md bg-muted px-3 py-3 text-sm font-medium text-foreground ring-focus'
                 : 'block rounded-md px-3 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground ring-focus'
             }
-            onClick={onClose}
+            {...(onClose !== undefined ? { onClick: onClose } : {})}
           >
             {item.label}
           </Link>

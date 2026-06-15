@@ -49,7 +49,7 @@ vi.mock('@playwright/test', () => ({
       const locator = target as FakeLocator;
       await locator.waitFor({
         state: 'visible',
-        timeout: options?.timeout,
+        ...(options?.timeout !== undefined ? { timeout: options.timeout } : {}),
       });
     },
     async toHaveAttribute(

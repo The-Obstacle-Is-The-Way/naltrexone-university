@@ -44,11 +44,12 @@ export class FakeQuestionFeedbackRepository
     );
     if (matching.length === 0) return null;
 
-    return matching.slice().sort((a, b) => {
+    const [latest] = matching.slice().sort((a, b) => {
       const byDate = b.createdAt.getTime() - a.createdAt.getTime();
       if (byDate !== 0) return byDate;
       return b.id.localeCompare(a.id);
-    })[0];
+    });
+    return latest ?? null;
   }
 
   private persistRating(

@@ -9,13 +9,13 @@ const ClerkUserButton = dynamic(
 );
 
 export type AuthUserButtonProps = {
-  appearance?: ComponentProps<typeof ClerkUserButton>['appearance'];
+  appearance?: ComponentProps<typeof ClerkUserButton>['appearance'] | undefined;
 };
 
 export function AuthUserButton({ appearance }: AuthUserButtonProps) {
   return (
     <div className="flex min-h-[44px] min-w-[44px] items-center justify-center">
-      <ClerkUserButton appearance={appearance} />
+      <ClerkUserButton {...(appearance !== undefined ? { appearance } : {})} />
     </div>
   );
 }

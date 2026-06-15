@@ -2,13 +2,17 @@
 import type { ThemeProviderProps } from 'next-themes';
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 
+type AppThemeProviderProps = Omit<ThemeProviderProps, 'nonce'> & {
+  nonce?: ThemeProviderProps['nonce'] | undefined;
+};
+
 export function ThemeProvider({
   children,
   nonce,
   ...props
-}: ThemeProviderProps) {
+}: AppThemeProviderProps) {
   return (
-    <NextThemesProvider nonce={nonce} {...props}>
+    <NextThemesProvider {...props} {...(nonce !== undefined ? { nonce } : {})}>
       {children}
     </NextThemesProvider>
   );

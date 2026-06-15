@@ -28,7 +28,7 @@ export function RootProvidersShell({
   nonce,
 }: {
   children: React.ReactNode;
-  nonce?: string;
+  nonce?: string | undefined;
 }) {
   return (
     <ThemeProvider

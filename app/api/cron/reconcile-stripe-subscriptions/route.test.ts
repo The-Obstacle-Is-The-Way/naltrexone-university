@@ -44,7 +44,7 @@ import { GET, POST } from './route';
 
 type CronContainer = {
   env: {
-    CRON_SECRET?: string;
+    CRON_SECRET?: string | undefined;
     NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: string;
     NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: string;
   };

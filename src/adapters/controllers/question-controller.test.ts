@@ -470,10 +470,6 @@ describe('question-controller', () => {
           questionId: input.questionId,
           choiceId: input.choiceId,
           sessionId: input.sessionId,
-          timeSpentSeconds: undefined,
-          retryOfAttemptId: undefined,
-          retryOrigin: undefined,
-          retrySessionId: undefined,
         },
       ]);
     });

@@ -155,33 +155,34 @@ export type QuestionViewProps = {
   question: GetQuestionBySlugOutput | null;
   selectedChoiceId: string | null;
   submitResult: QuestionPageSubmitResult | null;
-  isLoadingPreviousAttempt?: boolean;
-  reviewHydrationState?: ReviewHydrationState | null;
-  sessionUnansweredReveal?: SessionUnansweredReveal | null;
+  isLoadingPreviousAttempt?: boolean | undefined;
+  reviewHydrationState?: ReviewHydrationState | null | undefined;
+  sessionUnansweredReveal?: SessionUnansweredReveal | null | undefined;
   sessionNavigation: SessionNavigation | null;
   canSubmit: boolean;
   isPending: boolean;
-  bookmarkStatus?: QuestionPageBookmarkStatus;
-  isBookmarkHydrated?: boolean;
-  isBookmarked?: boolean;
+  bookmarkStatus?: QuestionPageBookmarkStatus | undefined;
+  isBookmarkHydrated?: boolean | undefined;
+  isBookmarked?: boolean | undefined;
   questionFeedback?:
     | (QuestionFeedbackRatingProps & {
         isReportOpen: boolean;
         openReport: (open?: boolean) => void;
         submitReport: QuestionReportDialogProps['submitReport'];
       })
-    | null;
-  mode?: QuestionMode | null;
-  origin?: QuestionOrigin | null;
-  sessionId?: string;
-  historyHref?: string;
-  reviewSessionMode?: 'tutor' | 'exam' | null;
+    | null
+    | undefined;
+  mode?: QuestionMode | null | undefined;
+  origin?: QuestionOrigin | null | undefined;
+  sessionId?: string | undefined;
+  historyHref?: string | undefined;
+  reviewSessionMode?: 'tutor' | 'exam' | null | undefined;
   onTryAgain: () => void;
-  onToggleBookmark?: () => void;
+  onToggleBookmark?: (() => void) | undefined;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: () => void;
   onReattempt: () => void;
-  onAnswerAsNew?: () => void;
+  onAnswerAsNew?: (() => void) | undefined;
 };
 
 export function QuestionView(props: QuestionViewProps) {
@@ -516,13 +517,13 @@ export default function QuestionPageClient({
   historyIndex,
 }: {
   slug: string;
-  from?: string;
-  mode?: string;
-  sessionId?: string;
-  attemptId?: string;
-  historyHref?: string;
-  historySeq?: string;
-  historyIndex?: string;
+  from?: string | undefined;
+  mode?: string | undefined;
+  sessionId?: string | undefined;
+  attemptId?: string | undefined;
+  historyHref?: string | undefined;
+  historySeq?: string | undefined;
+  historyIndex?: string | undefined;
 }) {
   const origin = parseQuestionOrigin(from);
   const parsedMode = parseQuestionMode(mode);

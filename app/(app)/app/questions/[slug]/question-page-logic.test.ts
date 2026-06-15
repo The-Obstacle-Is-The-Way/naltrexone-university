@@ -855,6 +855,36 @@ describe('question-page-logic', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
+    it('omits idempotencyKey when the current submit key is absent', async () => {
+      const submitAnswerFn = vi.fn(async () =>
+        ok({
+          attemptId: fixtureAttempt1Id,
+          isCorrect: true,
+          correctChoiceId: fixtureChoice1Id,
+          explanationMd: 'Because...',
+          referenceMd: null,
+          choiceExplanations: [],
+        } satisfies SubmitAnswerOutput),
+      );
+
+      await submitSelectedAnswer({
+        question: createQuestionOutput(),
+        selectedChoiceId: fixtureChoice1Id,
+        questionLoadedAtMs: 1000,
+        submitIdempotencyKey: null,
+        submitAnswerFn,
+        nowMs: () => 5000,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+      });
+
+      expect(submitAnswerFn).toHaveBeenCalledWith({
+        questionId: fixtureQuestion1Id,
+        choiceId: fixtureChoice1Id,
+        timeSpentSeconds: 4,
+      });
+    });
+
     it('passes retry provenance through to submit action payload', async () => {
       const submitAnswerFn = vi.fn(async () =>
         ok({

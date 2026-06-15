@@ -108,12 +108,14 @@ function QuestionMetadata({
 
 export type HistoryQuestionsTabProps = {
   result: ActionResult<GetAttemptedQuestionsOutput>;
-  filters?: QuestionsFilters;
-  tagOptions?: {
-    slug: string;
-    name: string;
-    kind: 'topic' | 'substance' | 'treatment';
-  }[];
+  filters?: QuestionsFilters | undefined;
+  tagOptions?:
+    | {
+        slug: string;
+        name: string;
+        kind: 'topic' | 'substance' | 'treatment';
+      }[]
+    | undefined;
 };
 
 export function HistoryQuestionsTab({

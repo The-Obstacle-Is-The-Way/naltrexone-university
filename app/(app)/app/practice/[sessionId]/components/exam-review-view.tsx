@@ -50,7 +50,7 @@ export function QuestionNavigator({
   review: NavigatorReview;
   currentQuestionId: string | null;
   controlledPanelId: string;
-  mode?: 'exam' | 'review';
+  mode?: 'exam' | 'review' | undefined;
   onNavigateQuestion: (questionId: string) => void;
 }) {
   return (

@@ -184,6 +184,27 @@ describe('normalizeStripeSubscriptionUpdate', () => {
     ).toThrow(expect.objectContaining({ code: 'STRIPE_ERROR' }));
   });
 
+  it('throws STRIPE_ERROR when subscription has no items', () => {
+    const logger = new FakeLogger();
+    const subscription = createSubscriptionFixture();
+    subscription.items.data = [];
+
+    expect(() =>
+      normalizeStripeSubscriptionUpdate({
+        subscription,
+        eventId: 'evt_1',
+        type: 'customer.subscription.updated',
+        priceIds,
+        logger,
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: 'STRIPE_ERROR',
+        message: 'Stripe subscription item is required',
+      }),
+    );
+  });
+
   it('throws STRIPE_ERROR when price id does not match configured plans', () => {
     const logger = new FakeLogger();
 
@@ -247,7 +268,11 @@ describe('retrieveAndNormalizeStripeSubscription', () => {
     });
 
     expect(logger.errorCalls).toHaveLength(1);
-    expect(logger.errorCalls[0].msg).toContain(
+    const errorCall = logger.errorCalls[0];
+    if (errorCall === undefined) {
+      throw new Error('Expected Stripe subscription payload error log');
+    }
+    expect(errorCall.msg).toContain(
       'Invalid Stripe subscription payload retrieved',
     );
   });

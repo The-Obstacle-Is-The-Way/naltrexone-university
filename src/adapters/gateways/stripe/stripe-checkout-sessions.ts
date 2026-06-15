@@ -10,10 +10,7 @@ import type {
   StripeSubscriptionStatus,
 } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
-import type {
-  CheckoutSessionInput,
-  PaymentGatewayRequestOptions,
-} from '@/src/application/ports/gateways';
+import type { CheckoutSessionInput } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
 import { callStripeWithRetry } from './stripe-retry';
@@ -418,10 +415,9 @@ export async function createStripeCheckoutSession({
 }: {
   stripe: StripeClient;
   input: CheckoutSessionInput;
-  options?: PaymentGatewayRequestOptions;
   priceIds: StripePriceIds;
   logger: Logger;
-  nowMs?: () => number;
+  nowMs?: (() => number) | undefined;
 }): Promise<{ url: string }> {
   const priceId = getStripePriceId(input.plan, priceIds);
   const trialRequested = input.trialPeriodDays !== undefined;

@@ -18,9 +18,10 @@ describe('FakeTagRepository', () => {
 
       const result = await repo.listAll();
 
-      expect(result).toHaveLength(2);
-      expect(result[0].slug).toBe('pharmacology');
-      expect(result[1].slug).toBe('diagnosis');
+      expect(result.map((tag) => tag.slug)).toEqual([
+        'pharmacology',
+        'diagnosis',
+      ]);
     });
 
     it('returns empty array when no tags', async () => {

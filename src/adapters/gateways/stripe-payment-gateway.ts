@@ -24,7 +24,7 @@ export type StripePaymentGatewayDeps = {
   webhookSecret: string;
   priceIds: StripePriceIds;
   logger: Logger;
-  webhookE2EOwner?: string;
+  webhookE2EOwner?: string | undefined;
 };
 
 export class StripePaymentGateway implements PaymentGateway {
@@ -44,12 +44,13 @@ export class StripePaymentGateway implements PaymentGateway {
 
   async createCheckoutSession(
     input: CheckoutSessionInput,
-    options?: PaymentGatewayRequestOptions,
+    _options?: PaymentGatewayRequestOptions,
   ): Promise<CheckoutSessionOutput> {
+    // Checkout sessions use deterministic Stripe idempotency keys by user and
+    // plan so concurrent same-plan starts collapse to one active session.
     return createStripeCheckoutSession({
       stripe: this.deps.stripe,
       input,
-      options,
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
     });

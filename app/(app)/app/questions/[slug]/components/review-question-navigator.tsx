@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 type ReviewQuestionNavigatorProps = {
   navigation: SessionNavigation;
-  historyHref?: string;
+  historyHref?: string | undefined;
 };
 
 export function ReviewQuestionNavigator({

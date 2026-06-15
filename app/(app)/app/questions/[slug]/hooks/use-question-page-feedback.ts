@@ -13,10 +13,10 @@ import type {
 export type QuestionPageFeedbackStatus = PracticeQuestionFeedbackStatus;
 
 export type UseQuestionPageFeedbackInput = {
-  mode?: QuestionMode | null;
+  mode?: QuestionMode | null | undefined;
   question: Pick<GetQuestionBySlugOutput, 'questionId'> | null;
-  attemptId?: string | null;
-  practiceSessionId?: string | null;
+  attemptId?: string | null | undefined;
+  practiceSessionId?: string | null | undefined;
   isMounted: () => boolean;
 };
 
