@@ -25,7 +25,7 @@ import { useHistorySessions } from '../hooks/use-history-sessions';
 
 export type HistorySessionsTabProps = {
   result: ActionResult<GetSessionHistoryOutput>;
-  modeFilter?: SessionModeFilter;
+  modeFilter?: SessionModeFilter | undefined;
 };
 
 // Preserve the prior compact disclosure toggle chrome while using Button.

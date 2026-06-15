@@ -10,9 +10,9 @@ import { getPreviousAttempt } from '@/src/adapters/controllers/question-view-con
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 export type UseQuestionPagePreviousAttemptInput = {
-  mode?: 'review' | null;
-  attemptId?: string;
-  sessionId?: string;
+  mode?: 'review' | null | undefined;
+  attemptId?: string | undefined;
+  sessionId?: string | undefined;
   loadState: LoadState;
   question: GetQuestionBySlugOutput | null;
   setSelectedChoiceId: (choiceId: string | null) => void;

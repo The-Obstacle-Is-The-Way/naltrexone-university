@@ -30,18 +30,25 @@ import { findAdjacentAvailableQuestionId } from './practice-session-question-nav
 import { SessionSummaryView } from './session-summary-view';
 export type PracticeSessionPageViewProps = {
   summary: EndPracticeSessionOutput | null;
-  postExamSummary?: EndPracticeSessionOutput | null;
-  examResultsSubstage?: 'post_exam_review' | 'session_summary' | null;
-  postExamReview?: GetCompletedSessionQuestionsWithFeedbackOutput | null;
-  postExamReviewLoadState?: LoadState;
-  postExamReviewCurrentQuestionId?: string | null;
-  summaryReview?: GetPracticeSessionReviewOutput | null;
-  summaryReviewLoadState?: LoadState;
-  review?: GetPracticeSessionReviewOutput | null;
-  reviewLoadState?: LoadState;
-  navigator?: GetPracticeSessionReviewOutput | null;
-  navigatorLoadState?: LoadState;
-  examTimer?: ReactNode;
+  postExamSummary?: EndPracticeSessionOutput | null | undefined;
+  examResultsSubstage?:
+    | 'post_exam_review'
+    | 'session_summary'
+    | null
+    | undefined;
+  postExamReview?:
+    | GetCompletedSessionQuestionsWithFeedbackOutput
+    | null
+    | undefined;
+  postExamReviewLoadState?: LoadState | undefined;
+  postExamReviewCurrentQuestionId?: string | null | undefined;
+  summaryReview?: GetPracticeSessionReviewOutput | null | undefined;
+  summaryReviewLoadState?: LoadState | undefined;
+  review?: GetPracticeSessionReviewOutput | null | undefined;
+  reviewLoadState?: LoadState | undefined;
+  navigator?: GetPracticeSessionReviewOutput | null | undefined;
+  navigatorLoadState?: LoadState | undefined;
+  examTimer?: ReactNode | undefined;
   sessionInfo: NextQuestion['session'];
   loadState: LoadState;
   question: NextQuestion | null;
@@ -51,26 +58,26 @@ export type PracticeSessionPageViewProps = {
   isPending: boolean;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
-  isMarkingForReview?: boolean;
-  bookmarkMessage?: string | null;
-  bookmarkMessageVersion?: number;
+  isMarkingForReview?: boolean | undefined;
+  bookmarkMessage?: string | null | undefined;
+  bookmarkMessageVersion?: number | undefined;
   questionFeedback?: PracticeViewProps['questionFeedback'];
   onEndSession: () => void;
-  onRetryReview?: () => void;
-  onRetryPostExamReview?: () => void;
-  onRetryNavigator?: () => void;
+  onRetryReview?: (() => void) | undefined;
+  onRetryPostExamReview?: (() => void) | undefined;
+  onRetryNavigator?: (() => void) | undefined;
   onTryAgain: () => void;
-  onRetryBookmarks?: () => void;
+  onRetryBookmarks?: (() => void) | undefined;
   onToggleBookmark: () => void;
-  onToggleMarkForReview?: () => void;
+  onToggleMarkForReview?: (() => void) | undefined;
   onSelectChoice: (choiceId: string) => void;
   onNextQuestion: () => void;
-  onNavigateQuestion?: (questionId: string) => void;
-  onOpenReviewQuestion?: (questionId: string) => void;
-  onNavigatePostExamReviewQuestion?: (questionId: string) => void;
-  onReenterPostExamReview?: (questionId?: string) => void;
-  onViewSummary?: () => void;
-  onFinalizeReview?: () => Promise<void>;
+  onNavigateQuestion?: ((questionId: string) => void) | undefined;
+  onOpenReviewQuestion?: ((questionId: string) => void) | undefined;
+  onNavigatePostExamReviewQuestion?: ((questionId: string) => void) | undefined;
+  onReenterPostExamReview?: ((questionId?: string) => void) | undefined;
+  onViewSummary?: (() => void) | undefined;
+  onFinalizeReview?: (() => Promise<void>) | undefined;
 };
 
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {

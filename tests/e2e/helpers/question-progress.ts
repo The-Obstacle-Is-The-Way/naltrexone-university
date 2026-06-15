@@ -1,11 +1,11 @@
 export function parseQuestionProgressCount(progressText: string): number {
   const normalized = progressText.trim();
-  const match = normalized.match(/^Question \d+ of (\d+)\b/);
-  if (!match) {
+  const countText = normalized.replace(/^Question \d+ of /, '');
+  if (countText === normalized || !/^\d+\b/.test(countText)) {
     throw new Error(
       `Could not parse question progress count from "${progressText}"`,
     );
   }
 
-  return Number.parseInt(match[1], 10);
+  return Number.parseInt(countText, 10);
 }

@@ -199,8 +199,12 @@ export const getNextQuestion = createAction({
       return d.getNextQuestionUseCase.execute({
         userId,
         sessionId: input.sessionId,
-        questionId: input.questionId,
-        fromIndex: input.fromIndex,
+        ...(input.questionId !== undefined
+          ? { questionId: input.questionId }
+          : {}),
+        ...(input.fromIndex !== undefined
+          ? { fromIndex: input.fromIndex }
+          : {}),
       });
     }
 
@@ -244,11 +248,11 @@ export const submitAnswer = createAction({
         userId,
         questionId,
         choiceId,
-        sessionId,
-        timeSpentSeconds,
-        retryOfAttemptId,
-        retryOrigin,
-        retrySessionId,
+        ...(sessionId !== undefined ? { sessionId } : {}),
+        ...(timeSpentSeconds !== undefined ? { timeSpentSeconds } : {}),
+        ...(retryOfAttemptId !== undefined ? { retryOfAttemptId } : {}),
+        ...(retryOrigin !== undefined ? { retryOrigin } : {}),
+        ...(retrySessionId !== undefined ? { retrySessionId } : {}),
       });
     }
 

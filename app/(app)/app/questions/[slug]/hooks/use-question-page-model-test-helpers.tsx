@@ -88,14 +88,14 @@ export function Probe({
   onRender,
 }: {
   slug?: string;
-  mode?: 'review' | null;
-  sessionId?: string;
-  attemptId?: string;
-  from?: QuestionOrigin | null;
-  historySequence?: readonly string[] | null;
-  historyIndex?: number | null;
+  mode?: 'review' | null | undefined;
+  sessionId?: string | undefined;
+  attemptId?: string | undefined;
+  from?: QuestionOrigin | null | undefined;
+  historySequence?: readonly string[] | null | undefined;
+  historyIndex?: number | null | undefined;
   onRender?: (snapshot: {
-    mode?: 'review' | null;
+    mode?: 'review' | null | undefined;
     isLoadingPreviousAttempt: boolean;
     reviewHydrationState: string | null;
   }) => void;

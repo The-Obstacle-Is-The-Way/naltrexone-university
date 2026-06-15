@@ -111,7 +111,7 @@ describe('runCheckoutSuccessPage', () => {
   it('awaits searchParams before reading session_id', async () => {
     const stripeRetrieveCalls: Array<{
       sessionId: string;
-      params?: { expand?: string[] };
+      params?: { expand?: string[] } | undefined;
     }> = [];
 
     const user = {
@@ -205,7 +205,7 @@ describe('runCheckoutSuccessPage', () => {
   it('returns the first session_id when searchParams contains an array', async () => {
     const stripeRetrieveCalls: Array<{
       sessionId: string;
-      params?: { expand?: string[] };
+      params?: { expand?: string[] } | undefined;
     }> = [];
 
     const user = {

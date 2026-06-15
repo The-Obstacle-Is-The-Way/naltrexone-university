@@ -27,7 +27,9 @@ export async function runManageBillingAction(deps: {
   let result: Awaited<ReturnType<CreatePortalSessionFn>>;
   try {
     result = await deps.createPortalSessionFn({
-      idempotencyKey: deps.idempotencyKey,
+      ...(deps.idempotencyKey !== undefined
+        ? { idempotencyKey: deps.idempotencyKey }
+        : {}),
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

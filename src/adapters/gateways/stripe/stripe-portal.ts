@@ -18,7 +18,7 @@ export async function createStripePortalSession({
 }: {
   stripe: StripeClient;
   input: PortalSessionInput;
-  options?: PaymentGatewayRequestOptions;
+  options?: PaymentGatewayRequestOptions | undefined;
   logger: Logger;
 }): Promise<{ url: string }> {
   const params = {

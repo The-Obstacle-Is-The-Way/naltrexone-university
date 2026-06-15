@@ -1,7 +1,7 @@
 export function runTransitionedAsyncAction(input: {
   startTransition: (fn: () => void) => void;
   run: () => Promise<void>;
-  onUnhandledError?: (error: unknown) => void | Promise<void>;
+  onUnhandledError?: ((error: unknown) => void | Promise<void>) | undefined;
 }): Promise<void> {
   return new Promise((resolve) => {
     input.startTransition(async () => {

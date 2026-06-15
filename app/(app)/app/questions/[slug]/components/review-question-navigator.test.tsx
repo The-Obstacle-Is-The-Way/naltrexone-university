@@ -50,7 +50,7 @@ describe('ReviewQuestionNavigator', () => {
 
   async function renderNavigator(input?: {
     navigation?: SessionNavigation;
-    historyHref?: string;
+    historyHref?: string | undefined;
   }) {
     const { ReviewQuestionNavigator } = await import(
       '@/app/(app)/app/questions/[slug]/components/review-question-navigator'

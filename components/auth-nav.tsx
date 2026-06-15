@@ -26,8 +26,10 @@ export async function AuthNav({
   options,
   showPrimaryLink = true,
 }: {
-  deps?: AuthNavDeps;
-  options?: { loadContainer?: LoadContainerFn<AuthDepsContainer> };
+  deps?: AuthNavDeps | undefined;
+  options?:
+    | { loadContainer?: LoadContainerFn<AuthDepsContainer> | undefined }
+    | undefined;
   showPrimaryLink?: boolean;
 } = {}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';

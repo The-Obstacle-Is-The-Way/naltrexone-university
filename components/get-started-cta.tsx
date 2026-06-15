@@ -16,8 +16,10 @@ export async function GetStartedCta({
   deps,
   options,
 }: {
-  deps?: GetStartedCtaDeps;
-  options?: { loadContainer?: LoadContainerFn<AuthDepsContainer> };
+  deps?: GetStartedCtaDeps | undefined;
+  options?:
+    | { loadContainer?: LoadContainerFn<AuthDepsContainer> | undefined }
+    | undefined;
 } = {}) {
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   if (skipClerk) {

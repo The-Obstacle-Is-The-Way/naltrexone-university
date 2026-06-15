@@ -14,13 +14,16 @@ import {
 } from './stripe-webhook-controller';
 
 class FailingStripeEventRepository extends FakeStripeEventRepository {
-  async pruneProcessedBefore(_cutoff: Date, _limit: number): Promise<number> {
+  override async pruneProcessedBefore(
+    _cutoff: Date,
+    _limit: number,
+  ): Promise<number> {
     throw new Error('boom');
   }
 }
 
 class FailingSubscriptionRepository extends FakeSubscriptionRepository {
-  async upsert(): Promise<never> {
+  override async upsert(): Promise<never> {
     throw new Error('boom');
   }
 }
@@ -38,7 +41,7 @@ class ThrowingPaymentGateway extends FakePaymentGateway {
     });
   }
 
-  async processWebhookEvent(): Promise<never> {
+  override async processWebhookEvent(): Promise<never> {
     throw this.error;
   }
 }

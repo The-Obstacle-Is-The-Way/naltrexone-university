@@ -15,17 +15,19 @@ export type HistoryPageClientProps =
   | {
       activeTab: 'sessions';
       sessionsResult: ActionResult<GetSessionHistoryOutput>;
-      sessionsModeFilter?: SessionModeFilter;
+      sessionsModeFilter?: SessionModeFilter | undefined;
     }
   | {
       activeTab: 'questions';
       questionsResult: ActionResult<GetAttemptedQuestionsOutput>;
-      questionsFilters?: QuestionsFilters;
-      questionsTagOptions?: {
-        slug: string;
-        name: string;
-        kind: 'topic' | 'substance' | 'treatment';
-      }[];
+      questionsFilters?: QuestionsFilters | undefined;
+      questionsTagOptions?:
+        | {
+            slug: string;
+            name: string;
+            kind: 'topic' | 'substance' | 'treatment';
+          }[]
+        | undefined;
     };
 
 export function HistoryPageClient(props: HistoryPageClientProps) {

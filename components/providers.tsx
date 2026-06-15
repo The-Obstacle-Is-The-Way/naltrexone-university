@@ -45,7 +45,7 @@ export function Providers({
   nonce,
 }: {
   children: React.ReactNode;
-  nonce?: string;
+  nonce?: string | undefined;
 }) {
   const { resolvedTheme } = useTheme();
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
@@ -64,7 +64,7 @@ export function Providers({
     <NotificationProvider>
       <ClerkProvider
         dynamic
-        nonce={nonce}
+        {...(nonce !== undefined ? { nonce } : {})}
         signInFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
         signUpFallbackRedirectUrl={ROUTES.APP_DASHBOARD}
         appearance={clerkAppearance}

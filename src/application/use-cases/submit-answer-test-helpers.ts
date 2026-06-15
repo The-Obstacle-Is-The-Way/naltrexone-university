@@ -24,7 +24,7 @@ function passthroughTransaction(
 }
 
 class FailingRecordSessionRepository extends FakePracticeSessionRepository {
-  async recordQuestionAnswer(): Promise<never> {
+  override async recordQuestionAnswer(): Promise<never> {
     throw new ApplicationError(
       'INTERNAL_ERROR',
       'Failed to persist practice session answer state',

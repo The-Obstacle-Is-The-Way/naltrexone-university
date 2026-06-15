@@ -19,9 +19,9 @@ export default function PracticeSessionPageClient({
   actualCount,
 }: {
   sessionId: string;
-  toast?: string;
-  requestedCount?: string;
-  actualCount?: string;
+  toast?: string | undefined;
+  requestedCount?: string | undefined;
+  actualCount?: string | undefined;
 }) {
   const props = usePracticeSessionPageModel(sessionId);
 

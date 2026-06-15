@@ -24,7 +24,9 @@ export async function runSubscribeAction(
 ): Promise<void> {
   const result = await deps.createCheckoutSessionFn({
     plan: input.plan,
-    idempotencyKey: input.idempotencyKey,
+    ...(input.idempotencyKey !== undefined
+      ? { idempotencyKey: input.idempotencyKey }
+      : {}),
   });
   if (result.ok) return deps.redirectFn(result.data.url);
 

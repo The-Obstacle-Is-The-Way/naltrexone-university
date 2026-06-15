@@ -20,12 +20,12 @@ export function SessionSummaryView({
   reviewEntryErrorMessage = null,
 }: {
   summary: EndPracticeSessionOutput;
-  review?: GetPracticeSessionReviewOutput | null;
-  reviewLoadState?: LoadState;
-  onReviewAnswers?: () => void;
-  onOpenReviewQuestion?: (questionId: string) => void;
-  isReviewLoading?: boolean;
-  reviewEntryErrorMessage?: string | null;
+  review?: GetPracticeSessionReviewOutput | null | undefined;
+  reviewLoadState?: LoadState | undefined;
+  onReviewAnswers?: (() => void) | undefined;
+  onOpenReviewQuestion?: ((questionId: string) => void) | undefined;
+  isReviewLoading?: boolean | undefined;
+  reviewEntryErrorMessage?: string | null | undefined;
 }) {
   const summaryReview = review ?? null;
   const summaryReviewLoadState = reviewLoadState ?? { status: 'idle' };

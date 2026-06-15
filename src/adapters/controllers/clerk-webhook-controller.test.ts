@@ -14,7 +14,7 @@ import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 class DeletionBarrierUserRepository extends FakeUserRepository {
   private readonly lockedUserIds = new Set<string>();
 
-  async lockByClerkId(
+  override async lockByClerkId(
     clerkId: string,
   ): Promise<Awaited<ReturnType<FakeUserRepository['findByClerkId']>>> {
     const user = await super.findByClerkId(clerkId);
@@ -41,7 +41,7 @@ class ConcurrentStripeSyncRepository extends FakeStripeCustomerRepository {
     super();
   }
 
-  async findByUserId(
+  override async findByUserId(
     userId: string,
   ): Promise<{ stripeCustomerId: string } | null> {
     const existing = await super.findByUserId(userId);

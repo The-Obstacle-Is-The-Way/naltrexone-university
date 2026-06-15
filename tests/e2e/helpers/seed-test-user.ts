@@ -112,6 +112,7 @@ async function findOwnerMatchedStripeCustomer(
       return customer;
     }
   }
+  return undefined;
 }
 
 async function listOwnerMatchedStripeSubscriptions(
@@ -147,10 +148,11 @@ async function resolveClerkUserId(
     throw new Error(`Clerk API error ${res.status}: ${await res.text()}`);
   }
   const users = (await res.json()) as Array<{ id: string }>;
-  if (users.length === 0) {
+  const [user] = users;
+  if (user === undefined) {
     throw new Error(`No Clerk user found for email ${email}`);
   }
-  return users[0].id;
+  return user.id;
 }
 
 // ── DB: users ────────────────────────────────────────────────────────────
@@ -168,6 +170,9 @@ async function ensureDbUser(
           updated_at    = now()
     RETURNING id
   `;
+  if (row === undefined) {
+    throw new Error('Failed to upsert E2E database user');
+  }
   return row.id as string;
 }
 
@@ -307,8 +312,12 @@ async function ensureActiveSubscription(
       });
     }
     subscriptionId = activeSub.id;
+    const [activeSubscriptionItem] = activeSub.items.data;
+    if (activeSubscriptionItem === undefined) {
+      throw new Error('Active Stripe subscription has no items');
+    }
     currentPeriodEnd = new Date(
-      activeSub.items.data[0].current_period_end * 1000,
+      activeSubscriptionItem.current_period_end * 1000,
     );
   } else {
     const subscription = await stripe.subscriptions.create({
@@ -320,9 +329,11 @@ async function ensureActiveSubscription(
       },
     });
     subscriptionId = subscription.id;
-    currentPeriodEnd = new Date(
-      subscription.items.data[0].current_period_end * 1000,
-    );
+    const [subscriptionItem] = subscription.items.data;
+    if (subscriptionItem === undefined) {
+      throw new Error('Created Stripe subscription has no items');
+    }
+    currentPeriodEnd = new Date(subscriptionItem.current_period_end * 1000);
   }
 
   // Upsert into DB

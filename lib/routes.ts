@@ -30,13 +30,13 @@ export type QuestionMode = 'review';
 export function toQuestionRoute(
   slug: string,
   options?: {
-    from?: QuestionOrigin;
-    mode?: QuestionMode;
-    sessionId?: string;
-    attemptId?: string;
-    historyHref?: string;
-    historySeq?: string;
-    historyIndex?: number;
+    from?: QuestionOrigin | undefined;
+    mode?: QuestionMode | undefined;
+    sessionId?: string | undefined;
+    attemptId?: string | undefined;
+    historyHref?: string | undefined;
+    historySeq?: string | undefined;
+    historyIndex?: number | undefined;
   },
 ): string {
   const base = `${ROUTES.APP_QUESTIONS}/${slug}`;

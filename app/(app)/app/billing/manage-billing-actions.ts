@@ -41,6 +41,6 @@ export async function manageBillingAction(
     createPortalSessionFn: d.createPortalSessionFn,
     redirectFn: d.redirectFn,
     logger: d.logger,
-    idempotencyKey,
+    ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
   });
 }

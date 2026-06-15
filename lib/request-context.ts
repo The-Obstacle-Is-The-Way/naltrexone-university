@@ -12,7 +12,7 @@ export function createRequestContext(
 ): RequestContext {
   return {
     requestId: input?.requestId ?? randomUUID(),
-    userId: input?.userId,
+    ...(input?.userId !== undefined ? { userId: input.userId } : {}),
   };
 }
 

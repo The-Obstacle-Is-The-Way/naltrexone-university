@@ -26,7 +26,14 @@ export function err(
   message: string,
   fieldErrors?: Record<string, string[]>,
 ): ActionResult<never> {
-  return { ok: false, error: { code, message, fieldErrors } };
+  return {
+    ok: false,
+    error: {
+      code,
+      message,
+      ...(fieldErrors !== undefined ? { fieldErrors } : {}),
+    },
+  };
 }
 
 export function handleError(

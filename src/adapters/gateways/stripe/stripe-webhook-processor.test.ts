@@ -435,10 +435,12 @@ describe('processStripeWebhookEvent', () => {
     });
 
     expect(logger.errorCalls).toHaveLength(1);
-    expect(logger.errorCalls[0].msg).toBe(
-      'Invalid Stripe subscription webhook payload',
-    );
-    expect(logger.errorCalls[0].context).toHaveProperty('error');
+    const errorCall = logger.errorCalls[0];
+    if (errorCall === undefined) {
+      throw new Error('Expected Stripe webhook payload error log');
+    }
+    expect(errorCall.msg).toBe('Invalid Stripe subscription webhook payload');
+    expect(errorCall.context).toHaveProperty('error');
     expect(stripe.subscriptions?.retrieve).not.toHaveBeenCalled();
   });
 });
