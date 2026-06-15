@@ -68,7 +68,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6.0.8
+        uses: pnpm/action-setup@v6.0.9
         with:
           version: 11.3.0
           run_install: false
@@ -118,7 +118,14 @@ jobs:
 
       - name: Install Playwright browsers
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        run: pnpm exec playwright install --with-deps
+        run: |
+          # GitHub's ubuntu-24.04 image ships Microsoft/Azure apt repos that
+          # intermittently return 403, which fails `apt-get update` inside
+          # `playwright install --with-deps` and reds an otherwise-green run.
+          # Playwright's system libs come from the Ubuntu archive, not these
+          # repos, so drop any Microsoft apt source before installing.
+          sudo find /etc/apt/sources.list.d -type f -exec grep -lE 'packages\.microsoft\.com' {} + 2>/dev/null | sudo xargs -r rm -f || true
+          pnpm exec playwright install --with-deps
 
       - name: Browser tests with coverage
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
