@@ -39,11 +39,20 @@ vi.mock('@/components/theme-provider', () => ({
   ThemeProvider: ({
     children,
     nonce,
+    forcedTheme,
+    defaultTheme,
   }: {
     children: React.ReactNode;
     nonce?: string;
+    forcedTheme?: string;
+    defaultTheme?: string;
   }) => (
-    <div data-testid="theme-provider" data-nonce={nonce}>
+    <div
+      data-testid="theme-provider"
+      data-nonce={nonce}
+      data-forced-theme={forcedTheme}
+      data-default-theme={defaultTheme}
+    >
       {children}
     </div>
   ),
@@ -90,6 +99,17 @@ describe('app/layout', () => {
     );
 
     expect(html).toContain('data-nonce="nonce-123"');
+  });
+
+  it('pins the app to dark mode via forcedTheme (light mode disabled — DEBT-421)', async () => {
+    const html = renderToStaticMarkup(
+      await NonceBoundProviders({
+        children: <div>Child content</div>,
+      }),
+    );
+
+    expect(html).toContain('data-forced-theme="dark"');
+    expect(html).toContain('data-default-theme="dark"');
   });
 
   it('does not nest a root main landmark around route-level content', () => {

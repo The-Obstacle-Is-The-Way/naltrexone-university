@@ -2,7 +2,7 @@
 
 **Priority:** P2 (ships a known-incomplete UI surface to users; quality/perception risk, low functional risk)
 **Created:** 2026-06-15
-**Status:** Open — decision doc (no code shipped yet; this doc exists to settle the approach before implementation)
+**Status:** Decided — **Option B implemented** on branch `debt/421-light-mode-force-dark-vs-default-dark` (full quality gate green on Node 24). Pending CodeRabbit review + merge. This doc records the decision and the as-shipped implementation.
 **Related:** [DEBT-262](../_archive/debt/debt-262-light-mode-opacity.md) (light-mode opacity-scale asymmetry, accepted + documented), [DEBT-263](../_archive/debt/debt-263-text-contrast.md) (light-mode success/destructive contrast fix), [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) (LIGHT-1/2/3 audit items), `docs/frontend/pattern-registry.md` § 1.2 (opacity scale + light-mode caveat)
 
 ---
@@ -100,14 +100,14 @@ Option A is the right call the moment light mode passes its own design bar (cont
 
 ---
 
-## Implementation sketch (when approved — out of scope for this docs-only doc)
+## Implementation (as shipped on this branch)
 
-1. `app/layout.tsx` — `defaultTheme="system" enableSystem` → `forcedTheme="dark"` (drop `enableSystem`; `forcedTheme` makes it moot).
-2. Stop mounting `<ThemeToggle />` in the nav (locate via the marketing/app nav components; the toggle currently appears in the app shell). Keep the component file.
-3. Leave `globals.css` `:root` light tokens, `theme-provider.tsx`, `theme-toggle.tsx`, and `CLERK_APPEARANCE_LIGHT` untouched (dormant, ready to re-enable).
-4. Update tests: `theme-toggle.browser.spec.tsx` and any nav/header test asserting toggle presence; confirm `theme-token-regression.test.tsx` still passes (no token changes, so it should).
-5. Verify Clerk renders dark on `/sign-in` and `/app/*` (it resolves dark via `resolvedTheme`, now pinned).
-6. Run the full quality gate (`pnpm typecheck`, `pnpm test --run`, `pnpm build`, lint) per AGENTS.md before pushing.
+1. **`app/layout.tsx`** — `defaultTheme="system" enableSystem` → `forcedTheme="dark" defaultTheme="dark"` (dropped `enableSystem`; `forcedTheme` makes OS detection moot). `defaultTheme="dark"` keeps the stored/resolved theme consistent so the Option-A exit is just "drop `forcedTheme`."
+2. **`components/providers.tsx`** — **the non-obvious fix.** Verified against the installed `next-themes@0.4.6` source: under `forcedTheme`, the provider applies `forcedTheme ?? theme` to the DOM class, but `resolvedTheme` is still computed as `theme === "system" ? systemTheme : theme` — i.e. it tracks the **stored/system** value, *not* the forced one. So a returning user with a stale `theme: light` in `localStorage` would render a dark page while `resolvedTheme === 'light'` selected Clerk's **light** appearance — a real mismatch. Fix: destructure `forcedTheme` from `useTheme()` and key the Clerk appearance off `forcedTheme ?? resolvedTheme`. This is reversible: once `forcedTheme` is removed for Option A, it falls back to `resolvedTheme` (current behavior).
+3. **Unmounted `<ThemeToggle />`** in both shells — `app/(app)/app/layout.tsx` (authenticated app) and `components/marketing/marketing-layout.tsx` (public marketing). Replaced each with a `DEBT-421` breadcrumb comment. The component file is kept.
+4. **Deleted nothing dormant** — `globals.css` `:root` light tokens, `theme-provider.tsx`, `theme-toggle.tsx`, `theme-toggle.browser.spec.tsx`, and `CLERK_APPEARANCE_LIGHT` are all untouched and ready to re-enable.
+5. **Tests** — `app/layout.test.tsx` now asserts `forcedTheme="dark"` + `defaultTheme="dark"` (locks in the decision); `components/theme-provider.test.tsx` proves the wrapper forwards `forcedTheme`; `components/providers.test.tsx` adds a regression guard that forced-dark + stored-light yields the dark Clerk appearance; `marketing-layout.test.tsx` flips to assert the toggle is **not** mounted (its existing mock now serves as a re-mount sentinel). `theme-toggle.browser.spec.tsx` is unchanged (component still works in isolation).
+6. **Gate** — `pnpm typecheck`, `pnpm lint`, `pnpm test --run` (2835 passed), and `pnpm build` (exit 0) all green on Node 24.
 
 ## Acceptance criteria (for the eventual implementation PR)
 

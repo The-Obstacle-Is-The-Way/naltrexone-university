@@ -31,10 +31,16 @@ export function RootProvidersShell({
   nonce?: string | undefined;
 }) {
   return (
+    // DEBT-421: light mode is unfinished, so the app is pinned to dark via
+    // `forcedTheme`. This overrides the OS preference AND any stale `theme:light`
+    // in localStorage, guaranteeing no user renders the unfinished light theme.
+    // `defaultTheme="dark"` keeps the stored/resolved theme consistent so the
+    // Option-A exit is simply: drop `forcedTheme`, re-mount the ThemeToggle.
+    // Do not delete the light tokens/components — they stay dormant for re-enable.
     <ThemeProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      forcedTheme="dark"
+      defaultTheme="dark"
       nonce={nonce}
     >
       <RootContentShell>
