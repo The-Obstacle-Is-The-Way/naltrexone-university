@@ -34,8 +34,8 @@ export function RootProvidersShell({
     // DEBT-421: light mode is unfinished, so the app is pinned to dark via
     // `forcedTheme`. This overrides the OS preference AND any stale `theme:light`
     // in localStorage, guaranteeing no user renders the unfinished light theme.
-    // `defaultTheme="dark"` keeps the stored/resolved theme consistent so the
-    // Option-A exit is simply: drop `forcedTheme`, re-mount the ThemeToggle.
+    // `defaultTheme="dark"` only affects fresh users with no stored preference;
+    // returning-user guarantees come from `forcedTheme` plus Providers' fallback.
     // Do not delete the light tokens/components — they stay dormant for re-enable.
     <ThemeProvider
       attribute="class"
@@ -85,10 +85,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+    // DEBT-421: author forced dark statically because the nonce-bound
+    // next-themes script streams after some body content under PPR.
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${manrope.className} ${manrope.variable} ${plusJakartaSans.variable} ${instrumentSans.variable}`}
+      className={`dark ${manrope.className} ${manrope.variable} ${plusJakartaSans.variable} ${instrumentSans.variable}`}
+      style={{ colorScheme: 'dark' }}
       suppressHydrationWarning
     >
       <body className="min-h-[100dvh]">

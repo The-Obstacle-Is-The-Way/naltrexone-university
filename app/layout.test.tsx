@@ -80,6 +80,24 @@ describe('app/layout', () => {
     expect(html).toContain('Child content');
   });
 
+  it('ships the forced dark theme on the opening html element before body content', () => {
+    const html = renderToStaticMarkup(
+      RootLayout({
+        children: <main id="main-content">Route content</main>,
+      }),
+    );
+    const htmlTag = html.match(/<html[^>]*>/)?.[0] ?? '';
+    const htmlTagIndex = html.indexOf('<html');
+    const mainIndex = html.indexOf('<main');
+
+    expect(htmlTag).toContain('class="dark ');
+    expect(htmlTag).toContain('style="color-scheme:dark"');
+    expect(htmlTagIndex).toBeGreaterThanOrEqual(0);
+    expect(mainIndex).toBeGreaterThan(htmlTagIndex);
+    expect(html.indexOf('class="dark ')).toBeLessThan(mainIndex);
+    expect(html.indexOf('style="color-scheme:dark"')).toBeLessThan(mainIndex);
+  });
+
   it('keeps the suspense fallback free of nonce-sensitive providers', () => {
     const html = renderToStaticMarkup(
       RootLayout({

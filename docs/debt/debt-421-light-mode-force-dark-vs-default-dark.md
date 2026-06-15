@@ -77,11 +77,13 @@ Lock the app to dark until light mode is finished, the standard "disable an unfi
 - **Guarantees** every user, new or returning, OS-light or OS-dark, sees only the finished dark theme. Closes both leaks (OS default *and* toggle *and* stale `localStorage`).
 - **Honest UI** — no control that promises a working alternate theme that isn't ready.
 - **Fully reversible / non-destructive** — `forcedTheme` is a single prop; the toggle is re-mounted in one place; zero CSS or component deletion. This is the feature-flag / kill-switch pattern: gate the incomplete capability off, keep the code, flip it on when it's ready.
-- Clerk already follows `resolvedTheme`, which `forcedTheme` pins to dark — Clerk surfaces stay consistent with zero extra work.
+- Clerk gets explicit compensation: next-themes keeps `resolvedTheme` on the stored/system value under `forcedTheme`, so `providers.tsx` keys Clerk appearance off `forcedTheme ?? resolvedTheme`.
 
 **Cons**
 - Removes user choice in the interim (acceptable: the only choice removed is "render the broken theme").
 - The `theme-toggle` tests (`theme-toggle.browser.spec.tsx`) and any nav test asserting the toggle's presence must be updated when the toggle is unmounted.
+
+**Accessibility trade-off:** Forcing dark removes an accessibility preference, not just a cosmetic choice. Some users read better in light mode due to low vision, astigmatism/halation, migraine or photophobia-adjacent sensitivity, or high ambient light. This is accepted only as a temporary kill switch because the current light mode has known contrast/legibility defects; restore user choice once light mode passes contrast and owner review.
 
 ---
 
@@ -102,12 +104,12 @@ Option A is the right call the moment light mode passes its own design bar (cont
 
 ## Implementation (as shipped on this branch)
 
-1. **`app/layout.tsx`** — `defaultTheme="system" enableSystem` → `forcedTheme="dark" defaultTheme="dark"` (dropped `enableSystem`; `forcedTheme` makes OS detection moot). `defaultTheme="dark"` keeps the stored/resolved theme consistent so the Option-A exit is just "drop `forcedTheme`."
+1. **`app/layout.tsx`** — `defaultTheme="system" enableSystem` → `forcedTheme="dark" defaultTheme="dark"` (dropped `enableSystem`; `forcedTheme` makes OS detection moot). `defaultTheme="dark"` only sets dark for fresh users with no stored preference and keeps the Option-A exit clean; the guarantee for returning users with a stale `theme:light` comes solely from `forcedTheme` winning the DOM plus the `providers.tsx` fallback, not from `defaultTheme`. The root `<html>` also statically ships `dark` and `color-scheme: dark` before body content because the nonce-bound next-themes script streams after some PPR body content.
 2. **`components/providers.tsx`** — **the non-obvious fix.** Verified against the installed `next-themes@0.4.6` source: under `forcedTheme`, the provider applies `forcedTheme ?? theme` to the DOM class, but `resolvedTheme` is still computed as `theme === "system" ? systemTheme : theme` — i.e. it tracks the **stored/system** value, *not* the forced one. So a returning user with a stale `theme: light` in `localStorage` would render a dark page while `resolvedTheme === 'light'` selected Clerk's **light** appearance — a real mismatch. Fix: destructure `forcedTheme` from `useTheme()` and key the Clerk appearance off `forcedTheme ?? resolvedTheme`. This is reversible: once `forcedTheme` is removed for Option A, it falls back to `resolvedTheme` (current behavior).
 3. **Unmounted `<ThemeToggle />`** in both shells — `app/(app)/app/layout.tsx` (authenticated app) and `components/marketing/marketing-layout.tsx` (public marketing). Replaced each with a `DEBT-421` breadcrumb comment. The component file is kept.
 4. **Deleted nothing dormant** — `globals.css` `:root` light tokens, `theme-provider.tsx`, `theme-toggle.tsx`, `theme-toggle.browser.spec.tsx`, and `CLERK_APPEARANCE_LIGHT` are all untouched and ready to re-enable.
 5. **Tests** — `app/layout.test.tsx` now asserts `forcedTheme="dark"` + `defaultTheme="dark"` (locks in the decision); `components/theme-provider.test.tsx` proves the wrapper forwards `forcedTheme`; `components/providers.test.tsx` adds a regression guard that forced-dark + stored-light yields the dark Clerk appearance; `marketing-layout.test.tsx` flips to assert the toggle is **not** mounted (its existing mock now serves as a re-mount sentinel). `theme-toggle.browser.spec.tsx` is unchanged (component still works in isolation).
-6. **Gate** — `pnpm typecheck`, `pnpm lint`, `pnpm test --run` (2835 passed), and `pnpm build` (exit 0) all green on Node 24.
+6. **Gate** — `pnpm typecheck`, `pnpm lint`, `pnpm test --run` (2837 passed), and `pnpm build` (exit 0) all green on Node 24.
 
 ## Acceptance criteria (for the eventual implementation PR)
 
@@ -120,5 +122,6 @@ Option A is the right call the moment light mode passes its own design bar (cont
 
 - [ ] Light mode meets `docs/frontend/contrast-policy.md` AA targets across all audited surfaces.
 - [ ] The opacity-scale legibility gap (`pattern-registry.md` § 1.2 light-mode caveat) is resolved or has an owner-accepted, documented design answer for every interactive surface.
+- [ ] The temporary accessibility trade-off is closed by restoring user choice after contrast and owner review pass.
 - [ ] Owner sign-off that light mode is design-complete.
 - [ ] Then: remove `forcedTheme`, re-mount `ThemeToggle`, set `defaultTheme="dark"` (keep dark as the soft default), and decide whether to re-introduce `enableSystem`.
