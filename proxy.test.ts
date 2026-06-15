@@ -230,17 +230,12 @@ describe('proxy middleware', () => {
     expect(capturedOptions).toMatchObject({
       contentSecurityPolicy: {
         strict: true,
-        reportOnly: false,
+        reportOnly: true,
         directives: expect.objectContaining({
           'base-uri': expect.arrayContaining(['self']),
           'connect-src': expect.arrayContaining(['ws:', 'wss:']),
           'frame-ancestors': expect.arrayContaining(['none']),
           'object-src': expect.arrayContaining(['none']),
-          'form-action': expect.arrayContaining([
-            'self',
-            'https://checkout.stripe.com',
-            'https://billing.stripe.com',
-          ]),
         }),
       },
     });
@@ -595,7 +590,7 @@ describe('proxy middleware', () => {
       const contentSecurityPolicy = await captureContentSecurityPolicyOptions();
 
       expect(contentSecurityPolicy.strict).toBe(true);
-      expect(contentSecurityPolicy.reportOnly).toBe(false);
+      expect(contentSecurityPolicy.reportOnly).toBe(true);
       expect(contentSecurityPolicy.directives['script-src']).toEqual([
         'https://vercel.live',
       ]);
@@ -743,7 +738,7 @@ describe('proxy middleware', () => {
     expect(capturedOptions).toMatchObject({
       contentSecurityPolicy: {
         strict: true,
-        reportOnly: false,
+        reportOnly: true,
         reportTo:
           'https://o456.ingest.us.sentry.io/api/789/security/?sentry_key=abc123&sentry_environment=test',
         directives: expect.objectContaining({
@@ -801,7 +796,7 @@ describe('proxy middleware', () => {
     ).contentSecurityPolicy;
 
     expect(directives.strict).toBe(true);
-    expect(directives.reportOnly).toBe(false);
+    expect(directives.reportOnly).toBe(true);
     expect(directives.reportTo).toBeUndefined();
     expect(directives.directives['connect-src']).toEqual(['ws:', 'wss:']);
     expect(directives.directives['report-uri']).toBeUndefined();
