@@ -3,7 +3,7 @@
 **Priority:** P2 (recommended-soon agent-safety guardrail; deferred only to avoid a repo-wide audit-resolution diff)
 **Created:** 2026-06-13
 **Status:** Resolved
-**Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md)
+**Related:** [AUDIT-012](../audits/audit-012-repo-org-devx.md)
 
 ---
 
