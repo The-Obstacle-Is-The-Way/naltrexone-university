@@ -33,6 +33,8 @@ describe('app/global-error', () => {
     );
     const htmlEl = doc.querySelector('html');
     expect(htmlEl?.getAttribute('lang')).toBe('en');
+    expect(htmlEl?.getAttribute('class')?.split(/\s+/)).toContain('dark');
+    expect(htmlEl?.getAttribute('style')).toBe('color-scheme:dark');
     expect(tryAgainButton?.getAttribute('type')).toBe('button');
     expect(heading?.getAttribute('class')).toBe(
       'text-2xl font-bold font-heading tracking-tight text-foreground',

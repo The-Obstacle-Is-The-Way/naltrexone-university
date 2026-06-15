@@ -61,11 +61,13 @@ vi.mock('@/components/theme-provider', () => ({
 describe('app/layout', () => {
   let RootLayout: typeof import('@/app/layout').default;
   let NonceBoundProviders: typeof import('@/app/layout').NonceBoundProviders;
+  let viewport: typeof import('@/app/layout').viewport;
 
   beforeAll(async () => {
     const module = await import('@/app/layout');
     RootLayout = module.default;
     NonceBoundProviders = module.NonceBoundProviders;
+    viewport = module.viewport;
   });
 
   it('adds data-scroll-behavior on the html element', () => {
@@ -128,6 +130,10 @@ describe('app/layout', () => {
 
     expect(html).toContain('data-forced-theme="dark"');
     expect(html).toContain('data-default-theme="dark"');
+  });
+
+  it('sets dark-only browser chrome metadata while forced dark is active', () => {
+    expect(viewport.themeColor).toBe('#090909');
   });
 
   it('does not nest a root main landmark around route-level content', () => {

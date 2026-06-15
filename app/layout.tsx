@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Instrument_Sans, Manrope, Plus_Jakarta_Sans } from 'next/font/google';
 import { headers } from 'next/headers';
 import { Suspense } from 'react';
@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   title: 'Addiction Boards Question Bank',
   description:
     'Board-relevant questions with detailed explanations for Addiction Psychiatry and Addiction Medicine exam prep.',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#090909',
 };
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });

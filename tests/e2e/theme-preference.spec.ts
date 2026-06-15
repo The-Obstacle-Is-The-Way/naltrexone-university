@@ -3,21 +3,22 @@ import { expect, test } from '@playwright/test';
 test.describe('theme preference', () => {
   test.use({ colorScheme: 'light' });
 
-  test('respects localStorage theme preference over OS default', async ({
+  test('forces dark over a stale light localStorage preference and OS light', async ({
     page,
   }) => {
     await page.addInitScript(() => {
-      window.localStorage.setItem('theme', 'dark');
+      window.localStorage.setItem('theme', 'light');
     });
 
     await page.goto('/');
 
+    await expect(page.locator('html')).toHaveClass(/(?:^|\s)dark(?:\s|$)/);
     await expect
-      .poll(async () => {
-        return page.evaluate(() =>
-          document.documentElement.classList.contains('dark'),
-        );
-      })
-      .toBe(true);
+      .poll(() =>
+        page.evaluate(
+          () => getComputedStyle(document.documentElement).colorScheme,
+        ),
+      )
+      .toBe('dark');
   });
 });
