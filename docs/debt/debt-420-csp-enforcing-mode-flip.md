@@ -20,7 +20,7 @@ The implementation path is intentionally small:
 2. Flip `contentSecurityPolicy.reportOnly` from `true` to `false` in `proxy.ts:208`.
 3. Update the four stale `proxy.test.ts` `reportOnly` assertions and add the `form-action` assertion.
 
-No dashboard toggle is needed for the CSP mode itself; `proxy.ts:205-214` is the code-owned Clerk CSP configuration. The only dashboard/account dependency is verifying Stripe's returned Checkout and Billing Portal hosts before relying on the allowlist.
+No dashboard toggle is needed for the CSP mode itself; `proxy.ts:205-214` is the code-owned Clerk CSP configuration. The only dashboard/account dependency — verifying Stripe's hosted Checkout and Billing Portal origins — is now **closed**: the account has no custom domain, so the defaults `checkout.stripe.com` / `billing.stripe.com` apply (verified 2026-06-14; see "Billing Path and Stripe Host Verification").
 
 ---
 
@@ -173,14 +173,19 @@ Those hosts are **not** a code fact. Stripe returns opaque hosted URLs:
 - Checkout session creation calls `stripe.checkout.sessions.create(...)` at `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:708-718`, carries the returned/retrieved `session.url` at `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:350-362`, and returns `canonicalRecoveredSession.url` at `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:806-813`.
 - Billing Portal session creation calls `stripe.billingPortal.sessions.create(...)` at `src/adapters/gateways/stripe/stripe-portal.ts:32-39` and returns `session.url` at `src/adapters/gateways/stripe/stripe-portal.ts:41-48`.
 
-**UNVERIFIED account-specific item:** no Stripe read MCP/tool was exposed in this Codex runtime, so this doc cannot prove the target account has no custom Checkout/Portal domain. The implementation PR must verify before merge:
+**VERIFIED 2026-06-14 — the target account has NO custom domain.** The account's Custom Domains settings (`dashboard.stripe.com/settings/custom-domains`) were inspected directly by the owner on 2026-06-14 and show all hosted products on Stripe defaults, with an "Add your domain" call-to-action (i.e., none configured):
 
-1. Generate one real Checkout Session in the target Stripe mode/environment and record `new URL(session.url).origin`.
-2. Generate one real Billing Portal Session in the target Stripe mode/environment and record `new URL(session.url).origin`.
-3. Check Stripe Dashboard for configured custom Checkout/Billing Portal domains.
-4. If either returned origin is not `https://checkout.stripe.com` or `https://billing.stripe.com`, add the observed custom origin to `form-action` and the `proxy.test.ts` assertion.
+| Product | Hosted domain |
+|---|---|
+| Checkout | `checkout.stripe.com` |
+| Payment Links | `buy.stripe.com` |
+| Customer Portal | `billing.stripe.com` |
 
-Do not merge enforcing CSP until this UNVERIFIED item is closed.
+The custom-domain setting is a single account-level toggle covering Checkout, Payment Links, and the Customer Portal (Stripe docs: "You can only set one custom domain per account"), so this one check is authoritative for both billing redirect origins this app uses. The `form-action` allowlist (`https://checkout.stripe.com` + `https://billing.stripe.com`) is therefore **correct as written**; no custom origin needs to be added. The Stripe account-info read also confirmed a single live account with no Connect/`on_behalf_of` indirection that would force the default domain anyway.
+
+**Re-check trigger:** if a custom Checkout/Portal domain is ever added in the Stripe Dashboard, this allowlist and the matching `proxy.test.ts` assertion must be updated to include that origin (the `form-action` directive would otherwise block the redirect under enforcing).
+
+With this item closed, the remaining pre-merge gates are purely runtime: the preview header/billing verification and the Sentry re-check below.
 
 ---
 
