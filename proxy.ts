@@ -205,6 +205,14 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
       contentSecurityPolicy: {
         directives: CLERK_CSP_DIRECTIVES,
         strict: true,
+        // ⚠️ Keep `reportOnly: true`. Do NOT flip to `false` (enforcing).
+        // Clerk strict mode uses a per-request nonce + 'strict-dynamic', which is
+        // fundamentally incompatible with this app's Next 16 PPR / Cache Components:
+        // prerendered static-shell <script> tags cannot carry the per-request nonce,
+        // so enforcing blocks first-party /_next/static/chunks and breaks the app
+        // (verified via live Sentry + a production-build experiment + Next/Clerk docs).
+        // Real enforcement would require a separate non-nonce host-allowlist policy.
+        // See docs/_archive/debt/debt-420-csp-enforcing-mode-flip.md.
         reportOnly: true,
         ...(sentrySecurityHeaderEndpoint
           ? { reportTo: sentrySecurityHeaderEndpoint }
