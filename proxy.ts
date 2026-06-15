@@ -101,6 +101,16 @@ const BASE_CLERK_CSP_DIRECTIVES = {
     ...(sentryIngestOrigin ? [sentryIngestOrigin] : []),
   ],
   'font-src': ['self', 'data:', 'https:'],
+  // Stripe billing is a server-side redirect to Stripe-hosted pages. Under
+  // enforcing CSP, Clerk's default `form-action 'self'` can block the redirect
+  // on the no-JS/303 path, so the Checkout and Billing Portal origins are
+  // allowlisted explicitly. Verified 2026-06-14: this account has no custom
+  // Stripe domain, so the defaults below apply. See DEBT-420.
+  'form-action': [
+    'self',
+    'https://checkout.stripe.com',
+    'https://billing.stripe.com',
+  ],
   'frame-ancestors': ['none'],
   'img-src': ['self', 'data:', 'blob:', 'https:'],
   'object-src': ['none'],
@@ -205,7 +215,7 @@ async function getClerkMiddleware(): Promise<NextMiddleware> {
       contentSecurityPolicy: {
         directives: CLERK_CSP_DIRECTIVES,
         strict: true,
-        reportOnly: true,
+        reportOnly: false,
         ...(sentrySecurityHeaderEndpoint
           ? { reportTo: sentrySecurityHeaderEndpoint }
           : {}),
