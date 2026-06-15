@@ -4,7 +4,7 @@
 **Triggered by:** Live Sentry queue review across production and preview
 **Status:** Completed triage; actionable issue promoted to [BUG-234](../../bugs/bug-234-auth-nav-user-button-missing-clerk-provider.md)
 **Scope:** Re-triage 7 unresolved Sentry issues from first principles using live API data, current code, and current vendor guidance
-**Related:** [BUG-234](../../bugs/bug-234-auth-nav-user-button-missing-clerk-provider.md), [DEBT-332](../../debt/debt-332-security-posture-audit.md), [BS-060](./bs-060-sentry-error-triage-and-environment-hygiene.md), [proxy.ts](../../../proxy.ts), [components/auth-nav.tsx](../../../components/auth-nav.tsx), [components/providers.tsx](../../../components/providers.tsx)
+**Related:** [BUG-234](../../bugs/bug-234-auth-nav-user-button-missing-clerk-provider.md), [DEBT-332](../debt/debt-332-security-posture-audit.md), [BS-060](./bs-060-sentry-error-triage-and-environment-hygiene.md), [proxy.ts](../../../proxy.ts), [components/auth-nav.tsx](../../../components/auth-nav.tsx), [components/providers.tsx](../../../components/providers.tsx)
 
 ---
 
