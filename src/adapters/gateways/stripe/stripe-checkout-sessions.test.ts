@@ -177,30 +177,6 @@ describe('createStripeCheckoutSession', () => {
     );
   });
 
-  it('uses the deterministic checkout idempotency key when caller key is present', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
-      openSessionsData: [],
-      createdSessionUrl: 'https://stripe/checkout/new',
-    });
-
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        options: { idempotencyKey: 'checkout_idem_custom_1' },
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
-  });
-
   it('creates a fresh session when deterministic fallback key replays a session expiring at the injected nowMs boundary', async () => {
     const { stripe, sessionsCreate } = createStripeMock({
       openSessionsData: [],
@@ -224,53 +200,6 @@ describe('createStripeCheckoutSession', () => {
       createStripeCheckoutSession({
         stripe,
         input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh' });
-
-    expect(sessionsCreate).toHaveBeenCalledTimes(2);
-    expect(sessionsCreate).toHaveBeenNthCalledWith(
-      1,
-      expect.any(Object),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
-    expect(sessionsCreate).toHaveBeenNthCalledWith(
-      2,
-      expect.any(Object),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_expired`,
-      }),
-    );
-  });
-
-  it('recovers when the deterministic checkout key replays an expired session even with a caller key', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
-      openSessionsData: [],
-      createdSessionResponses: [
-        {
-          id: 'cs_expired',
-          url: 'https://stripe/checkout/expired',
-          status: 'open',
-          expiresAtUnix: fixedNowUnix,
-        },
-        {
-          id: 'cs_fresh',
-          url: 'https://stripe/checkout/fresh',
-          status: 'open',
-          expiresAtUnix: fixedNowUnix + 3600,
-        },
-      ],
-    });
-
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        options: { idempotencyKey: 'checkout_idem_custom_1' },
         priceIds,
         logger,
         nowMs: () => fixedNowMs,

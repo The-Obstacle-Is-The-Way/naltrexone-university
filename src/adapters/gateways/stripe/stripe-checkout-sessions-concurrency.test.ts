@@ -139,7 +139,7 @@ describe('createStripeCheckoutSession concurrency', () => {
     logger = new FakeLogger();
   });
 
-  it('collapses concurrent same-plan creates with distinct caller keys into one Stripe session', async () => {
+  it('collapses concurrent same-plan creates into one Stripe session', async () => {
     const { stripe, sessionsCreate, getOpenSessions } =
       createConcurrentStripeMock();
 
@@ -147,14 +147,12 @@ describe('createStripeCheckoutSession concurrency', () => {
       createStripeCheckoutSession({
         stripe,
         input: { ...input, trialPeriodDays: 7 },
-        options: { idempotencyKey: 'client-tab-key-1' },
         priceIds,
         logger,
       }),
       createStripeCheckoutSession({
         stripe,
         input: { ...input, trialPeriodDays: 7 },
-        options: { idempotencyKey: 'client-tab-key-2' },
         priceIds,
         logger,
       }),
@@ -177,14 +175,12 @@ describe('createStripeCheckoutSession concurrency', () => {
       createStripeCheckoutSession({
         stripe,
         input: { ...input, plan: 'monthly', trialPeriodDays: 7 },
-        options: { idempotencyKey: 'client-tab-key-1' },
         priceIds,
         logger,
       }),
       createStripeCheckoutSession({
         stripe,
         input: { ...input, plan: 'annual', trialPeriodDays: 7 },
-        options: { idempotencyKey: 'client-tab-key-2' },
         priceIds,
         logger,
       }),

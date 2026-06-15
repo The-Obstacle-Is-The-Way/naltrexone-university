@@ -254,18 +254,21 @@ describe('StripePaymentGateway', () => {
     ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
   });
 
-  it('creates a subscription checkout session with the correct Stripe parameters', async () => {
+  it('creates a subscription checkout session with deterministic Stripe parameters', async () => {
     const { stripe, sessionsCreate } = createStripeMock();
     const gateway = createGateway(stripe);
 
     await expect(
-      gateway.createCheckoutSession({
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        plan: 'monthly',
-        successUrl: 'https://app/success',
-        cancelUrl: 'https://app/cancel',
-      }),
+      gateway.createCheckoutSession(
+        {
+          userId: appUserId,
+          externalCustomerId: 'cus_123',
+          plan: 'monthly',
+          successUrl: 'https://app/success',
+          cancelUrl: 'https://app/cancel',
+        },
+        { idempotencyKey: 'checkout_idem_custom_1' },
+      ),
     ).resolves.toEqual({ url: 'https://stripe/checkout' });
 
     expect(sessionsCreate).toHaveBeenCalledWith(
