@@ -4,8 +4,8 @@
 **Created:** 2026-06-14
 **Status:** **Decided — documentation only.** The originally-planned "flip Clerk strict CSP from report-only → enforcing" is **NOT viable on this stack** (proven three independent ways below). No production code change is recommended now.
 **Source:** Owner request to close DEBT-332's last item; GitHub issue [#245](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/245).
-**Parent audit:** [DEBT-332 Security Posture Audit](./debt-332-security-posture-audit.md).
-**Related:** [`proxy.ts`](../../proxy.ts), [`next.config.ts`](../../next.config.ts), [`proxy.test.ts`](../../proxy.test.ts), billing server-action forms, issues [#245](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/245) and [#251](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/251).
+**Parent audit:** [DEBT-332 Security Posture Audit](../../debt/debt-332-security-posture-audit.md).
+**Related:** [`proxy.ts`](../../../proxy.ts), [`next.config.ts`](../../../next.config.ts), [`proxy.test.ts`](../../../proxy.test.ts), billing server-action forms, issues [#245](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/245) and [#251](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/251).
 **Verified:** 2026-06-14 against `dev` @ `8f5c1c24`, `@clerk/nextjs@7.4.3`, a live production-build experiment, official Next.js/Clerk docs, live Sentry data, and the open GitHub issue register.
 
 ---
