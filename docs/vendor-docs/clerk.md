@@ -87,7 +87,7 @@ We run in **strict report-only** mode (`{ strict: true, reportOnly: true }`) wit
 - `app/layout.tsx` reads the nonce via `headers()` and passes it to `<Providers nonce={nonce}>`
 - Sentry CSP reporting is wired via `reportTo` and `report-uri` when the endpoint is configured
 
-**Current posture:** Strict CSP is active but in **report-only** mode — violations are reported to the configured reporting endpoint (Sentry when enabled), but not blocked. See DEBT-332 for the decision on whether to move to enforcing mode.
+**Current posture:** Strict CSP is active but in **report-only** mode — violations are reported to the configured reporting endpoint (Sentry when enabled), but not blocked. DEBT-420 records the current decision: do **not** enforce Clerk strict nonce CSP on this stack because Next 16 PPR/Cache Components serve prerendered shell scripts without the per-request nonce; if enforcement is prioritized later, use a separate non-nonce host-allowlist CSP design.
 
 ### Server Components
 
