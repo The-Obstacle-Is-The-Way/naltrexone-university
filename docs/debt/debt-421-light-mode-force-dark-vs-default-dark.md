@@ -125,3 +125,42 @@ Option A is the right call the moment light mode passes its own design bar (cont
 - [ ] The temporary accessibility trade-off is closed by restoring user choice after contrast and owner review pass.
 - [ ] Owner sign-off that light mode is design-complete.
 - [ ] Then: remove `forcedTheme`, re-mount `ThemeToggle`, set `defaultTheme="dark"` (keep dark as the soft default), and decide whether to re-introduce `enableSystem`.
+- [ ] **Re-enable is NOT just "drop `forcedTheme`."** The static `class="dark"` + `style="color-scheme: dark"` on the root `<html>` (FIX-1) is only correct while the theme is *statically* dark. Once the theme is user-selectable again, that static value would ship dark to a light-preferring user and flash dark→light when the (Suspense-/nonce-deferred) next-themes script resolves. Option A must therefore ALSO remove the static `<html>` theme attributes and restore a real anti-FOUC mechanism — a blocking, nonce-carrying head script that reads the stored preference before first paint — which is non-trivial under this app's PPR + CSP-nonce-deferred-provider architecture (see the audit appendix, finding T-4). Treat anti-FOUC for a dynamic theme as a first-class line item of the Option-A work, not an afterthought.
+
+---
+
+## Appendix — codebase-wide theme architecture audit (first-principles, all surfaces)
+
+This appendix answers a follow-up question: now that every theme surface is known, is the system cleanly coded top-to-bottom, or did forcing dark uncover unnecessary complexity worth simplifying? **Method:** read every theme-touching file (`app/layout.tsx`, `components/theme-provider.tsx`, `components/theme-toggle.tsx`, `components/providers.tsx`, `app/globals.css`, the 28 component files carrying governed `dark:` overrides, the PostCSS config, and `tests/e2e/theme-preference.spec.ts`); cross-checked `next-themes@0.4.6` behavior against its installed source; and **empirically** verified the one CSS-variant claim with a build diff.
+
+### Verdict
+
+**Architecturally clean and correct for the forced-dark interim.** The chain — root `<html>` → `ThemeProvider` (`forcedTheme`) → `.dark` token set → semantic Tailwind utilities → Clerk appearance — is internally consistent and function-preserving. The implementation is **not** carrying meaningful unnecessary complexity that should be torn out now. The apparent redundancies are each *justified by the deliberately preserved Option-A optionality*, and removing them would be the **wrong** kind of simplification — it would delete the re-enable path the whole decision exists to protect (see "Justified complexity" below). What the audit *did* surface is one test-correctness defect, one verified dead line, one drift risk, and the forward-looking FOUC caveat already folded into the Exit Criteria. None of these change the conclusion that the shipped code is well-built; they are polish and follow-through.
+
+### Surfaces reviewed
+
+| Surface | Role | Assessment |
+|---|---|---|
+| `app/layout.tsx` (`<html>` + `ThemeProvider`) | SSR theme authority + provider config | Correct. Static `dark`/`color-scheme` is the right FOUC fix *given forced dark* + the deferred provider. |
+| `components/theme-provider.tsx` | Thin wrapper over `next-themes` | **Load-bearing, not gratuitous** (T-5). |
+| `components/providers.tsx` | Clerk appearance switch | Correct after the `forcedTheme ?? resolvedTheme` fix. Carries a palette drift risk (T-3). |
+| `components/theme-toggle.tsx` | Dormant toggle | Correctly preserved, unmounted. |
+| `app/globals.css` | Token sets + dark variant registration | One **verified dead line** (T-2); tokens correct. |
+| 28 `dark:`-bearing components | Governed per-component overrides | Correct; light branches are dead-at-runtime-but-intentional (preserved for re-enable). |
+| `tests/e2e/theme-preference.spec.ts` | E2E theme guard | **Stale / passing for the wrong reason** (T-1). |
+| `postcss.config` / Tailwind v4 CSS-first | Build config | Clean (no `tailwind.config`, per DEBT-409). |
+
+### Findings & cleanup backlog
+
+- **T-1 — Stale E2E test, "passing for the wrong reason" (Medium; recommend fixing in THIS PR).** `tests/e2e/theme-preference.spec.ts` sets OS `colorScheme: 'light'` + `localStorage.theme = 'dark'` and asserts `<html>` is `dark` to prove "stored preference wins over OS." Post-DEBT-421 the html is dark because it is *force-pinned*, not because the stored preference is honored — a stored `'light'` would now *also* render dark, contradicting the test's name. It is the DEBT-421 change that invalidated this test, so it should be corrected in the same PR. **Recommended fix:** repurpose it into a genuine forced-dark guard — set `colorScheme: 'light'` + `localStorage.theme = 'light'`, assert `<html>` is still `dark`. That turns a misleading test into the strongest end-to-end proof of the exact leak this work closes (stored-light still renders dark in a real browser).
+- **T-2 — Dead CSS line, empirically verified (Low/trivial).** `app/globals.css:11` `@variant dark (&:is(.dark *));` is a no-op duplicate of the canonical registration on line 7 `@custom-variant dark (&:is(.dark *));`. Proof: removing line 11 and rebuilding produced **byte-identical** output CSS (79,534 bytes, 119 `.dark` rules, identical content hash `3286jft8b6wb0.css`, identical dark selectors). Safe one-line removal; fold into this PR or a trivial follow-up.
+- **T-3 — Clerk appearance is a second source of truth for the dark palette (Low; follow-up).** `CLERK_APPEARANCE_DARK`/`_LIGHT` in `components/providers.tsx` hand-code hex (`#121212`, `#ededed`, …) that approximate — but do **not** mirror — the `globals.css` tokens (e.g. Clerk's `colorBackground: #121212` tracks the `--card` ≈ 7% surface, not `--background` ≈ 3.5%). This is an allowed third-party seam, but the values can silently drift from the design tokens. **Recommendation (follow-up):** extract a single TS palette constant consumed by both, or at minimum add a comment documenting the intentional approximations and their token anchors so future token edits prompt a Clerk re-check.
+- **T-4 — Option A re-enable reintroduces FOUC (Medium; forward-looking, captured in Exit Criteria).** The static `<html>` dark attributes are correct only while the theme is static. Re-enabling a user-selectable theme requires removing them and restoring a real before-paint anti-FOUC script under the PPR + CSP-nonce-deferred-provider constraints. Documented as a first-class Option-A line item above; flagged here so it is not lost.
+- **T-5 — `theme-provider.tsx` wrapper is load-bearing — do NOT "simplify" it away (Informational).** It exists to conditionally spread `nonce` (`{...(nonce !== undefined ? { nonce } : {})}`). Under `exactOptionalPropertyTypes` (enabled by DEBT-418), passing `nonce={undefined}` directly to `next-themes`' `nonce?: string` is a type error, so the wrapper is required for the strict-types build. **Recommendation:** add a one-line comment to the wrapper stating this, so it is not refactored into a direct `NextThemesProvider` usage and silently breaking `pnpm typecheck`.
+- **T-6 — No `theme-color` meta for a now-dark-only app (Low/optional polish).** A dark-only product can set `<meta name="theme-color" content="#0a0a0a">` (or the `--background` dark value) so mobile browser chrome matches. Optional; revisit when light mode returns (it would then need to be theme-aware or dropped).
+
+### Justified complexity (intentional — do not "simplify")
+
+- **`next-themes` is still mounted under a hardcoded theme.** It looks redundant beside the static `<html class="dark">`, but it powers the dormant toggle's `useTheme`, supplies `forcedTheme` to `providers.tsx`, and keeps Option-A a near-one-line change. Removing it while forced would force a destructive rewire of the toggle and Clerk — the opposite of the optionality this decision preserves.
+- **The light branches in `providers.tsx` and the per-component `dark:` overrides** are dead at runtime while forced, but are the same preserved-for-re-enable asset as the toggle and the `:root` light tokens. Keeping them is the point, not an oversight.
+- **The redundant theme assertion (static `<html>` + next-themes both saying "dark")** is intentional belt-and-suspenders: the static attributes guarantee SSR/first-paint correctness, and next-themes owns the client runtime for the eventual dynamic case.
