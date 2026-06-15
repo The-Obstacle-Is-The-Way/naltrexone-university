@@ -254,7 +254,7 @@ describe('StripePaymentGateway', () => {
     ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
   });
 
-  it('creates a subscription checkout session with deterministic Stripe parameters', async () => {
+  it('uses a deterministic checkout idempotency key regardless of provided options', async () => {
     const { stripe, sessionsCreate } = createStripeMock();
     const gateway = createGateway(stripe);
 

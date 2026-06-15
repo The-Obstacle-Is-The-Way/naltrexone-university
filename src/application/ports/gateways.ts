@@ -78,6 +78,15 @@ export interface PaymentGateway {
     options?: PaymentGatewayRequestOptions,
   ): Promise<CreateCustomerOutput>;
 
+  /**
+   * Creates a checkout session for the selected plan.
+   *
+   * Callers may provide request options for application-level idempotency
+   * plumbing, but adapters can intentionally choose provider-specific
+   * idempotency. The Stripe adapter uses a deterministic key derived from
+   * userId and plan so concurrent same-plan checkout starts collapse to one
+   * active external session.
+   */
   createCheckoutSession(
     input: CheckoutSessionInput,
     options?: PaymentGatewayRequestOptions,
