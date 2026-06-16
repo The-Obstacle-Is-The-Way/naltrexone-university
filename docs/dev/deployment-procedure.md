@@ -1,19 +1,26 @@
 # Deployment Procedure
 
 > **Parent:** [Deployment Environments](./deployment-environments.md)
-> **Last Updated:** 2026-05-23
+> **Last Updated:** 2026-06-16
 
 ---
 
-## 1. Key Fact: Vercel Does Not Run Migrations or Seeds
+## 1. Migration Contract: Build-Command Migration
 
-Vercel deploys **code only**. It does not automatically:
+[BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command is set in `vercel.json` (`buildCommand`) to run:
 
-- Run `pnpm db:migrate` (schema changes)
-- Run `pnpm db:seed` (content data)
-- Execute any SQL scripts
+```bash
+pnpm db:migrate && pnpm build
+```
 
-These are always manual operator steps, run from a local machine with the appropriate `DATABASE_URL`.
+so Vercel applies checked-in Drizzle migrations to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, so the currently-serving deployment stays up.
+
+Vercel still does **not** automatically run:
+
+- `pnpm db:seed` (content data) — seeds remain a manual operator step
+- Any other SQL script
+
+For seeds, and for any manual deploy-target migration fallback, use an explicit, host-verified `DATABASE_URL`.
 
 ---
 
@@ -33,16 +40,16 @@ These are always manual operator steps, run from a local machine with the approp
    └─ Must pass before merge
 
 2. Vercel (automatic on push/merge)
-   └─ Builds and deploys the application code
+   └─ buildCommand (vercel.json): pnpm db:migrate && pnpm build
    └─ Preview: any non-main branch
    └─ Production: main branch
 
-3. Operator (manual, post-deploy)
-   └─ DATABASE_URL="<target>" pnpm db:migrate   # if schema changed
-   └─ DATABASE_URL="<target>" pnpm db:seed      # if content changed
+3. Operator
+   └─ Verify the Vercel build ran the migration before serving; manual migrate only as fallback
+   └─ DATABASE_URL="<target>" pnpm db:seed                                    # if content changed
 ```
 
-**Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment migrations and reseeds are still manual operator steps.
+**Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment schema migration runs via the Vercel Build Command (`pnpm db:migrate && pnpm build`); reseeding remains a manual operator step.
 
 ---
 
@@ -88,7 +95,7 @@ If you are using Neon, fetch the connection string for the intended branch first
 
 **Caution:** Always double-check which database/branch you're targeting. Running migrations or seeds against the wrong environment can corrupt data. Production operations should be done deliberately and verified immediately.
 
-**Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the unique seed targets without writing data. `pnpm db:seed:all` then imports drafts as published and seeds each unique `DATABASE_URL` once. It does **not** run migrations; keep using `pnpm db:migrate` separately when schema changes are involved.
+**Optional helper:** `pnpm db:seed:all -- --plan` pulls Vercel Development, Preview, and Production env files into a temp directory, compares them with local `.env.local`, and shows the unique seed targets without writing data. `pnpm db:seed:all` then imports drafts as published and seeds each unique `DATABASE_URL` once. It does **not** run migrations; deploy-time schema changes are handled by the Vercel Build Command migration. Use `pnpm db:migrate` manually only for an out-of-band or fallback migration against an explicit `DATABASE_URL`.
 
 Normal local authenticated E2E uses the resolver-scoped Docker database and runs migrations automatically through `pnpm test:e2e`. For an intentional deploy-target E2E check, confirm the host without printing credentials, migrate that target deliberately, then run the suite with `E2E_USE_EXISTING_DATABASE=true`:
 
@@ -118,7 +125,7 @@ Before merging to `main` (production deploy):
 - [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on pushes and same-repo PRs)
 - [ ] CodeRabbit review completed and feedback addressed
 - [ ] If schema changed: migration tested on local + preview DB first
-- [ ] If schema changed: `pnpm db:migrate` run against the target deployed database **immediately after deploy** (forgetting this causes silent write failures — see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
+- [ ] If schema changed: confirm the Vercel build ran the Build Command migration (`pnpm db:migrate`) before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
 - [ ] If content changed: seed tested on local + preview DB first
 
 ---
