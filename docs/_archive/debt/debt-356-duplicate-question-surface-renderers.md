@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-04-08
 **Status:** Resolved (PR #275)
-**Source:** Follow-up from [DEBT-354](../debt/debt-354-god-file-and-clean-code-audit.md)
+**Source:** Follow-up from [DEBT-354](./debt-354-god-file-and-clean-code-audit.md)
 **Related:** [question-page-client.tsx](../../../app/(app)/app/questions/[slug]/question-page-client.tsx), [practice-view.tsx](../../../app/(app)/app/practice/components/practice-view.tsx), [practice-session-page-view.tsx](../../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx), [BS-058](../brainstorming/bs-058-exam-post-submit-flow-reorder.md)
 
 ## Resolution

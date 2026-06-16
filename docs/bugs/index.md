@@ -241,7 +241,7 @@ Focused follow-up sweep across exam-answer secrecy, History projections, dashboa
 - Dashboard aggregate counts and recent activity still use the shared active-exam visibility predicate from the BUG-187 fix.
 - History attempted-question list/count still exclude active-exam attempts directly; BUG-235 is the narrower latest-visible fallback gap, not a renewed correctness leak.
 - Post-exam review, bookmark vocabulary, and `Bookmark` vs `Mark for review` surface policy remain aligned with the DEBT-365 closeout.
-- Active debt items DEBT-332, DEBT-337, and DEBT-349 remain debt/optimization concerns rather than open bug reports.
+- Debt/optimization items (e.g. DEBT-337 active; DEBT-349 deferred/parked, DEBT-332 resolved) are debt/optimization concerns rather than open bug reports.
 
 ## Audit #18 — Server-Action Idempotency + Stale Start Sweep (2026-04-03)
 

@@ -4,7 +4,7 @@
 **Created:** 2026-04-02
 **Resolved:** 2026-04-03
 **Source:** Performance investigation prompted by production codebase comparison
-**Related:** [ADR-010 Caching Strategy](../../adr/adr-010-caching-strategy.md), [SPEC-016 Observability](../../specs/spec-016-observability.md), [DEBT-349 Cross-Request Published Content Caching](../../debt/debt-349-cross-request-published-content-caching.md)
+**Related:** [ADR-010 Caching Strategy](../../adr/adr-010-caching-strategy.md), [SPEC-016 Observability](../../specs/spec-016-observability.md), [DEBT-349 Cross-Request Published Content Caching](./debt-349-cross-request-published-content-caching.md)
 
 ---
 
@@ -62,4 +62,5 @@ Tier 1 shipped on 2026-04-03:
 DEBT-344 is resolved for the approved Tier 1 scope.
 
 Optional Tier 2 cross-request caching for immutable published questions and tag
-lists is tracked separately in [DEBT-349](../../debt/debt-349-cross-request-published-content-caching.md).
+lists is tracked separately in [DEBT-349](./debt-349-cross-request-published-content-caching.md)
+(deferred / parked — not resolved).

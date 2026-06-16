@@ -9,7 +9,7 @@
 > **Decomposed:** This omnibus doc has been split into focused debt items. See:
 > - [DEBT-335](../_archive/debt/debt-335-remove-all-or-nothing-wrong-answer-guard.md) — Remove all-or-nothing wrong-answer display guard (resolved 2026-03-24)
 > - [DEBT-336](./debt-336-content-markdown-quality-pass.md) — Content markdown quality pass C1–C4 (external repo)
-> - [DEBT-337](./debt-337-future-feedback-enhancements.md) — Future enhancements F2/F3/F5/F6/F7 (parked)
+> - [DEBT-337](../../debt/debt-337-future-feedback-enhancements.md) — Future enhancements F2/F3/F5/F6/F7 (parked)
 >
 > The sections below are preserved as the original omnibus snapshot. Use
 > DEBT-335, DEBT-336, and DEBT-337 for current status.
