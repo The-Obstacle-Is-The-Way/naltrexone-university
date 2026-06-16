@@ -1,6 +1,7 @@
 # BUG-241: Deploy Pipeline Has No Migration Step — Schema PRs Ship Code Without Applying Migrations (Green CI, Broken Runtime)
 
-**Status:** Open — fix implemented in `vercel.json` (`buildCommand`); pending preview-deploy verification, then resolve + archive
+**Status:** Open
+**Resolution State:** Fixed on branch in `vercel.json` (`buildCommand`); pending preview-deploy verification and archival
 **Priority:** P2 (systemic process/infra gap; latent outage for every schema-bearing PR; high blast radius)
 **Date:** 2026-06-03
 **Family:** CI/CD / deploy / migrations
