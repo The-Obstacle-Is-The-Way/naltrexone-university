@@ -36,9 +36,7 @@ Do not hard-code branch hostnames, account ids, passwords, or connection strings
 
 ### Deploy Migration Contract
 
-Current live state while [BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is open: Vercel has no Build Command override and does not run `pnpm db:migrate` during deploy. Schema migrations against Vercel Preview/Development and Production databases remain manual operator actions.
-
-Accepted target after BUG-241 closes: the Vercel Project Build Command runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before the deployment can serve. The minimum fallback is a required drift gate that compares `db/migrations/meta/_journal.json` `entries[].when` to `drizzle.__drizzle_migrations.created_at` and fails closed if the target DB is behind.
+[BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
 
 ---
 
@@ -147,7 +145,7 @@ When code references a newly added column but the target database has not had `p
 - Look for the real Postgres error behind the generic controller error handling.
 - Compare the repo migration journal to the target DB ledger. Reuse the DEBT-391 primitive: `db/migrations/meta/_journal.json` `entries[].when` must be present in `drizzle.__drizzle_migrations.created_at`.
 
-**Fix while BUG-241 is open / manual fallback after BUG-241 closes**
+**Fix (manual fallback — the Vercel Build Command now applies deploy migrations automatically)**
 
 Run migrations against the exact database backing the failing environment:
 
@@ -177,9 +175,9 @@ E2E_USE_EXISTING_DATABASE=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:
 
 Do not run migrations by relying on implicit `.env.local` resolution. Every database mutation should pass an explicit `DATABASE_URL` for the intended target.
 
-**Prevention after BUG-241 closes**
+**Prevention**
 
-The Vercel Build Command must run `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds. If that cannot be enabled immediately, a required drift gate must fail closed before a deployment can serve when the target DB ledger is behind the repo journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
+The Vercel Build Command runs `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds (set in `vercel.json`), so a deployment cannot serve against a database that is behind the repo migration journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
 
 Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
 
@@ -202,7 +200,7 @@ When changing environment configuration, verify all of the following:
 3. Production and non-production databases are isolated.
 4. `NEXT_PUBLIC_APP_URL` matches the environment actually serving the app.
 5. Preview webhook targets are publicly reachable.
-6. While BUG-241 is open, any schema change is followed by `pnpm db:migrate` on the target database. After BUG-241 closes, the Vercel Build Command migration or required drift gate is verified for the target deployment before serving.
+6. Any schema change is applied by the Vercel Build Command migration on deploy; verify the build ran the migration for the target deployment before it serves (the build fails closed otherwise).
 7. Any content change that affects seeded data is followed by `pnpm db:seed` on the target database.
 8. Auth and payment flows have been smoke-tested on the target environment after changes.
 

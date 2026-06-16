@@ -1,6 +1,6 @@
 # BUG-241: Deploy Pipeline Has No Migration Step — Schema PRs Ship Code Without Applying Migrations (Green CI, Broken Runtime)
 
-**Status:** Open
+**Status:** Open — fix implemented in `vercel.json` (`buildCommand`); pending preview-deploy verification, then resolve + archive
 **Priority:** P2 (systemic process/infra gap; latent outage for every schema-bearing PR; high blast radius)
 **Date:** 2026-06-03
 **Family:** CI/CD / deploy / migrations
@@ -54,15 +54,15 @@ Disambiguate the three "dev" surfaces:
 - **Vercel currently builds only the app.** The Vercel project has no Build Command override, no Install Command override, and no Ignored Build Step. With `package.json:9-10`, the build is `next build`; with `package.json:24-25`, `pnpm db:migrate` remains a separate manual script.
 - **The docs rely on human memory.** The current deployment runbook correctly describes manual migration, but the merge/deploy path does not enforce it.
 
-## Expected Fix
+## Fix (Implemented)
 
-The primary fix is **Vercel release-phase migration in the Build Command**:
+The fix is **Vercel release-phase migration in the Build Command**, configured in `vercel.json` as the project `buildCommand`:
 
 ```bash
 pnpm db:migrate && pnpm build
 ```
 
-Configure this as the Vercel Project Build Command for Production and Preview builds. Leave the Install Command unset unless a separate package-manager change requires it. Keep the Ignored Build Step unset, or make any future ignore rule explicitly refuse to skip builds when `db/migrations/**`, `db/schema.ts`, or the deploy-migration gate changes.
+This is set as `buildCommand` in `vercel.json` (overriding Vercel's default `next build`), so it applies to Production and Preview builds. It is live on Preview/Development builds immediately and on Production once this change is on `main`. The Install Command is left unset, and no Ignored Build Step is configured, so every deploy build runs the migration; if an ignore rule is ever added it must explicitly refuse to skip builds when `db/migrations/**` or `db/schema.ts` changes.
 
 This mechanism is the accepted fix because Vercel already owns the traffic switch for both Preview and Production git deployments. Running `pnpm db:migrate` in the Vercel Build Command uses the environment-scoped `DATABASE_URL` that Vercel injects for the build, applies migrations to the same Neon branch the deployment will use, and fails the deployment closed before the new build can serve traffic if migration fails. The mechanism works in the Vercel build because `drizzle-kit` is installed for the build and `drizzle.config.ts` loads env files with `override: false`, so Vercel's injected environment-scoped `DATABASE_URL` wins over local file fallbacks. GitHub Actions cannot currently provide that ordering because the existing `deploy` job does not trigger or block Vercel's git integration.
 
@@ -96,13 +96,13 @@ This floor detects drift but does not apply migrations. It is a stopgap until th
 
 ## Verification
 
-- [ ] Vercel Project Build Command is set to `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds.
+- [x] Vercel Project Build Command is set to `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds (set as `buildCommand` in `vercel.json`; live on Preview immediately, on Production when merged to `main`).
 - [x] Redacted provider audit confirms `DATABASE_URL` is present in Production, Preview, and Development scopes (verified 2026-06-16); a value-free host comparison confirmed Production is isolated from the shared Preview/Development non-production host, with no connection strings or hostnames recorded.
 - [ ] A throwaway additive migration on a test branch is not servable before migration: the Preview build either applies and records it before `pnpm build`, or fails closed before the deployment reaches READY.
 - [ ] Re-running the same Vercel build or redeploy is idempotent: Drizzle sees the matching `drizzle.__drizzle_migrations.created_at` values and does not re-apply already-recorded migrations.
 - [ ] A deliberately invalid migration fails the Vercel build before the new deployment serves traffic.
 - [ ] The floor drift gate, if implemented before the Build Command change, reports missing tags by comparing `db/migrations/meta/_journal.json` `entries[].when` to `drizzle.__drizzle_migrations.created_at` without logging secrets or hostnames.
-- [ ] `docs/dev/deployment-procedure.md` and `docs/dev/deployment-environments.md` remain explicit that while BUG-241 is open migrations are manual, and after BUG-241 closes Vercel Build Command migration is the deploy contract.
+- [x] `docs/dev/deployment-procedure.md` and `docs/dev/deployment-environments.md` consistently state the Vercel Build Command migration is the deploy contract, with `pnpm db:seed` and any out-of-band migration remaining the documented manual fallback.
 - [x] [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) remediation is complete so the live regression is closed independently of this gate.
 
 ## Surfaces Confirmed
