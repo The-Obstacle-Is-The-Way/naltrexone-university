@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-14 (AUDIT-012 BUG-248 and BUG-249 resolved + archived — the `main-protection` ruleset is active and Dependabot vulnerability alerts + automated security fixes are enabled; the only active bug is now BUG-241. Prior: AUDIT-012 filed BUG-248/249 on 2026-06-13; BUG-247 resolved + archived via PR #424.)
+**Last Updated:** 2026-06-16 (BUG-241 entry citations refreshed, including deploy job `ci.yml:206-212` → `ci.yml:218-224`, and the accepted fix recorded as Vercel Build Command release-phase migration with a DEBT-391-style drift-gate floor. Prior: AUDIT-012 BUG-248 and BUG-249 resolved + archived — the `main-protection` ruleset is active and Dependabot vulnerability alerts + automated security fixes are enabled; the only active bug is now BUG-241.)
 
 ---
 
@@ -34,7 +34,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - BUG-240 verified fixed and archived: migrations `0019_illegal_warbound` and `0020_fat_ironclad` were applied to the deployed dev/preview and production DBs with `DATABASE_URL=<env> pnpm db:migrate`; read-only verification confirms the `question_feedback` table, all 3 enums, 7 indexes, and migration head `0020`. PR #391 merged with green CI/CodeRabbit, and dev/main are aligned at `704eabbf`.
 
 **Manual report (2026-06-03) — deploy migration enforcement gap remains open:**
-- BUG-241 filed (P2): systemic cause — the deploy pipeline has no migration step. CI migrates only its throwaway DB (`ci.yml:37,106`); the `deploy` job only `echo`s (`ci.yml:206-212`); Vercel build runs `next build` with no `db:migrate`. So every schema-bearing PR can ship code referencing tables that don't exist in dev/prod with fully green CI. BUG-240 was the first outage from this gap.
+- BUG-241 filed (P2): systemic cause — the deploy pipeline has no migration step. CI migrates only its throwaway DB (`ci.yml:37,106`); the `deploy` job is a no-op placeholder (`ci.yml:218-224`); Vercel currently has no Build Command override and falls back to `package.json` `build=next build` with no `db:migrate`. So every schema-bearing PR can ship code referencing tables that don't exist in the deployed Preview/Development or Production database with fully green CI. BUG-240 was the first outage from this gap; the accepted fix is Vercel Build Command release-phase migration with a DEBT-391-style drift-gate floor.
 
 **Latest archival (2026-04-25) — BUG-238 active-exam draft timing bound:**
 - BUG-238 verified fixed (PR #287, merged dev `ee1f801e`): `saveExamDraftAnswer` now rejects oversized `cumulativeMs` at the controller boundary, clamps non-controller use-case calls, and caps legacy oversized drafts during exam finalization. Archived to `docs/_archive/bugs/`.
@@ -153,7 +153,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to dev/prod, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |
+| [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) | CI/CD / deploy / migrations | P2 | Deploy pipeline has no migration step — schema PRs ship code without applying migrations to deployed Preview/Development or Production databases, with green CI (CI migrates only its throwaway DB). Systemic cause of BUG-240; will recur for every future migration without a gate. |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 
@@ -257,9 +257,9 @@ Focused follow-up sweep across mutation-oriented form actions and the interactiv
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-231](./bug-231-remove-bookmark-action-missing-idempotency.md) | Bookmarks / server actions | P4 | Remove-bookmark form posts are not replay-safe and can toggle the bookmark back on under duplicate submit |
-| [BUG-232](./bug-232-manage-billing-actions-drop-portal-idempotency.md) | Billing / server actions / Stripe | P4 | Manage Billing UI entry points still cannot reach the controller's portal-session idempotency path |
-| [BUG-233](./bug-233-practice-session-start-stale-response-after-config-change.md) | Practice / client async state | P3 | Session-start requests can still commit stale navigation or stale error state after visible configuration changes |
+| [BUG-231](../_archive/bugs/bug-231-remove-bookmark-action-missing-idempotency.md) | Bookmarks / server actions | P4 | Remove-bookmark form posts are not replay-safe and can toggle the bookmark back on under duplicate submit |
+| [BUG-232](../_archive/bugs/bug-232-manage-billing-actions-drop-portal-idempotency.md) | Billing / server actions / Stripe | P4 | Manage Billing UI entry points still cannot reach the controller's portal-session idempotency path |
+| [BUG-233](../_archive/bugs/bug-233-practice-session-start-stale-response-after-config-change.md) | Practice / client async state | P3 | Session-start requests can still commit stale navigation or stale error state after visible configuration changes |
 
 **Surfaces confirmed clean:**
 - Pricing checkout forms already emit an `IdempotencyKeyField` and forward it through `subscribeMonthlyAction` / `subscribeAnnualAction`.

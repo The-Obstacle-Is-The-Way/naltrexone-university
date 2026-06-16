@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Reviewed (code/docs):** 2026-06-12
+**Last Reviewed (code/docs):** 2026-06-16
 
 This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
@@ -30,7 +30,15 @@ The current Vercel + Neon setup uses one Neon project with isolated database bra
 - Vercel **Preview** and **Development** target the Neon `dev` branch.
 - Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment for local app runtime. Normal authenticated local E2E uses the resolver-scoped Docker database; use `E2E_USE_EXISTING_DATABASE=true` only for deliberate deploy-target E2E checks.
 
+Redacted Vercel metadata checked on 2026-06-16 confirms a `DATABASE_URL` entry exists in Production, Preview, and Development scopes, with no git-branch-specific override observed. The exact Neon branch behind each value remains an operator verification step because this repo must not record connection strings or hostnames.
+
 Do not hard-code branch hostnames, account ids, passwords, or connection strings in the repo. Verify those values through the Vercel Storage dashboard, Vercel environment variables, or a local redacted host check before running migrations.
+
+### Deploy Migration Contract
+
+Current live state while [BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is open: Vercel has no Build Command override and does not run `pnpm db:migrate` during deploy. Schema migrations against Vercel Preview/Development and Production databases remain manual operator actions.
+
+Accepted target after BUG-241 closes: the Vercel Project Build Command runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before the deployment can serve. The minimum fallback is a required drift gate that compares `db/migrations/meta/_journal.json` `entries[].when` to `drizzle.__drizzle_migrations.created_at` and fails closed if the target DB is behind.
 
 ---
 
@@ -137,8 +145,9 @@ When code references a newly added column but the target database has not had `p
 
 - Inspect Vercel function logs or local server logs.
 - Look for the real Postgres error behind the generic controller error handling.
+- Compare the repo migration journal to the target DB ledger. Reuse the DEBT-391 primitive: `db/migrations/meta/_journal.json` `entries[].when` must be present in `drizzle.__drizzle_migrations.created_at`.
 
-**Fix**
+**Fix while BUG-241 is open / manual fallback after BUG-241 closes**
 
 Run migrations against the exact database backing the failing environment:
 
@@ -168,6 +177,10 @@ E2E_USE_EXISTING_DATABASE=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:
 
 Do not run migrations by relying on implicit `.env.local` resolution. Every database mutation should pass an explicit `DATABASE_URL` for the intended target.
 
+**Prevention after BUG-241 closes**
+
+The Vercel Build Command must run `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds. If that cannot be enabled immediately, a required drift gate must fail closed before a deployment can serve when the target DB ledger is behind the repo journal. Keep migrations forward-only and additive where possible; use expand/contract for destructive changes.
+
 Historical example: PR #169 added `claimed_at` to `idempotency_keys`; the code deployed before the non-production database was migrated, which broke write paths until `pnpm db:migrate` was run.
 
 Historical example: SPEC-040 added `attempts.is_omitted` plus two CHECK constraints in migrations `0017` and `0018`; deploy-target E2E answer-submission flows failed with "Failed to insert attempt" until the Neon `dev` branch was migrated.
@@ -189,7 +202,7 @@ When changing environment configuration, verify all of the following:
 3. Production and non-production databases are isolated.
 4. `NEXT_PUBLIC_APP_URL` matches the environment actually serving the app.
 5. Preview webhook targets are publicly reachable.
-6. Any schema change is followed by `pnpm db:migrate` on the target database.
+6. While BUG-241 is open, any schema change is followed by `pnpm db:migrate` on the target database. After BUG-241 closes, the Vercel Build Command migration or required drift gate is verified for the target deployment before serving.
 7. Any content change that affects seeded data is followed by `pnpm db:seed` on the target database.
 8. Auth and payment flows have been smoke-tested on the target environment after changes.
 
