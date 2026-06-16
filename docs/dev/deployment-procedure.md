@@ -7,7 +7,7 @@
 
 ## 1. Migration Contract: Build-Command Migration
 
-[BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command is set in `vercel.json` (`buildCommand`) to run:
+[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command is set in `vercel.json` (`buildCommand`) to run:
 
 ```bash
 pnpm db:migrate && pnpm build

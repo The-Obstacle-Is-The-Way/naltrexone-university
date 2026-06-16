@@ -1,13 +1,17 @@
 # BUG-241: Deploy Pipeline Has No Migration Step — Schema PRs Ship Code Without Applying Migrations (Green CI, Broken Runtime)
 
-**Status:** Open
-**Resolution State:** Fixed on branch in `vercel.json` (`buildCommand`); pending preview-deploy verification and archival
+**Status:** Resolved (2026-06-16)
+**Resolution State:** Shipped — `vercel.json` `buildCommand` (`pnpm db:migrate && pnpm build`) merged via #453 → `dev` (`ff46fbda`) and promoted to `main` via #454 (`daed8479`); verified live (Preview build migrated Neon `dev`, Production build migrated Neon `main` — both logged "migrations applied successfully" before `next build`).
 **Priority:** P2 (systemic process/infra gap; latent outage for every schema-bearing PR; high blast radius)
 **Date:** 2026-06-03
 **Family:** CI/CD / deploy / migrations
-**Related:** [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) (the first outage this gap produced; remediated and archived), [DEBT-391](../_archive/debt/debt-391-local-e2e-schema-drift-preflight.md) (resolved local/E2E migration-ledger drift primitive to reuse)
+**Related:** [BUG-240](./bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) (the first outage this gap produced; remediated and archived), [DEBT-391](../debt/debt-391-local-e2e-schema-drift-preflight.md) (resolved local/E2E migration-ledger drift primitive to reuse)
 
 ---
+
+## Resolution (2026-06-16)
+
+**Resolved.** The fix is `buildCommand: "pnpm db:migrate && pnpm build"` in `vercel.json`. It merged to `dev` via PR #453 (squash `ff46fbda`) and was promoted to `main` via PR #454 (merge `daed8479`); `main` and `dev` trees are identical. Verified live on real Vercel builds: the Preview deploy applied migrations to Neon `dev` and the Production deploy applied migrations to Neon `main`, each logging `[✓] migrations applied successfully!` before `next build`, with the build failing closed if migration fails. Every git-triggered deployment now applies checked-in Drizzle migrations to its environment-scoped database before serving. `pnpm db:seed` (content) remains a documented manual step. The evidence, topology, and rejected-alternatives below are retained for reference.
 
 ## Description
 
@@ -15,7 +19,7 @@ When BUG-241 was filed, applying migrations to deployed databases was a **manual
 
 **The runbook was not the gap.** The pre-fix `docs/dev/deployment-procedure.md` checklist told operators to run `pnpm db:migrate` against the target deployed database when schema changed, and `docs/dev/deployment-environments.md` documented the exact symptom under **"Missing Database Migration Causes Silent Write Failures."** The gap was that the runbook step was not enforced by CI or Vercel. This branch reconciles those runbooks to the Build Command migration contract.
 
-[BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) is the first confirmed outage from this class: SPEC-041's `question_feedback` table was present in repo migrations but had not been applied to deployed dev/preview or production databases before code reached those environments.
+[BUG-240](./bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) is the first confirmed outage from this class: SPEC-041's `question_feedback` table was present in repo migrations but had not been applied to deployed dev/preview or production databases before code reached those environments.
 
 ## Verified Evidence
 
@@ -104,13 +108,13 @@ This floor detects drift but does not apply migrations. It is a stopgap until th
 - [ ] A deliberately invalid migration fails the Vercel build before the new deployment serves traffic.
 - [ ] The floor drift gate, if implemented before the Build Command change, reports missing tags by comparing `db/migrations/meta/_journal.json` `entries[].when` to `drizzle.__drizzle_migrations.created_at` without logging secrets or hostnames.
 - [x] `docs/dev/deployment-procedure.md` and `docs/dev/deployment-environments.md` consistently state the Vercel Build Command migration is the deploy contract, with `pnpm db:seed` and any out-of-band migration remaining the documented manual fallback.
-- [x] [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) remediation is complete so the live regression is closed independently of this gate.
+- [x] [BUG-240](./bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) remediation is complete so the live regression is closed independently of this gate.
 
 ## Surfaces Confirmed
 
 - Migration files exist under `db/migrations/`, and the repo journal is `db/migrations/meta/_journal.json`.
 - CI applies the current migration journal to a throwaway Postgres service.
-- The migration-ledger comparison primitive shipped with resolved [DEBT-391](../_archive/debt/debt-391-local-e2e-schema-drift-preflight.md).
+- The migration-ledger comparison primitive shipped with resolved [DEBT-391](../debt/debt-391-local-e2e-schema-drift-preflight.md).
 - This remains an infra/process bug. No `src/**` change is required to specify the fix.
 
 ## Operator-Must-Verify Facts
