@@ -2,8 +2,8 @@
 
 **Priority:** P2 (ships a known-incomplete UI surface to users; quality/perception risk, low functional risk)
 **Created:** 2026-06-15
-**Status:** Decided — **Option B implemented** on branch `debt/421-light-mode-force-dark-vs-default-dark` (full local gate green on Node 24: typecheck, lint, unit, browser, integration, build, E2E). Pending CodeRabbit review + merge. This doc records the decision and the as-shipped implementation.
-**Related:** [DEBT-262](../_archive/debt/debt-262-light-mode-opacity.md) (light-mode opacity-scale asymmetry, accepted + documented), [DEBT-263](../_archive/debt/debt-263-text-contrast.md) (light-mode success/destructive contrast fix), [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) (LIGHT-1/2/3 audit items), `docs/frontend/pattern-registry.md` § 1.2 (opacity scale + light-mode caveat)
+**Status:** **Resolved — Option B shipped + merged (#449), archived 2026-06-15.** The kill switch is live on `dev` + `main`: `app/layout.tsx` ships `forcedTheme="dark"` + `defaultTheme="dark"` with a static `dark` / `color-scheme: dark` root `<html>`, `ThemeToggle` is unmounted from both shells (with regression tests), `providers.tsx` keys Clerk appearance off `forcedTheme ?? resolvedTheme`, and `global-error` ships dark. All four acceptance criteria below are met (`[x]`). **Scope complete — not a living doc.** The unchecked **Exit criteria** are a *future, separate* effort (finishing light mode and re-enabling it via Option A, incl. the non-trivial T-4 anti-FOUC work); pursue that by filing a fresh debt that references this archived record, not by reopening DEBT-421.
+**Related:** [DEBT-262](./debt-262-light-mode-opacity.md) (light-mode opacity-scale asymmetry, accepted + documented), [DEBT-263](./debt-263-text-contrast.md) (light-mode success/destructive contrast fix), [DEBT-250](./debt-250-frontend-visual-divergence-compliance-plan.md) (LIGHT-1/2/3 audit items), `docs/frontend/pattern-registry.md` § 1.2 (opacity scale + light-mode caveat)
 
 ---
 
