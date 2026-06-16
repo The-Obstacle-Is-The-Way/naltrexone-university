@@ -8,12 +8,14 @@ vi.mock('next-themes', () => ({
     attribute,
     defaultTheme,
     enableSystem,
+    forcedTheme,
     nonce,
   }: {
     children: React.ReactNode;
     attribute?: string;
     defaultTheme?: string;
     enableSystem?: boolean;
+    forcedTheme?: string;
     nonce?: string;
   }) => (
     <div
@@ -21,6 +23,7 @@ vi.mock('next-themes', () => ({
       data-attribute={attribute}
       data-default-theme={defaultTheme}
       data-enable-system={enableSystem ? 'true' : 'false'}
+      data-forced-theme={forcedTheme}
       data-nonce={nonce}
     >
       {children}
@@ -35,8 +38,8 @@ describe('components/theme-provider', () => {
     const html = renderToStaticMarkup(
       <ThemeProvider
         attribute="class"
-        defaultTheme="system"
-        enableSystem
+        forcedTheme="dark"
+        defaultTheme="dark"
         nonce="nonce-123"
       >
         <div>child</div>
@@ -45,8 +48,10 @@ describe('components/theme-provider', () => {
 
     expect(html).toContain('data-testid="next-themes-provider"');
     expect(html).toContain('data-attribute="class"');
-    expect(html).toContain('data-default-theme="system"');
-    expect(html).toContain('data-enable-system="true"');
+    // forcedTheme is the load-bearing prop for DEBT-421 (app pinned to dark);
+    // prove the wrapper forwards it (and defaultTheme) to next-themes.
+    expect(html).toContain('data-forced-theme="dark"');
+    expect(html).toContain('data-default-theme="dark"');
     expect(html).toContain('data-nonce="nonce-123"');
     expect(html).toContain('child');
   });

@@ -12,6 +12,7 @@ export function ThemeProvider({
   ...props
 }: AppThemeProviderProps) {
   return (
+    // exactOptionalPropertyTypes rejects passing `nonce={undefined}` to next-themes.
     <NextThemesProvider {...props} {...(nonce !== undefined ? { nonce } : {})}>
       {children}
     </NextThemesProvider>

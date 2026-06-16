@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { type ReactNode, Suspense } from 'react';
 import { AuthNav } from '@/components/auth-nav';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/routes';
 
@@ -139,7 +138,7 @@ export async function MarketingLayout({
           <div className="flex items-center justify-between gap-4">
             {primaryNav}
             <div className="flex items-center gap-2">
-              <ThemeToggle />
+              {/* DEBT-421: ThemeToggle unmounted while light mode is disabled. */}
               <Suspense fallback={<MarketingAuthNavFallback />}>
                 {authNavSlot ?? <DeferredAuthNav />}
               </Suspense>

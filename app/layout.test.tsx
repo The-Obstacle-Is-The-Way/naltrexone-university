@@ -39,11 +39,20 @@ vi.mock('@/components/theme-provider', () => ({
   ThemeProvider: ({
     children,
     nonce,
+    forcedTheme,
+    defaultTheme,
   }: {
     children: React.ReactNode;
     nonce?: string;
+    forcedTheme?: string;
+    defaultTheme?: string;
   }) => (
-    <div data-testid="theme-provider" data-nonce={nonce}>
+    <div
+      data-testid="theme-provider"
+      data-nonce={nonce}
+      data-forced-theme={forcedTheme}
+      data-default-theme={defaultTheme}
+    >
       {children}
     </div>
   ),
@@ -52,11 +61,13 @@ vi.mock('@/components/theme-provider', () => ({
 describe('app/layout', () => {
   let RootLayout: typeof import('@/app/layout').default;
   let NonceBoundProviders: typeof import('@/app/layout').NonceBoundProviders;
+  let viewport: typeof import('@/app/layout').viewport;
 
   beforeAll(async () => {
     const module = await import('@/app/layout');
     RootLayout = module.default;
     NonceBoundProviders = module.NonceBoundProviders;
+    viewport = module.viewport;
   });
 
   it('adds data-scroll-behavior on the html element', () => {
@@ -69,6 +80,24 @@ describe('app/layout', () => {
     expect(html).toContain('data-scroll-behavior="smooth"');
     expect(html).toContain('Skip to content');
     expect(html).toContain('Child content');
+  });
+
+  it('ships the forced dark theme on the opening html element before body content', () => {
+    const html = renderToStaticMarkup(
+      RootLayout({
+        children: <main id="main-content">Route content</main>,
+      }),
+    );
+    const htmlTag = html.match(/<html[^>]*>/)?.[0] ?? '';
+    const htmlTagIndex = html.indexOf('<html');
+    const mainIndex = html.indexOf('<main');
+
+    expect(htmlTag).toContain('class="dark ');
+    expect(htmlTag).toContain('style="color-scheme:dark"');
+    expect(htmlTagIndex).toBeGreaterThanOrEqual(0);
+    expect(mainIndex).toBeGreaterThan(htmlTagIndex);
+    expect(html.indexOf('class="dark ')).toBeLessThan(mainIndex);
+    expect(html.indexOf('style="color-scheme:dark"')).toBeLessThan(mainIndex);
   });
 
   it('keeps the suspense fallback free of nonce-sensitive providers', () => {
@@ -90,6 +119,21 @@ describe('app/layout', () => {
     );
 
     expect(html).toContain('data-nonce="nonce-123"');
+  });
+
+  it('pins the app to dark mode via forcedTheme (light mode disabled — DEBT-421)', async () => {
+    const html = renderToStaticMarkup(
+      await NonceBoundProviders({
+        children: <div>Child content</div>,
+      }),
+    );
+
+    expect(html).toContain('data-forced-theme="dark"');
+    expect(html).toContain('data-default-theme="dark"');
+  });
+
+  it('sets dark-only browser chrome metadata while forced dark is active', () => {
+    expect(viewport.themeColor).toBe('#090909');
   });
 
   it('does not nest a root main landmark around route-level content', () => {
