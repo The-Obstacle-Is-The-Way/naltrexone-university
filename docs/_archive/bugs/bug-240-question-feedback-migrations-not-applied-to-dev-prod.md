@@ -5,7 +5,7 @@
 **Date:** 2026-06-03
 **Family:** Schema / migrations / deploy rollout
 **Resolution State:** Root cause remediated 2026-06-03 — schema migrations `0019`/`0020` applied to both deployed databases (dev/preview Neon `dev` branch + production Neon `main` branch) and verified read-only (table + 3 enums + indexes; `drizzle.__drizzle_migrations` head `0020`). Dev confirmed end-to-end (persisted `report`/`"test"` row). PR #391 merged after CodeRabbit and green CI; the remaining systemic migration-enforcement gap stays open as BUG-241.
-**Related:** [BUG-241](../../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) (systemic cause — manual, unenforced migrate-on-deploy step), SPEC-041 ([docs/_archive/specs/spec-041-question-feedback.md](../specs/spec-041-question-feedback.md))
+**Related:** [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) (systemic cause — manual, unenforced migrate-on-deploy step), SPEC-041 ([docs/_archive/specs/spec-041-question-feedback.md](../specs/spec-041-question-feedback.md))
 
 > **Update 2026-06-03 (fix applied):** This was a textbook instance of the documented known gotcha [deployment-environments.md → "Missing Database Migration Causes Silent Write Failures"](../../dev/deployment-environments.md). Both deployed DBs were migrated with the official migrator and verified:
 > - **dev/preview (Neon `dev` branch, host `ep-still-frog-…`)** — used by local `pnpm dev`, the Vercel Preview deployment, and the `…aqc6vir8n…` deployment URL. Verified end-to-end: 6 `question_feedback` rows persisted post-migration, including a `report` row with comment `"test"`.
@@ -62,7 +62,7 @@ The hydration (read) side fails the same way: `getQuestionRating` → `findLates
 - Nothing automated covers the gap: CI (`.github/workflows/ci.yml:106`) migrates only a **throwaway CI Postgres** (`…localhost:5432/addiction_boards_test`, line 37); the `deploy` job (`ci.yml:206-212`) only `echo`s; Vercel build runs `next build` — **no `db:migrate`**. Local/integration tests migrate the local :5434 DB, so everything stayed green and masked the omission.
 - Environment→DB mapping (`deployment-procedure.md` §4): **Preview/Development → Neon `dev` branch**; **Production → Neon `main` branch** (separate Vercel-scoped `DATABASE_URL`s — confirmed via `vercel env ls`). So dev and prod must each be migrated explicitly.
 
-The step being **manual and unenforced** (not undocumented) is the systemic issue, filed separately as [BUG-241](../../bugs/bug-241-deploy-pipeline-has-no-migration-step.md).
+The step being **manual and unenforced** (not undocumented) is the systemic issue, filed separately as [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md).
 
 ## Impact
 
@@ -91,7 +91,7 @@ Recommended order:
 2. With owner OK, `DATABASE_URL=<dev> pnpm db:migrate`. Re-verify the table/enums now exist and last-applied = `0020`.
 3. Smoke-test the live feature against dev (rate + report + hydrate succeed).
 4. Repeat verify → migrate → re-verify → smoke-test for **prod**.
-5. Land [BUG-241](../../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) so future schema PRs cannot ship without their migrations.
+5. Land [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) so future schema PRs cannot ship without their migrations.
 
 ## Verification
 
@@ -101,7 +101,7 @@ Recommended order:
 - [x] **Production (Neon `main` branch) — DONE 2026-06-03:** read-only confirmed table absent (host `ep-withered-cell-…`, head `0018`) → `DATABASE_URL=<prod via vercel env pull> pnpm db:migrate` → re-verified table + 3 enums present, head `0020`; pulled prod secrets wiped.
 - [x] Post-merge repository state verified: PR #391 merged, dev/main aligned, and the `.env.local` target DB still reports `question_feedback` + all 3 enums + 7 indexes with migration head `0020`.
 - [ ] Client error reporter / Sentry shows the `INTERNAL_ERROR` feedback-path stream stops (operator to confirm in dashboard; expected now both DBs are migrated). Recommend a prod smoke-test (rate + report on the production alias).
-- [ ] [BUG-241](../../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) enforcement landed so this cannot silently recur.
+- [ ] [BUG-241](./bug-241-deploy-pipeline-has-no-migration-step.md) enforcement landed so this cannot silently recur.
 
 ## Surfaces Confirmed Clean (deliberately NOT filed as bugs)
 

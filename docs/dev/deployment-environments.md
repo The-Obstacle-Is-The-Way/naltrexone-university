@@ -36,7 +36,7 @@ Do not hard-code branch hostnames, account ids, passwords, or connection strings
 
 ### Deploy Migration Contract
 
-[BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
+[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
 
 ---
 
