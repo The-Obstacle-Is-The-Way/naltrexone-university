@@ -134,10 +134,18 @@ test.describe('marketing contrast', () => {
     contextOptions: { reducedMotion: 'reduce' },
   });
 
-  test('homepage maintains readable hero and stat cards in light mode', async ({
+  test('homepage maintains readable hero and stat cards when OS light is forced dark', async ({
     page,
   }) => {
     await page.goto('/');
+    await expect(page.locator('html')).toHaveClass(/(?:^|\s)dark(?:\s|$)/);
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => getComputedStyle(document.documentElement).colorScheme,
+        ),
+      )
+      .toBe('dark');
 
     // Creating an Option element and reading option.style.* normalizes computed
     // colors (named colors, hex, rgb(), rgba()) into a consistent rgba()/rgb()

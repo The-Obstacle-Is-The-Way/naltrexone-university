@@ -47,13 +47,19 @@ export function Providers({
   children: React.ReactNode;
   nonce?: string | undefined;
 }) {
-  const { resolvedTheme } = useTheme();
+  // `forcedTheme` (DEBT-421: app pinned to dark) overrides the rendered DOM
+  // class but next-themes still computes `resolvedTheme` from the stored/system
+  // value, so we must prefer `forcedTheme` here or a returning user with a stale
+  // `theme: light` would get Clerk's light appearance on a dark page. When the
+  // force is later removed for Option A, this falls back to `resolvedTheme`.
+  const { resolvedTheme, forcedTheme } = useTheme();
+  const activeTheme = forcedTheme ?? resolvedTheme;
   const skipClerk = process.env.NEXT_PUBLIC_SKIP_CLERK === 'true';
   const clerkAppearance = useMemo(() => {
-    return resolvedTheme === 'dark'
+    return activeTheme === 'dark'
       ? CLERK_APPEARANCE_DARK
       : CLERK_APPEARANCE_LIGHT;
-  }, [resolvedTheme]);
+  }, [activeTheme]);
 
   if (skipClerk) {
     // Return children unwrapped for CI builds

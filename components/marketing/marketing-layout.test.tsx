@@ -200,10 +200,13 @@ describe('MarketingLayout', () => {
     ).not.toBeNull();
   });
 
-  it('includes ThemeToggle in the header action area', async () => {
+  it('does not mount the ThemeToggle while light mode is disabled (DEBT-421)', async () => {
+    // The theme-toggle mock above is a sentinel: if the layout ever re-mounts
+    // ThemeToggle, its testid reappears and this assertion fails. The toggle is
+    // unmounted until light mode is design-complete (Option A exit state).
     const html = await renderLayout({ authNavSlot: <div>Auth</div> });
 
-    expect(html).toContain('data-testid="theme-toggle"');
+    expect(html).not.toContain('data-testid="theme-toggle"');
   });
 
   it('renders a static sign-in fallback when auth nav is deferred', async () => {

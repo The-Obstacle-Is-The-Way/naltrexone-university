@@ -1,18 +1,23 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
-test.describe('dark mode', () => {
+async function expectForcedDark(page: Page) {
+  await expect(page.locator('html')).toHaveClass(/(?:^|\s)dark(?:\s|$)/);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => getComputedStyle(document.documentElement).colorScheme,
+      ),
+    )
+    .toBe('dark');
+}
+
+test.describe('forced dark mode', () => {
   test.use({ colorScheme: 'dark' });
 
-  test('applies the `.dark` class when OS prefers dark', async ({ page }) => {
+  test('ships dark tokens when OS prefers dark', async ({ page }) => {
     await page.goto('/');
 
-    await expect
-      .poll(async () => {
-        return page.evaluate(() =>
-          document.documentElement.classList.contains('dark'),
-        );
-      })
-      .toBe(true);
+    await expectForcedDark(page);
 
     await expect
       .poll(async () =>
@@ -27,37 +32,19 @@ test.describe('dark mode', () => {
       .toBe(false);
   });
 
-  test('updates the `.dark` class when OS preference changes', async ({
+  test('keeps dark forced when OS preference changes to light', async ({
     page,
   }) => {
     await page.goto('/');
 
-    await expect
-      .poll(async () => {
-        return page.evaluate(() =>
-          document.documentElement.classList.contains('dark'),
-        );
-      })
-      .toBe(true);
+    await expectForcedDark(page);
 
     await page.emulateMedia({ colorScheme: 'light' });
 
-    await expect
-      .poll(async () => {
-        return page.evaluate(() =>
-          document.documentElement.classList.contains('dark'),
-        );
-      })
-      .toBe(false);
+    await expectForcedDark(page);
 
     await page.emulateMedia({ colorScheme: 'dark' });
 
-    await expect
-      .poll(async () => {
-        return page.evaluate(() =>
-          document.documentElement.classList.contains('dark'),
-        );
-      })
-      .toBe(true);
+    await expectForcedDark(page);
   });
 });

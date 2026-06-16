@@ -6,6 +6,10 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+vi.mock('@/components/theme-toggle', () => ({
+  ThemeToggle: () => <span data-testid="theme-toggle" />,
+}));
+
 type AppLayoutModule = typeof import('@/app/(app)/app/layout');
 
 let AppLayoutShell: AppLayoutModule['AppLayoutShell'];
@@ -79,6 +83,22 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(mainClassTokens).toContain('flex-col');
     expect(mainClassTokens).toContain('min-h-0');
     expect(mainClassTokens).toContain('w-full');
+  });
+
+  it('does not mount the ThemeToggle while light mode is disabled (DEBT-421)', async () => {
+    // The theme-toggle mock above is a sentinel: if the app shell re-mounts
+    // ThemeToggle, its testid reappears and this assertion fails. The toggle is
+    // unmounted until light mode is design-complete (Option A exit state).
+    const html = renderToStaticMarkup(
+      <AppLayoutShell
+        authNav={<div>AuthNav</div>}
+        mobileNav={<div>MobileNav</div>}
+      >
+        <div>Child content</div>
+      </AppLayoutShell>,
+    );
+
+    expect(html).not.toContain('data-testid="theme-toggle"');
   });
 
   it('keeps banner, header, and main in one flex column shell', async () => {

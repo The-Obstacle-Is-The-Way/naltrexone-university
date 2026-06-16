@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Instrument_Sans, Manrope, Plus_Jakarta_Sans } from 'next/font/google';
 import { headers } from 'next/headers';
 import { Suspense } from 'react';
@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   title: 'Addiction Boards Question Bank',
   description:
     'Board-relevant questions with detailed explanations for Addiction Psychiatry and Addiction Medicine exam prep.',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#090909',
 };
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
@@ -31,10 +35,16 @@ export function RootProvidersShell({
   nonce?: string | undefined;
 }) {
   return (
+    // DEBT-421: light mode is unfinished, so the app is pinned to dark via
+    // `forcedTheme`. This overrides the OS preference AND any stale `theme:light`
+    // in localStorage, guaranteeing no user renders the unfinished light theme.
+    // `defaultTheme="dark"` only affects fresh users with no stored preference;
+    // returning-user guarantees come from `forcedTheme` plus Providers' fallback.
+    // Do not delete the light tokens/components — they stay dormant for re-enable.
     <ThemeProvider
       attribute="class"
-      defaultTheme="system"
-      enableSystem
+      forcedTheme="dark"
+      defaultTheme="dark"
       nonce={nonce}
     >
       <RootContentShell>
@@ -79,10 +89,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+    // DEBT-421: author forced dark statically because the nonce-bound
+    // next-themes script streams after some body content under PPR.
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`${manrope.className} ${manrope.variable} ${plusJakartaSans.variable} ${instrumentSans.variable}`}
+      className={`dark ${manrope.className} ${manrope.variable} ${plusJakartaSans.variable} ${instrumentSans.variable}`}
+      style={{ colorScheme: 'dark' }}
       suppressHydrationWarning
     >
       <body className="min-h-[100dvh]">

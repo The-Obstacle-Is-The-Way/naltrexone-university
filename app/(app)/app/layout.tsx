@@ -6,7 +6,6 @@ import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { MobileNav } from '@/components/mobile-nav';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
 import { ROUTES } from '@/lib/routes';
@@ -95,7 +94,7 @@ export function AppLayoutShell({
           </div>
           <div className="flex items-center gap-2">
             {mobileNav}
-            <ThemeToggle />
+            {/* DEBT-421: ThemeToggle unmounted while light mode is disabled. */}
             {authNav}
           </div>
         </div>
