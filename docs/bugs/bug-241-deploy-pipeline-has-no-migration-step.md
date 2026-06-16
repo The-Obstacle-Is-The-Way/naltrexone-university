@@ -68,7 +68,7 @@ This mechanism is the accepted fix because Vercel already owns the traffic switc
 
 Required implementation constraints:
 
-1. Use the Vercel-scoped `DATABASE_URL` for the build target. Enabling the Build Command migration is blocked until the operator has privately confirmed that Production points to the Neon `main` branch and Preview/Development point to the Neon `dev` branch without printing connection strings, hostnames, or passwords. This is a hard precondition: if Preview actually resolves to Neon `main`, `pnpm db:migrate && pnpm build` would apply migrations to the production database on every preview build.
+1. Use the Vercel-scoped `DATABASE_URL` for the build target. **Verified 2026-06-16** by a value-free Vercel host comparison (booleans only; no connection strings or hostnames recorded): the **Production** `DATABASE_URL` host is distinct from **Preview** and **Development**, and Preview and Development share one non-production host. A Preview or Development build therefore migrates the shared non-production (Neon `dev`) database, never production — the catastrophic failure mode (a Preview build resolving to the production database) is ruled out. Re-run the same value-free host comparison if Vercel env scoping or the Neon integration is ever reconfigured.
 2. Never use `drizzle-kit push` in any environment. Use checked-in migration files only.
 3. Treat migrations as forward-only. Additive migrations are the norm; destructive changes must use expand/contract so the currently served deployment remains compatible if the migration succeeds but a later build step fails.
 4. Rely on Drizzle's migration ledger for idempotency. Re-runs must be no-ops when `drizzle.__drizzle_migrations.created_at` already contains the journal `entries[].when` values.
@@ -97,7 +97,7 @@ This floor detects drift but does not apply migrations. It is a stopgap until th
 ## Verification
 
 - [ ] Vercel Project Build Command is set to `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds.
-- [ ] Redacted provider audit confirms `DATABASE_URL` is present in Production, Preview, and Development scopes, with exact branch targets privately verified by the operator and not recorded in docs/logs.
+- [x] Redacted provider audit confirms `DATABASE_URL` is present in Production, Preview, and Development scopes (verified 2026-06-16); a value-free host comparison confirmed Production is isolated from the shared Preview/Development non-production host, with no connection strings or hostnames recorded.
 - [ ] A throwaway additive migration on a test branch is not servable before migration: the Preview build either applies and records it before `pnpm build`, or fails closed before the deployment reaches READY.
 - [ ] Re-running the same Vercel build or redeploy is idempotent: Drizzle sees the matching `drizzle.__drizzle_migrations.created_at` values and does not re-apply already-recorded migrations.
 - [ ] A deliberately invalid migration fails the Vercel build before the new deployment serves traffic.
@@ -114,5 +114,5 @@ This floor detects drift but does not apply migrations. It is a stopgap until th
 
 ## Operator-Must-Verify Facts
 
-- Hard precondition before implementation: the operator must privately confirm the exact Neon branch behind each Vercel `DATABASE_URL` scope. Production must point to Neon `main`, and Preview/Development must point to Neon `dev`. Do not enable the Build Command migration until this is confirmed without printing connection strings, hostnames, or passwords; if Preview resolves to Neon `main`, every preview build would migrate production.
+- **Resolved 2026-06-16** (was a hard precondition before implementation): a value-free Vercel host comparison confirmed the Production `DATABASE_URL` host is distinct from Preview/Development and that Preview and Development share one non-production host, so production is isolated from preview/development builds. The literal Neon branch *names* (`main` for production, `dev` for the shared non-production branch) are confirmable in the Neon/Vercel dashboards but are not safety-critical given the verified isolation. Re-verify with the same value-free comparison if Vercel/Neon scoping is reconfigured.
 - Whether Preview Deployment Protection beyond Git fork protection is enabled. The available redacted Vercel protection metadata exposed Git fork protection, but not a clear Preview Standard Protection boolean.
