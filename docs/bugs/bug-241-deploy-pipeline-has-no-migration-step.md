@@ -11,9 +11,9 @@
 
 ## Description
 
-Applying migrations to deployed databases is currently a **manual, documented-but-unenforced** operator step. There is no automated deploy step that applies Drizzle migrations to the Vercel-targeted Neon branches, and nothing gates a deployment on the target database having the repo's migration journal applied. A PR can add a migration, pass all required CI, merge through the protected `main` flow, and deploy code that references a table or column that does not exist in the deployed database.
+When BUG-241 was filed, applying migrations to deployed databases was a **manual, documented-but-unenforced** operator step. There was no automated deploy step that applied Drizzle migrations to the Vercel-targeted Neon branches, and nothing gated a deployment on the target database having the repo's migration journal applied. A PR could add a migration, pass all required CI, merge through the protected `main` flow, and deploy code that referenced a table or column that did not exist in the deployed database.
 
-**The runbook is not the gap.** `docs/dev/deployment-procedure.md` §5 still tells operators to run `pnpm db:migrate` against the target deployed database when schema changes, and `docs/dev/deployment-environments.md` documents the exact symptom under **"Missing Database Migration Causes Silent Write Failures."** The gap is that the runbook step is not enforced by CI or Vercel.
+**The runbook was not the gap.** The pre-fix `docs/dev/deployment-procedure.md` checklist told operators to run `pnpm db:migrate` against the target deployed database when schema changed, and `docs/dev/deployment-environments.md` documented the exact symptom under **"Missing Database Migration Causes Silent Write Failures."** The gap was that the runbook step was not enforced by CI or Vercel. This branch reconciles those runbooks to the Build Command migration contract.
 
 [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) is the first confirmed outage from this class: SPEC-041's `question_feedback` table was present in repo migrations but had not been applied to deployed dev/preview or production databases before code reached those environments.
 
@@ -25,8 +25,8 @@ Applying migrations to deployed databases is currently a **manual, documented-bu
 | CI proves migrations apply cleanly only against that throwaway DB. | `.github/workflows/ci.yml:105-106` runs `pnpm db:migrate`; `.github/workflows/ci.yml:108-111` seeds placeholder content. | Confirmed. |
 | The GitHub `deploy` job does not deploy or migrate. | `.github/workflows/ci.yml:218-224` defines `deploy` and only echoes that Vercel Git integration handles production deploys. | Corrected from the prior stale deploy-job citation. |
 | The package build path is only Next build. | `package.json:9-10` defines `build` as `next build`; `package.json:24-25` defines `db:migrate` as a separate manual script. | Confirmed. There is no package-level deploy hook. |
-| Vercel cloud project currently has no Build Command override, Install Command override, or Ignored Build Step. | Redacted Vercel project metadata audit on 2026-06-16. | Confirmed without printing project identifiers, hostnames, or env values. Therefore Vercel currently falls back to the package build script. |
-| Vercel has `DATABASE_URL` scoped in Production, Preview, and Development. | Redacted Vercel env metadata audit on 2026-06-16. | Confirmed presence only: one `DATABASE_URL` entry in each scope, with no git-branch-specific override observed. Exact Neon branch behind each value is operator-must-verify. |
+| Vercel cloud project had no dashboard Build Command override, Install Command override, or Ignored Build Step before this branch's repo-level fix. | Redacted Vercel project metadata audit on 2026-06-16. | Confirmed without printing project identifiers, hostnames, or env values. Before `vercel.json` added `buildCommand`, Vercel fell back to the package build script. |
+| Vercel has `DATABASE_URL` scoped in Production, Preview, and Development. | Redacted Vercel env metadata audit on 2026-06-16. | Confirmed presence only: one `DATABASE_URL` entry in each scope, with no git-branch-specific override observed. A value-free host comparison verified Production is isolated from the shared Preview/Development non-production database. |
 | Vercel Build Step has scoped env available. | `lib/env.ts:101-118` documents `VERCEL_ENV` availability during the Build Step and function execution; `DATABASE_URL` is required by `lib/env.ts:38-40`. | Confirmed. A Vercel Build Command migration is viable from the repo's env-loading perspective. |
 | The migration ledger table and comparison primitive already exist in test helpers. | `tests/e2e/helpers/credential-health-check.ts:161-174` has `computeMissingMigrations()`, `:176-180` has `formatSchemaDriftMessage()`, and `:200-238` has `verifyMigrationLedger(sql)`. | Confirmed. Reuse this shipped primitive for the drift gate instead of inventing a second comparison. |
 | The ledger comparison is precise. | `tests/e2e/helpers/credential-health-check.ts:205-214` queries `drizzle.__drizzle_migrations.created_at`; `db/migrations/meta/_journal.json:4-152` stores journal `entries[].when`; `drizzle.config.ts:14-21` leaves Drizzle migration schema/table defaults in place. | Confirmed. Compare journal `entries[].when` to `drizzle.__drizzle_migrations.created_at`, then map missing `when` values back to journal tags for messages. |
@@ -37,14 +37,14 @@ Applying migrations to deployed databases is currently a **manual, documented-bu
 
 Disambiguate the three "dev" surfaces:
 
-| Surface | Source | Database target contract | Migration behavior today |
+| Surface | Source | Database target contract | Pre-fix migration behavior |
 |---|---|---|---|
-| Local app runtime | Local checkout with `.env.local` | Expected to match Vercel Development and the Neon `dev` branch. Exact provider target is operator-must-verify before any mutation. | Manual when intentionally targeting this database. |
+| Local app runtime | Local checkout with `.env.local` | Expected to match Vercel Development and the Neon `dev` branch. Verify the provider target before any manual mutation. | Manual when intentionally targeting this database. |
 | Local integration / normal local E2E | Local checkout via `scripts/resolve-local-test-target.ts` | Resolver-scoped Docker Postgres, never a deployed Neon branch unless the operator explicitly opts into an existing database. | E2E wrapper starts, migrates, and seeds automatically; integration wrapper uses the resolver-scoped local target. |
 | CI | GitHub Actions `test` job | Throwaway Postgres service on the CI runner. | CI runs `pnpm db:migrate` and seed against the throwaway DB only. |
-| Git `dev` branch / feature branches | Vercel Preview | Expected shared non-production Neon `dev` branch DB. Vercel Preview `DATABASE_URL` presence is verified; exact branch target is operator-must-verify. | No deploy migration step today. |
-| Vercel Development env | `vercel env pull` / local Vercel development scope | Expected shared non-production Neon `dev` branch DB. Vercel Development `DATABASE_URL` presence is verified; exact branch target is operator-must-verify. | No deploy migration step today. |
-| Git `main` branch | Vercel Production | Expected Neon `main` branch DB. Vercel Production `DATABASE_URL` presence is verified; exact branch target is operator-must-verify. | No deploy migration step today. |
+| Git `dev` branch / feature branches | Vercel Preview | Shared non-production Neon `dev` branch DB by documented contract; value-free host comparison verified it is isolated from Production. | No deploy migration step. Fixed on this branch by `vercel.json` `buildCommand`. |
+| Vercel Development env | `vercel env pull` / local Vercel development scope | Shared non-production Neon `dev` branch DB by documented contract; value-free host comparison verified it matches Preview and is isolated from Production. | No deploy migration step. Fixed on this branch by `vercel.json` `buildCommand` for Vercel builds. |
+| Git `main` branch | Vercel Production | Neon `main` branch DB by documented contract; value-free host comparison verified it is isolated from Preview/Development. | No deploy migration step. Fixed on this branch by `vercel.json` `buildCommand` once merged to `main`. |
 
 `main` is protected by an active GitHub `main-protection` ruleset requiring PRs and the `test` status check before merge. The local `origin/dev` and `origin/main` refs currently have identical trees, although `main` has merge commits on top of `dev`. Any fix must preserve this protected-main flow and must not rely on bypassing it.
 
@@ -52,8 +52,8 @@ Disambiguate the three "dev" surfaces:
 
 - **CI migrates only a throwaway DB.** `.github/workflows/ci.yml:105-106` runs `pnpm db:migrate` with the CI-local `DATABASE_URL` from `.github/workflows/ci.yml:35-37`. It proves the migration files apply; it never touches Vercel Preview, Vercel Development, or Vercel Production databases.
 - **The GitHub `deploy` job is a no-op placeholder.** `.github/workflows/ci.yml:218-224` only emits a message that production deployment is handled by Vercel Git integration. It cannot block Vercel's git-triggered deployment with a migration.
-- **Vercel currently builds only the app.** The Vercel project has no Build Command override, no Install Command override, and no Ignored Build Step. With `package.json:9-10`, the build is `next build`; with `package.json:24-25`, `pnpm db:migrate` remains a separate manual script.
-- **The docs rely on human memory.** The current deployment runbook correctly describes manual migration, but the merge/deploy path does not enforce it.
+- **Vercel previously built only the app.** Before this branch's `vercel.json` fix, the Vercel project had no dashboard Build Command override, no Install Command override, and no Ignored Build Step. With `package.json:9-10`, the build was `next build`; with `package.json:24-25`, `pnpm db:migrate` remained a separate manual script.
+- **The pre-fix docs relied on human memory.** The old deployment runbook correctly described manual migration, but the merge/deploy path did not enforce it.
 
 ## Fix (Implemented)
 
