@@ -3,9 +3,9 @@
 **Priority:** P3
 **Created:** 2026-05-08
 **Source:** User-reported concern that question fonts may have been oversized during earlier question-content/frontmatter work; live visual audit of Practice starter, Tutor, Exam, and Quick Practice on 2026-05-08; computed browser typography metrics saved with screenshots.
-**Related:** [Typography Policy](../frontend/typography-policy.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md), [Practice Page Docs](../frontend/pages/practice.md), [DEBT-378](../_archive/debt/debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-380](../_archive/debt/debt-380-exam-footer-cluster-previous-and-primary-cta-mirror-tutor.md)
+**Related:** [Typography Policy](../../frontend/typography-policy.md), [Frontend Standards](../../frontend/standards.md), [Pattern Registry](../../frontend/pattern-registry.md), [Practice Page Docs](../../frontend/pages/practice.md), [DEBT-378](./debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-380](./debt-380-exam-footer-cluster-previous-and-primary-cta-mirror-tutor.md)
 
-**Status:** Active
+**Status:** **Resolved by decision — archived 2026-06-15.** Docs-only; **no code change needed.** A live Playwright + computed-CSS audit across Quick Practice, Tutor, and Exam confirmed question content is already unified at the Typography Policy Medium tier (stems/choices/feedback `16px / 24px`). The verdict — *do not globally shrink question text* — stands as the SSOT and required no production change. The optional future path below (a user-selectable Markdown/content-size preference, default Medium = today's look) is **not authorized by this doc** and is captured only as a ready-made plan if user demand ever materializes; pursue it by filing a fresh request, not by reopening this audit. Same resolve-by-decision pattern as DEBT-420.
 
 ---
 
@@ -32,7 +32,7 @@ The right future path, if the font still feels large to some users, is a **user-
 
 Screenshots and computed CSS metrics were captured through the real Playwright E2E auth/setup path at `1920x1080`, dark theme.
 
-The original capture bundle was generated outside the repository as `practice-typography-audit-screenshots-2026-05-08T15-19-42-495Z`. If this evidence needs to become portable, save a sanitized copy under `docs/debt/artifacts/debt-381/`.
+The original capture bundle was generated outside the repository as `practice-typography-audit-screenshots-2026-05-08T15-19-42-495Z`. If this evidence needs to become portable, save a sanitized copy under `docs/_archive/debt/artifacts/debt-381/`.
 
 Files:
 

@@ -135,8 +135,8 @@ Defense in depth aligned with OWASP Top 10:
 Conservative framework-only caching policy:
 - Static or marketing surfaces may use framework caching
 - User-specific reads stay uncached across requests
-- No explicit `use cache` read path is checked into the app today; targeted
-  invalidation is used selectively where needed
+- Published question/tag repository reads are not cross-request cached today;
+  targeted invalidation is used selectively where needed
 
 ### ADR-011: API Design Principles
 

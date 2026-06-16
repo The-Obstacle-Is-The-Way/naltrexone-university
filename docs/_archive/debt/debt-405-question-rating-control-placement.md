@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-06-04
 **Source:** SPEC-041 question-feedback rating (shipped). Placement flagged in use; iterated twice via Claude in Design (round 1: inset box vs fold-in; round 2: fold-in vs post-action footer).
-**Related:** [DEBT-337](../debt/debt-337-future-feedback-enhancements.md) (sibling feedback/practice polish), [DEBT-381](../debt/debt-381-question-content-typography-audit-and-preference-path.md), [SPEC-041](../specs/spec-041-question-feedback.md), design docs `docs/frontend/standards.md` / `docs/frontend/pattern-registry.md` / `docs/frontend/design-principles.md`.
+**Related:** [DEBT-337](../../debt/debt-337-future-feedback-enhancements.md) (sibling feedback/practice polish), [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md) (resolved/archived), [SPEC-041](../specs/spec-041-question-feedback.md), design docs `docs/frontend/standards.md` / `docs/frontend/pattern-registry.md` / `docs/frontend/design-principles.md`.
 
 **Status:** **Resolved 2026-06-05.** Shipped as PR #402 (squash-merged to `dev` as `045240c4`, then `main` fast-forwarded to dev). See Resolution below.
 

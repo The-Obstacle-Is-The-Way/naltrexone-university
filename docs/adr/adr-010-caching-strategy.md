@@ -27,13 +27,15 @@ We need performance without correctness regressions:
 
 ### Current Runtime Position
 
-- No explicit app-level read caching (`use cache`, `cacheTag`, `unstable_cache`)
-  is checked into the repo today.
+- Cache Components are enabled (`cacheComponents: true`), and explicit
+  app-level `'use cache'` exists for static public marketing/pricing fragments.
+- No published question/tag repository read is cross-request cached with
+  `cacheTag`, `cacheLife`, `revalidateTag`, or `unstable_cache` today.
 - The current codebase uses targeted invalidation only where needed. The active
   example is `revalidatePath(ROUTES.APP_BOOKMARKS)` in
   `app/(app)/app/bookmarks/bookmarks-actions.ts`.
-- This ADR is therefore a conservative policy document: if explicit caching is
-  added later, it must follow the rules below.
+- This ADR is therefore still conservative for user-facing data: future
+  question/tag read caching must follow the rules below.
 
 ### What We Cache
 
@@ -61,7 +63,8 @@ Do not call Next.js cache invalidation from standalone scripts (e.g., `scripts/s
 ### Negative
 
 - Requires discipline to avoid caching user-specific reads
-- Offers fewer performance wins until explicit caching is introduced safely
+- Offers fewer performance wins until explicit content caching is introduced
+  safely
 
 ---
 
