@@ -72,7 +72,7 @@ function parseBoolean(value: string | null, fallback: boolean): boolean {
 function getReconciliationScope(url: URL): 'all' | 'page' {
   const scope = url.searchParams.get('scope');
   if (scope === 'all' || scope === 'page') return scope;
-  if (!scope && url.searchParams.has('offset')) return 'page';
+  if (url.searchParams.has('offset')) return 'page';
   return 'all';
 }
 

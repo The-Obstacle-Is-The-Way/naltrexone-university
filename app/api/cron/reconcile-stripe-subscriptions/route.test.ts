@@ -599,7 +599,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
   it('falls back to safe defaults when query params are malformed', async () => {
     const response = await POST(
       new Request(
-        'http://localhost/api/cron/reconcile-stripe-subscriptions?limit=abc&offset=-1&dryRun=notbool',
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?scope=unknown&limit=abc&offset=-1&dryRun=notbool',
         {
           method: 'POST',
           headers: {
