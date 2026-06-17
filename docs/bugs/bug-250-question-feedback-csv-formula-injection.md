@@ -1,6 +1,6 @@
 # BUG-250: Feedback Comment CSV Export Allows Spreadsheet Formula Injection
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-06-17
 **Confirmed:** 2026-06-17
@@ -94,11 +94,24 @@ Minimal fix:
 
 Do not remove `--include-comments`; the workflow is legitimate. The bug is output encoding for the CSV format.
 
+## Resolution
+
+Implemented in fix commit `Fix BUG-250: neutralize CSV formula injection in feedback export`.
+
+`csvCell` now neutralizes spreadsheet-formula-capable values before CSV delimiter quoting, and the existing `values.map(csvCell)` serialization path applies that protection to every CSV column. The JSON export branch remains unchanged and continues to emit raw comment text.
+
 ## Verification
 
 - [x] Code-level tracer bullet verified on 2026-06-17.
 - [x] Formatter probe confirmed a formula-prefixed comment survives as the first character of the CSV cell.
 - [x] Existing focused audit suite passed: `pnpm test --run components/markdown/markdown.test.tsx src/adapters/controllers/question-feedback-controller.test.ts src/adapters/controllers/question-controller.test.ts src/adapters/controllers/question-view-controller.test.ts src/adapters/controllers/review-controller.test.ts proxy.test.ts app/(marketing)/checkout/success/page.test.ts app/(marketing)/checkout/success/checkout-success-assertions.test.ts app/pricing/subscribe-actions.test.ts app/pricing/manage-billing-action.test.ts app/(app)/app/billing/manage-billing-action.test.ts` (168 tests).
+- [x] Implemented fix in `scripts/export-question-feedback.ts`: CSV cells are neutralized before delimiter quoting; JSON exports are untouched.
+- [x] Added unit coverage in `scripts/export-question-feedback.test.ts` for bare formulas, quoted formulas, leading-whitespace/control bypasses, preservation/idempotency cases, all-column CSV coverage, JSON untouched behavior, and the BUG-250 `=HYPERLINK(...)` repro.
+- [x] `pnpm test --run scripts/export-question-feedback.test.ts` passed (19 tests).
+- [x] `pnpm typecheck` passed.
+- [x] `pnpm lint` passed.
+- [x] `pnpm test --run` passed (350 files, 2859 tests).
+- [x] `pnpm build` passed.
 
 ## Related Clean Surfaces
 

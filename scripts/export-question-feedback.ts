@@ -64,6 +64,9 @@ const DEFAULT_OPTIONS: QuestionFeedbackExportOptions = {
   includeUserId: false,
   includeComments: false,
 };
+const CSV_FORMULA_PREFIXES = new Set(['=', '+', '-', '@']);
+const CSV_LEADING_IGNORED_CHARS = new Set([' ', '\t', '\r', '\n']);
+const CSV_RAW_CONTROL_PREFIXES = new Set(['\t', '\r', '\n']);
 
 const DEFAULT_DEPS: QuestionFeedbackExportDeps<
   ReturnType<typeof postgres>,
@@ -293,8 +296,21 @@ function csvRecordLine(
 
 function csvCell(value: string | null): string {
   if (value === null) return '';
-  if (!/[",\n\r]/.test(value)) return value;
-  return `"${value.replaceAll('"', '""')}"`;
+  const safeValue = neutralizeSpreadsheetFormula(value);
+  if (!/[",\n\r]/.test(safeValue)) return safeValue;
+  return `"${safeValue.replaceAll('"', '""')}"`;
+}
+
+function neutralizeSpreadsheetFormula(value: string): string {
+  if (value.startsWith("'")) return value;
+  if (CSV_RAW_CONTROL_PREFIXES.has(value.charAt(0))) return `'${value}`;
+
+  let index = 0;
+  while (CSV_LEADING_IGNORED_CHARS.has(value.charAt(index))) {
+    index += 1;
+  }
+
+  return CSV_FORMULA_PREFIXES.has(value.charAt(index)) ? `'${value}` : value;
 }
 
 function toIsoString(value: Date | string): string {
