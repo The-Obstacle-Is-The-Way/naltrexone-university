@@ -262,6 +262,33 @@ describe('reconcileAllStripeSubscriptionPages', () => {
     });
   });
 
+  it('stringifies a non-Error later page rejection in the synthetic failure', async () => {
+    const reconcilePage = vi.fn(async ({ offset }) => {
+      if (offset === 10) {
+        throw 'Stripe unavailable';
+      }
+
+      return {
+        scanned: 10,
+        updated: 10,
+        failed: 0,
+        failures: [],
+      };
+    });
+
+    const result = await reconcileAllStripeSubscriptionPages(
+      { limit: 10 },
+      createDeps({ reconcilePage }),
+    );
+
+    expect(result.failures).toEqual([
+      {
+        stripeSubscriptionId: '(page@offset=10)',
+        error: 'Stripe unavailable',
+      },
+    ]);
+  });
+
   it('rethrows when the first page rejects', async () => {
     const logger = new FakeLogger();
     const reconcilePage = vi.fn(async () => {

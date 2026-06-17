@@ -229,6 +229,39 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       expect.any(Object),
     );
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    const allPagesDeps = reconcileAllStripeSubscriptionPages.mock.calls[0]?.[1];
+    if (!allPagesDeps) throw new Error('expected all-pages deps');
+    await allPagesDeps.reconcilePage({ limit: 2, offset: 3, dryRun: false });
+    const pageDeps = reconcileStripeSubscriptions.mock.calls[0]?.[1];
+    if (!pageDeps) throw new Error('expected single-page deps');
+    container.db.query.stripeSubscriptions.findMany.mockResolvedValueOnce([
+      { userId: 'user_1', stripeSubscriptionId: 'sub_1' },
+    ]);
+    await expect(
+      pageDeps.listLocalSubscriptions({ limit: 2, offset: 3 }),
+    ).resolves.toEqual([{ userId: 'user_1', stripeSubscriptionId: 'sub_1' }]);
+    const query =
+      container.db.query.stripeSubscriptions.findMany.mock.calls.at(-1)?.[0];
+    expect(query).toMatchObject({
+      columns: { userId: true, stripeSubscriptionId: true },
+      limit: 2,
+      offset: 3,
+    });
+    expect(
+      query.orderBy(
+        { userId: 'userIdColumn' },
+        { asc: (column: unknown) => ['asc', column] },
+      ),
+    ).toEqual([['asc', 'userIdColumn']]);
+    const stripeCustomers = {};
+    const subscriptions = {};
+    container.createStripeCustomerRepository.mockReturnValueOnce(
+      stripeCustomers,
+    );
+    container.createSubscriptionRepository.mockReturnValueOnce(subscriptions);
+    await expect(
+      pageDeps.transaction(async (tx: unknown) => tx),
+    ).resolves.toEqual({ stripeCustomers, subscriptions });
   });
 
   it('uses all-pages mode when scope=all even if offset is present', async () => {
@@ -243,7 +276,6 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
         },
       ),
     );
-
     expect(response.status).toBe(200);
     expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledWith(
       {
@@ -724,6 +756,9 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
   });
 
   it('drains pending Stripe cancellations through the same authenticated GET run', async () => {
+    container.stripe = {
+      subscriptions: { list: async function* () {}, cancel: vi.fn() },
+    };
     const response = await GET(
       new Request(
         'http://localhost/api/cron/reconcile-stripe-subscriptions?dryRun=false',
@@ -753,5 +788,10 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
         logger: container.logger,
       }),
     );
+    await expect(
+      drainPendingStripeCancellations.mock.calls[0]?.[1].cancelStripeCustomerSubscriptions(
+        'cus_123',
+      ),
+    ).resolves.toBeUndefined();
   });
 });
