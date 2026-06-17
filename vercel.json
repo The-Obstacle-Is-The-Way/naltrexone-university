@@ -3,7 +3,7 @@
   "buildCommand": "pnpm db:migrate && pnpm build",
   "crons": [
     {
-      "path": "/api/cron/reconcile-stripe-subscriptions?dryRun=false",
+      "path": "/api/cron/reconcile-stripe-subscriptions?dryRun=false&scope=all",
       "schedule": "0 8 * * *"
     }
   ]

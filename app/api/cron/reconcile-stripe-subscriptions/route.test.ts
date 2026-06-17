@@ -4,10 +4,12 @@ import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 
 const {
   reconcileStripeSubscriptions,
+  reconcileAllStripeSubscriptionPages,
   drainPendingStripeCancellations,
   createContainer,
 } = vi.hoisted(() => ({
   reconcileStripeSubscriptions: vi.fn(),
+  reconcileAllStripeSubscriptionPages: vi.fn(),
   drainPendingStripeCancellations: vi.fn(),
   createContainer: vi.fn(),
 }));
@@ -24,6 +26,16 @@ vi.mock(
       typeof import('@/src/adapters/jobs/reconcile-stripe-subscriptions')
     >()),
     reconcileStripeSubscriptions,
+  }),
+);
+
+vi.mock(
+  '@/src/adapters/jobs/reconcile-all-stripe-subscription-pages',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('@/src/adapters/jobs/reconcile-all-stripe-subscription-pages')
+    >()),
+    reconcileAllStripeSubscriptionPages,
   }),
 );
 
@@ -113,6 +125,15 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       failed: 0,
       failures: [],
     });
+    reconcileAllStripeSubscriptionPages.mockResolvedValue({
+      scanned: 0,
+      updated: 0,
+      failed: 0,
+      failures: [],
+      pagesScanned: 1,
+      stoppedEarly: false,
+      nextOffset: null,
+    });
     drainPendingStripeCancellations.mockResolvedValue({
       scanned: 0,
       drained: 0,
@@ -125,7 +146,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     createContainer.mockReturnValue(container);
   });
 
-  it('clamps request limit to MAX_LIMIT before calling reconciliation', async () => {
+  it('clamps request limit to MAX_LIMIT before calling all-pages reconciliation', async () => {
     const response = await POST(
       new Request(
         'http://localhost/api/cron/reconcile-stripe-subscriptions?limit=750',
@@ -139,14 +160,126 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledWith(
       {
         limit: RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
-        offset: 0,
         dryRun: true,
+      },
+      expect.objectContaining({
+        logger: container.logger,
+        now: expect.any(Function),
+        reconcilePage: expect.any(Function),
+      }),
+    );
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it('runs all-pages mode by default and surfaces coverage fields in the response', async () => {
+    reconcileAllStripeSubscriptionPages.mockResolvedValueOnce({
+      scanned: 125,
+      updated: 124,
+      failed: 1,
+      failures: [{ stripeSubscriptionId: 'sub_failed', error: 'row failed' }],
+      pagesScanned: 2,
+      stoppedEarly: false,
+      nextOffset: null,
+    });
+    drainPendingStripeCancellations.mockResolvedValueOnce({
+      scanned: 1,
+      drained: 1,
+      failed: 0,
+      failures: [],
+      dryRun: false,
+    });
+
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?dryRun=false',
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      scanned: 125,
+      updated: 124,
+      failed: 1,
+      failures: [{ stripeSubscriptionId: 'sub_failed', error: 'row failed' }],
+      pagesScanned: 2,
+      stoppedEarly: false,
+      nextOffset: null,
+      pendingStripeCancellations: {
+        scanned: 1,
+        drained: 1,
+        failed: 0,
+        failures: [],
+        dryRun: false,
+      },
+    });
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledWith(
+      {
+        limit: 100,
+        dryRun: false,
       },
       expect.any(Object),
     );
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it('uses all-pages mode when scope=all even if offset is present', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?scope=all&limit=12&offset=7&dryRun=false&concurrency=3',
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledWith(
+      {
+        limit: 12,
+        dryRun: false,
+        concurrency: 3,
+      },
+      expect.any(Object),
+    );
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it('uses single-page mode when scope=page is explicit', async () => {
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?scope=page&limit=12&dryRun=false&concurrency=3',
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+      {
+        limit: 12,
+        offset: 0,
+        dryRun: false,
+        concurrency: 3,
+      },
+      expect.any(Object),
+    );
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
   });
 
   it('returns 401 when authorization header is missing even when CRON_SECRET is not configured', async () => {
@@ -161,6 +294,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     expect(container.logger.warn).toHaveBeenCalledWith(
       {
         route: '/api/cron/reconcile-stripe-subscriptions',
@@ -186,6 +320,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     expect(container.logger.warn).not.toHaveBeenCalled();
     expect(container.logger.error).toHaveBeenCalledWith(
       { route: '/api/cron/reconcile-stripe-subscriptions' },
@@ -203,6 +338,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     expect(container.logger.warn).toHaveBeenCalledWith(
       {
         route: '/api/cron/reconcile-stripe-subscriptions',
@@ -225,6 +361,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     expect(container.logger.warn).toHaveBeenCalledWith(
       {
         route: '/api/cron/reconcile-stripe-subscriptions',
@@ -247,6 +384,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     expect(container.logger.warn).toHaveBeenCalledWith(
       {
         route: '/api/cron/reconcile-stripe-subscriptions',
@@ -278,6 +416,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       },
       expect.any(Object),
     );
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
   });
 
   it('parses concurrency query param before reconciliation when provided', async () => {
@@ -303,6 +442,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       },
       expect.any(Object),
     );
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
   });
 
   it('clamps concurrency=0 to 1', async () => {
@@ -317,10 +457,11 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledWith(
       expect.objectContaining({ concurrency: 1 }),
       expect.any(Object),
     );
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
   });
 
   it('falls back concurrency=-1 to default then clamps', async () => {
@@ -335,12 +476,13 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledWith(
       expect.objectContaining({
         concurrency: RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
       }),
       expect.any(Object),
     );
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
   });
 
   it('falls back malformed concurrency to default', async () => {
@@ -355,12 +497,13 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
 
     expect(response.status).toBe(200);
-    expect(reconcileStripeSubscriptions).toHaveBeenCalledWith(
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledWith(
       expect.objectContaining({
         concurrency: RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
       }),
       expect.any(Object),
     );
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
   });
 
   it('returns 429 when rate limited', async () => {
@@ -396,6 +539,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       },
     ]);
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
   });
 
   it('returns 503 when the rate limiter fails', async () => {
@@ -416,6 +560,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       error: 'Rate limiter unavailable',
     });
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     expect(container.logger.error).toHaveBeenCalledTimes(1);
   });
 
@@ -441,10 +586,13 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       },
       expect.any(Object),
     );
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
   });
 
-  it('returns 500 when reconciliation throws', async () => {
-    reconcileStripeSubscriptions.mockRejectedValueOnce(new Error('boom'));
+  it('returns 500 when all-pages reconciliation throws before any page succeeds', async () => {
+    reconcileAllStripeSubscriptionPages.mockRejectedValueOnce(
+      new Error('boom'),
+    );
 
     const response = await POST(
       new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
@@ -458,6 +606,28 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: 'Internal error' });
     expect(container.logger.error).toHaveBeenCalledTimes(1);
+    expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when single-page reconciliation throws', async () => {
+    reconcileStripeSubscriptions.mockRejectedValueOnce(new Error('boom'));
+
+    const response = await POST(
+      new Request(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?offset=0',
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer test-secret',
+          },
+        },
+      ),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: 'Internal error' });
+    expect(container.logger.error).toHaveBeenCalledTimes(1);
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
   });
 });
 
@@ -472,6 +642,15 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
       updated: 0,
       failed: 0,
       failures: [],
+    });
+    reconcileAllStripeSubscriptionPages.mockResolvedValue({
+      scanned: 0,
+      updated: 0,
+      failed: 0,
+      failures: [],
+      pagesScanned: 1,
+      stoppedEarly: false,
+      nextOffset: null,
     });
     drainPendingStripeCancellations.mockResolvedValue({
       scanned: 0,
@@ -495,6 +674,7 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
     expect(response.status).toBe(401);
     expect(container.createRateLimiter).toBeDefined();
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     expect(
       container.db.query.stripeSubscriptions.findMany,
     ).not.toHaveBeenCalled();
@@ -512,6 +692,7 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
 
     expect(response.status).toBe(401);
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     expect(
       container.db.query.stripeSubscriptions.findMany,
     ).not.toHaveBeenCalled();
@@ -539,6 +720,7 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
       },
       expect.any(Object),
     );
+    expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
   });
 
   it('drains pending Stripe cancellations through the same authenticated GET run', async () => {
@@ -555,6 +737,13 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
     );
 
     expect(response.status).toBe(200);
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledWith(
+      {
+        limit: 100,
+        dryRun: false,
+      },
+      expect.any(Object),
+    );
     expect(drainPendingStripeCancellations).toHaveBeenCalledWith(
       expect.objectContaining({
         dryRun: false,

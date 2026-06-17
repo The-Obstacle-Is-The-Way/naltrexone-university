@@ -6,12 +6,14 @@ import {
   drainPendingStripeCancellations,
   PENDING_STRIPE_CANCELLATION_STALE_AFTER_MINUTES,
 } from '@/src/adapters/jobs/drain-pending-stripe-cancellations';
+import { reconcileAllStripeSubscriptionPages } from '@/src/adapters/jobs/reconcile-all-stripe-subscription-pages';
 import {
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_LIMIT,
   RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT,
   reconcileStripeSubscriptions,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
+import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import {
   HTTP_INTERNAL_SERVER_ERROR,
   HTTP_OK,
@@ -65,6 +67,13 @@ function parseBoolean(value: string | null, fallback: boolean): boolean {
   if (normalized === 'true' || normalized === '1') return true;
   if (normalized === 'false' || normalized === '0') return false;
   return fallback;
+}
+
+function getReconciliationScope(url: URL): 'all' | 'page' {
+  const scope = url.searchParams.get('scope');
+  if (scope === 'all' || scope === 'page') return scope;
+  if (!scope && url.searchParams.has('offset')) return 'page';
+  return 'all';
 }
 
 async function handleCronRequest(req: Request): Promise<NextResponse> {
@@ -169,49 +178,66 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
           ),
         )
       : null;
+  const reconciliationScope = getReconciliationScope(url);
 
-  let result: Awaited<ReturnType<typeof reconcileStripeSubscriptions>>;
+  let result:
+    | Awaited<ReturnType<typeof reconcileStripeSubscriptions>>
+    | Awaited<ReturnType<typeof reconcileAllStripeSubscriptionPages>>;
   let pendingStripeCancellations: Awaited<
     ReturnType<typeof drainPendingStripeCancellations>
   >;
   try {
-    result = await reconcileStripeSubscriptions(
+    const reconciliationDeps: ReconcileStripeSubscriptionsDeps = {
+      stripe: container.stripe,
+      priceIds: {
+        monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
+        annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
+      },
+      logger: container.logger,
+      webhookE2EOwner: container.env.STRIPE_WEBHOOK_E2E_OWNER,
+      listLocalSubscriptions: async ({ limit, offset }) => {
+        const rows = await container.db.query.stripeSubscriptions.findMany({
+          columns: {
+            userId: true,
+            stripeSubscriptionId: true,
+          },
+          orderBy: (subs, { asc }) => [asc(subs.userId)],
+          limit,
+          offset,
+        });
+
+        return rows.map((row) => ({
+          userId: row.userId,
+          stripeSubscriptionId: row.stripeSubscriptionId,
+        }));
+      },
+      transaction: async (fn) =>
+        container.db.transaction(async (tx) =>
+          fn({
+            stripeCustomers: container.createStripeCustomerRepository(tx),
+            subscriptions: container.createSubscriptionRepository(tx),
+          }),
+        ),
+    };
+    const singlePageInput =
       concurrency === null
         ? { limit, offset, dryRun }
-        : { limit, offset, dryRun, concurrency },
-      {
-        stripe: container.stripe,
-        priceIds: {
-          monthly: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
-          annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
-        },
-        logger: container.logger,
-        webhookE2EOwner: container.env.STRIPE_WEBHOOK_E2E_OWNER,
-        listLocalSubscriptions: async ({ limit, offset }) => {
-          const rows = await container.db.query.stripeSubscriptions.findMany({
-            columns: {
-              userId: true,
-              stripeSubscriptionId: true,
-            },
-            orderBy: (subs, { asc }) => [asc(subs.userId)],
-            limit,
-            offset,
-          });
+        : { limit, offset, dryRun, concurrency };
+    const allPagesInput =
+      concurrency === null ? { limit, dryRun } : { limit, dryRun, concurrency };
 
-          return rows.map((row) => ({
-            userId: row.userId,
-            stripeSubscriptionId: row.stripeSubscriptionId,
-          }));
-        },
-        transaction: async (fn) =>
-          container.db.transaction(async (tx) =>
-            fn({
-              stripeCustomers: container.createStripeCustomerRepository(tx),
-              subscriptions: container.createSubscriptionRepository(tx),
-            }),
-          ),
-      },
-    );
+    result =
+      reconciliationScope === 'page'
+        ? await reconcileStripeSubscriptions(
+            singlePageInput,
+            reconciliationDeps,
+          )
+        : await reconcileAllStripeSubscriptionPages(allPagesInput, {
+            reconcilePage: (pageInput) =>
+              reconcileStripeSubscriptions(pageInput, reconciliationDeps),
+            logger: container.logger,
+            now: Date.now,
+          });
     pendingStripeCancellations = await drainPendingStripeCancellations(
       {
         olderThan: pendingCancellationOlderThan,
