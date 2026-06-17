@@ -39,8 +39,8 @@ This is not a web XSS bug and does not affect the default export. It requires an
 
 The export script makes comment export an explicit supported mode:
 
-- [`package.json`](../../package.json#L28): `"export:feedback": "tsx scripts/export-question-feedback.ts"`
-- [`docs/dev/question-feedback-analytics.md`](../dev/question-feedback-analytics.md#L17): `pnpm --silent export:feedback -- --include-comments > question-feedback-comments.csv`
+- [`package.json`](../../../package.json#L28): `"export:feedback": "tsx scripts/export-question-feedback.ts"`
+- [`docs/dev/question-feedback-analytics.md`](../../dev/question-feedback-analytics.md#L17): `pnpm --silent export:feedback -- --include-comments > question-feedback-comments.csv`
 
 The script copies the persisted subscriber comment into the record when `--include-comments` is set:
 
@@ -50,7 +50,7 @@ if (options.includeComments) {
 }
 ```
 
-Location: [`scripts/export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L232)
+Location: [`scripts/export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L232)
 
 The CSV writer only escapes CSV delimiters, not spreadsheet formula prefixes:
 
@@ -62,7 +62,7 @@ function csvCell(value: string | null): string {
 }
 ```
 
-Location: [`scripts/export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L294)
+Location: [`scripts/export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L294)
 
 Because the payload contains double quotes, `csvCell` wraps and doubles quotes. After CSV parsing, the cell value still begins with `=`, so spreadsheet software treats it as a formula rather than inert text.
 
@@ -70,9 +70,9 @@ The vector does not even require the quoting path: `csvCell`'s guard only matche
 
 The comment input is bounded but intentionally free text:
 
-- Client textarea: [`components/question/question-report-dialog.tsx`](../../components/question/question-report-dialog.tsx#L145) sets `maxLength={MAX_QUESTION_FEEDBACK_COMMENT_LENGTH}`.
-- Server action: [`src/adapters/controllers/question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L40) trims and caps comments with `.max(MAX_QUESTION_FEEDBACK_COMMENT_LENGTH)`.
-- Database: [`db/schema.ts`](../../db/schema.ts#L603) enforces `char_length(comment) <= 2000`.
+- Client textarea: [`components/question/question-report-dialog.tsx`](../../../components/question/question-report-dialog.tsx#L145) sets `maxLength={MAX_QUESTION_FEEDBACK_COMMENT_LENGTH}`.
+- Server action: [`src/adapters/controllers/question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L40) trims and caps comments with `.max(MAX_QUESTION_FEEDBACK_COMMENT_LENGTH)`.
+- Database: [`db/schema.ts`](../../../db/schema.ts#L603) enforces `char_length(comment) <= 2000`.
 
 Those bounds prevent storage DoS, but they do not change the first character of the exported CSV cell.
 
@@ -115,5 +115,5 @@ Implemented in fix commit `Fix BUG-250: neutralize CSV formula injection in feed
 
 ## Related Clean Surfaces
 
-- Markdown rendering remains clean: [`components/markdown/markdown.tsx`](../../components/markdown/markdown.tsx#L71) uses `ReactMarkdown` with `rehypeSanitize` and `skipHtml`.
+- Markdown rendering remains clean: [`components/markdown/markdown.tsx`](../../../components/markdown/markdown.tsx#L71) uses `ReactMarkdown` with `rehypeSanitize` and `skipHtml`.
 - Stored report comments are not rendered in the first-party web UI; they are submitted, stored, and exported for editorial analysis.

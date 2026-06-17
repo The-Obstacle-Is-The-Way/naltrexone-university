@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-17 (BUG-250 filed — feedback comment CSV export allows spreadsheet formula injection when an operator opts into `--include-comments` and opens the CSV in spreadsheet software. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
+**Last Updated:** 2026-06-17 (BUG-250 resolved + archived — `csvCell` in the feedback export now neutralizes spreadsheet-formula-capable cells before CSV quoting; fix `b98306a6` + doc `523ae02d` on `dev`, dev→main promotion PR open for CodeRabbit review. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
 
 ---
 
@@ -14,6 +14,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 3. **Knowledge Base** — Help future developers understand past issues
 
 **Next Bug ID:** BUG-251
+
+**Latest archival (2026-06-17) — BUG-250 resolved (feedback CSV formula injection):**
+- BUG-250 (P3) verified fixed and archived to `docs/_archive/bugs/`. `csvCell` in `scripts/export-question-feedback.ts` now prefixes an apostrophe to spreadsheet-formula-capable cells (leading `=`/`+`/`-`/`@`, a raw leading tab/CR/LF, and leading-whitespace bypass forms) before delimiter quoting, and the existing `values.map(csvCell)` path applies it to every CSV column; the `--json` export path is untouched and still emits raw comment text. Fixed via TDD directly on `dev` (no feature branch): fix `b98306a6`, bug doc `523ae02d`. Full local gate green (typecheck, lint, unit 2859, build) and focused suite 19/19; owner-graded A. Promotion to `main` is via the dev→main promotion PR for this change (CodeRabbit review pending; not yet merged). This was the only active bug; **no active bugs remain.**
 
 **Latest archival (2026-06-16) — BUG-241 resolved (deploy migration enforcement):**
 - BUG-241 (P2) verified fixed and archived to `docs/_archive/bugs/`. The fix adds `"buildCommand": "pnpm db:migrate && pnpm build"` to `vercel.json`, so every git-triggered Vercel deploy applies checked-in Drizzle migrations to its environment-scoped Neon branch before serving, failing the build closed on migration error. Merged via PR #453 (squash `ff46fbda` → `dev`) and promoted to `main` via PR #454 (merge `daed8479`); `main` and `dev` trees are identical. Verified live on real Vercel builds: the Preview deploy migrated Neon `dev` and the Production deploy migrated Neon `main`, each logging `[✓] migrations applied successfully!` before `next build`. Neon branch isolation (Production vs shared Preview/Development) was confirmed by a value-free host comparison. `pnpm db:seed` (content) remains a documented manual step. This was the last active bug; **no active bugs remain.**
