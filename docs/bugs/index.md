@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-17 (BUG-250 fixed on `dev` and pending `main` promotion verification — `csvCell` in the feedback export now neutralizes spreadsheet-formula-capable cells before CSV quoting; fix `b98306a6`, dev→main promotion PR #460 open. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
+**Last Updated:** 2026-06-18 (BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
 
 ---
 
@@ -15,8 +15,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-251
 
-**Latest active bug update (2026-06-17) — BUG-250 fixed on `dev`, pending promotion verification:**
-- BUG-250 (P3) is fixed on `dev` but remains active until PR #460 promotes the fix to `main` and post-merge verification is complete. `csvCell` in `scripts/export-question-feedback.ts` now prefixes an apostrophe to spreadsheet-formula-capable cells (leading `=`/`+`/`-`/`@`, a raw leading tab/CR/LF, and leading-whitespace bypass forms) before delimiter quoting, and the existing `values.map(csvCell)` path applies it to every CSV column; the `--json` export path is untouched and still emits raw comment text. Fixed via TDD directly on `dev` (no feature branch): fix `b98306a6`. Full local gate green (typecheck, lint, unit 2859, build) and focused suite 19/19; owner-graded A. BUG-250 is the only active bug.
+**Latest archival (2026-06-18) — BUG-250 resolved (feedback CSV formula injection):**
+- BUG-250 (P3) verified fixed and archived to `docs/_archive/bugs/`. `csvCell` in `scripts/export-question-feedback.ts` now prefixes an apostrophe to spreadsheet-formula-capable cells (leading `=`/`+`/`-`/`@`, a raw leading tab/CR/LF, and leading-whitespace bypass forms) before delimiter quoting, and the existing `values.map(csvCell)` path applies it to every CSV column; the `--json` export path is untouched and still emits raw comment text. Fixed via TDD directly on `dev` (no feature branch): fix `b98306a6`, doc `523ae02d`. Full local gate green (typecheck, lint, unit 2859, build) and focused suite 19/19; owner-graded A. Promoted to `main` via PR #460 (merge `d76a3516`); production Vercel deploy for `d76a3516` verified READY; `main` and `dev` trees identical. This was the only active bug; **no active bugs remain.**
 
 **Latest archival (2026-06-16) — BUG-241 resolved (deploy migration enforcement):**
 - BUG-241 (P2) verified fixed and archived to `docs/_archive/bugs/`. The fix adds `"buildCommand": "pnpm db:migrate && pnpm build"` to `vercel.json`, so every git-triggered Vercel deploy applies checked-in Drizzle migrations to its environment-scoped Neon branch before serving, failing the build closed on migration error. Merged via PR #453 (squash `ff46fbda` → `dev`) and promoted to `main` via PR #454 (merge `daed8479`); `main` and `dev` trees are identical. Verified live on real Vercel builds: the Preview deploy migrated Neon `dev` and the Production deploy migrated Neon `main`, each logging `[✓] migrations applied successfully!` before `next build`. Neon branch isolation (Production vs shared Preview/Development) was confirmed by a value-free host comparison. `pnpm db:seed` (content) remains a documented manual step. This was the last active bug; **no active bugs remain.**
