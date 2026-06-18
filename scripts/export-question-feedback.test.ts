@@ -72,6 +72,147 @@ describe('formatQuestionFeedbackExport', () => {
     );
   });
 
+  it('neutralizes bare spreadsheet formulas in CSV comments', () => {
+    const csv = formatQuestionFeedbackExport(
+      ['=1+1', '+1+1', '-2+3', '@SUM(A1)'].map((comment, index) =>
+        rowWithComment(comment, { id: `feedback-formula-${index + 1}` }),
+      ),
+      {
+        format: 'csv',
+        includeUserId: false,
+        includeComments: true,
+      },
+    );
+
+    expect(csv).toContain(",true,'=1+1\n");
+    expect(csv).toContain(",true,'+1+1\n");
+    expect(csv).toContain(",true,'-2+3\n");
+    expect(csv).toContain(",true,'@SUM(A1)\n");
+  });
+
+  it('neutralizes quoted spreadsheet formulas before CSV delimiter quoting', () => {
+    const csv = formatQuestionFeedbackExport(
+      [rowWithComment('=HYPERLINK("https://example.invalid","c")')],
+      {
+        format: 'csv',
+        includeUserId: false,
+        includeComments: true,
+      },
+    );
+
+    expect(csv).toContain(
+      `,true,"'=HYPERLINK(""https://example.invalid"",""c"")"\n`,
+    );
+  });
+
+  it('neutralizes leading-whitespace and control-character formula bypasses in CSV comments', () => {
+    const cases = [
+      { comment: ' =1+1', expected: ",true,' =1+1\n" },
+      { comment: '\t=1+1', expected: ",true,'\t=1+1\n" },
+      { comment: '\r=1', expected: `,true,"'\r=1"\n` },
+      { comment: '\n=1', expected: `,true,"'\n=1"\n` },
+    ];
+
+    for (const { comment, expected } of cases) {
+      const csv = formatQuestionFeedbackExport([rowWithComment(comment)], {
+        format: 'csv',
+        includeUserId: false,
+        includeComments: true,
+      });
+
+      expect(csv).toContain(expected);
+    }
+  });
+
+  it('preserves non-formula CSV cells and existing delimiter quoting', () => {
+    const csv = formatQuestionFeedbackExport(
+      [
+        rowWithComment('normal comment', {
+          id: '11111111-1111-4111-8111-111111111111',
+          questionId: '33333333-3333-4333-8333-333333333333',
+          attemptId: '44444444-4444-4444-8444-444444444444',
+          createdAt: '2026-06-17T12:00:00.000Z',
+        }),
+        rowWithComment('Contains comma, "quote", and newline\ntext', {
+          id: '22222222-2222-4222-8222-222222222222',
+          questionId: '33333333-3333-4333-8333-333333333333',
+          attemptId: '44444444-4444-4444-8444-444444444444',
+          createdAt: '2026-06-17T12:00:00.000Z',
+        }),
+        rowWithComment("'=already-text", {
+          id: '33333333-3333-4333-8333-333333333333',
+          questionId: '33333333-3333-4333-8333-333333333333',
+          attemptId: '44444444-4444-4444-8444-444444444444',
+          createdAt: '2026-06-17T12:00:00.000Z',
+        }),
+        rowWithComment('', {
+          id: '44444444-4444-4444-8444-444444444444',
+          questionId: '33333333-3333-4333-8333-333333333333',
+          attemptId: '44444444-4444-4444-8444-444444444444',
+          createdAt: '2026-06-17T12:00:00.000Z',
+        }),
+        rowWithComment(null, {
+          id: '55555555-5555-4555-8555-555555555555',
+          questionId: '33333333-3333-4333-8333-333333333333',
+          attemptId: '44444444-4444-4444-8444-444444444444',
+          createdAt: '2026-06-17T12:00:00.000Z',
+        }),
+      ],
+      {
+        format: 'csv',
+        includeUserId: false,
+        includeComments: true,
+      },
+    );
+
+    expect(csv).toBe(
+      [
+        'feedback_id,question_id,question_slug,attempt_id,practice_session_id,kind,rating,category,created_at,user_id,has_comment,comment',
+        '11111111-1111-4111-8111-111111111111,33333333-3333-4333-8333-333333333333,question-slug-1,44444444-4444-4444-8444-444444444444,,report,,ambiguous_wording,2026-06-17T12:00:00.000Z,[redacted],true,normal comment',
+        '22222222-2222-4222-8222-222222222222,33333333-3333-4333-8333-333333333333,question-slug-1,44444444-4444-4444-8444-444444444444,,report,,ambiguous_wording,2026-06-17T12:00:00.000Z,[redacted],true,"Contains comma, ""quote"", and newline\ntext"',
+        "33333333-3333-4333-8333-333333333333,33333333-3333-4333-8333-333333333333,question-slug-1,44444444-4444-4444-8444-444444444444,,report,,ambiguous_wording,2026-06-17T12:00:00.000Z,[redacted],true,'=already-text",
+        '44444444-4444-4444-8444-444444444444,33333333-3333-4333-8333-333333333333,question-slug-1,44444444-4444-4444-8444-444444444444,,report,,ambiguous_wording,2026-06-17T12:00:00.000Z,[redacted],false,',
+        '55555555-5555-4555-8555-555555555555,33333333-3333-4333-8333-333333333333,question-slug-1,44444444-4444-4444-8444-444444444444,,report,,ambiguous_wording,2026-06-17T12:00:00.000Z,[redacted],false,',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('neutralizes formula-capable values in every CSV column', () => {
+    const csv = formatQuestionFeedbackExport(
+      [
+        rowWithComment('normal comment', {
+          questionSlug: '=formula-slug',
+          userId: '+spreadsheet-user',
+        }),
+      ],
+      {
+        format: 'csv',
+        includeUserId: true,
+        includeComments: true,
+      },
+    );
+
+    expect(csv).toContain(",'=formula-slug,");
+    expect(csv).toContain(",'+spreadsheet-user,");
+  });
+
+  it('keeps formula-prefixed comments raw in JSON exports', () => {
+    const json = formatQuestionFeedbackExport([rowWithComment('=1+1')], {
+      format: 'json',
+      includeUserId: false,
+      includeComments: true,
+    });
+
+    expect(JSON.parse(json)).toEqual([
+      expect.objectContaining({
+        comment: '=1+1',
+      }),
+    ]);
+    expect(json).toContain('"comment": "=1+1"');
+    expect(json).not.toContain("'=1+1");
+  });
+
   it('formats JSON with ISO timestamps and omits comment bodies by default', () => {
     const json = formatQuestionFeedbackExport([BASE_ROW], {
       format: 'json',
@@ -96,6 +237,17 @@ describe('formatQuestionFeedbackExport', () => {
     ]);
   });
 });
+
+function rowWithComment(
+  comment: string | null,
+  overrides: Partial<QuestionFeedbackExportRow> = {},
+): QuestionFeedbackExportRow {
+  return {
+    ...BASE_ROW,
+    comment,
+    ...overrides,
+  };
+}
 
 describe('parseQuestionFeedbackExportArgs', () => {
   it('defaults to CSV with privacy-preserving output', () => {
