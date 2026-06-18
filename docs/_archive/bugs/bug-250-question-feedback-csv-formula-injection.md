@@ -1,11 +1,12 @@
 # BUG-250: Feedback Comment CSV Export Allows Spreadsheet Formula Injection
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-06-17
 **Confirmed:** 2026-06-17
+**Resolved:** 2026-06-18
 **Component:** Question Feedback / Ops Export / Output Encoding
-**Resolution State:** Fixed on `dev` in commit `b98306a6`; pending PR #460 promotion to `main`, post-merge verification, and archival.
+**Resolution State:** Fixed on `dev` in commit `b98306a6`, promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY, and archived.
 
 ---
 
@@ -40,8 +41,8 @@ This is not a web XSS bug and does not affect the default export. It requires an
 
 The export script makes comment export an explicit supported mode:
 
-- [`package.json`](../../package.json#L28): `"export:feedback": "tsx scripts/export-question-feedback.ts"`
-- [`docs/dev/question-feedback-analytics.md`](../dev/question-feedback-analytics.md#L17): `pnpm --silent export:feedback -- --include-comments > question-feedback-comments.csv`
+- [`package.json`](../../../package.json#L28): `"export:feedback": "tsx scripts/export-question-feedback.ts"`
+- [`docs/dev/question-feedback-analytics.md`](../../dev/question-feedback-analytics.md#L17): `pnpm --silent export:feedback -- --include-comments > question-feedback-comments.csv`
 
 The script copies the persisted subscriber comment into the record when `--include-comments` is set:
 
@@ -51,7 +52,7 @@ if (options.includeComments) {
 }
 ```
 
-Location: [`scripts/export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L235)
+Location: [`scripts/export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L235)
 
 Before the `b98306a6` fix, the CSV writer only escaped CSV delimiters, not spreadsheet formula prefixes:
 
@@ -63,7 +64,7 @@ function csvCell(value: string | null): string {
 }
 ```
 
-The current `dev` implementation fixes the same [`csvCell` boundary](../../scripts/export-question-feedback.ts#L297) by neutralizing before delimiter quoting.
+The current `dev` implementation fixes the same [`csvCell` boundary](../../../scripts/export-question-feedback.ts#L297) by neutralizing before delimiter quoting.
 
 In the vulnerable version, because the payload contained double quotes, `csvCell` wrapped and doubled quotes. After CSV parsing, the cell value still began with `=`, so spreadsheet software treated it as a formula rather than inert text.
 
@@ -71,9 +72,9 @@ The vector did not even require the quoting path: `csvCell`'s guard only matched
 
 The comment input is bounded but intentionally free text:
 
-- Client textarea: [`components/question/question-report-dialog.tsx`](../../components/question/question-report-dialog.tsx#L145) sets `maxLength={MAX_QUESTION_FEEDBACK_COMMENT_LENGTH}`.
-- Server action: [`src/adapters/controllers/question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L40) trims and caps comments with `.max(MAX_QUESTION_FEEDBACK_COMMENT_LENGTH)`.
-- Database: [`db/schema.ts`](../../db/schema.ts#L603) enforces `char_length(comment) <= 2000`.
+- Client textarea: [`components/question/question-report-dialog.tsx`](../../../components/question/question-report-dialog.tsx#L145) sets `maxLength={MAX_QUESTION_FEEDBACK_COMMENT_LENGTH}`.
+- Server action: [`src/adapters/controllers/question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L40) trims and caps comments with `.max(MAX_QUESTION_FEEDBACK_COMMENT_LENGTH)`.
+- Database: [`db/schema.ts`](../../../db/schema.ts#L603) enforces `char_length(comment) <= 2000`.
 
 Those bounds prevent storage DoS, but they do not neutralize formula-capable text at input or storage time.
 
@@ -95,9 +96,9 @@ Minimal fix:
 
 Do not remove `--include-comments`; the workflow is legitimate. The bug is output encoding for the CSV format.
 
-## Implementation State
+## Resolution
 
-Implemented on `dev` in commit `b98306a6` (`Fix BUG-250: neutralize CSV formula injection in feedback export`).
+Fixed on `dev` in commit `b98306a6` (`Fix BUG-250: neutralize CSV formula injection in feedback export`), promoted to `main` via PR #460 (merge `d76a3516`), and verified live (production Vercel deploy READY).
 
 `csvCell` now neutralizes spreadsheet-formula-capable values before CSV delimiter quoting, and the existing `values.map(csvCell)` serialization path applies that protection to every CSV column. The JSON export branch remains unchanged and continues to emit raw comment text.
 
@@ -113,11 +114,11 @@ Implemented on `dev` in commit `b98306a6` (`Fix BUG-250: neutralize CSV formula 
 - [x] `pnpm lint` passed.
 - [x] `pnpm test --run` passed (350 files, 2859 tests).
 - [x] `pnpm build` passed.
-- [ ] PR #460 promoted the fix to `main`.
-- [ ] Post-merge verification completed.
-- [ ] Archived to `docs/_archive/bugs/` after verification.
+- [x] PR #460 promoted the fix to `main` (merge `d76a3516`).
+- [x] Post-merge verification completed — production Vercel deploy for `d76a3516` reached READY.
+- [x] Archived to `docs/_archive/bugs/`.
 
 ## Related Clean Surfaces
 
-- Markdown rendering remains clean: [`components/markdown/markdown.tsx`](../../components/markdown/markdown.tsx#L71) uses `ReactMarkdown` with `rehypeSanitize` and `skipHtml`.
+- Markdown rendering remains clean: [`components/markdown/markdown.tsx`](../../../components/markdown/markdown.tsx#L71) uses `ReactMarkdown` with `rehypeSanitize` and `skipHtml`.
 - Stored report comments are not rendered in the first-party web UI; they are submitted, stored, and exported for editorial analysis.
