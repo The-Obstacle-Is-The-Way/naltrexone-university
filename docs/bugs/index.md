@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-18 (BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
+**Last Updated:** 2026-06-18 (Manual practice/quiz engine correctness sweep filed BUG-251..BUG-252. Prior: BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
 
 ---
 
@@ -13,7 +13,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-251
+**Next Bug ID:** BUG-253
+
+**Latest manual report (2026-06-18) — Practice/quiz engine correctness sweep:**
+- BUG-251 (P2) filed: active exam abandon calls generic `endPracticeSession`, marks the exam completed without final attempts, and persists a discard action as a misleading reviewable session.
+- BUG-252 (P3) filed: unanswered exam-question elapsed time is tracked only in browser state and is not persisted, so final omitted attempts can record `timeSpentSeconds = 0`.
 
 **Latest archival (2026-06-18) — BUG-250 resolved (feedback CSV formula injection):**
 - BUG-250 (P3) verified fixed and archived to `docs/_archive/bugs/`. `csvCell` in `scripts/export-question-feedback.ts` now prefixes an apostrophe to spreadsheet-formula-capable cells (leading `=`/`+`/`-`/`@`, a raw leading tab/CR/LF, and leading-whitespace bypass forms) before delimiter quoting, and the existing `values.map(csvCell)` path applies it to every CSV column; the `--json` export path is untouched and still emits raw comment text. Fixed via TDD directly on `dev` (no feature branch): fix `b98306a6`, doc `523ae02d`. Full local gate green (typecheck, lint, unit 2859, build) and focused suite 19/19; owner-graded A. Promoted to `main` via PR #460 (merge `d76a3516`); production Vercel deploy for `d76a3516` verified READY; `main` and `dev` trees identical. This was the only active bug; **no active bugs remain.**
@@ -159,6 +163,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Filed |
 |----|-------|----------|-------|
+| [BUG-251](./bug-251-active-exam-abandon-bypasses-finalization.md) | Active Exam Abandon Completes Without Finalization | P2 | 2026-06-18 |
+| [BUG-252](./bug-252-unanswered-exam-time-not-persisted.md) | Unanswered Exam Question Time Is Not Persisted Before Finalization | P3 | 2026-06-18 |
 | [BUG-250](./bug-250-question-feedback-csv-formula-injection.md) | Feedback Comment CSV Export Allows Spreadsheet Formula Injection | P3 | 2026-06-17 |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
