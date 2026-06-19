@@ -60,11 +60,21 @@ This is a specific-flow lifecycle bug. A subscriber can turn an in-progress exam
 
 ## Proposed Fix
 
-Make generic `endPracticeSession` tutor-only for active sessions. If the loaded session is `mode === 'exam'` and `endedAt === null`, reject with a validation/conflict error and require `FinalizeExamAnswersUseCase` as the only path that can complete a reviewable exam.
+**Decision (2026-06-18, owner-approved): exam "Abandon" means TRUE DISCARD by deletion.**
 
-For the Practice page abandon UX, add a separate explicit exam-abandon action that discards or marks the incomplete exam as abandoned in a non-reviewable state. It must not set `endedAt` in a way that makes completed-session review readers reveal feedback. If the product wants "abandon" to mean "submit what I have," change the UI copy and route it through `finalizeExamAnswers`; do not silently finalize under discard wording.
+"Abandon" on an in-progress exam means *discard it as if it never happened* — matching the dialog copy ("This will discard the in-progress session and you will need to start over"). The owner confirmed there is **no need to retain or measure exam abandonment**, so the abandoned exam session is **hard-deleted**, not tombstoned. Deletion is chosen because it adds **no new lifecycle state** — and "a reader forgot to exclude a session state" is exactly this bug's failure mode, so introducing an `abandoned` state would re-create the bug class elsewhere. The discarded data is uncommitted exam drafts (an active exam has zero finalized attempts) — the lowest-value data in the system. If abandonment analytics are ever needed, a retain-and-hide model can be added then.
 
-Rejected alternative: making `endPracticeSession` automatically call `finalizeExamAnswers` for exams. The UI says the action discards the in-progress session and starts over, so silently submitting would surprise users and still leave a dangerous generic action boundary.
+Implementation (exam-specific):
+
+1. Add `DiscardPracticeSessionUseCase` + a `discardPracticeSession` server action that **deletes** the caller's incomplete session: `DELETE WHERE id = ? AND user_id = ? AND ended_at IS NULL`. Idempotent — a missing/already-discarded session resolves success (the abandon UI passes an idempotency key and may retry). Deletion frees the `PRACTICE_SESSIONS_USER_INCOMPLETE_UQ` partial unique index so the user can start a new session immediately.
+2. Guard `EndPracticeSessionUseCase` (defense in depth): reject `mode === 'exam' && endedAt === null` with `VALIDATION_ERROR`, so no caller can complete an active exam through the generic end path.
+3. Route the Practice-hub abandon to the new discard action for **exam** sessions. **Tutor** abandon is unchanged: tutor sessions accrue real graded attempts as they are answered, so `end()` legitimately completes them, and tutor mode has no answer secrecy.
+
+Rejected alternatives:
+
+- **Reject-only guard (no discard action):** would strand the user behind the one-incomplete-session constraint — they could neither end the exam nor start a new one. Kept only as defense-in-depth *alongside* the discard action, never alone.
+- **Auto-finalize on abandon (route to `finalizeExamAnswers`):** silently submits and grades drafts the user chose to throw away, contradicting the "discard" copy. If the product ever wants abandon-means-submit, re-label the dialog first; do not finalize under discard wording.
+- **Soft-delete / `abandoned_at` tombstone:** preserves an abandonment signal the owner does not want, and adds an `abandoned` state every lifecycle reader (history, completed-feedback, incomplete, stats) must remember to exclude — re-creating this bug's class. Over-engineered for the present need.
 
 ## Failing Test Sketch
 
