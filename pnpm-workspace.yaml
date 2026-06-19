@@ -1,11 +1,25 @@
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true # v11-only: fail when no version satisfies the 7-day age threshold.
 minimumReleaseAgeIgnoreMissingTime: false # v11-only: fail when registry metadata lacks package publish time.
+minimumReleaseAgeExclude:
+  - undici@7.28.0 # Security: dev-only undici patch (6 GHSAs) published 2026-06-15, 4 days old at fix time. Exact, narrow exception so the security patch lands now instead of waiting out the 7-day gate. Official undici-team release; safe to drop after it ages in (~2026-06-22).
 blockExoticSubdeps: true
 overrides:
   postcss: 8.5.15
   uuid: 14.0.0
   esbuild: '>=0.28.1'
+  # Security: 6 advisories (high→low) — SOCKS5 cross-origin routing & TLS-validation
+  # bypass, Set-Cookie header injection / SameSite downgrade, shared-cache disclosure,
+  # keep-alive response-queue poisoning. All dev-scoped via jsdom/vitest. Patched in
+  # undici 7.28.0; see minimumReleaseAgeExclude above for the age-gate exception.
+  undici: 7.28.0
+  # Security: GHSA-8988-4f7v-96qf — W3CBaggagePropagator.extract() lacked inbound
+  # size caps (unbounded allocation). Patched in OTel 2.8.0. Pinned exact to keep the
+  # lockstep trio (core/resources/sdk-trace-base pin each other exactly) coherent;
+  # within @sentry/node's accepted ^2.6.1 range. Pulled transitively via @sentry/nextjs.
+  '@opentelemetry/core': 2.8.0
+  '@opentelemetry/resources': 2.8.0
+  '@opentelemetry/sdk-trace-base': 2.8.0
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - semver@6.3.1 # legacy Babel dependency published in 2023; exact exception for no-downgrade provenance gap.
