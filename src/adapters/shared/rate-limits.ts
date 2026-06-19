@@ -39,6 +39,11 @@ export const START_PRACTICE_SESSION_RATE_LIMIT = {
   windowMs: ONE_MINUTE_MS,
 } as const;
 
+export const PRACTICE_SESSION_MUTATION_RATE_LIMIT = {
+  limit: 60,
+  windowMs: ONE_MINUTE_MS,
+} as const;
+
 export const BOOKMARK_MUTATION_RATE_LIMIT = {
   limit: 60,
   windowMs: ONE_MINUTE_MS,

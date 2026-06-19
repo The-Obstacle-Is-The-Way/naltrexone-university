@@ -2,6 +2,7 @@ import type { RateLimiter } from '@/src/application/ports/gateways';
 import {
   FakeAuthGateway,
   FakeCountAvailableQuestionsUseCase,
+  FakeDiscardPracticeSessionUseCase,
   FakeEndPracticeSessionUseCase,
   FakeFinalizeExamAnswersUseCase,
   FakeGetCompletedSessionQuestionsWithFeedbackUseCase,
@@ -18,6 +19,7 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import type {
+  DiscardPracticeSessionOutput,
   EndPracticeSessionOutput,
   FinalizeExamAnswersOutput,
   GetCompletedSessionQuestionsWithFeedbackOutput,
@@ -38,6 +40,7 @@ export type PracticeControllerTestDeps = PracticeControllerDeps & {
   getIncompletePracticeSessionUseCase: FakeGetIncompletePracticeSessionUseCase;
   getCompletedSessionQuestionsWithFeedbackUseCase: FakeGetCompletedSessionQuestionsWithFeedbackUseCase;
   startPracticeSessionUseCase: FakeStartPracticeSessionUseCase;
+  discardPracticeSessionUseCase: FakeDiscardPracticeSessionUseCase;
   endPracticeSessionUseCase: FakeEndPracticeSessionUseCase;
   finalizeExamAnswersUseCase: FakeFinalizeExamAnswersUseCase;
   saveExamDraftAnswerUseCase: FakeSaveExamDraftAnswerUseCase;
@@ -58,6 +61,8 @@ export function createDeps(overrides?: {
   startThrows?: unknown;
   countOutput?: { count: number };
   countThrows?: unknown;
+  discardOutput?: DiscardPracticeSessionOutput;
+  discardThrows?: unknown;
   endOutput?: EndPracticeSessionOutput;
   endThrows?: unknown;
   finalizeOutput?: FinalizeExamAnswersOutput;
@@ -130,6 +135,11 @@ export function createDeps(overrides?: {
   const countAvailableQuestionsUseCase = new FakeCountAvailableQuestionsUseCase(
     overrides?.countOutput ?? { count: 0 },
     overrides?.countThrows,
+  );
+
+  const discardPracticeSessionUseCase = new FakeDiscardPracticeSessionUseCase(
+    overrides?.discardOutput ?? { discarded: true },
+    overrides?.discardThrows,
   );
 
   const endPracticeSessionUseCase = new FakeEndPracticeSessionUseCase(
@@ -241,6 +251,7 @@ export function createDeps(overrides?: {
     getCompletedSessionQuestionsWithFeedbackUseCase,
     startPracticeSessionUseCase,
     countAvailableQuestionsUseCase,
+    discardPracticeSessionUseCase,
     endPracticeSessionUseCase,
     finalizeExamAnswersUseCase,
     saveExamDraftAnswerUseCase,

@@ -18,6 +18,23 @@ export class EndPracticeSessionUseCase {
   async execute(
     input: EndPracticeSessionInput,
   ): Promise<EndPracticeSessionOutput> {
+    const existing = await this.sessions.findByIdAndUserId(
+      input.sessionId,
+      input.userId,
+    );
+    if (!existing) {
+      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+    }
+    if (existing.endedAt) {
+      throw new ApplicationError('CONFLICT', 'Practice session already ended');
+    }
+    if (existing.mode === 'exam') {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Active exam sessions must be finalized or discarded, not ended',
+      );
+    }
+
     const session = await this.sessions.end(input.sessionId, input.userId);
 
     const endedAt = session.endedAt;

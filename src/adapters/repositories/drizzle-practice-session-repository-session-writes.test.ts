@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PRACTICE_SESSIONS_USER_INCOMPLETE_UQ } from '@/db/schema';
+import {
+  PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+  practiceSessions,
+} from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
@@ -232,6 +235,38 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     await expect(
       repo.create({ userId: userId, mode: 'tutor', paramsJson }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+  });
+
+  it('discards an incomplete practice session by deleting the session row', async () => {
+    const deleteWhere = vi.fn(async () => undefined);
+    const deleteFrom = vi.fn(() => ({ where: deleteWhere }));
+
+    const db = {
+      delete: deleteFrom,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      query: {
+        practiceSessions: {
+          findFirst: async () => {
+            throw new Error('unexpected findFirst');
+          },
+        },
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.discard(sessionId, userId)).resolves.toBeUndefined();
+
+    expect(deleteFrom).toHaveBeenCalledWith(practiceSessions);
+    expect(deleteWhere).toHaveBeenCalledTimes(1);
   });
 
   it('ends an active practice session', async () => {

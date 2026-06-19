@@ -22,6 +22,7 @@ export {
   FakeCountAvailableQuestionsUseCase,
   FakeCreateCheckoutSessionUseCase,
   FakeCreatePortalSessionUseCase,
+  FakeDiscardPracticeSessionUseCase,
   FakeEndPracticeSessionUseCase,
   FakeFinalizeExamAnswersUseCase,
   FakeGetAttemptedQuestionsUseCase,

@@ -63,6 +63,51 @@ describe('FakePracticeSessionRepository', () => {
     );
   });
 
+  it('discards only incomplete sessions owned by the caller', async () => {
+    const endedAt = new Date('2026-02-01T00:00:00Z');
+    const repo = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'active-owned',
+        userId: 'user-1',
+        mode: 'exam',
+        endedAt: null,
+      }),
+      createPracticeSession({
+        id: 'active-other',
+        userId: 'user-2',
+        mode: 'exam',
+        endedAt: null,
+      }),
+      createPracticeSession({
+        id: 'ended-owned',
+        userId: 'user-1',
+        mode: 'exam',
+        endedAt,
+      }),
+    ]);
+
+    await expect(repo.discard('active-owned', 'user-1')).resolves.toBe(
+      undefined,
+    );
+    await expect(repo.discard('missing', 'user-1')).resolves.toBe(undefined);
+    await expect(repo.discard('active-other', 'user-1')).resolves.toBe(
+      undefined,
+    );
+    await expect(repo.discard('ended-owned', 'user-1')).resolves.toBe(
+      undefined,
+    );
+
+    await expect(
+      repo.findByIdAndUserId('active-owned', 'user-1'),
+    ).resolves.toBeNull();
+    await expect(
+      repo.findByIdAndUserId('active-other', 'user-2'),
+    ).resolves.toMatchObject({ id: 'active-other' });
+    await expect(
+      repo.findByIdAndUserId('ended-owned', 'user-1'),
+    ).resolves.toMatchObject({ id: 'ended-owned', endedAt });
+  });
+
   it('normalizes missing draft fields when creating a session from legacy params', async () => {
     const repo = new FakePracticeSessionRepository();
 

@@ -68,6 +68,8 @@ reviews:
         4. One concept per test, use Arrange-Act-Assert pattern
         5. Test behavior, not implementation details
         6. Use factories: createQuestion(), createChoice() from test-helpers/
+        7. Do NOT require dynamic import()/beforeAll loading in pure TypeScript *.test.ts suites.
+           That React 19 compatibility rule is scoped to **/*.test.tsx component tests.
 
     # React component tests - React 19 specific
     - path: "**/*.test.tsx"

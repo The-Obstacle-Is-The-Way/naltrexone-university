@@ -372,6 +372,17 @@ export class FakePracticeSessionRepository
     return updatedState;
   }
 
+  async discard(id: string, userId: string): Promise<void> {
+    this.sessions = this.sessions.filter(
+      (session) =>
+        !(
+          session.id === id &&
+          session.userId === userId &&
+          session.endedAt === null
+        ),
+    );
+  }
+
   async end(id: string, userId: string): Promise<PracticeSession> {
     const existing = await this.findByIdAndUserId(id, userId);
     if (!existing) {

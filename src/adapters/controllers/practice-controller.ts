@@ -2,7 +2,10 @@
 
 // WHY large-file: this controller is the server-action facade for the practice use-case cluster; splitting it would hide shared auth/rate-limit/action-result conventions.
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
-import { START_PRACTICE_SESSION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import {
+  PRACTICE_SESSION_MUTATION_RATE_LIMIT,
+  START_PRACTICE_SESSION_RATE_LIMIT,
+} from '@/src/adapters/shared/rate-limits';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -13,6 +16,8 @@ import type { IdempotencyKeyRepository } from '@/src/application/ports/repositor
 import type {
   CountAvailableQuestionsInput,
   CountAvailableQuestionsOutput,
+  DiscardPracticeSessionInput,
+  DiscardPracticeSessionOutput,
   EndPracticeSessionInput,
   EndPracticeSessionOutput,
   FinalizeExamAnswersInput,
@@ -39,6 +44,8 @@ import type { SaveExamDraftAnswerOutput } from './practice-schemas';
 import {
   CountAvailableQuestionsInputSchema,
   CountAvailableQuestionsOutputSchema,
+  DiscardPracticeSessionInputSchema,
+  DiscardPracticeSessionOutputSchema,
   EmptyInputSchema,
   EndPracticeSessionInputSchema,
   EndPracticeSessionOutputSchema,
@@ -63,6 +70,7 @@ import { executeIdempotent } from './shared/execute-idempotent';
 
 export type {
   CountAvailableQuestionsOutput,
+  DiscardPracticeSessionOutput,
   EndPracticeSessionOutput,
   FinalizeExamAnswersOutput,
   GetCompletedSessionQuestionsWithFeedbackOutput,
@@ -100,6 +108,11 @@ export type PracticeControllerDeps = {
     execute: (
       input: CountAvailableQuestionsInput,
     ) => Promise<CountAvailableQuestionsOutput>;
+  };
+  discardPracticeSessionUseCase: {
+    execute: (
+      input: DiscardPracticeSessionInput,
+    ) => Promise<DiscardPracticeSessionOutput>;
   };
   endPracticeSessionUseCase: {
     execute: (
@@ -257,6 +270,40 @@ export const endPracticeSession = createAction({
       outputSchema: EndPracticeSessionOutputSchema,
       execute: () =>
         d.endPracticeSessionUseCase.execute({
+          userId,
+          sessionId,
+        }),
+    });
+  },
+});
+
+export const discardPracticeSession = createAction({
+  schema: DiscardPracticeSessionInputSchema,
+  getDeps,
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
+
+    const rate = await d.rateLimiter.limit({
+      key: `practice:discardPracticeSession:${userId}`,
+      ...PRACTICE_SESSION_MUTATION_RATE_LIMIT,
+    });
+    if (!rate.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many session mutations. Try again in ${rate.retryAfterSeconds}s.`,
+      );
+    }
+
+    const { sessionId, idempotencyKey } = input;
+
+    return executeIdempotent({
+      d,
+      userId,
+      action: 'practice:discardPracticeSession',
+      idempotencyKey,
+      outputSchema: DiscardPracticeSessionOutputSchema,
+      execute: () =>
+        d.discardPracticeSessionUseCase.execute({
           userId,
           sessionId,
         }),

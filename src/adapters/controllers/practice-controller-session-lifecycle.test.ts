@@ -3,6 +3,7 @@ import { ApplicationError } from '@/src/application/errors';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import type { FinalizeExamAnswersOutput } from '@/src/application/use-cases';
 import {
+  discardPracticeSession,
   endPracticeSession,
   finalizeExamAnswers,
   startPracticeSession,
@@ -366,6 +367,107 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.endPracticeSessionUseCase.inputs).toHaveLength(1);
+    });
+  });
+
+  describe('discardPracticeSession', () => {
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createDeps();
+
+      const result = await discardPracticeSession({ sessionId: 'bad' }, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { sessionId: expect.any(Array) },
+        },
+      });
+      expect(deps.discardPracticeSessionUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNAUTHENTICATED when unauthenticated', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await discardPracticeSession(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.discardPracticeSessionUseCase.inputs).toEqual([]);
+    });
+
+    it('returns UNSUBSCRIBED when not entitled', async () => {
+      const deps = createDeps({ isEntitled: false });
+
+      const result = await discardPracticeSession(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNSUBSCRIBED' },
+      });
+      expect(deps.discardPracticeSessionUseCase.inputs).toEqual([]);
+    });
+
+    it('returns RATE_LIMITED when rate limited', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter({
+          success: false,
+          limit: 20,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        }),
+      });
+
+      const result = await discardPracticeSession(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+      expect(deps.discardPracticeSessionUseCase.inputs).toEqual([]);
+    });
+
+    it('returns discard success when use case succeeds', async () => {
+      const deps = createDeps();
+
+      const result = await discardPracticeSession(
+        { sessionId: '11111111-1111-1111-1111-111111111111' },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: { discarded: true } });
+      expect(deps.discardPracticeSessionUseCase.inputs).toEqual([
+        {
+          userId: deps._fixtures.userId,
+          sessionId: '11111111-1111-1111-1111-111111111111',
+        },
+      ]);
+    });
+
+    it('returns the cached discard success when idempotencyKey is reused', async () => {
+      const deps = createDeps();
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await discardPracticeSession(input, deps);
+      const second = await discardPracticeSession(input, deps);
+
+      expect(first).toEqual({ ok: true, data: { discarded: true } });
+      expect(second).toEqual(first);
+      expect(deps.discardPracticeSessionUseCase.inputs).toHaveLength(1);
     });
   });
 

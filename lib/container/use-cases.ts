@@ -3,6 +3,7 @@ import {
   CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
+  DiscardPracticeSessionUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
@@ -74,6 +75,10 @@ export function createUseCaseFactories(input: {
     createCountAvailableQuestionsUseCase: () =>
       new CountAvailableQuestionsUseCase(
         repositories.createQuestionRepository(),
+      ),
+    createDiscardPracticeSessionUseCase: () =>
+      new DiscardPracticeSessionUseCase(
+        repositories.createPracticeSessionRepository(),
       ),
     createEndPracticeSessionUseCase: () =>
       new EndPracticeSessionUseCase(

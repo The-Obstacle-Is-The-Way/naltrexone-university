@@ -54,7 +54,7 @@ describe('EndPracticeSessionUseCase', () => {
     });
   }
 
-  it('returns exam accuracy using total question count denominator when calculating session metrics', async () => {
+  it('rejects generic end for an active exam session', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-02-01T00:10:00Z'));
 
@@ -66,16 +66,9 @@ describe('EndPracticeSessionUseCase', () => {
 
     await expect(
       useCase.execute({ userId: 'user-1', sessionId: 'session-exam' }),
-    ).resolves.toMatchObject({
-      sessionId: 'session-exam',
-      mode: 'exam',
-      questionCount: 3,
-      totals: {
-        answered: 1,
-        correct: 1,
-        accuracy: 1 / 3,
-      },
-    });
+    ).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+    } satisfies Partial<ApplicationError>);
   });
 
   it('returns tutor accuracy using total question count denominator when calculating session metrics', async () => {

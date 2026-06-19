@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  discardPracticeSession,
   endPracticeSession,
   type GetIncompletePracticeSessionOutput,
   getIncompletePracticeSession,
@@ -49,7 +50,9 @@ export function usePracticeIncompleteSession(
 
     await abandonIncompleteSession({
       sessionId: incompleteSession.sessionId,
+      mode: incompleteSession.mode,
       endPracticeSessionFn: endPracticeSession,
+      discardPracticeSessionFn: discardPracticeSession,
       setIncompleteSessionStatus,
       setIncompleteSessionError,
       setIncompleteSession,

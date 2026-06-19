@@ -13,6 +13,7 @@ import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-q
 import {
   FakeAuthGateway,
   FakeCountAvailableQuestionsUseCase,
+  FakeDiscardPracticeSessionUseCase,
   FakeEndPracticeSessionUseCase,
   FakeFinalizeExamAnswersUseCase,
   FakeGetCompletedSessionQuestionsWithFeedbackUseCase,
@@ -107,6 +108,9 @@ function createPracticeControllerDepsForBug238(input: {
     }),
     countAvailableQuestionsUseCase: new FakeCountAvailableQuestionsUseCase({
       count: 1,
+    }),
+    discardPracticeSessionUseCase: new FakeDiscardPracticeSessionUseCase({
+      discarded: true,
     }),
     endPracticeSessionUseCase: new FakeEndPracticeSessionUseCase({
       sessionId: '11111111-1111-1111-1111-111111111111',

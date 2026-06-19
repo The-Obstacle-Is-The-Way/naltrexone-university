@@ -19,6 +19,11 @@ export {
   CreatePortalSessionUseCase,
 } from './create-portal-session';
 export {
+  type DiscardPracticeSessionInput,
+  type DiscardPracticeSessionOutput,
+  DiscardPracticeSessionUseCase,
+} from './discard-practice-session';
+export {
   type EndPracticeSessionInput,
   type EndPracticeSessionOutput,
   EndPracticeSessionUseCase,

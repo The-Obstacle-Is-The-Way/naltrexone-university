@@ -135,15 +135,18 @@ describe('practice-page-incomplete-session', () => {
   });
 
   describe('abandonIncompleteSession', () => {
-    it('ends the session and clears local state on success', async () => {
+    it('ends a tutor session and clears local state on success', async () => {
       const setStatus = vi.fn();
       const setError = vi.fn();
       const setSession = vi.fn();
       const endPracticeSessionFn = vi.fn(async () => ok({}));
+      const discardPracticeSessionFn = vi.fn(async () => ok({}));
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        mode: 'tutor',
         endPracticeSessionFn,
+        discardPracticeSessionFn,
         setIncompleteSessionStatus: setStatus,
         setIncompleteSessionError: setError,
         setIncompleteSession: setSession,
@@ -154,6 +157,34 @@ describe('practice-page-incomplete-session', () => {
         sessionId: fixtureSession1Id,
         idempotencyKey: fixtureSession1Id,
       });
+      expect(discardPracticeSessionFn).not.toHaveBeenCalled();
+      expect(setSession).toHaveBeenCalledWith(null);
+      expect(setStatus).toHaveBeenLastCalledWith('idle');
+    });
+
+    it('discards an exam session and clears local state on success', async () => {
+      const setStatus = vi.fn();
+      const setError = vi.fn();
+      const setSession = vi.fn();
+      const endPracticeSessionFn = vi.fn(async () => ok({}));
+      const discardPracticeSessionFn = vi.fn(async () => ok({}));
+
+      await abandonIncompleteSession({
+        sessionId: fixtureSession1Id,
+        mode: 'exam',
+        endPracticeSessionFn,
+        discardPracticeSessionFn,
+        setIncompleteSessionStatus: setStatus,
+        setIncompleteSessionError: setError,
+        setIncompleteSession: setSession,
+        isMounted: () => true,
+      });
+
+      expect(discardPracticeSessionFn).toHaveBeenCalledWith({
+        sessionId: fixtureSession1Id,
+        idempotencyKey: fixtureSession1Id,
+      });
+      expect(endPracticeSessionFn).not.toHaveBeenCalled();
       expect(setSession).toHaveBeenCalledWith(null);
       expect(setStatus).toHaveBeenLastCalledWith('idle');
     });
@@ -166,10 +197,13 @@ describe('practice-page-incomplete-session', () => {
       const endPracticeSessionFn = vi.fn(async () => {
         throw error;
       });
+      const discardPracticeSessionFn = vi.fn(async () => ok({}));
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        mode: 'tutor',
         endPracticeSessionFn,
+        discardPracticeSessionFn,
         setIncompleteSessionStatus: setStatus,
         setIncompleteSessionError: setError,
         setIncompleteSession: setSession,
@@ -192,10 +226,13 @@ describe('practice-page-incomplete-session', () => {
       const endPracticeSessionFn = vi.fn(async () => {
         throw new Error('boom');
       });
+      const discardPracticeSessionFn = vi.fn(async () => ok({}));
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        mode: 'tutor',
         endPracticeSessionFn,
+        discardPracticeSessionFn,
         setIncompleteSessionStatus: setStatus,
         setIncompleteSessionError: setError,
         setIncompleteSession: setSession,
@@ -215,10 +252,13 @@ describe('practice-page-incomplete-session', () => {
       const endPracticeSessionFn = vi.fn(async () =>
         err('INTERNAL_ERROR', 'Nope'),
       );
+      const discardPracticeSessionFn = vi.fn(async () => ok({}));
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        mode: 'tutor',
         endPracticeSessionFn,
+        discardPracticeSessionFn,
         setIncompleteSessionStatus: setStatus,
         setIncompleteSessionError: setError,
         setIncompleteSession: setSession,

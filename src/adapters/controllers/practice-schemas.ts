@@ -51,6 +51,7 @@ export const EndPracticeSessionInputSchema = z
   })
   .strict();
 
+export const DiscardPracticeSessionInputSchema = EndPracticeSessionInputSchema;
 export const FinalizeExamAnswersInputSchema = EndPracticeSessionInputSchema;
 
 export const SaveExamDraftAnswerInputSchema = z
@@ -152,6 +153,11 @@ export const PracticeSessionSummaryOutputSchema =
   EndPracticeSessionOutputSchema;
 export const FinalizeExamAnswersOutputSchema =
   PracticeSessionSummaryOutputSchema;
+export const DiscardPracticeSessionOutputSchema = z
+  .object({
+    discarded: z.literal(true),
+  })
+  .strict();
 
 export const SaveExamDraftAnswerOutputSchema = z
   .object({
