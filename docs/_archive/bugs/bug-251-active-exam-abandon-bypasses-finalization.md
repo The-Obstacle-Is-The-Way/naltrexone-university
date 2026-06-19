@@ -1,7 +1,7 @@
 # BUG-251: Active Exam Abandon Completes Without Finalization
 
-**Status:** Open
-**Resolution State:** Fix implemented on `dev` in PR #464; pending review, promotion to `main`, production verification, and archival.
+**Status:** Resolved
+**Resolution State:** Fixed on `dev` in PR #464 (merge `d5568288` to `main`); production deploy verified READY 2026-06-19; archived to `docs/_archive/bugs/`.
 **Severity:** P2
 **Date:** 2026-06-18
 **Confirmed:** 2026-06-18
@@ -38,22 +38,22 @@ Actual:
 
 The incomplete-session abandon UI is mode-agnostic:
 
-- [`IncompleteSessionCard`](<../../app/(app)/app/practice/components/incomplete-session-card.tsx#L26>) renders the card for both exam and tutor sessions.
-- [`IncompleteSessionCard`](<../../app/(app)/app/practice/components/incomplete-session-card.tsx#L46>) exposes **Abandon session** for every incomplete session.
-- [`abandonIncompleteSession`](<../../app/(app)/app/practice/practice-page-incomplete-session.ts#L77>) calls the supplied `endPracticeSessionFn` with only `sessionId` and `idempotencyKey`.
+- [`IncompleteSessionCard`](<../../../app/(app)/app/practice/components/incomplete-session-card.tsx#L26>) renders the card for both exam and tutor sessions.
+- [`IncompleteSessionCard`](<../../../app/(app)/app/practice/components/incomplete-session-card.tsx#L46>) exposes **Abandon session** for every incomplete session.
+- [`abandonIncompleteSession`](<../../../app/(app)/app/practice/practice-page-incomplete-session.ts#L77>) calls the supplied `endPracticeSessionFn` with only `sessionId` and `idempotencyKey`.
 
 The server action and use case do not distinguish tutor end from exam finalization:
 
-- [`EndPracticeSessionInputSchema`](../../src/adapters/controllers/practice-schemas.ts#L47) accepts only `sessionId` and optional `idempotencyKey`; it has no mode or intent.
-- [`endPracticeSession`](../../src/adapters/controllers/practice-controller.ts#L244) directly calls `endPracticeSessionUseCase.execute(...)`.
-- [`EndPracticeSessionUseCase.execute`](../../src/application/use-cases/end-practice-session.ts#L21) directly calls `sessions.end(...)`; it does not reject active exam sessions or finalize drafts.
-- [`DrizzlePracticeSessionRepository.end`](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L319) only sets `endedAt` when it is currently null.
+- [`EndPracticeSessionInputSchema`](../../../src/adapters/controllers/practice-schemas.ts#L47) accepts only `sessionId` and optional `idempotencyKey`; it has no mode or intent.
+- [`endPracticeSession`](../../../src/adapters/controllers/practice-controller.ts#L244) directly calls `endPracticeSessionUseCase.execute(...)`.
+- [`EndPracticeSessionUseCase.execute`](../../../src/application/use-cases/end-practice-session.ts#L21) directly calls `sessions.end(...)`; it does not reject active exam sessions or finalize drafts.
+- [`DrizzlePracticeSessionRepository.end`](../../../src/adapters/repositories/drizzle-practice-session-repository.ts#L319) only sets `endedAt` when it is currently null.
 
 After that write, completed-session feedback trusts `endedAt` as the reveal boundary:
 
-- [`GetCompletedSessionQuestionsWithFeedbackUseCase.execute`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L100) only rejects sessions whose `endedAt` is null.
-- The same use case then returns answer-key fields at [`correctChoiceId`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L195), [`explanationMd`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L196), and [`choiceExplanations`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L198).
-- History links completed sessions to review routes at [`history-sessions-tab.tsx`](<../../app/(app)/app/history/components/history-sessions-tab.tsx#L172>) and renders the breakdown at [`history-sessions-tab.tsx`](<../../app/(app)/app/history/components/history-sessions-tab.tsx#L275>).
+- [`GetCompletedSessionQuestionsWithFeedbackUseCase.execute`](../../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L100) only rejects sessions whose `endedAt` is null.
+- The same use case then returns answer-key fields at [`correctChoiceId`](../../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L195), [`explanationMd`](../../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L196), and [`choiceExplanations`](../../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L198).
+- History links completed sessions to review routes at [`history-sessions-tab.tsx`](<../../../app/(app)/app/history/components/history-sessions-tab.tsx#L172>) and renders the breakdown at [`history-sessions-tab.tsx`](<../../../app/(app)/app/history/components/history-sessions-tab.tsx#L275>).
 
 ## Impact
 

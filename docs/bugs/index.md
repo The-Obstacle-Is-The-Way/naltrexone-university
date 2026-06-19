@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-18 (Manual practice/quiz engine correctness sweep filed BUG-251..BUG-252. Prior: BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
+**Last Updated:** 2026-06-19 (BUG-251 resolved + archived — exam "Abandon" now hard-deletes the incomplete session (`DiscardPracticeSessionUseCase`) instead of completing it; promoted to `main` via PR #464 (merge `d5568288`), production deploy verified READY. Prior: practice/quiz-engine sweep filed BUG-251..BUG-252, BUG-252 (P3) still open. Prior: BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
 
 ---
 
@@ -14,6 +14,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 3. **Knowledge Base** — Help future developers understand past issues
 
 **Next Bug ID:** BUG-253
+
+**Latest archival (2026-06-19) — BUG-251 resolved (exam abandon discard lifecycle):**
+- BUG-251 (P2) verified fixed and archived to `docs/_archive/bugs/`. Exam "Abandon" now means true discard: a new `DiscardPracticeSessionUseCase` + `discardPracticeSession` action hard-deletes the incomplete exam session (`DELETE WHERE id / user_id / ended_at IS NULL`, idempotent, exam-only) instead of routing through generic `endPracticeSession`, so a discarded exam no longer persists as a misleading reviewable "completed" session. `EndPracticeSessionUseCase` rejects active-exam ends (defense in depth); tutor abandon is unchanged. Fixed on `dev`, promoted to `main` via PR #464 (merge `d5568288`) after a CodeRabbit `APPROVED` review on the exact head (CHANGES_REQUESTED → fixes → APPROVED) and full gate green (typecheck, lint, unit 2874, browser 298, integration 111, build, e2e 36); production deploy for `d5568288` verified READY; `main` and `dev` trees identical. **BUG-252 (P3) remains open** (deferred — narrow omitted-question timing-accuracy gap).
 
 **Latest manual report (2026-06-18) — Practice/quiz engine correctness sweep:**
 - BUG-251 (P2) filed: active exam abandon calls generic `endPracticeSession`, marks the exam completed without final attempts, and persists a discard action as a misleading reviewable session.
@@ -163,7 +166,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | ID | Title | Priority | Filed |
 |----|-------|----------|-------|
-| [BUG-251](./bug-251-active-exam-abandon-bypasses-finalization.md) | Active Exam Abandon Completes Without Finalization | P2 | 2026-06-18 |
 | [BUG-252](./bug-252-unanswered-exam-time-not-persisted.md) | Unanswered Exam Question Time Is Not Persisted Before Finalization | P3 | 2026-06-18 |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
