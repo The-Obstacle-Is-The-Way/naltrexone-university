@@ -1,6 +1,6 @@
 # BUG-251: Active Exam Abandon Completes Without Finalization
 
-**Status:** Open — filed, NOT fixed
+**Status:** Fix implemented on `dev` (PR #464) — pending promotion to `main` + production verification before archival
 **Severity:** P2
 **Date:** 2026-06-18
 **Confirmed:** 2026-06-18

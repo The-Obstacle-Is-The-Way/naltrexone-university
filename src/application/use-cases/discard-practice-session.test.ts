@@ -136,6 +136,28 @@ describe('DiscardPracticeSessionUseCase', () => {
     ).resolves.toMatchObject({ id: 'session-ended', endedAt });
   });
 
+  it('rejects discarding a tutor session and leaves it intact', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-tutor',
+        userId: 'user-1',
+        mode: 'tutor',
+        endedAt: null,
+      }),
+    ]);
+
+    await expect(
+      new DiscardPracticeSessionUseCase(sessions).execute({
+        userId: 'user-1',
+        sessionId: 'session-tutor',
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    await expect(
+      sessions.findByIdAndUserId('session-tutor', 'user-1'),
+    ).resolves.toMatchObject({ id: 'session-tutor' });
+  });
+
   it('frees the incomplete-session slot so the user can start over', async () => {
     const userId = 'user-1';
     const question = createQuestion({

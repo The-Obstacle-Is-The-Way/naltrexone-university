@@ -165,7 +165,6 @@ Bug reports document issues discovered in the codebase along with their root cau
 |----|-------|----------|-------|
 | [BUG-251](./bug-251-active-exam-abandon-bypasses-finalization.md) | Active Exam Abandon Completes Without Finalization | P2 | 2026-06-18 |
 | [BUG-252](./bug-252-unanswered-exam-time-not-persisted.md) | Unanswered Exam Question Time Is Not Persisted Before Finalization | P3 | 2026-06-18 |
-| [BUG-250](./bug-250-question-feedback-csv-formula-injection.md) | Feedback Comment CSV Export Allows Spreadsheet Formula Injection | P3 | 2026-06-17 |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 
