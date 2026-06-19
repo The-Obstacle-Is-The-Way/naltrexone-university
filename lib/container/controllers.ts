@@ -99,6 +99,8 @@ export function createControllerFactories(input: {
       countAvailableQuestionsUseCase:
         useCases.createCountAvailableQuestionsUseCase(),
       startPracticeSessionUseCase: useCases.createStartPracticeSessionUseCase(),
+      discardPracticeSessionUseCase:
+        useCases.createDiscardPracticeSessionUseCase(),
       endPracticeSessionUseCase: useCases.createEndPracticeSessionUseCase(),
       finalizeExamAnswersUseCase: useCases.createFinalizeExamAnswersUseCase(),
       saveExamDraftAnswerUseCase: useCases.createSaveExamDraftAnswerUseCase(),

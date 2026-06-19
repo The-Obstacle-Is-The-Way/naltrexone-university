@@ -17,6 +17,9 @@ const getTags = vi.mocked(tagController.getTags);
 const countAvailableQuestions = vi.mocked(
   practiceController.countAvailableQuestions,
 );
+const discardPracticeSession = vi.mocked(
+  practiceController.discardPracticeSession,
+);
 const endPracticeSession = vi.mocked(practiceController.endPracticeSession);
 const getIncompletePracticeSession = vi.mocked(
   practiceController.getIncompletePracticeSession,
@@ -210,5 +213,39 @@ describe('usePracticeSessionControls (browser)', () => {
       sessionId,
       idempotencyKey: sessionId,
     });
+    expect(discardPracticeSession).not.toHaveBeenCalled();
+  });
+
+  it('uses discard instead of end when abandoning an incomplete exam session', async () => {
+    const sessionId = '11111111-1111-1111-1111-111111111112';
+
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    getIncompletePracticeSession.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'exam',
+        answeredCount: 0,
+        totalCount: 10,
+        startedAt: '2026-02-08T00:00:00.000Z',
+      }),
+    );
+    discardPracticeSession.mockResolvedValue(ok({ discarded: true }));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 0 }));
+
+    const screen = await render(<PracticeSessionControlsHookProbe />);
+
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('idle');
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+
+    expect(discardPracticeSession).toHaveBeenCalledWith({
+      sessionId,
+      idempotencyKey: sessionId,
+    });
+    expect(endPracticeSession).not.toHaveBeenCalled();
   });
 });

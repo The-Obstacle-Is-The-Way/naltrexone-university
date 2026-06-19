@@ -44,6 +44,10 @@ export class FakeCountAvailableQuestionsUseCase extends FakeUseCase<
   U.CountAvailableQuestionsInput,
   U.CountAvailableQuestionsOutput
 > {}
+export class FakeDiscardPracticeSessionUseCase extends FakeUseCase<
+  U.DiscardPracticeSessionInput,
+  U.DiscardPracticeSessionOutput
+> {}
 export class FakeEndPracticeSessionUseCase extends FakeUseCase<
   U.EndPracticeSessionInput,
   U.EndPracticeSessionOutput

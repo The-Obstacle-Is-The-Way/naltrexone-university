@@ -33,6 +33,7 @@ import {
   CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
+  DiscardPracticeSessionUseCase,
   EndPracticeSessionUseCase,
   GetAttemptedQuestionsUseCase,
   GetBookmarksUseCase,
@@ -382,6 +383,9 @@ describe('container factories', () => {
     );
     expect(practiceDeps.startPracticeSessionUseCase).toBeInstanceOf(
       StartPracticeSessionUseCase,
+    );
+    expect(practiceDeps.discardPracticeSessionUseCase).toBeInstanceOf(
+      DiscardPracticeSessionUseCase,
     );
     expect(practiceDeps.endPracticeSessionUseCase).toBeInstanceOf(
       EndPracticeSessionUseCase,

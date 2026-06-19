@@ -55,5 +55,6 @@ export interface PracticeSessionRepository {
     questionId: string;
     markedForReview: boolean;
   }): Promise<PracticeSessionQuestionState>;
+  discard(id: string, userId: string): Promise<void>;
   end(id: string, userId: string): Promise<PracticeSession>;
 }

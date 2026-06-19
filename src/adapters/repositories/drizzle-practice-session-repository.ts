@@ -316,6 +316,18 @@ export class DrizzlePracticeSessionRepository
     });
   }
 
+  async discard(id: string, userId: string): Promise<void> {
+    await this.db
+      .delete(practiceSessions)
+      .where(
+        and(
+          eq(practiceSessions.id, id),
+          eq(practiceSessions.userId, userId),
+          isNull(practiceSessions.endedAt),
+        ),
+      );
+  }
+
   async end(id: string, userId: string) {
     const existing = await this.findByIdAndUserId(id, userId);
     if (!existing) {

@@ -63,7 +63,9 @@ export function createIncompleteSessionEffect<T>(input: {
 
 export async function abandonIncompleteSession<T>(input: {
   sessionId: string;
+  mode: 'tutor' | 'exam';
   endPracticeSessionFn: (input: unknown) => Promise<ActionResult<unknown>>;
+  discardPracticeSessionFn: (input: unknown) => Promise<ActionResult<unknown>>;
   setIncompleteSessionStatus: (status: IncompleteSessionStatus) => void;
   setIncompleteSessionError: (message: string | null) => void;
   setIncompleteSession: (session: T | null) => void;
@@ -74,10 +76,15 @@ export async function abandonIncompleteSession<T>(input: {
   input.setIncompleteSessionStatus('loading');
   input.setIncompleteSessionError(null);
 
-  let res: Awaited<ReturnType<typeof input.endPracticeSessionFn>>;
+  const abandonSessionFn =
+    input.mode === 'exam'
+      ? input.discardPracticeSessionFn
+      : input.endPracticeSessionFn;
+
+  let res: Awaited<ReturnType<typeof abandonSessionFn>>;
   try {
     res = await withTimeout(
-      input.endPracticeSessionFn({
+      abandonSessionFn({
         sessionId: input.sessionId,
         idempotencyKey: input.sessionId,
       }),
