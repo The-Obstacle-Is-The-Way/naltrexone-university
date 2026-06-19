@@ -286,3 +286,58 @@ describe('BUG-238: Exam draft cumulativeMs is bounded', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// BUG-252: Time-only exam drafts are persisted
+// ---------------------------------------------------------------------------
+
+describe('BUG-252: unanswered exam draft time is persisted', () => {
+  it('round-trips a nullable draft choice and preserves the monotonic guard', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-bug252-time-only-draft-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const questions = new DrizzleQuestionRepository(db);
+    const sessions = new DrizzlePracticeSessionRepository(db);
+    const saveDraft = new SaveExamDraftAnswerUseCase(questions, sessions);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await saveDraft.execute({
+      userId: user.id,
+      sessionId: session.id,
+      questionId: question.id,
+      selectedChoiceId: null,
+      cumulativeMs: 15_000,
+    });
+
+    await sessions.saveDraftAnswer({
+      userId: user.id,
+      sessionId: session.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      cumulativeMs: 10_000,
+    });
+
+    const persisted = await sessions.findByIdAndUserId(session.id, user.id);
+    const state = persisted?.questionStates.find(
+      (questionState) => questionState.questionId === question.id,
+    );
+    expect(state).toMatchObject({
+      questionId: question.id,
+      draftSelectedChoiceId: null,
+      draftCumulativeMs: 15_000,
+    });
+    expect(state?.draftSavedAt).toEqual(expect.any(Date));
+  });
+});

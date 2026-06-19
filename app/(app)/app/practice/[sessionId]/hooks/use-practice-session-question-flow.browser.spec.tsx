@@ -220,7 +220,8 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
     });
   });
 
-  it('navigates without saving when exam next is used with no selection', async () => {
+  it('navigates without saving when exam next is used with no selection and no elapsed time', async () => {
+    vi.spyOn(Date, 'now').mockImplementation(() => 1_000);
     const getNextQuestionFn = vi
       .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
       .mockResolvedValueOnce(
@@ -390,7 +391,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
             'selectedChoiceId' in input &&
             typeof input.selectedChoiceId === 'string'
               ? input.selectedChoiceId
-              : fixtureChoice2Id,
+              : null,
           draftSavedAt: '2026-02-01T00:00:00.000Z',
           draftCumulativeMs:
             typeof input === 'object' &&
@@ -449,6 +450,12 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       cumulativeMs: 30_000,
     });
     expect(saveExamDraftAnswerFn).toHaveBeenNthCalledWith(2, {
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQ2Id,
+      selectedChoiceId: null,
+      cumulativeMs: 500,
+    });
+    expect(saveExamDraftAnswerFn).toHaveBeenNthCalledWith(3, {
       sessionId: fixtureSession1Id,
       questionId: fixtureQ1Id,
       selectedChoiceId: fixtureChoice2Id,
@@ -591,7 +598,13 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
     await expect
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ2Id);
-    expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
+    expect(saveExamDraftAnswerFn).toHaveBeenCalledTimes(1);
+    expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQ1Id,
+      selectedChoiceId: null,
+      cumulativeMs: 30_000,
+    });
 
     nowMs = 31_500;
     harness.result.current.onNavigateQuestion(fixtureQ1Id);
@@ -610,8 +623,14 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ2Id);
 
-    expect(saveExamDraftAnswerFn).toHaveBeenCalledTimes(1);
-    expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
+    expect(saveExamDraftAnswerFn).toHaveBeenCalledTimes(3);
+    expect(saveExamDraftAnswerFn).toHaveBeenNthCalledWith(2, {
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQ2Id,
+      selectedChoiceId: null,
+      cumulativeMs: 500,
+    });
+    expect(saveExamDraftAnswerFn).toHaveBeenNthCalledWith(3, {
       sessionId: fixtureSession1Id,
       questionId: fixtureQ1Id,
       selectedChoiceId: fixtureChoice2Id,

@@ -224,7 +224,7 @@ export class FakePracticeSessionRepository
     sessionId: string;
     userId: string;
     questionId: string;
-    selectedChoiceId: string;
+    selectedChoiceId: string | null;
     cumulativeMs: number;
   }): Promise<PracticeSession['questionStates'][number]> {
     const session = await this.getActiveSession(input.sessionId, input.userId);

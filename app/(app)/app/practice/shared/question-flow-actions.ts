@@ -171,15 +171,6 @@ export async function maybeSaveDraftBeforeNavigation<
     return true;
   }
 
-  if (!input.selectedChoiceId) {
-    input.onSaved?.({
-      questionId: input.question.questionId,
-      selectedChoiceId: null,
-      cumulativeMs: input.currentCumulativeMs,
-    });
-    return true;
-  }
-
   let res: ActionResult<SaveExamDraftAnswerOutput>;
   try {
     res = await withTimeout(

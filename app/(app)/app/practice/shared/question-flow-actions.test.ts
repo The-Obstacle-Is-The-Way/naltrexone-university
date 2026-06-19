@@ -855,11 +855,23 @@ describe('question-flow-actions', () => {
     });
   });
 
-  it('tracks unanswered exam time locally when no exam selection exists', async () => {
-    const saveExamDraftAnswerFn =
-      vi.fn<
+  it('persists cumulative time for unanswered exam questions before navigation', async () => {
+    const saveExamDraftAnswerFn = vi
+      .fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
-      >();
+      >()
+      .mockResolvedValue(
+        ok({
+          questionId: fixtureQuestion1Id,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: '2026-02-01T00:00:00.000Z',
+          draftCumulativeMs: 15_000,
+        }),
+      );
     const onSaved = vi.fn();
 
     const shouldNavigate = await maybeSaveDraftBeforeNavigation({
@@ -886,12 +898,52 @@ describe('question-flow-actions', () => {
     });
 
     expect(shouldNavigate).toBe(true);
-    expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
+    expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
+      sessionId: fixtureSession1Id,
+      questionId: fixtureQuestion1Id,
+      selectedChoiceId: null,
+      cumulativeMs: 15_000,
+    });
     expect(onSaved).toHaveBeenCalledWith({
       questionId: fixtureQuestion1Id,
       selectedChoiceId: null,
       cumulativeMs: 15_000,
     });
+  });
+
+  it('does not save a time-only exam draft when cumulative time did not advance', async () => {
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+    const onSaved = vi.fn();
+
+    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+      sessionId: fixtureSession1Id,
+      question: {
+        questionId: fixtureQuestion1Id,
+        session: {
+          sessionId: fixtureSession1Id,
+          mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          index: 0,
+          total: 2,
+        },
+      },
+      selectedChoiceId: null,
+      currentCumulativeMs: 15_000,
+      lastSavedDraftSelectedChoiceId: null,
+      lastSavedDraftCumulativeMs: 15_000,
+      saveExamDraftAnswerFn,
+      setLoadState: () => {},
+      onSaved,
+    });
+
+    expect(shouldNavigate).toBe(true);
+    expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
+    expect(onSaved).not.toHaveBeenCalled();
   });
 
   it('blocks navigation and sets load error when draft save fails', async () => {
