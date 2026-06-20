@@ -30,7 +30,7 @@ export interface PracticeSessionRepository {
     sessionId: string;
     userId: string;
     questionId: string;
-    selectedChoiceId: string;
+    selectedChoiceId: string | null;
     cumulativeMs: number;
   }): Promise<PracticeSessionQuestionState>;
   finalizeDraftAnswer(input: {

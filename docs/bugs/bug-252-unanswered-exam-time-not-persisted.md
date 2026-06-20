@@ -1,6 +1,7 @@
 # BUG-252: Unanswered Exam Question Time Is Not Persisted Before Finalization
 
-**Status:** Open — filed, NOT fixed
+**Status:** Open — branch fix landed, pending PR review / merge / production verification
+**Resolution State:** Implementation commit `902fc4d4` on branch `bug/252-persist-unanswered-exam-time` widens exam draft saves to accept `selectedChoiceId: string | null`, persists time-only unanswered drafts, and leaves `FinalizeExamAnswersUseCase` unchanged. Full local gate passed on 2026-06-19: typecheck, lint, unit 2883, browser 298, integration 112, build, and e2e 36. Keep open until PR review/merge, promotion to `main`, and production deploy READY verification are complete.
 **Severity:** P3
 **Date:** 2026-06-18
 **Confirmed:** 2026-06-18
@@ -10,9 +11,9 @@
 
 ## Summary
 
-Exam mode tracks per-question elapsed time locally, but if the user leaves a question without selecting an answer, the client intentionally skips the server draft write. `FinalizeExamAnswersUseCase` later computes omitted attempts' `timeSpentSeconds` from server-side `draftCumulativeMs`, so unanswered questions that the user spent time on can be finalized with `timeSpentSeconds = 0`.
+Before implementation commit `902fc4d4`, exam mode tracked per-question elapsed time locally, but if the user left a question without selecting an answer, the client intentionally skipped the server draft write. `FinalizeExamAnswersUseCase` later computed omitted attempts' `timeSpentSeconds` from server-side `draftCumulativeMs`, so unanswered questions that the user spent time on could be finalized with `timeSpentSeconds = 0`.
 
-This does not affect scoring and no current UI surfaces omitted-question timing. The bug is a narrow persistence-accuracy gap in the proposed stopwatch model: unanswered time is preserved only in browser state until the user later selects an answer.
+This does not affect scoring and no current UI surfaces omitted-question timing. Until the branch fix is reviewed, merged, promoted, and production-verified, BUG-252 remains a narrow persistence-accuracy gap in the proposed stopwatch model: unanswered time is preserved only in browser state until the user later selects an answer.
 
 ## Reproduction
 
@@ -27,42 +28,44 @@ Expected:
 - Question 1 is omitted and incorrect.
 - Its attempt records approximately `timeSpentSeconds = 15` because the user spent 15 seconds on that question.
 
-Actual:
+Pre-fix actual:
 
 - Question 1 is omitted and incorrect.
 - Its attempt records `timeSpentSeconds = 0` because no server draft write ever persisted the local `15_000` ms.
 
 ## Root Cause
 
+The root-cause evidence below describes the pre-fix state verified at filing. Commit `902fc4d4` changes the live branch behavior, but BUG-252 remains open until the fix is reviewed, merged/promoted, and production-verified.
+
 The interaction-contract doc labels the stopwatch behavior as a proposed model, and that model says cumulative time should be persisted on draft save and used during finalization:
 
-- [`interaction-contracts.md`](../practice-engine/interaction-contracts.md#L189) defines "On leave question: cumulativeMs += ...".
+- [`interaction-contracts.md`](../practice-engine/interaction-contracts.md#L191) defines "On leave question: cumulativeMs += ...".
 - [`interaction-contracts.md`](../practice-engine/interaction-contracts.md#L192) says "On draft save: persist cumulativeMs alongside the draft choiceId".
 - [`interaction-contracts.md`](../practice-engine/interaction-contracts.md#L193) says "On finalize: timeSpentSeconds = Math.floor(cumulativeMs / 1000)".
 
-The client has an explicit no-selection early return:
+The pre-fix client had an explicit no-selection early return:
 
 - [`maybeSaveDraftBeforeNavigation`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L174>) checks `if (!input.selectedChoiceId)`.
 - It calls `onSaved` with the local `cumulativeMs` at [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L175>), but returns without calling `saveExamDraftAnswerFn` at [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L180>).
 - The existing test suite locks in that behavior: [`question-flow-actions.test.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.test.ts#L858>) asserts "tracks unanswered exam time locally" and [`question-flow-actions.test.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.test.ts#L889>) expects `saveExamDraftAnswerFn` not to be called.
 
-The server/API shape also prevents persisting a time-only draft:
+The pre-fix server/API shape also prevented persisting a time-only draft:
 
-- [`SaveExamDraftAnswerInputSchema`](../../src/adapters/controllers/practice-schemas.ts#L56) requires `selectedChoiceId: zUuid`.
-- [`SaveExamDraftAnswerInput`](../../src/application/use-cases/save-exam-draft-answer.ts#L10) requires `selectedChoiceId: string`.
-- [`PracticeSessionRepository.saveDraftAnswer`](../../src/application/ports/practice-session-repository.ts#L29) also requires `selectedChoiceId: string`.
+- [`SaveExamDraftAnswerInputSchema`](../../src/adapters/controllers/practice-schemas.ts#L61) requires `selectedChoiceId: zUuid`.
+- [`SaveExamDraftAnswerInput`](../../src/application/use-cases/save-exam-draft-answer.ts#L14) requires `selectedChoiceId: string`.
+- [`PracticeSessionRepository.saveDraftAnswer`](../../src/application/ports/practice-session-repository.ts#L33) also requires `selectedChoiceId: string`.
 
 Finalization then trusts the server-side draft clock for omitted attempts:
 
 - [`FinalizeExamAnswersUseCase`](../../src/application/use-cases/finalize-exam-answers.ts#L95) loops every question state.
-- It computes `timeSpentSeconds` from `state.draftCumulativeMs` at [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L96).
-- For unanswered questions, it inserts the omitted attempt with that value at [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L102) and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L112).
+- It caps `state.draftCumulativeMs` and computes `timeSpentSeconds` from that value at [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L96-L100).
+- For unanswered questions, it inserts the omitted attempt with that value at [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L106) and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L112).
 
-Because unanswered cumulative time never leaves the browser until a choice is later selected, finalization writes an undercounted duration for questions that remain omitted.
+Before `902fc4d4`, unanswered cumulative time never left the browser until a choice was later selected, so finalization wrote an undercounted duration for questions that remained omitted.
 
 ## Impact
 
-Exam scoring remains correct for the omitted answer, but persisted attempt timing is wrong for skipped/unanswered exam questions. The current user-facing impact is low because the app does not display per-question omitted timing. The durable risk is bad timing data for analytics, audits, or future study recommendations.
+Exam scoring remains correct for the omitted answer, but persisted attempt timing is wrong for skipped/unanswered exam questions until the branch fix is deployed. The current user-facing impact is low because the app does not display per-question omitted timing. The durable risk is bad timing data for analytics, audits, or future study recommendations.
 
 ## Proposed Fix
 

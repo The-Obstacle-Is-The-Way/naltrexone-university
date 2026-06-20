@@ -16,7 +16,10 @@ import {
   type FinalizeExamAnswersWriteTransaction,
 } from './finalize-exam-answers';
 import { projectPracticeSessionSummary } from './practice-session-summary';
-import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from './save-exam-draft-answer';
+import {
+  SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+  SaveExamDraftAnswerUseCase,
+} from './save-exam-draft-answer';
 
 function passthroughTransaction(
   questions: FakeQuestionRepository,
@@ -243,6 +246,67 @@ describe('FinalizeExamAnswersUseCase', () => {
         },
       ],
     });
+  });
+
+  it('finalizes a saved time-only draft as an omitted attempt with the saved duration', async () => {
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ]);
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+      }),
+    ]);
+    const saveDraft = new SaveExamDraftAnswerUseCase(
+      questions,
+      sessions,
+      () => new Date('2026-03-17T12:00:30.000Z'),
+    );
+    const finalize = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+    );
+
+    await saveDraft.execute({
+      userId: 'user-1',
+      sessionId: 'session-1',
+      questionId: 'q1',
+      selectedChoiceId: null,
+      cumulativeMs: 15_000,
+    });
+
+    await expect(
+      finalize.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toMatchObject({
+      sessionId: 'session-1',
+      mode: 'exam',
+      questionCount: 1,
+      totals: {
+        answered: 0,
+        correct: 0,
+      },
+    });
+
+    await expect(
+      attempts.findBySessionId('session-1', 'user-1'),
+    ).resolves.toMatchObject([
+      {
+        questionId: 'q1',
+        outcome: { kind: 'omitted' },
+        isCorrect: false,
+        timeSpentSeconds: 15,
+      },
+    ]);
   });
 
   it('does not treat a malformed empty draft choice id as an omitted answer', async () => {

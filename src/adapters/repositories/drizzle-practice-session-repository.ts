@@ -239,7 +239,7 @@ export class DrizzlePracticeSessionRepository
     sessionId: string;
     userId: string;
     questionId: string;
-    selectedChoiceId: string;
+    selectedChoiceId: string | null;
     cumulativeMs: number;
   }): Promise<PracticeSessionQuestionState> {
     const savedAt = this.now();

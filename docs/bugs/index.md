@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-19 (BUG-251 resolved + archived — exam "Abandon" now hard-deletes the incomplete session (`DiscardPracticeSessionUseCase`) instead of completing it; promoted to `main` via PR #464 (merge `d5568288`), production deploy verified READY. Prior: practice/quiz-engine sweep filed BUG-251..BUG-252, BUG-252 (P3) still open. Prior: BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
+**Last Updated:** 2026-06-19 (BUG-252 branch fix landed in `902fc4d4` on `bug/252-persist-unanswered-exam-time`; full local gate green, PR review/promotion/prod verification pending, so BUG-252 remains open. Prior: BUG-251 resolved + archived — exam "Abandon" now hard-deletes the incomplete session (`DiscardPracticeSessionUseCase`) instead of completing it; promoted to `main` via PR #464 (merge `d5568288`), production deploy verified READY. Prior: practice/quiz-engine sweep filed BUG-251..BUG-252. Prior: BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
 
 ---
 
@@ -14,6 +14,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 3. **Knowledge Base** — Help future developers understand past issues
 
 **Next Bug ID:** BUG-253
+
+**Latest branch fix (2026-06-19) — BUG-252 implementation pending review:**
+- BUG-252 (P3) has a branch fix in implementation commit `902fc4d4` on `bug/252-persist-unanswered-exam-time`: exam draft saves now accept nullable `selectedChoiceId`, unanswered time-only drafts persist `draftCumulativeMs`, BUG-238 cumulative bounds remain intact, and finalization continues to read capped server-side draft timing. Full local gate passed (typecheck, lint, unit 2883, browser 298, integration 112, build, e2e 36). **BUG-252 remains open** pending PR review, merge to `dev`, promotion to `main`, and production deploy READY verification.
 
 **Latest archival (2026-06-19) — BUG-251 resolved (exam abandon discard lifecycle):**
 - BUG-251 (P2) verified fixed and archived to `docs/_archive/bugs/`. Exam "Abandon" now means true discard: a new `DiscardPracticeSessionUseCase` + `discardPracticeSession` action hard-deletes the incomplete exam session (`DELETE WHERE id / user_id / ended_at IS NULL`, idempotent, exam-only) instead of routing through generic `endPracticeSession`, so a discarded exam no longer persists as a misleading reviewable "completed" session. `EndPracticeSessionUseCase` rejects active-exam ends (defense in depth); tutor abandon is unchanged. Fixed on `dev`, promoted to `main` via PR #464 (merge `d5568288`) after a CodeRabbit `APPROVED` review on the exact head (CHANGES_REQUESTED → fixes → APPROVED) and full gate green (typecheck, lint, unit 2874, browser 298, integration 111, build, e2e 36); production deploy for `d5568288` verified READY; `main` and `dev` trees identical. **BUG-252 (P3) remains open** (deferred — narrow omitted-question timing-accuracy gap).
