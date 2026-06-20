@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-19 (BUG-252 branch fix landed in `902fc4d4` on `bug/252-persist-unanswered-exam-time`; full local gate green, PR review/promotion/prod verification pending, so BUG-252 remains open. Prior: BUG-251 resolved + archived — exam "Abandon" now hard-deletes the incomplete session (`DiscardPracticeSessionUseCase`) instead of completing it; promoted to `main` via PR #464 (merge `d5568288`), production deploy verified READY. Prior: practice/quiz-engine sweep filed BUG-251..BUG-252. Prior: BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
+**Last Updated:** 2026-06-20 (BUG-252 resolved + archived — exam draft saves now accept nullable `selectedChoiceId`, so unanswered time-only drafts persist `draftCumulativeMs`; `FinalizeExamAnswersUseCase` unchanged and BUG-238 cumulative bounds intact. Fixed via PR #472 (squash `2916f416` on `dev`), promoted to `main` via PR #473 (merge `d2f96d61`), production deploy verified READY; `main` and `dev` trees identical. **No active bugs remain.** Prior: BUG-251 resolved + archived — exam "Abandon" now hard-deletes the incomplete session (`DiscardPracticeSessionUseCase`) instead of completing it; promoted to `main` via PR #464 (merge `d5568288`), production deploy verified READY. Prior: BUG-250 resolved + archived — `csvCell` in the feedback export neutralizes spreadsheet-formula-capable cells before CSV quoting; fixed on `dev` (`b98306a6`), promoted to `main` via PR #460 (merge `d76a3516`), production deploy verified READY. Prior: BUG-241 resolved + archived — `vercel.json` `buildCommand` runs `pnpm db:migrate && pnpm build` on every Vercel deploy, verified live on Preview→Neon `dev` and Production→Neon `main`; merged via #453 → `dev` and #454 → `main`.)
 
 ---
 
@@ -15,8 +15,8 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **Next Bug ID:** BUG-253
 
-**Latest branch fix (2026-06-19) — BUG-252 implementation pending review:**
-- BUG-252 (P3) has a branch fix in implementation commit `902fc4d4` on `bug/252-persist-unanswered-exam-time`: exam draft saves now accept nullable `selectedChoiceId`, unanswered time-only drafts persist `draftCumulativeMs`, BUG-238 cumulative bounds remain intact, and finalization continues to read capped server-side draft timing. Full local gate passed (typecheck, lint, unit 2883, browser 298, integration 112, build, e2e 36). **BUG-252 remains open** pending PR review, merge to `dev`, promotion to `main`, and production deploy READY verification.
+**Latest archival (2026-06-20) — BUG-252 resolved (unanswered exam draft timing):**
+- BUG-252 (P3) verified fixed and archived to `docs/_archive/bugs/`. The exam draft write contract now accepts nullable `selectedChoiceId`, so unanswered time-only drafts persist `draftCumulativeMs` (the client now does a server round-trip on navigation whenever cumulative time advances, even with no choice selected); `FinalizeExamAnswersUseCase` is unchanged and reads the now-correct capped server-side draft timing. BUG-238 cumulative bounds preserved (schema `.max`, use-case clamp, repo monotonic guard, finalize cap); the null-save path cannot null an existing draft choice because the UI selection is hydrated from `draftSelectedChoiceId` on load and exam radios have no deselect. Fixed via PR #472 (squash `2916f416` on `dev`) after a CodeRabbit `APPROVED` review on the exact head (`08787944`, 0 actionable, 0 threads) and full gate green (typecheck, lint, unit 2883, browser 298, integration 112, build, e2e 36); promoted to `main` via PR #473 (merge `d2f96d61`, merged under an owner-authorized override of CodeRabbit's review-rate-limit cooldown justified by #472's approval of the byte-identical tree); production deploy for `d2f96d61` verified READY; `main` and `dev` trees identical. This was the last active bug; **no active bugs remain.**
 
 **Latest archival (2026-06-19) — BUG-251 resolved (exam abandon discard lifecycle):**
 - BUG-251 (P2) verified fixed and archived to `docs/_archive/bugs/`. Exam "Abandon" now means true discard: a new `DiscardPracticeSessionUseCase` + `discardPracticeSession` action hard-deletes the incomplete exam session (`DELETE WHERE id / user_id / ended_at IS NULL`, idempotent, exam-only) instead of routing through generic `endPracticeSession`, so a discarded exam no longer persists as a misleading reviewable "completed" session. `EndPracticeSessionUseCase` rejects active-exam ends (defense in depth); tutor abandon is unchanged. Fixed on `dev`, promoted to `main` via PR #464 (merge `d5568288`) after a CodeRabbit `APPROVED` review on the exact head (CHANGES_REQUESTED → fixes → APPROVED) and full gate green (typecheck, lint, unit 2874, browser 298, integration 111, build, e2e 36); production deploy for `d5568288` verified READY; `main` and `dev` trees identical. **BUG-252 (P3) remains open** (deferred — narrow omitted-question timing-accuracy gap).
@@ -167,9 +167,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Active Bugs
 
-| ID | Title | Priority | Filed |
-|----|-------|----------|-------|
-| [BUG-252](./bug-252-unanswered-exam-time-not-persisted.md) | Unanswered Exam Question Time Is Not Persisted Before Finalization | P3 | 2026-06-18 |
+_No active bugs. All filed bugs are resolved and archived to `docs/_archive/bugs/`._
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 
