@@ -317,13 +317,14 @@ export const finalizeExamAnswers = createAction({
   execute: async (input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
 
-    const { sessionId, idempotencyKey } = input;
+    const { sessionId, idempotencyKey, finalDraftAnswer } = input;
 
     async function finalizeExam(): Promise<FinalizeExamAnswersOutput> {
       return FinalizeExamAnswersOutputSchema.parse(
         await d.finalizeExamAnswersUseCase.execute({
           userId,
           sessionId,
+          ...(finalDraftAnswer ? { finalDraftAnswer } : {}),
         }),
       );
     }

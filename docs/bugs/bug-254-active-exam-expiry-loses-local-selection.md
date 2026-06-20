@@ -1,7 +1,7 @@
 # BUG-254: Active Exam Expiry Can Finalize a Locally Selected Answer as Omitted
 
 **Status:** In Progress
-**Fix Phase:** Pending implementation (Phase 1 red test + selected approach committed)
+**Fix Phase:** Fix complete on branch `fix/bug-254-exam-expiry-selection`, pending owner merge grade (Phase 2 server flush + client wiring shipped; full gate green)
 **Severity:** P2
 **Date:** 2026-06-20
 **Confirmed:** 2026-06-20
