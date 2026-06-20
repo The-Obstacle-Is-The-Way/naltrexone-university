@@ -11,7 +11,7 @@ export type SaveExamDraftAnswerInput = {
   userId: string;
   sessionId: string;
   questionId: string;
-  selectedChoiceId: string;
+  selectedChoiceId: string | null;
   cumulativeMs: number;
 };
 
@@ -61,10 +61,10 @@ export class SaveExamDraftAnswerUseCase {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    const selectedChoice = question.choices.find(
-      (choice) => choice.id === input.selectedChoiceId,
-    );
-    if (!selectedChoice) {
+    const selectedChoiceBelongsToQuestion =
+      input.selectedChoiceId === null ||
+      question.choices.some((choice) => choice.id === input.selectedChoiceId);
+    if (!selectedChoiceBelongsToQuestion) {
       throw new ApplicationError(
         'VALIDATION_ERROR',
         'Selected choice does not belong to the question',

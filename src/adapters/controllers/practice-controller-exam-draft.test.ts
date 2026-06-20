@@ -99,6 +99,47 @@ describe('practice-controller', () => {
       ]);
     });
 
+    it('accepts a time-only draft save with null selectedChoiceId', async () => {
+      const saveDraftOutput = {
+        questionId: '22222222-2222-2222-2222-222222222222',
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+        draftSelectedChoiceId: null,
+        draftSavedAt: new Date('2026-02-01T00:00:00.000Z'),
+        draftCumulativeMs: 15_000,
+      } as const;
+      const deps = createDeps({ saveDraftOutput });
+
+      const result = await saveExamDraftAnswer(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: null,
+          cumulativeMs: 15_000,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          ...saveDraftOutput,
+          draftSavedAt: '2026-02-01T00:00:00.000Z',
+        },
+      });
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toEqual([
+        {
+          userId: deps._fixtures.userId,
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          selectedChoiceId: null,
+          cumulativeMs: 15_000,
+        },
+      ]);
+    });
+
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 

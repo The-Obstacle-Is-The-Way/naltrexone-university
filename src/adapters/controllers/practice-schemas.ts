@@ -58,7 +58,7 @@ export const SaveExamDraftAnswerInputSchema = z
   .object({
     sessionId: zUuid,
     questionId: zUuid,
-    selectedChoiceId: zUuid,
+    selectedChoiceId: zUuid.nullable(),
     cumulativeMs: z.number().int().min(0).max(MAX_DRAFT_CUMULATIVE_MS),
   })
   .strict();
