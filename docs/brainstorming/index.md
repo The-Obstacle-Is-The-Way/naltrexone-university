@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-04-23
+**Last Updated:** 2026-06-20 (owner backlog review — re-verified the 3 Active docs against live code. All three premises still hold and none are superseded, so all stay Active: **BS-044** dark-border tiering — `dark:border-foreground/40` still on `feedback.tsx` inner cards + `notification-provider.tsx` toast shells; **BS-052** bookmark icon toggle — never built, all four surfaces still text pills, no `BookmarkToggle` component; **BS-059** action-bar grouping — Bookmark still sandwiched between nav controls, and a 7th control (`QuestionReportDialog`) has since been added. Fixed BS-059's stale `question-page-client.tsx:371-470` citation. All three are dormant aesthetic polish — parked-but-living, no design decision taken.)
 
 ---
 

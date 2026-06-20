@@ -1,7 +1,7 @@
 # BS-059: Session Review Question Page Action Bar — Button Arrangement and Grouping
 
 **Date:** 2026-03-21
-**Triggered by:** DEBT-330 investigation revealed the same bookmark-between-nav-controls problem exists on the question review / session review bottom action bar (`question-page-client.tsx:371-470`), but with more buttons and more state combinations making it harder to reason about in isolation.
+**Triggered by:** DEBT-330 investigation revealed the same bookmark-between-nav-controls problem exists on the question review / session review bottom action bar (`app/(app)/app/questions/[slug]/question-page-client.tsx`, the `data-testid="bottom-action-bar"` block), but with more buttons and more state combinations making it harder to reason about in isolation.
 **Scope:** Audit the question review / session review bottom action bar's arrangement across all states (pre-submit, post-submit, review mode, session nav present/absent) and determine if the button grouping needs the same kind of fix as DEBT-330 (post-exam review surface).
 **Related:** [BS-061](./bs-061-review-surface-divergence-audit.md), [DEBT-330 (resolved)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
 
@@ -13,7 +13,9 @@
 
 ## The Problem
 
-The bottom action bar at `question-page-client.tsx:371-470` renders up to 6 different buttons depending on state. This is the review/question page surface reached from History, Bookmarks, Dashboard, Summary, or session navigation. The active tutor practice surface is related context, but not the current unresolved layout problem.
+The bottom action bar (the `data-testid="bottom-action-bar"` flex container in `app/(app)/app/questions/[slug]/question-page-client.tsx`) renders up to 6–7 different controls depending on state. This is the review/question page surface reached from History, Bookmarks, Dashboard, Summary, or session navigation. The active tutor practice surface is related context, but not the current unresolved layout problem.
+
+> **Re-verified 2026-06-20:** premise still holds. In source order the controls render Previous → Submit → Try Again/Reattempt → **Bookmark** → `QuestionReportDialog` → Next → Back, so Bookmark is still sandwiched between the reattempt/previous controls and the next/back controls (no `ml-auto` right-push like the DEBT-330 fix). Note a **7th control, `QuestionReportDialog`, was added after Bookmark since this doc was filed** — the bar has accreted, not simplified, which reinforces the grouping concern below.
 
 The combinations are:
 
@@ -119,3 +121,4 @@ This is polish, not broken functionality.
 | 2026-03-21 | DEBT-330 resolved independently | Post-exam review now ships navigation-first ordering with trailing Bookmark, so this doc now represents a follow-up consistency exploration rather than a dependency blocker. |
 | 2026-03-29 | Tightened scope to the live unresolved surface | The active tutor practice bar is no longer the primary issue. The still-open layout problem is the question review / session review bottom action bar in `question-page-client.tsx`, which continues to render bookmark between reattempt/previous controls and next/back controls. |
 | 2026-04-07 | Remains brainstorming, not debt | Direction C exam-flow continuity is now tracked in DEBT-350. BS-059 stays active because the standalone `question-page-client.tsx` action-bar contract still needs a final multi-state decision before promotion. |
+| 2026-06-20 | Re-verified against live code; kept Active | Owner backlog review. Traced the live `bottom-action-bar`: Bookmark is still rendered between reattempt/previous and next/back controls (unfixed), and a 7th control (`QuestionReportDialog`) has since been added. Premise valid, not superseded. Fixed the stale `question-page-client.tsx:371-470` citation (file is under `questions/[slug]/`; anchored on `data-testid="bottom-action-bar"`). No design decision taken — remains parked-but-living polish. |
