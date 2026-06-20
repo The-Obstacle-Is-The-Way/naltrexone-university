@@ -24,10 +24,18 @@ import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from './save-exam-draft-answer';
  * The ordinary `SaveExamDraftAnswerUseCase` rejects any draft save at/after the
  * deadline. A selection made just before zero can therefore lose its save to the
  * network/event-loop hop and arrive after the deadline. This flush is accepted
- * only from the deadline up to this short window after it, covering that delay
- * without enabling arbitrary-late answering.
+ * only from the deadline up to this short window after it.
+ *
+ * The window is sized to one client mutation round-trip (the doomed draft save's
+ * timeout is `STANDARD_MUTATION_TIMEOUT_MS` = 15s) plus the 1s exam-timer tick:
+ * it must be at least that long so a genuinely slow network at expiry does not
+ * push the follow-up finalize past the window and drop a real answer (the very
+ * bug this fixes). It is deliberately kept this tight — not minutes — so the
+ * post-deadline window cannot be used to deliberately answer a fresh question
+ * (CodeRabbit PR #476 hardening: there is no server "active question" cursor in
+ * free-navigation exam mode, so the tight window is the integrity bound).
  */
-export const FINALIZE_FLUSH_DEADLINE_GRACE_MS = 30_000;
+export const FINALIZE_FLUSH_DEADLINE_GRACE_MS = 15_000;
 
 export type FinalizeExamFinalDraftAnswer = {
   questionId: string;
