@@ -1,7 +1,7 @@
 # BUG-254: Active Exam Expiry Can Finalize a Locally Selected Answer as Omitted
 
-**Status:** Open
-**Resolution State:** Fix complete on branch `fix/bug-254-exam-expiry-selection` (PR #476), pending owner merge grade. Phase 2 shipped the bounded single-question server-side finalization flush + client wiring; full gate green. Not yet merged/prod-verified, so Status stays `Open`.
+**Status:** Resolved
+**Resolution:** Shipped the bounded single-question server-side finalization flush. Fixed via PR #476 (squash `87650d55` on `dev`; CodeRabbit `APPROVED` on head `fe6de800`, 0 unresolved threads), promoted to `main` via PR #477 (merge `0bc288fb`; CodeRabbit `APPROVED` on head `87650d55`, required `test` check green). Production deploy `dpl_E7C6BeT2QF8dFubtXmu9VaHBrXcT` verified READY 2026-06-21 (`addictionboards.com` HTTP 200); `main` and `dev` trees identical. Note: the `file:line` citations below reflect the pre-fix code at filing time — the shipped fix lives in `applyFinalDraftAnswer` + `FINALIZE_FLUSH_DEADLINE_GRACE_MS` in `finalize-exam-answers.ts`.
 **Severity:** P2
 **Date:** 2026-06-20
 **Confirmed:** 2026-06-20
@@ -37,44 +37,44 @@ Actual:
 
 Active exam selection is local until a draft save occurs:
 
-- [`use-practice-session-question-flow.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L415>) updates local selection.
-- The same handler returns before `commitChoice(...)` for exam mode at [`use-practice-session-question-flow.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L421>).
+- [`use-practice-session-question-flow.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L415>) updates local selection.
+- The same handler returns before `commitChoice(...)` for exam mode at [`use-practice-session-question-flow.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L421>).
 
 The timer fires only at or after the deadline:
 
-- [`use-exam-timer.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L17>) computes zero remaining seconds at the deadline.
-- [`use-exam-timer.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L51>) calls `onExpire` once the timer is expired.
+- [`use-exam-timer.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L17>) computes zero remaining seconds at the deadline.
+- [`use-exam-timer.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L51>) calls `onExpire` once the timer is expired.
 
 The expiry handler ignores a failed final draft save:
 
-- [`use-practice-session-page-model.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L153>) starts `finalizeExpiredExam`.
-- [`use-practice-session-page-model.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L159>) awaits `saveCurrentExamDraft()`.
-- [`use-practice-session-page-model.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L170>) calls `reviewStage.finalizeExamSession()` regardless of the boolean save result.
+- [`use-practice-session-page-model.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L153>) starts `finalizeExpiredExam`.
+- [`use-practice-session-page-model.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L159>) awaits `saveCurrentExamDraft()`.
+- [`use-practice-session-page-model.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L170>) calls `reviewStage.finalizeExamSession()` regardless of the boolean save result.
 
 The server rejects draft saves after expiry:
 
-- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L55) throws `CONFLICT` when `isExamExpired(...)` is true.
+- [`save-exam-draft-answer.ts`](../../../src/application/use-cases/save-exam-draft-answer.ts#L55) throws `CONFLICT` when `isExamExpired(...)` is true.
 
 Finalization reads only persisted draft state:
 
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L101) reads `state.draftSelectedChoiceId`.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L102) treats `null` as unanswered.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L105) writes an omitted outcome.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L101) reads `state.draftSelectedChoiceId`.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L102) treats `null` as unanswered.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L105) writes an omitted outcome.
 
 Phase 1 replaces the timer-expiry browser expectation with a red regression for the intended contract:
 
-- [`use-practice-session-page-model-timer.browser.spec.tsx`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx#L117>) selects a choice, mocks the draft save as expired, and expects the finalized summary to report `answered: 1`.
+- [`use-practice-session-page-model-timer.browser.spec.tsx`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx#L117>) selects a choice, mocks the draft save as expired, and expects the finalized summary to report `answered: 1`.
 - The mock finalizer now reports `answered: 1` only when it receives a single-question `finalDraftAnswer`; today's client sends no such flush, so the focused browser run fails with `Received: 0`.
 
 ## Impact
 
 A subscriber can lose a selected exam answer at the exact timing boundary and receive an incorrectly lower score/review result.
 
-## Proposed Fix
+## Fix (Shipped)
 
-Use a bounded server-side finalization flush for the single question currently visible when the exam timer expires.
+Implemented a bounded server-side finalization flush for the single question currently visible when the exam timer expires.
 
-Implementation path:
+Implementation (as shipped):
 
 1. Extend `finalizeExamAnswers` input with an optional `finalDraftAnswer` object containing exactly one `questionId`, nullable `selectedChoiceId`, and `cumulativeMs`.
 2. Only the expiry path passes `finalDraftAnswer`; ordinary Review & Submit finalization keeps the current contract unless it has already persisted drafts through the existing save path.
