@@ -25,11 +25,17 @@ import type { NextQuestion } from '@/src/application/use-cases/get-next-question
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 type SessionIdInput = { sessionId: string };
+type FinalExamDraftAnswer = {
+  questionId: string;
+  selectedChoiceId: string | null;
+  cumulativeMs: number;
+};
 type EndPracticeSessionActionInput = SessionIdInput & {
   idempotencyKey?: string;
 };
 type FinalizeExamAnswersActionInput = SessionIdInput & {
   idempotencyKey?: string;
+  finalDraftAnswer?: FinalExamDraftAnswer;
 };
 
 export type { ExamResultsSubstage };
@@ -47,6 +53,7 @@ export type UsePracticeSessionReviewStageInput = {
   resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
   saveCurrentExamDraft: () => Promise<boolean>;
+  getCurrentExamDraft: () => FinalExamDraftAnswer | null;
   endPracticeSessionFn: (
     input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
@@ -107,10 +114,11 @@ export function usePracticeSessionReviewStage(
     ],
   );
   const finalizeExamSession = useCallback(
-    () =>
+    (finalDraftAnswer?: FinalExamDraftAnswer) =>
       endSession({
         sessionId: input.sessionId,
         endSessionIdempotencyKey: finalizeExamIdempotencyKeyRef.current,
+        ...(finalDraftAnswer ? { finalDraftAnswer } : {}),
         finalizeSessionFn: input.finalizeExamAnswersFn,
         getPracticeSessionSummaryFn: input.getPracticeSessionSummaryFn,
         setLoadState: input.setLoadState,
@@ -197,6 +205,10 @@ export function usePracticeSessionReviewStage(
     void (async () => {
       try {
         if (input.sessionMode === 'exam') {
+          // BUG-254: capture the on-screen draft before the save attempt so a
+          // selection made at the deadline can still be graded via the flush
+          // when the ordinary save is rejected for expiry.
+          const finalDraftAnswer = input.getCurrentExamDraft() ?? undefined;
           const saved = await input.saveCurrentExamDraft();
           if (!saved) {
             const deadlineAt = input.sessionInfo?.deadlineAt ?? null;
@@ -207,7 +219,7 @@ export function usePracticeSessionReviewStage(
             const isExpired =
               Number.isFinite(deadlineMs) && Date.now() >= deadlineMs;
             if (isExpired) {
-              await finalizeExamSession();
+              await finalizeExamSession(finalDraftAnswer);
             }
             return;
           }
@@ -227,6 +239,7 @@ export function usePracticeSessionReviewStage(
       reviewStage.onEndSession();
     })();
   }, [
+    input.getCurrentExamDraft,
     input.isMounted,
     input.saveCurrentExamDraft,
     input.sessionInfo?.deadlineAt,

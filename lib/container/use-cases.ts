@@ -51,6 +51,7 @@ export function createUseCaseFactories(input: {
             sessions: repositories.createPracticeSessionRepository(tx),
           }),
         ),
+      primitives.now,
     );
 
   return {

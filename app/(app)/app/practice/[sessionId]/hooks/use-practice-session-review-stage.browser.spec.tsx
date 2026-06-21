@@ -39,6 +39,9 @@ const getCompletedSessionQuestionsWithFeedbackMock =
     ) => Promise<ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>>
   >();
 const saveCurrentExamDraftMock = vi.fn<() => Promise<boolean>>();
+const getCurrentExamDraftMock = vi.fn<
+  UsePracticeSessionReviewStageInput['getCurrentExamDraft']
+>(() => null);
 
 function createInput(sessionMode: 'tutor' | 'exam') {
   return {
@@ -59,6 +62,7 @@ function createInput(sessionMode: 'tutor' | 'exam') {
     getCompletedSessionQuestionsWithFeedbackFn:
       getCompletedSessionQuestionsWithFeedbackMock,
     saveCurrentExamDraft: saveCurrentExamDraftMock,
+    getCurrentExamDraft: getCurrentExamDraftMock,
   };
 }
 

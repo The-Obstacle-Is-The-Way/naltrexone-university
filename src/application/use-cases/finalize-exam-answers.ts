@@ -5,7 +5,12 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
-import { gradeAnswer, MS_PER_SECOND } from '@/src/domain/services';
+import type { PracticeSession } from '@/src/domain/entities';
+import {
+  computeExamDeadline,
+  gradeAnswer,
+  MS_PER_SECOND,
+} from '@/src/domain/services';
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import {
   type PracticeSessionSummary,
@@ -13,9 +18,35 @@ import {
 } from './practice-session-summary';
 import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from './save-exam-draft-answer';
 
+/**
+ * BUG-254 grace window for the single-question expiry flush.
+ *
+ * The ordinary `SaveExamDraftAnswerUseCase` rejects any draft save at/after the
+ * deadline. A selection made just before zero can therefore lose its save to the
+ * network/event-loop hop and arrive after the deadline. This flush is accepted
+ * only from the deadline up to this short window after it.
+ *
+ * The window is sized to one client mutation round-trip (the doomed draft save's
+ * timeout is `STANDARD_MUTATION_TIMEOUT_MS` = 15s) plus the 1s exam-timer tick:
+ * it must be at least that long so a genuinely slow network at expiry does not
+ * push the follow-up finalize past the window and drop a real answer (the very
+ * bug this fixes). It is deliberately kept this tight — not minutes — so the
+ * post-deadline window cannot be used to deliberately answer a fresh question
+ * (CodeRabbit PR #476 hardening: there is no server "active question" cursor in
+ * free-navigation exam mode, so the tight window is the integrity bound).
+ */
+export const FINALIZE_FLUSH_DEADLINE_GRACE_MS = 15_000;
+
+export type FinalizeExamFinalDraftAnswer = {
+  questionId: string;
+  selectedChoiceId: string | null;
+  cumulativeMs: number;
+};
+
 export type FinalizeExamAnswersInput = {
   userId: string;
   sessionId: string;
+  finalDraftAnswer?: FinalizeExamFinalDraftAnswer;
 };
 
 export type FinalizeExamAnswersOutput = PracticeSessionSummary;
@@ -34,6 +65,7 @@ export class FinalizeExamAnswersUseCase {
     private readonly attempts: AttemptWriter,
     private readonly sessions: PracticeSessionRepository,
     private readonly writeTransaction: FinalizeExamAnswersWriteTransaction,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(
@@ -62,27 +94,39 @@ export class FinalizeExamAnswersUseCase {
     }
 
     const endedSession = await this.writeTransaction(async (tx) => {
-      const activeSession = await tx.sessions.findByIdAndUserId(
+      const loadedSession = await tx.sessions.findByIdAndUserId(
         input.sessionId,
         input.userId,
       );
-      if (!activeSession) {
+      if (!loadedSession) {
         throw new ApplicationError('NOT_FOUND', 'Practice session not found');
       }
 
-      if (activeSession.mode !== 'exam') {
+      if (loadedSession.mode !== 'exam') {
         throw new ApplicationError(
           'VALIDATION_ERROR',
           'Finalize exam is only available in exam mode',
         );
       }
 
-      if (activeSession.endedAt) {
+      if (loadedSession.endedAt) {
         throw new ApplicationError(
           'CONFLICT',
           'Cannot finalize a completed session',
         );
       }
+
+      // BUG-254: apply the single-question expiry flush BEFORE grading so the
+      // selection visible on-screen at expiry is graded instead of omitted.
+      // Grading below stays server-authoritative; this only persists the
+      // validated candidate draft inside the same finalize transaction.
+      const activeSession = input.finalDraftAnswer
+        ? await this.applyFinalDraftAnswer(
+            tx,
+            loadedSession,
+            input.finalDraftAnswer,
+          )
+        : loadedSession;
 
       const draftedStates = activeSession.questionStates.filter(
         (state) => state.draftSelectedChoiceId !== null,
@@ -161,5 +205,90 @@ export class FinalizeExamAnswersUseCase {
     }
 
     return projectPracticeSessionSummary(endedSession, endedAt);
+  }
+
+  private async applyFinalDraftAnswer(
+    tx: {
+      questions: QuestionRepository;
+      sessions: PracticeSessionRepository;
+    },
+    session: PracticeSession,
+    finalDraftAnswer: FinalizeExamFinalDraftAnswer,
+  ): Promise<PracticeSession> {
+    const questionState = session.questionStates.find(
+      (state) => state.questionId === finalDraftAnswer.questionId,
+    );
+    if (!questionState) {
+      throw new ApplicationError(
+        'NOT_FOUND',
+        'Question is not part of this practice session',
+      );
+    }
+
+    const deadline = computeExamDeadline(session);
+    const nowMs = this.now().getTime();
+    const isWithinGraceWindow =
+      deadline !== null &&
+      nowMs >= deadline.getTime() &&
+      nowMs <= deadline.getTime() + FINALIZE_FLUSH_DEADLINE_GRACE_MS;
+    if (!isWithinGraceWindow) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'Final exam answer flush is only allowed at exam expiry',
+      );
+    }
+
+    if (finalDraftAnswer.selectedChoiceId !== null) {
+      const question = await tx.questions.findPublishedById(
+        finalDraftAnswer.questionId,
+      );
+      if (!question) {
+        throw new ApplicationError('NOT_FOUND', 'Question not found');
+      }
+      const choiceBelongsToQuestion = question.choices.some(
+        (choice) => choice.id === finalDraftAnswer.selectedChoiceId,
+      );
+      if (!choiceBelongsToQuestion) {
+        throw new ApplicationError(
+          'VALIDATION_ERROR',
+          'Selected choice does not belong to the question',
+        );
+      }
+    }
+
+    const rawCumulativeMs = finalDraftAnswer.cumulativeMs;
+    const clampedCumulativeMs =
+      typeof rawCumulativeMs === 'number' && Number.isFinite(rawCumulativeMs)
+        ? Math.min(
+            SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+            Math.max(0, rawCumulativeMs),
+          )
+        : 0;
+    // saveDraftAnswer keeps draft state monotonic in cumulativeMs and drops a
+    // write whose value is below the persisted draft. Floor the flush at the
+    // existing (already-capped) draft time so a selection made at expiry is
+    // never silently dropped, while preserving the BUG-238 upper bound.
+    const persistedCumulativeMs = Math.min(
+      questionState.draftCumulativeMs,
+      SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+    );
+    const cumulativeMs = Math.max(clampedCumulativeMs, persistedCumulativeMs);
+
+    await tx.sessions.saveDraftAnswer({
+      sessionId: session.id,
+      userId: session.userId,
+      questionId: finalDraftAnswer.questionId,
+      selectedChoiceId: finalDraftAnswer.selectedChoiceId,
+      cumulativeMs,
+    });
+
+    const refreshedSession = await tx.sessions.findByIdAndUserId(
+      session.id,
+      session.userId,
+    );
+    if (!refreshedSession) {
+      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+    }
+    return refreshedSession;
   }
 }

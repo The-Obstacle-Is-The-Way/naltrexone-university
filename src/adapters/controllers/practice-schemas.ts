@@ -52,7 +52,26 @@ export const EndPracticeSessionInputSchema = z
   .strict();
 
 export const DiscardPracticeSessionInputSchema = EndPracticeSessionInputSchema;
-export const FinalizeExamAnswersInputSchema = EndPracticeSessionInputSchema;
+
+// BUG-254: the exam-expiry finalize path may carry exactly one bounded candidate
+// draft for the question on-screen when the timer expired. The server validates
+// ownership, membership, choice validity, timing (deadline grace window), and
+// grades it authoritatively. cumulativeMs mirrors the SaveExamDraftAnswer bound.
+const FinalDraftAnswerSchema = z
+  .object({
+    questionId: zUuid,
+    selectedChoiceId: zUuid.nullable(),
+    cumulativeMs: z.number().int().min(0).max(MAX_DRAFT_CUMULATIVE_MS),
+  })
+  .strict();
+
+export const FinalizeExamAnswersInputSchema = z
+  .object({
+    sessionId: zUuid,
+    idempotencyKey: zUuid.optional(),
+    finalDraftAnswer: FinalDraftAnswerSchema.optional(),
+  })
+  .strict();
 
 export const SaveExamDraftAnswerInputSchema = z
   .object({

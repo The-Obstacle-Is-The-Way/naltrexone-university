@@ -32,8 +32,14 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 const END_SESSION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 type SessionIdInput = { sessionId: string };
+type FinalExamDraftAnswer = {
+  questionId: string;
+  selectedChoiceId: string | null;
+  cumulativeMs: number;
+};
 type EndPracticeSessionActionInput = SessionIdInput & {
   idempotencyKey?: string;
+  finalDraftAnswer?: FinalExamDraftAnswer;
 };
 type PracticeSessionFinalizationOutput =
   | EndPracticeSessionOutput
@@ -161,6 +167,7 @@ export async function submitAnswerForQuestion(input: {
 export async function endSession(input: {
   sessionId: string;
   endSessionIdempotencyKey: string;
+  finalDraftAnswer?: FinalExamDraftAnswer | undefined;
   finalizeSessionFn: (
     input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<PracticeSessionFinalizationOutput>>;
@@ -183,6 +190,9 @@ export async function endSession(input: {
       input.finalizeSessionFn({
         sessionId: input.sessionId,
         idempotencyKey: input.endSessionIdempotencyKey,
+        ...(input.finalDraftAnswer
+          ? { finalDraftAnswer: input.finalDraftAnswer }
+          : {}),
       }),
       END_SESSION_TIMEOUT_MS,
     );

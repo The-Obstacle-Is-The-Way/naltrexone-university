@@ -188,6 +188,10 @@ export function PracticeSessionPageModelReviewProbe() {
         { testId: 'load-status', value: output.loadState.status },
         { testId: 'question-id', value: output.question?.questionId },
         { testId: 'summary-session-id', value: output.summary?.sessionId },
+        {
+          testId: 'summary-answered-count',
+          value: output.summary?.totals.answered,
+        },
         { testId: 'has-submit-result', value: output.submitResult !== null },
         {
           testId: 'review-answered-count',
