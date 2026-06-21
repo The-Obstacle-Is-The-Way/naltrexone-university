@@ -287,6 +287,12 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await expect
       .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
       .toBe(2);
+    await expect
+      .element(screen.getByTestId('summary-session-id'))
+      .toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('summary-mode'))
+      .toHaveTextContent('');
 
     screen.unmount();
     recoverySummary.resolve(
@@ -304,6 +310,13 @@ describe('usePracticeSessionPageModel (browser)', () => {
       }),
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(document.querySelector('[data-testid="active-view"]')).toBeNull();
+    expect(
+      document.querySelector('[data-testid="summary-session-id"]'),
+    ).toBeNull();
+    expect(document.querySelector('[data-testid="summary-mode"]')).toBeNull();
+    expect(document.body.textContent).not.toContain(BROWSER_SESSION_ID);
   });
 
   it('does not re-read the summary when normal in-session navigation returns no question', async () => {
