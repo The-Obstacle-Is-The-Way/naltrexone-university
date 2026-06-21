@@ -25,6 +25,7 @@ import { withTimeout } from '@/lib/with-timeout';
 import {
   endPracticeSession,
   finalizeExamAnswers,
+  type GetPracticeSessionSummaryOutput,
   getCompletedSessionQuestionsWithFeedback,
   getPracticeSessionReview,
   getPracticeSessionSummary,
@@ -201,6 +202,51 @@ export function usePracticeSessionPageModel(
       })
     : undefined;
 
+  const applyBootstrapSummary = useCallback(
+    (summary: GetPracticeSessionSummaryOutput) => {
+      reviewStage.setSummary(summary);
+      questionFlow.setSessionMode(summary.mode);
+      questionFlow.resetQuestionState();
+      questionFlow.setLoadState({ status: 'ready' });
+    },
+    [
+      questionFlow.resetQuestionState,
+      questionFlow.setLoadState,
+      questionFlow.setSessionMode,
+      reviewStage.setSummary,
+    ],
+  );
+
+  const recoverBootstrapSummaryAfterNullQuestion = useCallback(
+    async (requestId: number): Promise<boolean> => {
+      let result: Awaited<ReturnType<typeof getPracticeSessionSummary>>;
+      try {
+        result = await withTimeout(
+          getPracticeSessionSummary({ sessionId }),
+          BOOTSTRAP_SUMMARY_TIMEOUT_MS,
+        );
+      } catch (error) {
+        if (isMounted()) {
+          reportClientError(error, {
+            component: 'UsePracticeSessionPageModel',
+            action: 'recoverBootstrapSummaryAfterNullQuestion',
+          });
+        }
+        return false;
+      }
+
+      if (requestId !== bootstrapRequestIdRef.current || !isMounted()) {
+        return true;
+      }
+      if (!result.ok) return false;
+
+      setShouldRetryBootstrap(false);
+      applyBootstrapSummary(result.data);
+      return true;
+    },
+    [applyBootstrapSummary, isMounted, sessionId],
+  );
+
   const bootstrapSessionSummary = useCallback(() => {
     const requestId = bootstrapRequestIdRef.current + 1;
     bootstrapRequestIdRef.current = requestId;
@@ -216,15 +262,15 @@ export function usePracticeSessionPageModel(
         if (requestId !== bootstrapRequestIdRef.current || !isMounted()) return;
 
         if (result.ok) {
-          reviewStage.setSummary(result.data);
-          questionFlow.setSessionMode(result.data.mode);
-          questionFlow.resetQuestionState();
-          questionFlow.setLoadState({ status: 'ready' });
+          applyBootstrapSummary(result.data);
           return;
         }
 
         if (result.error.code === 'CONFLICT') {
-          questionFlow.onTryAgain();
+          questionFlow.onTryAgain({
+            recoverNullQuestion: () =>
+              recoverBootstrapSummaryAfterNullQuestion(requestId),
+          });
           return;
         }
 
@@ -249,10 +295,10 @@ export function usePracticeSessionPageModel(
   }, [
     sessionId,
     isMounted,
+    applyBootstrapSummary,
     questionFlow.onTryAgain,
-    questionFlow.resetQuestionState,
     questionFlow.setLoadState,
-    questionFlow.setSessionMode,
+    recoverBootstrapSummaryAfterNullQuestion,
     reviewStage.setSummary,
   ]);
 
