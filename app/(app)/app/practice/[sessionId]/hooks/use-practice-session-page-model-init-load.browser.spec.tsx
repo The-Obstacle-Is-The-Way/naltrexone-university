@@ -249,6 +249,63 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBeVisible();
   });
 
+  it('keeps the generic empty state when expired-exam recovery summary re-read throws', async () => {
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockRejectedValueOnce(new Error('Summary recovery failed'));
+    getNextQuestionMock.mockResolvedValue(ok(null));
+
+    const screen = await render(<PracticeSessionPageModelViewProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('');
+    await expect
+      .element(screen.getByText('No more questions found.'))
+      .toBeVisible();
+  });
+
+  it('does not commit expired-exam recovery results after unmount', async () => {
+    const recoverySummary = createDeferred<ActionResult<unknown>>();
+
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockImplementationOnce(() => recoverySummary.promise);
+    getNextQuestionMock.mockResolvedValue(ok(null));
+
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+
+    screen.unmount();
+    recoverySummary.resolve(
+      ok({
+        sessionId: BROWSER_SESSION_ID,
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 1200,
+        },
+      }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
   it('does not re-read the summary when normal in-session navigation returns no question', async () => {
     getPracticeSessionSummaryMock.mockResolvedValue(
       errorResult('CONFLICT', 'Practice session has not ended'),
