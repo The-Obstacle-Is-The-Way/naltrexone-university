@@ -58,6 +58,11 @@ export type UsePracticeSessionQuestionFlowOutput = {
   onSelectChoice: (choiceId: string) => void;
   onSubmit: (options?: SubmitOptions) => Promise<SubmitAnswerOutput | null>;
   saveCurrentExamDraft: () => Promise<boolean>;
+  getCurrentExamDraft: () => {
+    questionId: string;
+    selectedChoiceId: string | null;
+    cumulativeMs: number;
+  } | null;
 };
 
 export function usePracticeSessionQuestionFlow(
@@ -277,6 +282,27 @@ export function usePracticeSessionQuestionFlow(
     setQuestion,
   ]);
 
+  // BUG-254: the bounded candidate draft for the question currently on-screen.
+  // The exam-expiry finalize path forwards this so the server can grade the
+  // selection visible at timer expiry, even when the deadline rejects the save.
+  const getCurrentExamDraft = useCallback<
+    UsePracticeSessionQuestionFlowOutput['getCurrentExamDraft']
+  >(() => {
+    if (question?.session?.mode !== 'exam') return null;
+
+    const nowMs = Date.now();
+    const enteredAtMs = currentExamDraftEnteredAtRef.current;
+    const elapsedMs =
+      enteredAtMs === null ? 0 : Math.max(0, nowMs - enteredAtMs);
+    const cumulativeMs = currentExamDraftCumulativeMsRef.current + elapsedMs;
+
+    return {
+      questionId: question.questionId,
+      selectedChoiceId,
+      cumulativeMs,
+    };
+  }, [question, selectedChoiceId]);
+
   const onNavigateQuestion = useCallback(
     (questionId: string): void => {
       void runTransitionedAsyncAction({
@@ -445,5 +471,6 @@ export function usePracticeSessionQuestionFlow(
     onSelectChoice,
     onSubmit,
     saveCurrentExamDraft,
+    getCurrentExamDraft,
   };
 }

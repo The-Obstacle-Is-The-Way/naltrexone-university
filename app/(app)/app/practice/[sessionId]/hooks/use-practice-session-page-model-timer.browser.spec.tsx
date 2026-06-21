@@ -7,6 +7,7 @@ import {
   createReviewResponse,
 } from './practice-session-page-model.browser.fixtures';
 import {
+  BROWSER_CHOICE_1_ID,
   BROWSER_QUESTION_1_ID,
   BROWSER_SESSION_ID,
   CHOICE_1,
@@ -53,7 +54,27 @@ function mockActiveTimedExam(deadlineAt: string) {
   );
 }
 
-function mockFinalizeSummary() {
+function hasSelectedFinalDraft(input: unknown): boolean {
+  const finalDraftAnswer =
+    typeof input === 'object' && input !== null && 'finalDraftAnswer' in input
+      ? (
+          input as {
+            finalDraftAnswer?: {
+              questionId?: unknown;
+              selectedChoiceId?: unknown;
+            };
+          }
+        ).finalDraftAnswer
+      : null;
+
+  return (
+    finalDraftAnswer?.questionId === BROWSER_QUESTION_1_ID &&
+    finalDraftAnswer.selectedChoiceId === BROWSER_CHOICE_1_ID
+  );
+}
+
+function mockFinalizeSummary(input: { answered?: number } = {}) {
+  const answered = input.answered ?? 0;
   finalizeExamAnswersMock.mockResolvedValue(
     ok({
       sessionId: BROWSER_SESSION_ID,
@@ -61,7 +82,7 @@ function mockFinalizeSummary() {
       mode: 'exam',
       questionCount: 1,
       totals: {
-        answered: 0,
+        answered,
         correct: 0,
         accuracy: 0,
         durationSeconds: 72,
@@ -70,16 +91,34 @@ function mockFinalizeSummary() {
   );
 }
 
+function mockFinalizeSummaryFromFinalFlush() {
+  finalizeExamAnswersMock.mockImplementation(async (input: unknown) => {
+    const answered = hasSelectedFinalDraft(input) ? 1 : 0;
+    return ok({
+      sessionId: BROWSER_SESSION_ID,
+      endedAt: '2026-05-22T12:01:12.000Z',
+      mode: 'exam',
+      questionCount: 1,
+      totals: {
+        answered,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 72,
+      },
+    });
+  });
+}
+
 afterEach(() => {
   vi.useRealTimers();
 });
 
 describe('usePracticeSessionPageModel timer expiry', () => {
-  it('finalizes once on timer expiry even when the final draft save is rejected', async () => {
+  it('grades a locally selected exam answer when timer expiry final draft save is rejected', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
     mockActiveTimedExam('2026-05-22T12:00:01.000Z');
-    mockFinalizeSummary();
+    mockFinalizeSummaryFromFinalFlush();
     saveExamDraftAnswerMock.mockResolvedValue(
       errorResult('CONFLICT', 'Exam time has expired'),
     );
@@ -96,8 +135,25 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     await expect
       .element(screen.getByTestId('active-view'))
       .toHaveTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-answered-count'))
+      .toHaveTextContent('1');
     expect(saveExamDraftAnswerMock).toHaveBeenCalledTimes(1);
+    expect(saveExamDraftAnswerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        questionId: BROWSER_QUESTION_1_ID,
+        selectedChoiceId: BROWSER_CHOICE_1_ID,
+      }),
+    );
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
+    expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        finalDraftAnswer: expect.objectContaining({
+          questionId: BROWSER_QUESTION_1_ID,
+          selectedChoiceId: BROWSER_CHOICE_1_ID,
+        }),
+      }),
+    );
 
     await vi.advanceTimersByTimeAsync(3_000);
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);

@@ -84,6 +84,7 @@ export function usePracticeSessionPageModel(
       getCompletedSessionQuestionsWithFeedback,
     getPracticeSessionSummaryFn: getPracticeSessionSummary,
     saveCurrentExamDraft: questionFlow.saveCurrentExamDraft,
+    getCurrentExamDraft: questionFlow.getCurrentExamDraft,
   });
 
   const currentPostExamBookmarkQuestion = useMemo(() => {
@@ -155,6 +156,11 @@ export function usePracticeSessionPageModel(
     expiryFinalizeInFlightRef.current = true;
 
     void (async () => {
+      // BUG-254: capture the on-screen draft BEFORE the save attempt. At the
+      // deadline the ordinary draft save is rejected as expired; rather than
+      // leaving that doomed save's only effect as an error state, we forward the
+      // captured selection to finalization so the server grades it.
+      const finalDraftAnswer = questionFlow.getCurrentExamDraft() ?? undefined;
       try {
         await questionFlow.saveCurrentExamDraft();
       } catch (error) {
@@ -167,10 +173,11 @@ export function usePracticeSessionPageModel(
       }
 
       if (!isMounted()) return;
-      await reviewStage.finalizeExamSession();
+      await reviewStage.finalizeExamSession(finalDraftAnswer);
     })();
   }, [
     isMounted,
+    questionFlow.getCurrentExamDraft,
     questionFlow.saveCurrentExamDraft,
     reviewStage.finalizeExamSession,
   ]);
