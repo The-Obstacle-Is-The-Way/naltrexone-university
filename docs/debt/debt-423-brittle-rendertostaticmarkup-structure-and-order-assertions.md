@@ -1,0 +1,110 @@
+# DEBT-423: Brittle Raw-Markup & DOM-Order Assertions in `renderToStaticMarkup` Tests
+
+**Status:** Open
+**Priority:** P3
+**Date:** 2026-06-21
+**Owner:** Testing
+**Source:** Saved session note — surfaced while doing an E2E copy/wording update; the author noticed the *real* fragility was not the wording assertion being changed but a separate class of leftover `renderToStaticMarkup` assertions.
+
+> Saved note (verbatim):
+>
+> *"I found the real weak spot: not the E2E wording update, but some leftover render-to-static-markup tests that still assert raw HTML fragments and string order. That's the kind of thing that passes today and breaks on harmless markup refactors, so I'm tightening those now instead of just blessing them."*
+
+**Related (all resolved — this is the uncovered sibling):**
+- [DEBT-153](../_archive/debt/debt-153-brittle-css-class-string-assertions.md) — brittle CSS **class-string** assertions in `renderToStaticMarkup` tests
+- [DEBT-369](../_archive/debt/debt-369-feedback-test-brittle-presentational-token-assertions.md) — brittle presentational-**token** assertions in `Feedback.test.tsx`
+- [DEBT-271](../_archive/debt/debt-271-structural-ast-test-brittleness.md) — structural/AST-coupled test brittleness (Drizzle object shape)
+- [.claude/rules/testing.md](../../.claude/rules/testing.md) — "Prefer stable markers (role, visible text, href, data-testid)"; "Avoid asserting full space-delimited class strings for purely presentational styles"
+
+---
+
+## Why this note was worth saving
+
+DEBT-153 and DEBT-369 paid down one flavor of `renderToStaticMarkup` brittleness — **Tailwind class-string / presentational-token** assertions — and were both resolved. Neither touched a second, distinct flavor that lives in the same test layer:
+
+1. **Raw HTML tag/structure fragments** — `expect(html).toContain('<main id="main-content"')`, `toContain('<html')`, `toContain('<fieldset')`, `toContain('<h1')`, `toContain('class="dark "')`, `toContain('style="color-scheme:dark"')`, and the regex `toMatch(/<button[^>]*disabled=""[^>]*>Submit<\/button>/)`.
+2. **DOM string-order assertions** — comparisons of `html.indexOf('A')` vs `html.indexOf('B')` to assert that one element renders *before* another in the serialized markup.
+
+This is exactly the gap the note flags: these pass today but break on a **behaviorally inert markup refactor** — renaming a wrapper tag, wrapping content in an extra `<div>`, reordering attributes, swapping `<section>` for `<div>`, or moving a sibling above another in source while the *visual/accessible* output is unchanged. The class-string cleanups never covered the structure/order dimension, so it was never filed. The note is the breadcrumb that says: *this sibling exists, don't just re-bless it the next time it breaks.*
+
+This is **test-quality debt, not a bug.** The tests are green and do catch real removals. The cost is refactor friction and false confidence (asserting a `<main>` tag exists in a string is not the same as asserting the accessible landmark works).
+
+## Scope (verified 2026-06-21)
+
+### A. String-order (`indexOf`) assertions
+
+| File | Lines | Asserts order of… | Verdict |
+|------|-------|-------------------|---------|
+| `app/layout.test.tsx` | 92–100 | `<html>` before `<main>`, `class="dark "` / `style="color-scheme:dark"` before `<main>` | **Relax** — the *behavioral* guarantee is "forced dark applied on `<html>`"; tag-position math is incidental. Assert the `<html>` attributes directly (already done at 95–96), drop the positional `indexOf` math. |
+| `app/(app)/app/history/page.test.tsx` | 469–471, 548–550 | sort ordering of question rows | **Keep, but harden** — render order *is* the behavior here. Prefer asserting order of stable DOM nodes (e.g. row `data-testid` / accessible text in document order) over substring `indexOf` into the raw string. |
+| `app/(app)/app/practice/components/practice-view-answer-feedback.test.tsx` | 264–265 | action bar before rating prompt | **Relax** — layout order is presentational; assert both elements exist + their roles, not byte offset. |
+| `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx` | 294–295 | action bar before rating prompt | **Relax** (same as above). |
+| `app/(app)/app/questions/[slug]/question-page-client.test.tsx` | 1024–1025 | action bar before rating prompt | **Relax** (same as above). |
+| `components/question/question-surface-body.test.tsx` | 162–163 | "Before question card" slot before stem | **Relax** — slot-composition order; assert presence + relationship, not string position. |
+| `components/marketing/marketing-home.test.tsx` | 104–111 | hero pill/heading/CTA text order | **Relax** — marketing copy order is cosmetic; assert content present, not offsets. |
+
+### B. Raw HTML tag/structure fragments (`toContain('<…')` / tag regex)
+
+| File | Line(s) | Fragment | Verdict |
+|------|---------|----------|---------|
+| `app/not-found.test.tsx` | 14 | `<main id="main-content"` | **Keep as behavior** — but assert via the skip-link target / landmark role, not the literal tag string. |
+| `app/error.test.tsx` | 25 | `<main id="main-content"` | Keep-as-behavior (relax form). |
+| `app/global-error.test.tsx` | 28–29 | `<html`, `<head` | Keep — `global-error` must render its own document shell; this is a real contract. Consider a comment marking it intentional. |
+| `app/sign-up/[[...sign-up]]/page.test.tsx` | 35 | `<main id="main-content"` | Keep-as-behavior (relax form). |
+| `app/(app)/app/layout-shell.test.tsx` | 67 | `<main id="main-content"` | Keep-as-behavior (relax form). |
+| `app/(marketing)/checkout/success/page.test.ts` | 362 | `<main id="main-content"` | Keep-as-behavior (relax form). |
+| `app/(marketing)/checkout/success/error.test.tsx` | 18 | `<main id="main-content"` | Keep-as-behavior (relax form). |
+| `app/sign-in/[[...sign-in]]/page.test.tsx` | 35 | `<main id="main-content"` | Keep-as-behavior (relax form). |
+| `app/layout.test.tsx` | 95–96 | `class="dark "`, `style="color-scheme:dark"` | **Keep** — forced-dark contract (DEBT-421 sentinel); the *positional* part (lines 99–100) is what's brittle. |
+| `app/(app)/app/practice/page.test.tsx` | 516 | `<fieldset` | Keep — `<fieldset>` is an a11y grouping guarantee; assert via role/structure if cleaner. |
+| `app/(app)/app/billing/page.test.tsx` | 238 | `<h1` | **Relax** — assert the heading by role + text (`getByRole('heading', { level: 1 })`-equivalent), not the raw tag open. |
+| `app/(app)/app/questions/[slug]/page.test.tsx` | 535 | `/<button[^>]*disabled=""[^>]*>Submit<\/button>/` | **Relax** — the *behavior* is "Submit is disabled"; the regex couples to tag name + attribute serialization. Assert the disabled state semantically. |
+| `components/ui/filter-chip.test.tsx` | 29 | `<button` | Keep — primitive renders a real `<button>` (component-system contract). |
+| `components/ui/segmented-control.test.tsx` | 88, 104, 123, 141, 156 | `<fieldset` / `<legend>` (present/absent) | **Keep** — `<fieldset>`/`<legend>` presence/absence is an accessibility contract for the control. |
+| `components/ui/metallic-cta-button.test.tsx` | 44, 55 | `<svg`, `<a` | Keep-ish — anchor vs button is behavioral; the `<svg>` presence is cosmetic, relax that one. |
+| `components/markdown/markdown.test.tsx` | 28–29, 61 | `<h1>Title</h1>`, `not <script>`, `not <strong>` | **Keep** — `not.toContain('<script>')` is an XSS-sanitization guarantee; the rest verifies the markdown→HTML contract. This is behavior, not styling. |
+| `components/question/question-card.test.tsx` | 38 | `<fieldset` | Keep — a11y grouping (same as segmented-control). |
+
+> Excluded false positive: `src/adapters/repositories/drizzle-stripe-event-repository.test.ts:410` `toContain('<')` asserts on a **SQL** string, not rendered HTML — out of scope.
+
+## Why this is debt
+
+`.claude/rules/testing.md` already says to prefer stable markers (role, text, href, `data-testid`) and to avoid full presentational class strings — but it has **no explicit guidance** against raw tag-shape fragments or DOM `indexOf`-order assertions. So these slip through review the same way class-string assertions did before DEBT-153 added the rule. A future markup refactor (a wrapper element, a tag swap, an attribute-order change, PPR shell tweaks) breaks them for **zero behavioral reason**, which discourages otherwise-safe cleanups and trains authors to re-bless brittle assertions rather than fix them.
+
+## Remediation
+
+A **triage**, identical in shape to DEBT-153/369 — *not* a wholesale removal:
+
+1. **Keep** assertions where the tag/structure/order encodes a real contract:
+   - accessibility landmarks/grouping (`<main>` skip-link target, `<fieldset>`/`<legend>`),
+   - document-shell contracts (`global-error` `<html>`/`<head>`),
+   - sanitization guarantees (`not.toContain('<script>')`),
+   - component-system contracts (primitive renders a `<button>`/anchor),
+   - genuinely order-dependent behavior (sort results) — but expressed over stable DOM nodes, not raw substring offsets.
+2. **Relax** the cosmetic ones to semantic assertions:
+   - landmark *presence* → assert via role / skip-link target rather than the literal `<main id="…"` string,
+   - heading → role + level + text, not `<h1`,
+   - disabled control → semantic disabled state, not a tag+attribute regex,
+   - layout/copy order (action-bar-before-rating, hero text order, slot order) → assert both elements present + their relationship; drop `indexOf` math.
+3. **Extend `.claude/rules/testing.md`** (Option-C style, the DEBT-153 precedent): add a line that raw HTML tag-shape fragments and DOM `indexOf`-order assertions on `renderToStaticMarkup` output are acceptable only when the tag/order encodes behavior (a11y, sanitization, document shell, genuinely order-dependent output), and to prefer role/text/`data-testid`/`findAnchorByHref` otherwise. This is what stops the pattern from regrowing.
+
+Lean on the existing helpers: `@/tests/shared/dom-helpers` (`findAnchorByHref`) and the React-19 jsdom patterns in `.claude/rules/testing-react19.md`.
+
+## Constraints
+
+- Do **not** delete the affected test files or convert to snapshots — snapshots have their own brittleness mode and are explicitly rejected by DEBT-369.
+- Do **not** churn the keep-as-behavior sites for style alone; only relax the cosmetic structure/order assertions.
+- The forced-dark sentinels in `app/layout.test.tsx` (95–96) and the DEBT-421 regression intent must remain — only the positional `indexOf` math (99–100) is in scope to relax.
+- Pair the rule extension with the code triage in the same change so the guidance and the cleanup land together.
+
+## Why P3 (not P2)
+
+The tests pass and provide value; nothing is broken or blocking a shipped feature. The cost is friction on every markup refactor and the false confidence of string-shape checks. Pay it down before the next structural/markup refactor (e.g., further PPR/Cache-Components shell changes), not before.
+
+## Verification
+
+- [ ] `.claude/rules/testing.md` updated with the raw-markup / DOM-order guidance.
+- [ ] Cosmetic order assertions (action-bar-before-rating, hero text order, slot order, billing `<h1`, layout positional `indexOf`) relaxed to semantic assertions.
+- [ ] Keep-as-behavior sites (a11y landmarks/grouping, document shell, sanitization, component-system) left intact or expressed semantically — none silently dropped.
+- [ ] `grep -rEn "\.indexOf\('<" --include="*.test.tsx" app components` returns only behavior-justified, commented sites.
+- [ ] `pnpm test --run` stays green for every touched file.
