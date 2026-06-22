@@ -1,6 +1,6 @@
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
-  createTransitionedLoadAction,
+  type NullQuestionRecovery,
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
@@ -32,6 +32,9 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 const END_SESSION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 type SessionIdInput = { sessionId: string };
+type LoadNextQuestionOptions = {
+  recoverNullQuestion?: NullQuestionRecovery | undefined;
+};
 type FinalExamDraftAnswer = {
   questionId: string;
   selectedChoiceId: string | null;
@@ -62,6 +65,7 @@ export async function loadNextQuestion(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  recoverNullQuestion?: NullQuestionRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -89,6 +93,7 @@ export async function loadNextQuestion(input: {
       if (!question?.session) return;
       input.setSessionInfo(question.session);
     },
+    recoverNullQuestion: input.recoverNullQuestion,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,
@@ -114,11 +119,15 @@ export function createLoadNextQuestionAction(input: {
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
-}): () => void {
-  return createTransitionedLoadAction({
-    startTransition: input.startTransition,
-    run: () => loadNextQuestion(input),
-  });
+}): (options?: LoadNextQuestionOptions) => void {
+  return (options) => {
+    input.startTransition(() => {
+      void loadNextQuestion({
+        ...input,
+        recoverNullQuestion: options?.recoverNullQuestion,
+      });
+    });
+  };
 }
 
 export async function submitAnswerForQuestion(input: {

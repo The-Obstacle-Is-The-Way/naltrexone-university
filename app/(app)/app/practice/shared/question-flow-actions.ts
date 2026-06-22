@@ -22,6 +22,8 @@ export type RequestSequencingHooks = {
   isLatestRequest: (requestId: number) => boolean;
 };
 
+export type NullQuestionRecovery = () => Promise<boolean>;
+
 function assertRequestSequencingHooks(input: {
   createRequestSequenceId?:
     | RequestSequencingHooks['createRequestSequenceId']
@@ -61,6 +63,7 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: TQuestion | null) => void;
   onLoaded?: ((question: TQuestion | null) => void) | undefined;
+  recoverNullQuestion?: NullQuestionRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -115,6 +118,12 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
     input.setQuestionLoadedAt(null);
     input.onLoaded?.(null);
     return;
+  }
+
+  if (res.data === null && input.recoverNullQuestion) {
+    const handled = await input.recoverNullQuestion();
+    if (!canCommit()) return;
+    if (handled) return;
   }
 
   input.setQuestion(res.data);
