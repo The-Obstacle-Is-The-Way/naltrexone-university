@@ -328,7 +328,7 @@ export class DrizzlePracticeSessionRepository
       );
   }
 
-  async end(id: string, userId: string) {
+  async end(id: string, userId: string, explicitEndedAt?: Date) {
     const existing = await this.findByIdAndUserId(id, userId);
     if (!existing) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
@@ -338,7 +338,7 @@ export class DrizzlePracticeSessionRepository
       throw new ApplicationError('CONFLICT', 'Practice session already ended');
     }
 
-    const endedAt = this.now();
+    const endedAt = explicitEndedAt ?? this.now();
     const [updated] = await this.db
       .update(practiceSessions)
       .set({ endedAt })

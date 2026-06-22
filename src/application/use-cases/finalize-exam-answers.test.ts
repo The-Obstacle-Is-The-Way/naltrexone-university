@@ -6,13 +6,17 @@ import {
   FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
-import { MS_PER_SECOND } from '@/src/domain/services';
+import {
+  EXAM_SECONDS_PER_QUESTION,
+  MS_PER_SECOND,
+} from '@/src/domain/services';
 import {
   createChoice,
   createPracticeSession,
   createQuestion,
 } from '@/src/domain/test-helpers';
 import {
+  computeFinalExamEndedAt,
   FINALIZE_FLUSH_DEADLINE_GRACE_MS,
   FinalizeExamAnswersUseCase,
   type FinalizeExamAnswersWriteTransaction,
@@ -146,6 +150,10 @@ describe('FinalizeExamAnswersUseCase', () => {
       sessions,
       passthroughTransaction(questions, attempts, sessions),
     );
+    const examDeadline = new Date(
+      new Date('2026-03-17T12:00:00.000Z').getTime() +
+        4 * EXAM_SECONDS_PER_QUESTION * MS_PER_SECOND,
+    );
 
     await expect(
       useCase.execute({
@@ -156,12 +164,12 @@ describe('FinalizeExamAnswersUseCase', () => {
       sessionId: 'session-1',
       mode: 'exam',
       questionCount: 4,
-      endedAt: '2026-03-17T12:30:00.000Z',
+      endedAt: examDeadline.toISOString(),
       totals: {
         answered: 3,
         correct: 2,
         accuracy: 0.5,
-        durationSeconds: 1800,
+        durationSeconds: 4 * EXAM_SECONDS_PER_QUESTION,
       },
     });
 
@@ -208,7 +216,7 @@ describe('FinalizeExamAnswersUseCase', () => {
     await expect(
       sessions.findByIdAndUserId('session-1', 'user-1'),
     ).resolves.toMatchObject({
-      endedAt: new Date('2026-03-17T12:30:00.000Z'),
+      endedAt: examDeadline,
       questionStates: [
         {
           questionId: 'q1',
@@ -553,6 +561,136 @@ describe('FinalizeExamAnswersUseCase', () => {
         'Finalize exam is only available in exam mode',
       ),
     );
+  });
+
+  describe('exam end timestamp cap (BUG-255)', () => {
+    const STARTED_AT = new Date('2026-03-17T12:00:00.000Z');
+    const ONE_QUESTION_DEADLINE = new Date(
+      STARTED_AT.getTime() + EXAM_SECONDS_PER_QUESTION * MS_PER_SECOND,
+    );
+
+    function createTimedExamUseCase(input: { now: Date }) {
+      const questions = new FakeQuestionRepository([
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+      ]);
+      const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          startedAt: STARTED_AT,
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+              draftSelectedChoiceId: 'q1-correct',
+              draftSavedAt: new Date(STARTED_AT.getTime() + 30_000),
+              draftCumulativeMs: 30_000,
+            },
+          ],
+        }),
+      ]);
+      const useCase = new FinalizeExamAnswersUseCase(
+        questions,
+        attempts,
+        sessions,
+        passthroughTransaction(questions, attempts, sessions),
+        () => input.now,
+      );
+
+      return { attempts, sessions, useCase };
+    }
+
+    it('caps late exam finalization endedAt and duration at the server deadline', async () => {
+      const { attempts, sessions, useCase } = createTimedExamUseCase({
+        now: new Date('2026-03-17T12:05:00.000Z'),
+      });
+
+      const summary = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      expect(summary).toMatchObject({
+        endedAt: ONE_QUESTION_DEADLINE.toISOString(),
+        totals: {
+          durationSeconds: EXAM_SECONDS_PER_QUESTION,
+        },
+      });
+      await expect(
+        sessions.findByIdAndUserId('session-1', 'user-1'),
+      ).resolves.toMatchObject({
+        endedAt: ONE_QUESTION_DEADLINE,
+      });
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([{ answeredAt: ONE_QUESTION_DEADLINE }]);
+    });
+
+    it('keeps early exam finalization endedAt at now', async () => {
+      const earlyNow = new Date(STARTED_AT.getTime() + 30_000);
+      const { sessions, useCase } = createTimedExamUseCase({ now: earlyNow });
+
+      const summary = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      expect(summary).toMatchObject({
+        endedAt: earlyNow.toISOString(),
+        totals: {
+          durationSeconds: 30,
+        },
+      });
+      await expect(
+        sessions.findByIdAndUserId('session-1', 'user-1'),
+      ).resolves.toMatchObject({ endedAt: earlyNow });
+    });
+
+    it('uses now when the exam deadline is unavailable', () => {
+      const now = new Date('2026-03-17T12:05:00.000Z');
+
+      expect(
+        computeFinalExamEndedAt({
+          now,
+          deadline: null,
+          latestAnsweredAt: null,
+        }),
+      ).toEqual(now);
+    });
+
+    it('does not cap below a BUG-254 grace-window attempt answered after the deadline', async () => {
+      vi.useFakeTimers();
+      const graceAnsweredAt = new Date(
+        ONE_QUESTION_DEADLINE.getTime() + FINALIZE_FLUSH_DEADLINE_GRACE_MS,
+      );
+      vi.setSystemTime(graceAnsweredAt);
+      const { attempts, sessions, useCase } = createTimedExamUseCase({
+        now: graceAnsweredAt,
+      });
+
+      const summary = await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        finalDraftAnswer: {
+          questionId: 'q1',
+          selectedChoiceId: 'q1-correct',
+          cumulativeMs: 30_000,
+        },
+      });
+      const [attempt] = await attempts.findBySessionId('session-1', 'user-1');
+
+      expect(attempt?.answeredAt).toEqual(graceAnsweredAt);
+      expect(summary.endedAt).toBe(graceAnsweredAt.toISOString());
+      await expect(
+        sessions.findByIdAndUserId('session-1', 'user-1'),
+      ).resolves.toMatchObject({ endedAt: graceAnsweredAt });
+    });
   });
 
   describe('finalDraftAnswer expiry flush (BUG-254)', () => {

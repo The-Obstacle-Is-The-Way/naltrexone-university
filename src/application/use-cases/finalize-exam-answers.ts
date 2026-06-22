@@ -59,6 +59,23 @@ export type FinalizeExamAnswersWriteTransaction = <T>(
   }) => Promise<T>,
 ) => Promise<T>;
 
+export function computeFinalExamEndedAt(input: {
+  now: Date;
+  deadline: Date | null;
+  latestAnsweredAt: Date | null;
+}): Date {
+  const { now, deadline, latestAnsweredAt } = input;
+  if (deadline === null) {
+    return now;
+  }
+
+  const latestAnsweredAtMs =
+    latestAnsweredAt?.getTime() ?? Number.NEGATIVE_INFINITY;
+  return new Date(
+    Math.min(now.getTime(), Math.max(deadline.getTime(), latestAnsweredAtMs)),
+  );
+}
+
 export class FinalizeExamAnswersUseCase {
   constructor(
     private readonly questions: QuestionRepository,
@@ -116,6 +133,8 @@ export class FinalizeExamAnswersUseCase {
         );
       }
 
+      const finalizationNow = this.now();
+
       // BUG-254: apply the single-question expiry flush BEFORE grading so the
       // selection visible on-screen at expiry is graded instead of omitted.
       // Grading below stays server-authoritative; this only persists the
@@ -125,8 +144,31 @@ export class FinalizeExamAnswersUseCase {
             tx,
             loadedSession,
             input.finalDraftAnswer,
+            finalizationNow,
           )
         : loadedSession;
+      const deadline = computeExamDeadline(activeSession);
+      const finalDraftFlushAfterDeadline =
+        input.finalDraftAnswer !== undefined &&
+        deadline !== null &&
+        finalizationNow.getTime() >= deadline.getTime();
+      const finalAttemptAnsweredAt = finalDraftFlushAfterDeadline
+        ? finalizationNow
+        : computeFinalExamEndedAt({
+            now: finalizationNow,
+            deadline,
+            latestAnsweredAt: null,
+          });
+      let latestAnsweredAt: Date | null = null;
+      const trackAnsweredAt = (answeredAt: Date | null) => {
+        if (!answeredAt) return;
+        if (
+          latestAnsweredAt === null ||
+          answeredAt.getTime() > latestAnsweredAt.getTime()
+        ) {
+          latestAnsweredAt = answeredAt;
+        }
+      };
 
       const draftedStates = activeSession.questionStates.filter(
         (state) => state.draftSelectedChoiceId !== null,
@@ -137,6 +179,8 @@ export class FinalizeExamAnswersUseCase {
       );
 
       for (const state of activeSession.questionStates) {
+        trackAnsweredAt(state.latestAnsweredAt);
+
         const cappedCumulativeMs = Math.min(
           state.draftCumulativeMs,
           SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
@@ -154,7 +198,9 @@ export class FinalizeExamAnswersUseCase {
             outcome,
             isCorrect: false,
             timeSpentSeconds,
+            answeredAt: finalAttemptAnsweredAt,
           });
+          trackAnsweredAt(attempt.answeredAt);
 
           await tx.sessions.finalizeDraftAnswer({
             sessionId: input.sessionId,
@@ -181,7 +227,9 @@ export class FinalizeExamAnswersUseCase {
           outcome,
           isCorrect: grade.isCorrect,
           timeSpentSeconds,
+          answeredAt: finalAttemptAnsweredAt,
         });
+        trackAnsweredAt(attempt.answeredAt);
 
         await tx.sessions.finalizeDraftAnswer({
           sessionId: input.sessionId,
@@ -193,7 +241,12 @@ export class FinalizeExamAnswersUseCase {
         });
       }
 
-      return tx.sessions.end(input.sessionId, input.userId);
+      const effectiveEndedAt = computeFinalExamEndedAt({
+        now: finalizationNow,
+        deadline,
+        latestAnsweredAt,
+      });
+      return tx.sessions.end(input.sessionId, input.userId, effectiveEndedAt);
     });
 
     const endedAt = endedSession.endedAt;
@@ -214,6 +267,7 @@ export class FinalizeExamAnswersUseCase {
     },
     session: PracticeSession,
     finalDraftAnswer: FinalizeExamFinalDraftAnswer,
+    now: Date,
   ): Promise<PracticeSession> {
     const questionState = session.questionStates.find(
       (state) => state.questionId === finalDraftAnswer.questionId,
@@ -226,7 +280,7 @@ export class FinalizeExamAnswersUseCase {
     }
 
     const deadline = computeExamDeadline(session);
-    const nowMs = this.now().getTime();
+    const nowMs = now.getTime();
     const isWithinGraceWindow =
       deadline !== null &&
       nowMs >= deadline.getTime() &&
