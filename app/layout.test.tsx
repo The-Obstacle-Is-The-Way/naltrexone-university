@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { parseHtml } from '@/tests/shared/dom-helpers';
 
 vi.mock('next/headers', () => ({
   headers: async () => new Headers({ 'x-nonce': 'nonce-123' }),
@@ -82,22 +83,17 @@ describe('app/layout', () => {
     expect(html).toContain('Child content');
   });
 
-  it('ships the forced dark theme on the opening html element before body content', () => {
+  it('ships the forced dark theme on the root html element', () => {
     const html = renderToStaticMarkup(
       RootLayout({
         children: <main id="main-content">Route content</main>,
       }),
     );
-    const htmlTag = html.match(/<html[^>]*>/)?.[0] ?? '';
-    const htmlTagIndex = html.indexOf('<html');
-    const mainIndex = html.indexOf('<main');
+    const doc = parseHtml(html);
+    const htmlElement = doc.documentElement;
 
-    expect(htmlTag).toContain('class="dark ');
-    expect(htmlTag).toContain('style="color-scheme:dark"');
-    expect(htmlTagIndex).toBeGreaterThanOrEqual(0);
-    expect(mainIndex).toBeGreaterThan(htmlTagIndex);
-    expect(html.indexOf('class="dark ')).toBeLessThan(mainIndex);
-    expect(html.indexOf('style="color-scheme:dark"')).toBeLessThan(mainIndex);
+    expect(htmlElement.classList.contains('dark')).toBe(true);
+    expect(htmlElement.style.colorScheme).toBe('dark');
   });
 
   it('keeps the suspense fallback free of nonce-sensitive providers', () => {
@@ -142,8 +138,8 @@ describe('app/layout', () => {
         children: <main id="main-content">Route content</main>,
       }),
     );
+    const doc = parseHtml(html);
 
-    const mainCount = (html.match(/<main\b/g) ?? []).length;
-    expect(mainCount).toBe(1);
+    expect(doc.querySelectorAll('main')).toHaveLength(1);
   });
 });

@@ -7,6 +7,7 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
+import { findHeadingByText, parseHtml } from '@/tests/shared/dom-helpers';
 
 const { fixtureUser1Id } = vi.hoisted(() => ({
   fixtureUser1Id: crypto.randomUUID(),
@@ -231,11 +232,13 @@ describe('app/(app)/app/billing/page', () => {
           manageBillingAction={async () => undefined}
         />,
       );
+      const doc = parseHtml(html);
+      const heading = findHeadingByText(doc, 'Billing', { level: 1 });
 
       expect(html).toContain('Billing');
       expect(html).toContain('Manage your subscription');
       expect(html).toContain('Manage in Stripe');
-      expect(html).toContain('<h1');
+      expect(heading).not.toBeNull();
     });
 
     it('renders BillingContent without manage action when no subscription exists', async () => {

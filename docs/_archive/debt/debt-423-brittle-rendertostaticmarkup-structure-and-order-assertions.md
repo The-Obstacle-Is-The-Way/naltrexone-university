@@ -1,6 +1,6 @@
 # DEBT-423: Brittle Raw-Markup & DOM-Order Assertions in `renderToStaticMarkup` Tests
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-06-21
 **Owner:** Testing
@@ -11,10 +11,49 @@
 > *"I found the real weak spot: not the E2E wording update, but some leftover render-to-static-markup tests that still assert raw HTML fragments and string order. That's the kind of thing that passes today and breaks on harmless markup refactors, so I'm tightening those now instead of just blessing them."*
 
 **Related (all resolved — this is the uncovered sibling):**
-- [DEBT-153](../_archive/debt/debt-153-brittle-css-class-string-assertions.md) — brittle CSS **class-string** assertions in `renderToStaticMarkup` tests
-- [DEBT-369](../_archive/debt/debt-369-feedback-test-brittle-presentational-token-assertions.md) — brittle presentational-**token** assertions in `Feedback.test.tsx`
-- [DEBT-271](../_archive/debt/debt-271-structural-ast-test-brittleness.md) — structural/AST-coupled test brittleness (Drizzle object shape)
-- [.claude/rules/testing.md](../../.claude/rules/testing.md) — "Prefer stable markers (role, visible text, href, data-testid)"; "Avoid asserting full space-delimited class strings for purely presentational styles"
+- [DEBT-153](./debt-153-brittle-css-class-string-assertions.md) — brittle CSS **class-string** assertions in `renderToStaticMarkup` tests
+- [DEBT-369](./debt-369-feedback-test-brittle-presentational-token-assertions.md) — brittle presentational-**token** assertions in `Feedback.test.tsx`
+- [DEBT-271](./debt-271-structural-ast-test-brittleness.md) — structural/AST-coupled test brittleness (Drizzle object shape)
+- [.claude/rules/testing.md](../../../.claude/rules/testing.md) — "Prefer stable markers (role, visible text, href, data-testid)"; "Avoid asserting full space-delimited class strings for purely presentational styles"
+
+---
+
+## Resolution (2026-06-22)
+
+Resolved by replacing brittle serialized-markup assertions with parsed-DOM helpers and documenting the rule that stops the smell from regrowing.
+
+Implementation:
+
+1. Added `tests/shared/dom-helpers.ts` as the canonical seam for static-markup parsing and querying: `parseHtml`, text/heading/button/fieldset helpers, exact href lookup, explicit document-shell detection, and `compareDocumentPosition`-based node order.
+2. Migrated behavioral structure checks to parsed DOM:
+   - skip-link target landmarks now assert `main#main-content` plus `tabindex="-1"`;
+   - forced-dark now asserts root `<html>` class/style through the parsed document, while dropping positional byte-offset math;
+   - global-error's standalone document shell uses the explicit-shell helper because `DOMParser` would otherwise synthesize `<html>` / `<head>`;
+   - fieldset/legend grouping, component-system button/anchor primitives, markdown heading/sanitization, Billing heading, and disabled Submit are asserted through stable DOM semantics.
+3. Preserved behavioral order contracts with parsed node order:
+   - history pages render backend-provided row order unchanged;
+   - DEBT-405 / Pattern Registry F-9 rating footers render after each bottom action bar;
+   - `beforeQuestionCard` renders before the stem.
+4. Dropped only inert cosmetic brittleness:
+   - `layout.test.tsx` positional dark-before-main byte math;
+   - decorative metallic CTA `<svg>` presence;
+   - raw tag/class spelling in the checkout-success heading.
+5. Extended `.claude/rules/testing.md` with explicit raw-markup / DOM-order guidance and the no-snapshot rule.
+
+Verification evidence:
+
+- Before cleanup: 22 rendered-markup `.indexOf('...')` order assertions across 7 files; 24 raw tag/structure assertions across 16 files after excluding `src/adapters/repositories/drizzle-stripe-event-repository.test.ts:410` SQL.
+- After cleanup:
+  - `grep -rEn "\.indexOf\('" --include='*.test.tsx' --include='*.test.ts' app components src tests` returns only the accepted marketing hero DOM-text decision sequence plus the unrelated CI workflow helper.
+  - `grep -rEn "toContain\('<|toMatch\(/<" --include='*.test.tsx' --include='*.test.ts' app components src tests` returns only the SQL false positive.
+  - `grep -rEn "\.indexOf\('<" --include='*.test.tsx' app components` returns zero hits.
+- Step-1 behavior-sensitive proof:
+  - Temporary contract-breaking mutations produced the expected red tests: removing a main landmark, removing the explicit document shell, removing forced-dark root state, demoting required H1s, replacing fieldsets, changing `FilterChip` to submit, un-disabling Submit, moving `beforeQuestionCard`, and reversing history rows caused 13 targeted failures.
+  - Temporarily moving all three rating footers before their action bars caused the three DEBT-405 position tests to fail.
+- Step-1 refactor-resilience proof:
+  - Temporary behavior-inert wrappers/tag swaps around 404 content, Billing heading text, history row title text, `beforeQuestionCard`, and rating footer content stayed green across the affected suites.
+- Focused verification after reverting all temporary source mutations: `pnpm test --run` over 24 touched suites passed 259 tests.
+- Full local gate passed on Node 24 after installing the missing Playwright Chromium binary: `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build`. `pnpm lint` reported the repo's existing 19 oversized-file warnings only.
 
 ---
 
@@ -105,8 +144,8 @@ The tests pass and provide value; nothing is broken or blocking a shipped featur
 
 ## Verification
 
-- [ ] `.claude/rules/testing.md` updated with the raw-markup / DOM-order guidance.
-- [ ] Cosmetic order assertions (action-bar-before-rating, hero text order, slot order, billing `<h1`, layout positional `indexOf`) relaxed to semantic assertions.
-- [ ] Keep-as-behavior sites (a11y landmarks/grouping, document shell, sanitization, component-system) left intact or expressed semantically — none silently dropped.
-- [ ] `grep -rEn "\.indexOf\('<" --include="*.test.tsx" app components` returns only behavior-justified, commented sites.
-- [ ] `pnpm test --run` stays green for every touched file.
+- [x] `.claude/rules/testing.md` updated with the raw-markup / DOM-order guidance.
+- [x] Cosmetic structure assertions (layout positional `indexOf`, decorative metallic `<svg>`, checkout-success raw heading tag/class spelling) relaxed or dropped.
+- [x] Keep-as-behavior sites (a11y landmarks/grouping, document shell, sanitization, component-system, DEBT-405 rating order, `beforeQuestionCard` slot order, history backend-row order) expressed semantically — none silently dropped.
+- [x] `grep -rEn "\.indexOf\('<" --include="*.test.tsx" app components` returns zero hits.
+- [x] Focused touched-suite run passed: 24 files / 259 tests.

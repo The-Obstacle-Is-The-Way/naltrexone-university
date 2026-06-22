@@ -54,6 +54,14 @@ Tests and test helpers that create boundary-shaped fixtures MUST keep applicatio
 - Exact Tailwind class-string assertions are allowed only when the class itself encodes behavior (e.g. `sr-only`, breakpoint visibility, focus-ring presence, active-state tokens).
 - Avoid asserting full space-delimited class strings for purely presentational styles.
 
+### `renderToStaticMarkup` Structure Assertions
+
+- Do not assert raw HTML tag-shape fragments or DOM order through serialized string offsets (for example, `toContain('<main')`, `toMatch(/<button.../)`, or `html.indexOf('A') < html.indexOf('B')`) unless the tag or order itself is the behavior under test: accessibility landmarks/grouping, sanitization, standalone document shells, component-system primitives, or intentionally ordered output.
+- For behavior-bearing markup from `renderToStaticMarkup`, parse the HTML and assert through stable DOM seams: text, `role`/landmark-equivalent structure, `href`, `data-testid`, disabled state, heading level, fieldset/legend grouping, or node order via `compareDocumentPosition`.
+- Use `tests/shared/dom-helpers.ts` as the canonical helper surface for parsed static-markup tests (`parseHtml`, `findAnchorByHref`, text/heading/button/fieldset helpers, and node-order checks). Add a helper there before duplicating ad hoc DOMParser/query code across files.
+- Document-shell tests are the exception where `DOMParser` alone is insufficient because it synthesizes `<html>`/`<head>` around fragments; use the shared explicit-shell helper or a clearly commented behavior-only assertion.
+- Do not replace raw-fragment assertions with snapshots. Snapshots preserve the same structure coupling with a larger failure surface.
+
 ## Test Locations
 
 | Type | Pattern | Command |

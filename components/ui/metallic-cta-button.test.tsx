@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
 
 describe('MetallicCtaButton', () => {
   it('renders children text', async () => {
@@ -33,17 +34,6 @@ describe('MetallicCtaButton', () => {
     expect(html).toContain('border-radius:9999px');
   });
 
-  it('renders an arrow icon', async () => {
-    const { MetallicCtaButton } = await import(
-      '@/components/ui/metallic-cta-button'
-    );
-    const html = renderToStaticMarkup(
-      <MetallicCtaButton>Get Started</MetallicCtaButton>,
-    );
-    // ArrowRight from lucide-react renders as an SVG
-    expect(html).toContain('<svg');
-  });
-
   it('renders as a link when href is provided', async () => {
     const { MetallicCtaButton } = await import(
       '@/components/ui/metallic-cta-button'
@@ -51,8 +41,11 @@ describe('MetallicCtaButton', () => {
     const html = renderToStaticMarkup(
       <MetallicCtaButton href="/pricing">Get Started</MetallicCtaButton>,
     );
-    expect(html).toContain('href="/pricing"');
-    expect(html).toContain('<a');
+    const doc = parseHtml(html);
+    const anchor = findAnchorByHref(doc, '/pricing');
+
+    expect(anchor).not.toBeNull();
+    expect(anchor?.textContent).toContain('Get Started');
   });
 
   it('opens external links in a new tab with safe rel attributes', async () => {

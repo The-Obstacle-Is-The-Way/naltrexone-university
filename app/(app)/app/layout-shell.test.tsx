@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { findMainLandmarkById, parseHtml } from '@/tests/shared/dom-helpers';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -31,10 +32,10 @@ describe('app/(app)/app/layout (shell)', () => {
         <div>Child content</div>
       </AppLayoutShell>,
     );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const shell = doc.body.firstElementChild;
     const brandLink = doc.querySelector('header a[href="/app/dashboard"]');
-    const main = doc.querySelector('main#main-content');
+    const main = findMainLandmarkById(doc, 'main-content');
 
     expect(shell).not.toBeNull();
     if (!shell) {
@@ -64,7 +65,7 @@ describe('app/(app)/app/layout (shell)', () => {
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
-    expect(html).toContain('<main id="main-content"');
+    expect(main.getAttribute('tabindex')).toBe('-1');
     expect(shellClassTokens).toContain('flex');
     expect(shellClassTokens).toContain('h-dvh');
     expect(shellClassTokens).toContain('min-h-screen');

@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createChoice, createQuestion } from '@/src/domain/test-helpers';
+import { findButtonByText, parseHtml } from '@/tests/shared/dom-helpers';
 
 const { fixtureAttempt1Id, fixtureQuestion1Id } = vi.hoisted(() => ({
   fixtureAttempt1Id: crypto.randomUUID(),
@@ -531,7 +532,10 @@ describe('app/(app)/app/questions/[slug]', () => {
         onReattempt={() => undefined}
       />,
     );
+    const doc = parseHtml(html);
+    const submitButton = findButtonByText(doc, 'Submit');
 
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Submit<\/button>/);
+    expect(submitButton).not.toBeNull();
+    expect(submitButton?.hasAttribute('disabled')).toBe(true);
   });
 });
