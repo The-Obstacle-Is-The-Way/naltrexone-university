@@ -23,14 +23,14 @@ import type {
   AttemptedQuestionSummary,
   AttemptedQuestionsFilters,
   AttemptedQuestionsSort,
+  AttemptInsertInput,
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
   PageOptions,
   RecentAttempt,
 } from '@/src/application/ports/repositories';
-import type { Attempt, AttemptRetryOrigin } from '@/src/domain/entities';
+import type { Attempt } from '@/src/domain/entities';
 import {
-  type AnswerOutcome,
   isOmittedOutcome,
   selectedChoiceIdOrNull,
 } from '@/src/domain/value-objects';
@@ -164,17 +164,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     ];
   }
 
-  async insert(input: {
-    userId: string;
-    questionId: string;
-    practiceSessionId: string | null;
-    outcome: AnswerOutcome;
-    isCorrect: boolean;
-    timeSpentSeconds: number;
-    retryOfAttemptId?: string | null;
-    retryOrigin?: AttemptRetryOrigin | null;
-    retrySessionId?: string | null;
-  }) {
+  async insert(input: AttemptInsertInput) {
     let row: (typeof attempts)['$inferSelect'] | undefined;
     try {
       [row] = await this.db
@@ -187,6 +177,7 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           isOmitted: isOmittedOutcome(input.outcome),
           isCorrect: input.isCorrect,
           timeSpentSeconds: input.timeSpentSeconds,
+          ...(input.answeredAt ? { answeredAt: input.answeredAt } : {}),
           retryOfAttemptId: input.retryOfAttemptId ?? null,
           retryOrigin: input.retryOrigin ?? null,
           retrySessionId: input.retrySessionId ?? null,

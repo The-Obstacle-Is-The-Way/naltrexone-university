@@ -56,5 +56,5 @@ export interface PracticeSessionRepository {
     markedForReview: boolean;
   }): Promise<PracticeSessionQuestionState>;
   discard(id: string, userId: string): Promise<void>;
-  end(id: string, userId: string): Promise<PracticeSession>;
+  end(id: string, userId: string, endedAt?: Date): Promise<PracticeSession>;
 }

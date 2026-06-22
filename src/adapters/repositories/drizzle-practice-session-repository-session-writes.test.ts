@@ -347,6 +347,64 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
         ?.latestAnsweredAt,
     ).toEqual(new Date('2026-02-01T00:00:01.000Z'));
     expect(nowFn).toHaveBeenCalledTimes(1);
+    expect(updateSet).toHaveBeenCalledWith({ endedAt: now });
+  });
+
+  it('uses an explicit endedAt when ending a practice session', async () => {
+    const explicitEndedAt = new Date('2026-02-01T00:10:00.000Z');
+    const nowFn = vi.fn((): Date => {
+      throw new Error('unexpected clock call');
+    });
+
+    const row = {
+      id: sessionId,
+      userId: userId,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [firstQuestionId],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const updateReturning = vi.fn(async () => [
+      {
+        ...row,
+        endedAt: explicitEndedAt,
+      },
+    ]);
+    const updateWhere = vi.fn(() => ({ returning: updateReturning }));
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const update = vi.fn(() => ({ set: updateSet }));
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      update,
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(
+      db as unknown as RepoDb,
+      nowFn,
+    );
+
+    const ended = await repo.end(sessionId, userId, explicitEndedAt);
+
+    expect(ended).toMatchObject({ id: sessionId, endedAt: explicitEndedAt });
+    expect(updateSet).toHaveBeenCalledWith({ endedAt: explicitEndedAt });
+    expect(nowFn).not.toHaveBeenCalled();
   });
 
   it('throws CONFLICT when the practice session is already ended', async () => {

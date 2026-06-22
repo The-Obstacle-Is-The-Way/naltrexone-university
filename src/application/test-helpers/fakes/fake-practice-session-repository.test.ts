@@ -1,10 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { omittedOutcome } from '@/src/domain/value-objects';
 import { FakePracticeSessionRepository } from './fake-practice-session-repository';
 
 describe('FakePracticeSessionRepository', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('normalizes missing draft fields for seeded legacy sessions', async () => {
     const legacySession = {
       ...createPracticeSession({
@@ -61,6 +65,37 @@ describe('FakePracticeSessionRepository', () => {
     await expect(repo.end('session-1', 'user-1')).rejects.toEqual(
       new ApplicationError('CONFLICT', 'Practice session already ended'),
     );
+  });
+
+  it('honors explicit endedAt while preserving the default clock path', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-02-01T00:10:00.000Z'));
+    const explicitEndedAt = new Date('2026-02-01T00:05:00.000Z');
+    const repo = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'explicit-session',
+        userId: 'user-1',
+        mode: 'exam',
+        endedAt: null,
+      }),
+      createPracticeSession({
+        id: 'default-session',
+        userId: 'user-1',
+        mode: 'tutor',
+        endedAt: null,
+      }),
+    ]);
+
+    await expect(
+      repo.end('explicit-session', 'user-1', explicitEndedAt),
+    ).resolves.toMatchObject({
+      id: 'explicit-session',
+      endedAt: explicitEndedAt,
+    });
+    await expect(repo.end('default-session', 'user-1')).resolves.toMatchObject({
+      id: 'default-session',
+      endedAt: new Date('2026-02-01T00:10:00.000Z'),
+    });
   });
 
   it('discards only incomplete sessions owned by the caller', async () => {
