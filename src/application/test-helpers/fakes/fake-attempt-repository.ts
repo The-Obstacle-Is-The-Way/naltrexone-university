@@ -3,20 +3,14 @@ import type {
   AttemptedQuestionSummary,
   AttemptedQuestionsFilters,
   AttemptedQuestionsSort,
+  AttemptInsertInput,
   AttemptMostRecentAnsweredAt,
   AttemptRepository,
   PageOptions,
 } from '@/src/application/ports/repositories';
-import type {
-  Attempt,
-  AttemptRetryOrigin,
-  Question,
-} from '@/src/domain/entities';
+import type { Attempt, Question } from '@/src/domain/entities';
 import { createAttempt } from '@/src/domain/entities/attempt';
-import {
-  type AnswerOutcome,
-  isOmittedOutcome,
-} from '@/src/domain/value-objects';
+import { isOmittedOutcome } from '@/src/domain/value-objects';
 
 type InMemoryAttempt = Attempt & {
   practiceSessionId: string | null;
@@ -38,17 +32,7 @@ export class FakeAttemptRepository implements AttemptRepository {
       : null;
   }
 
-  async insert(input: {
-    userId: string;
-    questionId: string;
-    practiceSessionId: string | null;
-    outcome: AnswerOutcome;
-    isCorrect: boolean;
-    timeSpentSeconds: number;
-    retryOfAttemptId?: string | null;
-    retryOrigin?: AttemptRetryOrigin | null;
-    retrySessionId?: string | null;
-  }): Promise<Attempt> {
+  async insert(input: AttemptInsertInput): Promise<Attempt> {
     // BUG-105: Enforce session+question uniqueness (mirrors DB partial unique index)
     if (input.practiceSessionId !== null) {
       const duplicate = this.attempts.find(
@@ -82,7 +66,7 @@ export class FakeAttemptRepository implements AttemptRepository {
       retryOfAttemptId: input.retryOfAttemptId ?? null,
       retryOrigin: input.retryOrigin ?? null,
       retrySessionId: input.retrySessionId ?? null,
-      answeredAt: new Date(),
+      answeredAt: input.answeredAt ?? new Date(),
     });
     const storedAttempt = {
       ...attempt,

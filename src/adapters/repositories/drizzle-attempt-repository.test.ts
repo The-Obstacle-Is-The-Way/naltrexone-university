@@ -326,6 +326,43 @@ describe('DrizzleAttemptRepository', () => {
       });
     });
 
+    it('passes an explicit answeredAt timestamp when provided', async () => {
+      const db = createDbMock();
+      const answeredAt = new Date('2026-02-01T00:00:00Z');
+      const explicitAnsweredAt = new Date('2026-02-01T00:00:42Z');
+      db._mocks.insertReturning.mockResolvedValue([
+        {
+          id: attemptId,
+          userId: userId,
+          questionId: questionId,
+          practiceSessionId: sessionId,
+          selectedChoiceId: selectedChoiceId,
+          isOmitted: false,
+          isCorrect: true,
+          timeSpentSeconds: 42,
+          answeredAt,
+        },
+      ]);
+
+      const repo = new DrizzleAttemptRepository(db as unknown as RepoDb);
+
+      await repo.insert({
+        userId: userId,
+        questionId: questionId,
+        practiceSessionId: sessionId,
+        outcome: answeredOutcome(selectedChoiceId),
+        isCorrect: true,
+        timeSpentSeconds: 42,
+        answeredAt: explicitAnsweredAt,
+      });
+
+      expect(db._mocks.insertValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          answeredAt: explicitAnsweredAt,
+        }),
+      );
+    });
+
     it('returns an inserted omitted attempt', async () => {
       const db = createDbMock();
       const answeredAt = new Date('2026-02-01T00:00:00Z');

@@ -383,7 +383,11 @@ export class FakePracticeSessionRepository
     );
   }
 
-  async end(id: string, userId: string): Promise<PracticeSession> {
+  async end(
+    id: string,
+    userId: string,
+    explicitEndedAt?: Date,
+  ): Promise<PracticeSession> {
     const existing = await this.findByIdAndUserId(id, userId);
     if (!existing) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
@@ -393,7 +397,10 @@ export class FakePracticeSessionRepository
       throw new ApplicationError('CONFLICT', 'Practice session already ended');
     }
 
-    const ended: PracticeSession = { ...existing, endedAt: new Date() };
+    const ended: PracticeSession = {
+      ...existing,
+      endedAt: explicitEndedAt ?? new Date(),
+    };
     this.updateSession(id, () => ended);
     return ended;
   }

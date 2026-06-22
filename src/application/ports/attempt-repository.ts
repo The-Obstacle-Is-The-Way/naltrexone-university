@@ -17,6 +17,7 @@ export type AttemptInsertInput = {
   outcome: AnswerOutcome;
   isCorrect: boolean;
   timeSpentSeconds: number;
+  answeredAt?: Date;
   retryOfAttemptId?: string | null;
   retryOrigin?: AttemptRetryOrigin | null;
   retrySessionId?: string | null;

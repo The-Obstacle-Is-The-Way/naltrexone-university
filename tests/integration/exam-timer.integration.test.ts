@@ -46,6 +46,7 @@ function createFinalizeExamAnswersUseCase(input: { now: () => Date }) {
           sessions: new DrizzlePracticeSessionRepository(tx, input.now),
         }),
       ),
+    input.now,
   );
 }
 
