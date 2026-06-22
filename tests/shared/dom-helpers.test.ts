@@ -64,6 +64,17 @@ describe('dom-helpers', () => {
     expect(first && second ? isNodeBefore(second, first) : true).toBe(false);
   });
 
+  it('does not treat disconnected nodes as ordered', () => {
+    const firstDoc = parseHtml('<div id="first"></div>');
+    const secondDoc = parseHtml('<div id="second"></div>');
+    const first = firstDoc.getElementById('first');
+    const second = secondDoc.getElementById('second');
+
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first && second ? isNodeBefore(first, second) : true).toBe(false);
+  });
+
   it('detects an explicitly rendered document shell without DOMParser synthesis', () => {
     expect(
       hasExplicitDocumentShell(

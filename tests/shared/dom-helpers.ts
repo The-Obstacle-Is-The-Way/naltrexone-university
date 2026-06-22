@@ -109,11 +109,12 @@ export function findFieldsetByLegendText(
 }
 
 export function isNodeBefore(before: Node, after: Node): boolean {
-  return (
-    (before.compareDocumentPosition(after) &
-      Node.DOCUMENT_POSITION_FOLLOWING) !==
-    0
-  );
+  const position = before.compareDocumentPosition(after);
+  if ((position & Node.DOCUMENT_POSITION_DISCONNECTED) !== 0) {
+    return false;
+  }
+
+  return (position & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
 export function hasExplicitDocumentShell(html: string): boolean {

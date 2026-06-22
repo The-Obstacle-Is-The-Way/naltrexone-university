@@ -518,9 +518,9 @@ describe('app/(app)/app/practice', () => {
         fieldset.textContent.includes('Exam'),
     );
 
-    expect(html).toContain('Tutor');
-    expect(html).toContain('Exam');
     expect(modeFieldset).not.toBeUndefined();
+    expect(modeFieldset?.textContent).toContain('Tutor');
+    expect(modeFieldset?.textContent).toContain('Exam');
   });
 
   it('renders difficulty filter chips', () => {
