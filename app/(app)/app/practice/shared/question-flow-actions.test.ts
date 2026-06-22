@@ -201,6 +201,94 @@ describe('question-flow-actions', () => {
     expect(onLoaded).toHaveBeenCalledWith({ questionId: fixtureQuestion1Id });
   });
 
+  it('does not commit the generic empty state when null-question recovery handles the load', async () => {
+    const setLoadState = vi.fn();
+    const setQuestion = vi.fn();
+    const onLoaded = vi.fn();
+    const recoverNullQuestion = vi.fn(async () => true);
+
+    await runLoadQuestionFlow({
+      requestInput: {},
+      getQuestionFn: async () => ({
+        ok: true,
+        data: null,
+      }),
+      createIdempotencyKey: () => 'idemp_new',
+      nowMs: () => 9999,
+      setLoadState,
+      setSelectedChoiceId: () => undefined,
+      setSubmitResult: () => undefined,
+      setSubmitIdempotencyKey: () => undefined,
+      setQuestionLoadedAt: () => undefined,
+      setQuestion,
+      onLoaded,
+      recoverNullQuestion,
+    });
+
+    expect(recoverNullQuestion).toHaveBeenCalledOnce();
+    expect(setQuestion).not.toHaveBeenCalled();
+    expect(onLoaded).not.toHaveBeenCalled();
+    expect(setLoadState).toHaveBeenCalledOnce();
+    expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
+  });
+
+  it('commits the generic empty state when null-question recovery declines the load', async () => {
+    let loadState: AsyncLoadStateWithIdle = { status: 'idle' };
+    let question: unknown = { questionId: fixtureQuestionOldId };
+    const onLoaded = vi.fn();
+    const recoverNullQuestion = vi.fn(async () => false);
+
+    await runLoadQuestionFlow({
+      requestInput: {},
+      getQuestionFn: async () => ({
+        ok: true,
+        data: null,
+      }),
+      createIdempotencyKey: () => 'idemp_new',
+      nowMs: () => 9999,
+      setLoadState: (next) => {
+        loadState = next;
+      },
+      setSelectedChoiceId: () => undefined,
+      setSubmitResult: () => undefined,
+      setSubmitIdempotencyKey: () => undefined,
+      setQuestionLoadedAt: () => undefined,
+      setQuestion: (next) => {
+        question = next;
+      },
+      onLoaded,
+      recoverNullQuestion,
+    });
+
+    expect(recoverNullQuestion).toHaveBeenCalledOnce();
+    expect(loadState).toEqual({ status: 'ready' });
+    expect(question).toBeNull();
+    expect(onLoaded).toHaveBeenCalledWith(null);
+  });
+
+  it('does not invoke null-question recovery when a real question loads', async () => {
+    const recoverNullQuestion = vi.fn(async () => true);
+
+    await runLoadQuestionFlow({
+      requestInput: {},
+      getQuestionFn: async () => ({
+        ok: true,
+        data: { questionId: fixtureQuestion1Id },
+      }),
+      createIdempotencyKey: () => 'idemp_new',
+      nowMs: () => 9999,
+      setLoadState: () => undefined,
+      setSelectedChoiceId: () => undefined,
+      setSubmitResult: () => undefined,
+      setSubmitIdempotencyKey: () => undefined,
+      setQuestionLoadedAt: () => undefined,
+      setQuestion: () => undefined,
+      recoverNullQuestion,
+    });
+
+    expect(recoverNullQuestion).not.toHaveBeenCalled();
+  });
+
   it('uses the standard read timeout tier when loading questions', async () => {
     vi.useFakeTimers();
     try {

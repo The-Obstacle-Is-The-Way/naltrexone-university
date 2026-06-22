@@ -20,7 +20,9 @@ import {
   getPracticeSessionSummaryMock,
   mockBookmarksAndReview,
   PracticeSessionPageModelHookProbe,
+  PracticeSessionPageModelNavigationProbe,
   PracticeSessionPageModelSummaryProbe,
+  PracticeSessionPageModelViewProbe,
   setupPracticeSessionPageModelBrowserSpec,
 } from './use-practice-session-page-model-test-helpers';
 
@@ -171,6 +173,204 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .element(screen.getByTestId('question-id'))
       .toHaveTextContent(BROWSER_QUESTION_1_ID);
     expect(callOrder).toEqual(['summary', 'question']);
+  });
+
+  it('shows the summary when resuming an exam that expires during getNextQuestion', async () => {
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          sessionId: BROWSER_SESSION_ID,
+          endedAt: '2026-02-07T00:20:00.000Z',
+          mode: 'exam',
+          questionCount: 2,
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 1200,
+          },
+        }),
+      );
+    getNextQuestionMock.mockResolvedValue(ok(null));
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok(
+        createReviewResponse({
+          mode: 'exam',
+          totalCount: 2,
+          answeredCount: 2,
+          markedCount: 0,
+          rows: [
+            createReviewRow({ questionId: BROWSER_QUESTION_1_ID, order: 1 }),
+          ],
+        }),
+      ),
+    );
+
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-mode'))
+      .toHaveTextContent('exam');
+    await expect
+      .element(screen.getByTestId('summary-session-id'))
+      .toHaveTextContent(BROWSER_SESSION_ID);
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('');
+  });
+
+  it('keeps the generic empty state when expired-exam recovery still reports an active session', async () => {
+    getPracticeSessionSummaryMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Practice session has not ended'),
+    );
+    getNextQuestionMock.mockResolvedValue(ok(null));
+
+    const screen = await render(<PracticeSessionPageModelViewProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('');
+    await expect
+      .element(screen.getByText('No more questions found.'))
+      .toBeVisible();
+  });
+
+  it('keeps the generic empty state when expired-exam recovery summary re-read throws', async () => {
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockRejectedValueOnce(new Error('Summary recovery failed'));
+    getNextQuestionMock.mockResolvedValue(ok(null));
+
+    const screen = await render(<PracticeSessionPageModelViewProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('');
+    await expect
+      .element(screen.getByText('No more questions found.'))
+      .toBeVisible();
+  });
+
+  it('does not commit expired-exam recovery results after unmount', async () => {
+    const recoverySummary = createDeferred<ActionResult<unknown>>();
+
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockImplementationOnce(() => recoverySummary.promise);
+    getNextQuestionMock.mockResolvedValue(ok(null));
+
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('summary-session-id'))
+      .toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('summary-mode'))
+      .toHaveTextContent('');
+
+    screen.unmount();
+    recoverySummary.resolve(
+      ok({
+        sessionId: BROWSER_SESSION_ID,
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 2,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 1200,
+        },
+      }),
+    );
+    await expect
+      .poll(() => document.querySelector('[data-testid="active-view"]'))
+      .toBeNull();
+    await expect
+      .poll(() => document.querySelector('[data-testid="summary-session-id"]'))
+      .toBeNull();
+    await expect
+      .poll(() => document.querySelector('[data-testid="summary-mode"]'))
+      .toBeNull();
+    await expect
+      .poll(() => document.body.textContent ?? '')
+      .not.toContain(BROWSER_SESSION_ID);
+  });
+
+  it('does not re-read the summary when normal in-session navigation returns no question', async () => {
+    getPracticeSessionSummaryMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Practice session has not ended'),
+    );
+    getNextQuestionMock
+      .mockResolvedValueOnce(
+        ok(
+          createQuestionResponse({
+            questionId: BROWSER_QUESTION_1_ID,
+            session: {
+              mode: 'tutor',
+              deadlineAt: null,
+              index: 0,
+              total: 1,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(ok(null));
+    mockBookmarksAndReview(
+      createReviewResponse({
+        mode: 'tutor',
+        totalCount: 1,
+        answeredCount: 0,
+        markedCount: 0,
+        rows: [
+          createReviewRow({ questionId: BROWSER_QUESTION_1_ID, order: 1 }),
+        ],
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageModelNavigationProbe />);
+
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+
+    await screen.getByRole('button', { name: 'next-question' }).click();
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent('');
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(2);
+    expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
   });
 
   it('recovers a summary when ending an active tutor session returns CONFLICT', async () => {

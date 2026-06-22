@@ -8,7 +8,10 @@ import {
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import { maybeSaveDraftBeforeNavigation } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import {
+  maybeSaveDraftBeforeNavigation,
+  type NullQuestionRecovery,
+} from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/shared/transitioned-async-action';
 import { reportClientError } from '@/lib/report-client-error';
@@ -34,6 +37,10 @@ type SubmitOptions = {
   allowExamCommit?: boolean;
 };
 
+type TryAgainOptions = {
+  recoverNullQuestion?: NullQuestionRecovery | undefined;
+};
+
 export type UsePracticeSessionQuestionFlowOutput = {
   sessionInfo: NextQuestion['session'];
   sessionMode: 'tutor' | 'exam' | null;
@@ -52,7 +59,7 @@ export type UsePracticeSessionQuestionFlowOutput = {
   setSessionMode: (mode: 'tutor' | 'exam' | null) => void;
   setLoadState: (state: LoadState) => void;
   resetQuestionState: () => void;
-  onTryAgain: () => void;
+  onTryAgain: (options?: TryAgainOptions) => void;
   onNextQuestion: () => void;
   onNavigateQuestion: (questionId: string) => void;
   onSelectChoice: (choiceId: string) => void;
