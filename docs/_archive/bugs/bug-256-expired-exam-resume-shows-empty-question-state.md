@@ -1,10 +1,11 @@
 # BUG-256: Resuming an Expired Exam Can Show "No More Questions" Instead of Results
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P3
 **Date:** 2026-06-20
 **Confirmed:** 2026-06-20
 **Component:** Practice Engine / Expired Exam Resume / Client State
+**Resolution:** Fixed via PR #479 (squash `b848a778` on `dev`; CodeRabbit APPROVED on `4b480784`) → promoted to `main` via PR #487 (merge `5f71d9cc`; CodeRabbit APPROVED on `b848a778`, `test` check green). Production deploy `dpl_35zefrDS2AX7vi6MTTySDcaZdMTc` verified READY 2026-06-22 (addictionboards.com HTTP 200); `main` and `dev` trees identical. Shipped the committed path below: an app-layer null-question recovery hook (`runLoadQuestionFlow` → `recoverBootstrapSummaryAfterNullQuestion`) re-reads the server-authoritative summary on a bootstrap-fallback `ok(null)` **before** the generic empty state commits — read-only, idempotent, request-id/unmount-race guarded; normal-navigation nulls unchanged. Citations below reflect pre-fix line numbers in the Root Cause walkthrough.
 
 ---
 
@@ -32,35 +33,35 @@ Actual:
 
 The session page bootstraps by asking for the summary first:
 
-- [`use-practice-session-page-model.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L212>) calls `getPracticeSessionSummary`.
-- If the session is not yet ended, [`use-practice-session-page-model.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L227>) falls back to `questionFlow.onTryAgain()`.
+- [`use-practice-session-page-model.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L212>) calls `getPracticeSessionSummary`.
+- If the session is not yet ended, [`use-practice-session-page-model.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L227>) falls back to `questionFlow.onTryAgain()`.
 
 The fallback `getNextQuestion` path finalizes expired exams but returns no summary:
 
-- [`get-next-question.ts`](../../src/application/use-cases/get-next-question.ts#L178) checks expiry.
-- [`get-next-question.ts`](../../src/application/use-cases/get-next-question.ts#L185) executes the expired exam finalizer.
-- [`get-next-question.ts`](../../src/application/use-cases/get-next-question.ts#L186) returns `null`.
-- Existing coverage starts at [`get-next-question-navigation.test.ts`](../../src/application/use-cases/get-next-question-navigation.test.ts#L306) and asserts `getNextQuestion.execute(...)` resolves to `null` at [`get-next-question-navigation.test.ts`](../../src/application/use-cases/get-next-question-navigation.test.ts#L333).
+- [`get-next-question.ts`](../../../src/application/use-cases/get-next-question.ts#L178) checks expiry.
+- [`get-next-question.ts`](../../../src/application/use-cases/get-next-question.ts#L185) executes the expired exam finalizer.
+- [`get-next-question.ts`](../../../src/application/use-cases/get-next-question.ts#L186) returns `null`.
+- Existing coverage starts at [`get-next-question-navigation.test.ts`](../../../src/application/use-cases/get-next-question-navigation.test.ts#L306) and asserts `getNextQuestion.execute(...)` resolves to `null` at [`get-next-question-navigation.test.ts`](../../../src/application/use-cases/get-next-question-navigation.test.ts#L333).
 
 The shared load flow commits the `null` question as a ready state:
 
-- [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L120>) sets the loaded question to `res.data`.
-- [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L124>) marks the load as ready.
+- [`question-flow-actions.ts`](<../../../app/(app)/app/practice/shared/question-flow-actions.ts#L120>) sets the loaded question to `res.data`.
+- [`question-flow-actions.ts`](<../../../app/(app)/app/practice/shared/question-flow-actions.ts#L124>) marks the load as ready.
 
 The page renders the generic no-question card:
 
-- [`practice-view.tsx`](<../../app/(app)/app/practice/components/practice-view.tsx#L498>) checks `loadState.status === 'ready' && props.question === null`.
-- [`practice-view.tsx`](<../../app/(app)/app/practice/components/practice-view.tsx#L500>) renders "No more questions found."
+- [`practice-view.tsx`](<../../../app/(app)/app/practice/components/practice-view.tsx#L498>) checks `loadState.status === 'ready' && props.question === null`.
+- [`practice-view.tsx`](<../../../app/(app)/app/practice/components/practice-view.tsx#L500>) renders "No more questions found."
 
 ## Impact
 
-A subscriber returning to an expired exam briefly sees an incorrect state ("No more questions found") immediately after the server finalized their exam, instead of their results. It is recoverable rather than a hard dead-end: the empty-state card renders an end-session button ([`practice-view.tsx`](<../../app/(app)/app/practice/components/practice-view.tsx#L501>)), and a page reload re-runs the bootstrap, which now sees the ended session and returns the summary. The harm is the confusing wrong surface on first load, not data loss — the exam is finalized correctly server-side.
+A subscriber returning to an expired exam briefly sees an incorrect state ("No more questions found") immediately after the server finalized their exam, instead of their results. It is recoverable rather than a hard dead-end: the empty-state card renders an end-session button ([`practice-view.tsx`](<../../../app/(app)/app/practice/components/practice-view.tsx#L501>)), and a page reload re-runs the bootstrap, which now sees the ended session and returns the summary. The harm is the confusing wrong surface on first load, not data loss — the exam is finalized correctly server-side.
 
-## Proposed Fix
+## Fix (Shipped)
 
-Make the expired-finalization path converge to the same result surface as normal finalization with a client-side summary recovery in the session page bootstrap fallback.
+Converged the expired-finalization path to the same result surface as normal finalization via a client-side summary recovery in the session page bootstrap fallback.
 
-Committed path:
+Implementation (as shipped):
 
 1. Keep `GetNextQuestionUseCase` unchanged: when an active exam is already expired, it may finalize the exam server-side and return `null`.
 2. Add an optional async null-question recovery hook to the app-layer load path (`usePracticeSessionQuestionFlow` → `loadNextQuestion` → `runLoadQuestionFlow`). It must run only when the question load returns `ok(null)`, and it must run before `setQuestion(null)` / `setLoadState({ status: 'ready' })` commits the generic empty state.
