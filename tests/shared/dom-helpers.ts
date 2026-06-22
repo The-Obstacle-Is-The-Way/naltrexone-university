@@ -1,7 +1,22 @@
+import { createRequire } from 'node:module';
+
 type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+type JsdomModule = {
+  JSDOM: new (html: string) => { window: { document: Document } };
+};
+
+// DOM Standard bitmask values; keep local so the helper works in plain Node tests.
+const DOCUMENT_POSITION_DISCONNECTED = 1;
+const DOCUMENT_POSITION_FOLLOWING = 4;
+const requireModule = createRequire(import.meta.url);
 
 export function parseHtml(html: string): Document {
-  return new DOMParser().parseFromString(html, 'text/html');
+  if (typeof DOMParser !== 'undefined') {
+    return new DOMParser().parseFromString(html, 'text/html');
+  }
+
+  const { JSDOM } = requireModule('jsdom') as JsdomModule;
+  return new JSDOM(html).window.document;
 }
 
 function normalizeText(text: string): string {
@@ -110,11 +125,11 @@ export function findFieldsetByLegendText(
 
 export function isNodeBefore(before: Node, after: Node): boolean {
   const position = before.compareDocumentPosition(after);
-  if ((position & Node.DOCUMENT_POSITION_DISCONNECTED) !== 0) {
+  if ((position & DOCUMENT_POSITION_DISCONNECTED) !== 0) {
     return false;
   }
 
-  return (position & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+  return (position & DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
 export function hasExplicitDocumentShell(html: string): boolean {
