@@ -262,6 +262,166 @@ console.log(
     });
   });
 
+  it('deduplicates session-owned question reads by id within a single server render', () => {
+    const result = runReactServerScript<{
+      findByIdForSessionCallCount: number;
+      firstStatus: string;
+      secondStatus: string;
+    }>(`
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const React = require('react');
+const { renderToReadableStream } = require('next/dist/compiled/react-server-dom-webpack/server.node');
+const { createRequestCachedQuestionRepository } = require('./lib/cached-reads.ts');
+const { FakeQuestionRepository } = require('./src/application/test-helpers/fakes/fake-question-repository.ts');
+const { createQuestion } = require('./src/domain/test-helpers/index.ts');
+
+class CountingQuestionRepository extends FakeQuestionRepository {
+  findByIdForSessionCallCount = 0;
+
+  async findByIdForSession(id) {
+    this.findByIdForSessionCallCount++;
+    return super.findByIdForSession(id);
+  }
+}
+
+async function drain(stream) {
+  const reader = stream.getReader();
+  while (true) {
+    const { done } = await reader.read();
+    if (done) break;
+  }
+}
+
+const rawRepository = new CountingQuestionRepository([
+  createQuestion({ id: 'question-1', slug: 'question-1', status: 'archived' }),
+]);
+const repository = createRequestCachedQuestionRepository(rawRepository);
+
+let firstStatus = 'missing';
+let secondStatus = 'missing';
+
+async function FirstCaller() {
+  const question = await repository.findByIdForSession('question-1');
+  firstStatus = question?.status ?? 'missing';
+  return React.createElement('div', null, firstStatus);
+}
+
+async function SecondCaller() {
+  const question = await repository.findByIdForSession('question-1');
+  secondStatus = question?.status ?? 'missing';
+  return React.createElement('div', null, secondStatus);
+}
+
+async function App() {
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(FirstCaller),
+    React.createElement(SecondCaller),
+  );
+}
+
+await drain(await renderToReadableStream(React.createElement(App), null));
+console.log(
+  JSON.stringify({
+    findByIdForSessionCallCount: rawRepository.findByIdForSessionCallCount,
+    firstStatus,
+    secondStatus,
+  }),
+);
+`);
+
+    expect(result).toEqual({
+      findByIdForSessionCallCount: 1,
+      firstStatus: 'archived',
+      secondStatus: 'archived',
+    });
+  });
+
+  it('normalizes session-owned question batch reads while preserving caller order', () => {
+    const result = runReactServerScript<{
+      findByIdsForSessionCallCount: number;
+      findByIdsForSessionCalls: string[][];
+      firstResultIds: string[];
+      secondResultIds: string[];
+    }>(`
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const React = require('react');
+const { renderToReadableStream } = require('next/dist/compiled/react-server-dom-webpack/server.node');
+const { createRequestCachedQuestionRepository } = require('./lib/cached-reads.ts');
+const { FakeQuestionRepository } = require('./src/application/test-helpers/fakes/fake-question-repository.ts');
+const { createQuestion } = require('./src/domain/test-helpers/index.ts');
+
+class CountingQuestionRepository extends FakeQuestionRepository {
+  findByIdsForSessionCallCount = 0;
+
+  async findByIdsForSession(ids) {
+    this.findByIdsForSessionCallCount++;
+    return super.findByIdsForSession(ids);
+  }
+}
+
+async function drain(stream) {
+  const reader = stream.getReader();
+  while (true) {
+    const { done } = await reader.read();
+    if (done) break;
+  }
+}
+
+const rawRepository = new CountingQuestionRepository([
+  createQuestion({ id: 'a', slug: 'question-a', status: 'archived' }),
+  createQuestion({ id: 'b', slug: 'question-b', status: 'draft' }),
+]);
+const repository = createRequestCachedQuestionRepository(rawRepository);
+
+let firstResultIds = [];
+let secondResultIds = [];
+
+async function FirstCaller() {
+  const questions = await repository.findByIdsForSession(['b', 'a', 'a']);
+  firstResultIds = questions.map((question) => question.id);
+  return React.createElement('div', null, firstResultIds.join(','));
+}
+
+async function SecondCaller() {
+  const questions = await repository.findByIdsForSession(['a', 'b']);
+  secondResultIds = questions.map((question) => question.id);
+  return React.createElement('div', null, secondResultIds.join(','));
+}
+
+async function App() {
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement(FirstCaller),
+    React.createElement(SecondCaller),
+  );
+}
+
+await drain(await renderToReadableStream(React.createElement(App), null));
+console.log(
+  JSON.stringify({
+    findByIdsForSessionCallCount: rawRepository.findByIdsForSessionCallCount,
+    findByIdsForSessionCalls: rawRepository.findByIdsForSessionCalls,
+    firstResultIds,
+    secondResultIds,
+  }),
+);
+`);
+
+    expect(result).toEqual({
+      findByIdsForSessionCallCount: 1,
+      findByIdsForSessionCalls: [['a', 'b']],
+      firstResultIds: ['b', 'a', 'a'],
+      secondResultIds: ['a', 'b'],
+    });
+  });
+
   it('deduplicates tag list reads within a single server render', () => {
     const result = runReactServerScript(`
 import { createRequire } from 'node:module';
