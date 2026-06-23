@@ -11,6 +11,10 @@ import { usePracticeSessionReviewStageState } from '@/app/(app)/app/practice/[se
 import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import type {
+  ExamDraftAnswer,
+  ExamDraftSaveResult,
+} from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { getThrownErrorMessage } from '@/app/(app)/app/shared/error-message-helpers';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
@@ -25,17 +29,12 @@ import type { NextQuestion } from '@/src/application/use-cases/get-next-question
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
 type SessionIdInput = { sessionId: string };
-type FinalExamDraftAnswer = {
-  questionId: string;
-  selectedChoiceId: string | null;
-  cumulativeMs: number;
-};
 type EndPracticeSessionActionInput = SessionIdInput & {
   idempotencyKey?: string;
 };
 type FinalizeExamAnswersActionInput = SessionIdInput & {
   idempotencyKey?: string;
-  finalDraftAnswer?: FinalExamDraftAnswer;
+  finalDraftAnswer?: ExamDraftAnswer;
 };
 
 export type { ExamResultsSubstage };
@@ -52,8 +51,8 @@ export type UsePracticeSessionReviewStageInput = {
   setLoadState: (state: LoadState) => void;
   resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
-  saveCurrentExamDraft: () => Promise<boolean>;
-  getCurrentExamDraft: () => FinalExamDraftAnswer | null;
+  saveCurrentExamDraft: () => Promise<ExamDraftSaveResult>;
+  getCurrentExamDraft: () => ExamDraftAnswer | null;
   endPracticeSessionFn: (
     input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<EndPracticeSessionOutput>>;
@@ -114,7 +113,7 @@ export function usePracticeSessionReviewStage(
     ],
   );
   const finalizeExamSession = useCallback(
-    (finalDraftAnswer?: FinalExamDraftAnswer) =>
+    (finalDraftAnswer?: ExamDraftAnswer) =>
       endSession({
         sessionId: input.sessionId,
         endSessionIdempotencyKey: finalizeExamIdempotencyKeyRef.current,
@@ -209,16 +208,9 @@ export function usePracticeSessionReviewStage(
           // selection made at the deadline can still be graded via the flush
           // when the ordinary save is rejected for expiry.
           const finalDraftAnswer = input.getCurrentExamDraft() ?? undefined;
-          const saved = await input.saveCurrentExamDraft();
-          if (!saved) {
-            const deadlineAt = input.sessionInfo?.deadlineAt ?? null;
-            const deadlineMs =
-              deadlineAt === null
-                ? Number.POSITIVE_INFINITY
-                : Date.parse(deadlineAt);
-            const isExpired =
-              Number.isFinite(deadlineMs) && Date.now() >= deadlineMs;
-            if (isExpired) {
+          const saveResult = await input.saveCurrentExamDraft();
+          if (!saveResult.ok) {
+            if (saveResult.code === 'CONFLICT') {
               await finalizeExamSession(finalDraftAnswer);
             }
             return;
@@ -242,7 +234,6 @@ export function usePracticeSessionReviewStage(
     input.getCurrentExamDraft,
     input.isMounted,
     input.saveCurrentExamDraft,
-    input.sessionInfo?.deadlineAt,
     input.sessionMode,
     input.setLoadState,
     finalizeExamSession,

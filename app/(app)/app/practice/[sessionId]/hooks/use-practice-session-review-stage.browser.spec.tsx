@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import type { ExamDraftSaveResult } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
@@ -38,7 +39,7 @@ const getCompletedSessionQuestionsWithFeedbackMock =
       input: unknown,
     ) => Promise<ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>>
   >();
-const saveCurrentExamDraftMock = vi.fn<() => Promise<boolean>>();
+const saveCurrentExamDraftMock = vi.fn<() => Promise<ExamDraftSaveResult>>();
 const getCurrentExamDraftMock = vi.fn<
   UsePracticeSessionReviewStageInput['getCurrentExamDraft']
 >(() => null);
@@ -138,7 +139,7 @@ async function flushDeferredSettlement(): Promise<void> {
 
 describe('usePracticeSessionReviewStage (browser)', () => {
   beforeEach(() => {
-    saveCurrentExamDraftMock.mockResolvedValue(true);
+    saveCurrentExamDraftMock.mockResolvedValue({ ok: true });
   });
 
   afterEach(() => {
@@ -1054,7 +1055,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     const callOrder: string[] = [];
     saveCurrentExamDraftMock.mockImplementation(async () => {
       callOrder.push('save');
-      return true;
+      return { ok: true };
     });
     getPracticeSessionReviewMock.mockImplementation(async () => {
       callOrder.push('review');

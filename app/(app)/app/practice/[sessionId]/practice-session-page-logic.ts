@@ -1,5 +1,6 @@
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
+  type ExamDraftAnswer,
   type NullQuestionRecovery,
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
@@ -35,14 +36,9 @@ type SessionIdInput = { sessionId: string };
 type LoadNextQuestionOptions = {
   recoverNullQuestion?: NullQuestionRecovery | undefined;
 };
-type FinalExamDraftAnswer = {
-  questionId: string;
-  selectedChoiceId: string | null;
-  cumulativeMs: number;
-};
 type EndPracticeSessionActionInput = SessionIdInput & {
   idempotencyKey?: string;
-  finalDraftAnswer?: FinalExamDraftAnswer;
+  finalDraftAnswer?: ExamDraftAnswer;
 };
 type PracticeSessionFinalizationOutput =
   | EndPracticeSessionOutput
@@ -176,7 +172,7 @@ export async function submitAnswerForQuestion(input: {
 export async function endSession(input: {
   sessionId: string;
   endSessionIdempotencyKey: string;
-  finalDraftAnswer?: FinalExamDraftAnswer | undefined;
+  finalDraftAnswer?: ExamDraftAnswer | undefined;
   finalizeSessionFn: (
     input: EndPracticeSessionActionInput,
   ) => Promise<ActionResult<PracticeSessionFinalizationOutput>>;

@@ -9,6 +9,8 @@ import {
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
+  type ExamDraftAnswer,
+  type ExamDraftSaveResult,
   maybeSaveDraftBeforeNavigation,
   type NullQuestionRecovery,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
@@ -31,6 +33,9 @@ export type UsePracticeSessionQuestionFlowInput = {
   saveExamDraftAnswerFn: (
     input: unknown,
   ) => Promise<ActionResult<SaveExamDraftAnswerOutput>>;
+  onExamServerExpiry?: (
+    finalDraftAnswer: ExamDraftAnswer | null,
+  ) => Promise<void>;
 };
 
 type SubmitOptions = {
@@ -64,12 +69,8 @@ export type UsePracticeSessionQuestionFlowOutput = {
   onNavigateQuestion: (questionId: string) => void;
   onSelectChoice: (choiceId: string) => void;
   onSubmit: (options?: SubmitOptions) => Promise<SubmitAnswerOutput | null>;
-  saveCurrentExamDraft: () => Promise<boolean>;
-  getCurrentExamDraft: () => {
-    questionId: string;
-    selectedChoiceId: string | null;
-    cumulativeMs: number;
-  } | null;
+  saveCurrentExamDraft: () => Promise<ExamDraftSaveResult>;
+  getCurrentExamDraft: () => ExamDraftAnswer | null;
 };
 
 export function usePracticeSessionQuestionFlow(
@@ -223,71 +224,72 @@ export function usePracticeSessionQuestionFlow(
     currentExamDraftCumulativeMsRef.current = 0;
   }, [setQuestion, setSelectedChoiceId, setSubmitResult]);
 
-  const saveCurrentExamDraft = useCallback(async (): Promise<boolean> => {
-    // `=== 'exam'` on the optional chain narrows both `question` and
-    // `question.session` to non-null for the body below (drops the `?.`).
-    if (question?.session?.mode !== 'exam') return true;
+  const saveCurrentExamDraft =
+    useCallback(async (): Promise<ExamDraftSaveResult> => {
+      // `=== 'exam'` on the optional chain narrows both `question` and
+      // `question.session` to non-null for the body below (drops the `?.`).
+      if (question?.session?.mode !== 'exam') return { ok: true };
 
-    const nowMs = Date.now();
-    const enteredAtMs = currentExamDraftEnteredAtRef.current;
-    const elapsedMs =
-      enteredAtMs === null ? 0 : Math.max(0, nowMs - enteredAtMs);
-    const currentCumulativeMs =
-      currentExamDraftCumulativeMsRef.current + elapsedMs;
-    const lastSavedDraft = savedExamDraftsRef.current.get(
-      question.questionId,
-    ) ?? {
-      selectedChoiceId: question.session.draftSelectedChoiceId ?? null,
-      cumulativeMs: question.session.draftCumulativeMs ?? 0,
-    };
+      const nowMs = Date.now();
+      const enteredAtMs = currentExamDraftEnteredAtRef.current;
+      const elapsedMs =
+        enteredAtMs === null ? 0 : Math.max(0, nowMs - enteredAtMs);
+      const currentCumulativeMs =
+        currentExamDraftCumulativeMsRef.current + elapsedMs;
+      const lastSavedDraft = savedExamDraftsRef.current.get(
+        question.questionId,
+      ) ?? {
+        selectedChoiceId: question.session.draftSelectedChoiceId ?? null,
+        cumulativeMs: question.session.draftCumulativeMs ?? 0,
+      };
 
-    const saved = await maybeSaveDraftBeforeNavigation({
-      sessionId: input.sessionId,
+      const saveResult = await maybeSaveDraftBeforeNavigation({
+        sessionId: input.sessionId,
+        question,
+        selectedChoiceId,
+        currentCumulativeMs,
+        lastSavedDraftSelectedChoiceId: lastSavedDraft.selectedChoiceId,
+        lastSavedDraftCumulativeMs: lastSavedDraft.cumulativeMs,
+        saveExamDraftAnswerFn: input.saveExamDraftAnswerFn,
+        setLoadState,
+        onSaved: (draft) => {
+          savedExamDraftsRef.current.set(draft.questionId, {
+            selectedChoiceId: draft.selectedChoiceId,
+            cumulativeMs: draft.cumulativeMs,
+          });
+          if (draft.questionId === question.questionId) {
+            setQuestion({
+              ...question,
+              session:
+                question.session?.mode === 'exam'
+                  ? {
+                      ...question.session,
+                      draftSelectedChoiceId: draft.selectedChoiceId,
+                      draftCumulativeMs: draft.cumulativeMs,
+                    }
+                  : question.session,
+            });
+            currentExamDraftCumulativeMsRef.current = draft.cumulativeMs;
+            currentExamDraftEnteredAtRef.current = nowMs;
+          }
+        },
+      });
+
+      if (!saveResult.ok) return saveResult;
+
+      if (!selectedChoiceId) {
+        currentExamDraftEnteredAtRef.current = nowMs;
+      }
+
+      return { ok: true };
+    }, [
+      input.saveExamDraftAnswerFn,
+      input.sessionId,
       question,
       selectedChoiceId,
-      currentCumulativeMs,
-      lastSavedDraftSelectedChoiceId: lastSavedDraft.selectedChoiceId,
-      lastSavedDraftCumulativeMs: lastSavedDraft.cumulativeMs,
-      saveExamDraftAnswerFn: input.saveExamDraftAnswerFn,
       setLoadState,
-      onSaved: (draft) => {
-        savedExamDraftsRef.current.set(draft.questionId, {
-          selectedChoiceId: draft.selectedChoiceId,
-          cumulativeMs: draft.cumulativeMs,
-        });
-        if (draft.questionId === question.questionId) {
-          setQuestion({
-            ...question,
-            session:
-              question.session?.mode === 'exam'
-                ? {
-                    ...question.session,
-                    draftSelectedChoiceId: draft.selectedChoiceId,
-                    draftCumulativeMs: draft.cumulativeMs,
-                  }
-                : question.session,
-          });
-          currentExamDraftCumulativeMsRef.current = draft.cumulativeMs;
-          currentExamDraftEnteredAtRef.current = nowMs;
-        }
-      },
-    });
-
-    if (!saved) return false;
-
-    if (!selectedChoiceId) {
-      currentExamDraftEnteredAtRef.current = nowMs;
-    }
-
-    return true;
-  }, [
-    input.saveExamDraftAnswerFn,
-    input.sessionId,
-    question,
-    selectedChoiceId,
-    setLoadState,
-    setQuestion,
-  ]);
+      setQuestion,
+    ]);
 
   // BUG-254: the bounded candidate draft for the question currently on-screen.
   // The exam-expiry finalize path forwards this so the server can grade the
@@ -310,13 +312,23 @@ export function usePracticeSessionQuestionFlow(
     };
   }, [question, selectedChoiceId]);
 
+  const recoverServerExpiredExam = useCallback(async (): Promise<void> => {
+    if (!input.onExamServerExpiry) return;
+    await input.onExamServerExpiry(getCurrentExamDraft());
+  }, [getCurrentExamDraft, input.onExamServerExpiry]);
+
   const onNavigateQuestion = useCallback(
     (questionId: string): void => {
       void runTransitionedAsyncAction({
         startTransition,
         run: async () => {
-          const shouldNavigate = await saveCurrentExamDraft();
-          if (!shouldNavigate) return;
+          const saveResult = await saveCurrentExamDraft();
+          if (!saveResult.ok) {
+            if (saveResult.code === 'CONFLICT') {
+              await recoverServerExpiredExam();
+            }
+            return;
+          }
 
           await loadNextQuestion({
             ...loadQuestionConfig,
@@ -331,7 +343,12 @@ export function usePracticeSessionQuestionFlow(
         },
       });
     },
-    [loadQuestionConfig, saveCurrentExamDraft, startTransition],
+    [
+      loadQuestionConfig,
+      recoverServerExpiredExam,
+      saveCurrentExamDraft,
+      startTransition,
+    ],
   );
 
   const onNextQuestion = useCallback((): void => {
@@ -347,8 +364,13 @@ export function usePracticeSessionQuestionFlow(
     void runTransitionedAsyncAction({
       startTransition,
       run: async () => {
-        const shouldNavigate = await saveCurrentExamDraft();
-        if (!shouldNavigate) return;
+        const saveResult = await saveCurrentExamDraft();
+        if (!saveResult.ok) {
+          if (saveResult.code === 'CONFLICT') {
+            await recoverServerExpiredExam();
+          }
+          return;
+        }
 
         await loadNextQuestion({
           ...loadQuestionConfig,
@@ -365,6 +387,7 @@ export function usePracticeSessionQuestionFlow(
   }, [
     loadQuestionConfig,
     question?.session?.index,
+    recoverServerExpiredExam,
     saveCurrentExamDraft,
     sessionInfo?.index,
     startTransition,

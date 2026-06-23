@@ -94,7 +94,7 @@ describe('usePracticeSessionReviewStage', () => {
         setLoadState: () => undefined,
         resetQuestionState: () => undefined,
         loadSpecificQuestion: () => undefined,
-        saveCurrentExamDraft: async () => true,
+        saveCurrentExamDraft: async () => ({ ok: true }),
         getCurrentExamDraft: () => null,
         endPracticeSessionFn: async (): Promise<
           ActionResult<EndPracticeSessionOutput>
