@@ -1,6 +1,7 @@
 # BUG-257: Active Exam Finalization Depends on Current Question Publication State
 
 **Status:** Open
+**Resolution State:** Fixed on PR #494 (`fix/bug-257-active-session-finalization`); pending owner grade, merge, production verification, and archival.
 **Severity:** P4
 **Date:** 2026-06-20
 **Confirmed:** 2026-06-20 (mechanism only — see Reachability)
@@ -10,9 +11,9 @@
 
 ## Summary
 
-Practice sessions store only question IDs and draft choice IDs. Draft save and finalization then refetch question data through `findPublishedById(s)`. If a question is unpublished, archived, or otherwise absent from the published-question repository after the session starts but before the user saves/finalizes, the active exam can no longer save or finalize that answered question.
+Practice sessions store only question IDs and draft choice IDs. Before the fix on PR #494, draft save and finalization refetched question data through `findPublishedById(s)`. If a question was unpublished, archived, or otherwise absent from the published-question repository after the session started but before the user saved/finalized, the active exam could no longer save or finalize that answered question.
 
-Read models already tolerate unavailable questions after completion, but the write path for active sessions does not.
+Read models already tolerate unavailable questions after completion. PR #494 brings active-session write paths into alignment by using session-owned question lookups after membership is proven.
 
 ## Reachability (why P4, not P3)
 
@@ -29,37 +30,37 @@ Expected:
 
 - The active session finalizes against session-owned question/choice data even if the question is no longer publicly published, without stranding the whole session solely because publication status changed.
 
-Actual:
+Actual before PR #494:
 
 - Draft save rejects with `NOT_FOUND: Question not found`.
 - Finalization rejects when it cannot refetch the drafted question from the published-only repository.
 - The user must abandon the exam or wait for content to be restored.
 
-## Root Cause
+## Root Cause and Current Fix Seams
 
-The question repository only returns currently published rows:
+The public question repository methods intentionally return only currently published rows:
 
-- [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L95) filters `findPublishedById` by `questions.status = 'published'`.
+- [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L107) filters `findPublishedById` by `questions.status = 'published'`.
 - [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L131) does the same for `findPublishedByIds`.
 
-Draft save depends on the current published row:
+Before the fix, active-session write paths reused those public reads. Current PR #494 seams:
 
-- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L59) calls `findPublishedById(input.questionId)`.
-- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L61) throws `NOT_FOUND` if it is absent.
-- Existing coverage asserts that missing/unpublished draft saves are rejected at [`save-exam-draft-answer.test.ts`](../../src/application/use-cases/save-exam-draft-answer.test.ts#L191).
+- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L59) proves `input.questionId` is in the loaded session before the non-public lookup.
+- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L66) calls `findByIdForSession(input.questionId)` after that membership gate.
+- Coverage accepts session-owned archived questions at [`save-exam-draft-answer.test.ts`](../../src/application/use-cases/save-exam-draft-answer.test.ts#L156), rejects archived questions outside the session at [`save-exam-draft-answer.test.ts`](../../src/application/use-cases/save-exam-draft-answer.test.ts#L192), and still rejects genuinely missing session-owned rows at [`save-exam-draft-answer.test.ts`](../../src/application/use-cases/save-exam-draft-answer.test.ts#L262).
 
-Finalization depends on current published rows for drafted answers:
+Finalization now uses session-owned reads for drafted answers:
 
 - [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L173) collects drafted states.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L176) fetches those questions through [`fetchQuestionsById`](../../src/application/shared/fetch-questions-by-id.ts#L11), which calls `findPublishedByIds`.
+- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L176) fetches those questions through [`fetchSessionOwnedQuestionsById`](../../src/application/shared/fetch-session-owned-questions-by-id.ts#L4), which calls `findByIdsForSession`.
 - [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L216) reads the fetched question.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L218) throws `NOT_FOUND` when the published row is unavailable.
-- The BUG-254 final on-screen draft flush has the same dependency: [`applyFinalDraftAnswer`](../../src/application/use-cases/finalize-exam-answers.ts#L296) validates the flushed question through `findPublishedById`, and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L300) throws `NOT_FOUND` if that published row is unavailable.
+- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L218) still throws `NOT_FOUND` only if the session-owned row is genuinely absent.
+- The BUG-254 final on-screen draft flush uses the same session-owned boundary: [`applyFinalDraftAnswer`](../../src/application/use-cases/finalize-exam-answers.ts#L296) validates the flushed question through `findByIdForSession`, and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L300) throws `NOT_FOUND` only if that session-owned row is genuinely absent.
 
 Completed/read-side review already has an unavailable-row model:
 
-- [`get-practice-session-review.ts`](../../src/application/use-cases/get-practice-session-review.ts#L160) returns `isAvailable: false` rows for missing questions.
-- [`get-completed-session-questions-with-feedback.ts`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L207) does the same after completion.
+- [`get-practice-session-review.ts`](../../src/application/use-cases/get-practice-session-review.ts#L161) returns `isAvailable: false` rows for missing questions.
+- [`get-completed-session-questions-with-feedback.ts`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L208) does the same after completion.
 
 ## Impact
 
@@ -126,7 +127,7 @@ it('finalizes a drafted exam answer even if the question is no longer published'
 });
 ```
 
-The current implementation still throws `ApplicationError('NOT_FOUND', 'Question not found')` because `FakeQuestionRepository.findPublishedByIds` filters out the archived question. The concrete test will need the existing `passthroughTransaction(questions, attempts, sessions)` helper shape from `finalize-exam-answers.test.ts`.
+The pre-fix implementation threw `ApplicationError('NOT_FOUND', 'Question not found')` because `FakeQuestionRepository.findPublishedByIds` filtered out the archived question. PR #494's concrete regression test uses the existing `passthroughTransaction(questions, attempts, sessions)` helper shape from `finalize-exam-answers.test.ts`.
 
 ## Prior Bug Cross-Refs
 

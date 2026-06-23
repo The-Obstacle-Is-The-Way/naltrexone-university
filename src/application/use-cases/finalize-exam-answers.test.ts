@@ -366,6 +366,7 @@ describe('FinalizeExamAnswersUseCase', () => {
     ).resolves.toMatchObject({
       totals: { answered: 0, correct: 0 },
     });
+    expect(questions.findByIdsForSessionCalls).toEqual([]);
     await expect(
       attempts.findBySessionId('session-1', 'user-1'),
     ).resolves.toMatchObject([
