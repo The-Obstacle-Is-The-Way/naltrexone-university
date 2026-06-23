@@ -72,6 +72,8 @@ function createThrowingQuestionRepository(
       throw new Error(errorMessage);
     },
     findPublishedByIds: async () => [],
+    findByIdForSession: async () => null,
+    findByIdsForSession: async () => [],
     listPublishedCandidateIds: async () => [],
     countPublishedCandidateIds: async () => 0,
   };

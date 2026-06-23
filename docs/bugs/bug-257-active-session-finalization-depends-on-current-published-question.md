@@ -16,7 +16,7 @@ Read models already tolerate unavailable questions after completion, but the wri
 
 ## Reachability (why P4, not P3)
 
-This is a **latent robustness gap, not an in-app-reachable bug**. There is no application flow that unpublishes or deletes a published question: `QuestionRepository` exposes only reads (no `create`/`update`/`delete`/`insert`/`save`), there are no admin/content routes that mutate questions, and `questions.status` is written only via schema/migrations/seed. Triggering this requires an **out-of-band** content operation (a migration, re-seed, or manual DB edit that removes or unpublishes a question) to land **during a short, timed active exam** that already contains that question. No user action causes it. The genuine, verified observation is the read/write asymmetry — the read side tolerates missing rows with `isAvailable: false`, while the active-session write path throws `NOT_FOUND`. Tracked at P4 (hardening) until there is evidence of a content-change pathway that can actually hit an active session.
+This is a **latent robustness gap, not an in-app-reachable bug**. There is no application flow that unpublishes or deletes a published question: `QuestionRepository` exposes only reads (no `create`/`update`/`delete`/`insert`/`save`), there are no admin/content routes that mutate questions, and database writes to question publication state are limited to schema/migrations/seed tooling. Triggering this requires an **out-of-band** content operation (a migration, re-seed, seed archiving, or manual DB edit that removes a question from the published set) to land **during a short, timed active exam** that already contains that question. No user action causes it. The genuine, verified observation is the read/write asymmetry — the read side tolerates missing rows with `isAvailable: false`, while the active-session write path throws `NOT_FOUND`. Tracked at P4 (hardening) until there is evidence of a content-change pathway that can actually hit an active session.
 
 ## Reproduction
 
@@ -27,7 +27,7 @@ This is a **latent robustness gap, not an in-app-reachable bug**. There is no ap
 
 Expected:
 
-- The active session finalizes against the question/choice snapshot that was valid when the session was created, or gracefully omits/unavailable-marks the affected row without stranding the whole session.
+- The active session finalizes against session-owned question/choice data even if the question is no longer publicly published, without stranding the whole session solely because publication status changed.
 
 Actual:
 
@@ -39,8 +39,8 @@ Actual:
 
 The question repository only returns currently published rows:
 
-- [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L93) filters `findPublishedById` by `questions.status = 'published'`.
-- [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L125) does the same for `findPublishedByIds`.
+- [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L95) filters `findPublishedById` by `questions.status = 'published'`.
+- [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L131) does the same for `findPublishedByIds`.
 
 Draft save depends on the current published row:
 
@@ -50,10 +50,11 @@ Draft save depends on the current published row:
 
 Finalization depends on current published rows for drafted answers:
 
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L87) collects drafted states.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L90) fetches those questions.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L126) reads the fetched question.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L128) throws `NOT_FOUND` when the published row is unavailable.
+- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L173) collects drafted states.
+- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L176) fetches those questions through [`fetchQuestionsById`](../../src/application/shared/fetch-questions-by-id.ts#L11), which calls `findPublishedByIds`.
+- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L216) reads the fetched question.
+- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L218) throws `NOT_FOUND` when the published row is unavailable.
+- The BUG-254 final on-screen draft flush has the same dependency: [`applyFinalDraftAnswer`](../../src/application/use-cases/finalize-exam-answers.ts#L296) validates the flushed question through `findPublishedById`, and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L300) throws `NOT_FOUND` if that published row is unavailable.
 
 Completed/read-side review already has an unavailable-row model:
 
@@ -62,21 +63,33 @@ Completed/read-side review already has an unavailable-row model:
 
 ## Impact
 
-If an out-of-band content operation removes/unpublishes a drafted question during an active exam (no in-app flow does this today), the user loses the ability to save or submit that in-progress exam until the content is restored. Low probability and not user-triggerable, hence P4.
+If an out-of-band content operation removes a drafted question from the published set during an active exam (no in-app flow does this today), the user loses the ability to save or submit that in-progress exam until the content is restored. Low probability and not user-triggerable, hence P4.
 
 ## Proposed Fix
 
-Make active sessions snapshot-safe. Good implementation options:
+Make active-session writes publication-state tolerant without relaxing public question discovery. Add a `QuestionRepository` method for session-owned question lookup that fetches by ID regardless of current `questions.status`, and use it only after the loaded practice session proves the `questionId` is already part of that session. Thread that method through `SaveExamDraftAnswerUseCase`, `FinalizeExamAnswersUseCase` drafted-state grading, and the BUG-254 `finalDraftAnswer` flush validation; keep public browsing, standalone question loading, and new-session candidate selection on the existing `findPublished*`/`listPublishedCandidateIds` methods.
 
-1. Store immutable question/choice grading snapshot data in `practice_sessions.params_json` at session start, at least `{ questionId, choiceIds, correctChoiceId }`.
-2. Add a repository method for session-owned questions that can fetch by ID regardless of current publication status, and use it only for sessions that already contain the question ID.
-3. For finalization, if a question is unavailable and no grading snapshot exists, finalize the affected drafted answer through a documented fallback instead of failing the whole session.
-4. Keep public question browsing and new-session candidate selection restricted to published questions.
+This is the smallest sound Clean Architecture change for the verified mechanism. `practice_sessions.params_json` already exists, but today it stores only filters, ordered `questionIds`, and mutable question state; adding grading snapshots would require extending the strict params schema and changing session creation to fetch/store choice/correct-answer data that finalization can already obtain from the persisted question rows. Finalization needs the full question choices to validate membership and `gradeAnswer(question, selectedChoiceId)`, and archived/unpublished rows still satisfy the existing attempts/choices foreign keys, so a session-scoped non-public read fixes the published-state dependency while preserving the published-only boundary for user-facing discovery.
+
+Rejected alternatives:
+
+- **Snapshot grading data in `params_json`:** robust but more invasive than necessary for this P4 because session creation currently selects only IDs and params parsing is strict.
+- **Relax `findPublishedById(s)` globally:** would leak archived/draft questions into browsing and candidate selection.
+- **Finalize missing rows through a fallback without fetching question data:** prevents stranding only by giving up grading; keep it as a later hard-delete fallback if product wants to tolerate actual row deletion.
+- **Do nothing / accept:** low reachability, but a small port-level hardening keeps active sessions independent of later publication-state flips.
 
 ## Failing Test Sketch
 
 ```ts
 it('finalizes a drafted exam answer even if the question is no longer published', async () => {
+  const archivedQuestion = createQuestion({
+    id: 'q1',
+    status: 'archived',
+    choices: [
+      createChoice({ id: 'c1', questionId: 'q1', label: 'A', isCorrect: true }),
+      createChoice({ id: 'c2', questionId: 'q1', label: 'B', sortOrder: 2 }),
+    ],
+  });
   const sessions = new FakePracticeSessionRepository([
     createPracticeSession({
       id: 'session-1',
@@ -84,20 +97,26 @@ it('finalizes a drafted exam answer even if the question is no longer published'
       mode: 'exam',
       questionIds: ['q1'],
       questionStates: [
-        createPracticeSessionQuestionState({
+        {
           questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
           draftSelectedChoiceId: 'c1',
+          draftSavedAt: null,
           draftCumulativeMs: 12_000,
-        }),
+        },
       ],
     }),
   ]);
   const attempts = new FakeAttemptRepository();
-  const questions = new FakeQuestionRepository([]);
+  const questions = new FakeQuestionRepository([archivedQuestion]);
+  const writeTransaction = passthroughTransaction(questions, attempts, sessions);
   const useCase = new FinalizeExamAnswersUseCase(
-    sessions,
     questions,
     attempts,
+    sessions,
     writeTransaction,
   );
 
@@ -107,7 +126,7 @@ it('finalizes a drafted exam answer even if the question is no longer published'
 });
 ```
 
-The current implementation throws `ApplicationError('NOT_FOUND', 'Question not found')`.
+The current implementation still throws `ApplicationError('NOT_FOUND', 'Question not found')` because `FakeQuestionRepository.findPublishedByIds` filters out the archived question. The concrete test will need the existing `passthroughTransaction(questions, attempts, sessions)` helper shape from `finalize-exam-answers.test.ts`.
 
 ## Prior Bug Cross-Refs
 

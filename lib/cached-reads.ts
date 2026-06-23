@@ -32,6 +32,14 @@ export function createRequestCachedQuestionRepository(
       deserializeQuestionIds(serializedIds),
     ),
   );
+  const findByIdForSession = cache(async (id: string) =>
+    questionRepository.findByIdForSession(id),
+  );
+  const findByNormalizedIdsForSession = cache(async (serializedIds: string) =>
+    questionRepository.findByIdsForSession(
+      deserializeQuestionIds(serializedIds),
+    ),
+  );
 
   return {
     findPublishedById,
@@ -43,6 +51,24 @@ export function createRequestCachedQuestionRepository(
       if (normalizedIds.length === 0) return [];
 
       const questions = await findPublishedByNormalizedIds(
+        serializeQuestionIds(normalizedIds),
+      );
+      const questionById = new Map(
+        questions.map((question) => [question.id, question]),
+      );
+
+      return ids
+        .map((id) => questionById.get(id))
+        .filter((question): question is Question => question !== undefined);
+    },
+    findByIdForSession,
+    async findByIdsForSession(
+      ids: readonly string[],
+    ): Promise<readonly Question[]> {
+      const normalizedIds = getSortedUniqueQuestionIds(ids);
+      if (normalizedIds.length === 0) return [];
+
+      const questions = await findByNormalizedIdsForSession(
         serializeQuestionIds(normalizedIds),
       );
       const questionById = new Map(

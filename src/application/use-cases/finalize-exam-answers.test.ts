@@ -44,6 +44,7 @@ function createFinalizeQuestion(
   questionId: string,
   correctChoiceId: string,
   incorrectChoiceId?: string,
+  overrides: Partial<ReturnType<typeof createQuestion>> = {},
 ) {
   const wrongId = incorrectChoiceId ?? `${questionId}-wrong`;
   return createQuestion({
@@ -65,6 +66,7 @@ function createFinalizeQuestion(
         isCorrect: false,
       }),
     ],
+    ...overrides,
   });
 }
 
@@ -256,6 +258,124 @@ describe('FinalizeExamAnswersUseCase', () => {
         },
       ],
     });
+  });
+
+  it('finalizes and grades a drafted session-owned question after it leaves the published set', async () => {
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong', {
+        status: 'archived',
+      }),
+    ]);
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: 'q1-correct',
+            draftSavedAt: new Date('2026-03-17T12:00:30.000Z'),
+            draftCumulativeMs: 30_000,
+          },
+        ],
+      }),
+    ]);
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toMatchObject({
+      sessionId: 'session-1',
+      mode: 'exam',
+      questionCount: 1,
+      totals: {
+        answered: 1,
+        correct: 1,
+      },
+    });
+    await expect(
+      attempts.findBySessionId('session-1', 'user-1'),
+    ).resolves.toMatchObject([
+      {
+        questionId: 'q1',
+        outcome: {
+          kind: 'answered',
+          selectedChoiceId: 'q1-correct',
+        },
+        isCorrect: true,
+      },
+    ]);
+  });
+
+  it('finalizes an omitted session-owned question after it leaves the published set without fetching it for grading', async () => {
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong', {
+        status: 'archived',
+      }),
+    ]);
+    const attempts = new FakeAttemptRepository();
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 12_000,
+          },
+        ],
+      }),
+    ]);
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      attempts,
+      sessions,
+      passthroughTransaction(questions, attempts, sessions),
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toMatchObject({
+      totals: { answered: 0, correct: 0 },
+    });
+    await expect(
+      attempts.findBySessionId('session-1', 'user-1'),
+    ).resolves.toMatchObject([
+      {
+        questionId: 'q1',
+        outcome: { kind: 'omitted' },
+        isCorrect: false,
+        timeSpentSeconds: 12,
+      },
+    ]);
   });
 
   it('finalizes a saved time-only draft as an omitted attempt with the saved duration', async () => {
@@ -708,10 +828,11 @@ describe('FinalizeExamAnswersUseCase', () => {
       });
     }
 
-    function createFlushUseCase(now: () => Date) {
-      const questions = new FakeQuestionRepository([
-        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
-      ]);
+    function createFlushUseCase(
+      now: () => Date,
+      question = createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ) {
+      const questions = new FakeQuestionRepository([question]);
       const attempts = new FakeAttemptRepository();
       const sessions = new FakePracticeSessionRepository([
         createFlushSession(),
@@ -755,6 +876,38 @@ describe('FinalizeExamAnswersUseCase', () => {
           outcome: { kind: 'answered', selectedChoiceId: 'q1-correct' },
           isCorrect: true,
           timeSpentSeconds: 30,
+        },
+      ]);
+    });
+
+    it('grades a final flush selection for a session-owned question after it leaves the published set', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS),
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong', {
+          status: 'archived',
+        }),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 30_000,
+          },
+        }),
+      ).resolves.toMatchObject({
+        totals: { answered: 1, correct: 1 },
+      });
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'answered', selectedChoiceId: 'q1-correct' },
+          isCorrect: true,
         },
       ]);
     });

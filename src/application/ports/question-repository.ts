@@ -26,6 +26,24 @@ export interface QuestionRepository {
   findPublishedByIds(ids: readonly string[]): Promise<readonly Question[]>;
 
   /**
+   * Returns a question by id regardless of `questions.status`.
+   *
+   * Callers MUST prove the id is part of the caller's owned practice session
+   * before using this. This deliberately bypasses the published boundary and
+   * must never back public browsing or candidate selection.
+   */
+  findByIdForSession(id: string): Promise<Question | null>;
+
+  /**
+   * Returns questions by id regardless of `questions.status`.
+   *
+   * Callers MUST prove these ids are part of the caller's owned practice
+   * session before using this. This deliberately bypasses the published
+   * boundary and must never back public browsing or candidate selection.
+   */
+  findByIdsForSession(ids: readonly string[]): Promise<readonly Question[]>;
+
+  /**
    * Return candidate question ids for "next question" selection.
    *
    * Requirements:

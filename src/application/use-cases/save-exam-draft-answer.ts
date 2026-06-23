@@ -56,7 +56,14 @@ export class SaveExamDraftAnswerUseCase {
       throw new ApplicationError('CONFLICT', 'Exam time has expired');
     }
 
-    const question = await this.questions.findPublishedById(input.questionId);
+    const questionBelongsToSession = session.questionStates.some(
+      (state) => state.questionId === input.questionId,
+    );
+    if (!questionBelongsToSession) {
+      throw new ApplicationError('NOT_FOUND', 'Question not found');
+    }
+
+    const question = await this.questions.findByIdForSession(input.questionId);
     if (!question) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }

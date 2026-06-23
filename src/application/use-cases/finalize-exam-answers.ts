@@ -4,7 +4,7 @@ import type {
   PracticeSessionRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
-import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
+import { fetchSessionOwnedQuestionsById } from '@/src/application/shared/fetch-session-owned-questions-by-id';
 import type { PracticeSession } from '@/src/domain/entities';
 import {
   computeExamDeadline,
@@ -173,7 +173,7 @@ export class FinalizeExamAnswersUseCase {
       const draftedStates = activeSession.questionStates.filter(
         (state) => state.draftSelectedChoiceId !== null,
       );
-      const questionsById = await fetchQuestionsById(
+      const questionsById = await fetchSessionOwnedQuestionsById(
         tx.questions,
         draftedStates.map((state) => state.questionId),
       );
@@ -293,7 +293,7 @@ export class FinalizeExamAnswersUseCase {
     }
 
     if (finalDraftAnswer.selectedChoiceId !== null) {
-      const question = await tx.questions.findPublishedById(
+      const question = await tx.questions.findByIdForSession(
         finalDraftAnswer.questionId,
       );
       if (!question) {
