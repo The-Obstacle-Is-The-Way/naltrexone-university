@@ -230,6 +230,8 @@ export function usePracticeSessionQuestionFlow(
       // `question.session` to non-null for the body below (drops the `?.`).
       if (question?.session?.mode !== 'exam') return { ok: true };
 
+      const currentQuestion = question;
+      const currentSession = question.session;
       const nowMs = Date.now();
       const enteredAtMs = currentExamDraftEnteredAtRef.current;
       const elapsedMs =
@@ -237,15 +239,15 @@ export function usePracticeSessionQuestionFlow(
       const currentCumulativeMs =
         currentExamDraftCumulativeMsRef.current + elapsedMs;
       const lastSavedDraft = savedExamDraftsRef.current.get(
-        question.questionId,
+        currentQuestion.questionId,
       ) ?? {
-        selectedChoiceId: question.session.draftSelectedChoiceId ?? null,
-        cumulativeMs: question.session.draftCumulativeMs ?? 0,
+        selectedChoiceId: currentSession.draftSelectedChoiceId ?? null,
+        cumulativeMs: currentSession.draftCumulativeMs ?? 0,
       };
 
       const saveResult = await maybeSaveDraftBeforeNavigation({
         sessionId: input.sessionId,
-        question,
+        question: currentQuestion,
         selectedChoiceId,
         currentCumulativeMs,
         lastSavedDraftSelectedChoiceId: lastSavedDraft.selectedChoiceId,
@@ -257,17 +259,14 @@ export function usePracticeSessionQuestionFlow(
             selectedChoiceId: draft.selectedChoiceId,
             cumulativeMs: draft.cumulativeMs,
           });
-          if (draft.questionId === question.questionId) {
+          if (draft.questionId === currentQuestion.questionId) {
             setQuestion({
-              ...question,
-              session:
-                question.session?.mode === 'exam'
-                  ? {
-                      ...question.session,
-                      draftSelectedChoiceId: draft.selectedChoiceId,
-                      draftCumulativeMs: draft.cumulativeMs,
-                    }
-                  : question.session,
+              ...currentQuestion,
+              session: {
+                ...currentSession,
+                draftSelectedChoiceId: draft.selectedChoiceId,
+                draftCumulativeMs: draft.cumulativeMs,
+              },
             });
             currentExamDraftCumulativeMsRef.current = draft.cumulativeMs;
             currentExamDraftEnteredAtRef.current = nowMs;

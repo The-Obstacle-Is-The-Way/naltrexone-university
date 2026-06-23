@@ -113,8 +113,8 @@ export function usePracticeSessionReviewStage(
     ],
   );
   const finalizeExamSession = useCallback(
-    (finalDraftAnswer?: ExamDraftAnswer) =>
-      endSession({
+    (finalDraftAnswer?: ExamDraftAnswer) => {
+      return endSession({
         sessionId: input.sessionId,
         endSessionIdempotencyKey: finalizeExamIdempotencyKeyRef.current,
         ...(finalDraftAnswer ? { finalDraftAnswer } : {}),
@@ -127,7 +127,8 @@ export function usePracticeSessionReviewStage(
           finalizeExamIdempotencyKeyRef.current = crypto.randomUUID();
         },
         isMounted: input.isMounted,
-      }),
+      });
+    },
     [
       examResults.setSummary,
       input.finalizeExamAnswersFn,

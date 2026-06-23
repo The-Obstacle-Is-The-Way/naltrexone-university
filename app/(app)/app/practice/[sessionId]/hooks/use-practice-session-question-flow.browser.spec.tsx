@@ -439,6 +439,78 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
     expect(harness.result.current.question?.questionId).toBe(fixtureQ1Id);
   });
 
+  it('falls back to the server draft when the session draft cache is cleared before saving', async () => {
+    let nowMs = 1_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => nowMs);
+
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValue(
+        ok(
+          createNextQuestion({
+            questionId: fixtureQ1Id,
+            choices: [
+              { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+              { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
+            ],
+            session: {
+              sessionId: fixtureSession1Id,
+              mode: 'exam',
+
+              deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              index: 0,
+              total: 2,
+              isMarkedForReview: false,
+              draftSelectedChoiceId: fixtureChoice1Id,
+              draftCumulativeMs: 12_000,
+            },
+          }),
+        ),
+      );
+    const submitAnswerFn =
+      vi.fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>();
+    const saveExamDraftAnswerFn =
+      vi.fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >();
+
+    const harness = await renderHook(
+      (
+        props: { sessionId: string; autoload: boolean } = {
+          sessionId: fixtureSession1Id,
+          autoload: true,
+        },
+      ) =>
+        usePracticeSessionQuestionFlow({
+          sessionId: props.sessionId,
+          autoload: props.autoload,
+          isMounted: () => true,
+          getNextQuestionFn,
+          submitAnswerFn,
+          saveExamDraftAnswerFn,
+        }),
+      {
+        initialProps: { sessionId: fixtureSession1Id, autoload: true },
+      },
+    );
+
+    await expect
+      .poll(() => harness.result.current.selectedChoiceId)
+      .toBe(fixtureChoice1Id);
+
+    await harness.rerender({
+      sessionId: fixtureSession2Id,
+      autoload: false,
+    });
+    nowMs = 31_000;
+    await expect(
+      harness.result.current.saveCurrentExamDraft(),
+    ).resolves.toEqual({ ok: true });
+
+    expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
+  });
+
   it('navigates without saving when exam next is used with no selection and no elapsed time', async () => {
     vi.spyOn(Date, 'now').mockImplementation(() => 1_000);
     const getNextQuestionFn = vi
