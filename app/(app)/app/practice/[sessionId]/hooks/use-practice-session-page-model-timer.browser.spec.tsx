@@ -110,11 +110,11 @@ function mockFinalizeSummaryFromFinalFlush() {
   });
 }
 
-afterEach(() => {
-  vi.useRealTimers();
-});
-
 describe('usePracticeSessionPageModel timer expiry', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('grades a locally selected exam answer when timer expiry final draft save is rejected', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));

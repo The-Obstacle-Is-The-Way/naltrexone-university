@@ -17,6 +17,7 @@ const fixtureSession2Id = crypto.randomUUID();
 
 describe('usePracticeSessionQuestionFlow (browser)', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
