@@ -132,6 +132,18 @@ export function isNodeBefore(before: Node, after: Node): boolean {
   return (position & DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
+export function containsDescendant(
+  ancestor: Node | null,
+  descendant: Node | null,
+): boolean {
+  return Boolean(
+    ancestor &&
+      descendant &&
+      ancestor !== descendant &&
+      ancestor.contains(descendant),
+  );
+}
+
 export function hasExplicitDocumentShell(html: string): boolean {
   const trimmedHtml = html.trimStart().toLowerCase();
   const htmlOpenIndex = trimmedHtml.search(/<html(?:\s|>)/);

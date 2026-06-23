@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { GetCompletedSessionQuestionsWithFeedbackOutput } from '@/src/adapters/controllers/practice-controller';
 import {
+  containsDescendant,
   findFieldsetByLegendText,
   isNodeBefore,
 } from '@/tests/shared/dom-helpers';
@@ -302,6 +303,7 @@ describe('PostExamReviewView', () => {
     expect(actionBar).not.toBeNull();
     expect(ratingFooter).not.toBeNull();
     expect(ratingFieldset).not.toBeNull();
+    expect(containsDescendant(ratingFooter, ratingFieldset)).toBe(true);
     expect(
       actionBar && ratingFooter ? isNodeBefore(actionBar, ratingFooter) : false,
     ).toBe(true);

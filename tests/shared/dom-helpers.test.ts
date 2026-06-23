@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  containsDescendant,
   findButtonByText,
   findElementByText,
   findFieldsetByLegendText,
@@ -72,6 +73,20 @@ describe('dom-helpers', () => {
     expect(first).not.toBeNull();
     expect(second).not.toBeNull();
     expect(first && second ? isNodeBefore(first, second) : true).toBe(false);
+  });
+
+  it('checks structural containment without accepting sibling nodes', () => {
+    const doc = parseHtml(
+      '<footer id="footer"><fieldset id="rating"></fieldset></footer><fieldset id="sibling"></fieldset>',
+    );
+    const footer = doc.getElementById('footer');
+    const rating = doc.getElementById('rating');
+    const sibling = doc.getElementById('sibling');
+
+    expect(containsDescendant(footer, rating)).toBe(true);
+    expect(containsDescendant(footer, sibling)).toBe(false);
+    expect(containsDescendant(footer, footer)).toBe(false);
+    expect(containsDescendant(footer, null)).toBe(false);
   });
 
   it('detects an explicitly rendered document shell without DOMParser synthesis', () => {

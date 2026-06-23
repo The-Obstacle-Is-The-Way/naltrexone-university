@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { toQuestionRoute } from '@/lib/routes';
 import { createChoice, createQuestion } from '@/src/domain/test-helpers';
 import {
+  containsDescendant,
   findAnchorByHref,
   findFieldsetByLegendText,
   isNodeBefore,
@@ -1035,6 +1036,7 @@ describe('QuestionView', () => {
     expect(actionBar).not.toBeNull();
     expect(ratingFooter).not.toBeNull();
     expect(ratingFieldset).not.toBeNull();
+    expect(containsDescendant(ratingFooter, ratingFieldset)).toBe(true);
     expect(
       actionBar && ratingFooter ? isNodeBefore(actionBar, ratingFooter) : false,
     ).toBe(true);

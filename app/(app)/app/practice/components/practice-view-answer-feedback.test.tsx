@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import {
+  containsDescendant,
   findFieldsetByLegendText,
   isNodeBefore,
   parseHtml,
@@ -275,6 +276,7 @@ describe('PracticeView answer feedback', () => {
     expect(actionBar).not.toBeNull();
     expect(ratingFooter).not.toBeNull();
     expect(ratingFieldset).not.toBeNull();
+    expect(containsDescendant(ratingFooter, ratingFieldset)).toBe(true);
     expect(
       actionBar && ratingFooter ? isNodeBefore(actionBar, ratingFooter) : false,
     ).toBe(true);
