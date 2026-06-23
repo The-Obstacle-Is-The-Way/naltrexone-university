@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { practiceSessions } from '@/db/schema';
+import { practiceSessions, questions as questionsTable } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { QuestionProgressStatus } from '@/src/domain/value-objects';
 import { DrizzleQuestionRepository } from './drizzle-question-repository';
@@ -117,6 +117,28 @@ function createQuestionRow(
 
 describe('DrizzleQuestionRepository', () => {
   describe('findPublishedById', () => {
+    it('keeps a status predicate on the public id lookup', async () => {
+      let capturedWhere: unknown;
+      const db = {
+        query: {
+          questions: {
+            findFirst: async (config: { where: unknown }) => {
+              capturedWhere = config.where;
+              return null;
+            },
+          },
+        },
+      } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      await repo.findPublishedById(questionId);
+
+      const columns = collectColumnNamesForTable(capturedWhere, questionsTable);
+      expect(columns).toContain('id');
+      expect(columns).toContain('status');
+    });
+
     it('returns null when no row exists', async () => {
       const db = {
         query: {
@@ -192,6 +214,32 @@ describe('DrizzleQuestionRepository', () => {
     });
   });
 
+  describe('findByIdForSession', () => {
+    it('maps a non-published question without adding a status predicate', async () => {
+      let capturedWhere: unknown;
+      const row = createQuestionRow({ status: 'archived' });
+      const db = {
+        query: {
+          questions: {
+            findFirst: async (config: { where: unknown }) => {
+              capturedWhere = config.where;
+              return row;
+            },
+          },
+        },
+      } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      const result = await repo.findByIdForSession(row.id);
+
+      expect(result).toMatchObject({ id: row.id, status: 'archived' });
+      const columns = collectColumnNamesForTable(capturedWhere, questionsTable);
+      expect(columns).toContain('id');
+      expect(columns).not.toContain('status');
+    });
+  });
+
   describe('findPublishedBySlug', () => {
     it('returns the mapped question when found', async () => {
       const row = createQuestionRow({ slug: 'slug-1' });
@@ -229,6 +277,28 @@ describe('DrizzleQuestionRepository', () => {
       await expect(repo.findPublishedByIds([])).resolves.toEqual([]);
     });
 
+    it('keeps a status predicate on the public ids lookup', async () => {
+      let capturedWhere: unknown;
+      const db = {
+        query: {
+          questions: {
+            findMany: async (config: { where: unknown }) => {
+              capturedWhere = config.where;
+              return [];
+            },
+          },
+        },
+      } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      await repo.findPublishedByIds([questionId]);
+
+      const columns = collectColumnNamesForTable(capturedWhere, questionsTable);
+      expect(columns).toContain('id');
+      expect(columns).toContain('status');
+    });
+
     it('returns results ordered by requested ids and filters missing', async () => {
       const row1 = createQuestionRow({
         id: requestedFirstQuestionId,
@@ -258,6 +328,49 @@ describe('DrizzleQuestionRepository', () => {
         requestedThirdQuestionId,
         requestedFirstQuestionId,
       ]);
+    });
+  });
+
+  describe('findByIdsForSession', () => {
+    it('preserves requested order for non-published questions without adding a status predicate', async () => {
+      let capturedWhere: unknown;
+      const archived = createQuestionRow({
+        id: requestedFirstQuestionId,
+        slug: requestedFirstQuestionId,
+        status: 'archived',
+      });
+      const draft = createQuestionRow({
+        id: requestedThirdQuestionId,
+        slug: requestedThirdQuestionId,
+        status: 'draft',
+      });
+      const db = {
+        query: {
+          questions: {
+            findMany: async (config: { where: unknown }) => {
+              capturedWhere = config.where;
+              return [archived, draft];
+            },
+          },
+        },
+      } as const;
+
+      const repo = new DrizzleQuestionRepository(db as unknown as RepoDb);
+
+      const result = await repo.findByIdsForSession([
+        requestedThirdQuestionId,
+        missingQuestionId,
+        requestedFirstQuestionId,
+      ]);
+
+      expect(result.map((q) => q.id)).toEqual([
+        requestedThirdQuestionId,
+        requestedFirstQuestionId,
+      ]);
+      expect(result.map((q) => q.status)).toEqual(['draft', 'archived']);
+      const columns = collectColumnNamesForTable(capturedWhere, questionsTable);
+      expect(columns).toContain('id');
+      expect(columns).not.toContain('status');
     });
   });
 
