@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   containsDescendant,
+  findAnchorByHref,
   findButtonByText,
   findElementByText,
   findFieldsetByLegendText,
@@ -24,6 +25,17 @@ describe('dom-helpers', () => {
 
     expect(findElementByText(doc, 'p', 'Alpha beta')).not.toBeNull();
     expect(findElementByText(doc, 'p', 'Alpha')).toBeNull();
+  });
+
+  it('finds anchors by exact href attribute value', () => {
+    const doc = parseHtml(
+      '<a href="/app/history?tab=sessions&amp;sort=desc">Sessions</a><a href="/app/history?tab=questions">Questions</a>',
+    );
+
+    expect(
+      findAnchorByHref(doc, '/app/history?tab=sessions&sort=desc')?.textContent,
+    ).toBe('Sessions');
+    expect(findAnchorByHref(doc, '/app/history?tab=sessions')).toBeNull();
   });
 
   it('finds headings by level and accessible text', () => {

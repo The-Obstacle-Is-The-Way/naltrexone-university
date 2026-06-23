@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { findMainLandmarkById, parseHtml } from '@/tests/shared/dom-helpers';
 
+let NotFound: typeof import('./not-found').default;
+
+beforeAll(async () => {
+  NotFound = (await import('./not-found')).default;
+});
+
 describe('app/not-found', () => {
-  it('renders a 404 page with a valid skip-link target landmark', async () => {
-    const NotFound = (await import('./not-found')).default;
+  it('renders a 404 page with a valid skip-link target landmark', () => {
     const html = renderToStaticMarkup(<NotFound />);
     const doc = parseHtml(html);
     const heading = doc.querySelector('h1');
