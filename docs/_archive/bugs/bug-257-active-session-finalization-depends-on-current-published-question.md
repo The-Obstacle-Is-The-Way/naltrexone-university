@@ -1,11 +1,11 @@
 # BUG-257: Active Exam Finalization Depends on Current Question Publication State
 
-**Status:** Open
-**Resolution State:** Fixed on PR #494 (`fix/bug-257-active-session-finalization`); pending owner grade, merge, production verification, and archival.
+**Status:** Resolved
 **Severity:** P4
 **Date:** 2026-06-20
 **Confirmed:** 2026-06-20 (mechanism only — see Reachability)
 **Component:** Practice Engine / Session Snapshot Integrity / Content Publication
+**Resolution:** Fixed via PR #494 (squash `de29bf32` on `dev`; CodeRabbit went `CHANGES_REQUESTED` → `APPROVED` on the exact head `08f947dd`, 0 unresolved threads, "No actionable comments generated") → promoted to `main` via PR #495 (merge `8acc2964`; required `test` check green; the promo tree was byte-identical to the CR-approved #494 head and was merged under an owner-authorized override of CodeRabbit's review-rate-limit cooldown). Production deploy `6kHUtCD6ZT3JZ3n6Fi4j36n81WTv` verified READY 2026-06-23 (addictionboards.com HTTP 200); `main` and `dev` trees identical. Shipped the committed path below: session-scoped, publication-agnostic `QuestionRepository.findByIdForSession`/`findByIdsForSession` reads used only after session ownership is proven (membership gate in `SaveExamDraftAnswerUseCase` before the non-public lookup; finalize grades drafted state via `fetch-session-owned-questions-by-id.ts`; the BUG-254 flush validates via `findByIdForSession`); public browsing and candidate selection stay published-only. The Root Cause and Current Fix Seams citations below reflect the shipped (post-fix) line numbers.
 
 ---
 
@@ -40,27 +40,27 @@ Actual before PR #494:
 
 The public question repository methods intentionally return only currently published rows:
 
-- [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L107) filters `findPublishedById` by `questions.status = 'published'`.
-- [`drizzle-question-repository.ts`](../../src/adapters/repositories/drizzle-question-repository.ts#L131) does the same for `findPublishedByIds`.
+- [`drizzle-question-repository.ts`](../../../src/adapters/repositories/drizzle-question-repository.ts#L107) filters `findPublishedById` by `questions.status = 'published'`.
+- [`drizzle-question-repository.ts`](../../../src/adapters/repositories/drizzle-question-repository.ts#L131) does the same for `findPublishedByIds`.
 
 Before the fix, active-session write paths reused those public reads. Current PR #494 seams:
 
-- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L59) proves `input.questionId` is in the loaded session before the non-public lookup.
-- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L66) calls `findByIdForSession(input.questionId)` after that membership gate.
-- Coverage accepts session-owned archived questions at [`save-exam-draft-answer.test.ts`](../../src/application/use-cases/save-exam-draft-answer.test.ts#L156), rejects archived questions outside the session at [`save-exam-draft-answer.test.ts`](../../src/application/use-cases/save-exam-draft-answer.test.ts#L192), and still rejects genuinely missing session-owned rows at [`save-exam-draft-answer.test.ts`](../../src/application/use-cases/save-exam-draft-answer.test.ts#L262).
+- [`save-exam-draft-answer.ts`](../../../src/application/use-cases/save-exam-draft-answer.ts#L59) proves `input.questionId` is in the loaded session before the non-public lookup.
+- [`save-exam-draft-answer.ts`](../../../src/application/use-cases/save-exam-draft-answer.ts#L66) calls `findByIdForSession(input.questionId)` after that membership gate.
+- Coverage accepts session-owned archived questions at [`save-exam-draft-answer.test.ts`](../../../src/application/use-cases/save-exam-draft-answer.test.ts#L156), rejects archived questions outside the session at [`save-exam-draft-answer.test.ts`](../../../src/application/use-cases/save-exam-draft-answer.test.ts#L192), and still rejects genuinely missing session-owned rows at [`save-exam-draft-answer.test.ts`](../../../src/application/use-cases/save-exam-draft-answer.test.ts#L262).
 
 Finalization now uses session-owned reads for drafted answers:
 
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L173) collects drafted states.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L176) fetches those questions through [`fetchSessionOwnedQuestionsById`](../../src/application/shared/fetch-session-owned-questions-by-id.ts#L4), which calls `findByIdsForSession`.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L216) reads the fetched question.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L218) still throws `NOT_FOUND` only if the session-owned row is genuinely absent.
-- The BUG-254 final on-screen draft flush uses the same session-owned boundary: [`applyFinalDraftAnswer`](../../src/application/use-cases/finalize-exam-answers.ts#L296) validates the flushed question through `findByIdForSession`, and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L300) throws `NOT_FOUND` only if that session-owned row is genuinely absent.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L173) collects drafted states.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L176) fetches those questions through [`fetchSessionOwnedQuestionsById`](../../../src/application/shared/fetch-session-owned-questions-by-id.ts#L4), which calls `findByIdsForSession`.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L216) reads the fetched question.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L218) still throws `NOT_FOUND` only if the session-owned row is genuinely absent.
+- The BUG-254 final on-screen draft flush uses the same session-owned boundary: [`applyFinalDraftAnswer`](../../../src/application/use-cases/finalize-exam-answers.ts#L296) validates the flushed question through `findByIdForSession`, and [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L300) throws `NOT_FOUND` only if that session-owned row is genuinely absent.
 
 Completed/read-side review already has an unavailable-row model:
 
-- [`get-practice-session-review.ts`](../../src/application/use-cases/get-practice-session-review.ts#L161) returns `isAvailable: false` rows for missing questions.
-- [`get-completed-session-questions-with-feedback.ts`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L208) does the same after completion.
+- [`get-practice-session-review.ts`](../../../src/application/use-cases/get-practice-session-review.ts#L161) returns `isAvailable: false` rows for missing questions.
+- [`get-completed-session-questions-with-feedback.ts`](../../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L208) does the same after completion.
 
 ## Impact
 
