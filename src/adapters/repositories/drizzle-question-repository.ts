@@ -37,6 +37,20 @@ function isNonEmptyArray<T>(
   return values.length > 0;
 }
 
+const questionRelations = {
+  choices: true,
+  questionTags: {
+    with: {
+      tag: true,
+    },
+  },
+} as const;
+
+type QuestionRowWithRelations = Question & {
+  choices: Choice[];
+  questionTags: Array<QuestionTag & { tag: Tag }>;
+};
+
 export class DrizzleQuestionRepository implements QuestionRepository {
   constructor(private readonly db: DrizzleDb) {}
 
@@ -93,14 +107,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
   async findPublishedById(id: string) {
     const row = await this.db.query.questions.findFirst({
       where: and(eq(questions.id, id), eq(questions.status, 'published')),
-      with: {
-        choices: true,
-        questionTags: {
-          with: {
-            tag: true,
-          },
-        },
-      },
+      with: questionRelations,
     });
 
     return row ? this.toDomain(row) : null;
@@ -109,14 +116,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
   async findPublishedBySlug(slug: string) {
     const row = await this.db.query.questions.findFirst({
       where: and(eq(questions.slug, slug), eq(questions.status, 'published')),
-      with: {
-        choices: true,
-        questionTags: {
-          with: {
-            tag: true,
-          },
-        },
-      },
+      with: questionRelations,
     });
 
     return row ? this.toDomain(row) : null;
@@ -130,14 +130,30 @@ export class DrizzleQuestionRepository implements QuestionRepository {
         inArray(questions.id, [...ids]),
         eq(questions.status, 'published'),
       ),
-      with: {
-        choices: true,
-        questionTags: {
-          with: {
-            tag: true,
-          },
-        },
-      },
+      with: questionRelations,
+    });
+
+    const byId = new Map(rows.map((row) => [row.id, this.toDomain(row)]));
+    return ids
+      .map((id) => byId.get(id))
+      .filter((q): q is NonNullable<typeof q> => !!q);
+  }
+
+  async findByIdForSession(id: string) {
+    const row = await this.db.query.questions.findFirst({
+      where: eq(questions.id, id),
+      with: questionRelations,
+    });
+
+    return row ? this.toDomain(row) : null;
+  }
+
+  async findByIdsForSession(ids: readonly string[]) {
+    if (ids.length === 0) return [];
+
+    const rows = await this.db.query.questions.findMany({
+      where: inArray(questions.id, [...ids]),
+      with: questionRelations,
     });
 
     const byId = new Map(rows.map((row) => [row.id, this.toDomain(row)]));
@@ -267,12 +283,7 @@ export class DrizzleQuestionRepository implements QuestionRepository {
     }
   }
 
-  private toDomain(
-    row: Question & {
-      choices: Choice[];
-      questionTags: Array<QuestionTag & { tag: Tag }>;
-    },
-  ) {
+  private toDomain(row: QuestionRowWithRelations) {
     const mappedChoices = row.choices.map((c) => {
       if (!isValidChoiceLabel(c.label)) {
         throw new ApplicationError(

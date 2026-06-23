@@ -72,6 +72,43 @@ describe('DrizzleQuestionRepository', () => {
     expect(result.map((q) => q.id)).toEqual([publishedB.id, publishedA.id]);
   });
 
+  it('session-owned lookups return non-published questions while public lookups exclude them', async () => {
+    const published = await createQuestion(db, cleanup, {
+      slug: `it-session-pub-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const archived = await createQuestion(db, cleanup, {
+      slug: `it-session-archived-${randomUUID()}`,
+      status: 'archived',
+      difficulty: 'medium',
+    });
+    const draft = await createQuestion(db, cleanup, {
+      slug: `it-session-draft-${randomUUID()}`,
+      status: 'draft',
+      difficulty: 'hard',
+    });
+
+    const repo = new DrizzleQuestionRepository(db);
+
+    await expect(repo.findPublishedById(archived.id)).resolves.toBeNull();
+    await expect(
+      repo.findPublishedByIds([archived.id, published.id, draft.id]),
+    ).resolves.toMatchObject([{ id: published.id, status: 'published' }]);
+
+    await expect(repo.findByIdForSession(archived.id)).resolves.toMatchObject({
+      id: archived.id,
+      status: 'archived',
+    });
+    await expect(
+      repo.findByIdsForSession([draft.id, published.id, archived.id]),
+    ).resolves.toMatchObject([
+      { id: draft.id, status: 'draft' },
+      { id: published.id, status: 'published' },
+      { id: archived.id, status: 'archived' },
+    ]);
+  });
+
   it('listPublishedCandidateIds filters deterministically (difficulty + tags) and orders by createdAt desc, id asc', async () => {
     const tagSlug = `it-tag-${randomUUID()}`;
     const tag = await createTag(db, cleanup, { slug: tagSlug, kind: 'topic' });

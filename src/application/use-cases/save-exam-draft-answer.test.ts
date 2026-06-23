@@ -153,6 +153,77 @@ describe('SaveExamDraftAnswerUseCase', () => {
     expect(persisted?.questionStates[0]?.draftCumulativeMs).toBe(15_000);
   });
 
+  it('saves a draft for a session-owned question after it leaves the published set', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+      }),
+    ]);
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q1',
+        status: 'archived',
+        choices: [
+          createChoice({ id: 'choice-1', questionId: 'q1', label: 'A' }),
+          createChoice({ id: 'choice-2', questionId: 'q1', label: 'B' }),
+        ],
+      }),
+    ]);
+    const useCase = new SaveExamDraftAnswerUseCase(questions, sessions);
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        questionId: 'q1',
+        selectedChoiceId: 'choice-1',
+        cumulativeMs: 15_000,
+      }),
+    ).resolves.toMatchObject({
+      questionId: 'q1',
+      draftSelectedChoiceId: 'choice-1',
+      draftCumulativeMs: 15_000,
+    });
+  });
+
+  it('rejects unpublished question draft saves when the question is not part of the session', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q-in-session'],
+      }),
+    ]);
+    const questions = new FakeQuestionRepository([
+      createQuestion({
+        id: 'q-not-in-session',
+        status: 'archived',
+        choices: [
+          createChoice({
+            id: 'external-choice',
+            questionId: 'q-not-in-session',
+            label: 'A',
+          }),
+        ],
+      }),
+    ]);
+    const useCase = new SaveExamDraftAnswerUseCase(questions, sessions);
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+        questionId: 'q-not-in-session',
+        selectedChoiceId: 'external-choice',
+        cumulativeMs: 15_000,
+      }),
+    ).rejects.toEqual(new ApplicationError('NOT_FOUND', 'Question not found'));
+  });
+
   it('clamps oversized cumulativeMs for time-only drafts', async () => {
     const sessions = new FakePracticeSessionRepository([
       createPracticeSession({
@@ -188,7 +259,7 @@ describe('SaveExamDraftAnswerUseCase', () => {
     );
   });
 
-  it('still rejects time-only drafts for unpublished or missing questions', async () => {
+  it('still rejects time-only drafts for missing session-owned questions', async () => {
     const sessions = new FakePracticeSessionRepository([
       createPracticeSession({
         id: 'session-1',

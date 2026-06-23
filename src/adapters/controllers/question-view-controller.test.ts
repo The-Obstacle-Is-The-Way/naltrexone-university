@@ -67,13 +67,27 @@ function createThrowingQuestionRepository(
   errorMessage = 'QuestionRepository should not be called',
 ): QuestionRepository {
   return {
-    findPublishedById: async () => null,
+    findPublishedById: async () => {
+      throw new Error(errorMessage);
+    },
     findPublishedBySlug: async () => {
       throw new Error(errorMessage);
     },
-    findPublishedByIds: async () => [],
-    listPublishedCandidateIds: async () => [],
-    countPublishedCandidateIds: async () => 0,
+    findPublishedByIds: async () => {
+      throw new Error(errorMessage);
+    },
+    findByIdForSession: async () => {
+      throw new Error(errorMessage);
+    },
+    findByIdsForSession: async () => {
+      throw new Error(errorMessage);
+    },
+    listPublishedCandidateIds: async () => {
+      throw new Error(errorMessage);
+    },
+    countPublishedCandidateIds: async () => {
+      throw new Error(errorMessage);
+    },
   };
 }
 

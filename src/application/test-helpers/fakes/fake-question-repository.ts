@@ -33,6 +33,7 @@ function validateStatusFilterInvariant(filters: QuestionFilters): void {
 export class FakeQuestionRepository implements QuestionRepository {
   private readonly questions: readonly Question[];
   readonly findPublishedByIdsCalls: string[][] = [];
+  readonly findByIdsForSessionCalls: string[][] = [];
   readonly listPublishedCandidateIdsCalls: QuestionFilters[] = [];
   readonly countPublishedCandidateIdsCalls: QuestionFilters[] = [];
 
@@ -63,6 +64,18 @@ export class FakeQuestionRepository implements QuestionRepository {
         .filter((q) => q.status === 'published')
         .map((q) => [q.id, q]),
     );
+    return ids.map((id) => byId.get(id)).filter((q): q is Question => !!q);
+  }
+
+  async findByIdForSession(id: string): Promise<Question | null> {
+    return this.questions.find((q) => q.id === id) ?? null;
+  }
+
+  async findByIdsForSession(
+    ids: readonly string[],
+  ): Promise<readonly Question[]> {
+    this.findByIdsForSessionCalls.push([...ids]);
+    const byId = new Map(this.questions.map((q) => [q.id, q]));
     return ids.map((id) => byId.get(id)).filter((q): q is Question => !!q);
   }
 
