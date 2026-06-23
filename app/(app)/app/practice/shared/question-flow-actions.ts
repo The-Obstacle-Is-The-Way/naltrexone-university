@@ -8,7 +8,10 @@ import {
   STANDARD_READ_TIMEOUT_MS,
 } from '@/app/(app)/app/shared/timeout-tiers';
 import { withTimeout } from '@/lib/with-timeout';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type {
+  ActionErrorCode,
+  ActionResult,
+} from '@/src/adapters/controllers/action-result';
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { MS_PER_SECOND } from '@/src/domain/services';
@@ -23,6 +26,16 @@ export type RequestSequencingHooks = {
 };
 
 export type NullQuestionRecovery = () => Promise<boolean>;
+
+export type ExamDraftAnswer = {
+  questionId: string;
+  selectedChoiceId: string | null;
+  cumulativeMs: number;
+};
+
+export type ExamDraftSaveResult =
+  | { ok: true }
+  | { ok: false; code: ActionErrorCode | null };
 
 function assertRequestSequencingHooks(input: {
   createRequestSequenceId?:
@@ -167,9 +180,9 @@ export async function maybeSaveDraftBeforeNavigation<
     selectedChoiceId: string | null;
     cumulativeMs: number;
   }) => void;
-}): Promise<boolean> {
-  if (!input.question) return true;
-  if (input.question.session?.mode !== 'exam') return true;
+}): Promise<ExamDraftSaveResult> {
+  if (!input.question) return { ok: true };
+  if (input.question.session?.mode !== 'exam') return { ok: true };
 
   const hasDraftChanged =
     input.selectedChoiceId !== input.lastSavedDraftSelectedChoiceId;
@@ -177,7 +190,7 @@ export async function maybeSaveDraftBeforeNavigation<
     input.currentCumulativeMs > input.lastSavedDraftCumulativeMs;
 
   if (!hasDraftChanged && !hasCumulativeTimeAdvanced) {
-    return true;
+    return { ok: true };
   }
 
   let res: ActionResult<SaveExamDraftAnswerOutput>;
@@ -196,7 +209,7 @@ export async function maybeSaveDraftBeforeNavigation<
       status: 'error',
       message: getThrownErrorMessage(error),
     });
-    return false;
+    return { ok: false, code: null };
   }
 
   if (!res.ok) {
@@ -204,7 +217,7 @@ export async function maybeSaveDraftBeforeNavigation<
       status: 'error',
       message: getActionResultErrorMessage(res),
     });
-    return false;
+    return { ok: false, code: res.error.code };
   }
 
   input.onSaved?.({
@@ -212,7 +225,7 @@ export async function maybeSaveDraftBeforeNavigation<
     selectedChoiceId: res.data.draftSelectedChoiceId,
     cumulativeMs: res.data.draftCumulativeMs,
   });
-  return true;
+  return { ok: true };
 }
 
 export async function runSubmitAnswerFlow<

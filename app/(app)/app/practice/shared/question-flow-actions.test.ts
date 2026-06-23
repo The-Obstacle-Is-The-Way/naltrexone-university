@@ -798,7 +798,7 @@ describe('question-flow-actions', () => {
       );
     const onSaved = vi.fn();
 
-    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+    const saveResult = await maybeSaveDraftBeforeNavigation({
       sessionId: fixtureSession1Id,
       question: {
         questionId: fixtureQuestion1Id,
@@ -825,7 +825,7 @@ describe('question-flow-actions', () => {
       onSaved,
     });
 
-    expect(shouldNavigate).toBe(true);
+    expect(saveResult).toEqual({ ok: true });
     expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
       sessionId: fixtureSession1Id,
       questionId: fixtureQuestion1Id,
@@ -858,7 +858,7 @@ describe('question-flow-actions', () => {
         }),
       );
 
-    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+    const saveResult = await maybeSaveDraftBeforeNavigation({
       sessionId: fixtureSession1Id,
       question: {
         questionId: fixtureQuestion1Id,
@@ -882,7 +882,7 @@ describe('question-flow-actions', () => {
       setLoadState: () => {},
     });
 
-    expect(shouldNavigate).toBe(true);
+    expect(saveResult).toEqual({ ok: true });
     expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
       sessionId: fixtureSession1Id,
       questionId: fixtureQuestion1Id,
@@ -910,7 +910,7 @@ describe('question-flow-actions', () => {
         }),
       );
 
-    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+    const saveResult = await maybeSaveDraftBeforeNavigation({
       sessionId: fixtureSession1Id,
       question: {
         questionId: fixtureQuestion1Id,
@@ -935,7 +935,7 @@ describe('question-flow-actions', () => {
       onSaved,
     });
 
-    expect(shouldNavigate).toBe(true);
+    expect(saveResult).toEqual({ ok: true });
     expect(onSaved).toHaveBeenCalledWith({
       questionId: fixtureQuestion1Id,
       selectedChoiceId: null,
@@ -962,7 +962,7 @@ describe('question-flow-actions', () => {
       );
     const onSaved = vi.fn();
 
-    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+    const saveResult = await maybeSaveDraftBeforeNavigation({
       sessionId: fixtureSession1Id,
       question: {
         questionId: fixtureQuestion1Id,
@@ -985,7 +985,7 @@ describe('question-flow-actions', () => {
       onSaved,
     });
 
-    expect(shouldNavigate).toBe(true);
+    expect(saveResult).toEqual({ ok: true });
     expect(saveExamDraftAnswerFn).toHaveBeenCalledWith({
       sessionId: fixtureSession1Id,
       questionId: fixtureQuestion1Id,
@@ -1006,7 +1006,7 @@ describe('question-flow-actions', () => {
       >();
     const onSaved = vi.fn();
 
-    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+    const saveResult = await maybeSaveDraftBeforeNavigation({
       sessionId: fixtureSession1Id,
       question: {
         questionId: fixtureQuestion1Id,
@@ -1029,7 +1029,7 @@ describe('question-flow-actions', () => {
       onSaved,
     });
 
-    expect(shouldNavigate).toBe(true);
+    expect(saveResult).toEqual({ ok: true });
     expect(saveExamDraftAnswerFn).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
   });
@@ -1045,7 +1045,7 @@ describe('question-flow-actions', () => {
         error: { code: 'INTERNAL_ERROR', message: 'Draft save failed' },
       });
 
-    const shouldNavigate = await maybeSaveDraftBeforeNavigation({
+    const saveResult = await maybeSaveDraftBeforeNavigation({
       sessionId: fixtureSession1Id,
       question: {
         questionId: fixtureQuestion1Id,
@@ -1069,10 +1069,49 @@ describe('question-flow-actions', () => {
       },
     });
 
-    expect(shouldNavigate).toBe(false);
+    expect(saveResult).toEqual({ ok: false, code: 'INTERNAL_ERROR' });
     expect(loadStates.at(-1)).toEqual({
       status: 'error',
       message: 'Draft save failed',
+    });
+  });
+
+  it('returns a null error code when draft save throws before navigation', async () => {
+    const loadStates: AsyncLoadStateWithIdle[] = [];
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockRejectedValue(new Error('Network unavailable'));
+
+    const saveResult = await maybeSaveDraftBeforeNavigation({
+      sessionId: fixtureSession1Id,
+      question: {
+        questionId: fixtureQuestion1Id,
+        session: {
+          sessionId: fixtureSession1Id,
+          mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          index: 0,
+          total: 2,
+        },
+      },
+      selectedChoiceId: fixtureChoice1Id,
+      currentCumulativeMs: 50_000,
+      lastSavedDraftSelectedChoiceId: null,
+      lastSavedDraftCumulativeMs: 0,
+      saveExamDraftAnswerFn,
+      setLoadState: (state) => {
+        loadStates.push(state);
+      },
+    });
+
+    expect(saveResult).toEqual({ ok: false, code: null });
+    expect(loadStates.at(-1)).toEqual({
+      status: 'error',
+      message: 'Network unavailable',
     });
   });
 });

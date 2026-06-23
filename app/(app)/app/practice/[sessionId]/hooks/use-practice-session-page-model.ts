@@ -14,6 +14,7 @@ import { usePracticeSessionReviewStage } from '@/app/(app)/app/practice/[session
 import { ExamTimer } from '@/app/(app)/app/practice/components/exam-timer';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { usePracticeQuestionFeedback } from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
+import type { ExamDraftAnswer } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -56,7 +57,16 @@ export function usePracticeSessionPageModel(
   const isMounted = useIsMounted();
   const bootstrapRequestIdRef = useRef(0);
   const expiryFinalizeInFlightRef = useRef(false);
+  const onExamServerExpiryRef = useRef<
+    ((finalDraftAnswer: ExamDraftAnswer | null) => Promise<void>) | null
+  >(null);
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
+  const onExamServerExpiry = useCallback(
+    async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
+      await onExamServerExpiryRef.current?.(finalDraftAnswer);
+    },
+    [],
+  );
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
@@ -65,6 +75,7 @@ export function usePracticeSessionPageModel(
     getNextQuestionFn: getNextQuestion,
     submitAnswerFn: submitAnswer,
     saveExamDraftAnswerFn: saveExamDraftAnswer,
+    onExamServerExpiry,
   });
 
   const reviewStage = usePracticeSessionReviewStage({
@@ -87,6 +98,27 @@ export function usePracticeSessionPageModel(
     saveCurrentExamDraft: questionFlow.saveCurrentExamDraft,
     getCurrentExamDraft: questionFlow.getCurrentExamDraft,
   });
+
+  const handleExamServerExpiry = useCallback(
+    async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
+      if (reviewStage.summary || reviewStage.postExamSummary) return;
+      await reviewStage.finalizeExamSession(finalDraftAnswer ?? undefined);
+    },
+    [
+      reviewStage.finalizeExamSession,
+      reviewStage.postExamSummary,
+      reviewStage.summary,
+    ],
+  );
+
+  useEffect(() => {
+    onExamServerExpiryRef.current = handleExamServerExpiry;
+    return () => {
+      if (onExamServerExpiryRef.current === handleExamServerExpiry) {
+        onExamServerExpiryRef.current = null;
+      }
+    };
+  }, [handleExamServerExpiry]);
 
   const currentPostExamBookmarkQuestion = useMemo(() => {
     const currentRow =
