@@ -1082,6 +1082,26 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     expect(callOrder).toEqual(['save', 'review']);
   });
 
+  it('does not finalize or enter review when the current exam draft save fails without a conflict', async () => {
+    saveCurrentExamDraftMock.mockResolvedValue({
+      ok: false,
+      code: 'INTERNAL_ERROR',
+    });
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.onEndSession();
+
+    await expect.poll(() => saveCurrentExamDraftMock.mock.calls.length).toBe(1);
+    expect(finalizeExamAnswersMock).not.toHaveBeenCalled();
+    expect(getPracticeSessionReviewMock).not.toHaveBeenCalled();
+    await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
+    expect(harness.result.current.reviewLoadState).toEqual({ status: 'idle' });
+  });
+
   it('reports draft-save exceptions and does not enter the review stage', async () => {
     saveCurrentExamDraftMock.mockRejectedValue(new Error('Draft save failed'));
 

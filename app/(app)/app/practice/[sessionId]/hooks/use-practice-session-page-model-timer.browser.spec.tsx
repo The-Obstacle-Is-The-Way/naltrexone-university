@@ -258,4 +258,41 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     );
     expect(getNextQuestionMock).toHaveBeenCalledTimes(1);
   });
+
+  it('explicit navigation trusts a server-expired draft save when the browser clock is behind', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    mockActiveTimedExam('2026-05-22T12:00:30.000Z');
+    mockFinalizeSummaryFromFinalFlush();
+    saveExamDraftAnswerMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Exam time has expired'),
+    );
+
+    const screen = await render(<PracticeSessionPageModelNavigationProbe />);
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('question');
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+
+    await screen.getByRole('button', { name: 'navigate-question-1' }).click();
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-answered-count'))
+      .toHaveTextContent('1');
+    expect(saveExamDraftAnswerMock).toHaveBeenCalledTimes(1);
+    expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
+    expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        finalDraftAnswer: expect.objectContaining({
+          questionId: BROWSER_QUESTION_1_ID,
+          selectedChoiceId: BROWSER_CHOICE_1_ID,
+        }),
+      }),
+    );
+    expect(getNextQuestionMock).toHaveBeenCalledTimes(1);
+  });
 });

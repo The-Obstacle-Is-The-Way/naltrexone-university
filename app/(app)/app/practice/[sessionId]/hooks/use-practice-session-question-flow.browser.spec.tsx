@@ -220,6 +220,83 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
     });
   });
 
+  it('stops after a server-expired draft save when no expiry handler is registered', async () => {
+    let nowMs = 1_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => nowMs);
+
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValueOnce(
+        ok(
+          createNextQuestion({
+            questionId: fixtureQ1Id,
+            session: {
+              sessionId: fixtureSession1Id,
+              mode: 'exam',
+
+              deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              index: 0,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        ok(
+          createNextQuestion({
+            questionId: fixtureQ2Id,
+            session: {
+              sessionId: fixtureSession1Id,
+              mode: 'exam',
+
+              deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              index: 1,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      );
+    const submitAnswerFn =
+      vi.fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>();
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockResolvedValue({
+        ok: false,
+        error: { code: 'CONFLICT', message: 'Exam time has expired' },
+      });
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: fixtureSession1Id,
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe(fixtureQ1Id);
+
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    await expect
+      .poll(() => harness.result.current.selectedChoiceId)
+      .toBe(fixtureChoice2Id);
+    nowMs = 31_000;
+    harness.result.current.onNextQuestion();
+
+    await expect.poll(() => saveExamDraftAnswerFn.mock.calls.length).toBe(1);
+    expect(getNextQuestionFn).toHaveBeenCalledTimes(1);
+    expect(harness.result.current.question?.questionId).toBe(fixtureQ1Id);
+  });
+
   it('navigates without saving when exam next is used with no selection and no elapsed time', async () => {
     vi.spyOn(Date, 'now').mockImplementation(() => 1_000);
     const getNextQuestionFn = vi
