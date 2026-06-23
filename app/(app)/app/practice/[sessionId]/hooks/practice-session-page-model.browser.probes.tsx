@@ -89,9 +89,14 @@ export function PracticeSessionPageModelNavigationProbe() {
   return (
     <>
       {renderHookState([
+        { testId: 'active-view', value: getActiveView(output) },
         { testId: 'load-status', value: output.loadState.status },
         { testId: 'question-id', value: output.question?.questionId },
         { testId: 'selected-choice-id', value: output.selectedChoiceId },
+        {
+          testId: 'summary-answered-count',
+          value: output.summary?.totals.answered,
+        },
         { testId: 'has-submit-result', value: output.submitResult !== null },
         {
           testId: 'submit-result-correct-choice-id',

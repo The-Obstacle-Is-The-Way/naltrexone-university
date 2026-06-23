@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
+import type { ExamDraftSaveResult } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   EndPracticeSessionOutput,
@@ -38,7 +39,7 @@ const getCompletedSessionQuestionsWithFeedbackMock =
       input: unknown,
     ) => Promise<ActionResult<GetCompletedSessionQuestionsWithFeedbackOutput>>
   >();
-const saveCurrentExamDraftMock = vi.fn<() => Promise<boolean>>();
+const saveCurrentExamDraftMock = vi.fn<() => Promise<ExamDraftSaveResult>>();
 const getCurrentExamDraftMock = vi.fn<
   UsePracticeSessionReviewStageInput['getCurrentExamDraft']
 >(() => null);
@@ -138,7 +139,7 @@ async function flushDeferredSettlement(): Promise<void> {
 
 describe('usePracticeSessionReviewStage (browser)', () => {
   beforeEach(() => {
-    saveCurrentExamDraftMock.mockResolvedValue(true);
+    saveCurrentExamDraftMock.mockResolvedValue({ ok: true });
   });
 
   afterEach(() => {
@@ -1054,7 +1055,7 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     const callOrder: string[] = [];
     saveCurrentExamDraftMock.mockImplementation(async () => {
       callOrder.push('save');
-      return true;
+      return { ok: true };
     });
     getPracticeSessionReviewMock.mockImplementation(async () => {
       callOrder.push('review');
@@ -1079,6 +1080,97 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       .poll(() => harness.result.current.reviewLoadState.status)
       .toBe('ready');
     expect(callOrder).toEqual(['save', 'review']);
+  });
+
+  it('finalizes with the captured exam draft when the current exam draft save fails with a conflict', async () => {
+    saveCurrentExamDraftMock.mockResolvedValue({
+      ok: false,
+      code: 'CONFLICT',
+    });
+    getCurrentExamDraftMock.mockReturnValueOnce({
+      questionId: fixtureQ1Id,
+      selectedChoiceId: 'choice-1',
+      cumulativeMs: 30_000,
+    });
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: fixtureSession1Id,
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 10,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 1,
+          durationSeconds: 1200,
+        },
+      }),
+    );
+    getPracticeSessionSummaryMock.mockResolvedValue(
+      ok({
+        sessionId: fixtureSession1Id,
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 10,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 1,
+          durationSeconds: 1200,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: fixtureSession1Id,
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.onEndSession();
+
+    await expect.poll(() => finalizeExamAnswersMock.mock.calls.length).toBe(1);
+    expect(finalizeExamAnswersMock).toHaveBeenCalledWith({
+      sessionId: fixtureSession1Id,
+      idempotencyKey: expect.any(String),
+      finalDraftAnswer: {
+        questionId: fixtureQ1Id,
+        selectedChoiceId: 'choice-1',
+        cumulativeMs: 30_000,
+      },
+    });
+    await expect
+      .poll(() => harness.result.current.summary?.totals.answered)
+      .toBe(1);
+  });
+
+  it('does not finalize or enter review when the current exam draft save fails without a conflict', async () => {
+    saveCurrentExamDraftMock.mockResolvedValue({
+      ok: false,
+      code: 'INTERNAL_ERROR',
+    });
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.onEndSession();
+
+    await expect.poll(() => saveCurrentExamDraftMock.mock.calls.length).toBe(1);
+    expect(finalizeExamAnswersMock).not.toHaveBeenCalled();
+    expect(getPracticeSessionReviewMock).not.toHaveBeenCalled();
+    await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
+    expect(harness.result.current.reviewLoadState).toEqual({ status: 'idle' });
   });
 
   it('reports draft-save exceptions and does not enter the review stage', async () => {
