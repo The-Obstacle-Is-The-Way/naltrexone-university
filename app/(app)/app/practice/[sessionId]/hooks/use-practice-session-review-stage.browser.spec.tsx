@@ -1082,6 +1082,77 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     expect(callOrder).toEqual(['save', 'review']);
   });
 
+  it('finalizes with the captured exam draft when the current exam draft save fails with a conflict', async () => {
+    saveCurrentExamDraftMock.mockResolvedValue({
+      ok: false,
+      code: 'CONFLICT',
+    });
+    getCurrentExamDraftMock.mockReturnValueOnce({
+      questionId: fixtureQ1Id,
+      selectedChoiceId: 'choice-1',
+      cumulativeMs: 30_000,
+    });
+    finalizeExamAnswersMock.mockResolvedValue(
+      ok({
+        sessionId: fixtureSession1Id,
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 10,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 1,
+          durationSeconds: 1200,
+        },
+      }),
+    );
+    getPracticeSessionSummaryMock.mockResolvedValue(
+      ok({
+        sessionId: fixtureSession1Id,
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'exam',
+        questionCount: 10,
+        totals: {
+          answered: 1,
+          correct: 1,
+          accuracy: 1,
+          durationSeconds: 1200,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: fixtureSession1Id,
+        mode: 'exam',
+        totalCount: 1,
+        answeredCount: 1,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.onEndSession();
+
+    await expect.poll(() => finalizeExamAnswersMock.mock.calls.length).toBe(1);
+    expect(finalizeExamAnswersMock).toHaveBeenCalledWith({
+      sessionId: fixtureSession1Id,
+      idempotencyKey: expect.any(String),
+      finalDraftAnswer: {
+        questionId: fixtureQ1Id,
+        selectedChoiceId: 'choice-1',
+        cumulativeMs: 30_000,
+      },
+    });
+    await expect
+      .poll(() => harness.result.current.summary?.totals.answered)
+      .toBe(1);
+  });
+
   it('does not finalize or enter review when the current exam draft save fails without a conflict', async () => {
     saveCurrentExamDraftMock.mockResolvedValue({
       ok: false,
