@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  findFieldsetByLegendText,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 
 let QuestionCard: typeof import('./question-card').QuestionCard;
 
@@ -23,11 +27,11 @@ describe('QuestionCard', () => {
       />,
     );
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const stemParagraph = Array.from(doc.querySelectorAll('p')).find(
       (paragraph) => paragraph.textContent?.trim() === 'Stem paragraph',
     );
-    const fieldset = doc.querySelector('fieldset');
+    const fieldset = findFieldsetByLegendText(doc, 'Answer choices');
 
     expect(stemParagraph).not.toBeUndefined();
     expect(fieldset).not.toBeNull();
@@ -35,7 +39,6 @@ describe('QuestionCard', () => {
     expect(fieldset?.className).toContain('mt-8');
     expect(html).toContain('Choice A');
     expect(html).toContain('Choice B');
-    expect(html).toContain('<fieldset');
     expect(html).toContain('Answer choices');
   });
 

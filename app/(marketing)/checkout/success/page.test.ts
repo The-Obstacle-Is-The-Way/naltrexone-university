@@ -10,6 +10,11 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import {
+  findHeadingByText,
+  findMainLandmarkById,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
+import {
   type CheckoutSuccessDeps,
   type CheckoutSuccessTransaction,
   runCheckoutSuccessPage,
@@ -358,13 +363,20 @@ describe('runCheckoutSuccessPage', () => {
     );
 
     const html = renderToStaticMarkup(element);
+    const doc = parseHtml(html);
+    const main = findMainLandmarkById(doc, 'main-content');
+    const heading = findHeadingByText(
+      doc,
+      'You’re all set — your subscription is active',
+      { level: 1 },
+    );
+
     expect(redirectFn).not.toHaveBeenCalled();
-    expect(html).toContain('<main id="main-content"');
+    expect(main).not.toBeNull();
+    expect(main?.getAttribute('tabindex')).toBe('-1');
+    expect(heading).not.toBeNull();
     expect(html).toContain('You’re all set — your subscription is active');
     expect(html).not.toContain('free trial');
-    expect(html).toContain(
-      '<h1 class="text-xl font-semibold font-heading tracking-tight text-foreground">',
-    );
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain(`href="${ROUTES.APP_DASHBOARD}"`);
     expect(html).toContain('Go to your dashboard');

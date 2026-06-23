@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { ROUTES } from '@/lib/routes';
+import {
+  findAnchorByHref,
+  findMainLandmarkById,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
@@ -31,10 +37,20 @@ describe('app/(app)/app/layout (shell)', () => {
         <div>Child content</div>
       </AppLayoutShell>,
     );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const shell = doc.body.firstElementChild;
-    const brandLink = doc.querySelector('header a[href="/app/dashboard"]');
-    const main = doc.querySelector('main#main-content');
+    const header = doc.querySelector('header');
+    const brandLink = header
+      ? findAnchorByHref(header, ROUTES.APP_DASHBOARD)
+      : null;
+    const main = findMainLandmarkById(doc, 'main-content');
+    const expectedAppRoutes = [
+      ROUTES.APP_DASHBOARD,
+      ROUTES.APP_PRACTICE,
+      ROUTES.APP_HISTORY,
+      ROUTES.APP_BOOKMARKS,
+      ROUTES.APP_BILLING,
+    ];
 
     expect(shell).not.toBeNull();
     if (!shell) {
@@ -56,15 +72,15 @@ describe('app/(app)/app/layout (shell)', () => {
       .filter(Boolean);
 
     expect(html).toContain('Addiction Boards');
-    expect(html).toContain('href="/app/dashboard"');
-    expect(html).toContain('href="/app/practice"');
-    expect(html).toContain('href="/app/history"');
-    expect(html).toContain('href="/app/bookmarks"');
-    expect(html).toContain('href="/app/billing"');
+    expect(
+      expectedAppRoutes.map(
+        (route) => findAnchorByHref(doc, route)?.getAttribute('href') ?? null,
+      ),
+    ).toEqual(expectedAppRoutes);
     expect(html).toContain('AuthNav');
     expect(html).toContain('MobileNav');
     expect(html).toContain('Child content');
-    expect(html).toContain('<main id="main-content"');
+    expect(main.getAttribute('tabindex')).toBe('-1');
     expect(shellClassTokens).toContain('flex');
     expect(shellClassTokens).toContain('h-dvh');
     expect(shellClassTokens).toContain('min-h-screen');
@@ -112,9 +128,9 @@ describe('app/(app)/app/layout (shell)', () => {
       </AppLayoutShell>,
     );
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const shell = doc.body.firstElementChild;
-    const main = doc.querySelector('main#main-content');
+    const main = findMainLandmarkById(doc, 'main-content');
 
     expect(shell).not.toBeNull();
     expect(main).not.toBeNull();
@@ -204,8 +220,8 @@ describe('app/(app)/app/layout (shell)', () => {
     });
 
     const html = renderToStaticMarkup(element);
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const billingLink = doc.querySelector('a[href="/app/billing"]');
+    const doc = parseHtml(html);
+    const billingLink = findAnchorByHref(doc, ROUTES.APP_BILLING);
 
     if (!billingLink) {
       throw new Error('Expected billing link to be present in past-due banner');
@@ -214,7 +230,7 @@ describe('app/(app)/app/layout (shell)', () => {
 
     expect(html).toContain('Your payment failed');
     expect(html).toContain('update your billing information');
-    expect(billingLink.getAttribute('href')).toBe('/app/billing');
+    expect(billingLink.getAttribute('href')).toBe(ROUTES.APP_BILLING);
     expect(banner?.tagName).toBe('DIV');
     expect(html).toContain('Child content');
   });
@@ -236,7 +252,7 @@ describe('app/(app)/app/layout (shell)', () => {
     });
 
     const html = renderToStaticMarkup(element);
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const shell = doc.body.firstElementChild;
     const banner = shell?.children[0];
     const actionButton = banner?.querySelector('form button[type="submit"]');
@@ -284,7 +300,7 @@ describe('app/(app)/app/layout (shell)', () => {
     });
 
     const html = renderToStaticMarkup(element);
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const shell = doc.body.firstElementChild;
 
     expect(html).not.toContain('left in trial');

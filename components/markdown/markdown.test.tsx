@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { findHeadingByText, parseHtml } from '@/tests/shared/dom-helpers';
 
 let Markdown: typeof import('./markdown').Markdown;
 
@@ -24,9 +25,10 @@ describe('Markdown', () => {
     const html = renderToStaticMarkup(
       <Markdown content={'# Title\n\n<script>alert(1)</script>'} />,
     );
+    const doc = parseHtml(html);
 
-    expect(html).toContain('<h1>Title</h1>');
-    expect(html).not.toContain('<script>');
+    expect(findHeadingByText(doc, 'Title', { level: 1 })).not.toBeNull();
+    expect(doc.querySelector('script')).toBeNull();
   });
 
   it('sanitizes javascript: URLs in links', () => {
@@ -51,14 +53,13 @@ describe('Markdown', () => {
         content={'Explanation text.\n\n**Clinical pearl:** This is the pearl.'}
       />,
     );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const callout = findClinicalPearlCallout(doc);
 
     expect(callout).toBeDefined();
     expect(callout?.textContent).toContain('Clinical Pearl');
     expect(callout?.textContent).toContain('This is the pearl.');
     expect(callout?.querySelector('strong')).toBeNull();
-    expect(html).not.toContain('<strong>Clinical pearl:</strong>');
   });
 
   it('renders the clinical pearl label with the promoted foreground token', () => {

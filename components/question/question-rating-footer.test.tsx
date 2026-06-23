@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { containsDescendant } from '@/tests/shared/dom-helpers';
 
 type QuestionRatingFooterModule = typeof import('./question-rating-footer');
 
@@ -42,6 +43,8 @@ describe('QuestionRatingFooter', () => {
     expect(content?.getAttribute('class')).toContain('justify-center');
     expect(content?.getAttribute('class')).toContain('gap-3');
     expect(content?.getAttribute('class')).toContain('text-muted-foreground');
+    expect(containsDescendant(footer, content)).toBe(true);
+    expect(containsDescendant(footer, legend)).toBe(true);
     expect(html).toContain('Was this question helpful?');
     expect(legend?.textContent?.trim()).toBe('Rate this question');
     expect(legend?.getAttribute('class')).toContain('sr-only');

@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  findElementByText,
+  isNodeBefore,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 
 const { fixtureChoiceAId, fixtureChoiceBId } = vi.hoisted(() => ({
   fixtureChoiceAId: crypto.randomUUID(),
@@ -38,7 +43,7 @@ describe('QuestionSurfaceBody', () => {
 
     return {
       html,
-      doc: new DOMParser().parseFromString(html, 'text/html'),
+      doc: parseHtml(html),
     };
   }
 
@@ -152,16 +157,18 @@ describe('QuestionSurfaceBody', () => {
   });
 
   it('renders beforeQuestionCard content before the question card', () => {
-    const { html } = renderQuestionSurfaceBody({
+    const { doc, html } = renderQuestionSurfaceBody({
       beforeQuestionCard: (
         <div data-testid="before-question-card">Before question card</div>
       ),
     });
+    const slot = doc.querySelector('[data-testid="before-question-card"]');
+    const stem = findElementByText(doc, '*', 'Question stem');
 
     expect(html).toContain('Before question card');
-    expect(html.indexOf('Before question card')).toBeLessThan(
-      html.indexOf('Question stem'),
-    );
+    expect(slot).not.toBeNull();
+    expect(stem).not.toBeNull();
+    expect(slot && stem ? isNodeBefore(slot, stem) : false).toBe(true);
   });
 
   it('does not render beforeQuestionCard content when question is null', () => {

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { parseHtml } from '@/tests/shared/dom-helpers';
 
 const {
   fixtureAttempt1Id,
@@ -510,10 +511,16 @@ describe('app/(app)/app/practice', () => {
         onStartSession={() => undefined}
       />,
     );
+    const doc = parseHtml(html);
+    const modeFieldset = Array.from(doc.querySelectorAll('fieldset')).find(
+      (fieldset) =>
+        fieldset.textContent?.includes('Tutor') &&
+        fieldset.textContent.includes('Exam'),
+    );
 
-    expect(html).toContain('Tutor');
-    expect(html).toContain('Exam');
-    expect(html).toContain('<fieldset');
+    expect(modeFieldset).not.toBeUndefined();
+    expect(modeFieldset?.textContent).toContain('Tutor');
+    expect(modeFieldset?.textContent).toContain('Exam');
   });
 
   it('renders difficulty filter chips', () => {

@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  hasExplicitDocumentShell,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 
 let GlobalErrorPage: typeof import('./global-error').default;
 
@@ -15,7 +19,7 @@ describe('app/global-error', () => {
     const html = renderToStaticMarkup(
       <GlobalErrorPage error={error} reset={() => {}} />,
     );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const tryAgainButton = doc.querySelector('button');
     const heading = doc.querySelector('h1');
     const title = doc.querySelector('head > title');
@@ -25,8 +29,7 @@ describe('app/global-error', () => {
     expect(html).toContain('Try again');
     expect(html).toContain('Error ID');
     expect(html).toContain('digest_123');
-    expect(html).toContain('<html');
-    expect(html).toContain('<head');
+    expect(hasExplicitDocumentShell(html)).toBe(true);
     expect(title?.textContent?.trim()).toBe('Error - Addiction Boards');
     expect(viewportMeta?.getAttribute('content')).toBe(
       'width=device-width, initial-scale=1',

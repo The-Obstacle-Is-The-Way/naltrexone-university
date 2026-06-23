@@ -2,6 +2,12 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
+import {
+  containsDescendant,
+  findFieldsetByLegendText,
+  isNodeBefore,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 import { createQuestionProps } from './practice-view-test-helpers';
 
 const {
@@ -260,13 +266,20 @@ describe('PracticeView answer feedback', () => {
         onNextQuestion={() => undefined}
       />,
     );
+    const doc = parseHtml(html);
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    const ratingFooter = doc.querySelector(
+      '[data-testid="question-rating-footer"]',
+    );
+    const ratingFieldset = findFieldsetByLegendText(doc, 'Rate this question');
 
-    const actionBarIndex = html.indexOf('data-testid="bottom-action-bar"');
-    const ratingIndex = html.indexOf('Was this question helpful?');
-
-    expect(actionBarIndex).toBeGreaterThan(-1);
-    expect(ratingIndex).toBeGreaterThan(-1);
-    expect(actionBarIndex).toBeLessThan(ratingIndex);
+    expect(actionBar).not.toBeNull();
+    expect(ratingFooter).not.toBeNull();
+    expect(ratingFieldset).not.toBeNull();
+    expect(containsDescendant(ratingFooter, ratingFieldset)).toBe(true);
+    expect(
+      actionBar && ratingFooter ? isNodeBefore(actionBar, ratingFooter) : false,
+    ).toBe(true);
   });
 
   it('does not render Review answers for tutor mode after answer commit', () => {

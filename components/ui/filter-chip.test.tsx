@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { findButtonByText, parseHtml } from '@/tests/shared/dom-helpers';
 
 let FilterChip: typeof import('@/components/ui/filter-chip').FilterChip;
 
@@ -25,9 +26,11 @@ describe('FilterChip', () => {
     const html = renderToStaticMarkup(
       <FilterChip label="Opioids" selected={false} onClick={() => undefined} />,
     );
+    const doc = parseHtml(html);
+    const button = findButtonByText(doc, 'Opioids');
 
-    expect(html).toContain('<button');
-    expect(html).toContain('type="button"');
+    expect(button).not.toBeNull();
+    expect(button?.getAttribute('type')).toBe('button');
   });
 
   it('applies selected styling when selected is true', () => {

@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  findFieldsetByLegendText,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 
 let SegmentedControl: typeof import('./segmented-control').SegmentedControl;
 
@@ -84,8 +88,9 @@ describe('SegmentedControl', () => {
         onChange={() => undefined}
       />,
     );
+    const doc = parseHtml(html);
 
-    expect(html).toContain('<fieldset');
+    expect(doc.querySelector('fieldset')).not.toBeNull();
   });
 
   it('renders sr-only legend when legend prop is provided', () => {
@@ -100,8 +105,10 @@ describe('SegmentedControl', () => {
         legend="Mode"
       />,
     );
+    const doc = parseHtml(html);
+    const fieldset = findFieldsetByLegendText(doc, 'Mode');
 
-    expect(html).toContain('<legend');
+    expect(fieldset).not.toBeNull();
     expect(html).toContain('sr-only');
     expect(html).toContain('Mode');
   });
@@ -118,9 +125,10 @@ describe('SegmentedControl', () => {
         ariaLabelledBy="practice-session-mode-label"
       />,
     );
+    const doc = parseHtml(html);
 
     expect(html).toContain('aria-labelledby="practice-session-mode-label"');
-    expect(html).not.toContain('<legend');
+    expect(doc.querySelector('legend')).toBeNull();
   });
 
   it('ignores legend when ariaLabelledBy is also provided', () => {
@@ -136,9 +144,10 @@ describe('SegmentedControl', () => {
         ariaLabelledBy="external-label"
       />,
     );
+    const doc = parseHtml(html);
 
     expect(html).toContain('aria-labelledby="external-label"');
-    expect(html).not.toContain('<legend');
+    expect(doc.querySelector('legend')).toBeNull();
   });
 
   it('omits legend when legend prop is not provided', () => {
@@ -152,8 +161,9 @@ describe('SegmentedControl', () => {
         onChange={() => undefined}
       />,
     );
+    const doc = parseHtml(html);
 
-    expect(html).not.toContain('<legend');
+    expect(doc.querySelector('legend')).toBeNull();
   });
 
   it('disables all buttons when disabled', () => {

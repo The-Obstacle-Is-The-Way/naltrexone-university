@@ -7,6 +7,11 @@ import { ok } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
 import type { GetTagsOutput } from '@/src/adapters/controllers/tag-controller';
+import {
+  findElementByText,
+  isNodeBefore,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 import { createHistoryPage } from './page';
 
 const {
@@ -465,22 +470,30 @@ describe('app/(app)/app/history/page', () => {
       }),
     });
     const html = renderToStaticMarkup(element);
+    const doc = parseHtml(html);
+    const correctRecent = findElementByText(doc, '*', 'Correct recent');
+    const incorrectOld = findElementByText(doc, '*', 'Incorrect old');
+    const incorrectRecent = findElementByText(doc, '*', 'Incorrect recent');
 
-    const correctRecentIndex = html.indexOf('Correct recent');
-    const incorrectOldIndex = html.indexOf('Incorrect old');
-    const incorrectRecentIndex = html.indexOf('Incorrect recent');
-
-    expect(incorrectRecentIndex).toBeGreaterThanOrEqual(0);
-    expect(incorrectOldIndex).toBeGreaterThanOrEqual(0);
-    expect(correctRecentIndex).toBeGreaterThanOrEqual(0);
+    expect(incorrectRecent).not.toBeNull();
+    expect(incorrectOld).not.toBeNull();
+    expect(correctRecent).not.toBeNull();
     expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
       expect.objectContaining({
         sort: 'incorrect-first',
         source: undefined,
       }),
     );
-    expect(correctRecentIndex).toBeLessThan(incorrectOldIndex);
-    expect(incorrectOldIndex).toBeLessThan(incorrectRecentIndex);
+    expect(
+      correctRecent && incorrectOld
+        ? isNodeBefore(correctRecent, incorrectOld)
+        : false,
+    ).toBe(true);
+    expect(
+      incorrectOld && incorrectRecent
+        ? isNodeBefore(incorrectOld, incorrectRecent)
+        : false,
+    ).toBe(true);
   });
 
   it('passes difficulty sort to attempted questions fetch and renders backend order', async () => {
@@ -544,22 +557,22 @@ describe('app/(app)/app/history/page', () => {
       }),
     });
     const html = renderToStaticMarkup(element);
+    const doc = parseHtml(html);
+    const easy = findElementByText(doc, '*', 'Easy question');
+    const hard = findElementByText(doc, '*', 'Hard question');
+    const medium = findElementByText(doc, '*', 'Medium question');
 
-    const easyIndex = html.indexOf('Easy question');
-    const hardIndex = html.indexOf('Hard question');
-    const mediumIndex = html.indexOf('Medium question');
-
-    expect(hardIndex).toBeGreaterThanOrEqual(0);
-    expect(mediumIndex).toBeGreaterThanOrEqual(0);
-    expect(easyIndex).toBeGreaterThanOrEqual(0);
+    expect(hard).not.toBeNull();
+    expect(medium).not.toBeNull();
+    expect(easy).not.toBeNull();
     expect(getAttemptedQuestionsFn).toHaveBeenCalledWith(
       expect.objectContaining({
         sort: 'difficulty',
         source: undefined,
       }),
     );
-    expect(easyIndex).toBeLessThan(hardIndex);
-    expect(hardIndex).toBeLessThan(mediumIndex);
+    expect(easy && hard ? isNodeBefore(easy, hard) : false).toBe(true);
+    expect(hard && medium ? isNodeBefore(hard, medium) : false).toBe(true);
   });
 
   it('renders an error state when session history fetch returns not-ok', async () => {
