@@ -1,10 +1,11 @@
 # BUG-258: Server-Expired Draft Save Can Drop the Final Exam Selection When the Browser Clock Lags
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P3
 **Date:** 2026-06-23
 **Confirmed:** 2026-06-23
 **Component:** Practice Engine / Exam Clock / Draft Finalization
+**Resolution:** Fixed via PR #498 (squash `bf653f5a` on `dev`; CodeRabbit reviewed clean on the fix head `f966aebf` — "No actionable comments were generated", `reviewDecision` APPROVED, 0 unresolved threads) → promoted to `main` via PR #499 (merge commit `cf7b88a7`; required `test` / `codecov/patch` / `Vercel` checks green). The promo's own CodeRabbit review was rate-limited (org out of prepaid CodeRabbit credits), but its tree was byte-identical to the CodeRabbit-clean fix head `f966aebf`, so it merged under an owner-authorized override of the review-rate-limit cooldown — no unreviewed code shipped. Production deploy `5172902620` verified READY 2026-06-23 (`addictionboards.com` HTTP 200); `main` and `dev` trees identical. The shipped fix threads a typed `ExamDraftSaveResult` (`{ ok: true } | { ok: false; code }`) through the exam draft-save seam so the server's `CONFLICT` response — not the browser clock — drives expiry recovery: the captured on-screen `finalDraftAnswer` is flushed to the server-authoritative `finalizeExamAnswers` on the Review & Submit path (`onEndSession`, browser-clock gate removed) and on every draft-save-before-navigation caller (`onNavigateQuestion` / `onNextQuestion`, via a page-model expiry callback guarded so post-exam review navigation cannot re-finalize). App-layer hooks only; `SaveExamDraftAnswerUseCase`, the finalize grace window, and all server use-cases are unchanged. The Root Cause citations below describe the pre-fix code.
 
 ---
 
@@ -16,7 +17,7 @@ This is narrower than BUG-254: timer expiry already forwards the on-screen selec
 
 ## Reachability (why P3)
 
-Reachability is a real user path: a subscriber in an active exam selects an answer, clicks **Review & Submit** or a question navigation control after the server deadline, and has a browser clock behind the server by enough that `Date.now() < deadlineAt`. The screen **self-heals if the user simply waits**: the exam timer stays active through the save-error state — [`isTimerActive`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L186>) is not gated on the error load state — so once the browser clock crosses the deadline the timer-expiry path [`finalizeExpiredExam`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L155>) flushes the same captured selection and grades it. The **permanent-loss trigger** is a reload or route bootstrap that wipes the local React selection **before** the timer catches up: the expired-session finalizer then runs with no `finalDraftAnswer` and records the question as omitted. A plain retry without reload is not lossy on its own — the selection persists in React state and a later retry (or the self-heal) still flushes it. The clock-skew requirement bounds the harm window to the skew magnitude, so this is narrower than BUG-254 (which needed no skew and had no self-heal): P3 rather than P2.
+Reachability is a real user path: a subscriber in an active exam selects an answer, clicks **Review & Submit** or a question navigation control after the server deadline, and has a browser clock behind the server by enough that `Date.now() < deadlineAt`. The screen **self-heals if the user simply waits**: the exam timer stays active through the save-error state — [`isTimerActive`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L186>) is not gated on the error load state — so once the browser clock crosses the deadline the timer-expiry path [`finalizeExpiredExam`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L155>) flushes the same captured selection and grades it. The **permanent-loss trigger** is a reload or route bootstrap that wipes the local React selection **before** the timer catches up: the expired-session finalizer then runs with no `finalDraftAnswer` and records the question as omitted. A plain retry without reload is not lossy on its own — the selection persists in React state and a later retry (or the self-heal) still flushes it. The clock-skew requirement bounds the harm window to the skew magnitude, so this is narrower than BUG-254 (which needed no skew and had no self-heal): P3 rather than P2.
 
 ## Reproduction
 
@@ -41,41 +42,41 @@ Actual:
 
 Active exam choice selection is local until a draft save or final flush happens:
 
-- [`use-practice-session-question-flow.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L448>) handles `onSelectChoice`.
-- [`use-practice-session-question-flow.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L454>) returns before `commitChoice(...)` for exam mode.
-- [`saveCurrentExamDraft`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L226>) is the normal persistence path and delegates to `maybeSaveDraftBeforeNavigation`.
-- [`maybeSaveDraftBeforeNavigation`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L202>) sets an error and returns `false` when the server action returns `ok:false`.
+- [`use-practice-session-question-flow.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L448>) handles `onSelectChoice`.
+- [`use-practice-session-question-flow.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L454>) returns before `commitChoice(...)` for exam mode.
+- [`saveCurrentExamDraft`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L226>) is the normal persistence path and delegates to `maybeSaveDraftBeforeNavigation`.
+- [`maybeSaveDraftBeforeNavigation`](<../../../app/(app)/app/practice/shared/question-flow-actions.ts#L202>) sets an error and returns `false` when the server action returns `ok:false`.
 
 The server correctly enforces the deadline for ordinary draft saves:
 
-- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L55) checks `isExamExpired(session, this.now())`.
-- [`save-exam-draft-answer.ts`](../../src/application/use-cases/save-exam-draft-answer.ts#L56) throws `CONFLICT: Exam time has expired`.
+- [`save-exam-draft-answer.ts`](../../../src/application/use-cases/save-exam-draft-answer.ts#L55) checks `isExamExpired(session, this.now())`.
+- [`save-exam-draft-answer.ts`](../../../src/application/use-cases/save-exam-draft-answer.ts#L56) throws `CONFLICT: Exam time has expired`.
 
 The manual review/navigation path captures the answer but then reinterprets the failed server save through the browser clock:
 
-- [`use-practice-session-review-stage.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L211>) captures `finalDraftAnswer` before the save.
-- [`use-practice-session-review-stage.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L212>) awaits `saveCurrentExamDraft()`.
-- [`use-practice-session-review-stage.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L219>) computes `isExpired` with `Date.now() >= deadlineMs`.
-- [`use-practice-session-review-stage.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L221>) calls `finalizeExamSession(finalDraftAnswer)` only when that browser-clock check says expired.
-- [`use-practice-session-review-stage.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L224>) returns without finalizing when the server rejected the save but the browser clock is still behind.
+- [`use-practice-session-review-stage.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L211>) captures `finalDraftAnswer` before the save.
+- [`use-practice-session-review-stage.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L212>) awaits `saveCurrentExamDraft()`.
+- [`use-practice-session-review-stage.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L219>) computes `isExpired` with `Date.now() >= deadlineMs`.
+- [`use-practice-session-review-stage.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L221>) calls `finalizeExamSession(finalDraftAnswer)` only when that browser-clock check says expired.
+- [`use-practice-session-review-stage.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts#L224>) returns without finalizing when the server rejected the save but the browser clock is still behind.
 
 The timer path cannot be the authoritative fallback under skew because it is also browser-clock driven:
 
-- [`use-exam-timer.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L23>) computes remaining time from `Date.now()`.
-- [`use-exam-timer.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L51>) fires `onExpire` only when that local computation reaches zero.
+- [`use-exam-timer.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L23>) computes remaining time from `Date.now()`.
+- [`use-exam-timer.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L51>) fires `onExpire` only when that local computation reaches zero.
 
 If the user reloads or otherwise triggers bootstrap before the local timer catches up, the expired-session server path finalizes without the local answer:
 
-- [`get-next-question.ts`](../../src/application/use-cases/get-next-question.ts#L178) detects server-side expiry.
-- [`get-next-question.ts`](../../src/application/use-cases/get-next-question.ts#L185) runs the expired-exam finalizer with only `{ userId, sessionId }`.
-- [`get-next-question.ts`](../../src/application/use-cases/get-next-question.ts#L186) returns `null` after finalization.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L190) treats a null persisted draft as unanswered.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L193) creates an omitted outcome, and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L194) inserts the omitted attempt.
+- [`get-next-question.ts`](../../../src/application/use-cases/get-next-question.ts#L178) detects server-side expiry.
+- [`get-next-question.ts`](../../../src/application/use-cases/get-next-question.ts#L185) runs the expired-exam finalizer with only `{ userId, sessionId }`.
+- [`get-next-question.ts`](../../../src/application/use-cases/get-next-question.ts#L186) returns `null` after finalization.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L190) treats a null persisted draft as unanswered.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L193) creates an omitted outcome, and [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L194) inserts the omitted attempt.
 
 The existing browser coverage proves only the aligned/local-expired branch:
 
-- [`use-practice-session-page-model-timer.browser.spec.tsx`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx#L162>) covers manual **Review & Submit** after a rejected draft save.
-- [`use-practice-session-page-model-timer.browser.spec.tsx`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx#L177>) advances the browser clock past the deadline before clicking, so the skew branch is not covered.
+- [`use-practice-session-page-model-timer.browser.spec.tsx`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx#L162>) covers manual **Review & Submit** after a rejected draft save.
+- [`use-practice-session-page-model-timer.browser.spec.tsx`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx#L177>) advances the browser clock past the deadline before clicking, so the skew branch is not covered.
 
 ## Impact
 
@@ -135,7 +136,7 @@ it('finalizes with the captured draft when the server says the save is expired b
 });
 ```
 
-Today this fails because `usePracticeSessionReviewStage` returns after the rejected save: `finalizeExamAnswersMock` is not called and the active view remains in an error state. The test should live beside the existing timer/page-model browser coverage in [`use-practice-session-page-model-timer.browser.spec.tsx`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx>).
+Today this fails because `usePracticeSessionReviewStage` returns after the rejected save: `finalizeExamAnswersMock` is not called and the active view remains in an error state. The test should live beside the existing timer/page-model browser coverage in [`use-practice-session-page-model-timer.browser.spec.tsx`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model-timer.browser.spec.tsx>).
 
 ## Prior Bug Cross-Refs
 
