@@ -8,6 +8,7 @@ import type {
   GetPracticeSessionReviewOutput,
   GetSessionHistoryOutput,
 } from '@/src/adapters/controllers/practice-controller';
+import { buildHistorySessionsHref } from '../history-search-params';
 
 const {
   fixtureQuestion1Id,
@@ -690,6 +691,32 @@ describe('HistorySessionsTab', () => {
 
     expect(html).toContain('No completed sessions yet.');
     expect(html).toContain('href="/app/practice"');
+  });
+
+  it('renders an out-of-range empty page state with a back-to-first-page link when total is nonzero', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [],
+        total: 21,
+        limit: 20,
+        offset: 20,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistorySessionsTab result={result} modeFilter="exam" />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const backToFirstPageLink = Array.from(doc.querySelectorAll('a')).find(
+      (anchor) => anchor.textContent?.trim() === 'Back to first page',
+    );
+
+    expect(html).toContain('No more sessions on this page.');
+    expect(html).not.toContain('No completed sessions yet.');
+    expect(backToFirstPageLink?.getAttribute('href')).toBe(
+      buildHistorySessionsHref({ limit: 20, offset: 0, mode: 'exam' }),
+    );
   });
 
   it('renders an error card when result is not ok', () => {

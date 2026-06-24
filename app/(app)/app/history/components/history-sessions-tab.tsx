@@ -92,21 +92,41 @@ export function HistorySessionsTab({
     return <ErrorCard className="p-4">{result.error.message}</ErrorCard>;
   }
 
-  const rows = result.data.rows;
+  const { rows, limit, offset, total } = result.data;
+
   if (rows.length === 0) {
+    if (total === 0) {
+      return (
+        <div className="text-sm text-muted-foreground">
+          <div>No completed sessions yet.</div>
+          <div className="mt-3">
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="text-sm text-muted-foreground">
-        <div>No completed sessions yet.</div>
+        <div>No more sessions on this page.</div>
         <div className="mt-3">
-          <Button asChild variant="outline" className="rounded-full">
-            <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>
+          <Button asChild variant="link" className={headerActionLinkClasses}>
+            <Link
+              href={buildHistorySessionsHref({
+                limit,
+                offset: 0,
+                mode: modeFilter,
+              })}
+            >
+              Back to first page
+            </Link>
           </Button>
         </div>
       </div>
     );
   }
-
-  const { limit, offset, total } = result.data;
   const prevOffset = Math.max(0, offset - limit);
   const nextOffset = offset + limit;
   const hasNextPage = offset + rows.length < total;
