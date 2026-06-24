@@ -1,10 +1,23 @@
 # BUG-261: Out-of-Range Session History Pages Show a False Empty-State Message
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P4
 **Date:** 2026-06-23
 **Confirmed:** 2026-06-23
+**Resolved:** 2026-06-23
 **Component:** History / Session Pagination / UI State
+
+---
+
+## Resolution
+
+Fixed in `HistorySessionsTab` by reading `{ rows, limit, offset, total }` before the empty-rows branch and splitting it, mirroring `HistoryQuestionsTab`: `total === 0` keeps the true-empty "No completed sessions yet." + Go to Practice state, while `total > 0` (an empty but out-of-range page) now renders "No more sessions on this page." with a "Back to first page" link (`buildHistorySessionsHref({ limit, offset: 0, mode: modeFilter })`, preserving the active mode filter and limit). The normal in-range path (`prevOffset` / `nextOffset` / `hasNextPage` / "Showing X–Y of N") is unchanged.
+
+TDD: a new out-of-range test (`total: 21`, `offset: 20`) was red before the fix (the component returned the true-empty state) and green after; the existing true-empty test and 16 others were unaffected. Full gate green (typecheck, lint, unit 2936, build). CodeRabbit `APPROVED` on the exact fix head `ad2db641` with 0 unresolved threads (two quick-win test findings addressed: `@/` alias import + canonical `tests/shared/dom-helpers`).
+
+Shipped via PR #504 (squash `b3bbf76f` on `dev`) → promoted to `main` via PR #505 (merge `7466dfe9`; the promo's CodeRabbit was rate-limited, but its tree was byte-identical to the CR-approved fix head `ad2db641` — verified by tree-hash equality — so it merged under an owner-authorized override, no unreviewed code shipped); production deploy `5175666513` verified READY 2026-06-23 (`addictionboards.com` HTTP 200); `main` and `dev` trees identical.
+
+The Root Cause citations below describe the pre-fix code (line numbers predate the fix).
 
 ---
 
@@ -32,33 +45,33 @@ Actual: the page says "No completed sessions yet." and offers only "Go to Practi
 
 The page and controller allow a bounded but out-of-range offset to reach the session history query:
 
-- [`history-search-params.ts`](<../../app/(app)/app/history/history-search-params.ts#L34>) parses any non-negative integer offset and returns it unchanged.
-- [`history/page.tsx`](<../../app/(app)/app/history/page.tsx#L77>) reads search params.
-- [`history/page.tsx`](<../../app/(app)/app/history/page.tsx#L129>) calls `getSessionHistory` with the parsed limit/offset.
-- [`practice-schemas.ts`](../../src/adapters/controllers/practice-schemas.ts#L112) bounds `offset` with `MAX_PAGINATION_OFFSET`, but does not and cannot know the current `total`.
-- [`practice-controller.ts`](../../src/adapters/controllers/practice-controller.ts#L389) forwards the valid offset to the use case.
+- [`history-search-params.ts`](<../../../app/(app)/app/history/history-search-params.ts#L34>) parses any non-negative integer offset and returns it unchanged.
+- [`history/page.tsx`](<../../../app/(app)/app/history/page.tsx#L77>) reads search params.
+- [`history/page.tsx`](<../../../app/(app)/app/history/page.tsx#L129>) calls `getSessionHistory` with the parsed limit/offset.
+- [`practice-schemas.ts`](../../../src/adapters/controllers/practice-schemas.ts#L112) bounds `offset` with `MAX_PAGINATION_OFFSET`, but does not and cannot know the current `total`.
+- [`practice-controller.ts`](../../../src/adapters/controllers/practice-controller.ts#L389) forwards the valid offset to the use case.
 
 The use case and repository preserve the pagination shape:
 
-- [`get-session-history.ts`](../../src/application/use-cases/get-session-history.ts#L48) calls `findCompletedByUserId` with the requested offset.
-- [`drizzle-practice-session-repository.ts`](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L125) clamps only invalid/negative offsets.
-- [`drizzle-practice-session-repository.ts`](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L130) counts matching completed sessions.
-- [`drizzle-practice-session-repository.ts`](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L140) applies the safe offset to the row query.
-- [`get-session-history.ts`](../../src/application/use-cases/get-session-history.ts#L100) returns `rows`, `total`, `limit`, and `offset`.
+- [`get-session-history.ts`](../../../src/application/use-cases/get-session-history.ts#L48) calls `findCompletedByUserId` with the requested offset.
+- [`drizzle-practice-session-repository.ts`](../../../src/adapters/repositories/drizzle-practice-session-repository.ts#L125) clamps only invalid/negative offsets.
+- [`drizzle-practice-session-repository.ts`](../../../src/adapters/repositories/drizzle-practice-session-repository.ts#L130) counts matching completed sessions.
+- [`drizzle-practice-session-repository.ts`](../../../src/adapters/repositories/drizzle-practice-session-repository.ts#L140) applies the safe offset to the row query.
+- [`get-session-history.ts`](../../../src/application/use-cases/get-session-history.ts#L100) returns `rows`, `total`, `limit`, and `offset`.
 
 The sessions UI loses the distinction:
 
-- [`history-sessions-tab.tsx`](<../../app/(app)/app/history/components/history-sessions-tab.tsx#L95>) reads `rows`.
-- [`history-sessions-tab.tsx`](<../../app/(app)/app/history/components/history-sessions-tab.tsx#L96>) immediately treats every empty page as the true empty-session state.
-- [`history-sessions-tab.tsx`](<../../app/(app)/app/history/components/history-sessions-tab.tsx#L99>) renders "No completed sessions yet."
-- [`history-sessions-tab.tsx`](<../../app/(app)/app/history/components/history-sessions-tab.tsx#L109>) reads `limit`, `offset`, and `total` only after that early return.
+- [`history-sessions-tab.tsx`](<../../../app/(app)/app/history/components/history-sessions-tab.tsx#L95>) reads `rows`.
+- [`history-sessions-tab.tsx`](<../../../app/(app)/app/history/components/history-sessions-tab.tsx#L96>) immediately treats every empty page as the true empty-session state.
+- [`history-sessions-tab.tsx`](<../../../app/(app)/app/history/components/history-sessions-tab.tsx#L99>) renders "No completed sessions yet."
+- [`history-sessions-tab.tsx`](<../../../app/(app)/app/history/components/history-sessions-tab.tsx#L109>) reads `limit`, `offset`, and `total` only after that early return.
 
 The sibling questions tab demonstrates the intended distinction:
 
-- [`history-questions-tab.tsx`](<../../app/(app)/app/history/components/history-questions-tab.tsx#L417>) branches on empty rows.
-- [`history-questions-tab.tsx`](<../../app/(app)/app/history/components/history-questions-tab.tsx#L440>) renders the out-of-range page state when `totalCount > 0`.
-- [`history-questions-tab.test.tsx`](<../../app/(app)/app/history/components/history-questions-tab.test.tsx#L609>) covers a back-to-first-page link for an empty page with a nonzero total.
-- [`history-sessions-tab.test.tsx`](<../../app/(app)/app/history/components/history-sessions-tab.test.tsx#L678>) covers only the true empty state (`total: 0`).
+- [`history-questions-tab.tsx`](<../../../app/(app)/app/history/components/history-questions-tab.tsx#L417>) branches on empty rows.
+- [`history-questions-tab.tsx`](<../../../app/(app)/app/history/components/history-questions-tab.tsx#L440>) renders the out-of-range page state when `totalCount > 0`.
+- [`history-questions-tab.test.tsx`](<../../../app/(app)/app/history/components/history-questions-tab.test.tsx#L609>) covers a back-to-first-page link for an empty page with a nonzero total.
+- [`history-sessions-tab.test.tsx`](<../../../app/(app)/app/history/components/history-sessions-tab.test.tsx#L678>) covers only the true empty state (`total: 0`).
 
 ## Impact
 
