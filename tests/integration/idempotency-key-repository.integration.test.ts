@@ -30,7 +30,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
     await expect(
       repo.claim({ userId: user.id, action: 'it', key: 'k1', expiresAt }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual(completedAt);
 
     await repo.storeResult({
       userId: user.id,
@@ -48,7 +48,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
     await expect(
       repo.claim({ userId: user.id, action: 'it', key: 'k2', expiresAt }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual(completedAt);
 
     await repo.storeError({
       userId: user.id,
@@ -74,7 +74,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
     await expect(
       repo.claim({ userId: user.id, action: 'it', key: 'k-null', expiresAt }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual(completedAt);
 
     await repo.storeResult({
       userId: user.id,
@@ -93,7 +93,8 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
   it('reclaims expired keys and resets stored state', async () => {
     const user = await createUser(db, cleanup);
-    const now = () => new Date('2026-02-01T00:00:10.000Z');
+    const claimedAt = new Date('2026-02-01T00:00:10.000Z');
+    const now = () => claimedAt;
     const repo = new DrizzleIdempotencyKeyRepository(db, now);
 
     const expiredAt = new Date('2026-02-01T00:00:00.000Z');
@@ -104,7 +105,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         key: 'k3',
         expiresAt: expiredAt,
       }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual(claimedAt);
 
     await repo.storeResult({
       userId: user.id,
@@ -121,7 +122,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         key: 'k3',
         expiresAt: refreshedAt,
       }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual(claimedAt);
 
     await expect(repo.find(user.id, 'it', 'k3')).resolves.toMatchObject({
       resultJson: null,
@@ -146,7 +147,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         expiresAt: firstExpiry,
         zombieThresholdMs: 60_000,
       }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual(currentTime);
 
     currentTime = new Date('2026-02-01T00:00:30.000Z');
     await expect(
@@ -157,7 +158,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         expiresAt: new Date('2026-02-02T00:00:30.000Z'),
         zombieThresholdMs: 60_000,
       }),
-    ).resolves.toBe(false);
+    ).resolves.toBeNull();
 
     currentTime = new Date('2026-02-01T00:01:10.000Z');
     const refreshedExpiry = new Date('2026-02-02T00:01:10.000Z');
@@ -169,13 +170,54 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         expiresAt: refreshedExpiry,
         zombieThresholdMs: 60_000,
       }),
-    ).resolves.toBe(true);
+    ).resolves.toEqual(currentTime);
 
     await expect(repo.find(user.id, 'it', 'k-zombie')).resolves.toMatchObject({
       resultJson: null,
       error: null,
       completedAt: null,
       expiresAt: refreshedExpiry,
+    });
+  });
+
+  it('does not abort a pending row reclaimed after the original claim token', async () => {
+    const user = await createUser(db, cleanup);
+    let currentTime = new Date('2026-02-01T00:00:00.000Z');
+    const now = () => currentTime;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+    const key = 'k-stale-abort';
+
+    const firstClaimedAt = currentTime;
+    await expect(
+      repo.claim({
+        userId: user.id,
+        action: 'it',
+        key,
+        expiresAt: new Date('2026-02-02T00:00:00.000Z'),
+        zombieThresholdMs: 60_000,
+      }),
+    ).resolves.toEqual(firstClaimedAt);
+
+    currentTime = new Date('2026-02-01T00:01:01.000Z');
+    const reclaimedAt = currentTime;
+    const reclaimedExpiry = new Date('2026-02-02T00:01:01.000Z');
+    await expect(
+      repo.claim({
+        userId: user.id,
+        action: 'it',
+        key,
+        expiresAt: reclaimedExpiry,
+        zombieThresholdMs: 60_000,
+      }),
+    ).resolves.toEqual(reclaimedAt);
+
+    await repo.abortClaim(user.id, 'it', key, firstClaimedAt);
+
+    await expect(repo.find(user.id, 'it', key)).resolves.toMatchObject({
+      resultJson: null,
+      error: null,
+      completedAt: null,
+      expiresAt: reclaimedExpiry,
     });
   });
 
@@ -186,18 +228,20 @@ describe('DrizzleIdempotencyKeyRepository', () => {
     const repo = new DrizzleIdempotencyKeyRepository(db, now);
     const expiresAt = new Date('2026-02-02T00:00:00.000Z');
 
-    await repo.claim({
+    const pendingClaimedAt = await repo.claim({
       userId: user.id,
       action: 'it',
       key: 'k-pending',
       expiresAt,
     });
-    await repo.claim({
+    if (!pendingClaimedAt) throw new Error('Expected pending claim');
+    const completedClaimedAt = await repo.claim({
       userId: user.id,
       action: 'it',
       key: 'k-completed',
       expiresAt,
     });
+    if (!completedClaimedAt) throw new Error('Expected completed claim');
     await repo.storeResult({
       userId: user.id,
       action: 'it',
@@ -205,8 +249,8 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       resultJson: { ok: true },
     });
 
-    await repo.abortClaim(user.id, 'it', 'k-pending');
-    await repo.abortClaim(user.id, 'it', 'k-completed');
+    await repo.abortClaim(user.id, 'it', 'k-pending', pendingClaimedAt);
+    await repo.abortClaim(user.id, 'it', 'k-completed', completedClaimedAt);
 
     await expect(repo.find(user.id, 'it', 'k-pending')).resolves.toBeNull();
     await expect(
@@ -226,12 +270,13 @@ describe('DrizzleIdempotencyKeyRepository', () => {
     const repo = new DrizzleIdempotencyKeyRepository(db, now);
     const expiresAt = new Date('2026-02-02T00:00:00.000Z');
 
-    await repo.claim({
+    const errorClaimedAt = await repo.claim({
       userId: user.id,
       action: 'it',
       key: 'k-error',
       expiresAt,
     });
+    if (!errorClaimedAt) throw new Error('Expected error claim');
     await repo.storeError({
       userId: user.id,
       action: 'it',
@@ -239,7 +284,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       error: { code: 'INTERNAL_ERROR', message: 'boom' },
     });
 
-    await repo.abortClaim(user.id, 'it', 'k-error');
+    await repo.abortClaim(user.id, 'it', 'k-error', errorClaimedAt);
 
     await expect(repo.find(user.id, 'it', 'k-error')).resolves.toMatchObject({
       resultJson: null,

@@ -29,7 +29,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     key: string;
     expiresAt: Date;
     zombieThresholdMs?: number;
-  }): Promise<boolean> {
+  }): Promise<Date | null> {
     const now = this.now();
     const zombieThresholdMs =
       typeof input.zombieThresholdMs === 'number' &&
@@ -47,7 +47,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
         existing.error === null &&
         existing.claimedAt.getTime() < zombieCutoff.getTime();
       if (!isExpired && !isZombie) {
-        return false;
+        return null;
       }
     }
 
@@ -58,7 +58,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
       completedAt: null,
       expiresAt: input.expiresAt,
     });
-    return true;
+    return now;
   }
 
   async find(
@@ -122,10 +122,18 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     });
   }
 
-  async abortClaim(userId: string, action: string, key: string): Promise<void> {
+  async abortClaim(
+    userId: string,
+    action: string,
+    key: string,
+    claimedAt: Date,
+  ): Promise<void> {
     const id = this.toKey(userId, action, key);
     const existing = this.records.get(id);
     if (!existing || existing.completedAt !== null || existing.error !== null) {
+      return;
+    }
+    if (existing.claimedAt.getTime() !== claimedAt.getTime()) {
       return;
     }
 

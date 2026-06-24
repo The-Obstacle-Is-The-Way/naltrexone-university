@@ -79,7 +79,7 @@ export async function withIdempotency<T>(input: {
 
   while (input.now().getTime() - startMs <= maxWaitMs) {
     const expiresAt = new Date(input.now().getTime() + ttlMs);
-    const claimed = await input.repo.claim({
+    const claimedAt = await input.repo.claim({
       userId: input.userId,
       action: input.action,
       key: input.key,
@@ -87,13 +87,18 @@ export async function withIdempotency<T>(input: {
       zombieThresholdMs,
     });
 
-    if (claimed) {
+    if (claimedAt) {
       if (input.beforeExecute) {
         try {
           await input.beforeExecute();
         } catch (error) {
           try {
-            await input.repo.abortClaim(input.userId, input.action, input.key);
+            await input.repo.abortClaim(
+              input.userId,
+              input.action,
+              input.key,
+              claimedAt,
+            );
           } catch (abortError) {
             try {
               input.logger.error(

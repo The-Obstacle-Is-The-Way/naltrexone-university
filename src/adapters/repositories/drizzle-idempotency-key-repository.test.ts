@@ -39,8 +39,9 @@ function collectColumnNamesForTable(
 
 describe('DrizzleIdempotencyKeyRepository', () => {
   describe('claim', () => {
-    it('returns true when insert succeeds', async () => {
-      const insertReturning = vi.fn(async () => [{ key: 'idem-1' }]);
+    it('returns the claimedAt token when insert succeeds', async () => {
+      const now = new Date('2026-02-08T00:00:00.000Z');
+      const insertReturning = vi.fn(async () => [{ claimedAt: now }]);
       const insertOnConflictDoNothing = vi.fn(() => ({
         returning: insertReturning,
       }));
@@ -56,7 +57,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         update,
       } as unknown as RepoDb;
 
-      const repo = new DrizzleIdempotencyKeyRepository(db);
+      const repo = new DrizzleIdempotencyKeyRepository(db, () => now);
 
       await expect(
         repo.claim({
@@ -65,7 +66,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           key: 'idem-1',
           expiresAt: new Date('2026-02-08T01:00:00.000Z'),
         }),
-      ).resolves.toBe(true);
+      ).resolves.toEqual(now);
 
       expect(update).not.toHaveBeenCalled();
       expect(insertValues).toHaveBeenCalledWith(
@@ -75,7 +76,8 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       );
     });
 
-    it('returns true when an expired key is reclaimed', async () => {
+    it('returns the claimedAt token when an expired key is reclaimed', async () => {
+      const now = new Date('2026-02-08T00:00:00.000Z');
       const insertReturning = vi.fn(async () => []);
       const insertOnConflictDoNothing = vi.fn(() => ({
         returning: insertReturning,
@@ -85,7 +87,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       }));
       const insert = vi.fn(() => ({ values: insertValues }));
 
-      const updateReturning = vi.fn(async () => [{ key: 'idem-1' }]);
+      const updateReturning = vi.fn(async () => [{ claimedAt: now }]);
       const updateWhere = vi.fn(() => ({ returning: updateReturning }));
       const updateSet = vi.fn(() => ({ where: updateWhere }));
       const update = vi.fn(() => ({ set: updateSet }));
@@ -95,10 +97,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         update,
       } as unknown as RepoDb;
 
-      const repo = new DrizzleIdempotencyKeyRepository(
-        db,
-        () => new Date('2026-02-08T00:00:00.000Z'),
-      );
+      const repo = new DrizzleIdempotencyKeyRepository(db, () => now);
 
       await expect(
         repo.claim({
@@ -107,7 +106,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           key: 'idem-1',
           expiresAt: new Date('2026-02-08T01:00:00.000Z'),
         }),
-      ).resolves.toBe(true);
+      ).resolves.toEqual(now);
       expect(update).toHaveBeenCalledTimes(1);
       expect(updateSet).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -116,7 +115,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       );
     });
 
-    it('returns true when a zombie key is reclaimed after the threshold', async () => {
+    it('returns the claimedAt token when a zombie key is reclaimed after the threshold', async () => {
       const insertReturning = vi.fn(async () => []);
       const insertOnConflictDoNothing = vi.fn(() => ({
         returning: insertReturning,
@@ -126,7 +125,8 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       }));
       const insert = vi.fn(() => ({ values: insertValues }));
 
-      const updateReturning = vi.fn(async () => [{ key: 'idem-1' }]);
+      const now = new Date('2026-02-08T00:02:00.000Z');
+      const updateReturning = vi.fn(async () => [{ claimedAt: now }]);
       const updateWhere = vi.fn(() => ({ returning: updateReturning }));
       const updateSet = vi.fn(() => ({ where: updateWhere }));
       const update = vi.fn(() => ({ set: updateSet }));
@@ -136,7 +136,6 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         update,
       } as unknown as RepoDb;
 
-      const now = new Date('2026-02-08T00:02:00.000Z');
       const repo = new DrizzleIdempotencyKeyRepository(db, () => now);
 
       await expect(
@@ -147,7 +146,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           expiresAt: new Date('2026-02-08T01:00:00.000Z'),
           zombieThresholdMs: 60_000,
         }),
-      ).resolves.toBe(true);
+      ).resolves.toEqual(now);
 
       expect(update).toHaveBeenCalledTimes(1);
       expect(updateSet).toHaveBeenCalledWith(
@@ -168,7 +167,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       expect(idempotencyColumns).toContain('error_code');
     });
 
-    it('returns false when existing key is still active', async () => {
+    it('returns null when existing key is still active', async () => {
       const insertReturning = vi.fn(async () => []);
       const insertOnConflictDoNothing = vi.fn(() => ({
         returning: insertReturning,
@@ -197,7 +196,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           key: 'idem-1',
           expiresAt: new Date('2026-02-08T01:00:00.000Z'),
         }),
-      ).resolves.toBe(false);
+      ).resolves.toBeNull();
     });
   });
 

@@ -24,8 +24,8 @@ describe('FakeIdempotencyKeyRepository', () => {
       const expiresAt = new Date('2026-03-01T00:10:00.000Z');
       const input = createClaimInput(expiresAt);
 
-      await expect(repo.claim(input)).resolves.toBe(true);
-      await expect(repo.claim(input)).resolves.toBe(false);
+      await expect(repo.claim(input)).resolves.toEqual(clock.now);
+      await expect(repo.claim(input)).resolves.toBeNull();
 
       await expect(
         repo.find(input.userId, input.action, input.key),
@@ -35,6 +35,16 @@ describe('FakeIdempotencyKeyRepository', () => {
         completedAt: null,
         expiresAt,
       });
+    });
+
+    it('returns the claimedAt token for the claim it created', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const expiresAt = new Date('2026-03-01T00:10:00.000Z');
+      const input = createClaimInput(expiresAt);
+
+      await expect(repo.claim(input)).resolves.toEqual(clock.now);
+      await expect(repo.claim(input)).resolves.toBeNull();
     });
 
     it('allows claim again after record expiration', async () => {
@@ -50,7 +60,7 @@ describe('FakeIdempotencyKeyRepository', () => {
 
       await expect(
         repo.claim(createClaimInput(new Date('2026-03-01T00:05:00.000Z'))),
-      ).resolves.toBe(true);
+      ).resolves.toEqual(clock.now);
     });
   });
 
@@ -148,13 +158,14 @@ describe('FakeIdempotencyKeyRepository', () => {
       const expiresAt = new Date('2026-03-01T01:00:00.000Z');
       const input = createClaimInput(expiresAt);
 
-      await repo.claim(input);
+      const claimedAt = await repo.claim(input);
+      if (!claimedAt) throw new Error('Expected pending claim');
       await repo.claim({
         ...input,
         key: 'other_key',
       });
 
-      await repo.abortClaim(input.userId, input.action, input.key);
+      await repo.abortClaim(input.userId, input.action, input.key, claimedAt);
 
       await expect(
         repo.find(input.userId, input.action, input.key),
@@ -167,7 +178,42 @@ describe('FakeIdempotencyKeyRepository', () => {
         completedAt: null,
         expiresAt,
       });
-      await expect(repo.claim(input)).resolves.toBe(true);
+      await expect(repo.claim(input)).resolves.toEqual(clock.now);
+    });
+
+    it('does not remove a newer reclaimed pending row when aborting a stale claim token', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const initialClaimedAt = clock.now;
+      const input = createClaimInput(new Date('2026-03-01T01:00:00.000Z'));
+
+      await repo.claim({ ...input, zombieThresholdMs: 60_000 });
+
+      clock.now = new Date('2026-03-01T00:01:01.000Z');
+      const reclaimedAt = clock.now;
+      await expect(
+        repo.claim({
+          ...input,
+          expiresAt: new Date('2026-03-01T02:00:00.000Z'),
+          zombieThresholdMs: 60_000,
+        }),
+      ).resolves.toEqual(reclaimedAt);
+
+      await repo.abortClaim(
+        input.userId,
+        input.action,
+        input.key,
+        initialClaimedAt,
+      );
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toEqual({
+        resultJson: null,
+        error: null,
+        completedAt: null,
+        expiresAt: new Date('2026-03-01T02:00:00.000Z'),
+      });
     });
 
     it('does not remove completed result or error records', async () => {
@@ -180,14 +226,16 @@ describe('FakeIdempotencyKeyRepository', () => {
         key: 'idem_key_error',
       };
 
-      await repo.claim(resultInput);
+      const resultClaimedAt = await repo.claim(resultInput);
+      if (!resultClaimedAt) throw new Error('Expected result claim');
       await repo.storeResult({
         userId: resultInput.userId,
         action: resultInput.action,
         key: resultInput.key,
         resultJson: { ok: true },
       });
-      await repo.claim(errorInput);
+      const errorClaimedAt = await repo.claim(errorInput);
+      if (!errorClaimedAt) throw new Error('Expected error claim');
       await repo.storeError({
         userId: errorInput.userId,
         action: errorInput.action,
@@ -199,11 +247,13 @@ describe('FakeIdempotencyKeyRepository', () => {
         resultInput.userId,
         resultInput.action,
         resultInput.key,
+        resultClaimedAt,
       );
       await repo.abortClaim(
         errorInput.userId,
         errorInput.action,
         errorInput.key,
+        errorClaimedAt,
       );
 
       await expect(
