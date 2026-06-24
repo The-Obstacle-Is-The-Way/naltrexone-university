@@ -232,17 +232,6 @@ export const submitAnswer = createAction({
       timeSpentSeconds,
     } = input;
 
-    const rate = await d.rateLimiter.limit({
-      key: `question:submitAnswer:${userId}`,
-      ...SUBMIT_ANSWER_RATE_LIMIT,
-    });
-    if (!rate.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many submissions. Try again in ${rate.retryAfterSeconds}s.`,
-      );
-    }
-
     async function submitOnce(): Promise<SubmitAnswerOutput> {
       return d.submitAnswerUseCase.execute({
         userId,
@@ -256,12 +245,26 @@ export const submitAnswer = createAction({
       });
     }
 
+    async function enforceSubmitAnswerRateLimit(): Promise<void> {
+      const rate = await d.rateLimiter.limit({
+        key: `question:submitAnswer:${userId}`,
+        ...SUBMIT_ANSWER_RATE_LIMIT,
+      });
+      if (!rate.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many submissions. Try again in ${rate.retryAfterSeconds}s.`,
+        );
+      }
+    }
+
     return executeIdempotent({
       d,
       userId,
       action: 'question:submitAnswer',
       idempotencyKey,
       outputSchema: SubmitAnswerOutputSchema,
+      beforeExecute: enforceSubmitAnswerRateLimit,
       execute: submitOnce,
     });
   },

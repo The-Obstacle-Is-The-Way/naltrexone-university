@@ -50,6 +50,7 @@ export async function withIdempotency<T>(input: {
   pollIntervalMs?: number;
   zombieThresholdMs?: number;
   parseResult?: (value: unknown) => T;
+  beforeExecute?: () => Promise<void>;
   execute: () => Promise<T>;
 }): Promise<T> {
   const ttlMs = input.ttlMs ?? DEFAULT_TTL_MS;
@@ -74,99 +75,129 @@ export async function withIdempotency<T>(input: {
     );
   }
 
-  const expiresAt = new Date(input.now().getTime() + ttlMs);
-  const claimed = await input.repo.claim({
-    userId: input.userId,
-    action: input.action,
-    key: input.key,
-    expiresAt,
-    zombieThresholdMs,
-  });
+  const startMs = input.now().getTime();
 
-  if (claimed) {
-    try {
-      const result = await input.execute();
-      await input.repo.storeResult({
-        userId: input.userId,
-        action: input.action,
-        key: input.key,
-        resultJson: result,
-      });
-      return result;
-    } catch (error) {
+  while (input.now().getTime() - startMs <= maxWaitMs) {
+    const expiresAt = new Date(input.now().getTime() + ttlMs);
+    const claimed = await input.repo.claim({
+      userId: input.userId,
+      action: input.action,
+      key: input.key,
+      expiresAt,
+      zombieThresholdMs,
+    });
+
+    if (claimed) {
+      if (input.beforeExecute) {
+        try {
+          await input.beforeExecute();
+        } catch (error) {
+          try {
+            await input.repo.abortClaim(input.userId, input.action, input.key);
+          } catch (abortError) {
+            try {
+              input.logger.error(
+                {
+                  userId: input.userId,
+                  action: input.action,
+                  key: input.key,
+                  abortError:
+                    abortError instanceof Error
+                      ? abortError.message
+                      : String(abortError),
+                  originalError:
+                    error instanceof Error ? error.message : String(error),
+                },
+                'Failed to abort idempotency claim after beforeExecute failure',
+              );
+            } catch {
+              // Preserve the original beforeExecute error even if logging fails.
+            }
+          }
+          throw error;
+        }
+      }
+
       try {
-        await input.repo.storeError({
+        const result = await input.execute();
+        await input.repo.storeResult({
           userId: input.userId,
           action: input.action,
           key: input.key,
-          error: toErrorRecord(error),
+          resultJson: result,
         });
-      } catch (storeError) {
+        return result;
+      } catch (error) {
         try {
-          input.logger.error(
-            {
-              userId: input.userId,
-              action: input.action,
-              key: input.key,
-              storeError:
-                storeError instanceof Error
-                  ? storeError.message
-                  : String(storeError),
-              originalError:
-                error instanceof Error ? error.message : String(error),
-            },
-            'Failed to persist idempotency error record',
+          await input.repo.storeError({
+            userId: input.userId,
+            action: input.action,
+            key: input.key,
+            error: toErrorRecord(error),
+          });
+        } catch (storeError) {
+          try {
+            input.logger.error(
+              {
+                userId: input.userId,
+                action: input.action,
+                key: input.key,
+                storeError:
+                  storeError instanceof Error
+                    ? storeError.message
+                    : String(storeError),
+                originalError:
+                  error instanceof Error ? error.message : String(error),
+              },
+              'Failed to persist idempotency error record',
+            );
+          } catch {
+            // Preserve original execute error even if logger.error throws.
+          }
+        }
+        throw error;
+      }
+    }
+
+    let shouldRestartClaim = false;
+    while (input.now().getTime() - startMs <= maxWaitMs) {
+      const existing = await input.repo.find(
+        input.userId,
+        input.action,
+        input.key,
+      );
+      if (!existing) {
+        shouldRestartClaim = true;
+        break;
+      }
+
+      if (existing.error) {
+        throw new ApplicationError(existing.error.code, existing.error.message);
+      }
+
+      if (existing.completedAt !== null) {
+        if (!input.parseResult) {
+          return existing.resultJson as T;
+        }
+
+        try {
+          return input.parseResult(existing.resultJson);
+        } catch (cause) {
+          throw new ApplicationError(
+            'INTERNAL_ERROR',
+            'Cached idempotency result is invalid',
+            undefined,
+            { cause },
           );
-        } catch {
-          // Preserve original execute error even if logger.error throws.
         }
       }
-      throw error;
-    }
-  }
 
-  const startMs = input.now().getTime();
-  let keyDisappearedDuringPoll = false;
-  while (input.now().getTime() - startMs <= maxWaitMs) {
-    const existing = await input.repo.find(
-      input.userId,
-      input.action,
-      input.key,
-    );
-    if (!existing) {
-      keyDisappearedDuringPoll = true;
+      await delay(pollIntervalMs);
+    }
+
+    if (!shouldRestartClaim) {
       break;
     }
-
-    if (existing.error) {
-      throw new ApplicationError(existing.error.code, existing.error.message);
-    }
-
-    if (existing.completedAt !== null) {
-      if (!input.parseResult) {
-        return existing.resultJson as T;
-      }
-
-      try {
-        return input.parseResult(existing.resultJson);
-      } catch (cause) {
-        throw new ApplicationError(
-          'INTERNAL_ERROR',
-          'Cached idempotency result is invalid',
-          undefined,
-          { cause },
-        );
-      }
-    }
-
-    await delay(pollIntervalMs);
-  }
-
-  if (keyDisappearedDuringPoll) {
-    throw new ApplicationError(
-      'INTERNAL_ERROR',
-      'Idempotency key disappeared during poll',
-    );
   }
 
   throw new ApplicationError(

@@ -178,4 +178,74 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       expiresAt: refreshedExpiry,
     });
   });
+
+  it('aborts only pending incomplete claims and preserves completed rows', async () => {
+    const user = await createUser(db, cleanup);
+    const completedAt = new Date('2026-02-01T00:00:05.000Z');
+    const now = () => completedAt;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+
+    await repo.claim({
+      userId: user.id,
+      action: 'it',
+      key: 'k-pending',
+      expiresAt,
+    });
+    await repo.claim({
+      userId: user.id,
+      action: 'it',
+      key: 'k-completed',
+      expiresAt,
+    });
+    await repo.storeResult({
+      userId: user.id,
+      action: 'it',
+      key: 'k-completed',
+      resultJson: { ok: true },
+    });
+
+    await repo.abortClaim(user.id, 'it', 'k-pending');
+    await repo.abortClaim(user.id, 'it', 'k-completed');
+
+    await expect(repo.find(user.id, 'it', 'k-pending')).resolves.toBeNull();
+    await expect(
+      repo.find(user.id, 'it', 'k-completed'),
+    ).resolves.toMatchObject({
+      resultJson: { ok: true },
+      error: null,
+      completedAt,
+      expiresAt,
+    });
+  });
+
+  it('does not abort stored error rows', async () => {
+    const user = await createUser(db, cleanup);
+    const completedAt = new Date('2026-02-01T00:00:05.000Z');
+    const now = () => completedAt;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+
+    await repo.claim({
+      userId: user.id,
+      action: 'it',
+      key: 'k-error',
+      expiresAt,
+    });
+    await repo.storeError({
+      userId: user.id,
+      action: 'it',
+      key: 'k-error',
+      error: { code: 'INTERNAL_ERROR', message: 'boom' },
+    });
+
+    await repo.abortClaim(user.id, 'it', 'k-error');
+
+    await expect(repo.find(user.id, 'it', 'k-error')).resolves.toMatchObject({
+      resultJson: null,
+      error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      completedAt,
+      expiresAt,
+    });
+  });
 });

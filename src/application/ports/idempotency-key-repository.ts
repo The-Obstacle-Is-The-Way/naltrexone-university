@@ -57,5 +57,12 @@ export interface IdempotencyKeyRepository {
     error: IdempotencyKeyError;
   }): Promise<void>;
 
+  /**
+   * Remove a freshly claimed key that never reached execute/store.
+   *
+   * Must be a no-op for completed rows, stored-error rows, and missing keys.
+   */
+  abortClaim(userId: string, action: string, key: string): Promise<void>;
+
   pruneExpiredBefore(cutoff: Date, limit: number): Promise<number>;
 }

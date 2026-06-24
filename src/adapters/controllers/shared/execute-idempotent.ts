@@ -23,6 +23,7 @@ export async function executeIdempotent<TOutput>({
   idempotencyKey,
   action,
   outputSchema,
+  beforeExecute,
   execute,
 }: {
   d: IdempotentControllerDeps;
@@ -30,9 +31,13 @@ export async function executeIdempotent<TOutput>({
   idempotencyKey: string | null | undefined;
   action: string;
   outputSchema: ZodType<TOutput, unknown>;
+  beforeExecute?: () => Promise<void>;
   execute: () => Promise<TOutput>;
 }): Promise<TOutput> {
-  if (!idempotencyKey) return execute();
+  if (!idempotencyKey) {
+    await beforeExecute?.();
+    return execute();
+  }
 
   return withIdempotency({
     repo: d.idempotencyKeyRepository,
@@ -42,6 +47,7 @@ export async function executeIdempotent<TOutput>({
     key: idempotencyKey,
     now: d.now,
     parseResult: (value) => outputSchema.parse(value),
+    ...(beforeExecute ? { beforeExecute } : {}),
     execute,
   });
 }

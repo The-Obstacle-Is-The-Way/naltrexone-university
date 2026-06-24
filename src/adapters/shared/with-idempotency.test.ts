@@ -30,6 +30,110 @@ describe('withIdempotency', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
+  it('runs beforeExecute only for the fresh claim and skips it for cached result replays', async () => {
+    const now = () => new Date();
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const beforeExecute = vi.fn(async () => undefined);
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    const input = {
+      repo,
+      userId: appUserId,
+      action: 'billing:createCheckoutSession',
+      key: '11111111-1111-1111-1111-111111111113',
+      now,
+      logger,
+      beforeExecute,
+      execute,
+    } as const;
+
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    expect(beforeExecute).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('aborts the fresh claim and does not cache errors thrown by beforeExecute', async () => {
+    const now = () => new Date();
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '11111111-1111-1111-1111-111111111114';
+    const rateLimitError = new ApplicationError(
+      'RATE_LIMITED',
+      'Too many requests',
+    );
+    const beforeExecute = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(rateLimitError)
+      .mockResolvedValueOnce(undefined);
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    const input = {
+      repo,
+      userId: appUserId,
+      action: 'billing:createCheckoutSession',
+      key,
+      now,
+      logger,
+      beforeExecute,
+      execute,
+    } as const;
+
+    await expect(withIdempotency(input)).rejects.toBe(rateLimitError);
+    await expect(
+      repo.find(appUserId, 'billing:createCheckoutSession', key),
+    ).resolves.toBeNull();
+
+    await expect(withIdempotency(input)).resolves.toEqual({ ok: true });
+    expect(beforeExecute).toHaveBeenCalledTimes(2);
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips beforeExecute for cached error replays', async () => {
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '11111111-1111-1111-1111-111111111115';
+
+    await repo.claim({
+      userId: appUserId,
+      action: 'billing:createCheckoutSession',
+      key,
+      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
+    });
+    await repo.storeError({
+      userId: appUserId,
+      action: 'billing:createCheckoutSession',
+      key,
+      error: { code: 'NOT_FOUND', message: 'Missing customer' },
+    });
+
+    const beforeExecute = vi.fn(async () => {
+      throw new ApplicationError('RATE_LIMITED', 'Too many requests');
+    });
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'billing:createCheckoutSession',
+        key,
+        now,
+        logger,
+        beforeExecute,
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Missing customer',
+    });
+
+    expect(beforeExecute).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('parses cached results when parseResult is provided', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
@@ -396,45 +500,61 @@ describe('withIdempotency', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
-  it('throws INTERNAL_ERROR when key disappears during polling', async () => {
-    class DisappearingFindRepo extends FakeIdempotencyKeyRepository {
-      override async find(): Promise<null> {
-        return null;
-      }
-    }
-
+  it('restarts when a concurrent waiter observes a beforeExecute-aborted claim', async () => {
     const now = () => new Date('2026-02-07T00:00:00.000Z');
-    const repo = new DisappearingFindRepo(now);
+    const repo = new FakeIdempotencyKeyRepository(now);
     const logger = new FakeLogger();
     const key = '44444444-4444-4444-4444-444444444445';
+    const rateLimitError = new ApplicationError(
+      'RATE_LIMITED',
+      'Too many requests',
+    );
 
-    await repo.claim({
+    let markHookStarted: (() => void) | undefined;
+    const hookStarted = new Promise<void>((resolve) => {
+      markHookStarted = resolve;
+    });
+
+    let releaseHook: (() => void) | undefined;
+    const release = new Promise<void>((resolve) => {
+      releaseHook = resolve;
+    });
+
+    const beforeExecute = vi.fn(async () => {
+      if (beforeExecute.mock.calls.length === 1) {
+        markHookStarted?.();
+        await release;
+        throw rateLimitError;
+      }
+    });
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    const input = {
+      repo,
       userId: appUserId,
       action: 'billing:createCheckoutSession',
       key,
-      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
-    });
+      now,
+      logger,
+      maxWaitMs: 100,
+      pollIntervalMs: 1,
+      beforeExecute,
+      execute,
+    } as const;
 
-    const execute = vi.fn(async () => ({ ok: true }));
+    const first = withIdempotency(input);
+    await hookStarted;
+    const second = withIdempotency(input);
 
-    await expect(
-      withIdempotency({
-        repo,
-        userId: appUserId,
-        action: 'billing:createCheckoutSession',
-        key,
-        now,
-        logger,
-        maxWaitMs: 100,
-        pollIntervalMs: 1,
-        execute,
-      }),
-    ).rejects.toMatchObject({
-      code: 'INTERNAL_ERROR',
-      message: 'Idempotency key disappeared during poll',
-    });
+    if (!releaseHook) {
+      throw new Error('Expected beforeExecute to initialize release hook');
+    }
+    releaseHook();
 
-    expect(execute).not.toHaveBeenCalled();
+    await expect(first).rejects.toBe(rateLimitError);
+    await expect(second).resolves.toEqual({ ok: true });
+    expect(beforeExecute).toHaveBeenCalledTimes(2);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
   it('prunes expired idempotency keys before processing requests', async () => {

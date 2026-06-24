@@ -186,6 +186,20 @@ export class DrizzleIdempotencyKeyRepository
     }
   }
 
+  async abortClaim(userId: string, action: string, key: string): Promise<void> {
+    await this.db
+      .delete(idempotencyKeys)
+      .where(
+        and(
+          eq(idempotencyKeys.userId, userId),
+          eq(idempotencyKeys.action, action),
+          eq(idempotencyKeys.key, key),
+          isNull(idempotencyKeys.completedAt),
+          isNull(idempotencyKeys.errorCode),
+        ),
+      );
+  }
+
   async pruneExpiredBefore(cutoff: Date, limit: number): Promise<number> {
     if (!Number.isInteger(limit) || limit <= 0) {
       return 0;

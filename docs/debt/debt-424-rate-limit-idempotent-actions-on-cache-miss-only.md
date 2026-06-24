@@ -72,12 +72,12 @@ The cleanup piece is required by the live `withIdempotency` state machine: `repo
 
 ## Acceptance Criteria
 
-- [ ] `withIdempotency` / `executeIdempotent` accept a `beforeExecute` hook that runs only on a fresh claim/cache miss (and on the no-key fast path), before execute, and whose thrown error is never stored.
-- [ ] A `beforeExecute` denial aborts the incomplete idempotency claim; immediate same-key retry is not wedged behind a pending row, and same-key waiters do not surface `INTERNAL_ERROR` from a disappeared aborted claim.
-- [ ] All 8 in-scope controllers pass their limiter via the hook; none runs the limiter ahead of the cache lookup. The 3 no-limiter actions and webhook routes are unchanged.
-- [ ] Per in-scope action, TDD: (a) a replay with a reused key **while rate-limited** returns the **stored** success/error (CodeRabbit's `[success, RATE_LIMITED]` shape — second call equals the cached first, one use-case invocation); (b) a **fresh** execution is still rate-limited and the `RATE_LIMITED` is **not** cached; (c) success stays idempotent; (d) genuine use-case errors stay cached.
-- [ ] Billing checkout/portal adopt the same hook (no behavior drift versus the other actions).
-- [ ] Full gate green (typecheck, lint, unit, build).
+- [x] `withIdempotency` / `executeIdempotent` accept a `beforeExecute` hook that runs only on a fresh claim/cache miss (and on the no-key fast path), before execute, and whose thrown error is never stored.
+- [x] A `beforeExecute` denial aborts the incomplete idempotency claim; immediate same-key retry is not wedged behind a pending row, and same-key waiters do not surface `INTERNAL_ERROR` from a disappeared aborted claim.
+- [x] All 8 in-scope controllers pass their limiter via the hook; none runs the limiter ahead of the cache lookup. The 3 no-limiter actions and webhook routes are unchanged.
+- [x] Per in-scope action, TDD: (a) a replay with a reused key **while rate-limited** returns the **stored** success/error (CodeRabbit's `[success, RATE_LIMITED]` shape — second call equals the cached first, one use-case invocation); (b) a **fresh** execution is still rate-limited and the `RATE_LIMITED` is **not** cached; (c) success stays idempotent; (d) genuine use-case errors stay cached.
+- [x] Billing checkout/portal adopt the same hook (no behavior drift versus the other actions).
+- [x] Full gate green (typecheck, lint, unit, build).
 
 ## References
 

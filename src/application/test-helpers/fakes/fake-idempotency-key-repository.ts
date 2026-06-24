@@ -122,6 +122,16 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     });
   }
 
+  async abortClaim(userId: string, action: string, key: string): Promise<void> {
+    const id = this.toKey(userId, action, key);
+    const existing = this.records.get(id);
+    if (!existing || existing.completedAt !== null || existing.error !== null) {
+      return;
+    }
+
+    this.records.delete(id);
+  }
+
   async pruneExpiredBefore(cutoff: Date, limit: number): Promise<number> {
     if (!Number.isInteger(limit) || limit <= 0) {
       return 0;

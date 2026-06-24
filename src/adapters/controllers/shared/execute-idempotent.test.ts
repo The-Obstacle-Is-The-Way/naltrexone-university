@@ -57,6 +57,7 @@ function createDeps() {
 describe('executeIdempotent', () => {
   it('calls execute directly and never touches the repo when idempotencyKey is null', async () => {
     const deps = createDeps();
+    const beforeExecute = vi.fn().mockResolvedValue(undefined);
     const execute = vi.fn().mockResolvedValue({ value: 1 });
     const schema = z.object({ value: z.number() });
     const userId = crypto.randomUUID();
@@ -67,12 +68,39 @@ describe('executeIdempotent', () => {
       idempotencyKey: null,
       action: 'practice:test',
       outputSchema: schema,
+      beforeExecute,
       execute,
     });
 
     expect(result).toEqual({ value: 1 });
+    expect(beforeExecute).toHaveBeenCalledTimes(1);
     expect(execute).toHaveBeenCalledTimes(1);
     expect(deps.idempotencyKeyRepository.calls).toEqual([]);
+  });
+
+  it('does not run beforeExecute when a keyed request replays a cached result', async () => {
+    const deps = createDeps();
+    const beforeExecute = vi.fn().mockResolvedValue(undefined);
+    const execute = vi.fn().mockResolvedValue({ value: 100 });
+    const schema = z.object({ value: z.number() });
+    const userId = crypto.randomUUID();
+    const args = {
+      d: deps,
+      userId,
+      idempotencyKey: '22222222-2222-2222-2222-222222222223',
+      action: 'practice:test',
+      outputSchema: schema,
+      beforeExecute,
+      execute,
+    };
+
+    const first = await executeIdempotent(args);
+    const second = await executeIdempotent(args);
+
+    expect(first).toEqual({ value: 100 });
+    expect(second).toEqual({ value: 100 });
+    expect(beforeExecute).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
   it('calls execute directly when idempotencyKey is undefined', async () => {

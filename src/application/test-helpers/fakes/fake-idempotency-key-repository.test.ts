@@ -141,6 +141,86 @@ describe('FakeIdempotencyKeyRepository', () => {
     });
   });
 
+  describe('abortClaim', () => {
+    it('removes only an incomplete pending claim for the exact key', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const expiresAt = new Date('2026-03-01T01:00:00.000Z');
+      const input = createClaimInput(expiresAt);
+
+      await repo.claim(input);
+      await repo.claim({
+        ...input,
+        key: 'other_key',
+      });
+
+      await repo.abortClaim(input.userId, input.action, input.key);
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toBeNull();
+      await expect(
+        repo.find(input.userId, input.action, 'other_key'),
+      ).resolves.toEqual({
+        resultJson: null,
+        error: null,
+        completedAt: null,
+        expiresAt,
+      });
+      await expect(repo.claim(input)).resolves.toBe(true);
+    });
+
+    it('does not remove completed result or error records', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const expiresAt = new Date('2026-03-01T01:00:00.000Z');
+      const resultInput = createClaimInput(expiresAt);
+      const errorInput = {
+        ...resultInput,
+        key: 'idem_key_error',
+      };
+
+      await repo.claim(resultInput);
+      await repo.storeResult({
+        userId: resultInput.userId,
+        action: resultInput.action,
+        key: resultInput.key,
+        resultJson: { ok: true },
+      });
+      await repo.claim(errorInput);
+      await repo.storeError({
+        userId: errorInput.userId,
+        action: errorInput.action,
+        key: errorInput.key,
+        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      });
+
+      await repo.abortClaim(
+        resultInput.userId,
+        resultInput.action,
+        resultInput.key,
+      );
+      await repo.abortClaim(
+        errorInput.userId,
+        errorInput.action,
+        errorInput.key,
+      );
+
+      await expect(
+        repo.find(resultInput.userId, resultInput.action, resultInput.key),
+      ).resolves.toMatchObject({
+        resultJson: { ok: true },
+        error: null,
+      });
+      await expect(
+        repo.find(errorInput.userId, errorInput.action, errorInput.key),
+      ).resolves.toMatchObject({
+        resultJson: null,
+        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      });
+    });
+  });
+
   describe('pruneExpiredBefore', () => {
     it('prunes oldest matching records first up to limit', async () => {
       const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
