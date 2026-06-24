@@ -1,10 +1,25 @@
 # BUG-259: In-Place Answer, Bookmark, and Feedback Rate-Limit Errors Are Cached Under Idempotency Keys
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P4
 **Date:** 2026-06-23
 **Confirmed:** 2026-06-23
+**Resolved:** 2026-06-24
 **Component:** Answer Submission / Bookmarks / Question Feedback / Idempotency / Rate Limiting
+
+---
+
+## Resolution
+
+Fixed by hoisting each rate-limit check **before** `executeIdempotent` (after authentication), so a denied `RATE_LIMITED` `ApplicationError` is no longer thrown inside the idempotent closure and cached under the client idempotency key. Applied to the four in-place surfaces (`submitAnswer`, `toggleBookmark`, `rateQuestion`, `submitQuestionReport`) plus a consistency hoist of `startPracticeSession`; this matches the deliberate billing-controller ordering (BUG-204). Controller-side only — action names, idempotency keys, schemas, output parsing, and use-case calls are unchanged; no client / domain / application / schema change.
+
+A spec audit during implementation widened the documented scope from bookmark/feedback to **answer/bookmark/feedback** (the `submitAnswer` path has the identical antipattern). CodeRabbit then flagged that limiter-before-`executeIdempotent` also gates idempotent **replays** behind the limiter (a retry with the same key while rate-limited returns `RATE_LIMITED` instead of the stored result). That residual is transient/self-healing and consistent with the established billing pattern; the ideal "rate-limit on cache-miss only" semantics is tracked as **DEBT-424** (filed and independently audited in the same PR).
+
+TDD: per-surface controller tests proving a `RATE_LIMITED` first call is not cached under a reused key (red→green), plus success-still-idempotent and genuine-use-case-error-still-cached guards. Full gate green (typecheck, lint, unit 2948, build).
+
+Shipped via PR #508 (squash `e8c74fea` on `dev`; CodeRabbit `APPROVED` the code on head `1638cc55`, 0 unresolved threads; the post-approval delta was docs-only — DEBT-424 + this doc's nit — with CR of that docs differential waived by owner) → promoted to `main` via PR #509 (merge `c72c01ab`). Vercel's git integration skipped the production build for the merge commit (build-dedup against the byte-identical `dev` preview `e8c74fea`), so production was force-redeployed with `vercel deploy --prod`; production deploy `dpl_EpnW95vSdj24jj6WymRTwdKbwQXg` (commit `c72c01ab`) verified READY 2026-06-24 (`addictionboards.com` HTTP 200). `main` and `dev` trees identical.
+
+The Root Cause citations below describe the pre-fix code (line numbers predate the fix).
 
 ---
 
@@ -37,31 +52,31 @@ Actual: the client reuses the same idempotency key, and the server replays the c
 
 The in-place clients retain an idempotency key until success:
 
-- [`bookmark-toggle.ts`](<../../app/(app)/app/shared/bookmark-toggle.ts#L33>) reuses the existing bookmark idempotency key or creates one.
-- [`bookmark-toggle.ts`](<../../app/(app)/app/shared/bookmark-toggle.ts#L36>) persists a generated key before the request.
-- [`bookmark-toggle.ts`](<../../app/(app)/app/shared/bookmark-toggle.ts#L63>) returns on non-ok results before the success-only rotation at [`bookmark-toggle.ts`](<../../app/(app)/app/shared/bookmark-toggle.ts#L87>).
-- [`question-feedback-actions.ts`](<../../app/(app)/app/shared/question-feedback-actions.ts#L40>) does the same for ratings, with error return at [`question-feedback-actions.ts`](<../../app/(app)/app/shared/question-feedback-actions.ts#L74>) before success rotation at [`question-feedback-actions.ts`](<../../app/(app)/app/shared/question-feedback-actions.ts#L91>).
-- [`question-feedback-actions.ts`](<../../app/(app)/app/shared/question-feedback-actions.ts#L113>) does the same for reports, with error return at [`question-feedback-actions.ts`](<../../app/(app)/app/shared/question-feedback-actions.ts#L146>) before success rotation at [`question-feedback-actions.ts`](<../../app/(app)/app/shared/question-feedback-actions.ts#L163>).
-- [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L237>) submits answers with the current submit idempotency key; non-ok results return at [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L297>) without rotating it.
-- [`question-page-logic.ts`](<../../app/(app)/app/questions/[slug]/question-page-logic.ts#L248>) does the same for standalone question submits; non-ok results return at [`question-page-logic.ts`](<../../app/(app)/app/questions/[slug]/question-page-logic.ts#L283>) without rotating the key.
-- `error` state does not block answer retry: [`practice-page-logic.ts`](<../../app/(app)/app/practice/practice-page-logic.ts#L41>) and [`question-page-logic.ts`](<../../app/(app)/app/questions/[slug]/question-page-logic.ts#L101>) only block submit while loading.
-- The current bookmark helper test locks the failure behavior in at [`bookmark-toggle.test.ts`](<../../app/(app)/app/shared/bookmark-toggle.test.ts#L59>).
+- [`bookmark-toggle.ts`](<../../../app/(app)/app/shared/bookmark-toggle.ts#L33>) reuses the existing bookmark idempotency key or creates one.
+- [`bookmark-toggle.ts`](<../../../app/(app)/app/shared/bookmark-toggle.ts#L36>) persists a generated key before the request.
+- [`bookmark-toggle.ts`](<../../../app/(app)/app/shared/bookmark-toggle.ts#L63>) returns on non-ok results before the success-only rotation at [`bookmark-toggle.ts`](<../../../app/(app)/app/shared/bookmark-toggle.ts#L87>).
+- [`question-feedback-actions.ts`](<../../../app/(app)/app/shared/question-feedback-actions.ts#L40>) does the same for ratings, with error return at [`question-feedback-actions.ts`](<../../../app/(app)/app/shared/question-feedback-actions.ts#L74>) before success rotation at [`question-feedback-actions.ts`](<../../../app/(app)/app/shared/question-feedback-actions.ts#L91>).
+- [`question-feedback-actions.ts`](<../../../app/(app)/app/shared/question-feedback-actions.ts#L113>) does the same for reports, with error return at [`question-feedback-actions.ts`](<../../../app/(app)/app/shared/question-feedback-actions.ts#L146>) before success rotation at [`question-feedback-actions.ts`](<../../../app/(app)/app/shared/question-feedback-actions.ts#L163>).
+- [`question-flow-actions.ts`](<../../../app/(app)/app/practice/shared/question-flow-actions.ts#L237>) submits answers with the current submit idempotency key; non-ok results return at [`question-flow-actions.ts`](<../../../app/(app)/app/practice/shared/question-flow-actions.ts#L297>) without rotating it.
+- [`question-page-logic.ts`](<../../../app/(app)/app/questions/[slug]/question-page-logic.ts#L248>) does the same for standalone question submits; non-ok results return at [`question-page-logic.ts`](<../../../app/(app)/app/questions/[slug]/question-page-logic.ts#L283>) without rotating the key.
+- `error` state does not block answer retry: [`practice-page-logic.ts`](<../../../app/(app)/app/practice/practice-page-logic.ts#L41>) and [`question-page-logic.ts`](<../../../app/(app)/app/questions/[slug]/question-page-logic.ts#L101>) only block submit while loading.
+- The current bookmark helper test locks the failure behavior in at [`bookmark-toggle.test.ts`](<../../../app/(app)/app/shared/bookmark-toggle.test.ts#L59>).
 
 Before this fix, the affected controllers ran the rate-limit check inside the idempotent closure (this branch hoists each one before `executeIdempotent`; the line anchors below describe the pre-fix code):
 
-- [`question-controller.ts`](../../src/adapters/controllers/question-controller.ts#L236) performs the answer-submit limiter inside `submitOnce()`, then passes that function to `executeIdempotent` at [`question-controller.ts`](../../src/adapters/controllers/question-controller.ts#L259).
-- [`bookmark-controller.ts`](../../src/adapters/controllers/bookmark-controller.ts#L81) performs the bookmark limiter inside `toggle()`, then passes that function to `executeIdempotent` at [`bookmark-controller.ts`](../../src/adapters/controllers/bookmark-controller.ts#L99).
-- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L131) performs the rating limiter inside the idempotent operation.
-- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L183) performs the report limiter inside the idempotent operation.
-- The configured rate windows are one minute in [`rate-limits.ts`](../../src/adapters/shared/rate-limits.ts#L32), [`rate-limits.ts`](../../src/adapters/shared/rate-limits.ts#L47), [`rate-limits.ts`](../../src/adapters/shared/rate-limits.ts#L52), and [`rate-limits.ts`](../../src/adapters/shared/rate-limits.ts#L57).
+- [`question-controller.ts`](../../../src/adapters/controllers/question-controller.ts#L236) performs the answer-submit limiter inside `submitOnce()`, then passes that function to `executeIdempotent` at [`question-controller.ts`](../../../src/adapters/controllers/question-controller.ts#L259).
+- [`bookmark-controller.ts`](../../../src/adapters/controllers/bookmark-controller.ts#L81) performs the bookmark limiter inside `toggle()`, then passes that function to `executeIdempotent` at [`bookmark-controller.ts`](../../../src/adapters/controllers/bookmark-controller.ts#L99).
+- [`question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L131) performs the rating limiter inside the idempotent operation.
+- [`question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L183) performs the report limiter inside the idempotent operation.
+- The configured rate windows are one minute in [`rate-limits.ts`](../../../src/adapters/shared/rate-limits.ts#L32), [`rate-limits.ts`](../../../src/adapters/shared/rate-limits.ts#L47), [`rate-limits.ts`](../../../src/adapters/shared/rate-limits.ts#L52), and [`rate-limits.ts`](../../../src/adapters/shared/rate-limits.ts#L57).
 
 `withIdempotency` deliberately caches completed errors:
 
-- [`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L11) defaults idempotency TTL to `DAY_MS`.
-- [`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L77) sets `expiresAt` from that TTL.
-- [`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L96) stores thrown errors with `storeError`.
-- [`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L141) rethrows stored errors for repeated keys.
-- [`with-idempotency.test.ts`](../../src/adapters/shared/with-idempotency.test.ts#L270) explicitly verifies a stored `RATE_LIMITED` `ApplicationError` is replayed and the operation executes only once.
+- [`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L11) defaults idempotency TTL to `DAY_MS`.
+- [`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L77) sets `expiresAt` from that TTL.
+- [`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L96) stores thrown errors with `storeError`.
+- [`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L141) rethrows stored errors for repeated keys.
+- [`with-idempotency.test.ts`](../../../src/adapters/shared/with-idempotency.test.ts#L270) explicitly verifies a stored `RATE_LIMITED` `ApplicationError` is replayed and the operation executes only once.
 
 ## Impact
 
