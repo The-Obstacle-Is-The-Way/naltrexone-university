@@ -2,12 +2,14 @@
 import type { ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildHistorySessionsHref } from '@/app/(app)/app/history/history-search-params';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {
   GetPracticeSessionReviewOutput,
   GetSessionHistoryOutput,
 } from '@/src/adapters/controllers/practice-controller';
+import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
 
 const {
   fixtureQuestion1Id,
@@ -690,6 +692,32 @@ describe('HistorySessionsTab', () => {
 
     expect(html).toContain('No completed sessions yet.');
     expect(html).toContain('href="/app/practice"');
+  });
+
+  it('renders an out-of-range empty page state with a back-to-first-page link when total is nonzero', () => {
+    const result: SessionHistoryResult = {
+      ok: true,
+      data: {
+        rows: [],
+        total: 21,
+        limit: 20,
+        offset: 20,
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <HistorySessionsTab result={result} modeFilter="exam" />,
+    );
+    const doc = parseHtml(html);
+    const backToFirstPageLink = findAnchorByHref(
+      doc,
+      buildHistorySessionsHref({ limit: 20, offset: 0, mode: 'exam' }),
+    );
+
+    expect(html).toContain('No more sessions on this page.');
+    expect(html).not.toContain('No completed sessions yet.');
+    expect(backToFirstPageLink).not.toBeNull();
+    expect(backToFirstPageLink?.textContent?.trim()).toBe('Back to first page');
   });
 
   it('renders an error card when result is not ok', () => {
