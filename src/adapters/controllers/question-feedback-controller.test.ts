@@ -184,7 +184,7 @@ describe('question-feedback-controller', () => {
       ]);
     });
 
-    it('returns the cached rating result when idempotencyKey is reused', async () => {
+    it('keeps successful ratings idempotent when idempotencyKey is reused', async () => {
       const deps = createDeps({ rateQuestionOutput: { rating: null } });
       const input = { questionId, rating: null, idempotencyKey } as const;
 
@@ -194,7 +194,37 @@ describe('question-feedback-controller', () => {
       expect(first).toEqual({ ok: true, data: { rating: null } });
       expect(second).toEqual(first);
       expect(deps.rateQuestionUseCase.inputs).toHaveLength(1);
-      expect(deps.rateLimiter.inputs).toHaveLength(1);
+      expect(deps.rateLimiter.inputs).toHaveLength(2);
+    });
+
+    it('does not cache RATE_LIMITED under the idempotency key', async () => {
+      const deps = createDeps({
+        rateLimitResult: [
+          {
+            success: false,
+            limit: 60,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+          {
+            success: true,
+            limit: 60,
+            remaining: 59,
+            retryAfterSeconds: 0,
+          },
+        ],
+      });
+      const input = { questionId, rating: 'helpful', idempotencyKey } as const;
+
+      const first = await rateQuestion(input, deps);
+      expect(first).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      const second = await rateQuestion(input, deps);
+      expect(second).toEqual({ ok: true, data: { rating: 'helpful' } });
+      expect(deps.rateQuestionUseCase.inputs).toHaveLength(1);
     });
 
     it('returns RATE_LIMITED when rating limit denies request', async () => {
@@ -243,6 +273,26 @@ describe('question-feedback-controller', () => {
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Question not found' },
       });
+    });
+
+    it('keeps genuine rate use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        rateQuestionThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Question not found',
+        ),
+      });
+      const input = { questionId, rating: 'helpful', idempotencyKey } as const;
+
+      const first = await rateQuestion(input, deps);
+      const second = await rateQuestion(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Question not found' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.rateQuestionUseCase.inputs).toHaveLength(1);
     });
 
     it('returns ok when deps are loaded from the container', async () => {
@@ -364,7 +414,7 @@ describe('question-feedback-controller', () => {
       ]);
     });
 
-    it('returns the cached report result when idempotencyKey is reused', async () => {
+    it('keeps successful reports idempotent when idempotencyKey is reused', async () => {
       const deps = createDeps({
         submitQuestionReportOutput: { feedbackId },
       });
@@ -381,7 +431,42 @@ describe('question-feedback-controller', () => {
       expect(first).toEqual({ ok: true, data: { feedbackId } });
       expect(second).toEqual(first);
       expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
-      expect(deps.rateLimiter.inputs).toHaveLength(1);
+      expect(deps.rateLimiter.inputs).toHaveLength(2);
+    });
+
+    it('does not cache RATE_LIMITED under the idempotency key', async () => {
+      const deps = createDeps({
+        rateLimitResult: [
+          {
+            success: false,
+            limit: 10,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+          {
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          },
+        ],
+      });
+      const input = {
+        questionId,
+        category: 'other',
+        comment: 'Looks stale.',
+        idempotencyKey,
+      } as const;
+
+      const first = await submitQuestionReport(input, deps);
+      expect(first).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      const second = await submitQuestionReport(input, deps);
+      expect(second).toEqual({ ok: true, data: { feedbackId } });
+      expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
     });
 
     it('returns RATE_LIMITED when report limit denies request', async () => {
@@ -411,6 +496,30 @@ describe('question-feedback-controller', () => {
           windowMs: 60_000,
         },
       ]);
+    });
+
+    it('keeps genuine report use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        submitQuestionReportThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Question not found',
+        ),
+      });
+      const input = {
+        questionId,
+        category: 'other',
+        idempotencyKey,
+      } as const;
+
+      const first = await submitQuestionReport(input, deps);
+      const second = await submitQuestionReport(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Question not found' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
     });
   });
 });

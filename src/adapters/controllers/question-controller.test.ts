@@ -608,7 +608,7 @@ describe('question-controller', () => {
       });
     });
 
-    it('returns the cached result when idempotencyKey is reused', async () => {
+    it('keeps successful submissions idempotent when idempotencyKey is reused', async () => {
       const deps = createDeps();
 
       const input = {
