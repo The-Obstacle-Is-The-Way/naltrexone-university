@@ -232,18 +232,18 @@ export const submitAnswer = createAction({
       timeSpentSeconds,
     } = input;
 
-    async function submitOnce(): Promise<SubmitAnswerOutput> {
-      const rate = await d.rateLimiter.limit({
-        key: `question:submitAnswer:${userId}`,
-        ...SUBMIT_ANSWER_RATE_LIMIT,
-      });
-      if (!rate.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many submissions. Try again in ${rate.retryAfterSeconds}s.`,
-        );
-      }
+    const rate = await d.rateLimiter.limit({
+      key: `question:submitAnswer:${userId}`,
+      ...SUBMIT_ANSWER_RATE_LIMIT,
+    });
+    if (!rate.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many submissions. Try again in ${rate.retryAfterSeconds}s.`,
+      );
+    }
 
+    async function submitOnce(): Promise<SubmitAnswerOutput> {
       return d.submitAnswerUseCase.execute({
         userId,
         questionId,

@@ -180,18 +180,18 @@ export const startPracticeSession = createAction({
     const { mode, count, tagSlugs, difficulties, statuses, idempotencyKey } =
       input;
 
-    async function createNewSession(): Promise<StartPracticeSessionOutput> {
-      const rate = await d.rateLimiter.limit({
-        key: `practice:startPracticeSession:${userId}`,
-        ...START_PRACTICE_SESSION_RATE_LIMIT,
-      });
-      if (!rate.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many session starts. Try again in ${rate.retryAfterSeconds}s.`,
-        );
-      }
+    const rate = await d.rateLimiter.limit({
+      key: `practice:startPracticeSession:${userId}`,
+      ...START_PRACTICE_SESSION_RATE_LIMIT,
+    });
+    if (!rate.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many session starts. Try again in ${rate.retryAfterSeconds}s.`,
+      );
+    }
 
+    async function createNewSession(): Promise<StartPracticeSessionOutput> {
       return d.startPracticeSessionUseCase.execute({
         userId,
         mode,

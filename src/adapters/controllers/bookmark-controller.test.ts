@@ -161,7 +161,7 @@ describe('bookmark-controller', () => {
       ]);
     });
 
-    it('returns the cached bookmark result when idempotencyKey is reused', async () => {
+    it('keeps successful bookmark toggles idempotent when idempotencyKey is reused', async () => {
       const deps = createDeps({ toggleBookmarkOutput: { bookmarked: true } });
       const input = {
         questionId: '11111111-1111-1111-1111-111111111111',
@@ -173,6 +173,39 @@ describe('bookmark-controller', () => {
 
       expect(first).toEqual({ ok: true, data: { bookmarked: true } });
       expect(second).toEqual(first);
+      expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
+    });
+
+    it('does not cache RATE_LIMITED under the idempotency key', async () => {
+      const deps = createDeps({
+        rateLimitResult: [
+          {
+            success: false,
+            limit: 60,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+          {
+            success: true,
+            limit: 60,
+            remaining: 59,
+            retryAfterSeconds: 0,
+          },
+        ],
+      });
+      const input = {
+        questionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '22222222-2222-2222-2222-222222222222',
+      } as const;
+
+      const first = await toggleBookmark(input, deps);
+      expect(first).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      const second = await toggleBookmark(input, deps);
+      expect(second).toEqual({ ok: true, data: { bookmarked: true } });
       expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
     });
 
@@ -222,6 +255,29 @@ describe('bookmark-controller', () => {
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Question not found' },
       });
+    });
+
+    it('keeps genuine use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        toggleBookmarkThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Question not found',
+        ),
+      });
+      const input = {
+        questionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '22222222-2222-2222-2222-222222222222',
+      } as const;
+
+      const first = await toggleBookmark(input, deps);
+      const second = await toggleBookmark(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Question not found' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
     });
 
     it('returns ok when deps are loaded from the container', async () => {

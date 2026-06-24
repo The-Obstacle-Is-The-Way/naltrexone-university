@@ -78,18 +78,18 @@ export const toggleBookmark = createAction({
 
     const { questionId, idempotencyKey } = input;
 
-    async function toggle(): Promise<ToggleBookmarkOutput> {
-      const rate = await d.rateLimiter.limit({
-        key: `bookmark:toggleBookmark:${userId}`,
-        ...BOOKMARK_MUTATION_RATE_LIMIT,
-      });
-      if (!rate.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many bookmark changes. Try again in ${rate.retryAfterSeconds}s.`,
-        );
-      }
+    const rate = await d.rateLimiter.limit({
+      key: `bookmark:toggleBookmark:${userId}`,
+      ...BOOKMARK_MUTATION_RATE_LIMIT,
+    });
+    if (!rate.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many bookmark changes. Try again in ${rate.retryAfterSeconds}s.`,
+      );
+    }
 
+    async function toggle(): Promise<ToggleBookmarkOutput> {
       return d.toggleBookmarkUseCase.execute({
         userId,
         questionId,

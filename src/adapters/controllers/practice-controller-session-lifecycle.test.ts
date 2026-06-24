@@ -103,6 +103,73 @@ describe('practice-controller', () => {
       expect(deps.startPracticeSessionUseCase.inputs).toEqual([]);
     });
 
+    it('does not cache RATE_LIMITED under the idempotency key', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          { success: false, limit: 20, remaining: 0, retryAfterSeconds: 60 },
+          { success: true, limit: 20, remaining: 19, retryAfterSeconds: 0 },
+        ]),
+      });
+      const input = {
+        mode: 'tutor',
+        count: 10,
+        tagSlugs: [],
+        difficulties: [],
+        idempotencyKey: '33333333-3333-3333-3333-333333333333',
+      } as const;
+
+      const first = await startPracticeSession(input, deps);
+      expect(first).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      const second = await startPracticeSession(input, deps);
+      expect(second).toMatchObject({ ok: true });
+      expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);
+    });
+
+    it('keeps successful starts idempotent when idempotencyKey is reused', async () => {
+      const deps = createDeps();
+      const input = {
+        mode: 'tutor',
+        count: 10,
+        tagSlugs: [],
+        difficulties: [],
+        idempotencyKey: '33333333-3333-3333-3333-333333333333',
+      } as const;
+
+      const first = await startPracticeSession(input, deps);
+      const second = await startPracticeSession(input, deps);
+
+      expect(first).toMatchObject({ ok: true });
+      expect(second).toEqual(first);
+      expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);
+    });
+
+    it('keeps genuine use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        startThrows: new ApplicationError('NOT_FOUND', 'Question not found'),
+      });
+      const input = {
+        mode: 'tutor',
+        count: 10,
+        tagSlugs: [],
+        difficulties: [],
+        idempotencyKey: '33333333-3333-3333-3333-333333333333',
+      } as const;
+
+      const first = await startPracticeSession(input, deps);
+      const second = await startPracticeSession(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Question not found' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);
+    });
+
     it('returns sessionId when use case succeeds', async () => {
       const deps = createDeps({
         startOutput: {

@@ -128,18 +128,18 @@ export const rateQuestion = createAction({
     const userId = await requireEntitledUserId(d, meta);
     const { idempotencyKey } = input;
 
-    async function rate(): Promise<RateQuestionOutput> {
-      const rateLimit = await d.rateLimiter.limit({
-        key: `question-feedback:rateQuestion:${userId}`,
-        ...QUESTION_RATING_RATE_LIMIT,
-      });
-      if (!rateLimit.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many question ratings. Try again in ${rateLimit.retryAfterSeconds}s.`,
-        );
-      }
+    const rateLimit = await d.rateLimiter.limit({
+      key: `question-feedback:rateQuestion:${userId}`,
+      ...QUESTION_RATING_RATE_LIMIT,
+    });
+    if (!rateLimit.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many question ratings. Try again in ${rateLimit.retryAfterSeconds}s.`,
+      );
+    }
 
+    async function rate(): Promise<RateQuestionOutput> {
       return d.rateQuestionUseCase.execute({
         userId,
         questionId: input.questionId,
@@ -180,18 +180,18 @@ export const submitQuestionReport = createAction({
     const userId = await requireEntitledUserId(d, meta);
     const { idempotencyKey } = input;
 
-    async function submit(): Promise<SubmitQuestionReportOutput> {
-      const rateLimit = await d.rateLimiter.limit({
-        key: `question-feedback:submitQuestionReport:${userId}`,
-        ...QUESTION_REPORT_RATE_LIMIT,
-      });
-      if (!rateLimit.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many question reports. Try again in ${rateLimit.retryAfterSeconds}s.`,
-        );
-      }
+    const rateLimit = await d.rateLimiter.limit({
+      key: `question-feedback:submitQuestionReport:${userId}`,
+      ...QUESTION_REPORT_RATE_LIMIT,
+    });
+    if (!rateLimit.success) {
+      throw new ApplicationError(
+        'RATE_LIMITED',
+        `Too many question reports. Try again in ${rateLimit.retryAfterSeconds}s.`,
+      );
+    }
 
+    async function submit(): Promise<SubmitQuestionReportOutput> {
       return d.submitQuestionReportUseCase.execute({
         userId,
         questionId: input.questionId,
