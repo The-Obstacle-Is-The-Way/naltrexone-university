@@ -47,7 +47,7 @@ The in-place clients retain an idempotency key until success:
 - `error` state does not block answer retry: [`practice-page-logic.ts`](<../../app/(app)/app/practice/practice-page-logic.ts#L41>) and [`question-page-logic.ts`](<../../app/(app)/app/questions/[slug]/question-page-logic.ts#L101>) only block submit while loading.
 - The current bookmark helper test locks the failure behavior in at [`bookmark-toggle.test.ts`](<../../app/(app)/app/shared/bookmark-toggle.test.ts#L59>).
 
-The affected controllers place rate limiting inside the idempotent closure:
+Before this fix, the affected controllers ran the rate-limit check inside the idempotent closure (this branch hoists each one before `executeIdempotent`; the line anchors below describe the pre-fix code):
 
 - [`question-controller.ts`](../../src/adapters/controllers/question-controller.ts#L236) performs the answer-submit limiter inside `submitOnce()`, then passes that function to `executeIdempotent` at [`question-controller.ts`](../../src/adapters/controllers/question-controller.ts#L259).
 - [`bookmark-controller.ts`](../../src/adapters/controllers/bookmark-controller.ts#L81) performs the bookmark limiter inside `toggle()`, then passes that function to `executeIdempotent` at [`bookmark-controller.ts`](../../src/adapters/controllers/bookmark-controller.ts#L99).
