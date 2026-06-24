@@ -85,6 +85,10 @@ Rejected alternatives:
 - Teach `withIdempotency` not to cache `RATE_LIMITED` globally: broader semantic change that affects all idempotent actions, including surfaces where cached application errors may be intentional.
 - Shorten idempotency TTL: weakens legitimate replay protection and still leaves the retry stuck for whatever shorter TTL is chosen.
 
+## Related hardening (defense-in-depth)
+
+`startPracticeSession` (`practice-controller.ts`) has the same limiter-inside-`executeIdempotent` shape, but it is **not** a reachable instance of this bug: its client rotates the idempotency key on failure (`practice-page-session-start.ts` rotates on both the thrown-error and non-ok paths), so an honest retry never reuses the key that cached the `RATE_LIMITED` error. It is hoisted alongside the four reachable surfaces purely for consistency — making "rate-limit before idempotency" uniform across every idempotent server action and removing the latent footgun should that client ever stop rotating. `discardPracticeSession` already follows the safe ordering and is unchanged.
+
 ## Failing Test Sketch
 
 ```ts
