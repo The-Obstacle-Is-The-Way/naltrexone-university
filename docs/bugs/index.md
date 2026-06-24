@@ -13,7 +13,59 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-259
+**Next Bug ID:** BUG-262
+
+**Latest manual report (2026-06-23) — Practice corners and adjacent-system follow-up sweep:**
+
+**Methodology:**
+- Read prior art first: `docs/bugs/index.md`, archived BUG-251..258, and the known non-refile registry for active-exam visibility, BUG-137 renewal boundaries, BUG-253, BUG-250, BUG-257 out-of-band publication-state cases, and prior Stripe/billing Audit #21.
+- Split the sweep across practice stats/history/tags/quick-start/resume, bookmarks/feedback/export/notifications, Clerk/entitlement/cron/idempotency/rate limiting, and performance/concurrency/observability.
+- For each candidate, traced a real entry point through controller/schema/use case/repository or UI sink with current file:line anchors, then ran an independent skeptic pass that tried to refute reachability, harm, and prior-art uniqueness.
+- Filed only candidates that survived with concrete user/operator harm. All survivors are P4 because each is narrow, recoverable, or metadata-hardening rather than score/security/data-loss.
+
+**3 new bugs filed (BUG-259..261):**
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| [BUG-259](bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md) | Idempotency / rate limiting / bookmarks / feedback | P4 | In-place bookmark/rating/report rate-limit errors are cached under the reused idempotency key, so retry can stay stuck after the limiter window resets |
+| [BUG-260](bug-260-question-feedback-trusts-client-context-ids.md) | Question feedback / analytics metadata | P4 | Rating/report actions persist client-supplied attempt/session context IDs without ownership or question/session validation |
+| [BUG-261](bug-261-history-sessions-out-of-range-offset-shows-empty-state.md) | History / session pagination UI | P4 | Out-of-range session-history pages with `total > 0` render the true-empty "No completed sessions yet" state |
+
+**Coverage ledger:**
+
+| Surface | Result |
+|---------|--------|
+| Dashboard/stats aggregates and streaks | Clean: shared active-exam visibility predicates still apply to counts, recent activity, and answered-at inputs; no divide-by-zero or denominator drift survived tests/source review |
+| Session history projections | Found BUG-261 in the sessions-tab UI sink; repository count/page shape and summary math were otherwise clean |
+| Attempted-question history/filtering | Clean: list and count paths apply the same filters; questions tab already handles out-of-range pages with recovery |
+| Question feedback/rating/export | Found BUG-260 context-integrity gap; BUG-250 CSV formula injection remains fixed, default export redacts user IDs and omits comments unless explicitly requested |
+| Bookmarks in practice/review | Found BUG-259 through the in-place idempotency/rate-limit interaction; user scoping and stale-load guards otherwise held |
+| Tag/taxonomy selection and quick practice | Clean: visible tag-kind filtering, candidate sorting/shuffling, status pools, and empty-result handling matched tests and ordering policy |
+| Tutor mode and session start/resume | Clean: immediate grading, retry semantics, incomplete-session conflict, quick-start idempotency/stale-response guards, and expired-exam summary recovery held |
+| Clerk lifecycle/webhooks | Clean: `verifyWebhook(req)` is live, event claim/locks/tombstones/pending Stripe cancellation drain cover replay/deletion races |
+| Entitlement/access gating | Clean by current product rule: app layout and every app-data server action require `requireEntitledUserId`; no bypass found |
+| Cron/reconciliation | Clean: Vercel cron exists, auth runs before config/rate/work, all-pages job reports early stop; DEBT-422 covers resume/keyset concerns |
+| Stripe replay and billing idempotency | Clean against prior Audit #21 fixes: subscription-write guard prevents stale terminal overwrites; checkout/open-session idempotency and duplicate-sub cancellation remain covered |
+| Performance/concurrency/observability | Clean: bounded sessions plus set-based fetches avoid counted N+1s; CAS updater and monotonic draft guard held; no answer-key/comment/PII logging sink survived grep and trace |
+
+**Refuted candidates deliberately NOT filed (with why):**
+- **Active exam attempts leaking into stats/history:** refuted by `getActiveExamVisibilityCondition()` usage in aggregate/recent/streak/history queries and prior BUG-187/235/236/237 coverage.
+- **Session accuracy denominator drift:** refuted by shared question-count denominator behavior in summary/history and tests for exam, tutor, and zero-answered sessions.
+- **History question filters/count mismatch:** refuted because page filters flow into both attempted-question list and count SQL.
+- **Diagnosis tags in history filters:** refuted by the visible-kind allowlist for `topic` / `substance` / `treatment` and direct page coverage.
+- **Quick-practice and start-session full candidate-pool fetch:** refuted as intentional ordering-policy behavior, not a counted N+1; current content size is finite and persisted session size is capped at 200.
+- **Review/completed-feedback N+1:** refuted by set-based question/session-attempt fetches before bounded per-row mapping.
+- **Session-state lost update or stale draft overwrite:** refuted by CAS `params_json` compare/retry and repository monotonic cumulative draft guard.
+- **Missing await/unhandled rejection in practice async flows:** refuted by transition wrappers, fire-and-forget catch handlers, and action-result error paths.
+- **Question feedback CSV formula injection or default privacy leak:** refuted by BUG-250 escaping and default export redaction/comment omission.
+- **Feedback report comment logging:** refuted; failure logs include error/question/category but not free-text comments, and tests cover omission.
+- **Clerk webhook dummy-secret bypass, deletion replay, and resurrection races:** refuted by live `verifyWebhook(req)`, event claim/processed checks, locks, tombstones, and drain job.
+- **Practice entitlement bypass:** refuted; protected layout and server actions independently enforce entitlement, and the domain check requires an entitled status plus unexpired period.
+- **Cron auth/config leak or missing schedule:** refuted; `vercel.json` schedules the job and auth precedes rate limiting and work.
+- **Stale Stripe webhook/checkout-success replay overwriting active entitlement:** refuted by the shared subscription-write guard and checkout-success fallback to the protected current row.
+- **Concurrent two-tab checkout duplicate subscriptions:** refuted by deterministic Stripe idempotency keys plus open-session reconciliation.
+- **Reconciliation early-stop without automatic resume:** known DEBT-422 observability/resume policy, not a new bug.
+- **Billing idempotency replay consuming rate limit before cache replay:** prior-art accepted ordering for billing; relevant only as the safe contrast for BUG-259.
 
 **Latest manual report (2026-06-23) — Practice/quiz engine correctness, clock, lifecycle, async, observability, performance sweep:**
 
@@ -223,7 +275,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Active Bugs
 
-_None — all filed bugs are resolved and archived to [`docs/_archive/bugs/`](../_archive/bugs/)._ Next Bug ID: **BUG-259**.
+| Bug | Severity | Component | Summary |
+|-----|----------|-----------|---------|
+| [BUG-259](bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md) | P4 | Bookmarks / feedback / idempotency | In-place bookmark/rating/report rate-limit errors are cached under a reused idempotency key, wedging same-page retry until reload/navigation/key expiry |
+| [BUG-260](bug-260-question-feedback-trusts-client-context-ids.md) | P4 | Question feedback / analytics export | Feedback actions persist client-supplied attempt/session context IDs without ownership, question-match, or session-membership validation |
+| [BUG-261](bug-261-history-sessions-out-of-range-offset-shows-empty-state.md) | P4 | History / session pagination | Out-of-range session-history pages with `total > 0` show the false "No completed sessions yet" state |
+
+Next Bug ID: **BUG-262**.
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 
