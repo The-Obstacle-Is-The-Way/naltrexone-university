@@ -27,7 +27,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Family | Priority | Summary |
 |-----|--------|----------|---------|
-| [BUG-259](bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md) | Idempotency / rate limiting / bookmarks / feedback | P4 | In-place bookmark/rating/report rate-limit errors are cached under the reused idempotency key, so retry can stay stuck after the limiter window resets |
+| [BUG-259](bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md) | Idempotency / rate limiting / answers / bookmarks / feedback | P4 | In-place answer/bookmark/rating/report rate-limit errors are cached under the reused idempotency key, so retry can stay stuck after the limiter window resets |
 | [BUG-260](bug-260-question-feedback-trusts-client-context-ids.md) | Question feedback / analytics metadata | P4 | Rating/report actions persist client-supplied attempt/session context IDs without ownership or question/session validation |
 | [BUG-261](../_archive/bugs/bug-261-history-sessions-out-of-range-offset-shows-empty-state.md) | History / session pagination UI | P4 | Out-of-range session-history pages with `total > 0` render the true-empty "No completed sessions yet" state |
 
@@ -39,9 +39,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 | Session history projections | Found BUG-261 in the sessions-tab UI sink; repository count/page shape and summary math were otherwise clean |
 | Attempted-question history/filtering | Clean: list and count paths apply the same filters; questions tab already handles out-of-range pages with recovery |
 | Question feedback/rating/export | Found BUG-260 context-integrity gap; BUG-250 CSV formula injection remains fixed, default export redacts user IDs and omits comments unless explicitly requested |
-| Bookmarks in practice/review | Found BUG-259 through the in-place idempotency/rate-limit interaction; user scoping and stale-load guards otherwise held |
+| Answer submission and bookmarks in practice/review | Found BUG-259 through the in-place idempotency/rate-limit interaction; user scoping and stale-load guards otherwise held |
 | Tag/taxonomy selection and quick practice | Clean: visible tag-kind filtering, candidate sorting/shuffling, status pools, and empty-result handling matched tests and ordering policy |
-| Tutor mode and session start/resume | Clean: immediate grading, retry semantics, incomplete-session conflict, quick-start idempotency/stale-response guards, and expired-exam summary recovery held |
+| Tutor mode and session start/resume | Found the BUG-259 answer-submit rate-limit/idempotency retry wedge; immediate grading, retry semantics, incomplete-session conflict, quick-start idempotency/stale-response guards, and expired-exam summary recovery otherwise held |
 | Clerk lifecycle/webhooks | Clean: `verifyWebhook(req)` is live, event claim/locks/tombstones/pending Stripe cancellation drain cover replay/deletion races |
 | Entitlement/access gating | Clean by current product rule: app layout and every app-data server action require `requireEntitledUserId`; no bypass found |
 | Cron/reconciliation | Clean: Vercel cron exists, auth runs before config/rate/work, all-pages job reports early stop; DEBT-422 covers resume/keyset concerns |
@@ -280,7 +280,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Severity | Component | Summary |
 |-----|----------|-----------|---------|
-| [BUG-259](bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md) | P4 | Bookmarks / feedback / idempotency | In-place bookmark/rating/report rate-limit errors are cached under a reused idempotency key, wedging same-page retry until reload/navigation/key expiry |
+| [BUG-259](bug-259-in-place-rate-limit-errors-cache-idempotency-retries.md) | P4 | Answers / bookmarks / feedback / idempotency | In-place answer/bookmark/rating/report rate-limit errors are cached under a reused idempotency key, wedging same-page retry until reload/navigation/key expiry |
 | [BUG-260](bug-260-question-feedback-trusts-client-context-ids.md) | P4 | Question feedback / analytics export | Feedback actions persist client-supplied attempt/session context IDs without ownership, question-match, or session-membership validation |
 
 Next Bug ID: **BUG-262**.
