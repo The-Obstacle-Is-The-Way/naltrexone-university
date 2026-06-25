@@ -1,16 +1,28 @@
 # DEBT-424: Rate-Limit Idempotent Server Actions on Cache-Miss Only (replay-before-limit)
 
-**Status:** In Review
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-06-24
+**Resolved:** 2026-06-24
 **Component:** Idempotency / Rate Limiting / Adapter controllers
 **Surfaced by:** CodeRabbit review of the BUG-259 fix (PR #508)
 
 ---
 
+## Resolution
+
+**Shipped and prod-verified 2026-06-24.** Implemented exactly per the Decision below: a `beforeExecute` hook in the shared `withIdempotency` / `executeIdempotent` runs the rate limiter only on a fresh cache-miss claim, so idempotent **replays** return the stored success/error instead of `RATE_LIMITED`. A hook-denied `RATE_LIMITED` is raised without being stored and without leaving a pending row — `claim()` now returns the `claimedAt` token, and `abortClaim` / `storeResult` / `storeError` are fenced to that exact still-pending claim, so a hook abort or a stale execution can never delete or clobber a newer reclaimed row (outcome immutability). All **8** in-scope controllers were moved to the hook (behavior-preserving); same-key waiters that observe an aborted/missing row restart the claim loop instead of surfacing `INTERNAL_ERROR`.
+
+- **Fix PR:** [#512](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/512) — squash `40c33e4b` to `dev`. CodeRabbit reviewed the exact head `7ab0de10` ("No actionable comments were generated in the recent review", 0 unresolved threads); an independent adversarial concurrency review returned CLEAN (claim-token round-trip, abort/completion fencing, fake↔Drizzle parity, no infinite-loop, non-tautological tests).
+- **Promotion:** [#513](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/513) — merge commit `0861f28a` to `main` (byte-identical-tree owner-override; CodeRabbit rate-limited on the promo, promoted tree identical to the CR-approved #512).
+- **Prod-verified:** deploy `dpl_Dz8UjHFSBgZuTc6fXXkJyrrAEsTR` (commit `0861f28a`, `target: production`) READY, `addictionboards.com` 200.
+- **Test coverage:** per in-scope action, a replay with a reused key while rate-limited returns the cached success/error (CodeRabbit's `[success, RATE_LIMITED]` shape, one use-case invocation); a fresh execution is still rate-limited and the `RATE_LIMITED` is not cached; success stays idempotent; genuine use-case errors stay cached. Drizzle↔fake parity is covered against real Postgres in `tests/integration/idempotency-key-repository.integration.test.ts`. Full gate green (typecheck, lint, unit, browser, integration, build, e2e).
+
+---
+
 ## Problem
 
-`executeIdempotent` bridges keyed controller actions into `withIdempotency` ([`execute-idempotent.ts`](../../src/adapters/controllers/shared/execute-idempotent.ts#L37)); its only local short-circuit is the no-key fast path ([`execute-idempotent.ts`](../../src/adapters/controllers/shared/execute-idempotent.ts#L35)). In the keyed path, `withIdempotency` claims a fresh key ([`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L78)), but cache hits return the stored result or rethrow the stored error **without** running the `execute` closure ([`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L141), [`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L145)).
+`executeIdempotent` bridges keyed controller actions into `withIdempotency` ([`execute-idempotent.ts`](../../../src/adapters/controllers/shared/execute-idempotent.ts#L37)); its only local short-circuit is the no-key fast path ([`execute-idempotent.ts`](../../../src/adapters/controllers/shared/execute-idempotent.ts#L35)). In the keyed path, `withIdempotency` claims a fresh key ([`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L78)), but cache hits return the stored result or rethrow the stored error **without** running the `execute` closure ([`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L141), [`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L145)).
 
 Every rate-limited idempotent action runs its limiter **before** `executeIdempotent` (the deliberate ordering from BUG-204, applied to the in-place actions by BUG-259, to avoid caching `RATE_LIMITED` errors). Because the limiter runs on **every** request, an idempotent **replay** — a retry with the same `idempotencyKey` for an operation that already completed — is gated behind the limiter. If the user's quota is exhausted at the moment of the retry, the call returns `RATE_LIMITED` instead of replaying the stored success or stored use-case error.
 
@@ -24,14 +36,14 @@ Every `executeIdempotent` call site was enumerated and classified by rate-limit 
 
 | Action | Limiter (file:line, key constant) | `executeIdempotent` |
 |--------|-----------------------------------|---------------------|
-| `submitAnswer` | [`question-controller.ts:235`](../../src/adapters/controllers/question-controller.ts#L235) · `SUBMIT_ANSWER_RATE_LIMIT` | [L259](../../src/adapters/controllers/question-controller.ts#L259) |
-| `toggleBookmark` | [`bookmark-controller.ts:81`](../../src/adapters/controllers/bookmark-controller.ts#L81) · `BOOKMARK_MUTATION_RATE_LIMIT` | [L99](../../src/adapters/controllers/bookmark-controller.ts#L99) |
-| `rateQuestion` | [`question-feedback-controller.ts:131`](../../src/adapters/controllers/question-feedback-controller.ts#L131) · `QUESTION_RATING_RATE_LIMIT` | [L152](../../src/adapters/controllers/question-feedback-controller.ts#L152) |
-| `submitQuestionReport` | [`question-feedback-controller.ts:183`](../../src/adapters/controllers/question-feedback-controller.ts#L183) · `QUESTION_REPORT_RATE_LIMIT` | [L205](../../src/adapters/controllers/question-feedback-controller.ts#L205) |
-| `startPracticeSession` | [`practice-controller.ts:183`](../../src/adapters/controllers/practice-controller.ts#L183) · `START_PRACTICE_SESSION_RATE_LIMIT` | [L205](../../src/adapters/controllers/practice-controller.ts#L205) |
-| `discardPracticeSession` | [`practice-controller.ts:286`](../../src/adapters/controllers/practice-controller.ts#L286) · `PRACTICE_SESSION_MUTATION_RATE_LIMIT` | [L299](../../src/adapters/controllers/practice-controller.ts#L299) |
-| `createCheckoutSession` | [`billing-controller.ts:111`](../../src/adapters/controllers/billing-controller.ts#L111) · `CHECKOUT_SESSION_RATE_LIMIT` | [L139](../../src/adapters/controllers/billing-controller.ts#L139) |
-| `createPortalSession` | [`billing-controller.ts:157`](../../src/adapters/controllers/billing-controller.ts#L157) · `PORTAL_SESSION_RATE_LIMIT` | [L183](../../src/adapters/controllers/billing-controller.ts#L183) |
+| `submitAnswer` | [`question-controller.ts:235`](../../../src/adapters/controllers/question-controller.ts#L235) · `SUBMIT_ANSWER_RATE_LIMIT` | [L259](../../../src/adapters/controllers/question-controller.ts#L259) |
+| `toggleBookmark` | [`bookmark-controller.ts:81`](../../../src/adapters/controllers/bookmark-controller.ts#L81) · `BOOKMARK_MUTATION_RATE_LIMIT` | [L99](../../../src/adapters/controllers/bookmark-controller.ts#L99) |
+| `rateQuestion` | [`question-feedback-controller.ts:131`](../../../src/adapters/controllers/question-feedback-controller.ts#L131) · `QUESTION_RATING_RATE_LIMIT` | [L152](../../../src/adapters/controllers/question-feedback-controller.ts#L152) |
+| `submitQuestionReport` | [`question-feedback-controller.ts:183`](../../../src/adapters/controllers/question-feedback-controller.ts#L183) · `QUESTION_REPORT_RATE_LIMIT` | [L205](../../../src/adapters/controllers/question-feedback-controller.ts#L205) |
+| `startPracticeSession` | [`practice-controller.ts:183`](../../../src/adapters/controllers/practice-controller.ts#L183) · `START_PRACTICE_SESSION_RATE_LIMIT` | [L205](../../../src/adapters/controllers/practice-controller.ts#L205) |
+| `discardPracticeSession` | [`practice-controller.ts:286`](../../../src/adapters/controllers/practice-controller.ts#L286) · `PRACTICE_SESSION_MUTATION_RATE_LIMIT` | [L299](../../../src/adapters/controllers/practice-controller.ts#L299) |
+| `createCheckoutSession` | [`billing-controller.ts:111`](../../../src/adapters/controllers/billing-controller.ts#L111) · `CHECKOUT_SESSION_RATE_LIMIT` | [L139](../../../src/adapters/controllers/billing-controller.ts#L139) |
+| `createPortalSession` | [`billing-controller.ts:157`](../../../src/adapters/controllers/billing-controller.ts#L157) · `PORTAL_SESSION_RATE_LIMIT` | [L183](../../../src/adapters/controllers/billing-controller.ts#L183) |
 
 > Note: `discardPracticeSession` and billing were already "limiter-before-`executeIdempotent`" before BUG-259 (so they never cached `RATE_LIMITED`), but they still gate replays — so they are in scope for *this* debt. BUG-259 only changed the four in-place actions + `startPracticeSession` from limiter-inside-closure to this ordering; this debt is the next step for all eight.
 
@@ -39,13 +51,13 @@ Every `executeIdempotent` call site was enumerated and classified by rate-limit 
 
 Unchanged by the fix below (no `beforeExecute` hook is passed):
 
-- `endPracticeSession` ([`practice-controller.ts:265`](../../src/adapters/controllers/practice-controller.ts#L265))
-- `finalizeExamAnswers` ([`practice-controller.ts:332`](../../src/adapters/controllers/practice-controller.ts#L332))
-- `setPracticeSessionQuestionMark` ([`practice-controller.ts:411`](../../src/adapters/controllers/practice-controller.ts#L411))
+- `endPracticeSession` ([`practice-controller.ts:265`](../../../src/adapters/controllers/practice-controller.ts#L265))
+- `finalizeExamAnswers` ([`practice-controller.ts:332`](../../../src/adapters/controllers/practice-controller.ts#L332))
+- `setPracticeSessionQuestionMark` ([`practice-controller.ts:411`](../../../src/adapters/controllers/practice-controller.ts#L411))
 
 ### Out of scope — considered and explicitly excluded
 
-- **Webhook route limiters** — the Stripe ([`app/api/stripe/webhook/handler.ts:49`](../../app/api/stripe/webhook/handler.ts#L49)) and Clerk ([`app/api/webhooks/clerk/handler.ts:66`](../../app/api/webhooks/clerk/handler.ts#L66)) routes apply a **per-IP abuse limiter at the route boundary** (before signature verification), and the handlers do event-dedup via a **claim/lock/process/mark repository pattern** (`StripeEventRepository` / `ClerkEventRepository`), not `executeIdempotent`. This is a different concern (endpoint abuse protection vs. user-action replay); folding it into the cache-miss model would change abuse-protection semantics. Excluded; revisit as a separate item only if webhook-retry-during-throttle is ever observed. (Health and cron route limiters are likewise route-level and non-idempotent.)
+- **Webhook route limiters** — the Stripe ([`app/api/stripe/webhook/handler.ts:49`](../../../app/api/stripe/webhook/handler.ts#L49)) and Clerk ([`app/api/webhooks/clerk/handler.ts:66`](../../../app/api/webhooks/clerk/handler.ts#L66)) routes apply a **per-IP abuse limiter at the route boundary** (before signature verification), and the handlers do event-dedup via a **claim/lock/process/mark repository pattern** (`StripeEventRepository` / `ClerkEventRepository`), not `executeIdempotent`. This is a different concern (endpoint abuse protection vs. user-action replay); folding it into the cache-miss model would change abuse-protection semantics. Excluded; revisit as a separate item only if webhook-retry-during-throttle is ever observed. (Health and cron route limiters are likewise route-level and non-idempotent.)
 - **Provider-native idempotency** — the Stripe payment gateway uses deterministic Stripe idempotency keys internally; that is provider-level, not the app's `withIdempotency`. Out of scope.
 - **No LIMITER-INSIDE-CLOSURE remains** — verified: after BUG-259 + its consistency hoist, no idempotent action runs its limiter inside the `execute` closure. (If one reappears, it is a BUG-259 regression, not this debt.)
 
@@ -55,7 +67,7 @@ Move the rate-limit check **inside** the shared idempotency wrapper, gated on a 
 
 Add an optional `beforeExecute` hook to `executeIdempotent` / `withIdempotency` that runs only for the caller that wins the fresh idempotency claim, after cache-hit/in-progress replay has been ruled out and before the mutation closure executes. On a cache-hit the hook is skipped, so the stored result/error replays untouched. A `RATE_LIMITED` thrown by `beforeExecute` is raised to the caller **without being stored** and **without leaving a pending idempotency row**.
 
-The cleanup piece is required by the live `withIdempotency` state machine: `repo.claim(...)` creates an incomplete row before `execute()` runs ([`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L78), [`drizzle-idempotency-key-repository.ts`](../../src/adapters/repositories/drizzle-idempotency-key-repository.ts#L38)). A naive "claim then run hook" would avoid storing `RATE_LIMITED`, but would leave the key pending until zombie recovery. Therefore the implementation must make hook-denied claims explicitly abortable and make pollers tolerate that abort.
+The cleanup piece is required by the live `withIdempotency` state machine: `repo.claim(...)` creates an incomplete row before `execute()` runs ([`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L78), [`drizzle-idempotency-key-repository.ts`](../../../src/adapters/repositories/drizzle-idempotency-key-repository.ts#L38)). A naive "claim then run hook" would avoid storing `RATE_LIMITED`, but would leave the key pending until zombie recovery. Therefore the implementation must make hook-denied claims explicitly abortable and make pollers tolerate that abort.
 
 1. Add `beforeExecute?: () => Promise<void>` to `executeIdempotent` and `withIdempotency`; keep the no-key fast path running `beforeExecute` then `execute`.
 2. Extend `IdempotencyKeyRepository` (fake + Drizzle implementation) so `claim(...)` returns the row's `claimedAt` token on a fresh claim/reclaim and `null` on cache-hit/pending-hit. Add a narrow `abortClaim(userId, action, key, claimedAt)` operation that removes only the still-incomplete row for that exact claim (`claimedAt` matches, `completedAt IS NULL`, and no stored error). Thread the same token through `storeResult(...)` and `storeError(...)`, and require those completion writes to match a still-pending row (`completedAt IS NULL`) so stale executions cannot persist over a newer reclaimed claim and duplicate same-claim writes cannot replace the first cached outcome. In `withIdempotency`, after a successful `claim`, run `beforeExecute` before `execute`; if the hook throws, best-effort abort that exact incomplete claim, log abort failures without masking the original error, and rethrow the original error without calling `storeError`.
