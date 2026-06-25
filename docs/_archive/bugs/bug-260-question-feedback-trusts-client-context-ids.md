@@ -1,10 +1,28 @@
 # BUG-260: Question Feedback Trusts Client-Supplied Attempt and Session Context IDs
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P4
 **Date:** 2026-06-23
 **Confirmed:** 2026-06-23
+**Resolved:** 2026-06-25
 **Component:** Question Feedback / Analytics Export / Data Integrity
+
+---
+
+## Resolution
+
+**Fixed and prod-verified 2026-06-25.** Implemented exactly per the Proposed Fix below: a shared `validateFeedbackContext` application helper, with `AttemptRepository` + `PracticeSessionRepository` injected into `RateQuestionUseCase` and `SubmitQuestionReportUseCase`, validates optional client context before the feedback row is recorded:
+
+- a present `attemptId` must be owned by the caller (`findByIdAndUserId`) and its `questionId` must equal the feedback question;
+- a present `practiceSessionId` must be owned by the caller and its `questionIds` must include the feedback question;
+- when both are present and the attempt is session-scoped, the attempt's `practiceSessionId` must match the supplied session.
+
+Not-found / not-owned context throws `NOT_FOUND`; found-but-mismatched context throws `VALIDATION_ERROR`; null context is still allowed (standalone / best-effort); only validated context IDs are persisted. The controller, schema, repository, and export script were unchanged.
+
+- **TDD:** 11-branch helper test (`validate-feedback-context.test.ts`) + per-use-case reject/valid/null integration tests; red→green verified (neutering the validator failed exactly the 11 guard tests, the 11 valid/null tests stayed green). Full gate green (typecheck, lint, unit 2994, build).
+- **Fix PR:** [#516](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/516) — squash `542eedbc` to `dev`. CodeRabbit reviewed the exact head `3cb21ae2` ("No actionable comments were generated in the recent review", 0 unresolved threads).
+- **Promotion:** [#517](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/517) — merge commit `602997b9` to `main` (byte-identical-tree owner-override; CodeRabbit rate-limited on the promo, `git diff 3cb21ae2 origin/main` empty).
+- **Prod-verified:** deploy `dpl_EFeg1cHqhTvdTU2W5bWq5iuyJDDe` (commit `602997b9`, `target: production`) READY, `addictionboards.com` 200.
 
 ---
 
@@ -33,35 +51,35 @@ Actual: the feedback row persists and exports an unrelated context ID.
 
 The controller boundary only validates UUID shape:
 
-- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L43) accepts `attemptId` and `practiceSessionId` on rating input.
-- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L59) accepts the same context fields on report input.
-- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L128) authenticates/entitles the rating caller, then [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L135) forwards the context IDs (`attemptId` / `practiceSessionId`) unchanged into the use case.
-- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L183) authenticates/entitles the report caller, then [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L190) forwards the context IDs unchanged.
+- [`question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L43) accepts `attemptId` and `practiceSessionId` on rating input.
+- [`question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L59) accepts the same context fields on report input.
+- [`question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L128) authenticates/entitles the rating caller, then [`question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L135) forwards the context IDs (`attemptId` / `practiceSessionId`) unchanged into the use case.
+- [`question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L183) authenticates/entitles the report caller, then [`question-feedback-controller.ts`](../../../src/adapters/controllers/question-feedback-controller.ts#L190) forwards the context IDs unchanged.
 
 The use cases validate the question, but not the context:
 
-- [`rate-question.ts`](../../src/application/use-cases/rate-question.ts#L28) fetches the published question and [`rate-question.ts`](../../src/application/use-cases/rate-question.ts#L33) records the provided `attemptId` / `practiceSessionId`.
-- [`submit-question-report.ts`](../../src/application/use-cases/submit-question-report.ts#L31) fetches the published question and [`submit-question-report.ts`](../../src/application/use-cases/submit-question-report.ts#L36) records the provided context.
+- [`rate-question.ts`](../../../src/application/use-cases/rate-question.ts#L28) fetches the published question and [`rate-question.ts`](../../../src/application/use-cases/rate-question.ts#L33) records the provided `attemptId` / `practiceSessionId`.
+- [`submit-question-report.ts`](../../../src/application/use-cases/submit-question-report.ts#L31) fetches the published question and [`submit-question-report.ts`](../../../src/application/use-cases/submit-question-report.ts#L36) records the provided context.
 
 The repository and database preserve the supplied IDs:
 
-- [`drizzle-question-feedback-repository.ts`](../../src/adapters/repositories/drizzle-question-feedback-repository.ts#L20) inserts feedback rows.
-- [`drizzle-question-feedback-repository.ts`](../../src/adapters/repositories/drizzle-question-feedback-repository.ts#L25) writes `attemptId` from the event.
-- [`drizzle-question-feedback-repository.ts`](../../src/adapters/repositories/drizzle-question-feedback-repository.ts#L26) writes `practiceSessionId` from the event.
-- [`schema.ts`](../../db/schema.ts#L547) constrains feedback `userId`.
-- [`schema.ts`](../../db/schema.ts#L553) and [`schema.ts`](../../db/schema.ts#L556) define independent FKs to attempts and sessions, but no ownership/question/session-membership constraint.
+- [`drizzle-question-feedback-repository.ts`](../../../src/adapters/repositories/drizzle-question-feedback-repository.ts#L20) inserts feedback rows.
+- [`drizzle-question-feedback-repository.ts`](../../../src/adapters/repositories/drizzle-question-feedback-repository.ts#L25) writes `attemptId` from the event.
+- [`drizzle-question-feedback-repository.ts`](../../../src/adapters/repositories/drizzle-question-feedback-repository.ts#L26) writes `practiceSessionId` from the event.
+- [`schema.ts`](../../../db/schema.ts#L547) constrains feedback `userId`.
+- [`schema.ts`](../../../db/schema.ts#L553) and [`schema.ts`](../../../db/schema.ts#L556) define independent FKs to attempts and sessions, but no ownership/question/session-membership constraint.
 
 The exported data makes the stale context operational:
 
-- [`export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L157) reads feedback rows.
-- [`export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L166) selects `attemptId`.
-- [`export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L167) selects `practiceSessionId`.
-- [`export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L217) maps rows to export records, including context at [`export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L225) and [`export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L226).
-- [`export-question-feedback.ts`](../../scripts/export-question-feedback.ts#L246) emits CSV headers including `attempt_id` and `practice_session_id`.
+- [`export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L157) reads feedback rows.
+- [`export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L166) selects `attemptId`.
+- [`export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L167) selects `practiceSessionId`.
+- [`export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L217) maps rows to export records, including context at [`export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L225) and [`export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L226).
+- [`export-question-feedback.ts`](../../../scripts/export-question-feedback.ts#L246) emits CSV headers including `attempt_id` and `practice_session_id`.
 
 The missing validation matters because the spec says the context exists for correctness/mode correlation:
 
-- [`spec-041-question-feedback.md`](../_archive/specs/spec-041-question-feedback.md#L78) says feedback persists best-effort context so analysis can correlate whether the learner got the question right and in which mode.
+- [`spec-041-question-feedback.md`](../specs/spec-041-question-feedback.md#L78) says feedback persists best-effort context so analysis can correlate whether the learner got the question right and in which mode.
 
 ## Impact
 
