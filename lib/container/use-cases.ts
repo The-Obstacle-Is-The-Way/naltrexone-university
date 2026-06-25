@@ -124,11 +124,15 @@ export function createUseCaseFactories(input: {
       new RateQuestionUseCase(
         repositories.createQuestionFeedbackRepository(),
         repositories.createQuestionRepository(),
+        repositories.createAttemptRepository(),
+        repositories.createPracticeSessionRepository(),
       ),
     createSubmitQuestionReportUseCase: () =>
       new SubmitQuestionReportUseCase(
         repositories.createQuestionFeedbackRepository(),
         repositories.createQuestionRepository(),
+        repositories.createAttemptRepository(),
+        repositories.createPracticeSessionRepository(),
       ),
     createGetIncompletePracticeSessionUseCase: () =>
       new GetIncompletePracticeSessionUseCase(
