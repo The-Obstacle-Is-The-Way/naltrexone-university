@@ -25,7 +25,7 @@ export class DrizzleIdempotencyKeyRepository
     key: string;
     expiresAt: Date;
     zombieThresholdMs?: number;
-  }): Promise<boolean> {
+  }): Promise<Date | null> {
     const now = this.now();
     const zombieThresholdMs =
       typeof input.zombieThresholdMs === 'number' &&
@@ -55,9 +55,9 @@ export class DrizzleIdempotencyKeyRepository
           idempotencyKeys.key,
         ],
       })
-      .returning({ key: idempotencyKeys.key });
+      .returning({ claimedAt: idempotencyKeys.claimedAt });
 
-    if (row) return true;
+    if (row) return row.claimedAt;
 
     const [updated] = await this.db
       .update(idempotencyKeys)
@@ -84,9 +84,9 @@ export class DrizzleIdempotencyKeyRepository
           ),
         ),
       )
-      .returning({ key: idempotencyKeys.key });
+      .returning({ claimedAt: idempotencyKeys.claimedAt });
 
-    return !!updated;
+    return updated?.claimedAt ?? null;
   }
 
   async find(
@@ -134,6 +134,7 @@ export class DrizzleIdempotencyKeyRepository
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     resultJson: unknown;
   }): Promise<void> {
     const [updated] = await this.db
@@ -149,6 +150,8 @@ export class DrizzleIdempotencyKeyRepository
           eq(idempotencyKeys.userId, input.userId),
           eq(idempotencyKeys.action, input.action),
           eq(idempotencyKeys.key, input.key),
+          eq(idempotencyKeys.claimedAt, input.claimedAt),
+          isNull(idempotencyKeys.completedAt),
         ),
       )
       .returning({ key: idempotencyKeys.key });
@@ -162,6 +165,7 @@ export class DrizzleIdempotencyKeyRepository
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     error: { code: ApplicationErrorCode; message: string };
   }): Promise<void> {
     const [updated] = await this.db
@@ -177,6 +181,8 @@ export class DrizzleIdempotencyKeyRepository
           eq(idempotencyKeys.userId, input.userId),
           eq(idempotencyKeys.action, input.action),
           eq(idempotencyKeys.key, input.key),
+          eq(idempotencyKeys.claimedAt, input.claimedAt),
+          isNull(idempotencyKeys.completedAt),
         ),
       )
       .returning({ key: idempotencyKeys.key });
@@ -184,6 +190,26 @@ export class DrizzleIdempotencyKeyRepository
     if (!updated) {
       throw new ApplicationError('NOT_FOUND', 'Idempotency key not found');
     }
+  }
+
+  async abortClaim(
+    userId: string,
+    action: string,
+    key: string,
+    claimedAt: Date,
+  ): Promise<void> {
+    await this.db
+      .delete(idempotencyKeys)
+      .where(
+        and(
+          eq(idempotencyKeys.userId, userId),
+          eq(idempotencyKeys.action, action),
+          eq(idempotencyKeys.key, key),
+          eq(idempotencyKeys.claimedAt, claimedAt),
+          isNull(idempotencyKeys.completedAt),
+          isNull(idempotencyKeys.errorCode),
+        ),
+      );
   }
 
   async pruneExpiredBefore(cutoff: Date, limit: number): Promise<number> {

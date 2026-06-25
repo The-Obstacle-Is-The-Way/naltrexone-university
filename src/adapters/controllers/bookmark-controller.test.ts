@@ -176,6 +176,38 @@ describe('bookmark-controller', () => {
       expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
     });
 
+    it('replays a cached bookmark toggle while the reused key is rate limited', async () => {
+      const deps = createDeps({
+        toggleBookmarkOutput: { bookmarked: true },
+        rateLimitResult: [
+          {
+            success: true,
+            limit: 60,
+            remaining: 59,
+            retryAfterSeconds: 0,
+          },
+          {
+            success: false,
+            limit: 60,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+        ],
+      });
+      const input = {
+        questionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '22222222-2222-2222-2222-222222222222',
+      } as const;
+
+      const first = await toggleBookmark(input, deps);
+      const second = await toggleBookmark(input, deps);
+
+      expect(first).toEqual({ ok: true, data: { bookmarked: true } });
+      expect(second).toEqual(first);
+      expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
+      expect(deps.rateLimiter.inputs).toHaveLength(1);
+    });
+
     it('does not cache RATE_LIMITED under the idempotency key', async () => {
       const deps = createDeps({
         rateLimitResult: [
@@ -259,6 +291,20 @@ describe('bookmark-controller', () => {
 
     it('keeps genuine use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
       const deps = createDeps({
+        rateLimitResult: [
+          {
+            success: true,
+            limit: 60,
+            remaining: 59,
+            retryAfterSeconds: 0,
+          },
+          {
+            success: false,
+            limit: 60,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+        ],
         toggleBookmarkThrows: new ApplicationError(
           'NOT_FOUND',
           'Question not found',
@@ -278,6 +324,7 @@ describe('bookmark-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
+      expect(deps.rateLimiter.inputs).toHaveLength(1);
     });
 
     it('returns ok when deps are loaded from the container', async () => {

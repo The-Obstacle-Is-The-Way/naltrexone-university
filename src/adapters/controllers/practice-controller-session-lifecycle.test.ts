@@ -147,8 +147,36 @@ describe('practice-controller', () => {
       expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);
     });
 
+    it('replays a cached start while the reused key is rate limited', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          { success: true, limit: 20, remaining: 19, retryAfterSeconds: 0 },
+          { success: false, limit: 20, remaining: 0, retryAfterSeconds: 60 },
+        ]),
+      });
+      const input = {
+        mode: 'tutor',
+        count: 10,
+        tagSlugs: [],
+        difficulties: [],
+        idempotencyKey: '33333333-3333-3333-3333-333333333333',
+      } as const;
+
+      const first = await startPracticeSession(input, deps);
+      const second = await startPracticeSession(input, deps);
+
+      expect(first).toMatchObject({ ok: true });
+      expect(second).toEqual(first);
+      expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
+    });
+
     it('keeps genuine use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
       const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          { success: true, limit: 20, remaining: 19, retryAfterSeconds: 0 },
+          { success: false, limit: 20, remaining: 0, retryAfterSeconds: 60 },
+        ]),
         startThrows: new ApplicationError('NOT_FOUND', 'Question not found'),
       });
       const input = {
@@ -168,6 +196,7 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.startPracticeSessionUseCase.inputs).toHaveLength(1);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
     });
 
     it('returns sessionId when use case succeeds', async () => {
@@ -535,6 +564,75 @@ describe('practice-controller', () => {
       expect(first).toEqual({ ok: true, data: { discarded: true } });
       expect(second).toEqual(first);
       expect(deps.discardPracticeSessionUseCase.inputs).toHaveLength(1);
+    });
+
+    it('does not cache RATE_LIMITED under the discard idempotency key', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          { success: false, limit: 20, remaining: 0, retryAfterSeconds: 60 },
+          { success: true, limit: 20, remaining: 19, retryAfterSeconds: 0 },
+        ]),
+      });
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await discardPracticeSession(input, deps);
+      expect(first).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      const second = await discardPracticeSession(input, deps);
+      expect(second).toEqual({ ok: true, data: { discarded: true } });
+      expect(deps.discardPracticeSessionUseCase.inputs).toHaveLength(1);
+    });
+
+    it('replays a cached discard while the reused key is rate limited', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          { success: true, limit: 20, remaining: 19, retryAfterSeconds: 0 },
+          { success: false, limit: 20, remaining: 0, retryAfterSeconds: 60 },
+        ]),
+      });
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await discardPracticeSession(input, deps);
+      const second = await discardPracticeSession(input, deps);
+
+      expect(first).toEqual({ ok: true, data: { discarded: true } });
+      expect(second).toEqual(first);
+      expect(deps.discardPracticeSessionUseCase.inputs).toHaveLength(1);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
+    });
+
+    it('keeps genuine discard use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          { success: true, limit: 20, remaining: 19, retryAfterSeconds: 0 },
+          { success: false, limit: 20, remaining: 0, retryAfterSeconds: 60 },
+        ]),
+        discardThrows: new ApplicationError('NOT_FOUND', 'Session not found'),
+      });
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await discardPracticeSession(input, deps);
+      const second = await discardPracticeSession(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Session not found' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.discardPracticeSessionUseCase.inputs).toHaveLength(1);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
     });
   });
 

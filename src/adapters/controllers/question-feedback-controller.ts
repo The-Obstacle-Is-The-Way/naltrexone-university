@@ -128,17 +128,6 @@ export const rateQuestion = createAction({
     const userId = await requireEntitledUserId(d, meta);
     const { idempotencyKey } = input;
 
-    const rateLimit = await d.rateLimiter.limit({
-      key: `question-feedback:rateQuestion:${userId}`,
-      ...QUESTION_RATING_RATE_LIMIT,
-    });
-    if (!rateLimit.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many question ratings. Try again in ${rateLimit.retryAfterSeconds}s.`,
-      );
-    }
-
     async function rate(): Promise<RateQuestionOutput> {
       return d.rateQuestionUseCase.execute({
         userId,
@@ -149,12 +138,26 @@ export const rateQuestion = createAction({
       });
     }
 
+    async function enforceRatingRateLimit(): Promise<void> {
+      const rateLimit = await d.rateLimiter.limit({
+        key: `question-feedback:rateQuestion:${userId}`,
+        ...QUESTION_RATING_RATE_LIMIT,
+      });
+      if (!rateLimit.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many question ratings. Try again in ${rateLimit.retryAfterSeconds}s.`,
+        );
+      }
+    }
+
     return executeIdempotent({
       d,
       userId,
       action: 'question-feedback:rateQuestion',
       idempotencyKey,
       outputSchema: RateQuestionOutputSchema,
+      beforeExecute: enforceRatingRateLimit,
       execute: rate,
     });
   },
@@ -180,17 +183,6 @@ export const submitQuestionReport = createAction({
     const userId = await requireEntitledUserId(d, meta);
     const { idempotencyKey } = input;
 
-    const rateLimit = await d.rateLimiter.limit({
-      key: `question-feedback:submitQuestionReport:${userId}`,
-      ...QUESTION_REPORT_RATE_LIMIT,
-    });
-    if (!rateLimit.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many question reports. Try again in ${rateLimit.retryAfterSeconds}s.`,
-      );
-    }
-
     async function submit(): Promise<SubmitQuestionReportOutput> {
       return d.submitQuestionReportUseCase.execute({
         userId,
@@ -202,12 +194,26 @@ export const submitQuestionReport = createAction({
       });
     }
 
+    async function enforceReportRateLimit(): Promise<void> {
+      const rateLimit = await d.rateLimiter.limit({
+        key: `question-feedback:submitQuestionReport:${userId}`,
+        ...QUESTION_REPORT_RATE_LIMIT,
+      });
+      if (!rateLimit.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many question reports. Try again in ${rateLimit.retryAfterSeconds}s.`,
+        );
+      }
+    }
+
     return executeIdempotent({
       d,
       userId,
       action: 'question-feedback:submitQuestionReport',
       idempotencyKey,
       outputSchema: SubmitQuestionReportOutputSchema,
+      beforeExecute: enforceReportRateLimit,
       execute: submit,
     });
   },

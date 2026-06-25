@@ -108,17 +108,6 @@ export const createCheckoutSession = createAction({
     const user = await d.authGateway.requireUser();
     const { plan, idempotencyKey } = input;
 
-    const checkoutRateLimit = await d.rateLimiter.limit({
-      key: `billing:createCheckoutSession:${user.id}`,
-      ...CHECKOUT_SESSION_RATE_LIMIT,
-    });
-    if (!checkoutRateLimit.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many checkout attempts. Try again in ${checkoutRateLimit.retryAfterSeconds}s.`,
-      );
-    }
-
     async function createNewSession(): Promise<CreateCheckoutSessionOutput> {
       const checkoutSessionInput = {
         userId: user.id,
@@ -136,12 +125,26 @@ export const createCheckoutSession = createAction({
       );
     }
 
+    async function enforceCheckoutRateLimit(): Promise<void> {
+      const checkoutRateLimit = await d.rateLimiter.limit({
+        key: `billing:createCheckoutSession:${user.id}`,
+        ...CHECKOUT_SESSION_RATE_LIMIT,
+      });
+      if (!checkoutRateLimit.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many checkout attempts. Try again in ${checkoutRateLimit.retryAfterSeconds}s.`,
+        );
+      }
+    }
+
     return executeIdempotent({
       d,
       userId: user.id,
       action: 'billing:createCheckoutSession',
       idempotencyKey,
       outputSchema: CreateCheckoutSessionOutputSchema,
+      beforeExecute: enforceCheckoutRateLimit,
       execute: createNewSession,
     });
   },
@@ -153,17 +156,6 @@ export const createPortalSession = createAction({
   execute: async (input, d) => {
     const user = await d.authGateway.requireUser();
     const { idempotencyKey } = input;
-
-    const portalRateLimit = await d.rateLimiter.limit({
-      key: `billing:createPortalSession:${user.id}`,
-      ...PORTAL_SESSION_RATE_LIMIT,
-    });
-    if (!portalRateLimit.success) {
-      throw new ApplicationError(
-        'RATE_LIMITED',
-        `Too many billing portal attempts. Try again in ${portalRateLimit.retryAfterSeconds}s.`,
-      );
-    }
 
     async function createNewSession(): Promise<CreatePortalSessionOutput> {
       const portalSessionInput = {
@@ -180,12 +172,26 @@ export const createPortalSession = createAction({
       return CreatePortalSessionOutputSchema.parse(result);
     }
 
+    async function enforcePortalRateLimit(): Promise<void> {
+      const portalRateLimit = await d.rateLimiter.limit({
+        key: `billing:createPortalSession:${user.id}`,
+        ...PORTAL_SESSION_RATE_LIMIT,
+      });
+      if (!portalRateLimit.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many billing portal attempts. Try again in ${portalRateLimit.retryAfterSeconds}s.`,
+        );
+      }
+    }
+
     return executeIdempotent({
       d,
       userId: user.id,
       action: 'billing:createPortalSession',
       idempotencyKey,
       outputSchema: CreatePortalSessionOutputSchema,
+      beforeExecute: enforcePortalRateLimit,
       execute: createNewSession,
     });
   },
