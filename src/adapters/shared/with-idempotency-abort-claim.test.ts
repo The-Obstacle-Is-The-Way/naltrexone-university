@@ -7,6 +7,78 @@ import {
 import { withIdempotency } from './with-idempotency';
 
 describe('withIdempotency abortClaim race safety', () => {
+  it('stores non-Error failures as INTERNAL_ERROR records for replay', async () => {
+    const appUserId = crypto.randomUUID();
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '11111111-1111-1111-1111-111111111118';
+    const execute = vi.fn(async () => {
+      throw 'plain failure';
+    });
+    const input = {
+      repo,
+      userId: appUserId,
+      action: 'billing:createCheckoutSession',
+      key,
+      now,
+      logger,
+      execute,
+    } as const;
+
+    await expect(withIdempotency(input)).rejects.toBe('plain failure');
+    await expect(withIdempotency(input)).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'plain failure',
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs abort failures without masking the original beforeExecute error', async () => {
+    class AbortFailingRepo extends FakeIdempotencyKeyRepository {
+      override async abortClaim(): Promise<void> {
+        throw new Error('abort failed');
+      }
+    }
+
+    const appUserId = crypto.randomUUID();
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new AbortFailingRepo(now);
+    const logger = new FakeLogger();
+    const key = '11111111-1111-1111-1111-111111111119';
+    const rateLimitError = new ApplicationError(
+      'RATE_LIMITED',
+      'Too many requests',
+    );
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'billing:createCheckoutSession',
+        key,
+        now,
+        logger,
+        beforeExecute: async () => {
+          throw rateLimitError;
+        },
+        execute: async () => ({ ok: true }),
+      }),
+    ).rejects.toBe(rateLimitError);
+
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      msg: 'Failed to abort idempotency claim after beforeExecute failure',
+      context: {
+        userId: appUserId,
+        action: 'billing:createCheckoutSession',
+        key,
+        abortError: 'abort failed',
+        originalError: 'Too many requests',
+      },
+    });
+  });
+
   it('skips beforeExecute for cached error replays', async () => {
     const appUserId = crypto.randomUUID();
     const now = () => new Date('2026-02-07T00:00:00.000Z');
