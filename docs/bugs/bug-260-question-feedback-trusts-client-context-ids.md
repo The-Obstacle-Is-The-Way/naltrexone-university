@@ -35,8 +35,8 @@ The controller boundary only validates UUID shape:
 
 - [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L43) accepts `attemptId` and `practiceSessionId` on rating input.
 - [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L59) accepts the same context fields on report input.
-- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L128) authenticates/entitles the rating caller, then [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L143) forwards the context IDs.
-- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L180) authenticates/entitles the report caller, then [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L195) forwards the context IDs.
+- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L128) authenticates/entitles the rating caller, then [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L135) forwards the context IDs (`attemptId` / `practiceSessionId`) unchanged into the use case.
+- [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L183) authenticates/entitles the report caller, then [`question-feedback-controller.ts`](../../src/adapters/controllers/question-feedback-controller.ts#L190) forwards the context IDs unchanged.
 
 The use cases validate the question, but not the context:
 
