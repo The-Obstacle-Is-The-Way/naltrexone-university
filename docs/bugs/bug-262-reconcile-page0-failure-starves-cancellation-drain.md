@@ -49,7 +49,7 @@ A transient first-page reconcile failure skips the deleted-account cancellation 
 Decouple the two maintenance tasks so a reconcile failure cannot short-circuit the independent drain. Run `drainPendingStripeCancellations` in its **own** `try`/`catch`, after (and independent of) the reconcile result:
 
 1. Wrap the reconcile call in its own `try`/`catch`; on failure, log + record a degraded reconcile outcome instead of throwing out of the handler.
-2. Always run `drainPendingStripeCancellations` afterward in its own `try`/`catch`.
+2. Always run `drainPendingStripeCancellations` afterward in its own `try`/`catch`. Because the drain converts per-row cancellation errors into a `failed` count instead of throwing, treat the drain as failed when it either throws **or** returns `failed > 0` (a partial drain failure means a deleted-account subscription was not cancelled). Reconcile's per-row `failed` count is left as-is (routine eventual-consistency, retried next run), so only a thrown reconcile error marks reconcile failed.
 3. Aggregate both outcomes into the response body; return a partial/degraded status (and the appropriate HTTP code) reflecting which task(s) failed, rather than letting a reconcile throw skip the drain and return a bare 500.
 4. Keep both tasks idempotent/resumable as they already are.
 

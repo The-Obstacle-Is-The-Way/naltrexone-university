@@ -275,6 +275,10 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
         logger: container.logger,
       },
     );
+    // The drain converts per-row cancellation errors into a `failed` count
+    // rather than throwing, so a partial drain failure (a deleted-account
+    // subscription that did NOT get cancelled) must still mark the run failed.
+    drainFailed = pendingStripeCancellations.failed > 0;
   } catch (error) {
     drainFailed = true;
     container.logger.error(
