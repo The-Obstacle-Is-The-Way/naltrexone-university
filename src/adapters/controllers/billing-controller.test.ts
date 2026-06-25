@@ -190,6 +190,77 @@ describe('billing-controller', () => {
       expect(deps._calls.clerkCalls).toHaveLength(1);
     });
 
+    it('does not cache RATE_LIMITED under the checkout idempotency key', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          {
+            success: false,
+            limit: 10,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+          {
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          },
+        ]),
+      });
+      const input = {
+        plan: 'monthly',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createCheckoutSession(input, deps);
+      expect(first).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      const second = await createCheckoutSession(input, deps);
+      expect(second).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/checkout' },
+      });
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
+    });
+
+    it('replays a cached checkout session while the reused key is rate limited', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          {
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          },
+          {
+            success: false,
+            limit: 10,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+        ]),
+      });
+      const input = {
+        plan: 'monthly',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createCheckoutSession(input, deps);
+      const second = await createCheckoutSession(input, deps);
+
+      expect(first).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/checkout' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
+      expect(deps._calls.clerkCalls).toHaveLength(1);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
+    });
+
     it('returns the cached checkout session when same-form double submit races with the same idempotencyKey', async () => {
       const deps = createDeps();
 
@@ -228,6 +299,44 @@ describe('billing-controller', () => {
         ok: false,
         error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
       });
+    });
+
+    it('keeps genuine checkout use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          {
+            success: true,
+            limit: 10,
+            remaining: 9,
+            retryAfterSeconds: 0,
+          },
+          {
+            success: false,
+            limit: 10,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+        ]),
+        checkoutThrows: new ApplicationError(
+          'ALREADY_SUBSCRIBED',
+          'Already subscribed',
+        ),
+      });
+      const input = {
+        plan: 'monthly',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createCheckoutSession(input, deps);
+      const second = await createCheckoutSession(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
     });
   });
 
@@ -339,6 +448,39 @@ describe('billing-controller', () => {
       ]);
     });
 
+    it('replays a cached portal session while the reused key is rate limited', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          {
+            success: true,
+            limit: 20,
+            remaining: 19,
+            retryAfterSeconds: 0,
+          },
+          {
+            success: false,
+            limit: 20,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+        ]),
+      });
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createPortalSession(input, deps);
+      const second = await createPortalSession(input, deps);
+
+      expect(first).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/portal' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
+    });
+
     it('does not cache RATE_LIMITED under the idempotency key', async () => {
       const rateLimiter = new FakeRateLimiter([
         {
@@ -388,6 +530,43 @@ describe('billing-controller', () => {
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Stripe customer not found' },
       });
+    });
+
+    it('keeps genuine portal use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter([
+          {
+            success: true,
+            limit: 20,
+            remaining: 19,
+            retryAfterSeconds: 0,
+          },
+          {
+            success: false,
+            limit: 20,
+            remaining: 0,
+            retryAfterSeconds: 60,
+          },
+        ]),
+        portalThrows: new ApplicationError(
+          'NOT_FOUND',
+          'Stripe customer not found',
+        ),
+      });
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createPortalSession(input, deps);
+      const second = await createPortalSession(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Stripe customer not found' },
+      });
+      expect(second).toEqual(first);
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
     });
   });
 });

@@ -114,8 +114,53 @@ describe('question-controller submitAnswer idempotency', () => {
     expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
   });
 
+  it('replays a cached submission while the reused key is rate limited', async () => {
+    const deps = createDeps({
+      rateLimiter: new FakeRateLimiter([
+        {
+          success: true,
+          limit: 120,
+          remaining: 119,
+          retryAfterSeconds: 0,
+        },
+        {
+          success: false,
+          limit: 120,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        },
+      ]),
+    });
+    const input = { questionId, choiceId, idempotencyKey } as const;
+
+    const first = await submitAnswer(input, deps);
+    const second = await submitAnswer(input, deps);
+
+    expect(first).toMatchObject({
+      ok: true,
+      data: { attemptId: '44444444-4444-4444-4444-444444444444' },
+    });
+    expect(second).toEqual(first);
+    expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
+    expect(deps.rateLimiter.inputs).toHaveLength(1);
+  });
+
   it('keeps genuine use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
     const deps = createDeps({
+      rateLimiter: new FakeRateLimiter([
+        {
+          success: true,
+          limit: 120,
+          remaining: 119,
+          retryAfterSeconds: 0,
+        },
+        {
+          success: false,
+          limit: 120,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        },
+      ]),
       submitAnswerThrows: new ApplicationError(
         'NOT_FOUND',
         'Question not found',
@@ -132,5 +177,6 @@ describe('question-controller submitAnswer idempotency', () => {
     });
     expect(second).toEqual(first);
     expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
+    expect(deps.rateLimiter.inputs).toHaveLength(1);
   });
 });

@@ -19,8 +19,8 @@ export interface IdempotencyKeyRepository {
    * Attempt to claim an idempotency key for exclusive execution.
    *
    * Returns:
-   * - true when the key was inserted (caller should execute the operation)
-   * - false when the key already exists (caller should read and reuse result)
+   * - the claimedAt token when the key was inserted/reclaimed
+   * - null when the key already exists (caller should read and reuse result)
    */
   claim(input: {
     userId: string;
@@ -28,7 +28,7 @@ export interface IdempotencyKeyRepository {
     key: string;
     expiresAt: Date;
     zombieThresholdMs?: number;
-  }): Promise<boolean>;
+  }): Promise<Date | null>;
 
   /**
    * Read an existing idempotency record.
@@ -43,19 +43,45 @@ export interface IdempotencyKeyRepository {
     key: string,
   ): Promise<IdempotencyKeyRecord | null>;
 
+  /**
+   * Persist the first successful result for the exact still-pending claim.
+   *
+   * Must reject missing, reclaimed, or already completed rows so cached
+   * idempotency outcomes remain immutable after first completion.
+   */
   storeResult(input: {
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     resultJson: unknown;
   }): Promise<void>;
 
+  /**
+   * Persist the first failure record for the exact still-pending claim.
+   *
+   * Must reject missing, reclaimed, or already completed rows so cached
+   * idempotency outcomes remain immutable after first completion.
+   */
   storeError(input: {
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     error: IdempotencyKeyError;
   }): Promise<void>;
+
+  /**
+   * Remove a freshly claimed key that never reached execute/store.
+   *
+   * Must be a no-op for completed rows, stored-error rows, and missing keys.
+   */
+  abortClaim(
+    userId: string,
+    action: string,
+    key: string,
+    claimedAt: Date,
+  ): Promise<void>;
 
   pruneExpiredBefore(cutoff: Date, limit: number): Promise<number>;
 }

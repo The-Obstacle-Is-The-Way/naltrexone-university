@@ -1,6 +1,6 @@
 # DEBT-424: Rate-Limit Idempotent Server Actions on Cache-Miss Only (replay-before-limit)
 
-**Status:** Open
+**Status:** In Review
 **Priority:** P3
 **Date:** 2026-06-24
 **Component:** Idempotency / Rate Limiting / Adapter controllers
@@ -58,7 +58,7 @@ Add an optional `beforeExecute` hook to `executeIdempotent` / `withIdempotency` 
 The cleanup piece is required by the live `withIdempotency` state machine: `repo.claim(...)` creates an incomplete row before `execute()` runs ([`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L78), [`drizzle-idempotency-key-repository.ts`](../../src/adapters/repositories/drizzle-idempotency-key-repository.ts#L38)). A naive "claim then run hook" would avoid storing `RATE_LIMITED`, but would leave the key pending until zombie recovery. Therefore the implementation must make hook-denied claims explicitly abortable and make pollers tolerate that abort.
 
 1. Add `beforeExecute?: () => Promise<void>` to `executeIdempotent` and `withIdempotency`; keep the no-key fast path running `beforeExecute` then `execute`.
-2. Extend `IdempotencyKeyRepository` (fake + Drizzle implementation) with a narrow `abortClaim(userId, action, key)` operation that removes only an incomplete row for that exact key (`completedAt IS NULL` and no stored error). In `withIdempotency`, after a successful `claim`, run `beforeExecute` before `execute`; if the hook throws, best-effort abort the incomplete claim, log abort failures without masking the original error, and rethrow the original error without calling `storeError`.
+2. Extend `IdempotencyKeyRepository` (fake + Drizzle implementation) so `claim(...)` returns the row's `claimedAt` token on a fresh claim/reclaim and `null` on cache-hit/pending-hit. Add a narrow `abortClaim(userId, action, key, claimedAt)` operation that removes only the still-incomplete row for that exact claim (`claimedAt` matches, `completedAt IS NULL`, and no stored error). Thread the same token through `storeResult(...)` and `storeError(...)`, and require those completion writes to match a still-pending row (`completedAt IS NULL`) so stale executions cannot persist over a newer reclaimed claim and duplicate same-claim writes cannot replace the first cached outcome. In `withIdempotency`, after a successful `claim`, run `beforeExecute` before `execute`; if the hook throws, best-effort abort that exact incomplete claim, log abort failures without masking the original error, and rethrow the original error without calling `storeError`.
 3. Update the polling branch so a waiter that observes a hook-aborted/missing row restarts the claim/read loop instead of returning the current "Idempotency key disappeared during poll" internal error. Keep true store-result / store-error replay behavior unchanged.
 4. Update all **8 in-scope** controllers to pass their `rateLimiter.limit(...)` + `RATE_LIMITED` throw as `beforeExecute` instead of running it ahead of `executeIdempotent`. Leave the 3 no-limiter actions and the webhook routes untouched.
 5. Keep action names, idempotency keys, schemas, output parsing, and use-case calls unchanged.
@@ -72,12 +72,12 @@ The cleanup piece is required by the live `withIdempotency` state machine: `repo
 
 ## Acceptance Criteria
 
-- [ ] `withIdempotency` / `executeIdempotent` accept a `beforeExecute` hook that runs only on a fresh claim/cache miss (and on the no-key fast path), before execute, and whose thrown error is never stored.
-- [ ] A `beforeExecute` denial aborts the incomplete idempotency claim; immediate same-key retry is not wedged behind a pending row, and same-key waiters do not surface `INTERNAL_ERROR` from a disappeared aborted claim.
-- [ ] All 8 in-scope controllers pass their limiter via the hook; none runs the limiter ahead of the cache lookup. The 3 no-limiter actions and webhook routes are unchanged.
-- [ ] Per in-scope action, TDD: (a) a replay with a reused key **while rate-limited** returns the **stored** success/error (CodeRabbit's `[success, RATE_LIMITED]` shape — second call equals the cached first, one use-case invocation); (b) a **fresh** execution is still rate-limited and the `RATE_LIMITED` is **not** cached; (c) success stays idempotent; (d) genuine use-case errors stay cached.
-- [ ] Billing checkout/portal adopt the same hook (no behavior drift versus the other actions).
-- [ ] Full gate green (typecheck, lint, unit, build).
+- [x] `withIdempotency` / `executeIdempotent` accept a `beforeExecute` hook that runs only on a fresh claim/cache miss (and on the no-key fast path), before execute, and whose thrown error is never stored.
+- [x] A `beforeExecute` denial aborts only the exact incomplete idempotency claim it created; immediate same-key retry is not wedged behind a pending row, same-key waiters do not surface `INTERNAL_ERROR` from a disappeared aborted claim, stale hook failures cannot delete a newer reclaimed row, and stale executions cannot store a result/error over a newer reclaimed claim.
+- [x] All 8 in-scope controllers pass their limiter via the hook; none runs the limiter ahead of the cache lookup. The 3 no-limiter actions and webhook routes are unchanged.
+- [x] Per in-scope action, TDD: (a) a replay with a reused key **while rate-limited** returns the **stored** success/error (CodeRabbit's `[success, RATE_LIMITED]` shape — second call equals the cached first, one use-case invocation); (b) a **fresh** execution is still rate-limited and the `RATE_LIMITED` is **not** cached; (c) success stays idempotent; (d) genuine use-case errors stay cached.
+- [x] Billing checkout/portal adopt the same hook (no behavior drift versus the other actions).
+- [x] Full gate green (typecheck, lint, unit, build).
 
 ## References
 
