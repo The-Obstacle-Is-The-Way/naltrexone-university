@@ -1,11 +1,22 @@
 # BUG-262: First-Page Reconcile Failure Starves the Deleted-Account Stripe-Cancellation Drain
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P4
 **Date:** 2026-06-25
 **Confirmed:** 2026-06-25
+**Resolved:** 2026-06-25
 **Component:** Cron / Stripe reconciliation / Billing maintenance
-**Resolution State:** Fix implemented and CodeRabbit-approved (PR #520, squashed to `dev` as `5aac1d5d`; code approved on head `f79c3a57`). Promotion to `main` in progress (PR #521). This doc moves to `docs/_archive/bugs/` with **Status: Resolved** once the production deploy is verified.
+
+---
+
+## Resolution
+
+**Fixed and prod-verified 2026-06-25.** Decoupled the two billing-maintenance tasks: reconcile and `drainPendingStripeCancellations` now run in separate `try`/`catch` blocks, so a page-level first-page reconcile failure can no longer skip the deleted-account cancellation drain. The drain is marked failed when it throws **or** returns `failed > 0` (a partial drain failure = a deleted-account subscription that was not cancelled); reconcile keeps throw-only semantics (per-row reconcile failures are routine eventual-consistency). On any task failure the route returns 500 with `{ reconciliationFailed, drainFailed }`; on success the response is unchanged.
+
+- **Fix PR:** [#520](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/520) — squash `5aac1d5d` to `dev`. CodeRabbit APPROVED the route fix on head `f79c3a57`; a follow-up commit addressed a Major finding (signal partial drain failures), and the doc/index were corrected after an independent re-audit.
+- **Promotion:** [#521](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/521) — merge commit `f40b1904` to `main`. CodeRabbit APPROVED the corrected doc on the exact promo head `c91c7450`, 0 unresolved threads.
+- **Prod-verified:** deploy `dpl_BGQQppuN4vaiozxrocgbuXjrDi7t` (commit `f40b1904`, `target: production`) READY, `addictionboards.com` 200.
+- **Tests:** `still drains pending cancellations when all-pages reconciliation throws`, `still runs reconcile when only the drain throws`, `returns 500 when the drain reports partial cancellation failures (failed > 0)`, plus the updated existing throw tests. Full gate green (typecheck, lint, unit 2997, build).
 
 ---
 
@@ -33,14 +44,14 @@ Actual: `reconcileAllStripeSubscriptionPages` re-throws on page 0, the shared `c
 
 The two maintenance tasks share one `try`/`catch`, reconcile-first:
 
-- [`route.ts`](../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L229) runs `reconcileAllStripeSubscriptionPages` (the `scope=all` cron path), then [`route.ts`](../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L241) runs `drainPendingStripeCancellations` — both inside the same `try`.
-- The all-pages orchestrator re-throws on a first-page failure: [`reconcile-all-stripe-subscription-pages.ts`](../../src/adapters/jobs/reconcile-all-stripe-subscription-pages.ts#L154) (`if (aggregate.pagesScanned === 0) throw error`). Later-page failures only stop early; a page-0 failure propagates.
-- Ordinary row-level Stripe failures are not this trigger: the page lists local rows before the row loop ([`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L67)), then catches per-row reconciliation errors and returns `{ ok: false }` rows ([`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L299)). Page-level setup failures outside that catch still reject the first page.
-- The shared `catch` logs and returns 500 ([`route.ts`](../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L258)), so the drain call at line 241 is unreachable once reconcile throws.
+- [`route.ts`](../../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L229) runs `reconcileAllStripeSubscriptionPages` (the `scope=all` cron path), then [`route.ts`](../../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L241) runs `drainPendingStripeCancellations` — both inside the same `try`.
+- The all-pages orchestrator re-throws on a first-page failure: [`reconcile-all-stripe-subscription-pages.ts`](../../../src/adapters/jobs/reconcile-all-stripe-subscription-pages.ts#L154) (`if (aggregate.pagesScanned === 0) throw error`). Later-page failures only stop early; a page-0 failure propagates.
+- Ordinary row-level Stripe failures are not this trigger: the page lists local rows before the row loop ([`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L67)), then catches per-row reconciliation errors and returns `{ ok: false }` rows ([`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L299)). Page-level setup failures outside that catch still reject the first page.
+- The shared `catch` logs and returns 500 ([`route.ts`](../../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L258)), so the drain call at line 241 is unreachable once reconcile throws.
 
-The behavior is pinned by the existing route test ["returns 500 when all-pages reconciliation throws before any page succeeds"](../../app/api/cron/reconcile-stripe-subscriptions/route.test.ts#L624) — it asserts the 500 but not that the drain still runs, which is the gap.
+The behavior is pinned by the existing route test ["returns 500 when all-pages reconciliation throws before any page succeeds"](../../../app/api/cron/reconcile-stripe-subscriptions/route.test.ts#L624) — it asserts the 500 but not that the drain still runs, which is the gap.
 
-The cron cadence is daily: [`vercel.json`](../../vercel.json#L7) (`"schedule": "0 8 * * *"`, path `…?dryRun=false&scope=all`).
+The cron cadence is daily: [`vercel.json`](../../../vercel.json#L7) (`"schedule": "0 8 * * *"`, path `…?dryRun=false&scope=all`).
 
 ## Impact
 
