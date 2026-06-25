@@ -1,10 +1,13 @@
 import { ApplicationError } from '@/src/application/errors';
 import type {
+  AttemptRepository,
+  PracticeSessionRepository,
   QuestionFeedbackRepository,
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 import { newQuestionReportFeedback } from '@/src/domain/entities';
 import type { QuestionFeedbackCategory } from '@/src/domain/value-objects';
+import { validateFeedbackContext } from './validate-feedback-context';
 
 export type SubmitQuestionReportInput = {
   userId: string;
@@ -23,6 +26,8 @@ export class SubmitQuestionReportUseCase {
   constructor(
     private readonly feedback: QuestionFeedbackRepository,
     private readonly questions: QuestionRepository,
+    private readonly attempts: AttemptRepository,
+    private readonly sessions: PracticeSessionRepository,
   ) {}
 
   async execute(
@@ -33,7 +38,23 @@ export class SubmitQuestionReportUseCase {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    const saved = await this.feedback.record(newQuestionReportFeedback(input));
+    const context = await validateFeedbackContext(
+      {
+        userId: input.userId,
+        questionId: input.questionId,
+        attemptId: input.attemptId,
+        practiceSessionId: input.practiceSessionId,
+      },
+      { attempts: this.attempts, sessions: this.sessions },
+    );
+
+    const saved = await this.feedback.record(
+      newQuestionReportFeedback({
+        ...input,
+        attemptId: context.attemptId,
+        practiceSessionId: context.practiceSessionId,
+      }),
+    );
     return { feedbackId: saved.id };
   }
 }

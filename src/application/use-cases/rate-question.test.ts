@@ -1,23 +1,50 @@
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import {
+  FakeAttemptRepository,
+  FakePracticeSessionRepository,
   FakeQuestionFeedbackRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
-import { createQuestion } from '@/src/domain/test-helpers';
+import {
+  createAttempt,
+  createPracticeSession,
+  createQuestion,
+} from '@/src/domain/test-helpers';
 import { RateQuestionUseCase } from './rate-question';
+
+const userId = 'user-1';
+
+function makeUseCase(input?: {
+  questions?: FakeQuestionRepository;
+  attempts?: FakeAttemptRepository;
+  sessions?: FakePracticeSessionRepository;
+}): {
+  useCase: RateQuestionUseCase;
+  feedback: FakeQuestionFeedbackRepository;
+} {
+  const feedback = new FakeQuestionFeedbackRepository();
+  const useCase = new RateQuestionUseCase(
+    feedback,
+    input?.questions ??
+      new FakeQuestionRepository([
+        createQuestion({ id: 'question-1', status: 'published' }),
+      ]),
+    input?.attempts ?? new FakeAttemptRepository(),
+    input?.sessions ?? new FakePracticeSessionRepository(),
+  );
+  return { useCase, feedback };
+}
 
 describe('RateQuestionUseCase', () => {
   it('returns NOT_FOUND when the question is missing', async () => {
-    const feedback = new FakeQuestionFeedbackRepository();
-    const useCase = new RateQuestionUseCase(
-      feedback,
-      new FakeQuestionRepository([]),
-    );
+    const { useCase, feedback } = makeUseCase({
+      questions: new FakeQuestionRepository([]),
+    });
 
     await expect(
       useCase.execute({
-        userId: 'user-1',
+        userId,
         questionId: 'missing',
         attemptId: null,
         practiceSessionId: null,
@@ -27,18 +54,28 @@ describe('RateQuestionUseCase', () => {
     expect(feedback.recordCalls).toEqual([]);
   });
 
-  it('records a rating event and returns the rating', async () => {
-    const feedback = new FakeQuestionFeedbackRepository();
-    const useCase = new RateQuestionUseCase(
-      feedback,
-      new FakeQuestionRepository([
-        createQuestion({ id: 'question-1', status: 'published' }),
+  it('records a rating event with validated context and returns the rating', async () => {
+    const { useCase, feedback } = makeUseCase({
+      attempts: new FakeAttemptRepository([
+        createAttempt({
+          id: 'attempt-1',
+          userId,
+          questionId: 'question-1',
+          practiceSessionId: 'session-1',
+        }),
       ]),
-    );
+      sessions: new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId,
+          questionIds: ['question-1'],
+        }),
+      ]),
+    });
 
     await expect(
       useCase.execute({
-        userId: 'user-1',
+        userId,
         questionId: 'question-1',
         attemptId: 'attempt-1',
         practiceSessionId: 'session-1',
@@ -48,7 +85,7 @@ describe('RateQuestionUseCase', () => {
 
     expect(feedback.recordCalls).toEqual([
       {
-        userId: 'user-1',
+        userId,
         questionId: 'question-1',
         attemptId: 'attempt-1',
         practiceSessionId: 'session-1',
@@ -59,22 +96,16 @@ describe('RateQuestionUseCase', () => {
       },
     ]);
     await expect(
-      feedback.findLatestRatingByUser('user-1', 'question-1'),
+      feedback.findLatestRatingByUser(userId, 'question-1'),
     ).resolves.toMatchObject({ rating: 'not_helpful' });
   });
 
   it('records a null rating event for retraction', async () => {
-    const feedback = new FakeQuestionFeedbackRepository();
-    const useCase = new RateQuestionUseCase(
-      feedback,
-      new FakeQuestionRepository([
-        createQuestion({ id: 'question-1', status: 'published' }),
-      ]),
-    );
+    const { useCase, feedback } = makeUseCase();
 
     await expect(
       useCase.execute({
-        userId: 'user-1',
+        userId,
         questionId: 'question-1',
         attemptId: null,
         practiceSessionId: null,
@@ -84,7 +115,7 @@ describe('RateQuestionUseCase', () => {
 
     expect(feedback.recordCalls).toEqual([
       {
-        userId: 'user-1',
+        userId,
         questionId: 'question-1',
         attemptId: null,
         practiceSessionId: null,
@@ -94,5 +125,76 @@ describe('RateQuestionUseCase', () => {
         comment: null,
       },
     ]);
+  });
+
+  it('rejects and records nothing when the attempt belongs to a different question', async () => {
+    const { useCase, feedback } = makeUseCase({
+      attempts: new FakeAttemptRepository([
+        createAttempt({
+          id: 'attempt-q2',
+          userId,
+          questionId: 'question-2',
+          practiceSessionId: null,
+        }),
+      ]),
+    });
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId: 'question-1',
+        attemptId: 'attempt-q2',
+        practiceSessionId: null,
+        rating: 'helpful',
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    expect(feedback.recordCalls).toEqual([]);
+  });
+
+  it('rejects and records nothing when the session does not contain the question', async () => {
+    const { useCase, feedback } = makeUseCase({
+      sessions: new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId,
+          questionIds: ['question-2'],
+        }),
+      ]),
+    });
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId: 'question-1',
+        attemptId: null,
+        practiceSessionId: 'session-1',
+        rating: 'helpful',
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    expect(feedback.recordCalls).toEqual([]);
+  });
+
+  it('rejects with NOT_FOUND when the attempt is not owned by the user', async () => {
+    const { useCase, feedback } = makeUseCase({
+      attempts: new FakeAttemptRepository([
+        createAttempt({
+          id: 'attempt-1',
+          userId: 'someone-else',
+          questionId: 'question-1',
+          practiceSessionId: null,
+        }),
+      ]),
+    });
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId: 'question-1',
+        attemptId: 'attempt-1',
+        practiceSessionId: null,
+        rating: 'helpful',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(feedback.recordCalls).toEqual([]);
   });
 });
