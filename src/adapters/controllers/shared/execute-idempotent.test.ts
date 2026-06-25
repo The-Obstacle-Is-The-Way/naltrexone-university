@@ -207,11 +207,18 @@ describe('executeIdempotent', () => {
       execute,
     };
 
-    await executeIdempotent(args);
+    const claimedAt = await deps.idempotencyKeyRepository.claim({
+      userId: args.userId,
+      action: args.action,
+      key: args.idempotencyKey,
+      expiresAt: new Date('2026-04-28T12:00:00.000Z'),
+    });
+    if (!claimedAt) throw new Error('Expected idempotency claim');
     await deps.idempotencyKeyRepository.storeResult({
       userId: args.userId,
       action: args.action,
       key: args.idempotencyKey,
+      claimedAt,
       resultJson: { value: 'not-a-number' },
     });
 
@@ -219,6 +226,6 @@ describe('executeIdempotent', () => {
       code: 'INTERNAL_ERROR',
       message: 'Cached idempotency result is invalid',
     });
-    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute).not.toHaveBeenCalled();
   });
 });

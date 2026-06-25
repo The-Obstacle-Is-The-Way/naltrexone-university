@@ -129,6 +129,7 @@ export async function withIdempotency<T>(input: {
           userId: input.userId,
           action: input.action,
           key: input.key,
+          claimedAt,
           resultJson: result,
         });
         return result;
@@ -138,6 +139,7 @@ export async function withIdempotency<T>(input: {
             userId: input.userId,
             action: input.action,
             key: input.key,
+            claimedAt,
             error: toErrorRecord(error),
           });
         } catch (storeError) {

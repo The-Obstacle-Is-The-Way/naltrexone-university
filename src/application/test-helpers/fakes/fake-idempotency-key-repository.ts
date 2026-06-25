@@ -86,11 +86,15 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     resultJson: unknown;
   }): Promise<void> {
     const id = this.toKey(input.userId, input.action, input.key);
     const existing = this.records.get(id);
-    if (!existing) {
+    if (
+      !existing ||
+      existing.claimedAt.getTime() !== input.claimedAt.getTime()
+    ) {
       throw new ApplicationError('NOT_FOUND', 'Idempotency key not found');
     }
 
@@ -106,11 +110,15 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     error: IdempotencyKeyError;
   }): Promise<void> {
     const id = this.toKey(input.userId, input.action, input.key);
     const existing = this.records.get(id);
-    if (!existing) {
+    if (
+      !existing ||
+      existing.claimedAt.getTime() !== input.claimedAt.getTime()
+    ) {
       throw new ApplicationError('NOT_FOUND', 'Idempotency key not found');
     }
 

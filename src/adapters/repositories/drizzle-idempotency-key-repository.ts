@@ -134,6 +134,7 @@ export class DrizzleIdempotencyKeyRepository
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     resultJson: unknown;
   }): Promise<void> {
     const [updated] = await this.db
@@ -149,6 +150,7 @@ export class DrizzleIdempotencyKeyRepository
           eq(idempotencyKeys.userId, input.userId),
           eq(idempotencyKeys.action, input.action),
           eq(idempotencyKeys.key, input.key),
+          eq(idempotencyKeys.claimedAt, input.claimedAt),
         ),
       )
       .returning({ key: idempotencyKeys.key });
@@ -162,6 +164,7 @@ export class DrizzleIdempotencyKeyRepository
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     error: { code: ApplicationErrorCode; message: string };
   }): Promise<void> {
     const [updated] = await this.db
@@ -177,6 +180,7 @@ export class DrizzleIdempotencyKeyRepository
           eq(idempotencyKeys.userId, input.userId),
           eq(idempotencyKeys.action, input.action),
           eq(idempotencyKeys.key, input.key),
+          eq(idempotencyKeys.claimedAt, input.claimedAt),
         ),
       )
       .returning({ key: idempotencyKeys.key });

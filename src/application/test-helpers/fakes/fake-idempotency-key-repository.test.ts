@@ -71,13 +71,15 @@ describe('FakeIdempotencyKeyRepository', () => {
       const expiresAt = new Date('2026-03-01T01:00:00.000Z');
       const input = createClaimInput(expiresAt);
 
-      await repo.claim(input);
+      const claimedAt = await repo.claim(input);
+      if (!claimedAt) throw new Error('Expected claim');
 
       clock.now = new Date('2026-03-01T00:00:05.000Z');
       await repo.storeResult({
         userId: input.userId,
         action: input.action,
         key: input.key,
+        claimedAt,
         resultJson: { checkoutUrl: 'https://example.test/checkout' },
       });
 
@@ -97,11 +99,13 @@ describe('FakeIdempotencyKeyRepository', () => {
       const expiresAt = new Date('2026-03-01T01:00:00.000Z');
       const input = createClaimInput(expiresAt);
 
-      await repo.claim(input);
+      const claimedAt = await repo.claim(input);
+      if (!claimedAt) throw new Error('Expected claim');
       await repo.storeResult({
         userId: input.userId,
         action: input.action,
         key: input.key,
+        claimedAt,
         resultJson: { checkoutUrl: 'https://example.test/checkout' },
       });
 
@@ -110,6 +114,7 @@ describe('FakeIdempotencyKeyRepository', () => {
         userId: input.userId,
         action: input.action,
         key: input.key,
+        claimedAt,
         error: { code: 'INTERNAL_ERROR', message: 'boom' },
       });
 
@@ -132,6 +137,7 @@ describe('FakeIdempotencyKeyRepository', () => {
           userId: 'user_1',
           action: 'createCheckoutSession',
           key: 'missing',
+          claimedAt: new Date('2026-03-01T00:00:00.000Z'),
           resultJson: { ok: true },
         }),
       ).rejects.toMatchObject({
@@ -143,6 +149,7 @@ describe('FakeIdempotencyKeyRepository', () => {
           userId: 'user_1',
           action: 'createCheckoutSession',
           key: 'missing',
+          claimedAt: new Date('2026-03-01T00:00:00.000Z'),
           error: { code: 'INTERNAL_ERROR', message: 'boom' },
         }),
       ).rejects.toMatchObject({
@@ -216,6 +223,96 @@ describe('FakeIdempotencyKeyRepository', () => {
       });
     });
 
+    it('does not let a stale claim token store a result over a newer reclaimed row', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const input = createClaimInput(new Date('2026-03-01T01:00:00.000Z'));
+
+      const initialClaimedAt = await repo.claim({
+        ...input,
+        zombieThresholdMs: 60_000,
+      });
+      if (!initialClaimedAt) throw new Error('Expected initial claim');
+
+      clock.now = new Date('2026-03-01T00:01:01.000Z');
+      const reclaimedAt = await repo.claim({
+        ...input,
+        expiresAt: new Date('2026-03-01T02:00:00.000Z'),
+        zombieThresholdMs: 60_000,
+      });
+      if (!reclaimedAt) throw new Error('Expected reclaimed claim');
+
+      await expect(
+        repo.storeResult({
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          claimedAt: initialClaimedAt,
+          resultJson: { ok: 'stale' },
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+      await repo.storeResult({
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        claimedAt: reclaimedAt,
+        resultJson: { ok: 'newer' },
+      });
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toMatchObject({
+        resultJson: { ok: 'newer' },
+        error: null,
+      });
+    });
+
+    it('does not let a stale claim token store an error over a newer reclaimed row', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const input = createClaimInput(new Date('2026-03-01T01:00:00.000Z'));
+
+      const initialClaimedAt = await repo.claim({
+        ...input,
+        zombieThresholdMs: 60_000,
+      });
+      if (!initialClaimedAt) throw new Error('Expected initial claim');
+
+      clock.now = new Date('2026-03-01T00:01:01.000Z');
+      const reclaimedAt = await repo.claim({
+        ...input,
+        expiresAt: new Date('2026-03-01T02:00:00.000Z'),
+        zombieThresholdMs: 60_000,
+      });
+      if (!reclaimedAt) throw new Error('Expected reclaimed claim');
+
+      await expect(
+        repo.storeError({
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          claimedAt: initialClaimedAt,
+          error: { code: 'INTERNAL_ERROR', message: 'stale' },
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+      await repo.storeResult({
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        claimedAt: reclaimedAt,
+        resultJson: { ok: 'newer' },
+      });
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toMatchObject({
+        resultJson: { ok: 'newer' },
+        error: null,
+      });
+    });
+
     it('does not remove completed result or error records', async () => {
       const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
       const repo = createRepo(clock);
@@ -232,6 +329,7 @@ describe('FakeIdempotencyKeyRepository', () => {
         userId: resultInput.userId,
         action: resultInput.action,
         key: resultInput.key,
+        claimedAt: resultClaimedAt,
         resultJson: { ok: true },
       });
       const errorClaimedAt = await repo.claim(errorInput);
@@ -240,6 +338,7 @@ describe('FakeIdempotencyKeyRepository', () => {
         userId: errorInput.userId,
         action: errorInput.action,
         key: errorInput.key,
+        claimedAt: errorClaimedAt,
         error: { code: 'INTERNAL_ERROR', message: 'boom' },
       });
 

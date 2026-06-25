@@ -47,6 +47,7 @@ export interface IdempotencyKeyRepository {
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     resultJson: unknown;
   }): Promise<void>;
 
@@ -54,6 +55,7 @@ export interface IdempotencyKeyRepository {
     userId: string;
     action: string;
     key: string;
+    claimedAt: Date;
     error: IdempotencyKeyError;
   }): Promise<void>;
 

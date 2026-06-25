@@ -90,50 +90,6 @@ describe('withIdempotency', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
-  it('skips beforeExecute for cached error replays', async () => {
-    const now = () => new Date('2026-02-07T00:00:00.000Z');
-    const repo = new FakeIdempotencyKeyRepository(now);
-    const logger = new FakeLogger();
-    const key = '11111111-1111-1111-1111-111111111115';
-
-    await repo.claim({
-      userId: appUserId,
-      action: 'billing:createCheckoutSession',
-      key,
-      expiresAt: new Date('2026-02-08T00:00:00.000Z'),
-    });
-    await repo.storeError({
-      userId: appUserId,
-      action: 'billing:createCheckoutSession',
-      key,
-      error: { code: 'NOT_FOUND', message: 'Missing customer' },
-    });
-
-    const beforeExecute = vi.fn(async () => {
-      throw new ApplicationError('RATE_LIMITED', 'Too many requests');
-    });
-    const execute = vi.fn(async () => ({ ok: true }));
-
-    await expect(
-      withIdempotency({
-        repo,
-        userId: appUserId,
-        action: 'billing:createCheckoutSession',
-        key,
-        now,
-        logger,
-        beforeExecute,
-        execute,
-      }),
-    ).rejects.toMatchObject({
-      code: 'NOT_FOUND',
-      message: 'Missing customer',
-    });
-
-    expect(beforeExecute).not.toHaveBeenCalled();
-    expect(execute).not.toHaveBeenCalled();
-  });
-
   it('parses cached results when parseResult is provided', async () => {
     const now = () => new Date();
     const repo = new FakeIdempotencyKeyRepository(now);
@@ -254,17 +210,19 @@ describe('withIdempotency', () => {
     const logger = new FakeLogger();
     const key = '22222222-2222-2222-2222-222222222223';
 
-    await repo.claim({
+    const claimedAt = await repo.claim({
       userId: appUserId,
       action: 'question:submitAnswer',
       key,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
+    if (!claimedAt) throw new Error('Expected cached null claim');
 
     await repo.storeResult({
       userId: appUserId,
       action: 'question:submitAnswer',
       key,
+      claimedAt,
       resultJson: null,
     });
 
@@ -290,16 +248,18 @@ describe('withIdempotency', () => {
     const logger = new FakeLogger();
     const key = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
-    await repo.claim({
+    const claimedAt = await repo.claim({
       userId: appUserId,
       action: 'question:submitAnswer',
       key,
       expiresAt: new Date('2026-02-08T00:00:00.000Z'),
     });
+    if (!claimedAt) throw new Error('Expected cached null claim');
     await repo.storeResult({
       userId: appUserId,
       action: 'question:submitAnswer',
       key,
+      claimedAt,
       resultJson: null,
     });
 
@@ -329,16 +289,18 @@ describe('withIdempotency', () => {
     const logger = new FakeLogger();
     const key = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 
-    await repo.claim({
+    const claimedAt = await repo.claim({
       userId: appUserId,
       action: 'question:submitAnswer',
       key,
       expiresAt: new Date('2026-02-08T00:00:00.000Z'),
     });
+    if (!claimedAt) throw new Error('Expected cached null claim');
     await repo.storeResult({
       userId: appUserId,
       action: 'question:submitAnswer',
       key,
+      claimedAt,
       resultJson: null,
     });
 

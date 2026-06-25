@@ -347,6 +347,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           userId: '11111111-1111-1111-1111-111111111111',
           action: 'question:submitAnswer',
           key: 'idem-1',
+          claimedAt: new Date('2026-02-08T00:00:00.000Z'),
           resultJson: { ok: true },
         }),
       ).resolves.toBeUndefined();
@@ -369,6 +370,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         userId: '11111111-1111-1111-1111-111111111111',
         action: 'question:submitAnswer',
         key: 'idem-1',
+        claimedAt: now,
         resultJson: null,
       });
 
@@ -399,6 +401,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           userId: '11111111-1111-1111-1111-111111111111',
           action: 'question:submitAnswer',
           key: 'idem-1',
+          claimedAt: new Date('2026-02-08T00:00:00.000Z'),
           resultJson: { ok: true },
         }),
       ).rejects.toEqual(
@@ -425,6 +428,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           userId: '11111111-1111-1111-1111-111111111111',
           action: 'question:submitAnswer',
           key: 'idem-1',
+          claimedAt: new Date('2026-02-08T00:00:00.000Z'),
           error: {
             code: 'INTERNAL_ERROR',
             message: 'unexpected failure',
@@ -450,6 +454,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         userId: '11111111-1111-1111-1111-111111111111',
         action: 'question:submitAnswer',
         key: 'idem-1',
+        claimedAt: now,
         error: {
           code: 'INTERNAL_ERROR',
           message: 'unexpected failure',
@@ -483,6 +488,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           userId: '11111111-1111-1111-1111-111111111111',
           action: 'question:submitAnswer',
           key: 'idem-1',
+          claimedAt: new Date('2026-02-08T00:00:00.000Z'),
           error: {
             code: 'INTERNAL_ERROR',
             message: 'unexpected failure',
