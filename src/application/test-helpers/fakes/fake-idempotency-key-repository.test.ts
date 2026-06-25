@@ -93,7 +93,7 @@ describe('FakeIdempotencyKeyRepository', () => {
       });
     });
 
-    it('stores error payload, clears result payload, and sets completion timestamp', async () => {
+    it('stores error payload and sets completion timestamp', async () => {
       const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
       const repo = createRepo(clock);
       const expiresAt = new Date('2026-03-01T01:00:00.000Z');
@@ -101,13 +101,6 @@ describe('FakeIdempotencyKeyRepository', () => {
 
       const claimedAt = await repo.claim(input);
       if (!claimedAt) throw new Error('Expected claim');
-      await repo.storeResult({
-        userId: input.userId,
-        action: input.action,
-        key: input.key,
-        claimedAt,
-        resultJson: { checkoutUrl: 'https://example.test/checkout' },
-      });
 
       clock.now = new Date('2026-03-01T00:00:06.000Z');
       await repo.storeError({
@@ -124,6 +117,84 @@ describe('FakeIdempotencyKeyRepository', () => {
         resultJson: null,
         error: { code: 'INTERNAL_ERROR', message: 'boom' },
         completedAt: new Date('2026-03-01T00:00:06.000Z'),
+        expiresAt,
+      });
+    });
+
+    it('rejects duplicate result completion with the same claim token', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const expiresAt = new Date('2026-03-01T01:00:00.000Z');
+      const input = createClaimInput(expiresAt);
+
+      const claimedAt = await repo.claim(input);
+      if (!claimedAt) throw new Error('Expected claim');
+
+      clock.now = new Date('2026-03-01T00:00:05.000Z');
+      await repo.storeResult({
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        claimedAt,
+        resultJson: { source: 'first' },
+      });
+
+      clock.now = new Date('2026-03-01T00:00:06.000Z');
+      await expect(
+        repo.storeResult({
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          claimedAt,
+          resultJson: { source: 'second' },
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toEqual({
+        resultJson: { source: 'first' },
+        error: null,
+        completedAt: new Date('2026-03-01T00:00:05.000Z'),
+        expiresAt,
+      });
+    });
+
+    it('rejects duplicate error completion with the same claim token', async () => {
+      const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+      const repo = createRepo(clock);
+      const expiresAt = new Date('2026-03-01T01:00:00.000Z');
+      const input = createClaimInput(expiresAt);
+
+      const claimedAt = await repo.claim(input);
+      if (!claimedAt) throw new Error('Expected claim');
+
+      clock.now = new Date('2026-03-01T00:00:05.000Z');
+      await repo.storeError({
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        claimedAt,
+        error: { code: 'INTERNAL_ERROR', message: 'first' },
+      });
+
+      clock.now = new Date('2026-03-01T00:00:06.000Z');
+      await expect(
+        repo.storeError({
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          claimedAt,
+          error: { code: 'VALIDATION_ERROR', message: 'second' },
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+      await expect(
+        repo.find(input.userId, input.action, input.key),
+      ).resolves.toEqual({
+        resultJson: null,
+        error: { code: 'INTERNAL_ERROR', message: 'first' },
+        completedAt: new Date('2026-03-01T00:00:05.000Z'),
         expiresAt,
       });
     });

@@ -93,7 +93,8 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     const existing = this.records.get(id);
     if (
       !existing ||
-      existing.claimedAt.getTime() !== input.claimedAt.getTime()
+      existing.claimedAt.getTime() !== input.claimedAt.getTime() ||
+      existing.completedAt !== null
     ) {
       throw new ApplicationError('NOT_FOUND', 'Idempotency key not found');
     }
@@ -117,7 +118,8 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     const existing = this.records.get(id);
     if (
       !existing ||
-      existing.claimedAt.getTime() !== input.claimedAt.getTime()
+      existing.claimedAt.getTime() !== input.claimedAt.getTime() ||
+      existing.completedAt !== null
     ) {
       throw new ApplicationError('NOT_FOUND', 'Idempotency key not found');
     }

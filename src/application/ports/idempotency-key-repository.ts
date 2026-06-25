@@ -43,6 +43,12 @@ export interface IdempotencyKeyRepository {
     key: string,
   ): Promise<IdempotencyKeyRecord | null>;
 
+  /**
+   * Persist the first successful result for the exact still-pending claim.
+   *
+   * Must reject missing, reclaimed, or already completed rows so cached
+   * idempotency outcomes remain immutable after first completion.
+   */
   storeResult(input: {
     userId: string;
     action: string;
@@ -51,6 +57,12 @@ export interface IdempotencyKeyRepository {
     resultJson: unknown;
   }): Promise<void>;
 
+  /**
+   * Persist the first failure record for the exact still-pending claim.
+   *
+   * Must reject missing, reclaimed, or already completed rows so cached
+   * idempotency outcomes remain immutable after first completion.
+   */
   storeError(input: {
     userId: string;
     action: string;

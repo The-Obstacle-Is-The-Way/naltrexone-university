@@ -348,6 +348,92 @@ describe('DrizzleIdempotencyKeyRepository', () => {
     });
   });
 
+  it('rejects duplicate result completion with the same claim token', async () => {
+    const user = await createUser(db, cleanup);
+    let currentTime = new Date('2026-02-01T00:00:00.000Z');
+    const now = () => currentTime;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+    const key = 'k-duplicate-result';
+
+    const claimedAt = await repo.claim({
+      userId: user.id,
+      action: 'it',
+      key,
+      expiresAt,
+    });
+    if (!claimedAt) throw new Error('Expected result claim');
+
+    currentTime = new Date('2026-02-01T00:00:05.000Z');
+    await repo.storeResult({
+      userId: user.id,
+      action: 'it',
+      key,
+      claimedAt,
+      resultJson: { source: 'first' },
+    });
+
+    currentTime = new Date('2026-02-01T00:00:06.000Z');
+    await expect(
+      repo.storeResult({
+        userId: user.id,
+        action: 'it',
+        key,
+        claimedAt,
+        resultJson: { source: 'second' },
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(repo.find(user.id, 'it', key)).resolves.toMatchObject({
+      resultJson: { source: 'first' },
+      error: null,
+      completedAt: new Date('2026-02-01T00:00:05.000Z'),
+    });
+  });
+
+  it('rejects duplicate error completion with the same claim token', async () => {
+    const user = await createUser(db, cleanup);
+    let currentTime = new Date('2026-02-01T00:00:00.000Z');
+    const now = () => currentTime;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+    const key = 'k-duplicate-error';
+
+    const claimedAt = await repo.claim({
+      userId: user.id,
+      action: 'it',
+      key,
+      expiresAt,
+    });
+    if (!claimedAt) throw new Error('Expected error claim');
+
+    currentTime = new Date('2026-02-01T00:00:05.000Z');
+    await repo.storeError({
+      userId: user.id,
+      action: 'it',
+      key,
+      claimedAt,
+      error: { code: 'INTERNAL_ERROR', message: 'first' },
+    });
+
+    currentTime = new Date('2026-02-01T00:00:06.000Z');
+    await expect(
+      repo.storeError({
+        userId: user.id,
+        action: 'it',
+        key,
+        claimedAt,
+        error: { code: 'VALIDATION_ERROR', message: 'second' },
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    await expect(repo.find(user.id, 'it', key)).resolves.toMatchObject({
+      resultJson: null,
+      error: { code: 'INTERNAL_ERROR', message: 'first' },
+      completedAt: new Date('2026-02-01T00:00:05.000Z'),
+    });
+  });
+
   it('aborts only pending incomplete claims and preserves completed rows', async () => {
     const user = await createUser(db, cleanup);
     const completedAt = new Date('2026-02-01T00:00:05.000Z');

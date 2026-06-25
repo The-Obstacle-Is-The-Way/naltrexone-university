@@ -151,6 +151,7 @@ export class DrizzleIdempotencyKeyRepository
           eq(idempotencyKeys.action, input.action),
           eq(idempotencyKeys.key, input.key),
           eq(idempotencyKeys.claimedAt, input.claimedAt),
+          isNull(idempotencyKeys.completedAt),
         ),
       )
       .returning({ key: idempotencyKeys.key });
@@ -181,6 +182,7 @@ export class DrizzleIdempotencyKeyRepository
           eq(idempotencyKeys.action, input.action),
           eq(idempotencyKeys.key, input.key),
           eq(idempotencyKeys.claimedAt, input.claimedAt),
+          isNull(idempotencyKeys.completedAt),
         ),
       )
       .returning({ key: idempotencyKeys.key });
