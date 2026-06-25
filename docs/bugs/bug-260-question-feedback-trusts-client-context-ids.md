@@ -74,7 +74,7 @@ Validate feedback context in the application layer before recording feedback. Ex
 1. If `attemptId` is present, load it with `findByIdAndUserId(attemptId, userId)` and require `attempt.questionId === input.questionId`.
 2. If `practiceSessionId` is present, load it with `findByIdAndUserId(practiceSessionId, userId)` and require `session.questionIds.includes(input.questionId)`.
 3. If both are present, require the attempt's `practiceSessionId` to match the supplied session when the attempt is session-scoped.
-4. Reject invalid context with `NOT_FOUND` or `VALIDATION_ERROR`; continue allowing null context for standalone or best-effort cases.
+4. Reject missing or not-owned context with `NOT_FOUND`, reject found-but-mismatched context with `VALIDATION_ERROR`, and continue allowing null context for standalone or best-effort cases.
 5. Persist only validated context IDs.
 
 Rejected alternatives:
