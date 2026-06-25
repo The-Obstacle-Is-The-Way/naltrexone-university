@@ -636,9 +636,97 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
 
     expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: 'Internal error' });
+    await expect(response.json()).resolves.toEqual({
+      error: 'Internal error',
+      reconciliationFailed: true,
+      drainFailed: false,
+    });
     expect(container.logger.error).toHaveBeenCalledTimes(1);
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+    // BUG-262: the drain must still run when reconcile throws.
+    expect(drainPendingStripeCancellations).toHaveBeenCalledTimes(1);
+  });
+
+  it('still drains pending cancellations when all-pages reconciliation throws (BUG-262)', async () => {
+    reconcileAllStripeSubscriptionPages.mockRejectedValueOnce(
+      new Error('boom'),
+    );
+    drainPendingStripeCancellations.mockResolvedValueOnce({
+      scanned: 1,
+      drained: 1,
+      failed: 0,
+      failures: [],
+      dryRun: false,
+    });
+
+    const response = await POST(
+      new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer test-secret',
+        },
+      }),
+    );
+
+    // The deleted-account cancellation drain MUST run despite the reconcile failure.
+    expect(drainPendingStripeCancellations).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Internal error',
+      reconciliationFailed: true,
+      drainFailed: false,
+    });
+  });
+
+  it('returns 500 and still runs reconcile when only the drain throws', async () => {
+    drainPendingStripeCancellations.mockRejectedValueOnce(new Error('boom'));
+
+    const response = await POST(
+      new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer test-secret',
+        },
+      }),
+    );
+
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Internal error',
+      reconciliationFailed: false,
+      drainFailed: true,
+    });
+    expect(container.logger.error).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 500 when the drain reports partial cancellation failures (failed > 0)', async () => {
+    drainPendingStripeCancellations.mockResolvedValueOnce({
+      scanned: 2,
+      drained: 1,
+      failed: 1,
+      failures: [{ eventId: 'evt_failed', error: 'cancel failed' }],
+      dryRun: false,
+    });
+
+    const response = await POST(
+      new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer test-secret',
+        },
+      }),
+    );
+
+    // The drain returns a `failed` count instead of throwing, so a partial
+    // drain failure must still mark the run failed (BUG-262 / CodeRabbit).
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Internal error',
+      reconciliationFailed: false,
+      drainFailed: true,
+    });
+    expect(reconcileAllStripeSubscriptionPages).toHaveBeenCalledTimes(1);
   });
 
   it('returns 500 when single-page reconciliation throws', async () => {
@@ -657,9 +745,15 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
 
     expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: 'Internal error' });
+    await expect(response.json()).resolves.toEqual({
+      error: 'Internal error',
+      reconciliationFailed: true,
+      drainFailed: false,
+    });
     expect(container.logger.error).toHaveBeenCalledTimes(1);
     expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
+    // BUG-262: the drain must still run when single-page reconcile throws.
+    expect(drainPendingStripeCancellations).toHaveBeenCalledTimes(1);
   });
 });
 

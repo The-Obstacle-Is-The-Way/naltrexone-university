@@ -182,10 +182,9 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
 
   let result:
     | Awaited<ReturnType<typeof reconcileStripeSubscriptions>>
-    | Awaited<ReturnType<typeof reconcileAllStripeSubscriptionPages>>;
-  let pendingStripeCancellations: Awaited<
-    ReturnType<typeof drainPendingStripeCancellations>
-  >;
+    | Awaited<ReturnType<typeof reconcileAllStripeSubscriptionPages>>
+    | null = null;
+  let reconciliationFailed = false;
   try {
     const reconciliationDeps: ReconcileStripeSubscriptionsDeps = {
       stripe: container.stripe,
@@ -238,6 +237,27 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
             logger: container.logger,
             now: Date.now,
           });
+  } catch (error) {
+    reconciliationFailed = true;
+    container.logger.error(
+      {
+        route: ROUTE,
+        task: 'reconcile',
+        error: error instanceof Error ? error.message : String(error),
+      },
+      'Stripe subscription reconciliation failed',
+    );
+  }
+
+  // BUG-262: run the deleted-account cancellation drain independently of the
+  // reconcile result. The two are unrelated maintenance tasks; a reconcile
+  // failure (e.g. a first-page Stripe outage) must not skip the drain — that is
+  // the durable safety net for failed post-deletion cancellations (BUG-246).
+  let pendingStripeCancellations: Awaited<
+    ReturnType<typeof drainPendingStripeCancellations>
+  > | null = null;
+  let drainFailed = false;
+  try {
     pendingStripeCancellations = await drainPendingStripeCancellations(
       {
         olderThan: pendingCancellationOlderThan,
@@ -255,16 +275,25 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
         logger: container.logger,
       },
     );
+    // The drain converts per-row cancellation errors into a `failed` count
+    // rather than throwing, so a partial drain failure (a deleted-account
+    // subscription that did NOT get cancelled) must still mark the run failed.
+    drainFailed = pendingStripeCancellations.failed > 0;
   } catch (error) {
+    drainFailed = true;
     container.logger.error(
       {
         route: ROUTE,
+        task: 'drain',
         error: error instanceof Error ? error.message : String(error),
       },
-      'Failed to run Stripe billing maintenance',
+      'Pending Stripe cancellation drain failed',
     );
+  }
+
+  if (reconciliationFailed || drainFailed) {
     return NextResponse.json(
-      { error: 'Internal error' },
+      { error: 'Internal error', reconciliationFailed, drainFailed },
       { status: HTTP_INTERNAL_SERVER_ERROR },
     );
   }
