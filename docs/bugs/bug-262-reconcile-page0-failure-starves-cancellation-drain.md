@@ -5,6 +5,7 @@
 **Date:** 2026-06-25
 **Confirmed:** 2026-06-25
 **Component:** Cron / Stripe reconciliation / Billing maintenance
+**Resolution State:** Fix implemented and CodeRabbit-approved (PR #520, squashed to `dev` as `5aac1d5d`; code approved on head `f79c3a57`). Promotion to `main` in progress (PR #521). This doc moves to `docs/_archive/bugs/` with **Status: Resolved** once the production deploy is verified.
 
 ---
 
@@ -64,18 +65,30 @@ Decouple the two maintenance tasks so a reconcile failure cannot short-circuit t
 
 ```ts
 it('still drains pending cancellations when the first reconcile page throws', async () => {
-  // reconcile-all rejects before any page succeeds (page-0 failure)
+  // A page-level first-page failure (e.g. the listLocalSubscriptions query
+  // rejecting) — NOT a caught row-level Stripe error.
   reconcileAllStripeSubscriptionPages.mockRejectedValueOnce(
-    new Error('stripe unavailable'),
+    new Error('list query failed'),
   );
-  drainPendingStripeCancellations.mockResolvedValueOnce({ scanned: 1, drained: 1 });
+  // Full drain payload per the contract (failed / failures / dryRun present).
+  drainPendingStripeCancellations.mockResolvedValueOnce({
+    scanned: 1,
+    drained: 1,
+    failed: 0,
+    failures: [],
+    dryRun: false,
+  });
 
-  const res = await GET(authedCronRequest());
+  const res = await POST(
+    new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
+      method: 'POST',
+      headers: { authorization: 'Bearer test-secret' },
+    }),
+  );
 
   // The drain MUST still run despite the reconcile failure.
   expect(drainPendingStripeCancellations).toHaveBeenCalledTimes(1);
-  // The route still returns 500 because reconciliation failed, but the
-  // structured body proves the independent drain completed.
+  // 500 because reconcile failed, but the structured body proves the drain ran.
   expect(res.status).toBe(500);
   await expect(res.json()).resolves.toEqual({
     error: 'Internal error',
@@ -83,6 +96,9 @@ it('still drains pending cancellations when the first reconcile page throws', as
     drainFailed: false,
   });
 });
+
+// A sibling test exercises the partial-drain branch: when the drain resolves with
+// `failed: 1`, the route marks `drainFailed: true` and returns 500.
 ```
 
 Before the fix this failed because the shared `try` let the reconcile throw propagate to the `catch`, the drain was never invoked, and the route returned a bare 500. The regression test should assert the corrected contract: 500 with `reconciliationFailed: true`, `drainFailed: false`, and the drain invoked exactly once.
