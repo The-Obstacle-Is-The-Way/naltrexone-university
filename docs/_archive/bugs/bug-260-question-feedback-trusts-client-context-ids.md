@@ -15,7 +15,7 @@
 
 - a present `attemptId` must be owned by the caller (`findByIdAndUserId`) and its `questionId` must equal the feedback question;
 - a present `practiceSessionId` must be owned by the caller and its `questionIds` must include the feedback question;
-- when both are present, the attempt must belong to the supplied session either directly (`practiceSessionId`) or as a session-review retry (`retryOrigin=session_review` plus matching `retrySessionId`).
+- when both are present, the attempt must belong to the supplied session either directly (`practiceSessionId`) or as a standalone session-review retry (`practiceSessionId=null`, `retryOrigin=session_review`, plus matching `retrySessionId`).
 
 Not-found / not-owned context throws `NOT_FOUND`; found-but-mismatched context throws `VALIDATION_ERROR`; null context is still allowed (standalone / best-effort); only validated context IDs are persisted. The controller, schema, repository, and export script were unchanged.
 
@@ -26,7 +26,7 @@ Not-found / not-owned context throws `NOT_FOUND`; found-but-mismatched context t
 
 ### Residual + completion (2026-06-25)
 
-A post-archive re-audit found one residual both-ID gap in the original helper rule: it rejected mismatched session-scoped attempts, but still accepted an owned standalone attempt for the same question paired with an unrelated owned session that also contained the question. That could still persist misleading export-correlation metadata. The completion fix tightens the both-ID invariant to require a real attempt/session relationship: either `attempt.practiceSessionId === input.practiceSessionId`, or the attempt is a legitimate session-review retry with `retryOrigin === 'session_review'` and `retrySessionId === input.practiceSessionId`. The retry branch is required because the real session-review "Try Again" path submits a standalone retry attempt while preserving the reviewed session id for feedback context.
+A post-archive re-audit found one residual both-ID gap in the original helper rule: it rejected mismatched session-scoped attempts, but still accepted an owned standalone attempt for the same question paired with an unrelated owned session that also contained the question. That could still persist misleading export-correlation metadata. The completion fix tightens the both-ID invariant to require a real attempt/session relationship: either `attempt.practiceSessionId === input.practiceSessionId`, or the attempt is a legitimate standalone session-review retry with `attempt.practiceSessionId === null`, `retryOrigin === 'session_review'`, and `retrySessionId === input.practiceSessionId`. The retry branch is required because the real session-review "Try Again" path submits a standalone retry attempt while preserving the reviewed session id for feedback context.
 
 This is treated as BUG-260 completion, not a new bug ID. Added regression coverage rejects the standalone-attempt + unrelated-session pair at the helper level and through both `RateQuestionUseCase` and `SubmitQuestionReportUseCase`, while preserving null context, standalone-with-null-session, direct session attempts, and session-review retry feedback.
 
@@ -97,7 +97,7 @@ Validate feedback context in the application layer before recording feedback. Ex
 
 1. If `attemptId` is present, load it with `findByIdAndUserId(attemptId, userId)` and require `attempt.questionId === input.questionId`.
 2. If `practiceSessionId` is present, load it with `findByIdAndUserId(practiceSessionId, userId)` and require `session.questionIds.includes(input.questionId)`.
-3. If both are present, require the attempt to belong to the supplied session either directly (`attempt.practiceSessionId === input.practiceSessionId`) or as a session-review retry (`attempt.retryOrigin === 'session_review' && attempt.retrySessionId === input.practiceSessionId`).
+3. If both are present, require the attempt to belong to the supplied session either directly (`attempt.practiceSessionId === input.practiceSessionId`) or as a standalone session-review retry (`attempt.practiceSessionId === null && attempt.retryOrigin === 'session_review' && attempt.retrySessionId === input.practiceSessionId`).
 4. Reject missing or not-owned context with `NOT_FOUND`, reject found-but-mismatched context with `VALIDATION_ERROR`, and continue allowing null context for standalone or best-effort cases.
 5. Persist only validated context IDs.
 
@@ -139,7 +139,7 @@ it('rejects feedback context when the attempt belongs to a different question', 
 });
 ```
 
-Add sibling tests for a session that does not contain the question, a valid direct attempt/session pair, a valid session-review retry pair, a standalone attempt with null session, and null context. The 2026-06-25 completion regression rejects a standalone attempt paired with an unrelated session even when both are owned and both point at / contain the feedback question.
+Add sibling tests for a session that does not contain the question, a valid direct attempt/session pair, a valid standalone session-review retry pair, standalone session-review retries with missing/mismatched reviewed-session provenance, a standalone attempt with null session, and null context. The 2026-06-25 completion regression rejects a standalone attempt paired with an unrelated session even when both are owned and both point at / contain the feedback question.
 
 ## Prior Bug Cross-Refs
 

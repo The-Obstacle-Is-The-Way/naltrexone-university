@@ -272,6 +272,72 @@ describe('validateFeedbackContext', () => {
     );
   });
 
+  it('rejects a standalone session-review retry paired with a different reviewed session', async () => {
+    const attempts = attemptsWith({
+      id: 'attempt-retry-q1',
+      userId,
+      questionId: 'q1',
+      practiceSessionId: null,
+      retryOrigin: 'session_review',
+      retrySessionId: 'session-other',
+    });
+    const sessions = sessionsWith({
+      id: 'session-1',
+      userId,
+      questionIds: ['q1'],
+    });
+
+    await expect(
+      validateFeedbackContext(
+        {
+          userId,
+          questionId: 'q1',
+          attemptId: 'attempt-retry-q1',
+          practiceSessionId: 'session-1',
+        },
+        { attempts, sessions },
+      ),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Feedback attempt is not part of the supplied session',
+      ),
+    );
+  });
+
+  it('rejects a standalone session-review retry with missing reviewed-session provenance', async () => {
+    const attempts = attemptsWith({
+      id: 'attempt-retry-q1',
+      userId,
+      questionId: 'q1',
+      practiceSessionId: null,
+      retryOrigin: 'session_review',
+      retrySessionId: null,
+    });
+    const sessions = sessionsWith({
+      id: 'session-1',
+      userId,
+      questionIds: ['q1'],
+    });
+
+    await expect(
+      validateFeedbackContext(
+        {
+          userId,
+          questionId: 'q1',
+          attemptId: 'attempt-retry-q1',
+          practiceSessionId: 'session-1',
+        },
+        { attempts, sessions },
+      ),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Feedback attempt is not part of the supplied session',
+      ),
+    );
+  });
+
   it('rejects a session-scoped attempt even with matching session-review retry provenance', async () => {
     // The attempt already belongs to a different session, so the session_review
     // exception must NOT apply (it is only for standalone retry attempts).
