@@ -696,4 +696,55 @@ describe('PracticeSessionStarter', () => {
     expect(substanceIndex).toBeGreaterThan(topicIndex);
     expect(treatmentIndex).toBeGreaterThan(substanceIndex);
   });
+
+  function renderWithAvailableCount(
+    availableCount: number,
+    sessionCount: number,
+  ) {
+    return renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={sessionCount}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={availableCount}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+  }
+
+  it('pluralizes the available-count message as singular when exactly one question matches', () => {
+    const html = renderWithAvailableCount(1, 1);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const message = doc.querySelector('output')?.textContent ?? '';
+
+    expect(message).toBe('1 question available.');
+    expect(message).not.toContain('1 questions');
+  });
+
+  it('keeps the available-count message plural for more than one question', () => {
+    const html = renderWithAvailableCount(3, 3);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const message = doc.querySelector('output')?.textContent ?? '';
+
+    expect(message).toBe('3 questions available.');
+  });
+
+  it('pluralizes the capped-count message as singular when only one question is available', () => {
+    const html = renderWithAvailableCount(1, 20);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const message = doc.querySelector('output')?.textContent ?? '';
+
+    expect(message).toBe('Only 1 question available. Starting session with 1.');
+    expect(message).not.toContain('1 questions');
+  });
 });
