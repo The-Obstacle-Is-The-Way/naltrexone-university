@@ -272,6 +272,41 @@ describe('validateFeedbackContext', () => {
     );
   });
 
+  it('rejects a session-scoped attempt even with matching session-review retry provenance', async () => {
+    // The attempt already belongs to a different session, so the session_review
+    // exception must NOT apply (it is only for standalone retry attempts).
+    const attempts = attemptsWith({
+      id: 'attempt-scoped',
+      userId,
+      questionId: 'q1',
+      practiceSessionId: 'session-other',
+      retryOrigin: 'session_review',
+      retrySessionId: 'session-1',
+    });
+    const sessions = sessionsWith({
+      id: 'session-1',
+      userId,
+      questionIds: ['q1'],
+    });
+
+    await expect(
+      validateFeedbackContext(
+        {
+          userId,
+          questionId: 'q1',
+          attemptId: 'attempt-scoped',
+          practiceSessionId: 'session-1',
+        },
+        { attempts, sessions },
+      ),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Feedback attempt is not part of the supplied session',
+      ),
+    );
+  });
+
   it('accepts a session-review retry attempt paired with its reviewed session', async () => {
     const attempts = attemptsWith({
       id: 'attempt-retry-q1',

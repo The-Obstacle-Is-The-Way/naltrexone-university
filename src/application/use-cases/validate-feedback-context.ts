@@ -98,8 +98,14 @@ export async function validateFeedbackContext(
     input.practiceSessionId !== null &&
     attemptSessionId !== input.practiceSessionId &&
     !(
-      attemptRetryOrigin === 'session_review' &&
-      attemptRetrySessionId === input.practiceSessionId
+      // A session-review retry is a STANDALONE attempt (no session of its own)
+      // that points back to the reviewed session via retry provenance. An
+      // attempt that already belongs to a different session must not qualify.
+      (
+        attemptSessionId === null &&
+        attemptRetryOrigin === 'session_review' &&
+        attemptRetrySessionId === input.practiceSessionId
+      )
     )
   ) {
     throw new ApplicationError(
