@@ -207,7 +207,7 @@ describe('validateFeedbackContext', () => {
     ).rejects.toEqual(
       new ApplicationError(
         'VALIDATION_ERROR',
-        'Feedback attempt belongs to a different practice session',
+        'Feedback attempt is not part of the supplied session',
       ),
     );
   });
@@ -241,7 +241,7 @@ describe('validateFeedbackContext', () => {
     });
   });
 
-  it('accepts a standalone attempt alongside a valid session (attempt makes no session claim)', async () => {
+  it('rejects a standalone attempt paired with an unrelated session', async () => {
     const attempts = attemptsWith({
       id: 'attempt-q1',
       userId,
@@ -264,8 +264,41 @@ describe('validateFeedbackContext', () => {
         },
         { attempts, sessions },
       ),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Feedback attempt is not part of the supplied session',
+      ),
+    );
+  });
+
+  it('accepts a session-review retry attempt paired with its reviewed session', async () => {
+    const attempts = attemptsWith({
+      id: 'attempt-retry-q1',
+      userId,
+      questionId: 'q1',
+      practiceSessionId: null,
+      retryOrigin: 'session_review',
+      retrySessionId: 'session-1',
+    });
+    const sessions = sessionsWith({
+      id: 'session-1',
+      userId,
+      questionIds: ['q1'],
+    });
+
+    await expect(
+      validateFeedbackContext(
+        {
+          userId,
+          questionId: 'q1',
+          attemptId: 'attempt-retry-q1',
+          practiceSessionId: 'session-1',
+        },
+        { attempts, sessions },
+      ),
     ).resolves.toEqual({
-      attemptId: 'attempt-q1',
+      attemptId: 'attempt-retry-q1',
       practiceSessionId: 'session-1',
     });
   });

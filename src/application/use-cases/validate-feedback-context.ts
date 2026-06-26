@@ -3,6 +3,7 @@ import type {
   AttemptRepository,
   PracticeSessionRepository,
 } from '@/src/application/ports/repositories';
+import type { AttemptRetryOrigin } from '@/src/domain/entities';
 
 /**
  * Client-supplied feedback context attached to a rating/report.
@@ -32,8 +33,9 @@ export type ValidatedFeedbackContext = {
  *   equal the feedback `questionId`.
  * - `practiceSessionId` present -> must be owned by `userId` and its
  *   `questionIds` must include the feedback `questionId`.
- * - both present and the attempt is session-scoped -> the attempt's
- *   `practiceSessionId` must equal the supplied `practiceSessionId`.
+ * - both present -> the attempt must belong to the supplied session either
+ *   directly (`practiceSessionId`) or as a session-review retry
+ *   (`retryOrigin=session_review` + `retrySessionId`).
  *
  * Error mapping: not-found/not-owned -> `NOT_FOUND`; found-but-mismatched ->
  * `VALIDATION_ERROR`. Null context is always allowed and passes through
@@ -47,6 +49,8 @@ export async function validateFeedbackContext(
   },
 ): Promise<ValidatedFeedbackContext> {
   let attemptSessionId: string | null = null;
+  let attemptRetryOrigin: AttemptRetryOrigin | null = null;
+  let attemptRetrySessionId: string | null = null;
 
   if (input.attemptId !== null) {
     const attempt = await deps.attempts.findByIdAndUserId(
@@ -63,6 +67,8 @@ export async function validateFeedbackContext(
       );
     }
     attemptSessionId = attempt.practiceSessionId;
+    attemptRetryOrigin = attempt.retryOrigin;
+    attemptRetrySessionId = attempt.retrySessionId;
   }
 
   if (input.practiceSessionId !== null) {
@@ -84,18 +90,21 @@ export async function validateFeedbackContext(
     }
   }
 
-  // When both are supplied and the attempt is session-scoped, the attempt must
-  // belong to the supplied session. A standalone attempt (null session) carries
-  // no session claim, so it does not constrain the supplied session.
+  // When both are supplied, the attempt must have a real relationship to the
+  // supplied session. Session-review retries are standalone attempts that point
+  // back to the reviewed session through retry provenance.
   if (
     input.attemptId !== null &&
     input.practiceSessionId !== null &&
-    attemptSessionId !== null &&
-    attemptSessionId !== input.practiceSessionId
+    attemptSessionId !== input.practiceSessionId &&
+    !(
+      attemptRetryOrigin === 'session_review' &&
+      attemptRetrySessionId === input.practiceSessionId
+    )
   ) {
     throw new ApplicationError(
       'VALIDATION_ERROR',
-      'Feedback attempt belongs to a different practice session',
+      'Feedback attempt is not part of the supplied session',
     );
   }
 
