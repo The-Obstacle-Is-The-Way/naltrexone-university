@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pluralize } from './pluralize';
+import { pluralize } from '@/lib/pluralize';
 
 describe('pluralize', () => {
   it('uses the plural form for zero', () => {

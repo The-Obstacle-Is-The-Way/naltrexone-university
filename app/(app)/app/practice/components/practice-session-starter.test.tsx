@@ -745,7 +745,9 @@ describe('PracticeSessionStarter', () => {
     const doc = parseHtml(html);
     const message = doc.querySelector('output')?.textContent ?? '';
 
-    expect(message).toBe('Only 1 question available. Starting session with 1.');
+    expect(message).toBe(
+      'Only 1 question available. Starting session with 1 question.',
+    );
     expect(message).not.toContain('1 questions');
   });
 });

@@ -82,7 +82,7 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
     }
 
     if (props.sessionCount > props.availableCount) {
-      return `Only ${pluralize(props.availableCount, 'question')} available. Starting session with ${props.availableCount}.`;
+      return `Only ${pluralize(props.availableCount, 'question')} available. Starting session with ${pluralize(props.availableCount, 'question')}.`;
     }
 
     return `${pluralize(props.availableCount, 'question')} available.`;

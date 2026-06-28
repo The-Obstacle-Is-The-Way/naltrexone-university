@@ -200,7 +200,7 @@ test('warns when session count exceeds available question count', async () => {
   await expect
     .element(
       screen.getByText(
-        'Only 10 questions available. Starting session with 10.',
+        'Only 10 questions available. Starting session with 10 questions.',
       ),
     )
     .toBeVisible();

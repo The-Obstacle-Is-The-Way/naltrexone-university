@@ -242,14 +242,16 @@ describe('validateFeedbackContext', () => {
   });
 
   it('rejects a standalone attempt paired with an unrelated session', async () => {
+    const attemptId = crypto.randomUUID();
+    const sessionId = crypto.randomUUID();
     const attempts = attemptsWith({
-      id: 'attempt-q1',
+      id: attemptId,
       userId,
       questionId: 'q1',
       practiceSessionId: null,
     });
     const sessions = sessionsWith({
-      id: 'session-1',
+      id: sessionId,
       userId,
       questionIds: ['q1'],
     });
@@ -259,8 +261,8 @@ describe('validateFeedbackContext', () => {
         {
           userId,
           questionId: 'q1',
-          attemptId: 'attempt-q1',
-          practiceSessionId: 'session-1',
+          attemptId,
+          practiceSessionId: sessionId,
         },
         { attempts, sessions },
       ),
@@ -273,16 +275,19 @@ describe('validateFeedbackContext', () => {
   });
 
   it('rejects a standalone session-review retry paired with a different reviewed session', async () => {
+    const attemptId = crypto.randomUUID();
+    const reviewedSessionId = crypto.randomUUID();
+    const suppliedSessionId = crypto.randomUUID();
     const attempts = attemptsWith({
-      id: 'attempt-retry-q1',
+      id: attemptId,
       userId,
       questionId: 'q1',
       practiceSessionId: null,
       retryOrigin: 'session_review',
-      retrySessionId: 'session-other',
+      retrySessionId: reviewedSessionId,
     });
     const sessions = sessionsWith({
-      id: 'session-1',
+      id: suppliedSessionId,
       userId,
       questionIds: ['q1'],
     });
@@ -292,8 +297,8 @@ describe('validateFeedbackContext', () => {
         {
           userId,
           questionId: 'q1',
-          attemptId: 'attempt-retry-q1',
-          practiceSessionId: 'session-1',
+          attemptId,
+          practiceSessionId: suppliedSessionId,
         },
         { attempts, sessions },
       ),
@@ -306,8 +311,10 @@ describe('validateFeedbackContext', () => {
   });
 
   it('rejects a standalone session-review retry with missing reviewed-session provenance', async () => {
+    const attemptId = crypto.randomUUID();
+    const sessionId = crypto.randomUUID();
     const attempts = attemptsWith({
-      id: 'attempt-retry-q1',
+      id: attemptId,
       userId,
       questionId: 'q1',
       practiceSessionId: null,
@@ -315,7 +322,7 @@ describe('validateFeedbackContext', () => {
       retrySessionId: null,
     });
     const sessions = sessionsWith({
-      id: 'session-1',
+      id: sessionId,
       userId,
       questionIds: ['q1'],
     });
@@ -325,8 +332,8 @@ describe('validateFeedbackContext', () => {
         {
           userId,
           questionId: 'q1',
-          attemptId: 'attempt-retry-q1',
-          practiceSessionId: 'session-1',
+          attemptId,
+          practiceSessionId: sessionId,
         },
         { attempts, sessions },
       ),
@@ -341,16 +348,19 @@ describe('validateFeedbackContext', () => {
   it('rejects a session-scoped attempt even with matching session-review retry provenance', async () => {
     // The attempt already belongs to a different session, so the session_review
     // exception must NOT apply (it is only for standalone retry attempts).
+    const attemptId = crypto.randomUUID();
+    const attemptSessionId = crypto.randomUUID();
+    const suppliedSessionId = crypto.randomUUID();
     const attempts = attemptsWith({
-      id: 'attempt-scoped',
+      id: attemptId,
       userId,
       questionId: 'q1',
-      practiceSessionId: 'session-other',
+      practiceSessionId: attemptSessionId,
       retryOrigin: 'session_review',
-      retrySessionId: 'session-1',
+      retrySessionId: suppliedSessionId,
     });
     const sessions = sessionsWith({
-      id: 'session-1',
+      id: suppliedSessionId,
       userId,
       questionIds: ['q1'],
     });
@@ -360,8 +370,8 @@ describe('validateFeedbackContext', () => {
         {
           userId,
           questionId: 'q1',
-          attemptId: 'attempt-scoped',
-          practiceSessionId: 'session-1',
+          attemptId,
+          practiceSessionId: suppliedSessionId,
         },
         { attempts, sessions },
       ),
@@ -374,16 +384,18 @@ describe('validateFeedbackContext', () => {
   });
 
   it('accepts a session-review retry attempt paired with its reviewed session', async () => {
+    const attemptId = crypto.randomUUID();
+    const sessionId = crypto.randomUUID();
     const attempts = attemptsWith({
-      id: 'attempt-retry-q1',
+      id: attemptId,
       userId,
       questionId: 'q1',
       practiceSessionId: null,
       retryOrigin: 'session_review',
-      retrySessionId: 'session-1',
+      retrySessionId: sessionId,
     });
     const sessions = sessionsWith({
-      id: 'session-1',
+      id: sessionId,
       userId,
       questionIds: ['q1'],
     });
@@ -393,14 +405,14 @@ describe('validateFeedbackContext', () => {
         {
           userId,
           questionId: 'q1',
-          attemptId: 'attempt-retry-q1',
-          practiceSessionId: 'session-1',
+          attemptId,
+          practiceSessionId: sessionId,
         },
         { attempts, sessions },
       ),
     ).resolves.toEqual({
-      attemptId: 'attempt-retry-q1',
-      practiceSessionId: 'session-1',
+      attemptId,
+      practiceSessionId: sessionId,
     });
   });
 });
