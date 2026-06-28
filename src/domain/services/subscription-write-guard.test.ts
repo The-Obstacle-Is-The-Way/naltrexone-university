@@ -132,13 +132,66 @@ describe('shouldPersistSubscriptionWrite', () => {
     'paymentProcessing',
     'unpaid',
     'paused',
-  ])('allows a different %s write so recoverable canonical subscriptions can persist', (status) => {
+  ])('rejects a different %s write over a current entitled row', (status) => {
     expect(
       shouldPersistSubscriptionWrite({
         stored: candidate({ status: 'active' }),
         incoming: candidate({
           subscriptionIdentity: 'sub_recoverable',
           status,
+          currentPeriodEnd: FUTURE,
+        }),
+        now: NOW,
+      }),
+    ).toBe(false);
+  });
+
+  it.each<SubscriptionStatus>([
+    'active',
+    'inTrial',
+    'pastDue',
+  ])('allows a different current-entitled %s write over a current entitled row', (status) => {
+    expect(
+      shouldPersistSubscriptionWrite({
+        stored: candidate({ status: 'active' }),
+        incoming: candidate({
+          subscriptionIdentity: 'sub_canonical',
+          status,
+          currentPeriodEnd: FUTURE,
+        }),
+        now: NOW,
+      }),
+    ).toBe(true);
+  });
+
+  it.each<SubscriptionStatus>([
+    'paymentProcessing',
+    'unpaid',
+    'paused',
+  ])('allows same-subscription %s lifecycle updates', (status) => {
+    expect(
+      shouldPersistSubscriptionWrite({
+        stored: candidate({
+          subscriptionIdentity: 'sub_current',
+          status: 'active',
+        }),
+        incoming: candidate({
+          subscriptionIdentity: 'sub_current',
+          status,
+          currentPeriodEnd: FUTURE,
+        }),
+        now: NOW,
+      }),
+    ).toBe(true);
+  });
+
+  it('allows a different unpaid write when the stored active period has expired', () => {
+    expect(
+      shouldPersistSubscriptionWrite({
+        stored: candidate({ status: 'active', currentPeriodEnd: PAST }),
+        incoming: candidate({
+          subscriptionIdentity: 'sub_recoverable',
+          status: 'unpaid',
           currentPeriodEnd: FUTURE,
         }),
         now: NOW,

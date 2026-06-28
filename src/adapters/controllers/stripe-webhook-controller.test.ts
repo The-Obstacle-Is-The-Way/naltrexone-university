@@ -320,6 +320,65 @@ describe('processStripeWebhook', () => {
     await expect(stripeCustomers.findByUserId(userId)).resolves.toBeNull();
   });
 
+  it('does not let a different unpaid subscription webhook overwrite a current active row', async () => {
+    const userId = crypto.randomUUID();
+    const now = new Date('2026-06-12T00:00:00.000Z');
+    const subscriptions = new FakeSubscriptionRepository([], () => now);
+    await subscriptions.upsert({
+      userId,
+      externalSubscriptionId: 'sub_current',
+      plan: 'monthly',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_duplicate_unpaid',
+        type: 'customer.subscription.updated',
+        subscriptionUpdate: {
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_unpaid',
+          plan: 'monthly',
+          status: 'unpaid',
+          currentPeriodEnd: new Date('2026-07-13T00:00:00.000Z'),
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+
+    const { deps, stripeEvents, stripeCustomers } = createDeps({
+      paymentGateway,
+      subscriptions,
+    });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    await expect(
+      subscriptions.findByExternalSubscriptionId('sub_current'),
+    ).resolves.toMatchObject({
+      userId,
+      status: 'active',
+      currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
+    });
+    await expect(
+      subscriptions.findByExternalSubscriptionId('sub_unpaid'),
+    ).resolves.toBeNull();
+    await expect(
+      stripeEvents.lock('evt_duplicate_unpaid'),
+    ).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
+    await expect(stripeCustomers.findByUserId(userId)).resolves.toBeNull();
+  });
+
   it('marks non-subscription events as processed (no subscription update)', async () => {
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
