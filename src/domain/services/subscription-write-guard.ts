@@ -48,7 +48,9 @@ export function shouldPersistSubscriptionWrite(input: {
   if (isTerminalSubscriptionStatus(input.incoming.status)) return false;
   if (!hasEntitledSubscriptionTier(input.incoming.status)) return false;
 
-  return (
-    compareCanonicalSubscriptionCandidates(input.incoming, input.stored) < 0
+  const canonicalOrdering = compareCanonicalSubscriptionCandidates(
+    input.incoming,
+    input.stored,
   );
+  return canonicalOrdering < 0;
 }
