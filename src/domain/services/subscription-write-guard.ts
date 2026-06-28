@@ -42,7 +42,8 @@ export function shouldPersistSubscriptionWrite(input: {
     return true;
   }
 
-  if (isTerminalSubscriptionStatus(input.incoming.status)) return false;
-
-  return hasEntitledSubscriptionTier(input.incoming.status);
+  return (
+    !isTerminalSubscriptionStatus(input.incoming.status) &&
+    hasEntitledSubscriptionTier(input.incoming.status)
+  );
 }
