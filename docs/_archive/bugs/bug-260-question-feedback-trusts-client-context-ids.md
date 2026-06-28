@@ -9,9 +9,9 @@
 
 ---
 
-## Resolution
+## Resolution (PR #516/#517 historical)
 
-**Fixed and prod-verified 2026-06-25.** Implemented exactly per the Proposed Fix below: a shared `validateFeedbackContext` application helper, with `AttemptRepository` + `PracticeSessionRepository` injected into `RateQuestionUseCase` and `SubmitQuestionReportUseCase`, validates optional client context before the feedback row is recorded:
+**Fixed and prod-verified 2026-06-25.** PR #516/#517 implemented the original ownership/context-validation plan: a shared `validateFeedbackContext` application helper, with `AttemptRepository` + `PracticeSessionRepository` injected into `RateQuestionUseCase` and `SubmitQuestionReportUseCase`, validates optional client context before the feedback row is recorded:
 
 - a present `attemptId` must be owned by the caller (`findByIdAndUserId`) and its `questionId` must equal the feedback question;
 - a present `practiceSessionId` must be owned by the caller and its `questionIds` must include the feedback question;
@@ -23,6 +23,12 @@ Not-found / not-owned context throws `NOT_FOUND`; found-but-mismatched context t
 - **Fix PR:** [#516](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/516) — squash `542eedbc` to `dev`. CodeRabbit reviewed the exact head `3cb21ae2` ("No actionable comments were generated in the recent review", 0 unresolved threads).
 - **Promotion:** [#517](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/517) — merge commit `602997b9` to `main` (byte-identical-tree owner-override; CodeRabbit rate-limited on the promo, `git diff 3cb21ae2 origin/main` empty).
 - **Prod-verified:** deploy `dpl_EFeg1cHqhTvdTU2W5bWq5iuyJDDe` (commit `602997b9`, `target: production`) READY, `addictionboards.com` 200.
+
+### Residual + completion (2026-06-25)
+
+A post-archive re-audit found one residual both-ID gap in the original helper rule: it rejected mismatched session-scoped attempts, but still accepted an owned standalone attempt for the same question paired with an unrelated owned session that also contained the question. That could still persist misleading export-correlation metadata. Completion PR [#524](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/524) is active and not yet merged/prod-verified; it tightens the both-ID invariant to require a real attempt/session relationship: either `attempt.practiceSessionId === input.practiceSessionId`, or the attempt is a legitimate standalone session-review retry with `attempt.practiceSessionId === null`, `retryOrigin === 'session_review'`, and `retrySessionId === input.practiceSessionId`. The retry branch is required because the real session-review "Try Again" path submits a standalone retry attempt while preserving the reviewed session id for feedback context.
+
+This is treated as BUG-260 completion, not a new bug ID. The active completion branch adds regression coverage that rejects the standalone-attempt + unrelated-session pair at the helper level and through both `RateQuestionUseCase` and `SubmitQuestionReportUseCase`, while preserving null context, standalone-with-null-session, direct session attempts, and session-review retry feedback. The archived Resolution above should be updated only after #524 merges and prod-verifies.
 
 ---
 
@@ -91,7 +97,7 @@ Validate feedback context in the application layer before recording feedback. Ex
 
 1. If `attemptId` is present, load it with `findByIdAndUserId(attemptId, userId)` and require `attempt.questionId === input.questionId`.
 2. If `practiceSessionId` is present, load it with `findByIdAndUserId(practiceSessionId, userId)` and require `session.questionIds.includes(input.questionId)`.
-3. If both are present, require the attempt's `practiceSessionId` to match the supplied session when the attempt is session-scoped.
+3. If both are present, require the attempt to belong to the supplied session either directly (`attempt.practiceSessionId === input.practiceSessionId`) or as a standalone session-review retry (`attempt.practiceSessionId === null && attempt.retryOrigin === 'session_review' && attempt.retrySessionId === input.practiceSessionId`).
 4. Reject missing or not-owned context with `NOT_FOUND`, reject found-but-mismatched context with `VALIDATION_ERROR`, and continue allowing null context for standalone or best-effort cases.
 5. Persist only validated context IDs.
 
@@ -133,7 +139,7 @@ it('rejects feedback context when the attempt belongs to a different question', 
 });
 ```
 
-Add sibling tests for a session that does not contain the question, a valid attempt/session pair, and null context. Today the rejection test fails because the use cases do not load attempts or sessions before recording the feedback row.
+Add sibling tests for a session that does not contain the question, a valid direct attempt/session pair, a valid standalone session-review retry pair, standalone session-review retries with missing/mismatched reviewed-session provenance, a standalone attempt with null session, and null context. The 2026-06-25 completion regression rejects a standalone attempt paired with an unrelated session even when both are owned and both point at / contain the feedback question.
 
 ## Prior Bug Cross-Refs
 
