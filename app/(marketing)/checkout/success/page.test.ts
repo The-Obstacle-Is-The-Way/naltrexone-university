@@ -181,7 +181,7 @@ describe('runCheckoutSuccessPage', () => {
           stripeCustomers,
           subscriptions,
         }),
-    };
+    } satisfies CheckoutSuccessDeps;
 
     const searchParams = new Proxy(Promise.resolve({ session_id: 'cs_test' }), {
       get(target, propertyKey) {
@@ -1273,18 +1273,14 @@ describe('syncCheckoutSuccess', () => {
           stripeCustomers,
           subscriptions,
         }),
-    };
+    } satisfies CheckoutSuccessDeps;
 
     const redirectFn = vi.fn((url: string): never => {
       throw new RedirectError(url);
     });
 
     await expect(
-      syncCheckoutSuccess(
-        { sessionId: 'cs_unpaid' },
-        deps as never,
-        redirectFn,
-      ),
+      syncCheckoutSuccess({ sessionId: 'cs_unpaid' }, deps, redirectFn),
     ).resolves.toEqual({ status: 'active' });
 
     expect(redirectFn).not.toHaveBeenCalled();

@@ -150,7 +150,7 @@ describe('shouldPersistSubscriptionWrite', () => {
     'active',
     'inTrial',
     'pastDue',
-  ])('allows a different current-entitled %s write over a current entitled row', (status) => {
+  ])('allows a different current-entitled %s canonical winner', (status) => {
     expect(
       shouldPersistSubscriptionWrite({
         stored: candidate({ status: 'active' }),
@@ -162,6 +162,24 @@ describe('shouldPersistSubscriptionWrite', () => {
         now: NOW,
       }),
     ).toBe(true);
+  });
+
+  it('rejects a different current-entitled write that loses canonical ordering', () => {
+    expect(
+      shouldPersistSubscriptionWrite({
+        stored: candidate({
+          subscriptionIdentity: 'sub_current',
+          status: 'active',
+          currentPeriodEnd: FUTURE,
+        }),
+        incoming: candidate({
+          subscriptionIdentity: 'sub_shorter',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-06-20T12:00:00.000Z'),
+        }),
+        now: NOW,
+      }),
+    ).toBe(false);
   });
 
   it.each<SubscriptionStatus>([

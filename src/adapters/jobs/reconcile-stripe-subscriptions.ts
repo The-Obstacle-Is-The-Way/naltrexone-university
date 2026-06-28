@@ -10,7 +10,7 @@ import type {
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { mapWithConcurrencyLimit } from '@/src/adapters/shared/concurrency';
 import { ApplicationError } from '@/src/application/errors';
-import { compareCanonicalSubscriptionCandidates } from '@/src/domain/services';
+import { compareCanonicalSubscriptionCandidates } from '@/src/application/shared/subscription-canonicalization';
 
 export const RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_LIMIT = 100;
 export const RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT = 500;
