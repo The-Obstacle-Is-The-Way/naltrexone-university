@@ -37,6 +37,27 @@ test('shows an info toast when fewer questions are available than requested', as
     .toBeVisible();
 });
 
+test('uses the singular noun in the toast when exactly one question matched', async () => {
+  const screen = await render(
+    <NotificationProvider>
+      <PracticeSessionToast
+        code="session_started"
+        requestedCount="20"
+        actualCount="1"
+      />
+      <div>page</div>
+    </NotificationProvider>,
+  );
+
+  await expect
+    .element(
+      screen.getByText(
+        'Only 1 of 20 questions matched your filters. Starting session with 1 question.',
+      ),
+    )
+    .toBeVisible();
+});
+
 test('does not show a toast when requestedCount equals actualCount', async () => {
   await render(
     <NotificationProvider>

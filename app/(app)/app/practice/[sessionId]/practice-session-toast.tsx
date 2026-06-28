@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useNotification } from '@/components/ui/notification-provider';
+import { pluralize } from '@/lib/pluralize';
 
 type PracticeSessionToastCode = 'session_started';
 
@@ -52,7 +53,7 @@ export function PracticeSessionToast({
     lastHandledToastRef.current = handledKey;
 
     notify({
-      message: `Only ${actual} of ${requested} questions matched your filters. Starting session with ${actual} questions.`,
+      message: `Only ${actual} of ${pluralize(requested, 'question')} matched your filters. Starting session with ${pluralize(actual, 'question')}.`,
       tone: 'info',
     });
 

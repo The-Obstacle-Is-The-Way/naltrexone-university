@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { compactControlShellClasses } from '@/components/ui/control-shell-styles';
+import { parseHtml } from '@/tests/shared/dom-helpers';
 
 const {
   fixtureTag1Id,
@@ -95,7 +96,7 @@ describe('PracticeSessionStarter', () => {
     expect(html).toContain('data-slot="card"');
     expect(html).toContain('data-slot="input"');
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const title = doc.querySelector('h2');
     const input = findQuestionsInput(doc);
     const inputTokens = getClassTokens(input?.getAttribute('class') ?? '');
@@ -139,7 +140,7 @@ describe('PracticeSessionStarter', () => {
       />,
     );
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const label = findQuestionsLabel(doc);
     const input = findQuestionsInput(doc);
 
@@ -187,7 +188,7 @@ describe('PracticeSessionStarter', () => {
       </>,
     );
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const modeLabels = findVisibleLabelsWithId(doc, 'Mode');
     const statusLabels = findVisibleLabelsWithId(doc, 'Status');
     const difficultyLabels = findVisibleLabelsWithId(doc, 'Difficulty');
@@ -237,7 +238,7 @@ describe('PracticeSessionStarter', () => {
         onStartSession={() => undefined}
       />,
     );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const sessionCountInput = findQuestionsInput(doc);
     const starterRow = sessionCountInput?.closest('div[class~="sm:flex-row"]');
     const starterRowTokens = getClassTokens(
@@ -270,7 +271,7 @@ describe('PracticeSessionStarter', () => {
         onStartSession={() => undefined}
       />,
     );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const label = findQuestionsLabel(doc);
     const input = findQuestionsInput(doc);
     const questionsWrapper = label?.parentElement;
@@ -315,7 +316,7 @@ describe('PracticeSessionStarter', () => {
         onStartSession={() => undefined}
       />,
     );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const statusFieldset = findFieldsetByVisibleLabel(doc, 'Status');
     const difficultyFieldset = findFieldsetByVisibleLabel(doc, 'Difficulty');
     const statusWrapper = statusFieldset?.closest('div[class~="space-y-2"]');
@@ -367,7 +368,7 @@ describe('PracticeSessionStarter', () => {
       />,
     );
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     expect(findFieldsetByVisibleLabel(doc, 'Mode')).not.toBeNull();
     expect(findFieldsetByVisibleLabel(doc, 'Status')).not.toBeNull();
     expect(findFieldsetByVisibleLabel(doc, 'Difficulty')).not.toBeNull();
@@ -418,7 +419,7 @@ describe('PracticeSessionStarter', () => {
       />,
     );
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const details = Array.from(doc.querySelectorAll('details'));
     expect(details.length).toBeGreaterThan(0);
     for (const element of details) {
@@ -613,7 +614,7 @@ describe('PracticeSessionStarter', () => {
     expect(html).not.toContain('Leave empty to include all questions');
     expect(html).not.toContain('Leave empty to include all difficulties');
 
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const statusControl = findFieldsetByVisibleLabel(doc, 'Status');
     expect(statusControl).toBeTruthy();
     const activeStatus = statusControl?.querySelector(
@@ -676,7 +677,7 @@ describe('PracticeSessionStarter', () => {
     );
 
     expect(html).not.toContain('Exam Section');
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const doc = parseHtml(html);
     const summaryLabels = Array.from(doc.querySelectorAll('summary')).map(
       (el) => el.textContent ?? '',
     );
@@ -695,5 +696,56 @@ describe('PracticeSessionStarter', () => {
     expect(topicIndex).toBeGreaterThanOrEqual(0);
     expect(substanceIndex).toBeGreaterThan(topicIndex);
     expect(treatmentIndex).toBeGreaterThan(substanceIndex);
+  });
+
+  function renderWithAvailableCount(
+    availableCount: number,
+    sessionCount: number,
+  ) {
+    return renderToStaticMarkup(
+      <PracticeSessionStarter
+        sessionMode="tutor"
+        sessionCount={sessionCount}
+        filters={{ tagSlugs: [], difficulty: null, status: 'unanswered' }}
+        availableCountStatus="idle"
+        availableCount={availableCount}
+        tagLoadStatus="idle"
+        availableTags={[]}
+        sessionStartStatus="idle"
+        sessionStartError={null}
+        onDifficultyChange={() => undefined}
+        onStatusChange={() => undefined}
+        onToggleTag={() => undefined}
+        onSessionModeChange={() => undefined}
+        onSessionCountChange={() => undefined}
+        onStartSession={() => undefined}
+      />,
+    );
+  }
+
+  it('pluralizes the available-count message as singular when exactly one question matches', () => {
+    const html = renderWithAvailableCount(1, 1);
+    const doc = parseHtml(html);
+    const message = doc.querySelector('output')?.textContent ?? '';
+
+    expect(message).toBe('1 question available.');
+    expect(message).not.toContain('1 questions');
+  });
+
+  it('keeps the available-count message plural for more than one question', () => {
+    const html = renderWithAvailableCount(3, 3);
+    const doc = parseHtml(html);
+    const message = doc.querySelector('output')?.textContent ?? '';
+
+    expect(message).toBe('3 questions available.');
+  });
+
+  it('pluralizes the capped-count message as singular when only one question is available', () => {
+    const html = renderWithAvailableCount(1, 20);
+    const doc = parseHtml(html);
+    const message = doc.querySelector('output')?.textContent ?? '';
+
+    expect(message).toBe('Only 1 question available. Starting session with 1.');
+    expect(message).not.toContain('1 questions');
   });
 });
