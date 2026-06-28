@@ -8,6 +8,7 @@ import { compactControlShellClasses } from '@/components/ui/control-shell-styles
 import { FilterChip } from '@/components/ui/filter-chip';
 import { Input } from '@/components/ui/input';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { pluralize } from '@/lib/pluralize';
 import type { TagRow } from '@/src/adapters/controllers/tag-controller';
 import {
   AllDifficulties,
@@ -81,10 +82,10 @@ export function PracticeSessionStarter(props: PracticeSessionStarterProps) {
     }
 
     if (props.sessionCount > props.availableCount) {
-      return `Only ${props.availableCount} questions available. Starting session with ${props.availableCount}.`;
+      return `Only ${pluralize(props.availableCount, 'question')} available. Starting session with ${pluralize(props.availableCount, 'question')}.`;
     }
 
-    return `${props.availableCount} questions available.`;
+    return `${pluralize(props.availableCount, 'question')} available.`;
   }, [props.availableCount, props.availableCountStatus, props.sessionCount]);
 
   const isStartDisabled =

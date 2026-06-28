@@ -197,4 +197,40 @@ describe('RateQuestionUseCase', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     expect(feedback.recordCalls).toEqual([]);
   });
+
+  it('rejects and records nothing when a standalone attempt is paired with an unrelated session', async () => {
+    const { useCase, feedback } = makeUseCase({
+      attempts: new FakeAttemptRepository([
+        createAttempt({
+          id: 'attempt-1',
+          userId,
+          questionId: 'question-1',
+          practiceSessionId: null,
+        }),
+      ]),
+      sessions: new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId,
+          questionIds: ['question-1'],
+        }),
+      ]),
+    });
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId: 'question-1',
+        attemptId: 'attempt-1',
+        practiceSessionId: 'session-1',
+        rating: 'helpful',
+      }),
+    ).rejects.toEqual(
+      new ApplicationError(
+        'VALIDATION_ERROR',
+        'Feedback attempt is not part of the supplied session',
+      ),
+    );
+    expect(feedback.recordCalls).toEqual([]);
+  });
 });
