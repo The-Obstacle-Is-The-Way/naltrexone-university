@@ -2,7 +2,6 @@ minimumReleaseAge: 10080
 minimumReleaseAgeStrict: true # v11-only: fail when no version satisfies the 7-day age threshold.
 minimumReleaseAgeIgnoreMissingTime: false # v11-only: fail when registry metadata lacks package publish time.
 minimumReleaseAgeExclude:
-  - undici@7.28.0 # Security: dev-only undici patch (6 GHSAs) published 2026-06-15, 4 days old at fix time. Exact, narrow exception so the security patch lands now instead of waiting out the 7-day gate. Official undici-team release; safe to drop after it ages in (~2026-06-22).
   - js-yaml@3.15.0 # Security: CVE-2026-53550 / GHSA-h67p-54hq-rp68 quadratic-complexity DoS patch (v3-legacy backport) published 2026-06-26, ~3 days old at fix time. Exact, narrow exception so the security patch lands now instead of waiting out the 7-day gate. Safe to drop after it ages in (~2026-07-03).
 blockExoticSubdeps: true
 overrides:
@@ -12,7 +11,7 @@ overrides:
   # Security: 6 advisories (high→low) — SOCKS5 cross-origin routing & TLS-validation
   # bypass, Set-Cookie header injection / SameSite downgrade, shared-cache disclosure,
   # keep-alive response-queue poisoning. All dev-scoped via jsdom/vitest. Patched in
-  # undici 7.28.0; see minimumReleaseAgeExclude above for the age-gate exception.
+  # undici 7.28.0 (aged past the 7-day release gate ~2026-06-22; no age exception needed).
   undici: 7.28.0
   # Security: GHSA-8988-4f7v-96qf — W3CBaggagePropagator.extract() lacked inbound
   # size caps (unbounded allocation). Patched in OTel 2.8.0. Pinned exact to keep the
