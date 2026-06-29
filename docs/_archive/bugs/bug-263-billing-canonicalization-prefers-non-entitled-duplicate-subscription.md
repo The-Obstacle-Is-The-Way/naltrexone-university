@@ -1,11 +1,22 @@
 # BUG-263: Billing Canonicalization Can Prefer a Non-Entitled Duplicate Subscription Over an Active Paid Subscription
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P2
 **Date:** 2026-06-28
 **Confirmed:** 2026-06-28
+**Resolved:** 2026-06-29
 **Component:** Billing / Stripe Reconciliation / Subscription Canonicalization
-**Resolution State:** Fix implemented on `fix/bug-263-billing-canonicalization`; PR review and owner grade pending.
+
+---
+
+## Resolution
+
+**Fixed and prod-verified 2026-06-29.** A shared domain entitlement-tier canonical ordering (`compareCanonicalSubscriptionCandidates`: entitled tier → later `currentPeriodEnd` → deterministic id) now governs both Stripe reconciliation Phase 3 and `shouldPersistSubscriptionWrite`, so a non-entitled duplicate subscription (`unpaid` / `paymentProcessing` / `paused`) can no longer outrank or overwrite a current entitled (paid-access) subscription. Same-subscription lifecycle transitions and recovery over a non-entitled stored row are preserved; a different subscription may supersede a current entitled row only if it is itself entitled and ranks higher by the shared ordering. The Stripe webhook and checkout-success sync paths inherit the guard through the repository upsert, so a duplicate non-entitled subscription cannot revoke active access there either.
+
+- **Fix PR:** [#528](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/528) — squash `19d0a215` to `dev`. CodeRabbit incremental review covered the exact head `38e1ab31` ("No actionable comments", 0 unresolved threads).
+- **Promotion:** [#529](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/529) — merge `9021887a` to `main`; required `test` check green; CodeRabbit `APPROVED` on the exact head `19d0a215`.
+- **Prod-verified:** deploy `dpl_HvgfaMzTPZtZm1uwyJn38zuyLuqM` (commit `9021887a`, `target: production`) READY; `addictionboards.com` HTTP 200, `/api/health` `{"ok":true,"db":true}`. `main` and `dev` trees identical.
+- **TDD:** RED-first across the reconcile non-entitled-duplicate case (plus dryRun and `incomplete`/`paused` variants), the flipped write-guard contract (`paymentProcessing` / `unpaid` / `paused` now rejected over a current entitled row), and webhook + checkout-success regressions; the shared comparator has its own domain unit test. Full gate green (typecheck, lint, unit 3029, build).
 
 ---
 
@@ -37,63 +48,63 @@ Actual: the non-entitled duplicate can win solely because its period end is late
 
 The reconciliation cron is scheduled in production with destructive mode enabled:
 
-- [`vercel.json`](../../vercel.json#L4) defines the cron list.
-- [`vercel.json`](../../vercel.json#L6) calls `/api/cron/reconcile-stripe-subscriptions?dryRun=false&scope=all`.
-- [`route.ts`](../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L228) invokes the all-pages reconciliation path.
-- [`route.ts`](../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L234) calls `reconcileAllStripeSubscriptionPages(...)`.
+- [`vercel.json`](../../../vercel.json#L4) defines the cron list.
+- [`vercel.json`](../../../vercel.json#L6) calls `/api/cron/reconcile-stripe-subscriptions?dryRun=false&scope=all`.
+- [`route.ts`](../../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L228) invokes the all-pages reconciliation path.
+- [`route.ts`](../../../app/api/cron/reconcile-stripe-subscriptions/route.ts#L234) calls `reconcileAllStripeSubscriptionPages(...)`.
 
 The reconciler's blocking set includes non-entitled Stripe states:
 
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L19) starts `BLOCKING_STATUSES`.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L23) includes `unpaid`.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L24) includes `incomplete`.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L25) includes `paused`.
-- [`stripe-subscription-status.ts`](../../src/adapters/gateways/stripe/stripe-subscription-status.ts#L8) maps `incomplete` to `paymentProcessing`.
-- [`stripe-subscription-status.ts`](../../src/adapters/gateways/stripe/stripe-subscription-status.ts#L14) maps `unpaid` to `unpaid`.
-- [`stripe-subscription-status.ts`](../../src/adapters/gateways/stripe/stripe-subscription-status.ts#L15) maps `paused` to `paused`.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L19) starts `BLOCKING_STATUSES`.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L23) includes `unpaid`.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L24) includes `incomplete`.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L25) includes `paused`.
+- [`stripe-subscription-status.ts`](../../../src/adapters/gateways/stripe/stripe-subscription-status.ts#L8) maps `incomplete` to `paymentProcessing`.
+- [`stripe-subscription-status.ts`](../../../src/adapters/gateways/stripe/stripe-subscription-status.ts#L14) maps `unpaid` to `unpaid`.
+- [`stripe-subscription-status.ts`](../../../src/adapters/gateways/stripe/stripe-subscription-status.ts#L15) maps `paused` to `paused`.
 
 Those local states do not grant app access:
 
-- [`subscription-status.ts`](../../src/domain/value-objects/subscription-status.ts#L29) defines entitled statuses as `active`, `inTrial`, and `pastDue`.
-- [`subscription-status.ts`](../../src/domain/value-objects/subscription-status.ts#L40) still treats `unpaid`, `paymentProcessing`, and `paused` as blocking-checkout states.
-- [`entitlement.ts`](../../src/domain/services/entitlement.ts#L17) returns false for a null subscription.
-- [`entitlement.ts`](../../src/domain/services/entitlement.ts#L18) returns false when the status is not entitled.
-- [`layout.tsx`](<../../app/(app)/app/layout.tsx#L42>) redirects non-entitled app users to pricing.
+- [`subscription-status.ts`](../../../src/domain/value-objects/subscription-status.ts#L29) defines entitled statuses as `active`, `inTrial`, and `pastDue`.
+- [`subscription-status.ts`](../../../src/domain/value-objects/subscription-status.ts#L40) still treats `unpaid`, `paymentProcessing`, and `paused` as blocking-checkout states.
+- [`entitlement.ts`](../../../src/domain/services/entitlement.ts#L17) returns false for a null subscription.
+- [`entitlement.ts`](../../../src/domain/services/entitlement.ts#L18) returns false when the status is not entitled.
+- [`layout.tsx`](<../../../app/(app)/app/layout.tsx#L42>) redirects non-entitled app users to pricing.
 
 Canonical selection ignores that entitlement distinction:
 
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L118) lists every subscription for the customer.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L130) filters to blocking subscription ids.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L183) enters canonical selection when any blocking id exists.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L190) sorts candidates by `currentPeriodEnd` only.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L194) uses subscription id only as a deterministic tie-break.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L223) persists the selected canonical subscription.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L230) writes the selected status to the user-keyed subscription row.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L240) begins duplicate cancellation for every non-winner.
-- [`reconcile-stripe-subscriptions.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L245) calls Stripe cancel for each duplicate.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L118) lists every subscription for the customer.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L130) filters to blocking subscription ids.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L183) enters canonical selection when any blocking id exists.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L190) sorts candidates by `currentPeriodEnd` only.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L194) uses subscription id only as a deterministic tie-break.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L223) persists the selected canonical subscription.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L230) writes the selected status to the user-keyed subscription row.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L240) begins duplicate cancellation for every non-winner.
+- [`reconcile-stripe-subscriptions.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L245) calls Stripe cancel for each duplicate.
 
 The shared write guard lets the non-entitled duplicate persist over an active row:
 
-- [`subscription-write-guard.ts`](../../src/domain/services/subscription-write-guard.ts#L9) defines only `canceled` and `paymentFailed` as terminal.
-- [`subscription-write-guard.ts`](../../src/domain/services/subscription-write-guard.ts#L18) treats current entitled rows specially.
-- [`subscription-write-guard.ts`](../../src/domain/services/subscription-write-guard.ts#L37) keeps same-row and non-current writes permissive.
-- [`subscription-write-guard.ts`](../../src/domain/services/subscription-write-guard.ts#L41) allows any different incoming status that is not terminal, including `paymentProcessing`, `unpaid`, and `paused`.
-- [`subscription-write-guard.test.ts`](../../src/domain/services/subscription-write-guard.test.ts#L131) explicitly asserts the current behavior for those three statuses.
+- [`subscription-write-guard.ts`](../../../src/domain/services/subscription-write-guard.ts#L9) defines only `canceled` and `paymentFailed` as terminal.
+- [`subscription-write-guard.ts`](../../../src/domain/services/subscription-write-guard.ts#L18) treats current entitled rows specially.
+- [`subscription-write-guard.ts`](../../../src/domain/services/subscription-write-guard.ts#L37) keeps same-row and non-current writes permissive.
+- [`subscription-write-guard.ts`](../../../src/domain/services/subscription-write-guard.ts#L41) allows any different incoming status that is not terminal, including `paymentProcessing`, `unpaid`, and `paused`.
+- [`subscription-write-guard.test.ts`](../../../src/domain/services/subscription-write-guard.test.ts#L131) explicitly asserts the current behavior for those three statuses.
 
 The same guard is used by the repository that Stripe webhooks and checkout-success sync call:
 
-- [`drizzle-subscription-repository.ts`](../../src/adapters/repositories/drizzle-subscription-repository.ts#L90) calls `shouldPersistSubscriptionWrite(...)` before an upsert.
-- [`stripe-webhook-controller.ts`](../../src/adapters/controllers/stripe-webhook-controller.ts#L124) handles subscription updates inside the webhook transaction.
-- [`stripe-webhook-controller.ts`](../../src/adapters/controllers/stripe-webhook-controller.ts#L126) calls `subscriptions.upsert(...)`.
-- [`checkout-success-sync.tsx`](<../../app/(marketing)/checkout/success/checkout-success-sync.tsx#L241>) calls the same repository during eager checkout-success sync.
-- [`checkout-success-sync.tsx`](<../../app/(marketing)/checkout/success/checkout-success-sync.tsx#L262>) then derives the effective status from the write result.
+- [`drizzle-subscription-repository.ts`](../../../src/adapters/repositories/drizzle-subscription-repository.ts#L90) calls `shouldPersistSubscriptionWrite(...)` before an upsert.
+- [`stripe-webhook-controller.ts`](../../../src/adapters/controllers/stripe-webhook-controller.ts#L124) handles subscription updates inside the webhook transaction.
+- [`stripe-webhook-controller.ts`](../../../src/adapters/controllers/stripe-webhook-controller.ts#L126) calls `subscriptions.upsert(...)`.
+- [`checkout-success-sync.tsx`](<../../../app/(marketing)/checkout/success/checkout-success-sync.tsx#L241>) calls the same repository during eager checkout-success sync.
+- [`checkout-success-sync.tsx`](<../../../app/(marketing)/checkout/success/checkout-success-sync.tsx#L262>) then derives the effective status from the write result.
 
 Existing tests cover adjacent cases but not this one:
 
-- [`reconcile-stripe-subscriptions.test.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L1083) covers a `past_due` duplicate replacing an active row; `pastDue` remains entitled, so it does not prove the non-entitled case safe.
-- [`reconcile-stripe-subscriptions.test.ts`](../../src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L1139) proves the job cancels the current local row when another candidate has the later period end.
-- [`stripe-webhook-controller.test.ts`](../../src/adapters/controllers/stripe-webhook-controller.test.ts#L264) guards only superseded terminal webhooks.
-- [`checkout-success/page.test.ts`](<../../app/(marketing)/checkout/success/page.test.ts#L1122>) guards only stale terminal checkout-success URLs.
+- [`reconcile-stripe-subscriptions.test.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L1083) covers a `past_due` duplicate replacing an active row; `pastDue` remains entitled, so it does not prove the non-entitled case safe.
+- [`reconcile-stripe-subscriptions.test.ts`](../../../src/adapters/jobs/reconcile-stripe-subscriptions.test.ts#L1139) proves the job cancels the current local row when another candidate has the later period end.
+- [`stripe-webhook-controller.test.ts`](../../../src/adapters/controllers/stripe-webhook-controller.test.ts#L264) guards only superseded terminal webhooks.
+- [`checkout-success/page.test.ts`](<../../../app/(marketing)/checkout/success/page.test.ts#L1122>) guards only stale terminal checkout-success URLs.
 
 ## Impact
 
@@ -182,7 +193,7 @@ Dry-run note: `dryRun=true` suppresses Stripe duplicate cancellation only. The r
 
 ## Prior Bug Cross-Refs
 
-- [BUG-205](../_archive/bugs/bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) fixed the earlier short-circuit that kept the local subscription without sorting the full blocking set. BUG-263 is the next layer: the full-set sort exists, but its status priority is wrong.
-- [BUG-242](../_archive/bugs/bug-242-stale-subscription-webhook-overwrites-active-row.md) and [BUG-243](../_archive/bugs/bug-243-checkout-success-replay-overwrites-active-subscription.md) fixed stale terminal overwrites. BUG-263 covers non-terminal but non-entitled duplicate subscriptions.
-- [BUG-245](../_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) fixed a normal in-app duplicate creation path. BUG-263 is about safely handling duplicate state that still exists or is created outside that path.
-- [BUG-244](../_archive/bugs/bug-244-reconciliation-cron-never-scheduled.md) made the reconciliation safety net run. This bug is inside what that scheduled safety net does once it runs.
+- [BUG-205](bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) fixed the earlier short-circuit that kept the local subscription without sorting the full blocking set. BUG-263 is the next layer: the full-set sort exists, but its status priority is wrong.
+- [BUG-242](bug-242-stale-subscription-webhook-overwrites-active-row.md) and [BUG-243](bug-243-checkout-success-replay-overwrites-active-subscription.md) fixed stale terminal overwrites. BUG-263 covers non-terminal but non-entitled duplicate subscriptions.
+- [BUG-245](bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) fixed a normal in-app duplicate creation path. BUG-263 is about safely handling duplicate state that still exists or is created outside that path.
+- [BUG-244](bug-244-reconciliation-cron-never-scheduled.md) made the reconciliation safety net run. This bug is inside what that scheduled safety net does once it runs.
