@@ -57,6 +57,25 @@ describe('practice session question state normalization', () => {
     }
   });
 
+  it('fails loudly when multiple DEBT-425 backfill blocks are marked', () => {
+    const migrationsDir = mkdtempSync(join(tmpdir(), 'debt-425-backfill-'));
+    const markedBlock = [
+      '-- DEBT-425 backfill:start',
+      'SELECT 1;',
+      '-- DEBT-425 backfill:end',
+    ].join('\n');
+    try {
+      writeFileSync(join(migrationsDir, '0001_first.sql'), markedBlock);
+      writeFileSync(join(migrationsDir, '0002_second.sql'), markedBlock);
+
+      expect(() => readDebt425BackfillSql(migrationsDir)).toThrow(
+        'Expected exactly one DEBT-425 marked backfill migration block, found 2',
+      );
+    } finally {
+      rmSync(migrationsDir, { recursive: true, force: true });
+    }
+  });
+
   it('backfills legacy params_json states into relational rows idempotently', async () => {
     const user = await createUser(db, cleanup);
     const firstQuestion = await createQuestion(db, cleanup, {

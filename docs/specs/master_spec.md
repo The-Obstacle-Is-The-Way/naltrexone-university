@@ -81,6 +81,7 @@ Next.js Route Handlers use the Web `Request`/`Response` APIs and live inside the
 // db/schema.ts
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,

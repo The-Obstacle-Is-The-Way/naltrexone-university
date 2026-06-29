@@ -77,7 +77,41 @@ function collectColumnNames(
   ];
 }
 
-function expectVersionedStateUpdatePredicate(predicate: unknown) {
+function collectPrimitiveValues(
+  value: unknown,
+  seen = new Set<object>(),
+): Array<string | number | boolean | null> {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return [value];
+  }
+  if (typeof value !== 'object' || seen.has(value)) return [];
+  seen.add(value);
+
+  return Reflect.ownKeys(value).flatMap((key) =>
+    collectPrimitiveValues((value as Record<PropertyKey, unknown>)[key], seen),
+  );
+}
+
+function expectSqlIncrementExpression(value: unknown) {
+  const stringFragments = collectPrimitiveValues(value).filter(
+    (primitive): primitive is string => typeof primitive === 'string',
+  );
+
+  expect([...new Set(collectColumnNames(value))]).toEqual(
+    expect.arrayContaining(['version']),
+  );
+  expect(stringFragments.join(' ')).toContain('+ 1');
+}
+
+function expectVersionedStateUpdatePredicate(
+  predicate: unknown,
+  expected: { stateId: string; version: number },
+) {
   expect([...new Set(collectColumnNames(predicate))]).toEqual(
     expect.arrayContaining([
       'id',
@@ -86,6 +120,9 @@ function expectVersionedStateUpdatePredicate(predicate: unknown) {
       'user_id',
       'ended_at',
     ]),
+  );
+  expect(collectPrimitiveValues(predicate)).toEqual(
+    expect.arrayContaining([expected.stateId, expected.version, userId]),
   );
 }
 
@@ -113,12 +150,32 @@ function createQuestionStateDb(input: {
     }),
   }));
 
-  const updateReturning = vi.fn();
-  for (const rows of input.updatedRows) {
-    updateReturning.mockResolvedValueOnce(rows);
-  }
+  let updateAttemptIndex = 0;
+  const updateReturning = vi.fn(async () => {
+    const attemptIndex = updateAttemptIndex - 1;
+    const snapshot = input.snapshots[attemptIndex]?.state;
+    const rows = input.updatedRows[attemptIndex] ?? [];
+
+    if (rows.length > 0 && snapshot === undefined) {
+      throw new Error('Missing expected state snapshot for update attempt');
+    }
+    for (const row of rows) {
+      expect(row.id).toBe(snapshot?.id);
+      expect(row.version).toBe((snapshot?.version ?? 0) + 1);
+    }
+
+    return rows;
+  });
   const updateWhere = vi.fn((predicate: unknown) => {
-    expectVersionedStateUpdatePredicate(predicate);
+    const snapshot = input.snapshots[updateAttemptIndex]?.state;
+    if (snapshot === undefined) {
+      throw new Error('Missing expected state snapshot for update attempt');
+    }
+    expectVersionedStateUpdatePredicate(predicate, {
+      stateId: snapshot.id,
+      version: snapshot.version,
+    });
+    updateAttemptIndex += 1;
     return { returning: updateReturning };
   });
   const updateSet = vi.fn((values: Record<string, unknown>) => {
@@ -128,6 +185,7 @@ function createQuestionStateDb(input: {
         updatedAt: expect.any(Date),
       }),
     );
+    expectSqlIncrementExpression(values.version);
     return { where: updateWhere };
   });
   const update = vi.fn(() => ({ set: updateSet }));
