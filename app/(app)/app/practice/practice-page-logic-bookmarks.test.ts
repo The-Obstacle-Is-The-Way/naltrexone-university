@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   createBookmarksEffect,
-  toggleBookmarkForQuestion,
+  setBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
@@ -266,8 +266,8 @@ describe('practice-page-logic bookmarks', () => {
     });
   });
 
-  describe('toggleBookmarkForQuestion', () => {
-    it('toggles bookmark, forwards idempotency key, and rotates key on success', async () => {
+  describe('setBookmarkForQuestion', () => {
+    it('sets bookmark, forwards desired state and idempotency key, and rotates key on success', async () => {
       let ids = new Set<string>(['other']);
       const setBookmarkedQuestionIds = vi.fn(
         (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
@@ -276,21 +276,23 @@ describe('practice-page-logic bookmarks', () => {
       );
       const onBookmarkToggled = vi.fn();
       const setBookmarkIdempotencyKey = vi.fn();
-      const toggleBookmarkFn = vi.fn(async () => ok({ bookmarked: true }));
+      const setBookmarkFn = vi.fn(async () => ok({ bookmarked: true }));
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
+        desiredBookmarked: true,
         bookmarkIdempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setBookmarkIdempotencyKey,
-        toggleBookmarkFn,
+        setBookmarkFn,
         setBookmarkStatus: vi.fn(),
         setBookmarkedQuestionIds,
         onBookmarkToggled,
       });
 
-      expect(toggleBookmarkFn).toHaveBeenCalledWith({
+      expect(setBookmarkFn).toHaveBeenCalledWith({
         questionId: fixtureQuestion1Id,
+        bookmarked: true,
         idempotencyKey: 'idem_1',
       });
       expect(ids.has(fixtureQuestion1Id)).toBe(true);
@@ -298,13 +300,14 @@ describe('practice-page-logic bookmarks', () => {
       expect(setBookmarkIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
-    it('sets error state when toggle fails', async () => {
+    it('sets error state when bookmark write fails', async () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkToggled = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        desiredBookmarked: true,
+        setBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),
         onBookmarkToggled,
@@ -326,9 +329,10 @@ describe('practice-page-logic bookmarks', () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkToggled = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => ok({ bookmarked: false }),
+        desiredBookmarked: false,
+        setBookmarkFn: async () => ok({ bookmarked: false }),
         setBookmarkStatus,
         setBookmarkedQuestionIds,
         onBookmarkToggled,
@@ -339,14 +343,15 @@ describe('practice-page-logic bookmarks', () => {
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('idle');
     });
 
-    it('sets error state when toggle throws', async () => {
+    it('sets error state when bookmark write throws', async () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkToggled = vi.fn();
       const onBookmarkError = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => {
+        desiredBookmarked: true,
+        setBookmarkFn: async () => {
           throw new Error('Boom');
         },
         setBookmarkStatus,
@@ -363,15 +368,16 @@ describe('practice-page-logic bookmarks', () => {
       );
     });
 
-    it('logs thrown toggle errors while preserving generic error UI state', async () => {
+    it('logs thrown set-bookmark errors while preserving generic error UI state', async () => {
       const error = new Error('Boom');
       const logError = vi.fn();
       const setBookmarkStatus = vi.fn();
       const onBookmarkError = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => {
+        desiredBookmarked: true,
+        setBookmarkFn: async () => {
           throw error;
         },
         setBookmarkStatus,
@@ -380,7 +386,7 @@ describe('practice-page-logic bookmarks', () => {
         logError,
       });
 
-      expect(logError).toHaveBeenCalledWith('Failed to toggle bookmark', error);
+      expect(logError).toHaveBeenCalledWith('Failed to set bookmark', error);
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkError).toHaveBeenCalledWith(
         'Failed to save bookmark. Please try again.',
@@ -396,9 +402,10 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       await expect(
-        toggleBookmarkForQuestion({
+        setBookmarkForQuestion({
           question: createFixtureNextQuestion(),
-          toggleBookmarkFn: async () => {
+          desiredBookmarked: true,
+          setBookmarkFn: async () => {
             throw error;
           },
           setBookmarkStatus,
@@ -408,20 +415,21 @@ describe('practice-page-logic bookmarks', () => {
         }),
       ).resolves.toBeUndefined();
 
-      expect(logError).toHaveBeenCalledWith('Failed to toggle bookmark', error);
+      expect(logError).toHaveBeenCalledWith('Failed to set bookmark', error);
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
       expect(onBookmarkError).toHaveBeenCalledWith(
         'Failed to save bookmark. Please try again.',
       );
     });
 
-    it('invokes error callback when toggle controller returns an error result', async () => {
+    it('invokes error callback when set-bookmark controller returns an error result', async () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkError = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        desiredBookmarked: true,
+        setBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),
         onBookmarkError,
@@ -434,7 +442,7 @@ describe('practice-page-logic bookmarks', () => {
       );
     });
 
-    it('logs structured toggle failures while preserving generic error UI state', async () => {
+    it('logs structured set-bookmark failures while preserving generic error UI state', async () => {
       const structuredError = {
         code: 'INTERNAL_ERROR',
         message: 'Boom',
@@ -443,9 +451,10 @@ describe('practice-page-logic bookmarks', () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkError = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => ({
+        desiredBookmarked: true,
+        setBookmarkFn: async () => ({
           ok: false,
           error: structuredError,
         }),
@@ -456,7 +465,7 @@ describe('practice-page-logic bookmarks', () => {
       });
 
       expect(logError).toHaveBeenCalledWith(
-        'Failed to toggle bookmark',
+        'Failed to set bookmark',
         structuredError,
       );
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
@@ -465,7 +474,7 @@ describe('practice-page-logic bookmarks', () => {
       );
     });
 
-    it('does not log expected business toggle failures while preserving generic error UI state', async () => {
+    it('does not log expected business set-bookmark failures while preserving generic error UI state', async () => {
       const structuredError = {
         code: 'UNAUTHENTICATED',
         message: 'Authentication required',
@@ -474,9 +483,10 @@ describe('practice-page-logic bookmarks', () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkError = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => ({
+        desiredBookmarked: true,
+        setBookmarkFn: async () => ({
           ok: false,
           error: structuredError,
         }),
@@ -505,9 +515,10 @@ describe('practice-page-logic bookmarks', () => {
       const onBookmarkError = vi.fn();
 
       await expect(
-        toggleBookmarkForQuestion({
+        setBookmarkForQuestion({
           question: createFixtureNextQuestion(),
-          toggleBookmarkFn: async () => ({
+          desiredBookmarked: true,
+          setBookmarkFn: async () => ({
             ok: false,
             error: structuredError,
           }),
@@ -519,7 +530,7 @@ describe('practice-page-logic bookmarks', () => {
       ).resolves.toBeUndefined();
 
       expect(logError).toHaveBeenCalledWith(
-        'Failed to toggle bookmark',
+        'Failed to set bookmark',
         structuredError,
       );
       expect(setBookmarkStatus).toHaveBeenLastCalledWith('error');
@@ -528,7 +539,7 @@ describe('practice-page-logic bookmarks', () => {
       );
     });
 
-    it('returns no state updates when unmounted during toggleBookmarkForQuestion', async () => {
+    it('returns no state updates when unmounted during setBookmarkForQuestion', async () => {
       const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
       let mounted = true;
 
@@ -536,9 +547,10 @@ describe('practice-page-logic bookmarks', () => {
       const setBookmarkedQuestionIds = vi.fn();
       const onBookmarkToggled = vi.fn();
 
-      const promise = toggleBookmarkForQuestion({
+      const promise = setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => deferred.promise,
+        desiredBookmarked: true,
+        setBookmarkFn: async () => deferred.promise,
         setBookmarkStatus,
         setBookmarkedQuestionIds,
         onBookmarkToggled,
@@ -554,7 +566,7 @@ describe('practice-page-logic bookmarks', () => {
       expect(setBookmarkStatus).not.toHaveBeenCalledWith('idle');
     });
 
-    it('logs thrown toggle errors after unmount without applying error UI state', async () => {
+    it('logs thrown set-bookmark errors after unmount without applying error UI state', async () => {
       const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
       const error = new Error('Boom');
       let mounted = true;
@@ -563,9 +575,10 @@ describe('practice-page-logic bookmarks', () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkError = vi.fn();
 
-      const promise = toggleBookmarkForQuestion({
+      const promise = setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => deferred.promise,
+        desiredBookmarked: true,
+        setBookmarkFn: async () => deferred.promise,
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),
         onBookmarkError,
@@ -577,12 +590,12 @@ describe('practice-page-logic bookmarks', () => {
       deferred.reject(error);
       await promise;
 
-      expect(logError).toHaveBeenCalledWith('Failed to toggle bookmark', error);
+      expect(logError).toHaveBeenCalledWith('Failed to set bookmark', error);
       expect(onBookmarkError).not.toHaveBeenCalled();
       expect(setBookmarkStatus).not.toHaveBeenCalledWith('error');
     });
 
-    it('logs structured toggle failures after unmount without applying error UI state', async () => {
+    it('logs structured set-bookmark failures after unmount without applying error UI state', async () => {
       const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
       const structuredError = {
         code: 'INTERNAL_ERROR',
@@ -594,9 +607,10 @@ describe('practice-page-logic bookmarks', () => {
       const setBookmarkStatus = vi.fn();
       const onBookmarkError = vi.fn();
 
-      const promise = toggleBookmarkForQuestion({
+      const promise = setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
-        toggleBookmarkFn: async () => deferred.promise,
+        desiredBookmarked: true,
+        setBookmarkFn: async () => deferred.promise,
         setBookmarkStatus,
         setBookmarkedQuestionIds: vi.fn(),
         onBookmarkError,
@@ -612,7 +626,7 @@ describe('practice-page-logic bookmarks', () => {
       await promise;
 
       expect(logError).toHaveBeenCalledWith(
-        'Failed to toggle bookmark',
+        'Failed to set bookmark',
         structuredError,
       );
       expect(onBookmarkError).not.toHaveBeenCalled();

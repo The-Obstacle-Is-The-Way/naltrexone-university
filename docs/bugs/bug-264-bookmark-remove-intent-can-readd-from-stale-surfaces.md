@@ -1,7 +1,7 @@
 # BUG-264: Stale Remove-Bookmark Surfaces Can Re-Add the Bookmark
 
 **Status:** Open
-**Resolution State:** Unresolved - documented only; no code fix has been made.
+**Resolution State:** Fix implemented; awaiting review + prod-verify.
 **Severity:** P4
 **Date:** 2026-06-29
 **Confirmed:** 2026-06-29

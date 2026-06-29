@@ -2,7 +2,6 @@ import { normalizeSearchParam } from '@/lib/search-params';
 
 const REMOVE_BOOKMARK_ERROR_CODES = [
   'missing_question_id',
-  'toggle_failed',
   'remove_failed',
 ] as const;
 
@@ -31,10 +30,8 @@ export function getRemoveBookmarkErrorMessage(
   switch (code) {
     case 'missing_question_id':
       return 'Unable to remove bookmark: missing question id.';
-    case 'toggle_failed':
-      return 'Unable to remove bookmark. Please try again.';
     case 'remove_failed':
-      return 'Unable to remove bookmark. Please refresh and try again.';
+      return 'Unable to remove bookmark. Please try again.';
     default: {
       const _exhaustive: never = code;
       return _exhaustive;

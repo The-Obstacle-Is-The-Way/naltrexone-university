@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { scheduleBookmarkMessageAutoClear } from '@/app/(app)/app/practice/hooks/bookmark-message-timeout';
 import {
   createBookmarksEffect,
-  toggleBookmarkForQuestion,
+  setBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
 import type { BookmarkableQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
 import { reportClientError } from '@/lib/report-client-error';
 import {
   getBookmarks,
-  toggleBookmark,
+  setBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 
 export type UsePracticeQuestionBookmarksInput = {
@@ -72,9 +72,11 @@ export function usePracticeQuestionBookmarks(
 
   const onToggleBookmark = useCallback(async () => {
     const questionId = input.question?.questionId;
+    const desiredBookmarked = !isBookmarked;
 
-    await toggleBookmarkForQuestion({
+    await setBookmarkForQuestion({
       question: input.question,
+      desiredBookmarked,
       bookmarkIdempotencyKey: questionId
         ? (bookmarkIdempotencyKeysRef.current.get(questionId) ?? null)
         : null,
@@ -83,7 +85,7 @@ export function usePracticeQuestionBookmarks(
         if (!questionId) return;
         bookmarkIdempotencyKeysRef.current.set(questionId, key);
       },
-      toggleBookmarkFn: toggleBookmark,
+      setBookmarkFn: setBookmark,
       setBookmarkStatus,
       setBookmarkedQuestionIds,
       onBookmarkToggled: (bookmarked: boolean) => {
@@ -109,12 +111,12 @@ export function usePracticeQuestionBookmarks(
       logError: (_message: string, error: unknown) => {
         reportClientError(error, {
           component: 'UsePracticeQuestionBookmarks',
-          action: 'toggleBookmark',
+          action: 'setBookmark',
         });
       },
       isMounted: input.isMounted,
     });
-  }, [input.question, input.isMounted]);
+  }, [input.question, input.isMounted, isBookmarked]);
 
   const onRetryBookmarks = useCallback(() => {
     setBookmarkRetryCount((prev) => prev + 1);

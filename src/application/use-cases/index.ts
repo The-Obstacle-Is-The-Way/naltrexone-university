@@ -107,6 +107,11 @@ export {
   SaveExamDraftAnswerUseCase,
 } from './save-exam-draft-answer';
 export {
+  type SetBookmarkInput,
+  type SetBookmarkOutput,
+  SetBookmarkUseCase,
+} from './set-bookmark';
+export {
   type SetPracticeSessionQuestionMarkInput,
   type SetPracticeSessionQuestionMarkOutput,
   SetPracticeSessionQuestionMarkUseCase,
@@ -126,9 +131,3 @@ export {
   type SubmitQuestionReportOutput,
   SubmitQuestionReportUseCase,
 } from './submit-question-report';
-
-export {
-  type ToggleBookmarkInput,
-  type ToggleBookmarkOutput,
-  ToggleBookmarkUseCase,
-} from './toggle-bookmark';

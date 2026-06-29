@@ -16,8 +16,8 @@ import {
   QUESTION_PAGE_CHOICE_1_ID,
   QUESTION_PAGE_QUESTION_1_ID,
   QUESTION_PAGE_QUESTION_2_ID,
+  setBookmark,
   setupQuestionPageModelBrowserSpec,
-  toggleBookmark,
 } from './use-question-page-model-test-helpers';
 
 setupQuestionPageModelBrowserSpec();
@@ -172,7 +172,7 @@ describe('useQuestionPageModel (browser)', () => {
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
     );
-    toggleBookmark.mockResolvedValue(ok({ bookmarked: true }));
+    setBookmark.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<Probe mode="review" />);
 
@@ -185,9 +185,10 @@ describe('useQuestionPageModel (browser)', () => {
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
-    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
-    expect(toggleBookmark).toHaveBeenCalledWith({
+    await expect.poll(() => setBookmark.mock.calls.length).toBe(1);
+    expect(setBookmark).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,
+      bookmarked: true,
       idempotencyKey: expect.any(String),
     });
     await expect
@@ -229,7 +230,7 @@ describe('useQuestionPageModel (browser)', () => {
       }),
     );
     const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
-    toggleBookmark.mockReturnValue(deferred.promise);
+    setBookmark.mockReturnValue(deferred.promise);
 
     const screen = await render(<Probe mode="review" />);
 
@@ -279,7 +280,7 @@ describe('useQuestionPageModel (browser)', () => {
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
     );
-    toggleBookmark
+    setBookmark
       .mockResolvedValueOnce({
         ok: false,
         error: { code: 'INTERNAL_ERROR', message: 'Boom' },
@@ -314,10 +315,11 @@ describe('useQuestionPageModel (browser)', () => {
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
-    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
-    const firstInput = toggleBookmark.mock.calls[0]?.[0] as {
+    await expect.poll(() => setBookmark.mock.calls.length).toBe(1);
+    const firstInput = setBookmark.mock.calls[0]?.[0] as {
       idempotencyKey: string;
       questionId: string;
+      bookmarked: boolean;
     };
 
     await expect
@@ -334,14 +336,17 @@ describe('useQuestionPageModel (browser)', () => {
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
-    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(2);
-    const secondInput = toggleBookmark.mock.calls[1]?.[0] as {
+    await expect.poll(() => setBookmark.mock.calls.length).toBe(2);
+    const secondInput = setBookmark.mock.calls[1]?.[0] as {
       idempotencyKey: string;
       questionId: string;
+      bookmarked: boolean;
     };
 
     expect(firstInput.questionId).toBe(QUESTION_PAGE_QUESTION_1_ID);
+    expect(firstInput.bookmarked).toBe(true);
     expect(secondInput.questionId).toBe(QUESTION_PAGE_QUESTION_2_ID);
+    expect(secondInput.bookmarked).toBe(true);
     expect(secondInput.idempotencyKey).not.toBe(firstInput.idempotencyKey);
   });
 });

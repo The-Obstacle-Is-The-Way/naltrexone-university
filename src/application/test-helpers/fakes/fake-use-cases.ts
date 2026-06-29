@@ -16,9 +16,9 @@ export class FakeUseCase<I, O> implements UseCase<I, O> {
   }
 }
 
-export class FakeToggleBookmarkUseCase extends FakeUseCase<
-  U.ToggleBookmarkInput,
-  U.ToggleBookmarkOutput
+export class FakeSetBookmarkUseCase extends FakeUseCase<
+  U.SetBookmarkInput,
+  U.SetBookmarkOutput
 > {}
 export class FakeRateQuestionUseCase extends FakeUseCase<
   U.RateQuestionInput,

@@ -16,24 +16,25 @@ import type {
 import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 import type {
-  ToggleBookmarkInput,
-  ToggleBookmarkOutput,
+  SetBookmarkInput,
+  SetBookmarkOutput,
 } from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
 
-const ToggleBookmarkInputSchema = z
+const SetBookmarkInputSchema = z
   .object({
     questionId: zUuid,
+    bookmarked: z.boolean(),
     idempotencyKey: zUuid.optional(),
   })
   .strict();
 
 const GetBookmarksInputSchema = z.object({}).strict();
 
-const ToggleBookmarkOutputSchema = z
+const SetBookmarkOutputSchema = z
   .object({
     bookmarked: z.boolean(),
   })
@@ -44,7 +45,7 @@ export type {
   GetBookmarksOutput,
 } from '@/src/application/ports/bookmarks';
 
-export type { ToggleBookmarkOutput } from '@/src/application/use-cases';
+export type { SetBookmarkOutput } from '@/src/application/use-cases';
 
 export type BookmarkControllerDeps = {
   authGateway: AuthGateway;
@@ -52,8 +53,8 @@ export type BookmarkControllerDeps = {
   rateLimiter: RateLimiter;
   idempotencyKeyRepository: IdempotencyKeyRepository;
   checkEntitlementUseCase: CheckEntitlementUseCase;
-  toggleBookmarkUseCase: {
-    execute: (input: ToggleBookmarkInput) => Promise<ToggleBookmarkOutput>;
+  setBookmarkUseCase: {
+    execute: (input: SetBookmarkInput) => Promise<SetBookmarkOutput>;
   };
   getBookmarksUseCase: {
     execute: (input: GetBookmarksInput) => Promise<GetBookmarksOutput>;
@@ -70,24 +71,25 @@ const getDeps = createDepsResolver<
   BookmarkControllerContainer
 >((container) => container.createBookmarkControllerDeps(), loadAppContainer);
 
-export const toggleBookmark = createAction({
-  schema: ToggleBookmarkInputSchema,
+export const setBookmark = createAction({
+  schema: SetBookmarkInputSchema,
   getDeps,
   execute: async (input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
 
-    const { questionId, idempotencyKey } = input;
+    const { questionId, bookmarked, idempotencyKey } = input;
 
-    async function toggle(): Promise<ToggleBookmarkOutput> {
-      return d.toggleBookmarkUseCase.execute({
+    async function setDesiredBookmarkState(): Promise<SetBookmarkOutput> {
+      return d.setBookmarkUseCase.execute({
         userId,
         questionId,
+        bookmarked,
       });
     }
 
     async function enforceBookmarkRateLimit(): Promise<void> {
       const rate = await d.rateLimiter.limit({
-        key: `bookmark:toggleBookmark:${userId}`,
+        key: `bookmark:setBookmark:${userId}`,
         ...BOOKMARK_MUTATION_RATE_LIMIT,
       });
       if (!rate.success) {
@@ -101,11 +103,11 @@ export const toggleBookmark = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'bookmark:toggleBookmark',
+      action: 'bookmark:setBookmark',
       idempotencyKey,
-      outputSchema: ToggleBookmarkOutputSchema,
+      outputSchema: SetBookmarkOutputSchema,
       beforeExecute: enforceBookmarkRateLimit,
-      execute: toggle,
+      execute: setDesiredBookmarkState,
     });
   },
 });

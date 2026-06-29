@@ -18,8 +18,8 @@ import {
   FakeIdempotencyKeyRepository,
   FakeLogger,
   FakeRateLimiter,
+  FakeSetBookmarkUseCase,
   FakeSubscriptionRepository,
-  FakeToggleBookmarkUseCase,
 } from '@/src/application/test-helpers/fakes';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
@@ -77,13 +77,13 @@ function createGetBookmarksFn(
 }
 
 type BookmarkActionControllerDeps = BookmarkControllerDeps & {
-  toggleBookmarkUseCase: FakeToggleBookmarkUseCase;
+  setBookmarkUseCase: FakeSetBookmarkUseCase;
 };
 
 function createBookmarkActionControllerDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
-  toggleBookmarkOutput?: { bookmarked: boolean };
+  setBookmarkOutput?: { bookmarked: boolean };
 }): BookmarkActionControllerDeps {
   const user =
     overrides?.user === undefined
@@ -117,8 +117,8 @@ function createBookmarkActionControllerDeps(overrides?: {
       subscriptionRepository,
       () => now,
     ),
-    toggleBookmarkUseCase: new FakeToggleBookmarkUseCase(
-      overrides?.toggleBookmarkOutput ?? { bookmarked: false },
+    setBookmarkUseCase: new FakeSetBookmarkUseCase(
+      overrides?.setBookmarkOutput ?? { bookmarked: false },
     ),
     getBookmarksUseCase: new FakeGetBookmarksUseCase({ rows: [] }),
     now: () => now,
@@ -129,7 +129,7 @@ let BookmarksView: typeof import('./page').BookmarksView;
 let createBookmarksPage: typeof import('./page').createBookmarksPage;
 let renderBookmarks: typeof import('./page').renderBookmarks;
 let removeBookmarkAction: typeof import('./bookmarks-actions').removeBookmarkAction;
-let toggleBookmark: typeof import('@/src/adapters/controllers/bookmark-controller').toggleBookmark;
+let setBookmark: typeof import('@/src/adapters/controllers/bookmark-controller').setBookmark;
 
 beforeAll(async () => {
   const [pageModule, actionsModule, bookmarkControllerModule] =
@@ -143,7 +143,7 @@ beforeAll(async () => {
   createBookmarksPage = pageModule.createBookmarksPage;
   renderBookmarks = pageModule.renderBookmarks;
   removeBookmarkAction = actionsModule.removeBookmarkAction;
-  toggleBookmark = bookmarkControllerModule.toggleBookmark;
+  setBookmark = bookmarkControllerModule.setBookmark;
 });
 
 describe('app/(app)/app/bookmarks', () => {
@@ -408,7 +408,7 @@ describe('app/(app)/app/bookmarks', () => {
   });
 
   it('calls revalidatePath when removeBookmarkAction succeeds', async () => {
-    const toggleBookmarkFn = vi.fn(async () => ok({ bookmarked: false }));
+    const setBookmarkFn = vi.fn(async () => ok({ bookmarked: false }));
     const revalidatePathFn = vi.fn();
 
     const formData = new FormData();
@@ -416,7 +416,7 @@ describe('app/(app)/app/bookmarks', () => {
 
     await expect(
       removeBookmarkAction(formData, {
-        toggleBookmarkFn,
+        setBookmarkFn,
         revalidatePathFn,
         redirectFn: (url: string): never => {
           throw new Error(`redirect:${url}`);
@@ -426,14 +426,15 @@ describe('app/(app)/app/bookmarks', () => {
       message: `redirect:${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`,
     });
 
-    expect(toggleBookmarkFn).toHaveBeenCalledWith({
+    expect(setBookmarkFn).toHaveBeenCalledWith({
       questionId: fixtureQuestion1Id,
+      bookmarked: false,
     });
     expect(revalidatePathFn).toHaveBeenCalledWith(ROUTES.APP_BOOKMARKS);
   });
 
-  it('passes idempotencyKey from the form data to toggleBookmarkFn', async () => {
-    const toggleBookmarkFn = vi.fn(async () => ok({ bookmarked: false }));
+  it('passes desired removal state and idempotencyKey from the form data to setBookmarkFn', async () => {
+    const setBookmarkFn = vi.fn(async () => ok({ bookmarked: false }));
 
     const formData = new FormData();
     formData.set('questionId', fixtureQuestion1Id);
@@ -441,7 +442,7 @@ describe('app/(app)/app/bookmarks', () => {
 
     await expect(
       removeBookmarkAction(formData, {
-        toggleBookmarkFn,
+        setBookmarkFn,
         revalidatePathFn: vi.fn(),
         redirectFn: (url: string): never => {
           throw new Error(`redirect:${url}`);
@@ -451,15 +452,16 @@ describe('app/(app)/app/bookmarks', () => {
       message: `redirect:${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`,
     });
 
-    expect(toggleBookmarkFn).toHaveBeenCalledWith({
+    expect(setBookmarkFn).toHaveBeenCalledWith({
       questionId: fixtureQuestion1Id,
+      bookmarked: false,
       idempotencyKey: '11111111-1111-1111-1111-111111111111',
     });
   });
 
   it('replays the original removal result when duplicate submissions reuse the same idempotency key', async () => {
     const deps = createBookmarkActionControllerDeps({
-      toggleBookmarkOutput: { bookmarked: false },
+      setBookmarkOutput: { bookmarked: false },
     });
     const revalidatePathFn = vi.fn();
     const questionId = '11111111-1111-1111-1111-111111111111';
@@ -471,7 +473,7 @@ describe('app/(app)/app/bookmarks', () => {
       formData.set('idempotencyKey', idempotencyKey);
 
       return removeBookmarkAction(formData, {
-        toggleBookmarkFn: (input) => toggleBookmark(input, deps),
+        setBookmarkFn: (input) => setBookmark(input, deps),
         revalidatePathFn,
         redirectFn: (url: string): never => {
           throw new Error(`redirect:${url}`);
@@ -486,10 +488,11 @@ describe('app/(app)/app/bookmarks', () => {
       message: `redirect:${ROUTES.APP_BOOKMARKS}?toast=bookmark_removed`,
     });
 
-    expect(deps.toggleBookmarkUseCase.inputs).toEqual([
+    expect(deps.setBookmarkUseCase.inputs).toEqual([
       {
         userId: fixtureUser1Id,
         questionId,
+        bookmarked: false,
       },
     ]);
     expect(revalidatePathFn).toHaveBeenCalledTimes(2);
@@ -524,30 +527,13 @@ describe('app/(app)/app/bookmarks', () => {
     });
   });
 
-  it('redirects when removeBookmarkAction cannot toggle bookmark', async () => {
+  it('redirects when removeBookmarkAction cannot remove bookmark', async () => {
     const formData = new FormData();
     formData.set('questionId', fixtureQuestion1Id);
 
     await expect(
       removeBookmarkAction(formData, {
-        toggleBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
-        revalidatePathFn: vi.fn(),
-        redirectFn: (url: string): never => {
-          throw new Error(`redirect:${url}`);
-        },
-      }),
-    ).rejects.toMatchObject({
-      message: `redirect:${ROUTES.APP_BOOKMARKS}?error=toggle_failed`,
-    });
-  });
-
-  it('redirects when removeBookmarkAction results in bookmarked=true', async () => {
-    const formData = new FormData();
-    formData.set('questionId', fixtureQuestion1Id);
-
-    await expect(
-      removeBookmarkAction(formData, {
-        toggleBookmarkFn: async () => ok({ bookmarked: true }),
+        setBookmarkFn: async () => err('INTERNAL_ERROR', 'Boom'),
         revalidatePathFn: vi.fn(),
         redirectFn: (url: string): never => {
           throw new Error(`redirect:${url}`);
@@ -574,7 +560,7 @@ describe('app/(app)/app/bookmarks', () => {
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
-      searchParams: Promise.resolve({ error: 'toggle_failed' }),
+      searchParams: Promise.resolve({ error: 'remove_failed' }),
     });
     const html = renderToStaticMarkup(element);
 
@@ -600,7 +586,7 @@ describe('app/(app)/app/bookmarks', () => {
 
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
-      searchParams: Promise.resolve({ error: ['toggle_failed'] }),
+      searchParams: Promise.resolve({ error: ['remove_failed'] }),
     });
     const html = renderToStaticMarkup(element);
 
@@ -614,7 +600,7 @@ describe('app/(app)/app/bookmarks', () => {
     const BookmarksPage = createBookmarksPage({ getBookmarksFn });
     const element = await BookmarksPage({
       searchParams: Promise.resolve({
-        error: ['toggle_failed', 'missing_question_id'],
+        error: ['remove_failed', 'missing_question_id'],
       }),
     });
     const html = renderToStaticMarkup(element);
@@ -635,36 +621,6 @@ describe('app/(app)/app/bookmarks', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Unable to remove bookmark: missing question id.');
-    expect(html).toContain('Stem for q1');
-  });
-
-  it('renders a banner when redirected back with remove_failed', async () => {
-    const getBookmarksFn = createGetBookmarksFn();
-
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
-    const element = await BookmarksPage({
-      searchParams: Promise.resolve({ error: 'remove_failed' }),
-    });
-    const html = renderToStaticMarkup(element);
-
-    expect(html).toContain(
-      'Unable to remove bookmark. Please refresh and try again.',
-    );
-    expect(html).toContain('Stem for q1');
-  });
-
-  it('renders error banner when error searchParam is an array with remove_failed', async () => {
-    const getBookmarksFn = createGetBookmarksFn();
-
-    const BookmarksPage = createBookmarksPage({ getBookmarksFn });
-    const element = await BookmarksPage({
-      searchParams: Promise.resolve({ error: ['remove_failed'] }),
-    });
-    const html = renderToStaticMarkup(element);
-
-    expect(html).toContain(
-      'Unable to remove bookmark. Please refresh and try again.',
-    );
     expect(html).toContain('Stem for q1');
   });
 

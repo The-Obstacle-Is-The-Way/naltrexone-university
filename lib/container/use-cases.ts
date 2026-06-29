@@ -19,11 +19,11 @@ import {
   GetUserStatsUseCase,
   RateQuestionUseCase,
   SaveExamDraftAnswerUseCase,
+  SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
   SubmitQuestionReportUseCase,
-  ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
 import type {
   ContainerPrimitives,
@@ -197,8 +197,8 @@ export function createUseCaseFactories(input: {
             }),
           ),
       ),
-    createToggleBookmarkUseCase: () =>
-      new ToggleBookmarkUseCase(
+    createSetBookmarkUseCase: () =>
+      new SetBookmarkUseCase(
         repositories.createBookmarkRepository(),
         repositories.createQuestionRepository(),
       ),

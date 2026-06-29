@@ -37,10 +37,10 @@ export {
   FakeGetUserStatsUseCase,
   FakeRateQuestionUseCase,
   FakeSaveExamDraftAnswerUseCase,
+  FakeSetBookmarkUseCase,
   FakeSetPracticeSessionQuestionMarkUseCase,
   FakeStartPracticeSessionUseCase,
   FakeSubmitAnswerUseCase,
   FakeSubmitQuestionReportUseCase,
-  FakeToggleBookmarkUseCase,
 } from './fake-use-cases';
 export { FakeUserRepository } from './fake-user-repository';

@@ -16,7 +16,7 @@ vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
 const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
-const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
+const setBookmark = vi.mocked(bookmarkController.setBookmark);
 
 installReportClientErrorMocks(reportClientError);
 
@@ -74,7 +74,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
   beforeEach(() => {
     getBookmarks.mockResolvedValue(emptyBookmarksResult);
-    toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
+    setBookmark.mockResolvedValue(ok({ bookmarked: true }));
   });
 
   afterEach(() => {
@@ -111,7 +111,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
   });
 
   it('toggles bookmark state for the current review question', async () => {
-    toggleBookmark.mockResolvedValue(ok({ bookmarked: true }));
+    setBookmark.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<Probe />);
 
@@ -124,9 +124,10 @@ describe('useQuestionPageBookmarks (browser)', () => {
 
     await screen.getByTestId('trigger-toggle-bookmark').click();
 
-    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
-    expect(toggleBookmark).toHaveBeenCalledWith({
+    await expect.poll(() => setBookmark.mock.calls.length).toBe(1);
+    expect(setBookmark).toHaveBeenCalledWith({
       questionId: QUESTION_PAGE_QUESTION_1_ID,
+      bookmarked: true,
       idempotencyKey: expect.any(String),
     });
     await expect
@@ -135,5 +136,41 @@ describe('useQuestionPageBookmarks (browser)', () => {
     await expect
       .element(screen.getByTestId('is-bookmarked'))
       .toHaveTextContent('true');
+  });
+
+  it('sends bookmarked=false when removing a hydrated bookmarked review question', async () => {
+    getBookmarks.mockResolvedValue(
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: QUESTION_PAGE_QUESTION_1_ID,
+            slug: 'q-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+    setBookmark.mockResolvedValue(ok({ bookmarked: false }));
+
+    const screen = await render(<Probe />);
+
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
+
+    await screen.getByTestId('trigger-toggle-bookmark').click();
+
+    await expect.poll(() => setBookmark.mock.calls.length).toBe(1);
+    expect(setBookmark).toHaveBeenCalledWith({
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
+      bookmarked: false,
+      idempotencyKey: expect.any(String),
+    });
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('false');
   });
 });

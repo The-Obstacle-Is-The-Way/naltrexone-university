@@ -15,9 +15,9 @@ import {
   PracticeSessionPageModelBookmarkPendingProbe,
   PracticeSessionPageModelBookmarkProbe,
   PracticeSessionPageModelMarkForReviewProbe,
+  setBookmarkMock,
   setPracticeSessionQuestionMarkMock,
   setupPracticeSessionPageModelBrowserSpec,
-  toggleBookmarkMock,
 } from './use-practice-session-page-model-test-helpers';
 
 setupPracticeSessionPageModelBrowserSpec();
@@ -51,7 +51,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         markedCount: 0,
       }),
     );
-    toggleBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
+    setBookmarkMock.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<PracticeSessionPageModelBookmarkProbe />);
 
@@ -100,7 +100,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         markedCount: 0,
       }),
     );
-    toggleBookmarkMock.mockImplementation(async () => deferred.promise);
+    setBookmarkMock.mockImplementation(async () => deferred.promise);
 
     const screen = await render(
       <PracticeSessionPageModelBookmarkPendingProbe />,

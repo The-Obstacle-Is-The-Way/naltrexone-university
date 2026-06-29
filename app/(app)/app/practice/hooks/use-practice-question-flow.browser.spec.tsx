@@ -18,7 +18,7 @@ vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
 
 const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
-const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
+const setBookmark = vi.mocked(bookmarkController.setBookmark);
 const getNextQuestion = vi.mocked(questionController.getNextQuestion);
 const submitAnswer = vi.mocked(questionController.submitAnswer);
 
@@ -144,7 +144,7 @@ describe('usePracticeQuestionFlow (browser)', () => {
       ),
     );
     getBookmarks.mockResolvedValue(ok({ rows: [] }));
-    toggleBookmark.mockResolvedValue(ok({ bookmarked: true }));
+    setBookmark.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<PracticeQuestionFlowBookmarkProbe />);
 
