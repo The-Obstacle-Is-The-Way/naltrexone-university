@@ -33,6 +33,12 @@ export {
   filterAttemptsInWindow,
 } from './statistics';
 export {
+  type CanonicalSubscriptionCandidate,
+  compareCanonicalSubscriptionCandidates,
+  hasEntitledSubscriptionTier,
+  subscriptionEntitlementTier,
+} from './subscription-canonicalization';
+export {
   type SubscriptionWriteCandidate,
   shouldPersistSubscriptionWrite,
 } from './subscription-write-guard';

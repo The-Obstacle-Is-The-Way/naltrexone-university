@@ -1028,6 +1028,100 @@ describe('reconcileStripeSubscriptions', () => {
     expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { stripeStatus: 'unpaid' as const, duplicateId: 'sub_unpaid' },
+    { stripeStatus: 'incomplete' as const, duplicateId: 'sub_incomplete' },
+    { stripeStatus: 'paused' as const, duplicateId: 'sub_paused' },
+  ])('keeps an active subscription over a later $stripeStatus duplicate', async ({
+    stripeStatus,
+    duplicateId,
+  }) => {
+    const active = createUserSubscriptionFixture('sub_active', {
+      status: 'active',
+      currentPeriodEnd: 1_800_000_000,
+    });
+    const duplicate = createUserSubscriptionFixture(duplicateId, {
+      status: stripeStatus,
+      currentPeriodEnd: 1_900_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: active }, { fixture: duplicate }],
+    });
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: active.id,
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expect(result).toEqual({
+      scanned: 1,
+      updated: 1,
+      failed: 0,
+      failures: [],
+    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
+      duplicateId,
+      undefined,
+      {
+        idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
+      },
+    );
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_active'),
+    ).resolves.toMatchObject({
+      userId: primaryUserId,
+      status: 'active',
+      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId(duplicateId),
+    ).resolves.toBeNull();
+  });
+
+  it('keeps the local row active over a later unpaid duplicate in dry-run mode', async () => {
+    const active = createUserSubscriptionFixture('sub_active', {
+      status: 'active',
+      currentPeriodEnd: 1_800_000_000,
+    });
+    const unpaid = createUserSubscriptionFixture('sub_unpaid', {
+      status: 'unpaid',
+      currentPeriodEnd: 1_900_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: active }, { fixture: unpaid }],
+    });
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: active.id,
+    });
+
+    const result = await scenario.run({ dryRun: true });
+
+    expect(result).toEqual({
+      scanned: 1,
+      updated: 1,
+      failed: 0,
+      failures: [],
+    });
+    expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_active'),
+    ).resolves.toMatchObject({
+      userId: primaryUserId,
+      status: 'active',
+      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_unpaid'),
+    ).resolves.toBeNull();
+  });
+
   it('replaces a stale non-blocking local subscription with the blocking Stripe subscription', async () => {
     const localCanceled = createUserSubscriptionFixture('sub_local_canceled', {
       status: 'canceled',
@@ -1078,6 +1172,53 @@ describe('reconcileStripeSubscriptions', () => {
       scenario.subscriptions.findByExternalSubscriptionId(localCanceled.id),
     ).resolves.toBeNull();
     expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
+  });
+
+  it('still selects the latest period end when only non-entitled candidates exist', async () => {
+    const localUnpaid = createUserSubscriptionFixture('sub_unpaid_old', {
+      status: 'unpaid',
+      currentPeriodEnd: 1_700_000_000,
+    });
+    const laterPaused = createUserSubscriptionFixture('sub_paused_later', {
+      status: 'paused',
+      currentPeriodEnd: 1_800_000_000,
+    });
+
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: localUnpaid }, { fixture: laterPaused }],
+    });
+
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: localUnpaid.id,
+    });
+
+    const result = await scenario.run({ dryRun: false });
+
+    expect(result).toEqual({
+      scanned: 1,
+      updated: 1,
+      failed: 0,
+      failures: [],
+    });
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
+      'sub_unpaid_old',
+      undefined,
+      {
+        idempotencyKey: 'reconcile_duplicate_subscription:sub_unpaid_old',
+      },
+    );
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_paused_later'),
+    ).resolves.toMatchObject({
+      userId: primaryUserId,
+      status: 'paused',
+      currentPeriodEnd: new Date(1_800_000_000 * 1000),
+    });
+    await expect(
+      scenario.subscriptions.findByExternalSubscriptionId('sub_unpaid_old'),
+    ).resolves.toBeNull();
   });
 
   it('keeps persisting a different canonical winner over a current entitled row', async () => {
