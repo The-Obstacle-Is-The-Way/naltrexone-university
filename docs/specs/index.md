@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-03
+**Last Updated:** 2026-06-29 — aligned `PracticeSessionParams.questionStates` with the implemented exam draft-state fields documented by DEBT-425.
 
 ---
 

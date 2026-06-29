@@ -154,6 +154,9 @@ export type PracticeSessionParams = {
     latestSelectedChoiceId: string | null;
     latestIsCorrect: boolean | null;
     latestAnsweredAt: string | null;
+    draftSelectedChoiceId?: string | null;
+    draftSavedAt?: string | null;
+    draftCumulativeMs?: number;
   }>;
 };
 
@@ -1179,7 +1182,7 @@ export type StartPracticeSessionOutput = { sessionId: string };
    * `user_id`, `mode`
    * `params_json = { count, tagSlugs, difficulties, questionIds, questionStates }`
    * `questionStates` is initialized for each selected question:
-     * `{ questionId, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null }`
+     * `{ questionId, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null, draftSelectedChoiceId:null, draftSavedAt:null, draftCumulativeMs:0 }`
    * `started_at = now()`
 6. Return `sessionId`.
 7. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:startPracticeSession'`) so retries replay the previously created session id.
