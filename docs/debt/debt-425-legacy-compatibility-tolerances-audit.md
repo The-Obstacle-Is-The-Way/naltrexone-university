@@ -51,10 +51,12 @@ Development detail:
 
 Git archaeology:
 
-- `fd6749ac` on 2026-02-06 introduced `questionStates` creation for practice sessions.
-- `1ade1bae` on 2026-03-02 fixed BUG-188 by switching CAS comparison to raw persisted JSON.
-- `985dc47d` on 2026-03-18 introduced the exam draft fields.
-- `c74bd7c7` on 2026-04-25 introduced the BUG-238 draft cumulative-ms bound.
+| Commit | Date | Milestone |
+|---|---|---|
+| `fd6749ac` | 2026-02-06 | Introduced `questionStates` creation for practice sessions. |
+| `1ade1bae` | 2026-03-02 | Fixed BUG-188 by switching CAS comparison to raw persisted JSON. |
+| `985dc47d` | 2026-03-18 | Introduced the exam draft fields. |
+| `c74bd7c7` | 2026-04-25 | Introduced the BUG-238 draft cumulative-ms bound. |
 
 Decision:
 
