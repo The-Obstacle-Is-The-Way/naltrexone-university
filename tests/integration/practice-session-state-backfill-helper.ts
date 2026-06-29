@@ -4,8 +4,9 @@ import { join } from 'node:path';
 const BACKFILL_START = '-- DEBT-425 backfill:start';
 const BACKFILL_END = '-- DEBT-425 backfill:end';
 
-export function readDebt425BackfillSql(): string {
-  const migrationsDir = join(process.cwd(), 'db/migrations');
+export function readDebt425BackfillSql(
+  migrationsDir = join(process.cwd(), 'db/migrations'),
+): string {
   for (const fileName of readdirSync(migrationsDir).sort()) {
     if (!fileName.endsWith('.sql')) continue;
 

@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
@@ -38,6 +41,22 @@ afterAll(async () => {
 });
 
 describe('practice session question state normalization', () => {
+  it('fails loudly when the marked DEBT-425 backfill block is missing', () => {
+    const migrationsDir = mkdtempSync(join(tmpdir(), 'debt-425-backfill-'));
+    try {
+      writeFileSync(
+        join(migrationsDir, '0001_unrelated.sql'),
+        'SELECT 1;--> statement-breakpoint\n',
+      );
+
+      expect(() => readDebt425BackfillSql(migrationsDir)).toThrow(
+        'Missing DEBT-425 marked backfill migration block',
+      );
+    } finally {
+      rmSync(migrationsDir, { recursive: true, force: true });
+    }
+  });
+
   it('backfills legacy params_json states into relational rows idempotently', async () => {
     const user = await createUser(db, cleanup);
     const firstQuestion = await createQuestion(db, cleanup, {
