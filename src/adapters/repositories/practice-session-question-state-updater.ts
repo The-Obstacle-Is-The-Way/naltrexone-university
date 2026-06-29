@@ -127,6 +127,10 @@ export async function updatePracticeSessionQuestionState(input: {
     }
 
     const updatedState = input.updateFn(existing.state);
+    if (updatedState === existing.state) {
+      return existing.state;
+    }
+
     const [updated] = await input.db
       .update(practiceSessionQuestionStates)
       .set({

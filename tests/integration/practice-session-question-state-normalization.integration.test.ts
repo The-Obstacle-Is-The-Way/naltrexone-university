@@ -316,6 +316,88 @@ describe('practice session question state normalization', () => {
     expect(secondWrite).toEqual([]);
   });
 
+  it('does not bump version or updated_at for stale draft saves', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-state-stale-draft-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const firstSavedAt = new Date('2026-02-01T00:05:00.000Z');
+    const sessions = new DrizzlePracticeSessionRepository(
+      db,
+      () => firstSavedAt,
+    );
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await sessions.saveDraftAnswer({
+      userId: user.id,
+      sessionId: session.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      cumulativeMs: 45_000,
+    });
+
+    const [beforeStale] = await sql<
+      Array<{
+        version: number;
+        updated_at: string;
+      }>
+    >`
+      SELECT version, updated_at
+      FROM practice_session_question_states
+      WHERE practice_session_id = ${session.id}
+        AND question_id = ${question.id}
+    `;
+    if (!beforeStale) throw new Error('Missing state before stale draft save');
+
+    const staleSessions = new DrizzlePracticeSessionRepository(
+      db,
+      () => new Date('2026-02-01T00:04:00.000Z'),
+    );
+    await staleSessions.saveDraftAnswer({
+      userId: user.id,
+      sessionId: session.id,
+      questionId: question.id,
+      selectedChoiceId: question.incorrectChoiceId,
+      cumulativeMs: 30_000,
+    });
+
+    const [afterStale] = await sql<
+      Array<{
+        draft_selected_choice_id: string | null;
+        draft_cumulative_ms: number;
+        version: number;
+        updated_at: string;
+      }>
+    >`
+      SELECT
+        draft_selected_choice_id::text,
+        draft_cumulative_ms,
+        version,
+        updated_at
+      FROM practice_session_question_states
+      WHERE practice_session_id = ${session.id}
+        AND question_id = ${question.id}
+    `;
+
+    expect(afterStale).toMatchObject({
+      draft_selected_choice_id: question.correctChoiceId,
+      draft_cumulative_ms: 45_000,
+      version: beforeStale.version,
+      updated_at: beforeStale.updated_at,
+    });
+  });
+
   it('enforces the draft cumulative-ms bound at the database boundary', async () => {
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {

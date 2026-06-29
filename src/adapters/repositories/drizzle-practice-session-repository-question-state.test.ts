@@ -55,6 +55,40 @@ function createStateRow(
   };
 }
 
+function collectColumnNames(
+  value: unknown,
+  seen = new Set<object>(),
+): string[] {
+  if (typeof value !== 'object' || value === null || seen.has(value)) return [];
+  seen.add(value);
+
+  const maybeColumn = value as { name?: unknown; columnType?: unknown };
+  const ownName =
+    typeof maybeColumn.name === 'string' &&
+    typeof maybeColumn.columnType === 'string'
+      ? [maybeColumn.name]
+      : [];
+
+  return [
+    ...ownName,
+    ...Reflect.ownKeys(value).flatMap((key) =>
+      collectColumnNames((value as Record<PropertyKey, unknown>)[key], seen),
+    ),
+  ];
+}
+
+function expectVersionedStateUpdatePredicate(predicate: unknown) {
+  expect([...new Set(collectColumnNames(predicate))]).toEqual(
+    expect.arrayContaining([
+      'id',
+      'version',
+      'practice_session_id',
+      'user_id',
+      'ended_at',
+    ]),
+  );
+}
+
 function createQuestionStateDb(input: {
   snapshots: Array<{ state: StateRow; endedAt: Date | null }>;
   updatedRows: StateRow[][];
@@ -83,8 +117,19 @@ function createQuestionStateDb(input: {
   for (const rows of input.updatedRows) {
     updateReturning.mockResolvedValueOnce(rows);
   }
-  const updateWhere = vi.fn(() => ({ returning: updateReturning }));
-  const updateSet = vi.fn(() => ({ where: updateWhere }));
+  const updateWhere = vi.fn((predicate: unknown) => {
+    expectVersionedStateUpdatePredicate(predicate);
+    return { returning: updateReturning };
+  });
+  const updateSet = vi.fn((values: Record<string, unknown>) => {
+    expect(values).toEqual(
+      expect.objectContaining({
+        version: expect.anything(),
+        updatedAt: expect.any(Date),
+      }),
+    );
+    return { where: updateWhere };
+  });
   const update = vi.fn(() => ({ set: updateSet }));
 
   return {
@@ -307,9 +352,9 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       draftSavedAt: new Date('2026-02-01T00:05:00.000Z'),
       draftCumulativeMs: 45_000,
     });
-    const { db } = createQuestionStateDb({
+    const { db, updateReturning } = createQuestionStateDb({
       snapshots: [{ state: existing, endedAt: null }],
-      updatedRows: [[{ ...existing, version: 1 }]],
+      updatedRows: [],
     });
 
     type RepoDb = ConstructorParameters<
@@ -334,6 +379,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       draftSavedAt: new Date('2026-02-01T00:05:00.000Z'),
       draftCumulativeMs: 45_000,
     });
+    expect(updateReturning).not.toHaveBeenCalled();
   });
 
   it('retries question-state update when a concurrent write causes a stale version miss', async () => {

@@ -10,6 +10,7 @@ import {
   type ApplicationErrorCode,
 } from '@/src/application/errors';
 import type { PracticeSession } from '@/src/domain/entities';
+import { zUuid } from '../shared/zod-schemas';
 
 const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
 
@@ -22,7 +23,7 @@ const practiceSessionParamsSchema = z.object({
     .array(questionDifficultySchema)
     .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
   questionIds: z
-    .array(z.string().min(1))
+    .array(zUuid)
     .max(MAX_PRACTICE_SESSION_QUESTIONS)
     .refine((questionIds) => new Set(questionIds).size === questionIds.length, {
       message: 'questionIds must be unique',

@@ -9,6 +9,20 @@ const questionId = crypto.randomUUID();
 const draftSelectedChoiceId = crypto.randomUUID();
 
 describe('parsePracticeSessionParamsJson', () => {
+  it('rejects non-UUID question IDs at the persistence metadata boundary', () => {
+    expect(() =>
+      parsePracticeSessionParamsJson(
+        {
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: ['not-a-uuid'],
+        },
+        'VALIDATION_ERROR',
+      ),
+    ).toThrow(/Invalid practice session parameters/);
+  });
+
   it('ignores stale questionStates when parsing immutable session metadata', () => {
     const parsed = parsePracticeSessionParamsJson(
       {

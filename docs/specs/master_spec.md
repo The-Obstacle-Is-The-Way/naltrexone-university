@@ -1052,7 +1052,7 @@ export type GetNextQuestionOutput = NextQuestion | null; // null means no remain
 3. Determine target question:
 
    * If `questionId` is provided, it must belong to `params_json.questionIds`.
-   * Else pick the first question in `params_json.questionIds` whose relational state has `latestSelectedChoiceId = null`.
+   * Else pick the first question in `params_json.questionIds` whose persisted answer marker is empty: for active exam sessions use `draftSelectedChoiceId ?? latestSelectedChoiceId`, and for tutor sessions use `latestSelectedChoiceId`.
 4. If none found: return `null`.
 5. Fetch question + choices by target questionId:
 
@@ -1203,7 +1203,7 @@ export type StartPracticeSessionOutput = { sessionId: string };
    * `user_id`, `mode`
    * `params_json = { count, tagSlugs, difficulties, questionIds }`
    * one `practice_session_question_states` row per selected question, in `questionIds` order:
-     * `{ questionId, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null, draftSelectedChoiceId:null, draftSavedAt:null, draftCumulativeMs:0 }`
+     * `{ questionId, position:<0-based index>, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null, draftSelectedChoiceId:null, draftSavedAt:null, draftCumulativeMs:0 }`
    * `started_at = now()`
 6. Return `sessionId`.
 7. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:startPracticeSession'`) so retries replay the previously created session id.
