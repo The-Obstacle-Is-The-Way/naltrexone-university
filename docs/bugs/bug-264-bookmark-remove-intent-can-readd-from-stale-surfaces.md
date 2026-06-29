@@ -120,14 +120,14 @@ it('does not re-add a bookmark when two stale remove intents execute independent
   const questions = new FakeQuestionRepository([
     createQuestion({ id: questionId, status: 'published' }),
   ]);
-  const removeBookmark = new RemoveBookmarkUseCase(bookmarks, questions);
+  const setBookmark = new SetBookmarkUseCase(bookmarks, questions);
 
-  await expect(removeBookmark.execute({ userId, questionId })).resolves.toEqual({
-    bookmarked: false,
-  });
-  await expect(removeBookmark.execute({ userId, questionId })).resolves.toEqual({
-    bookmarked: false,
-  });
+  await expect(
+    setBookmark.execute({ userId, questionId, bookmarked: false }),
+  ).resolves.toEqual({ bookmarked: false });
+  await expect(
+    setBookmark.execute({ userId, questionId, bookmarked: false }),
+  ).resolves.toEqual({ bookmarked: false });
   await expect(bookmarks.exists(userId, questionId)).resolves.toBe(false);
 });
 ```

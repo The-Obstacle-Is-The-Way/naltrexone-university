@@ -26,6 +26,14 @@ export class SetBookmarkUseCase {
       return { bookmarked: false };
     }
 
+    const alreadyBookmarked = await this.bookmarks.exists(
+      input.userId,
+      input.questionId,
+    );
+    if (alreadyBookmarked) {
+      return { bookmarked: true };
+    }
+
     const question = await this.questions.findPublishedById(input.questionId);
     if (!question) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');

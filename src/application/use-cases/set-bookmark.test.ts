@@ -86,6 +86,21 @@ describe('SetBookmarkUseCase', () => {
     await expect(bookmarks.listByUserId(userId)).resolves.toHaveLength(1);
   });
 
+  it('returns bookmarked=true for an existing bookmark when the question is no longer published', async () => {
+    const bookmarks = new FakeBookmarkRepository([
+      { userId, questionId, createdAt: now },
+    ]);
+    const questions = new FakeQuestionRepository([
+      createQuestion({ id: questionId, status: 'archived' }),
+    ]);
+    const useCase = new SetBookmarkUseCase(bookmarks, questions);
+
+    await expect(
+      useCase.execute({ userId, questionId, bookmarked: true }),
+    ).resolves.toEqual({ bookmarked: true });
+    await expect(bookmarks.listByUserId(userId)).resolves.toHaveLength(1);
+  });
+
   it('throws NOT_FOUND when adding an unpublished question', async () => {
     const questions = new FakeQuestionRepository([
       createQuestion({ id: questionId, status: 'draft' }),

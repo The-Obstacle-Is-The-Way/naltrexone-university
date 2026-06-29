@@ -142,5 +142,8 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
       bookmarked: false,
       idempotencyKey: expect.any(String),
     });
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('false');
   });
 });
