@@ -57,6 +57,38 @@ describe('practice session question state normalization', () => {
     }
   });
 
+  it('fails loudly when a DEBT-425 backfill block has no end marker', () => {
+    const migrationsDir = mkdtempSync(join(tmpdir(), 'debt-425-backfill-'));
+    try {
+      writeFileSync(
+        join(migrationsDir, '0001_broken.sql'),
+        '-- DEBT-425 backfill:start\nSELECT 1;',
+      );
+
+      expect(() => readDebt425BackfillSql(migrationsDir)).toThrow(
+        'Malformed DEBT-425 marked backfill migration block in 0001_broken.sql',
+      );
+    } finally {
+      rmSync(migrationsDir, { recursive: true, force: true });
+    }
+  });
+
+  it('fails loudly when a DEBT-425 backfill end marker appears first', () => {
+    const migrationsDir = mkdtempSync(join(tmpdir(), 'debt-425-backfill-'));
+    try {
+      writeFileSync(
+        join(migrationsDir, '0001_broken.sql'),
+        '-- DEBT-425 backfill:end\nSELECT 1;',
+      );
+
+      expect(() => readDebt425BackfillSql(migrationsDir)).toThrow(
+        'Malformed DEBT-425 marked backfill migration block in 0001_broken.sql',
+      );
+    } finally {
+      rmSync(migrationsDir, { recursive: true, force: true });
+    }
+  });
+
   it('fails loudly when multiple DEBT-425 backfill blocks are marked', () => {
     const migrationsDir = mkdtempSync(join(tmpdir(), 'debt-425-backfill-'));
     const markedBlock = [

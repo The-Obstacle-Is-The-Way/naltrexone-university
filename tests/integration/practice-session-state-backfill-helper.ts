@@ -13,7 +13,10 @@ function extractMarkedBackfillBlocks(fileName: string, body: string): string[] {
     const nextEndIndex = body.indexOf(BACKFILL_END, cursor);
 
     if (startIndex === -1 && nextEndIndex === -1) break;
-    if (startIndex === -1 || nextEndIndex < startIndex) {
+    if (
+      startIndex === -1 ||
+      (nextEndIndex !== -1 && nextEndIndex < startIndex)
+    ) {
       throw new Error(
         `Malformed DEBT-425 marked backfill migration block in ${fileName}`,
       );
