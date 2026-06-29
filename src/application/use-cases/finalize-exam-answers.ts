@@ -181,11 +181,9 @@ export class FinalizeExamAnswersUseCase {
       for (const state of activeSession.questionStates) {
         trackAnsweredAt(state.latestAnsweredAt);
 
-        const cappedCumulativeMs = Math.min(
-          state.draftCumulativeMs,
-          SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
+        const timeSpentSeconds = Math.floor(
+          state.draftCumulativeMs / MS_PER_SECOND,
         );
-        const timeSpentSeconds = Math.floor(cappedCumulativeMs / MS_PER_SECOND);
         const selectedChoiceId = state.draftSelectedChoiceId;
         if (selectedChoiceId === null) {
           if (state.latestSelectedChoiceId !== null) continue;

@@ -23,6 +23,19 @@ const backfillSql = readFileSync(
   'utf8',
 );
 
+type LegacyPracticeSessionParams = schema.PracticeSessionParams & {
+  questionStates: Array<{
+    questionId: string;
+    markedForReview: boolean;
+    latestSelectedChoiceId: string | null;
+    latestIsCorrect: boolean | null;
+    latestAnsweredAt: string | null;
+    draftSelectedChoiceId: string | null;
+    draftSavedAt: string | null;
+    draftCumulativeMs: number;
+  }>;
+};
+
 afterEach(async () => {
   await cleanupAfterEach(db, cleanup);
 });
@@ -60,6 +73,80 @@ describe('omitted exam attempt backfill migration', () => {
       difficulty: 'easy',
     });
     const endedAt = new Date('2026-05-01T12:00:00.000Z');
+    const examParamsJson: LegacyPracticeSessionParams = {
+      count: 3,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [qOmitted.id, qExistingAttempt.id, qAnsweredState.id],
+      questionStates: [
+        {
+          questionId: qOmitted.id,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 12_500,
+        },
+        {
+          questionId: qExistingAttempt.id,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 8_000,
+        },
+        {
+          questionId: qAnsweredState.id,
+          markedForReview: false,
+          latestSelectedChoiceId: qAnsweredState.correctChoiceId,
+          latestIsCorrect: true,
+          latestAnsweredAt: endedAt.toISOString(),
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 5_000,
+        },
+      ],
+    };
+    const activeExamParamsJson: LegacyPracticeSessionParams = {
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [qActiveExam.id],
+      questionStates: [
+        {
+          questionId: qActiveExam.id,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 4_000,
+        },
+      ],
+    };
+    const tutorParamsJson: LegacyPracticeSessionParams = {
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [qTutor.id],
+      questionStates: [
+        {
+          questionId: qTutor.id,
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: null,
+          draftSavedAt: null,
+          draftCumulativeMs: 4_000,
+        },
+      ],
+    };
 
     const [examSession] = await db
       .insert(schema.practiceSessions)
@@ -67,44 +154,7 @@ describe('omitted exam attempt backfill migration', () => {
         userId: user.id,
         mode: 'exam',
         endedAt,
-        paramsJson: {
-          count: 3,
-          tagSlugs: [],
-          difficulties: [],
-          questionIds: [qOmitted.id, qExistingAttempt.id, qAnsweredState.id],
-          questionStates: [
-            {
-              questionId: qOmitted.id,
-              markedForReview: false,
-              latestSelectedChoiceId: null,
-              latestIsCorrect: null,
-              latestAnsweredAt: null,
-              draftSelectedChoiceId: null,
-              draftSavedAt: null,
-              draftCumulativeMs: 12_500,
-            },
-            {
-              questionId: qExistingAttempt.id,
-              markedForReview: false,
-              latestSelectedChoiceId: null,
-              latestIsCorrect: null,
-              latestAnsweredAt: null,
-              draftSelectedChoiceId: null,
-              draftSavedAt: null,
-              draftCumulativeMs: 8_000,
-            },
-            {
-              questionId: qAnsweredState.id,
-              markedForReview: false,
-              latestSelectedChoiceId: qAnsweredState.correctChoiceId,
-              latestIsCorrect: true,
-              latestAnsweredAt: endedAt.toISOString(),
-              draftSelectedChoiceId: null,
-              draftSavedAt: null,
-              draftCumulativeMs: 5_000,
-            },
-          ],
-        },
+        paramsJson: examParamsJson,
       })
       .returning({ id: schema.practiceSessions.id });
     if (!examSession) throw new Error('Failed to insert exam session');
@@ -114,47 +164,13 @@ describe('omitted exam attempt backfill migration', () => {
         userId: user.id,
         mode: 'exam',
         endedAt: null,
-        paramsJson: {
-          count: 1,
-          tagSlugs: [],
-          difficulties: [],
-          questionIds: [qActiveExam.id],
-          questionStates: [
-            {
-              questionId: qActiveExam.id,
-              markedForReview: false,
-              latestSelectedChoiceId: null,
-              latestIsCorrect: null,
-              latestAnsweredAt: null,
-              draftSelectedChoiceId: null,
-              draftSavedAt: null,
-              draftCumulativeMs: 4_000,
-            },
-          ],
-        },
+        paramsJson: activeExamParamsJson,
       },
       {
         userId: user.id,
         mode: 'tutor',
         endedAt,
-        paramsJson: {
-          count: 1,
-          tagSlugs: [],
-          difficulties: [],
-          questionIds: [qTutor.id],
-          questionStates: [
-            {
-              questionId: qTutor.id,
-              markedForReview: false,
-              latestSelectedChoiceId: null,
-              latestIsCorrect: null,
-              latestAnsweredAt: null,
-              draftSelectedChoiceId: null,
-              draftSavedAt: null,
-              draftCumulativeMs: 4_000,
-            },
-          ],
-        },
+        paramsJson: tutorParamsJson,
       },
     ]);
 

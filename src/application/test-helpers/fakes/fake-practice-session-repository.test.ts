@@ -143,7 +143,7 @@ describe('FakePracticeSessionRepository', () => {
     ).resolves.toMatchObject({ id: 'ended-owned', endedAt });
   });
 
-  it('normalizes missing draft fields when creating a session from legacy params', async () => {
+  it('creates default question states from questionIds and ignores stale blob state', async () => {
     const repo = new FakePracticeSessionRepository();
 
     const created = await repo.create({
@@ -156,10 +156,10 @@ describe('FakePracticeSessionRepository', () => {
         questionStates: [
           {
             questionId: 'question-1',
-            markedForReview: false,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-            latestAnsweredAt: null,
+            markedForReview: true,
+            latestSelectedChoiceId: 'choice-legacy',
+            latestIsCorrect: true,
+            latestAnsweredAt: '2026-03-17T12:00:00.000Z',
           },
         ],
       },

@@ -222,33 +222,12 @@ describe('StartPracticeSessionUseCase', () => {
     const paramsJson = createInput?.paramsJson as {
       count: number;
       questionIds: string[];
-      questionStates: Array<{
-        questionId: string;
-        markedForReview: boolean;
-        latestSelectedChoiceId: string | null;
-        latestIsCorrect: boolean | null;
-        latestAnsweredAt: string | null;
-        draftSelectedChoiceId: string | null;
-        draftSavedAt: string | null;
-        draftCumulativeMs: number;
-      }>;
+      questionStates?: unknown;
     };
 
     expect(paramsJson.questionIds).toHaveLength(2);
     expect(paramsJson.count).toBe(2);
-    expect(paramsJson.questionStates).toHaveLength(2);
-    expect(paramsJson.questionStates).toEqual(
-      paramsJson.questionIds.map((questionId) => ({
-        questionId,
-        markedForReview: false,
-        latestSelectedChoiceId: null,
-        latestIsCorrect: null,
-        latestAnsweredAt: null,
-        draftSelectedChoiceId: null,
-        draftSavedAt: null,
-        draftCumulativeMs: 0,
-      })),
-    );
+    expect(paramsJson).not.toHaveProperty('questionStates');
   });
 
   it('returns NOT_FOUND error when filters yield zero questions', async () => {

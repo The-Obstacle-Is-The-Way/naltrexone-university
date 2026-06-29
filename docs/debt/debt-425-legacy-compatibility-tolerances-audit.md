@@ -1,6 +1,6 @@
 # DEBT-425: Legacy Compatibility Tolerances Audit and Hardening Plan
 
-**Status:** Open
+**Status:** Implemented in PR #537; post-deploy proof pending
 **Priority:** P3
 **Created:** 2026-06-29
 **Owner:** Engineering
@@ -12,7 +12,7 @@
 
 This audit re-verified legacy and backward-compatibility paths that are easy to misread as dead code. The rule is "prove, then delete": keep compatibility where it protects real data or external API variance, and only remove tolerance after a backfill plus an enforced invariant make the legacy shape unrepresentable.
 
-The main cleanup opportunity is `practice_sessions.params_json`: current code still accepts older session JSON shapes where `questionStates` is missing entirely, where per-question draft fields are missing, or where `draftCumulativeMs` predates the BUG-238 bound. Those tolerances live at the adapter/persistence boundary and do not leak into the domain entity, which remains required and normalized.
+Track A was chosen and executed in PR #537. Mutable per-question practice-session state now lives in `practice_session_question_states`; `practice_sessions.params_json` carries only immutable selection metadata (`count`, filters, ordered `questionIds`). The domain `PracticeSession` shape and application repository port stayed unchanged.
 
 ---
 
@@ -20,22 +20,15 @@ The main cleanup opportunity is `practice_sessions.params_json`: current code st
 
 ### 1. Practice-session params JSON tolerances
 
-Current code verified on 2026-06-29:
+Implementation verified on 2026-06-29:
 
-- `db/schema.ts:114-129` keeps `PracticeSessionParams.questionStates` optional, and keeps draft fields optional inside each serialized state.
-- `src/adapters/repositories/practice-session-params.ts:19-35` defaults missing draft fields to `null`, `null`, and `0`.
-- `src/adapters/repositories/practice-session-params.ts:55-58` accepts missing `questionStates`.
-- `src/adapters/repositories/practice-session-params.ts:108-135` normalizes one full state per `questionIds` entry when stored state is missing or incomplete.
-- `src/domain/services/session-stats.ts:40-53` creates default question states with all three draft fields present.
-- `src/adapters/repositories/practice-session-params.ts:91-105` serializes every domain question state with all three draft fields.
-- `src/domain/entities/practice-session.ts:6-15` has no optional legacy shape: the domain state requires `draftSelectedChoiceId`, `draftSavedAt`, and `draftCumulativeMs`.
-- `src/application/use-cases/start-practice-session.ts:68-78` writes current sessions with `questionStates` from `createDefaultQuestionState`.
-
-The BUG-188 CAS fix is correct and must stay:
-
-- `src/adapters/repositories/drizzle-practice-session-repository.ts:68-92` returns a normalized domain session plus the raw persisted `paramsJson`.
-- `src/adapters/repositories/practice-session-question-state-updater.ts:66-78` compares the CAS `WHERE` against `existingSnapshot.rawParamsJson`, not a normalized re-serialization.
-- `tests/integration/bug-regression-historical.integration.test.ts:18-68` proves a row with no `questionStates` can still be updated and is upgraded to the current shape.
+- `db/schema.ts` defines `PracticeSessionParams` as immutable metadata only and adds `practice_session_question_states` with required scalar columns, unique `(practice_session_id, question_id)`, unique `(practice_session_id, position)`, `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`, non-negative `position`, non-negative `version`, and FK cleanup via `ON DELETE CASCADE`.
+- `db/migrations/0021_flaky_domino.sql` creates the table and runs the marked DEBT-425 idempotent backfill. It inserts one row per `params_json.questionIds` entry, defaults missing legacy state fields, and clamps oversized legacy `draftCumulativeMs` before the CHECK can reject it.
+- `src/adapters/repositories/practice-session-params.ts` no longer parses or serializes mutable question state. It ignores stale `questionStates` keys in old blobs but does not use them.
+- `src/adapters/repositories/drizzle-practice-session-repository.ts` creates session rows and state rows in one transaction, loads state rows ordered by `position`, and maps them back into the unchanged domain `PracticeSession`.
+- `src/adapters/repositories/practice-session-question-state-updater.ts` now performs row-level optimistic updates guarded by `id`, `version`, and an active owning session check. The BUG-188 raw-blob CAS path is gone.
+- `src/application/use-cases/start-practice-session.ts` no longer writes `questionStates` into `paramsJson`.
+- `src/application/use-cases/finalize-exam-answers.ts` no longer caps persisted draft state during finalization; persisted values are bounded by migration clamp plus the state-table CHECK. The final-flush input clamp remains because it is application input normalization before saving draft state.
 
 Data proof, read-only queries against `.env.local`, Vercel Development, and Vercel Production on 2026-06-29:
 
@@ -62,22 +55,23 @@ Git archaeology:
 
 Decision:
 
-- **KEEP-AREA:** raw-snapshot CAS. This is not legacy cruft; it is the correct optimistic-concurrency comparison against persisted state.
-- **CLEAN-UP-DEFERRED:** optional `questionStates`, optional draft fields, and finalization tolerance for oversized persisted draft timing. Missing draft fields are now purely legacy: the data window ends on 2026-03-17, the draft-field feature shipped on 2026-03-18, and current code paths create and serialize all three fields. Clean them only after a backfill and enforced invariant.
+- **IMPLEMENTED:** optional blob `questionStates`, optional blob draft fields, and the oversized persisted-state finalization cap were retired by Track A normalization.
+- **RETIRED:** BUG-188 raw-snapshot CAS. It was correct while mutable state lived in JSON, but Track A removes the blob-write bug class by moving concurrency to per-state-row `version` checks.
 
 ### 2. Oversized draft timing cap
 
-Current code verified:
+Current code verified after Track A:
 
 - `src/application/use-cases/save-exam-draft-answer.ts:20-21` defines `SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS` from the submit-answer seconds bound.
 - `src/adapters/controllers/practice-schemas.ts:76-82` rejects oversized controller input.
 - `src/application/use-cases/save-exam-draft-answer.ts:81-88` clamps non-controller callers.
-- `src/application/use-cases/finalize-exam-answers.ts:184-188` caps persisted legacy `draftCumulativeMs` before writing `timeSpentSeconds`.
-- `src/application/use-cases/finalize-exam-answers.test.ts:491-540` and `tests/integration/bug-regression-exam-draft-bounds.integration.test.ts:224-287` pin the legacy oversized-finalize behavior.
+- `db/schema.ts` enforces persisted `draft_cumulative_ms` with a scalar CHECK.
+- `db/migrations/0021_flaky_domino.sql` clamps oversized legacy JSON values during backfill.
+- `tests/integration/practice-session-question-state-normalization.integration.test.ts` proves the backfill clamp and state-table CHECK.
 
-Data proof found zero oversized persisted values in Development and Production. This still stays deferred rather than deleted now because the persisted JSON schema does not yet enforce the bound.
+Original data proof found zero oversized persisted JSON values in Development and Production. Track A now enforces the persisted bound relationally.
 
-Decision: **CLEAN-UP-DEFERRED.** After the JSON invariant is enforced with a backfill plus validation/check constraint, the finalization cap can be reconsidered. Until then it is a cheap, user-protecting persistence-boundary guard.
+Decision: **IMPLEMENTED.** The persisted-state finalization cap was removed because no read path can now surface an unbounded persisted draft duration.
 
 ### 3. Stripe subscription reference fallback
 
@@ -142,44 +136,73 @@ Decision: **CLEAN-UP-DEFERRED.** This is accidental outer-layer duplication, but
 
 ### Practice-session params hardening
 
-Current source of truth: `docs/specs/master_spec.md` and `db/schema.ts` still define `practice_sessions.params_json` as the persistence shape for session question order and mutable per-question state. This debt does not silently change that model. If cleanup is pursued, choose one explicit track.
+Current source of truth: `docs/specs/master_spec.md` and `db/schema.ts` now define `practice_sessions.params_json` as immutable session selection metadata and `practice_session_question_states` as the mutable per-question state store.
 
-ROI framing: Production currently has zero practice sessions. The legacy rows found by the audit are non-production historical/dev data, and the current tolerances are cheap adapter-boundary guards. Do not spend a standalone sprint on JSON-blob hardening just to delete parser defaults. Either keep the guards, do a small pre-launch invariant pass if already touching this persistence area, or invest in the normalized table track below to remove the bug class.
+ROI framing: Production had zero practice sessions at execution time, so PR #537 used a one-shot atomic cutover rather than a multi-phase expand/contract rollout. The migration still backfills non-production legacy rows idempotently.
 
-#### Track A: preferred model normalization
+#### Track A: preferred model normalization — CHOSEN AND EXECUTED
 
-This is the architecturally clean end-state if the team chooses to spend real engineering time on the session-state model.
+Implemented by `db/migrations/0021_flaky_domino.sql`.
 
-1. Add characterization tests that prove current legacy rows still parse and raw-snapshot CAS still succeeds before the refactor.
-2. Add a `practice_session_question_states` table with scalar, constrained columns:
+1. Characterization/new-contract tests were added or updated:
+   - `src/application/use-cases/start-practice-session.test.ts` proves `paramsJson` no longer includes `questionStates`.
+   - `src/adapters/repositories/practice-session-params.test.ts` proves stale blob `questionStates` are ignored and serialization emits immutable metadata only.
+   - `tests/integration/practice-session-question-state-normalization.integration.test.ts` proves idempotent backfill, immutable `params_json`, relational create rows, row-version stale-write rejection, independent concurrent updates, and the draft-ms CHECK.
+   - `tests/integration/bug-regression-historical.integration.test.ts` now proves migrated legacy JSON rows remain updatable through relational state.
+   - `tests/e2e/helpers/reset-e2e-user-state.test.ts` proves deterministic E2E baseline seeders create normalized state rows, so fixture inserts cannot bypass the new invariant.
+2. Added `practice_session_question_states` with scalar, constrained columns:
    - `practice_session_id` FK;
    - `question_id` FK;
-   - `position` or equivalent ordered-session index;
+   - `position` as the 0-based ordered-session index;
    - `marked_for_review`, `latest_selected_choice_id`, `latest_is_correct`, `latest_answered_at`;
    - `draft_selected_choice_id`, `draft_saved_at`, `draft_cumulative_ms`;
-   - a `version` or equivalent concurrency token for row-level optimistic updates.
-3. Enforce invariants with normal relational constraints:
+   - `version` as the row-level optimistic concurrency token.
+3. Enforced invariants with normal relational constraints:
    - `NOT NULL` on required state columns;
    - `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`;
    - unique constraints on `(practice_session_id, question_id)` and `(practice_session_id, position)`.
-4. Backfill one state row per existing `params_json.questionIds` entry, using the current parser defaults for missing legacy state and clamping oversized `draftCumulativeMs`.
-5. Move repository reads to join/load state rows and map them back into the unchanged domain `PracticeSession`.
-6. Replace blob CAS with row-level updates guarded by the state row concurrency token.
-7. Stop persisting mutable `questionStates` in `params_json`; keep only immutable selection/filter metadata there or migrate that metadata into relational columns if the same refactor justifies it.
-8. After the relational path is deployed and verified, remove legacy JSON parser defaults and the BUG-188 raw-blob CAS machinery.
+4. Backfilled one state row per existing `params_json.questionIds` entry, using legacy parser defaults for missing state and clamping oversized `draftCumulativeMs`.
+5. Moved repository reads to load state rows and map them back into the unchanged domain `PracticeSession`.
+6. Replaced blob CAS with row-level updates guarded by the state row concurrency token and an active-session ownership check.
+7. Stopped persisting mutable `questionStates` in `params_json`; existing stale blob keys are ignored.
+8. Removed legacy JSON parser defaults and the BUG-188 raw-blob CAS machinery.
 
 Acceptance criteria for Track A:
 
-- Session state invariants are enforced by scalar columns and relational constraints.
-- Repository ports and domain entities remain persistence-ignorant.
-- Ordered session review still preserves original question order.
-- Concurrent draft/mark/answer updates cannot clobber each other.
-- The legacy JSON tolerance tests are replaced by migration/backfill tests and current relational invariant tests.
-- Full quality gate passes before push.
+- [x] Session state invariants are enforced by scalar columns and relational constraints.
+- [x] Repository ports and domain entities remain persistence-ignorant.
+- [x] Ordered session review still preserves original question order.
+- [x] Concurrent draft/mark/answer updates cannot clobber each other.
+- [x] Legacy JSON tolerance tests are replaced by migration/backfill tests and current relational invariant tests.
+- [x] Full quality gate passes before push.
+- [ ] Development and Production post-migration data proof recorded after deployment.
+
+Post-migration proof obligation for Track A:
+
+The old audit queries that count `params_json ? 'questionStates'` are historical only. After Track A, `params_json.questionStates` is deliberately absent on new writes, so the live proof must verify relational coverage instead:
+
+```sql
+-- Sessions whose immutable questionIds do not have exactly one normalized state row per question.
+SELECT count(*)
+FROM practice_sessions ps
+WHERE jsonb_array_length(coalesce(ps.params_json -> 'questionIds', '[]'::jsonb)) <>
+  (
+    SELECT count(*)::int
+    FROM practice_session_question_states state
+    WHERE state.practice_session_id = ps.id
+  );
+
+-- Persisted draft durations outside the allowed range; should also be impossible by CHECK.
+SELECT count(*)
+FROM practice_session_question_states
+WHERE draft_cumulative_ms < 0 OR draft_cumulative_ms > 86400000;
+```
+
+The non-null draft-field proof is now structural: `draft_selected_choice_id` and `draft_saved_at` are nullable by design, while `draft_cumulative_ms`, `marked_for_review`, `position`, and `version` are `NOT NULL` scalar columns.
 
 #### Track B: minimal blob hardening
 
-This is an interim, lower-ROI path only if normalizing the table is intentionally out of scope.
+Not chosen. Kept here only as historical rationale for why blob hardening was rejected in favor of Track A.
 
 1. Add characterization tests that prove current legacy rows still parse and raw-snapshot CAS still succeeds. Keep this red/green proof before any cleanup.
 2. Add an idempotent migration that backfills every `practice_sessions.params_json` row:
@@ -227,10 +250,10 @@ Acceptance criteria:
 
 | Item | Verdict | Why |
 |---|---|---|
-| BUG-188 raw-snapshot CAS | KEEP-AREA | Correct concurrency comparison; protects legacy and future persisted JSON bytes. |
-| Missing `questionStates` tolerance | CLEAN-UP-DEFERRED | Dev has one ended legacy row; needs backfill plus required schema before removal. |
-| Missing draft-field tolerance | CLEAN-UP-DEFERRED | Purely legacy. Dev has 66 affected sessions and one active non-production session; cleanup should be either relational normalization or a deliberately scoped blob-hardening pass. |
-| Oversized `draftCumulativeMs` finalization cap | CLEAN-UP-DEFERRED | Data is currently zero, but persisted JSON does not enforce the bound yet; scalar constraints come naturally with normalization. |
+| BUG-188 raw-snapshot CAS | IMPLEMENTED/RETIRED | Correct while state lived in JSON; removed by Track A because row-level `version` updates retire the blob-CAS bug class. |
+| Missing `questionStates` tolerance | IMPLEMENTED/RETIRED | `params_json.questionStates` is no longer a state source; migration `0021_flaky_domino.sql` backfills relational state from legacy blobs. |
+| Missing draft-field tolerance | IMPLEMENTED/RETIRED | Draft fields are required scalar columns in `practice_session_question_states`; legacy missing fields are defaulted during backfill. |
+| Oversized `draftCumulativeMs` finalization cap | IMPLEMENTED/RETIRED | Legacy values are clamped during backfill; new persisted values are bounded by `practice_session_question_states_draft_cumulative_ms_chk`. |
 | Stripe root `subscription` fallback | KEEP-AREA | Essential external API compatibility; nested Clover shape merely has priority. |
 | NODE_ENV dev/prod guards | KEEP-AREA | Environment policy, not legacy cruft. |
 | Dormant light-mode infrastructure | KEEP-AREA | DEBT-421 reversible kill switch; explicitly preserved. |

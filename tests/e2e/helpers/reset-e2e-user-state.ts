@@ -367,23 +367,6 @@ const defaultServices: E2EUserStateResetServices = {
     questionFixtures,
     choiceFixtures,
   }) => {
-    const questionStates = [
-      {
-        questionId: questionFixtures.placeholder01Id,
-        markedForReview: false,
-        latestSelectedChoiceId: choiceFixtures.placeholder01CorrectChoiceId,
-        latestIsCorrect: true,
-        latestAnsweredAt: DETERMINISTIC_BASELINE.answeredAtInSession,
-      },
-      {
-        questionId: questionFixtures.placeholder02Id,
-        markedForReview: false,
-        latestSelectedChoiceId: null,
-        latestIsCorrect: null,
-        latestAnsweredAt: null,
-      },
-    ];
-
     const paramsJson = {
       count: 2,
       tagSlugs: [],
@@ -392,7 +375,6 @@ const defaultServices: E2EUserStateResetServices = {
         questionFixtures.placeholder01Id,
         questionFixtures.placeholder02Id,
       ],
-      questionStates,
     };
 
     try {
@@ -417,6 +399,33 @@ const defaultServices: E2EUserStateResetServices = {
             JSON.stringify(paramsJson),
             DETERMINISTIC_BASELINE.startedAt,
             DETERMINISTIC_BASELINE.endedAt,
+          ],
+        );
+
+        await tx.unsafe(
+          `
+          INSERT INTO practice_session_question_states (
+            practice_session_id,
+            question_id,
+            position,
+            marked_for_review,
+            latest_selected_choice_id,
+            latest_is_correct,
+            latest_answered_at,
+            draft_selected_choice_id,
+            draft_saved_at,
+            draft_cumulative_ms
+          )
+          VALUES
+            ($1, $2, 0, false, $3, true, $4, NULL, NULL, 0),
+            ($1, $5, 1, false, NULL, NULL, NULL, NULL, NULL, 0)
+          `,
+          [
+            DETERMINISTIC_BASELINE.sessionId,
+            questionFixtures.placeholder01Id,
+            choiceFixtures.placeholder01CorrectChoiceId,
+            DETERMINISTIC_BASELINE.answeredAtInSession,
+            questionFixtures.placeholder02Id,
           ],
         );
 
@@ -504,6 +513,7 @@ const defaultServices: E2EUserStateResetServices = {
           completedSessions: number;
           attemptCount: number;
           bookmarkCount: number;
+          questionStateCount: number;
         }[]
       >`
         SELECT
@@ -522,19 +532,32 @@ const defaultServices: E2EUserStateResetServices = {
             SELECT COUNT(*)::int
             FROM bookmarks
             WHERE user_id = ${userId}
-          ) AS "bookmarkCount"
+          ) AS "bookmarkCount",
+          (
+            SELECT COUNT(*)::int
+            FROM practice_session_question_states state
+            INNER JOIN practice_sessions session
+              ON session.id = state.practice_session_id
+            WHERE session.user_id = ${userId}
+          ) AS "questionStateCount"
       `;
 
       const baseline = rows[0];
       const completedSessions = baseline?.completedSessions ?? 0;
       const attemptCount = baseline?.attemptCount ?? 0;
       const bookmarkCount = baseline?.bookmarkCount ?? 0;
+      const questionStateCount = baseline?.questionStateCount ?? 0;
 
-      if (completedSessions < 1 || attemptCount < 2 || bookmarkCount < 1) {
+      if (
+        completedSessions < 1 ||
+        attemptCount < 2 ||
+        bookmarkCount < 1 ||
+        questionStateCount < 2
+      ) {
         throw new E2EUserStateResetError(
           'E2E_RESET:BASELINE_STATE_INCOMPLETE',
           'Deterministic E2E baseline verification failed after reset.',
-          'Verify reset helper inserts completed session, attempts, and bookmark rows for the E2E user.',
+          'Verify reset helper inserts completed session, normalized session question state, attempts, and bookmark rows for the E2E user.',
         );
       }
     } catch (error) {

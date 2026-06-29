@@ -86,6 +86,7 @@ function createRoutingSqlClient(
       completedSessions: number;
       attemptCount: number;
       bookmarkCount: number;
+      questionStateCount: number;
     }>;
   } = {},
 ) {
@@ -156,7 +157,12 @@ function createRoutingSqlClient(
     if (queryText.includes('completedSessions')) {
       return (
         options.baselineRows ?? [
-          { completedSessions: 1, attemptCount: 2, bookmarkCount: 1 },
+          {
+            completedSessions: 1,
+            attemptCount: 2,
+            bookmarkCount: 1,
+            questionStateCount: 2,
+          },
         ]
       );
     }
@@ -720,7 +726,12 @@ describe('runE2EUserStateReset default service diagnostics', () => {
     await importResetWithPostgresMock();
     const sqlClient = createRoutingSqlClient({
       baselineRows: [
-        { completedSessions: 0, attemptCount: 0, bookmarkCount: 0 },
+        {
+          completedSessions: 0,
+          attemptCount: 0,
+          bookmarkCount: 0,
+          questionStateCount: 0,
+        },
       ],
     });
     postgresMock.mockReturnValue(sqlClient);
@@ -754,5 +765,13 @@ describe('runE2EUserStateReset default service diagnostics', () => {
 
     expect(postgresMock).toHaveBeenCalledTimes(1);
     expect(sqlClient.end).toHaveBeenCalledTimes(1);
+    const unsafeQueries = sqlClient.tx.unsafe.mock.calls.map(([query]) =>
+      String(query),
+    );
+    expect(
+      unsafeQueries.some((query) =>
+        query.includes('INSERT INTO practice_session_question_states'),
+      ),
+    ).toBe(true);
   });
 });

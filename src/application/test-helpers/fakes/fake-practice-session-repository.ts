@@ -174,42 +174,21 @@ export class FakePracticeSessionRepository
       questionIds: string[];
       tagSlugs: string[];
       difficulties: QuestionDifficulty[];
-      questionStates?: Array<{
-        questionId: string;
-        markedForReview: boolean;
-        latestSelectedChoiceId: string | null;
-        latestIsCorrect: boolean | null;
-        latestAnsweredAt: string | null;
-        draftSelectedChoiceId?: string | null;
-        draftSavedAt?: string | null;
-        draftCumulativeMs?: number;
-      }>;
     };
-    const statesByQuestionId = new Map(
-      (params.questionStates ?? []).map((state) => [state.questionId, state]),
-    );
     const session: PracticeSession = {
       id: crypto.randomUUID(),
       userId: input.userId,
       mode: input.mode,
       questionIds: params.questionIds,
-      questionStates: params.questionIds.map((questionId) => {
-        const state = statesByQuestionId.get(questionId);
-        return this.normalizeQuestionState({
+      questionStates: params.questionIds.map((questionId) =>
+        this.normalizeQuestionState({
           questionId,
-          markedForReview: state?.markedForReview ?? false,
-          latestSelectedChoiceId: state?.latestSelectedChoiceId ?? null,
-          latestIsCorrect: state?.latestIsCorrect ?? null,
-          latestAnsweredAt: state?.latestAnsweredAt
-            ? new Date(state.latestAnsweredAt)
-            : null,
-          draftSelectedChoiceId: state?.draftSelectedChoiceId ?? null,
-          draftSavedAt: state?.draftSavedAt
-            ? new Date(state.draftSavedAt)
-            : null,
-          draftCumulativeMs: state?.draftCumulativeMs ?? 0,
-        });
-      }),
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        }),
+      ),
       tagFilters: params.tagSlugs,
       difficultyFilters: params.difficulties,
       startedAt: new Date(),

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createPracticeSession } from '@/src/domain/test-helpers';
+import type { PracticeSession } from '@/src/domain/entities';
 import {
   parsePracticeSessionParamsJson,
-  toDomainPracticeSessionQuestionStates,
   toPracticeSessionParamsJson,
 } from './practice-session-params';
 
@@ -10,7 +9,7 @@ const questionId = crypto.randomUUID();
 const draftSelectedChoiceId = crypto.randomUUID();
 
 describe('parsePracticeSessionParamsJson', () => {
-  it('defaults missing draft fields for legacy question state payloads', () => {
+  it('ignores stale questionStates when parsing immutable session metadata', () => {
     const parsed = parsePracticeSessionParamsJson(
       {
         count: 1,
@@ -30,67 +29,43 @@ describe('parsePracticeSessionParamsJson', () => {
       'VALIDATION_ERROR',
     );
 
-    expect(parsed.questionStates).toEqual([
-      {
-        questionId: questionId,
-        markedForReview: false,
-        latestSelectedChoiceId: null,
-        latestIsCorrect: null,
-        latestAnsweredAt: null,
-        draftSelectedChoiceId: null,
-        draftSavedAt: null,
-        draftCumulativeMs: 0,
-      },
-    ]);
+    expect(parsed).toEqual({
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [questionId],
+    });
   });
 
-  it('round-trips explicit draft fields across parse, domain mapping, and serialization', () => {
-    const parsed = parsePracticeSessionParamsJson(
-      {
-        count: 1,
-        tagSlugs: ['opioids'],
-        difficulties: ['hard'],
-        questionIds: [questionId],
-        questionStates: [
-          {
-            questionId: questionId,
-            markedForReview: true,
-            latestSelectedChoiceId: null,
-            latestIsCorrect: null,
-            latestAnsweredAt: null,
-            draftSelectedChoiceId: draftSelectedChoiceId,
-            draftSavedAt: '2026-03-17T12:00:00.000Z',
-            draftCumulativeMs: 45_000,
-          },
-        ],
-      },
-      'VALIDATION_ERROR',
-    );
-
-    const domainSession = createPracticeSession({
+  it('serializes only immutable session metadata', () => {
+    const domainSession: PracticeSession = {
+      id: crypto.randomUUID(),
+      userId: crypto.randomUUID(),
+      mode: 'exam' as const,
       questionIds: [questionId],
-      questionStates: toDomainPracticeSessionQuestionStates(parsed),
+      questionStates: [
+        {
+          questionId,
+          markedForReview: true,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: draftSelectedChoiceId,
+          draftSavedAt: new Date('2026-03-17T12:00:00.000Z'),
+          draftCumulativeMs: 45_000,
+        },
+      ],
       tagFilters: ['opioids'],
       difficultyFilters: ['hard'],
-    });
+      startedAt: new Date('2026-03-17T12:00:00.000Z'),
+      endedAt: null,
+    };
 
     expect(toPracticeSessionParamsJson(domainSession)).toEqual({
       count: 1,
       tagSlugs: ['opioids'],
       difficulties: ['hard'],
       questionIds: [questionId],
-      questionStates: [
-        {
-          questionId: questionId,
-          markedForReview: true,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-          draftSelectedChoiceId: draftSelectedChoiceId,
-          draftSavedAt: '2026-03-17T12:00:00.000Z',
-          draftCumulativeMs: 45_000,
-        },
-      ],
     });
   });
 });

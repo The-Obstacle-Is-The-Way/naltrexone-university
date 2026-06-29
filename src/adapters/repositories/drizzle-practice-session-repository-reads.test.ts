@@ -10,6 +10,59 @@ const secondQuestionId = crypto.randomUUID();
 const thirdQuestionId = crypto.randomUUID();
 const orphanQuestionId = crypto.randomUUID();
 
+type StateRow = {
+  id: string;
+  practiceSessionId: string;
+  questionId: string;
+  position: number;
+  markedForReview: boolean;
+  latestSelectedChoiceId: string | null;
+  latestIsCorrect: boolean | null;
+  latestAnsweredAt: Date | null;
+  draftSelectedChoiceId: string | null;
+  draftSavedAt: Date | null;
+  draftCumulativeMs: number;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function createStateRow(
+  input: {
+    practiceSessionId?: string;
+    questionId: string;
+    position: number;
+  } & Partial<StateRow>,
+): StateRow {
+  const now = new Date('2026-02-01T00:00:00.000Z');
+  return {
+    id: crypto.randomUUID(),
+    practiceSessionId: input.practiceSessionId ?? sessionId,
+    questionId: input.questionId,
+    position: input.position,
+    markedForReview: input.markedForReview ?? false,
+    latestSelectedChoiceId: input.latestSelectedChoiceId ?? null,
+    latestIsCorrect: input.latestIsCorrect ?? null,
+    latestAnsweredAt: input.latestAnsweredAt ?? null,
+    draftSelectedChoiceId: input.draftSelectedChoiceId ?? null,
+    draftSavedAt: input.draftSavedAt ?? null,
+    draftCumulativeMs: input.draftCumulativeMs ?? 0,
+    version: input.version ?? 0,
+    createdAt: input.createdAt ?? now,
+    updatedAt: input.updatedAt ?? now,
+  };
+}
+
+function createStateSelect(rows: readonly StateRow[]) {
+  return vi.fn(() => ({
+    from: () => ({
+      where: () => ({
+        orderBy: async () => rows,
+      }),
+    }),
+  }));
+}
+
 describe('DrizzlePracticeSessionRepository reads', () => {
   afterEach(restoreDrizzlePracticeSessionRepositoryTestMocks);
 
@@ -58,6 +111,23 @@ describe('DrizzlePracticeSessionRepository reads', () => {
           findFirst: queryFindFirst,
         },
       },
+      select: createStateSelect([
+        createStateRow({
+          practiceSessionId: alternateSessionId,
+          questionId: firstQuestionId,
+          position: 0,
+        }),
+        createStateRow({
+          practiceSessionId: alternateSessionId,
+          questionId: secondQuestionId,
+          position: 1,
+        }),
+        createStateRow({
+          practiceSessionId: alternateSessionId,
+          questionId: thirdQuestionId,
+          position: 2,
+        }),
+      ]),
       insert: () => {
         throw new Error('unexpected insert');
       },
@@ -136,11 +206,32 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       },
     ]);
     const countWhere = vi.fn().mockResolvedValue([{ count: 1 }]);
-    const select = vi.fn(() => ({
-      from: () => ({
-        where: countWhere,
-      }),
-    }));
+    const select = vi.fn((selection?: unknown) => {
+      if (selection) {
+        return {
+          from: () => ({
+            where: countWhere,
+          }),
+        };
+      }
+
+      return {
+        from: () => ({
+          where: () => ({
+            orderBy: async () => [
+              createStateRow({
+                questionId: firstQuestionId,
+                position: 0,
+              }),
+              createStateRow({
+                questionId: secondQuestionId,
+                position: 1,
+              }),
+            ],
+          }),
+        }),
+      };
+    });
 
     const tx = {
       query: {
@@ -333,6 +424,10 @@ describe('DrizzlePracticeSessionRepository reads', () => {
           findFirst: async () => row,
         },
       },
+      select: createStateSelect([
+        createStateRow({ questionId: firstQuestionId, position: 0 }),
+        createStateRow({ questionId: secondQuestionId, position: 1 }),
+      ]),
       insert: () => {
         throw new Error('unexpected insert');
       },
@@ -419,7 +514,7 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
-  it('drops orphaned questionStates without calling console.warn', async () => {
+  it('ignores stale blob questionStates and maps relational state rows without console.warn', async () => {
     const row = {
       id: sessionId,
       userId: userId,
@@ -460,6 +555,9 @@ describe('DrizzlePracticeSessionRepository reads', () => {
           findFirst: async () => row,
         },
       },
+      select: createStateSelect([
+        createStateRow({ questionId: firstQuestionId, position: 0 }),
+      ]),
       insert: () => {
         throw new Error('unexpected insert');
       },

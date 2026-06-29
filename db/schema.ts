@@ -116,16 +116,6 @@ export type PracticeSessionParams = {
   tagSlugs: string[]; // filter; empty = no tag filter
   difficulties: QuestionDifficulty[]; // filter; empty = no difficulty filter
   questionIds: string[]; // ordered UUID list selected at session start
-  questionStates?: Array<{
-    questionId: string;
-    markedForReview: boolean;
-    latestSelectedChoiceId: string | null;
-    latestIsCorrect: boolean | null;
-    latestAnsweredAt: string | null;
-    draftSelectedChoiceId?: string | null;
-    draftSavedAt?: string | null;
-    draftCumulativeMs?: number;
-  }>;
 };
 
 /**
@@ -443,6 +433,66 @@ export const practiceSessions = pgTable(
   }),
 );
 
+// practice_session_question_states
+export const PRACTICE_SESSION_QUESTION_STATES_SESSION_QUESTION_UQ =
+  'practice_session_question_states_session_question_uq';
+export const PRACTICE_SESSION_QUESTION_STATES_SESSION_POSITION_UQ =
+  'practice_session_question_states_session_position_uq';
+
+export const practiceSessionQuestionStates = pgTable(
+  'practice_session_question_states',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    practiceSessionId: uuid('practice_session_id')
+      .notNull()
+      .references(() => practiceSessions.id, { onDelete: 'cascade' }),
+    questionId: uuid('question_id')
+      .notNull()
+      .references(() => questions.id),
+    position: integer('position').notNull(),
+    markedForReview: boolean('marked_for_review').notNull().default(false),
+    latestSelectedChoiceId: uuid('latest_selected_choice_id').references(
+      () => choices.id,
+      { onDelete: 'restrict' },
+    ),
+    latestIsCorrect: boolean('latest_is_correct'),
+    latestAnsweredAt: timestamp('latest_answered_at', { withTimezone: true }),
+    draftSelectedChoiceId: uuid('draft_selected_choice_id').references(
+      () => choices.id,
+      { onDelete: 'restrict' },
+    ),
+    draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
+    draftCumulativeMs: integer('draft_cumulative_ms').notNull().default(0),
+    version: integer('version').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    sessionQuestionUq: uniqueIndex(
+      PRACTICE_SESSION_QUESTION_STATES_SESSION_QUESTION_UQ,
+    ).on(t.practiceSessionId, t.questionId),
+    sessionPositionUq: uniqueIndex(
+      PRACTICE_SESSION_QUESTION_STATES_SESSION_POSITION_UQ,
+    ).on(t.practiceSessionId, t.position),
+    draftCumulativeMsChk: check(
+      'practice_session_question_states_draft_cumulative_ms_chk',
+      sql`${t.draftCumulativeMs} BETWEEN 0 AND 86400000`,
+    ),
+    positionChk: check(
+      'practice_session_question_states_position_chk',
+      sql`${t.position} >= 0`,
+    ),
+    versionChk: check(
+      'practice_session_question_states_version_chk',
+      sql`${t.version} >= 0`,
+    ),
+  }),
+);
+
 // attempts
 export const ATTEMPTS_SESSION_QUESTION_UQ = 'attempts_session_question_uq';
 
@@ -632,6 +682,7 @@ export const questionsRelations = relations(questions, ({ many }) => ({
   attempts: many(attempts),
   bookmarks: many(bookmarks),
   feedback: many(questionFeedback),
+  practiceSessionQuestionStates: many(practiceSessionQuestionStates),
 }));
 
 export const choicesRelations = relations(choices, ({ one }) => ({
@@ -663,8 +714,31 @@ export const practiceSessionsRelations = relations(
       fields: [practiceSessions.userId],
       references: [users.id],
     }),
+    questionStates: many(practiceSessionQuestionStates),
     attempts: many(attempts),
     feedback: many(questionFeedback),
+  }),
+);
+
+export const practiceSessionQuestionStatesRelations = relations(
+  practiceSessionQuestionStates,
+  ({ one }) => ({
+    practiceSession: one(practiceSessions, {
+      fields: [practiceSessionQuestionStates.practiceSessionId],
+      references: [practiceSessions.id],
+    }),
+    question: one(questions, {
+      fields: [practiceSessionQuestionStates.questionId],
+      references: [questions.id],
+    }),
+    latestSelectedChoice: one(choices, {
+      fields: [practiceSessionQuestionStates.latestSelectedChoiceId],
+      references: [choices.id],
+    }),
+    draftSelectedChoice: one(choices, {
+      fields: [practiceSessionQuestionStates.draftSelectedChoiceId],
+      references: [choices.id],
+    }),
   }),
 );
 
@@ -761,6 +835,10 @@ export type NewQuestionTag = typeof questionTags.$inferInsert;
 
 export type PracticeSession = typeof practiceSessions.$inferSelect;
 export type NewPracticeSession = typeof practiceSessions.$inferInsert;
+export type PracticeSessionQuestionState =
+  typeof practiceSessionQuestionStates.$inferSelect;
+export type NewPracticeSessionQuestionState =
+  typeof practiceSessionQuestionStates.$inferInsert;
 
 export type Attempt = typeof attempts.$inferSelect;
 export type NewAttempt = typeof attempts.$inferInsert;
