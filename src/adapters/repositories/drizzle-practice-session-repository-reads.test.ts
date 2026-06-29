@@ -379,6 +379,82 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     });
   });
 
+  it('returns an empty completed page when offset exceeds the matching rows', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const countWhere = vi.fn().mockResolvedValue([{ count: 3 }]);
+    const select = vi.fn((selection?: unknown) => {
+      if (selection) {
+        return {
+          from: () => ({
+            where: countWhere,
+          }),
+        };
+      }
+
+      return {
+        from: () => ({
+          where: () => ({
+            orderBy: () => {
+              throw new Error('state rows should not load for an empty page');
+            },
+          }),
+        }),
+      };
+    });
+
+    const tx = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+          findMany,
+        },
+      },
+      select,
+    } as const;
+    const transaction = vi.fn(
+      async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    );
+    const db = {
+      transaction,
+      query: {
+        practiceSessions: {
+          findFirst: () => {
+            throw new Error('unexpected root findFirst');
+          },
+          findMany: () => {
+            throw new Error('unexpected root findMany');
+          },
+        },
+      },
+      select: () => {
+        throw new Error('unexpected root select');
+      },
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.findCompletedByUserId(userId, 10, 50)).resolves.toEqual({
+      rows: [],
+      total: 3,
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 10, offset: 50 }),
+    );
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
+  });
+
   it('returns null when no incomplete session exists for user', async () => {
     const db = {
       query: {

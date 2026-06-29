@@ -61,6 +61,7 @@ function createQuestionStateDb(input: {
   sessionStatus?: { endedAt: Date | null } | null;
 }) {
   const limit = vi.fn();
+  limit.mockResolvedValue([]);
   for (const snapshot of input.snapshots) {
     limit.mockResolvedValueOnce([
       {
@@ -418,6 +419,209 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
     expect(updateReturning).toHaveBeenCalledTimes(3);
     expect(select).toHaveBeenCalledTimes(4);
+  });
+
+  it('throws NOT_FOUND when the session does not exist', async () => {
+    const { db, select, updateReturning } = createQuestionStateDb({
+      snapshots: [],
+      updatedRows: [],
+      sessionStatus: null,
+    });
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId,
+        userId,
+        questionId: firstQuestionId,
+        selectedChoiceId,
+        isCorrect: true,
+        answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Practice session not found',
+    });
+
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(updateReturning).not.toHaveBeenCalled();
+  });
+
+  it('throws NOT_FOUND when the question is not part of an active session', async () => {
+    const { db, select, updateReturning } = createQuestionStateDb({
+      snapshots: [],
+      updatedRows: [],
+      sessionStatus: { endedAt: null },
+    });
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId,
+        userId,
+        questionId: firstQuestionId,
+        selectedChoiceId,
+        isCorrect: true,
+        answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Question is not part of this practice session',
+    });
+
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(updateReturning).not.toHaveBeenCalled();
+  });
+
+  it('throws CONFLICT when a missing state belongs to an ended session', async () => {
+    const { db, select, updateReturning } = createQuestionStateDb({
+      snapshots: [],
+      updatedRows: [],
+      sessionStatus: { endedAt: new Date('2026-02-01T00:10:00.000Z') },
+    });
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId,
+        userId,
+        questionId: firstQuestionId,
+        selectedChoiceId,
+        isCorrect: true,
+        answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+    });
+
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(updateReturning).not.toHaveBeenCalled();
+  });
+
+  it('throws CONFLICT when the loaded session has already ended', async () => {
+    const existing = createStateRow({
+      questionId: firstQuestionId,
+      position: 0,
+    });
+    const { db, select, updateReturning } = createQuestionStateDb({
+      snapshots: [
+        { state: existing, endedAt: new Date('2026-02-01T00:10:00.000Z') },
+      ],
+      updatedRows: [],
+    });
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId,
+        userId,
+        questionId: firstQuestionId,
+        selectedChoiceId,
+        isCorrect: true,
+        answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+    });
+
+    expect(select).toHaveBeenCalledTimes(1);
+    expect(updateReturning).not.toHaveBeenCalled();
+  });
+
+  it('throws NOT_FOUND when the session disappears after version retries', async () => {
+    const snapshot = createStateRow({
+      questionId: firstQuestionId,
+      position: 0,
+      version: 0,
+    });
+    const { db, select, updateReturning } = createQuestionStateDb({
+      snapshots: [
+        { state: snapshot, endedAt: null },
+        { state: snapshot, endedAt: null },
+        { state: snapshot, endedAt: null },
+      ],
+      updatedRows: [[], [], []],
+      sessionStatus: null,
+    });
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId,
+        userId,
+        questionId: firstQuestionId,
+        selectedChoiceId,
+        isCorrect: true,
+        answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+      }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Practice session not found',
+    });
+
+    expect(updateReturning).toHaveBeenCalledTimes(3);
+    expect(select).toHaveBeenCalledTimes(3);
+  });
+
+  it('throws CONFLICT when the session ends after version retries', async () => {
+    const snapshot = createStateRow({
+      questionId: firstQuestionId,
+      position: 0,
+      version: 0,
+    });
+    const { db, select, updateReturning } = createQuestionStateDb({
+      snapshots: [
+        { state: snapshot, endedAt: null },
+        { state: snapshot, endedAt: null },
+        { state: snapshot, endedAt: null },
+      ],
+      updatedRows: [[], [], []],
+      sessionStatus: { endedAt: new Date('2026-02-01T00:10:00.000Z') },
+    });
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.recordQuestionAnswer({
+        sessionId,
+        userId,
+        questionId: firstQuestionId,
+        selectedChoiceId,
+        isCorrect: true,
+        answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+    });
+
+    expect(updateReturning).toHaveBeenCalledTimes(3);
+    expect(select).toHaveBeenCalledTimes(3);
   });
 
   it('updates mark-for-review state for a session question', async () => {
