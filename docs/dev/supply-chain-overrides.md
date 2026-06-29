@@ -38,9 +38,10 @@ allowBuilds:
 
 Do not weaken these settings casually. Every exception must be small,
 named in the PR body, and removed when it is no longer needed.
-There are no standing `minimumReleaseAgeExclude` entries in the active
-policy; add one only as a dated temporary override through the workflow
-below.
+`minimumReleaseAgeExclude` entries are always dated, temporary overrides for
+in-flight security patches — never standing policy. Add one only through the
+workflow below, and remove it once the pinned version is older than the 7-day
+window (see the worked example below).
 
 ## Urgent CVE patches before the 7-day cooldown
 
@@ -88,6 +89,59 @@ window. Do not use package-wide bootstrap exceptions.
 
 PR #382 removed the dated DEBT-394 bootstrap exceptions after they aged
 out. There are no current package-wide bootstrap exceptions.
+
+### Worked example: js-yaml CVE-2026-53550 (2026-06-29)
+
+Dependabot alert #13 flagged `js-yaml` (medium): CVE-2026-53550 /
+GHSA-h67p-54hq-rp68, a quadratic-complexity denial-of-service in merge-key
+handling via repeated aliases, affecting `< 3.15.0`.
+
+**Reachability (why it was low-risk).** `js-yaml@3.14.2` was transitive-only.
+`pnpm why js-yaml` showed two production paths and no direct imports:
+
+- `gray-matter@4.0.3` → `js-yaml` — used only by seed/build scripts
+  (`scripts/seed/question-parser.ts`, `scripts/draft-question-import.ts`) to
+  parse YAML frontmatter in our own first-party question markdown. Not a
+  runtime request path and not attacker-controlled.
+- `@istanbuljs/load-nyc-config` → `babel-plugin-istanbul` → jest →
+  `react-native` → `@clerk/ui` — test/build tooling the deployed Next.js app
+  never executes.
+
+No code path parses attacker-supplied YAML, so the DoS was not exploitable in
+production. We patched anyway, as defense-in-depth and to clear the alert.
+
+**Fix — two edits in `pnpm-workspace.yaml`.**
+
+1. Pin the patched version with an exact override. `3.15.0` is the
+   `v3-legacy` security backport; it satisfies both consumers' `^3.13.1` and
+   is an upgrade from `3.14.2`, so `no-downgrade` stays satisfied:
+
+   ```yaml
+   overrides:
+     js-yaml: 3.15.0 # GHSA-h67p-54hq-rp68 / CVE-2026-53550 DoS patch
+   ```
+
+2. `3.15.0` was published 2026-06-26 (~3 days old at fix time), so
+   `minimumReleaseAgeStrict` would refuse it. Add the smallest dated
+   exception:
+
+   ```yaml
+   minimumReleaseAgeExclude:
+     - js-yaml@3.15.0 # remove after ~2026-07-03 (7 days post-publish)
+   ```
+
+Then regenerate and verify:
+
+```sh
+pnpm install                       # rewrites the lockfile (Packages: +1 -1)
+pnpm why js-yaml                    # must show js-yaml@3.15.0, no 3.14.2
+pnpm typecheck && pnpm lint && pnpm test --run && pnpm build
+```
+
+**Removal.** Drop the `minimumReleaseAgeExclude: js-yaml@3.15.0` line once the
+version is older than 7 days (~2026-07-03); a clean `pnpm install` will still
+resolve `3.15.0` because the override remains. The override pin itself can stay
+until a newer mature `js-yaml` (or a `4.x` consumer) makes it unnecessary.
 
 ## Adding a new native-build package to allowBuilds
 
