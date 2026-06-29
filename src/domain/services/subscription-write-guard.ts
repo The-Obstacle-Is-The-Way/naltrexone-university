@@ -1,4 +1,8 @@
-import { isEntitledStatus, type SubscriptionStatus } from '../value-objects';
+import type { SubscriptionStatus } from '../value-objects';
+import {
+  compareCanonicalSubscriptionCandidates,
+  hasEntitledSubscriptionTier,
+} from './subscription-canonicalization';
 
 export type SubscriptionWriteCandidate = {
   subscriptionIdentity: string;
@@ -19,7 +23,10 @@ function isCurrentEntitledSubscription(
   candidate: SubscriptionWriteCandidate,
   now: Date,
 ): boolean {
-  return isEntitledStatus(candidate.status) && candidate.currentPeriodEnd > now;
+  return (
+    hasEntitledSubscriptionTier(candidate.status) &&
+    candidate.currentPeriodEnd > now
+  );
 }
 
 export function shouldPersistSubscriptionWrite(input: {
@@ -38,5 +45,12 @@ export function shouldPersistSubscriptionWrite(input: {
     return true;
   }
 
-  return !isTerminalSubscriptionStatus(input.incoming.status);
+  if (isTerminalSubscriptionStatus(input.incoming.status)) return false;
+  if (!hasEntitledSubscriptionTier(input.incoming.status)) return false;
+
+  const canonicalOrdering = compareCanonicalSubscriptionCandidates(
+    input.incoming,
+    input.stored,
+  );
+  return canonicalOrdering < 0;
 }

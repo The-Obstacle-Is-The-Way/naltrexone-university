@@ -10,6 +10,7 @@ import type {
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { mapWithConcurrencyLimit } from '@/src/adapters/shared/concurrency';
 import { ApplicationError } from '@/src/application/errors';
+import { compareCanonicalSubscriptionCandidates } from '@/src/application/shared/subscription-canonicalization';
 
 export const RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_LIMIT = 100;
 export const RECONCILE_STRIPE_SUBSCRIPTIONS_MAX_LIMIT = 500;
@@ -181,20 +182,27 @@ export async function reconcileStripeSubscriptions(
         }
 
         if (blockingSubscriptionIds.length > 0) {
-          // Phase 3: select the canonical subscription via period-end sort + deterministic tie-break.
+          // Phase 3: select the canonical subscription via entitlement tier,
+          // period-end sort, and deterministic tie-break.
           const keptSubscription = blockingSubscriptionIds
             .map((id) => canonicalById.get(id))
             .filter((subscription): subscription is typeof canonical => {
               return subscription !== undefined;
             })
-            .sort((a, b) => {
-              const periodDiff =
-                b.currentPeriodEnd.getTime() - a.currentPeriodEnd.getTime();
-              if (periodDiff !== 0) return periodDiff;
-              return a.externalSubscriptionId.localeCompare(
-                b.externalSubscriptionId,
-              );
-            })[0];
+            .sort((a, b) =>
+              compareCanonicalSubscriptionCandidates(
+                {
+                  subscriptionIdentity: a.externalSubscriptionId,
+                  status: a.status,
+                  currentPeriodEnd: a.currentPeriodEnd,
+                },
+                {
+                  subscriptionIdentity: b.externalSubscriptionId,
+                  status: b.status,
+                  currentPeriodEnd: b.currentPeriodEnd,
+                },
+              ),
+            )[0];
 
           const keptSubscriptionIdCandidate =
             keptSubscription?.externalSubscriptionId;
