@@ -129,7 +129,15 @@ function expectVersionedStateUpdatePredicate(
 function createQuestionStateDb(input: {
   snapshots: Array<{ state: StateRow; endedAt: Date | null }>;
   updatedRows: StateRow[][];
-  sessionStatus?: { endedAt: Date | null } | null;
+  sessionStatus?: {
+    endedAt: Date | null;
+    paramsJson?: {
+      count: number;
+      tagSlugs: string[];
+      difficulties: string[];
+      questionIds: string[];
+    };
+  } | null;
 }) {
   const limit = vi.fn();
   limit.mockResolvedValue([]);
@@ -196,7 +204,19 @@ function createQuestionStateDb(input: {
       update,
       query: {
         practiceSessions: {
-          findFirst: vi.fn(async () => input.sessionStatus ?? null),
+          findFirst: vi.fn(async () =>
+            input.sessionStatus
+              ? {
+                  paramsJson: {
+                    count: 1,
+                    tagSlugs: [],
+                    difficulties: [],
+                    questionIds: [],
+                  },
+                  ...input.sessionStatus,
+                }
+              : null,
+          ),
         },
       },
       insert: () => {

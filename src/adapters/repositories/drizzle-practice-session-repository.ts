@@ -81,6 +81,19 @@ export class DrizzlePracticeSessionRepository
     params: PracticeSessionParamsJson,
     rows: readonly PracticeSessionQuestionStateRow[],
   ): PracticeSessionQuestionState[] {
+    if (rows.length > params.questionIds.length) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Practice session ${sessionId} has inconsistent normalized question state`,
+      );
+    }
+    if (rows.length < params.questionIds.length) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Practice session ${sessionId} is missing normalized question state`,
+      );
+    }
+
     const rowsByQuestionId = new Map(rows.map((row) => [row.questionId, row]));
     return params.questionIds.map((questionId, position) => {
       const row = rowsByQuestionId.get(questionId);

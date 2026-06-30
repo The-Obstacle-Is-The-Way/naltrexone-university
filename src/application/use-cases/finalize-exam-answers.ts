@@ -76,6 +76,11 @@ export function computeFinalExamEndedAt(input: {
   );
 }
 
+function clampDraftCumulativeMs(cumulativeMs: number): number {
+  if (!Number.isFinite(cumulativeMs)) return 0;
+  return Math.min(SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS, Math.max(0, cumulativeMs));
+}
+
 export class FinalizeExamAnswersUseCase {
   constructor(
     private readonly questions: QuestionRepository,
@@ -182,7 +187,7 @@ export class FinalizeExamAnswersUseCase {
         trackAnsweredAt(state.latestAnsweredAt);
 
         const timeSpentSeconds = Math.floor(
-          state.draftCumulativeMs / MS_PER_SECOND,
+          clampDraftCumulativeMs(state.draftCumulativeMs) / MS_PER_SECOND,
         );
         const selectedChoiceId = state.draftSelectedChoiceId;
         if (selectedChoiceId === null) {
@@ -308,21 +313,15 @@ export class FinalizeExamAnswersUseCase {
       }
     }
 
-    const rawCumulativeMs = finalDraftAnswer.cumulativeMs;
-    const clampedCumulativeMs =
-      typeof rawCumulativeMs === 'number' && Number.isFinite(rawCumulativeMs)
-        ? Math.min(
-            SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
-            Math.max(0, rawCumulativeMs),
-          )
-        : 0;
+    const clampedCumulativeMs = clampDraftCumulativeMs(
+      finalDraftAnswer.cumulativeMs,
+    );
     // saveDraftAnswer keeps draft state monotonic in cumulativeMs and drops a
     // write whose value is below the persisted draft. Floor the flush at the
     // existing (already-capped) draft time so a selection made at expiry is
     // never silently dropped, while preserving the BUG-238 upper bound.
-    const persistedCumulativeMs = Math.min(
+    const persistedCumulativeMs = clampDraftCumulativeMs(
       questionState.draftCumulativeMs,
-      SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS,
     );
     const cumulativeMs = Math.max(clampedCumulativeMs, persistedCumulativeMs);
 

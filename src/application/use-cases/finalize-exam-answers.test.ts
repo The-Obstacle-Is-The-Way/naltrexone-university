@@ -1064,6 +1064,55 @@ describe('FinalizeExamAnswersUseCase', () => {
       ]);
     });
 
+    it('clamps oversized persisted draft state before writing timeSpentSeconds', async () => {
+      const questions = new FakeQuestionRepository([
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+      ]);
+      const attempts = new FakeAttemptRepository();
+      const sessions = new FakePracticeSessionRepository([
+        createPracticeSession({
+          id: 'session-1',
+          userId: 'user-1',
+          mode: 'exam',
+          questionIds: ['q1'],
+          startedAt: STARTED_AT,
+          questionStates: [
+            {
+              questionId: 'q1',
+              markedForReview: false,
+              latestSelectedChoiceId: null,
+              latestIsCorrect: null,
+              latestAnsweredAt: null,
+              draftSelectedChoiceId: 'q1-correct',
+              draftSavedAt: new Date(STARTED_AT.getTime() + 50_000),
+              draftCumulativeMs: Number.MAX_SAFE_INTEGER,
+            },
+          ],
+        }),
+      ]);
+      const useCase = new FinalizeExamAnswersUseCase(
+        questions,
+        attempts,
+        sessions,
+        passthroughTransaction(questions, attempts, sessions),
+        () => new Date(DEADLINE_MS),
+      );
+
+      await useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          timeSpentSeconds: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS / MS_PER_SECOND,
+        },
+      ]);
+    });
+
     it('applies the flushed selection even when its cumulativeMs is below a persisted draft', async () => {
       // A prior time-only draft persisted 50s; the expiry flush carries a lower
       // cumulativeMs but a real selection. The selection must still be graded

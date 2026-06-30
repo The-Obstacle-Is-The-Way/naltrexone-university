@@ -448,6 +448,8 @@ export const practiceSessionQuestionStates = pgTable(
       .references(() => practiceSessions.id, { onDelete: 'cascade' }),
     questionId: uuid('question_id')
       .notNull()
+      // Intentionally no cascade: hard-deleting referenced questions should fail
+      // so practice-session history cannot silently lose its question anchor.
       .references(() => questions.id),
     position: integer('position').notNull(),
     markedForReview: boolean('marked_for_review').notNull().default(false),

@@ -3,6 +3,7 @@ import { practiceSessionQuestionStates, practiceSessions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { PracticeSessionQuestionState } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
+import { parsePracticeSessionParamsJson } from './practice-session-params';
 
 const UPDATE_QUESTION_STATE_MAX_RETRIES = 3;
 
@@ -34,10 +35,10 @@ async function findSessionStatus(input: {
   db: DrizzleDb;
   sessionId: string;
   userId: string;
-}): Promise<{ endedAt: Date | null } | null> {
+}): Promise<{ endedAt: Date | null; paramsJson: unknown } | null> {
   return (
     (await input.db.query.practiceSessions.findFirst({
-      columns: { endedAt: true },
+      columns: { endedAt: true, paramsJson: true },
       where: and(
         eq(practiceSessions.id, input.sessionId),
         eq(practiceSessions.userId, input.userId),
@@ -85,6 +86,17 @@ async function findQuestionStateSnapshot(input: {
   }
   if (session.endedAt) {
     throw new ApplicationError('CONFLICT', 'Practice session already ended');
+  }
+
+  const params = parsePracticeSessionParamsJson(
+    session.paramsJson,
+    'INTERNAL_ERROR',
+  );
+  if (params.questionIds.includes(input.questionId)) {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      `Practice session ${input.sessionId} is missing normalized question state`,
+    );
   }
 
   throw new ApplicationError(

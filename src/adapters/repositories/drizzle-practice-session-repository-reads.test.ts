@@ -551,6 +551,53 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     });
   });
 
+  it('throws INTERNAL_ERROR when normalized state has surplus rows', async () => {
+    const row = {
+      id: sessionId,
+      userId: userId,
+      mode: 'tutor',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [firstQuestionId, secondQuestionId],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const db = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      select: createStateSelect([
+        createStateRow({ questionId: firstQuestionId, position: 0 }),
+        createStateRow({ questionId: secondQuestionId, position: 1 }),
+        createStateRow({ questionId: thirdQuestionId, position: 2 }),
+      ]),
+      insert: () => {
+        throw new Error('unexpected insert');
+      },
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(
+      repo.findByIdAndUserId(sessionId, userId),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: `Practice session ${sessionId} has inconsistent normalized question state`,
+    });
+  });
+
   it('returns INTERNAL_ERROR when persisted paramsJson is invalid', async () => {
     const row = {
       id: sessionId,
