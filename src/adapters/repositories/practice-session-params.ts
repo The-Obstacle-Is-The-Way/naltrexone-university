@@ -14,21 +14,30 @@ import { zUuid } from '../shared/zod-schemas';
 
 const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
 
-const practiceSessionParamsSchema = z.object({
-  count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
-  tagSlugs: z
-    .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
-    .max(MAX_PRACTICE_SESSION_TAG_FILTERS),
-  difficulties: z
-    .array(questionDifficultySchema)
-    .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
-  questionIds: z
-    .array(zUuid)
-    .max(MAX_PRACTICE_SESSION_QUESTIONS)
-    .refine((questionIds) => new Set(questionIds).size === questionIds.length, {
-      message: 'questionIds must be unique',
-    }),
-});
+const practiceSessionParamsSchema = z
+  .object({
+    count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
+    tagSlugs: z
+      .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
+      .max(MAX_PRACTICE_SESSION_TAG_FILTERS),
+    difficulties: z
+      .array(questionDifficultySchema)
+      .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
+    questionIds: z
+      .array(zUuid)
+      .min(1)
+      .max(MAX_PRACTICE_SESSION_QUESTIONS)
+      .refine(
+        (questionIds) => new Set(questionIds).size === questionIds.length,
+        {
+          message: 'questionIds must be unique',
+        },
+      ),
+  })
+  .refine((params) => params.count === params.questionIds.length, {
+    message: 'count must match questionIds length',
+    path: ['count'],
+  });
 
 export type PracticeSessionParamsJson = z.infer<
   typeof practiceSessionParamsSchema

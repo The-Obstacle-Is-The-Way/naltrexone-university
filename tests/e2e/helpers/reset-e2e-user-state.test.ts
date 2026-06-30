@@ -727,10 +727,10 @@ describe('runE2EUserStateReset default service diagnostics', () => {
     const sqlClient = createRoutingSqlClient({
       baselineRows: [
         {
-          completedSessions: 0,
-          attemptCount: 0,
-          bookmarkCount: 0,
-          questionStateCount: 0,
+          completedSessions: 1,
+          attemptCount: 2,
+          bookmarkCount: 1,
+          questionStateCount: 3,
         },
       ],
     });
@@ -773,5 +773,10 @@ describe('runE2EUserStateReset default service diagnostics', () => {
         query.includes('INSERT INTO practice_session_question_states'),
       ),
     ).toBe(true);
+    const baselineQuery = sqlClient.mock.calls
+      .map(([strings]) => Array.from(strings).join(' '))
+      .find((query) => query.includes('"questionStateCount"'));
+    expect(baselineQuery).toContain('WHERE state.practice_session_id = ');
+    expect(baselineQuery).not.toContain('INNER JOIN practice_sessions');
   });
 });

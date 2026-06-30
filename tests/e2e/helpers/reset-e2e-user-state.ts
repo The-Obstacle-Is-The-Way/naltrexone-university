@@ -21,6 +21,9 @@ const DETERMINISTIC_BASELINE = {
   answeredAtAdhoc: '2026-01-01T00:03:00.000Z',
   bookmarkCreatedAt: '2026-01-01T00:05:00.000Z',
 } as const;
+const DETERMINISTIC_BASELINE_QUESTION_STATE_COUNT = Object.keys(
+  REQUIRED_QUESTION_SLUGS,
+).length;
 
 const REQUIRED_ENV_VARS: readonly SharedRequiredEnvVar[] = [
   {
@@ -536,9 +539,7 @@ const defaultServices: E2EUserStateResetServices = {
           (
             SELECT COUNT(*)::int
             FROM practice_session_question_states state
-            INNER JOIN practice_sessions session
-              ON session.id = state.practice_session_id
-            WHERE session.user_id = ${userId}
+            WHERE state.practice_session_id = ${DETERMINISTIC_BASELINE.sessionId}
           ) AS "questionStateCount"
       `;
 
@@ -552,7 +553,7 @@ const defaultServices: E2EUserStateResetServices = {
         completedSessions < 1 ||
         attemptCount < 2 ||
         bookmarkCount < 1 ||
-        questionStateCount < 2
+        questionStateCount !== DETERMINISTIC_BASELINE_QUESTION_STATE_COUNT
       ) {
         throw new E2EUserStateResetError(
           'E2E_RESET:BASELINE_STATE_INCOMPLETE',

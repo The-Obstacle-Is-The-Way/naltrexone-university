@@ -6,6 +6,7 @@ import {
 } from './practice-session-params';
 
 const questionId = crypto.randomUUID();
+const secondQuestionId = crypto.randomUUID();
 const draftSelectedChoiceId = crypto.randomUUID();
 
 describe('parsePracticeSessionParamsJson', () => {
@@ -17,6 +18,34 @@ describe('parsePracticeSessionParamsJson', () => {
           tagSlugs: [],
           difficulties: [],
           questionIds: ['not-a-uuid'],
+        },
+        'VALIDATION_ERROR',
+      ),
+    ).toThrow(/Invalid practice session parameters/);
+  });
+
+  it('rejects empty question ID metadata', () => {
+    expect(() =>
+      parsePracticeSessionParamsJson(
+        {
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: [],
+        },
+        'VALIDATION_ERROR',
+      ),
+    ).toThrow(/Invalid practice session parameters/);
+  });
+
+  it('rejects params when count does not match question ID metadata', () => {
+    expect(() =>
+      parsePracticeSessionParamsJson(
+        {
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: [questionId, secondQuestionId],
         },
         'VALIDATION_ERROR',
       ),

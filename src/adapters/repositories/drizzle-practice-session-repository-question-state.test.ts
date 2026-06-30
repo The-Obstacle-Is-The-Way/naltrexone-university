@@ -579,7 +579,15 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     const { db, select, updateReturning } = createQuestionStateDb({
       snapshots: [],
       updatedRows: [],
-      sessionStatus: { endedAt: null },
+      sessionStatus: {
+        endedAt: null,
+        paramsJson: {
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: [secondQuestionId],
+        },
+      },
     });
 
     type RepoDb = ConstructorParameters<
