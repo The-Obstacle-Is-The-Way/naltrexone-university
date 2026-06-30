@@ -722,18 +722,30 @@ describe('runE2EUserStateReset default service diagnostics', () => {
     }
   });
 
-  it('surfaces incomplete baseline verification without wrapping the explicit reset error', async () => {
+  it.each([
+    {
+      label: 'missing normalized question state',
+      baselineRow: {
+        completedSessions: 1,
+        attemptCount: 2,
+        bookmarkCount: 1,
+        questionStateCount: 3,
+      },
+    },
+    {
+      label: 'stale extra rows',
+      baselineRow: {
+        completedSessions: 2,
+        attemptCount: 3,
+        bookmarkCount: 2,
+        questionStateCount: 2,
+      },
+    },
+  ])('surfaces invalid baseline verification for $label without wrapping the explicit reset error', async ({
+    baselineRow,
+  }) => {
     await importResetWithPostgresMock();
-    const sqlClient = createRoutingSqlClient({
-      baselineRows: [
-        {
-          completedSessions: 1,
-          attemptCount: 2,
-          bookmarkCount: 1,
-          questionStateCount: 3,
-        },
-      ],
-    });
+    const sqlClient = createRoutingSqlClient({ baselineRows: [baselineRow] });
     postgresMock.mockReturnValue(sqlClient);
     const fetchSpy = mockClerkUserFetch();
 

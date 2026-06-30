@@ -151,11 +151,20 @@ export class DrizzlePracticeSessionRepository
     );
   }
 
+  private async inRepeatableRead<T>(
+    action: (db: DrizzleDb) => Promise<T>,
+  ): Promise<T> {
+    return this.db.transaction((tx) => action(tx as unknown as DrizzleDb), {
+      isolationLevel: 'repeatable read',
+    });
+  }
+
   private async findRowByIdAndUserId(
+    db: DrizzleDb,
     id: string,
     userId: string,
   ): Promise<PracticeSessionRow | null> {
-    const row = await this.db.query.practiceSessions.findFirst({
+    const row = await db.query.practiceSessions.findFirst({
       where: and(
         eq(practiceSessions.id, id),
         eq(practiceSessions.userId, userId),
@@ -199,25 +208,29 @@ export class DrizzlePracticeSessionRepository
   }
 
   async findByIdAndUserId(id: string, userId: string) {
-    const row = await this.findRowByIdAndUserId(id, userId);
-    if (!row) return null;
-    return this.toDomainFromRow(this.db, row);
+    return this.inRepeatableRead(async (db) => {
+      const row = await this.findRowByIdAndUserId(db, id, userId);
+      if (!row) return null;
+      return this.toDomainFromRow(db, row);
+    });
   }
 
   async findLatestIncompleteByUserId(
     userId: string,
   ): Promise<PracticeSession | null> {
-    const row = await this.db.query.practiceSessions.findFirst({
-      where: and(
-        eq(practiceSessions.userId, userId),
-        isNull(practiceSessions.endedAt),
-      ),
-      orderBy: (table, { desc }) => [desc(table.startedAt)],
+    return this.inRepeatableRead(async (db) => {
+      const row = await db.query.practiceSessions.findFirst({
+        where: and(
+          eq(practiceSessions.userId, userId),
+          isNull(practiceSessions.endedAt),
+        ),
+        orderBy: (table, { desc }) => [desc(table.startedAt)],
+      });
+
+      if (!row) return null;
+
+      return this.toDomainFromRow(db, row);
     });
-
-    if (!row) return null;
-
-    return this.toDomainFromRow(this.db, row);
   }
 
   async findCompletedByUserId(
@@ -464,7 +477,7 @@ export class DrizzlePracticeSessionRepository
   }
 
   async end(id: string, userId: string, explicitEndedAt?: Date) {
-    const existingRow = await this.findRowByIdAndUserId(id, userId);
+    const existingRow = await this.findRowByIdAndUserId(this.db, id, userId);
     if (!existingRow) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }

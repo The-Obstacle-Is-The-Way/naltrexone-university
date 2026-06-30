@@ -595,7 +595,7 @@ export type StartPracticeSessionOutput = { sessionId: string };
 5. Insert `practice_sessions` row with:
 
    * `user_id`, `mode`
-   * `params_json = { count, tagSlugs, difficulties, questionIds }`
+   * `params_json = { count: questionIds.length, tagSlugs, difficulties, questionIds }`; persisted `count` is the actual selected session size, which may be smaller than the requested count when filters return fewer candidates.
    * one `practice_session_question_states` row per selected question, in `questionIds` order:
      * `{ questionId, position:<0-based index>, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null, draftSelectedChoiceId:null, draftSavedAt:null, draftCumulativeMs:0 }`
    * `started_at = now()`

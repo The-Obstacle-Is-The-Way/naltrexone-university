@@ -37,7 +37,9 @@ describe('practice session question state updater locking', () => {
       latestAnsweredAt: answeredAt,
       version: 3,
     };
+    const callOrder: string[] = [];
     const sessionLockFor = vi.fn(async (strength: unknown) => {
+      callOrder.push('lock');
       expect(strength).toBe('update');
       return [
         {
@@ -51,8 +53,14 @@ describe('practice session question state updater locking', () => {
         },
       ];
     });
-    const stateLimit = vi.fn(async () => [existing]);
-    const updateReturning = vi.fn(async () => [updated]);
+    const stateLimit = vi.fn(async () => {
+      callOrder.push('state');
+      return [existing];
+    });
+    const updateReturning = vi.fn(async () => {
+      callOrder.push('update');
+      return [updated];
+    });
     const tx = {
       select: vi
         .fn()
@@ -133,5 +141,6 @@ describe('practice session question state updater locking', () => {
     expect(sessionLockFor).toHaveBeenCalledTimes(1);
     expect(stateLimit).toHaveBeenCalledTimes(1);
     expect(updateReturning).toHaveBeenCalledTimes(1);
+    expect(callOrder).toEqual(['lock', 'state', 'update']);
   });
 });

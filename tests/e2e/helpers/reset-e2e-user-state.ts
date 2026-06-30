@@ -21,6 +21,9 @@ const DETERMINISTIC_BASELINE = {
   answeredAtAdhoc: '2026-01-01T00:03:00.000Z',
   bookmarkCreatedAt: '2026-01-01T00:05:00.000Z',
 } as const;
+const DETERMINISTIC_BASELINE_COMPLETED_SESSION_COUNT = 1;
+const DETERMINISTIC_BASELINE_ATTEMPT_COUNT = 2;
+const DETERMINISTIC_BASELINE_BOOKMARK_COUNT = 1;
 const DETERMINISTIC_BASELINE_QUESTION_STATE_COUNT = Object.keys(
   REQUIRED_QUESTION_SLUGS,
 ).length;
@@ -550,9 +553,9 @@ const defaultServices: E2EUserStateResetServices = {
       const questionStateCount = baseline?.questionStateCount ?? 0;
 
       if (
-        completedSessions < 1 ||
-        attemptCount < 2 ||
-        bookmarkCount < 1 ||
+        completedSessions !== DETERMINISTIC_BASELINE_COMPLETED_SESSION_COUNT ||
+        attemptCount !== DETERMINISTIC_BASELINE_ATTEMPT_COUNT ||
+        bookmarkCount !== DETERMINISTIC_BASELINE_BOOKMARK_COUNT ||
         questionStateCount !== DETERMINISTIC_BASELINE_QUESTION_STATE_COUNT
       ) {
         throw new E2EUserStateResetError(
