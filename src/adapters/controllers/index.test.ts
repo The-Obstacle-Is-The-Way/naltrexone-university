@@ -8,9 +8,9 @@ import {
   getUserStats,
   processStripeWebhook,
   rateQuestion,
+  setBookmark,
   submitAnswer,
   submitQuestionReport,
-  toggleBookmark,
 } from '@/src/adapters/controllers';
 
 describe('controllers exports', () => {
@@ -22,7 +22,7 @@ describe('controllers exports', () => {
     expect(submitAnswer).toBeTypeOf('function');
     expect(rateQuestion).toBeTypeOf('function');
     expect(submitQuestionReport).toBeTypeOf('function');
-    expect(toggleBookmark).toBeTypeOf('function');
+    expect(setBookmark).toBeTypeOf('function');
     expect(getUserStats).toBeTypeOf('function');
     expect(processStripeWebhook).toBeTypeOf('function');
     expect(getTags).toBeTypeOf('function');

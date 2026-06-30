@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
-import { toggleBookmarkForQuestion } from './bookmark-toggle';
+import { setBookmarkForQuestion } from './bookmark-toggle';
 
 const { fixtureQuestion1Id, fixtureChoice1Id } = vi.hoisted(() => ({
   fixtureQuestion1Id: crypto.randomUUID(),
@@ -26,8 +26,8 @@ function createFixtureNextQuestion(
 }
 
 describe('bookmark-toggle', () => {
-  describe('toggleBookmarkForQuestion', () => {
-    it('rotates the idempotency key after a successful toggle', async () => {
+  describe('setBookmarkForQuestion', () => {
+    it('rotates the idempotency key after a successful set-bookmark request', async () => {
       const setBookmarkStatus = vi.fn();
       const setBookmarkedQuestionIds = vi.fn();
       const onBookmarkToggled = vi.fn();
@@ -37,11 +37,12 @@ describe('bookmark-toggle', () => {
         .mockReturnValueOnce('idem_2');
       const setBookmarkIdempotencyKey = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion({ questionId: fixtureQuestion1Id }),
+        desiredBookmarked: true,
         createIdempotencyKey,
         setBookmarkIdempotencyKey,
-        toggleBookmarkFn: vi.fn(async () => ok({ bookmarked: true })),
+        setBookmarkFn: vi.fn(async () => ok({ bookmarked: true })),
         setBookmarkStatus,
         setBookmarkedQuestionIds,
         onBookmarkToggled,
@@ -65,18 +66,19 @@ describe('bookmark-toggle', () => {
       const setBookmarkIdempotencyKey = vi.fn((key: string) => {
         events.push(`persist:${key}`);
       });
-      const toggleBookmarkFn = vi.fn(async (input: unknown) => {
+      const setBookmarkFn = vi.fn(async (input: unknown) => {
         events.push(
           `request:${(input as { idempotencyKey?: string }).idempotencyKey ?? 'missing'}`,
         );
         return err('INTERNAL_ERROR', 'Boom');
       });
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
+        desiredBookmarked: true,
         createIdempotencyKey,
         setBookmarkIdempotencyKey,
-        toggleBookmarkFn,
+        setBookmarkFn,
         setBookmarkStatus: vi.fn(),
         setBookmarkedQuestionIds: vi.fn(),
       });
@@ -86,15 +88,16 @@ describe('bookmark-toggle', () => {
       expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
     });
 
-    it('reports an error state when the toggle request returns a non-ok result', async () => {
+    it('reports an error state when the set-bookmark request returns a non-ok result', async () => {
       const setBookmarkStatus = vi.fn();
       const setBookmarkedQuestionIds = vi.fn();
       const onBookmarkError = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion({ questionId: fixtureQuestion1Id }),
-        toggleBookmarkFn: vi.fn(async () =>
-          err('INTERNAL_ERROR', 'Failed to toggle bookmark'),
+        desiredBookmarked: true,
+        setBookmarkFn: vi.fn(async () =>
+          err('INTERNAL_ERROR', 'Failed to set bookmark'),
         ),
         setBookmarkStatus,
         setBookmarkedQuestionIds,
@@ -112,22 +115,23 @@ describe('bookmark-toggle', () => {
     it('returns early when no question is available', async () => {
       const createIdempotencyKey = vi.fn<() => string>();
       const setBookmarkIdempotencyKey = vi.fn();
-      const toggleBookmarkFn = vi.fn();
+      const setBookmarkFn = vi.fn();
       const setBookmarkStatus = vi.fn();
       const setBookmarkedQuestionIds = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: null,
+        desiredBookmarked: true,
         createIdempotencyKey,
         setBookmarkIdempotencyKey,
-        toggleBookmarkFn,
+        setBookmarkFn,
         setBookmarkStatus,
         setBookmarkedQuestionIds,
       });
 
       expect(createIdempotencyKey).not.toHaveBeenCalled();
       expect(setBookmarkIdempotencyKey).not.toHaveBeenCalled();
-      expect(toggleBookmarkFn).not.toHaveBeenCalled();
+      expect(setBookmarkFn).not.toHaveBeenCalled();
       expect(setBookmarkStatus).not.toHaveBeenCalled();
       expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
     });
@@ -142,11 +146,12 @@ describe('bookmark-toggle', () => {
         .mockReturnValueOnce('idem_2');
       const setBookmarkIdempotencyKey = vi.fn();
 
-      await toggleBookmarkForQuestion({
+      await setBookmarkForQuestion({
         question: createFixtureNextQuestion({ questionId: fixtureQuestion1Id }),
+        desiredBookmarked: true,
         createIdempotencyKey,
         setBookmarkIdempotencyKey,
-        toggleBookmarkFn: vi.fn(async () => ok({ bookmarked: true })),
+        setBookmarkFn: vi.fn(async () => ok({ bookmarked: true })),
         setBookmarkStatus,
         setBookmarkedQuestionIds,
         onBookmarkToggled,
@@ -162,18 +167,19 @@ describe('bookmark-toggle', () => {
       expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
     });
 
-    it('uses the mutation timeout tier for bookmark toggles', async () => {
+    it('uses the mutation timeout tier for bookmark writes', async () => {
       vi.useFakeTimers();
       try {
         const setBookmarkStatus = vi.fn();
         const setBookmarkedQuestionIds = vi.fn();
         const onBookmarkError = vi.fn();
 
-        const promise = toggleBookmarkForQuestion({
+        const promise = setBookmarkForQuestion({
           question: createFixtureNextQuestion({
             questionId: fixtureQuestion1Id,
           }),
-          toggleBookmarkFn: async () => new Promise<never>(() => {}),
+          desiredBookmarked: true,
+          setBookmarkFn: async () => new Promise<never>(() => {}),
           setBookmarkStatus,
           setBookmarkedQuestionIds,
           onBookmarkError,

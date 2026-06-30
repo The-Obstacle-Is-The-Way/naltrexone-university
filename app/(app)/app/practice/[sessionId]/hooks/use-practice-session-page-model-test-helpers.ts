@@ -36,7 +36,7 @@ export const {
   getNextQuestionMock,
   submitAnswerMock,
   getBookmarksMock,
-  toggleBookmarkMock,
+  setBookmarkMock,
   getPracticeSessionReviewMock,
   getCompletedSessionQuestionsWithFeedbackMock,
   getPracticeSessionSummaryMock,

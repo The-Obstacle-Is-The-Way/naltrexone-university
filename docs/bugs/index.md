@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-29 (**BUG-263 resolved + prod-verified** — the daily Stripe reconciliation cron could prefer a later non-entitled duplicate subscription over a current paid-access subscription, persisting the non-entitled row and canceling the active Stripe subscription, revoking app access. Fixed with a shared domain entitlement-tier canonical ordering used by both reconciliation and the subscription write guard, so non-entitled duplicates (`unpaid`/`paymentProcessing`/`paused`) can no longer outrank or overwrite a current entitled row, while same-subscription lifecycle transitions are preserved. Shipped via PR #528 (squash `19d0a215`) → promoted via PR #529 (merge `9021887a`); production deploy `dpl_HvgfaMzTPZtZm1uwyJn38zuyLuqM` verified READY (`addictionboards.com` HTTP 200, `/api/health` ok). Active Bugs empty; Next Bug ID BUG-264.)
+**Last Updated:** 2026-06-29 (**BUG-264 filed** - stale independently keyed remove-bookmark surfaces can re-add an already-removed bookmark because the server mutation still toggles current state instead of applying an idempotent remove intent. Narrow, recoverable user-facing misinformation/state surprise; Active Bugs has one P4. Next Bug ID BUG-265.)
 
 ---
 
@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-264
+**Next Bug ID:** BUG-265
 
 **Latest follow-up (2026-06-28) — BUG-260 completion resolved (no new bug ID):**
 - [BUG-260](../_archive/bugs/bug-260-question-feedback-trusts-client-context-ids.md)'s original fix shipped + prod-verified + archived, but a post-archive re-audit found one residual both-ID context gap: a standalone owned attempt for the feedback question could still be paired with an unrelated owned session that also contained that question. Completion branch `fix/bug-260-feedback-context-completion` tightened `validateFeedbackContext` so both IDs require direct attempt membership in the supplied session or a verified standalone session-review retry (`retryOrigin=session_review` and matching `retrySessionId`). The retry exception is required by the real question-page session-review "Try Again" flow, which creates a standalone retry attempt while feedback still carries the reviewed session id. Regression coverage rejects the incoherent standalone/session pair at the helper level and through both feedback use cases. Shipped via PR #524 and promoted via PR #526; production smoke passed 2026-06-28.
@@ -297,7 +297,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Severity | Component | Summary |
 |-----|----------|-----------|---------|
-| _None_ | - | - | No active bugs currently tracked. |
+| [BUG-264](bug-264-bookmark-remove-intent-can-readd-from-stale-surfaces.md) | P4 | Bookmarks / stale UI state | Two stale "Remove bookmark" surfaces with independent idempotency keys can remove then re-add the bookmark, leaving server truth opposite the user's remove intent. |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 

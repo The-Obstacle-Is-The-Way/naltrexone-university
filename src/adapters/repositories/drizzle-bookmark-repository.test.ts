@@ -1,6 +1,7 @@
 import type { SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it, vi } from 'vitest';
+import { bookmarks } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleBookmarkRepository } from './drizzle-bookmark-repository';
 
@@ -95,6 +96,10 @@ describe('DrizzleBookmarkRepository', () => {
       expect(db._mocks.insertValues).toHaveBeenCalledWith({
         userId: userId,
         questionId: questionId,
+      });
+      expect(db._mocks.insertOnConflictDoUpdate).toHaveBeenCalledWith({
+        target: [bookmarks.userId, bookmarks.questionId],
+        set: { createdAt: expect.anything() },
       });
     });
 

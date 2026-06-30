@@ -4,27 +4,35 @@ import type {
   QuestionRepository,
 } from '@/src/application/ports/repositories';
 
-export type ToggleBookmarkInput = {
+export type SetBookmarkInput = {
   userId: string;
   questionId: string;
-};
-
-export type ToggleBookmarkOutput = {
   bookmarked: boolean;
 };
 
-export class ToggleBookmarkUseCase {
+export type SetBookmarkOutput = {
+  bookmarked: boolean;
+};
+
+export class SetBookmarkUseCase {
   constructor(
     private readonly bookmarks: BookmarkRepository,
     private readonly questions: QuestionRepository,
   ) {}
 
-  async execute(input: ToggleBookmarkInput): Promise<ToggleBookmarkOutput> {
-    const wasRemoved = await this.bookmarks.remove(
+  async execute(input: SetBookmarkInput): Promise<SetBookmarkOutput> {
+    if (!input.bookmarked) {
+      await this.bookmarks.remove(input.userId, input.questionId);
+      return { bookmarked: false };
+    }
+
+    const alreadyBookmarked = await this.bookmarks.exists(
       input.userId,
       input.questionId,
     );
-    if (wasRemoved) return { bookmarked: false };
+    if (alreadyBookmarked) {
+      return { bookmarked: true };
+    }
 
     const question = await this.questions.findPublishedById(input.questionId);
     if (!question) {

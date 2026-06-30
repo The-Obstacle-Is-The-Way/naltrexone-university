@@ -9,7 +9,7 @@ import {
   runSubmitAnswerFlow,
 } from './shared/question-flow-actions';
 
-export { toggleBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
+export { setBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
 export { createBookmarksEffect } from './practice-page-bookmarks';
 export {
   createDifficultyChangeHandler,

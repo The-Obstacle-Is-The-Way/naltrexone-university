@@ -12,7 +12,7 @@ const fixtureQuestion2Id = crypto.randomUUID();
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 
 const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
-const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
+const setBookmark = vi.mocked(bookmarkController.setBookmark);
 
 function PracticeQuestionBookmarksProbe() {
   const [question, setQuestion] = useState(
@@ -30,6 +30,9 @@ function PracticeQuestionBookmarksProbe() {
     <>
       <div data-testid="question-id">{question.questionId}</div>
       <div data-testid="bookmark-status">{output.bookmarkStatus}</div>
+      <div data-testid="is-bookmarked">
+        {output.isBookmarked ? 'true' : 'false'}
+      </div>
       <button type="button" onClick={() => void output.onToggleBookmark()}>
         toggle-bookmark
       </button>
@@ -53,7 +56,7 @@ function PracticeQuestionBookmarksProbe() {
 describe('usePracticeQuestionBookmarks (browser)', () => {
   beforeEach(() => {
     getBookmarks.mockResolvedValue(ok({ rows: [] }));
-    toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
+    setBookmark.mockResolvedValue(ok({ bookmarked: true }));
   });
 
   afterEach(() => {
@@ -61,7 +64,7 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
   });
 
   it('uses a different bookmark idempotency key after moving to a different practice question following a failed toggle', async () => {
-    toggleBookmark
+    setBookmark
       .mockResolvedValueOnce({
         ok: false,
         error: { code: 'INTERNAL_ERROR', message: 'Boom' },
@@ -76,10 +79,11 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 
-    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(1);
-    const firstInput = toggleBookmark.mock.calls[0]?.[0] as {
+    await expect.poll(() => setBookmark.mock.calls.length).toBe(1);
+    const firstInput = setBookmark.mock.calls[0]?.[0] as {
       idempotencyKey: string;
       questionId: string;
+      bookmarked: boolean;
     };
 
     await expect
@@ -93,14 +97,53 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 
-    await expect.poll(() => toggleBookmark.mock.calls.length).toBe(2);
-    const secondInput = toggleBookmark.mock.calls[1]?.[0] as {
+    await expect.poll(() => setBookmark.mock.calls.length).toBe(2);
+    const secondInput = setBookmark.mock.calls[1]?.[0] as {
       idempotencyKey: string;
       questionId: string;
+      bookmarked: boolean;
     };
 
     expect(firstInput.questionId).toBe(fixtureQuestion1Id);
+    expect(firstInput.bookmarked).toBe(true);
     expect(secondInput.questionId).toBe(fixtureQuestion2Id);
+    expect(secondInput.bookmarked).toBe(true);
     expect(secondInput.idempotencyKey).not.toBe(firstInput.idempotencyKey);
+  });
+
+  it('sends bookmarked=false when removing a hydrated bookmarked practice question', async () => {
+    getBookmarks.mockResolvedValue(
+      ok({
+        rows: [
+          {
+            isAvailable: true,
+            questionId: fixtureQuestion1Id,
+            slug: 'question-1',
+            stemMd: 'Stem',
+            difficulty: 'easy',
+            bookmarkedAt: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+    setBookmark.mockResolvedValue(ok({ bookmarked: false }));
+
+    const screen = await render(<PracticeQuestionBookmarksProbe />);
+
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
+
+    await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
+
+    await expect.poll(() => setBookmark.mock.calls.length).toBe(1);
+    expect(setBookmark).toHaveBeenCalledWith({
+      questionId: fixtureQuestion1Id,
+      bookmarked: false,
+      idempotencyKey: expect.any(String),
+    });
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('false');
   });
 });

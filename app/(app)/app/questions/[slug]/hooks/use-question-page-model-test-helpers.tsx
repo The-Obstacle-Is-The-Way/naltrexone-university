@@ -43,7 +43,7 @@ export const getPracticeSessionReview = vi.mocked(
   practiceController.getPracticeSessionReview,
 );
 export const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
-export const toggleBookmark = vi.mocked(bookmarkController.toggleBookmark);
+export const setBookmark = vi.mocked(bookmarkController.setBookmark);
 export const getQuestionRating = vi.mocked(
   questionFeedbackController.getQuestionRating,
 );
@@ -64,7 +64,7 @@ const emptyBookmarksResult: { ok: true; data: GetBookmarksOutput } = ok({
 export function setupQuestionPageModelBrowserSpec() {
   beforeEach(() => {
     getBookmarks.mockResolvedValue(emptyBookmarksResult);
-    toggleBookmark.mockResolvedValue(ok({ bookmarked: false }));
+    setBookmark.mockResolvedValue(ok({ bookmarked: true }));
     getQuestionRating.mockResolvedValue(ok({ rating: null }));
     rateQuestion.mockResolvedValue(ok({ rating: null }));
     submitQuestionReport.mockResolvedValue(

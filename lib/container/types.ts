@@ -51,11 +51,11 @@ import type {
   GetUserStatsUseCase,
   RateQuestionUseCase,
   SaveExamDraftAnswerUseCase,
+  SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
   SubmitQuestionReportUseCase,
-  ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
 import type { env } from '../env';
 import type { logger } from '../logger';
@@ -138,7 +138,7 @@ export type UseCaseFactories = {
   createSetPracticeSessionQuestionMarkUseCase: () => SetPracticeSessionQuestionMarkUseCase;
   createStartPracticeSessionUseCase: () => StartPracticeSessionUseCase;
   createSubmitAnswerUseCase: () => SubmitAnswerUseCase;
-  createToggleBookmarkUseCase: () => ToggleBookmarkUseCase;
+  createSetBookmarkUseCase: () => SetBookmarkUseCase;
 };
 
 export type ControllerFactories = {

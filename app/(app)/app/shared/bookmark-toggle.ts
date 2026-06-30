@@ -3,18 +3,19 @@ import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { STANDARD_MUTATION_TIMEOUT_MS } from './timeout-tiers';
 
-const TOGGLE_BOOKMARK_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
+const SET_BOOKMARK_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export type BookmarkableQuestion = {
   questionId: string;
 };
 
-export async function toggleBookmarkForQuestion(input: {
+export async function setBookmarkForQuestion(input: {
   question: BookmarkableQuestion | null;
+  desiredBookmarked: boolean;
   bookmarkIdempotencyKey?: string | null;
   createIdempotencyKey?: () => string;
   setBookmarkIdempotencyKey?: (key: string) => void;
-  toggleBookmarkFn: (
+  setBookmarkFn: (
     input: unknown,
   ) => Promise<ActionResult<{ bookmarked: boolean }>>;
   setBookmarkStatus: (status: 'idle' | 'loading' | 'error') => void;
@@ -42,15 +43,16 @@ export async function toggleBookmarkForQuestion(input: {
   let res: ActionResult<{ bookmarked: boolean }>;
   try {
     res = await withTimeout(
-      input.toggleBookmarkFn({
+      input.setBookmarkFn({
         questionId,
+        bookmarked: input.desiredBookmarked,
         idempotencyKey: requestIdempotencyKey ?? undefined,
       }),
-      TOGGLE_BOOKMARK_TIMEOUT_MS,
+      SET_BOOKMARK_TIMEOUT_MS,
     );
   } catch (error) {
     try {
-      input.logError?.('Failed to toggle bookmark', error);
+      input.logError?.('Failed to set bookmark', error);
     } catch {
       // Reporter failures must not block the primary error path.
     }
@@ -63,7 +65,7 @@ export async function toggleBookmarkForQuestion(input: {
   if (!res.ok) {
     if (shouldReportClientError(res.error)) {
       try {
-        input.logError?.('Failed to toggle bookmark', res.error);
+        input.logError?.('Failed to set bookmark', res.error);
       } catch {
         // Reporter failures must not block the primary error path.
       }
@@ -78,12 +80,12 @@ export async function toggleBookmarkForQuestion(input: {
 
   input.setBookmarkedQuestionIds((prev) => {
     const next = new Set(prev);
-    if (res.data.bookmarked) next.add(questionId);
+    if (input.desiredBookmarked) next.add(questionId);
     else next.delete(questionId);
     return next;
   });
 
-  input.onBookmarkToggled?.(res.data.bookmarked);
+  input.onBookmarkToggled?.(input.desiredBookmarked);
   if (input.setBookmarkIdempotencyKey && input.createIdempotencyKey) {
     input.setBookmarkIdempotencyKey(input.createIdempotencyKey());
   }

@@ -8,21 +8,21 @@ import {
   FakeIdempotencyKeyRepository,
   FakeLogger,
   FakeRateLimiter,
+  FakeSetBookmarkUseCase,
   FakeSubscriptionRepository,
-  FakeToggleBookmarkUseCase,
 } from '@/src/application/test-helpers/fakes';
-import type { ToggleBookmarkOutput } from '@/src/application/use-cases';
+import type { SetBookmarkOutput } from '@/src/application/use-cases';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
   type BookmarkControllerDeps,
   getBookmarks,
-  toggleBookmark,
+  setBookmark,
 } from './bookmark-controller';
 
 type BookmarkControllerTestDeps = BookmarkControllerDeps & {
-  toggleBookmarkUseCase: FakeToggleBookmarkUseCase;
+  setBookmarkUseCase: FakeSetBookmarkUseCase;
   getBookmarksUseCase: FakeGetBookmarksUseCase;
   rateLimiter: FakeRateLimiter;
   _fixtures: {
@@ -34,8 +34,8 @@ function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
   rateLimitResult?: ConstructorParameters<typeof FakeRateLimiter>[0];
-  toggleBookmarkOutput?: ToggleBookmarkOutput;
-  toggleBookmarkThrows?: unknown;
+  setBookmarkOutput?: SetBookmarkOutput;
+  setBookmarkThrows?: unknown;
   getBookmarksOutput?: GetBookmarksOutput;
   getBookmarksThrows?: unknown;
 }): BookmarkControllerTestDeps {
@@ -72,9 +72,9 @@ function createDeps(overrides?: {
 
   const rateLimiter = new FakeRateLimiter(overrides?.rateLimitResult);
 
-  const toggleBookmarkUseCase = new FakeToggleBookmarkUseCase(
-    overrides?.toggleBookmarkOutput ?? { bookmarked: true },
-    overrides?.toggleBookmarkThrows,
+  const setBookmarkUseCase = new FakeSetBookmarkUseCase(
+    overrides?.setBookmarkOutput ?? { bookmarked: true },
+    overrides?.setBookmarkThrows,
   );
 
   const getBookmarksUseCase = new FakeGetBookmarksUseCase(
@@ -88,7 +88,7 @@ function createDeps(overrides?: {
     rateLimiter,
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(() => now),
     checkEntitlementUseCase,
-    toggleBookmarkUseCase,
+    setBookmarkUseCase,
     getBookmarksUseCase,
     now: () => now,
     _fixtures: {
@@ -98,11 +98,14 @@ function createDeps(overrides?: {
 }
 
 describe('bookmark-controller', () => {
-  describe('toggleBookmark', () => {
+  describe('setBookmark', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await toggleBookmark({ questionId: 'not-a-uuid' }, deps);
+      const result = await setBookmark(
+        { questionId: 'not-a-uuid', bookmarked: true },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
@@ -111,14 +114,17 @@ describe('bookmark-controller', () => {
           fieldErrors: { questionId: expect.any(Array) },
         },
       });
-      expect(deps.toggleBookmarkUseCase.inputs).toEqual([]);
+      expect(deps.setBookmarkUseCase.inputs).toEqual([]);
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await toggleBookmark(
-        { questionId: '11111111-1111-1111-1111-111111111111' },
+      const result = await setBookmark(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: true,
+        },
         deps,
       );
 
@@ -126,14 +132,17 @@ describe('bookmark-controller', () => {
         ok: false,
         error: { code: 'UNAUTHENTICATED' },
       });
-      expect(deps.toggleBookmarkUseCase.inputs).toEqual([]);
+      expect(deps.setBookmarkUseCase.inputs).toEqual([]);
     });
 
     it('returns UNSUBSCRIBED when not entitled', async () => {
       const deps = createDeps({ isEntitled: false });
 
-      const result = await toggleBookmark(
-        { questionId: '11111111-1111-1111-1111-111111111111' },
+      const result = await setBookmark(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: true,
+        },
         deps,
       );
 
@@ -141,44 +150,85 @@ describe('bookmark-controller', () => {
         ok: false,
         error: { code: 'UNSUBSCRIBED' },
       });
-      expect(deps.toggleBookmarkUseCase.inputs).toEqual([]);
+      expect(deps.setBookmarkUseCase.inputs).toEqual([]);
     });
 
     it('returns ok when use case succeeds', async () => {
-      const deps = createDeps({ toggleBookmarkOutput: { bookmarked: false } });
+      const deps = createDeps({ setBookmarkOutput: { bookmarked: false } });
 
-      const result = await toggleBookmark(
-        { questionId: '11111111-1111-1111-1111-111111111111' },
+      const result = await setBookmark(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: false,
+        },
         deps,
       );
 
       expect(result).toEqual({ ok: true, data: { bookmarked: false } });
-      expect(deps.toggleBookmarkUseCase.inputs).toEqual([
+      expect(deps.setBookmarkUseCase.inputs).toEqual([
         {
           userId: deps._fixtures.userId,
           questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: false,
         },
       ]);
     });
 
-    it('keeps successful bookmark toggles idempotent when idempotencyKey is reused', async () => {
-      const deps = createDeps({ toggleBookmarkOutput: { bookmarked: true } });
+    it('executes independently keyed set-bookmark requests separately', async () => {
+      const deps = createDeps({ setBookmarkOutput: { bookmarked: false } });
+
+      const first = await setBookmark(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: false,
+          idempotencyKey: '22222222-2222-2222-2222-222222222222',
+        },
+        deps,
+      );
+      const second = await setBookmark(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: false,
+          idempotencyKey: '33333333-3333-3333-3333-333333333333',
+        },
+        deps,
+      );
+
+      expect(first).toEqual({ ok: true, data: { bookmarked: false } });
+      expect(second).toEqual(first);
+      expect(deps.setBookmarkUseCase.inputs).toEqual([
+        {
+          userId: deps._fixtures.userId,
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: false,
+        },
+        {
+          userId: deps._fixtures.userId,
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: false,
+        },
+      ]);
+    });
+
+    it('keeps successful set-bookmark requests idempotent when idempotencyKey is reused', async () => {
+      const deps = createDeps({ setBookmarkOutput: { bookmarked: true } });
       const input = {
         questionId: '11111111-1111-1111-1111-111111111111',
+        bookmarked: true,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
-      const first = await toggleBookmark(input, deps);
-      const second = await toggleBookmark(input, deps);
+      const first = await setBookmark(input, deps);
+      const second = await setBookmark(input, deps);
 
       expect(first).toEqual({ ok: true, data: { bookmarked: true } });
       expect(second).toEqual(first);
-      expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
+      expect(deps.setBookmarkUseCase.inputs).toHaveLength(1);
     });
 
-    it('replays a cached bookmark toggle while the reused key is rate limited', async () => {
+    it('replays a cached set-bookmark request while the reused key is rate limited', async () => {
       const deps = createDeps({
-        toggleBookmarkOutput: { bookmarked: true },
+        setBookmarkOutput: { bookmarked: true },
         rateLimitResult: [
           {
             success: true,
@@ -196,15 +246,16 @@ describe('bookmark-controller', () => {
       });
       const input = {
         questionId: '11111111-1111-1111-1111-111111111111',
+        bookmarked: true,
         idempotencyKey: '22222222-2222-2222-2222-222222222222',
       } as const;
 
-      const first = await toggleBookmark(input, deps);
-      const second = await toggleBookmark(input, deps);
+      const first = await setBookmark(input, deps);
+      const second = await setBookmark(input, deps);
 
       expect(first).toEqual({ ok: true, data: { bookmarked: true } });
       expect(second).toEqual(first);
-      expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
+      expect(deps.setBookmarkUseCase.inputs).toHaveLength(1);
       expect(deps.rateLimiter.inputs).toHaveLength(1);
     });
 
@@ -227,18 +278,19 @@ describe('bookmark-controller', () => {
       });
       const input = {
         questionId: '11111111-1111-1111-1111-111111111111',
+        bookmarked: true,
         idempotencyKey: '22222222-2222-2222-2222-222222222222',
       } as const;
 
-      const first = await toggleBookmark(input, deps);
+      const first = await setBookmark(input, deps);
       expect(first).toMatchObject({
         ok: false,
         error: { code: 'RATE_LIMITED' },
       });
 
-      const second = await toggleBookmark(input, deps);
+      const second = await setBookmark(input, deps);
       expect(second).toEqual({ ok: true, data: { bookmarked: true } });
-      expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
+      expect(deps.setBookmarkUseCase.inputs).toHaveLength(1);
     });
 
     it('returns RATE_LIMITED when rate limiter denies request', async () => {
@@ -251,8 +303,11 @@ describe('bookmark-controller', () => {
         },
       });
 
-      const result = await toggleBookmark(
-        { questionId: '11111111-1111-1111-1111-111111111111' },
+      const result = await setBookmark(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: true,
+        },
         deps,
       );
 
@@ -260,10 +315,10 @@ describe('bookmark-controller', () => {
         ok: false,
         error: { code: 'RATE_LIMITED' },
       });
-      expect(deps.toggleBookmarkUseCase.inputs).toEqual([]);
+      expect(deps.setBookmarkUseCase.inputs).toEqual([]);
       expect(deps.rateLimiter.inputs).toEqual([
         {
-          key: `bookmark:toggleBookmark:${deps._fixtures.userId}`,
+          key: `bookmark:setBookmark:${deps._fixtures.userId}`,
           limit: 60,
           windowMs: 60_000,
         },
@@ -272,14 +327,17 @@ describe('bookmark-controller', () => {
 
     it('returns NOT_FOUND when use case throws ApplicationError', async () => {
       const deps = createDeps({
-        toggleBookmarkThrows: new ApplicationError(
+        setBookmarkThrows: new ApplicationError(
           'NOT_FOUND',
           'Question not found',
         ),
       });
 
-      const result = await toggleBookmark(
-        { questionId: '11111111-1111-1111-1111-111111111111' },
+      const result = await setBookmark(
+        {
+          questionId: '11111111-1111-1111-1111-111111111111',
+          bookmarked: true,
+        },
         deps,
       );
 
@@ -305,37 +363,42 @@ describe('bookmark-controller', () => {
             retryAfterSeconds: 60,
           },
         ],
-        toggleBookmarkThrows: new ApplicationError(
+        setBookmarkThrows: new ApplicationError(
           'NOT_FOUND',
           'Question not found',
         ),
       });
       const input = {
         questionId: '11111111-1111-1111-1111-111111111111',
+        bookmarked: true,
         idempotencyKey: '22222222-2222-2222-2222-222222222222',
       } as const;
 
-      const first = await toggleBookmark(input, deps);
-      const second = await toggleBookmark(input, deps);
+      const first = await setBookmark(input, deps);
+      const second = await setBookmark(input, deps);
 
       expect(first).toEqual({
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Question not found' },
       });
       expect(second).toEqual(first);
-      expect(deps.toggleBookmarkUseCase.inputs).toHaveLength(1);
+      expect(deps.setBookmarkUseCase.inputs).toHaveLength(1);
       expect(deps.rateLimiter.inputs).toHaveLength(1);
     });
 
     it('returns ok when deps are loaded from the container', async () => {
-      const deps = createDeps({ toggleBookmarkOutput: { bookmarked: true } });
+      const deps = createDeps({ setBookmarkOutput: { bookmarked: true } });
 
       const questionId = '11111111-1111-1111-1111-111111111111';
-      const result = await toggleBookmark({ questionId }, undefined, {
-        loadContainer: async () => ({
-          createBookmarkControllerDeps: () => deps,
-        }),
-      });
+      const result = await setBookmark(
+        { questionId, bookmarked: true },
+        undefined,
+        {
+          loadContainer: async () => ({
+            createBookmarkControllerDeps: () => deps,
+          }),
+        },
+      );
 
       expect(result).toEqual({ ok: true, data: { bookmarked: true } });
     });
