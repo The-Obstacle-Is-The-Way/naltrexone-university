@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { toggleBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
+import { setBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
 import {
   reportClientError,
   shouldReportClientError,
@@ -8,7 +8,7 @@ import type { QuestionMode } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import {
   getBookmarks,
-  toggleBookmark,
+  setBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import { STANDARD_READ_TIMEOUT_MS } from '../../../shared/timeout-tiers';
@@ -171,16 +171,18 @@ export function useQuestionPageBookmarks(
       bookmarkStateVersionRef.current += 1;
       const stateVersion = bookmarkStateVersionRef.current;
       const questionId = input.question.questionId;
+      const desiredBookmarked = !isBookmarked;
 
-      void toggleBookmarkForQuestion({
+      void setBookmarkForQuestion({
         question: input.question,
+        desiredBookmarked,
         bookmarkIdempotencyKey:
           bookmarkIdempotencyKeysRef.current.get(questionId) ?? null,
         createIdempotencyKey: () => crypto.randomUUID(),
         setBookmarkIdempotencyKey: (key) => {
           bookmarkIdempotencyKeysRef.current.set(questionId, key);
         },
-        toggleBookmarkFn: toggleBookmark,
+        setBookmarkFn: setBookmark,
         setBookmarkStatus: (status) => {
           if (!isMountedRef.current()) return;
           if (bookmarkStateVersionRef.current !== stateVersion) return;
@@ -195,13 +197,13 @@ export function useQuestionPageBookmarks(
         logError: (_message: string, error: unknown) => {
           reportClientError(error, {
             component: 'UseQuestionPageBookmarks',
-            action: 'toggleBookmark',
+            action: 'setBookmark',
           });
         },
         isMounted: () => isMountedRef.current(),
       });
     };
-  }, [input.question]);
+  }, [input.question, isBookmarked]);
 
   return {
     bookmarkStatus,

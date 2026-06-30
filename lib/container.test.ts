@@ -45,10 +45,10 @@ import {
   GetQuestionRatingUseCase,
   GetUserStatsUseCase,
   RateQuestionUseCase,
+  SetBookmarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
   SubmitQuestionReportUseCase,
-  ToggleBookmarkUseCase,
 } from '@/src/application/use-cases';
 import {
   restoreProcessEnv,
@@ -241,8 +241,8 @@ describe('container factories', () => {
     expect(container.createSubmitAnswerUseCase()).toBeInstanceOf(
       SubmitAnswerUseCase,
     );
-    expect(container.createToggleBookmarkUseCase()).toBeInstanceOf(
-      ToggleBookmarkUseCase,
+    expect(container.createSetBookmarkUseCase()).toBeInstanceOf(
+      SetBookmarkUseCase,
     );
     expect(container.createGetBookmarksUseCase()).toBeInstanceOf(
       GetBookmarksUseCase,
@@ -335,9 +335,7 @@ describe('container factories', () => {
     expect(bookmarkDeps.checkEntitlementUseCase).toBeInstanceOf(
       CheckEntitlementUseCase,
     );
-    expect(bookmarkDeps.toggleBookmarkUseCase).toBeInstanceOf(
-      ToggleBookmarkUseCase,
-    );
+    expect(bookmarkDeps.setBookmarkUseCase).toBeInstanceOf(SetBookmarkUseCase);
     expect(bookmarkDeps.getBookmarksUseCase).toBeInstanceOf(
       GetBookmarksUseCase,
     );

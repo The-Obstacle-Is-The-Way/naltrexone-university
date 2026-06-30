@@ -64,7 +64,7 @@ export function createControllerFactories(input: {
       rateLimiter: gateways.createRateLimiter(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
-      toggleBookmarkUseCase: useCases.createToggleBookmarkUseCase(),
+      setBookmarkUseCase: useCases.createSetBookmarkUseCase(),
       getBookmarksUseCase: useCases.createGetBookmarksUseCase(),
       now: primitives.now,
     }),
