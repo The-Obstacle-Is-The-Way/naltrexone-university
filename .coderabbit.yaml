@@ -70,6 +70,14 @@ reviews:
         6. Use factories: createQuestion(), createChoice() from test-helpers/
         7. Do NOT require dynamic import()/beforeAll loading in pure TypeScript *.test.ts suites.
            That React 19 compatibility rule is scoped to **/*.test.tsx component tests.
+        8. FIXTURE IDs (see .claude/rules/fixture-integrity.md): in fakes-only
+           application/domain/use-case tests, readable string IDs such as 'q1',
+           'user-1', or 'attempt-1' are INTENTIONAL and correct — do NOT suggest
+           replacing them with UUIDs or crypto.randomUUID(). UUID-shaped fixtures are
+           required ONLY where an ID crosses a zUuid/Drizzle uuid() boundary, which is
+           covered in adapter/controller tests (those legitimately assert UUID shape and
+           the 'not-a-uuid' rejection path). Flagging readable fake-backed IDs in
+           fakes-only tests is a known recurring false positive in this repo.
 
     # React component tests - React 19 specific
     - path: "**/*.test.tsx"
