@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-29 (**BUG-264 filed** - stale independently keyed remove-bookmark surfaces can re-add an already-removed bookmark because the server mutation still toggles current state instead of applying an idempotent remove intent. Narrow, recoverable user-facing misinformation/state surprise; Active Bugs has one P4. Next Bug ID BUG-265.)
+**Last Updated:** 2026-06-30 (**BUG-264 resolved + prod-verified** — stale independently keyed "Remove bookmark" surfaces could remove then re-add a bookmark because the server mutation toggled current state instead of applying an idempotent desired-state write. Fixed by replacing the toggle use case/controller with an idempotent `setBookmark` desired-state write (add/remove idempotent in both directions; remove no longer requires a published question; the bookmarks page and in-place practice/review surfaces send explicit bookmark intent); repository and port unchanged. Shipped via PR #540 (squash `ca17b5f6`) → promoted via PR #541 (merge `72dd2aff`); production deploy `dpl_22bpJvPoiZWKHZFPj6Dw1JioqdaG` (`72dd2aff`) verified READY (`addictionboards.com` HTTP 200, `/api/health` `{"ok":true,"db":true}`). Active Bugs register empty; Next Bug ID BUG-265.)
 
 ---
 
@@ -297,7 +297,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Severity | Component | Summary |
 |-----|----------|-----------|---------|
-| [BUG-264](bug-264-bookmark-remove-intent-can-readd-from-stale-surfaces.md) | P4 | Bookmarks / stale UI state | Two stale "Remove bookmark" surfaces with independent idempotency keys can remove then re-add the bookmark, leaving server truth opposite the user's remove intent. |
+| _None_ | - | - | No active bugs currently tracked. |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 
