@@ -508,11 +508,13 @@ export const practiceSessionQuestionStates = pgTable(
     latestAnswerChk: check(
       PRACTICE_SESSION_QUESTION_STATES_LATEST_ANSWER_CHK,
       sql`(${t.latestIsCorrect} IS NULL) = (${t.latestAnsweredAt} IS NULL)
+          AND (${t.latestSelectedChoiceId} IS NOT NULL OR ${t.latestIsCorrect} IS NOT TRUE)
           AND (${t.latestSelectedChoiceId} IS NULL OR (${t.latestIsCorrect} IS NOT NULL AND ${t.latestAnsweredAt} IS NOT NULL))`,
     ),
     draftSavedChk: check(
       PRACTICE_SESSION_QUESTION_STATES_DRAFT_SAVED_CHK,
-      sql`${t.draftSelectedChoiceId} IS NULL OR ${t.draftSavedAt} IS NOT NULL`,
+      sql`(${t.draftSelectedChoiceId} IS NULL AND ${t.draftCumulativeMs} = 0)
+          OR ${t.draftSavedAt} IS NOT NULL`,
     ),
     positionChk: check(
       'practice_session_question_states_position_chk',

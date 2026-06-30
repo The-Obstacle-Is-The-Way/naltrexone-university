@@ -618,6 +618,49 @@ describe('practice session question state normalization', () => {
     ).resolves.toBeDefined();
   });
 
+  it('rejects omitted finalized state marked correct', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-state-omitted-correct-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessions = new DrizzlePracticeSessionRepository(db);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await expect(
+      db
+        .update(schema.practiceSessionQuestionStates)
+        .set({
+          latestSelectedChoiceId: null,
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:12:00.000Z'),
+        })
+        .where(
+          and(
+            eq(
+              schema.practiceSessionQuestionStates.practiceSessionId,
+              session.id,
+            ),
+            eq(schema.practiceSessionQuestionStates.questionId, question.id),
+          ),
+        ),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23514',
+      },
+    });
+  });
+
   it('rejects selected draft choice state without a draft save timestamp', async () => {
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {
@@ -641,6 +684,45 @@ describe('practice session question state normalization', () => {
       db
         .update(schema.practiceSessionQuestionStates)
         .set({ draftSelectedChoiceId: question.correctChoiceId })
+        .where(
+          and(
+            eq(
+              schema.practiceSessionQuestionStates.practiceSessionId,
+              session.id,
+            ),
+            eq(schema.practiceSessionQuestionStates.questionId, question.id),
+          ),
+        ),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23514',
+      },
+    });
+  });
+
+  it('rejects positive draft time without a draft save timestamp', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-state-draft-time-consistency-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessions = new DrizzlePracticeSessionRepository(db);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await expect(
+      db
+        .update(schema.practiceSessionQuestionStates)
+        .set({ draftCumulativeMs: 1 })
         .where(
           and(
             eq(
