@@ -98,6 +98,7 @@ Next.js Route Handlers use the Web `Request`/`Response` APIs and live inside the
 import {
   boolean,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -326,6 +327,7 @@ export const choices = pgTable(
     sortOrder: integer('sort_order').notNull(), // 1..N
   },
   (t) => ({
+    idQuestionIdUq: uniqueIndex('choices_id_question_id_uq').on(t.id, t.questionId),
     questionIdIdx: index('choices_question_id_idx').on(t.questionId),
     questionLabelUq: uniqueIndex('choices_question_id_label_uq').on(
       t.questionId,
@@ -410,13 +412,15 @@ export const practiceSessionQuestionStates = pgTable(
       .notNull()
       // Intentionally no cascade: hard-deleting referenced questions should fail
       // so practice-session history cannot silently lose its question anchor.
+      // This intentionally differs from attempts.questionId because attempts
+      // are derived answer events, while session state anchors session history.
       .references(() => questions.id),
     position: integer('position').notNull(), // 0-based order in params_json.questionIds
     markedForReview: boolean('marked_for_review').notNull().default(false),
-    latestSelectedChoiceId: uuid('latest_selected_choice_id').references(() => choices.id, { onDelete: 'restrict' }),
+    latestSelectedChoiceId: uuid('latest_selected_choice_id'),
     latestIsCorrect: boolean('latest_is_correct'),
     latestAnsweredAt: timestamp('latest_answered_at', { withTimezone: true }),
-    draftSelectedChoiceId: uuid('draft_selected_choice_id').references(() => choices.id, { onDelete: 'restrict' }),
+    draftSelectedChoiceId: uuid('draft_selected_choice_id'),
     draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
     draftCumulativeMs: integer('draft_cumulative_ms').notNull().default(0),
     version: integer('version').notNull().default(0), // row-level optimistic concurrency token
@@ -426,6 +430,16 @@ export const practiceSessionQuestionStates = pgTable(
   (t) => ({
     sessionQuestionUq: uniqueIndex('practice_session_question_states_session_question_uq').on(t.practiceSessionId, t.questionId),
     sessionPositionUq: uniqueIndex('practice_session_question_states_session_position_uq').on(t.practiceSessionId, t.position),
+    latestChoiceQuestionFk: foreignKey({
+      name: 'practice_session_question_states_latest_choice_question_fk',
+      columns: [t.latestSelectedChoiceId, t.questionId],
+      foreignColumns: [choices.id, choices.questionId],
+    }).onDelete('restrict'),
+    draftChoiceQuestionFk: foreignKey({
+      name: 'practice_session_question_states_draft_choice_question_fk',
+      columns: [t.draftSelectedChoiceId, t.questionId],
+      foreignColumns: [choices.id, choices.questionId],
+    }).onDelete('restrict'),
     draftCumulativeMsChk: check('practice_session_question_states_draft_cumulative_ms_chk', sql`${t.draftCumulativeMs} BETWEEN 0 AND 86400000`),
     positionChk: check('practice_session_question_states_position_chk', sql`${t.position} >= 0`),
     versionChk: check('practice_session_question_states_version_chk', sql`${t.version} >= 0`),

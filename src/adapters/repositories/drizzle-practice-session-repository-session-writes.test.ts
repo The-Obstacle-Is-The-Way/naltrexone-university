@@ -297,11 +297,11 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
 
   it('throws INTERNAL_ERROR when create() does not return an inserted row', async () => {
     const tx = {
-      insert: () => ({
+      insert: vi.fn(() => ({
         values: () => ({
           returning: async () => [],
         }),
-      }),
+      })),
     };
     const db = {
       transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
@@ -332,6 +332,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     await expect(
       repo.create({ userId: userId, mode: 'tutor', paramsJson }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    expect(tx.insert).toHaveBeenCalledTimes(1);
   });
 
   it('discards an incomplete practice session by deleting the session row', async () => {

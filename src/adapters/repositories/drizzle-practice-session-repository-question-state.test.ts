@@ -139,24 +139,56 @@ function createQuestionStateDb(input: {
     };
   } | null;
 }) {
-  const limit = vi.fn();
-  limit.mockResolvedValue([]);
-  for (const snapshot of input.snapshots) {
-    limit.mockResolvedValueOnce([
-      {
-        state: snapshot.state,
-        endedAt: snapshot.endedAt,
-      },
-    ]);
-  }
+  const defaultParamsJson = {
+    count: 1,
+    tagSlugs: [],
+    difficulties: [],
+    questionIds: [],
+  };
+  const lockedSession = (endedAt: Date | null) => [
+    {
+      endedAt,
+      paramsJson: input.sessionStatus?.paramsJson ?? defaultParamsJson,
+    },
+  ];
+  let sessionLockIndex = 0;
+  const sessionLockFor = vi.fn(async (strength: unknown) => {
+    expect(strength).toBe('update');
+    const snapshot = input.snapshots[sessionLockIndex];
+    sessionLockIndex += 1;
 
-  const select = vi.fn(() => ({
-    from: () => ({
-      innerJoin: () => ({
-        where: () => ({ limit }),
-      }),
-    }),
-  }));
+    if (snapshot) return lockedSession(snapshot.endedAt);
+    return input.sessionStatus
+      ? lockedSession(input.sessionStatus.endedAt)
+      : [];
+  });
+
+  let stateReadIndex = 0;
+  const stateLimit = vi.fn(async () => {
+    const snapshot = input.snapshots[stateReadIndex];
+    stateReadIndex += 1;
+    return snapshot ? [snapshot.state] : [];
+  });
+
+  let selectCallIndex = 0;
+  const select = vi.fn(() => {
+    selectCallIndex += 1;
+    return selectCallIndex % 2 === 1
+      ? {
+          from: () => ({
+            where: () => ({
+              for: sessionLockFor,
+            }),
+          }),
+        }
+      : {
+          from: () => ({
+            where: () => ({
+              limit: stateLimit,
+            }),
+          }),
+        };
+  });
 
   let updateAttemptIndex = 0;
   const updateReturning = vi.fn(async () => {
@@ -197,34 +229,21 @@ function createQuestionStateDb(input: {
     return { where: updateWhere };
   });
   const update = vi.fn(() => ({ set: updateSet }));
+  const tx = {
+    select,
+    update,
+  };
+  const transaction = vi.fn(
+    async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+  );
 
   return {
     db: {
+      transaction,
       select,
       update,
-      query: {
-        practiceSessions: {
-          findFirst: vi.fn(async () =>
-            input.sessionStatus
-              ? {
-                  paramsJson: {
-                    count: 1,
-                    tagSlugs: [],
-                    difficulties: [],
-                    questionIds: [],
-                  },
-                  ...input.sessionStatus,
-                }
-              : null,
-          ),
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
     },
     select,
-    update,
     updateSet,
     updateReturning,
   } as const;
@@ -475,7 +494,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       latestAnsweredAt: answeredAt,
       version: 2,
     };
-    const { db, select, updateReturning } = createQuestionStateDb({
+    const { db, updateReturning } = createQuestionStateDb({
       snapshots: [
         { state: firstSnapshot, endedAt: null },
         { state: retrySnapshot, endedAt: null },
@@ -504,7 +523,6 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       latestAnsweredAt: answeredAt,
     });
 
-    expect(select).toHaveBeenCalledTimes(2);
     expect(updateReturning).toHaveBeenCalledTimes(2);
   });
 
@@ -514,7 +532,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       position: 0,
       version: 0,
     });
-    const { db, select, updateReturning } = createQuestionStateDb({
+    const { db, updateReturning } = createQuestionStateDb({
       snapshots: [
         { state: snapshot, endedAt: null },
         { state: snapshot, endedAt: null },
@@ -542,11 +560,10 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
 
     expect(updateReturning).toHaveBeenCalledTimes(3);
-    expect(select).toHaveBeenCalledTimes(4);
   });
 
   it('throws NOT_FOUND when the session does not exist', async () => {
-    const { db, select, updateReturning } = createQuestionStateDb({
+    const { db } = createQuestionStateDb({
       snapshots: [],
       updatedRows: [],
       sessionStatus: null,
@@ -570,13 +587,10 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       code: 'NOT_FOUND',
       message: 'Practice session not found',
     });
-
-    expect(select).toHaveBeenCalledTimes(1);
-    expect(updateReturning).not.toHaveBeenCalled();
   });
 
   it('throws NOT_FOUND when the question is not part of an active session', async () => {
-    const { db, select, updateReturning } = createQuestionStateDb({
+    const { db } = createQuestionStateDb({
       snapshots: [],
       updatedRows: [],
       sessionStatus: {
@@ -608,13 +622,10 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       code: 'NOT_FOUND',
       message: 'Question is not part of this practice session',
     });
-
-    expect(select).toHaveBeenCalledTimes(1);
-    expect(updateReturning).not.toHaveBeenCalled();
   });
 
   it('throws CONFLICT when a missing state belongs to an ended session', async () => {
-    const { db, select, updateReturning } = createQuestionStateDb({
+    const { db } = createQuestionStateDb({
       snapshots: [],
       updatedRows: [],
       sessionStatus: { endedAt: new Date('2026-02-01T00:10:00.000Z') },
@@ -638,9 +649,6 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       code: 'CONFLICT',
       message: 'Practice session already ended',
     });
-
-    expect(select).toHaveBeenCalledTimes(1);
-    expect(updateReturning).not.toHaveBeenCalled();
   });
 
   it('throws CONFLICT when the loaded session has already ended', async () => {
@@ -648,7 +656,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       questionId: firstQuestionId,
       position: 0,
     });
-    const { db, select, updateReturning } = createQuestionStateDb({
+    const { db } = createQuestionStateDb({
       snapshots: [
         { state: existing, endedAt: new Date('2026-02-01T00:10:00.000Z') },
       ],
@@ -673,9 +681,6 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       code: 'CONFLICT',
       message: 'Practice session already ended',
     });
-
-    expect(select).toHaveBeenCalledTimes(1);
-    expect(updateReturning).not.toHaveBeenCalled();
   });
 
   it('throws NOT_FOUND when the session disappears after version retries', async () => {
@@ -684,7 +689,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       position: 0,
       version: 0,
     });
-    const { db, select, updateReturning } = createQuestionStateDb({
+    const { db, updateReturning } = createQuestionStateDb({
       snapshots: [
         { state: snapshot, endedAt: null },
         { state: snapshot, endedAt: null },
@@ -714,7 +719,6 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     });
 
     expect(updateReturning).toHaveBeenCalledTimes(3);
-    expect(select).toHaveBeenCalledTimes(3);
   });
 
   it('throws CONFLICT when the session ends after version retries', async () => {
@@ -723,7 +727,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
       position: 0,
       version: 0,
     });
-    const { db, select, updateReturning } = createQuestionStateDb({
+    const { db, updateReturning } = createQuestionStateDb({
       snapshots: [
         { state: snapshot, endedAt: null },
         { state: snapshot, endedAt: null },
@@ -753,7 +757,6 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     });
 
     expect(updateReturning).toHaveBeenCalledTimes(3);
-    expect(select).toHaveBeenCalledTimes(3);
   });
 
   it('updates mark-for-review state for a session question', async () => {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
@@ -431,7 +431,13 @@ describe('question controllers (integration)', () => {
       })
       .from(schema.practiceSessionQuestionStates)
       .where(
-        eq(schema.practiceSessionQuestionStates.practiceSessionId, session.id),
+        and(
+          eq(
+            schema.practiceSessionQuestionStates.practiceSessionId,
+            session.id,
+          ),
+          eq(schema.practiceSessionQuestionStates.questionId, question.id),
+        ),
       );
     expect(stateRow).toEqual({
       questionId: question.id,

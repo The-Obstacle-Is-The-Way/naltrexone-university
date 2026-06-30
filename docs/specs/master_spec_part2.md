@@ -1107,7 +1107,9 @@ export type GetIncompletePracticeSessionOutput =
 
 1. Load the most recent in-progress session for user (`ended_at IS NULL`).
 2. If none exists, return `null`.
-3. Compute `answeredCount` from persisted `practice_session_question_states` where `latestSelectedChoiceId` is non-null.
+3. Compute `answeredCount` from persisted `practice_session_question_states`:
+   * for active exam sessions, count states where `draftSelectedChoiceId IS NOT NULL OR latestSelectedChoiceId IS NOT NULL`;
+   * otherwise, count states where `latestSelectedChoiceId IS NOT NULL`.
 4. Return minimal resume metadata for UI continuation.
 
 ---

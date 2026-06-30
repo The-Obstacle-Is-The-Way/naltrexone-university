@@ -24,6 +24,7 @@ Implementation verified on 2026-06-29:
 
 - `db/schema.ts` defines `PracticeSessionParams` as immutable metadata only and adds `practice_session_question_states` with required scalar columns, unique `(practice_session_id, question_id)`, unique `(practice_session_id, position)`, `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`, non-negative `position`, non-negative `version`, and FK cleanup via `ON DELETE CASCADE`.
 - `db/migrations/0021_flaky_domino.sql` creates the table and runs the marked DEBT-425 idempotent backfill. It inserts one row per `params_json.questionIds` entry, defaults missing legacy state fields, and clamps oversized legacy `draftCumulativeMs` before the CHECK can reject it.
+- `db/migrations/0022_confused_mandrill.sql` hardens the normalized model by enforcing that `latest_selected_choice_id` and `draft_selected_choice_id` belong to the same `question_id` as the state row, with a pre-constraint cleanup for impossible legacy/dev rows.
 - `src/adapters/repositories/practice-session-params.ts` no longer parses or serializes mutable question state. It ignores stale `questionStates` keys in old blobs but does not use them.
 - `src/adapters/repositories/drizzle-practice-session-repository.ts` creates session rows and state rows in one transaction, loads state rows ordered by `position`, and maps them back into the unchanged domain `PracticeSession`.
 - `src/adapters/repositories/practice-session-question-state-updater.ts` now performs row-level optimistic updates guarded by `id`, `version`, and an active owning session check. The BUG-188 raw-blob CAS path is gone.
@@ -142,7 +143,7 @@ ROI framing: Production had zero practice sessions at execution time, so PR #537
 
 #### Track A: preferred model normalization — CHOSEN AND EXECUTED
 
-Implemented by `db/migrations/0021_flaky_domino.sql`.
+Implemented by `db/migrations/0021_flaky_domino.sql` and hardened by `db/migrations/0022_confused_mandrill.sql`.
 
 1. Characterization/new-contract tests were added or updated:
    - `src/application/use-cases/start-practice-session.test.ts` proves `paramsJson` no longer includes `questionStates`.
@@ -182,15 +183,57 @@ Post-migration proof obligation for Track A:
 The old audit queries that count `params_json ? 'questionStates'` are historical only. After Track A, `params_json.questionStates` is deliberately absent on new writes, so the live proof must verify relational coverage instead:
 
 ```sql
--- Sessions whose immutable questionIds do not have exactly one normalized state row per question.
+-- Sessions with any missing, surplus, or mispositioned normalized state row.
+WITH expected AS (
+  SELECT
+    ps.id AS practice_session_id,
+    expected_question.question_id,
+    (expected_question.position - 1)::integer AS position
+  FROM practice_sessions ps
+  CROSS JOIN LATERAL jsonb_array_elements_text(
+    coalesce(ps.params_json -> 'questionIds', '[]'::jsonb)
+  ) WITH ORDINALITY AS expected_question(question_id, position)
+),
+state_rows AS (
+  SELECT
+    practice_session_id,
+    question_id::text AS question_id,
+    position
+  FROM practice_session_question_states
+),
+mismatches AS (
+  SELECT expected.practice_session_id
+  FROM expected
+  LEFT JOIN state_rows state
+    ON state.practice_session_id = expected.practice_session_id
+   AND state.question_id = expected.question_id
+   AND state.position = expected.position
+  WHERE state.practice_session_id IS NULL
+
+  UNION ALL
+
+  SELECT state.practice_session_id
+  FROM state_rows state
+  LEFT JOIN expected
+    ON expected.practice_session_id = state.practice_session_id
+   AND expected.question_id = state.question_id
+   AND expected.position = state.position
+  WHERE expected.practice_session_id IS NULL
+)
 SELECT count(*)
-FROM practice_sessions ps
-WHERE jsonb_array_length(coalesce(ps.params_json -> 'questionIds', '[]'::jsonb)) <>
-  (
-    SELECT count(*)::int
-    FROM practice_session_question_states state
-    WHERE state.practice_session_id = ps.id
-  );
+FROM mismatches;
+
+-- Selected choices that do not belong to the state row's question; should be impossible by composite FKs.
+SELECT count(*)
+FROM practice_session_question_states state
+LEFT JOIN choices latest_choice
+  ON latest_choice.id = state.latest_selected_choice_id
+ AND latest_choice.question_id = state.question_id
+LEFT JOIN choices draft_choice
+  ON draft_choice.id = state.draft_selected_choice_id
+ AND draft_choice.question_id = state.question_id
+WHERE (state.latest_selected_choice_id IS NOT NULL AND latest_choice.id IS NULL)
+   OR (state.draft_selected_choice_id IS NOT NULL AND draft_choice.id IS NULL);
 
 -- Persisted draft durations outside the allowed range; should also be impossible by CHECK.
 SELECT count(*)

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import {
@@ -197,10 +197,15 @@ describe('BUG-238: Exam draft cumulativeMs is bounded', () => {
       })
       .from(schema.practiceSessionQuestionStates)
       .where(
-        eq(schema.practiceSessionQuestionStates.practiceSessionId, session.id),
+        and(
+          eq(
+            schema.practiceSessionQuestionStates.practiceSessionId,
+            session.id,
+          ),
+          eq(schema.practiceSessionQuestionStates.questionId, question.id),
+        ),
       );
-    const state = row?.questionId === question.id ? row : undefined;
-    expect(state).toMatchObject({
+    expect(row).toMatchObject({
       questionId: question.id,
       draftSelectedChoiceId: null,
       draftCumulativeMs: 0,
@@ -231,9 +236,12 @@ describe('BUG-238: Exam draft cumulativeMs is bounded', () => {
         .update(schema.practiceSessionQuestionStates)
         .set({ draftCumulativeMs: SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS + 1 })
         .where(
-          eq(
-            schema.practiceSessionQuestionStates.practiceSessionId,
-            session.id,
+          and(
+            eq(
+              schema.practiceSessionQuestionStates.practiceSessionId,
+              session.id,
+            ),
+            eq(schema.practiceSessionQuestionStates.questionId, question.id),
           ),
         ),
     ).rejects.toMatchObject({

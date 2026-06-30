@@ -488,6 +488,53 @@ describe('practice session question state normalization', () => {
     });
   });
 
+  it('rejects selected choices from a different question at the database boundary', async () => {
+    const user = await createUser(db, cleanup);
+    const firstQuestion = await createQuestion(db, cleanup, {
+      slug: `it-state-choice-fk-first-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const secondQuestion = await createQuestion(db, cleanup, {
+      slug: `it-state-choice-fk-second-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessions = new DrizzlePracticeSessionRepository(db);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [firstQuestion.id],
+      },
+    });
+
+    await expect(
+      db
+        .update(schema.practiceSessionQuestionStates)
+        .set({ latestSelectedChoiceId: secondQuestion.correctChoiceId })
+        .where(
+          and(
+            eq(
+              schema.practiceSessionQuestionStates.practiceSessionId,
+              session.id,
+            ),
+            eq(
+              schema.practiceSessionQuestionStates.questionId,
+              firstQuestion.id,
+            ),
+          ),
+        ),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23503',
+      },
+    });
+  });
+
   it('preserves normalized state rows by blocking deletion of referenced questions', async () => {
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {
