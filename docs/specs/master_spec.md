@@ -1276,7 +1276,7 @@ export type EndPracticeSessionOutput = {
 3. Set `ended_at = now()`.
 4. Compute summary:
 
-   * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null
+   * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
    * `correct` = count of persisted session question states where `latestIsCorrect === true`
    * duration = floor((ended_at - started_at)/1000)
 5. Return summary.
@@ -1686,7 +1686,7 @@ export type GetSessionHistoryOutput = {
 1. Load completed practice sessions (`ended_at IS NOT NULL`) for user, ordered by `ended_at DESC`.
 2. For each session, compute stats from persisted `practice_session_question_states`:
    * `questionCount` = total questions in session
-   * `answered` = count where `latestSelectedChoiceId` is not null
+   * `answered` = count where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
    * `correct` = count where `latestIsCorrect === true`
    * `accuracy` = correct / questionCount (0 if questionCount = 0)
    * `durationSeconds` = floor((ended_at - started_at) / 1000)
