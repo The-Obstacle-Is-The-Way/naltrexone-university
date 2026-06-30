@@ -308,6 +308,10 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       },
     ]);
     const countWhere = vi.fn().mockResolvedValue([{ count: 1 }]);
+    const stateSelect = createStateSelect([
+      createStateRow({ questionId: firstQuestionId, position: 0 }),
+      createStateRow({ questionId: secondQuestionId, position: 1 }),
+    ]);
     const select = vi.fn((selection?: unknown) => {
       if (selection) {
         return {
@@ -317,22 +321,7 @@ describe('DrizzlePracticeSessionRepository reads', () => {
         };
       }
 
-      return {
-        from: () => ({
-          where: () => ({
-            orderBy: async () => [
-              createStateRow({
-                questionId: firstQuestionId,
-                position: 0,
-              }),
-              createStateRow({
-                questionId: secondQuestionId,
-                position: 1,
-              }),
-            ],
-          }),
-        }),
-      };
+      return stateSelect();
     });
 
     const tx = {

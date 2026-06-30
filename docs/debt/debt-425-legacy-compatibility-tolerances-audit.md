@@ -22,9 +22,10 @@ Track A was chosen and executed in PR #537. Mutable per-question practice-sessio
 
 Implementation verified on 2026-06-29:
 
-- `db/schema.ts` defines `PracticeSessionParams` as immutable metadata only and adds `practice_session_question_states` with required scalar columns, unique `(practice_session_id, question_id)`, unique `(practice_session_id, position)`, `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`, non-negative `position`, non-negative `version`, and FK cleanup via `ON DELETE CASCADE`.
+- `db/schema.ts` defines `PracticeSessionParams` as immutable metadata only and adds `practice_session_question_states` with required scalar columns, unique `(practice_session_id, question_id)`, unique `(practice_session_id, position)`, `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`, non-negative `position`, non-negative `version`, same-question selected-choice FKs, latest-answer consistency checks, draft-save consistency checks, and FK cleanup via `ON DELETE CASCADE`.
 - `db/migrations/0021_flaky_domino.sql` creates the table and runs the marked DEBT-425 idempotent backfill. It inserts one row per `params_json.questionIds` entry, defaults missing legacy state fields, and clamps oversized legacy `draftCumulativeMs` before the CHECK can reject it.
 - `db/migrations/0022_confused_mandrill.sql` hardens the normalized model by enforcing that `latest_selected_choice_id` and `draft_selected_choice_id` belong to the same `question_id` as the state row, with a pre-constraint cleanup for impossible legacy/dev rows.
+- `db/migrations/0023_soft_blue_marvel.sql` adds DB-level consistency checks for latest-answer metadata and selected draft saves while deliberately preserving valid omitted answers and time-only drafts.
 - `src/adapters/repositories/practice-session-params.ts` no longer parses or serializes mutable question state. It ignores stale `questionStates` keys in old blobs but does not use them.
 - `src/adapters/repositories/drizzle-practice-session-repository.ts` creates session rows and state rows in one transaction, loads state rows ordered by `position`, and maps them back into the unchanged domain `PracticeSession`.
 - `src/adapters/repositories/practice-session-question-state-updater.ts` now performs row-level optimistic updates guarded by `id`, `version`, and an active owning session check. The BUG-188 raw-blob CAS path is gone.
@@ -143,7 +144,7 @@ ROI framing: Production had zero practice sessions at execution time, so PR #537
 
 #### Track A: preferred model normalization — CHOSEN AND EXECUTED
 
-Implemented by `db/migrations/0021_flaky_domino.sql` and hardened by `db/migrations/0022_confused_mandrill.sql`.
+Implemented by `db/migrations/0021_flaky_domino.sql` and hardened by `db/migrations/0022_confused_mandrill.sql` plus `db/migrations/0023_soft_blue_marvel.sql`.
 
 1. Characterization/new-contract tests were added or updated:
    - `src/application/use-cases/start-practice-session.test.ts` proves `paramsJson` no longer includes `questionStates`.
@@ -161,6 +162,8 @@ Implemented by `db/migrations/0021_flaky_domino.sql` and hardened by `db/migrati
 3. Enforced invariants with normal relational constraints:
    - `NOT NULL` on required state columns;
    - `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`;
+   - latest-answer consistency checks that allow omitted finalized answers (`latest_selected_choice_id IS NULL`, `latest_is_correct = false`, `latest_answered_at IS NOT NULL`) while rejecting partial answered-choice metadata;
+   - selected-draft consistency checks that allow time-only drafts (`draft_selected_choice_id IS NULL`, `draft_saved_at IS NOT NULL`) while rejecting selected draft choices without a save timestamp;
    - unique constraints on `(practice_session_id, question_id)` and `(practice_session_id, position)`.
 4. Backfilled one state row per existing `params_json.questionIds` entry, using legacy parser defaults for missing state and clamping oversized `draftCumulativeMs`.
 5. Moved repository reads to load state rows and map them back into the unchanged domain `PracticeSession`.

@@ -515,7 +515,11 @@ describe('practice session question state normalization', () => {
     await expect(
       db
         .update(schema.practiceSessionQuestionStates)
-        .set({ latestSelectedChoiceId: secondQuestion.correctChoiceId })
+        .set({
+          latestSelectedChoiceId: secondQuestion.correctChoiceId,
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:10:00.000Z'),
+        })
         .where(
           and(
             eq(
@@ -531,6 +535,124 @@ describe('practice session question state normalization', () => {
     ).rejects.toMatchObject({
       cause: {
         code: '23503',
+      },
+    });
+  });
+
+  it('rejects answered choice state without correctness and answer timestamp metadata', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-state-latest-consistency-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessions = new DrizzlePracticeSessionRepository(db);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await expect(
+      db
+        .update(schema.practiceSessionQuestionStates)
+        .set({ latestSelectedChoiceId: question.correctChoiceId })
+        .where(
+          and(
+            eq(
+              schema.practiceSessionQuestionStates.practiceSessionId,
+              session.id,
+            ),
+            eq(schema.practiceSessionQuestionStates.questionId, question.id),
+          ),
+        ),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23514',
+      },
+    });
+  });
+
+  it('allows omitted finalized state without a selected latest choice', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-state-omitted-consistency-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessions = new DrizzlePracticeSessionRepository(db);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+    const answeredAt = new Date('2026-02-01T00:12:00.000Z');
+
+    await expect(
+      db
+        .update(schema.practiceSessionQuestionStates)
+        .set({
+          latestSelectedChoiceId: null,
+          latestIsCorrect: false,
+          latestAnsweredAt: answeredAt,
+        })
+        .where(
+          and(
+            eq(
+              schema.practiceSessionQuestionStates.practiceSessionId,
+              session.id,
+            ),
+            eq(schema.practiceSessionQuestionStates.questionId, question.id),
+          ),
+        ),
+    ).resolves.toBeDefined();
+  });
+
+  it('rejects selected draft choice state without a draft save timestamp', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-state-draft-consistency-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessions = new DrizzlePracticeSessionRepository(db);
+    const session = await sessions.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    await expect(
+      db
+        .update(schema.practiceSessionQuestionStates)
+        .set({ draftSelectedChoiceId: question.correctChoiceId })
+        .where(
+          and(
+            eq(
+              schema.practiceSessionQuestionStates.practiceSessionId,
+              session.id,
+            ),
+            eq(schema.practiceSessionQuestionStates.questionId, question.id),
+          ),
+        ),
+    ).rejects.toMatchObject({
+      cause: {
+        code: '23514',
       },
     });
   });

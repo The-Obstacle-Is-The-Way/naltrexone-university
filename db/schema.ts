@@ -449,6 +449,10 @@ export const PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_QUESTION_FK =
   'practice_session_question_states_latest_choice_question_fk';
 export const PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_QUESTION_FK =
   'practice_session_question_states_draft_choice_question_fk';
+export const PRACTICE_SESSION_QUESTION_STATES_LATEST_ANSWER_CHK =
+  'practice_session_question_states_latest_answer_chk';
+export const PRACTICE_SESSION_QUESTION_STATES_DRAFT_SAVED_CHK =
+  'practice_session_question_states_draft_saved_chk';
 
 export const practiceSessionQuestionStates = pgTable(
   'practice_session_question_states',
@@ -500,6 +504,15 @@ export const practiceSessionQuestionStates = pgTable(
     draftCumulativeMsChk: check(
       'practice_session_question_states_draft_cumulative_ms_chk',
       sql`${t.draftCumulativeMs} BETWEEN 0 AND 86400000`,
+    ),
+    latestAnswerChk: check(
+      PRACTICE_SESSION_QUESTION_STATES_LATEST_ANSWER_CHK,
+      sql`(${t.latestIsCorrect} IS NULL) = (${t.latestAnsweredAt} IS NULL)
+          AND (${t.latestSelectedChoiceId} IS NULL OR (${t.latestIsCorrect} IS NOT NULL AND ${t.latestAnsweredAt} IS NOT NULL))`,
+    ),
+    draftSavedChk: check(
+      PRACTICE_SESSION_QUESTION_STATES_DRAFT_SAVED_CHK,
+      sql`${t.draftSelectedChoiceId} IS NULL OR ${t.draftSavedAt} IS NOT NULL`,
     ),
     positionChk: check(
       'practice_session_question_states_position_chk',
