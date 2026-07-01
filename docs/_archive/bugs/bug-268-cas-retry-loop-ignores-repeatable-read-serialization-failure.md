@@ -1,8 +1,9 @@
 # BUG-268: CAS retry loop in `updatePracticeSessionQuestionState` doesn't catch Postgres serialization failures once the write transaction runs REPEATABLE READ
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P1
 **Date:** 2026-07-01
+**Resolved:** 2026-07-01
 
 ---
 
@@ -27,19 +28,26 @@ In both cases, the finalize/submit call surfaces a raw `PostgresError` (`40001`)
 
 ## Resolution
 
-Handle `40001` / `40P01` at the transaction boundary that owns the fixed snapshot, not only inside the per-row updater. PostgreSQL requires retrying the complete transaction, including the application logic that chose which SQL and values to issue. A local catch inside `updatePracticeSessionQuestionState` can map direct top-level repository-call failures, but it cannot make nested REPEATABLE READ retries fresh because every savepoint shares the outer transaction's old snapshot.
+Fixed on `chore/legacy-audit` before PR #537 merged. `lib/container/use-cases.ts` now owns a bounded composition-root helper for the two practice-session-state write transactions (`FinalizeExamAnswersUseCase` and session-backed `SubmitAnswerUseCase`):
 
-The clean fix is a composition-root transaction helper for the two practice-session-state write transactions in `lib/container/use-cases.ts` that either retries the entire outer transaction callback on retryable serialization/deadlock failures or deliberately maps those failures to a clean `ApplicationError('CONFLICT' | 'INTERNAL_ERROR', ...)` if retrying a specific use case is judged unsafe. Sequence this with DEBT-426 because both touch the same lock/transaction-shape surface.
+- The helper opens the outer transaction at `{ isolationLevel: 'repeatable read' }`, preserving the BUG-267 fix.
+- It catches retryable Postgres transaction failures (`40001` serialization failure and `40P01` deadlock), then reruns the entire write-transaction callback in a fresh top-level transaction/snapshot, up to 3 attempts.
+- If all retry attempts fail, it maps the last retryable database error to `ApplicationError('CONFLICT', 'Practice session state changed concurrently; please retry.')` with the original error preserved as `cause`, so raw driver errors no longer escape the use case.
+- It deliberately does **not** change `updatePracticeSessionQuestionState`'s local zero-row CAS retry loop. That loop remains correct for top-level READ COMMITTED calls such as mark-for-review; nested REPEATABLE READ conflicts are handled at the owning transaction boundary.
+
+Side-effect audit before choosing auto-retry: both affected callbacks perform only database reads/writes inside the transaction. Attempt inserts, question-state writes, and session-end writes roll back with the aborted transaction; no email, Stripe, logging, or other non-idempotent external side effect runs inside the retried callback.
 
 ## Verification
 
-An integration test that starts a REPEATABLE READ write transaction wrapping two concurrent CAS attempts on the same `practice_session_question_states` row (one committing before the other's UPDATE executes) should observe the losing writer get a handled application outcome — either a successful full-transaction retry or a clean `ApplicationError` — not an uncaught `postgres` `40001` exception. Add a companion finalize-shaped test for the invalidated BUG-269 window so the stale-snapshot trigger is covered as a BUG-268 serialization-failure regression, not refiled as silent data loss.
+- [x] `lib/container.test.ts` covers both affected write-transaction wirings: finalize retries after a synthetic `40001`, session-backed submit retries after a synthetic `40P01`, and exhausted retryable failures map to `ApplicationError('CONFLICT')` with the original cause.
+- [x] `tests/integration/bug-regression-practice-session-transaction-isolation.integration.test.ts` uses two real Postgres connections. The first session-backed submit transaction takes a REPEATABLE READ snapshot, a second connection commits a concurrent `practice_session_question_states` update, the first attempt hits the real `40001` path, and the composition-root helper retries the full callback so the submit resolves and preserves the concurrent `markedForReview` state.
+- [x] Focused runs: `pnpm test --run lib/container.test.ts`; `pnpm test --run scripts/seed-helpers.test.ts scripts/seed.test.ts lib/container.test.ts`; `DATABASE_URL=<local-test-db> pnpm test:integration -- tests/integration/bug-regression-seed-choice-sync.integration.test.ts tests/integration/bug-regression-practice-session-transaction-isolation.integration.test.ts`.
 
 ## Related
 
-- PR #537, [BUG-267 (archived)](../_archive/bugs/bug-267-nested-repeatable-read-silently-drops-isolation.md)
-- [BUG-269 (invalidated)](../_archive/bugs/bug-269-finalize-exam-stale-snapshot-clobbers-concurrent-draft-save.md) — its stale finalize window is a trigger for this bug, not an independent silent-clobber defect under current HEAD
-- [DEBT-426](../debt/debt-426-session-wide-lock-defeats-row-concurrency.md) — same lock/transaction-shape surface, sequence any redesign together
+- PR #537, [BUG-267 (archived)](./bug-267-nested-repeatable-read-silently-drops-isolation.md)
+- [BUG-269 (invalidated)](./bug-269-finalize-exam-stale-snapshot-clobbers-concurrent-draft-save.md) — its stale finalize window is a trigger for this bug, not an independent silent-clobber defect under current HEAD
+- [DEBT-426](../../debt/debt-426-session-wide-lock-defeats-row-concurrency.md) — same lock/transaction-shape surface, sequence any future lock redesign with this retry boundary
 - `src/adapters/repositories/practice-session-question-state-updater.ts:146-211`
 - `lib/container/use-cases.ts` (`PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG`)
 - Found via a systematic post-fix transaction/locking audit (2026-07-01), independently re-verified by reading the actual code (not the audit agent's summary alone)

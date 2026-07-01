@@ -21,7 +21,7 @@ Line-level verification:
 3. However, the repository write is executed through `updatePracticeSessionQuestionState`, whose nested transaction is a savepoint under the outer `REPEATABLE READ` transaction. It reads the old row version from the fixed snapshot and then tries to update that same stale version (`src/adapters/repositories/practice-session-question-state-updater.ts:151-189`).
 4. PostgreSQL's `REPEATABLE READ` semantics make that stale write fail with `40001` if another transaction committed a change to the target row after the snapshot started. That means the failure mode is a raw serialization failure, not silent answer loss.
 
-The exact concurrent-draft-save race described here is therefore a useful reachable trigger for [BUG-268](../../bugs/bug-268-cas-retry-loop-ignores-repeatable-read-serialization-failure.md), not an independent active data-loss bug.
+The exact concurrent-draft-save race described here is therefore a useful reachable trigger for [BUG-268](./bug-268-cas-retry-loop-ignores-repeatable-read-serialization-failure.md), not an independent active data-loss bug.
 
 ## Residual Note
 

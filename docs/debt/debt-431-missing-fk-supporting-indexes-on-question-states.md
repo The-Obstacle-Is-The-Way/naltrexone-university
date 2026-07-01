@@ -14,7 +14,7 @@ Missing FK-supporting indexes on the *referencing* side matter specifically beca
 
 ## Impact
 
-Every content-sync choice deletion (`scripts/seed/question-syncer.ts:199-203`, and its reference-check query at ~lines 142-167 that now also queries this table per BUG-266's fix) forces a full sequential scan of `practice_session_question_states` to determine whether a candidate choice is still referenced. This is currently cheap only because the table is small (0 production sessions per DEBT-425); it will degrade linearly as real session volume accumulates, and it directly widens the practical blast radius of [BUG-270](../bugs/bug-270-seed-choice-resort-can-violate-sort-order-unique-index.md)'s failure mode by making every seed run's reference-check step slower than necessary on a growing table.
+Every content-sync choice deletion (`scripts/seed/question-syncer.ts:199-203`, and its reference-check query at ~lines 142-167 that now also queries this table per BUG-266's fix) forces a full sequential scan of `practice_session_question_states` to determine whether a candidate choice is still referenced. This is currently cheap only because the table is small (0 production sessions per DEBT-425); it will degrade linearly as real session volume accumulates, and it directly widens the practical blast radius of [BUG-270](../_archive/bugs/bug-270-seed-choice-resort-can-violate-sort-order-unique-index.md)'s failure mode by making every seed run's reference-check step slower than necessary on a growing table.
 
 ## Resolution
 
@@ -26,6 +26,6 @@ Add supporting indexes: one on `question_id` alone (or confirm the composite FK'
 
 ## Related
 
-- PR #537, [BUG-270](../bugs/bug-270-seed-choice-resort-can-violate-sort-order-unique-index.md), [BUG-266 (archived)](../_archive/bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md)
+- PR #537, [BUG-270 (archived)](../_archive/bugs/bug-270-seed-choice-resort-can-violate-sort-order-unique-index.md), [BUG-266 (archived)](../_archive/bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md)
 - `db/schema.ts:457-495`
 - Found via a systematic migration schema-evolution audit (2026-07-01), independently re-verified against the current schema definition

@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { sql as drizzleSql } from 'drizzle-orm';
+import { and, sql as drizzleSql, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import * as schema from '@/db/schema';
 import { createContainer } from '@/lib/container';
+import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   cleanupAfterEach,
@@ -14,6 +17,7 @@ import {
 } from './helpers';
 
 const { db, sql } = createIntegrationDb();
+const concurrent = createIntegrationDb();
 const cleanup = createCleanupState();
 
 afterEach(async () => {
@@ -21,6 +25,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
+  await closeConnection(concurrent.sql);
   await closeConnection(sql);
 });
 
@@ -98,5 +103,129 @@ describe('BUG-267 practice-session transaction isolation', () => {
 
     expect(observedIsolationLevels).toContain('repeatable read');
     expect(observedIsolationLevels).not.toContain('read committed');
+  });
+});
+
+describe('BUG-268 practice-session repeatable-read transaction retries', () => {
+  it('retries the full session-backed submit transaction after a serialization failure', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-submit-serialization-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessionRepository = new DrizzlePracticeSessionRepository(db);
+    const session = await sessionRepository.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+    let conflictInjected = false;
+
+    const createPracticeSessionRepository = (
+      dbOverride?: DrizzleDb,
+    ): PracticeSessionRepository => {
+      const repo = new DrizzlePracticeSessionRepository(dbOverride ?? db);
+      return new Proxy(repo, {
+        get(target, property, receiver) {
+          if (property !== 'recordQuestionAnswer') {
+            return Reflect.get(target, property, receiver);
+          }
+
+          return async (
+            input: Parameters<
+              PracticeSessionRepository['recordQuestionAnswer']
+            >[0],
+          ) => {
+            if (dbOverride && !conflictInjected) {
+              conflictInjected = true;
+              await concurrent.db
+                .update(schema.practiceSessionQuestionStates)
+                .set({
+                  markedForReview: true,
+                  version: drizzleSql`${schema.practiceSessionQuestionStates.version} + 1`,
+                  updatedAt: new Date('2026-06-30T12:05:00.000Z'),
+                })
+                .where(
+                  and(
+                    eq(
+                      schema.practiceSessionQuestionStates.practiceSessionId,
+                      session.id,
+                    ),
+                    eq(
+                      schema.practiceSessionQuestionStates.questionId,
+                      question.id,
+                    ),
+                  ),
+                );
+            }
+
+            return target.recordQuestionAnswer(input);
+          };
+        },
+      }) as PracticeSessionRepository;
+    };
+
+    const container = createContainer({
+      primitives: {
+        db,
+        env: {
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+          STRIPE_WEBHOOK_SECRET: 'whsec',
+          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
+        } as unknown as typeof import('@/lib/env').env,
+        logger:
+          new FakeLogger() as unknown as typeof import('@/lib/logger').logger,
+        getStripe: () =>
+          ({}) as unknown as ReturnType<
+            typeof import('@/lib/stripe').getStripe
+          >,
+        now: () => new Date('2026-06-30T12:06:00.000Z'),
+      },
+      repositories: {
+        createPracticeSessionRepository,
+      },
+    });
+
+    await expect(
+      container.createSubmitAnswerUseCase().execute({
+        userId: user.id,
+        sessionId: session.id,
+        questionId: question.id,
+        choiceId: question.correctChoiceId,
+      }),
+    ).resolves.toMatchObject({
+      isCorrect: true,
+      correctChoiceId: question.correctChoiceId,
+    });
+
+    const [state] = await db
+      .select({
+        markedForReview: schema.practiceSessionQuestionStates.markedForReview,
+        latestSelectedChoiceId:
+          schema.practiceSessionQuestionStates.latestSelectedChoiceId,
+      })
+      .from(schema.practiceSessionQuestionStates)
+      .where(
+        and(
+          eq(
+            schema.practiceSessionQuestionStates.practiceSessionId,
+            session.id,
+          ),
+          eq(schema.practiceSessionQuestionStates.questionId, question.id),
+        ),
+      );
+
+    expect(conflictInjected).toBe(true);
+    expect(state).toEqual({
+      markedForReview: true,
+      latestSelectedChoiceId: question.correctChoiceId,
+    });
   });
 });
