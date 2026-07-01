@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { and, asc, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
@@ -15,6 +16,7 @@ import {
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
+const LOCK_WAIT_TIMEOUT_MS = 5_000;
 
 afterEach(async () => {
   await cleanupAfterEach(db, cleanup);
@@ -127,6 +129,40 @@ function buildSeedQuestionWithInvalidTag(slug: string): string {
   ].join('\n');
 }
 
+function createDeferred<T = void>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
+}
+
+async function waitForBlockedQuestionUpdate(input: {
+  monitorSql: typeof sql;
+  blockerPid: number;
+}): Promise<void> {
+  const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const rows = await input.monitorSql<{ count: number }[]>`
+      SELECT count(*)::int AS count
+      FROM pg_stat_activity
+      WHERE wait_event_type = 'Lock'
+        AND query ILIKE '%update "questions"%'
+        AND ${input.blockerPid} = ANY(pg_blocking_pids(pid))
+    `;
+    if ((rows.at(0)?.count ?? 0) > 0) {
+      return;
+    }
+    await sleep(25);
+  }
+
+  throw new Error(
+    'Timed out waiting for seed sync to block on question update',
+  );
+}
+
 describe('BUG-266 seed choice sync guard', () => {
   it('refuses to delete a choice referenced only by normalized practice-session draft state', async () => {
     const user = await createUser(db, cleanup);
@@ -174,6 +210,71 @@ describe('BUG-266 seed choice sync guard', () => {
     ).rejects.toThrow(
       `Refusing to delete choice ${question.incorrectChoiceId} (A) because it is referenced by an attempt or practice session state`,
     );
+  });
+
+  it('reports the domain guard when a choice becomes referenced after the preflight check but before delete', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-seed-choice-sync-race-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const { sql: blockerSql } = createIntegrationDb();
+    const { db: writerDb, sql: writerSql } = createIntegrationDb();
+    const { sql: monitorSql } = createIntegrationDb();
+    const lockReady = createDeferred<number>();
+    const releaseLock = createDeferred();
+
+    const blocker = blockerSql.begin(async (tx) => {
+      const [backend] = await tx<{ pid: number }[]>`
+        SELECT pg_backend_pid()::int AS pid
+      `;
+      await tx`
+        SELECT id
+        FROM questions
+        WHERE id = ${question.id}
+        FOR NO KEY UPDATE
+      `;
+      lockReady.resolve(backend?.pid ?? 0);
+      await releaseLock.promise;
+    });
+
+    const blockerPid = await lockReady.promise;
+    const syncPromise = syncQuestionsFromFiles(db, [
+      {
+        absolutePath: `${question.slug}.mdx`,
+        raw: buildSeedQuestionWithRemovedChoice(question.slug),
+      },
+    ]);
+
+    try {
+      await waitForBlockedQuestionUpdate({
+        monitorSql,
+        blockerPid,
+      });
+
+      await writerDb.insert(schema.attempts).values({
+        userId: user.id,
+        questionId: question.id,
+        selectedChoiceId: question.incorrectChoiceId,
+        isCorrect: false,
+        isOmitted: false,
+        timeSpentSeconds: 1,
+      });
+
+      releaseLock.resolve();
+
+      await expect(syncPromise).rejects.toThrow(
+        `Refusing to delete choice ${question.incorrectChoiceId} (A) because it is referenced by an attempt or practice session state`,
+      );
+    } finally {
+      releaseLock.resolve();
+      await blocker;
+      await syncPromise.catch(() => undefined);
+      await closeConnection(blockerSql);
+      await closeConnection(writerSql);
+      await closeConnection(monitorSql);
+    }
   });
 });
 

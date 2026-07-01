@@ -45,8 +45,11 @@ const RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES = new Set([
 ]);
 
 function isRetryablePracticeSessionStateWriteFailure(error: unknown): boolean {
-  if (error instanceof ApplicationError) return false;
-  const code = getPostgresErrorCode(error);
+  const postgresError =
+    error instanceof ApplicationError
+      ? (error as { cause?: unknown }).cause
+      : error;
+  const code = getPostgresErrorCode(postgresError);
   return (
     code !== null && RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES.has(code)
   );

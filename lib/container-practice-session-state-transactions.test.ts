@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
@@ -157,6 +158,40 @@ describe('container factories — practice session state write transactions', ()
     const transaction = vi.fn<TestTransaction>(async (fn) => {
       if (transaction.mock.calls.length === 1) {
         throw serializationFailure;
+      }
+      return fn(tx);
+    });
+
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+
+    await expect(
+      container.createFinalizeExamAnswersUseCase().execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+      }),
+    ).resolves.toMatchObject({ sessionId: fixture.sessionId });
+
+    expect(transaction).toHaveBeenCalledTimes(2);
+    expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
+  });
+
+  it('retries finalize exam write transactions when a retryable failure is wrapped in ApplicationError', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const tx = createUnexpectedNestedTransactionDb();
+    const serializationFailure = { code: '40001' };
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      if (transaction.mock.calls.length === 1) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          'Failed to insert attempt',
+          undefined,
+          { cause: serializationFailure },
+        );
       }
       return fn(tx);
     });

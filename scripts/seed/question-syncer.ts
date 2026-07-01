@@ -166,68 +166,7 @@ export async function syncQuestionsFromFiles(
       const deleteCandidates = existingChoices.filter(
         (choice) => !desiredLabels.has(choice.label),
       );
-
-      let referencedChoiceIds: ReadonlySet<string> = new Set();
-      if (deleteCandidates.length > 0) {
-        const deleteCandidateIds = deleteCandidates.map((choice) => choice.id);
-
-        const attemptRows = await db
-          .select({ selectedChoiceId: schema.attempts.selectedChoiceId })
-          .from(schema.attempts)
-          .where(
-            and(
-              eq(schema.attempts.questionId, existingQuestion.id),
-              inArray(schema.attempts.selectedChoiceId, deleteCandidateIds),
-            ),
-          );
-
-        const stateRows = await db
-          .select({
-            latestSelectedChoiceId:
-              schema.practiceSessionQuestionStates.latestSelectedChoiceId,
-            draftSelectedChoiceId:
-              schema.practiceSessionQuestionStates.draftSelectedChoiceId,
-          })
-          .from(schema.practiceSessionQuestionStates)
-          .where(
-            and(
-              eq(
-                schema.practiceSessionQuestionStates.questionId,
-                existingQuestion.id,
-              ),
-              or(
-                inArray(
-                  schema.practiceSessionQuestionStates.latestSelectedChoiceId,
-                  deleteCandidateIds,
-                ),
-                inArray(
-                  schema.practiceSessionQuestionStates.draftSelectedChoiceId,
-                  deleteCandidateIds,
-                ),
-              ),
-            ),
-          );
-
-        referencedChoiceIds = computeReferencedChoiceIds({
-          attemptRows,
-          stateRows,
-        });
-      }
-
-      const { deleteChoiceIds } = computeChoiceSyncPlan({
-        existingChoices: existingChoices.map((choice) => ({
-          id: choice.id,
-          label: choice.label,
-        })),
-        desiredChoices: seedFromFile.choices.map((choice) => ({
-          label: choice.label,
-        })),
-        referencedChoiceIds,
-      });
-      const deleteChoiceIdSet = new Set(deleteChoiceIds);
-      const survivingChoices = existingChoices
-        .filter((choice) => !deleteChoiceIdSet.has(choice.id))
-        .map((choice) => ({ id: choice.id, sortOrder: choice.sortOrder }));
+      const deleteCandidateIds = deleteCandidates.map((choice) => choice.id);
 
       await db.transaction(async (tx) => {
         await tx
@@ -241,6 +180,72 @@ export async function syncQuestionsFromFiles(
             updatedAt: new Date(),
           })
           .where(eq(schema.questions.id, existingQuestion.id));
+
+        let referencedChoiceIds: ReadonlySet<string> = new Set();
+        if (deleteCandidateIds.length > 0) {
+          await tx
+            .select({ id: schema.choices.id })
+            .from(schema.choices)
+            .where(inArray(schema.choices.id, deleteCandidateIds))
+            .for('update');
+
+          const attemptRows = await tx
+            .select({ selectedChoiceId: schema.attempts.selectedChoiceId })
+            .from(schema.attempts)
+            .where(
+              and(
+                eq(schema.attempts.questionId, existingQuestion.id),
+                inArray(schema.attempts.selectedChoiceId, deleteCandidateIds),
+              ),
+            );
+
+          const stateRows = await tx
+            .select({
+              latestSelectedChoiceId:
+                schema.practiceSessionQuestionStates.latestSelectedChoiceId,
+              draftSelectedChoiceId:
+                schema.practiceSessionQuestionStates.draftSelectedChoiceId,
+            })
+            .from(schema.practiceSessionQuestionStates)
+            .where(
+              and(
+                eq(
+                  schema.practiceSessionQuestionStates.questionId,
+                  existingQuestion.id,
+                ),
+                or(
+                  inArray(
+                    schema.practiceSessionQuestionStates.latestSelectedChoiceId,
+                    deleteCandidateIds,
+                  ),
+                  inArray(
+                    schema.practiceSessionQuestionStates.draftSelectedChoiceId,
+                    deleteCandidateIds,
+                  ),
+                ),
+              ),
+            );
+
+          referencedChoiceIds = computeReferencedChoiceIds({
+            attemptRows,
+            stateRows,
+          });
+        }
+
+        const { deleteChoiceIds } = computeChoiceSyncPlan({
+          existingChoices: existingChoices.map((choice) => ({
+            id: choice.id,
+            label: choice.label,
+          })),
+          desiredChoices: seedFromFile.choices.map((choice) => ({
+            label: choice.label,
+          })),
+          referencedChoiceIds,
+        });
+        const deleteChoiceIdSet = new Set(deleteChoiceIds);
+        const survivingChoices = existingChoices
+          .filter((choice) => !deleteChoiceIdSet.has(choice.id))
+          .map((choice) => ({ id: choice.id, sortOrder: choice.sortOrder }));
 
         if (deleteChoiceIds.length > 0) {
           await tx
