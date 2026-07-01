@@ -61,6 +61,20 @@ export function computeChoiceSyncPlan(input: {
   return { deleteChoiceIds };
 }
 
+export function computeTemporarySortOrders(
+  existingChoices: ReadonlyArray<{ id: string; sortOrder: number }>,
+): Array<{ id: string; sortOrder: number }> {
+  if (existingChoices.length === 0) return [];
+
+  const firstTemporarySortOrder =
+    Math.min(0, ...existingChoices.map((choice) => choice.sortOrder)) - 1;
+
+  return existingChoices.map((choice, index) => ({
+    id: choice.id,
+    sortOrder: firstTemporarySortOrder - index,
+  }));
+}
+
 const WRONG_ANSWERS_HEADING_PATTERN =
   /^\s*(?:\*\*|__)?\s*Why other answers are wrong\s*:?\s*(?:\*\*|__)?\s*$/i;
 const SECTION_HEADING_PATTERN = /^\s*#{1,6}\s+\S+/;

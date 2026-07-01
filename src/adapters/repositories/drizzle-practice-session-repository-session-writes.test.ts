@@ -5,7 +5,10 @@ import {
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
-import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
+import {
+  expectStateSelectPredicate,
+  restoreDrizzlePracticeSessionRepositoryTestMocks,
+} from './drizzle-practice-session-repository-test-helpers';
 
 const sessionId = crypto.randomUUID();
 const userId = crypto.randomUUID();
@@ -55,12 +58,20 @@ function createStateRow(
   };
 }
 
-function createStateSelect(rows: readonly StateRow[]) {
+function createStateSelect(
+  rows: readonly StateRow[],
+  expectedSessionIds: readonly string[] = rows.map(
+    (row) => row.practiceSessionId,
+  ),
+) {
   return vi.fn(() => ({
     from: () => ({
-      where: () => ({
-        orderBy: async () => rows,
-      }),
+      where: (predicate: unknown) => {
+        expectStateSelectPredicate(predicate, expectedSessionIds);
+        return {
+          orderBy: async () => rows,
+        };
+      },
     }),
   }));
 }

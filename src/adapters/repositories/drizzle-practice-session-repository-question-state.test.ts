@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
-import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
+import {
+  collectColumnNames,
+  collectPrimitiveValues,
+  restoreDrizzlePracticeSessionRepositoryTestMocks,
+} from './drizzle-practice-session-repository-test-helpers';
 
 const sessionId = crypto.randomUUID();
 const userId = crypto.randomUUID();
@@ -53,48 +57,6 @@ function createStateRow(
     createdAt: input.createdAt ?? now,
     updatedAt: input.updatedAt ?? now,
   };
-}
-
-function collectColumnNames(
-  value: unknown,
-  seen = new Set<object>(),
-): string[] {
-  if (typeof value !== 'object' || value === null || seen.has(value)) return [];
-  seen.add(value);
-
-  const maybeColumn = value as { name?: unknown; columnType?: unknown };
-  const ownName =
-    typeof maybeColumn.name === 'string' &&
-    typeof maybeColumn.columnType === 'string'
-      ? [maybeColumn.name]
-      : [];
-
-  return [
-    ...ownName,
-    ...Reflect.ownKeys(value).flatMap((key) =>
-      collectColumnNames((value as Record<PropertyKey, unknown>)[key], seen),
-    ),
-  ];
-}
-
-function collectPrimitiveValues(
-  value: unknown,
-  seen = new Set<object>(),
-): Array<string | number | boolean | null> {
-  if (
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  ) {
-    return [value];
-  }
-  if (typeof value !== 'object' || seen.has(value)) return [];
-  seen.add(value);
-
-  return Reflect.ownKeys(value).flatMap((key) =>
-    collectPrimitiveValues((value as Record<PropertyKey, unknown>)[key], seen),
-  );
 }
 
 function expectSqlIncrementExpression(value: unknown) {
@@ -526,7 +488,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     expect(updateReturning).toHaveBeenCalledTimes(2);
   });
 
-  it('throws INTERNAL_ERROR when all version retries are exhausted', async () => {
+  it('throws CONFLICT when all version retries are exhausted', async () => {
     const snapshot = createStateRow({
       questionId: firstQuestionId,
       position: 0,
@@ -557,7 +519,10 @@ describe('DrizzlePracticeSessionRepository question state', () => {
         isCorrect: true,
         answeredAt: new Date('2026-02-01T00:10:00.000Z'),
       }),
-    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session state changed concurrently; please retry.',
+    });
 
     expect(updateReturning).toHaveBeenCalledTimes(3);
   });

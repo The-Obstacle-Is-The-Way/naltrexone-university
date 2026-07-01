@@ -9,6 +9,7 @@ import {
 import {
   computeChoiceSyncPlan,
   computeReferencedChoiceIds,
+  computeTemporarySortOrders,
 } from '../seed-helpers';
 import type { SeedSourceFile } from './file-reader';
 import { buildSeedRepFromDb, parseSeedQuestionFile } from './question-parser';
@@ -48,15 +49,10 @@ async function moveExistingChoicesToTemporarySortOrders(
   tx: PostgresJsDatabase<typeof schema>,
   existingChoices: ReadonlyArray<{ id: string; sortOrder: number }>,
 ): Promise<void> {
-  if (existingChoices.length === 0) return;
-
-  const firstTemporarySortOrder =
-    Math.min(0, ...existingChoices.map((choice) => choice.sortOrder)) - 1;
-
-  for (const [index, choice] of existingChoices.entries()) {
+  for (const choice of computeTemporarySortOrders(existingChoices)) {
     await tx
       .update(schema.choices)
-      .set({ sortOrder: firstTemporarySortOrder - index })
+      .set({ sortOrder: choice.sortOrder })
       .where(eq(schema.choices.id, choice.id));
   }
 }

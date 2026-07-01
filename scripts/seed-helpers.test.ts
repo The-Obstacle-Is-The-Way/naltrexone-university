@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   computeChoiceSyncPlan,
   computeReferencedChoiceIds,
+  computeTemporarySortOrders,
   parseExplanationAndReference,
 } from './seed-helpers';
 
@@ -98,6 +99,38 @@ describe('computeChoiceSyncPlan', () => {
     });
 
     expect(plan.deleteChoiceIds).toEqual([]);
+  });
+});
+
+describe('computeTemporarySortOrders', () => {
+  it('moves existing choices below the current minimum sort order in stable order', () => {
+    const plans = computeTemporarySortOrders([
+      { id: 'choice-a', sortOrder: 10 },
+      { id: 'choice-b', sortOrder: 1 },
+      { id: 'choice-c', sortOrder: 3 },
+    ]);
+
+    expect(plans).toEqual([
+      { id: 'choice-a', sortOrder: -1 },
+      { id: 'choice-b', sortOrder: -2 },
+      { id: 'choice-c', sortOrder: -3 },
+    ]);
+  });
+
+  it('keeps temporary sort orders below zero when existing rows are already negative', () => {
+    const plans = computeTemporarySortOrders([
+      { id: 'choice-a', sortOrder: -4 },
+      { id: 'choice-b', sortOrder: 2 },
+    ]);
+
+    expect(plans).toEqual([
+      { id: 'choice-a', sortOrder: -5 },
+      { id: 'choice-b', sortOrder: -6 },
+    ]);
+  });
+
+  it('returns no update plans when there are no existing choices', () => {
+    expect(computeTemporarySortOrders([])).toEqual([]);
   });
 });
 

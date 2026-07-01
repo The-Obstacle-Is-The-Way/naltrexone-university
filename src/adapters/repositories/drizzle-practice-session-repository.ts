@@ -379,7 +379,6 @@ export class DrizzlePracticeSessionRepository
         latestIsCorrect: input.isCorrect,
         latestAnsweredAt: input.answeredAt,
       }),
-      failureMessage: 'Failed to persist practice session answer state',
     });
   }
 
@@ -413,7 +412,6 @@ export class DrizzlePracticeSessionRepository
           draftCumulativeMs: input.cumulativeMs,
         };
       },
-      failureMessage: 'Failed to persist practice session draft answer state',
     });
   }
 
@@ -440,7 +438,6 @@ export class DrizzlePracticeSessionRepository
         draftSavedAt: null,
         draftCumulativeMs: 0,
       }),
-      failureMessage: 'Failed to finalize practice session draft answer state',
     });
   }
 
@@ -460,7 +457,6 @@ export class DrizzlePracticeSessionRepository
         ...current,
         markedForReview: input.markedForReview,
       }),
-      failureMessage: 'Failed to persist practice session review mark',
     });
   }
 

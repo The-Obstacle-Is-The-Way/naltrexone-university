@@ -141,7 +141,6 @@ export async function updatePracticeSessionQuestionState(input: {
   updateFn: (
     current: PracticeSessionQuestionState,
   ) => PracticeSessionQuestionState;
-  failureMessage: string;
 }): Promise<PracticeSessionQuestionState> {
   for (
     let attempt = 0;
@@ -207,5 +206,8 @@ export async function updatePracticeSessionQuestionState(input: {
   if (finalSnapshot.endedAt) {
     throw new ApplicationError('CONFLICT', 'Practice session already ended');
   }
-  throw new ApplicationError('INTERNAL_ERROR', input.failureMessage);
+  throw new ApplicationError(
+    'CONFLICT',
+    'Practice session state changed concurrently; please retry.',
+  );
 }
