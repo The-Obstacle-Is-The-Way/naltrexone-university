@@ -4,6 +4,7 @@
 **Priority:** P1
 **Date:** 2026-07-01
 **Resolved:** 2026-07-01
+**Scope:** Branch-local pre-merge defect in PR #537; fixed and verified before the Track A implementation shipped.
 
 ---
 
@@ -28,7 +29,7 @@ In both cases, the finalize/submit call surfaces a raw `PostgresError` (`40001`)
 
 ## Resolution
 
-Fixed on `chore/legacy-audit` before PR #537 merged. `lib/container/use-cases.ts` now owns a bounded composition-root helper for the two practice-session-state write transactions (`FinalizeExamAnswersUseCase` and session-backed `SubmitAnswerUseCase`):
+Fixed on `chore/legacy-audit` as a branch-local pre-merge blocker in PR #537. `lib/container/use-cases.ts` now owns a bounded composition-root helper for the two practice-session-state write transactions (`FinalizeExamAnswersUseCase` and session-backed `SubmitAnswerUseCase`):
 
 - The helper opens the outer transaction at `{ isolationLevel: 'repeatable read' }`, preserving the BUG-267 fix.
 - It catches retryable Postgres transaction failures (`40001` serialization failure and `40P01` deadlock), then reruns the entire write-transaction callback in a fresh top-level transaction/snapshot, up to 3 attempts.

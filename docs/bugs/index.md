@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-07-01 (**PR #537 Track A pre-merge blockers resolved, then a systematic post-fix sweep filed 3 more and one was invalidated on second-opinion verification** — BUG-265 remains archived as self-resolved by `aab81ca1` / migration `0024_needy_jimmy_woo.sql`; BUG-266 is fixed by extending the seed choice-deletion guard to normalized practice-session state references; BUG-267 is fixed by opening the composition-root practice-session-state write transactions at `repeatable read` and proving the real driver isolation. A follow-up DDIA-style audit of the same branch then filed BUG-268 (CAS retry loop doesn't handle `repeatable read` serialization failures), BUG-269 (stale finalize snapshot clobber) and BUG-270 (seed choice-reorder can violate the sort-order unique index and abort the rest of the seed batch). BUG-269 was invalidated against current HEAD: the stale window reaches BUG-268's raw `40001` failure mode under repeatable read, not silent data loss. BUG-268 and BUG-270 are now fixed and archived before PR #537 merged. Active Bugs: none. Next Bug ID BUG-271.)
+**Last Updated:** 2026-07-01 (**PR #537 Track A pre-merge blockers resolved, then a systematic post-fix sweep filed 3 more and one was invalidated on second-opinion verification** — BUG-265 remains archived as self-resolved by `aab81ca1` / migration `0024_needy_jimmy_woo.sql`; BUG-266 is fixed by extending the seed choice-deletion guard to normalized practice-session state references; BUG-267 is fixed by opening the composition-root practice-session-state write transactions at `repeatable read` and proving the real driver isolation. A follow-up DDIA-style audit of the same branch then filed BUG-268 (CAS retry loop doesn't handle `repeatable read` serialization failures), BUG-269 (stale finalize snapshot clobber) and BUG-270 (seed choice-reorder can violate the sort-order unique index and abort the rest of the seed batch). BUG-269 was invalidated against current HEAD: the stale window reaches BUG-268's raw `40001` failure mode under repeatable read, not silent data loss. BUG-268 and BUG-270 are now fixed and archived under the branch-local pre-merge convention below; none of BUG-265..270 shipped to users before resolution. Active Bugs: none. Next Bug ID BUG-271.)
 
 ---
 
@@ -12,6 +12,12 @@ Bug reports document issues discovered in the codebase along with their root cau
 1. **Issue Tracking** — Formal record of what went wrong and how it was fixed
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
+
+## Tracking Convention
+
+- Bugs discovered in shipped code stay active until their fix is merged and the required deploy or production proof is complete. Archived shipped-bug docs must not imply production verification until that proof exists.
+- Bugs discovered only on an unmerged implementation branch may be marked resolved and archived in the same PR once the fix is implemented, red-first regression coverage or equivalent focused proof is green, and the PR still goes through the normal CI and review gate before merge. These docs must state that the defect was branch-local or fixed before the branch shipped, so future readers do not mistake the archive for post-deploy proof.
+- Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
 **Next Bug ID:** BUG-271
 
@@ -295,7 +301,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Active Bugs
 
-**2026-07-01 — PR #537 Track A pre-merge blockers resolved:** the 2026-06-30 adversarial review filed BUG-265..267 against the unmerged practice-session normalization branch. BUG-265 was self-resolved before action and archived. BUG-266 and BUG-267 were independently confirmed, fixed with red-first tests, and archived before PR #537 merged: the seed syncer now guards normalized practice-session state choice references, and the composition-root practice-session-state write transactions now open at `repeatable read`.
+**2026-07-01 — PR #537 Track A pre-merge blockers resolved:** the 2026-06-30 adversarial review filed BUG-265..267 against the unmerged practice-session normalization branch. BUG-265 was self-resolved before action and archived. BUG-266 and BUG-267 were independently confirmed, fixed with red-first tests, and archived as branch-local pre-merge defects under the convention above: the seed syncer now guards normalized practice-session state choice references, and the composition-root practice-session-state write transactions now open at `repeatable read`.
 
 **2026-07-01 — Systematic post-fix DDIA-style sweep (schema/transaction/driver/consistency/seed/read-path, 6 parallel angles) filed 3 candidate bugs against unmerged PR #537; second-opinion verification kept 2 active and invalidated 1; both active bugs are now resolved:** run specifically because the BUG-267 fix (write transactions now opened at `repeatable read`) changes concurrency semantics for every write path sharing that transaction shape, and because the branch's size (8,000+ lines) warranted one more pass focused on database/ORM correctness before merge. Findings were independently re-verified by reading the actual code (retry loop, lock-acquisition order, upsert loop, migration SQL, schema indexes) rather than trusting audit-agent summaries as-is. BUG-269's stale-snapshot trace is real, but its active-bug conclusion was wrong under current repeatable-read semantics: the stale write fails with `40001`, making it a BUG-268 trigger rather than independent silent answer loss. BUG-268 is fixed by retrying the full composition-root practice-session-state write transaction on retryable `40001` / `40P01` failures and mapping exhausted retries to `ApplicationError('CONFLICT')`; BUG-270 is fixed by two-phasing seed choice sort-order updates through temporary negative slots while preserving fail-fast batch semantics with slug/path context.
 

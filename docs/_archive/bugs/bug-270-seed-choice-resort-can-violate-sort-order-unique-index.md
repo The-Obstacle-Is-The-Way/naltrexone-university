@@ -4,6 +4,7 @@
 **Priority:** P2
 **Date:** 2026-07-01
 **Resolved:** 2026-07-01
+**Scope:** Branch-local pre-merge defect in PR #537; fixed and verified before the Track A implementation shipped.
 
 ---
 
@@ -33,7 +34,7 @@ Because this happens inside `syncQuestionsFromFiles`'s per-file transaction with
 
 ## Resolution
 
-Fixed on `chore/legacy-audit` before PR #537 merged with option (a), the smaller reversible seed-pipeline change:
+Fixed on `chore/legacy-audit` as a branch-local pre-merge blocker in PR #537 with option (a), the smaller reversible seed-pipeline change:
 
 - For existing questions whose content hash changes, `syncQuestionsFromFiles(...)` computes stale choices as before and still refuses to delete referenced choices.
 - Inside the per-file transaction, after allowed stale-choice deletes, it moves all surviving existing choices for that question to temporary negative `sort_order` values lower than any currently stored value. This clears the positive `(question_id, sort_order)` collision space before the normal `(question_id, label)` upsert loop assigns final sort orders.

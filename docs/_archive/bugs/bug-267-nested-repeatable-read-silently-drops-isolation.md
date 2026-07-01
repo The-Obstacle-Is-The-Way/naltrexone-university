@@ -5,6 +5,7 @@
 **Date:** 2026-06-30
 **Confirmed:** 2026-06-30
 **Resolved:** 2026-07-01
+**Scope:** Branch-local pre-merge defect in PR #537; fixed and verified before the Track A implementation shipped.
 
 ---
 
