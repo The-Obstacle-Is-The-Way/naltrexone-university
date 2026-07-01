@@ -32,7 +32,7 @@ Implementation verified on 2026-06-29:
 - `src/adapters/repositories/drizzle-practice-session-repository.ts` creates session rows and state rows in one transaction, loads state rows ordered by `position`, and maps them back into the unchanged domain `PracticeSession`.
 - `src/adapters/repositories/practice-session-question-state-updater.ts` now performs row-level optimistic updates guarded by `id`, `version`, and an active owning session check. The BUG-188 raw-blob CAS path is gone.
 - `src/application/use-cases/start-practice-session.ts` no longer writes `questionStates` into `paramsJson`.
-- `src/application/use-cases/finalize-exam-answers.ts` no longer caps persisted draft state during finalization; persisted values are bounded by migration clamp plus the state-table CHECK. The final-flush input clamp remains because it is application input normalization before saving draft state.
+- `src/application/use-cases/finalize-exam-answers.ts` still clamps draft cumulative time when projecting session state to `timeSpentSeconds` and when merging the final flush with an existing draft. Track A retires the legacy JSON persistence reason for that cap in the Drizzle read path because normalized rows are backfilled/clamped and bounded by the state-table CHECK; the remaining clamp is application-level port/fake-safety normalization.
 
 Data proof, read-only queries against `.env.local`, Vercel Development, and Vercel Production on 2026-06-29:
 
@@ -59,7 +59,7 @@ Git archaeology:
 
 Decision:
 
-- **IMPLEMENTED:** optional blob `questionStates`, optional blob draft fields, and the oversized persisted-state finalization cap were retired by Track A normalization.
+- **IMPLEMENTED:** optional blob `questionStates` and optional blob draft fields were retired by Track A normalization. Oversized persisted JSON values are clamped during migration and new Drizzle-persisted state is bounded by the relational CHECK; finalization keeps a defensive application clamp for port/fake-backed session state.
 - **RETIRED:** BUG-188 raw-snapshot CAS. It was correct while mutable state lived in JSON, but Track A removes the blob-write bug class by moving concurrency to per-state-row `version` checks.
 
 ### 2. Oversized draft timing cap
@@ -71,11 +71,12 @@ Current code verified after Track A:
 - `src/application/use-cases/save-exam-draft-answer.ts:81-88` clamps non-controller callers.
 - `db/schema.ts` enforces persisted `draft_cumulative_ms` with a scalar CHECK.
 - `db/migrations/0021_flaky_domino.sql` clamps oversized legacy JSON values during backfill.
+- `src/application/use-cases/finalize-exam-answers.ts:79-82`, `:189-191`, and `:323-326` retain an application clamp before converting persisted or fake-backed draft state into `timeSpentSeconds` and before merging a final flush with existing draft time.
 - `tests/integration/practice-session-question-state-normalization.integration.test.ts` proves the backfill clamp and state-table CHECK.
 
 Original data proof found zero oversized persisted JSON values in Development and Production. Track A now enforces the persisted bound relationally.
 
-Decision: **IMPLEMENTED.** The persisted-state finalization cap was removed because no read path can now surface an unbounded persisted draft duration.
+Decision: **IMPLEMENTED.** Track A removed the legacy JSON persistence exposure by clamping existing values during backfill and enforcing the bound relationally for new Drizzle writes. The finalization use case deliberately keeps its clamp because the repository port and fakes can still supply domain-shaped session state outside the database CHECK boundary.
 
 ### 3. Stripe subscription reference fallback
 
@@ -301,7 +302,7 @@ Acceptance criteria:
 | BUG-188 raw-snapshot CAS | IMPLEMENTED/RETIRED | Correct while state lived in JSON; removed by Track A because row-level `version` updates retire the blob-CAS bug class. |
 | Missing `questionStates` tolerance | IMPLEMENTED/RETIRED | `params_json.questionStates` is no longer a state source; migration `0021_flaky_domino.sql` backfills relational state from legacy blobs. |
 | Missing draft-field tolerance | IMPLEMENTED/RETIRED | Draft fields are required scalar columns in `practice_session_question_states`; legacy missing fields are defaulted during backfill. |
-| Oversized `draftCumulativeMs` finalization cap | IMPLEMENTED/RETIRED | Legacy values are clamped during backfill; new persisted values are bounded by `practice_session_question_states_draft_cumulative_ms_chk`. |
+| Oversized `draftCumulativeMs` JSON persistence tolerance | IMPLEMENTED/RETIRED | Legacy JSON values are clamped during backfill; new Drizzle-persisted values are bounded by `practice_session_question_states_draft_cumulative_ms_chk`. The finalization use case still clamps port/fake-backed session state before converting draft milliseconds to seconds. |
 | Stripe root `subscription` fallback | KEEP-AREA | Essential external API compatibility; nested Clover shape merely has priority. |
 | NODE_ENV dev/prod guards | KEEP-AREA | Environment policy, not legacy cruft. |
 | Dormant light-mode infrastructure | KEEP-AREA | DEBT-421 reversible kill switch; explicitly preserved. |

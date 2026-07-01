@@ -8,7 +8,7 @@
 
 ## Description
 
-`toDomainQuestionState` (row → domain mapping for `practice_session_question_states`) is duplicated byte-for-byte between `practice-session-question-state-updater.ts` (lines 24-37) and `drizzle-practice-session-repository.ts` (lines 64-77). The `StateRow` type / `createStateRow()` fixture builder and the `collectColumnNames`/`collectPrimitiveValues` SQL-tree-walking test helpers are each independently duplicated across 3-4 test files (`drizzle-practice-session-repository-question-state.test.ts`, `-reads.test.ts`, `-session-writes.test.ts`, `practice-session-question-state-updater-lock.test.ts`) despite a shared `drizzle-practice-session-repository-test-helpers.ts` module already being imported by all of them for other shared concerns.
+`toDomainQuestionState` (row → domain mapping for `practice_session_question_states`) is duplicated byte-for-byte between `practice-session-question-state-updater.ts` (lines 24-37) and `drizzle-practice-session-repository.ts` (lines 64-77). Test helper duplication is also real but uneven: `StateRow` is duplicated across `drizzle-practice-session-repository-question-state.test.ts`, `-reads.test.ts`, and `-session-writes.test.ts`; `createStateRow()` is duplicated across those three files plus `practice-session-question-state-updater-lock.test.ts`; and `collectColumnNames` / `collectPrimitiveValues` are duplicated across `drizzle-practice-session-repository-question-state.test.ts` and `-reads.test.ts`. The three repository tests already import the shared `drizzle-practice-session-repository-test-helpers.ts` module for other shared concerns, while the lock test does not.
 
 ## Impact
 

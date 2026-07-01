@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-30 (**BUG-264 resolved + prod-verified** — stale independently keyed "Remove bookmark" surfaces could remove then re-add a bookmark because the server mutation toggled current state instead of applying an idempotent desired-state write. Fixed by replacing the toggle use case/controller with an idempotent `setBookmark` desired-state write (add/remove idempotent in both directions; remove no longer requires a published question; the bookmarks page and in-place practice/review surfaces send explicit bookmark intent); repository and port unchanged. Shipped via PR #540 (squash `ca17b5f6`) → promoted via PR #541 (merge `72dd2aff`); production deploy `dpl_22bpJvPoiZWKHZFPj6Dw1JioqdaG` (`72dd2aff`) verified READY (`addictionboards.com` HTTP 200, `/api/health` `{"ok":true,"db":true}`). Active Bugs register empty; Next Bug ID BUG-265.)
+**Last Updated:** 2026-06-30 (**PR #537 Track A pre-merge review filed BUG-265..267** — BUG-265 was confirmed self-resolved on the same unmerged branch by `aab81ca1` / migration `0024_needy_jimmy_woo.sql` plus follow-up doc clarification in `845e8abb`, and is archived. BUG-266 and BUG-267 remain active pre-merge blockers for PR #537: the seed choice-deletion guard does not account for normalized practice-session state choice references, and nested Drizzle postgres-js transactions ignore the requested `repeatable read` config. Active Bugs: BUG-266, BUG-267. Next Bug ID BUG-268.)
 
 ---
 
@@ -299,7 +299,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 | Bug | Severity | Component | Summary |
 |-----|----------|-----------|---------|
-| [BUG-266](./bug-266-practice-session-question-states-fk-breaks-content-sync.md) | P1 | Content seeding | New `ON DELETE RESTRICT` choice FKs from the question-state table break `pnpm db:seed` for any in-progress session with a draft/latest answer on a choice whose label changes — the seeder's safety check only guards `attempts`, not the new table |
+| [BUG-266](./bug-266-practice-session-question-states-fk-breaks-content-sync.md) | P1 | Content seeding | New `ON DELETE RESTRICT` choice FKs from the question-state table can break `pnpm db:seed` for an in-progress session with a draft-selected choice whose label changes; the existing seeder safety check only guards `attempts`, not normalized state rows. The same FK class also applies to latest-state rows if one references a stale choice without a matching attempt row. |
 | [BUG-267](./bug-267-nested-repeatable-read-silently-drops-isolation.md) | P2 | Practice session repository / concurrency | Nested `inRepeatableRead` silently drops its isolation-level config (drizzle-orm postgres-js driver limitation), reintroducing a torn-read race between session and question-state rows inside `FinalizeExamAnswersUseCase`; confirmed reachable because session discard hard-deletes active exam sessions |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)

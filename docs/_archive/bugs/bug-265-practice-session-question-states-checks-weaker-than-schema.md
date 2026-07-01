@@ -15,11 +15,11 @@ At branch head `6bc2bd99`, `db/schema.ts` declared two CHECK constraints on `pra
 
 ## Resolution
 
-This was independently caught and fixed on the same branch (`chore/legacy-audit`, PR #537) by commit `aab81ca1` ("Tighten practice state consistency checks"), which added `db/migrations/0024_needy_jimmy_woo.sql`. That migration drops both constraints, backfills the two edge-case row shapes that would otherwise violate the tightened checks (`latest_is_correct = false` when omitted-but-marked-correct; `draft_saved_at` backfilled when a draft exists with no saved timestamp), and re-adds both constraints with the full clause set matching `db/schema.ts`.
+This was independently caught and fixed on the same branch (`chore/legacy-audit`, PR #537) by commit `aab81ca1` ("Tighten practice state consistency checks"), which added `db/migrations/0024_needy_jimmy_woo.sql`. That migration drops both constraints, backfills the two edge-case row shapes that would otherwise violate the tightened checks (`latest_is_correct = false` when omitted-but-marked-correct; `draft_saved_at` backfilled when a draft exists with no saved timestamp), and re-adds both constraints with the same rendered SQL logic declared by `db/schema.ts`.
 
-Verified directly against branch head `845e8abb`: `db/schema.ts:508-518`'s `latestAnswerChk` and `draftSavedChk` clauses now match `0024_needy_jimmy_woo.sql`'s `ALTER TABLE ... ADD CONSTRAINT` clauses exactly, word for word. `db/migrations/meta/0024_snapshot.json` reflects the same, confirming no residual drift.
+Verified directly against branch head `845e8abb`: `db/schema.ts:508-518`'s `latestAnswerChk` and `draftSavedChk` clauses render to the same CHECK logic as `0024_needy_jimmy_woo.sql`'s final `ALTER TABLE ... ADD CONSTRAINT` clauses. `db/migrations/meta/0024_snapshot.json` reflects the same rendered constraint values, confirming no residual drift.
 
-This bug doc was filed against `6bc2bd99` during an independent review pass; by the time the doc was written, two further commits (`aab81ca1`, `845e8abb`) had already landed on the branch (from concurrent work on the same PR) that fixed the exact defect described. An independent adversarial second-opinion review (run immediately after this doc was filed) caught that the doc was stale relative to current head and flagged it for correction — confirmed correct on verification. No new fix work was required; the bug's underlying cause never shipped to `main`.
+This bug doc was filed against `6bc2bd99` during an independent review pass; by the time the doc was written, two further commits (`aab81ca1`, `845e8abb`) had already landed on the branch (from concurrent work on the same PR). `aab81ca1` fixed the exact defect described by adding migration `0024`; `845e8abb` clarified invariant docs/specs afterward. An independent adversarial second-opinion review (run immediately after this doc was filed) caught that the doc was stale relative to current head and flagged it for correction — confirmed correct on verification. No new fix work was required; the bug's underlying cause never shipped to `main`.
 
 ## Root Cause (original)
 
@@ -27,7 +27,7 @@ This bug doc was filed against `6bc2bd99` during an independent review pass; by 
 
 ## Verification
 
-- [x] `db/schema.ts` CHECK clauses confirmed byte-for-byte identical to `0024_needy_jimmy_woo.sql`'s final constraint clauses (manual diff, 2026-06-30)
+- [x] `db/schema.ts` CHECK clauses confirmed logically identical to `0024_needy_jimmy_woo.sql`'s final rendered constraint clauses (manual diff, 2026-06-30)
 - [x] `db/migrations/meta/0024_snapshot.json` reflects the same corrected constraints
 - [ ] `pnpm db:generate` re-run to confirm zero pending changes (not yet run as part of this correction — recommended before merge as a final sanity check)
 

@@ -8,14 +8,14 @@
 
 ## Description
 
-`db/migrations/0021_flaky_domino.sql` / `0022_confused_mandrill.sql` add `ON DELETE RESTRICT` composite FKs from `practice_session_question_states.latest_selected_choice_id` and `.draft_selected_choice_id` to `choices(id, question_id)`. `scripts/seed/question-syncer.ts`'s existing choice-deletion safety check (lines ~121-144) only queries `attempts.selectedChoiceId` to decide which stale choices are "referenced" and must not be deleted. It has no knowledge of the new table, so it does not protect against this new FK.
+`db/migrations/0021_flaky_domino.sql` / `0022_confused_mandrill.sql` add `ON DELETE RESTRICT` FKs from `practice_session_question_states.latest_selected_choice_id` and `.draft_selected_choice_id` to choices, ending as composite references to `choices(id, question_id)`. `scripts/seed/question-syncer.ts`'s existing choice-deletion safety check (lines ~121-144) only queries `attempts.selectedChoiceId` to decide which stale choices are "referenced" and must not be deleted. It has no knowledge of the new table, so it does not protect against normalized-state-only choice references. The common reachable case is an in-progress exam draft (`draft_selected_choice_id`) before any attempt row exists; `latest_selected_choice_id` has the same FK class and is only missed when a latest-state row exists without a corresponding attempt reference.
 
 ## Steps to Reproduce
 
 1. A user starts a practice/exam session and selects (drafts) an answer for question Q, choice C, without submitting it — `practice_session_question_states.draft_selected_choice_id = C`, and no `attempts` row exists yet for C.
 2. A content editor changes choice C's label in the source markdown and re-runs `pnpm db:seed` (this also runs in CI with `SEED_INCLUDE_PLACEHOLDERS=true`).
 3. `question-syncer.ts` computes `deleteChoiceIds` for question Q, including C, because `referencedChoiceIds` only checked `attempts` (which has no row for C).
-4. `tx.delete(schema.choices).where(inArray(schema.choices.id, deleteChoiceIds))` runs. Postgres throws an uncaught `23503` foreign-key violation from `practice_session_question_states_latest_choice_question_fk` / `..._draft_choice_question_fk` instead of the script's intended clean "Refusing to delete choice ... because it is referenced" guard, aborting the whole sync for that question.
+4. `tx.delete(schema.choices).where(inArray(schema.choices.id, deleteChoiceIds))` runs. Postgres throws an uncaught `23503` foreign-key violation from `practice_session_question_states_draft_choice_question_fk` instead of the script's intended clean "Refusing to delete choice ... because it is referenced" guard, aborting the whole sync for that question. The sibling `practice_session_question_states_latest_choice_question_fk` can fail the same way for any latest-state-only reference not also covered by `attempts`.
 
 ## Root Cause
 
