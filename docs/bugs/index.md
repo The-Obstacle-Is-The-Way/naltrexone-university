@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-07-01 (**PR #537 Track A pre-merge blockers resolved** — BUG-265 remains archived as self-resolved by `aab81ca1` / migration `0024_needy_jimmy_woo.sql`; BUG-266 is fixed by extending the seed choice-deletion guard to normalized practice-session state references; BUG-267 is fixed by opening the composition-root practice-session-state write transactions at `repeatable read` and proving the real driver isolation. Active Bugs register is empty. Next Bug ID BUG-268.)
+**Last Updated:** 2026-07-01 (**PR #537 Track A pre-merge blockers resolved, then a systematic post-fix sweep filed 3 more** — BUG-265 remains archived as self-resolved by `aab81ca1` / migration `0024_needy_jimmy_woo.sql`; BUG-266 is fixed by extending the seed choice-deletion guard to normalized practice-session state references; BUG-267 is fixed by opening the composition-root practice-session-state write transactions at `repeatable read` and proving the real driver isolation. A follow-up DDIA-style audit of the same branch then filed BUG-268 (CAS retry loop doesn't handle `repeatable read` serialization failures), BUG-269 (exam finalize decides outcomes from a pre-lock stale snapshot, can silently discard a concurrent draft save), and BUG-270 (seed choice-reorder can violate the sort-order unique index and abort the rest of the seed batch). Active Bugs: BUG-268, BUG-269, BUG-270. Next Bug ID BUG-271.)
 
 ---
 
@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-268
+**Next Bug ID:** BUG-271
 
 **Latest follow-up (2026-06-28) — BUG-260 completion resolved (no new bug ID):**
 - [BUG-260](../_archive/bugs/bug-260-question-feedback-trusts-client-context-ids.md)'s original fix shipped + prod-verified + archived, but a post-archive re-audit found one residual both-ID context gap: a standalone owned attempt for the feedback question could still be paired with an unrelated owned session that also contained that question. Completion branch `fix/bug-260-feedback-context-completion` tightened `validateFeedbackContext` so both IDs require direct attempt membership in the supplied session or a verified standalone session-review retry (`retryOrigin=session_review` and matching `retrySessionId`). The retry exception is required by the real question-page session-review "Try Again" flow, which creates a standalone retry attempt while feedback still carries the reviewed session id. Regression coverage rejects the incoherent standalone/session pair at the helper level and through both feedback use cases. Shipped via PR #524 and promoted via PR #526; production smoke passed 2026-06-28.
@@ -297,7 +297,15 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 **2026-07-01 — PR #537 Track A pre-merge blockers resolved:** the 2026-06-30 adversarial review filed BUG-265..267 against the unmerged practice-session normalization branch. BUG-265 was self-resolved before action and archived. BUG-266 and BUG-267 were independently confirmed, fixed with red-first tests, and archived before PR #537 merged: the seed syncer now guards normalized practice-session state choice references, and the composition-root practice-session-state write transactions now open at `repeatable read`.
 
-No active bugs as of 2026-07-01.
+**2026-07-01 — Systematic post-fix DDIA-style sweep (schema/transaction/driver/consistency/seed/read-path, 6 parallel angles) filed 3 new bugs, all still against unmerged PR #537:** run specifically because the BUG-267 fix (write transactions now opened at `repeatable read`) changes concurrency semantics for every write path sharing that transaction shape, and because the branch's size (8,000+ lines) warranted one more pass focused on database/ORM correctness before merge. Findings independently re-verified by reading the actual code (retry loop, lock-acquisition order, upsert loop, migration SQL, schema indexes) rather than trusting audit-agent summaries as-is.
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| [BUG-268](./bug-268-cas-retry-loop-ignores-repeatable-read-serialization-failure.md) | Practice session state / transactions | P1 | The CAS retry loop in `updatePracticeSessionQuestionState` doesn't catch Postgres `40001` serialization failures now that the outer write transaction runs `repeatable read` (a side effect of the BUG-267 fix) — a genuine concurrent write now throws a raw driver error instead of retrying into a clean `ApplicationError` |
+| [BUG-269](./bug-269-finalize-exam-stale-snapshot-clobbers-concurrent-draft-save.md) | Practice session state / exam finalize | P1 | `FinalizeExamAnswersUseCase` decides every question's outcome from a snapshot read before its own session lock is acquired; a concurrent draft autosave landing in that window is silently overwritten with an "omitted" outcome — real answer data loss |
+| [BUG-270](./bug-270-seed-choice-resort-can-violate-sort-order-unique-index.md) | Content seeding | P2 | An ordinary choice-label content edit that inserts a new choice between two existing ones (no deletion) can violate the `(question_id, sort_order)` unique index mid-sync, aborting not just that question but every subsequent question file in the same `pnpm db:seed` run |
+
+No other active bugs as of 2026-07-01.
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 
