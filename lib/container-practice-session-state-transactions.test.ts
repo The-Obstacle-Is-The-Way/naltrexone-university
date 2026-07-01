@@ -67,9 +67,10 @@ function createUnexpectedNestedTransactionDb(): DrizzleDb {
 
 function createPracticeSessionStateWriteContainer(input: {
   transaction: TestTransaction;
-  questions: FakeQuestionRepository;
-  attempts: FakeAttemptRepository;
-  sessions: FakePracticeSessionRepository;
+  fixture: Pick<
+    ReturnType<typeof createPracticeSessionStateWriteFixture>,
+    'questions' | 'attempts' | 'sessions'
+  >;
   now?: () => Date;
 }) {
   return createContainer({
@@ -78,61 +79,70 @@ function createPracticeSessionStateWriteContainer(input: {
       now: input.now ?? (() => new Date('2026-02-01T00:01:00.000Z')),
     },
     repositories: {
-      createQuestionRepository: vi.fn(() => input.questions),
-      createAttemptRepository: vi.fn(() => input.attempts),
-      createPracticeSessionRepository: vi.fn(() => input.sessions),
+      createQuestionRepository: vi.fn(() => input.fixture.questions),
+      createAttemptRepository: vi.fn(() => input.fixture.attempts),
+      createPracticeSessionRepository: vi.fn(() => input.fixture.sessions),
     },
   } satisfies ContainerOverrides);
 }
 
+function createPracticeSessionStateWriteFixture(mode: 'exam' | 'tutor') {
+  const userId = 'user-1';
+  const sessionId = 'session-1';
+  const questionId = 'q1';
+  const correctChoiceId = 'c-correct';
+  const question = createQuestion({
+    id: questionId,
+    status: 'published',
+    choices: [
+      createChoice({
+        id: correctChoiceId,
+        questionId,
+        label: 'A',
+        isCorrect: true,
+      }),
+      createChoice({
+        id: 'c-wrong',
+        questionId,
+        label: 'B',
+        isCorrect: false,
+      }),
+    ],
+  });
+  const session = createPracticeSession({
+    id: sessionId,
+    userId,
+    mode,
+    questionIds: [questionId],
+    startedAt: new Date('2026-02-01T00:00:00.000Z'),
+    endedAt: null,
+  });
+
+  return {
+    userId,
+    sessionId,
+    questionId,
+    correctChoiceId,
+    questions: new FakeQuestionRepository([question]),
+    attempts: new FakeAttemptRepository(),
+    sessions: new FakePracticeSessionRepository([session]),
+  };
+}
+
 describe('container factories — practice session state write transactions', () => {
   it('opens finalize exam write transactions at repeatable read isolation', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-    const questionId = 'q1';
-    const correctChoiceId = 'c-correct';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({
-          id: correctChoiceId,
-          questionId,
-          label: 'A',
-          isCorrect: true,
-        }),
-        createChoice({
-          id: 'c-wrong',
-          questionId,
-          label: 'B',
-          isCorrect: false,
-        }),
-      ],
-    });
-    const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'exam',
-      questionIds: [questionId],
-      startedAt: new Date('2026-02-01T00:00:00.000Z'),
-      endedAt: null,
-    });
-    const questions = new FakeQuestionRepository([question]);
-    const attempts = new FakeAttemptRepository();
-    const sessions = new FakePracticeSessionRepository([session]);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
     const tx = createUnexpectedNestedTransactionDb();
     const transaction = vi.fn<TestTransaction>(async (fn) => fn(tx));
 
     const container = createPracticeSessionStateWriteContainer({
       transaction,
-      questions,
-      attempts,
-      sessions,
+      fixture,
     });
 
     await container.createFinalizeExamAnswersUseCase().execute({
-      userId,
-      sessionId,
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
     });
 
     expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
@@ -141,39 +151,7 @@ describe('container factories — practice session state write transactions', ()
   });
 
   it('retries finalize exam write transactions after retryable serialization failures', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-    const questionId = 'q1';
-    const correctChoiceId = 'c-correct';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({
-          id: correctChoiceId,
-          questionId,
-          label: 'A',
-          isCorrect: true,
-        }),
-        createChoice({
-          id: 'c-wrong',
-          questionId,
-          label: 'B',
-          isCorrect: false,
-        }),
-      ],
-    });
-    const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'exam',
-      questionIds: [questionId],
-      startedAt: new Date('2026-02-01T00:00:00.000Z'),
-      endedAt: null,
-    });
-    const questions = new FakeQuestionRepository([question]);
-    const attempts = new FakeAttemptRepository();
-    const sessions = new FakePracticeSessionRepository([session]);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
     const tx = createUnexpectedNestedTransactionDb();
     const serializationFailure = { code: '40001' };
     const transaction = vi.fn<TestTransaction>(async (fn) => {
@@ -185,17 +163,15 @@ describe('container factories — practice session state write transactions', ()
 
     const container = createPracticeSessionStateWriteContainer({
       transaction,
-      questions,
-      attempts,
-      sessions,
+      fixture,
     });
 
     await expect(
       container.createFinalizeExamAnswersUseCase().execute({
-        userId,
-        sessionId,
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
       }),
-    ).resolves.toMatchObject({ sessionId });
+    ).resolves.toMatchObject({ sessionId: fixture.sessionId });
 
     expect(transaction).toHaveBeenCalledTimes(2);
     expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
@@ -204,20 +180,7 @@ describe('container factories — practice session state write transactions', ()
   });
 
   it('maps exhausted retryable finalize exam write failures to ApplicationError CONFLICT', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-    const questionId = 'q1';
-    const question = createQuestion({ id: questionId, status: 'published' });
-    const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'exam',
-      questionIds: [questionId],
-      endedAt: null,
-    });
-    const questions = new FakeQuestionRepository([question]);
-    const attempts = new FakeAttemptRepository();
-    const sessions = new FakePracticeSessionRepository([session]);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
     const serializationFailure = { code: '40001' };
     const transaction = vi.fn<TestTransaction>(async () => {
       throw serializationFailure;
@@ -225,15 +188,13 @@ describe('container factories — practice session state write transactions', ()
 
     const container = createPracticeSessionStateWriteContainer({
       transaction,
-      questions,
-      attempts,
-      sessions,
+      fixture,
     });
 
     await expect(
       container.createFinalizeExamAnswersUseCase().execute({
-        userId,
-        sessionId,
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
       }),
     ).rejects.toMatchObject({
       code: 'CONFLICT',
@@ -244,53 +205,20 @@ describe('container factories — practice session state write transactions', ()
   });
 
   it('opens session-backed submit-answer write transactions at repeatable read isolation', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-    const questionId = 'q1';
-    const selectedChoiceId = 'c-correct';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({
-          id: 'c-wrong',
-          questionId,
-          label: 'A',
-          isCorrect: false,
-        }),
-        createChoice({
-          id: selectedChoiceId,
-          questionId,
-          label: 'B',
-          isCorrect: true,
-        }),
-      ],
-    });
-    const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
-      questionIds: [questionId],
-      endedAt: null,
-    });
-    const questions = new FakeQuestionRepository([question]);
-    const attempts = new FakeAttemptRepository();
-    const sessions = new FakePracticeSessionRepository([session]);
+    const fixture = createPracticeSessionStateWriteFixture('tutor');
     const tx = createUnexpectedNestedTransactionDb();
     const transaction = vi.fn<TestTransaction>(async (fn) => fn(tx));
 
     const container = createPracticeSessionStateWriteContainer({
       transaction,
-      questions,
-      attempts,
-      sessions,
+      fixture,
     });
 
     await container.createSubmitAnswerUseCase().execute({
-      userId,
-      sessionId,
-      questionId,
-      choiceId: selectedChoiceId,
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+      questionId: fixture.questionId,
+      choiceId: fixture.correctChoiceId,
     });
 
     expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
@@ -299,38 +227,7 @@ describe('container factories — practice session state write transactions', ()
   });
 
   it('retries session-backed submit-answer write transactions after retryable serialization failures', async () => {
-    const userId = 'user-1';
-    const sessionId = 'session-1';
-    const questionId = 'q1';
-    const selectedChoiceId = 'c-correct';
-    const question = createQuestion({
-      id: questionId,
-      status: 'published',
-      choices: [
-        createChoice({
-          id: 'c-wrong',
-          questionId,
-          label: 'A',
-          isCorrect: false,
-        }),
-        createChoice({
-          id: selectedChoiceId,
-          questionId,
-          label: 'B',
-          isCorrect: true,
-        }),
-      ],
-    });
-    const session = createPracticeSession({
-      id: sessionId,
-      userId,
-      mode: 'tutor',
-      questionIds: [questionId],
-      endedAt: null,
-    });
-    const questions = new FakeQuestionRepository([question]);
-    const attempts = new FakeAttemptRepository();
-    const sessions = new FakePracticeSessionRepository([session]);
+    const fixture = createPracticeSessionStateWriteFixture('tutor');
     const tx = createUnexpectedNestedTransactionDb();
     const serializationFailure = { code: '40P01' };
     const transaction = vi.fn<TestTransaction>(async (fn) => {
@@ -342,21 +239,19 @@ describe('container factories — practice session state write transactions', ()
 
     const container = createPracticeSessionStateWriteContainer({
       transaction,
-      questions,
-      attempts,
-      sessions,
+      fixture,
     });
 
     await expect(
       container.createSubmitAnswerUseCase().execute({
-        userId,
-        sessionId,
-        questionId,
-        choiceId: selectedChoiceId,
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+        questionId: fixture.questionId,
+        choiceId: fixture.correctChoiceId,
       }),
     ).resolves.toMatchObject({
       isCorrect: true,
-      correctChoiceId: selectedChoiceId,
+      correctChoiceId: fixture.correctChoiceId,
     });
 
     expect(transaction).toHaveBeenCalledTimes(2);
