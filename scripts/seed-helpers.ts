@@ -5,6 +5,39 @@ export type ChoiceRef = {
   label: string;
 };
 
+type AttemptChoiceReferenceRow = {
+  selectedChoiceId: string | null;
+};
+
+type PracticeSessionChoiceReferenceRow = {
+  latestSelectedChoiceId: string | null;
+  draftSelectedChoiceId: string | null;
+};
+
+export function computeReferencedChoiceIds(input: {
+  attemptRows: readonly AttemptChoiceReferenceRow[];
+  stateRows: readonly PracticeSessionChoiceReferenceRow[];
+}): ReadonlySet<string> {
+  const referencedChoiceIds = new Set<string>();
+
+  for (const row of input.attemptRows) {
+    if (row.selectedChoiceId) {
+      referencedChoiceIds.add(row.selectedChoiceId);
+    }
+  }
+
+  for (const row of input.stateRows) {
+    if (row.latestSelectedChoiceId) {
+      referencedChoiceIds.add(row.latestSelectedChoiceId);
+    }
+    if (row.draftSelectedChoiceId) {
+      referencedChoiceIds.add(row.draftSelectedChoiceId);
+    }
+  }
+
+  return referencedChoiceIds;
+}
+
 export function computeChoiceSyncPlan(input: {
   existingChoices: readonly ChoiceRef[];
   desiredChoices: ReadonlyArray<{ label: string }>;
@@ -18,7 +51,7 @@ export function computeChoiceSyncPlan(input: {
 
     if (input.referencedChoiceIds.has(choice.id)) {
       throw new Error(
-        `Refusing to delete choice ${choice.id} (${choice.label}) because it is referenced by an attempt`,
+        `Refusing to delete choice ${choice.id} (${choice.label}) because it is referenced by an attempt or practice session state`,
       );
     }
 

@@ -32,6 +32,10 @@ import type {
   UseCaseFactories,
 } from './types';
 
+const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG = {
+  isolationLevel: 'repeatable read',
+} as const;
+
 export function createUseCaseFactories(input: {
   primitives: ContainerPrimitives;
   repositories: RepositoryFactories;
@@ -44,12 +48,14 @@ export function createUseCaseFactories(input: {
       repositories.createAttemptRepository(),
       repositories.createPracticeSessionRepository(),
       async (fn) =>
-        primitives.db.transaction(async (tx) =>
-          fn({
-            questions: repositories.createQuestionRepository(tx),
-            attempts: repositories.createAttemptRepository(tx),
-            sessions: repositories.createPracticeSessionRepository(tx),
-          }),
+        primitives.db.transaction(
+          async (tx) =>
+            fn({
+              questions: repositories.createQuestionRepository(tx),
+              attempts: repositories.createAttemptRepository(tx),
+              sessions: repositories.createPracticeSessionRepository(tx),
+            }),
+          PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG,
         ),
       primitives.now,
     );
@@ -190,11 +196,13 @@ export function createUseCaseFactories(input: {
         repositories.createPracticeSessionRepository(),
         primitives.logger,
         async (fn) =>
-          primitives.db.transaction(async (tx) =>
-            fn({
-              attempts: repositories.createAttemptRepository(tx),
-              sessions: repositories.createPracticeSessionRepository(tx),
-            }),
+          primitives.db.transaction(
+            async (tx) =>
+              fn({
+                attempts: repositories.createAttemptRepository(tx),
+                sessions: repositories.createPracticeSessionRepository(tx),
+              }),
+            PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG,
           ),
       ),
     createSetBookmarkUseCase: () =>

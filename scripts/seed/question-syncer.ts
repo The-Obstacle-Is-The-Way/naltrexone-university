@@ -1,11 +1,14 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema';
 import {
   canonicalJsonString,
   sha256Hex,
 } from '../../lib/content/parse-mdx-question';
-import { computeChoiceSyncPlan } from '../seed-helpers';
+import {
+  computeChoiceSyncPlan,
+  computeReferencedChoiceIds,
+} from '../seed-helpers';
 import type { SeedSourceFile } from './file-reader';
 import { buildSeedRepFromDb, parseSeedQuestionFile } from './question-parser';
 import { upsertTags, validateSeedQuestionTags } from './tag-manager';
@@ -122,11 +125,11 @@ export async function syncQuestionsFromFiles(
       (choice) => !desiredLabels.has(choice.label),
     );
 
-    const referencedChoiceIds = new Set<string>();
+    let referencedChoiceIds: ReadonlySet<string> = new Set();
     if (deleteCandidates.length > 0) {
       const deleteCandidateIds = deleteCandidates.map((choice) => choice.id);
 
-      const referenced = await db
+      const attemptRows = await db
         .select({ selectedChoiceId: schema.attempts.selectedChoiceId })
         .from(schema.attempts)
         .where(
@@ -136,11 +139,37 @@ export async function syncQuestionsFromFiles(
           ),
         );
 
-      for (const row of referenced) {
-        if (row.selectedChoiceId) {
-          referencedChoiceIds.add(row.selectedChoiceId);
-        }
-      }
+      const stateRows = await db
+        .select({
+          latestSelectedChoiceId:
+            schema.practiceSessionQuestionStates.latestSelectedChoiceId,
+          draftSelectedChoiceId:
+            schema.practiceSessionQuestionStates.draftSelectedChoiceId,
+        })
+        .from(schema.practiceSessionQuestionStates)
+        .where(
+          and(
+            eq(
+              schema.practiceSessionQuestionStates.questionId,
+              existingQuestion.id,
+            ),
+            or(
+              inArray(
+                schema.practiceSessionQuestionStates.latestSelectedChoiceId,
+                deleteCandidateIds,
+              ),
+              inArray(
+                schema.practiceSessionQuestionStates.draftSelectedChoiceId,
+                deleteCandidateIds,
+              ),
+            ),
+          ),
+        );
+
+      referencedChoiceIds = computeReferencedChoiceIds({
+        attemptRows,
+        stateRows,
+      });
     }
 
     const { deleteChoiceIds } = computeChoiceSyncPlan({

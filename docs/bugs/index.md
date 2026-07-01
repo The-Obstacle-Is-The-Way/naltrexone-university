@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-30 (**PR #537 Track A pre-merge review filed BUG-265..267** — BUG-265 was confirmed self-resolved on the same unmerged branch by `aab81ca1` / migration `0024_needy_jimmy_woo.sql` plus follow-up doc clarification in `845e8abb`, and is archived. BUG-266 and BUG-267 remain active pre-merge blockers for PR #537: the seed choice-deletion guard does not account for normalized practice-session state choice references, and nested Drizzle postgres-js transactions ignore the requested `repeatable read` config. Active Bugs: BUG-266, BUG-267. Next Bug ID BUG-268.)
+**Last Updated:** 2026-07-01 (**PR #537 Track A pre-merge blockers resolved** — BUG-265 remains archived as self-resolved by `aab81ca1` / migration `0024_needy_jimmy_woo.sql`; BUG-266 is fixed by extending the seed choice-deletion guard to normalized practice-session state references; BUG-267 is fixed by opening the composition-root practice-session-state write transactions at `repeatable read` and proving the real driver isolation. Active Bugs register is empty. Next Bug ID BUG-268.)
 
 ---
 
@@ -295,12 +295,9 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Active Bugs
 
-**2026-06-30 — independent adversarial review of unmerged PR #537 (DEBT-425 Track A practice-session normalization):** before converting #537 from draft to ready, ran an 8-angle review pass (line-by-line, removed-behavior, cross-file tracing, reuse/simplification/efficiency/altitude, CLAUDE.md conventions) over the full `main...HEAD` diff, then independently re-verified the top candidates by reading the actual source/driver code (not just trusting finder output). 3 candidate correctness defects filed as bugs; 4 lower-severity architecture/process/cleanup items filed as debt (see [DEBT-426](../debt/debt-426-session-wide-lock-defeats-row-concurrency.md)..[429](../debt/debt-429-duplicated-question-state-mapper-and-test-helpers.md)). A second, independent adversarial pass then re-verified all 7 against the branch's current head: **BUG-265 was found already self-resolved** by two later commits on the same branch (`aab81ca1`, `845e8abb` — migration `0024_needy_jimmy_woo.sql` tightened the CHECK constraints to match `db/schema.ts` before this doc's fix was ever actioned) and archived to `docs/_archive/bugs/`. **BUG-266 and BUG-267 were both independently confirmed** as real, reachable defects — see their docs for the confirming trace. None of this has merged or deployed — filed so the fixes are tracked before merge, not after.
+**2026-07-01 — PR #537 Track A pre-merge blockers resolved:** the 2026-06-30 adversarial review filed BUG-265..267 against the unmerged practice-session normalization branch. BUG-265 was self-resolved before action and archived. BUG-266 and BUG-267 were independently confirmed, fixed with red-first tests, and archived before PR #537 merged: the seed syncer now guards normalized practice-session state choice references, and the composition-root practice-session-state write transactions now open at `repeatable read`.
 
-| Bug | Severity | Component | Summary |
-|-----|----------|-----------|---------|
-| [BUG-266](./bug-266-practice-session-question-states-fk-breaks-content-sync.md) | P1 | Content seeding | New `ON DELETE RESTRICT` choice FKs from the question-state table can break `pnpm db:seed` for an in-progress session with a draft-selected choice whose label changes; the existing seeder safety check only guards `attempts`, not normalized state rows. The same FK class also applies to latest-state rows if one references a stale choice without a matching attempt row. |
-| [BUG-267](./bug-267-nested-repeatable-read-silently-drops-isolation.md) | P2 | Practice session repository / concurrency | Nested `inRepeatableRead` silently drops its isolation-level config (drizzle-orm postgres-js driver limitation), reintroducing a torn-read race between session and question-state rows inside `FinalizeExamAnswersUseCase`; confirmed reachable because session discard hard-deletes active exam sessions |
+No active bugs as of 2026-07-01.
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 
@@ -911,6 +908,9 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-267](../_archive/bugs/bug-267-nested-repeatable-read-silently-drops-isolation.md) | Nested `inRepeatableRead` silently dropped isolation inside finalize/submit write transactions; resolved by opening the owning composition-root practice-session-state write transactions at `repeatable read` and adding real-driver isolation proof. | P2 | 2026-07-01 |
+| [BUG-266](../_archive/bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md) | New choice FKs could make `pnpm db:seed` surface raw FK failures for normalized practice-session state references; resolved by querying latest/draft state references before deleting stale choices. | P1 | 2026-07-01 |
+| [BUG-265](../_archive/bugs/bug-265-practice-session-question-states-checks-weaker-than-schema.md) | `practice_session_question_states` CHECK constraints were weaker than `db/schema.ts`; self-resolved on the unmerged PR branch by migration `0024_needy_jimmy_woo.sql`. | P1 | 2026-06-30 |
 | [BUG-248](../_archive/bugs/bug-248-main-branch-has-no-github-merge-gate.md) | Public `main` had no GitHub merge gate — resolved by creating the active `main-protection` ruleset (PR required, `test` status check required, force-push + deletion blocked, 0 required approvals to avoid solo-owner lockout). Verified via `gh api repos/:owner/:repo/rulesets`. | P1 | 2026-06-14 |
 | [BUG-249](../_archive/bugs/bug-249-dependency-security-automation-disabled.md) | Dependency security automation disabled — resolved by enabling GitHub vulnerability alerts + automated security fixes (`dependabot_security_updates: enabled`) and raising the Dependabot security-update PR cap from 0 to 5. Residual esbuild advisory tracked in DEBT-419. | P1 | 2026-06-14 |
 | [BUG-245](../_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Concurrent Two-Tab Checkout Creates Duplicate Subscriptions — fixed via a deterministic per-(user,plan,variant) Stripe idempotency key + lock-free post-create reconciliation (DB-layer dedup retained); Stripe "limit to 1 subscription" Dashboard backstop configured live; shipped with the DEBT-417 multi-clone test-isolation fix in PR #421. | P2 | 2026-06-13 |
