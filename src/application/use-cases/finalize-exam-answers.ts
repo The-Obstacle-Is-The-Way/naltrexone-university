@@ -115,6 +115,8 @@ export class FinalizeExamAnswersUseCase {
       );
     }
 
+    const finalizationNow = this.now();
+
     const endedSession = await this.writeTransaction(async (tx) => {
       const loadedSession = await tx.sessions.findByIdAndUserId(
         input.sessionId,
@@ -137,8 +139,6 @@ export class FinalizeExamAnswersUseCase {
           'Cannot finalize a completed session',
         );
       }
-
-      const finalizationNow = this.now();
 
       // BUG-254: apply the single-question expiry flush BEFORE grading so the
       // selection visible on-screen at expiry is graded instead of omitted.

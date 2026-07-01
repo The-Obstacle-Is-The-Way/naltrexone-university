@@ -84,6 +84,67 @@ describe('FinalizeExamAnswersUseCase', () => {
     void new FinalizeExamAnswersUseCase(questions, attempts, sessions);
   });
 
+  it('uses one finalization timestamp when the write transaction replays the callback', async () => {
+    const requestNow = new Date('2026-03-17T12:00:10.000Z');
+    const retryNow = new Date('2026-03-17T12:00:20.000Z');
+    const now = vi
+      .fn()
+      .mockReturnValueOnce(requestNow)
+      .mockReturnValue(retryNow);
+    const createSession = () =>
+      createPracticeSession({
+        id: 'session-1',
+        userId: 'user-1',
+        mode: 'exam',
+        questionIds: ['q1'],
+        startedAt: new Date('2026-03-17T12:00:00.000Z'),
+      });
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct'),
+    ]);
+    const initialSessions = new FakePracticeSessionRepository([
+      createSession(),
+    ]);
+    const firstTxSessions = new FakePracticeSessionRepository([
+      createSession(),
+    ]);
+    const secondTxSessions = new FakePracticeSessionRepository([
+      createSession(),
+    ]);
+    const writeTransaction: FinalizeExamAnswersWriteTransaction = async (
+      fn,
+    ) => {
+      await fn({
+        questions,
+        attempts: new FakeAttemptRepository(),
+        sessions: firstTxSessions,
+      });
+      return fn({
+        questions,
+        attempts: new FakeAttemptRepository(),
+        sessions: secondTxSessions,
+      });
+    };
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      new FakeAttemptRepository(),
+      initialSessions,
+      writeTransaction,
+      now,
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).resolves.toMatchObject({
+      endedAt: requestNow.toISOString(),
+    });
+
+    expect(now).toHaveBeenCalledTimes(1);
+  });
+
   it('finalizes drafted answers and records omitted exam questions as incorrect attempts', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-17T12:30:00.000Z'));

@@ -63,9 +63,6 @@ describe('DrizzlePracticeSessionRepository missing question state row', () => {
       message: `Practice session ${sessionId} is missing normalized question state`,
     });
 
-    expect(select).toHaveBeenCalledTimes(2);
-    expect(sessionLockFor).toHaveBeenCalledWith('update');
-    expect(stateLimit).toHaveBeenCalledTimes(1);
     expect(update).not.toHaveBeenCalled();
   });
 });

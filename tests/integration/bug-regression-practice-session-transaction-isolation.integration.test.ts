@@ -131,6 +131,7 @@ describe('BUG-268 practice-session repeatable-read transaction retries', () => {
       },
     });
     let conflictInjected = false;
+    let recordQuestionAnswerCalls = 0;
 
     const createPracticeSessionRepository = (
       dbOverride?: DrizzleDb,
@@ -147,6 +148,9 @@ describe('BUG-268 practice-session repeatable-read transaction retries', () => {
               PracticeSessionRepository['recordQuestionAnswer']
             >[0],
           ) => {
+            if (dbOverride) {
+              recordQuestionAnswerCalls += 1;
+            }
             if (dbOverride && !conflictInjected) {
               conflictInjected = true;
               await concurrent.db
@@ -216,6 +220,7 @@ describe('BUG-268 practice-session repeatable-read transaction retries', () => {
       );
 
     expect(conflictInjected).toBe(true);
+    expect(recordQuestionAnswerCalls).toBe(2);
     expect(state).toEqual({
       markedForReview: true,
       latestSelectedChoiceId: question.correctChoiceId,

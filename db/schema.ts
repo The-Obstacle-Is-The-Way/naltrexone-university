@@ -445,6 +445,12 @@ export const PRACTICE_SESSION_QUESTION_STATES_SESSION_QUESTION_UQ =
   'practice_session_question_states_session_question_uq';
 export const PRACTICE_SESSION_QUESTION_STATES_SESSION_POSITION_UQ =
   'practice_session_question_states_session_position_uq';
+export const PRACTICE_SESSION_QUESTION_STATES_QUESTION_ID_IDX =
+  'practice_session_question_states_question_id_idx';
+export const PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_QUESTION_IDX =
+  'practice_session_question_states_latest_choice_question_idx';
+export const PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_QUESTION_IDX =
+  'practice_session_question_states_draft_choice_question_idx';
 export const PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_QUESTION_FK =
   'practice_session_question_states_latest_choice_question_fk';
 export const PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_QUESTION_FK =
@@ -491,6 +497,15 @@ export const practiceSessionQuestionStates = pgTable(
     sessionPositionUq: uniqueIndex(
       PRACTICE_SESSION_QUESTION_STATES_SESSION_POSITION_UQ,
     ).on(t.practiceSessionId, t.position),
+    questionIdIdx: index(PRACTICE_SESSION_QUESTION_STATES_QUESTION_ID_IDX).on(
+      t.questionId,
+    ),
+    latestChoiceQuestionIdx: index(
+      PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_QUESTION_IDX,
+    ).on(t.latestSelectedChoiceId, t.questionId),
+    draftChoiceQuestionIdx: index(
+      PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_QUESTION_IDX,
+    ).on(t.draftSelectedChoiceId, t.questionId),
     latestChoiceQuestionFk: foreignKey({
       name: PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_QUESTION_FK,
       columns: [t.latestSelectedChoiceId, t.questionId],

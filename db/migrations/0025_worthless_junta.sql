@@ -1,0 +1,3 @@
+CREATE INDEX "practice_session_question_states_question_id_idx" ON "practice_session_question_states" USING btree ("question_id");--> statement-breakpoint
+CREATE INDEX "practice_session_question_states_latest_choice_question_idx" ON "practice_session_question_states" USING btree ("latest_selected_choice_id","question_id");--> statement-breakpoint
+CREATE INDEX "practice_session_question_states_draft_choice_question_idx" ON "practice_session_question_states" USING btree ("draft_selected_choice_id","question_id");

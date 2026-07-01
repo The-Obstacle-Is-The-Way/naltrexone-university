@@ -414,6 +414,9 @@ export const practiceSessionQuestionStates = pgTable(
   (t) => ({
     sessionQuestionUq: uniqueIndex('practice_session_question_states_session_question_uq').on(t.practiceSessionId, t.questionId),
     sessionPositionUq: uniqueIndex('practice_session_question_states_session_position_uq').on(t.practiceSessionId, t.position),
+    questionIdIdx: index('practice_session_question_states_question_id_idx').on(t.questionId),
+    latestChoiceQuestionIdx: index('practice_session_question_states_latest_choice_question_idx').on(t.latestSelectedChoiceId, t.questionId),
+    draftChoiceQuestionIdx: index('practice_session_question_states_draft_choice_question_idx').on(t.draftSelectedChoiceId, t.questionId),
     latestChoiceQuestionFk: foreignKey({
       name: 'practice_session_question_states_latest_choice_question_fk',
       columns: [t.latestSelectedChoiceId, t.questionId],
@@ -1222,7 +1225,7 @@ export type StartPracticeSessionOutput = { sessionId: string };
    * `user_id`, `mode`
    * `params_json = { count: questionIds.length, tagSlugs, difficulties, questionIds }`; persisted `count` is the actual selected session size, which may be smaller than the requested count when filters return fewer candidates.
    * one `practice_session_question_states` row per selected question, in `questionIds` order:
-     * `{ questionId, position:<0-based index>, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null, draftSelectedChoiceId:null, draftSavedAt:null, draftCumulativeMs:0 }`
+     * `{ practiceSessionId, questionId, position:<0-based index>, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null, draftSelectedChoiceId:null, draftSavedAt:null, draftCumulativeMs:0 }`
    * `started_at = now()`
 6. Return `sessionId`.
 7. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:startPracticeSession'`) so retries replay the previously created session id.

@@ -176,6 +176,13 @@
       "when": 1782862237182,
       "tag": "0024_needy_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1782939399994,
+      "tag": "0025_worthless_junta",
+      "breakpoints": true
     }
   ]
 }

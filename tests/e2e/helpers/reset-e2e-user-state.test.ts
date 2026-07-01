@@ -38,6 +38,14 @@ type UnsafeTx = {
   unsafe: ReturnType<typeof vi.fn>;
 };
 
+type BaselineRow = {
+  incompleteSessionCount?: number;
+  completedSessions: number;
+  attemptCount: number;
+  bookmarkCount: number;
+  questionStateCount: number;
+};
+
 function createEnv(
   overrides: Partial<Record<RequiredEnvKey, string | undefined>> = {},
 ): NodeJS.ProcessEnv {
@@ -63,6 +71,16 @@ function expectNoSensitiveParts(value: string) {
   }
 }
 
+function createBaselineRow(overrides: Partial<BaselineRow> = {}): BaselineRow {
+  return {
+    completedSessions: 1,
+    attemptCount: 2,
+    bookmarkCount: 1,
+    questionStateCount: 2,
+    ...overrides,
+  };
+}
+
 async function captureRejectedError(action: () => Promise<unknown>) {
   try {
     await action();
@@ -82,12 +100,7 @@ function createRoutingSqlClient(
     placeholderQuestionCount?: string;
     includeRequiredQuestionFixture?: boolean;
     includeRequiredChoiceFixture?: boolean;
-    baselineRows?: Array<{
-      completedSessions: number;
-      attemptCount: number;
-      bookmarkCount: number;
-      questionStateCount: number;
-    }>;
+    baselineRows?: BaselineRow[];
   } = {},
 ) {
   const beginFailures = [...(options.beginFailures ?? [])];
@@ -155,16 +168,7 @@ function createRoutingSqlClient(
     }
 
     if (queryText.includes('completedSessions')) {
-      return (
-        options.baselineRows ?? [
-          {
-            completedSessions: 1,
-            attemptCount: 2,
-            bookmarkCount: 1,
-            questionStateCount: 2,
-          },
-        ]
-      );
+      return options.baselineRows ?? [createBaselineRow()];
     }
 
     return [];
@@ -724,22 +728,24 @@ describe('runE2EUserStateReset default service diagnostics', () => {
 
   it.each([
     {
+      label: 'leftover incomplete session',
+      baselineRow: createBaselineRow({
+        incompleteSessionCount: 1,
+      }),
+    },
+    {
       label: 'missing normalized question state',
-      baselineRow: {
-        completedSessions: 1,
-        attemptCount: 2,
-        bookmarkCount: 1,
+      baselineRow: createBaselineRow({
         questionStateCount: 3,
-      },
+      }),
     },
     {
       label: 'stale extra rows',
-      baselineRow: {
+      baselineRow: createBaselineRow({
         completedSessions: 2,
         attemptCount: 3,
         bookmarkCount: 2,
-        questionStateCount: 2,
-      },
+      }),
     },
   ])('surfaces invalid baseline verification for $label without wrapping the explicit reset error', async ({
     baselineRow,

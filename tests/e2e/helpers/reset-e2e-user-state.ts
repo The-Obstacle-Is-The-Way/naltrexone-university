@@ -516,6 +516,7 @@ const defaultServices: E2EUserStateResetServices = {
     try {
       const rows = await sql<
         {
+          incompleteSessionCount: number;
           completedSessions: number;
           attemptCount: number;
           bookmarkCount: number;
@@ -523,6 +524,12 @@ const defaultServices: E2EUserStateResetServices = {
         }[]
       >`
         SELECT
+          (
+            SELECT COUNT(*)::int
+            FROM practice_sessions
+            WHERE user_id = ${userId}
+              AND ended_at IS NULL
+          ) AS "incompleteSessionCount",
           (
             SELECT COUNT(*)::int
             FROM practice_sessions
@@ -547,12 +554,14 @@ const defaultServices: E2EUserStateResetServices = {
       `;
 
       const baseline = rows[0];
+      const incompleteSessionCount = baseline?.incompleteSessionCount ?? 0;
       const completedSessions = baseline?.completedSessions ?? 0;
       const attemptCount = baseline?.attemptCount ?? 0;
       const bookmarkCount = baseline?.bookmarkCount ?? 0;
       const questionStateCount = baseline?.questionStateCount ?? 0;
 
       if (
+        incompleteSessionCount !== 0 ||
         completedSessions !== DETERMINISTIC_BASELINE_COMPLETED_SESSION_COUNT ||
         attemptCount !== DETERMINISTIC_BASELINE_ATTEMPT_COUNT ||
         bookmarkCount !== DETERMINISTIC_BASELINE_BOOKMARK_COUNT ||
@@ -561,7 +570,7 @@ const defaultServices: E2EUserStateResetServices = {
         throw new E2EUserStateResetError(
           'E2E_RESET:BASELINE_STATE_INCOMPLETE',
           'Deterministic E2E baseline verification failed after reset.',
-          'Verify reset helper inserts completed session, normalized session question state, attempts, and bookmark rows for the E2E user.',
+          'Verify reset helper leaves no incomplete sessions and inserts completed session, normalized session question state, attempts, and bookmark rows for the E2E user.',
         );
       }
     } catch (error) {
