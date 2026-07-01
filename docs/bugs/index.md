@@ -13,7 +13,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-265
+**Next Bug ID:** BUG-268
 
 **Latest follow-up (2026-06-28) — BUG-260 completion resolved (no new bug ID):**
 - [BUG-260](../_archive/bugs/bug-260-question-feedback-trusts-client-context-ids.md)'s original fix shipped + prod-verified + archived, but a post-archive re-audit found one residual both-ID context gap: a standalone owned attempt for the feedback question could still be paired with an unrelated owned session that also contained that question. Completion branch `fix/bug-260-feedback-context-completion` tightened `validateFeedbackContext` so both IDs require direct attempt membership in the supplied session or a verified standalone session-review retry (`retryOrigin=session_review` and matching `retrySessionId`). The retry exception is required by the real question-page session-review "Try Again" flow, which creates a standalone retry attempt while feedback still carries the reviewed session id. Regression coverage rejects the incoherent standalone/session pair at the helper level and through both feedback use cases. Shipped via PR #524 and promoted via PR #526; production smoke passed 2026-06-28.
@@ -295,9 +295,12 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Active Bugs
 
+**2026-06-30 — independent adversarial review of unmerged PR #537 (DEBT-425 Track A practice-session normalization):** before converting #537 from draft to ready, ran an 8-angle review pass (line-by-line, removed-behavior, cross-file tracing, reuse/simplification/efficiency/altitude, CLAUDE.md conventions) over the full `main...HEAD` diff, then independently re-verified the top candidates by reading the actual source/driver code (not just trusting finder output). 3 candidate correctness defects filed as bugs; 4 lower-severity architecture/process/cleanup items filed as debt (see [DEBT-426](../debt/debt-426-session-wide-lock-defeats-row-concurrency.md)..[429](../debt/debt-429-duplicated-question-state-mapper-and-test-helpers.md)). A second, independent adversarial pass then re-verified all 7 against the branch's current head: **BUG-265 was found already self-resolved** by two later commits on the same branch (`aab81ca1`, `845e8abb` — migration `0024_needy_jimmy_woo.sql` tightened the CHECK constraints to match `db/schema.ts` before this doc's fix was ever actioned) and archived to `docs/_archive/bugs/`. **BUG-266 and BUG-267 were both independently confirmed** as real, reachable defects — see their docs for the confirming trace. None of this has merged or deployed — filed so the fixes are tracked before merge, not after.
+
 | Bug | Severity | Component | Summary |
 |-----|----------|-----------|---------|
-| _None_ | - | - | No active bugs currently tracked. |
+| [BUG-266](./bug-266-practice-session-question-states-fk-breaks-content-sync.md) | P1 | Content seeding | New `ON DELETE RESTRICT` choice FKs from the question-state table break `pnpm db:seed` for any in-progress session with a draft/latest answer on a choice whose label changes — the seeder's safety check only guards `attempts`, not the new table |
+| [BUG-267](./bug-267-nested-repeatable-read-silently-drops-isolation.md) | P2 | Practice session repository / concurrency | Nested `inRepeatableRead` silently drops its isolation-level config (drizzle-orm postgres-js driver limitation), reintroducing a torn-read race between session and question-state rows inside `FinalizeExamAnswersUseCase`; confirmed reachable because session discard hard-deletes active exam sessions |
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 

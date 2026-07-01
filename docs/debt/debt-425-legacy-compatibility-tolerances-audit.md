@@ -6,6 +6,8 @@
 **Owner:** Engineering
 **Related:** [BUG-188](../_archive/bugs/bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md), [BUG-238](../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md), [DEBT-180](../_archive/debt/debt-180-duplicated-manage-billing-files.md), [DEBT-321](../_archive/debt/debt-321-bs055-exam-interaction-model-overhaul.md), [DEBT-421](../_archive/debt/debt-421-light-mode-force-dark-vs-default-dark.md), [DEBT-385](../_archive/debt/debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), [Debt Index](./index.md)
 
+**Independent review findings (2026-06-30):** an 8-angle review pass over the full Track A diff, followed by an independent adversarial second-opinion pass, surfaced 3 candidate correctness defects and 4 architecture/process/cleanup items in the unmerged implementation. One ([BUG-265](../_archive/bugs/bug-265-practice-session-question-states-checks-weaker-than-schema.md)) was found already self-resolved by later commits on this same branch. Two are confirmed and must be fixed before this PR merges: [BUG-266](../bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md) (new choice FKs break `pnpm db:seed` for in-progress sessions) and [BUG-267](../bugs/bug-267-nested-repeatable-read-silently-drops-isolation.md) (nested transaction silently drops its isolation level, reopening a torn-read race in exam finalization). The remaining four ([DEBT-426](./debt-426-session-wide-lock-defeats-row-concurrency.md)..[429](./debt-429-duplicated-question-state-mapper-and-test-helpers.md)) are tracked as follow-up debt, not merge blockers.
+
 ---
 
 ## Context
