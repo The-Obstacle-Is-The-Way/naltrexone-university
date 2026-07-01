@@ -6,7 +6,6 @@ import { createContainer } from '@/lib/container';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -29,10 +28,15 @@ afterAll(async () => {
   await closeConnection(sql);
 });
 
-function observeTransactionIsolation(input: {
-  observedIsolationLevels: string[];
-}): DrizzleDb {
-  return new Proxy(db, {
+function observeTransactionIsolation(
+  currentDb: DrizzleDb,
+  input: {
+    observedIsolationLevels: string[];
+    observedTransactionDepths: number[];
+  },
+  depth = 0,
+): DrizzleDb {
+  return new Proxy(currentDb, {
     get(target, property, receiver) {
       if (property !== 'transaction') {
         return Reflect.get(target, property, receiver);
@@ -42,15 +46,22 @@ function observeTransactionIsolation(input: {
         fn: (tx: DrizzleDb) => Promise<T>,
         config?: Parameters<DrizzleDb['transaction']>[1],
       ): Promise<T> =>
-        db.transaction(async (tx) => {
+        target.transaction(async (tx) => {
           const rows = await tx.execute<{ transaction_isolation: string }>(
             drizzleSql`SHOW transaction_isolation`,
           );
           const isolationLevel = rows[0]?.transaction_isolation;
           if (isolationLevel) {
             input.observedIsolationLevels.push(isolationLevel);
+            input.observedTransactionDepths.push(depth);
           }
-          return fn(tx as unknown as DrizzleDb);
+          return fn(
+            observeTransactionIsolation(
+              tx as unknown as DrizzleDb,
+              input,
+              depth + 1,
+            ),
+          );
         }, config);
     },
   }) as DrizzleDb;
@@ -59,6 +70,7 @@ function observeTransactionIsolation(input: {
 describe('BUG-267 practice-session transaction isolation', () => {
   it('opens the finalize exam write transaction at repeatable read in the real driver', async () => {
     const observedIsolationLevels: string[] = [];
+    const observedTransactionDepths: number[] = [];
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {
       slug: `it-finalize-isolation-${randomUUID()}`,
@@ -68,19 +80,10 @@ describe('BUG-267 practice-session transaction isolation', () => {
     const now = new Date('2026-06-30T12:01:00.000Z');
     const container = createContainer({
       primitives: {
-        db: observeTransactionIsolation({ observedIsolationLevels }),
-        env: {
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-          STRIPE_WEBHOOK_SECRET: 'whsec',
-          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-        } as unknown as typeof import('@/lib/env').env,
-        logger:
-          new FakeLogger() as unknown as typeof import('@/lib/logger').logger,
-        getStripe: () =>
-          ({}) as unknown as ReturnType<
-            typeof import('@/lib/stripe').getStripe
-          >,
+        db: observeTransactionIsolation(db, {
+          observedIsolationLevels,
+          observedTransactionDepths,
+        }),
         now: () => now,
       },
     });
@@ -101,6 +104,8 @@ describe('BUG-267 practice-session transaction isolation', () => {
       sessionId: session.id,
     });
 
+    expect(observedIsolationLevels.length).toBeGreaterThan(1);
+    expect(observedTransactionDepths).toContain(1);
     expect(observedIsolationLevels).toContain('repeatable read');
     expect(observedIsolationLevels).not.toContain('read committed');
   });
@@ -174,18 +179,6 @@ describe('BUG-268 practice-session repeatable-read transaction retries', () => {
     const container = createContainer({
       primitives: {
         db,
-        env: {
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-          STRIPE_WEBHOOK_SECRET: 'whsec',
-          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-        } as unknown as typeof import('@/lib/env').env,
-        logger:
-          new FakeLogger() as unknown as typeof import('@/lib/logger').logger,
-        getStripe: () =>
-          ({}) as unknown as ReturnType<
-            typeof import('@/lib/stripe').getStripe
-          >,
         now: () => new Date('2026-06-30T12:06:00.000Z'),
       },
       repositories: {

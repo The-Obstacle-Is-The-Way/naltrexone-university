@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   FakeAttemptRepository,
-  FakeLogger,
   FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -15,6 +14,7 @@ import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
+import type { ContainerOverrides } from './container';
 
 vi.mock('server-only', () => ({}));
 vi.mock('stripe', () => ({
@@ -39,6 +39,10 @@ async function loadContainer() {
 }
 
 let createContainer: Awaited<ReturnType<typeof loadContainer>>;
+type TestTransaction = (
+  fn: (db: DrizzleDb) => Promise<unknown>,
+  config?: Parameters<DrizzleDb['transaction']>[1],
+) => Promise<unknown>;
 
 beforeAll(async () => {
   createContainer = await loadContainer();
@@ -47,6 +51,39 @@ beforeAll(async () => {
 afterAll(() => {
   restoreProcessEnv(ORIGINAL_ENV);
 });
+
+function createTransactionOnlyDb(transaction: TestTransaction): DrizzleDb {
+  const db = {
+    transaction: transaction as DrizzleDb['transaction'],
+  } satisfies Pick<DrizzleDb, 'transaction'>;
+  return db as DrizzleDb;
+}
+
+function createUnexpectedNestedTransactionDb(): DrizzleDb {
+  return createTransactionOnlyDb(async () => {
+    throw new Error('Unexpected nested transaction in container wiring test');
+  });
+}
+
+function createPracticeSessionStateWriteContainer(input: {
+  transaction: TestTransaction;
+  questions: FakeQuestionRepository;
+  attempts: FakeAttemptRepository;
+  sessions: FakePracticeSessionRepository;
+  now?: () => Date;
+}) {
+  return createContainer({
+    primitives: {
+      db: createTransactionOnlyDb(input.transaction),
+      now: input.now ?? (() => new Date('2026-02-01T00:01:00.000Z')),
+    },
+    repositories: {
+      createQuestionRepository: vi.fn(() => input.questions),
+      createAttemptRepository: vi.fn(() => input.attempts),
+      createPracticeSessionRepository: vi.fn(() => input.sessions),
+    },
+  } satisfies ContainerOverrides);
+}
 
 describe('container factories — practice session state write transactions', () => {
   it('opens finalize exam write transactions at repeatable read isolation', async () => {
@@ -83,30 +120,14 @@ describe('container factories — practice session state write transactions', ()
     const questions = new FakeQuestionRepository([question]);
     const attempts = new FakeAttemptRepository();
     const sessions = new FakePracticeSessionRepository([session]);
-    const tx = { tx: true } as const;
-    const transaction = vi.fn(
-      async <T>(fn: (db: unknown) => Promise<T>): Promise<T> => fn(tx),
-    );
+    const tx = createUnexpectedNestedTransactionDb();
+    const transaction = vi.fn<TestTransaction>(async (fn) => fn(tx));
 
-    const container = createContainer({
-      primitives: {
-        db: { transaction } as unknown as DrizzleDb,
-        env: {
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-          STRIPE_WEBHOOK_SECRET: 'whsec',
-          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-        } as unknown as typeof import('./env').env,
-        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        getStripe: () =>
-          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
-        now: () => new Date('2026-02-01T00:01:00.000Z'),
-      },
-      repositories: {
-        createQuestionRepository: vi.fn(() => questions),
-        createAttemptRepository: vi.fn(() => attempts),
-        createPracticeSessionRepository: vi.fn(() => sessions),
-      },
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      questions,
+      attempts,
+      sessions,
     });
 
     await container.createFinalizeExamAnswersUseCase().execute({
@@ -153,36 +174,20 @@ describe('container factories — practice session state write transactions', ()
     const questions = new FakeQuestionRepository([question]);
     const attempts = new FakeAttemptRepository();
     const sessions = new FakePracticeSessionRepository([session]);
-    const tx = { tx: true } as const;
+    const tx = createUnexpectedNestedTransactionDb();
     const serializationFailure = { code: '40001' };
-    const transaction = vi.fn(
-      async <T>(fn: (db: unknown) => Promise<T>): Promise<T> => {
-        if (transaction.mock.calls.length === 1) {
-          throw serializationFailure;
-        }
-        return fn(tx);
-      },
-    );
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      if (transaction.mock.calls.length === 1) {
+        throw serializationFailure;
+      }
+      return fn(tx);
+    });
 
-    const container = createContainer({
-      primitives: {
-        db: { transaction } as unknown as DrizzleDb,
-        env: {
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-          STRIPE_WEBHOOK_SECRET: 'whsec',
-          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-        } as unknown as typeof import('./env').env,
-        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        getStripe: () =>
-          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
-        now: () => new Date('2026-02-01T00:01:00.000Z'),
-      },
-      repositories: {
-        createQuestionRepository: vi.fn(() => questions),
-        createAttemptRepository: vi.fn(() => attempts),
-        createPracticeSessionRepository: vi.fn(() => sessions),
-      },
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      questions,
+      attempts,
+      sessions,
     });
 
     await expect(
@@ -214,29 +219,15 @@ describe('container factories — practice session state write transactions', ()
     const attempts = new FakeAttemptRepository();
     const sessions = new FakePracticeSessionRepository([session]);
     const serializationFailure = { code: '40001' };
-    const transaction = vi.fn(async () => {
+    const transaction = vi.fn<TestTransaction>(async () => {
       throw serializationFailure;
     });
 
-    const container = createContainer({
-      primitives: {
-        db: { transaction } as unknown as DrizzleDb,
-        env: {
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-          STRIPE_WEBHOOK_SECRET: 'whsec',
-          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-        } as unknown as typeof import('./env').env,
-        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        getStripe: () =>
-          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
-        now: () => new Date('2026-02-01T00:01:00.000Z'),
-      },
-      repositories: {
-        createQuestionRepository: vi.fn(() => questions),
-        createAttemptRepository: vi.fn(() => attempts),
-        createPracticeSessionRepository: vi.fn(() => sessions),
-      },
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      questions,
+      attempts,
+      sessions,
     });
 
     await expect(
@@ -285,30 +276,14 @@ describe('container factories — practice session state write transactions', ()
     const questions = new FakeQuestionRepository([question]);
     const attempts = new FakeAttemptRepository();
     const sessions = new FakePracticeSessionRepository([session]);
-    const tx = { tx: true } as const;
-    const transaction = vi.fn(
-      async <T>(fn: (db: unknown) => Promise<T>): Promise<T> => fn(tx),
-    );
+    const tx = createUnexpectedNestedTransactionDb();
+    const transaction = vi.fn<TestTransaction>(async (fn) => fn(tx));
 
-    const container = createContainer({
-      primitives: {
-        db: { transaction } as unknown as DrizzleDb,
-        env: {
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-          STRIPE_WEBHOOK_SECRET: 'whsec',
-          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-        } as unknown as typeof import('./env').env,
-        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        getStripe: () =>
-          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
-        now: () => new Date('2026-02-01T00:01:00.000Z'),
-      },
-      repositories: {
-        createQuestionRepository: vi.fn(() => questions),
-        createAttemptRepository: vi.fn(() => attempts),
-        createPracticeSessionRepository: vi.fn(() => sessions),
-      },
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      questions,
+      attempts,
+      sessions,
     });
 
     await container.createSubmitAnswerUseCase().execute({
@@ -356,36 +331,20 @@ describe('container factories — practice session state write transactions', ()
     const questions = new FakeQuestionRepository([question]);
     const attempts = new FakeAttemptRepository();
     const sessions = new FakePracticeSessionRepository([session]);
-    const tx = { tx: true } as const;
+    const tx = createUnexpectedNestedTransactionDb();
     const serializationFailure = { code: '40P01' };
-    const transaction = vi.fn(
-      async <T>(fn: (db: unknown) => Promise<T>): Promise<T> => {
-        if (transaction.mock.calls.length === 1) {
-          throw serializationFailure;
-        }
-        return fn(tx);
-      },
-    );
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      if (transaction.mock.calls.length === 1) {
+        throw serializationFailure;
+      }
+      return fn(tx);
+    });
 
-    const container = createContainer({
-      primitives: {
-        db: { transaction } as unknown as DrizzleDb,
-        env: {
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
-          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
-          STRIPE_WEBHOOK_SECRET: 'whsec',
-          NEXT_PUBLIC_APP_URL: 'https://app.example.com',
-        } as unknown as typeof import('./env').env,
-        logger: new FakeLogger() as unknown as typeof import('./logger').logger,
-        getStripe: () =>
-          ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
-        now: () => new Date('2026-02-01T00:01:00.000Z'),
-      },
-      repositories: {
-        createQuestionRepository: vi.fn(() => questions),
-        createAttemptRepository: vi.fn(() => attempts),
-        createPracticeSessionRepository: vi.fn(() => sessions),
-      },
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      questions,
+      attempts,
+      sessions,
     });
 
     await expect(
