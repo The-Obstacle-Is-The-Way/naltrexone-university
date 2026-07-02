@@ -18,11 +18,11 @@ From the moment the application writes any new question-state change (via `pract
 
 Low priority, no urgency: DEBT-425's post-deploy proof is now satisfied. On 2026-07-02, Development and Production both had migration ledger head `0025_worthless_junta`, and the normalized-state proof queries returned zero state-coverage mismatches, zero cross-question choice references, and zero out-of-range draft durations. Production has zero practice sessions and zero stale JSON `questionStates` rows; Development has 123 stale JSON `questionStates` rows left from pre-Track-A sessions.
 
-This means cleanup is now allowed but still not urgent: a follow-up migration can delete the `questionStates` key from `practice_sessions.params_json` for all rows, or null/empty it if a future migration chooses that representation explicitly. The app already treats the normalized table as the sole source of truth; this debt is about removing misleading duplicate data for humans and ad hoc tooling, not restoring runtime correctness.
+This means cleanup is now allowed but still not urgent: a follow-up migration should delete the `questionStates` key from `practice_sessions.params_json` for all rows. The app already treats the normalized table as the sole source of truth; this debt is about removing misleading duplicate data for humans and ad hoc tooling, not restoring runtime correctness.
 
 ## Verification
 
-If the follow-up cleanup migration ships, verify `params_json ? 'questionStates'` is false (or the key is present but empty/nulled per whatever approach is chosen) for all `practice_sessions` rows post-migration, and that no application code path reads it (already true today per DEBT-425, but worth re-confirming at cleanup time).
+If the follow-up cleanup migration ships, verify `params_json ? 'questionStates'` is false for all `practice_sessions` rows post-migration, and that no application code path reads it (already true today per DEBT-425, but worth re-confirming at cleanup time).
 
 Current post-deploy baseline from 2026-07-02:
 
