@@ -740,6 +740,12 @@ describe('runE2EUserStateReset default service diagnostics', () => {
       }),
     },
     {
+      label: 'missing normalized question state',
+      baselineRow: createBaselineRow({
+        questionStateCount: 1,
+      }),
+    },
+    {
       label: 'stale extra rows',
       baselineRow: createBaselineRow({
         completedSessions: 2,
