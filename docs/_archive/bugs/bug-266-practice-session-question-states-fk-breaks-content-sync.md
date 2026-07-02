@@ -35,7 +35,7 @@ Fixed on `chore/legacy-audit` before PR #537 merged. The seed syncer now treats 
 
 ## Related
 
-- PR #537, [DEBT-425](../../debt/debt-425-legacy-compatibility-tolerances-audit.md)
+- PR #537, [DEBT-425](../debt/debt-425-legacy-compatibility-tolerances-audit.md)
 - `scripts/seed/question-syncer.ts`
 - `scripts/seed-helpers.ts`
 - `db/migrations/0022_confused_mandrill.sql`

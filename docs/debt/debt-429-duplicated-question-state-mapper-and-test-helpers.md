@@ -24,6 +24,6 @@ After consolidation, grep confirms a single definition of each; existing test su
 
 ## Related
 
-- PR #537, [DEBT-425](./debt-425-legacy-compatibility-tolerances-audit.md)
+- PR #537, [DEBT-425](../_archive/debt/debt-425-legacy-compatibility-tolerances-audit.md)
 - `src/adapters/repositories/practice-session-question-state-updater.ts:24-37`
 - `src/adapters/repositories/drizzle-practice-session-repository.ts:64-77`

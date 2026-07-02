@@ -28,7 +28,7 @@ A concurrency test issuing two concurrent writes to two *different* questions in
 
 ## Related
 
-- PR #537, [DEBT-425](./debt-425-legacy-compatibility-tolerances-audit.md)
+- PR #537, [DEBT-425](../_archive/debt/debt-425-legacy-compatibility-tolerances-audit.md)
 - `src/adapters/repositories/practice-session-question-state-updater.ts:39-61, 176-187`
 - `src/adapters/repositories/practice-session-question-state-updater-lock.test.ts`
 - commit `cf2cdf21`

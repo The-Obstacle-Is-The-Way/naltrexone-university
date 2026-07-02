@@ -1,12 +1,12 @@
 # DEBT-425: Legacy Compatibility Tolerances Audit and Hardening Plan
 
-**Status:** Implemented in PR #537; post-deploy proof pending
+**Status:** Resolved (2026-07-02)
 **Priority:** P3
 **Created:** 2026-06-29
 **Owner:** Engineering
-**Related:** [BUG-188](../_archive/bugs/bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md), [BUG-238](../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md), [DEBT-180](../_archive/debt/debt-180-duplicated-manage-billing-files.md), [DEBT-321](../_archive/debt/debt-321-bs055-exam-interaction-model-overhaul.md), [DEBT-421](../_archive/debt/debt-421-light-mode-force-dark-vs-default-dark.md), [DEBT-385](../_archive/debt/debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), [Debt Index](./index.md)
+**Related:** [BUG-188](../bugs/bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md), [BUG-238](../bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md), [DEBT-180](./debt-180-duplicated-manage-billing-files.md), [DEBT-321](./debt-321-bs055-exam-interaction-model-overhaul.md), [DEBT-421](./debt-421-light-mode-force-dark-vs-default-dark.md), [DEBT-385](./debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), [Debt Index](../../debt/index.md)
 
-**Independent review findings (2026-06-30; resolved blockers updated 2026-07-01):** an 8-angle review pass over the full Track A diff, followed by an independent adversarial second-opinion pass, surfaced 3 candidate correctness defects and 4 architecture/process/cleanup items in the unmerged implementation. [BUG-265](../_archive/bugs/bug-265-practice-session-question-states-checks-weaker-than-schema.md) was found already self-resolved by later commits on this same branch. [BUG-266](../_archive/bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md) and [BUG-267](../_archive/bugs/bug-267-nested-repeatable-read-silently-drops-isolation.md) were independently confirmed, then fixed and archived before PR #537 merged: seed choice deletion now accounts for normalized practice-session state references, and practice-session-state write transactions now open at `repeatable read` at the composition root with real-driver proof. The remaining four ([DEBT-426](./debt-426-session-wide-lock-defeats-row-concurrency.md)..[429](./debt-429-duplicated-question-state-mapper-and-test-helpers.md)) are tracked as follow-up debt, not merge blockers.
+**Independent review findings (2026-06-30; resolved blockers updated 2026-07-01):** an 8-angle review pass over the full Track A diff, followed by an independent adversarial second-opinion pass, surfaced 3 candidate correctness defects and 4 architecture/process/cleanup items in the unmerged implementation. [BUG-265](../bugs/bug-265-practice-session-question-states-checks-weaker-than-schema.md) was found already self-resolved by later commits on this same branch. [BUG-266](../bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md) and [BUG-267](../bugs/bug-267-nested-repeatable-read-silently-drops-isolation.md) were independently confirmed, then fixed and archived before PR #537 merged: seed choice deletion now accounts for normalized practice-session state references, and practice-session-state write transactions now open at `repeatable read` at the composition root with real-driver proof. The remaining four ([DEBT-426](../../debt/debt-426-session-wide-lock-defeats-row-concurrency.md)..[429](../../debt/debt-429-duplicated-question-state-mapper-and-test-helpers.md)) are tracked as follow-up debt, not merge blockers.
 
 ---
 
@@ -40,6 +40,22 @@ Data proof, read-only queries against `.env.local`, Vercel Development, and Verc
 |---|---:|---:|---:|---:|---:|---:|---:|
 | `.env.local` / Vercel Development | 124 | 1 | 0 | 600 | 66 | 1 | 0 |
 | Vercel Production | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Post-deploy proof, read-only against the deployed Neon branches on 2026-07-02:
+
+| Target | Host label | Ledger head | Missing journal entries | State coverage mismatches | Cross-question choice refs | Out-of-range draft durations | Sessions | State rows | Stale JSON `questionStates` rows |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Development | `ep-still-frog` | `0025_worthless_junta` / `1782939399994` | 0 | 0 | 0 | 0 | 124 | 873 | 123 |
+| Production | `ep-withered-cell` | `0025_worthless_junta` / `1782939399994` | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Operational notes:
+
+- No manual `DATABASE_URL=<env> pnpm db:migrate` run was needed during the post-merge proof because both remote ledgers were already current through `0025_worthless_junta`.
+- Vercel Production deployment `dpl_7WFJk7P56byivGi7dynB52TXecyz` for squash `9711ca48` ran `pnpm db:migrate && pnpm build`; its logs show `pnpm db:migrate` starting at `2026-07-02T20:31:44Z`, `[✓] migrations applied successfully!` before `next build` at `2026-07-02T20:31:48Z`, and deployment completion at `2026-07-02T20:33:06Z`.
+- Vercel Preview/Development deployment for `dev` at the same commit also ran `pnpm db:migrate && pnpm build`; its logs show migration success before `next build`.
+- `https://addictionboards.com/` returned HTTP 200, `/api/health` returned `{"ok":true,"db":true}`, and Vercel Production error/status-500 logs since the deployment returned no entries. Unauthenticated `/app/practice` hit the expected Clerk-protected boundary rather than a server error; no authenticated production practice-session mutation was performed during this proof.
+- The 123 stale JSON `questionStates` rows in Development are DEBT-434 cleanup residue only. They are no longer application state and do not block this debt's resolution.
+- Separate follow-up [DEBT-428](../../debt/debt-428-question-ids-narrowed-unverified-against-legacy-data.md) now has concrete post-deploy data: Development contains one ended, double-encoded legacy `params_json` string row with invalid/missing top-level `questionIds`; Production contains zero. Object-shaped sessions in both environments have zero duplicate or dangling `questionIds`. This dev-only malformed row is outside Track A's normalized state proof and remains tracked under DEBT-428.
 
 Development detail:
 
@@ -182,7 +198,7 @@ Acceptance criteria for Track A:
 - [x] Concurrent draft/mark/answer updates cannot clobber each other.
 - [x] Legacy JSON tolerance tests are replaced by migration/backfill tests and current relational invariant tests.
 - [x] Full quality gate passes before push.
-- [ ] Development and Production post-migration data proof recorded after deployment.
+- [x] Development and Production post-migration data proof recorded after deployment.
 
 Post-migration proof obligation for Track A:
 

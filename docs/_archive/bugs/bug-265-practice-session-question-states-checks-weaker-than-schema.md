@@ -33,7 +33,7 @@ This bug doc was filed against `6bc2bd99` during an independent review pass; by 
 
 ## Related
 
-- PR #537, [DEBT-425](../../debt/debt-425-legacy-compatibility-tolerances-audit.md)
+- PR #537, [DEBT-425](../debt/debt-425-legacy-compatibility-tolerances-audit.md)
 - `db/schema.ts:508-518`
 - `db/migrations/0023_soft_blue_marvel.sql:12-14` (original weaker version)
 - `db/migrations/0024_needy_jimmy_woo.sql` (fix)
