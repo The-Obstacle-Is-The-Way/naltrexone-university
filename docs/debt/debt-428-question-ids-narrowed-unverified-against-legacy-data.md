@@ -12,19 +12,28 @@
 
 ## Impact
 
-Any pre-existing row that doesn't conform to the new stricter shape (a non-UUID-format legacy `questionId`, an empty `questionIds` array, or a historical `count`/`questionIds.length` mismatch from an old bug) now throws `INTERNAL_ERROR` on read, where the old looser schema parsed it successfully. The DEBT-425 audit's data-proof table only checked missing `questionStates`, missing draft fields, and oversized `draftCumulativeMs` — it never checked this specific shape dimension against the 124 dev-environment sessions, so this is an unverified residual risk (low risk in production, which has zero sessions today per the same audit).
+Any pre-existing row that doesn't conform to the new stricter shape (a non-UUID-format legacy `questionId`, an empty `questionIds` array, or a historical `count`/`questionIds.length` mismatch from an old bug) now throws `INTERNAL_ERROR` on read, where the old looser schema parsed it successfully.
+
+Post-deploy proof on 2026-07-02 turned this from unverified risk into concrete Development cleanup: Production has zero affected rows, but Development has one ended tutor session whose `params_json` is a double-encoded JSON string rather than a top-level object. That row therefore has no top-level `questionIds` as far as JSONB operators and the current parser are concerned, and the embedded string contains non-UUID legacy question IDs. Object-shaped sessions in both environments have zero duplicate and zero dangling `questionIds`.
 
 **Correction (2026-06-30, second review pass):** the `questionIds` *uniqueness* refine (`new Set(questionIds).size === questionIds.length`) is **not** new — it was already present and enforced on `main` before this PR; this PR only added the `zUuid` format check, `.min(1)`, and the `count === questionIds.length` refine. A legacy row with duplicate `questionIds` would already have failed to parse before this PR too, so uniqueness itself is not a newly introduced risk here. What *is* worth tracking is a downstream interaction: migration `0021`'s backfill `INSERT` uses `ON CONFLICT (practice_session_id, question_id) DO NOTHING`, so a row with duplicate `questionIds` (if one somehow exists despite the app-level guard, e.g. from a pre-Zod-refine era or a direct DB write) would backfill fewer state rows than `questionIds.length`, producing a `rows.length < params.questionIds.length` mismatch at read time — a different, migration-level manifestation of the same underlying data-quality question. Tracked as an explicit scenario under [DEBT-427](./debt-427-migration-fk-ordering-and-unaudited-cleanup.md) rather than duplicated here.
 
 ## Resolution
 
-Run a one-off query against dev (and prod, before any future sessions accumulate) counting rows where `questionIds` fails the new schema, before this PR ships. If any exist, either backfill/correct them or add the same kind of defensive normalization Track A already applies to other legacy fields.
+Clean the single malformed Development row deliberately, either by deleting the ended legacy seed artifact or by replacing its double-encoded `params_json` with a valid current object shape if the row still has diagnostic value. Production needs no remediation based on the 2026-07-02 proof. Do not add parser tolerance for double-encoded `params_json` unless production data proves it is necessary; this is internal dev residue, not an external compatibility surface.
 
 ## Verification
 
-Add the query's result to the DEBT-425 data-proof table; zero affected rows clears this debt outright, any non-zero count needs a remediation plan before merge.
+Current proof from 2026-07-02:
+
+| Target | Sessions failing current `questionIds` shape | Object-shaped sessions with duplicate `questionIds` | Object-shaped sessions with dangling `questionIds` |
+|---|---:|---:|---:|
+| Development (`ep-still-frog`) | 1 | 0 | 0 |
+| Production (`ep-withered-cell`) | 0 | 0 | 0 |
+
+This debt clears when the Development count is zero, or if the owner explicitly accepts the ended dev artifact as permanent non-production residue with a documented reason.
 
 ## Related
 
-- PR #537, [DEBT-425](./debt-425-legacy-compatibility-tolerances-audit.md)
+- PR #537, [DEBT-425](../_archive/debt/debt-425-legacy-compatibility-tolerances-audit.md)
 - `src/adapters/repositories/practice-session-params.ts:24-32`

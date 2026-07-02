@@ -13,6 +13,8 @@
 
 **Resolved.** The fix is `buildCommand: "pnpm db:migrate && pnpm build"` in `vercel.json`. It merged to `dev` via PR #453 (squash `ff46fbda`) and was promoted to `main` via PR #454 (merge `daed8479`); `main` and `dev` trees are identical. Verified live on real Vercel builds: the Preview deploy applied migrations to Neon `dev` and the Production deploy applied migrations to Neon `main`, each logging `[✓] migrations applied successfully!` before `next build`, with the build failing closed if migration fails. Every git-triggered deployment now applies checked-in Drizzle migrations to its environment-scoped database before serving. `pnpm db:seed` (content) remains a documented manual step. The evidence, topology, and rejected-alternatives below are retained for reference.
 
+**Post-merge regression proof (2026-07-02):** PR #537 added migrations `0021` through `0025` and merged as squash `9711ca48`. The Production Vercel deployment `dpl_7WFJk7P56byivGi7dynB52TXecyz` cloned `main` at `9711ca4`, ran `pnpm db:migrate && pnpm build`, logged `[✓] migrations applied successfully!` before `next build`, and completed deployment only afterward. Read-only ledger checks on both deployed Neon branches then showed 26 journal rows through `0025_worthless_junta` with no missing entries. A unit regression guard in `vercel.test.ts` now pins the build command itself, so removing or reordering the deploy migration step fails the required unit suite.
+
 ## Description
 
 When BUG-241 was filed, applying migrations to deployed databases was a **manual, documented-but-unenforced** operator step. There was no automated deploy step that applied Drizzle migrations to the Vercel-targeted Neon branches, and nothing gated a deployment on the target database having the repo's migration journal applied. A PR could add a migration, pass all required CI, merge through the protected `main` flow, and deploy code that referenced a table or column that did not exist in the deployed database.
@@ -103,6 +105,8 @@ This floor detects drift but does not apply migrations. It is a stopgap until th
 
 - [x] Vercel Project Build Command is set to `pnpm db:migrate && pnpm build` for git-triggered Preview and Production builds (set as `buildCommand` in `vercel.json`; live on Preview immediately, on Production when merged to `main`).
 - [x] Redacted provider audit confirms `DATABASE_URL` is present in Production, Preview, and Development scopes (verified 2026-06-16); a value-free host comparison confirmed Production is isolated from the shared Preview/Development non-production host, with no connection strings or hostnames recorded.
+- [x] PR #537 post-merge deployment re-verified the gate on a real schema-bearing release: Vercel ran migrations `0021` through `0025` before serving Production, and both Development and Production ledgers are current through `0025_worthless_junta`.
+- [x] `vercel.test.ts` fails the required unit suite if `vercel.json` stops running `pnpm db:migrate && pnpm build`.
 - [ ] A throwaway additive migration on a test branch is not servable before migration: the Preview build either applies and records it before `pnpm build`, or fails closed before the deployment reaches READY.
 - [ ] Re-running the same Vercel build or redeploy is idempotent: Drizzle sees the matching `drizzle.__drizzle_migrations.created_at` values and does not re-apply already-recorded migrations.
 - [ ] A deliberately invalid migration fails the Vercel build before the new deployment serves traffic.

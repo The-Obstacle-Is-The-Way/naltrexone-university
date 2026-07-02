@@ -36,7 +36,7 @@ Fixed on `chore/legacy-audit` before PR #537 merged by moving the invariant to t
 
 ## Related
 
-- PR #537, [DEBT-425](../../debt/debt-425-legacy-compatibility-tolerances-audit.md)
+- PR #537, [DEBT-425](../debt/debt-425-legacy-compatibility-tolerances-audit.md)
 - `src/adapters/repositories/drizzle-practice-session-repository.ts`
 - `src/application/use-cases/finalize-exam-answers.ts`
 - `src/application/use-cases/submit-answer.ts`
