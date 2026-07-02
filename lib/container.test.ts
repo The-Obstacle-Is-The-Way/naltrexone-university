@@ -35,6 +35,7 @@ import {
   CreatePortalSessionUseCase,
   DiscardPracticeSessionUseCase,
   EndPracticeSessionUseCase,
+  FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
   GetBookmarksUseCase,
   GetCompletedSessionQuestionsWithFeedbackUseCase,
@@ -279,6 +280,9 @@ describe('container factories', () => {
     );
     expect(container.createPortalSessionUseCase()).toBeInstanceOf(
       CreatePortalSessionUseCase,
+    );
+    expect(container.createFinalizeExamAnswersUseCase()).toBeInstanceOf(
+      FinalizeExamAnswersUseCase,
     );
 
     const deps = container.createStripeWebhookDeps();

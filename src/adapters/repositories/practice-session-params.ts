@@ -9,30 +9,10 @@ import {
   ApplicationError,
   type ApplicationErrorCode,
 } from '@/src/application/errors';
-import type {
-  PracticeSession,
-  PracticeSessionQuestionState,
-} from '@/src/domain/entities';
+import type { PracticeSession } from '@/src/domain/entities';
+import { zUuid } from '../shared/zod-schemas';
 
 const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
-
-const practiceSessionQuestionStateSchema = z
-  .object({
-    questionId: z.string().min(1),
-    markedForReview: z.boolean(),
-    latestSelectedChoiceId: z.string().min(1).nullable(),
-    latestIsCorrect: z.boolean().nullable(),
-    latestAnsweredAt: z.string().datetime().nullable(),
-    draftSelectedChoiceId: z
-      .string()
-      .min(1)
-      .nullable()
-      .optional()
-      .default(null),
-    draftSavedAt: z.string().datetime().nullable().optional().default(null),
-    draftCumulativeMs: z.number().int().min(0).optional().default(0),
-  })
-  .strict();
 
 const practiceSessionParamsSchema = z
   .object({
@@ -44,7 +24,8 @@ const practiceSessionParamsSchema = z
       .array(questionDifficultySchema)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
     questionIds: z
-      .array(z.string().min(1))
+      .array(zUuid)
+      .min(1)
       .max(MAX_PRACTICE_SESSION_QUESTIONS)
       .refine(
         (questionIds) => new Set(questionIds).size === questionIds.length,
@@ -52,93 +33,20 @@ const practiceSessionParamsSchema = z
           message: 'questionIds must be unique',
         },
       ),
-    questionStates: z
-      .array(practiceSessionQuestionStateSchema)
-      .max(MAX_PRACTICE_SESSION_QUESTIONS)
-      .optional(),
   })
-  .strict();
+  .refine((params) => params.count === params.questionIds.length, {
+    message: 'count must match questionIds length',
+    path: ['count'],
+  });
 
-type PracticeSessionParamsJson = z.infer<typeof practiceSessionParamsSchema>;
-type PersistedQuestionState = z.infer<
-  typeof practiceSessionQuestionStateSchema
+export type PracticeSessionParamsJson = z.infer<
+  typeof practiceSessionParamsSchema
 >;
-
-export type NormalizedPracticeSessionParamsJson = Omit<
-  PracticeSessionParamsJson,
-  'questionStates'
-> & {
-  questionStates: PersistedQuestionState[];
-};
-
-function toDomainQuestionState(
-  state: PersistedQuestionState,
-): PracticeSessionQuestionState {
-  return {
-    questionId: state.questionId,
-    markedForReview: state.markedForReview,
-    latestSelectedChoiceId: state.latestSelectedChoiceId,
-    latestIsCorrect: state.latestIsCorrect,
-    latestAnsweredAt: state.latestAnsweredAt
-      ? new Date(state.latestAnsweredAt)
-      : null,
-    draftSelectedChoiceId: state.draftSelectedChoiceId,
-    draftSavedAt: state.draftSavedAt ? new Date(state.draftSavedAt) : null,
-    draftCumulativeMs: state.draftCumulativeMs,
-  };
-}
-
-function serializeQuestionState(
-  state: PracticeSessionQuestionState,
-): PersistedQuestionState {
-  return {
-    questionId: state.questionId,
-    markedForReview: state.markedForReview,
-    latestSelectedChoiceId: state.latestSelectedChoiceId,
-    latestIsCorrect: state.latestIsCorrect,
-    latestAnsweredAt: state.latestAnsweredAt
-      ? state.latestAnsweredAt.toISOString()
-      : null,
-    draftSelectedChoiceId: state.draftSelectedChoiceId,
-    draftSavedAt: state.draftSavedAt ? state.draftSavedAt.toISOString() : null,
-    draftCumulativeMs: state.draftCumulativeMs,
-  };
-}
-
-function normalizeParams(
-  params: PracticeSessionParamsJson,
-): NormalizedPracticeSessionParamsJson {
-  const expectedQuestionIds = new Set(params.questionIds);
-  const byQuestionId = new Map(
-    (params.questionStates ?? [])
-      .filter((state) => expectedQuestionIds.has(state.questionId))
-      .map((state) => [state.questionId, state]),
-  );
-
-  return {
-    ...params,
-    questionStates: params.questionIds.map((questionId) => {
-      const existing = byQuestionId.get(questionId);
-      if (existing) return existing;
-
-      return {
-        questionId,
-        markedForReview: false,
-        latestSelectedChoiceId: null,
-        latestIsCorrect: null,
-        latestAnsweredAt: null,
-        draftSelectedChoiceId: null,
-        draftSavedAt: null,
-        draftCumulativeMs: 0,
-      };
-    }),
-  };
-}
 
 export function parsePracticeSessionParamsJson(
   paramsJson: unknown,
   errorCode: ApplicationErrorCode,
-): NormalizedPracticeSessionParamsJson {
+): PracticeSessionParamsJson {
   let parsed: PracticeSessionParamsJson;
   try {
     parsed = practiceSessionParamsSchema.parse(paramsJson);
@@ -160,25 +68,16 @@ export function parsePracticeSessionParamsJson(
     throw error;
   }
 
-  return normalizeParams(parsed);
+  return parsed;
 }
 
 export function toPracticeSessionParamsJson(
   session: PracticeSession,
-): NormalizedPracticeSessionParamsJson {
+): PracticeSessionParamsJson {
   return {
     count: session.questionIds.length,
     tagSlugs: [...session.tagFilters],
     difficulties: [...session.difficultyFilters],
     questionIds: [...session.questionIds],
-    questionStates: session.questionStates.map((state) =>
-      serializeQuestionState(state),
-    ),
   };
-}
-
-export function toDomainPracticeSessionQuestionStates(
-  params: NormalizedPracticeSessionParamsJson,
-): PracticeSessionQuestionState[] {
-  return params.questionStates.map((state) => toDomainQuestionState(state));
 }

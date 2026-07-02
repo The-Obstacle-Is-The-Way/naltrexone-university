@@ -97,6 +97,8 @@ Next.js Route Handlers use the Web `Request`/`Response` APIs and live inside the
 // db/schema.ts
 import {
   boolean,
+  check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -164,13 +166,6 @@ export type PracticeSessionParams = {
   tagSlugs: string[];            // filter; empty = no tag filter
   difficulties: QuestionDifficulty[]; // filter; empty = no difficulty filter
   questionIds: string[];         // ordered UUID list selected at session start
-  questionStates?: Array<{
-    questionId: string;
-    markedForReview: boolean;
-    latestSelectedChoiceId: string | null;
-    latestIsCorrect: boolean | null;
-    latestAnsweredAt: string | null;
-  }>;
 };
 
 /**
@@ -332,6 +327,7 @@ export const choices = pgTable(
     sortOrder: integer('sort_order').notNull(), // 1..N
   },
   (t) => ({
+    idQuestionIdUq: uniqueIndex('choices_id_question_id_uq').on(t.id, t.questionId),
     questionIdIdx: index('choices_question_id_idx').on(t.questionId),
     questionLabelUq: uniqueIndex('choices_question_id_label_uq').on(
       t.questionId,
@@ -402,6 +398,56 @@ export const practiceSessions = pgTable(
     userIncompleteUq: uniqueIndex('practice_sessions_user_incomplete_uq')
       .on(t.userId)
       .where(sql`ended_at IS NULL`),
+  }),
+);
+
+export const practiceSessionQuestionStates = pgTable(
+  'practice_session_question_states',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    practiceSessionId: uuid('practice_session_id')
+      .notNull()
+      .references(() => practiceSessions.id, { onDelete: 'cascade' }),
+    questionId: uuid('question_id')
+      .notNull()
+      // Intentionally no cascade: hard-deleting referenced questions should fail
+      // so practice-session history cannot silently lose its question anchor.
+      // This intentionally differs from attempts.questionId because attempts
+      // are derived answer events, while session state anchors session history.
+      .references(() => questions.id),
+    position: integer('position').notNull(), // 0-based order in params_json.questionIds
+    markedForReview: boolean('marked_for_review').notNull().default(false),
+    latestSelectedChoiceId: uuid('latest_selected_choice_id'),
+    latestIsCorrect: boolean('latest_is_correct'),
+    latestAnsweredAt: timestamp('latest_answered_at', { withTimezone: true }),
+    draftSelectedChoiceId: uuid('draft_selected_choice_id'),
+    draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
+    draftCumulativeMs: integer('draft_cumulative_ms').notNull().default(0),
+    version: integer('version').notNull().default(0), // row-level optimistic concurrency token
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    sessionQuestionUq: uniqueIndex('practice_session_question_states_session_question_uq').on(t.practiceSessionId, t.questionId),
+    sessionPositionUq: uniqueIndex('practice_session_question_states_session_position_uq').on(t.practiceSessionId, t.position),
+    questionIdIdx: index('practice_session_question_states_question_id_idx').on(t.questionId),
+    latestChoiceQuestionIdx: index('practice_session_question_states_latest_choice_question_idx').on(t.latestSelectedChoiceId, t.questionId),
+    draftChoiceQuestionIdx: index('practice_session_question_states_draft_choice_question_idx').on(t.draftSelectedChoiceId, t.questionId),
+    latestChoiceQuestionFk: foreignKey({
+      name: 'practice_session_question_states_latest_choice_question_fk',
+      columns: [t.latestSelectedChoiceId, t.questionId],
+      foreignColumns: [choices.id, choices.questionId],
+    }).onDelete('restrict'),
+    draftChoiceQuestionFk: foreignKey({
+      name: 'practice_session_question_states_draft_choice_question_fk',
+      columns: [t.draftSelectedChoiceId, t.questionId],
+      foreignColumns: [choices.id, choices.questionId],
+    }).onDelete('restrict'),
+    draftCumulativeMsChk: check('practice_session_question_states_draft_cumulative_ms_chk', sql`${t.draftCumulativeMs} BETWEEN 0 AND ${DAY_MS}`),
+    latestAnswerChk: check('practice_session_question_states_latest_answer_chk', sql`(latest_is_correct IS NULL) = (latest_answered_at IS NULL) AND (latest_selected_choice_id IS NOT NULL OR latest_is_correct IS NOT TRUE) AND (latest_selected_choice_id IS NULL OR (latest_is_correct IS NOT NULL AND latest_answered_at IS NOT NULL))`),
+    draftSavedChk: check('practice_session_question_states_draft_saved_chk', sql`(draft_selected_choice_id IS NULL AND draft_cumulative_ms = 0) OR draft_saved_at IS NOT NULL`),
+    positionChk: check('practice_session_question_states_position_chk', sql`${t.position} >= 0`),
+    versionChk: check('practice_session_question_states_version_chk', sql`${t.version} >= 0`),
   }),
 );
 

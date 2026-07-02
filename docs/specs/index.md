@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-03
+**Last Updated:** 2026-06-29 — normalized mutable practice-session question state into `practice_session_question_states`; `PracticeSessionParams` now carries immutable selection metadata only.
 
 ---
 

@@ -38,6 +38,14 @@ type UnsafeTx = {
   unsafe: ReturnType<typeof vi.fn>;
 };
 
+type BaselineRow = {
+  incompleteSessionCount?: number;
+  completedSessions: number;
+  attemptCount: number;
+  bookmarkCount: number;
+  questionStateCount: number;
+};
+
 function createEnv(
   overrides: Partial<Record<RequiredEnvKey, string | undefined>> = {},
 ): NodeJS.ProcessEnv {
@@ -63,6 +71,16 @@ function expectNoSensitiveParts(value: string) {
   }
 }
 
+function createBaselineRow(overrides: Partial<BaselineRow> = {}): BaselineRow {
+  return {
+    completedSessions: 1,
+    attemptCount: 2,
+    bookmarkCount: 1,
+    questionStateCount: 2,
+    ...overrides,
+  };
+}
+
 async function captureRejectedError(action: () => Promise<unknown>) {
   try {
     await action();
@@ -82,11 +100,7 @@ function createRoutingSqlClient(
     placeholderQuestionCount?: string;
     includeRequiredQuestionFixture?: boolean;
     includeRequiredChoiceFixture?: boolean;
-    baselineRows?: Array<{
-      completedSessions: number;
-      attemptCount: number;
-      bookmarkCount: number;
-    }>;
+    baselineRows?: BaselineRow[];
   } = {},
 ) {
   const beginFailures = [...(options.beginFailures ?? [])];
@@ -154,11 +168,7 @@ function createRoutingSqlClient(
     }
 
     if (queryText.includes('completedSessions')) {
-      return (
-        options.baselineRows ?? [
-          { completedSessions: 1, attemptCount: 2, bookmarkCount: 1 },
-        ]
-      );
+      return options.baselineRows ?? [createBaselineRow()];
     }
 
     return [];
@@ -716,13 +726,38 @@ describe('runE2EUserStateReset default service diagnostics', () => {
     }
   });
 
-  it('surfaces incomplete baseline verification without wrapping the explicit reset error', async () => {
+  it.each([
+    {
+      label: 'leftover incomplete session',
+      baselineRow: createBaselineRow({
+        incompleteSessionCount: 1,
+      }),
+    },
+    {
+      label: 'extra normalized question state',
+      baselineRow: createBaselineRow({
+        questionStateCount: 3,
+      }),
+    },
+    {
+      label: 'missing normalized question state',
+      baselineRow: createBaselineRow({
+        questionStateCount: 1,
+      }),
+    },
+    {
+      label: 'stale extra rows',
+      baselineRow: createBaselineRow({
+        completedSessions: 2,
+        attemptCount: 3,
+        bookmarkCount: 2,
+      }),
+    },
+  ])('surfaces invalid baseline verification for $label without wrapping the explicit reset error', async ({
+    baselineRow,
+  }) => {
     await importResetWithPostgresMock();
-    const sqlClient = createRoutingSqlClient({
-      baselineRows: [
-        { completedSessions: 0, attemptCount: 0, bookmarkCount: 0 },
-      ],
-    });
+    const sqlClient = createRoutingSqlClient({ baselineRows: [baselineRow] });
     postgresMock.mockReturnValue(sqlClient);
     const fetchSpy = mockClerkUserFetch();
 
@@ -754,5 +789,18 @@ describe('runE2EUserStateReset default service diagnostics', () => {
 
     expect(postgresMock).toHaveBeenCalledTimes(1);
     expect(sqlClient.end).toHaveBeenCalledTimes(1);
+    const unsafeQueries = sqlClient.tx.unsafe.mock.calls.map(([query]) =>
+      String(query),
+    );
+    expect(
+      unsafeQueries.some((query) =>
+        query.includes('INSERT INTO practice_session_question_states'),
+      ),
+    ).toBe(true);
+    const baselineQuery = sqlClient.mock.calls
+      .map(([strings]) => Array.from(strings).join(' '))
+      .find((query) => query.includes('"questionStateCount"'));
+    expect(baselineQuery).toContain('WHERE state.practice_session_id = ');
+    expect(baselineQuery).not.toContain('INNER JOIN practice_sessions');
   });
 });

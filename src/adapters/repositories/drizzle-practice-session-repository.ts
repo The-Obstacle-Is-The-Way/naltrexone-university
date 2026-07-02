@@ -1,7 +1,8 @@
 // WHY large-file: this repository centralizes practice-session persistence invariants and transaction helpers so session state transitions stay consistent across use cases.
-import { and, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+  practiceSessionQuestionStates,
   practiceSessions,
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
@@ -21,13 +22,14 @@ import {
   isPostgresUniqueViolation,
 } from './postgres-errors';
 import {
-  type NormalizedPracticeSessionParamsJson,
+  type PracticeSessionParamsJson,
   parsePracticeSessionParamsJson,
-  toDomainPracticeSessionQuestionStates,
 } from './practice-session-params';
 import { updatePracticeSessionQuestionState } from './practice-session-question-state-updater';
 
 type PracticeSessionRow = typeof practiceSessions.$inferSelect;
+type PracticeSessionQuestionStateRow =
+  typeof practiceSessionQuestionStates.$inferSelect;
 
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
@@ -39,19 +41,103 @@ export class DrizzlePracticeSessionRepository
 
   private toDomain(
     row: PracticeSessionRow,
-    params: NormalizedPracticeSessionParamsJson,
+    params: PracticeSessionParamsJson,
+    questionStateRows: readonly PracticeSessionQuestionStateRow[],
   ): PracticeSession {
     return {
       id: row.id,
       userId: row.userId,
       mode: row.mode,
       questionIds: params.questionIds,
-      questionStates: toDomainPracticeSessionQuestionStates(params),
+      questionStates: this.toOrderedDomainQuestionStates(
+        row.id,
+        params,
+        questionStateRows,
+      ),
       tagFilters: params.tagSlugs,
       difficultyFilters: params.difficulties,
       startedAt: row.startedAt,
       endedAt: row.endedAt ?? null,
     };
+  }
+
+  private toDomainQuestionState(
+    row: PracticeSessionQuestionStateRow,
+  ): PracticeSessionQuestionState {
+    return {
+      questionId: row.questionId,
+      markedForReview: row.markedForReview,
+      latestSelectedChoiceId: row.latestSelectedChoiceId,
+      latestIsCorrect: row.latestIsCorrect,
+      latestAnsweredAt: row.latestAnsweredAt ?? null,
+      draftSelectedChoiceId: row.draftSelectedChoiceId,
+      draftSavedAt: row.draftSavedAt ?? null,
+      draftCumulativeMs: row.draftCumulativeMs,
+    };
+  }
+
+  private toOrderedDomainQuestionStates(
+    sessionId: string,
+    params: PracticeSessionParamsJson,
+    rows: readonly PracticeSessionQuestionStateRow[],
+  ): PracticeSessionQuestionState[] {
+    if (rows.length > params.questionIds.length) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Practice session ${sessionId} has inconsistent normalized question state`,
+      );
+    }
+    if (rows.length < params.questionIds.length) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        `Practice session ${sessionId} is missing normalized question state`,
+      );
+    }
+
+    const rowsByQuestionId = new Map(rows.map((row) => [row.questionId, row]));
+    return params.questionIds.map((questionId, position) => {
+      const row = rowsByQuestionId.get(questionId);
+      if (!row || row.position !== position) {
+        throw new ApplicationError(
+          'INTERNAL_ERROR',
+          `Practice session ${sessionId} is missing normalized question state`,
+        );
+      }
+      return this.toDomainQuestionState(row);
+    });
+  }
+
+  private async loadQuestionStateRowsBySessionIds(
+    db: DrizzleDb,
+    sessionIds: readonly string[],
+  ): Promise<Map<string, PracticeSessionQuestionStateRow[]>> {
+    const rowsBySessionId = new Map<
+      string,
+      PracticeSessionQuestionStateRow[]
+    >();
+    if (sessionIds.length === 0) return rowsBySessionId;
+
+    const rows = await db
+      .select()
+      .from(practiceSessionQuestionStates)
+      .where(
+        inArray(practiceSessionQuestionStates.practiceSessionId, sessionIds),
+      )
+      .orderBy(
+        asc(practiceSessionQuestionStates.practiceSessionId),
+        asc(practiceSessionQuestionStates.position),
+      );
+
+    for (const row of rows) {
+      const existing = rowsBySessionId.get(row.practiceSessionId);
+      if (existing) {
+        existing.push(row);
+      } else {
+        rowsBySessionId.set(row.practiceSessionId, [row]);
+      }
+    }
+
+    return rowsBySessionId;
   }
 
   private completedSessionCondition(
@@ -65,55 +151,86 @@ export class DrizzlePracticeSessionRepository
     );
   }
 
-  private async findSnapshotByIdAndUserId(
+  private async inRepeatableRead<T>(
+    action: (db: DrizzleDb) => Promise<T>,
+  ): Promise<T> {
+    return this.db.transaction((tx) => action(tx as unknown as DrizzleDb), {
+      isolationLevel: 'repeatable read',
+    });
+  }
+
+  private async findRowByIdAndUserId(
+    db: DrizzleDb,
     id: string,
     userId: string,
-  ): Promise<{
-    session: PracticeSession;
-    rawParamsJson: PracticeSessionRow['paramsJson'];
-  } | null> {
-    const row = await this.db.query.practiceSessions.findFirst({
+  ): Promise<PracticeSessionRow | null> {
+    const row = await db.query.practiceSessions.findFirst({
       where: and(
         eq(practiceSessions.id, id),
         eq(practiceSessions.userId, userId),
       ),
     });
 
-    if (!row) return null;
+    return row ?? null;
+  }
 
+  private async toDomainFromRow(
+    db: DrizzleDb,
+    row: PracticeSessionRow,
+  ): Promise<PracticeSession> {
     const params = parsePracticeSessionParamsJson(
       row.paramsJson,
       'INTERNAL_ERROR',
     );
-    return {
-      session: this.toDomain(row, params),
-      rawParamsJson: row.paramsJson,
-    };
+    const stateRowsBySessionId = await this.loadQuestionStateRowsBySessionIds(
+      db,
+      [row.id],
+    );
+    return this.toDomain(row, params, stateRowsBySessionId.get(row.id) ?? []);
+  }
+
+  private initialQuestionStateRows(input: {
+    sessionId: string;
+    questionIds: readonly string[];
+  }): Array<typeof practiceSessionQuestionStates.$inferInsert> {
+    return input.questionIds.map((questionId, position) => ({
+      practiceSessionId: input.sessionId,
+      questionId,
+      position,
+      markedForReview: false,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+      draftSelectedChoiceId: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
+    }));
   }
 
   async findByIdAndUserId(id: string, userId: string) {
-    const snapshot = await this.findSnapshotByIdAndUserId(id, userId);
-    return snapshot?.session ?? null;
+    return this.inRepeatableRead(async (db) => {
+      const row = await this.findRowByIdAndUserId(db, id, userId);
+      if (!row) return null;
+      return this.toDomainFromRow(db, row);
+    });
   }
 
   async findLatestIncompleteByUserId(
     userId: string,
   ): Promise<PracticeSession | null> {
-    const row = await this.db.query.practiceSessions.findFirst({
-      where: and(
-        eq(practiceSessions.userId, userId),
-        isNull(practiceSessions.endedAt),
-      ),
-      orderBy: (table, { desc }) => [desc(table.startedAt)],
+    return this.inRepeatableRead(async (db) => {
+      const row = await db.query.practiceSessions.findFirst({
+        where: and(
+          eq(practiceSessions.userId, userId),
+          isNull(practiceSessions.endedAt),
+        ),
+        orderBy: (table, { desc }) => [desc(table.startedAt)],
+      });
+
+      if (!row) return null;
+
+      return this.toDomainFromRow(db, row);
     });
-
-    if (!row) return null;
-
-    const params = parsePracticeSessionParamsJson(
-      row.paramsJson,
-      'INTERNAL_ERROR',
-    );
-    return this.toDomain(row, params);
   }
 
   async findCompletedByUserId(
@@ -146,6 +263,11 @@ export class DrizzlePracticeSessionRepository
           limit: safeLimit,
           offset: safeOffset,
         });
+        const stateRowsBySessionId =
+          await this.loadQuestionStateRowsBySessionIds(
+            tx as unknown as DrizzleDb,
+            rows.map((row) => row.id),
+          );
 
         return {
           rows: rows.map((row) => {
@@ -153,7 +275,11 @@ export class DrizzlePracticeSessionRepository
               row.paramsJson,
               'INTERNAL_ERROR',
             );
-            return this.toDomain(row, params);
+            return this.toDomain(
+              row,
+              params,
+              stateRowsBySessionId.get(row.id) ?? [],
+            );
           }),
           total,
         };
@@ -172,16 +298,38 @@ export class DrizzlePracticeSessionRepository
       'VALIDATION_ERROR',
     );
 
-    let row: PracticeSessionRow | undefined;
+    let created:
+      | {
+          row: PracticeSessionRow;
+          stateRows: PracticeSessionQuestionStateRow[];
+          params: PracticeSessionParamsJson;
+        }
+      | undefined;
     try {
-      [row] = await this.db
-        .insert(practiceSessions)
-        .values({
-          userId: input.userId,
-          mode: input.mode,
-          paramsJson: params,
-        })
-        .returning();
+      created = await this.db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(practiceSessions)
+          .values({
+            userId: input.userId,
+            mode: input.mode,
+            paramsJson: params,
+          })
+          .returning();
+
+        if (!row) return undefined;
+
+        const stateRows = await tx
+          .insert(practiceSessionQuestionStates)
+          .values(
+            this.initialQuestionStateRows({
+              sessionId: row.id,
+              questionIds: params.questionIds,
+            }),
+          )
+          .returning();
+
+        return { row, stateRows, params };
+      });
     } catch (error) {
       if (
         isPostgresUniqueViolation(error) &&
@@ -201,14 +349,14 @@ export class DrizzlePracticeSessionRepository
       );
     }
 
-    if (!row) {
+    if (!created) {
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'Failed to create practice session',
       );
     }
 
-    return this.toDomain(row, params);
+    return this.toDomain(created.row, created.params, created.stateRows);
   }
 
   async recordQuestionAnswer(input: {
@@ -221,7 +369,7 @@ export class DrizzlePracticeSessionRepository
   }): Promise<PracticeSessionQuestionState> {
     return updatePracticeSessionQuestionState({
       db: this.db,
-      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
+      now: this.now,
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,
@@ -231,7 +379,6 @@ export class DrizzlePracticeSessionRepository
         latestIsCorrect: input.isCorrect,
         latestAnsweredAt: input.answeredAt,
       }),
-      failureMessage: 'Failed to persist practice session answer state',
     });
   }
 
@@ -246,7 +393,7 @@ export class DrizzlePracticeSessionRepository
 
     return updatePracticeSessionQuestionState({
       db: this.db,
-      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
+      now: this.now,
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,
@@ -265,7 +412,6 @@ export class DrizzlePracticeSessionRepository
           draftCumulativeMs: input.cumulativeMs,
         };
       },
-      failureMessage: 'Failed to persist practice session draft answer state',
     });
   }
 
@@ -279,7 +425,7 @@ export class DrizzlePracticeSessionRepository
   }): Promise<PracticeSessionQuestionState> {
     return updatePracticeSessionQuestionState({
       db: this.db,
-      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
+      now: this.now,
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,
@@ -292,7 +438,6 @@ export class DrizzlePracticeSessionRepository
         draftSavedAt: null,
         draftCumulativeMs: 0,
       }),
-      failureMessage: 'Failed to finalize practice session draft answer state',
     });
   }
 
@@ -304,7 +449,7 @@ export class DrizzlePracticeSessionRepository
   }): Promise<PracticeSessionQuestionState> {
     return updatePracticeSessionQuestionState({
       db: this.db,
-      findByIdAndUserId: this.findSnapshotByIdAndUserId.bind(this),
+      now: this.now,
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,
@@ -312,7 +457,6 @@ export class DrizzlePracticeSessionRepository
         ...current,
         markedForReview: input.markedForReview,
       }),
-      failureMessage: 'Failed to persist practice session review mark',
     });
   }
 
@@ -329,12 +473,12 @@ export class DrizzlePracticeSessionRepository
   }
 
   async end(id: string, userId: string, explicitEndedAt?: Date) {
-    const existing = await this.findByIdAndUserId(id, userId);
-    if (!existing) {
+    const existingRow = await this.findRowByIdAndUserId(this.db, id, userId);
+    if (!existingRow) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
 
-    if (existing.endedAt) {
+    if (existingRow.endedAt) {
       throw new ApplicationError('CONFLICT', 'Practice session already ended');
     }
 
@@ -368,10 +512,6 @@ export class DrizzlePracticeSessionRepository
       );
     }
 
-    const params = parsePracticeSessionParamsJson(
-      updated.paramsJson,
-      'INTERNAL_ERROR',
-    );
-    return this.toDomain(updated, params);
+    return this.toDomainFromRow(this.db, updated);
   }
 }

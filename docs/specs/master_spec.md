@@ -81,6 +81,8 @@ Next.js Route Handlers use the Web `Request`/`Response` APIs and live inside the
 // db/schema.ts
 import {
   boolean,
+  check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -148,13 +150,6 @@ export type PracticeSessionParams = {
   tagSlugs: string[];            // filter; empty = no tag filter
   difficulties: QuestionDifficulty[]; // filter; empty = no difficulty filter
   questionIds: string[];         // ordered UUID list selected at session start
-  questionStates?: Array<{
-    questionId: string;
-    markedForReview: boolean;
-    latestSelectedChoiceId: string | null;
-    latestIsCorrect: boolean | null;
-    latestAnsweredAt: string | null;
-  }>;
 };
 
 /**
@@ -316,6 +311,7 @@ export const choices = pgTable(
     sortOrder: integer('sort_order').notNull(), // 1..N
   },
   (t) => ({
+    idQuestionIdUq: uniqueIndex('choices_id_question_id_uq').on(t.id, t.questionId),
     questionIdIdx: index('choices_question_id_idx').on(t.questionId),
     questionLabelUq: uniqueIndex('choices_question_id_label_uq').on(
       t.questionId,
@@ -386,6 +382,56 @@ export const practiceSessions = pgTable(
     userIncompleteUq: uniqueIndex('practice_sessions_user_incomplete_uq')
       .on(t.userId)
       .where(sql`ended_at IS NULL`),
+  }),
+);
+
+export const practiceSessionQuestionStates = pgTable(
+  'practice_session_question_states',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    practiceSessionId: uuid('practice_session_id')
+      .notNull()
+      .references(() => practiceSessions.id, { onDelete: 'cascade' }),
+    questionId: uuid('question_id')
+      .notNull()
+      // Intentionally no cascade: hard-deleting referenced questions should fail
+      // so practice-session history cannot silently lose its question anchor.
+      // This intentionally differs from attempts.questionId because attempts
+      // are derived answer events, while session state anchors session history.
+      .references(() => questions.id),
+    position: integer('position').notNull(), // 0-based order in params_json.questionIds
+    markedForReview: boolean('marked_for_review').notNull().default(false),
+    latestSelectedChoiceId: uuid('latest_selected_choice_id'),
+    latestIsCorrect: boolean('latest_is_correct'),
+    latestAnsweredAt: timestamp('latest_answered_at', { withTimezone: true }),
+    draftSelectedChoiceId: uuid('draft_selected_choice_id'),
+    draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
+    draftCumulativeMs: integer('draft_cumulative_ms').notNull().default(0),
+    version: integer('version').notNull().default(0), // row-level optimistic concurrency token
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    sessionQuestionUq: uniqueIndex('practice_session_question_states_session_question_uq').on(t.practiceSessionId, t.questionId),
+    sessionPositionUq: uniqueIndex('practice_session_question_states_session_position_uq').on(t.practiceSessionId, t.position),
+    questionIdIdx: index('practice_session_question_states_question_id_idx').on(t.questionId),
+    latestChoiceQuestionIdx: index('practice_session_question_states_latest_choice_question_idx').on(t.latestSelectedChoiceId, t.questionId),
+    draftChoiceQuestionIdx: index('practice_session_question_states_draft_choice_question_idx').on(t.draftSelectedChoiceId, t.questionId),
+    latestChoiceQuestionFk: foreignKey({
+      name: 'practice_session_question_states_latest_choice_question_fk',
+      columns: [t.latestSelectedChoiceId, t.questionId],
+      foreignColumns: [choices.id, choices.questionId],
+    }).onDelete('restrict'),
+    draftChoiceQuestionFk: foreignKey({
+      name: 'practice_session_question_states_draft_choice_question_fk',
+      columns: [t.draftSelectedChoiceId, t.questionId],
+      foreignColumns: [choices.id, choices.questionId],
+    }).onDelete('restrict'),
+    draftCumulativeMsChk: check('practice_session_question_states_draft_cumulative_ms_chk', sql`${t.draftCumulativeMs} BETWEEN 0 AND ${DAY_MS}`),
+    latestAnswerChk: check('practice_session_question_states_latest_answer_chk', sql`(latest_is_correct IS NULL) = (latest_answered_at IS NULL) AND (latest_selected_choice_id IS NOT NULL OR latest_is_correct IS NOT TRUE) AND (latest_selected_choice_id IS NULL OR (latest_is_correct IS NOT NULL AND latest_answered_at IS NOT NULL))`),
+    draftSavedChk: check('practice_session_question_states_draft_saved_chk', sql`(draft_selected_choice_id IS NULL AND draft_cumulative_ms = 0) OR draft_saved_at IS NOT NULL`),
+    positionChk: check('practice_session_question_states_position_chk', sql`${t.position} >= 0`),
+    versionChk: check('practice_session_question_states_version_chk', sql`${t.version} >= 0`),
   }),
 );
 
@@ -1024,11 +1070,11 @@ export type GetNextQuestionOutput = NextQuestion | null; // null means no remain
 ##### Case A: sessionId provided
 
 1. Load practice session by `id` AND `user_id`.
-2. Parse `params_json` as `PracticeSessionParams`.
+2. Parse `params_json` as immutable `PracticeSessionParams` metadata and load mutable state from `practice_session_question_states` ordered by `position`.
 3. Determine target question:
 
    * If `questionId` is provided, it must belong to `params_json.questionIds`.
-   * Else pick the first question in `params_json.questionIds` whose persisted state has `latestSelectedChoiceId = null`.
+   * Else pick the first question in `params_json.questionIds` whose persisted answer marker is empty: for active exam sessions use `draftSelectedChoiceId ?? latestSelectedChoiceId`, and for tutor sessions use `latestSelectedChoiceId`.
 4. If none found: return `null`.
 5. Fetch question + choices by target questionId:
 
@@ -1177,9 +1223,9 @@ export type StartPracticeSessionOutput = { sessionId: string };
 5. Insert `practice_sessions` row with:
 
    * `user_id`, `mode`
-   * `params_json = { count, tagSlugs, difficulties, questionIds, questionStates }`
-   * `questionStates` is initialized for each selected question:
-     * `{ questionId, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null }`
+   * `params_json = { count: questionIds.length, tagSlugs, difficulties, questionIds }`; persisted `count` is the actual selected session size, which may be smaller than the requested count when filters return fewer candidates.
+   * one `practice_session_question_states` row per selected question, in `questionIds` order:
+     * `{ practiceSessionId, questionId, position:<0-based index>, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null, draftSelectedChoiceId:null, draftSavedAt:null, draftCumulativeMs:0 }`
    * `started_at = now()`
 6. Return `sessionId`.
 7. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:startPracticeSession'`) so retries replay the previously created session id.
@@ -1233,7 +1279,7 @@ export type EndPracticeSessionOutput = {
 3. Set `ended_at = now()`.
 4. Compute summary:
 
-   * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null
+   * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
    * `correct` = count of persisted session question states where `latestIsCorrect === true`
    * duration = floor((ended_at - started_at)/1000)
 5. Return summary.
@@ -1542,7 +1588,7 @@ export type GetPracticeSessionReviewOutput = {
 **Behavior (exact):**
 
 1. Load session by id and user_id.
-2. Build ordered review rows from persisted `questionStates`.
+2. Build ordered review rows from persisted `practice_session_question_states`.
 3. Join question ids to published questions for stem/difficulty when available.
 4. Return aggregate counts (`totalCount`, `answeredCount`, `markedCount`) and ordered rows.
 
@@ -1641,9 +1687,9 @@ export type GetSessionHistoryOutput = {
 **Behavior (exact):**
 
 1. Load completed practice sessions (`ended_at IS NOT NULL`) for user, ordered by `ended_at DESC`.
-2. For each session, compute stats from persisted `questionStates` in `params_json`:
+2. For each session, compute stats from persisted `practice_session_question_states`:
    * `questionCount` = total questions in session
-   * `answered` = count where `latestSelectedChoiceId` is not null
+   * `answered` = count where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
    * `correct` = count where `latestIsCorrect === true`
    * `accuracy` = correct / questionCount (0 if questionCount = 0)
    * `durationSeconds` = floor((ended_at - started_at) / 1000)
@@ -1689,7 +1735,9 @@ export type GetIncompletePracticeSessionOutput =
 
 1. Load the most recent in-progress session for user (`ended_at IS NULL`).
 2. If none exists, return `null`.
-3. Compute `answeredCount` from persisted `questionStates` where `latestSelectedChoiceId` is non-null.
+3. Compute `answeredCount` from persisted `practice_session_question_states`:
+   * for active exam sessions, count states where `draftSelectedChoiceId IS NOT NULL OR latestSelectedChoiceId IS NOT NULL`;
+   * otherwise, count states where `latestSelectedChoiceId IS NOT NULL`.
 4. Return minimal resume metadata for UI continuation.
 
 ---
@@ -2440,7 +2488,7 @@ As a subscribed user, I can run a timed practice session with filters and get a 
 
 **Implementation Checklist:**
 
-1. Implement `startPracticeSession` and persist `questionIds` + `questionStates` in `params_json`.
+1. Implement `startPracticeSession` and persist immutable selection metadata in `params_json` plus mutable state in `practice_session_question_states`.
 2. Implement session runner route `/app/practice/[sessionId]`.
 3. Implement review-stage actions: `getPracticeSessionReview`, `setPracticeSessionQuestionMark`.
 4. Implement `endPracticeSession` finalization using latest per-question session state.

@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
-import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
+import {
+  expectStateSelectPredicate,
+  restoreDrizzlePracticeSessionRepositoryTestMocks,
+} from './drizzle-practice-session-repository-test-helpers';
 
 const sessionId = crypto.randomUUID();
 const alternateSessionId = crypto.randomUUID();
@@ -10,30 +13,129 @@ const secondQuestionId = crypto.randomUUID();
 const thirdQuestionId = crypto.randomUUID();
 const orphanQuestionId = crypto.randomUUID();
 
+type StateRow = {
+  id: string;
+  practiceSessionId: string;
+  questionId: string;
+  position: number;
+  markedForReview: boolean;
+  latestSelectedChoiceId: string | null;
+  latestIsCorrect: boolean | null;
+  latestAnsweredAt: Date | null;
+  draftSelectedChoiceId: string | null;
+  draftSavedAt: Date | null;
+  draftCumulativeMs: number;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function createStateRow(
+  input: {
+    practiceSessionId?: string;
+    questionId: string;
+    position: number;
+  } & Partial<StateRow>,
+): StateRow {
+  const now = new Date('2026-02-01T00:00:00.000Z');
+  return {
+    id: crypto.randomUUID(),
+    practiceSessionId: input.practiceSessionId ?? sessionId,
+    questionId: input.questionId,
+    position: input.position,
+    markedForReview: input.markedForReview ?? false,
+    latestSelectedChoiceId: input.latestSelectedChoiceId ?? null,
+    latestIsCorrect: input.latestIsCorrect ?? null,
+    latestAnsweredAt: input.latestAnsweredAt ?? null,
+    draftSelectedChoiceId: input.draftSelectedChoiceId ?? null,
+    draftSavedAt: input.draftSavedAt ?? null,
+    draftCumulativeMs: input.draftCumulativeMs ?? 0,
+    version: input.version ?? 0,
+    createdAt: input.createdAt ?? now,
+    updatedAt: input.updatedAt ?? now,
+  };
+}
+
+function createStateSelect(
+  rows: readonly StateRow[],
+  expectedSessionIds: readonly string[] = rows.map(
+    (row) => row.practiceSessionId,
+  ),
+) {
+  return vi.fn(() => ({
+    from: () => ({
+      where: (predicate: unknown) => {
+        expectStateSelectPredicate(predicate, expectedSessionIds);
+        return {
+          orderBy: async () => rows,
+        };
+      },
+    }),
+  }));
+}
+
+function createRepeatableReadDb<TTx extends object>(tx: TTx) {
+  const transaction = vi.fn(async (fn: (client: TTx) => Promise<unknown>) =>
+    fn(tx),
+  );
+  const db = {
+    transaction,
+    query: {
+      practiceSessions: {
+        findFirst: () => {
+          throw new Error('unexpected root findFirst');
+        },
+        findMany: () => {
+          throw new Error('unexpected root findMany');
+        },
+      },
+    },
+    select: () => {
+      throw new Error('unexpected root select');
+    },
+    insert: () => {
+      throw new Error('unexpected insert');
+    },
+    update: () => {
+      throw new Error('unexpected update');
+    },
+  } as const;
+
+  type RepoDb = ConstructorParameters<
+    typeof DrizzlePracticeSessionRepository
+  >[0];
+  return {
+    db: db as unknown as RepoDb,
+    transaction,
+  };
+}
+
+function expectRepeatableReadTransaction(
+  transaction: ReturnType<typeof vi.fn>,
+) {
+  expect(transaction).toHaveBeenCalledTimes(1);
+  expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+    isolationLevel: 'repeatable read',
+  });
+}
+
 describe('DrizzlePracticeSessionRepository reads', () => {
   afterEach(restoreDrizzlePracticeSessionRepositoryTestMocks);
 
   it('returns null when session is not found', async () => {
-    const db = {
+    const tx = {
       query: {
         practiceSessions: {
           findFirst: async () => null,
         },
       },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-      update: () => {
-        throw new Error('unexpected update');
-      },
     } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+    const repo = new DrizzlePracticeSessionRepository(db);
 
     await expect(repo.findByIdAndUserId(sessionId, userId)).resolves.toBeNull();
+    expectRepeatableReadTransaction(transaction);
   });
 
   it('returns latest incomplete session for a user', async () => {
@@ -52,24 +154,33 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       endedAt: null,
     });
 
-    const db = {
+    const tx = {
       query: {
         practiceSessions: {
           findFirst: queryFindFirst,
         },
       },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-      update: () => {
-        throw new Error('unexpected update');
-      },
+      select: createStateSelect([
+        createStateRow({
+          practiceSessionId: alternateSessionId,
+          questionId: firstQuestionId,
+          position: 0,
+        }),
+        createStateRow({
+          practiceSessionId: alternateSessionId,
+          questionId: secondQuestionId,
+          position: 1,
+        }),
+        createStateRow({
+          practiceSessionId: alternateSessionId,
+          questionId: thirdQuestionId,
+          position: 2,
+        }),
+      ]),
     } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+    const repo = new DrizzlePracticeSessionRepository(db);
 
     await expect(repo.findLatestIncompleteByUserId(userId)).resolves.toEqual({
       id: alternateSessionId,
@@ -115,6 +226,7 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     });
 
     expect(queryFindFirst).toHaveBeenCalledTimes(1);
+    expectRepeatableReadTransaction(transaction);
   });
 
   it('returns completed sessions with total count', async () => {
@@ -136,11 +248,21 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       },
     ]);
     const countWhere = vi.fn().mockResolvedValue([{ count: 1 }]);
-    const select = vi.fn(() => ({
-      from: () => ({
-        where: countWhere,
-      }),
-    }));
+    const stateSelect = createStateSelect([
+      createStateRow({ questionId: firstQuestionId, position: 0 }),
+      createStateRow({ questionId: secondQuestionId, position: 1 }),
+    ]);
+    const select = vi.fn((selection?: unknown) => {
+      if (selection) {
+        return {
+          from: () => ({
+            where: countWhere,
+          }),
+        };
+      }
+
+      return stateSelect();
+    });
 
     const tx = {
       query: {
@@ -288,12 +410,55 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     });
   });
 
-  it('returns null when no incomplete session exists for user', async () => {
-    const db = {
+  it('returns an empty completed page when offset exceeds the matching rows', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const countWhere = vi.fn().mockResolvedValue([{ count: 3 }]);
+    const select = vi.fn((selection?: unknown) => {
+      if (selection) {
+        return {
+          from: () => ({
+            where: countWhere,
+          }),
+        };
+      }
+
+      return {
+        from: () => ({
+          where: () => ({
+            orderBy: () => {
+              throw new Error('state rows should not load for an empty page');
+            },
+          }),
+        }),
+      };
+    });
+
+    const tx = {
       query: {
         practiceSessions: {
           findFirst: async () => null,
+          findMany,
         },
+      },
+      select,
+    } as const;
+    const transaction = vi.fn(
+      async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    );
+    const db = {
+      transaction,
+      query: {
+        practiceSessions: {
+          findFirst: () => {
+            throw new Error('unexpected root findFirst');
+          },
+          findMany: () => {
+            throw new Error('unexpected root findMany');
+          },
+        },
+      },
+      select: () => {
+        throw new Error('unexpected root select');
       },
       insert: () => {
         throw new Error('unexpected insert');
@@ -308,7 +473,33 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     >[0];
     const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
+    await expect(repo.findCompletedByUserId(userId, 10, 50)).resolves.toEqual({
+      rows: [],
+      total: 3,
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 10, offset: 50 }),
+    );
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
+  });
+
+  it('returns null when no incomplete session exists for user', async () => {
+    const tx = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => null,
+        },
+      },
+    } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
+
+    const repo = new DrizzlePracticeSessionRepository(db);
+
     await expect(repo.findLatestIncompleteByUserId(userId)).resolves.toBeNull();
+    expectRepeatableReadTransaction(transaction);
   });
 
   it('parses paramsJson and maps the row to a domain PracticeSession', async () => {
@@ -327,24 +518,20 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       endedAt: null,
     } as const;
 
-    const db = {
+    const tx = {
       query: {
         practiceSessions: {
           findFirst: async () => row,
         },
       },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-      update: () => {
-        throw new Error('unexpected update');
-      },
+      select: createStateSelect([
+        createStateRow({ questionId: firstQuestionId, position: 0 }),
+        createStateRow({ questionId: secondQuestionId, position: 1 }),
+      ]),
     } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+    const repo = new DrizzlePracticeSessionRepository(db);
 
     await expect(repo.findByIdAndUserId(sessionId, userId)).resolves.toEqual({
       id: sessionId,
@@ -378,6 +565,47 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       startedAt,
       endedAt: null,
     });
+    expectRepeatableReadTransaction(transaction);
+  });
+
+  it('throws INTERNAL_ERROR when normalized state has surplus rows', async () => {
+    const row = {
+      id: sessionId,
+      userId: userId,
+      mode: 'tutor',
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [firstQuestionId, secondQuestionId],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+
+    const tx = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      select: createStateSelect([
+        createStateRow({ questionId: firstQuestionId, position: 0 }),
+        createStateRow({ questionId: secondQuestionId, position: 1 }),
+        createStateRow({ questionId: thirdQuestionId, position: 2 }),
+      ]),
+    } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
+
+    const repo = new DrizzlePracticeSessionRepository(db);
+
+    await expect(
+      repo.findByIdAndUserId(sessionId, userId),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: `Practice session ${sessionId} has inconsistent normalized question state`,
+    });
+    expectRepeatableReadTransaction(transaction);
   });
 
   it('returns INTERNAL_ERROR when persisted paramsJson is invalid', async () => {
@@ -395,31 +623,24 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       endedAt: null,
     } as const;
 
-    const db = {
+    const tx = {
       query: {
         practiceSessions: {
           findFirst: async () => row,
         },
       },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-      update: () => {
-        throw new Error('unexpected update');
-      },
     } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+    const repo = new DrizzlePracticeSessionRepository(db);
 
     await expect(
       repo.findByIdAndUserId(sessionId, userId),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    expectRepeatableReadTransaction(transaction);
   });
 
-  it('drops orphaned questionStates without calling console.warn', async () => {
+  it('ignores stale blob questionStates and maps relational state rows without console.warn', async () => {
     const row = {
       id: sessionId,
       userId: userId,
@@ -454,24 +675,19 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       .spyOn(console, 'warn')
       .mockImplementation(() => undefined);
 
-    const db = {
+    const tx = {
       query: {
         practiceSessions: {
           findFirst: async () => row,
         },
       },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-      update: () => {
-        throw new Error('unexpected update');
-      },
+      select: createStateSelect([
+        createStateRow({ questionId: firstQuestionId, position: 0 }),
+      ]),
     } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+    const repo = new DrizzlePracticeSessionRepository(db);
 
     const session = await repo.findByIdAndUserId(sessionId, userId);
     expect(session?.questionStates).toEqual([
@@ -488,5 +704,6 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     ]);
 
     expect(warnSpy).not.toHaveBeenCalled();
+    expectRepeatableReadTransaction(transaction);
   });
 });

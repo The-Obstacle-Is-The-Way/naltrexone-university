@@ -1,100 +1,216 @@
-import { and, eq, isNull } from 'drizzle-orm';
-import { type PracticeSessionParams, practiceSessions } from '@/db/schema';
+import { and, eq, sql } from 'drizzle-orm';
+import { practiceSessionQuestionStates, practiceSessions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
-import type {
-  PracticeSession,
-  PracticeSessionQuestionState,
-} from '@/src/domain/entities';
+import type { PracticeSessionQuestionState } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
-import { toPracticeSessionParamsJson } from './practice-session-params';
+import { parsePracticeSessionParamsJson } from './practice-session-params';
 
 const UPDATE_QUESTION_STATE_MAX_RETRIES = 3;
 
-type PracticeSessionSnapshot = {
-  session: PracticeSession;
-  rawParamsJson: PracticeSessionParams;
+type PracticeSessionQuestionStateRow =
+  typeof practiceSessionQuestionStates.$inferSelect;
+
+type QuestionStateSnapshot = {
+  row: PracticeSessionQuestionStateRow;
+  state: PracticeSessionQuestionState;
+  endedAt: Date | null;
 };
+
+type SessionStatus = {
+  endedAt: Date | null;
+  paramsJson: unknown;
+};
+
+function toDomainQuestionState(
+  row: PracticeSessionQuestionStateRow,
+): PracticeSessionQuestionState {
+  return {
+    questionId: row.questionId,
+    markedForReview: row.markedForReview,
+    latestSelectedChoiceId: row.latestSelectedChoiceId,
+    latestIsCorrect: row.latestIsCorrect,
+    latestAnsweredAt: row.latestAnsweredAt ?? null,
+    draftSelectedChoiceId: row.draftSelectedChoiceId,
+    draftSavedAt: row.draftSavedAt ?? null,
+    draftCumulativeMs: row.draftCumulativeMs,
+  };
+}
+
+async function lockSessionStatus(input: {
+  db: DrizzleDb;
+  sessionId: string;
+  userId: string;
+}): Promise<SessionStatus | null> {
+  const [row] = await input.db
+    .select({
+      endedAt: practiceSessions.endedAt,
+      paramsJson: practiceSessions.paramsJson,
+    })
+    .from(practiceSessions)
+    .where(
+      and(
+        eq(practiceSessions.id, input.sessionId),
+        eq(practiceSessions.userId, input.userId),
+      ),
+    )
+    .for('update');
+
+  return row
+    ? { endedAt: row.endedAt ?? null, paramsJson: row.paramsJson }
+    : null;
+}
+
+async function findQuestionStateRow(input: {
+  db: DrizzleDb;
+  sessionId: string;
+  questionId: string;
+}): Promise<PracticeSessionQuestionStateRow | null> {
+  const [row] = await input.db
+    .select()
+    .from(practiceSessionQuestionStates)
+    .where(
+      and(
+        eq(practiceSessionQuestionStates.practiceSessionId, input.sessionId),
+        eq(practiceSessionQuestionStates.questionId, input.questionId),
+      ),
+    )
+    .limit(1);
+
+  return row ?? null;
+}
+
+async function findQuestionStateSnapshot(input: {
+  db: DrizzleDb;
+  sessionId: string;
+  userId: string;
+  questionId: string;
+}): Promise<QuestionStateSnapshot> {
+  const session = await lockSessionStatus(input);
+  if (!session) {
+    throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+  }
+
+  const row = await findQuestionStateRow(input);
+  if (row) {
+    return {
+      row,
+      state: toDomainQuestionState(row),
+      endedAt: session.endedAt,
+    };
+  }
+
+  // A session-owned question missing its normalized state row is data
+  // corruption (failed backfill/migration) and must outrank the ended-session
+  // CONFLICT so it cannot hide behind "already ended".
+  const params = parsePracticeSessionParamsJson(
+    session.paramsJson,
+    'INTERNAL_ERROR',
+  );
+  if (params.questionIds.includes(input.questionId)) {
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      `Practice session ${input.sessionId} is missing normalized question state`,
+    );
+  }
+
+  if (session.endedAt) {
+    throw new ApplicationError('CONFLICT', 'Practice session already ended');
+  }
+
+  throw new ApplicationError(
+    'NOT_FOUND',
+    'Question is not part of this practice session',
+  );
+}
+
+function toPersistenceUpdate(state: PracticeSessionQuestionState) {
+  return {
+    markedForReview: state.markedForReview,
+    latestSelectedChoiceId: state.latestSelectedChoiceId,
+    latestIsCorrect: state.latestIsCorrect,
+    latestAnsweredAt: state.latestAnsweredAt,
+    draftSelectedChoiceId: state.draftSelectedChoiceId,
+    draftSavedAt: state.draftSavedAt,
+    draftCumulativeMs: state.draftCumulativeMs,
+  };
+}
 
 export async function updatePracticeSessionQuestionState(input: {
   db: DrizzleDb;
-  findByIdAndUserId: (
-    id: string,
-    userId: string,
-  ) => Promise<PracticeSessionSnapshot | null>;
+  now: () => Date;
   sessionId: string;
   userId: string;
   questionId: string;
   updateFn: (
     current: PracticeSessionQuestionState,
   ) => PracticeSessionQuestionState;
-  failureMessage: string;
 }): Promise<PracticeSessionQuestionState> {
   for (
     let attempt = 0;
     attempt < UPDATE_QUESTION_STATE_MAX_RETRIES;
     attempt += 1
   ) {
-    const existingSnapshot = await input.findByIdAndUserId(
-      input.sessionId,
-      input.userId,
-    );
-    if (!existingSnapshot) {
-      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
-    }
-    const existing = existingSnapshot.session;
-    if (existing.endedAt) {
-      throw new ApplicationError('CONFLICT', 'Practice session already ended');
-    }
+    const attemptResult = await input.db.transaction(async (tx) => {
+      const txDb = tx as unknown as DrizzleDb;
+      const existing = await findQuestionStateSnapshot({
+        ...input,
+        db: txDb,
+      });
+      if (existing.endedAt) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Practice session already ended',
+        );
+      }
 
-    const found = existing.questionStates.find(
-      (state) => state.questionId === input.questionId,
-    );
-    if (!found) {
-      throw new ApplicationError(
-        'NOT_FOUND',
-        'Question is not part of this practice session',
-      );
-    }
+      const updatedState = input.updateFn(existing.state);
+      if (updatedState === existing.state) {
+        return { status: 'updated' as const, state: existing.state };
+      }
 
-    const updatedState = input.updateFn(found);
-    const nextSession: PracticeSession = {
-      ...existing,
-      questionStates: existing.questionStates.map((state) =>
-        state.questionId === input.questionId ? updatedState : state,
-      ),
-    };
-    const expectedParamsJson = existingSnapshot.rawParamsJson;
-    const nextParamsJson = toPracticeSessionParamsJson(nextSession);
+      const [updated] = await txDb
+        .update(practiceSessionQuestionStates)
+        .set({
+          ...toPersistenceUpdate(updatedState),
+          version: sql`${practiceSessionQuestionStates.version} + 1`,
+          updatedAt: input.now(),
+        })
+        .where(
+          and(
+            eq(practiceSessionQuestionStates.id, existing.row.id),
+            eq(practiceSessionQuestionStates.version, existing.row.version),
+            sql`exists (
+              select 1
+              from ${practiceSessions}
+              where ${practiceSessions.id} = ${practiceSessionQuestionStates.practiceSessionId}
+                and ${practiceSessions.userId} = ${input.userId}
+                and ${practiceSessions.endedAt} is null
+            )`,
+          ),
+        )
+        .returning();
 
-    const [updated] = await input.db
-      .update(practiceSessions)
-      .set({ paramsJson: nextParamsJson })
-      .where(
-        and(
-          eq(practiceSessions.id, input.sessionId),
-          eq(practiceSessions.userId, input.userId),
-          isNull(practiceSessions.endedAt),
-          eq(practiceSessions.paramsJson, expectedParamsJson),
-        ),
-      )
-      .returning({ id: practiceSessions.id });
+      return updated
+        ? { status: 'updated' as const, state: toDomainQuestionState(updated) }
+        : { status: 'stale' as const };
+    });
 
-    if (updated) {
-      return updatedState;
+    if (attemptResult.status === 'updated') {
+      return attemptResult.state;
     }
   }
 
-  const currentSnapshot = await input.findByIdAndUserId(
-    input.sessionId,
-    input.userId,
+  const finalSnapshot = await input.db.transaction(async (tx) =>
+    findQuestionStateSnapshot({
+      ...input,
+      db: tx as unknown as DrizzleDb,
+    }),
   );
-  if (!currentSnapshot) {
-    throw new ApplicationError('NOT_FOUND', 'Practice session not found');
-  }
-  const current = currentSnapshot.session;
-  if (current.endedAt) {
+  if (finalSnapshot.endedAt) {
     throw new ApplicationError('CONFLICT', 'Practice session already ended');
   }
-
-  throw new ApplicationError('INTERNAL_ERROR', input.failureMessage);
+  throw new ApplicationError(
+    'CONFLICT',
+    'Practice session state changed concurrently; please retry.',
+  );
 }

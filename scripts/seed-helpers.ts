@@ -5,6 +5,39 @@ export type ChoiceRef = {
   label: string;
 };
 
+type AttemptChoiceReferenceRow = {
+  selectedChoiceId: string | null;
+};
+
+type PracticeSessionChoiceReferenceRow = {
+  latestSelectedChoiceId: string | null;
+  draftSelectedChoiceId: string | null;
+};
+
+export function computeReferencedChoiceIds(input: {
+  attemptRows: readonly AttemptChoiceReferenceRow[];
+  stateRows: readonly PracticeSessionChoiceReferenceRow[];
+}): ReadonlySet<string> {
+  const referencedChoiceIds = new Set<string>();
+
+  for (const row of input.attemptRows) {
+    if (row.selectedChoiceId) {
+      referencedChoiceIds.add(row.selectedChoiceId);
+    }
+  }
+
+  for (const row of input.stateRows) {
+    if (row.latestSelectedChoiceId) {
+      referencedChoiceIds.add(row.latestSelectedChoiceId);
+    }
+    if (row.draftSelectedChoiceId) {
+      referencedChoiceIds.add(row.draftSelectedChoiceId);
+    }
+  }
+
+  return referencedChoiceIds;
+}
+
 export function computeChoiceSyncPlan(input: {
   existingChoices: readonly ChoiceRef[];
   desiredChoices: ReadonlyArray<{ label: string }>;
@@ -18,7 +51,7 @@ export function computeChoiceSyncPlan(input: {
 
     if (input.referencedChoiceIds.has(choice.id)) {
       throw new Error(
-        `Refusing to delete choice ${choice.id} (${choice.label}) because it is referenced by an attempt`,
+        `Refusing to delete choice ${choice.id} (${choice.label}) because it is referenced by an attempt or practice session state`,
       );
     }
 
@@ -26,6 +59,20 @@ export function computeChoiceSyncPlan(input: {
   }
 
   return { deleteChoiceIds };
+}
+
+export function computeTemporarySortOrders(
+  existingChoices: ReadonlyArray<{ id: string; sortOrder: number }>,
+): Array<{ id: string; sortOrder: number }> {
+  if (existingChoices.length === 0) return [];
+
+  const firstTemporarySortOrder =
+    Math.min(0, ...existingChoices.map((choice) => choice.sortOrder)) - 1;
+
+  return existingChoices.map((choice, index) => ({
+    id: choice.id,
+    sortOrder: firstTemporarySortOrder - index,
+  }));
 }
 
 const WRONG_ANSWERS_HEADING_PATTERN =

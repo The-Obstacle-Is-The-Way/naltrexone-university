@@ -442,11 +442,11 @@ export type GetNextQuestionOutput = NextQuestion | null; // null means no remain
 ##### Case A: sessionId provided
 
 1. Load practice session by `id` AND `user_id`.
-2. Parse `params_json` as `PracticeSessionParams`.
+2. Parse `params_json` as immutable `PracticeSessionParams` metadata and load mutable state from `practice_session_question_states` ordered by `position`.
 3. Determine target question:
 
    * If `questionId` is provided, it must belong to `params_json.questionIds`.
-   * Else pick the first question in `params_json.questionIds` whose persisted state has `latestSelectedChoiceId = null`.
+   * Else pick the first question in `params_json.questionIds` whose persisted answer marker is empty: for active exam sessions use `draftSelectedChoiceId ?? latestSelectedChoiceId`, and for tutor sessions use `latestSelectedChoiceId`.
 4. If none found: return `null`.
 5. Fetch question + choices by target questionId:
 
@@ -595,9 +595,9 @@ export type StartPracticeSessionOutput = { sessionId: string };
 5. Insert `practice_sessions` row with:
 
    * `user_id`, `mode`
-   * `params_json = { count, tagSlugs, difficulties, questionIds, questionStates }`
-   * `questionStates` is initialized for each selected question:
-     * `{ questionId, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null }`
+   * `params_json = { count: questionIds.length, tagSlugs, difficulties, questionIds }`; persisted `count` is the actual selected session size, which may be smaller than the requested count when filters return fewer candidates.
+   * one `practice_session_question_states` row per selected question, in `questionIds` order:
+     * `{ practiceSessionId, questionId, position:<0-based index>, markedForReview:false, latestSelectedChoiceId:null, latestIsCorrect:null, latestAnsweredAt:null, draftSelectedChoiceId:null, draftSavedAt:null, draftCumulativeMs:0 }`
    * `started_at = now()`
 6. Return `sessionId`.
 7. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='practice:startPracticeSession'`) so retries replay the previously created session id.
@@ -651,7 +651,7 @@ export type EndPracticeSessionOutput = {
 3. Set `ended_at = now()`.
 4. Compute summary:
 
-   * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null
+   * `answered` = count of persisted session question states where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
    * `correct` = count of persisted session question states where `latestIsCorrect === true`
    * duration = floor((ended_at - started_at)/1000)
 5. Return summary.
@@ -960,7 +960,7 @@ export type GetPracticeSessionReviewOutput = {
 **Behavior (exact):**
 
 1. Load session by id and user_id.
-2. Build ordered review rows from persisted `questionStates`.
+2. Build ordered review rows from persisted `practice_session_question_states`.
 3. Join question ids to published questions for stem/difficulty when available.
 4. Return aggregate counts (`totalCount`, `answeredCount`, `markedCount`) and ordered rows.
 
@@ -1059,9 +1059,9 @@ export type GetSessionHistoryOutput = {
 **Behavior (exact):**
 
 1. Load completed practice sessions (`ended_at IS NOT NULL`) for user, ordered by `ended_at DESC`.
-2. For each session, compute stats from persisted `questionStates` in `params_json`:
+2. For each session, compute stats from persisted `practice_session_question_states`:
    * `questionCount` = total questions in session
-   * `answered` = count where `latestSelectedChoiceId` is not null
+   * `answered` = count where `latestSelectedChoiceId` is not null; finalized omitted states have `latestAnsweredAt` for attempt timing but are not counted as answered because no choice was selected
    * `correct` = count where `latestIsCorrect === true`
    * `accuracy` = correct / questionCount (0 if questionCount = 0)
    * `durationSeconds` = floor((ended_at - started_at) / 1000)
@@ -1107,7 +1107,9 @@ export type GetIncompletePracticeSessionOutput =
 
 1. Load the most recent in-progress session for user (`ended_at IS NULL`).
 2. If none exists, return `null`.
-3. Compute `answeredCount` from persisted `questionStates` where `latestSelectedChoiceId` is non-null.
+3. Compute `answeredCount` from persisted `practice_session_question_states`:
+   * for active exam sessions, count states where `draftSelectedChoiceId IS NOT NULL OR latestSelectedChoiceId IS NOT NULL`;
+   * otherwise, count states where `latestSelectedChoiceId IS NOT NULL`.
 4. Return minimal resume metadata for UI continuation.
 
 ---

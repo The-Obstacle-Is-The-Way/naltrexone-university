@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeChoiceSyncPlan,
+  computeReferencedChoiceIds,
+  computeTemporarySortOrders,
   parseExplanationAndReference,
 } from './seed-helpers';
 
@@ -15,6 +17,49 @@ function getErrorMessage(fn: () => unknown): string {
 }
 
 describe('computeChoiceSyncPlan', () => {
+  it('merges choice references from attempts and normalized session state rows', () => {
+    const attemptChoiceId = crypto.randomUUID();
+    const latestChoiceId = crypto.randomUUID();
+    const draftChoiceId = crypto.randomUUID();
+
+    const referenced = computeReferencedChoiceIds({
+      attemptRows: [
+        { selectedChoiceId: attemptChoiceId },
+        { selectedChoiceId: null },
+      ],
+      stateRows: [
+        {
+          latestSelectedChoiceId: latestChoiceId,
+          draftSelectedChoiceId: null,
+        },
+        {
+          latestSelectedChoiceId: null,
+          draftSelectedChoiceId: draftChoiceId,
+        },
+      ],
+    });
+
+    expect([...referenced].sort()).toEqual(
+      [attemptChoiceId, draftChoiceId, latestChoiceId].sort(),
+    );
+  });
+
+  it('treats a draft-only normalized session state as a protected choice reference', () => {
+    const draftChoiceId = crypto.randomUUID();
+
+    const referenced = computeReferencedChoiceIds({
+      attemptRows: [],
+      stateRows: [
+        {
+          latestSelectedChoiceId: null,
+          draftSelectedChoiceId: draftChoiceId,
+        },
+      ],
+    });
+
+    expect(referenced.has(draftChoiceId)).toBe(true);
+  });
+
   it('throws if asked to delete a choice that is referenced by an attempt', () => {
     expect(() =>
       computeChoiceSyncPlan({
@@ -26,7 +71,7 @@ describe('computeChoiceSyncPlan', () => {
         desiredChoices: [{ label: 'A' }, { label: 'B' }],
         referencedChoiceIds: new Set(['c-c']),
       }),
-    ).toThrow(/referenced/i);
+    ).toThrow(/referenced by an attempt or practice session state/i);
   });
 
   it('returns delete ids only for unreferenced removed labels', () => {
@@ -54,6 +99,38 @@ describe('computeChoiceSyncPlan', () => {
     });
 
     expect(plan.deleteChoiceIds).toEqual([]);
+  });
+});
+
+describe('computeTemporarySortOrders', () => {
+  it('moves existing choices below the current minimum sort order in stable order', () => {
+    const plans = computeTemporarySortOrders([
+      { id: 'choice-a', sortOrder: 10 },
+      { id: 'choice-b', sortOrder: 1 },
+      { id: 'choice-c', sortOrder: 3 },
+    ]);
+
+    expect(plans).toEqual([
+      { id: 'choice-a', sortOrder: -1 },
+      { id: 'choice-b', sortOrder: -2 },
+      { id: 'choice-c', sortOrder: -3 },
+    ]);
+  });
+
+  it('keeps temporary sort orders below zero when existing rows are already negative', () => {
+    const plans = computeTemporarySortOrders([
+      { id: 'choice-a', sortOrder: -4 },
+      { id: 'choice-b', sortOrder: 2 },
+    ]);
+
+    expect(plans).toEqual([
+      { id: 'choice-a', sortOrder: -5 },
+      { id: 'choice-b', sortOrder: -6 },
+    ]);
+  });
+
+  it('returns no update plans when there are no existing choices', () => {
+    expect(computeTemporarySortOrders([])).toEqual([]);
   });
 });
 

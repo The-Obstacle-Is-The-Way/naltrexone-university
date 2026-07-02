@@ -5,13 +5,76 @@ import {
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
-import { restoreDrizzlePracticeSessionRepositoryTestMocks } from './drizzle-practice-session-repository-test-helpers';
+import {
+  expectStateSelectPredicate,
+  restoreDrizzlePracticeSessionRepositoryTestMocks,
+} from './drizzle-practice-session-repository-test-helpers';
 
 const sessionId = crypto.randomUUID();
 const userId = crypto.randomUUID();
 const firstQuestionId = crypto.randomUUID();
 const secondQuestionId = crypto.randomUUID();
 const selectedChoiceId = crypto.randomUUID();
+
+type StateRow = {
+  id: string;
+  practiceSessionId: string;
+  questionId: string;
+  position: number;
+  markedForReview: boolean;
+  latestSelectedChoiceId: string | null;
+  latestIsCorrect: boolean | null;
+  latestAnsweredAt: Date | null;
+  draftSelectedChoiceId: string | null;
+  draftSavedAt: Date | null;
+  draftCumulativeMs: number;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function createStateRow(
+  input: {
+    questionId: string;
+    position: number;
+  } & Partial<StateRow>,
+): StateRow {
+  const now = new Date('2026-02-01T00:00:00.000Z');
+  return {
+    id: crypto.randomUUID(),
+    practiceSessionId: input.practiceSessionId ?? sessionId,
+    questionId: input.questionId,
+    position: input.position,
+    markedForReview: input.markedForReview ?? false,
+    latestSelectedChoiceId: input.latestSelectedChoiceId ?? null,
+    latestIsCorrect: input.latestIsCorrect ?? null,
+    latestAnsweredAt: input.latestAnsweredAt ?? null,
+    draftSelectedChoiceId: input.draftSelectedChoiceId ?? null,
+    draftSavedAt: input.draftSavedAt ?? null,
+    draftCumulativeMs: input.draftCumulativeMs ?? 0,
+    version: input.version ?? 0,
+    createdAt: input.createdAt ?? now,
+    updatedAt: input.updatedAt ?? now,
+  };
+}
+
+function createStateSelect(
+  rows: readonly StateRow[],
+  expectedSessionIds: readonly string[] = rows.map(
+    (row) => row.practiceSessionId,
+  ),
+) {
+  return vi.fn(() => ({
+    from: () => ({
+      where: (predicate: unknown) => {
+        expectStateSelectPredicate(predicate, expectedSessionIds);
+        return {
+          orderBy: async () => rows,
+        };
+      },
+    }),
+  }));
+}
 
 describe('DrizzlePracticeSessionRepository session writes', () => {
   afterEach(restoreDrizzlePracticeSessionRepositoryTestMocks);
@@ -22,19 +85,37 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       id: sessionId,
       userId: userId,
       mode: 'exam',
-      paramsJson: {},
+      paramsJson: {
+        count: 2,
+        tagSlugs: [],
+        difficulties: ['easy', 'hard'],
+        questionIds: [firstQuestionId, secondQuestionId],
+      },
       startedAt,
       endedAt: null,
     };
 
-    const insertValues = vi.fn(() => ({
+    const insertSessionValues = vi.fn(() => ({
       returning: async () => [returningRow],
     }));
+    const stateRows = [
+      createStateRow({ questionId: firstQuestionId, position: 0 }),
+      createStateRow({ questionId: secondQuestionId, position: 1 }),
+    ];
+    const insertStateValues = vi.fn(() => ({
+      returning: async () => stateRows,
+    }));
+    const tx = {
+      insert: vi
+        .fn()
+        .mockReturnValueOnce({ values: insertSessionValues })
+        .mockReturnValueOnce({ values: insertStateValues }),
+    };
 
     const db = {
-      insert: () => ({
-        values: insertValues,
-      }),
+      transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
       query: {
         practiceSessions: {
           findFirst: async () => null,
@@ -70,9 +151,21 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       endedAt: null,
     });
 
-    expect(insertValues).toHaveBeenCalledWith(
+    expect(insertSessionValues).toHaveBeenCalledWith(
       expect.objectContaining({ userId: userId, mode: 'exam' }),
     );
+    expect(insertStateValues).toHaveBeenCalledWith([
+      expect.objectContaining({
+        practiceSessionId: sessionId,
+        questionId: firstQuestionId,
+        position: 0,
+      }),
+      expect.objectContaining({
+        practiceSessionId: sessionId,
+        questionId: secondQuestionId,
+        position: 1,
+      }),
+    ]);
   });
 
   it('maps unique incomplete-session constraint violations to CONFLICT', async () => {
@@ -84,11 +177,16 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
         };
       },
     }));
-
-    const db = {
+    const tx = {
       insert: () => ({
         values: insertValues,
       }),
+    };
+
+    const db = {
+      transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
       query: {
         practiceSessions: {
           findFirst: async () => null,
@@ -128,11 +226,16 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
         throw cause;
       },
     }));
-
-    const db = {
+    const tx = {
       insert: () => ({
         values: insertValues,
       }),
+    };
+
+    const db = {
+      transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
       query: {
         practiceSessions: {
           findFirst: async () => null,
@@ -204,12 +307,17 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
   });
 
   it('throws INTERNAL_ERROR when create() does not return an inserted row', async () => {
-    const db = {
-      insert: () => ({
+    const tx = {
+      insert: vi.fn(() => ({
         values: () => ({
           returning: async () => [],
         }),
-      }),
+      })),
+    };
+    const db = {
+      transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
       query: {
         practiceSessions: {
           findFirst: async () => null,
@@ -235,6 +343,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     await expect(
       repo.create({ userId: userId, mode: 'tutor', paramsJson }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    expect(tx.insert).toHaveBeenCalledTimes(1);
   });
 
   it('discards an incomplete practice session by deleting the session row', async () => {
@@ -291,18 +400,6 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       {
         ...row,
         endedAt: now,
-        paramsJson: {
-          ...row.paramsJson,
-          questionStates: [
-            {
-              questionId: firstQuestionId,
-              markedForReview: false,
-              latestSelectedChoiceId: selectedChoiceId,
-              latestIsCorrect: true,
-              latestAnsweredAt: '2026-02-01T00:00:01.000Z',
-            },
-          ],
-        },
       },
     ]);
     const updateWhere = vi.fn(() => ({ returning: updateReturning }));
@@ -315,6 +412,16 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
           findFirst: async () => row,
         },
       },
+      select: createStateSelect([
+        createStateRow({
+          questionId: firstQuestionId,
+          position: 0,
+          latestSelectedChoiceId: selectedChoiceId,
+          latestIsCorrect: true,
+          latestAnsweredAt: new Date('2026-02-01T00:00:01.000Z'),
+        }),
+        createStateRow({ questionId: secondQuestionId, position: 1 }),
+      ]),
       update,
       insert: () => {
         throw new Error('unexpected insert');
@@ -386,6 +493,9 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
           findFirst: async () => row,
         },
       },
+      select: createStateSelect([
+        createStateRow({ questionId: firstQuestionId, position: 0 }),
+      ]),
       update,
       insert: () => {
         throw new Error('unexpected insert');

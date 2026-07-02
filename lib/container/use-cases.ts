@@ -1,3 +1,6 @@
+import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
+import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import { ApplicationError } from '@/src/application/errors';
 import {
   CheckEntitlementUseCase,
   CountAvailableQuestionsUseCase,
@@ -32,6 +35,79 @@ import type {
   UseCaseFactories,
 } from './types';
 
+const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG = {
+  isolationLevel: 'repeatable read',
+} as const;
+const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_ATTEMPTS = 3;
+const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_BASE_RETRY_DELAY_MS = 25;
+const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_RETRY_DELAY_MS = 250;
+const RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES = new Set([
+  '40001',
+  '40P01',
+]);
+
+function isRetryablePracticeSessionStateWriteFailure(error: unknown): boolean {
+  const postgresError =
+    error instanceof ApplicationError
+      ? (error as { cause?: unknown }).cause
+      : error;
+  const code = getPostgresErrorCode(postgresError);
+  return (
+    code !== null && RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES.has(code)
+  );
+}
+
+function getPracticeSessionStateWriteRetryDelayMs(attempt: number): number {
+  const cappedExponentialDelayMs = Math.min(
+    PRACTICE_SESSION_STATE_WRITE_TRANSACTION_BASE_RETRY_DELAY_MS * 2 ** attempt,
+    PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_RETRY_DELAY_MS,
+  );
+  const jitterMs = Math.floor(Math.random() * cappedExponentialDelayMs);
+  return Math.min(
+    cappedExponentialDelayMs + jitterMs,
+    PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_RETRY_DELAY_MS,
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runPracticeSessionStateWriteTransaction<T>(
+  primitives: ContainerPrimitives,
+  action: (tx: DrizzleDb) => Promise<T>,
+): Promise<T> {
+  let lastRetryableError: unknown;
+
+  for (
+    let attempt = 0;
+    attempt < PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      return await primitives.db.transaction(
+        async (tx) => action(tx as unknown as DrizzleDb),
+        PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG,
+      );
+    } catch (error) {
+      if (!isRetryablePracticeSessionStateWriteFailure(error)) {
+        throw error;
+      }
+      lastRetryableError = error;
+      if (attempt + 1 < PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_ATTEMPTS) {
+        await sleep(getPracticeSessionStateWriteRetryDelayMs(attempt));
+      }
+    }
+  }
+
+  throw new ApplicationError(
+    'CONFLICT',
+    'Practice session state changed concurrently; please retry.',
+    undefined,
+    { cause: lastRetryableError },
+  );
+}
+
 export function createUseCaseFactories(input: {
   primitives: ContainerPrimitives;
   repositories: RepositoryFactories;
@@ -44,7 +120,7 @@ export function createUseCaseFactories(input: {
       repositories.createAttemptRepository(),
       repositories.createPracticeSessionRepository(),
       async (fn) =>
-        primitives.db.transaction(async (tx) =>
+        runPracticeSessionStateWriteTransaction(primitives, async (tx) =>
           fn({
             questions: repositories.createQuestionRepository(tx),
             attempts: repositories.createAttemptRepository(tx),
@@ -190,7 +266,7 @@ export function createUseCaseFactories(input: {
         repositories.createPracticeSessionRepository(),
         primitives.logger,
         async (fn) =>
-          primitives.db.transaction(async (tx) =>
+          runPracticeSessionStateWriteTransaction(primitives, async (tx) =>
             fn({
               attempts: repositories.createAttemptRepository(tx),
               sessions: repositories.createPracticeSessionRepository(tx),

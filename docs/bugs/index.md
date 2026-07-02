@@ -1,7 +1,7 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-30 (**BUG-264 resolved + prod-verified** — stale independently keyed "Remove bookmark" surfaces could remove then re-add a bookmark because the server mutation toggled current state instead of applying an idempotent desired-state write. Fixed by replacing the toggle use case/controller with an idempotent `setBookmark` desired-state write (add/remove idempotent in both directions; remove no longer requires a published question; the bookmarks page and in-place practice/review surfaces send explicit bookmark intent); repository and port unchanged. Shipped via PR #540 (squash `ca17b5f6`) → promoted via PR #541 (merge `72dd2aff`); production deploy `dpl_22bpJvPoiZWKHZFPj6Dw1JioqdaG` (`72dd2aff`) verified READY (`addictionboards.com` HTTP 200, `/api/health` `{"ok":true,"db":true}`). Active Bugs register empty; Next Bug ID BUG-265.)
+**Last Updated:** 2026-07-01 (**PR #537 Track A pre-merge blockers resolved, then a systematic post-fix sweep filed 3 more and one was invalidated on second-opinion verification** — BUG-265 remains archived as self-resolved by `aab81ca1` / migration `0024_needy_jimmy_woo.sql`; BUG-266 is fixed by extending the seed choice-deletion guard to normalized practice-session state references; BUG-267 is fixed by opening the composition-root practice-session-state write transactions at `repeatable read` and proving the real driver isolation. A follow-up DDIA-style audit of the same branch then filed BUG-268 (CAS retry loop doesn't handle `repeatable read` serialization failures), BUG-269 (stale finalize snapshot clobber) and BUG-270 (seed choice-reorder can violate the sort-order unique index and abort the rest of the seed batch). BUG-269 was invalidated against current HEAD: the stale window reaches BUG-268's raw `40001` failure mode under repeatable read, not silent data loss. BUG-268 and BUG-270 are now fixed and archived under the branch-local pre-merge convention below; none of BUG-265..270 shipped to users before resolution. Active Bugs: none. Next Bug ID BUG-271.)
 
 ---
 
@@ -13,7 +13,13 @@ Bug reports document issues discovered in the codebase along with their root cau
 2. **Regression Prevention** — Ensure we don't reintroduce the same bugs
 3. **Knowledge Base** — Help future developers understand past issues
 
-**Next Bug ID:** BUG-265
+## Tracking Convention
+
+- Bugs discovered in shipped code stay active until their fix is merged and the required deploy or production proof is complete. Archived shipped-bug docs must not imply production verification until that proof exists.
+- Bugs discovered only on an unmerged implementation branch may be marked resolved and archived in the same PR once the fix is implemented, red-first regression coverage or equivalent focused proof is green, and the PR still goes through the normal CI and review gate before merge. These docs must state that the defect was branch-local or fixed before the branch shipped, so future readers do not mistake the archive for post-deploy proof.
+- Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
+
+**Next Bug ID:** BUG-271
 
 **Latest follow-up (2026-06-28) — BUG-260 completion resolved (no new bug ID):**
 - [BUG-260](../_archive/bugs/bug-260-question-feedback-trusts-client-context-ids.md)'s original fix shipped + prod-verified + archived, but a post-archive re-audit found one residual both-ID context gap: a standalone owned attempt for the feedback question could still be paired with an unrelated owned session that also contained that question. Completion branch `fix/bug-260-feedback-context-completion` tightened `validateFeedbackContext` so both IDs require direct attempt membership in the supplied session or a verified standalone session-review retry (`retryOrigin=session_review` and matching `retrySessionId`). The retry exception is required by the real question-page session-review "Try Again" flow, which creates a standalone retry attempt while feedback still carries the reviewed session id. Regression coverage rejects the incoherent standalone/session pair at the helper level and through both feedback use cases. Shipped via PR #524 and promoted via PR #526; production smoke passed 2026-06-28.
@@ -295,9 +301,11 @@ Bug reports document issues discovered in the codebase along with their root cau
 
 ## Active Bugs
 
-| Bug | Severity | Component | Summary |
-|-----|----------|-----------|---------|
-| _None_ | - | - | No active bugs currently tracked. |
+**2026-07-01 — PR #537 Track A pre-merge blockers resolved:** the 2026-06-30 adversarial review filed BUG-265..267 against the unmerged practice-session normalization branch. BUG-265 was self-resolved before action and archived. BUG-266 and BUG-267 were independently confirmed, fixed with red-first tests, and archived as branch-local pre-merge defects under the convention above: the seed syncer now guards normalized practice-session state choice references, and the composition-root practice-session-state write transactions now open at `repeatable read`.
+
+**2026-07-01 — Systematic post-fix DDIA-style sweep (schema/transaction/driver/consistency/seed/read-path, 6 parallel angles) filed 3 candidate bugs against unmerged PR #537; second-opinion verification kept 2 active and invalidated 1; both active bugs are now resolved:** run specifically because the BUG-267 fix (write transactions now opened at `repeatable read`) changes concurrency semantics for every write path sharing that transaction shape, and because the branch's size (8,000+ lines) warranted one more pass focused on database/ORM correctness before merge. Findings were independently re-verified by reading the actual code (retry loop, lock-acquisition order, upsert loop, migration SQL, schema indexes) rather than trusting audit-agent summaries as-is. BUG-269's stale-snapshot trace is real, but its active-bug conclusion was wrong under current repeatable-read semantics: the stale write fails with `40001`, making it a BUG-268 trigger rather than independent silent answer loss. BUG-268 is fixed by retrying the full composition-root practice-session-state write transaction on retryable `40001` / `40P01` failures and mapping exhausted retries to `ApplicationError('CONFLICT')`; BUG-270 is fixed by two-phasing seed choice sort-order updates through temporary negative slots while preserving fail-fast batch semantics with slug/path context.
+
+No other active bugs as of 2026-07-01.
 
 ## Audit #21 — Stripe/Billing Deep Sweep (2026-06-11)
 
@@ -908,6 +916,12 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 
 | ID | Title | Priority | Resolved |
 |----|-------|----------|----------|
+| [BUG-270](../_archive/bugs/bug-270-seed-choice-resort-can-violate-sort-order-unique-index.md) | Parser-valid choice reorder (`A`/`C` -> `A`/`B`/`C`) could violate `choices_question_id_sort_order_uq`; resolved by moving survivor choices to temporary negative sort orders before assigning final values, while preserving fail-fast seed behavior with slug/path context. | P2 | 2026-07-01 |
+| [BUG-269](../_archive/bugs/bug-269-finalize-exam-stale-snapshot-clobbers-concurrent-draft-save.md) | Stale finalize snapshot clobber claim invalidated against current PR #537 head; under the BUG-267 repeatable-read transaction boundary, the race reaches BUG-268's raw `40001` serialization failure instead of silently overwriting a saved draft. | N/A | 2026-07-01 |
+| [BUG-268](../_archive/bugs/bug-268-cas-retry-loop-ignores-repeatable-read-serialization-failure.md) | Nested REPEATABLE READ practice-session state writes could surface raw `40001`; resolved by retrying the full outer write-transaction callback on `40001` / `40P01` and mapping exhausted retries to `ApplicationError('CONFLICT')`. | P1 | 2026-07-01 |
+| [BUG-267](../_archive/bugs/bug-267-nested-repeatable-read-silently-drops-isolation.md) | Nested `inRepeatableRead` silently dropped isolation inside finalize/submit write transactions; resolved by opening the owning composition-root practice-session-state write transactions at `repeatable read` and adding real-driver isolation proof. | P2 | 2026-07-01 |
+| [BUG-266](../_archive/bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md) | New choice FKs could make `pnpm db:seed` surface raw FK failures for normalized practice-session state references; resolved by querying latest/draft state references before deleting stale choices. | P1 | 2026-07-01 |
+| [BUG-265](../_archive/bugs/bug-265-practice-session-question-states-checks-weaker-than-schema.md) | `practice_session_question_states` CHECK constraints were weaker than `db/schema.ts`; self-resolved on the unmerged PR branch by migration `0024_needy_jimmy_woo.sql`. | P1 | 2026-06-30 |
 | [BUG-248](../_archive/bugs/bug-248-main-branch-has-no-github-merge-gate.md) | Public `main` had no GitHub merge gate — resolved by creating the active `main-protection` ruleset (PR required, `test` status check required, force-push + deletion blocked, 0 required approvals to avoid solo-owner lockout). Verified via `gh api repos/:owner/:repo/rulesets`. | P1 | 2026-06-14 |
 | [BUG-249](../_archive/bugs/bug-249-dependency-security-automation-disabled.md) | Dependency security automation disabled — resolved by enabling GitHub vulnerability alerts + automated security fixes (`dependabot_security_updates: enabled`) and raising the Dependabot security-update PR cap from 0 to 5. Residual esbuild advisory tracked in DEBT-419. | P1 | 2026-06-14 |
 | [BUG-245](../_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) | Concurrent Two-Tab Checkout Creates Duplicate Subscriptions — fixed via a deterministic per-(user,plan,variant) Stripe idempotency key + lock-free post-create reconciliation (DB-layer dedup retained); Stripe "limit to 1 subscription" Dashboard backstop configured live; shipped with the DEBT-417 multi-clone test-isolation fix in PR #421. | P2 | 2026-06-13 |

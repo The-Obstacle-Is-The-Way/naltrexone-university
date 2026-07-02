@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
@@ -421,19 +421,29 @@ describe('question controllers (integration)', () => {
       attempts.findBySessionIdAndQuestionId(session.id, user.id, question.id),
     ).resolves.toBeNull();
 
-    const [sessionRow] = await db
-      .select({ paramsJson: schema.practiceSessions.paramsJson })
-      .from(schema.practiceSessions)
-      .where(eq(schema.practiceSessions.id, session.id));
-    expect(sessionRow?.paramsJson).toMatchObject({
-      questionStates: [
-        expect.objectContaining({
-          questionId: question.id,
-          latestSelectedChoiceId: null,
-          latestIsCorrect: null,
-          latestAnsweredAt: null,
-        }),
-      ],
+    const [stateRow] = await db
+      .select({
+        questionId: schema.practiceSessionQuestionStates.questionId,
+        latestSelectedChoiceId:
+          schema.practiceSessionQuestionStates.latestSelectedChoiceId,
+        latestIsCorrect: schema.practiceSessionQuestionStates.latestIsCorrect,
+        latestAnsweredAt: schema.practiceSessionQuestionStates.latestAnsweredAt,
+      })
+      .from(schema.practiceSessionQuestionStates)
+      .where(
+        and(
+          eq(
+            schema.practiceSessionQuestionStates.practiceSessionId,
+            session.id,
+          ),
+          eq(schema.practiceSessionQuestionStates.questionId, question.id),
+        ),
+      );
+    expect(stateRow).toEqual({
+      questionId: question.id,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
     });
   });
 

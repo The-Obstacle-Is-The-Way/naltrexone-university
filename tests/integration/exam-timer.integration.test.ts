@@ -39,12 +39,14 @@ function createFinalizeExamAnswersUseCase(input: { now: () => Date }) {
     new DrizzleAttemptRepository(db),
     new DrizzlePracticeSessionRepository(db, input.now),
     async (fn) =>
-      db.transaction(async (tx) =>
-        fn({
-          questions: new DrizzleQuestionRepository(tx),
-          attempts: new DrizzleAttemptRepository(tx),
-          sessions: new DrizzlePracticeSessionRepository(tx, input.now),
-        }),
+      db.transaction(
+        async (tx) =>
+          fn({
+            questions: new DrizzleQuestionRepository(tx),
+            attempts: new DrizzleAttemptRepository(tx),
+            sessions: new DrizzlePracticeSessionRepository(tx, input.now),
+          }),
+        { isolationLevel: 'repeatable read' },
       ),
     input.now,
   );

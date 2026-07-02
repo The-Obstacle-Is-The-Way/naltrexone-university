@@ -50,6 +50,7 @@ describe('database migrations', () => {
       'tags',
       'question_tags',
       'practice_sessions',
+      'practice_session_question_states',
       'attempts',
       'bookmarks',
       'question_feedback',
@@ -73,6 +74,26 @@ describe('database migrations', () => {
     expect(indexes).toContain('question_feedback_attempt_created_at_idx');
     expect(indexes).toContain(
       'question_feedback_practice_session_created_at_idx',
+    );
+  });
+
+  it('creates practice-session question-state foreign-key support indexes', async () => {
+    const rows = await sql<{ indexname: string }[]>`
+      select indexname
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'practice_session_question_states'
+    `;
+    const indexes = new Set(rows.map((row) => row.indexname));
+
+    expect(indexes).toContain(
+      'practice_session_question_states_question_id_idx',
+    );
+    expect(indexes).toContain(
+      'practice_session_question_states_latest_choice_question_idx',
+    );
+    expect(indexes).toContain(
+      'practice_session_question_states_draft_choice_question_idx',
     );
   });
 
