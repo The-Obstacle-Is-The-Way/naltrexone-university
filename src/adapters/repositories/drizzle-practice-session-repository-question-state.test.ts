@@ -88,9 +88,31 @@ function expectVersionedStateUpdatePredicate(
   );
 }
 
+function expectSessionLockPredicate(predicate: unknown) {
+  expect([...new Set(collectColumnNames(predicate))]).toEqual(
+    expect.arrayContaining(['id', 'user_id']),
+  );
+  expect(collectPrimitiveValues(predicate)).toEqual(
+    expect.arrayContaining([sessionId, userId]),
+  );
+}
+
+function expectQuestionStateSelectPredicate(
+  predicate: unknown,
+  expected: { questionId: string },
+) {
+  expect([...new Set(collectColumnNames(predicate))]).toEqual(
+    expect.arrayContaining(['practice_session_id', 'question_id']),
+  );
+  expect(collectPrimitiveValues(predicate)).toEqual(
+    expect.arrayContaining([sessionId, expected.questionId]),
+  );
+}
+
 function createQuestionStateDb(input: {
   snapshots: Array<{ state: StateRow; endedAt: Date | null }>;
   updatedRows: StateRow[][];
+  expectedQuestionId?: string;
   sessionStatus?: {
     endedAt: Date | null;
     paramsJson?: {
@@ -128,6 +150,10 @@ function createQuestionStateDb(input: {
       ? lockedSession(input.sessionStatus.endedAt)
       : [];
   });
+  const expectedQuestionId =
+    input.expectedQuestionId ??
+    input.snapshots[0]?.state.questionId ??
+    firstQuestionId;
 
   let stateReadIndex = 0;
   const stateLimit = vi.fn(async () => {
@@ -142,16 +168,24 @@ function createQuestionStateDb(input: {
     return selectCallIndex % 2 === 1
       ? {
           from: () => ({
-            where: () => ({
-              for: sessionLockFor,
-            }),
+            where: (predicate: unknown) => {
+              expectSessionLockPredicate(predicate);
+              return {
+                for: sessionLockFor,
+              };
+            },
           }),
         }
       : {
           from: () => ({
-            where: () => ({
-              limit: stateLimit,
-            }),
+            where: (predicate: unknown) => {
+              expectQuestionStateSelectPredicate(predicate, {
+                questionId: expectedQuestionId,
+              });
+              return {
+                limit: stateLimit,
+              };
+            },
           }),
         };
   });

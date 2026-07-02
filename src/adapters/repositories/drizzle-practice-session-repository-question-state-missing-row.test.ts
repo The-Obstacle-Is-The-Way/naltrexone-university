@@ -6,48 +6,59 @@ const userId = crypto.randomUUID();
 const questionId = crypto.randomUUID();
 const selectedChoiceId = crypto.randomUUID();
 
+function createMissingQuestionStateRepo(input: {
+  endedAt: Date | null;
+  sessionQuestionIds?: string[];
+}) {
+  const questionIds = input.sessionQuestionIds ?? [questionId];
+  const sessionLockFor = vi.fn(async () => [
+    {
+      endedAt: input.endedAt,
+      paramsJson: {
+        count: questionIds.length,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds,
+      },
+    },
+  ]);
+  const stateLimit = vi.fn(async () => []);
+  const select = vi
+    .fn()
+    .mockReturnValueOnce({
+      from: () => ({
+        where: () => ({
+          for: sessionLockFor,
+        }),
+      }),
+    })
+    .mockReturnValueOnce({
+      from: () => ({
+        where: () => ({
+          limit: stateLimit,
+        }),
+      }),
+    });
+  const update = vi.fn(() => {
+    throw new Error('unexpected update');
+  });
+  const tx = { select, update };
+  const db = {
+    transaction: vi.fn(async (fn: (client: typeof tx) => unknown) => fn(tx)),
+  } as const;
+
+  type RepoDb = ConstructorParameters<
+    typeof DrizzlePracticeSessionRepository
+  >[0];
+  return {
+    repo: new DrizzlePracticeSessionRepository(db as unknown as RepoDb),
+    update,
+  };
+}
+
 describe('DrizzlePracticeSessionRepository missing question state row', () => {
   it('throws INTERNAL_ERROR when a session-owned question is missing normalized state', async () => {
-    const sessionLockFor = vi.fn(async () => [
-      {
-        endedAt: null,
-        paramsJson: {
-          count: 1,
-          tagSlugs: [],
-          difficulties: [],
-          questionIds: [questionId],
-        },
-      },
-    ]);
-    const stateLimit = vi.fn(async () => []);
-    const select = vi
-      .fn()
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () => ({
-            for: sessionLockFor,
-          }),
-        }),
-      })
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () => ({
-            limit: stateLimit,
-          }),
-        }),
-      });
-    const update = vi.fn(() => {
-      throw new Error('unexpected update');
-    });
-    const tx = { select, update };
-    const db = {
-      transaction: vi.fn(async (fn: (client: typeof tx) => unknown) => fn(tx)),
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+    const { repo, update } = createMissingQuestionStateRepo({ endedAt: null });
 
     await expect(
       repo.recordQuestionAnswer({
@@ -67,46 +78,9 @@ describe('DrizzlePracticeSessionRepository missing question state row', () => {
   });
 
   it('throws INTERNAL_ERROR over CONFLICT when an ended session is missing state for a session-owned question', async () => {
-    const sessionLockFor = vi.fn(async () => [
-      {
-        endedAt: new Date('2026-02-01T01:00:00.000Z'),
-        paramsJson: {
-          count: 1,
-          tagSlugs: [],
-          difficulties: [],
-          questionIds: [questionId],
-        },
-      },
-    ]);
-    const stateLimit = vi.fn(async () => []);
-    const select = vi
-      .fn()
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () => ({
-            for: sessionLockFor,
-          }),
-        }),
-      })
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () => ({
-            limit: stateLimit,
-          }),
-        }),
-      });
-    const update = vi.fn(() => {
-      throw new Error('unexpected update');
+    const { repo, update } = createMissingQuestionStateRepo({
+      endedAt: new Date('2026-02-01T01:00:00.000Z'),
     });
-    const tx = { select, update };
-    const db = {
-      transaction: vi.fn(async (fn: (client: typeof tx) => unknown) => fn(tx)),
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
     await expect(
       repo.recordQuestionAnswer({
@@ -127,46 +101,9 @@ describe('DrizzlePracticeSessionRepository missing question state row', () => {
 
   it('keeps CONFLICT for an ended session when the missing question is not part of the session', async () => {
     const foreignQuestionId = crypto.randomUUID();
-    const sessionLockFor = vi.fn(async () => [
-      {
-        endedAt: new Date('2026-02-01T01:00:00.000Z'),
-        paramsJson: {
-          count: 1,
-          tagSlugs: [],
-          difficulties: [],
-          questionIds: [questionId],
-        },
-      },
-    ]);
-    const stateLimit = vi.fn(async () => []);
-    const select = vi
-      .fn()
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () => ({
-            for: sessionLockFor,
-          }),
-        }),
-      })
-      .mockReturnValueOnce({
-        from: () => ({
-          where: () => ({
-            limit: stateLimit,
-          }),
-        }),
-      });
-    const update = vi.fn(() => {
-      throw new Error('unexpected update');
+    const { repo, update } = createMissingQuestionStateRepo({
+      endedAt: new Date('2026-02-01T01:00:00.000Z'),
     });
-    const tx = { select, update };
-    const db = {
-      transaction: vi.fn(async (fn: (client: typeof tx) => unknown) => fn(tx)),
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
 
     await expect(
       repo.recordQuestionAnswer({

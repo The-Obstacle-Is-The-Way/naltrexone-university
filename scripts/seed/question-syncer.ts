@@ -133,42 +133,52 @@ export async function syncQuestionsFromFiles(
         continue;
       }
 
-      const existingChoices = await db
-        .select()
-        .from(schema.choices)
-        .where(eq(schema.choices.questionId, existingQuestion.id));
+      const syncResult = await db.transaction(async (tx) => {
+        const [lockedQuestion] = await tx
+          .select()
+          .from(schema.questions)
+          .where(eq(schema.questions.id, existingQuestion.id))
+          .for('update');
+        if (!lockedQuestion) {
+          throw new Error(
+            `Question disappeared during seed sync for slug "${seedFromFile.slug}"`,
+          );
+        }
 
-      const existingTags = await db
-        .select({
-          slug: schema.tags.slug,
-          name: schema.tags.name,
-          kind: schema.tags.kind,
-        })
-        .from(schema.questionTags)
-        .innerJoin(schema.tags, eq(schema.questionTags.tagId, schema.tags.id))
-        .where(eq(schema.questionTags.questionId, existingQuestion.id));
+        const existingChoices = await tx
+          .select()
+          .from(schema.choices)
+          .where(eq(schema.choices.questionId, lockedQuestion.id));
 
-      const seedFromDb = buildSeedRepFromDb(
-        existingQuestion,
-        existingChoices,
-        existingTags,
-      );
+        const existingTags = await tx
+          .select({
+            slug: schema.tags.slug,
+            name: schema.tags.name,
+            kind: schema.tags.kind,
+          })
+          .from(schema.questionTags)
+          .innerJoin(schema.tags, eq(schema.questionTags.tagId, schema.tags.id))
+          .where(eq(schema.questionTags.questionId, lockedQuestion.id));
 
-      const dbHash = sha256Hex(canonicalJsonString(seedFromDb));
-      if (dbHash === fileHash) {
-        skipped += 1;
-        continue;
-      }
+        const seedFromDb = buildSeedRepFromDb(
+          lockedQuestion,
+          existingChoices,
+          existingTags,
+        );
 
-      const desiredLabels = new Set(
-        seedFromFile.choices.map((choice) => choice.label),
-      );
-      const deleteCandidates = existingChoices.filter(
-        (choice) => !desiredLabels.has(choice.label),
-      );
-      const deleteCandidateIds = deleteCandidates.map((choice) => choice.id);
+        const dbHash = sha256Hex(canonicalJsonString(seedFromDb));
+        if (dbHash === fileHash) {
+          return 'skipped' as const;
+        }
 
-      await db.transaction(async (tx) => {
+        const desiredLabels = new Set(
+          seedFromFile.choices.map((choice) => choice.label),
+        );
+        const deleteCandidates = existingChoices.filter(
+          (choice) => !desiredLabels.has(choice.label),
+        );
+        const deleteCandidateIds = deleteCandidates.map((choice) => choice.id);
+
         await tx
           .update(schema.questions)
           .set({
@@ -179,7 +189,7 @@ export async function syncQuestionsFromFiles(
             status: seedFromFile.status,
             updatedAt: new Date(),
           })
-          .where(eq(schema.questions.id, existingQuestion.id));
+          .where(eq(schema.questions.id, lockedQuestion.id));
 
         let referencedChoiceIds: ReadonlySet<string> = new Set();
         if (deleteCandidateIds.length > 0) {
@@ -194,7 +204,7 @@ export async function syncQuestionsFromFiles(
             .from(schema.attempts)
             .where(
               and(
-                eq(schema.attempts.questionId, existingQuestion.id),
+                eq(schema.attempts.questionId, lockedQuestion.id),
                 inArray(schema.attempts.selectedChoiceId, deleteCandidateIds),
               ),
             );
@@ -211,7 +221,7 @@ export async function syncQuestionsFromFiles(
               and(
                 eq(
                   schema.practiceSessionQuestionStates.questionId,
-                  existingQuestion.id,
+                  lockedQuestion.id,
                 ),
                 or(
                   inArray(
@@ -259,7 +269,7 @@ export async function syncQuestionsFromFiles(
           await tx
             .insert(schema.choices)
             .values({
-              questionId: existingQuestion.id,
+              questionId: lockedQuestion.id,
               label: choice.label,
               textMd: choice.text_md,
               isCorrect: choice.is_correct,
@@ -279,12 +289,12 @@ export async function syncQuestionsFromFiles(
 
         await tx
           .delete(schema.questionTags)
-          .where(eq(schema.questionTags.questionId, existingQuestion.id));
+          .where(eq(schema.questionTags.questionId, lockedQuestion.id));
 
         const tagMap = await upsertTags(tx, seedFromFile.tags);
         await tx.insert(schema.questionTags).values(
           seedFromFile.tags.map((tag) => ({
-            questionId: existingQuestion.id,
+            questionId: lockedQuestion.id,
             tagId:
               tagMap.get(tag.slug)?.id ??
               (() => {
@@ -292,9 +302,15 @@ export async function syncQuestionsFromFiles(
               })(),
           })),
         );
+
+        return 'updated' as const;
       });
 
-      updated += 1;
+      if (syncResult === 'skipped') {
+        skipped += 1;
+      } else {
+        updated += 1;
+      }
     } catch (error) {
       throw createSeedQuestionSyncError({
         file,
