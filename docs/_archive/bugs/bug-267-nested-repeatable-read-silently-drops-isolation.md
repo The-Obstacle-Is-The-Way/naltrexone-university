@@ -25,6 +25,7 @@ Fixed on `chore/legacy-audit` before PR #537 merged by moving the invariant to t
 
 - `lib/container/use-cases.ts` now opens both practice-session-state write transactions at `{ isolationLevel: 'repeatable read' }`: `FinalizeExamAnswersUseCase` and session-backed `SubmitAnswerUseCase`.
 - `DrizzlePracticeSessionRepository.inRepeatableRead()` remains the repository-owned guard for top-level read methods. When the repository is constructed with an already-open transaction, nested savepoints inherit the outer transaction's isolation; the outer transaction is now correctly opened at `repeatable read`, so the nested driver limitation no longer weakens the finalize/submit flows.
+- Residual caller-discipline hazard: this fix is enforced only at the two composition-root call sites, not structurally — a future call site that hands the repository an already-open `read committed` transaction would silently reintroduce the degraded-savepoint behavior. Any lock/transaction-shape redesign must preserve the boundary-owned isolation; tracked with [DEBT-426](../../debt/debt-426-session-wide-lock-defeats-row-concurrency.md), which owns that surface.
 - `tests/integration/exam-timer.integration.test.ts`'s manual finalize wiring was aligned with the production composition-root isolation so integration tests do not keep a stale read-committed helper.
 
 ## Verification

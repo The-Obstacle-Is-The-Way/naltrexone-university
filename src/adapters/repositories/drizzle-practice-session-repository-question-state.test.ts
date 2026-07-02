@@ -101,11 +101,15 @@ function createQuestionStateDb(input: {
     };
   } | null;
 }) {
+  // Valid per parsePracticeSessionParamsJson (count === questionIds.length)
+  // and deliberately NOT owning the queried question, so missing-row
+  // classification falls through to the ended/NOT_FOUND branches rather than
+  // the missing-normalized-state INTERNAL_ERROR.
   const defaultParamsJson = {
     count: 1,
     tagSlugs: [],
     difficulties: [],
-    questionIds: [],
+    questionIds: [crypto.randomUUID()],
   };
   const lockedSession = (endedAt: Date | null) => [
     {

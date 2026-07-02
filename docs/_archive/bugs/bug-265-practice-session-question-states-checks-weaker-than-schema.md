@@ -29,7 +29,7 @@ This bug doc was filed against `6bc2bd99` during an independent review pass; by 
 
 - [x] `db/schema.ts` CHECK clauses confirmed logically identical to `0024_needy_jimmy_woo.sql`'s final rendered constraint clauses (manual diff, 2026-06-30)
 - [x] `db/migrations/meta/0024_snapshot.json` reflects the same corrected constraints
-- [ ] `pnpm db:generate` re-run to confirm zero pending changes (not yet run as part of this correction — recommended before merge as a final sanity check)
+- [x] `pnpm db:generate` re-run to confirm zero pending changes ("No schema changes, nothing to migrate", 2026-07-02, at head `f7b2e4cf` + updater classification fix — covers migrations through `0025_worthless_junta.sql`)
 
 ## Related
 

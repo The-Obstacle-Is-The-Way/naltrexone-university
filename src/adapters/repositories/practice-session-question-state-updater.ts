@@ -99,10 +99,9 @@ async function findQuestionStateSnapshot(input: {
     };
   }
 
-  if (session.endedAt) {
-    throw new ApplicationError('CONFLICT', 'Practice session already ended');
-  }
-
+  // A session-owned question missing its normalized state row is data
+  // corruption (failed backfill/migration) and must outrank the ended-session
+  // CONFLICT so it cannot hide behind "already ended".
   const params = parsePracticeSessionParamsJson(
     session.paramsJson,
     'INTERNAL_ERROR',
@@ -112,6 +111,10 @@ async function findQuestionStateSnapshot(input: {
       'INTERNAL_ERROR',
       `Practice session ${input.sessionId} is missing normalized question state`,
     );
+  }
+
+  if (session.endedAt) {
+    throw new ApplicationError('CONFLICT', 'Practice session already ended');
   }
 
   throw new ApplicationError(
