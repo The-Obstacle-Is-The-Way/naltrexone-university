@@ -427,7 +427,7 @@ export const practiceSessionQuestionStates = pgTable(
       columns: [t.draftSelectedChoiceId, t.questionId],
       foreignColumns: [choices.id, choices.questionId],
     }).onDelete('restrict'),
-    draftCumulativeMsChk: check('practice_session_question_states_draft_cumulative_ms_chk', sql`${t.draftCumulativeMs} BETWEEN 0 AND 86400000`),
+    draftCumulativeMsChk: check('practice_session_question_states_draft_cumulative_ms_chk', sql`${t.draftCumulativeMs} BETWEEN 0 AND ${DAY_MS}`),
     latestAnswerChk: check('practice_session_question_states_latest_answer_chk', sql`(latest_is_correct IS NULL) = (latest_answered_at IS NULL) AND (latest_selected_choice_id IS NOT NULL OR latest_is_correct IS NOT TRUE) AND (latest_selected_choice_id IS NULL OR (latest_is_correct IS NOT NULL AND latest_answered_at IS NOT NULL))`),
     draftSavedChk: check('practice_session_question_states_draft_saved_chk', sql`(draft_selected_choice_id IS NULL AND draft_cumulative_ms = 0) OR draft_saved_at IS NOT NULL`),
     positionChk: check('practice_session_question_states_position_chk', sql`${t.position} >= 0`),

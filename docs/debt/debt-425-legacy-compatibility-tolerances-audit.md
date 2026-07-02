@@ -24,7 +24,7 @@ Track A was chosen and executed in PR #537. Mutable per-question practice-sessio
 
 Implementation verified on 2026-06-29:
 
-- `db/schema.ts` defines `PracticeSessionParams` as immutable metadata only and adds `practice_session_question_states` with required scalar columns, unique `(practice_session_id, question_id)`, unique `(practice_session_id, position)`, `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`, non-negative `position`, non-negative `version`, same-question selected-choice FKs, latest-answer consistency checks, draft-save consistency checks, a cascading practice-session FK, a non-cascading question FK, and restrictive choice FKs.
+- `db/schema.ts` defines `PracticeSessionParams` as immutable metadata only and adds `practice_session_question_states` with required scalar columns, unique `(practice_session_id, question_id)`, unique `(practice_session_id, position)`, a `DAY_MS`-backed `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`, non-negative `position`, non-negative `version`, same-question selected-choice FKs, latest-answer consistency checks, draft-save consistency checks, a cascading practice-session FK, a non-cascading question FK, and restrictive choice FKs.
 - `db/migrations/0021_flaky_domino.sql` creates the table and runs the marked DEBT-425 idempotent backfill. It inserts one row per `params_json.questionIds` entry, defaults missing legacy state fields, and clamps oversized legacy `draftCumulativeMs` before the CHECK can reject it.
 - `db/migrations/0022_confused_mandrill.sql` hardens the normalized model by enforcing that `latest_selected_choice_id` and `draft_selected_choice_id` belong to the same `question_id` as the state row, with a pre-constraint cleanup for impossible legacy/dev rows.
 - `db/migrations/0023_soft_blue_marvel.sql` adds DB-level consistency checks for latest-answer metadata and selected draft saves while deliberately preserving valid omitted answers and time-only drafts; `db/migrations/0024_needy_jimmy_woo.sql` tightens those checks so omitted finalized answers cannot be marked correct and positive draft time always has a draft save timestamp.
@@ -164,7 +164,7 @@ Implemented by `db/migrations/0021_flaky_domino.sql` and hardened by `db/migrati
    - `version` as the row-level optimistic concurrency token.
 3. Enforced invariants with normal relational constraints:
    - `NOT NULL` on required state columns;
-   - `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`;
+   - `CHECK (draft_cumulative_ms BETWEEN 0 AND 86400000)`, sourced in `db/schema.ts` from the domain `DAY_MS` constant;
    - latest-answer consistency checks that allow omitted finalized answers (`latest_selected_choice_id IS NULL`, `latest_is_correct = false`, `latest_answered_at IS NOT NULL`) while rejecting partial answered-choice metadata and impossible omitted-correct state;
    - selected-draft consistency checks that allow time-only drafts (`draft_selected_choice_id IS NULL`, `draft_saved_at IS NOT NULL`) while rejecting selected draft choices or positive draft time without a save timestamp;
    - unique constraints on `(practice_session_id, question_id)` and `(practice_session_id, position)`.

@@ -17,6 +17,7 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
+import { DAY_MS } from '@/src/domain/services/time-constants';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
 // DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
@@ -518,7 +519,7 @@ export const practiceSessionQuestionStates = pgTable(
     }).onDelete('restrict'),
     draftCumulativeMsChk: check(
       'practice_session_question_states_draft_cumulative_ms_chk',
-      sql`${t.draftCumulativeMs} BETWEEN 0 AND 86400000`,
+      sql`${t.draftCumulativeMs} BETWEEN 0 AND ${DAY_MS}`,
     ),
     latestAnswerChk: check(
       PRACTICE_SESSION_QUESTION_STATES_LATEST_ANSWER_CHK,

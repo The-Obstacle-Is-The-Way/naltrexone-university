@@ -1,4 +1,12 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
 import {
@@ -51,6 +59,11 @@ beforeAll(async () => {
 
 afterAll(() => {
   restoreProcessEnv(ORIGINAL_ENV);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 function createTransactionOnlyDb(transaction: TestTransaction): DrizzleDb {
@@ -180,6 +193,40 @@ describe('container factories — practice session state write transactions', ()
     });
   });
 
+  it('waits with jittered backoff before retrying retryable write transaction failures', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const tx = createUnexpectedNestedTransactionDb();
+    const serializationFailure = { code: '40001' };
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      if (transaction.mock.calls.length === 1) {
+        throw serializationFailure;
+      }
+      return fn(tx);
+    });
+
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+
+    const result = container.createFinalizeExamAnswersUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+
+    await vi.advanceTimersByTimeAsync(24);
+    expect(transaction).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(result).resolves.toMatchObject({
+      sessionId: fixture.sessionId,
+    });
+    expect(transaction).toHaveBeenCalledTimes(2);
+  });
+
   it('retries finalize exam write transactions when a retryable failure is wrapped in ApplicationError', async () => {
     const fixture = createPracticeSessionStateWriteFixture('exam');
     const tx = createUnexpectedNestedTransactionDb();
@@ -215,6 +262,8 @@ describe('container factories — practice session state write transactions', ()
   });
 
   it('maps exhausted retryable finalize exam write failures to ApplicationError CONFLICT', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
     const fixture = createPracticeSessionStateWriteFixture('exam');
     const serializationFailure = { code: '40001' };
     const transaction = vi.fn<TestTransaction>(async () => {
@@ -226,16 +275,17 @@ describe('container factories — practice session state write transactions', ()
       fixture,
     });
 
-    await expect(
-      container.createFinalizeExamAnswersUseCase().execute({
-        userId: fixture.userId,
-        sessionId: fixture.sessionId,
-      }),
-    ).rejects.toMatchObject({
+    const result = container.createFinalizeExamAnswersUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+    const rejection = expect(result).rejects.toMatchObject({
       code: 'CONFLICT',
       cause: serializationFailure,
     });
 
+    await vi.runAllTimersAsync();
+    await rejection;
     expect(transaction).toHaveBeenCalledTimes(3);
   });
 

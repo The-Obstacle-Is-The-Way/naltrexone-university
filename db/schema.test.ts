@@ -1,4 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import { DAY_MS } from '@/src/domain/services/time-constants';
 import type {
   NewPendingStripeCancellation,
   PendingStripeCancellation,
@@ -6,6 +7,7 @@ import type {
 } from './schema';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+  practiceSessionQuestionStates,
   practiceSessions,
 } from './schema';
 
@@ -72,6 +74,38 @@ function getPracticeSessionIndex(name: string): { config: { name: string } } {
   return index;
 }
 
+function getPracticeSessionQuestionStateConfig(): Record<string, unknown> {
+  const extraConfigBuilderSymbol = getTableSymbol(
+    practiceSessionQuestionStates,
+    'Symbol(drizzle:ExtraConfigBuilder)',
+  );
+  const extraConfigColumnsSymbol = getTableSymbol(
+    practiceSessionQuestionStates,
+    'Symbol(drizzle:ExtraConfigColumns)',
+  );
+
+  const tableAsSymbolRecord =
+    practiceSessionQuestionStates as unknown as Record<symbol, unknown>;
+  const extraConfigBuilder = tableAsSymbolRecord[extraConfigBuilderSymbol];
+  const extraConfigColumns = tableAsSymbolRecord[extraConfigColumnsSymbol];
+
+  if (typeof extraConfigBuilder !== 'function') {
+    throw new Error('Expected Drizzle extra config builder function');
+  }
+
+  return (extraConfigBuilder as (columns: unknown) => Record<string, unknown>)(
+    extraConfigColumns,
+  );
+}
+
+function getSqlQueryChunks(value: unknown): unknown[] {
+  const checkValue = (value as { value?: { queryChunks?: unknown[] } }).value;
+  if (!Array.isArray(checkValue?.queryChunks)) {
+    throw new Error('Expected Drizzle check SQL query chunks');
+  }
+  return checkValue.queryChunks;
+}
+
 describe('practiceSessions schema indexes', () => {
   it('defines a user + startedAt index for session ordering', () => {
     expect(getPracticeSessionIndex('userStartedAtIdx').config.name).toBe(
@@ -89,6 +123,25 @@ describe('practiceSessions schema indexes', () => {
     expect(getPracticeSessionIndex('userIncompleteUq').config.name).toBe(
       PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
     );
+  });
+});
+
+describe('practiceSessionQuestionStates schema checks', () => {
+  it('uses the domain day bound for draft cumulative milliseconds', () => {
+    const draftCumulativeMsCheck =
+      getPracticeSessionQuestionStateConfig().draftCumulativeMsChk;
+    const queryChunks = getSqlQueryChunks(draftCumulativeMsCheck);
+
+    expect(
+      queryChunks.some(
+        (chunk) =>
+          Array.isArray((chunk as { value?: unknown }).value) &&
+          (chunk as { value: string[] }).value.some((text) =>
+            text.includes(`86400000`),
+          ),
+      ),
+    ).toBe(false);
+    expect(queryChunks.some((chunk) => chunk === DAY_MS)).toBe(true);
   });
 });
 

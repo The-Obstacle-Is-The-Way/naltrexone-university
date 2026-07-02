@@ -39,6 +39,8 @@ const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG = {
   isolationLevel: 'repeatable read',
 } as const;
 const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_ATTEMPTS = 3;
+const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_BASE_RETRY_DELAY_MS = 25;
+const PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_RETRY_DELAY_MS = 250;
 const RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES = new Set([
   '40001',
   '40P01',
@@ -53,6 +55,22 @@ function isRetryablePracticeSessionStateWriteFailure(error: unknown): boolean {
   return (
     code !== null && RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES.has(code)
   );
+}
+
+function getPracticeSessionStateWriteRetryDelayMs(attempt: number): number {
+  const cappedExponentialDelayMs = Math.min(
+    PRACTICE_SESSION_STATE_WRITE_TRANSACTION_BASE_RETRY_DELAY_MS * 2 ** attempt,
+    PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_RETRY_DELAY_MS,
+  );
+  const jitterMs = Math.floor(Math.random() * cappedExponentialDelayMs);
+  return Math.min(
+    cappedExponentialDelayMs + jitterMs,
+    PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_RETRY_DELAY_MS,
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function runPracticeSessionStateWriteTransaction<T>(
@@ -76,6 +94,9 @@ async function runPracticeSessionStateWriteTransaction<T>(
         throw error;
       }
       lastRetryableError = error;
+      if (attempt + 1 < PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_ATTEMPTS) {
+        await sleep(getPracticeSessionStateWriteRetryDelayMs(attempt));
+      }
     }
   }
 
