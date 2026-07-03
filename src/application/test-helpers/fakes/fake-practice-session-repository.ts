@@ -8,7 +8,7 @@ import type {
 } from '@/src/domain/value-objects';
 import { selectedChoiceIdOrNull } from '@/src/domain/value-objects';
 
-const STATE_CHANGED_CONCURRENTLY_MESSAGE =
+export const STATE_CHANGED_CONCURRENTLY_MESSAGE =
   'Practice session state changed concurrently; please retry.';
 
 export class FakePracticeSessionRepository

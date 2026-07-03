@@ -28,10 +28,10 @@ Current live code can read this row if a Development user/history path selects t
 
 Current proof from 2026-07-02:
 
-| Target | Sessions failing current `questionIds` shape | Object-shaped sessions with duplicate `questionIds` | Object-shaped sessions with dangling `questionIds` |
-|---|---:|---:|---:|
-| Development (`ep-still-frog`) | 1 (`00000000-0000-4000-8000-000000000244`) | 0 | 0 |
-| Production (`ep-withered-cell`) | 0 | 0 | 0 |
+| Target | Non-object `params_json` rows | Object-shaped sessions failing current `questionIds` shape | Object-shaped sessions with duplicate `questionIds` | Object-shaped sessions with dangling `questionIds` |
+|---|---:|---:|---:|---:|
+| Development (`ep-still-frog`) | 1 (`00000000-0000-4000-8000-000000000244`) | 0 | 0 | 0 |
+| Production (`ep-withered-cell`) | 0 | 0 | 0 | 0 |
 
 This debt clears when the Development count is zero, or if the owner explicitly accepts the ended dev artifact as permanent non-production residue with a documented reason.
 

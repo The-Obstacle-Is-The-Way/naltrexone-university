@@ -24,11 +24,11 @@ Decide consciously whether session-wide write serialization is actually required
 
 **Correction (2026-06-30, second review pass; wording updated 2026-07-01 after BUG-267 was fixed):** simply deleting the `FOR UPDATE` call is not a safe drop-in fix. The lock also participates in the read-then-write snapshot consistency `findQuestionStateSnapshot` relies on, and removing it without a compensating design change would reopen parent/child race and error-classification issues similar to [BUG-267](../_archive/bugs/bug-267-nested-repeatable-read-silently-drops-isolation.md)'s historical torn-read class of problem. BUG-267 itself is resolved; this debt remains only for the separate lock-granularity redesign. A real fix needs the updater redesigned around either a single joined statement (session-active check + row CAS in one round trip) or a narrower per-row lock that doesn't serialize across questions — not just lock removal. Treat this as a design task, not a quick delete.
 
-Bundle the client conflict disambiguation with that redesign. Acceptable shapes include a structured `ApplicationError` reason/details field from the server, or a client-side session re-check before expiry recovery. Do not keep matching every draft-save `CONFLICT` as expiry once row-level state-write conflicts can surface without the session-wide lock.
+Bundle the client conflict disambiguation with that redesign. Acceptable shapes include a client-side session re-check before expiry recovery, or a structured `ApplicationError` reason/details field from the server; the latter is a deliberate server/client contract change because today's evidence only shows plain `ApplicationError('CONFLICT', message)`. Do not keep matching every draft-save `CONFLICT` as expiry once row-level state-write conflicts can surface without the session-wide lock.
 
 ## Verification
 
-A concurrency test issuing two concurrent writes to two *different* questions in the same session should not block on each other once resolved (if the decision is to remove the session-wide lock). Add a browser/unit regression proving a transient state-write `CONFLICT` from draft save does not trigger exam-expiry finalize recovery, while the real expiry conflict still does.
+A concurrency test issuing two concurrent writes to two *different* questions in the same session should not block on each other once resolved (if the decision is to remove the session-wide lock). Add browser/unit regressions covering both `use-practice-session-question-flow` and `use-practice-session-review-stage`, proving a transient state-write `CONFLICT` from draft save does not trigger exam-expiry finalize recovery while the real expiry conflict still does.
 
 ## Related
 

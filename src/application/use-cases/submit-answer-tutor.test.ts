@@ -10,6 +10,7 @@ import {
   FakePracticeSessionRepository,
   FakeQuestionRepository,
   passthroughTransaction,
+  STATE_CHANGED_CONCURRENTLY_MESSAGE,
   SubmitAnswerUseCase,
 } from './submit-answer-test-helpers';
 
@@ -165,10 +166,7 @@ describe('SubmitAnswerUseCase', () => {
         sessionId,
       }),
     ).rejects.toEqual(
-      new ApplicationError(
-        'CONFLICT',
-        'Practice session state changed concurrently; please retry.',
-      ),
+      new ApplicationError('CONFLICT', STATE_CHANGED_CONCURRENTLY_MESSAGE),
     );
 
     expect(attempts.getAll()).toEqual([]);
