@@ -121,7 +121,9 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     mockActiveTimedExam('2026-05-22T12:00:01.000Z');
     mockFinalizeSummaryFromFinalFlush();
     saveExamDraftAnswerMock.mockResolvedValue(
-      errorResult('CONFLICT', 'Exam time has expired'),
+      errorResult('CONFLICT', 'Exam time has expired', {
+        reason: 'exam_time_expired',
+      }),
     );
 
     const screen = await render(<PracticeSessionPageModelReviewProbe />);
@@ -166,7 +168,9 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     mockActiveTimedExam('2026-05-22T12:00:01.000Z');
     mockFinalizeSummary();
     saveExamDraftAnswerMock.mockResolvedValue(
-      errorResult('CONFLICT', 'Exam time has expired'),
+      errorResult('CONFLICT', 'Exam time has expired', {
+        reason: 'exam_time_expired',
+      }),
     );
 
     const screen = await render(<PracticeSessionPageModelReviewProbe />);
@@ -192,7 +196,9 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     mockActiveTimedExam('2026-05-22T12:00:30.000Z');
     mockFinalizeSummaryFromFinalFlush();
     saveExamDraftAnswerMock.mockResolvedValue(
-      errorResult('CONFLICT', 'Exam time has expired'),
+      errorResult('CONFLICT', 'Exam time has expired', {
+        reason: 'exam_time_expired',
+      }),
     );
 
     const screen = await render(<PracticeSessionPageModelReviewProbe />);
@@ -228,7 +234,9 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     mockActiveTimedExam('2026-05-22T12:00:30.000Z');
     mockFinalizeSummaryFromFinalFlush();
     saveExamDraftAnswerMock.mockResolvedValue(
-      errorResult('CONFLICT', 'Exam time has expired'),
+      errorResult('CONFLICT', 'Exam time has expired', {
+        reason: 'exam_time_expired',
+      }),
     );
 
     const screen = await render(<PracticeSessionPageModelNavigationProbe />);
@@ -265,7 +273,9 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     mockActiveTimedExam('2026-05-22T12:00:30.000Z');
     mockFinalizeSummaryFromFinalFlush();
     saveExamDraftAnswerMock.mockResolvedValue(
-      errorResult('CONFLICT', 'Exam time has expired'),
+      errorResult('CONFLICT', 'Exam time has expired', {
+        reason: 'exam_time_expired',
+      }),
     );
 
     const screen = await render(<PracticeSessionPageModelNavigationProbe />);

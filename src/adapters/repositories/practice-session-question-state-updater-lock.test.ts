@@ -27,7 +27,7 @@ function createStateRow() {
 }
 
 describe('practice session question state updater locking', () => {
-  it('locks the parent practice session before updating question state', async () => {
+  it('reads the parent session and question state in one snapshot without locking the parent session', async () => {
     const answeredAt = new Date('2026-02-01T00:10:00.000Z');
     const existing = createStateRow();
     const updated = {
@@ -38,46 +38,40 @@ describe('practice session question state updater locking', () => {
       version: 3,
     };
     const callOrder: string[] = [];
-    const sessionLockFor = vi.fn(async (strength: unknown) => {
-      callOrder.push('lock');
-      expect(strength).toBe('update');
+    const snapshotLimit = vi.fn(async () => {
+      callOrder.push('snapshot');
       return [
         {
-          endedAt: null,
-          paramsJson: {
+          sessionEndedAt: null,
+          sessionParamsJson: {
             count: 1,
             tagSlugs: [],
             difficulties: [],
             questionIds: [questionId],
           },
+          state: existing,
         },
       ];
-    });
-    const stateLimit = vi.fn(async () => {
-      callOrder.push('state');
-      return [existing];
     });
     const updateReturning = vi.fn(async () => {
       callOrder.push('update');
       return [updated];
     });
     const tx = {
-      select: vi
-        .fn()
-        .mockReturnValueOnce({
-          from: () => ({
+      select: vi.fn().mockReturnValue({
+        from: () => ({
+          leftJoin: () => ({
             where: () => ({
-              for: sessionLockFor,
+              limit: snapshotLimit,
             }),
           }),
-        })
-        .mockReturnValueOnce({
-          from: () => ({
-            where: () => ({
-              limit: stateLimit,
-            }),
+          where: () => ({
+            for: () => {
+              throw new Error('unexpected parent session row lock');
+            },
           }),
         }),
+      }),
       update: () => ({
         set: () => ({
           where: () => ({
@@ -138,9 +132,8 @@ describe('practice session question state updater locking', () => {
     });
 
     expect(transaction).toHaveBeenCalledTimes(1);
-    expect(sessionLockFor).toHaveBeenCalledTimes(1);
-    expect(stateLimit).toHaveBeenCalledTimes(1);
+    expect(snapshotLimit).toHaveBeenCalledTimes(1);
     expect(updateReturning).toHaveBeenCalledTimes(1);
-    expect(callOrder).toEqual(['lock', 'state', 'update']);
+    expect(callOrder).toEqual(['snapshot', 'update']);
   });
 });

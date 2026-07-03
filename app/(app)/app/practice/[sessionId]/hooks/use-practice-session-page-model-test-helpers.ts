@@ -75,10 +75,11 @@ export {
 export function errorResult(
   code: ActionErrorCode,
   message: string,
+  details?: Readonly<Record<string, unknown>>,
 ): ActionResult<never> {
   return {
     ok: false,
-    error: { code, message },
+    error: { code, message, ...(details !== undefined ? { details } : {}) },
   };
 }
 

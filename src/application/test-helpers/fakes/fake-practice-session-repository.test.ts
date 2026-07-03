@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { omittedOutcome } from '@/src/domain/value-objects';
 import { FakePracticeSessionRepository } from './fake-practice-session-repository';
@@ -62,9 +65,13 @@ describe('FakePracticeSessionRepository', () => {
 
     const repo = new FakePracticeSessionRepository([session]);
 
-    await expect(repo.end('session-1', 'user-1')).rejects.toEqual(
-      new ApplicationError('CONFLICT', 'Practice session already ended'),
-    );
+    await expect(repo.end('session-1', 'user-1')).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+      details: {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      },
+    });
   });
 
   it('honors explicit endedAt while preserving the default clock path', async () => {

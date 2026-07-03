@@ -49,6 +49,29 @@ describe('action-result', () => {
     });
   });
 
+  it('handleError maps ApplicationError details into the ActionResult error payload', async () => {
+    const { handleError } = await import('./action-result');
+    const error = new ApplicationError(
+      'CONFLICT',
+      'Practice session state changed concurrently; please retry.',
+      undefined,
+      {
+        details: { reason: 'practice_session_state_changed_concurrently' },
+      } as ConstructorParameters<typeof ApplicationError>[3] & {
+        details: Record<string, unknown>;
+      },
+    );
+
+    expect(handleError(error)).toEqual({
+      ok: false,
+      error: {
+        code: 'CONFLICT',
+        message: 'Practice session state changed concurrently; please retry.',
+        details: { reason: 'practice_session_state_changed_concurrently' },
+      },
+    });
+  });
+
   it('handleError maps ZodError to VALIDATION_ERROR with fieldErrors', async () => {
     const { handleError } = await import('./action-result');
     const schema = z.object({ email: z.string().email() }).strict();

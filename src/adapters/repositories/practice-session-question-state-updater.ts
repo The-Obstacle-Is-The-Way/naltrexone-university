@@ -1,6 +1,9 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { practiceSessionQuestionStates, practiceSessions } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import type { PracticeSessionQuestionState } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
 import { parsePracticeSessionParamsJson } from './practice-session-params';
@@ -14,11 +17,6 @@ type QuestionStateSnapshot = {
   row: PracticeSessionQuestionStateRow;
   state: PracticeSessionQuestionState;
   endedAt: Date | null;
-};
-
-type SessionStatus = {
-  endedAt: Date | null;
-  paramsJson: unknown;
 };
 
 function toDomainQuestionState(
@@ -36,47 +34,31 @@ function toDomainQuestionState(
   };
 }
 
-async function lockSessionStatus(input: {
-  db: DrizzleDb;
-  sessionId: string;
-  userId: string;
-}): Promise<SessionStatus | null> {
-  const [row] = await input.db
-    .select({
-      endedAt: practiceSessions.endedAt,
-      paramsJson: practiceSessions.paramsJson,
-    })
-    .from(practiceSessions)
-    .where(
-      and(
-        eq(practiceSessions.id, input.sessionId),
-        eq(practiceSessions.userId, input.userId),
-      ),
-    )
-    .for('update');
-
-  return row
-    ? { endedAt: row.endedAt ?? null, paramsJson: row.paramsJson }
-    : null;
+function sessionAlreadyEndedError(): ApplicationError {
+  return new ApplicationError(
+    'CONFLICT',
+    'Practice session already ended',
+    undefined,
+    {
+      details: {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      },
+    },
+  );
 }
 
-async function findQuestionStateRow(input: {
-  db: DrizzleDb;
-  sessionId: string;
-  questionId: string;
-}): Promise<PracticeSessionQuestionStateRow | null> {
-  const [row] = await input.db
-    .select()
-    .from(practiceSessionQuestionStates)
-    .where(
-      and(
-        eq(practiceSessionQuestionStates.practiceSessionId, input.sessionId),
-        eq(practiceSessionQuestionStates.questionId, input.questionId),
-      ),
-    )
-    .limit(1);
-
-  return row ?? null;
+function stateChangedConcurrentlyError(cause?: unknown): ApplicationError {
+  return new ApplicationError(
+    'CONFLICT',
+    'Practice session state changed concurrently; please retry.',
+    undefined,
+    {
+      ...(cause !== undefined ? { cause } : {}),
+      details: {
+        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+      },
+    },
+  );
 }
 
 async function findQuestionStateSnapshot(input: {
@@ -85,17 +67,41 @@ async function findQuestionStateSnapshot(input: {
   userId: string;
   questionId: string;
 }): Promise<QuestionStateSnapshot> {
-  const session = await lockSessionStatus(input);
-  if (!session) {
+  const [snapshot] = await input.db
+    .select({
+      sessionEndedAt: practiceSessions.endedAt,
+      sessionParamsJson: practiceSessions.paramsJson,
+      state: practiceSessionQuestionStates,
+    })
+    .from(practiceSessions)
+    .leftJoin(
+      practiceSessionQuestionStates,
+      and(
+        eq(
+          practiceSessionQuestionStates.practiceSessionId,
+          practiceSessions.id,
+        ),
+        eq(practiceSessionQuestionStates.questionId, input.questionId),
+      ),
+    )
+    .where(
+      and(
+        eq(practiceSessions.id, input.sessionId),
+        eq(practiceSessions.userId, input.userId),
+      ),
+    )
+    .limit(1);
+
+  if (!snapshot) {
     throw new ApplicationError('NOT_FOUND', 'Practice session not found');
   }
 
-  const row = await findQuestionStateRow(input);
+  const row = snapshot.state;
   if (row) {
     return {
       row,
       state: toDomainQuestionState(row),
-      endedAt: session.endedAt,
+      endedAt: snapshot.sessionEndedAt ?? null,
     };
   }
 
@@ -103,7 +109,7 @@ async function findQuestionStateSnapshot(input: {
   // corruption (failed backfill/migration) and must outrank the ended-session
   // CONFLICT so it cannot hide behind "already ended".
   const params = parsePracticeSessionParamsJson(
-    session.paramsJson,
+    snapshot.sessionParamsJson,
     'INTERNAL_ERROR',
   );
   if (params.questionIds.includes(input.questionId)) {
@@ -113,8 +119,8 @@ async function findQuestionStateSnapshot(input: {
     );
   }
 
-  if (session.endedAt) {
-    throw new ApplicationError('CONFLICT', 'Practice session already ended');
+  if (snapshot.sessionEndedAt) {
+    throw sessionAlreadyEndedError();
   }
 
   throw new ApplicationError(
@@ -157,10 +163,7 @@ export async function updatePracticeSessionQuestionState(input: {
         db: txDb,
       });
       if (existing.endedAt) {
-        throw new ApplicationError(
-          'CONFLICT',
-          'Practice session already ended',
-        );
+        throw sessionAlreadyEndedError();
       }
 
       const updatedState = input.updateFn(existing.state);
@@ -207,10 +210,7 @@ export async function updatePracticeSessionQuestionState(input: {
     }),
   );
   if (finalSnapshot.endedAt) {
-    throw new ApplicationError('CONFLICT', 'Practice session already ended');
+    throw sessionAlreadyEndedError();
   }
-  throw new ApplicationError(
-    'CONFLICT',
-    'Practice session state changed concurrently; please retry.',
-  );
+  throw stateChangedConcurrentlyError();
 }

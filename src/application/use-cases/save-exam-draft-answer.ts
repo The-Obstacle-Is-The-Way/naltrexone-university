@@ -1,4 +1,7 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import type {
   PracticeSessionRepository,
   QuestionRepository,
@@ -49,11 +52,26 @@ export class SaveExamDraftAnswerUseCase {
       throw new ApplicationError(
         'CONFLICT',
         'Cannot modify a completed session',
+        undefined,
+        {
+          details: {
+            reason: PracticeSessionConflictReasons.AlreadyEnded,
+          },
+        },
       );
     }
 
     if (isExamExpired(session, this.now())) {
-      throw new ApplicationError('CONFLICT', 'Exam time has expired');
+      throw new ApplicationError(
+        'CONFLICT',
+        'Exam time has expired',
+        undefined,
+        {
+          details: {
+            reason: PracticeSessionConflictReasons.ExamTimeExpired,
+          },
+        },
+      );
     }
 
     const questionBelongsToSession = session.questionStates.some(

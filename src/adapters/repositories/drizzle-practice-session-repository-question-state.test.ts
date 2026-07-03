@@ -88,24 +88,12 @@ function expectVersionedStateUpdatePredicate(
   );
 }
 
-function expectSessionLockPredicate(predicate: unknown) {
+function expectSessionOwnershipPredicate(predicate: unknown) {
   expect([...new Set(collectColumnNames(predicate))]).toEqual(
     expect.arrayContaining(['id', 'user_id']),
   );
   expect(collectPrimitiveValues(predicate)).toEqual(
     expect.arrayContaining([sessionId, userId]),
-  );
-}
-
-function expectQuestionStateSelectPredicate(
-  predicate: unknown,
-  expected: { questionId: string },
-) {
-  expect([...new Set(collectColumnNames(predicate))]).toEqual(
-    expect.arrayContaining(['practice_session_id', 'question_id']),
-  );
-  expect(collectPrimitiveValues(predicate)).toEqual(
-    expect.arrayContaining([sessionId, expected.questionId]),
   );
 }
 
@@ -133,21 +121,21 @@ function createQuestionStateDb(input: {
     difficulties: [],
     questionIds: [crypto.randomUUID()],
   };
-  const lockedSession = (endedAt: Date | null) => [
+  const joinedSnapshot = (endedAt: Date | null, state: StateRow | null) => [
     {
-      endedAt,
-      paramsJson: input.sessionStatus?.paramsJson ?? defaultParamsJson,
+      sessionEndedAt: endedAt,
+      sessionParamsJson: input.sessionStatus?.paramsJson ?? defaultParamsJson,
+      state,
     },
   ];
-  let sessionLockIndex = 0;
-  const sessionLockFor = vi.fn(async (strength: unknown) => {
-    expect(strength).toBe('update');
-    const snapshot = input.snapshots[sessionLockIndex];
-    sessionLockIndex += 1;
+  let snapshotReadIndex = 0;
+  const snapshotLimit = vi.fn(async () => {
+    const snapshot = input.snapshots[snapshotReadIndex];
+    snapshotReadIndex += 1;
 
-    if (snapshot) return lockedSession(snapshot.endedAt);
+    if (snapshot) return joinedSnapshot(snapshot.endedAt, snapshot.state);
     return input.sessionStatus
-      ? lockedSession(input.sessionStatus.endedAt)
+      ? joinedSnapshot(input.sessionStatus.endedAt, null)
       : [];
   });
   const expectedQuestionId =
@@ -155,39 +143,31 @@ function createQuestionStateDb(input: {
     input.snapshots[0]?.state.questionId ??
     firstQuestionId;
 
-  let stateReadIndex = 0;
-  const stateLimit = vi.fn(async () => {
-    const snapshot = input.snapshots[stateReadIndex];
-    stateReadIndex += 1;
-    return snapshot ? [snapshot.state] : [];
-  });
-
-  let selectCallIndex = 0;
   const select = vi.fn(() => {
-    selectCallIndex += 1;
-    return selectCallIndex % 2 === 1
-      ? {
-          from: () => ({
+    return {
+      from: () => ({
+        leftJoin: (_table: unknown, joinPredicate: unknown) => {
+          expect([...new Set(collectColumnNames(joinPredicate))]).toEqual(
+            expect.arrayContaining([
+              'id',
+              'practice_session_id',
+              'question_id',
+            ]),
+          );
+          expect(collectPrimitiveValues(joinPredicate)).toEqual(
+            expect.arrayContaining([expectedQuestionId]),
+          );
+          return {
             where: (predicate: unknown) => {
-              expectSessionLockPredicate(predicate);
+              expectSessionOwnershipPredicate(predicate);
               return {
-                for: sessionLockFor,
+                limit: snapshotLimit,
               };
             },
-          }),
-        }
-      : {
-          from: () => ({
-            where: (predicate: unknown) => {
-              expectQuestionStateSelectPredicate(predicate, {
-                questionId: expectedQuestionId,
-              });
-              return {
-                limit: stateLimit,
-              };
-            },
-          }),
-        };
+          };
+        },
+      }),
+    };
   });
 
   let updateAttemptIndex = 0;

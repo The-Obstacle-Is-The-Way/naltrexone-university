@@ -1,6 +1,9 @@
 import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import {
   CheckEntitlementUseCase,
   CountAvailableQuestionsUseCase,
@@ -104,7 +107,12 @@ async function runPracticeSessionStateWriteTransaction<T>(
     'CONFLICT',
     'Practice session state changed concurrently; please retry.',
     undefined,
-    { cause: lastRetryableError },
+    {
+      cause: lastRetryableError,
+      details: {
+        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+      },
+    },
   );
 }
 

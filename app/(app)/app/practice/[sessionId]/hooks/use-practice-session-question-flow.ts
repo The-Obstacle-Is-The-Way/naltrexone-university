@@ -11,6 +11,7 @@ import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
   type ExamDraftAnswer,
   type ExamDraftSaveResult,
+  isExamExpiryDraftSaveConflict,
   maybeSaveDraftBeforeNavigation,
   type NullQuestionRecovery,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
@@ -323,7 +324,7 @@ export function usePracticeSessionQuestionFlow(
         run: async () => {
           const saveResult = await saveCurrentExamDraft();
           if (!saveResult.ok) {
-            if (saveResult.code === 'CONFLICT') {
+            if (isExamExpiryDraftSaveConflict(saveResult)) {
               await recoverServerExpiredExam();
             }
             return;
@@ -365,7 +366,7 @@ export function usePracticeSessionQuestionFlow(
       run: async () => {
         const saveResult = await saveCurrentExamDraft();
         if (!saveResult.ok) {
-          if (saveResult.code === 'CONFLICT') {
+          if (isExamExpiryDraftSaveConflict(saveResult)) {
             await recoverServerExpiredExam();
           }
           return;
