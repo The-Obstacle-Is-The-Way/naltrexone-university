@@ -30,6 +30,11 @@ describe('shouldCachePracticeSessionStateWriteError', () => {
     );
     expect(
       shouldCachePracticeSessionStateWriteError(
+        new ApplicationError('CONFLICT', 'Plain conflict'),
+      ),
+    ).toBe(true);
+    expect(
+      shouldCachePracticeSessionStateWriteError(
         new ApplicationError('CONFLICT', 'Malformed reason', undefined, {
           details: {
             reason: PracticeSessionConflictReasons.ExamTimeExpired,
