@@ -54,6 +54,47 @@ describe('withIdempotency practice-session conflict caching', () => {
     expect(execute).toHaveBeenCalledTimes(2);
   });
 
+  it('logs abort failures without masking non-cacheable execute errors', async () => {
+    class AbortFailingRepo extends FakeIdempotencyKeyRepository {
+      override async abortClaim(): Promise<void> {
+        throw 'plain abort failure';
+      }
+    }
+
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new AbortFailingRepo(now);
+    const logger = new FakeLogger();
+    const key = '33333333-3333-3333-3333-333333337777';
+    const originalError = 'plain execute failure';
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'practice:setPracticeSessionQuestionMark',
+        key,
+        now,
+        logger,
+        shouldCacheError: () => false,
+        execute: async () => {
+          throw originalError;
+        },
+      }),
+    ).rejects.toBe(originalError);
+
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      msg: 'Failed to abort idempotency claim after non-cacheable execute error',
+      context: {
+        userId: appUserId,
+        action: 'practice:setPracticeSessionQuestionMark',
+        key,
+        abortError: 'plain abort failure',
+        originalError: 'plain execute failure',
+      },
+    });
+  });
+
   it('replays cached terminal practice-session conflicts with details intact', async () => {
     const now = () => new Date('2026-02-07T00:00:00.000Z');
     const repo = new FakeIdempotencyKeyRepository(now);
