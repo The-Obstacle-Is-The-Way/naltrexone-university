@@ -23,6 +23,11 @@ const practiceSessionParamsSchema = z
     difficulties: z
       .array(questionDifficultySchema)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
+    // DEBT-433: this array's order is mirrored by
+    // practice_session_question_states.position. Direct data repairs or
+    // migrations that edit one side must transactionally update the other;
+    // DrizzlePracticeSessionRepository.toOrderedDomainQuestionStates throws
+    // INTERNAL_ERROR if count or order drift is detected at read time.
     questionIds: z
       .array(zUuid)
       .min(1)

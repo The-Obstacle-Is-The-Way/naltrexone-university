@@ -1,5 +1,6 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -72,6 +73,50 @@ describe('DrizzleIdempotencyKeyRepository', () => {
     await expect(repo.find(user.id, 'it', 'k2')).resolves.toMatchObject({
       resultJson: null,
       error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      completedAt,
+      expiresAt,
+    });
+  });
+
+  it('persists and replays cached error details', async () => {
+    const user = await createUser(db, cleanup);
+    const completedAt = new Date('2026-02-01T00:00:00.000Z');
+    const now = () => completedAt;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+
+    const claimedAt = await repo.claim({
+      userId: user.id,
+      action: 'it',
+      key: 'k-details',
+      expiresAt,
+    });
+    expect(claimedAt).toEqual(completedAt);
+    if (!claimedAt) throw new Error('Expected details claim');
+
+    await repo.storeError({
+      userId: user.id,
+      action: 'it',
+      key: 'k-details',
+      claimedAt,
+      error: {
+        code: 'CONFLICT',
+        message: 'Practice session already ended',
+        details: {
+          reason: PracticeSessionConflictReasons.AlreadyEnded,
+        },
+      },
+    });
+
+    await expect(repo.find(user.id, 'it', 'k-details')).resolves.toMatchObject({
+      resultJson: null,
+      error: {
+        code: 'CONFLICT',
+        message: 'Practice session already ended',
+        details: {
+          reason: PracticeSessionConflictReasons.AlreadyEnded,
+        },
+      },
       completedAt,
       expiresAt,
     });

@@ -3,13 +3,30 @@ import { idempotencyKeys } from '@/db/schema';
 import {
   ApplicationError,
   type ApplicationErrorCode,
+  type ApplicationErrorDetails,
+  isPracticeSessionConflictReason,
 } from '@/src/application/errors';
 import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
+  type IdempotencyKeyError,
   type IdempotencyKeyRecord,
   type IdempotencyKeyRepository,
 } from '@/src/application/ports/repositories';
 import type { DrizzleDb } from '../shared/database-types';
+
+function toApplicationErrorDetails(
+  value: unknown,
+): ApplicationErrorDetails | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const reason = (value as { reason?: unknown }).reason;
+  if (reason === undefined) return undefined;
+  if (!isPracticeSessionConflictReason(reason)) return undefined;
+
+  return { reason };
+}
 
 export class DrizzleIdempotencyKeyRepository
   implements IdempotencyKeyRepository
@@ -44,6 +61,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: null,
         errorMessage: null,
+        errorDetails: null,
         claimedAt: now,
         completedAt: null,
         expiresAt: input.expiresAt,
@@ -65,6 +83,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: null,
         errorMessage: null,
+        errorDetails: null,
         claimedAt: now,
         completedAt: null,
         expiresAt: input.expiresAt,
@@ -99,6 +118,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: idempotencyKeys.resultJson,
         errorCode: idempotencyKeys.errorCode,
         errorMessage: idempotencyKeys.errorMessage,
+        errorDetails: idempotencyKeys.errorDetails,
         completedAt: idempotencyKeys.completedAt,
         expiresAt: idempotencyKeys.expiresAt,
       })
@@ -117,12 +137,15 @@ export class DrizzleIdempotencyKeyRepository
       return null;
     }
 
+    const errorDetails = toApplicationErrorDetails(row.errorDetails);
+
     return {
       resultJson: row.resultJson ?? null,
       error: row.errorCode
         ? {
             code: row.errorCode as ApplicationErrorCode,
             message: row.errorMessage ?? row.errorCode,
+            ...(errorDetails !== undefined ? { details: errorDetails } : {}),
           }
         : null,
       completedAt: row.completedAt,
@@ -143,6 +166,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: input.resultJson,
         errorCode: null,
         errorMessage: null,
+        errorDetails: null,
         completedAt: this.now(),
       })
       .where(
@@ -166,7 +190,7 @@ export class DrizzleIdempotencyKeyRepository
     action: string;
     key: string;
     claimedAt: Date;
-    error: { code: ApplicationErrorCode; message: string };
+    error: IdempotencyKeyError;
   }): Promise<void> {
     const [updated] = await this.db
       .update(idempotencyKeys)
@@ -174,6 +198,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: input.error.code,
         errorMessage: input.error.message,
+        errorDetails: input.error.details ?? null,
         completedAt: this.now(),
       })
       .where(

@@ -67,6 +67,7 @@ import {
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
+import { shouldCachePracticeSessionStateWriteError } from './shared/practice-session-idempotency-policy';
 
 export type {
   CountAvailableQuestionsOutput,
@@ -341,6 +342,7 @@ export const finalizeExamAnswers = createAction({
       action: 'practice:finalizeExamAnswers',
       idempotencyKey,
       outputSchema: FinalizeExamAnswersOutputSchema,
+      shouldCacheError: shouldCachePracticeSessionStateWriteError,
       execute: finalizeExam,
     });
   },
@@ -420,6 +422,7 @@ export const setPracticeSessionQuestionMark = createAction({
       action: 'practice:setPracticeSessionQuestionMark',
       idempotencyKey,
       outputSchema: SetPracticeSessionQuestionMarkOutputSchema,
+      shouldCacheError: shouldCachePracticeSessionStateWriteError,
       execute: () =>
         d.setPracticeSessionQuestionMarkUseCase.execute({
           userId,

@@ -183,6 +183,13 @@
       "when": 1782939399994,
       "tag": "0025_worthless_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1783092600000,
+      "tag": "0026_track_a_tail_sweep",
+      "breakpoints": true
     }
   ]
 }

@@ -24,6 +24,7 @@ export async function executeIdempotent<TOutput>({
   action,
   outputSchema,
   beforeExecute,
+  shouldCacheError,
   execute,
 }: {
   d: IdempotentControllerDeps;
@@ -32,6 +33,7 @@ export async function executeIdempotent<TOutput>({
   action: string;
   outputSchema: ZodType<TOutput, unknown>;
   beforeExecute?: () => Promise<void>;
+  shouldCacheError?: (error: unknown) => boolean;
   execute: () => Promise<TOutput>;
 }): Promise<TOutput> {
   if (!idempotencyKey) {
@@ -48,6 +50,7 @@ export async function executeIdempotent<TOutput>({
     now: d.now,
     parseResult: (value) => outputSchema.parse(value),
     ...(beforeExecute ? { beforeExecute } : {}),
+    ...(shouldCacheError ? { shouldCacheError } : {}),
     execute,
   });
 }

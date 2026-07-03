@@ -3,6 +3,7 @@ import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
+  type IdempotencyKeyError,
   type IdempotencyKeyRepository,
 } from '@/src/application/ports/repositories';
 import { DAY_MS } from '@/src/domain/services';
@@ -27,15 +28,59 @@ function toErrorMessage(error: unknown): string {
     : message;
 }
 
-function toErrorRecord(error: unknown): {
-  code: ApplicationError['code'];
-  message: string;
-} {
+function toErrorRecord(error: unknown): IdempotencyKeyError {
   if (isApplicationError(error)) {
-    return { code: error.code, message: error.message };
+    return {
+      code: error.code,
+      message: error.message,
+      ...(error.details !== undefined ? { details: error.details } : {}),
+    };
   }
 
   return { code: 'INTERNAL_ERROR', message: toErrorMessage(error) };
+}
+
+async function abortClaimPreservingOriginalError(
+  input: {
+    repo: IdempotencyKeyRepository;
+    logger: Logger;
+    userId: string;
+    action: string;
+    key: string;
+  },
+  claimedAt: Date,
+  originalError: unknown,
+  message: string,
+): Promise<void> {
+  try {
+    await input.repo.abortClaim(
+      input.userId,
+      input.action,
+      input.key,
+      claimedAt,
+    );
+  } catch (abortError) {
+    try {
+      input.logger.error(
+        {
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          abortError:
+            abortError instanceof Error
+              ? abortError.message
+              : String(abortError),
+          originalError:
+            originalError instanceof Error
+              ? originalError.message
+              : String(originalError),
+        },
+        message,
+      );
+    } catch {
+      // Preserve the original error even if logging fails.
+    }
+  }
 }
 
 export async function withIdempotency<T>(input: {
@@ -51,6 +96,7 @@ export async function withIdempotency<T>(input: {
   zombieThresholdMs?: number;
   parseResult?: (value: unknown) => T;
   beforeExecute?: () => Promise<void>;
+  shouldCacheError?: (error: unknown) => boolean;
   execute: () => Promise<T>;
 }): Promise<T> {
   const ttlMs = input.ttlMs ?? DEFAULT_TTL_MS;
@@ -92,33 +138,12 @@ export async function withIdempotency<T>(input: {
         try {
           await input.beforeExecute();
         } catch (error) {
-          try {
-            await input.repo.abortClaim(
-              input.userId,
-              input.action,
-              input.key,
-              claimedAt,
-            );
-          } catch (abortError) {
-            try {
-              input.logger.error(
-                {
-                  userId: input.userId,
-                  action: input.action,
-                  key: input.key,
-                  abortError:
-                    abortError instanceof Error
-                      ? abortError.message
-                      : String(abortError),
-                  originalError:
-                    error instanceof Error ? error.message : String(error),
-                },
-                'Failed to abort idempotency claim after beforeExecute failure',
-              );
-            } catch {
-              // Preserve the original beforeExecute error even if logging fails.
-            }
-          }
+          await abortClaimPreservingOriginalError(
+            input,
+            claimedAt,
+            error,
+            'Failed to abort idempotency claim after beforeExecute failure',
+          );
           throw error;
         }
       }
@@ -134,6 +159,16 @@ export async function withIdempotency<T>(input: {
         });
         return result;
       } catch (error) {
+        if (input.shouldCacheError && !input.shouldCacheError(error)) {
+          await abortClaimPreservingOriginalError(
+            input,
+            claimedAt,
+            error,
+            'Failed to abort idempotency claim after non-cacheable execute error',
+          );
+          throw error;
+        }
+
         try {
           await input.repo.storeError({
             userId: input.userId,
@@ -179,7 +214,14 @@ export async function withIdempotency<T>(input: {
       }
 
       if (existing.error) {
-        throw new ApplicationError(existing.error.code, existing.error.message);
+        throw new ApplicationError(
+          existing.error.code,
+          existing.error.message,
+          undefined,
+          existing.error.details
+            ? { details: existing.error.details }
+            : undefined,
+        );
       }
 
       if (existing.completedAt !== null) {
