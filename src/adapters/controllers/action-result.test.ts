@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 vi.mock('server-only', () => ({}));
@@ -56,9 +59,9 @@ describe('action-result', () => {
       'Practice session state changed concurrently; please retry.',
       undefined,
       {
-        details: { reason: 'practice_session_state_changed_concurrently' },
-      } as ConstructorParameters<typeof ApplicationError>[3] & {
-        details: Record<string, unknown>;
+        details: {
+          reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+        },
       },
     );
 
@@ -67,7 +70,9 @@ describe('action-result', () => {
       error: {
         code: 'CONFLICT',
         message: 'Practice session state changed concurrently; please retry.',
-        details: { reason: 'practice_session_state_changed_concurrently' },
+        details: {
+          reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+        },
       },
     });
   });

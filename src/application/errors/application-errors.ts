@@ -14,8 +14,6 @@ export const ApplicationErrorCodes = [
 
 export type ApplicationErrorCode = (typeof ApplicationErrorCodes)[number];
 
-export type ApplicationErrorDetails = Readonly<Record<string, unknown>>;
-
 export const PracticeSessionConflictReasons = {
   AlreadyEnded: 'practice_session_already_ended',
   ExamTimeExpired: 'exam_time_expired',
@@ -24,6 +22,16 @@ export const PracticeSessionConflictReasons = {
 
 export type PracticeSessionConflictReason =
   (typeof PracticeSessionConflictReasons)[keyof typeof PracticeSessionConflictReasons];
+
+export const PracticeSessionConflictMessages = {
+  AlreadyEnded: 'Practice session already ended',
+  StateChangedConcurrently:
+    'Practice session state changed concurrently; please retry.',
+} as const;
+
+export type ApplicationErrorDetails = Readonly<{
+  reason?: PracticeSessionConflictReason;
+}>;
 
 const practiceSessionConflictReasonValues = new Set<string>(
   Object.values(PracticeSessionConflictReasons),
@@ -56,6 +64,38 @@ export class ApplicationError extends Error {
       this.details = options.details;
     }
   }
+}
+
+export function practiceSessionAlreadyEndedError(options?: {
+  cause?: unknown;
+}): ApplicationError {
+  return new ApplicationError(
+    'CONFLICT',
+    PracticeSessionConflictMessages.AlreadyEnded,
+    undefined,
+    {
+      ...(options?.cause !== undefined ? { cause: options.cause } : {}),
+      details: {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      },
+    },
+  );
+}
+
+export function practiceSessionStateChangedConcurrentlyError(options?: {
+  cause?: unknown;
+}): ApplicationError {
+  return new ApplicationError(
+    'CONFLICT',
+    PracticeSessionConflictMessages.StateChangedConcurrently,
+    undefined,
+    {
+      ...(options?.cause !== undefined ? { cause: options.cause } : {}),
+      details: {
+        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+      },
+    },
+  );
 }
 
 export function isApplicationError(error: unknown): error is ApplicationError {

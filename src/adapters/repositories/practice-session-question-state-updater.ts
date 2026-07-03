@@ -2,7 +2,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import { practiceSessionQuestionStates, practiceSessions } from '@/db/schema';
 import {
   ApplicationError,
-  PracticeSessionConflictReasons,
+  practiceSessionAlreadyEndedError,
+  practiceSessionStateChangedConcurrentlyError,
 } from '@/src/application/errors';
 import type { PracticeSessionQuestionState } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
@@ -32,32 +33,6 @@ function toDomainQuestionState(
     draftSavedAt: row.draftSavedAt ?? null,
     draftCumulativeMs: row.draftCumulativeMs,
   };
-}
-
-function sessionAlreadyEndedError(): ApplicationError {
-  return new ApplicationError(
-    'CONFLICT',
-    'Practice session already ended',
-    undefined,
-    {
-      details: {
-        reason: PracticeSessionConflictReasons.AlreadyEnded,
-      },
-    },
-  );
-}
-
-function stateChangedConcurrentlyError(): ApplicationError {
-  return new ApplicationError(
-    'CONFLICT',
-    'Practice session state changed concurrently; please retry.',
-    undefined,
-    {
-      details: {
-        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
-      },
-    },
-  );
 }
 
 async function findQuestionStateSnapshot(input: {
@@ -119,7 +94,7 @@ async function findQuestionStateSnapshot(input: {
   }
 
   if (snapshot.sessionEndedAt) {
-    throw sessionAlreadyEndedError();
+    throw practiceSessionAlreadyEndedError();
   }
 
   throw new ApplicationError(
@@ -162,7 +137,7 @@ export async function updatePracticeSessionQuestionState(input: {
         db: txDb,
       });
       if (existing.endedAt) {
-        throw sessionAlreadyEndedError();
+        throw practiceSessionAlreadyEndedError();
       }
 
       const updatedState = input.updateFn(existing.state);
@@ -209,7 +184,7 @@ export async function updatePracticeSessionQuestionState(input: {
     }),
   );
   if (finalSnapshot.endedAt) {
-    throw sessionAlreadyEndedError();
+    throw practiceSessionAlreadyEndedError();
   }
-  throw stateChangedConcurrentlyError();
+  throw practiceSessionStateChangedConcurrentlyError();
 }

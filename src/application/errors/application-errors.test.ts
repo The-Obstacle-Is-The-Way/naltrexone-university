@@ -3,6 +3,9 @@ import {
   ApplicationError,
   ApplicationErrorCodes,
   isApplicationError,
+  PracticeSessionConflictReasons,
+  practiceSessionAlreadyEndedError,
+  practiceSessionStateChangedConcurrentlyError,
 } from './application-errors';
 
 describe('ApplicationErrorCodes', () => {
@@ -43,6 +46,44 @@ describe('ApplicationError', () => {
       cause,
     });
 
+    expect((error as Error).cause).toBe(cause);
+  });
+
+  it('preserves explicit client-facing details when provided', () => {
+    const error = new ApplicationError('CONFLICT', 'Conflict', undefined, {
+      details: {
+        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+      },
+    });
+
+    expect(error.details).toEqual({
+      reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+    });
+  });
+
+  it('creates a structured already-ended practice-session conflict', () => {
+    const error = practiceSessionAlreadyEndedError();
+
+    expect(error).toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+      details: {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      },
+    });
+  });
+
+  it('creates a structured concurrent practice-session state conflict with an optional cause', () => {
+    const cause = new Error('serialization failure');
+    const error = practiceSessionStateChangedConcurrentlyError({ cause });
+
+    expect(error).toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session state changed concurrently; please retry.',
+      details: {
+        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+      },
+    });
     expect((error as Error).cause).toBe(cause);
   });
 });

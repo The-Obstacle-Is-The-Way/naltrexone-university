@@ -2,7 +2,7 @@ import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-error
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   ApplicationError,
-  PracticeSessionConflictReasons,
+  practiceSessionStateChangedConcurrentlyError,
 } from '@/src/application/errors';
 import {
   CheckEntitlementUseCase,
@@ -103,17 +103,9 @@ async function runPracticeSessionStateWriteTransaction<T>(
     }
   }
 
-  throw new ApplicationError(
-    'CONFLICT',
-    'Practice session state changed concurrently; please retry.',
-    undefined,
-    {
-      cause: lastRetryableError,
-      details: {
-        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
-      },
-    },
-  );
+  throw practiceSessionStateChangedConcurrentlyError({
+    cause: lastRetryableError,
+  });
 }
 
 export function createUseCaseFactories(input: {

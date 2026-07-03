@@ -1,6 +1,8 @@
 import {
   ApplicationError,
-  PracticeSessionConflictReasons,
+  PracticeSessionConflictMessages,
+  practiceSessionAlreadyEndedError,
+  practiceSessionStateChangedConcurrentlyError,
 } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type { PracticeSession } from '@/src/domain/entities';
@@ -12,33 +14,7 @@ import type {
 import { selectedChoiceIdOrNull } from '@/src/domain/value-objects';
 
 export const STATE_CHANGED_CONCURRENTLY_MESSAGE =
-  'Practice session state changed concurrently; please retry.';
-
-function practiceSessionAlreadyEndedError(): ApplicationError {
-  return new ApplicationError(
-    'CONFLICT',
-    'Practice session already ended',
-    undefined,
-    {
-      details: {
-        reason: PracticeSessionConflictReasons.AlreadyEnded,
-      },
-    },
-  );
-}
-
-function practiceSessionStateChangedConcurrentlyError(): ApplicationError {
-  return new ApplicationError(
-    'CONFLICT',
-    STATE_CHANGED_CONCURRENTLY_MESSAGE,
-    undefined,
-    {
-      details: {
-        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
-      },
-    },
-  );
-}
+  PracticeSessionConflictMessages.StateChangedConcurrently;
 
 export class FakePracticeSessionRepository
   implements PracticeSessionRepository
