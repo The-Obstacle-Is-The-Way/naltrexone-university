@@ -95,6 +95,41 @@ describe('withIdempotency practice-session conflict caching', () => {
     });
   });
 
+  it('caches and rethrows the original execute error when the cache policy throws', async () => {
+    const now = () => new Date('2026-02-07T00:00:00.000Z');
+    const repo = new FakeIdempotencyKeyRepository(now);
+    const logger = new FakeLogger();
+    const key = '33333333-3333-3333-3333-333333338888';
+    const originalError = practiceSessionStateChangedConcurrentlyError();
+    const policyError = new Error('policy failed');
+    const execute = vi.fn(async () => {
+      throw originalError;
+    });
+
+    const input = {
+      repo,
+      userId: appUserId,
+      action: 'practice:setPracticeSessionQuestionMark',
+      key,
+      now,
+      logger,
+      shouldCacheError: () => {
+        throw policyError;
+      },
+      execute,
+    } as const;
+
+    await expect(withIdempotency(input)).rejects.toBe(originalError);
+    await expect(withIdempotency(input)).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session state changed concurrently; please retry.',
+      details: {
+        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+      },
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
   it('replays cached terminal practice-session conflicts with details intact', async () => {
     const now = () => new Date('2026-02-07T00:00:00.000Z');
     const repo = new FakeIdempotencyKeyRepository(now);

@@ -40,6 +40,20 @@ function toErrorRecord(error: unknown): IdempotencyKeyError {
   return { code: 'INTERNAL_ERROR', message: toErrorMessage(error) };
 }
 
+function shouldCacheExecutionError(
+  shouldCacheError: ((error: unknown) => boolean) | undefined,
+  error: unknown,
+): boolean {
+  if (!shouldCacheError) return true;
+
+  try {
+    return shouldCacheError(error);
+  } catch {
+    // Cache the original execute error if the policy itself fails.
+    return true;
+  }
+}
+
 async function abortClaimPreservingOriginalError(
   input: {
     repo: IdempotencyKeyRepository;
@@ -159,7 +173,7 @@ export async function withIdempotency<T>(input: {
         });
         return result;
       } catch (error) {
-        if (input.shouldCacheError && !input.shouldCacheError(error)) {
+        if (!shouldCacheExecutionError(input.shouldCacheError, error)) {
           await abortClaimPreservingOriginalError(
             input,
             claimedAt,
