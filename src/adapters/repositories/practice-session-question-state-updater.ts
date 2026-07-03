@@ -47,13 +47,12 @@ function sessionAlreadyEndedError(): ApplicationError {
   );
 }
 
-function stateChangedConcurrentlyError(cause?: unknown): ApplicationError {
+function stateChangedConcurrentlyError(): ApplicationError {
   return new ApplicationError(
     'CONFLICT',
     'Practice session state changed concurrently; please retry.',
     undefined,
     {
-      ...(cause !== undefined ? { cause } : {}),
       details: {
         reason: PracticeSessionConflictReasons.StateChangedConcurrently,
       },
