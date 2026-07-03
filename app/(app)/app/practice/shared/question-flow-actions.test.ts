@@ -1076,6 +1076,56 @@ describe('question-flow-actions', () => {
     });
   });
 
+  it('preserves draft-save conflict details for client-side recovery decisions', async () => {
+    const loadStates: AsyncLoadStateWithIdle[] = [];
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockResolvedValue({
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Practice session state changed concurrently; please retry.',
+          details: { reason: 'practice_session_state_changed_concurrently' },
+        },
+      } as ActionResult<SaveExamDraftAnswerOutput>);
+
+    const saveResult = await maybeSaveDraftBeforeNavigation({
+      sessionId: fixtureSession1Id,
+      question: {
+        questionId: fixtureQuestion1Id,
+        session: {
+          sessionId: fixtureSession1Id,
+          mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          index: 0,
+          total: 2,
+        },
+      },
+      selectedChoiceId: fixtureChoice1Id,
+      currentCumulativeMs: 50_000,
+      lastSavedDraftSelectedChoiceId: null,
+      lastSavedDraftCumulativeMs: 0,
+      saveExamDraftAnswerFn,
+      setLoadState: (state) => {
+        loadStates.push(state);
+      },
+    });
+
+    expect(saveResult).toEqual({
+      ok: false,
+      code: 'CONFLICT',
+      reason: 'practice_session_state_changed_concurrently',
+    });
+    expect(loadStates.at(-1)).toEqual({
+      status: 'error',
+      message: 'Practice session state changed concurrently; please retry.',
+    });
+  });
+
   it('returns a null error code when draft save throws before navigation', async () => {
     const loadStates: AsyncLoadStateWithIdle[] = [];
     const saveExamDraftAnswerFn = vi

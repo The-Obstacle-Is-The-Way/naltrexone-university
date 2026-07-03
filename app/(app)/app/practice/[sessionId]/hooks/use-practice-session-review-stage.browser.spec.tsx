@@ -1086,7 +1086,8 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     saveCurrentExamDraftMock.mockResolvedValue({
       ok: false,
       code: 'CONFLICT',
-    });
+      reason: 'exam_time_expired',
+    } as ExamDraftSaveResult);
     getCurrentExamDraftMock.mockReturnValueOnce({
       questionId: fixtureQ1Id,
       selectedChoiceId: 'choice-1',
@@ -1151,6 +1152,32 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     await expect
       .poll(() => harness.result.current.summary?.totals.answered)
       .toBe(1);
+  });
+
+  it('does not finalize when the current exam draft save fails with a transient state-write conflict', async () => {
+    saveCurrentExamDraftMock.mockResolvedValue({
+      ok: false,
+      code: 'CONFLICT',
+      reason: 'practice_session_state_changed_concurrently',
+    } as ExamDraftSaveResult);
+    getCurrentExamDraftMock.mockReturnValueOnce({
+      questionId: fixtureQ1Id,
+      selectedChoiceId: 'choice-1',
+      cumulativeMs: 30_000,
+    });
+
+    const input = createInput('exam');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    harness.result.current.onEndSession();
+
+    await expect.poll(() => saveCurrentExamDraftMock.mock.calls.length).toBe(1);
+    expect(finalizeExamAnswersMock).not.toHaveBeenCalled();
+    expect(getPracticeSessionReviewMock).not.toHaveBeenCalled();
+    await expect.poll(() => harness.result.current.isInReviewStage).toBe(false);
+    expect(harness.result.current.reviewLoadState).toEqual({ status: 'idle' });
   });
 
   it('does not finalize or enter review when the current exam draft save fails without a conflict', async () => {

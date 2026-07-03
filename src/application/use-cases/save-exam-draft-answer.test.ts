@@ -439,9 +439,11 @@ describe('SaveExamDraftAnswerUseCase', () => {
         selectedChoiceId: 'choice-1',
         cumulativeMs: 5_000,
       }),
-    ).rejects.toEqual(
-      new ApplicationError('CONFLICT', 'Cannot modify a completed session'),
-    );
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Cannot modify a completed session',
+      details: { reason: 'practice_session_already_ended' },
+    });
   });
 
   it('rejects draft saves after the server-derived exam deadline', async () => {
@@ -467,9 +469,11 @@ describe('SaveExamDraftAnswerUseCase', () => {
         selectedChoiceId: 'choice-1',
         cumulativeMs: 5_000,
       }),
-    ).rejects.toEqual(
-      new ApplicationError('CONFLICT', 'Exam time has expired'),
-    );
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Exam time has expired',
+      details: { reason: 'exam_time_expired' },
+    });
   });
 
   it('allows draft saves before the server-derived exam deadline', async () => {

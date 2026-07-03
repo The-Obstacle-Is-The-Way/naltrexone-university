@@ -1,8 +1,27 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import { createPracticeSession } from '@/src/domain/test-helpers';
 import { omittedOutcome } from '@/src/domain/value-objects';
-import { FakePracticeSessionRepository } from './fake-practice-session-repository';
+import {
+  FakePracticeSessionRepository,
+  STATE_CHANGED_CONCURRENTLY_MESSAGE,
+} from './fake-practice-session-repository';
+
+class ClearingAfterReadPracticeSessionRepository extends FakePracticeSessionRepository {
+  override async findByIdAndUserId(
+    id: string,
+    userId: string,
+  ): Promise<
+    Awaited<ReturnType<FakePracticeSessionRepository['findByIdAndUserId']>>
+  > {
+    const session = await super.findByIdAndUserId(id, userId);
+    (this as unknown as { sessions: readonly [] }).sessions = [];
+    return session;
+  }
+}
 
 describe('FakePracticeSessionRepository', () => {
   afterEach(() => {
@@ -62,9 +81,95 @@ describe('FakePracticeSessionRepository', () => {
 
     const repo = new FakePracticeSessionRepository([session]);
 
-    await expect(repo.end('session-1', 'user-1')).rejects.toEqual(
-      new ApplicationError('CONFLICT', 'Practice session already ended'),
-    );
+    await expect(repo.end('session-1', 'user-1')).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+      details: {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      },
+    });
+  });
+
+  it('throws structured transient CONFLICT when state persistence loses the active session', async () => {
+    const userId = 'user-1';
+    const questionId = crypto.randomUUID();
+
+    const operations: Array<{
+      name: string;
+      run: (
+        repo: FakePracticeSessionRepository,
+        sessionId: string,
+      ) => Promise<unknown>;
+    }> = [
+      {
+        name: 'saveDraftAnswer',
+        run: (repo, sessionId) =>
+          repo.saveDraftAnswer({
+            sessionId,
+            userId,
+            questionId,
+            selectedChoiceId: null,
+            cumulativeMs: 1_000,
+          }),
+      },
+      {
+        name: 'finalizeDraftAnswer',
+        run: (repo, sessionId) =>
+          repo.finalizeDraftAnswer({
+            sessionId,
+            userId,
+            questionId,
+            outcome: omittedOutcome(),
+            isCorrect: false,
+            answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+          }),
+      },
+      {
+        name: 'recordQuestionAnswer',
+        run: (repo, sessionId) =>
+          repo.recordQuestionAnswer({
+            sessionId,
+            userId,
+            questionId,
+            selectedChoiceId: crypto.randomUUID(),
+            isCorrect: true,
+            answeredAt: new Date('2026-02-01T00:10:00.000Z'),
+          }),
+      },
+      {
+        name: 'setQuestionMarkedForReview',
+        run: (repo, sessionId) =>
+          repo.setQuestionMarkedForReview({
+            sessionId,
+            userId,
+            questionId,
+            markedForReview: true,
+          }),
+      },
+    ];
+
+    for (const operation of operations) {
+      const sessionId = crypto.randomUUID();
+      const repo = new ClearingAfterReadPracticeSessionRepository([
+        createPracticeSession({
+          id: sessionId,
+          userId,
+          mode: 'exam',
+          questionIds: [questionId],
+        }),
+      ]);
+
+      await expect(
+        operation.run(repo, sessionId),
+        operation.name,
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        message: STATE_CHANGED_CONCURRENTLY_MESSAGE,
+        details: {
+          reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+        },
+      });
+    }
   });
 
   it('honors explicit endedAt while preserving the default clock path', async () => {

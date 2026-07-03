@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 vi.mock('server-only', () => ({}));
@@ -45,6 +48,31 @@ describe('action-result', () => {
         code: 'CONFLICT',
         message: 'User conflict',
         fieldErrors: { email: ['Already taken'] },
+      },
+    });
+  });
+
+  it('handleError maps ApplicationError details into the ActionResult error payload', async () => {
+    const { handleError } = await import('./action-result');
+    const error = new ApplicationError(
+      'CONFLICT',
+      'Practice session state changed concurrently; please retry.',
+      undefined,
+      {
+        details: {
+          reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+        },
+      },
+    );
+
+    expect(handleError(error)).toEqual({
+      ok: false,
+      error: {
+        code: 'CONFLICT',
+        message: 'Practice session state changed concurrently; please retry.',
+        details: {
+          reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+        },
       },
     });
   });

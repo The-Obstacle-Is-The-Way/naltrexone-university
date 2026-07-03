@@ -13,6 +13,11 @@ import type {
   ActionResult,
 } from '@/src/adapters/controllers/action-result';
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
+import {
+  isPracticeSessionConflictReason,
+  type PracticeSessionConflictReason,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { MS_PER_SECOND } from '@/src/domain/services';
 
@@ -35,7 +40,11 @@ export type ExamDraftAnswer = {
 
 export type ExamDraftSaveResult =
   | { ok: true }
-  | { ok: false; code: ActionErrorCode | null };
+  | {
+      ok: false;
+      code: ActionErrorCode | null;
+      reason?: PracticeSessionConflictReason;
+    };
 
 function assertRequestSequencingHooks(input: {
   createRequestSequenceId?:
@@ -157,6 +166,25 @@ export function createTransitionedLoadAction(input: {
   };
 }
 
+export function isExamExpiryDraftSaveConflict(
+  result: ExamDraftSaveResult,
+): boolean {
+  return (
+    !result.ok &&
+    result.code === 'CONFLICT' &&
+    (result.reason === PracticeSessionConflictReasons.AlreadyEnded ||
+      result.reason === PracticeSessionConflictReasons.ExamTimeExpired)
+  );
+}
+
+function getActionResultPracticeSessionConflictReason(
+  result: ActionResult<unknown>,
+): PracticeSessionConflictReason | undefined {
+  if (result.ok) return undefined;
+  const reason = result.error.details?.reason;
+  return isPracticeSessionConflictReason(reason) ? reason : undefined;
+}
+
 export async function maybeSaveDraftBeforeNavigation<
   TQuestion extends {
     questionId: string;
@@ -217,7 +245,12 @@ export async function maybeSaveDraftBeforeNavigation<
       status: 'error',
       message: getActionResultErrorMessage(res),
     });
-    return { ok: false, code: res.error.code };
+    const reason = getActionResultPracticeSessionConflictReason(res);
+    return {
+      ok: false,
+      code: res.error.code,
+      ...(reason !== undefined ? { reason } : {}),
+    };
   }
 
   input.onSaved?.({

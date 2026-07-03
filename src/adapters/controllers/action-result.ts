@@ -1,6 +1,9 @@
 import { ZodError, z } from 'zod';
 import { logger } from '@/lib/logger';
-import type { ApplicationErrorCode } from '@/src/application/errors';
+import type {
+  ApplicationErrorCode,
+  ApplicationErrorDetails,
+} from '@/src/application/errors';
 import { isApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 
@@ -14,6 +17,7 @@ export type ActionResult<T> =
         code: ActionErrorCode;
         message: string;
         fieldErrors?: Record<string, string[]>;
+        details?: ApplicationErrorDetails;
       };
     };
 
@@ -25,6 +29,7 @@ export function err(
   code: ActionErrorCode,
   message: string,
   fieldErrors?: Record<string, string[]>,
+  details?: ApplicationErrorDetails,
 ): ActionResult<never> {
   return {
     ok: false,
@@ -32,6 +37,7 @@ export function err(
       code,
       message,
       ...(fieldErrors !== undefined ? { fieldErrors } : {}),
+      ...(details !== undefined ? { details } : {}),
     },
   };
 }
@@ -43,7 +49,7 @@ export function handleError(
   const errorLogger = options?.logger ?? logger;
 
   if (isApplicationError(error)) {
-    return err(error.code, error.message, error.fieldErrors);
+    return err(error.code, error.message, error.fieldErrors, error.details);
   }
 
   if (error instanceof ZodError) {

@@ -269,8 +269,12 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       >()
       .mockResolvedValue({
         ok: false,
-        error: { code: 'CONFLICT', message: 'Exam time has expired' },
-      });
+        error: {
+          code: 'CONFLICT',
+          message: 'Exam time has expired',
+          details: { reason: 'exam_time_expired' },
+        },
+      } as ActionResult<SaveExamDraftAnswerOutput>);
 
     const harness = await renderHook(() =>
       usePracticeSessionQuestionFlow({
@@ -333,8 +337,12 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       >()
       .mockResolvedValue({
         ok: false,
-        error: { code: 'CONFLICT', message: 'Exam time has expired' },
-      });
+        error: {
+          code: 'CONFLICT',
+          message: 'Exam time has expired',
+          details: { reason: 'exam_time_expired' },
+        },
+      } as ActionResult<SaveExamDraftAnswerOutput>);
     const onExamServerExpiry = vi.fn<(draft: unknown) => Promise<void>>(
       async () => {},
     );
@@ -367,6 +375,79 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       selectedChoiceId: fixtureChoice2Id,
       cumulativeMs: 30_000,
     });
+    expect(getNextQuestionFn).toHaveBeenCalledTimes(1);
+    expect(harness.result.current.question?.questionId).toBe(fixtureQ1Id);
+  });
+
+  it('does not recover server expiry when explicit navigation draft save fails with a transient state-write conflict', async () => {
+    let nowMs = 1_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => nowMs);
+
+    const getNextQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<NextQuestion | null>>>()
+      .mockResolvedValue(
+        ok(
+          createNextQuestion({
+            questionId: fixtureQ1Id,
+            choices: [
+              { id: fixtureChoice1Id, label: 'A', textMd: 'A', sortOrder: 1 },
+              { id: fixtureChoice2Id, label: 'B', textMd: 'B', sortOrder: 2 },
+            ],
+            session: {
+              sessionId: fixtureSession1Id,
+              mode: 'exam',
+
+              deadlineAt: '2099-05-22T12:02:24.000Z',
+
+              index: 0,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      );
+    const submitAnswerFn =
+      vi.fn<(input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>>();
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockResolvedValue({
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Practice session state changed concurrently; please retry.',
+          details: { reason: 'practice_session_state_changed_concurrently' },
+        },
+      } as ActionResult<SaveExamDraftAnswerOutput>);
+    const onExamServerExpiry = vi.fn<(draft: unknown) => Promise<void>>(
+      async () => {},
+    );
+
+    const harness = await renderHook(() =>
+      usePracticeSessionQuestionFlow({
+        sessionId: fixtureSession1Id,
+        isMounted: () => true,
+        getNextQuestionFn,
+        submitAnswerFn,
+        saveExamDraftAnswerFn,
+        onExamServerExpiry,
+      }),
+    );
+
+    await expect
+      .poll(() => harness.result.current.question?.questionId)
+      .toBe(fixtureQ1Id);
+
+    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    await expect
+      .poll(() => harness.result.current.selectedChoiceId)
+      .toBe(fixtureChoice2Id);
+    nowMs = 31_000;
+    harness.result.current.onNavigateQuestion(fixtureQ2Id);
+
+    await expect.poll(() => saveExamDraftAnswerFn.mock.calls.length).toBe(1);
+    expect(onExamServerExpiry).not.toHaveBeenCalled();
     expect(getNextQuestionFn).toHaveBeenCalledTimes(1);
     expect(harness.result.current.question?.questionId).toBe(fixtureQ1Id);
   });

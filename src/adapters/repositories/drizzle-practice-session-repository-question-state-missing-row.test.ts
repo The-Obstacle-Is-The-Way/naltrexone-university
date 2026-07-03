@@ -11,34 +11,27 @@ function createMissingQuestionStateRepo(input: {
   sessionQuestionIds?: string[];
 }) {
   const questionIds = input.sessionQuestionIds ?? [questionId];
-  const sessionLockFor = vi.fn(async () => [
+  const snapshotLimit = vi.fn(async () => [
     {
-      endedAt: input.endedAt,
-      paramsJson: {
+      sessionEndedAt: input.endedAt,
+      sessionParamsJson: {
         count: questionIds.length,
         tagSlugs: [],
         difficulties: [],
         questionIds,
       },
+      state: null,
     },
   ]);
-  const stateLimit = vi.fn(async () => []);
-  const select = vi
-    .fn()
-    .mockReturnValueOnce({
-      from: () => ({
+  const select = vi.fn(() => ({
+    from: () => ({
+      leftJoin: () => ({
         where: () => ({
-          for: sessionLockFor,
+          limit: snapshotLimit,
         }),
       }),
-    })
-    .mockReturnValueOnce({
-      from: () => ({
-        where: () => ({
-          limit: stateLimit,
-        }),
-      }),
-    });
+    }),
+  }));
   const update = vi.fn(() => {
     throw new Error('unexpected update');
   });

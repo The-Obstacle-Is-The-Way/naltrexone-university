@@ -11,9 +11,10 @@ import { usePracticeSessionReviewStageState } from '@/app/(app)/app/practice/[se
 import { usePracticeSessionSummaryReview } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review';
 import { endSession } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
-import type {
-  ExamDraftAnswer,
-  ExamDraftSaveResult,
+import {
+  type ExamDraftAnswer,
+  type ExamDraftSaveResult,
+  isExamExpiryDraftSaveConflict,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { getThrownErrorMessage } from '@/app/(app)/app/shared/error-message-helpers';
 import { reportClientError } from '@/lib/report-client-error';
@@ -211,7 +212,7 @@ export function usePracticeSessionReviewStage(
           const finalDraftAnswer = input.getCurrentExamDraft() ?? undefined;
           const saveResult = await input.saveCurrentExamDraft();
           if (!saveResult.ok) {
-            if (saveResult.code === 'CONFLICT') {
+            if (isExamExpiryDraftSaveConflict(saveResult)) {
               await finalizeExamSession(finalDraftAnswer);
             }
             return;

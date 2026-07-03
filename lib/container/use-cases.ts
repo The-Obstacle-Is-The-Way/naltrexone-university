@@ -1,6 +1,9 @@
 import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  practiceSessionStateChangedConcurrentlyError,
+} from '@/src/application/errors';
 import {
   CheckEntitlementUseCase,
   CountAvailableQuestionsUseCase,
@@ -100,12 +103,9 @@ async function runPracticeSessionStateWriteTransaction<T>(
     }
   }
 
-  throw new ApplicationError(
-    'CONFLICT',
-    'Practice session state changed concurrently; please retry.',
-    undefined,
-    { cause: lastRetryableError },
-  );
+  throw practiceSessionStateChangedConcurrentlyError({
+    cause: lastRetryableError,
+  });
 }
 
 export function createUseCaseFactories(input: {

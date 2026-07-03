@@ -4,6 +4,7 @@ import type {
   ActionErrorCode,
   ActionResult,
 } from '@/src/adapters/controllers/action-result';
+import type { ApplicationErrorDetails } from '@/src/application/errors';
 import { ok } from '@/tests/test-helpers/ok';
 import {
   BROWSER_CHOICE_1_ID,
@@ -75,10 +76,11 @@ export {
 export function errorResult(
   code: ActionErrorCode,
   message: string,
+  details?: ApplicationErrorDetails,
 ): ActionResult<never> {
   return {
     ok: false,
-    error: { code, message },
+    error: { code, message, ...(details !== undefined ? { details } : {}) },
   };
 }
 
