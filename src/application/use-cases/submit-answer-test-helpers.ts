@@ -12,6 +12,7 @@ import {
   FakeLogger,
   FakePracticeSessionRepository,
   FakeQuestionRepository,
+  STATE_CHANGED_CONCURRENTLY_MESSAGE,
 } from '../test-helpers/fakes';
 import type { SubmitAnswerWriteTransaction } from './submit-answer';
 import { SubmitAnswerUseCase } from './submit-answer';
@@ -25,10 +26,7 @@ function passthroughTransaction(
 
 class FailingRecordSessionRepository extends FakePracticeSessionRepository {
   override async recordQuestionAnswer(): Promise<never> {
-    throw new ApplicationError(
-      'INTERNAL_ERROR',
-      'Failed to persist practice session answer state',
-    );
+    throw new ApplicationError('CONFLICT', STATE_CHANGED_CONCURRENTLY_MESSAGE);
   }
 }
 
@@ -55,6 +53,7 @@ export {
   FakePracticeSessionRepository,
   FakeQuestionRepository,
   passthroughTransaction,
+  STATE_CHANGED_CONCURRENTLY_MESSAGE,
   SubmitAnswerUseCase,
   shuffleWithSeed,
   ThrowingInfoLogger,

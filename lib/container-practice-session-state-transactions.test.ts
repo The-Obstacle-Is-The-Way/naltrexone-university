@@ -289,6 +289,30 @@ describe('container factories — practice session state write transactions', ()
     expect(transaction).toHaveBeenCalledTimes(3);
   });
 
+  it('does not retry non-retryable ApplicationError failures', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const nonRetryableError = new ApplicationError(
+      'NOT_FOUND',
+      'Practice session not found',
+    );
+    const transaction = vi.fn<TestTransaction>(async () => {
+      throw nonRetryableError;
+    });
+
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+
+    await expect(
+      container.createFinalizeExamAnswersUseCase().execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+      }),
+    ).rejects.toBe(nonRetryableError);
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
   it('opens session-backed submit-answer write transactions at repeatable read isolation', async () => {
     const fixture = createPracticeSessionStateWriteFixture('tutor');
     const tx = createUnexpectedNestedTransactionDb();

@@ -302,11 +302,12 @@ describe('BUG-266 seed choice sync guard', () => {
       );
     } finally {
       releaseLock.resolve();
-      await blocker;
-      await syncPromise.catch(() => undefined);
-      await closeConnection(blockerSql);
-      await closeConnection(writerSql);
-      await closeConnection(monitorSql);
+      await Promise.allSettled([blocker, syncPromise]);
+      await Promise.allSettled([
+        closeConnection(blockerSql),
+        closeConnection(writerSql),
+        closeConnection(monitorSql),
+      ]);
     }
   });
 
@@ -376,11 +377,12 @@ describe('BUG-266 seed choice sync guard', () => {
       expect(labels).toEqual([{ label: 'A' }, { label: 'B' }]);
     } finally {
       releaseLock.resolve();
-      await blocker;
-      await syncPromise.catch(() => undefined);
-      await closeConnection(blockerSql);
-      await closeConnection(writerSql);
-      await closeConnection(monitorSql);
+      await Promise.allSettled([blocker, syncPromise]);
+      await Promise.allSettled([
+        closeConnection(blockerSql),
+        closeConnection(writerSql),
+        closeConnection(monitorSql),
+      ]);
     }
   });
 });

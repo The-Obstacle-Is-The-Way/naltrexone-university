@@ -800,6 +800,8 @@ describe('runE2EUserStateReset default service diagnostics', () => {
     const baselineQuery = sqlClient.mock.calls
       .map(([strings]) => Array.from(strings).join(' '))
       .find((query) => query.includes('"questionStateCount"'));
+    expect(baselineQuery).toContain('"incompleteSessionCount"');
+    expect(baselineQuery).toContain('ended_at IS NULL');
     expect(baselineQuery).toContain('WHERE state.practice_session_id = ');
     expect(baselineQuery).not.toContain('INNER JOIN practice_sessions');
   });
