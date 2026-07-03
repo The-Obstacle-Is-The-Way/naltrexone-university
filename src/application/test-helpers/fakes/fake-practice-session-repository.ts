@@ -8,6 +8,9 @@ import type {
 } from '@/src/domain/value-objects';
 import { selectedChoiceIdOrNull } from '@/src/domain/value-objects';
 
+const STATE_CHANGED_CONCURRENTLY_MESSAGE =
+  'Practice session state changed concurrently; please retry.';
+
 export class FakePracticeSessionRepository
   implements PracticeSessionRepository
 {
@@ -237,8 +240,8 @@ export class FakePracticeSessionRepository
 
     if (!updatedState) {
       throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Failed to persist practice session draft answer state',
+        'CONFLICT',
+        STATE_CHANGED_CONCURRENTLY_MESSAGE,
       );
     }
     return updatedState;
@@ -276,8 +279,8 @@ export class FakePracticeSessionRepository
 
     if (!updatedState) {
       throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Failed to finalize practice session draft answer state',
+        'CONFLICT',
+        STATE_CHANGED_CONCURRENTLY_MESSAGE,
       );
     }
     return updatedState;
@@ -312,8 +315,8 @@ export class FakePracticeSessionRepository
 
     if (!updatedState) {
       throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Failed to persist practice session answer state',
+        'CONFLICT',
+        STATE_CHANGED_CONCURRENTLY_MESSAGE,
       );
     }
     return updatedState;
@@ -344,8 +347,8 @@ export class FakePracticeSessionRepository
 
     if (!updatedState) {
       throw new ApplicationError(
-        'INTERNAL_ERROR',
-        'Failed to persist practice session review mark',
+        'CONFLICT',
+        STATE_CHANGED_CONCURRENTLY_MESSAGE,
       );
     }
     return updatedState;

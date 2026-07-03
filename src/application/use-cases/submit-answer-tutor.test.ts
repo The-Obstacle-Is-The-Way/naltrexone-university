@@ -115,7 +115,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(attempts.getAll()).toEqual([]);
   });
 
-  it('propagates error when recordQuestionAnswer fails inside transaction', async () => {
+  it('propagates transient state-write CONFLICT when recordQuestionAnswer fails inside transaction', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
     const questionId = 'q1';
@@ -164,7 +164,12 @@ describe('SubmitAnswerUseCase', () => {
         choiceId: 'c2',
         sessionId,
       }),
-    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    ).rejects.toEqual(
+      new ApplicationError(
+        'CONFLICT',
+        'Practice session state changed concurrently; please retry.',
+      ),
+    );
 
     expect(attempts.getAll()).toEqual([]);
   });

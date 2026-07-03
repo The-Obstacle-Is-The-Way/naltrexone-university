@@ -99,6 +99,7 @@ describe('BUG-267 practice-session transaction isolation', () => {
     });
 
     observedIsolationLevels.length = 0;
+    observedTransactionDepths.length = 0;
     await container.createFinalizeExamAnswersUseCase().execute({
       userId: user.id,
       sessionId: session.id,

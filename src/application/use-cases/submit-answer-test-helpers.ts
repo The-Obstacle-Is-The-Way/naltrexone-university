@@ -26,8 +26,8 @@ function passthroughTransaction(
 class FailingRecordSessionRepository extends FakePracticeSessionRepository {
   override async recordQuestionAnswer(): Promise<never> {
     throw new ApplicationError(
-      'INTERNAL_ERROR',
-      'Failed to persist practice session answer state',
+      'CONFLICT',
+      'Practice session state changed concurrently; please retry.',
     );
   }
 }
