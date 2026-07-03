@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { idempotencyKeys } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import { DrizzleIdempotencyKeyRepository } from './drizzle-idempotency-key-repository';
 
 type RepoDb = ConstructorParameters<typeof DrizzleIdempotencyKeyRepository>[0];
@@ -290,6 +293,97 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       });
     });
 
+    it('returns validated cached error details for active keys', async () => {
+      const expiresAt = new Date('2026-02-08T01:00:00.000Z');
+      const completedAt = new Date('2026-02-08T00:00:00.000Z');
+      const selectWhere = vi.fn(async () => [
+        {
+          resultJson: null,
+          errorCode: 'CONFLICT',
+          errorMessage: 'Practice session already ended',
+          errorDetails: {
+            reason: PracticeSessionConflictReasons.AlreadyEnded,
+          },
+          expiresAt,
+          completedAt,
+        },
+      ]);
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+      const select = vi.fn(() => ({ from: selectFrom }));
+
+      const db = {
+        select,
+      } as unknown as RepoDb;
+
+      const repo = new DrizzleIdempotencyKeyRepository(
+        db,
+        () => new Date('2026-02-08T00:00:00.000Z'),
+      );
+
+      await expect(
+        repo.find(
+          '11111111-1111-1111-1111-111111111111',
+          'question:submitAnswer',
+          'idem-1',
+        ),
+      ).resolves.toEqual({
+        resultJson: null,
+        error: {
+          code: 'CONFLICT',
+          message: 'Practice session already ended',
+          details: {
+            reason: PracticeSessionConflictReasons.AlreadyEnded,
+          },
+        },
+        expiresAt,
+        completedAt,
+      });
+    });
+
+    it('drops invalid cached error details safely', async () => {
+      const expiresAt = new Date('2026-02-08T01:00:00.000Z');
+      const completedAt = new Date('2026-02-08T00:00:00.000Z');
+      const selectWhere = vi.fn(async () => [
+        {
+          resultJson: null,
+          errorCode: 'CONFLICT',
+          errorMessage: 'Practice session already ended',
+          errorDetails: {
+            reason: 'not-a-known-reason',
+          },
+          expiresAt,
+          completedAt,
+        },
+      ]);
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+      const select = vi.fn(() => ({ from: selectFrom }));
+
+      const db = {
+        select,
+      } as unknown as RepoDb;
+
+      const repo = new DrizzleIdempotencyKeyRepository(
+        db,
+        () => new Date('2026-02-08T00:00:00.000Z'),
+      );
+
+      await expect(
+        repo.find(
+          '11111111-1111-1111-1111-111111111111',
+          'question:submitAnswer',
+          'idem-1',
+        ),
+      ).resolves.toEqual({
+        resultJson: null,
+        error: {
+          code: 'CONFLICT',
+          message: 'Practice session already ended',
+        },
+        expiresAt,
+        completedAt,
+      });
+    });
+
     it('returns completed records even when resultJson is null', async () => {
       const expiresAt = new Date('2026-02-08T01:00:00.000Z');
       const completedAt = new Date('2026-02-08T00:00:00.000Z');
@@ -458,6 +552,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         error: {
           code: 'INTERNAL_ERROR',
           message: 'unexpected failure',
+          details: {
+            reason: PracticeSessionConflictReasons.AlreadyEnded,
+          },
         },
       });
 
@@ -466,6 +563,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           resultJson: null,
           errorCode: 'INTERNAL_ERROR',
           errorMessage: 'unexpected failure',
+          errorDetails: {
+            reason: PracticeSessionConflictReasons.AlreadyEnded,
+          },
           completedAt: now,
         }),
       );

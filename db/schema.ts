@@ -117,6 +117,10 @@ export type PracticeSessionParams = {
   count: number; // number of questions in this session
   tagSlugs: string[]; // filter; empty = no tag filter
   difficulties: QuestionDifficulty[]; // filter; empty = no difficulty filter
+  // DEBT-433: this ordered list is coupled to
+  // practice_session_question_states.position. Any direct writer or migration
+  // that changes one side must update the other in the same transaction;
+  // toOrderedDomainQuestionStates fails loud with INTERNAL_ERROR on mismatch.
   questionIds: string[]; // ordered UUID list selected at session start
 };
 
@@ -296,6 +300,7 @@ export const idempotencyKeys = pgTable(
     resultJson: jsonb('result_json').$type<unknown>(),
     errorCode: varchar('error_code', { length: 255 }),
     errorMessage: text('error_message'),
+    errorDetails: jsonb('error_details').$type<unknown>(),
     claimedAt: timestamp('claimed_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -475,6 +480,9 @@ export const practiceSessionQuestionStates = pgTable(
       // This intentionally differs from attempts.questionId because attempts
       // are derived answer events, while session state anchors session history.
       .references(() => questions.id),
+    // DEBT-433: ordinal mirror of practice_sessions.params_json.questionIds.
+    // Any direct writer/migration touching either side must update both in one
+    // transaction; toOrderedDomainQuestionStates fails loud on drift.
     position: integer('position').notNull(),
     markedForReview: boolean('marked_for_review').notNull().default(false),
     latestSelectedChoiceId: uuid('latest_selected_choice_id'),
@@ -495,6 +503,10 @@ export const practiceSessionQuestionStates = pgTable(
     sessionQuestionUq: uniqueIndex(
       PRACTICE_SESSION_QUESTION_STATES_SESSION_QUESTION_UQ,
     ).on(t.practiceSessionId, t.questionId),
+    // DEBT-433: position is the relational mirror of
+    // practice_sessions.params_json.questionIds order. Keep direct writes to
+    // both sides transactionally coupled; toOrderedDomainQuestionStates rejects
+    // count/order drift with INTERNAL_ERROR at read time.
     sessionPositionUq: uniqueIndex(
       PRACTICE_SESSION_QUESTION_STATES_SESSION_POSITION_UQ,
     ).on(t.practiceSessionId, t.position),

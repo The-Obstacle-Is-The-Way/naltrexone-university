@@ -35,6 +35,8 @@ Current post-deploy proof recorded 2026-07-02:
 
 The remaining verification gap is process-level: future cleanup UPDATEs should report affected-row counts at migration time, because the 0022/0023/0024 counts cannot be recovered after the fact from the ledger alone.
 
+**Process update (2026-07-03):** migration `0026_track_a_tail_sweep.sql` establishes the requested pattern for future cleanup migrations: it uses a marked cleanup block, captures affected-row counts with `GET DIAGNOSTICS`, and emits `RAISE NOTICE` lines for both the DEBT-428 string-row normalization and the DEBT-434 stale `questionStates` strip. This does not retroactively recover the unaudited 0022/0023/0024 cleanup counts, so DEBT-427 remains open as a historical migration-hygiene/process item rather than being archived in this tail sweep.
+
 ## Related
 
 - PR #537, [DEBT-425](../_archive/debt/debt-425-legacy-compatibility-tolerances-audit.md)

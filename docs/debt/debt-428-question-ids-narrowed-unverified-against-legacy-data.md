@@ -1,6 +1,6 @@
 # DEBT-428: questionIds validation narrowed to strict zUuid + count-match without auditing existing data
 
-**Status:** Open
+**Status:** Implemented; post-deploy proof pending
 **Priority:** P3
 **Date:** 2026-06-30
 
@@ -20,9 +20,9 @@ Post-deploy proof on 2026-07-02 turned this from unverified risk into concrete D
 
 ## Resolution
 
-Clean the single malformed Development row deliberately. Preferred disposition: delete the ended legacy seed artifact in a one-shot Development cleanup; the attempt FK is `ON DELETE SET NULL`, so cleanup can preserve the answer event while removing the unreadable session row. Only rewrite the double-encoded `params_json` into a valid current object shape if the owner wants this exact seed artifact kept for diagnostics. Production needs no remediation based on the 2026-07-02 proof. Do not add parser tolerance for double-encoded `params_json` unless production data proves it is necessary; this is internal dev residue, not an external compatibility surface.
+Implemented in migration `0026_track_a_tail_sweep.sql`: string-typed `practice_sessions.params_json` rows are converted back into JSONB objects by parsing the string payload. The migration fails loudly if any string row cannot be parsed to a JSON object; it does not add application parser tolerance for double-encoded JSON. This keeps the invariant at the data boundary and avoids making internal Development residue a permanent compatibility surface.
 
-Current live code can read this row if a Development user/history path selects that completed session (`findByIdAndUserId`, `findCompletedByUserId`, or review/summary paths using the practice-session repository). It will fail loudly in `parsePracticeSessionParamsJson()` because the top-level JSONB value is a string, not the required object. That is the intended failure mode until the dev artifact is cleaned; it should not be converted into permanent compatibility logic.
+The same migration also records the affected row count with `GET DIAGNOSTICS` / `RAISE NOTICE`, establishing the row-count audit pattern requested by DEBT-427 for future cleanup migrations. Production previously had zero affected rows; this debt remains active only until post-merge deploy proof confirms both Neon branches are at ledger head `0026_track_a_tail_sweep` and have zero string-typed `params_json` rows.
 
 ## Verification
 
@@ -33,7 +33,19 @@ Current proof from 2026-07-02:
 | Development (`ep-still-frog`) | 1 (`00000000-0000-4000-8000-000000000244`) | 0 | 0 | 0 |
 | Production (`ep-withered-cell`) | 0 | 0 | 0 | 0 |
 
-This debt clears when the Development count is zero, or if the owner explicitly accepts the ended dev artifact as permanent non-production residue with a documented reason.
+Implementation proof in this branch:
+
+- `tests/integration/practice-session-params-json-cleanup.integration.test.ts` seeds a string-typed `params_json` row, runs the marked `DEBT-428/434` cleanup block twice, and proves the row parses through `parsePracticeSessionParamsJson()` after cleanup.
+
+Post-merge proof still required before archive:
+
+```sql
+SELECT count(*)::int AS string_params_json_rows
+FROM practice_sessions
+WHERE jsonb_typeof(params_json) = 'string';
+```
+
+Expected result for Development (`ep-still-frog`) and Production (`ep-withered-cell`): `0`.
 
 ## Related
 

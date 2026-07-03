@@ -1,8 +1,9 @@
 # DEBT-433: The question-order invariant between `practice_sessions.params_json.questionIds` and `practice_session_question_states.position` is enforced only at read time, not by the database
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-07-01
+**Resolved:** 2026-07-03
 
 ---
 
@@ -18,11 +19,16 @@ Any write path that touches `params_json.questionIds` (a reorder, an add/remove)
 
 ## Resolution
 
-No DB-level fix fully closes this gap given the JSON/relational split (a `CHECK` constraint can't reason about another table's contents). Two lower-cost mitigations: (1) add a code comment at both `params_json.questionIds`'s definition and the `position` column's definition cross-referencing each other and this doc, so a future direct-write script doesn't discover the coupling only via a production `INTERNAL_ERROR`; (2) consider whether `toOrderedDomainQuestionStates`'s failure mode should distinguish "this specific session's data is corrupt" (worth surfacing loudly, as today) from a broader systemic issue — today it's already loud-fail, which is the right default; this is more about documenting the invariant than changing behavior.
+Resolved by documenting the accepted invariant coupling at the code definition sites rather than adding partial database enforcement. No DB-level fix fully closes this gap given the JSON/relational split (a `CHECK` constraint can't reason about another table's contents), and the current loud `INTERNAL_ERROR` from `toOrderedDomainQuestionStates` remains the correct failure mode for corrupt session data.
+
+The code now cross-references both sides:
+
+- `src/adapters/repositories/practice-session-params.ts` documents that `questionIds` order is mirrored by `practice_session_question_states.position`, and direct migrations/scripts must update both sides transactionally.
+- `db/schema.ts` documents the same coupling at `PracticeSessionParams.questionIds`, `practiceSessionQuestionStates.position`, and `sessionPositionUq`, including the read-time `INTERNAL_ERROR` guard.
 
 ## Verification
 
-No code change required by default; if the code-comment mitigation is adopted, verify the cross-references render correctly and stay accurate through the next schema change to either side.
+Verified by code review of the cross-references. No behavior change was made; enforcement remains the existing read-time guard in `toOrderedDomainQuestionStates`.
 
 ## Related
 

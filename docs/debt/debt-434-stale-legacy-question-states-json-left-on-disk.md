@@ -1,6 +1,6 @@
 # DEBT-434: Migration 0021's backfill copies `params_json.questionStates` into the new table but never strips the now-dead JSON copy, leaving diverging duplicate data on disk
 
-**Status:** Open
+**Status:** Implemented; post-deploy proof pending
 **Priority:** P4
 **Date:** 2026-07-01
 
@@ -18,11 +18,26 @@ From the moment the application writes any new question-state change (via `pract
 
 Low priority, no urgency: DEBT-425's post-deploy proof is now satisfied. On 2026-07-02, Development and Production both had migration ledger head `0025_worthless_junta`, and the normalized-state proof queries returned zero state-coverage mismatches, zero cross-question choice references, and zero out-of-range draft durations. Production has zero practice sessions and zero stale JSON `questionStates` rows; Development has 123 stale JSON `questionStates` rows left from pre-Track-A sessions.
 
-This means cleanup is now allowed but still not urgent: a follow-up migration should delete the `questionStates` key from `practice_sessions.params_json` for all rows. The app already treats the normalized table as the sole source of truth; this debt is about removing misleading duplicate data for humans and ad hoc tooling, not restoring runtime correctness.
+Implemented in migration `0026_track_a_tail_sweep.sql`: after normalizing any string-typed `params_json` rows, the migration removes the stale `questionStates` key from object-shaped `practice_sessions.params_json` rows. The app already treats the normalized table as the sole source of truth; this cleanup removes misleading duplicate data for humans and ad hoc tooling, not runtime behavior.
+
+The migration captures affected-row counts with `GET DIAGNOSTICS` / `RAISE NOTICE`, so deploy logs record how many stale JSON blobs were stripped. This debt remains active only until post-merge deploy proof confirms both Neon branches are at ledger head `0026_track_a_tail_sweep` and have zero remaining `params_json.questionStates` keys.
 
 ## Verification
 
-If the follow-up cleanup migration ships, verify `params_json ? 'questionStates'` is false for all `practice_sessions` rows post-migration, and that no application code path reads it (already true today per DEBT-425, but worth re-confirming at cleanup time).
+Implementation proof in this branch:
+
+- `tests/integration/practice-session-params-json-cleanup.integration.test.ts` seeds an object-shaped row with stale `questionStates`, runs the marked `DEBT-428/434` cleanup block twice, and proves the key is removed while an unaffected object row remains byte-identical.
+
+Post-merge proof still required before archive:
+
+```sql
+SELECT count(*)::int AS stale_question_states_rows
+FROM practice_sessions
+WHERE jsonb_typeof(params_json) = 'object'
+  AND params_json ? 'questionStates';
+```
+
+Expected result for Development (`ep-still-frog`) and Production (`ep-withered-cell`): `0`.
 
 Current post-deploy baseline from 2026-07-02:
 
