@@ -3,6 +3,7 @@ import { practiceSessions, questions as questionsTable } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type { QuestionProgressStatus } from '@/src/domain/value-objects';
 import { DrizzleQuestionRepository } from './drizzle-question-repository';
+import { collectColumnNamesForTable } from './repository-test-helpers';
 
 type RepoDb = ConstructorParameters<typeof DrizzleQuestionRepository>[0];
 
@@ -39,38 +40,6 @@ const baseQuestionRow: QuestionRow = {
   createdAt: new Date('2026-02-01T00:00:00Z'),
   updatedAt: new Date('2026-02-01T00:00:00Z'),
 };
-
-function collectColumnNamesForTable(
-  node: unknown,
-  table: unknown,
-): readonly string[] {
-  const names = new Set<string>();
-
-  const visit = (value: unknown): void => {
-    if (!value || typeof value !== 'object') {
-      return;
-    }
-
-    const maybeNode = value as {
-      table?: unknown;
-      name?: unknown;
-      queryChunks?: unknown[];
-    };
-
-    if (maybeNode.table === table && typeof maybeNode.name === 'string') {
-      names.add(maybeNode.name);
-    }
-
-    if (Array.isArray(maybeNode.queryChunks)) {
-      for (const chunk of maybeNode.queryChunks) {
-        visit(chunk);
-      }
-    }
-  };
-
-  visit(node);
-  return [...names];
-}
 
 function createQuestionRow(
   overrides: Partial<QuestionRow> = {},

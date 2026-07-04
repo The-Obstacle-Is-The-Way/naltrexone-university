@@ -72,6 +72,8 @@ DATABASE_URL="<target>" pnpm db:seed
 
 **For additive-only migrations** (new columns, new tables, new enum values), `pnpm db:migrate` alone is sufficient — no reseed needed unless the seed populates the new columns.
 
+For authoring rules before a migration PR merges — pre-flight data proof, cleanup row-count notices, operation ordering, and lock-scope review — see [Migration Authoring](./migration-authoring.md).
+
 ---
 
 ## 4. Per-Environment Connection

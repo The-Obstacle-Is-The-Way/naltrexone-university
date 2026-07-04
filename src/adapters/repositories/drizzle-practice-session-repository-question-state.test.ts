@@ -4,7 +4,9 @@ import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-rep
 import {
   collectColumnNames,
   collectPrimitiveValues,
+  createStateRow,
   restoreDrizzlePracticeSessionRepositoryTestMocks,
+  type StateRow,
 } from './drizzle-practice-session-repository-test-helpers';
 
 const sessionId = crypto.randomUUID();
@@ -16,48 +18,6 @@ const latestChoiceId = crypto.randomUUID();
 const draftChoiceId = crypto.randomUUID();
 const newerChoiceId = crypto.randomUUID();
 const olderChoiceId = crypto.randomUUID();
-
-type StateRow = {
-  id: string;
-  practiceSessionId: string;
-  questionId: string;
-  position: number;
-  markedForReview: boolean;
-  latestSelectedChoiceId: string | null;
-  latestIsCorrect: boolean | null;
-  latestAnsweredAt: Date | null;
-  draftSelectedChoiceId: string | null;
-  draftSavedAt: Date | null;
-  draftCumulativeMs: number;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-function createStateRow(
-  input: {
-    questionId: string;
-    position: number;
-  } & Partial<StateRow>,
-): StateRow {
-  const now = new Date('2026-02-01T00:00:00.000Z');
-  return {
-    id: input.id ?? crypto.randomUUID(),
-    practiceSessionId: input.practiceSessionId ?? sessionId,
-    questionId: input.questionId,
-    position: input.position,
-    markedForReview: input.markedForReview ?? false,
-    latestSelectedChoiceId: input.latestSelectedChoiceId ?? null,
-    latestIsCorrect: input.latestIsCorrect ?? null,
-    latestAnsweredAt: input.latestAnsweredAt ?? null,
-    draftSelectedChoiceId: input.draftSelectedChoiceId ?? null,
-    draftSavedAt: input.draftSavedAt ?? null,
-    draftCumulativeMs: input.draftCumulativeMs ?? 0,
-    version: input.version ?? 0,
-    createdAt: input.createdAt ?? now,
-    updatedAt: input.updatedAt ?? now,
-  };
-}
 
 function expectSqlIncrementExpression(value: unknown) {
   const stringFragments = collectPrimitiveValues(value).filter(
@@ -235,6 +195,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
   it('records the latest answer state with a row-version update', async () => {
     const answeredAt = new Date('2026-02-01T00:10:00.000Z');
     const existing = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       version: 2,
@@ -285,6 +246,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
   it('saves a draft answer snapshot for a session question', async () => {
     const savedAt = new Date('2026-02-01T00:06:00.000Z');
     const existing = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       latestSelectedChoiceId: latestChoiceId,
@@ -333,6 +295,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
   it('finalizes a draft answer into latest fields and clears the draft snapshot', async () => {
     const answeredAt = new Date('2026-02-01T00:10:00.000Z');
     const existing = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       draftSelectedChoiceId: draftChoiceId,
@@ -382,6 +345,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
   it('finalizes an omitted answer state for session review', async () => {
     const answeredAt = new Date('2026-02-01T00:10:00.000Z');
     const existing = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       markedForReview: true,
@@ -423,6 +387,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('ignores stale draft saves when the stored draft snapshot is newer', async () => {
     const existing = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       draftSelectedChoiceId: newerChoiceId,
@@ -462,6 +427,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
   it('retries question-state update when a concurrent write causes a stale version miss', async () => {
     const answeredAt = new Date('2026-02-01T00:10:00.000Z');
     const firstSnapshot = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       version: 0,
@@ -508,6 +474,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('throws CONFLICT when all version retries are exhausted', async () => {
     const snapshot = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       version: 0,
@@ -636,6 +603,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('throws CONFLICT when the loaded session has already ended', async () => {
     const existing = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
     });
@@ -668,6 +636,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('throws NOT_FOUND when the session disappears after version retries', async () => {
     const snapshot = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       version: 0,
@@ -706,6 +675,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('throws CONFLICT when the session ends after version retries', async () => {
     const snapshot = createStateRow({
+      practiceSessionId: sessionId,
       questionId: firstQuestionId,
       position: 0,
       version: 0,
@@ -744,6 +714,7 @@ describe('DrizzlePracticeSessionRepository question state', () => {
 
   it('updates mark-for-review state for a session question', async () => {
     const existing = createStateRow({
+      practiceSessionId: sessionId,
       questionId: secondQuestionId,
       position: 1,
     });

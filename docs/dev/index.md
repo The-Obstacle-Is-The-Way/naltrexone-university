@@ -1,6 +1,6 @@
 # Developer Docs Index
 
-**Last Updated:** 2026-06-13
+**Last Updated:** 2026-07-04
 
 Use this index to route to the right developer runbook. Universal agent rules and required push gates remain canonical in [`AGENTS.md`](../../AGENTS.md).
 
@@ -14,6 +14,7 @@ Use this index to route to the right developer runbook. Universal agent rules an
 
 - [Deployment Procedure](./deployment-procedure.md) — release checklist and deploy-time database migration cautions.
 - [Deployment Environments](./deployment-environments.md) — environment layout, deploy targets, and known environment failure modes.
+- [Migration Authoring](./migration-authoring.md) — pre-flight proof, cleanup audit trails, ordering, and lock-scope rules for Drizzle migrations.
 - [Database Rollbacks](./database-rollbacks.md) — rollback constraints and database recovery guidance.
 - [Logging](./logging.md) — logging conventions and operational diagnostics.
 - [Stabilization Checklist](./stabilization-checklist.md) — pre-release stabilization checks.

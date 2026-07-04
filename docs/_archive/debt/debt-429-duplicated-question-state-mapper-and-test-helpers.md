@@ -1,6 +1,6 @@
 # DEBT-429: Duplicated question-state mapper and test helpers across practice-session-question-state files
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-06-30
 
@@ -22,15 +22,30 @@ A future column addition/rename on `practice_session_question_states` requires e
 
 ## Resolution
 
-Export the single mapper function from one location and import it in the other. Move `StateRow`/`createStateRow`/`collectColumnNames`/`collectPrimitiveValues` into the existing shared test-helpers module.
+Resolved in the debt-register clear-out branch:
+
+- `toDomainQuestionState` is exported from `practice-session-question-state-updater.ts`, the module that owns state-row writes and already maps updated rows back to domain state. `drizzle-practice-session-repository.ts` imports that mapper and no longer keeps a private copy.
+- `StateRow` and `createStateRow()` now live in `drizzle-practice-session-repository-test-helpers.ts`. The shared factory emits the full strict row shape, and tests that create state rows now pass `practiceSessionId` explicitly instead of relying on file-local hidden defaults.
+- Generic Drizzle predicate inspection helpers moved to neutral `repository-test-helpers.ts`. Practice-session tests continue to get `collectColumnNames` / `collectPrimitiveValues` through their family helper, while idempotency and question repository tests import `collectColumnNamesForTable` from the neutral helper instead of carrying local copies.
 
 ## Verification
 
-After consolidation, grep confirms a single definition of each; existing test suites stay green.
+Consolidation proof:
+
+```bash
+rg -n "function toDomainQuestionState|private toDomainQuestionState|function createStateRow|type StateRow|function collectColumnNames|function collectPrimitiveValues|function collectColumnNamesForTable" src/adapters/repositories
+```
+
+Result: one definition each for `toDomainQuestionState`, `StateRow`, `createStateRow`, `collectColumnNames`, `collectPrimitiveValues`, and `collectColumnNamesForTable`.
+
+Behavior proof:
+
+- `pnpm exec tsc --noEmit --pretty false` passed after the consolidation.
+- `pnpm test --run src/adapters/repositories/drizzle-practice-session-repository-question-state.test.ts src/adapters/repositories/drizzle-practice-session-repository-reads.test.ts src/adapters/repositories/drizzle-practice-session-repository-session-writes.test.ts src/adapters/repositories/practice-session-question-state-updater-lock.test.ts src/adapters/repositories/drizzle-idempotency-key-repository.test.ts src/adapters/repositories/drizzle-question-repository.test.ts` passed: 6 files, 70 tests.
 
 ## Related
 
-- PR #537, [DEBT-425](../_archive/debt/debt-425-legacy-compatibility-tolerances-audit.md)
+- PR #537, [DEBT-425](./debt-425-legacy-compatibility-tolerances-audit.md)
 - `src/adapters/repositories/practice-session-question-state-updater.ts:23-36`
 - `src/adapters/repositories/drizzle-practice-session-repository.ts:64-77`
 - `src/adapters/repositories/drizzle-idempotency-key-repository.test.ts:11`, `src/adapters/repositories/drizzle-question-repository.test.ts:43` (new `collectColumnNames`/`collectPrimitiveValues` copies, 2026-07-04)

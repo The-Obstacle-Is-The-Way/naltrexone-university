@@ -1,50 +1,46 @@
 import { expect, vi } from 'vitest';
+import type { practiceSessionQuestionStates } from '@/db/schema';
+import {
+  collectColumnNames,
+  collectPrimitiveValues,
+} from './repository-test-helpers';
+
+export {
+  collectColumnNames,
+  collectPrimitiveValues,
+} from './repository-test-helpers';
+
+export type StateRow = typeof practiceSessionQuestionStates.$inferSelect;
 
 export function restoreDrizzlePracticeSessionRepositoryTestMocks() {
   vi.useRealTimers();
   vi.restoreAllMocks();
 }
 
-export function collectColumnNames(
-  value: unknown,
-  seen = new Set<object>(),
-): string[] {
-  if (typeof value !== 'object' || value === null || seen.has(value)) return [];
-  seen.add(value);
-
-  const maybeColumn = value as { name?: unknown; columnType?: unknown };
-  const ownName =
-    typeof maybeColumn.name === 'string' &&
-    typeof maybeColumn.columnType === 'string'
-      ? [maybeColumn.name]
-      : [];
-
-  return [
-    ...ownName,
-    ...Reflect.ownKeys(value).flatMap((key) =>
-      collectColumnNames((value as Record<PropertyKey, unknown>)[key], seen),
-    ),
-  ];
-}
-
-export function collectPrimitiveValues(
-  value: unknown,
-  seen = new Set<object>(),
-): Array<string | number | boolean | null> {
-  if (
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  ) {
-    return [value];
-  }
-  if (typeof value !== 'object' || seen.has(value)) return [];
-  seen.add(value);
-
-  return Reflect.ownKeys(value).flatMap((key) =>
-    collectPrimitiveValues((value as Record<PropertyKey, unknown>)[key], seen),
-  );
+export function createStateRow(
+  input: {
+    practiceSessionId: string;
+    questionId: string;
+    position: number;
+  } & Partial<StateRow>,
+): StateRow {
+  const now = new Date('2026-02-01T00:00:00.000Z');
+  return {
+    id: input.id ?? crypto.randomUUID(),
+    practiceSessionId: input.practiceSessionId,
+    questionId: input.questionId,
+    position: input.position,
+    markedForReview: input.markedForReview ?? false,
+    latestSelectedChoiceId: input.latestSelectedChoiceId ?? null,
+    latestIsCorrect: input.latestIsCorrect ?? null,
+    latestAnsweredAt: input.latestAnsweredAt ?? null,
+    draftSelectedChoiceId: input.draftSelectedChoiceId ?? null,
+    draftSavedAt: input.draftSavedAt ?? null,
+    draftCumulativeMs: input.draftCumulativeMs ?? 0,
+    version: input.version ?? 0,
+    createdAt: input.createdAt ?? now,
+    updatedAt: input.updatedAt ?? now,
+  };
 }
 
 function uniqueSorted(values: readonly string[]): string[] {

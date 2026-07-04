@@ -25,7 +25,10 @@ import {
   type PracticeSessionParamsJson,
   parsePracticeSessionParamsJson,
 } from './practice-session-params';
-import { updatePracticeSessionQuestionState } from './practice-session-question-state-updater';
+import {
+  toDomainQuestionState,
+  updatePracticeSessionQuestionState,
+} from './practice-session-question-state-updater';
 
 type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 type PracticeSessionQuestionStateRow =
@@ -61,21 +64,6 @@ export class DrizzlePracticeSessionRepository
     };
   }
 
-  private toDomainQuestionState(
-    row: PracticeSessionQuestionStateRow,
-  ): PracticeSessionQuestionState {
-    return {
-      questionId: row.questionId,
-      markedForReview: row.markedForReview,
-      latestSelectedChoiceId: row.latestSelectedChoiceId,
-      latestIsCorrect: row.latestIsCorrect,
-      latestAnsweredAt: row.latestAnsweredAt ?? null,
-      draftSelectedChoiceId: row.draftSelectedChoiceId,
-      draftSavedAt: row.draftSavedAt ?? null,
-      draftCumulativeMs: row.draftCumulativeMs,
-    };
-  }
-
   private toOrderedDomainQuestionStates(
     sessionId: string,
     params: PracticeSessionParamsJson,
@@ -103,7 +91,7 @@ export class DrizzlePracticeSessionRepository
           `Practice session ${sessionId} is missing normalized question state`,
         );
       }
-      return this.toDomainQuestionState(row);
+      return toDomainQuestionState(row);
     });
   }
 
