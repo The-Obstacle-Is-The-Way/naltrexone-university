@@ -8,7 +8,7 @@
 
 ## Description
 
-`practice-session-params.ts`'s `questionIds` field was tightened from `z.array(z.string().min(1))` to `z.array(zUuid).min(1)` plus a new `count === questionIds.length` refine, applied via `parsePracticeSessionParamsJson(row.paramsJson, 'INTERNAL_ERROR')` on every read of every `practice_sessions` row (`findByIdAndUserId`, `findLatestIncompleteByUserId`, `findCompletedByUserId`).
+`practice-session-params.ts`'s `questionIds` field was tightened from `z.array(z.string().min(1))` to `z.array(zUuid).min(1)` plus a new `count === questionIds.length` refine, applied via `parsePracticeSessionParamsJson(row.paramsJson, 'INTERNAL_ERROR')` on every read of every `practice_sessions` row (`findByIdAndUserId`, `findLatestIncompleteByUserId`, `findCompletedByUserId`, all funneling through the repository's private `toDomain`). Two additional strict-parse sites exist as of 2026-07-04: `create()` validates params on write (`drizzle-practice-session-repository.ts:296`), and the missing-row classifier in `practice-session-question-state-updater.ts:85` parses params when a state row is absent.
 
 ## Impact
 
@@ -50,4 +50,4 @@ Expected result for Development (`ep-still-frog`) and Production (`ep-withered-c
 ## Related
 
 - PR #537, [DEBT-425](../_archive/debt/debt-425-legacy-compatibility-tolerances-audit.md)
-- `src/adapters/repositories/practice-session-params.ts:24-32`
+- `src/adapters/repositories/practice-session-params.ts:26-45` (`questionIds` schema block; shifted from 24-32 by the DEBT-433 cross-reference comment added in PR #556)
