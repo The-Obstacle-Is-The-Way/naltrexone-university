@@ -40,7 +40,7 @@ Both predate the DEBT-426 conflict-reason contract and were never annotated with
 Client — no recovery on these surfaces:
 
 - [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L330-L335>): `runSubmitAnswerFlow` funnels any failure into a generic error state; no CONFLICT branch.
-- The question-load path likewise treats CONFLICT as a generic load error. Contrast [`practice-session-page-logic.ts`](<../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts#L222-L247>) (end surface: CONFLICT → summary fetch → results) and the bootstrap summary path in `use-practice-session-page-model.ts`, which is why a reload works.
+- [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L131-L142>): the question-load path likewise treats any non-ok result, including CONFLICT, as a generic load error. Contrast [`practice-session-page-logic.ts`](<../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts#L222-L247>) (end surface: CONFLICT → summary fetch → results) and the bootstrap summary path in `use-practice-session-page-model.ts`, which is why a reload works.
 
 ## Impact
 
@@ -49,7 +49,7 @@ Multi-tab tutor users hit an unexplained, unrecoverable-in-place error loop. No 
 ## Proposed Fix
 
 1. Server: replace both bare throws with `practiceSessionAlreadyEndedError()` so the CONFLICT carries `AlreadyEnded`.
-2. Client: on submit/load CONFLICT with reason `AlreadyEnded`, reuse the existing summary-recovery (fetch summary, render results) instead of the generic error state. The predicate helper (`getActionResultPracticeSessionConflictReason`) already exists in `question-flow-actions.ts`.
+2. Client: on submit/load CONFLICT with reason `AlreadyEnded`, reuse the existing summary-recovery (fetch summary, render results) instead of the generic error state. A private reason extractor (`getActionResultPracticeSessionConflictReason`) already exists in `question-flow-actions.ts`; use or generalize that instead of matching messages.
 
 Keep the fail-safe default: CONFLICT without a recognized reason continues to the generic error state.
 

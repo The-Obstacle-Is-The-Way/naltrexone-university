@@ -12,7 +12,7 @@
 
 The seed syncer's delete path carefully refuses to remove choices referenced by attempts or practice-session state rows (the BUG-266 guard), but its **upsert** path has no equivalent guard: `onConflictDoUpdate` on `(question_id, label)` unconditionally rewrites `text_md`, `is_correct`, `explanation_md`, and `sort_order` — including flipping `is_correct` on choices that graded history references.
 
-Stored grades (`attempts.is_correct`, `practice_session_question_states.latest_is_correct`) were computed against the answer key at submission time and are never regraded. But every review surface recomputes the "correct answer" highlight from **current** content. After a key-changing re-import, the two sources contradict each other on screen: a user who answered B when B was correct sees a "Correct" result badge next to a review that highlights C as the correct answer and renders their B as wrong.
+Stored grades (`attempts.is_correct`, `practice_session_question_states.latest_is_correct`) were computed against the answer key at submission time and are never regraded. But the completed-session/post-exam review path recomputes the "correct answer" highlight from **current** content. After a key-changing re-import, the two sources contradict each other on screen: a user who answered B when B was correct sees a "Correct" result badge next to a review that highlights C as the correct answer and renders their B as wrong.
 
 The trigger is exactly the well-intentioned case: a content editor fixing a miskeyed question — the moment the fix lands, every prior answer of that question displays contradictory grading.
 
@@ -33,7 +33,7 @@ Actual: the result badge says "Correct" (stored grade) while the recomputed key 
 ## Root Cause
 
 - [`question-syncer.ts`](../../scripts/seed/question-syncer.ts#L269-L287): the choice upsert's `onConflictDoUpdate` sets `isCorrect: choice.is_correct` with no check against existing attempt/state references — asymmetric with the same file's delete path, which does check ([`question-syncer.ts`](../../scripts/seed/question-syncer.ts#L195-L243)).
-- Review surfaces dual-source correctness: stored grade for the badge, recomputed key for the highlight — e.g. [`get-completed-session-questions-with-feedback.ts`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L141-L152) reads the stored attempt while the correct-choice derivation comes from current choice rows.
+- Completed-session/post-exam review dual-sources correctness: stored grade for the badge, recomputed key for the highlight — [`get-completed-session-questions-with-feedback.ts`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L141-L152) reads the stored attempt/state grade, while [`get-completed-session-questions-with-feedback.ts`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L164-L195) derives the correct choice from the current `Question` choices.
 
 Neither half is individually wrong; the system simply has no answer-key versioning and no policy for key changes under history.
 

@@ -10,20 +10,20 @@
 
 ## Summary
 
-In `executeIdempotent`, one `try` block covers both the business effect (`execute()`) and the recording of its success (`repo.storeResult(...)`). If `execute()` **commits its side effect** and the subsequent `storeResult` UPDATE fails transiently (connection blip, pool timeout), the `catch` cannot tell the difference: it treats the storage failure as an *execution* failure, consults `shouldCacheError` (which approves — it's not a transient practice-session CONFLICT), and calls `storeError` with the same still-valid `claimedAt` fence. That write typically succeeds (the blip has passed), durably recording an `INTERNAL_ERROR` as the outcome of a request whose effect is already committed.
+In `executeIdempotent`, one `try` block covers both the business effect (`execute()`) and the recording of its success (`repo.storeResult(...)`). If `execute()` **commits its side effect** and the subsequent `storeResult` attempt fails before it marks the idempotency row completed (connection blip, pool timeout, repository fault), the `catch` cannot tell the difference: it treats the storage failure as an *execution* failure, consults `shouldCacheError` (which approves — it's not a transient practice-session CONFLICT), and calls `storeError` with the same still-valid `claimedAt` fence. That write can succeed because the row is still pending, durably recording an `INTERNAL_ERROR` as the outcome of a request whose business effect is already committed.
 
 The caller is told the request failed after it succeeded, and every same-key retry replays the cached error for the 24-hour TTL. This is the shared wrapper under **all** idempotent server actions — practice mutations and billing-adjacent actions alike — so the blast radius is any effect that commits followed by one transient failure on the outcome write.
 
 ## Reachability
 
-Any idempotent action whose `execute()` has committed and whose `storeResult` hits a transient failure. Requires a narrowly-timed infrastructure fault, so per-request probability is low — but the wrapper executes on every idempotent mutation in the system, and the consequence is a durable lie (failure-after-success) rather than a transient one.
+Any idempotent action whose `execute()` has committed and whose `storeResult` attempt fails before the success outcome is persisted. Requires a narrowly-timed infrastructure fault, so per-request probability is low — but the wrapper executes on every idempotent mutation in the system, and the consequence is a durable lie (failure-after-success) rather than a transient one.
 
 ## Reproduction
 
 Fault injection at the repository seam:
 
 1. Wire `executeIdempotent` with an `execute` that performs a real insert (e.g. submit-answer's attempt row) and a repo whose `storeResult` rejects once with a transient error.
-2. Call the action. The insert commits; `storeResult` throws; the wrapper caches `INTERNAL_ERROR` via `storeError` (same claim, still pending, fence passes).
+2. Call the action. The insert commits; `storeResult` throws before completing the idempotency row; the wrapper caches `INTERNAL_ERROR` via `storeError` (same claim, still pending, fence passes).
 3. Retry with the same key.
 
 Expected: the retry either replays the committed success or re-executes idempotently.
@@ -35,22 +35,62 @@ Actual: the retry replays `INTERNAL_ERROR` from the cache without executing anyt
 [`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L165-L215):
 
 ```typescript
-try {
-  const result = await input.execute();
-  await input.repo.storeResult({ ... claimedAt, resultJson: result }); // failure here falls through
-  return result;
-} catch (error) {
-  if (!shouldCacheExecutionError(input.shouldCacheError, error)) { ... }
-  try {
-    await input.repo.storeError({ ... claimedAt, error: toErrorRecord(error) });
-  } ...
-  throw error;
-}
+      try {
+        const result = await input.execute();
+        await input.repo.storeResult({
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          claimedAt,
+          resultJson: result,
+        });
+        return result;
+      } catch (error) {
+        if (!shouldCacheExecutionError(input.shouldCacheError, error)) {
+          await abortClaimPreservingOriginalError(
+            input,
+            claimedAt,
+            error,
+            'Failed to abort idempotency claim after non-cacheable execute error',
+          );
+          throw error;
+        }
+
+        try {
+          await input.repo.storeError({
+            userId: input.userId,
+            action: input.action,
+            key: input.key,
+            claimedAt,
+            error: toErrorRecord(error),
+          });
+        } catch (storeError) {
+          try {
+            input.logger.error(
+              {
+                userId: input.userId,
+                action: input.action,
+                key: input.key,
+                storeError:
+                  storeError instanceof Error
+                    ? storeError.message
+                    : String(storeError),
+                originalError:
+                  error instanceof Error ? error.message : String(error),
+              },
+              'Failed to persist idempotency error record',
+            );
+          } catch {
+            // Preserve original execute error even if logger.error throws.
+          }
+        }
+        throw error;
+      }
 ```
 
-A `storeResult` rejection enters the same `catch` as an `execute` rejection. Nothing distinguishes "the effect failed" from "the effect succeeded but recording it failed" — yet the correct handling is opposite: an execute failure may be cached as the outcome; a storeResult failure must **never** be recorded as an error outcome, because the effect is already durable.
+A `storeResult` rejection enters the same `catch` as an `execute` rejection. Nothing distinguishes "the effect failed" from "the effect succeeded but recording it failed" — yet the correct handling is opposite: an execute failure may be cached as the outcome; a storeResult failure after the business effect has returned must **never** be recorded as an error outcome.
 
-The `claimedAt` fencing (DEBT-424) is not violated — the row is still pending and owned by this claim, which is exactly why the wrong `storeError` write succeeds.
+The `claimedAt` fencing (DEBT-424) is not violated — when the success row was not completed, the row is still pending and owned by this claim, which is exactly why the wrong `storeError` write can succeed. If `storeResult` actually commits and the client merely observes an ambiguous post-commit failure, `storeError` is fenced out by the repository's `completed_at IS NULL` predicate; that adjacent ambiguity is not the reproducible bug documented here.
 
 ## Impact
 
