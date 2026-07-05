@@ -1,6 +1,6 @@
 # DEBT-430: Migrations 0021-0024 hold broad write-blocking locks for their entire combined transaction, including a non-concurrent unique index build
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-07-01
 
@@ -22,11 +22,17 @@ Neutralized today: the DEBT-425 audit confirms 0 practice sessions in production
 
 ## Resolution
 
-For future migrations touching these tables: order operations so constraint-adding `ALTER TABLE` statements run *after* any backfill that could conflict with them (matching the safer pattern `0022`/`0023`/`0024` already use for their own cleanup-before-constraint UPDATEs, confirmed accurate per DEBT-427). Split `CREATE INDEX CONCURRENTLY` statements into their own separately-applied migration outside the multi-file transaction batch, or accept the writer-blocking standard-index cost only when the target table is known to be small/empty (as it is here today, but that assumption isn't documented anywhere near the SQL itself). Consider adding a comment at the top of any future FK-adding migration in this family noting the multi-file-transaction lock-duration hazard so it doesn't get silently repeated.
+Converted to durable authoring guidance in [Migration Authoring](../../dev/migration-authoring.md):
+
+- [Lock Scope](../../dev/migration-authoring.md#lock-scope) records that Drizzle's transaction keeps locks until commit, that foreign-key validation takes `SHARE ROW EXCLUSIVE` locks on referencing and referenced tables, and that ordinary `CREATE INDEX` blocks writes but not reads.
+- The same section records the `CREATE INDEX CONCURRENTLY` constraint: it cannot run inside the normal transaction batch, so large live-table index builds need a separately-applied path.
+- The section also requires migration-local comments when accepting lock cost because a table is known small or empty. `0026_track_a_tail_sweep.sql` is now the local example of documenting a bounded small-table cleanup.
+
+This closes DEBT-430 as a process debt. No retroactive runtime lock capture is possible or useful for already-applied migrations 0021-0024.
 
 ## Verification
 
-No runtime verification possible retroactively for an already-applied migration; this is a process/review-checklist item for future migrations in this family. If desired, a `pg_locks` capture during a staging replay of this exact migration set (with representative row counts) would confirm the lock duration and blocked-statement set empirically.
+Closeout proof recorded 2026-07-04: [Migration Authoring](../../dev/migration-authoring.md#lock-scope) now carries the lock-scope checklist and `docs/dev/deployment-procedure.md` links migration authors to that runbook from the data-affecting migration section.
 
 ## Related
 

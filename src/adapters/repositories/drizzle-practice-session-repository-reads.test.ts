@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import {
+  createStateRow,
   expectStateSelectPredicate,
   restoreDrizzlePracticeSessionRepositoryTestMocks,
+  type StateRow,
 } from './drizzle-practice-session-repository-test-helpers';
 
 const sessionId = crypto.randomUUID();
@@ -12,49 +14,6 @@ const firstQuestionId = crypto.randomUUID();
 const secondQuestionId = crypto.randomUUID();
 const thirdQuestionId = crypto.randomUUID();
 const orphanQuestionId = crypto.randomUUID();
-
-type StateRow = {
-  id: string;
-  practiceSessionId: string;
-  questionId: string;
-  position: number;
-  markedForReview: boolean;
-  latestSelectedChoiceId: string | null;
-  latestIsCorrect: boolean | null;
-  latestAnsweredAt: Date | null;
-  draftSelectedChoiceId: string | null;
-  draftSavedAt: Date | null;
-  draftCumulativeMs: number;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-function createStateRow(
-  input: {
-    practiceSessionId?: string;
-    questionId: string;
-    position: number;
-  } & Partial<StateRow>,
-): StateRow {
-  const now = new Date('2026-02-01T00:00:00.000Z');
-  return {
-    id: crypto.randomUUID(),
-    practiceSessionId: input.practiceSessionId ?? sessionId,
-    questionId: input.questionId,
-    position: input.position,
-    markedForReview: input.markedForReview ?? false,
-    latestSelectedChoiceId: input.latestSelectedChoiceId ?? null,
-    latestIsCorrect: input.latestIsCorrect ?? null,
-    latestAnsweredAt: input.latestAnsweredAt ?? null,
-    draftSelectedChoiceId: input.draftSelectedChoiceId ?? null,
-    draftSavedAt: input.draftSavedAt ?? null,
-    draftCumulativeMs: input.draftCumulativeMs ?? 0,
-    version: input.version ?? 0,
-    createdAt: input.createdAt ?? now,
-    updatedAt: input.updatedAt ?? now,
-  };
-}
 
 function createStateSelect(
   rows: readonly StateRow[],
@@ -249,8 +208,16 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     ]);
     const countWhere = vi.fn().mockResolvedValue([{ count: 1 }]);
     const stateSelect = createStateSelect([
-      createStateRow({ questionId: firstQuestionId, position: 0 }),
-      createStateRow({ questionId: secondQuestionId, position: 1 }),
+      createStateRow({
+        practiceSessionId: sessionId,
+        questionId: firstQuestionId,
+        position: 0,
+      }),
+      createStateRow({
+        practiceSessionId: sessionId,
+        questionId: secondQuestionId,
+        position: 1,
+      }),
     ]);
     const select = vi.fn((selection?: unknown) => {
       if (selection) {
@@ -525,8 +492,16 @@ describe('DrizzlePracticeSessionRepository reads', () => {
         },
       },
       select: createStateSelect([
-        createStateRow({ questionId: firstQuestionId, position: 0 }),
-        createStateRow({ questionId: secondQuestionId, position: 1 }),
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: firstQuestionId,
+          position: 0,
+        }),
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: secondQuestionId,
+          position: 1,
+        }),
       ]),
     } as const;
     const { db, transaction } = createRepeatableReadDb(tx);
@@ -590,9 +565,21 @@ describe('DrizzlePracticeSessionRepository reads', () => {
         },
       },
       select: createStateSelect([
-        createStateRow({ questionId: firstQuestionId, position: 0 }),
-        createStateRow({ questionId: secondQuestionId, position: 1 }),
-        createStateRow({ questionId: thirdQuestionId, position: 2 }),
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: firstQuestionId,
+          position: 0,
+        }),
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: secondQuestionId,
+          position: 1,
+        }),
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: thirdQuestionId,
+          position: 2,
+        }),
       ]),
     } as const;
     const { db, transaction } = createRepeatableReadDb(tx);
@@ -682,7 +669,11 @@ describe('DrizzlePracticeSessionRepository reads', () => {
         },
       },
       select: createStateSelect([
-        createStateRow({ questionId: firstQuestionId, position: 0 }),
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: firstQuestionId,
+          position: 0,
+        }),
       ]),
     } as const;
     const { db, transaction } = createRepeatableReadDb(tx);

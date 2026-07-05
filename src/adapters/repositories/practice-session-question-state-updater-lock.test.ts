@@ -1,35 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
+import { createStateRow } from './drizzle-practice-session-repository-test-helpers';
 
 const sessionId = crypto.randomUUID();
 const userId = crypto.randomUUID();
 const questionId = crypto.randomUUID();
 const selectedChoiceId = crypto.randomUUID();
 
-function createStateRow() {
-  const now = new Date('2026-02-01T00:00:00.000Z');
-  return {
-    id: crypto.randomUUID(),
-    practiceSessionId: sessionId,
-    questionId,
-    position: 0,
-    markedForReview: false,
-    latestSelectedChoiceId: null,
-    latestIsCorrect: null,
-    latestAnsweredAt: null,
-    draftSelectedChoiceId: null,
-    draftSavedAt: null,
-    draftCumulativeMs: 0,
-    version: 2,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
 describe('practice session question state updater locking', () => {
   it('reads the parent session and question state in one snapshot without locking the parent session', async () => {
     const answeredAt = new Date('2026-02-01T00:10:00.000Z');
-    const existing = createStateRow();
+    const existing = createStateRow({
+      practiceSessionId: sessionId,
+      questionId,
+      position: 0,
+      version: 2,
+    });
     const updated = {
       ...existing,
       latestSelectedChoiceId: selectedChoiceId,

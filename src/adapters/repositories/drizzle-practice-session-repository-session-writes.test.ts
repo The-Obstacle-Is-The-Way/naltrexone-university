@@ -6,8 +6,10 @@ import {
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import {
+  createStateRow,
   expectStateSelectPredicate,
   restoreDrizzlePracticeSessionRepositoryTestMocks,
+  type StateRow,
 } from './drizzle-practice-session-repository-test-helpers';
 
 const sessionId = crypto.randomUUID();
@@ -15,48 +17,6 @@ const userId = crypto.randomUUID();
 const firstQuestionId = crypto.randomUUID();
 const secondQuestionId = crypto.randomUUID();
 const selectedChoiceId = crypto.randomUUID();
-
-type StateRow = {
-  id: string;
-  practiceSessionId: string;
-  questionId: string;
-  position: number;
-  markedForReview: boolean;
-  latestSelectedChoiceId: string | null;
-  latestIsCorrect: boolean | null;
-  latestAnsweredAt: Date | null;
-  draftSelectedChoiceId: string | null;
-  draftSavedAt: Date | null;
-  draftCumulativeMs: number;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-function createStateRow(
-  input: {
-    questionId: string;
-    position: number;
-  } & Partial<StateRow>,
-): StateRow {
-  const now = new Date('2026-02-01T00:00:00.000Z');
-  return {
-    id: crypto.randomUUID(),
-    practiceSessionId: input.practiceSessionId ?? sessionId,
-    questionId: input.questionId,
-    position: input.position,
-    markedForReview: input.markedForReview ?? false,
-    latestSelectedChoiceId: input.latestSelectedChoiceId ?? null,
-    latestIsCorrect: input.latestIsCorrect ?? null,
-    latestAnsweredAt: input.latestAnsweredAt ?? null,
-    draftSelectedChoiceId: input.draftSelectedChoiceId ?? null,
-    draftSavedAt: input.draftSavedAt ?? null,
-    draftCumulativeMs: input.draftCumulativeMs ?? 0,
-    version: input.version ?? 0,
-    createdAt: input.createdAt ?? now,
-    updatedAt: input.updatedAt ?? now,
-  };
-}
 
 function createStateSelect(
   rows: readonly StateRow[],
@@ -99,8 +59,16 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       returning: async () => [returningRow],
     }));
     const stateRows = [
-      createStateRow({ questionId: firstQuestionId, position: 0 }),
-      createStateRow({ questionId: secondQuestionId, position: 1 }),
+      createStateRow({
+        practiceSessionId: sessionId,
+        questionId: firstQuestionId,
+        position: 0,
+      }),
+      createStateRow({
+        practiceSessionId: sessionId,
+        questionId: secondQuestionId,
+        position: 1,
+      }),
     ];
     const insertStateValues = vi.fn(() => ({
       returning: async () => stateRows,
@@ -414,13 +382,18 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       },
       select: createStateSelect([
         createStateRow({
+          practiceSessionId: sessionId,
           questionId: firstQuestionId,
           position: 0,
           latestSelectedChoiceId: selectedChoiceId,
           latestIsCorrect: true,
           latestAnsweredAt: new Date('2026-02-01T00:00:01.000Z'),
         }),
-        createStateRow({ questionId: secondQuestionId, position: 1 }),
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: secondQuestionId,
+          position: 1,
+        }),
       ]),
       update,
       insert: () => {
@@ -494,7 +467,11 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
         },
       },
       select: createStateSelect([
-        createStateRow({ questionId: firstQuestionId, position: 0 }),
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: firstQuestionId,
+          position: 0,
+        }),
       ]),
       update,
       insert: () => {

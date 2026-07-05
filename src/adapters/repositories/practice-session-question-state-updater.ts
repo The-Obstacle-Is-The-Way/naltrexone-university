@@ -20,7 +20,7 @@ type QuestionStateSnapshot = {
   endedAt: Date | null;
 };
 
-function toDomainQuestionState(
+export function toDomainQuestionState(
   row: PracticeSessionQuestionStateRow,
 ): PracticeSessionQuestionState {
   return {

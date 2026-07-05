@@ -5,40 +5,9 @@ import {
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
 import { DrizzleIdempotencyKeyRepository } from './drizzle-idempotency-key-repository';
+import { collectColumnNamesForTable } from './repository-test-helpers';
 
 type RepoDb = ConstructorParameters<typeof DrizzleIdempotencyKeyRepository>[0];
-
-function collectColumnNamesForTable(
-  node: unknown,
-  table: unknown,
-): readonly string[] {
-  const names = new Set<string>();
-
-  const visit = (value: unknown): void => {
-    if (!value || typeof value !== 'object') {
-      return;
-    }
-
-    const maybeNode = value as {
-      table?: unknown;
-      name?: unknown;
-      queryChunks?: unknown[];
-    };
-
-    if (maybeNode.table === table && typeof maybeNode.name === 'string') {
-      names.add(maybeNode.name);
-    }
-
-    if (Array.isArray(maybeNode.queryChunks)) {
-      for (const chunk of maybeNode.queryChunks) {
-        visit(chunk);
-      }
-    }
-  };
-
-  visit(node);
-  return [...names];
-}
 
 describe('DrizzleIdempotencyKeyRepository', () => {
   describe('claim', () => {
