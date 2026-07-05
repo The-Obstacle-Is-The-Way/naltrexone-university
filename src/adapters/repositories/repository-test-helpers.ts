@@ -14,9 +14,13 @@ export function collectColumnNames(
 
   return [
     ...ownName,
-    ...Reflect.ownKeys(value).flatMap((key) =>
-      collectColumnNames((value as Record<PropertyKey, unknown>)[key], seen),
-    ),
+    ...Reflect.ownKeys(value).flatMap((key) => {
+      if (key === 'table') return [];
+      return collectColumnNames(
+        (value as Record<PropertyKey, unknown>)[key],
+        seen,
+      );
+    }),
   ];
 }
 
