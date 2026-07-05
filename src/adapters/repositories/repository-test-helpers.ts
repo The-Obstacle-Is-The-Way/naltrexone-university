@@ -39,9 +39,13 @@ export function collectPrimitiveValues(
   if (typeof value !== 'object' || seen.has(value)) return [];
   seen.add(value);
 
-  return Reflect.ownKeys(value).flatMap((key) =>
-    collectPrimitiveValues((value as Record<PropertyKey, unknown>)[key], seen),
-  );
+  return Reflect.ownKeys(value).flatMap((key) => {
+    if (key === 'table') return [];
+    return collectPrimitiveValues(
+      (value as Record<PropertyKey, unknown>)[key],
+      seen,
+    );
+  });
 }
 
 export function collectColumnNamesForTable(
