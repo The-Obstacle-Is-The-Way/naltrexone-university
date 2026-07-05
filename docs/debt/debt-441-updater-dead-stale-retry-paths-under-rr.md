@@ -13,7 +13,7 @@
 - **Transaction-bound REPEATABLE READ paths** (submit, finalize — via `runPracticeSessionStateWriteTransaction`): the snapshot read and the CAS UPDATE share one RR snapshot, so a 0-row CAS result is impossible — any concurrent committed write raises `40001` instead, which propagates to the composition-root retry (fresh transaction, fresh snapshot, correct classification). Here the inner `'stale'` branch and the final re-read are **dead code**. Worse, if the final re-read *were* ever reached tx-bound, it would be wrong: drizzle nests via SAVEPOINT and postgres-js ignores isolation config on nested `transaction()`, so the re-read inherits the stale outer snapshot — a concurrently-ended session would still show `endedAt = null` and the code would misreport `AlreadyEnded` as `StateChangedConcurrently`.
 - **Standalone READ COMMITTED paths** (exam draft save via `SaveExamDraftAnswerUseCase`, mark-for-review): each attempt is a fresh top-level transaction; EvalPlanQual re-evaluation produces genuine 0-row `'stale'` results; the loop and final re-read are live and **correct** here.
 
-Nothing in the updater's signature, comments, or tests records this split. A future maintainer reading the retry loop will reasonably assume it provides in-transaction retry semantics for the RR paths (it does not), or refactor the standalone paths onto the runner (silently killing the live branch), or "simplify" the final re-read into the RR flow (activating the misclassification described above).
+Nothing in the updater's signature or comments records this split, and the existing tests that cover standalone stale-version retries do not make the transaction-context distinction visible at the production entry point. A future maintainer reading the retry loop will reasonably assume it provides in-transaction retry semantics for the RR paths (it does not), or refactor the standalone paths onto the runner (silently killing the live branch), or "simplify" the final re-read into the RR flow (activating the misclassification described above).
 
 ## Impact
 
@@ -24,14 +24,14 @@ No current defect — every live path behaves correctly today. The debt is compr
 Pick one, deliberately:
 
 1. **Document the split in place (minimum):** a block comment on the loop + final re-read stating the per-context liveness (RR tx-bound: dead, `40001` path owns retries; standalone RC: live via EvalPlanQual) and the savepoint-snapshot caveat that makes the re-read unsafe to reach tx-bound.
-2. **Make the split structural (better):** split the entry points — a tx-bound variant with no inner loop (single CAS, let `40001`/0-rows-impossible semantics stand) and a standalone variant that owns the retry loop and final classification. Tests then pin each variant's semantics separately.
+2. **Make the split structural (better):** split the entry points — a tx-bound variant with no inner loop (single CAS, let `40001`/0-rows-impossible semantics stand) and a standalone variant that owns the retry loop and final classification.
 
-Either way, add a test that pins the standalone-path `'stale'` retry behavior (currently untested distinct from the RR path) so the live branch can't be silently removed.
+Either way, preserve the existing repository tests that already pin standalone-path stale-version retry and retry-exhaustion behavior (`drizzle-practice-session-repository-question-state.test.ts`). If the entry points are split, move or duplicate that coverage so the standalone variant owns it and the tx-bound variant is explicitly covered as single-CAS/no-loop.
 
 ## Verification
 
-- Comment or split lands with a test exercising the standalone READ COMMITTED `'stale'` retry (fake or integration).
-- If split: the tx-bound variant contains no retry loop; grep confirms the RR callers use it.
+- Comment or split lands and the existing standalone READ COMMITTED stale-version retry/exhaustion tests remain green.
+- If split: the tx-bound variant contains no retry loop; grep confirms the RR callers use it; the standalone variant retains the retry loop and final-classification tests.
 
 ## Related
 
