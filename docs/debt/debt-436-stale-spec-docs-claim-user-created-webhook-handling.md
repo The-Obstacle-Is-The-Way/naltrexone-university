@@ -10,7 +10,7 @@
 
 `docs/specs/master_spec.md` and `docs/specs/master_spec_part2.md` both still list, under "Events handled" for the Clerk webhook:
 
-```
+```text
 * `user.created` — Create user in `users` table
 * `user.updated` — Update user email in `users` table
 * `user.deleted` — Delete user and cascade (subscription, attempts, bookmarks, etc.)
@@ -34,7 +34,7 @@ A future engineer or auditor who trusts `master_spec.md`/`master_spec_part2.md` 
 
 Replace the `user.created` bullet in both `docs/specs/master_spec.md` and `docs/specs/master_spec_part2.md` with a line matching `clerk.md`'s framing, e.g.:
 
-```
+```text
 * `user.created` — No-op; users are created lazily via `upsertByClerkId` on first authenticated request (see `docs/vendor-docs/clerk.md`)
 * `user.updated` — Update user email in `users` table
 * `user.deleted` — Delete user and cascade (subscription, attempts, bookmarks, etc.)
