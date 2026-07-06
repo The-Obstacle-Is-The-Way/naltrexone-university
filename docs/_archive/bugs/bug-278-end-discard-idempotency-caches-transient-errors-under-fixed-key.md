@@ -79,6 +79,7 @@ The fix added an end/discard-specific idempotency error policy that caches only 
 
 - Fix PR: #562, squash `c9e91b4b`.
 - Promotion PR: #564, merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`.
+- Regression proof: [`practice-controller-session-lifecycle-idempotency-policy.test.ts`](../../../src/adapters/controllers/practice-controller-session-lifecycle-idempotency-policy.test.ts) pins that transient end-session failures, non-terminal discard `ApplicationError`s, and internal discard failures re-execute on the reused idempotency key, while terminal conflicts replay with structured reasons. [`drizzle-practice-session-repository-session-writes.test.ts`](../../../src/adapters/repositories/drizzle-practice-session-repository-session-writes.test.ts) pins child-first discard ordering inside one `repeatable read` transaction.
 - Production deploy: GitHub deployment `5331520979`, Vercel target `https://naltrexone-university-cosiyzvs9-john-h-jungs-projects.vercel.app`, succeeded 2026-07-06T15:13:34Z.
 - Health proof: `https://addictionboards.com/` and the Vercel deployment URL both returned HTTP/2 200 after the promo; Vercel runtime logs for the checked deployment window contained only the two successful HEAD requests and no errors.
 
