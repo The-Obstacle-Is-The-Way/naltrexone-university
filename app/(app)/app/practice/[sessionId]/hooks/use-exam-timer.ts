@@ -61,17 +61,18 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
       }
 
       firedDeadlineMsRef.current = deadlineMs;
-      void Promise.resolve(onExpireRef.current())
-        .then((handled) => {
+      void (async () => {
+        try {
+          const handled = await onExpireRef.current();
           if (handled === false && firedDeadlineMsRef.current === deadlineMs) {
             firedDeadlineMsRef.current = null;
           }
-        })
-        .catch(() => {
+        } catch {
           if (firedDeadlineMsRef.current === deadlineMs) {
             firedDeadlineMsRef.current = null;
           }
-        });
+        }
+      })();
     }
 
     update();

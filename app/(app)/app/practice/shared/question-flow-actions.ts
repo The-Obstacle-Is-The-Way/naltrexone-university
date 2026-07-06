@@ -31,7 +31,9 @@ export type RequestSequencingHooks = {
 };
 
 export type NullQuestionRecovery = () => Promise<boolean>;
-export type EndedSessionConflictRecovery = () => Promise<boolean>;
+export type EndedSessionConflictRecovery = (input: {
+  canCommit: () => boolean;
+}) => Promise<boolean>;
 
 export type ExamDraftAnswer = {
   questionId: string;
@@ -79,7 +81,9 @@ async function tryRecoverEndedSessionConflict(input: {
     return 'not-handled';
   }
 
-  const handled = await input.recoverEndedSessionConflict();
+  const handled = await input.recoverEndedSessionConflict({
+    canCommit: input.canCommit,
+  });
   if (!input.canCommit()) return 'stale-request';
   return handled ? 'handled' : 'not-handled';
 }

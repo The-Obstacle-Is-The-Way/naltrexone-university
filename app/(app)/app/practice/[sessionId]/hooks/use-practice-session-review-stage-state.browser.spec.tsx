@@ -41,7 +41,7 @@ function createInput(
     setSessionMode: vi.fn(),
     resetQuestionState: vi.fn(),
     loadSpecificQuestion: vi.fn(),
-    finalizeSession: vi.fn().mockResolvedValue(undefined),
+    finalizeSession: vi.fn().mockResolvedValue(true),
     getPracticeSessionReviewFn: getPracticeSessionReviewMock,
   };
 }

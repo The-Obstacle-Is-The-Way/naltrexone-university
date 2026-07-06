@@ -185,4 +185,40 @@ describe('withIdempotency outcome writes', () => {
       },
     });
   });
+
+  it('caches an indeterminate error instead of replaying non-replayable actions after storeResult fails', async () => {
+    class StoreResultFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        throw new Error('store result failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StoreResultFailingRepo(now);
+    const logger = new FakeLogger();
+    const execute = vi.fn(async () => ({ feedbackId: crypto.randomUUID() }));
+    const key = '17171717-1717-1717-1717-171717171717';
+    const input = {
+      repo,
+      userId: appUserId,
+      action: 'question-feedback:submitQuestionReport',
+      key,
+      now,
+      logger,
+      outcomeStoreFailurePolicy: 'cache-error-and-throw' as const,
+      execute,
+    };
+
+    await expect(withIdempotency(input)).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message:
+        'Idempotency outcome could not be recorded after committed success',
+    });
+    await expect(withIdempotency(input)).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message:
+        'Idempotency outcome could not be recorded after committed success',
+    });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
 });

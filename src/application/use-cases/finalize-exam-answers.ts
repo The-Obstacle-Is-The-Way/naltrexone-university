@@ -58,6 +58,11 @@ export type FinalizeExamAnswersInput = {
 
 export type FinalizeExamAnswersOutput = PracticeSessionSummary;
 
+type FinalDraftAnswerApplication = {
+  session: PracticeSession;
+  applied: boolean;
+};
+
 export type FinalizeExamAnswersWriteTransaction = <T>(
   fn: (tx: {
     questions: QuestionRepository;
@@ -164,17 +169,18 @@ export class FinalizeExamAnswersUseCase {
       // selection visible on-screen at expiry is graded instead of omitted.
       // Grading below stays server-authoritative; this only persists the
       // validated candidate draft inside the same finalize transaction.
-      const activeSession = input.finalDraftAnswer
+      const finalDraftApplication = input.finalDraftAnswer
         ? await this.applyFinalDraftAnswer(
             tx,
             loadedSession,
             input.finalDraftAnswer,
             finalizationNow,
           )
-        : loadedSession;
+        : { session: loadedSession, applied: false };
+      const activeSession = finalDraftApplication.session;
       const deadline = computeExamDeadline(activeSession);
       const finalDraftFlushAfterDeadline =
-        input.finalDraftAnswer !== undefined &&
+        finalDraftApplication.applied &&
         deadline !== null &&
         finalizationNow.getTime() >= deadline.getTime();
       const finalAttemptAnsweredAt = finalDraftFlushAfterDeadline
@@ -309,7 +315,7 @@ export class FinalizeExamAnswersUseCase {
     session: PracticeSession,
     finalDraftAnswer: FinalizeExamFinalDraftAnswer,
     now: Date,
-  ): Promise<PracticeSession> {
+  ): Promise<FinalDraftAnswerApplication> {
     const questionState = session.questionStates.find(
       (state) => state.questionId === finalDraftAnswer.questionId,
     );
@@ -333,7 +339,7 @@ export class FinalizeExamAnswersUseCase {
         },
         'Dropped stale final exam draft flush after grace window',
       );
-      return session;
+      return { session, applied: false };
     }
 
     const isWithinGraceWindow =
@@ -392,6 +398,6 @@ export class FinalizeExamAnswersUseCase {
     if (!refreshedSession) {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
-    return refreshedSession;
+    return { session: refreshedSession, applied: true };
   }
 }

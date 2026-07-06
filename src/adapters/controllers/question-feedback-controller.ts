@@ -214,6 +214,7 @@ export const submitQuestionReport = createAction({
       idempotencyKey,
       outputSchema: SubmitQuestionReportOutputSchema,
       beforeExecute: enforceReportRateLimit,
+      outcomeStoreFailurePolicy: 'cache-error-and-throw',
       execute: submit,
     });
   },

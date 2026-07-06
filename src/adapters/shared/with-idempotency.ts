@@ -14,6 +14,10 @@ const DEFAULT_MAX_WAIT_MS = 2_000;
 const DEFAULT_POLL_INTERVAL_MS = 50;
 const ERROR_MESSAGE_LIMIT = 1000;
 
+export type IdempotencyOutcomeStoreFailurePolicy =
+  | 'return-result'
+  | 'cache-error-and-throw';
+
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const message = error.message || error.name;
@@ -111,6 +115,7 @@ export async function withIdempotency<T>(input: {
   parseResult?: (value: unknown) => T;
   beforeExecute?: () => Promise<void>;
   shouldCacheError?: (error: unknown) => boolean;
+  outcomeStoreFailurePolicy?: IdempotencyOutcomeStoreFailurePolicy;
   execute: () => Promise<T>;
 }): Promise<T> {
   const ttlMs = input.ttlMs ?? DEFAULT_TTL_MS;
@@ -221,6 +226,47 @@ export async function withIdempotency<T>(input: {
           storeResultError.code === 'NOT_FOUND'
         ) {
           throw storeResultError;
+        }
+
+        const outcomeError = new ApplicationError(
+          'INTERNAL_ERROR',
+          'Idempotency outcome could not be recorded after committed success',
+          undefined,
+          { cause: storeResultError },
+        );
+
+        if (input.outcomeStoreFailurePolicy === 'cache-error-and-throw') {
+          try {
+            await input.repo.storeError({
+              userId: input.userId,
+              action: input.action,
+              key: input.key,
+              claimedAt,
+              error: toErrorRecord(outcomeError),
+            });
+          } catch (storeError) {
+            try {
+              input.logger.error(
+                {
+                  userId: input.userId,
+                  action: input.action,
+                  key: input.key,
+                  storeError:
+                    storeError instanceof Error
+                      ? storeError.message
+                      : String(storeError),
+                  storeResultError:
+                    storeResultError instanceof Error
+                      ? storeResultError.message
+                      : String(storeResultError),
+                },
+                'Failed to persist indeterminate idempotency outcome',
+              );
+            } catch {
+              // Preserve the indeterminate outcome error even if logging fails.
+            }
+          }
+          throw outcomeError;
         }
 
         try {

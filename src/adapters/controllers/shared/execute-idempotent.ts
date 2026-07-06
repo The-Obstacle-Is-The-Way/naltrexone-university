@@ -1,5 +1,8 @@
 import type { ZodType } from 'zod';
-import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
+import {
+  type IdempotencyOutcomeStoreFailurePolicy,
+  withIdempotency,
+} from '@/src/adapters/shared/with-idempotency';
 import type { Logger } from '@/src/application/ports/logger';
 import type { IdempotencyKeyRepository } from '@/src/application/ports/repositories';
 
@@ -25,6 +28,7 @@ export async function executeIdempotent<TOutput>({
   outputSchema,
   beforeExecute,
   shouldCacheError,
+  outcomeStoreFailurePolicy,
   execute,
 }: {
   d: IdempotentControllerDeps;
@@ -34,6 +38,7 @@ export async function executeIdempotent<TOutput>({
   outputSchema: ZodType<TOutput, unknown>;
   beforeExecute?: () => Promise<void>;
   shouldCacheError?: (error: unknown) => boolean;
+  outcomeStoreFailurePolicy?: IdempotencyOutcomeStoreFailurePolicy;
   execute: () => Promise<TOutput>;
 }): Promise<TOutput> {
   if (!idempotencyKey) {
@@ -51,6 +56,7 @@ export async function executeIdempotent<TOutput>({
     parseResult: (value) => outputSchema.parse(value),
     ...(beforeExecute ? { beforeExecute } : {}),
     ...(shouldCacheError ? { shouldCacheError } : {}),
+    ...(outcomeStoreFailurePolicy ? { outcomeStoreFailurePolicy } : {}),
     execute,
   });
 }

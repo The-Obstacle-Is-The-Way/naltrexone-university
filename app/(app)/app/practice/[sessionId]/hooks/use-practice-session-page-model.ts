@@ -81,9 +81,9 @@ export function usePracticeSessionPageModel(
   >(null);
   const recoverEndedSessionConflictRef =
     useRef<EndedSessionConflictRecovery | null>(null);
-  const recoverEndedSessionSummaryPromiseRef = useRef<Promise<boolean> | null>(
-    null,
-  );
+  const recoverEndedSessionSummaryPromiseRef = useRef<Promise<Awaited<
+    ReturnType<typeof getPracticeSessionSummary>
+  > | null> | null>(null);
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
   const onExamServerExpiry = useCallback(
     async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
@@ -91,10 +91,12 @@ export function usePracticeSessionPageModel(
     },
     [],
   );
-  const recoverEndedSessionConflict =
-    useCallback(async (): Promise<boolean> => {
-      return (await recoverEndedSessionConflictRef.current?.()) ?? false;
-    }, []);
+  const recoverEndedSessionConflict = useCallback(
+    async (input: { canCommit: () => boolean }): Promise<boolean> => {
+      return (await recoverEndedSessionConflictRef.current?.(input)) ?? false;
+    },
+    [],
+  );
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
@@ -333,53 +335,57 @@ export function usePracticeSessionPageModel(
     [applyBootstrapSummary, isMounted, sessionId],
   );
 
-  const recoverEndedSessionSummary = useCallback((): Promise<boolean> => {
-    if (reviewStage.summary || reviewStage.postExamSummary) {
-      return Promise.resolve(true);
-    }
-    if (recoverEndedSessionSummaryPromiseRef.current) {
-      return recoverEndedSessionSummaryPromiseRef.current;
-    }
-
-    const recovery = (async (): Promise<boolean> => {
-      let result: Awaited<ReturnType<typeof getPracticeSessionSummary>>;
-      try {
-        result = await withTimeout(
-          getPracticeSessionSummary({ sessionId }),
-          BOOTSTRAP_SUMMARY_TIMEOUT_MS,
-        );
-      } catch (error) {
-        if (isMounted()) {
-          reportClientError(error, {
-            component: 'UsePracticeSessionPageModel',
-            action: 'recoverEndedSessionSummary',
-          });
-        }
-        return false;
+  const recoverEndedSessionSummary = useCallback(
+    (input: { canCommit: () => boolean }): Promise<boolean> => {
+      if (reviewStage.summary || reviewStage.postExamSummary) {
+        return Promise.resolve(true);
+      }
+      let recovery = recoverEndedSessionSummaryPromiseRef.current;
+      if (!recovery) {
+        recovery = (async (): Promise<Awaited<
+          ReturnType<typeof getPracticeSessionSummary>
+        > | null> => {
+          try {
+            return await withTimeout(
+              getPracticeSessionSummary({ sessionId }),
+              BOOTSTRAP_SUMMARY_TIMEOUT_MS,
+            );
+          } catch (error) {
+            if (isMounted()) {
+              reportClientError(error, {
+                component: 'UsePracticeSessionPageModel',
+                action: 'recoverEndedSessionSummary',
+              });
+            }
+            return null;
+          }
+        })();
+        recoverEndedSessionSummaryPromiseRef.current = recovery;
+        void recovery.finally(() => {
+          if (recoverEndedSessionSummaryPromiseRef.current === recovery) {
+            recoverEndedSessionSummaryPromiseRef.current = null;
+          }
+        });
       }
 
-      if (!isMounted()) return false;
-      if (!result.ok) return false;
+      return recovery.then((result) => {
+        if (!isMounted() || !input.canCommit()) return false;
+        if (!result?.ok) return false;
 
-      setShouldRetryBootstrap(false);
-      applyBootstrapSummary(result.data);
-      return true;
-    })();
-
-    recoverEndedSessionSummaryPromiseRef.current = recovery;
-    void recovery.finally(() => {
-      if (recoverEndedSessionSummaryPromiseRef.current === recovery) {
-        recoverEndedSessionSummaryPromiseRef.current = null;
-      }
-    });
-    return recovery;
-  }, [
-    applyBootstrapSummary,
-    isMounted,
-    reviewStage.postExamSummary,
-    reviewStage.summary,
-    sessionId,
-  ]);
+        if (!input.canCommit()) return false;
+        setShouldRetryBootstrap(false);
+        applyBootstrapSummary(result.data);
+        return true;
+      });
+    },
+    [
+      applyBootstrapSummary,
+      isMounted,
+      reviewStage.postExamSummary,
+      reviewStage.summary,
+      sessionId,
+    ],
+  );
 
   useEffect(() => {
     recoverEndedSessionConflictRef.current = recoverEndedSessionSummary;

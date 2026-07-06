@@ -1250,6 +1250,7 @@ describe('FinalizeExamAnswersUseCase', () => {
           outcome: { kind: 'omitted' },
           isCorrect: false,
           timeSpentSeconds: 0,
+          answeredAt: new Date(DEADLINE_MS),
         },
       ]);
       expect(logger.warnCalls).toContainEqual({
@@ -1285,6 +1286,7 @@ describe('FinalizeExamAnswersUseCase', () => {
           questionId: 'q1',
           outcome: { kind: 'omitted' },
           isCorrect: false,
+          answeredAt: new Date(DEADLINE_MS),
         },
       ]);
     });
