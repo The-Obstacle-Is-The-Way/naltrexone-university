@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { useState } from 'react';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
@@ -14,9 +15,12 @@ import {
   createReviewRow,
 } from './practice-session-page-model.browser.fixtures';
 import {
+  BROWSER_CHOICE_1_ID,
   BROWSER_QUESTION_1_ID,
+  BROWSER_QUESTION_2_ID,
   BROWSER_SESSION_ID,
   errorResult,
+  getCompletedSessionQuestionsWithFeedbackMock,
   getNextQuestionMock,
   getPracticeSessionReviewMock,
   getPracticeSessionSummaryMock,
@@ -28,9 +32,19 @@ import {
 
 setupPracticeSessionPageModelBrowserSpec();
 
-function mockTutorSummary() {
+let usePracticeSessionPageModel: typeof import('./use-practice-session-page-model').usePracticeSessionPageModel;
+
+const BROWSER_SESSION_2_ID = crypto.randomUUID();
+
+beforeAll(async () => {
+  ({ usePracticeSessionPageModel } = await import(
+    './use-practice-session-page-model'
+  ));
+});
+
+function mockTutorSummary(sessionId = BROWSER_SESSION_ID) {
   return ok({
-    sessionId: BROWSER_SESSION_ID,
+    sessionId,
     endedAt: '2026-02-07T00:20:00.000Z',
     mode: 'tutor' as const,
     questionCount: 2,
@@ -43,10 +57,11 @@ function mockTutorSummary() {
   });
 }
 
-function mockTutorReview() {
+function mockTutorReview(sessionId = BROWSER_SESSION_ID) {
   getPracticeSessionReviewMock.mockResolvedValue(
     ok(
       createReviewResponse({
+        sessionId,
         mode: 'tutor',
         totalCount: 2,
         answeredCount: 1,
@@ -56,6 +71,42 @@ function mockTutorReview() {
         ],
       }),
     ),
+  );
+}
+
+function mockCompletedSessionQuestionsWithFeedback(
+  sessionId = BROWSER_SESSION_ID,
+) {
+  getCompletedSessionQuestionsWithFeedbackMock.mockResolvedValue(
+    ok({
+      sessionId,
+      mode: 'tutor',
+      totalCount: 2,
+      answeredCount: 1,
+      markedCount: 0,
+      rows: [
+        {
+          isAvailable: true,
+          questionId: BROWSER_QUESTION_1_ID,
+          slug: 'question-1',
+          stemMd: 'Question 1',
+          difficulty: 'easy',
+          order: 1,
+          isAnswered: true,
+          isCorrect: true,
+          isOmitted: false,
+          markedForReview: false,
+          choices: [
+            { id: BROWSER_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+          ],
+          selectedChoiceId: BROWSER_CHOICE_1_ID,
+          correctChoiceId: BROWSER_CHOICE_1_ID,
+          explanationMd: 'Because A is correct.',
+          referenceMd: null,
+          choiceExplanations: [],
+        },
+      ],
+    }),
   );
 }
 
@@ -82,6 +133,45 @@ function mockActiveTutorQuestionThenEndedConflict() {
       ),
     )
     .mockResolvedValue(alreadyEndedConflict());
+}
+
+function getActiveView(output: ReturnType<typeof usePracticeSessionPageModel>) {
+  if (output.summary) return 'summary';
+  if (output.question) return 'question';
+  return '';
+}
+
+function MutableSessionRecoveryProbe() {
+  const [sessionId, setSessionId] = useState(BROWSER_SESSION_ID);
+  const output = usePracticeSessionPageModel(sessionId);
+
+  return (
+    <>
+      <div data-testid="current-session-id">{sessionId}</div>
+      <div data-testid="active-view">{getActiveView(output)}</div>
+      <div data-testid="question-id">{output.question?.questionId ?? ''}</div>
+      <div data-testid="summary-session-id">
+        {output.summary?.sessionId ?? ''}
+      </div>
+      <button
+        type="button"
+        onClick={() => output.onSelectChoice(BROWSER_CHOICE_1_ID)}
+      >
+        select-choice-1
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          void output.onSubmit();
+        }}
+      >
+        submit-answer
+      </button>
+      <button type="button" onClick={() => setSessionId(BROWSER_SESSION_2_ID)}>
+        switch-session
+      </button>
+    </>
+  );
 }
 
 describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
@@ -221,5 +311,122 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
       .element(screen.getByTestId('active-view'))
       .toHaveTextContent('summary');
     expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not let stale ended-session recovery overwrite a newer question load', async () => {
+    const recoverySummary = createDeferred<ActionResult<unknown>>();
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockImplementation(() => recoverySummary.promise);
+    getNextQuestionMock
+      .mockResolvedValueOnce(
+        ok(
+          createQuestionResponse({
+            questionId: BROWSER_QUESTION_1_ID,
+            session: {
+              mode: 'tutor',
+              deadlineAt: null,
+              index: 0,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        ok(
+          createQuestionResponse({
+            questionId: BROWSER_QUESTION_2_ID,
+            session: {
+              mode: 'tutor',
+              deadlineAt: null,
+              index: 1,
+              total: 2,
+              isMarkedForReview: false,
+            },
+          }),
+        ),
+      );
+    submitAnswerMock.mockResolvedValue(alreadyEndedConflict());
+    mockTutorReview();
+
+    const screen = await render(<PracticeSessionPageModelNavigationProbe />);
+
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+
+    await screen.getByRole('button', { name: 'next-question' }).click();
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+
+    recoverySummary.resolve(mockTutorSummary());
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('question');
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent(BROWSER_QUESTION_2_ID);
+  });
+
+  it('does not let stale ended-session recovery overwrite a newer session summary', async () => {
+    const recoverySummary = createDeferred<ActionResult<unknown>>();
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockImplementationOnce(() => recoverySummary.promise)
+      .mockResolvedValueOnce(mockTutorSummary(BROWSER_SESSION_2_ID));
+    getNextQuestionMock.mockResolvedValueOnce(
+      ok(
+        createQuestionResponse({
+          questionId: BROWSER_QUESTION_1_ID,
+          session: {
+            mode: 'tutor',
+            deadlineAt: null,
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          },
+        }),
+      ),
+    );
+    submitAnswerMock.mockResolvedValue(alreadyEndedConflict());
+    mockTutorReview(BROWSER_SESSION_2_ID);
+    mockCompletedSessionQuestionsWithFeedback(BROWSER_SESSION_2_ID);
+
+    const screen = await render(<MutableSessionRecoveryProbe />);
+
+    await expect
+      .element(screen.getByTestId('question-id'))
+      .toHaveTextContent(BROWSER_QUESTION_1_ID);
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+
+    await screen.getByRole('button', { name: 'switch-session' }).click();
+    await expect
+      .element(screen.getByTestId('summary-session-id'))
+      .toHaveTextContent(BROWSER_SESSION_2_ID);
+
+    recoverySummary.resolve(mockTutorSummary(BROWSER_SESSION_ID));
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-session-id'))
+      .toHaveTextContent(BROWSER_SESSION_2_ID);
   });
 });

@@ -61,17 +61,20 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
       }
 
       firedDeadlineMsRef.current = deadlineMs;
-      void Promise.resolve(onExpireRef.current())
-        .then((handled) => {
+      void (async () => {
+        try {
+          const handled = await onExpireRef.current();
           if (handled === false && firedDeadlineMsRef.current === deadlineMs) {
             firedDeadlineMsRef.current = null;
           }
-        })
-        .catch(() => {
+        } catch {
+          // onExpire reports its own failures; clear the latch so the next tick
+          // can retry expiry finalization for the same deadline.
           if (firedDeadlineMsRef.current === deadlineMs) {
             firedDeadlineMsRef.current = null;
           }
-        });
+        }
+      })();
     }
 
     update();

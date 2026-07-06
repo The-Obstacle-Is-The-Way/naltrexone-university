@@ -215,6 +215,7 @@ export const startPracticeSession = createAction({
       idempotencyKey,
       outputSchema: StartPracticeSessionOutputSchema,
       beforeExecute: enforceStartRateLimit,
+      outcomeStoreFailurePolicy: 'cache-error-and-throw',
       execute: createNewSession,
     });
   },

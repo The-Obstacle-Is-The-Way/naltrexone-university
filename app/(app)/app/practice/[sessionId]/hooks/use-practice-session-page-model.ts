@@ -48,6 +48,13 @@ const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS =
   EXAM_FINAL_DRAFT_FLUSH_GRACE_MS;
 
+type EndedSessionSummaryRecovery = {
+  sessionId: string;
+  promise: Promise<Awaited<
+    ReturnType<typeof getPracticeSessionSummary>
+  > | null>;
+};
+
 type PracticeSessionPageModelOutput = Omit<
   PracticeSessionPageViewProps,
   'questionFeedback'
@@ -81,9 +88,10 @@ export function usePracticeSessionPageModel(
   >(null);
   const recoverEndedSessionConflictRef =
     useRef<EndedSessionConflictRecovery | null>(null);
-  const recoverEndedSessionSummaryPromiseRef = useRef<Promise<boolean> | null>(
-    null,
-  );
+  const recoverEndedSessionSummaryPromiseRef =
+    useRef<EndedSessionSummaryRecovery | null>(null);
+  const currentSessionIdRef = useRef(sessionId);
+  currentSessionIdRef.current = sessionId;
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
   const onExamServerExpiry = useCallback(
     async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
@@ -91,10 +99,18 @@ export function usePracticeSessionPageModel(
     },
     [],
   );
-  const recoverEndedSessionConflict =
-    useCallback(async (): Promise<boolean> => {
-      return (await recoverEndedSessionConflictRef.current?.()) ?? false;
-    }, []);
+  const recoverEndedSessionConflict = useCallback(
+    async (input: { canCommit: () => boolean }): Promise<boolean> => {
+      return (await recoverEndedSessionConflictRef.current?.(input)) ?? false;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (recoverEndedSessionSummaryPromiseRef.current?.sessionId !== sessionId) {
+      recoverEndedSessionSummaryPromiseRef.current = null;
+    }
+  }, [sessionId]);
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
@@ -333,53 +349,64 @@ export function usePracticeSessionPageModel(
     [applyBootstrapSummary, isMounted, sessionId],
   );
 
-  const recoverEndedSessionSummary = useCallback((): Promise<boolean> => {
-    if (reviewStage.summary || reviewStage.postExamSummary) {
-      return Promise.resolve(true);
-    }
-    if (recoverEndedSessionSummaryPromiseRef.current) {
-      return recoverEndedSessionSummaryPromiseRef.current;
-    }
-
-    const recovery = (async (): Promise<boolean> => {
-      let result: Awaited<ReturnType<typeof getPracticeSessionSummary>>;
-      try {
-        result = await withTimeout(
-          getPracticeSessionSummary({ sessionId }),
-          BOOTSTRAP_SUMMARY_TIMEOUT_MS,
-        );
-      } catch (error) {
-        if (isMounted()) {
-          reportClientError(error, {
-            component: 'UsePracticeSessionPageModel',
-            action: 'recoverEndedSessionSummary',
-          });
-        }
-        return false;
+  const recoverEndedSessionSummary = useCallback(
+    (input: { canCommit: () => boolean }): Promise<boolean> => {
+      if (reviewStage.summary || reviewStage.postExamSummary) {
+        return Promise.resolve(true);
+      }
+      let recovery = recoverEndedSessionSummaryPromiseRef.current;
+      if (recovery?.sessionId !== sessionId) {
+        recovery = null;
+      }
+      if (!recovery) {
+        const recoverySessionId = sessionId;
+        const promise = (async (): Promise<Awaited<
+          ReturnType<typeof getPracticeSessionSummary>
+        > | null> => {
+          try {
+            return await withTimeout(
+              getPracticeSessionSummary({ sessionId: recoverySessionId }),
+              BOOTSTRAP_SUMMARY_TIMEOUT_MS,
+            );
+          } catch (error) {
+            if (isMounted()) {
+              reportClientError(error, {
+                component: 'UsePracticeSessionPageModel',
+                action: 'recoverEndedSessionSummary',
+              });
+            }
+            return null;
+          }
+        })();
+        recovery = { sessionId: recoverySessionId, promise };
+        recoverEndedSessionSummaryPromiseRef.current = recovery;
+        const activeRecovery = recovery;
+        void promise.finally(() => {
+          if (recoverEndedSessionSummaryPromiseRef.current === activeRecovery) {
+            recoverEndedSessionSummaryPromiseRef.current = null;
+          }
+        });
       }
 
-      if (!isMounted()) return false;
-      if (!result.ok) return false;
+      const recoverySessionId = recovery.sessionId;
+      return recovery.promise.then((result) => {
+        if (currentSessionIdRef.current !== recoverySessionId) return false;
+        if (!isMounted() || !input.canCommit()) return false;
+        if (!result?.ok) return false;
 
-      setShouldRetryBootstrap(false);
-      applyBootstrapSummary(result.data);
-      return true;
-    })();
-
-    recoverEndedSessionSummaryPromiseRef.current = recovery;
-    void recovery.finally(() => {
-      if (recoverEndedSessionSummaryPromiseRef.current === recovery) {
-        recoverEndedSessionSummaryPromiseRef.current = null;
-      }
-    });
-    return recovery;
-  }, [
-    applyBootstrapSummary,
-    isMounted,
-    reviewStage.postExamSummary,
-    reviewStage.summary,
-    sessionId,
-  ]);
+        setShouldRetryBootstrap(false);
+        applyBootstrapSummary(result.data);
+        return true;
+      });
+    },
+    [
+      applyBootstrapSummary,
+      isMounted,
+      reviewStage.postExamSummary,
+      reviewStage.summary,
+      sessionId,
+    ],
+  );
 
   useEffect(() => {
     recoverEndedSessionConflictRef.current = recoverEndedSessionSummary;
