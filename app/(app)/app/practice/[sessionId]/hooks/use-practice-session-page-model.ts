@@ -22,7 +22,10 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/shared/error-message-helpers';
-import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
+import {
+  STANDARD_MUTATION_TIMEOUT_MS,
+  STANDARD_READ_TIMEOUT_MS,
+} from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
@@ -40,9 +43,12 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
-import { FINALIZE_FLUSH_DEADLINE_GRACE_MS } from '@/src/application/use-cases/finalize-exam-answers';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+// Client-side optimization only: avoid sending a draft flush that is already
+// older than one mutation round-trip. The server remains authoritative for the
+// exact finalize grace-window invariant.
+const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 type PracticeSessionPageModelOutput = Omit<
   PracticeSessionPageViewProps,
@@ -63,7 +69,7 @@ function isFinalDraftFlushProvablyStale(input: {
   const deadlineMs = Date.parse(input.deadlineAt);
   if (!Number.isFinite(deadlineMs)) return false;
 
-  return input.nowMs > deadlineMs + FINALIZE_FLUSH_DEADLINE_GRACE_MS;
+  return input.nowMs > deadlineMs + STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS;
 }
 
 export function usePracticeSessionPageModel(
