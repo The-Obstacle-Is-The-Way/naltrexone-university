@@ -12,7 +12,7 @@ import type {
   PracticeMode,
   QuestionDifficulty,
 } from '@/src/domain/value-objects';
-import { ApplicationError } from '../errors';
+import { ApplicationError, practiceSessionAlreadyEndedError } from '../errors';
 import type {
   AttemptMostRecentAnsweredAtReader,
   PracticeSessionRepository,
@@ -173,7 +173,7 @@ export class GetNextQuestionUseCase {
       throw new ApplicationError('NOT_FOUND', 'Practice session not found');
     }
     if (session.endedAt) {
-      throw new ApplicationError('CONFLICT', 'Practice session already ended');
+      throw practiceSessionAlreadyEndedError();
     }
     if (isExamExpired(session, this.now())) {
       if (!this.expiredExamFinalizer) {

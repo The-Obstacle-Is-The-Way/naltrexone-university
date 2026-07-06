@@ -1,5 +1,6 @@
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
+  type EndedSessionConflictRecovery,
   type ExamDraftAnswer,
   type NullQuestionRecovery,
   runLoadQuestionFlow,
@@ -62,6 +63,7 @@ export async function loadNextQuestion(input: {
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
   recoverNullQuestion?: NullQuestionRecovery | undefined;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -90,6 +92,7 @@ export async function loadNextQuestion(input: {
       input.setSessionInfo(question.session);
     },
     recoverNullQuestion: input.recoverNullQuestion,
+    recoverEndedSessionConflict: input.recoverEndedSessionConflict,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,
@@ -112,6 +115,7 @@ export function createLoadNextQuestionAction(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -137,6 +141,7 @@ export async function submitAnswerForQuestion(input: {
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -163,6 +168,7 @@ export async function submitAnswerForQuestion(input: {
     setLoadState: input.setLoadState,
     setSubmitResult: input.setSubmitResult,
     onSuccess: input.onSuccess,
+    recoverEndedSessionConflict: input.recoverEndedSessionConflict,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,
@@ -184,7 +190,7 @@ export async function endSession(input: {
   resetQuestionState: () => void;
   rotateIdempotencyKey?: (() => void) | undefined;
   isMounted?: (() => boolean) | undefined;
-}): Promise<void> {
+}): Promise<boolean> {
   const isMounted = input.isMounted ?? (() => true);
 
   input.setLoadState({ status: 'loading' });
@@ -202,7 +208,7 @@ export async function endSession(input: {
       END_SESSION_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!isMounted()) return;
+    if (!isMounted()) return false;
 
     reportClientError(error, {
       component: 'PracticeSessionPageLogic',
@@ -213,9 +219,9 @@ export async function endSession(input: {
       status: 'error',
       message: getThrownErrorMessage(error),
     });
-    return;
+    return false;
   }
-  if (!isMounted()) return;
+  if (!isMounted()) return false;
   if (!res.ok) {
     let recoveryErrorMessage: string | null = null;
 
@@ -227,17 +233,17 @@ export async function endSession(input: {
           }),
           END_SESSION_TIMEOUT_MS,
         );
-        if (!isMounted()) return;
+        if (!isMounted()) return false;
         if (summaryRes.ok) {
           input.setSummary(summaryRes.data);
           input.resetQuestionState();
           input.setLoadState({ status: 'ready' });
-          return;
+          return true;
         }
 
         recoveryErrorMessage = getActionResultErrorMessage(summaryRes);
       } catch (error) {
-        if (!isMounted()) return;
+        if (!isMounted()) return false;
         reportClientError(error, {
           component: 'PracticeSessionPageLogic',
           action: 'getPracticeSessionSummary',
@@ -251,12 +257,13 @@ export async function endSession(input: {
       status: 'error',
       message: recoveryErrorMessage ?? getActionResultErrorMessage(res),
     });
-    return;
+    return false;
   }
 
   input.setSummary(res.data);
   input.resetQuestionState();
   input.setLoadState({ status: 'ready' });
+  return true;
 }
 
 export function createNavigatorEffect(input: {

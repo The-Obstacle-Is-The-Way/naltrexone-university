@@ -11,7 +11,7 @@ export type ExamTimerState = {
 export type UseExamTimerInput = {
   deadlineAt: string | null;
   isExamActive: boolean;
-  onExpire: () => void;
+  onExpire: () => boolean | undefined | Promise<boolean | undefined>;
 };
 
 function computeRemainingSeconds(deadlineMs: number, nowMs: number): number {
@@ -61,7 +61,17 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
       }
 
       firedDeadlineMsRef.current = deadlineMs;
-      onExpireRef.current();
+      void Promise.resolve(onExpireRef.current())
+        .then((handled) => {
+          if (handled === false && firedDeadlineMsRef.current === deadlineMs) {
+            firedDeadlineMsRef.current = null;
+          }
+        })
+        .catch(() => {
+          if (firedDeadlineMsRef.current === deadlineMs) {
+            firedDeadlineMsRef.current = null;
+          }
+        });
     }
 
     update();

@@ -1,4 +1,5 @@
 export const MS_PER_SECOND = 1000;
 export const EXAM_SECONDS_PER_QUESTION = 72;
+export const EXAM_FINAL_DRAFT_FLUSH_GRACE_MS = 15 * MS_PER_SECOND;
 export const DAY_MS = 86_400_000;
 export const SECONDS_PER_DAY = DAY_MS / MS_PER_SECOND;

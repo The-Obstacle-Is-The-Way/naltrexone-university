@@ -31,6 +31,7 @@ export type RequestSequencingHooks = {
 };
 
 export type NullQuestionRecovery = () => Promise<boolean>;
+export type EndedSessionConflictRecovery = () => Promise<boolean>;
 
 export type ExamDraftAnswer = {
   questionId: string;
@@ -61,6 +62,28 @@ function assertRequestSequencingHooks(input: {
   throw new Error('Request sequencing hooks must be provided together');
 }
 
+type EndedSessionConflictRecoveryResult =
+  | 'handled'
+  | 'not-handled'
+  | 'stale-request';
+
+async function tryRecoverEndedSessionConflict(input: {
+  result: ActionResult<unknown>;
+  recoverEndedSessionConflict: EndedSessionConflictRecovery | undefined;
+  canCommit: () => boolean;
+}): Promise<EndedSessionConflictRecoveryResult> {
+  if (
+    !input.recoverEndedSessionConflict ||
+    !isPracticeSessionAlreadyEndedActionConflict(input.result)
+  ) {
+    return 'not-handled';
+  }
+
+  const handled = await input.recoverEndedSessionConflict();
+  if (!input.canCommit()) return 'stale-request';
+  return handled ? 'handled' : 'not-handled';
+}
+
 export function buildTimeSpentSeconds(
   questionLoadedAtMs: number | null,
   nowMs: number,
@@ -86,6 +109,7 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   setQuestion: (question: TQuestion | null) => void;
   onLoaded?: ((question: TQuestion | null) => void) | undefined;
   recoverNullQuestion?: NullQuestionRecovery | undefined;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -129,6 +153,13 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   if (!canCommit()) return;
 
   if (!res.ok) {
+    const recovery = await tryRecoverEndedSessionConflict({
+      result: res,
+      recoverEndedSessionConflict: input.recoverEndedSessionConflict,
+      canCommit,
+    });
+    if (recovery === 'stale-request' || recovery === 'handled') return;
+
     input.setLoadState({
       status: 'error',
       message: getActionResultErrorMessage(res),
@@ -177,12 +208,21 @@ export function isExamExpiryDraftSaveConflict(
   );
 }
 
-function getActionResultPracticeSessionConflictReason(
+export function getActionResultPracticeSessionConflictReason(
   result: ActionResult<unknown>,
 ): PracticeSessionConflictReason | undefined {
   if (result.ok) return undefined;
   const reason = result.error.details?.reason;
   return isPracticeSessionConflictReason(reason) ? reason : undefined;
+}
+
+export function isPracticeSessionAlreadyEndedActionConflict(
+  result: ActionResult<unknown>,
+): boolean {
+  return (
+    getActionResultPracticeSessionConflictReason(result) ===
+    PracticeSessionConflictReasons.AlreadyEnded
+  );
 }
 
 export async function maybeSaveDraftBeforeNavigation<
@@ -282,6 +322,7 @@ export async function runSubmitAnswerFlow<
     questionId?: string | null,
   ) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -328,6 +369,13 @@ export async function runSubmitAnswerFlow<
   if (!canCommit()) return;
 
   if (!res.ok) {
+    const recovery = await tryRecoverEndedSessionConflict({
+      result: res,
+      recoverEndedSessionConflict: input.recoverEndedSessionConflict,
+      canCommit,
+    });
+    if (recovery === 'stale-request' || recovery === 'handled') return;
+
     input.setLoadState({
       status: 'error',
       message: getActionResultErrorMessage(res),

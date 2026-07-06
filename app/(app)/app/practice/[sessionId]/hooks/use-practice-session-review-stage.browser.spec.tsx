@@ -196,6 +196,47 @@ describe('usePracticeSessionReviewStage (browser)', () => {
     );
   });
 
+  it('awaits tutor finalization from the finalize-review callback', async () => {
+    endPracticeSessionMock.mockResolvedValue(
+      ok({
+        sessionId: fixtureSession1Id,
+        endedAt: '2026-02-07T00:20:00.000Z',
+        mode: 'tutor',
+        questionCount: 10,
+        totals: {
+          answered: 10,
+          correct: 8,
+          accuracy: 0.8,
+          durationSeconds: 1200,
+        },
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok({
+        sessionId: fixtureSession1Id,
+        mode: 'tutor',
+        totalCount: 10,
+        answeredCount: 10,
+        markedCount: 0,
+        rows: [],
+      }),
+    );
+
+    const input = createInput('tutor');
+    const harness = await renderHook(() =>
+      usePracticeSessionReviewStage(input),
+    );
+
+    const finalized = await harness.result.current.onFinalizeReview();
+    expect(finalized).toBe(true);
+
+    await expect
+      .poll(() => harness.result.current.summary?.sessionId ?? null)
+      .toBe(fixtureSession1Id);
+    expect(endPracticeSessionMock).toHaveBeenCalledTimes(1);
+    expect(finalizeExamAnswersMock).not.toHaveBeenCalled();
+  });
+
   it('sets review load error when exam review loading throws', async () => {
     getPracticeSessionReviewMock.mockRejectedValue(
       new Error('Review load failed'),

@@ -14,7 +14,10 @@ import { usePracticeSessionReviewStage } from '@/app/(app)/app/practice/[session
 import { ExamTimer } from '@/app/(app)/app/practice/components/exam-timer';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { usePracticeQuestionFeedback } from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
-import type { ExamDraftAnswer } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import type {
+  EndedSessionConflictRecovery,
+  ExamDraftAnswer,
+} from '@/app/(app)/app/practice/shared/question-flow-actions';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -37,8 +40,13 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import { EXAM_FINAL_DRAFT_FLUSH_GRACE_MS } from '@/src/domain/services';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+// Client-side optimization only: avoid sending a draft flush that is already
+// outside the shared server grace window. The server remains authoritative.
+const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS =
+  EXAM_FINAL_DRAFT_FLUSH_GRACE_MS;
 
 type PracticeSessionPageModelOutput = Omit<
   PracticeSessionPageViewProps,
@@ -51,6 +59,17 @@ type PracticeSessionPageModelOutput = Omit<
   onSubmit: () => void;
 };
 
+function isFinalDraftFlushProvablyStale(input: {
+  deadlineAt: string | null | undefined;
+  nowMs: number;
+}): boolean {
+  if (typeof input.deadlineAt !== 'string') return false;
+  const deadlineMs = Date.parse(input.deadlineAt);
+  if (!Number.isFinite(deadlineMs)) return false;
+
+  return input.nowMs > deadlineMs + STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS;
+}
+
 export function usePracticeSessionPageModel(
   sessionId: string,
 ): PracticeSessionPageModelOutput {
@@ -60,6 +79,11 @@ export function usePracticeSessionPageModel(
   const onExamServerExpiryRef = useRef<
     ((finalDraftAnswer: ExamDraftAnswer | null) => Promise<void>) | null
   >(null);
+  const recoverEndedSessionConflictRef =
+    useRef<EndedSessionConflictRecovery | null>(null);
+  const recoverEndedSessionSummaryPromiseRef = useRef<Promise<boolean> | null>(
+    null,
+  );
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
   const onExamServerExpiry = useCallback(
     async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
@@ -67,6 +91,10 @@ export function usePracticeSessionPageModel(
     },
     [],
   );
+  const recoverEndedSessionConflict =
+    useCallback(async (): Promise<boolean> => {
+      return (await recoverEndedSessionConflictRef.current?.()) ?? false;
+    }, []);
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
@@ -76,6 +104,7 @@ export function usePracticeSessionPageModel(
     submitAnswerFn: submitAnswer,
     saveExamDraftAnswerFn: saveExamDraftAnswer,
     onExamServerExpiry,
+    recoverEndedSessionConflict,
   });
 
   const reviewStage = usePracticeSessionReviewStage({
@@ -184,16 +213,24 @@ export function usePracticeSessionPageModel(
     isMounted,
   });
 
-  const finalizeExpiredExam = useCallback(() => {
-    if (expiryFinalizeInFlightRef.current) return;
+  const finalizeExpiredExam = useCallback((): Promise<boolean> => {
+    if (expiryFinalizeInFlightRef.current) return Promise.resolve(true);
     expiryFinalizeInFlightRef.current = true;
 
-    void (async () => {
+    return (async () => {
       // BUG-254: capture the on-screen draft BEFORE the save attempt. At the
       // deadline the ordinary draft save is rejected as expired; rather than
       // leaving that doomed save's only effect as an error state, we forward the
       // captured selection to finalization so the server grades it.
-      const finalDraftAnswer = questionFlow.getCurrentExamDraft() ?? undefined;
+      const capturedFinalDraftAnswer = questionFlow.getCurrentExamDraft();
+      const finalDraftAnswer =
+        capturedFinalDraftAnswer &&
+        !isFinalDraftFlushProvablyStale({
+          deadlineAt: questionFlow.sessionInfo?.deadlineAt,
+          nowMs: Date.now(),
+        })
+          ? capturedFinalDraftAnswer
+          : undefined;
       try {
         await questionFlow.saveCurrentExamDraft();
       } catch (error) {
@@ -205,13 +242,30 @@ export function usePracticeSessionPageModel(
         }
       }
 
-      if (!isMounted()) return;
-      await reviewStage.finalizeExamSession(finalDraftAnswer);
+      if (!isMounted()) return false;
+      try {
+        const finalized =
+          await reviewStage.finalizeExamSession(finalDraftAnswer);
+        if (!finalized && isMounted()) {
+          expiryFinalizeInFlightRef.current = false;
+        }
+        return finalized;
+      } catch (error) {
+        if (isMounted()) {
+          expiryFinalizeInFlightRef.current = false;
+          reportClientError(error, {
+            component: 'UsePracticeSessionPageModel',
+            action: 'finalizeExpiredExam',
+          });
+        }
+        return false;
+      }
     })();
   }, [
     isMounted,
     questionFlow.getCurrentExamDraft,
     questionFlow.saveCurrentExamDraft,
+    questionFlow.sessionInfo?.deadlineAt,
     reviewStage.finalizeExamSession,
   ]);
 
@@ -278,6 +332,65 @@ export function usePracticeSessionPageModel(
     },
     [applyBootstrapSummary, isMounted, sessionId],
   );
+
+  const recoverEndedSessionSummary = useCallback((): Promise<boolean> => {
+    if (reviewStage.summary || reviewStage.postExamSummary) {
+      return Promise.resolve(true);
+    }
+    if (recoverEndedSessionSummaryPromiseRef.current) {
+      return recoverEndedSessionSummaryPromiseRef.current;
+    }
+
+    const recovery = (async (): Promise<boolean> => {
+      let result: Awaited<ReturnType<typeof getPracticeSessionSummary>>;
+      try {
+        result = await withTimeout(
+          getPracticeSessionSummary({ sessionId }),
+          BOOTSTRAP_SUMMARY_TIMEOUT_MS,
+        );
+      } catch (error) {
+        if (isMounted()) {
+          reportClientError(error, {
+            component: 'UsePracticeSessionPageModel',
+            action: 'recoverEndedSessionSummary',
+          });
+        }
+        return false;
+      }
+
+      if (!isMounted()) return false;
+      if (!result.ok) return false;
+
+      setShouldRetryBootstrap(false);
+      applyBootstrapSummary(result.data);
+      return true;
+    })();
+
+    recoverEndedSessionSummaryPromiseRef.current = recovery;
+    void recovery.finally(() => {
+      if (recoverEndedSessionSummaryPromiseRef.current === recovery) {
+        recoverEndedSessionSummaryPromiseRef.current = null;
+      }
+    });
+    return recovery;
+  }, [
+    applyBootstrapSummary,
+    isMounted,
+    reviewStage.postExamSummary,
+    reviewStage.summary,
+    sessionId,
+  ]);
+
+  useEffect(() => {
+    recoverEndedSessionConflictRef.current = recoverEndedSessionSummary;
+    return () => {
+      if (
+        recoverEndedSessionConflictRef.current === recoverEndedSessionSummary
+      ) {
+        recoverEndedSessionConflictRef.current = null;
+      }
+    };
+  }, [recoverEndedSessionSummary]);
 
   const bootstrapSessionSummary = useCallback(() => {
     const requestId = bootstrapRequestIdRef.current + 1;

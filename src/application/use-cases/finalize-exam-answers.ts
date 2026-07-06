@@ -1,4 +1,10 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  AttemptConflictMessages,
+  isApplicationError,
+  practiceSessionAlreadyEndedError,
+} from '@/src/application/errors';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   AttemptWriter,
   PracticeSessionRepository,
@@ -8,6 +14,7 @@ import { fetchSessionOwnedQuestionsById } from '@/src/application/shared/fetch-s
 import type { PracticeSession } from '@/src/domain/entities';
 import {
   computeExamDeadline,
+  EXAM_FINAL_DRAFT_FLUSH_GRACE_MS,
   gradeAnswer,
   MS_PER_SECOND,
 } from '@/src/domain/services';
@@ -35,7 +42,7 @@ import { SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS } from './save-exam-draft-answer';
  * (CodeRabbit PR #476 hardening: there is no server "active question" cursor in
  * free-navigation exam mode, so the tight window is the integrity bound).
  */
-export const FINALIZE_FLUSH_DEADLINE_GRACE_MS = 15_000;
+export const FINALIZE_FLUSH_DEADLINE_GRACE_MS = EXAM_FINAL_DRAFT_FLUSH_GRACE_MS;
 
 export type FinalizeExamFinalDraftAnswer = {
   questionId: string;
@@ -58,6 +65,18 @@ export type FinalizeExamAnswersWriteTransaction = <T>(
     sessions: PracticeSessionRepository;
   }) => Promise<T>,
 ) => Promise<T>;
+
+const noopFinalizeLogger: Pick<Logger, 'warn'> = {
+  warn: () => undefined,
+};
+
+function isAttemptAlreadyAnsweredConflict(error: unknown): boolean {
+  return (
+    isApplicationError(error) &&
+    error.code === 'CONFLICT' &&
+    error.message === AttemptConflictMessages.AlreadyAnsweredInSession
+  );
+}
 
 export function computeFinalExamEndedAt(input: {
   now: Date;
@@ -88,6 +107,7 @@ export class FinalizeExamAnswersUseCase {
     private readonly sessions: PracticeSessionRepository,
     private readonly writeTransaction: FinalizeExamAnswersWriteTransaction,
     private readonly now: () => Date = () => new Date(),
+    private readonly logger: Pick<Logger, 'warn'> = noopFinalizeLogger,
   ) {}
 
   async execute(
@@ -250,6 +270,9 @@ export class FinalizeExamAnswersUseCase {
         latestAnsweredAt,
       });
       return tx.sessions.end(input.sessionId, input.userId, effectiveEndedAt);
+    }).catch(async (error: unknown) => {
+      await this.throwAlreadyEndedForDoubleFinalizeLoser(input, error);
+      throw error;
     });
 
     const endedAt = endedSession.endedAt;
@@ -261,6 +284,21 @@ export class FinalizeExamAnswersUseCase {
     }
 
     return projectPracticeSessionSummary(endedSession, endedAt);
+  }
+
+  private async throwAlreadyEndedForDoubleFinalizeLoser(
+    input: FinalizeExamAnswersInput,
+    error: unknown,
+  ): Promise<void> {
+    if (!isAttemptAlreadyAnsweredConflict(error)) return;
+
+    const freshSession = await this.sessions.findByIdAndUserId(
+      input.sessionId,
+      input.userId,
+    );
+    if (!freshSession?.endedAt) return;
+
+    throw practiceSessionAlreadyEndedError({ cause: error });
   }
 
   private async applyFinalDraftAnswer(
@@ -284,6 +322,20 @@ export class FinalizeExamAnswersUseCase {
 
     const deadline = computeExamDeadline(session);
     const nowMs = now.getTime();
+    const isAfterGraceWindow =
+      deadline !== null &&
+      nowMs > deadline.getTime() + FINALIZE_FLUSH_DEADLINE_GRACE_MS;
+    if (isAfterGraceWindow) {
+      this.logger.warn(
+        {
+          sessionId: session.id,
+          questionId: finalDraftAnswer.questionId,
+        },
+        'Dropped stale final exam draft flush after grace window',
+      );
+      return session;
+    }
+
     const isWithinGraceWindow =
       deadline !== null &&
       nowMs >= deadline.getTime() &&

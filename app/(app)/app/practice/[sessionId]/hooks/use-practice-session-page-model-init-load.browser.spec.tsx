@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { PracticeSessionConflictMessages } from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 
@@ -422,7 +423,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       ),
     );
     endPracticeSessionMock.mockResolvedValue(
-      errorResult('CONFLICT', 'Practice session already ended'),
+      errorResult('CONFLICT', PracticeSessionConflictMessages.AlreadyEnded),
     );
 
     const screen = await render(<PracticeSessionPageModelSummaryProbe />);
