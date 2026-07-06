@@ -268,4 +268,85 @@ describe('withIdempotency outcome writes', () => {
       },
     });
   });
+
+  it('logs non-error indeterminate outcome cache failures', async () => {
+    class OutcomeWriteFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        return Promise.reject('store result failed literal');
+      }
+
+      override async storeError(): Promise<void> {
+        return Promise.reject('store error failed literal');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new OutcomeWriteFailingRepo(now);
+    const logger = new FakeLogger();
+    const execute = vi.fn(async () => ({ feedbackId: crypto.randomUUID() }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'question-feedback:submitQuestionReport',
+        key: '19191919-1919-1919-1919-191919191919',
+        now,
+        logger,
+        outcomeStoreFailurePolicy: 'cache-error-and-throw',
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message:
+        'Idempotency outcome could not be recorded after committed success',
+    });
+
+    expect(logger.errorCalls[0]).toMatchObject({
+      context: {
+        storeError: 'store error failed literal',
+        storeResultError: 'store result failed literal',
+      },
+    });
+  });
+
+  it('preserves the indeterminate error when indeterminate outcome logging fails', async () => {
+    class OutcomeWriteFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        throw new Error('store result failed');
+      }
+
+      override async storeError(): Promise<void> {
+        throw new Error('store error failed');
+      }
+    }
+
+    class ThrowingErrorLogger extends FakeLogger {
+      override error(): void {
+        throw new Error('logger failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new OutcomeWriteFailingRepo(now);
+    const logger = new ThrowingErrorLogger();
+    const execute = vi.fn(async () => ({ feedbackId: crypto.randomUUID() }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'question-feedback:submitQuestionReport',
+        key: '20202020-2020-2020-2020-202020202020',
+        now,
+        logger,
+        outcomeStoreFailurePolicy: 'cache-error-and-throw',
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message:
+        'Idempotency outcome could not be recorded after committed success',
+    });
+  });
 });
