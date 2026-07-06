@@ -37,6 +37,7 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import { FINALIZE_FLUSH_DEADLINE_GRACE_MS } from '@/src/application/use-cases/finalize-exam-answers';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 
@@ -50,6 +51,17 @@ type PracticeSessionPageModelOutput = Omit<
   canSubmit: boolean;
   onSubmit: () => void;
 };
+
+function isFinalDraftFlushProvablyStale(input: {
+  deadlineAt: string | null | undefined;
+  nowMs: number;
+}): boolean {
+  if (typeof input.deadlineAt !== 'string') return false;
+  const deadlineMs = Date.parse(input.deadlineAt);
+  if (!Number.isFinite(deadlineMs)) return false;
+
+  return input.nowMs > deadlineMs + FINALIZE_FLUSH_DEADLINE_GRACE_MS;
+}
 
 export function usePracticeSessionPageModel(
   sessionId: string,
@@ -184,16 +196,24 @@ export function usePracticeSessionPageModel(
     isMounted,
   });
 
-  const finalizeExpiredExam = useCallback(() => {
-    if (expiryFinalizeInFlightRef.current) return;
+  const finalizeExpiredExam = useCallback((): Promise<boolean> => {
+    if (expiryFinalizeInFlightRef.current) return Promise.resolve(true);
     expiryFinalizeInFlightRef.current = true;
 
-    void (async () => {
+    return (async () => {
       // BUG-254: capture the on-screen draft BEFORE the save attempt. At the
       // deadline the ordinary draft save is rejected as expired; rather than
       // leaving that doomed save's only effect as an error state, we forward the
       // captured selection to finalization so the server grades it.
-      const finalDraftAnswer = questionFlow.getCurrentExamDraft() ?? undefined;
+      const capturedFinalDraftAnswer = questionFlow.getCurrentExamDraft();
+      const finalDraftAnswer =
+        capturedFinalDraftAnswer &&
+        !isFinalDraftFlushProvablyStale({
+          deadlineAt: questionFlow.sessionInfo?.deadlineAt,
+          nowMs: Date.now(),
+        })
+          ? capturedFinalDraftAnswer
+          : undefined;
       try {
         await questionFlow.saveCurrentExamDraft();
       } catch (error) {
@@ -205,13 +225,30 @@ export function usePracticeSessionPageModel(
         }
       }
 
-      if (!isMounted()) return;
-      await reviewStage.finalizeExamSession(finalDraftAnswer);
+      if (!isMounted()) return false;
+      try {
+        const finalized =
+          await reviewStage.finalizeExamSession(finalDraftAnswer);
+        if (!finalized && isMounted()) {
+          expiryFinalizeInFlightRef.current = false;
+        }
+        return finalized;
+      } catch (error) {
+        if (isMounted()) {
+          expiryFinalizeInFlightRef.current = false;
+          reportClientError(error, {
+            component: 'UsePracticeSessionPageModel',
+            action: 'finalizeExpiredExam',
+          });
+        }
+        return false;
+      }
     })();
   }, [
     isMounted,
     questionFlow.getCurrentExamDraft,
     questionFlow.saveCurrentExamDraft,
+    questionFlow.sessionInfo?.deadlineAt,
     reviewStage.finalizeExamSession,
   ]);
 

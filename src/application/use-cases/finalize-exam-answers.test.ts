@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeAttemptRepository,
+  FakeLogger,
   FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -832,6 +833,7 @@ describe('FinalizeExamAnswersUseCase', () => {
     function createFlushUseCase(
       now: () => Date,
       question = createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+      logger?: FakeLogger,
     ) {
       const questions = new FakeQuestionRepository([question]);
       const attempts = new FakeAttemptRepository();
@@ -844,6 +846,7 @@ describe('FinalizeExamAnswersUseCase', () => {
         sessions,
         passthroughTransaction(questions, attempts, sessions),
         now,
+        logger,
       );
       return { questions, attempts, sessions, useCase };
     }
@@ -995,9 +998,12 @@ describe('FinalizeExamAnswersUseCase', () => {
       ).resolves.toEqual([]);
     });
 
-    it('rejects a flush arriving after the grace window (arbitrary-late answering)', async () => {
+    it('drops a flush arriving after the grace window and still finalizes', async () => {
+      const logger = new FakeLogger();
       const { attempts, useCase } = createFlushUseCase(
         () => new Date(DEADLINE_MS + FINALIZE_FLUSH_DEADLINE_GRACE_MS + 1),
+        createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+        logger,
       );
 
       await expect(
@@ -1010,16 +1016,26 @@ describe('FinalizeExamAnswersUseCase', () => {
             cumulativeMs: 10_000,
           },
         }),
-      ).rejects.toEqual(
-        new ApplicationError(
-          'CONFLICT',
-          'Final exam answer flush is only allowed at exam expiry',
-        ),
-      );
+      ).resolves.toMatchObject({ totals: { answered: 0, correct: 0 } });
 
       await expect(
         attempts.findBySessionId('session-1', 'user-1'),
-      ).resolves.toEqual([]);
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'omitted' },
+          isCorrect: false,
+          timeSpentSeconds: 0,
+        },
+      ]);
+      expect(logger.warnCalls).toContainEqual({
+        context: {
+          sessionId: 'session-1',
+          userId: 'user-1',
+          questionId: 'q1',
+        },
+        msg: 'Dropped stale final exam draft flush after grace window',
+      });
     });
 
     it('rejects a flush for a question that is not in the session', async () => {

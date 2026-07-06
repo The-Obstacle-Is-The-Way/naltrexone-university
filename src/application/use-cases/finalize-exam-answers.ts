@@ -1,4 +1,5 @@
 import { ApplicationError } from '@/src/application/errors';
+import type { Logger } from '@/src/application/ports/logger';
 import type {
   AttemptWriter,
   PracticeSessionRepository,
@@ -59,6 +60,10 @@ export type FinalizeExamAnswersWriteTransaction = <T>(
   }) => Promise<T>,
 ) => Promise<T>;
 
+const noopFinalizeLogger: Pick<Logger, 'warn'> = {
+  warn: () => undefined,
+};
+
 export function computeFinalExamEndedAt(input: {
   now: Date;
   deadline: Date | null;
@@ -88,6 +93,7 @@ export class FinalizeExamAnswersUseCase {
     private readonly sessions: PracticeSessionRepository,
     private readonly writeTransaction: FinalizeExamAnswersWriteTransaction,
     private readonly now: () => Date = () => new Date(),
+    private readonly logger: Pick<Logger, 'warn'> = noopFinalizeLogger,
   ) {}
 
   async execute(
@@ -284,6 +290,21 @@ export class FinalizeExamAnswersUseCase {
 
     const deadline = computeExamDeadline(session);
     const nowMs = now.getTime();
+    const isAfterGraceWindow =
+      deadline !== null &&
+      nowMs > deadline.getTime() + FINALIZE_FLUSH_DEADLINE_GRACE_MS;
+    if (isAfterGraceWindow) {
+      this.logger.warn(
+        {
+          sessionId: session.id,
+          userId: session.userId,
+          questionId: finalDraftAnswer.questionId,
+        },
+        'Dropped stale final exam draft flush after grace window',
+      );
+      return session;
+    }
+
     const isWithinGraceWindow =
       deadline !== null &&
       nowMs >= deadline.getTime() &&

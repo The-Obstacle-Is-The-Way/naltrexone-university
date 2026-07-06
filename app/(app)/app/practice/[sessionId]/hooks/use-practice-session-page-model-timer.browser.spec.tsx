@@ -162,6 +162,90 @@ describe('usePracticeSessionPageModel timer expiry', () => {
     expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
   });
 
+  it('omits a provably stale final draft flush when a backgrounded exam tab resumes after grace', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    mockActiveTimedExam('2026-05-22T12:00:01.000Z');
+    mockFinalizeSummary();
+    saveExamDraftAnswerMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Exam time has expired', {
+        reason: 'exam_time_expired',
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageModelReviewProbe />);
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('question');
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+
+    vi.setSystemTime(new Date('2026-05-22T12:00:20.000Z'));
+    window.dispatchEvent(new Event('focus'));
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-answered-count'))
+      .toHaveTextContent('0');
+    expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
+    expect(finalizeExamAnswersMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        finalDraftAnswer: expect.anything(),
+      }),
+    );
+  });
+
+  it('retries timer expiry finalization after a failed attempt with a null-selection draft', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    mockActiveTimedExam('2026-05-22T12:00:01.000Z');
+    finalizeExamAnswersMock
+      .mockResolvedValueOnce(errorResult('INTERNAL_ERROR', 'Finalize failed'))
+      .mockResolvedValueOnce(
+        ok({
+          sessionId: BROWSER_SESSION_ID,
+          endedAt: '2026-05-22T12:01:12.000Z',
+          mode: 'exam',
+          questionCount: 1,
+          totals: {
+            answered: 0,
+            correct: 0,
+            accuracy: 0,
+            durationSeconds: 72,
+          },
+        }),
+      );
+
+    const screen = await render(<PracticeSessionPageModelReviewProbe />);
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('question');
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('error');
+    expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(1);
+    expect(finalizeExamAnswersMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        finalDraftAnswer: expect.objectContaining({
+          questionId: BROWSER_QUESTION_1_ID,
+          selectedChoiceId: null,
+        }),
+      }),
+    );
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    expect(finalizeExamAnswersMock).toHaveBeenCalledTimes(2);
+  });
+
   it('manual Review & Submit after expiry proceeds to finalization after a rejected draft save', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));

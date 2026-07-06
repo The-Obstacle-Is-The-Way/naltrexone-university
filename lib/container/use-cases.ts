@@ -128,6 +128,7 @@ export function createUseCaseFactories(input: {
           }),
         ),
       primitives.now,
+      primitives.logger,
     );
 
   return {
