@@ -124,4 +124,65 @@ describe('withIdempotency outcome writes', () => {
     ).resolves.toEqual({ ok: true });
     expect(execute).toHaveBeenCalledTimes(1);
   });
+
+  it('preserves the stale-claim error when storeResult detects a fenced claim', async () => {
+    const staleClaimError = new ApplicationError(
+      'NOT_FOUND',
+      'Idempotency claim is no longer current',
+    );
+    class StaleClaimRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        throw staleClaimError;
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StaleClaimRepo(now);
+    const logger = new FakeLogger();
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'billing:createCheckoutSession',
+        key: '15151515-1515-1515-1515-151515151515',
+        now,
+        logger,
+        execute,
+      }),
+    ).rejects.toBe(staleClaimError);
+    expect(logger.errorCalls).toHaveLength(0);
+  });
+
+  it('logs non-error storeResult failures and returns the committed result', async () => {
+    class StoreResultFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        return Promise.reject('store result failed literal');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StoreResultFailingRepo(now);
+    const logger = new FakeLogger();
+    const execute = vi.fn(async () => ({ ok: true }));
+    const key = '16161616-1616-1616-1616-161616161616';
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'billing:createCheckoutSession',
+        key,
+        now,
+        logger,
+        execute,
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(logger.errorCalls[0]).toMatchObject({
+      context: {
+        storeResultError: 'store result failed literal',
+      },
+    });
+  });
 });
