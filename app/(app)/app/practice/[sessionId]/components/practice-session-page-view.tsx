@@ -77,7 +77,7 @@ export type PracticeSessionPageViewProps = {
   onNavigatePostExamReviewQuestion?: ((questionId: string) => void) | undefined;
   onReenterPostExamReview?: ((questionId?: string) => void) | undefined;
   onViewSummary?: (() => void) | undefined;
-  onFinalizeReview?: (() => Promise<void>) | undefined;
+  onFinalizeReview?: (() => Promise<boolean | void>) | undefined;
 };
 
 export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
