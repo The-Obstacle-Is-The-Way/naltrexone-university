@@ -1261,6 +1261,34 @@ describe('FinalizeExamAnswersUseCase', () => {
       });
     });
 
+    it('drops a late flush without requiring an injected logger', async () => {
+      const { attempts, useCase } = createFlushUseCase(
+        () => new Date(DEADLINE_MS + FINALIZE_FLUSH_DEADLINE_GRACE_MS + 1),
+      );
+
+      await expect(
+        useCase.execute({
+          userId: 'user-1',
+          sessionId: 'session-1',
+          finalDraftAnswer: {
+            questionId: 'q1',
+            selectedChoiceId: 'q1-correct',
+            cumulativeMs: 10_000,
+          },
+        }),
+      ).resolves.toMatchObject({ totals: { answered: 0, correct: 0 } });
+
+      await expect(
+        attempts.findBySessionId('session-1', 'user-1'),
+      ).resolves.toMatchObject([
+        {
+          questionId: 'q1',
+          outcome: { kind: 'omitted' },
+          isCorrect: false,
+        },
+      ]);
+    });
+
     it('rejects a flush for a question that is not in the session', async () => {
       const { attempts, useCase } = createFlushUseCase(
         () => new Date(DEADLINE_MS),
