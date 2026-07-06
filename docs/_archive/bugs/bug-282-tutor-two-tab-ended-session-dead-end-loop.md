@@ -1,6 +1,6 @@
 # BUG-282: Tutor Session Ended in Another Tab Leaves the Losing Tab in a Reason-less CONFLICT Dead-End Loop
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P3
 **Date:** 2026-07-05
 **Confirmed:** 2026-07-05
@@ -32,15 +32,15 @@ Actual: step 2 fails (`submit-answer` CONFLICT), step 3 fails (`get-next-questio
 
 Server — reason-less CONFLICTs:
 
-- [`submit-answer.ts`](../../src/application/use-cases/submit-answer.ts#L189-L191): `if (session && session.endedAt !== null) throw new ApplicationError('CONFLICT', 'Practice session already ended')` — no `details`.
-- [`get-next-question.ts`](../../src/application/use-cases/get-next-question.ts#L175-L177): same shape on session load.
+- [`submit-answer.ts`](../../../src/application/use-cases/submit-answer.ts#L189-L191): `if (session && session.endedAt !== null) throw new ApplicationError('CONFLICT', 'Practice session already ended')` — no `details`.
+- [`get-next-question.ts`](../../../src/application/use-cases/get-next-question.ts#L175-L177): same shape on session load.
 
 Both predate the DEBT-426 conflict-reason contract and were never annotated with `practiceSessionAlreadyEndedError()` (which exists in `src/application/errors` and carries `details.reason = AlreadyEnded`).
 
 Client — no recovery on these surfaces:
 
-- [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L330-L335>): `runSubmitAnswerFlow` funnels any failure into a generic error state; no CONFLICT branch.
-- [`question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L131-L142>): the question-load path likewise treats any non-ok result, including CONFLICT, as a generic load error. Contrast [`practice-session-page-logic.ts`](<../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts#L222-L247>) (end surface: CONFLICT → summary fetch → results) and the bootstrap summary path in `use-practice-session-page-model.ts`, which is why a reload works.
+- [`question-flow-actions.ts`](<../../../app/(app)/app/practice/shared/question-flow-actions.ts#L330-L335>): `runSubmitAnswerFlow` funnels any failure into a generic error state; no CONFLICT branch.
+- [`question-flow-actions.ts`](<../../../app/(app)/app/practice/shared/question-flow-actions.ts#L131-L142>): the question-load path likewise treats any non-ok result, including CONFLICT, as a generic load error. Contrast [`practice-session-page-logic.ts`](<../../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts#L222-L247>) (end surface: CONFLICT → summary fetch → results) and the bootstrap summary path in `use-practice-session-page-model.ts`, which is why a reload works.
 
 ## Impact
 
@@ -69,8 +69,21 @@ it('annotates the ended-session submit conflict with AlreadyEnded', async () => 
 
 Plus a browser-mode spec pinning that a submit CONFLICT with `AlreadyEnded` transitions the session view to the summary instead of `loadState: 'error'`.
 
+## Resolution
+
+Resolved by PR #563 (squash `a3be3330`) and promoted to production by PR #564 (merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`).
+
+The fix replaced the bare ended-session CONFLICTs on submit/load with `practiceSessionAlreadyEndedError()` and taught the tutor question-flow client to recover recognized `AlreadyEnded` conflicts by fetching and rendering the session summary. Reason-less conflicts still use the generic fail-safe error path.
+
+## Verification
+
+- Fix PR: #563, squash `a3be3330`.
+- Promotion PR: #564, merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`.
+- Production deploy: GitHub deployment `5331520979`, Vercel target `https://naltrexone-university-cosiyzvs9-john-h-jungs-projects.vercel.app`, succeeded 2026-07-06T15:13:34Z.
+- Health proof: `https://addictionboards.com/` and the Vercel deployment URL both returned HTTP/2 200 after the promo; Vercel runtime logs for the checked deployment window contained only the two successful HEAD requests and no errors.
+
 ## Related
 
 - DEBT-426 (archived) — the conflict-reason contract these paths predate.
-- [DEBT-438](../debt/debt-438-conflict-reason-client-coverage-gaps.md) — umbrella coverage debt (this bug is its highest-value concrete instance).
+- [DEBT-438](../../debt/debt-438-conflict-reason-client-coverage-gaps.md) — umbrella coverage debt (this bug is its highest-value concrete instance).
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review (five independent DDIA-lens reviewers; line-level verification against `e3853656`).

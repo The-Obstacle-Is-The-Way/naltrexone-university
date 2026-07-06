@@ -1,6 +1,6 @@
 # BUG-278: End/Discard Idempotency Caches Transient Errors Under a Never-Rotating Key, Bricking Session Abandonment for 24 Hours
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P2
 **Date:** 2026-07-05
 **Confirmed:** 2026-07-05
@@ -35,9 +35,9 @@ Actual: every attempt replays the cached error from the idempotency store withou
 
 Three facts compose:
 
-1. **No error-caching policy on end/discard.** [`practice-controller.ts`](../../src/adapters/controllers/practice-controller.ts#L261-L282) (`endPracticeSession`) and [`practice-controller.ts`](../../src/adapters/controllers/practice-controller.ts#L284-L320) (`discardPracticeSession`) call `executeIdempotent` without `shouldCacheError`. Contrast `finalizeExamAnswers` on the same file, which passes `shouldCachePracticeSessionStateWriteError`. In the wrapper, no policy means every execute error is cached ([`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L176-L193)). `startPracticeSession` is also idempotent and has a different start-session/rate-limit profile; this bug is scoped to the abandonment actions whose retry key is fixed to an existing incomplete session.
-2. **The abandon surface's key never rotates.** [`practice-page-incomplete-session.ts`](<../../app/(app)/app/practice/practice-page-incomplete-session.ts#L89>) passes `idempotencyKey: input.sessionId` — deterministic and stable across retries and reloads. Contrast the `[sessionId]` page's end flow, which rotates its key on failure ([`practice-session-page-logic.ts`](<../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts#L249>)).
-3. **A real transient error exists on this path.** [`drizzle-practice-session-repository.ts`](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L451-L461): `discard()` is a bare autocommit DELETE (parent row lock → cascade to child rows). An in-flight finalize ([`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L120-L253)) updates child state rows first and writes the parent row last via `end()`. Opposite lock order → AB-BA deadlock → Postgres kills one side with `40P01`. The finalize side retries (`RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES` includes `40P01` in [`lib/container/use-cases.ts`](../../lib/container/use-cases.ts)); the discard side has no retry and no mapping, so the raw failure propagates — and is then cached per fact 1.
+1. **No error-caching policy on end/discard.** [`practice-controller.ts`](../../../src/adapters/controllers/practice-controller.ts#L261-L282) (`endPracticeSession`) and [`practice-controller.ts`](../../../src/adapters/controllers/practice-controller.ts#L284-L320) (`discardPracticeSession`) call `executeIdempotent` without `shouldCacheError`. Contrast `finalizeExamAnswers` on the same file, which passes `shouldCachePracticeSessionStateWriteError`. In the wrapper, no policy means every execute error is cached ([`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L176-L193)). `startPracticeSession` is also idempotent and has a different start-session/rate-limit profile; this bug is scoped to the abandonment actions whose retry key is fixed to an existing incomplete session.
+2. **The abandon surface's key never rotates.** [`practice-page-incomplete-session.ts`](<../../../app/(app)/app/practice/practice-page-incomplete-session.ts#L89>) passes `idempotencyKey: input.sessionId` — deterministic and stable across retries and reloads. Contrast the `[sessionId]` page's end flow, which rotates its key on failure ([`practice-session-page-logic.ts`](<../../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts#L249>)).
+3. **A real transient error exists on this path.** [`drizzle-practice-session-repository.ts`](../../../src/adapters/repositories/drizzle-practice-session-repository.ts#L451-L461): `discard()` is a bare autocommit DELETE (parent row lock → cascade to child rows). An in-flight finalize ([`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L120-L253)) updates child state rows first and writes the parent row last via `end()`. Opposite lock order → AB-BA deadlock → Postgres kills one side with `40P01`. The finalize side retries (`RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES` includes `40P01` in [`lib/container/use-cases.ts`](../../../lib/container/use-cases.ts)); the discard side has no retry and no mapping, so the raw failure propagates — and is then cached per fact 1.
 
 Note the intended semantics: end/discard are natural idempotent operations whose *success* caching is fine, and whose only correct-to-cache errors are monotone facts (e.g. `CONFLICT 'Practice session already ended'`). Transient infrastructure errors are exactly what the DEBT-435/PR #556 `shouldCacheError` seam was built to exclude — these two actions just never adopted an appropriate policy.
 
@@ -68,6 +68,19 @@ it('re-executes end/discard after a transient failure instead of replaying a cac
   expect(calls).toBe(2);
 });
 ```
+
+## Resolution
+
+Resolved by PR #562 (squash `c9e91b4b`) and promoted to production by PR #564 (merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`).
+
+The fix added an end/discard-specific idempotency error policy that caches only monotone practice-session conflicts, keeps transient/internal failures uncached so the claim is aborted and retryable, makes `discard()` delete child state rows before the parent session row, and rotates the incomplete-session abandon idempotency key after failures.
+
+## Verification
+
+- Fix PR: #562, squash `c9e91b4b`.
+- Promotion PR: #564, merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`.
+- Production deploy: GitHub deployment `5331520979`, Vercel target `https://naltrexone-university-cosiyzvs9-john-h-jungs-projects.vercel.app`, succeeded 2026-07-06T15:13:34Z.
+- Health proof: `https://addictionboards.com/` and the Vercel deployment URL both returned HTTP/2 200 after the promo; Vercel runtime logs for the checked deployment window contained only the two successful HEAD requests and no errors.
 
 ## Related
 

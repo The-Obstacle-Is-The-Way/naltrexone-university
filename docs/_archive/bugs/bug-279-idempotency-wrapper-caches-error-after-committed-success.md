@@ -1,6 +1,6 @@
 # BUG-279: Idempotency Wrapper Conflates a Failed Outcome-Write With a Failed Execution, Caching an Error for a Request That Succeeded
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P2
 **Date:** 2026-07-05
 **Confirmed:** 2026-07-05
@@ -32,7 +32,7 @@ Actual: the retry replays `INTERNAL_ERROR` from the cache without executing anyt
 
 ## Root Cause
 
-[`with-idempotency.ts`](../../src/adapters/shared/with-idempotency.ts#L165-L215):
+[`with-idempotency.ts`](../../../src/adapters/shared/with-idempotency.ts#L165-L215):
 
 ```typescript
       try {
@@ -131,6 +131,19 @@ it('does not cache an error outcome when storeResult fails after execute succeed
   expect(record?.error).toBeUndefined();
 });
 ```
+
+## Resolution
+
+Resolved by PR #562 (squash `c9e91b4b`) and promoted to production by PR #564 (merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`).
+
+The fix separated the business-effect failure domain from the outcome-write failure domain. If `execute()` succeeds but `storeResult` fails, the wrapper logs the outcome-write failure and returns the successful result instead of storing an error for an already-committed effect. Execute failures still follow the existing `shouldCacheError`/abort-claim path.
+
+## Verification
+
+- Fix PR: #562, squash `c9e91b4b`.
+- Promotion PR: #564, merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`.
+- Production deploy: GitHub deployment `5331520979`, Vercel target `https://naltrexone-university-cosiyzvs9-john-h-jungs-projects.vercel.app`, succeeded 2026-07-06T15:13:34Z.
+- Health proof: `https://addictionboards.com/` and the Vercel deployment URL both returned HTTP/2 200 after the promo; Vercel runtime logs for the checked deployment window contained only the two successful HEAD requests and no errors.
 
 ## Related
 
