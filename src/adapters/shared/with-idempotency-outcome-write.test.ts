@@ -92,4 +92,36 @@ describe('withIdempotency outcome writes', () => {
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });
+
+  it('returns the committed result when both storeResult and outcome logging fail', async () => {
+    class StoreResultFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        throw new Error('store result failed');
+      }
+    }
+
+    class ThrowingErrorLogger extends FakeLogger {
+      override error(): void {
+        throw new Error('logger failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StoreResultFailingRepo(now);
+    const logger = new ThrowingErrorLogger();
+    const execute = vi.fn(async () => ({ ok: true }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'billing:createCheckoutSession',
+        key: '14141414-1414-1414-1414-141414141414',
+        now,
+        logger,
+        execute,
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
 });
