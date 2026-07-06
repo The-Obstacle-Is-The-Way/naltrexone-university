@@ -45,18 +45,18 @@ Actual: the arrow-key-selected choice is now the question's `selectedChoiceId`, 
 
 The choices are a genuine native radio group (correct accessible markup, not the bug):
 
-- [`choice-button.tsx`](<../../components/question/choice-button.tsx#L51>) renders `<input type="radio" name={name} value={label} checked={selected} onChange={() => onClick()} disabled={disabled} className="sr-only">` — `sr-only` only visually hides the input (clip/absolute-position), it remains focusable and keyboard-operable.
-- [`question-card.tsx`](<../../components/question/question-card.tsx#L31>) generates one shared `choiceGroupName` via `useId()` and passes it as `name` to every `ChoiceButton` in the `<fieldset>` (`question-card.tsx#L37-L63`), forming one true native radio group.
+- [`choice-button.tsx`](<../../components/question/choice-button.tsx#L51-L59>) renders `<input type="radio" name={name} value={label} checked={selected} onChange={() => onClick()} disabled={disabled} className="sr-only">` — `sr-only` only visually hides the input (clip/absolute-position), it remains focusable and keyboard-operable.
+- [`question-card.tsx`](<../../components/question/question-card.tsx#L31-L63>) generates one shared `choiceGroupName` via `useId()` and passes it as `name` to every `ChoiceButton` in the `<fieldset>`, forming one true native radio group.
 - [`question-card.tsx`](<../../components/question/question-card.tsx#L58>) sets `disabled={disabled || correctChoiceId !== null}` — once a `correctChoiceId` is known (i.e., the answer has been graded), every choice in the group becomes permanently disabled for that question. This is what "locks" the choice in Quick Practice/Tutor.
 
 The `onChange`/`onClick` callback is wired to an **unconditional selection** in all three modes, with grading conditionally attached:
 
-- [`use-practice-question-answer-flow.ts`](<../../app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts#L190-L200>) (Quick Practice, via `usePracticeQuestionFlow` → `usePracticeQuestionAnswerFlow`): `onSelectChoice` calls `selectChoice(choiceId)` then unconditionally `void commitChoice(choiceId)` — no mode check at all.
-- [`use-practice-session-question-flow.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L470-L481>) (full session, Tutor + Exam modes): `onSelectChoice` calls `selectChoice(choiceId)` **unconditionally at line 474**, and only *afterward*, at line 476, checks `if (question?.session?.mode === 'exam') return;` before reaching `void commitChoice(choiceId)` at line 478. **The mode check guards only the grading call, not the selection itself.**
+- [`use-practice-question-answer-flow.ts`](<../../app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts#L190-L198>) (Quick Practice, via `usePracticeQuestionFlow` → `usePracticeQuestionAnswerFlow`): `onSelectChoice` calls `selectChoice(choiceId)` then unconditionally `void commitChoice(choiceId)` — no mode check at all.
+- [`use-practice-session-question-flow.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L471-L480>) (full session, Tutor + Exam modes): `onSelectChoice` calls `selectChoice(choiceId)` **unconditionally at line 475**, and only *afterward*, at line 477, checks `if (question?.session?.mode === 'exam') return;` before reaching `void commitChoice(choiceId)` at line 479. **The mode check guards only the grading call, not the selection itself.**
 
-For Quick Practice/Tutor, once `commitChoice` resolves, the server-graded `correctChoiceId` flows back into `QuestionCard` (e.g. `practice-view.tsx#L311-L313` derives it from `props.submitResult?.correctChoiceId` outside exam mode), which disables the whole group per the line cited above — so the accidental selection cannot be corrected by arrowing again.
+For Quick Practice/Tutor, once `commitChoice` resolves, the server-graded `correctChoiceId` flows back into `QuestionCard` (e.g. [`practice-view.tsx#L310-L313`](<../../app/(app)/app/practice/components/practice-view.tsx#L310-L313>) derives it from `props.submitResult?.correctChoiceId` outside exam mode), which disables the whole group per the line cited above — so the accidental selection cannot be corrected by arrowing again.
 
-For Exam mode, the arrow-key-updated `selectedChoiceId` is not immediately graded, but it is not discarded either: it is exactly the value the session's existing autosave-on-navigation mechanism (`saveCurrentExamDraft`/`maybeSaveDraftBeforeNavigation` in [`app/(app)/app/practice/shared/question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L160-L228>)) persists as the question's draft answer when the user moves to another question, and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L189) grades directly from `state.draftSelectedChoiceId` at session end — so there is no code-level distinction between "the user deliberately clicked this choice" and "an arrow key happened to land here last." A separate `allowExamCommit`/`isReviewQuestionActive` mechanism ([`use-practice-session-page-model.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L352-L356>)) exists for the distinct flow of explicitly reopening one specific question from the exam's pre-finalize review screen, but it does not gate or protect the primary scenario described here (arrow-key browsing during normal forward navigation through the exam).
+For Exam mode, the arrow-key-updated `selectedChoiceId` is not immediately graded, but it is not discarded either: it is exactly the value the session's existing autosave-on-navigation mechanism (`saveCurrentExamDraft`/`maybeSaveDraftBeforeNavigation` in [`app/(app)/app/practice/shared/question-flow-actions.ts`](<../../app/(app)/app/practice/shared/question-flow-actions.ts#L188-L243>)) persists as the question's draft answer when the user moves to another question, and [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L186-L193) grades directly from `state.draftSelectedChoiceId` at session end — so there is no code-level distinction between "the user deliberately clicked this choice" and "an arrow key happened to land here last." A separate `allowExamCommit`/`isReviewQuestionActive` mechanism ([`use-practice-session-page-model.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L352-L356>)) exists for the distinct flow of explicitly reopening one specific question from the exam's pre-finalize review screen, but it does not gate or protect the primary scenario described here (arrow-key browsing during normal forward navigation through the exam).
 
 ## Impact
 
@@ -80,12 +80,12 @@ Rejected alternatives:
 
 ## Failing Test Sketch
 
-The existing hook-level probe test (`use-practice-question-answer-flow.browser.spec.tsx`) renders only plain `<button>` elements calling `onSelectChoice` directly — it contains no real `<input type="radio">` and cannot exercise this defect. A regression test needs real sibling radio markup, e.g. extending `practice-view.browser.spec.tsx`'s existing multi-radio harness:
+The existing hook-level probe tests (`use-practice-question-answer-flow.browser.spec.tsx` and `use-practice-session-question-flow-click-commit.browser.spec.tsx`) call `onSelectChoice` directly from buttons or hook handles — they contain no real sibling `<input type="radio">` interaction and cannot exercise this defect. The existing `practice-view.browser.spec.tsx` does render real radios, but `PracticeView` itself only receives an `onSelectChoice` callback; it cannot observe whether that callback immediately becomes a server submit unless the test harness wires it that way. A regression test needs real sibling radio markup wired to the relevant flow-level commit/draft behavior, e.g.:
 
 ```tsx
 it('does not submit an answer when arrow-key navigation changes the focused choice', async () => {
   const submitAnswerFn = vi.fn();
-  const screen = await renderPracticeView({ submitAnswerFn }); // existing harness, real radios
+  const screen = await render(<QuickPracticeRadioFlowProbe submitAnswerFn={submitAnswerFn} />);
 
   const firstRadio = screen.getByRole('radio', { name: /choice a/i });
   await firstRadio.element().focus();
@@ -96,7 +96,7 @@ it('does not submit an answer when arrow-key navigation changes the focused choi
 });
 ```
 
-Today this fails (or would fail if written) because `onChange` unconditionally calls `commitChoice` (Quick Practice/Tutor) or updates `selectedChoiceId` en route to being persisted as the exam draft (Exam mode), the instant arrow-key navigation lands on and checks a sibling radio.
+Today this fails (or would fail if written) because `onChange` unconditionally calls `commitChoice` (Quick Practice/Tutor) or updates `selectedChoiceId` en route to being persisted as the exam draft (Exam mode), the instant arrow-key navigation lands on and checks a sibling radio. A companion Exam-mode test should use the same real-radio setup and assert that arrow-key browsing alone does not change the value later sent to `saveExamDraftAnswerFn`.
 
 ## Related
 

@@ -48,7 +48,7 @@ Rejected alternatives:
 
 ## Failing Test Sketch
 
-Place this in a `.browser.spec.tsx` file using this repo's `vitest-browser-react` hook pattern (`await renderHook(...)`, `await harness.rerender(...)`, and `expect.poll(...)` for effect-driven calls), not a synchronous Testing Library-style `renderHook`.
+Place this in a `.browser.spec.tsx` file using this repo's `vitest-browser-react` hook pattern (`await renderHook(...)`, `await harness.rerender(...)`, and `expect.poll(...)` for effect-driven calls), not a synchronous Testing Library-style `renderHook`. The current colocated `use-quick-practice-status-counts.test.ts` covers only the pure effect helper; this regression needs the hook boundary because the bug is the missing dependency/signal on the hook's `useEffect`.
 
 ```tsx
 import { expect, it, vi } from 'vitest';
