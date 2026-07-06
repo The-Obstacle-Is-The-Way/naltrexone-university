@@ -1,6 +1,6 @@
 import { delay } from '@/src/adapters/shared/delay';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
-import type { Logger } from '@/src/application/ports/logger';
+import type { Logger, LoggerContext } from '@/src/application/ports/logger';
 import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
   type IdempotencyKeyError,
@@ -44,6 +44,18 @@ function toErrorRecord(error: unknown): IdempotencyKeyError {
   return { code: 'INTERNAL_ERROR', message: toErrorMessage(error) };
 }
 
+function safeLogError(
+  logger: Logger,
+  context: LoggerContext,
+  msg: string,
+): void {
+  try {
+    logger.error(context, msg);
+  } catch {
+    // Preserve the primary outcome even if logging fails.
+  }
+}
+
 function shouldCacheExecutionError(
   shouldCacheError: ((error: unknown) => boolean) | undefined,
   error: unknown,
@@ -78,26 +90,21 @@ async function abortClaimPreservingOriginalError(
       claimedAt,
     );
   } catch (abortError) {
-    try {
-      input.logger.error(
-        {
-          userId: input.userId,
-          action: input.action,
-          key: input.key,
-          abortError:
-            abortError instanceof Error
-              ? abortError.message
-              : String(abortError),
-          originalError:
-            originalError instanceof Error
-              ? originalError.message
-              : String(originalError),
-        },
-        message,
-      );
-    } catch {
-      // Preserve the original error even if logging fails.
-    }
+    safeLogError(
+      input.logger,
+      {
+        userId: input.userId,
+        action: input.action,
+        key: input.key,
+        abortError:
+          abortError instanceof Error ? abortError.message : String(abortError),
+        originalError:
+          originalError instanceof Error
+            ? originalError.message
+            : String(originalError),
+      },
+      message,
+    );
   }
 }
 
@@ -190,24 +197,21 @@ export async function withIdempotency<T>(input: {
             error: toErrorRecord(error),
           });
         } catch (storeError) {
-          try {
-            input.logger.error(
-              {
-                userId: input.userId,
-                action: input.action,
-                key: input.key,
-                storeError:
-                  storeError instanceof Error
-                    ? storeError.message
-                    : String(storeError),
-                originalError:
-                  error instanceof Error ? error.message : String(error),
-              },
-              'Failed to persist idempotency error record',
-            );
-          } catch {
-            // Preserve original execute error even if logger.error throws.
-          }
+          safeLogError(
+            input.logger,
+            {
+              userId: input.userId,
+              action: input.action,
+              key: input.key,
+              storeError:
+                storeError instanceof Error
+                  ? storeError.message
+                  : String(storeError),
+              originalError:
+                error instanceof Error ? error.message : String(error),
+            },
+            'Failed to persist idempotency error record',
+          );
         }
         throw error;
       }
@@ -244,47 +248,42 @@ export async function withIdempotency<T>(input: {
               claimedAt,
               error: toErrorRecord(outcomeError),
             });
+            safeLogError(
+              input.logger,
+              {
+                userId: input.userId,
+                action: input.action,
+                key: input.key,
+                storeResultError: toErrorMessage(storeResultError),
+              },
+              'Idempotency outcome write failed after committed success; cached indeterminate error',
+            );
           } catch (storeError) {
-            try {
-              input.logger.error(
-                {
-                  userId: input.userId,
-                  action: input.action,
-                  key: input.key,
-                  storeError:
-                    storeError instanceof Error
-                      ? storeError.message
-                      : String(storeError),
-                  storeResultError:
-                    storeResultError instanceof Error
-                      ? storeResultError.message
-                      : String(storeResultError),
-                },
-                'Failed to persist indeterminate idempotency outcome',
-              );
-            } catch {
-              // Preserve the indeterminate outcome error even if logging fails.
-            }
+            safeLogError(
+              input.logger,
+              {
+                userId: input.userId,
+                action: input.action,
+                key: input.key,
+                storeError: toErrorMessage(storeError),
+                storeResultError: toErrorMessage(storeResultError),
+              },
+              'Failed to persist indeterminate idempotency outcome',
+            );
           }
           throw outcomeError;
         }
 
-        try {
-          input.logger.error(
-            {
-              userId: input.userId,
-              action: input.action,
-              key: input.key,
-              storeResultError:
-                storeResultError instanceof Error
-                  ? storeResultError.message
-                  : String(storeResultError),
-            },
-            'Idempotency outcome write failed after committed success',
-          );
-        } catch {
-          // Preserve the committed business result even if logging fails.
-        }
+        safeLogError(
+          input.logger,
+          {
+            userId: input.userId,
+            action: input.action,
+            key: input.key,
+            storeResultError: toErrorMessage(storeResultError),
+          },
+          'Idempotency outcome write failed after committed success',
+        );
       }
 
       return result;

@@ -48,6 +48,13 @@ const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS =
   EXAM_FINAL_DRAFT_FLUSH_GRACE_MS;
 
+type EndedSessionSummaryRecovery = {
+  sessionId: string;
+  promise: Promise<Awaited<
+    ReturnType<typeof getPracticeSessionSummary>
+  > | null>;
+};
+
 type PracticeSessionPageModelOutput = Omit<
   PracticeSessionPageViewProps,
   'questionFeedback'
@@ -81,9 +88,10 @@ export function usePracticeSessionPageModel(
   >(null);
   const recoverEndedSessionConflictRef =
     useRef<EndedSessionConflictRecovery | null>(null);
-  const recoverEndedSessionSummaryPromiseRef = useRef<Promise<Awaited<
-    ReturnType<typeof getPracticeSessionSummary>
-  > | null> | null>(null);
+  const recoverEndedSessionSummaryPromiseRef =
+    useRef<EndedSessionSummaryRecovery | null>(null);
+  const currentSessionIdRef = useRef(sessionId);
+  currentSessionIdRef.current = sessionId;
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
   const onExamServerExpiry = useCallback(
     async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
@@ -97,6 +105,12 @@ export function usePracticeSessionPageModel(
     },
     [],
   );
+
+  useEffect(() => {
+    if (recoverEndedSessionSummaryPromiseRef.current?.sessionId !== sessionId) {
+      recoverEndedSessionSummaryPromiseRef.current = null;
+    }
+  }, [sessionId]);
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
@@ -341,13 +355,17 @@ export function usePracticeSessionPageModel(
         return Promise.resolve(true);
       }
       let recovery = recoverEndedSessionSummaryPromiseRef.current;
+      if (recovery?.sessionId !== sessionId) {
+        recovery = null;
+      }
       if (!recovery) {
-        recovery = (async (): Promise<Awaited<
+        const recoverySessionId = sessionId;
+        const promise = (async (): Promise<Awaited<
           ReturnType<typeof getPracticeSessionSummary>
         > | null> => {
           try {
             return await withTimeout(
-              getPracticeSessionSummary({ sessionId }),
+              getPracticeSessionSummary({ sessionId: recoverySessionId }),
               BOOTSTRAP_SUMMARY_TIMEOUT_MS,
             );
           } catch (error) {
@@ -360,15 +378,19 @@ export function usePracticeSessionPageModel(
             return null;
           }
         })();
+        recovery = { sessionId: recoverySessionId, promise };
         recoverEndedSessionSummaryPromiseRef.current = recovery;
-        void recovery.finally(() => {
-          if (recoverEndedSessionSummaryPromiseRef.current === recovery) {
+        const activeRecovery = recovery;
+        void promise.finally(() => {
+          if (recoverEndedSessionSummaryPromiseRef.current === activeRecovery) {
             recoverEndedSessionSummaryPromiseRef.current = null;
           }
         });
       }
 
-      return recovery.then((result) => {
+      const recoverySessionId = recovery.sessionId;
+      return recovery.promise.then((result) => {
+        if (currentSessionIdRef.current !== recoverySessionId) return false;
         if (!isMounted() || !input.canCommit()) return false;
         if (!result?.ok) return false;
 

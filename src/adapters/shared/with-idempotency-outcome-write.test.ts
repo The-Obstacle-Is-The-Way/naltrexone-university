@@ -222,6 +222,48 @@ describe('withIdempotency outcome writes', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
+  it('logs when it caches an indeterminate error after storeResult fails', async () => {
+    class StoreResultFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        throw new Error('store result failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StoreResultFailingRepo(now);
+    const logger = new FakeLogger();
+    const execute = vi.fn(async () => ({ feedbackId: crypto.randomUUID() }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'question-feedback:submitQuestionReport',
+        key: '21212121-2121-2121-2121-212121212121',
+        now,
+        logger,
+        outcomeStoreFailurePolicy: 'cache-error-and-throw',
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message:
+        'Idempotency outcome could not be recorded after committed success',
+    });
+
+    expect(logger.errorCalls).toEqual([
+      {
+        msg: 'Idempotency outcome write failed after committed success; cached indeterminate error',
+        context: {
+          action: 'question-feedback:submitQuestionReport',
+          key: '21212121-2121-2121-2121-212121212121',
+          storeResultError: 'store result failed',
+          userId: appUserId,
+        },
+      },
+    ]);
+  });
+
   it('throws the indeterminate error and logs when caching it also fails', async () => {
     class OutcomeWriteFailingRepo extends FakeIdempotencyKeyRepository {
       override async storeResult(): Promise<void> {
