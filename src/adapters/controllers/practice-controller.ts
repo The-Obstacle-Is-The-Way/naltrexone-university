@@ -67,7 +67,10 @@ import {
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
-import { shouldCachePracticeSessionStateWriteError } from './shared/practice-session-idempotency-policy';
+import {
+  shouldCachePracticeSessionLifecycleError,
+  shouldCachePracticeSessionStateWriteError,
+} from './shared/practice-session-idempotency-policy';
 
 export type {
   CountAvailableQuestionsOutput,
@@ -272,6 +275,7 @@ export const endPracticeSession = createAction({
       action: 'practice:endPracticeSession',
       idempotencyKey,
       outputSchema: EndPracticeSessionOutputSchema,
+      shouldCacheError: shouldCachePracticeSessionLifecycleError,
       execute: () =>
         d.endPracticeSessionUseCase.execute({
           userId,
@@ -309,6 +313,7 @@ export const discardPracticeSession = createAction({
       idempotencyKey,
       outputSchema: DiscardPracticeSessionOutputSchema,
       beforeExecute: enforceSessionMutationRateLimit,
+      shouldCacheError: shouldCachePracticeSessionLifecycleError,
       execute: () =>
         d.discardPracticeSessionUseCase.execute({
           userId,

@@ -35,6 +35,9 @@ export function usePracticeIncompleteSession(
   >(null);
   const [incompleteSession, setIncompleteSession] =
     useState<IncompletePracticeSession | null>(null);
+  const [abandonIdempotencyKey, setAbandonIdempotencyKey] = useState(() =>
+    crypto.randomUUID(),
+  );
 
   useEffect(() => {
     return createIncompleteSessionEffect({
@@ -50,6 +53,8 @@ export function usePracticeIncompleteSession(
 
     await abandonIncompleteSession({
       sessionId: incompleteSession.sessionId,
+      idempotencyKey: abandonIdempotencyKey,
+      rotateIdempotencyKey: () => setAbandonIdempotencyKey(crypto.randomUUID()),
       mode: incompleteSession.mode,
       endPracticeSessionFn: endPracticeSession,
       discardPracticeSessionFn: discardPracticeSession,
@@ -58,7 +63,7 @@ export function usePracticeIncompleteSession(
       setIncompleteSession,
       isMounted: input.isMounted,
     });
-  }, [incompleteSession, input.isMounted]);
+  }, [abandonIdempotencyKey, incompleteSession, input.isMounted]);
 
   return {
     incompleteSessionStatus,

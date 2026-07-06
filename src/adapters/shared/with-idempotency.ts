@@ -162,16 +162,9 @@ export async function withIdempotency<T>(input: {
         }
       }
 
+      let result: T;
       try {
-        const result = await input.execute();
-        await input.repo.storeResult({
-          userId: input.userId,
-          action: input.action,
-          key: input.key,
-          claimedAt,
-          resultJson: result,
-        });
-        return result;
+        result = await input.execute();
       } catch (error) {
         if (!shouldCacheExecutionError(input.shouldCacheError, error)) {
           await abortClaimPreservingOriginalError(
@@ -213,6 +206,42 @@ export async function withIdempotency<T>(input: {
         }
         throw error;
       }
+
+      try {
+        await input.repo.storeResult({
+          userId: input.userId,
+          action: input.action,
+          key: input.key,
+          claimedAt,
+          resultJson: result,
+        });
+      } catch (storeResultError) {
+        if (
+          isApplicationError(storeResultError) &&
+          storeResultError.code === 'NOT_FOUND'
+        ) {
+          throw storeResultError;
+        }
+
+        try {
+          input.logger.error(
+            {
+              userId: input.userId,
+              action: input.action,
+              key: input.key,
+              storeResultError:
+                storeResultError instanceof Error
+                  ? storeResultError.message
+                  : String(storeResultError),
+            },
+            'Idempotency outcome write failed after committed success',
+          );
+        } catch {
+          // Preserve the committed business result even if logging fails.
+        }
+      }
+
+      return result;
     }
 
     let shouldRestartClaim = false;
