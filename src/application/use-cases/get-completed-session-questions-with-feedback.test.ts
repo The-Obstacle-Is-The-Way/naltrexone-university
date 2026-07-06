@@ -219,6 +219,51 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
     });
   });
 
+  it('throws INTERNAL_ERROR when normalized question state is missing', async () => {
+    const userId = 'user-1';
+    const sessionId = 'session-1';
+    const session = createPracticeSession({
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      endedAt: new Date('2026-03-19T12:00:00Z'),
+      questionIds: ['q1', 'q2'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+        },
+      ],
+    });
+
+    const useCase = new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([
+        createQuestion({
+          id: 'q1',
+          slug: 'q-1',
+          stemMd: 'Stem for q1',
+          difficulty: 'easy',
+        }),
+        createQuestion({
+          id: 'q2',
+          slug: 'q-2',
+          stemMd: 'Stem for q2',
+          difficulty: 'easy',
+        }),
+      ]),
+      new FakeAttemptRepository([]),
+      new FakeLogger(),
+    );
+
+    await expect(useCase.execute({ userId, sessionId })).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
+  });
+
   it('returns omitted attempts as incorrect feedback rows without a selected choice', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';

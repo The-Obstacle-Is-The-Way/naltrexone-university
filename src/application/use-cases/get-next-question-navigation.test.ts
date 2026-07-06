@@ -112,6 +112,26 @@ describe('GetNextQuestionUseCase', () => {
     });
   });
 
+  it('throws INTERNAL_ERROR when normalized question state is missing', async () => {
+    const q1 = createSingleChoiceQuestion('q1', 'c1');
+    const q2 = createSingleChoiceQuestion('q2', 'c2');
+    const session = createPracticeSession({
+      questionIds: ['q1', 'q2'],
+      questionStates: [createQuestionState('q1')],
+    });
+
+    const { getNextQuestion, sessionRepo } = createTestDeps({
+      questions: [q1, q2],
+    });
+    sessionRepo.findByIdAndUserId = async () => session;
+
+    await expect(
+      getNextQuestion.execute({ userId: USER_ID, sessionId: SESSION_ID }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
+  });
+
   it('wraps to earlier unanswered questions when no unanswered remain after fromIndex', async () => {
     const q1 = createSingleChoiceQuestion('q1', 'c1');
     const q2 = createSingleChoiceQuestion('q2', 'c2');

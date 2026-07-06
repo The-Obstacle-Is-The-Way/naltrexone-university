@@ -106,6 +106,22 @@ function getSqlQueryChunks(value: unknown): unknown[] {
   return checkValue.queryChunks;
 }
 
+function collectSqlChunkText(chunks: readonly unknown[]): string {
+  return chunks
+    .flatMap((chunk) => {
+      const value = (chunk as { value?: unknown }).value;
+      const ownText = Array.isArray(value)
+        ? value.filter((part): part is string => typeof part === 'string')
+        : [];
+      const nestedChunks = (chunk as { queryChunks?: unknown[] }).queryChunks;
+      const nestedText = Array.isArray(nestedChunks)
+        ? [collectSqlChunkText(nestedChunks)]
+        : [];
+      return [...ownText, ...nestedText];
+    })
+    .join('');
+}
+
 describe('practiceSessions schema indexes', () => {
   it('defines a user + startedAt index for session ordering', () => {
     expect(getPracticeSessionIndex('userStartedAtIdx').config.name).toBe(
@@ -131,17 +147,10 @@ describe('practiceSessionQuestionStates schema checks', () => {
     const draftCumulativeMsCheck =
       getPracticeSessionQuestionStateConfig().draftCumulativeMsChk;
     const queryChunks = getSqlQueryChunks(draftCumulativeMsCheck);
+    const sqlText = collectSqlChunkText(queryChunks);
 
-    expect(
-      queryChunks.some(
-        (chunk) =>
-          Array.isArray((chunk as { value?: unknown }).value) &&
-          (chunk as { value: string[] }).value.some((text) =>
-            text.includes(`86400000`),
-          ),
-      ),
-    ).toBe(false);
-    expect(queryChunks.some((chunk) => chunk === DAY_MS)).toBe(true);
+    expect(sqlText).toContain(String(DAY_MS));
+    expect(queryChunks.some((chunk) => chunk === DAY_MS)).toBe(false);
   });
 });
 

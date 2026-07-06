@@ -416,6 +416,8 @@ export const questionTags = pgTable(
 // practice_sessions
 export const PRACTICE_SESSIONS_USER_INCOMPLETE_UQ =
   'practice_sessions_user_incomplete_uq';
+export const PRACTICE_SESSIONS_PARAMS_JSON_OBJECT_CHK =
+  'practice_sessions_params_json_object_chk';
 
 export const practiceSessions = pgTable(
   'practice_sessions',
@@ -443,6 +445,10 @@ export const practiceSessions = pgTable(
     userIncompleteUq: uniqueIndex(PRACTICE_SESSIONS_USER_INCOMPLETE_UQ)
       .on(t.userId)
       .where(sql`ended_at IS NULL`),
+    paramsJsonObjectChk: check(
+      PRACTICE_SESSIONS_PARAMS_JSON_OBJECT_CHK,
+      sql`jsonb_typeof(${t.paramsJson}) = 'object'`,
+    ),
   }),
 );
 
@@ -531,7 +537,7 @@ export const practiceSessionQuestionStates = pgTable(
     }).onDelete('restrict'),
     draftCumulativeMsChk: check(
       'practice_session_question_states_draft_cumulative_ms_chk',
-      sql`${t.draftCumulativeMs} BETWEEN 0 AND ${DAY_MS}`,
+      sql`${t.draftCumulativeMs} BETWEEN 0 AND ${sql.raw(String(DAY_MS))}`,
     ),
     latestAnswerChk: check(
       PRACTICE_SESSION_QUESTION_STATES_LATEST_ANSWER_CHK,
@@ -557,6 +563,8 @@ export const practiceSessionQuestionStates = pgTable(
 
 // attempts
 export const ATTEMPTS_SESSION_QUESTION_UQ = 'attempts_session_question_uq';
+export const ATTEMPTS_SELECTED_CHOICE_QUESTION_FK =
+  'attempts_selected_choice_question_fk';
 
 export const attempts = pgTable(
   'attempts',
@@ -574,9 +582,7 @@ export const attempts = pgTable(
         onDelete: 'set null',
       },
     ),
-    selectedChoiceId: uuid('selected_choice_id').references(() => choices.id, {
-      onDelete: 'restrict',
-    }),
+    selectedChoiceId: uuid('selected_choice_id'),
     isOmitted: boolean('is_omitted').notNull().default(false),
     isCorrect: boolean('is_correct').notNull(),
     timeSpentSeconds: integer('time_spent_seconds').notNull().default(0),
@@ -625,6 +631,11 @@ export const attempts = pgTable(
       'attempts_omitted_incorrect_chk',
       sql`NOT ${t.isOmitted} OR ${t.isCorrect} = false`,
     ),
+    selectedChoiceQuestionFk: foreignKey({
+      name: ATTEMPTS_SELECTED_CHOICE_QUESTION_FK,
+      columns: [t.selectedChoiceId, t.questionId],
+      foreignColumns: [choices.id, choices.questionId],
+    }).onDelete('restrict'),
   }),
 );
 

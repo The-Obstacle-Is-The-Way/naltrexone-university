@@ -135,9 +135,13 @@ describe('database migrations', () => {
       from pg_constraint c
       join pg_class t on c.conrelid = t.oid
       where t.relname = 'attempts'
-        and c.conname = 'attempts_selected_choice_id_choices_id_fk'
+        and c.conname = 'attempts_selected_choice_question_fk'
     `;
 
+    expect(rows[0]?.def).toContain(
+      'FOREIGN KEY (selected_choice_id, question_id)',
+    );
+    expect(rows[0]?.def).toContain('REFERENCES choices(id, question_id)');
     expect(rows[0]?.def).toContain('ON DELETE RESTRICT');
   });
 });

@@ -6,6 +6,7 @@ import {
   practiceSessions,
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
+import type { Logger } from '@/src/application/ports/logger';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type {
   PracticeSession,
@@ -34,12 +35,20 @@ type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 type PracticeSessionQuestionStateRow =
   typeof practiceSessionQuestionStates.$inferSelect;
 
+const noopLogger: Logger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+};
+
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
   constructor(
     private readonly db: DrizzleDb,
     private readonly now: () => Date = () => new Date(),
+    private readonly logger: Logger = noopLogger,
   ) {}
 
   private toDomain(
@@ -177,6 +186,30 @@ export class DrizzlePracticeSessionRepository
     return this.toDomain(row, params, stateRowsBySessionId.get(row.id) ?? []);
   }
 
+  private isCorruptPracticeSessionRowError(
+    error: unknown,
+  ): error is ApplicationError {
+    return error instanceof ApplicationError && error.code === 'INTERNAL_ERROR';
+  }
+
+  private logSkippedCorruptPracticeSessionRow(input: {
+    row: PracticeSessionRow;
+    msg: string;
+    mode?: PracticeMode | null;
+    error: unknown;
+  }): void {
+    this.logger.warn(
+      {
+        sessionId: input.row.id,
+        userId: input.row.userId,
+        mode: input.mode ?? null,
+        rowMode: input.row.mode,
+        error: input.error,
+      },
+      input.msg,
+    );
+  }
+
   private initialQuestionStateRows(input: {
     sessionId: string;
     questionIds: readonly string[];
@@ -217,7 +250,19 @@ export class DrizzlePracticeSessionRepository
 
       if (!row) return null;
 
-      return this.toDomainFromRow(db, row);
+      try {
+        return await this.toDomainFromRow(db, row);
+      } catch (error) {
+        if (!this.isCorruptPracticeSessionRowError(error)) {
+          throw error;
+        }
+        this.logSkippedCorruptPracticeSessionRow({
+          row,
+          msg: 'Skipping corrupt incomplete practice session row',
+          error,
+        });
+        return null;
+      }
     });
   }
 
@@ -257,18 +302,35 @@ export class DrizzlePracticeSessionRepository
             rows.map((row) => row.id),
           );
 
-        return {
-          rows: rows.map((row) => {
+        const domainRows: PracticeSession[] = [];
+        for (const row of rows) {
+          try {
             const params = parsePracticeSessionParamsJson(
               row.paramsJson,
               'INTERNAL_ERROR',
             );
-            return this.toDomain(
-              row,
-              params,
-              stateRowsBySessionId.get(row.id) ?? [],
+            domainRows.push(
+              this.toDomain(
+                row,
+                params,
+                stateRowsBySessionId.get(row.id) ?? [],
+              ),
             );
-          }),
+          } catch (error) {
+            if (!this.isCorruptPracticeSessionRowError(error)) {
+              throw error;
+            }
+            this.logSkippedCorruptPracticeSessionRow({
+              row,
+              msg: 'Skipping corrupt completed practice session row',
+              mode: mode ?? null,
+              error,
+            });
+          }
+        }
+
+        return {
+          rows: domainRows,
           total,
         };
       },
@@ -488,6 +550,7 @@ export class DrizzlePracticeSessionRepository
       throw new ApplicationError('CONFLICT', 'Practice session already ended');
     }
 
+    const existingSession = await this.toDomainFromRow(this.db, existingRow);
     const endedAt = explicitEndedAt ?? this.now();
     const [updated] = await this.db
       .update(practiceSessions)
@@ -518,6 +581,6 @@ export class DrizzlePracticeSessionRepository
       );
     }
 
-    return this.toDomainFromRow(this.db, updated);
+    return { ...existingSession, endedAt };
   }
 }

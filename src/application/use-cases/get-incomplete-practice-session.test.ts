@@ -134,6 +134,36 @@ describe('GetIncompletePracticeSessionUseCase', () => {
     });
   });
 
+  it('throws INTERNAL_ERROR when normalized question state is missing', async () => {
+    const session = createPracticeSession({
+      id: 'session-new',
+      userId: 'user-1',
+      mode: 'exam',
+      questionIds: ['q4', 'q5'],
+      questionStates: [
+        {
+          questionId: 'q4',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'choice-1',
+          draftSavedAt: new Date('2026-02-05T09:01:00Z'),
+          draftCumulativeMs: 15_000,
+        },
+      ],
+      startedAt: new Date('2026-02-05T09:00:00Z'),
+      endedAt: null,
+    });
+    const sessions = new FakePracticeSessionRepository([]);
+    sessions.findLatestIncompleteByUserId = async () => session;
+    const useCase = new GetIncompletePracticeSessionUseCase(sessions);
+
+    await expect(useCase.execute({ userId: 'user-1' })).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
+  });
+
   it('propagates repository failures', async () => {
     const sessions = new FakePracticeSessionRepository([]);
     sessions.findLatestIncompleteByUserId = async () => {

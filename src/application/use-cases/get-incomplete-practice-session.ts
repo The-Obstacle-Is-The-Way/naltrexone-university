@@ -1,8 +1,9 @@
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import {
-  computeSessionStats,
-  createDefaultQuestionState,
-} from '@/src/domain/services';
+  createPracticeSessionStateMap,
+  requirePracticeSessionQuestionState,
+} from '@/src/application/shared/practice-session-state';
+import { computeSessionStats } from '@/src/domain/services';
 
 export type GetIncompletePracticeSessionInput = {
   userId: string;
@@ -44,16 +45,20 @@ export class GetIncompletePracticeSessionUseCase {
 
     const answeredCount =
       session.mode === 'exam' && session.endedAt === null
-        ? session.questionIds.reduce((count, questionId) => {
-            const state =
-              session.questionStates.find(
-                (candidate) => candidate.questionId === questionId,
-              ) ?? createDefaultQuestionState(questionId);
+        ? (() => {
+            const stateByQuestionId = createPracticeSessionStateMap(session);
+            return session.questionIds.reduce((count, questionId) => {
+              const state = requirePracticeSessionQuestionState({
+                sessionId: session.id,
+                questionId,
+                stateByQuestionId,
+              });
 
-            return getIncompleteSelectedChoiceId(session, state) !== null
-              ? count + 1
-              : count;
-          }, 0)
+              return getIncompleteSelectedChoiceId(session, state) !== null
+                ? count + 1
+                : count;
+            }, 0);
+          })()
         : computeSessionStats(session.questionStates).answered;
 
     return {
