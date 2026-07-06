@@ -38,7 +38,11 @@ export function createRepositoryFactories(
     createPendingStripeCancellationRepository: (dbOverride = primitives.db) =>
       new DrizzlePendingStripeCancellationRepository(dbOverride),
     createPracticeSessionRepository: (dbOverride = primitives.db) =>
-      new DrizzlePracticeSessionRepository(dbOverride, primitives.now),
+      new DrizzlePracticeSessionRepository(
+        dbOverride,
+        primitives.now,
+        primitives.logger,
+      ),
     createQuestionFeedbackRepository: (dbOverride = primitives.db) =>
       new DrizzleQuestionFeedbackRepository(dbOverride),
     createQuestionRepository: (dbOverride = primitives.db) =>

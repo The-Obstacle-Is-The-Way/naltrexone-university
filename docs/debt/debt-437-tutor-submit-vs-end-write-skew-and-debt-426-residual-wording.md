@@ -26,12 +26,12 @@ Concrete anomaly: two tabs on a tutor session; a submit for question 10 is in fl
 
 ## Resolution
 
-1. **Correct the archived doc now (cheap, mandatory):** amend the DEBT-426 residual paragraph to state that the window also admits a *graded tutor submit* against a concurrent standalone `end()` (no overlapping write → no serialization failure), scoped precisely as above, with a pointer to this debt item.
-2. **Decide the hardening (optional, deliberate):** if the invariant is to be enforced, the cheapest sound options are (a) `end()` also touching the session's state rows (any no-op update creates the write-write overlap that forces `40001` on the submit side), or (b) the submit transaction taking `SELECT ... FOR SHARE` on the parent row (blocks `end()`'s UPDATE until the submit commits). Both partially re-serialize what DEBT-426 deliberately de-serialized — weigh against the lock-granularity goals before choosing. Accepting the anomaly with accurate documentation is a legitimate outcome.
+1. **Correct the archived doc now (cheap, mandatory):** shipped 2026-07-06. The archived DEBT-426 residual paragraph now states that the window also admits a *graded tutor submit* against a concurrent standalone `end()` (no overlapping write → no serialization failure), scoped precisely as above, with a pointer back to this debt item.
+2. **Decide the hardening (optional, deliberate):** still open. If the invariant is to be enforced, the cheapest sound options are (a) `end()` also touching the session's state rows (any no-op update creates the write-write overlap that forces `40001` on the submit side), or (b) the submit transaction taking `SELECT ... FOR SHARE` on the parent row (blocks `end()`'s UPDATE until the submit commits). Both partially re-serialize what DEBT-426 deliberately de-serialized — weigh against the lock-granularity goals before choosing. Accepting the anomaly with accurate documentation is a legitimate outcome.
 
 ## Verification
 
-- The amended archived DEBT-426 doc names the tutor-submit-vs-end pair explicitly and no longer claims grading is unaffected.
+- The amended archived DEBT-426 doc names the tutor-submit-vs-end pair explicitly and no longer claims grading is unaffected. Completed 2026-07-06.
 - If hardening is chosen: a red-first integration test where a tutor submit's transaction spans a concurrent `end()` commit must fail closed (`AlreadyEnded` CONFLICT), not commit a post-end graded attempt.
 
 ## Related

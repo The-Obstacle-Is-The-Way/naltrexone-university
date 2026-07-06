@@ -97,6 +97,18 @@ describe('database migrations', () => {
     );
   });
 
+  it('creates the attempts selected-choice composite foreign-key support index', async () => {
+    const rows = await sql<{ indexname: string }[]>`
+      select indexname
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'attempts'
+    `;
+    const indexes = new Set(rows.map((row) => row.indexname));
+
+    expect(indexes).toContain('attempts_selected_choice_question_idx');
+  });
+
   it('allows attempts.selected_choice_id to be nullable for omitted attempts', async () => {
     const rows = await sql<{ is_nullable: string }[]>`
       select is_nullable
@@ -135,9 +147,13 @@ describe('database migrations', () => {
       from pg_constraint c
       join pg_class t on c.conrelid = t.oid
       where t.relname = 'attempts'
-        and c.conname = 'attempts_selected_choice_id_choices_id_fk'
+        and c.conname = 'attempts_selected_choice_question_fk'
     `;
 
+    expect(rows[0]?.def).toContain(
+      'FOREIGN KEY (selected_choice_id, question_id)',
+    );
+    expect(rows[0]?.def).toContain('REFERENCES choices(id, question_id)');
     expect(rows[0]?.def).toContain('ON DELETE RESTRICT');
   });
 });

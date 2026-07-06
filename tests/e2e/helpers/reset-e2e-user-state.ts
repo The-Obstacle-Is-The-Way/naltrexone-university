@@ -373,16 +373,6 @@ const defaultServices: E2EUserStateResetServices = {
     questionFixtures,
     choiceFixtures,
   }) => {
-    const paramsJson = {
-      count: 2,
-      tagSlugs: [],
-      difficulties: [],
-      questionIds: [
-        questionFixtures.placeholder01Id,
-        questionFixtures.placeholder02Id,
-      ],
-    };
-
     try {
       await assertNoStaleDeterministicBaselineOwner({ sql, userId });
 
@@ -397,12 +387,25 @@ const defaultServices: E2EUserStateResetServices = {
             started_at,
             ended_at
           )
-          VALUES ($1, $2, 'tutor', $3::jsonb, $4, $5)
+          VALUES (
+            $1,
+            $2,
+            'tutor',
+            jsonb_build_object(
+              'count', 2,
+              'tagSlugs', '[]'::jsonb,
+              'difficulties', '[]'::jsonb,
+              'questionIds', jsonb_build_array($3::text, $4::text)
+            ),
+            $5,
+            $6
+          )
           `,
           [
             DETERMINISTIC_BASELINE.sessionId,
             userId,
-            JSON.stringify(paramsJson),
+            questionFixtures.placeholder01Id,
+            questionFixtures.placeholder02Id,
             DETERMINISTIC_BASELINE.startedAt,
             DETERMINISTIC_BASELINE.endedAt,
           ],

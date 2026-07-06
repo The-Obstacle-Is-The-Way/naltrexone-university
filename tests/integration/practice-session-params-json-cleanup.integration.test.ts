@@ -37,7 +37,7 @@ afterAll(async () => {
 });
 
 describe('practice session params_json cleanup', () => {
-  it('normalizes string params_json and strips stale questionStates idempotently', async () => {
+  it('blocks new string params_json rows and strips stale questionStates idempotently', async () => {
     const user = await createUser(db, cleanup);
     const firstQuestion = await createQuestion(db, cleanup, {
       slug: `it-state-cleanup-first-${randomUUID()}`,
@@ -81,17 +81,19 @@ describe('practice session params_json cleanup', () => {
       questionIds: [firstQuestion.id],
     };
 
-    const [stringSession, staleObjectSession, untouchedSession] = await db
+    await expect(sql`
+      INSERT INTO practice_sessions (user_id, mode, params_json, ended_at)
+      VALUES (
+        ${user.id},
+        'tutor',
+        to_jsonb(${JSON.stringify(doubleEncodedParamsJson)}::text),
+        '2026-01-01T00:02:00.000Z'::timestamptz
+      )
+    `).rejects.toThrow();
+
+    const [staleObjectSession, untouchedSession] = await db
       .insert(schema.practiceSessions)
       .values([
-        {
-          userId: user.id,
-          mode: 'tutor',
-          paramsJson: JSON.stringify(
-            doubleEncodedParamsJson,
-          ) as unknown as schema.PracticeSessionParams,
-          endedAt: new Date('2026-01-01T00:02:00.000Z'),
-        },
         {
           userId: user.id,
           mode: 'exam',
@@ -108,7 +110,7 @@ describe('practice session params_json cleanup', () => {
       ])
       .returning({ id: schema.practiceSessions.id });
 
-    if (!stringSession || !staleObjectSession || !untouchedSession) {
+    if (!staleObjectSession || !untouchedSession) {
       throw new Error('Failed to insert cleanup sessions');
     }
 
@@ -139,25 +141,17 @@ describe('practice session params_json cleanup', () => {
         jsonb_typeof(params_json) AS params_type,
         params_json ? 'questionStates' AS has_question_states
       FROM practice_sessions
-      WHERE id IN (${stringSession.id}, ${staleObjectSession.id}, ${untouchedSession.id})
+      WHERE id IN (${staleObjectSession.id}, ${untouchedSession.id})
       ORDER BY id
     `;
     const rowsById = new Map(rows.map((row) => [row.id, row]));
 
-    const normalizedStringRow = rowsById.get(stringSession.id);
     const strippedObjectRow = rowsById.get(staleObjectSession.id);
     const untouchedRow = rowsById.get(untouchedSession.id);
-    if (!normalizedStringRow || !strippedObjectRow || !untouchedRow) {
+    if (!strippedObjectRow || !untouchedRow) {
       throw new Error('Missing cleanup result rows');
     }
 
-    expect(normalizedStringRow.params_type).toBe('object');
-    expect(
-      parsePracticeSessionParamsJson(
-        normalizedStringRow.params_json,
-        'INTERNAL_ERROR',
-      ),
-    ).toEqual(doubleEncodedParamsJson);
     expect(strippedObjectRow.has_question_states).toBe(false);
     expect(
       parsePracticeSessionParamsJson(

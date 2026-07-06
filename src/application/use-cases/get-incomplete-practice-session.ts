@@ -1,8 +1,9 @@
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import {
-  computeSessionStats,
-  createDefaultQuestionState,
-} from '@/src/domain/services';
+  createPracticeSessionStateMap,
+  requirePracticeSessionQuestionState,
+} from '@/src/application/shared/practice-session-state';
+import type { PracticeSession } from '@/src/domain/entities';
 
 export type GetIncompletePracticeSessionInput = {
   userId: string;
@@ -31,6 +32,21 @@ function getIncompleteSelectedChoiceId(
     : state.latestSelectedChoiceId;
 }
 
+function countIncompleteAnsweredQuestions(session: PracticeSession): number {
+  const stateByQuestionId = createPracticeSessionStateMap(session);
+  return session.questionIds.reduce((count, questionId) => {
+    const state = requirePracticeSessionQuestionState({
+      sessionId: session.id,
+      questionId,
+      stateByQuestionId,
+    });
+
+    return getIncompleteSelectedChoiceId(session, state) !== null
+      ? count + 1
+      : count;
+  }, 0);
+}
+
 export class GetIncompletePracticeSessionUseCase {
   constructor(private readonly sessions: PracticeSessionRepository) {}
 
@@ -42,19 +58,7 @@ export class GetIncompletePracticeSessionUseCase {
     );
     if (!session) return null;
 
-    const answeredCount =
-      session.mode === 'exam' && session.endedAt === null
-        ? session.questionIds.reduce((count, questionId) => {
-            const state =
-              session.questionStates.find(
-                (candidate) => candidate.questionId === questionId,
-              ) ?? createDefaultQuestionState(questionId);
-
-            return getIncompleteSelectedChoiceId(session, state) !== null
-              ? count + 1
-              : count;
-          }, 0)
-        : computeSessionStats(session.questionStates).answered;
+    const answeredCount = countIncompleteAnsweredQuestions(session);
 
     return {
       sessionId: session.id,

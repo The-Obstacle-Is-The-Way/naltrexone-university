@@ -1,7 +1,6 @@
 import type { Question } from '@/src/domain/entities';
 import {
   computeExamDeadline,
-  createDefaultQuestionState,
   createSeed,
   isExamExpired,
   selectNextQuestionId,
@@ -19,6 +18,10 @@ import type {
   QuestionFilters,
   QuestionRepository,
 } from '../ports/repositories';
+import {
+  createPracticeSessionStateMap,
+  requirePracticeSessionQuestionState,
+} from '../shared/practice-session-state';
 import {
   buildShuffledChoiceViews,
   type ChoiceExplanation,
@@ -186,11 +189,13 @@ export class GetNextQuestionUseCase {
       return null;
     }
 
-    const stateByQuestionId = new Map(
-      session.questionStates.map((state) => [state.questionId, state]),
-    );
+    const stateByQuestionId = createPracticeSessionStateMap(session);
     const orderedStates = session.questionIds.map((id) => {
-      return stateByQuestionId.get(id) ?? createDefaultQuestionState(id);
+      return requirePracticeSessionQuestionState({
+        sessionId: session.id,
+        questionId: id,
+        stateByQuestionId,
+      });
     });
 
     const targetQuestionId = (() => {

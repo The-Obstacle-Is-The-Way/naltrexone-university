@@ -792,6 +792,15 @@ describe('runE2EUserStateReset default service diagnostics', () => {
     const unsafeQueries = sqlClient.tx.unsafe.mock.calls.map(([query]) =>
       String(query),
     );
+    const practiceSessionInsert = sqlClient.tx.unsafe.mock.calls.find(
+      ([query]) => String(query).includes('INSERT INTO practice_sessions'),
+    );
+    expect(String(practiceSessionInsert?.[0])).toContain('jsonb_build_object');
+    expect(practiceSessionInsert?.[1]).toContain(fixtureQuestion01Id);
+    expect(practiceSessionInsert?.[1]).toContain(fixtureQuestion02Id);
+    expect(practiceSessionInsert?.[1]).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('"questionIds"')]),
+    );
     expect(
       unsafeQueries.some((query) =>
         query.includes('INSERT INTO practice_session_question_states'),
