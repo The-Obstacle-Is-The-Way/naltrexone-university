@@ -318,7 +318,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
   });
 
   it('discards an incomplete practice session child-first in one transaction', async () => {
-    const deleteWhere = vi.fn(async () => undefined);
+    const deleteWhere = vi.fn(async (_where: unknown) => undefined);
     const deleteFrom = vi.fn(() => ({ where: deleteWhere }));
     const tx = {
       delete: deleteFrom,
@@ -367,7 +367,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     const childDeleteWhere = deleteWhere.mock.calls[0]?.[0];
     expect(childDeleteWhere).toBeDefined();
     const childDeleteSql = new PgDialect().sqlToQuery(
-      childDeleteWhere as SQL,
+      childDeleteWhere as unknown as SQL,
     ).sql;
     expect(childDeleteSql).toContain(
       '"practice_session_question_states"."practice_session_id"',
