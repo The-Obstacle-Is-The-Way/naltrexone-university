@@ -114,16 +114,60 @@ describe('DrizzlePracticeSessionRepository corrupt list reads', () => {
     );
 
     await expect(repo.findLatestIncompleteByUserId(userId)).resolves.toBeNull();
-    expect(logger.warn).toHaveBeenCalledWith(
+    const [context, message] = logger.warn.mock.calls[0] ?? [];
+    expect(context).toEqual(
       expect.objectContaining({
         sessionId,
-        userId,
         mode: null,
         rowMode: 'exam',
         error: expect.objectContaining({ code: 'INTERNAL_ERROR' }),
       }),
-      'Skipping corrupt incomplete practice session row',
     );
+    expect(context).not.toHaveProperty('userId');
+    expect(message).toBe('Skipping corrupt incomplete practice session row');
+    expectRepeatableReadTransaction(transaction);
+  });
+
+  it('does not classify unmarked internal errors by message text', async () => {
+    const internalError = new ApplicationError(
+      'INTERNAL_ERROR',
+      'Unexpected normalized question state helper failure',
+    );
+    const row = {
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [questionId],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+    const tx = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      select: () => {
+        throw internalError;
+      },
+    } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
+    const logger = createLogger();
+    const repo = new DrizzlePracticeSessionRepository(
+      db,
+      () => new Date('2026-02-01T00:00:00.000Z'),
+      logger,
+    );
+
+    await expect(repo.findLatestIncompleteByUserId(userId)).rejects.toBe(
+      internalError,
+    );
+    expect(logger.warn).not.toHaveBeenCalled();
     expectRepeatableReadTransaction(transaction);
   });
 
@@ -230,16 +274,17 @@ describe('DrizzlePracticeSessionRepository corrupt list reads', () => {
       rows: [],
       total: 1,
     });
-    expect(logger.warn).toHaveBeenCalledWith(
+    const [context, message] = logger.warn.mock.calls[0] ?? [];
+    expect(context).toEqual(
       expect.objectContaining({
         sessionId,
-        userId,
         mode: null,
         rowMode: 'tutor',
         error: expect.objectContaining({ code: 'INTERNAL_ERROR' }),
       }),
-      'Skipping corrupt completed practice session row',
     );
+    expect(context).not.toHaveProperty('userId');
+    expect(message).toBe('Skipping corrupt completed practice session row');
     expectRepeatableReadTransaction(transaction);
   });
 });

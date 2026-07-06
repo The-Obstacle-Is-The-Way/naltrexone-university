@@ -97,6 +97,18 @@ describe('database migrations', () => {
     );
   });
 
+  it('creates the attempts selected-choice composite foreign-key support index', async () => {
+    const rows = await sql<{ indexname: string }[]>`
+      select indexname
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'attempts'
+    `;
+    const indexes = new Set(rows.map((row) => row.indexname));
+
+    expect(indexes).toContain('attempts_selected_choice_question_idx');
+  });
+
   it('allows attempts.selected_choice_id to be nullable for omitted attempts', async () => {
     const rows = await sql<{ is_nullable: string }[]>`
       select is_nullable

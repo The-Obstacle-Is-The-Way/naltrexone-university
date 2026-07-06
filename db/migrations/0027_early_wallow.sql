@@ -48,4 +48,6 @@ ALTER TABLE "attempts" DROP CONSTRAINT "attempts_selected_choice_id_choices_id_f
 --> statement-breakpoint
 ALTER TABLE "practice_sessions" ADD CONSTRAINT "practice_sessions_params_json_object_chk" CHECK (jsonb_typeof("params_json") = 'object');
 --> statement-breakpoint
+CREATE INDEX "attempts_selected_choice_question_idx" ON "attempts" USING btree ("selected_choice_id","question_id");
+--> statement-breakpoint
 ALTER TABLE "attempts" ADD CONSTRAINT "attempts_selected_choice_question_fk" FOREIGN KEY ("selected_choice_id","question_id") REFERENCES "public"."choices"("id","question_id") ON DELETE restrict ON UPDATE no action;

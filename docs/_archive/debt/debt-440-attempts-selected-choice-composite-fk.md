@@ -22,11 +22,11 @@ None today (app-path-proof). If a direct writer ever violates it: permanently co
 Resolved 2026-07-06. The plain FK was swapped for the composite one, mirroring 0022's pattern for the state table:
 
 1. Schema: change `attempts.selected_choice_id` to a composite FK `(selected_choice_id, question_id) → choices(id, question_id) ON DELETE restrict` (nullable column semantics unchanged — omitted attempts keep `selected_choice_id IS NULL`).
-2. Additive migration: `0027_early_wallow.sql` pre-validates existing data with a mismatch count query, then drops `attempts_selected_choice_id_choices_id_fk` and adds `attempts_selected_choice_question_fk`.
+2. Additive migration: `0027_early_wallow.sql` pre-validates existing data with a mismatch count query, then drops `attempts_selected_choice_id_choices_id_fk`, creates the child-side `attempts_selected_choice_question_idx` supporting index, and adds `attempts_selected_choice_question_fk`.
 
 ## Verification
 
-- `tests/integration/practice-session-schema-hardening.integration.test.ts` proves inserting an attempt whose `selected_choice_id` belongs to another question fails with an FK violation.
+- `tests/integration/practice-session-schema-hardening.integration.test.ts` proves inserting an attempt whose `selected_choice_id` belongs to another question fails with an FK violation; `tests/integration/db.integration.test.ts` proves the supporting `attempts_selected_choice_question_idx` exists after migration.
 - Local migration proof on 2026-07-06: fresh local DB migration to `0027_early_wallow` emitted `DEBT-440 preflight: attempts rows with cross-question selected_choice_id = 0`.
 - Post-deploy ledger/data proof will be recorded after the promo deploy that applies `0027_early_wallow` to Development and Production.
 

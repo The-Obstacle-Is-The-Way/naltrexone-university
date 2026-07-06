@@ -225,6 +225,27 @@
           "method": "btree",
           "with": {}
         },
+        "attempts_selected_choice_question_idx": {
+          "name": "attempts_selected_choice_question_idx",
+          "columns": [
+            {
+              "expression": "selected_choice_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "question_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "attempts_retry_of_attempt_id_idx": {
           "name": "attempts_retry_of_attempt_id_idx",
           "columns": [

@@ -563,6 +563,8 @@ export const practiceSessionQuestionStates = pgTable(
 
 // attempts
 export const ATTEMPTS_SESSION_QUESTION_UQ = 'attempts_session_question_uq';
+export const ATTEMPTS_SELECTED_CHOICE_QUESTION_IDX =
+  'attempts_selected_choice_question_idx';
 export const ATTEMPTS_SELECTED_CHOICE_QUESTION_FK =
   'attempts_selected_choice_question_fk';
 
@@ -615,6 +617,10 @@ export const attempts = pgTable(
       desc(t.answeredAt),
     ),
     questionIdIdx: index('attempts_question_id_idx').on(t.questionId),
+    selectedChoiceQuestionIdx: index(ATTEMPTS_SELECTED_CHOICE_QUESTION_IDX).on(
+      t.selectedChoiceId,
+      t.questionId,
+    ),
     retryOfAttemptIdIdx: index('attempts_retry_of_attempt_id_idx').on(
       t.retryOfAttemptId,
     ),

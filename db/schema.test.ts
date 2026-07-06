@@ -6,6 +6,7 @@ import type {
   pendingStripeCancellations,
 } from './schema';
 import {
+  attempts,
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
   practiceSessionQuestionStates,
   practiceSessions,
@@ -98,6 +99,29 @@ function getPracticeSessionQuestionStateConfig(): Record<string, unknown> {
   );
 }
 
+function getAttemptsConfig(): Record<string, unknown> {
+  const extraConfigBuilderSymbol = getTableSymbol(
+    attempts,
+    'Symbol(drizzle:ExtraConfigBuilder)',
+  );
+  const extraConfigColumnsSymbol = getTableSymbol(
+    attempts,
+    'Symbol(drizzle:ExtraConfigColumns)',
+  );
+
+  const tableAsSymbolRecord = attempts as unknown as Record<symbol, unknown>;
+  const extraConfigBuilder = tableAsSymbolRecord[extraConfigBuilderSymbol];
+  const extraConfigColumns = tableAsSymbolRecord[extraConfigColumnsSymbol];
+
+  if (typeof extraConfigBuilder !== 'function') {
+    throw new Error('Expected Drizzle extra config builder function');
+  }
+
+  return (extraConfigBuilder as (columns: unknown) => Record<string, unknown>)(
+    extraConfigColumns,
+  );
+}
+
 function getSqlQueryChunks(value: unknown): unknown[] {
   const checkValue = (value as { value?: { queryChunks?: unknown[] } }).value;
   if (!Array.isArray(checkValue?.queryChunks)) {
@@ -151,6 +175,18 @@ describe('practiceSessionQuestionStates schema checks', () => {
 
     expect(sqlText).toContain(String(DAY_MS));
     expect(queryChunks.some((chunk) => chunk === DAY_MS)).toBe(false);
+  });
+});
+
+describe('attempts schema indexes', () => {
+  it('defines a selected choice + question index for the composite FK', () => {
+    const selectedChoiceQuestionIdx =
+      getAttemptsConfig().selectedChoiceQuestionIdx;
+
+    expect(
+      (selectedChoiceQuestionIdx as { config?: { name?: string } }).config
+        ?.name,
+    ).toBe('attempts_selected_choice_question_idx');
   });
 });
 

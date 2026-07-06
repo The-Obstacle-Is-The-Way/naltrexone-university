@@ -79,15 +79,19 @@ export class DrizzlePracticeSessionRepository
     rows: readonly PracticeSessionQuestionStateRow[],
   ): PracticeSessionQuestionState[] {
     if (rows.length > params.questionIds.length) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        `Practice session ${sessionId} has inconsistent normalized question state`,
+      throw new CorruptPracticeSessionRowError(
+        new ApplicationError(
+          'INTERNAL_ERROR',
+          `Practice session ${sessionId} has inconsistent normalized question state`,
+        ),
       );
     }
     if (rows.length < params.questionIds.length) {
-      throw new ApplicationError(
-        'INTERNAL_ERROR',
-        `Practice session ${sessionId} is missing normalized question state`,
+      throw new CorruptPracticeSessionRowError(
+        new ApplicationError(
+          'INTERNAL_ERROR',
+          `Practice session ${sessionId} is missing normalized question state`,
+        ),
       );
     }
 
@@ -95,9 +99,11 @@ export class DrizzlePracticeSessionRepository
     return params.questionIds.map((questionId, position) => {
       const row = rowsByQuestionId.get(questionId);
       if (!row || row.position !== position) {
-        throw new ApplicationError(
-          'INTERNAL_ERROR',
-          `Practice session ${sessionId} is missing normalized question state`,
+        throw new CorruptPracticeSessionRowError(
+          new ApplicationError(
+            'INTERNAL_ERROR',
+            `Practice session ${sessionId} is missing normalized question state`,
+          ),
         );
       }
       return toDomainQuestionState(row);
@@ -171,14 +177,25 @@ export class DrizzlePracticeSessionRepository
     return row ?? null;
   }
 
+  private parsePersistedParamsJson(value: unknown): PracticeSessionParamsJson {
+    try {
+      return parsePracticeSessionParamsJson(value, 'INTERNAL_ERROR');
+    } catch (error) {
+      if (
+        error instanceof ApplicationError &&
+        error.code === 'INTERNAL_ERROR'
+      ) {
+        throw new CorruptPracticeSessionRowError(error);
+      }
+      throw error;
+    }
+  }
+
   private async toDomainFromRow(
     db: DrizzleDb,
     row: PracticeSessionRow,
   ): Promise<PracticeSession> {
-    const params = parsePracticeSessionParamsJson(
-      row.paramsJson,
-      'INTERNAL_ERROR',
-    );
+    const params = this.parsePersistedParamsJson(row.paramsJson);
     const stateRowsBySessionId = await this.loadQuestionStateRowsBySessionIds(
       db,
       [row.id],
@@ -186,50 +203,19 @@ export class DrizzlePracticeSessionRepository
     return this.toDomain(row, params, stateRowsBySessionId.get(row.id) ?? []);
   }
 
-  private isPracticeSessionRowCorruptionError(
-    error: unknown,
-  ): error is ApplicationError {
-    return (
-      error instanceof ApplicationError &&
-      error.code === 'INTERNAL_ERROR' &&
-      (error.message.startsWith('Invalid practice session parameters:') ||
-        error.message.includes('normalized question state'))
-    );
-  }
-
-  private toCorruptPracticeSessionRowError(
-    error: unknown,
-  ): CorruptPracticeSessionRowError {
-    if (this.isPracticeSessionRowCorruptionError(error)) {
-      return new CorruptPracticeSessionRowError(error);
-    }
-    throw error;
-  }
-
   private async toDomainFromListRow(
     db: DrizzleDb,
     row: PracticeSessionRow,
   ): Promise<PracticeSession> {
-    try {
-      return await this.toDomainFromRow(db, row);
-    } catch (error) {
-      throw this.toCorruptPracticeSessionRowError(error);
-    }
+    return this.toDomainFromRow(db, row);
   }
 
   private toCompletedDomainFromListRow(input: {
     row: PracticeSessionRow;
     stateRows: readonly PracticeSessionQuestionStateRow[];
   }): PracticeSession {
-    try {
-      const params = parsePracticeSessionParamsJson(
-        input.row.paramsJson,
-        'INTERNAL_ERROR',
-      );
-      return this.toDomain(input.row, params, input.stateRows);
-    } catch (error) {
-      throw this.toCorruptPracticeSessionRowError(error);
-    }
+    const params = this.parsePersistedParamsJson(input.row.paramsJson);
+    return this.toDomain(input.row, params, input.stateRows);
   }
 
   private isCorruptPracticeSessionRowError(
@@ -247,7 +233,6 @@ export class DrizzlePracticeSessionRepository
     this.logger?.warn(
       {
         sessionId: input.row.id,
-        userId: input.row.userId,
         mode: input.mode ?? null,
         rowMode: input.row.mode,
         error: input.error,

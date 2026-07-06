@@ -4,7 +4,6 @@ import {
   requirePracticeSessionQuestionState,
 } from '@/src/application/shared/practice-session-state';
 import type { PracticeSession } from '@/src/domain/entities';
-import { computeSessionStats } from '@/src/domain/services';
 
 export type GetIncompletePracticeSessionInput = {
   userId: string;
@@ -33,7 +32,7 @@ function getIncompleteSelectedChoiceId(
     : state.latestSelectedChoiceId;
 }
 
-function countActiveExamAnsweredQuestions(session: PracticeSession): number {
+function countIncompleteAnsweredQuestions(session: PracticeSession): number {
   const stateByQuestionId = createPracticeSessionStateMap(session);
   return session.questionIds.reduce((count, questionId) => {
     const state = requirePracticeSessionQuestionState({
@@ -59,10 +58,7 @@ export class GetIncompletePracticeSessionUseCase {
     );
     if (!session) return null;
 
-    const answeredCount =
-      session.mode === 'exam' && session.endedAt === null
-        ? countActiveExamAnsweredQuestions(session)
-        : computeSessionStats(session.questionStates).answered;
+    const answeredCount = countIncompleteAnsweredQuestions(session);
 
     return {
       sessionId: session.id,

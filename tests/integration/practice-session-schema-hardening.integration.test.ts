@@ -118,12 +118,12 @@ describe('practice session schema hardening', () => {
     expect(logger.warnCalls).toEqual([
       expect.objectContaining({
         context: expect.objectContaining({
-          userId: user.id,
           mode: null,
         }),
         msg: 'Skipping corrupt completed practice session row',
       }),
     ]);
+    expect(logger.warnCalls[0]?.context).not.toHaveProperty('userId');
   });
 
   it('skips and logs a corrupt latest incomplete practice-session row', async () => {
@@ -140,12 +140,11 @@ describe('practice session schema hardening', () => {
     );
     expect(logger.warnCalls).toEqual([
       expect.objectContaining({
-        context: expect.objectContaining({
-          userId: user.id,
-        }),
+        context: expect.objectContaining({ mode: null }),
         msg: 'Skipping corrupt incomplete practice session row',
       }),
     ]);
+    expect(logger.warnCalls[0]?.context).not.toHaveProperty('userId');
   });
 
   it('does not commit end() before reporting a corrupt practice-session row', async () => {
