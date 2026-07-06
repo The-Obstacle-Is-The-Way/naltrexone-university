@@ -133,7 +133,7 @@ export function ExamReviewView({
   review: GetPracticeSessionReviewOutput;
   isPending: boolean;
   onOpenQuestion: (questionId: string) => void;
-  onFinalizeReview: () => Promise<boolean | void>;
+  onFinalizeReview: () => Promise<boolean | undefined>;
 }) {
   const unansweredCount = review.totalCount - review.answeredCount;
   const isFinalizingRef = useRef(false);
