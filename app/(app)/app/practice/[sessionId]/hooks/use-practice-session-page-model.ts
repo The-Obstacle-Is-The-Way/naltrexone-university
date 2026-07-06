@@ -372,7 +372,6 @@ export function usePracticeSessionPageModel(
         if (!isMounted() || !input.canCommit()) return false;
         if (!result?.ok) return false;
 
-        if (!input.canCommit()) return false;
         setShouldRetryBootstrap(false);
         applyBootstrapSummary(result.data);
         return true;

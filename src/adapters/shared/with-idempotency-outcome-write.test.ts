@@ -221,4 +221,51 @@ describe('withIdempotency outcome writes', () => {
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });
+
+  it('throws the indeterminate error and logs when caching it also fails', async () => {
+    class OutcomeWriteFailingRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        throw new Error('store result failed');
+      }
+
+      override async storeError(): Promise<void> {
+        throw new Error('store error failed');
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new OutcomeWriteFailingRepo(now);
+    const logger = new FakeLogger();
+    const execute = vi.fn(async () => ({ feedbackId: crypto.randomUUID() }));
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'question-feedback:submitQuestionReport',
+        key: '18181818-1818-1818-1818-181818181818',
+        now,
+        logger,
+        outcomeStoreFailurePolicy: 'cache-error-and-throw',
+        execute,
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message:
+        'Idempotency outcome could not be recorded after committed success',
+    });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]).toMatchObject({
+      msg: 'Failed to persist indeterminate idempotency outcome',
+      context: {
+        action: 'question-feedback:submitQuestionReport',
+        key: '18181818-1818-1818-1818-181818181818',
+        storeError: 'store error failed',
+        storeResultError: 'store result failed',
+        userId: appUserId,
+      },
+    });
+  });
 });
