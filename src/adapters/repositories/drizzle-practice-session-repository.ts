@@ -35,6 +35,13 @@ type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 type PracticeSessionQuestionStateRow =
   typeof practiceSessionQuestionStates.$inferSelect;
 
+class CorruptPracticeSessionRowError extends ApplicationError {
+  constructor(cause: ApplicationError) {
+    super('INTERNAL_ERROR', cause.message, cause.fieldErrors, { cause });
+    this.name = 'CorruptPracticeSessionRowError';
+  }
+}
+
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
@@ -179,10 +186,56 @@ export class DrizzlePracticeSessionRepository
     return this.toDomain(row, params, stateRowsBySessionId.get(row.id) ?? []);
   }
 
-  private isCorruptPracticeSessionRowError(
+  private isPracticeSessionRowCorruptionError(
     error: unknown,
   ): error is ApplicationError {
-    return error instanceof ApplicationError && error.code === 'INTERNAL_ERROR';
+    return (
+      error instanceof ApplicationError &&
+      error.code === 'INTERNAL_ERROR' &&
+      (error.message.startsWith('Invalid practice session parameters:') ||
+        error.message.includes('normalized question state'))
+    );
+  }
+
+  private toCorruptPracticeSessionRowError(
+    error: unknown,
+  ): CorruptPracticeSessionRowError {
+    if (this.isPracticeSessionRowCorruptionError(error)) {
+      return new CorruptPracticeSessionRowError(error);
+    }
+    throw error;
+  }
+
+  private async toDomainFromListRow(
+    db: DrizzleDb,
+    row: PracticeSessionRow,
+  ): Promise<PracticeSession> {
+    try {
+      return await this.toDomainFromRow(db, row);
+    } catch (error) {
+      throw this.toCorruptPracticeSessionRowError(error);
+    }
+  }
+
+  private toCompletedDomainFromListRow(input: {
+    row: PracticeSessionRow;
+    stateRows: readonly PracticeSessionQuestionStateRow[];
+  }): PracticeSession {
+    try {
+      const params = parsePracticeSessionParamsJson(
+        input.row.paramsJson,
+        'INTERNAL_ERROR',
+      );
+      return this.toDomain(input.row, params, input.stateRows);
+    } catch (error) {
+      throw this.toCorruptPracticeSessionRowError(error);
+    }
+  }
+
+  private isCorruptPracticeSessionRowError(
+    error: unknown,
+  ): error is CorruptPracticeSessionRowError {
+    return error instanceof CorruptPracticeSessionRowError;
   }
 
   private logSkippedCorruptPracticeSessionRow(input: {
@@ -244,7 +297,7 @@ export class DrizzlePracticeSessionRepository
       if (!row) return null;
 
       try {
-        return await this.toDomainFromRow(db, row);
+        return await this.toDomainFromListRow(db, row);
       } catch (error) {
         if (!this.isCorruptPracticeSessionRowError(error)) {
           throw error;
@@ -298,16 +351,11 @@ export class DrizzlePracticeSessionRepository
         const domainRows: PracticeSession[] = [];
         for (const row of rows) {
           try {
-            const params = parsePracticeSessionParamsJson(
-              row.paramsJson,
-              'INTERNAL_ERROR',
-            );
             domainRows.push(
-              this.toDomain(
+              this.toCompletedDomainFromListRow({
                 row,
-                params,
-                stateRowsBySessionId.get(row.id) ?? [],
-              ),
+                stateRows: stateRowsBySessionId.get(row.id) ?? [],
+              }),
             );
           } catch (error) {
             if (!this.isCorruptPracticeSessionRowError(error)) {

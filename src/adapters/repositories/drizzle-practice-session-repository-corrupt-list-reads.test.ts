@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import {
   createStateRow,
@@ -123,6 +124,49 @@ describe('DrizzlePracticeSessionRepository corrupt list reads', () => {
       }),
       'Skipping corrupt incomplete practice session row',
     );
+    expectRepeatableReadTransaction(transaction);
+  });
+
+  it('propagates unrelated internal errors instead of treating them as corrupt rows', async () => {
+    const internalError = new ApplicationError(
+      'INTERNAL_ERROR',
+      'Unexpected query mapper failure',
+    );
+    const row = {
+      id: sessionId,
+      userId,
+      mode: 'exam',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [questionId],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+    const tx = {
+      query: {
+        practiceSessions: {
+          findFirst: async () => row,
+        },
+      },
+      select: () => {
+        throw internalError;
+      },
+    } as const;
+    const { db, transaction } = createRepeatableReadDb(tx);
+    const logger = createLogger();
+    const repo = new DrizzlePracticeSessionRepository(
+      db,
+      () => new Date('2026-02-01T00:00:00.000Z'),
+      logger,
+    );
+
+    await expect(repo.findLatestIncompleteByUserId(userId)).rejects.toBe(
+      internalError,
+    );
+    expect(logger.warn).not.toHaveBeenCalled();
     expectRepeatableReadTransaction(transaction);
   });
 

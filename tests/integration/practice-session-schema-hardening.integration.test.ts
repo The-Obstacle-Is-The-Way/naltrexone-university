@@ -112,6 +112,7 @@ describe('practice session schema hardening', () => {
 
     const result = await sessions.findCompletedByUserId(user.id, 10, 0);
 
+    expect(result.total).toBe(2);
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]?.id).toBe(healthySession.id);
     expect(logger.warnCalls).toEqual([
