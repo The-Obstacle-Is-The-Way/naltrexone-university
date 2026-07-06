@@ -62,6 +62,28 @@ function assertRequestSequencingHooks(input: {
   throw new Error('Request sequencing hooks must be provided together');
 }
 
+type EndedSessionConflictRecoveryResult =
+  | 'handled'
+  | 'not-handled'
+  | 'stale-request';
+
+async function tryRecoverEndedSessionConflict(input: {
+  result: ActionResult<unknown>;
+  recoverEndedSessionConflict: EndedSessionConflictRecovery | undefined;
+  canCommit: () => boolean;
+}): Promise<EndedSessionConflictRecoveryResult> {
+  if (
+    !input.recoverEndedSessionConflict ||
+    !isPracticeSessionAlreadyEndedActionConflict(input.result)
+  ) {
+    return 'not-handled';
+  }
+
+  const handled = await input.recoverEndedSessionConflict();
+  if (!input.canCommit()) return 'stale-request';
+  return handled ? 'handled' : 'not-handled';
+}
+
 export function buildTimeSpentSeconds(
   questionLoadedAtMs: number | null,
   nowMs: number,
@@ -131,14 +153,12 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   if (!canCommit()) return;
 
   if (!res.ok) {
-    if (
-      input.recoverEndedSessionConflict &&
-      isPracticeSessionAlreadyEndedActionConflict(res)
-    ) {
-      const handled = await input.recoverEndedSessionConflict();
-      if (!canCommit()) return;
-      if (handled) return;
-    }
+    const recovery = await tryRecoverEndedSessionConflict({
+      result: res,
+      recoverEndedSessionConflict: input.recoverEndedSessionConflict,
+      canCommit,
+    });
+    if (recovery === 'stale-request' || recovery === 'handled') return;
 
     input.setLoadState({
       status: 'error',
@@ -349,14 +369,12 @@ export async function runSubmitAnswerFlow<
   if (!canCommit()) return;
 
   if (!res.ok) {
-    if (
-      input.recoverEndedSessionConflict &&
-      isPracticeSessionAlreadyEndedActionConflict(res)
-    ) {
-      const handled = await input.recoverEndedSessionConflict();
-      if (!canCommit()) return;
-      if (handled) return;
-    }
+    const recovery = await tryRecoverEndedSessionConflict({
+      result: res,
+      recoverEndedSessionConflict: input.recoverEndedSessionConflict,
+      canCommit,
+    });
+    if (recovery === 'stale-request' || recovery === 'handled') return;
 
     input.setLoadState({
       status: 'error',

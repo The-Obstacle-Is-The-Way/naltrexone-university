@@ -2,6 +2,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ApplicationError,
+  AttemptConflictMessages,
+  PracticeSessionConflictMessages,
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
 import {
@@ -726,7 +728,7 @@ describe('FinalizeExamAnswersUseCase', () => {
       }),
     ).rejects.toMatchObject({
       code: 'CONFLICT',
-      message: 'Practice session already ended',
+      message: PracticeSessionConflictMessages.AlreadyEnded,
       details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
     });
   });
@@ -788,7 +790,7 @@ describe('FinalizeExamAnswersUseCase', () => {
       }),
     ).rejects.toMatchObject({
       code: 'CONFLICT',
-      message: 'This question has already been answered in this session',
+      message: AttemptConflictMessages.AlreadyAnsweredInSession,
       details: undefined,
     });
   });
@@ -850,7 +852,7 @@ describe('FinalizeExamAnswersUseCase', () => {
       }),
     ).rejects.toMatchObject({
       code: 'CONFLICT',
-      message: 'This question has already been answered in this session',
+      message: AttemptConflictMessages.AlreadyAnsweredInSession,
       details: undefined,
     });
   });
@@ -1253,7 +1255,6 @@ describe('FinalizeExamAnswersUseCase', () => {
       expect(logger.warnCalls).toContainEqual({
         context: {
           sessionId: 'session-1',
-          userId: 'user-1',
           questionId: 'q1',
         },
         msg: 'Dropped stale final exam draft flush after grace window',

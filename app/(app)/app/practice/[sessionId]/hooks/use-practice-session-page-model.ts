@@ -22,10 +22,7 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/shared/error-message-helpers';
-import {
-  STANDARD_MUTATION_TIMEOUT_MS,
-  STANDARD_READ_TIMEOUT_MS,
-} from '@/app/(app)/app/shared/timeout-tiers';
+import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { reportClientError } from '@/lib/report-client-error';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import { withTimeout } from '@/lib/with-timeout';
@@ -43,12 +40,13 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import { EXAM_FINAL_DRAFT_FLUSH_GRACE_MS } from '@/src/domain/services';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 // Client-side optimization only: avoid sending a draft flush that is already
-// older than one mutation round-trip. The server remains authoritative for the
-// exact finalize grace-window invariant.
-const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS = STANDARD_MUTATION_TIMEOUT_MS;
+// outside the shared server grace window. The server remains authoritative.
+const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS =
+  EXAM_FINAL_DRAFT_FLUSH_GRACE_MS;
 
 type PracticeSessionPageModelOutput = Omit<
   PracticeSessionPageViewProps,
@@ -83,6 +81,9 @@ export function usePracticeSessionPageModel(
   >(null);
   const recoverEndedSessionConflictRef =
     useRef<EndedSessionConflictRecovery | null>(null);
+  const recoverEndedSessionSummaryPromiseRef = useRef<Promise<boolean> | null>(
+    null,
+  );
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
   const onExamServerExpiry = useCallback(
     async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
@@ -332,32 +333,53 @@ export function usePracticeSessionPageModel(
     [applyBootstrapSummary, isMounted, sessionId],
   );
 
-  const recoverEndedSessionSummary = useCallback(async (): Promise<boolean> => {
-    if (reviewStage.summary) return true;
-
-    let result: Awaited<ReturnType<typeof getPracticeSessionSummary>>;
-    try {
-      result = await withTimeout(
-        getPracticeSessionSummary({ sessionId }),
-        BOOTSTRAP_SUMMARY_TIMEOUT_MS,
-      );
-    } catch (error) {
-      if (isMounted()) {
-        reportClientError(error, {
-          component: 'UsePracticeSessionPageModel',
-          action: 'recoverEndedSessionSummary',
-        });
-      }
-      return false;
+  const recoverEndedSessionSummary = useCallback((): Promise<boolean> => {
+    if (reviewStage.summary || reviewStage.postExamSummary) {
+      return Promise.resolve(true);
+    }
+    if (recoverEndedSessionSummaryPromiseRef.current) {
+      return recoverEndedSessionSummaryPromiseRef.current;
     }
 
-    if (!isMounted()) return false;
-    if (!result.ok) return false;
+    const recovery = (async (): Promise<boolean> => {
+      let result: Awaited<ReturnType<typeof getPracticeSessionSummary>>;
+      try {
+        result = await withTimeout(
+          getPracticeSessionSummary({ sessionId }),
+          BOOTSTRAP_SUMMARY_TIMEOUT_MS,
+        );
+      } catch (error) {
+        if (isMounted()) {
+          reportClientError(error, {
+            component: 'UsePracticeSessionPageModel',
+            action: 'recoverEndedSessionSummary',
+          });
+        }
+        return false;
+      }
 
-    setShouldRetryBootstrap(false);
-    applyBootstrapSummary(result.data);
-    return true;
-  }, [applyBootstrapSummary, isMounted, reviewStage.summary, sessionId]);
+      if (!isMounted()) return false;
+      if (!result.ok) return false;
+
+      setShouldRetryBootstrap(false);
+      applyBootstrapSummary(result.data);
+      return true;
+    })();
+
+    recoverEndedSessionSummaryPromiseRef.current = recovery;
+    void recovery.finally(() => {
+      if (recoverEndedSessionSummaryPromiseRef.current === recovery) {
+        recoverEndedSessionSummaryPromiseRef.current = null;
+      }
+    });
+    return recovery;
+  }, [
+    applyBootstrapSummary,
+    isMounted,
+    reviewStage.postExamSummary,
+    reviewStage.summary,
+    sessionId,
+  ]);
 
   useEffect(() => {
     recoverEndedSessionConflictRef.current = recoverEndedSessionSummary;

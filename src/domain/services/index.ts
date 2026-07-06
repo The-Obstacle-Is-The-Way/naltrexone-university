@@ -44,6 +44,7 @@ export {
 } from './subscription-write-guard';
 export {
   DAY_MS,
+  EXAM_FINAL_DRAFT_FLUSH_GRACE_MS,
   EXAM_SECONDS_PER_QUESTION,
   MS_PER_SECOND,
   SECONDS_PER_DAY,

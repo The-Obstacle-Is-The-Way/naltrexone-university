@@ -4,14 +4,14 @@ import {
   runSubmitAnswerFlow,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
-import { PracticeSessionConflictReasons } from '@/src/application/errors';
+import {
+  PracticeSessionConflictMessages,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 
-const { fixtureChoice1Id, fixtureQuestion1Id, fixtureQuestionOldId } =
-  vi.hoisted(() => ({
-    fixtureChoice1Id: crypto.randomUUID(),
-    fixtureQuestion1Id: crypto.randomUUID(),
-    fixtureQuestionOldId: crypto.randomUUID(),
-  }));
+const fixtureChoice1Id = crypto.randomUUID();
+const fixtureQuestion1Id = crypto.randomUUID();
+const fixtureQuestionOldId = crypto.randomUUID();
 
 describe('question-flow-actions ended-session conflict recovery', () => {
   it('runs ended-session recovery instead of committing load error for structured AlreadyEnded conflicts', async () => {
@@ -28,7 +28,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
         ok: false,
         error: {
           code: 'CONFLICT',
-          message: 'Practice session already ended',
+          message: PracticeSessionConflictMessages.AlreadyEnded,
           details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
         },
       }),
@@ -62,7 +62,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
         ok: false,
         error: {
           code: 'CONFLICT',
-          message: 'Practice session already ended',
+          message: PracticeSessionConflictMessages.AlreadyEnded,
         },
       }),
       createIdempotencyKey: () => 'idemp_new',
@@ -81,7 +81,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     expect(recoverEndedSessionConflict).not.toHaveBeenCalled();
     expect(loadState).toEqual({
       status: 'error',
-      message: 'Practice session already ended',
+      message: PracticeSessionConflictMessages.AlreadyEnded,
     });
   });
 
@@ -101,7 +101,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
         ok: false,
         error: {
           code: 'CONFLICT',
-          message: 'Practice session already ended',
+          message: PracticeSessionConflictMessages.AlreadyEnded,
           details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
         },
       }),
@@ -131,7 +131,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
         ok: false,
         error: {
           code: 'CONFLICT',
-          message: 'Practice session already ended',
+          message: PracticeSessionConflictMessages.AlreadyEnded,
         },
       }),
       buildSubmitInput: () => ({}),
@@ -146,7 +146,7 @@ describe('question-flow-actions ended-session conflict recovery', () => {
     expect(recoverEndedSessionConflict).not.toHaveBeenCalled();
     expect(loadState).toEqual({
       status: 'error',
-      message: 'Practice session already ended',
+      message: PracticeSessionConflictMessages.AlreadyEnded,
     });
   });
 });

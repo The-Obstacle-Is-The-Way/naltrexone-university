@@ -3,6 +3,7 @@ export {
   type ApplicationErrorCode,
   ApplicationErrorCodes,
   type ApplicationErrorDetails,
+  AttemptConflictMessages,
   isApplicationError,
   isPracticeSessionConflictReason,
   PracticeSessionConflictMessages,
