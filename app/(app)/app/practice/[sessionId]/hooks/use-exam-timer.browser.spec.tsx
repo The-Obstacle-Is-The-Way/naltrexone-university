@@ -6,7 +6,7 @@ import { useExamTimer } from './use-exam-timer';
 function TimerProbe(props: {
   initialDeadlineAt: string | null;
   isExamActive?: boolean;
-  onExpire: () => boolean | undefined;
+  onExpire: () => boolean | undefined | Promise<boolean | undefined>;
 }) {
   const [deadlineAt, setDeadlineAt] = useState(props.initialDeadlineAt);
   const timer = useExamTimer({
@@ -102,6 +102,30 @@ describe('useExamTimer', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
     const onExpire = vi.fn().mockReturnValueOnce(false);
+
+    await render(
+      <TimerProbe
+        initialDeadlineAt="2026-05-22T12:00:01.000Z"
+        onExpire={onExpire}
+      />,
+    );
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(onExpire).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries an expired deadline when onExpire rejects', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    const onExpire = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('Finalize failed'));
 
     await render(
       <TimerProbe

@@ -286,6 +286,62 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent('');
   });
 
+  it('keeps the generic load error when ended-session recovery still reports an active session', async () => {
+    getPracticeSessionSummaryMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Practice session has not ended'),
+    );
+    getNextQuestionMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Practice session already ended', {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('error');
+    await expect
+      .element(screen.getByTestId('error-message'))
+      .toHaveTextContent('Practice session already ended');
+  });
+
+  it('keeps the generic load error when ended-session recovery summary re-read throws', async () => {
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockRejectedValueOnce(new Error('Summary recovery failed'));
+    getNextQuestionMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Practice session already ended', {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      }),
+    );
+
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('error');
+    await expect
+      .element(screen.getByTestId('error-message'))
+      .toHaveTextContent('Practice session already ended');
+  });
+
   it('keeps the generic empty state when expired-exam recovery still reports an active session', async () => {
     getPracticeSessionSummaryMock.mockResolvedValue(
       errorResult('CONFLICT', 'Practice session has not ended'),

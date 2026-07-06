@@ -50,7 +50,9 @@ class SequencedFindPracticeSessionRepository extends FakePracticeSessionReposito
 
   constructor(
     private readonly firstSession: ReturnType<typeof createPracticeSession>,
-    private readonly laterSession: ReturnType<typeof createPracticeSession>,
+    private readonly laterSession: ReturnType<
+      typeof createPracticeSession
+    > | null,
   ) {
     super([]);
   }
@@ -754,6 +756,68 @@ describe('FinalizeExamAnswersUseCase', () => {
     const outerSessions = new SequencedFindPracticeSessionRepository(
       activeSession,
       activeSession,
+    );
+    const txSessions = new FakePracticeSessionRepository([activeSession]);
+    const txAttempts = new FakeAttemptRepository([
+      createAttempt({
+        id: 'attempt-1',
+        userId: 'user-1',
+        questionId: 'q1',
+        practiceSessionId: 'session-1',
+        selectedChoiceId: 'q1-correct',
+        isCorrect: true,
+      }),
+    ]);
+    const writeTransaction: FinalizeExamAnswersWriteTransaction = async (fn) =>
+      fn({
+        questions,
+        attempts: txAttempts,
+        sessions: txSessions,
+      });
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      new FakeAttemptRepository(),
+      outerSessions,
+      writeTransaction,
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'This question has already been answered in this session',
+      details: undefined,
+    });
+  });
+
+  it('keeps an already-answered finalize conflict unchanged when the fresh re-read misses the session', async () => {
+    const activeSession = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'exam',
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'q1-correct',
+          draftSavedAt: new Date('2026-03-17T12:00:00.000Z'),
+          draftCumulativeMs: 20_000,
+        },
+      ],
+    });
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ]);
+    const outerSessions = new SequencedFindPracticeSessionRepository(
+      activeSession,
+      null,
     );
     const txSessions = new FakePracticeSessionRepository([activeSession]);
     const txAttempts = new FakeAttemptRepository([
