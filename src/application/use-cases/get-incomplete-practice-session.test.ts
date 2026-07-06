@@ -90,6 +90,60 @@ describe('GetIncompletePracticeSessionUseCase', () => {
     });
   });
 
+  it('returns progress for an active tutor session from latest answers', async () => {
+    const sessions = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-tutor',
+        userId: 'user-1',
+        mode: 'tutor',
+        questionIds: ['q1', 'q2', 'q3'],
+        questionStates: [
+          {
+            questionId: 'q1',
+            markedForReview: false,
+            latestSelectedChoiceId: 'choice-1',
+            latestIsCorrect: true,
+            latestAnsweredAt: new Date('2026-02-05T09:01:00Z'),
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+          {
+            questionId: 'q2',
+            markedForReview: false,
+            latestSelectedChoiceId: null,
+            latestIsCorrect: null,
+            latestAnsweredAt: null,
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+          {
+            questionId: 'q3',
+            markedForReview: false,
+            latestSelectedChoiceId: 'choice-3',
+            latestIsCorrect: false,
+            latestAnsweredAt: new Date('2026-02-05T09:03:00Z'),
+            draftSelectedChoiceId: null,
+            draftSavedAt: null,
+            draftCumulativeMs: 0,
+          },
+        ],
+        startedAt: new Date('2026-02-05T09:00:00Z'),
+        endedAt: null,
+      }),
+    ]);
+    const useCase = new GetIncompletePracticeSessionUseCase(sessions);
+
+    await expect(useCase.execute({ userId: 'user-1' })).resolves.toEqual({
+      sessionId: 'session-tutor',
+      mode: 'tutor',
+      answeredCount: 2,
+      totalCount: 3,
+      startedAt: '2026-02-05T09:00:00.000Z',
+    });
+  });
+
   it('falls back to latestSelectedChoiceId for legacy active exam sessions with no draft', async () => {
     const sessions = new FakePracticeSessionRepository([
       createPracticeSession({

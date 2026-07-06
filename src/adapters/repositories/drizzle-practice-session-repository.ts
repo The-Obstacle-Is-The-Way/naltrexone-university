@@ -35,20 +35,13 @@ type PracticeSessionRow = typeof practiceSessions.$inferSelect;
 type PracticeSessionQuestionStateRow =
   typeof practiceSessionQuestionStates.$inferSelect;
 
-const noopLogger: Logger = {
-  debug: () => {},
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-};
-
 export class DrizzlePracticeSessionRepository
   implements PracticeSessionRepository
 {
   constructor(
     private readonly db: DrizzleDb,
     private readonly now: () => Date = () => new Date(),
-    private readonly logger: Logger = noopLogger,
+    private readonly logger?: Logger,
   ) {}
 
   private toDomain(
@@ -198,7 +191,7 @@ export class DrizzlePracticeSessionRepository
     mode?: PracticeMode | null;
     error: unknown;
   }): void {
-    this.logger.warn(
+    this.logger?.warn(
       {
         sessionId: input.row.id,
         userId: input.row.userId,
