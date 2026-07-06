@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 
@@ -24,6 +25,7 @@ import {
   PracticeSessionPageModelSummaryProbe,
   PracticeSessionPageModelViewProbe,
   setupPracticeSessionPageModelBrowserSpec,
+  submitAnswerMock,
 } from './use-practice-session-page-model-test-helpers';
 
 setupPracticeSessionPageModelBrowserSpec();
@@ -229,6 +231,61 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent('');
   });
 
+  it('shows the summary when loading a tutor question reports an AlreadyEnded conflict', async () => {
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          sessionId: BROWSER_SESSION_ID,
+          endedAt: '2026-02-07T00:20:00.000Z',
+          mode: 'tutor',
+          questionCount: 2,
+          totals: {
+            answered: 1,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 1200,
+          },
+        }),
+      );
+    getNextQuestionMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Practice session already ended', {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok(
+        createReviewResponse({
+          mode: 'tutor',
+          totalCount: 2,
+          answeredCount: 1,
+          markedCount: 0,
+          rows: [
+            createReviewRow({ questionId: BROWSER_QUESTION_1_ID, order: 1 }),
+          ],
+        }),
+      ),
+    );
+
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
+
+    await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-mode'))
+      .toHaveTextContent('tutor');
+    await expect
+      .element(screen.getByTestId('error-message'))
+      .toHaveTextContent('');
+  });
+
   it('keeps the generic empty state when expired-exam recovery still reports an active session', async () => {
     getPracticeSessionSummaryMock.mockResolvedValue(
       errorResult('CONFLICT', 'Practice session has not ended'),
@@ -371,6 +428,78 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent('');
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(2);
     expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the summary when tutor answer submit reports an AlreadyEnded conflict', async () => {
+    getPracticeSessionSummaryMock
+      .mockResolvedValueOnce(
+        errorResult('CONFLICT', 'Practice session has not ended'),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          sessionId: BROWSER_SESSION_ID,
+          endedAt: '2026-02-07T00:20:00.000Z',
+          mode: 'tutor',
+          questionCount: 2,
+          totals: {
+            answered: 1,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 1200,
+          },
+        }),
+      );
+    getNextQuestionMock.mockResolvedValue(
+      ok(
+        createQuestionResponse({
+          questionId: BROWSER_QUESTION_1_ID,
+          session: {
+            mode: 'tutor',
+            deadlineAt: null,
+            index: 0,
+            total: 2,
+            isMarkedForReview: false,
+          },
+        }),
+      ),
+    );
+    submitAnswerMock.mockResolvedValue(
+      errorResult('CONFLICT', 'Practice session already ended', {
+        reason: PracticeSessionConflictReasons.AlreadyEnded,
+      }),
+    );
+    getPracticeSessionReviewMock.mockResolvedValue(
+      ok(
+        createReviewResponse({
+          mode: 'tutor',
+          totalCount: 2,
+          answeredCount: 1,
+          markedCount: 0,
+          rows: [
+            createReviewRow({ questionId: BROWSER_QUESTION_1_ID, order: 1 }),
+          ],
+        }),
+      ),
+    );
+
+    const screen = await render(<PracticeSessionPageModelNavigationProbe />);
+
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('question');
+    await screen.getByRole('button', { name: 'select-choice-1' }).click();
+    await screen.getByRole('button', { name: 'submit-answer' }).click();
+
+    await expect.poll(() => submitAnswerMock.mock.calls.length > 0).toBe(true);
+    await expect
+      .poll(() => getPracticeSessionSummaryMock.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('active-view'))
+      .toHaveTextContent('summary');
+    await expect
+      .element(screen.getByTestId('summary-answered-count'))
+      .toHaveTextContent('1');
   });
 
   it('recovers a summary when ending an active tutor session returns CONFLICT', async () => {

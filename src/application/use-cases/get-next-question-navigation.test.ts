@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import {
   ANSWERED_AT,
   ApplicationError,
@@ -107,6 +108,7 @@ describe('GetNextQuestionUseCase', () => {
     ).rejects.toMatchObject({
       code: 'CONFLICT',
       message: 'Practice session already ended',
+      details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
     });
   });
 

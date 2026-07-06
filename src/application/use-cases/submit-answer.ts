@@ -11,7 +11,7 @@ import {
   shouldShowExplanation as sessionShouldShowExplanation,
 } from '@/src/domain/services';
 import { answeredOutcome } from '@/src/domain/value-objects';
-import { ApplicationError } from '../errors';
+import { ApplicationError, practiceSessionAlreadyEndedError } from '../errors';
 import type {
   AttemptSingleQuestionReader,
   AttemptWriter,
@@ -187,7 +187,7 @@ export class SubmitAnswerUseCase {
     }
 
     if (session && session.endedAt !== null) {
-      throw new ApplicationError('CONFLICT', 'Practice session already ended');
+      throw practiceSessionAlreadyEndedError();
     }
 
     const rawTimeSpentSeconds = input.timeSpentSeconds;

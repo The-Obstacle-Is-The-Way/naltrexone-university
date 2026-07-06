@@ -14,7 +14,10 @@ import { usePracticeSessionReviewStage } from '@/app/(app)/app/practice/[session
 import { ExamTimer } from '@/app/(app)/app/practice/components/exam-timer';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { usePracticeQuestionFeedback } from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
-import type { ExamDraftAnswer } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import type {
+  EndedSessionConflictRecovery,
+  ExamDraftAnswer,
+} from '@/app/(app)/app/practice/shared/question-flow-actions';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -72,6 +75,8 @@ export function usePracticeSessionPageModel(
   const onExamServerExpiryRef = useRef<
     ((finalDraftAnswer: ExamDraftAnswer | null) => Promise<void>) | null
   >(null);
+  const recoverEndedSessionConflictRef =
+    useRef<EndedSessionConflictRecovery | null>(null);
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
   const onExamServerExpiry = useCallback(
     async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
@@ -79,6 +84,10 @@ export function usePracticeSessionPageModel(
     },
     [],
   );
+  const recoverEndedSessionConflict =
+    useCallback(async (): Promise<boolean> => {
+      return (await recoverEndedSessionConflictRef.current?.()) ?? false;
+    }, []);
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
@@ -88,6 +97,7 @@ export function usePracticeSessionPageModel(
     submitAnswerFn: submitAnswer,
     saveExamDraftAnswerFn: saveExamDraftAnswer,
     onExamServerExpiry,
+    recoverEndedSessionConflict,
   });
 
   const reviewStage = usePracticeSessionReviewStage({
@@ -315,6 +325,44 @@ export function usePracticeSessionPageModel(
     },
     [applyBootstrapSummary, isMounted, sessionId],
   );
+
+  const recoverEndedSessionSummary = useCallback(async (): Promise<boolean> => {
+    if (reviewStage.summary) return true;
+
+    let result: Awaited<ReturnType<typeof getPracticeSessionSummary>>;
+    try {
+      result = await withTimeout(
+        getPracticeSessionSummary({ sessionId }),
+        BOOTSTRAP_SUMMARY_TIMEOUT_MS,
+      );
+    } catch (error) {
+      if (isMounted()) {
+        reportClientError(error, {
+          component: 'UsePracticeSessionPageModel',
+          action: 'recoverEndedSessionSummary',
+        });
+      }
+      return false;
+    }
+
+    if (!isMounted()) return false;
+    if (!result.ok) return false;
+
+    setShouldRetryBootstrap(false);
+    applyBootstrapSummary(result.data);
+    return true;
+  }, [applyBootstrapSummary, isMounted, reviewStage.summary, sessionId]);
+
+  useEffect(() => {
+    recoverEndedSessionConflictRef.current = recoverEndedSessionSummary;
+    return () => {
+      if (
+        recoverEndedSessionConflictRef.current === recoverEndedSessionSummary
+      ) {
+        recoverEndedSessionConflictRef.current = null;
+      }
+    };
+  }, [recoverEndedSessionSummary]);
 
   const bootstrapSessionSummary = useCallback(() => {
     const requestId = bootstrapRequestIdRef.current + 1;

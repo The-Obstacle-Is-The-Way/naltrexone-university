@@ -1,5 +1,6 @@
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
+  type EndedSessionConflictRecovery,
   type ExamDraftAnswer,
   type NullQuestionRecovery,
   runLoadQuestionFlow,
@@ -62,6 +63,7 @@ export async function loadNextQuestion(input: {
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
   recoverNullQuestion?: NullQuestionRecovery | undefined;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -90,6 +92,7 @@ export async function loadNextQuestion(input: {
       input.setSessionInfo(question.session);
     },
     recoverNullQuestion: input.recoverNullQuestion,
+    recoverEndedSessionConflict: input.recoverEndedSessionConflict,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,
@@ -112,6 +115,7 @@ export function createLoadNextQuestionAction(input: {
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -137,6 +141,7 @@ export async function submitAnswerForQuestion(input: {
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -163,6 +168,7 @@ export async function submitAnswerForQuestion(input: {
     setLoadState: input.setLoadState,
     setSubmitResult: input.setSubmitResult,
     onSuccess: input.onSuccess,
+    recoverEndedSessionConflict: input.recoverEndedSessionConflict,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,

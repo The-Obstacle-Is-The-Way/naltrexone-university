@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import {
   ApplicationError,
   createChoice,
@@ -209,9 +210,11 @@ describe('SubmitAnswerUseCase', () => {
         choiceId: 'c2',
         sessionId,
       }),
-    ).rejects.toEqual(
-      new ApplicationError('CONFLICT', 'Practice session already ended'),
-    );
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+      details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
+    });
 
     expect(attempts.getAll()).toEqual([]);
   });
