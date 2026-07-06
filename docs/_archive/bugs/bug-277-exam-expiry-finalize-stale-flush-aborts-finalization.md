@@ -1,6 +1,6 @@
 # BUG-277: Exam-Expiry Finalize Carrying a Stale Draft Flush Aborts the Entire Finalization With a Reason-less CONFLICT
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P2
 **Date:** 2026-07-05
 **Confirmed:** 2026-07-05
@@ -34,16 +34,16 @@ Actual: `useExamTimer`'s `visibilitychange`/`focus` handler fires `onExpire` →
 
 Server — the flush check is inside the finalize transaction and aborts everything, with no reason annotation:
 
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L147-L154) applies `finalDraftAnswer` via `applyFinalDraftAnswer` inside the write transaction, **before** grading.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L285-L296): outside `[deadline, deadline + FINALIZE_FLUSH_DEADLINE_GRACE_MS]` it throws `new ApplicationError('CONFLICT', 'Final exam answer flush is only allowed at exam expiry')` — no `details.reason`, and the throw propagates out of the transaction, aborting the grading that would otherwise have succeeded.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L147-L154) applies `finalDraftAnswer` via `applyFinalDraftAnswer` inside the write transaction, **before** grading.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L285-L296): outside `[deadline, deadline + FINALIZE_FLUSH_DEADLINE_GRACE_MS]` it throws `new ApplicationError('CONFLICT', 'Final exam answer flush is only allowed at exam expiry')` — no `details.reason`, and the throw propagates out of the transaction, aborting the grading that would otherwise have succeeded.
 
 Client — the flush is unconditional and the guards are one-shot:
 
-- [`use-practice-session-page-model.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L187-L210>): `finalizeExpiredExam` sets `expiryFinalizeInFlightRef.current = true` (never reset), captures `questionFlow.getCurrentExamDraft() ?? undefined`, and forwards it to `reviewStage.finalizeExamSession(finalDraftAnswer)`. [`use-practice-session-question-flow.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L297-L313>) returns a draft object for any loaded exam question, even when `selectedChoiceId` is `null`. There is no staleness check against the deadline before attaching the flush.
-- [`use-exam-timer.ts`](<../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L58-L64>): `firedDeadlineMsRef` guarantees `onExpire` fires at most once per deadline — so a failed finalize is never retried by the timer.
-- [`practice-session-page-logic.ts`](<../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts#L222-L247>): the end-session CONFLICT recovery assumes CONFLICT means "already ended" and fetches the summary; [`get-practice-session-summary.ts`](../../src/application/use-cases/get-practice-session-summary.ts#L30) then throws `CONFLICT 'Practice session has not ended'`, which becomes the displayed error message.
+- [`use-practice-session-page-model.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-model.ts#L187-L210>): `finalizeExpiredExam` sets `expiryFinalizeInFlightRef.current = true` (never reset), captures `questionFlow.getCurrentExamDraft() ?? undefined`, and forwards it to `reviewStage.finalizeExamSession(finalDraftAnswer)`. [`use-practice-session-question-flow.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow.ts#L297-L313>) returns a draft object for any loaded exam question, even when `selectedChoiceId` is `null`. There is no staleness check against the deadline before attaching the flush.
+- [`use-exam-timer.ts`](<../../../app/(app)/app/practice/[sessionId]/hooks/use-exam-timer.ts#L58-L64>): `firedDeadlineMsRef` guarantees `onExpire` fires at most once per deadline — so a failed finalize is never retried by the timer.
+- [`practice-session-page-logic.ts`](<../../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts#L222-L247>): the end-session CONFLICT recovery assumes CONFLICT means "already ended" and fetches the summary; [`get-practice-session-summary.ts`](../../../src/application/use-cases/get-practice-session-summary.ts#L30) then throws `CONFLICT 'Practice session has not ended'`, which becomes the displayed error message.
 
-Recovery that does exist: [`get-next-question.ts`](../../src/application/use-cases/get-next-question.ts#L178-L186) auto-finalizes an expired exam (without any flush) via `expiredExamFinalizer` on the next question load, so Try Again / reload converges. Any at-expiry selection is dropped at that point, which is the correct grace-window policy after the window has elapsed — but the path to get there is a wrong error and a dead-ended timer.
+Recovery that does exist: [`get-next-question.ts`](../../../src/application/use-cases/get-next-question.ts#L178-L186) auto-finalizes an expired exam (without any flush) via `expiredExamFinalizer` on the next question load, so Try Again / reload converges. Any at-expiry selection is dropped at that point, which is the correct grace-window policy after the window has elapsed — but the path to get there is a wrong error and a dead-ended timer.
 
 ## Impact
 
@@ -74,10 +74,23 @@ it('finalizes the session even when the final draft flush arrives after the grac
 });
 ```
 
+## Resolution
+
+Resolved by PR #563 (squash `a3be3330`) and promoted to production by PR #564 (merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`).
+
+The fix made stale final-draft flushes an optional enhancement instead of a finalize blocker: `applyFinalDraftAnswer` drops and logs flushes outside the deadline grace window while allowing finalization to continue. The client no longer attaches a provably stale flush, and the expiry finalization guard resets after a failed attempt so the timer path is not one-shot.
+
+## Verification
+
+- Fix PR: #563, squash `a3be3330`.
+- Promotion PR: #564, merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`.
+- Production deploy: GitHub deployment `5331520979`, Vercel target `https://naltrexone-university-cosiyzvs9-john-h-jungs-projects.vercel.app`, succeeded 2026-07-06T15:13:34Z.
+- Health proof: `https://addictionboards.com/` and the Vercel deployment URL both returned HTTP/2 200 after the promo; Vercel runtime logs for the checked deployment window contained only the two successful HEAD requests and no errors.
+
 ## Related
 
 - BUG-254 (archived) introduced the grace-window flush this bug is the failure mode of.
 - DEBT-426 (archived) introduced the conflict-reason contract this CONFLICT bypasses.
 - [BUG-280](bug-280-double-finalize-race-maps-to-reasonless-conflict.md) — a second reason-less CONFLICT on the same finalize surface.
-- [DEBT-438](../debt/debt-438-conflict-reason-client-coverage-gaps.md) — the broader reason-coverage debt this instance belongs to.
+- [DEBT-438](../../debt/debt-438-conflict-reason-client-coverage-gaps.md) — the broader reason-coverage debt this instance belongs to.
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review (five independent DDIA-lens reviewers; line-level verification against `e3853656`).

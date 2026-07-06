@@ -491,7 +491,7 @@ describe('GetPracticeSessionReviewUseCase', () => {
     );
   });
 
-  it('builds rows from questionIds even when questionStates is shorter', async () => {
+  it('throws INTERNAL_ERROR when normalized question state is missing', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
     const logger = new FakeLogger();
@@ -532,46 +532,11 @@ describe('GetPracticeSessionReviewUseCase', () => {
       logger,
     );
 
-    await expect(useCase.execute({ userId, sessionId })).resolves.toMatchObject(
-      {
-        totalCount: 2,
-        answeredCount: 1,
-        markedCount: 1,
-        rows: [
-          {
-            isAvailable: true,
-            questionId: 'q1',
-            slug: 'q-1',
-            order: 1,
-            isAnswered: true,
-            isCorrect: true,
-            isOmitted: false,
-            markedForReview: true,
-          },
-          {
-            isAvailable: true,
-            questionId: 'q2',
-            slug: 'q-2',
-            order: 2,
-            isAnswered: false,
-            isCorrect: null,
-            isOmitted: false,
-            markedForReview: false,
-          },
-        ],
-      },
-    );
+    await expect(useCase.execute({ userId, sessionId })).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+    });
     expect(questions.findPublishedByIdsCalls).toEqual([['q1', 'q2']]);
-    expect(logger.warnCalls).toEqual([
-      {
-        context: {
-          sessionId,
-          userId,
-          questionId: 'q2',
-        },
-        msg: 'Practice session review missing question state; defaulting to unanswered',
-      },
-    ]);
+    expect(logger.warnCalls).toEqual([]);
   });
 
   it('returns unavailable rows when a referenced question is missing and logs warning', async () => {

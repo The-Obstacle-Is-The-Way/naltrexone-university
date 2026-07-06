@@ -1,14 +1,15 @@
 # DEBT-441: The Question-State Updater's Inner Retry and Final Re-Read Are Dead Code in the REPEATABLE READ Paths — and Would Misreport If Ever Reached
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-07-05
+**Resolved:** 2026-07-06
 
 ---
 
 ## Description
 
-`updatePracticeSessionQuestionState` ([`practice-session-question-state-updater.ts`](../../src/adapters/repositories/practice-session-question-state-updater.ts#L118-L190)) contains a 3-attempt CAS loop with a `'stale'` branch and a post-exhaustion final-snapshot re-read that classifies the failure (`AlreadyEnded` vs `StateChangedConcurrently`). These paths have **different liveness per calling context**, which the code does not express:
+`updatePracticeSessionQuestionState` ([`practice-session-question-state-updater.ts`](../../../src/adapters/repositories/practice-session-question-state-updater.ts)) contains a 3-attempt CAS loop with a `'stale'` branch and a post-exhaustion final-snapshot re-read that classifies the failure (`AlreadyEnded` vs `StateChangedConcurrently`). Before this debt was resolved, these paths had **different liveness per calling context** that the code did not express:
 
 - **Transaction-bound REPEATABLE READ paths** (submit, finalize — via `runPracticeSessionStateWriteTransaction`): the snapshot read and the CAS UPDATE share one RR snapshot, so a 0-row CAS result is impossible — any concurrent committed write raises `40001` instead, which propagates to the composition-root retry (fresh transaction, fresh snapshot, correct classification). Here the inner `'stale'` branch and the final re-read are **dead code**. Worse, if the final re-read *were* ever reached tx-bound, it would be wrong: drizzle nests via SAVEPOINT and postgres-js ignores isolation config on nested `transaction()`, so the re-read inherits the stale outer snapshot — a concurrently-ended session would still show `endedAt = null` and the code would misreport `AlreadyEnded` as `StateChangedConcurrently`.
 - **Standalone READ COMMITTED paths** (exam draft save via `SaveExamDraftAnswerUseCase`, mark-for-review): each attempt is a fresh top-level transaction; EvalPlanQual re-evaluation produces genuine 0-row `'stale'` results; the loop and final re-read are live and **correct** here.
@@ -21,20 +22,20 @@ No current defect — every live path behaves correctly today. The debt is compr
 
 ## Resolution
 
-Pick one, deliberately:
+Resolved 2026-07-06 by choosing the minimum documented-split path. `updatePracticeSessionQuestionState` now records the per-context contract directly above the retry loop:
 
-1. **Document the split in place (minimum):** a block comment on the loop + final re-read stating the per-context liveness (RR tx-bound: dead, `40001` path owns retries; standalone RC: live via EvalPlanQual) and the savepoint-snapshot caveat that makes the re-read unsafe to reach tx-bound.
-2. **Make the split structural (better):** split the entry points — a tx-bound variant with no inner loop (single CAS, let `40001`/0-rows-impossible semantics stand) and a standalone variant that owns the retry loop and final classification.
+- standalone callers open fresh top-level READ COMMITTED transactions for each attempt, so the loop can observe a newer row version on retry;
+- repositories bound to a composition-root REPEATABLE READ transaction inherit the outer snapshot, so serialization failures there are owned by `runPracticeSessionStateWriteTransaction`.
 
-Either way, preserve the existing repository tests that already pin standalone-path stale-version retry and retry-exhaustion behavior (`drizzle-practice-session-repository-question-state.test.ts`). If the entry points are split, move or duplicate that coverage so the standalone variant owns it and the tx-bound variant is explicitly covered as single-CAS/no-loop.
+No behavior changed. A structural split remains possible later if this updater grows again, but the immediate risk was the undocumented failure-domain split.
 
 ## Verification
 
-- Comment or split lands and the existing standalone READ COMMITTED stale-version retry/exhaustion tests remain green.
-- If split: the tx-bound variant contains no retry loop; grep confirms the RR callers use it; the standalone variant retains the retry loop and final-classification tests.
+- The retry-loop comment landed in `src/adapters/repositories/practice-session-question-state-updater.ts`.
+- Existing standalone READ COMMITTED stale-version retry/exhaustion coverage in `drizzle-practice-session-repository-question-state.test.ts` remains the owner of the live retry behavior.
 
 ## Related
 
 - Archived DEBT-426 (lock redesign that created the two calling contexts) and BUG-268 (the `40001` composition-root retry that owns RR-path retries).
-- [DEBT-437](./debt-437-tutor-submit-vs-end-write-skew-and-debt-426-residual-wording.md) — adjacent semantics-accuracy item on the same surface.
+- [DEBT-437](../../debt/debt-437-tutor-submit-vs-end-write-skew-and-debt-426-residual-wording.md) — adjacent semantics-accuracy item on the same surface.
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review (isolation lens, including postgres-js/drizzle nested-transaction semantics verification against `e3853656`).

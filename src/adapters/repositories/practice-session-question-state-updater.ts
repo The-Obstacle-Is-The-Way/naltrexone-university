@@ -125,6 +125,10 @@ export async function updatePracticeSessionQuestionState(input: {
     current: PracticeSessionQuestionState,
   ) => PracticeSessionQuestionState;
 }): Promise<PracticeSessionQuestionState> {
+  // Standalone callers open fresh top-level READ COMMITTED transactions here, so
+  // this loop can observe a newer row version on retry. Repositories bound to a
+  // composition-root REPEATABLE READ transaction inherit that outer snapshot;
+  // serialization failures there are retried by runPracticeSessionStateWriteTransaction.
   for (
     let attempt = 0;
     attempt < UPDATE_QUESTION_STATE_MAX_RETRIES;

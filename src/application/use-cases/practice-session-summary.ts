@@ -1,9 +1,12 @@
+import {
+  createPracticeSessionStateMap,
+  requirePracticeSessionQuestionState,
+} from '@/src/application/shared/practice-session-state';
 import type { PracticeSession } from '@/src/domain/entities';
 import {
   computeAccuracy,
   computeSessionDurationSeconds,
   computeSessionStats,
-  createDefaultQuestionState,
 } from '@/src/domain/services';
 
 export type PracticeSessionSummary = {
@@ -24,14 +27,13 @@ export function projectPracticeSessionSummary(
   endedAt: Date,
 ): PracticeSessionSummary {
   const questionCount = session.questionIds.length;
-  const stateByQuestionId = new Map(
-    session.questionStates.map((state) => [state.questionId, state]),
-  );
+  const stateByQuestionId = createPracticeSessionStateMap(session);
   const orderedStates = session.questionIds.map((questionId) => {
-    return (
-      stateByQuestionId.get(questionId) ??
-      createDefaultQuestionState(questionId)
-    );
+    return requirePracticeSessionQuestionState({
+      sessionId: session.id,
+      questionId,
+      stateByQuestionId,
+    });
   });
   const { answered, correct } = computeSessionStats(orderedStates);
 

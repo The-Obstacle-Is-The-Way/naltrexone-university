@@ -1,6 +1,6 @@
 # DEBT-436: Master Spec Docs Claim the Clerk Webhook Handles `user.created`, Contradicting the Actual Lazy-Provisioning Design
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-06-30
 
@@ -8,7 +8,7 @@
 
 ## Description
 
-`docs/specs/master_spec.md` and `docs/specs/master_spec_part2.md` both still list, under "Events handled" for the Clerk webhook:
+Before resolution, `docs/specs/master_spec.md` and `docs/specs/master_spec_part2.md` both listed, under "Events handled" for the Clerk webhook:
 
 ```text
 * `user.created` — Create user in `users` table
@@ -18,9 +18,9 @@
 
 This directly contradicts both the live implementation and this repo's own already-correct vendor documentation. The webhook controller never handles `user.created`:
 
-- [`src/adapters/controllers/clerk-webhook-controller.ts`](../../src/adapters/controllers/clerk-webhook-controller.ts#L213) branches only on `event.type !== 'user.updated' && event.type !== 'user.deleted'` (treating anything else, including `user.created`, as a no-op) — there is no `user.created` handler anywhere in the file.
-- [`docs/vendor-docs/clerk.md`](../vendor-docs/clerk.md#L136) already states the correct, intentional design plainly: "We do NOT handle `user.created`. Users are created lazily on first authenticated request."
-- [`src/adapters/gateways/clerk-auth-gateway.ts`](../../src/adapters/gateways/clerk-auth-gateway.ts#L48-L71) (`getCurrentUser`) confirms the actual mechanism: every authenticated request calls `currentUser()` and upserts the local `users` row via `userRepository.upsertByClerkId(...)` — a genuine, race-safe Postgres `ON CONFLICT (clerk_user_id) DO UPDATE` ([`drizzle-user-repository.ts#L71-L135`](../../src/adapters/repositories/drizzle-user-repository.ts#L71-L135)) — independent of any webhook.
+- [`src/adapters/controllers/clerk-webhook-controller.ts`](../../../src/adapters/controllers/clerk-webhook-controller.ts#L213) branches only on `event.type !== 'user.updated' && event.type !== 'user.deleted'` (treating anything else, including `user.created`, as a no-op) — there is no `user.created` handler anywhere in the file.
+- [`docs/vendor-docs/clerk.md`](../../vendor-docs/clerk.md#L136) already states the correct, intentional design plainly: "We do NOT handle `user.created`. Users are created lazily on first authenticated request."
+- [`src/adapters/gateways/clerk-auth-gateway.ts`](../../../src/adapters/gateways/clerk-auth-gateway.ts#L48-L71) (`getCurrentUser`) confirms the actual mechanism: every authenticated request calls `currentUser()` and upserts the local `users` row via `userRepository.upsertByClerkId(...)` — a genuine, race-safe Postgres `ON CONFLICT (clerk_user_id) DO UPDATE` ([`drizzle-user-repository.ts#L71-L135`](../../../src/adapters/repositories/drizzle-user-repository.ts#L71-L135)) — independent of any webhook.
 
 This is not a functional bug (the lazy-provisioning design is correct and was specifically verified race-free during the 2026-06-30 auth/redirect bug sweep), purely a documentation drift between two specs that disagree with this repo's own correct vendor doc and with reality.
 
@@ -32,7 +32,7 @@ A future engineer or auditor who trusts `master_spec.md`/`master_spec_part2.md` 
 
 ## Resolution
 
-Replace the `user.created` bullet in both `docs/specs/master_spec.md` and `docs/specs/master_spec_part2.md` with a line matching `clerk.md`'s framing, e.g.:
+Resolved in the Phase 0 close-out docs PR after PR #562/#563 were promoted. The living specs now match `clerk.md`'s framing:
 
 ```text
 * `user.created` — No-op; users are created lazily via `upsertByClerkId` on first authenticated request (see `docs/vendor-docs/clerk.md`)
@@ -40,7 +40,7 @@ Replace the `user.created` bullet in both `docs/specs/master_spec.md` and `docs/
 * `user.deleted` — Delete user and cascade (subscription, attempts, bookmarks, etc.)
 ```
 
-Docs-only change; no code, test, or behavior changes required.
+Docs-only change; no code, test, or behavior changes were required. The archived historical docs named in the Description remain intentionally untouched.
 
 ## Verification
 
@@ -50,5 +50,5 @@ Docs-only change; no code, test, or behavior changes required.
 
 ## Related
 
-- [`docs/vendor-docs/clerk.md`](../vendor-docs/clerk.md) is the already-correct source of truth this fix aligns the specs to.
+- [`docs/vendor-docs/clerk.md`](../../vendor-docs/clerk.md) is the already-correct source of truth this fix aligns the specs to.
 - Found during the 2026-06-30 auth/redirect bug sweep while verifying the Clerk webhook-vs-DB-provisioning timing race was a non-issue (it is, by this exact lazy-upsert design).

@@ -7,9 +7,10 @@ import type {
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
 import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
 import {
-  createDefaultQuestionState,
-  shouldShowExplanation as sessionShouldShowExplanation,
-} from '@/src/domain/services';
+  createPracticeSessionStateMap,
+  requirePracticeSessionQuestionState,
+} from '@/src/application/shared/practice-session-state';
+import { shouldShowExplanation as sessionShouldShowExplanation } from '@/src/domain/services';
 
 export type GetPracticeSessionReviewInput = {
   userId: string;
@@ -90,9 +91,7 @@ export class GetPracticeSessionReviewUseCase {
       session.questionIds,
     );
     const shouldShowCorrectness = sessionShouldShowExplanation(session);
-    const stateByQuestionId = new Map(
-      session.questionStates.map((state) => [state.questionId, state]),
-    );
+    const stateByQuestionId = createPracticeSessionStateMap(session);
 
     type ReviewSeed = {
       questionId: string;
@@ -109,19 +108,11 @@ export class GetPracticeSessionReviewUseCase {
       const questionId = session.questionIds[i];
       if (!questionId) continue;
 
-      const existingState = stateByQuestionId.get(questionId);
-      if (!existingState) {
-        this.logger.warn(
-          {
-            sessionId: session.id,
-            userId: input.userId,
-            questionId,
-          },
-          'Practice session review missing question state; defaulting to unanswered',
-        );
-      }
-
-      const state = existingState ?? createDefaultQuestionState(questionId);
+      const state = requirePracticeSessionQuestionState({
+        sessionId: session.id,
+        questionId,
+        stateByQuestionId,
+      });
       const isAnswered = getReviewSelectedChoiceId(session, state) !== null;
       const isOmitted =
         session.mode === 'exam' &&

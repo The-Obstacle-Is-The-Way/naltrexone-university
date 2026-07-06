@@ -202,7 +202,7 @@ export type ClerkWebhookResponse = { received: true };
 
 **Events handled:**
 
-* `user.created` — Create user in `users` table
+* `user.created` — No-op; users are created lazily via `upsertByClerkId` on first authenticated request (see `docs/vendor-docs/clerk.md`)
 * `user.updated` — Update user email in `users` table
 * `user.deleted` — Delete user and cascade (subscription, attempts, bookmarks, etc.)
 

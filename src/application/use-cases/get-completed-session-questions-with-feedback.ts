@@ -8,6 +8,10 @@ import type {
 import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
 import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
 import {
+  createPracticeSessionStateMap,
+  requirePracticeSessionQuestionState,
+} from '@/src/application/shared/practice-session-state';
+import {
   buildShuffledChoiceViews,
   type ChoiceExplanation,
 } from '@/src/application/shared/shuffled-choice-views';
@@ -115,9 +119,7 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
     const attemptByQuestionId = new Map(
       attempts.map((attempt) => [attempt.questionId, attempt]),
     );
-    const stateByQuestionId = new Map(
-      session.questionStates.map((state) => [state.questionId, state]),
-    );
+    const stateByQuestionId = createPracticeSessionStateMap(session);
 
     let answeredCount = 0;
     const reviewSeeds: ReviewSeed[] = [];
@@ -125,22 +127,16 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
       const questionId = session.questionIds[i];
       if (!questionId) continue;
 
-      const state = stateByQuestionId.get(questionId);
-      if (!state) {
-        this.logger.warn(
-          {
-            sessionId: session.id,
-            userId: input.userId,
-            questionId,
-          },
-          'Completed session feedback missing question state; defaulting to unanswered',
-        );
-      }
+      const state = requirePracticeSessionQuestionState({
+        sessionId: session.id,
+        questionId,
+        stateByQuestionId,
+      });
 
       const attempt = attemptByQuestionId.get(questionId);
       const selectedChoiceId = attempt
         ? selectedChoiceIdOrNull(attempt.outcome)
-        : (state?.latestSelectedChoiceId ?? null);
+        : state.latestSelectedChoiceId;
       const isOmitted = attempt ? isOmittedOutcome(attempt.outcome) : false;
       const isAnswered = selectedChoiceId !== null;
       if (isAnswered) answeredCount += 1;
@@ -149,9 +145,9 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
         questionId,
         order: i + 1,
         isAnswered,
-        isCorrect: attempt?.isCorrect ?? state?.latestIsCorrect ?? null,
+        isCorrect: attempt?.isCorrect ?? state.latestIsCorrect,
         isOmitted,
-        markedForReview: state?.markedForReview ?? false,
+        markedForReview: state.markedForReview,
         selectedChoiceId,
       });
     }
