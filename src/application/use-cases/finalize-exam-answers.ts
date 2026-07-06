@@ -1,4 +1,8 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  isApplicationError,
+  practiceSessionAlreadyEndedError,
+} from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
   AttemptWriter,
@@ -63,6 +67,16 @@ export type FinalizeExamAnswersWriteTransaction = <T>(
 const noopFinalizeLogger: Pick<Logger, 'warn'> = {
   warn: () => undefined,
 };
+const ATTEMPT_ALREADY_ANSWERED_CONFLICT_MESSAGE =
+  'This question has already been answered in this session';
+
+function isAttemptAlreadyAnsweredConflict(error: unknown): boolean {
+  return (
+    isApplicationError(error) &&
+    error.code === 'CONFLICT' &&
+    error.message === ATTEMPT_ALREADY_ANSWERED_CONFLICT_MESSAGE
+  );
+}
 
 export function computeFinalExamEndedAt(input: {
   now: Date;
@@ -256,6 +270,9 @@ export class FinalizeExamAnswersUseCase {
         latestAnsweredAt,
       });
       return tx.sessions.end(input.sessionId, input.userId, effectiveEndedAt);
+    }).catch(async (error: unknown) => {
+      await this.throwAlreadyEndedForDoubleFinalizeLoser(input, error);
+      throw error;
     });
 
     const endedAt = endedSession.endedAt;
@@ -267,6 +284,21 @@ export class FinalizeExamAnswersUseCase {
     }
 
     return projectPracticeSessionSummary(endedSession, endedAt);
+  }
+
+  private async throwAlreadyEndedForDoubleFinalizeLoser(
+    input: FinalizeExamAnswersInput,
+    error: unknown,
+  ): Promise<void> {
+    if (!isAttemptAlreadyAnsweredConflict(error)) return;
+
+    const freshSession = await this.sessions.findByIdAndUserId(
+      input.sessionId,
+      input.userId,
+    );
+    if (!freshSession?.endedAt) return;
+
+    throw practiceSessionAlreadyEndedError({ cause: error });
   }
 
   private async applyFinalDraftAnswer(

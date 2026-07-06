@@ -1,6 +1,9 @@
 // biome-ignore lint/style/noExcessiveLinesPerFile: Keep all FinalizeExamAnswersUseCase behavior (drafted grading, BUG-238 cumulative bounds, BUG-252 nullable drafts, BUG-254 expiry flush) in one file so the use-case contract stays auditable next to its shared fakes/helpers.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import {
   FakeAttemptRepository,
   FakeLogger,
@@ -12,6 +15,7 @@ import {
   MS_PER_SECOND,
 } from '@/src/domain/services';
 import {
+  createAttempt,
   createChoice,
   createPracticeSession,
   createQuestion,
@@ -39,6 +43,32 @@ function passthroughTransaction(
       attempts,
       sessions,
     });
+}
+
+class SequencedFindPracticeSessionRepository extends FakePracticeSessionRepository {
+  private findCallCount = 0;
+
+  constructor(
+    private readonly firstSession: ReturnType<typeof createPracticeSession>,
+    private readonly laterSession: ReturnType<typeof createPracticeSession>,
+  ) {
+    super([]);
+  }
+
+  override async findByIdAndUserId(
+    sessionId: string,
+    userId: string,
+  ): Promise<ReturnType<typeof createPracticeSession> | null> {
+    if (
+      sessionId !== this.firstSession.id ||
+      userId !== this.firstSession.userId
+    ) {
+      return null;
+    }
+
+    this.findCallCount += 1;
+    return this.findCallCount === 1 ? this.firstSession : this.laterSession;
+  }
 }
 
 function createFinalizeQuestion(
@@ -631,6 +661,134 @@ describe('FinalizeExamAnswersUseCase', () => {
     ).rejects.toEqual(
       new ApplicationError('CONFLICT', 'Cannot finalize a completed session'),
     );
+  });
+
+  it('maps a double-finalize already-answered loser to AlreadyEnded after a fresh re-read', async () => {
+    const activeSession = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'exam',
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'q1-correct',
+          draftSavedAt: new Date('2026-03-17T12:00:00.000Z'),
+          draftCumulativeMs: 20_000,
+        },
+      ],
+    });
+    const endedSession = createPracticeSession({
+      ...activeSession,
+      endedAt: new Date('2026-03-17T12:30:00.000Z'),
+    });
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ]);
+    const outerSessions = new SequencedFindPracticeSessionRepository(
+      activeSession,
+      endedSession,
+    );
+    const txSessions = new FakePracticeSessionRepository([activeSession]);
+    const txAttempts = new FakeAttemptRepository([
+      createAttempt({
+        id: 'attempt-1',
+        userId: 'user-1',
+        questionId: 'q1',
+        practiceSessionId: 'session-1',
+        selectedChoiceId: 'q1-correct',
+        isCorrect: true,
+      }),
+    ]);
+    const writeTransaction: FinalizeExamAnswersWriteTransaction = async (fn) =>
+      fn({
+        questions,
+        attempts: txAttempts,
+        sessions: txSessions,
+      });
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      new FakeAttemptRepository(),
+      outerSessions,
+      writeTransaction,
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Practice session already ended',
+      details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
+    });
+  });
+
+  it('keeps an already-answered finalize conflict unchanged when the fresh re-read is still active', async () => {
+    const activeSession = createPracticeSession({
+      id: 'session-1',
+      userId: 'user-1',
+      mode: 'exam',
+      questionIds: ['q1'],
+      questionStates: [
+        {
+          questionId: 'q1',
+          markedForReview: false,
+          latestSelectedChoiceId: null,
+          latestIsCorrect: null,
+          latestAnsweredAt: null,
+          draftSelectedChoiceId: 'q1-correct',
+          draftSavedAt: new Date('2026-03-17T12:00:00.000Z'),
+          draftCumulativeMs: 20_000,
+        },
+      ],
+    });
+    const questions = new FakeQuestionRepository([
+      createFinalizeQuestion('q1', 'q1-correct', 'q1-wrong'),
+    ]);
+    const outerSessions = new SequencedFindPracticeSessionRepository(
+      activeSession,
+      activeSession,
+    );
+    const txSessions = new FakePracticeSessionRepository([activeSession]);
+    const txAttempts = new FakeAttemptRepository([
+      createAttempt({
+        id: 'attempt-1',
+        userId: 'user-1',
+        questionId: 'q1',
+        practiceSessionId: 'session-1',
+        selectedChoiceId: 'q1-correct',
+        isCorrect: true,
+      }),
+    ]);
+    const writeTransaction: FinalizeExamAnswersWriteTransaction = async (fn) =>
+      fn({
+        questions,
+        attempts: txAttempts,
+        sessions: txSessions,
+      });
+    const useCase = new FinalizeExamAnswersUseCase(
+      questions,
+      new FakeAttemptRepository(),
+      outerSessions,
+      writeTransaction,
+    );
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        sessionId: 'session-1',
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'This question has already been answered in this session',
+      details: undefined,
+    });
   });
 
   it('rejects missing sessions', async () => {
