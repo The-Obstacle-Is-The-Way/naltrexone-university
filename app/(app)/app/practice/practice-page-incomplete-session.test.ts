@@ -195,6 +195,7 @@ describe('practice-page-incomplete-session', () => {
       const setStatus = vi.fn();
       const setError = vi.fn();
       const setSession = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
       const error = new Error('boom');
       const endPracticeSessionFn = vi.fn(async () => {
         throw error;
@@ -204,6 +205,7 @@ describe('practice-page-incomplete-session', () => {
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
         idempotencyKey: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+        rotateIdempotencyKey,
         mode: 'tutor',
         endPracticeSessionFn,
         discardPracticeSessionFn,
@@ -215,6 +217,7 @@ describe('practice-page-incomplete-session', () => {
 
       expect(setStatus).toHaveBeenLastCalledWith('error');
       expect(setError).toHaveBeenLastCalledWith('boom');
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
       expect(setSession).not.toHaveBeenCalled();
       expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
         component: 'PracticePageIncompleteSession',

@@ -1,3 +1,5 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
@@ -352,12 +354,27 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     await expect(repo.discard(sessionId, userId)).resolves.toBeUndefined();
 
     expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(db.transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
     expect(deleteFrom).toHaveBeenNthCalledWith(
       1,
       practiceSessionQuestionStates,
     );
     expect(deleteFrom).toHaveBeenNthCalledWith(2, practiceSessions);
     expect(deleteWhere).toHaveBeenCalledTimes(2);
+
+    const childDeleteWhere = deleteWhere.mock.calls[0]?.[0];
+    expect(childDeleteWhere).toBeDefined();
+    const childDeleteSql = new PgDialect().sqlToQuery(
+      childDeleteWhere as SQL,
+    ).sql;
+    expect(childDeleteSql).toContain(
+      '"practice_session_question_states"."practice_session_id"',
+    );
+    expect(childDeleteSql).toContain('exists');
+    expect(childDeleteSql).toContain('"practice_sessions"."user_id"');
+    expect(childDeleteSql).toContain('"practice_sessions"."ended_at" is null');
   });
 
   it('ends an active practice session', async () => {
