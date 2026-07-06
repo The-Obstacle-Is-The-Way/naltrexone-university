@@ -1,6 +1,6 @@
 # BUG-280: Double-Finalize Race Surfaces as a Reason-less "Already Answered" CONFLICT That Gets Cached Under the Loser's Idempotency Key
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P3
 **Date:** 2026-07-05
 **Confirmed:** 2026-07-05
@@ -29,10 +29,10 @@ Actual: the loser blocks on the winner's uncommitted unique-index entry, then re
 
 ## Root Cause
 
-- [`drizzle-attempt-repository.ts`](../../src/adapters/repositories/drizzle-attempt-repository.ts#L186-L195): the `23505`-on-`ATTEMPTS_SESSION_QUESTION_UQ` mapping throws `CONFLICT` with a tutor-double-submit message and no `details`. The mapping is correct for its original audience (per-question tutor submits) and wrong for finalize, which inserts many attempts inside one transaction.
-- [`finalize-exam-answers.ts`](../../src/application/use-cases/finalize-exam-answers.ts#L136-L141): the in-transaction `endedAt` check reads the transaction snapshot, which cannot see a concurrently-committing winner under REPEATABLE READ — so the check passes on both sides and the unique index is the actual serializer.
-- [`practice-session-idempotency-policy.ts`](../../src/adapters/controllers/shared/practice-session-idempotency-policy.ts): only `StateChangedConcurrently` is exempt from error caching, so this reason-less transient CONFLICT is cached.
-- [`db/schema.ts`](../../db/schema.ts#L617-L619): `attempts_session_question_uq` (BUG-105) is the constraint doing the serializing — working as designed; the defect is purely in the error semantics layered on it.
+- [`drizzle-attempt-repository.ts`](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L186-L195): the `23505`-on-`ATTEMPTS_SESSION_QUESTION_UQ` mapping throws `CONFLICT` with a tutor-double-submit message and no `details`. The mapping is correct for its original audience (per-question tutor submits) and wrong for finalize, which inserts many attempts inside one transaction.
+- [`finalize-exam-answers.ts`](../../../src/application/use-cases/finalize-exam-answers.ts#L136-L141): the in-transaction `endedAt` check reads the transaction snapshot, which cannot see a concurrently-committing winner under REPEATABLE READ — so the check passes on both sides and the unique index is the actual serializer.
+- [`practice-session-idempotency-policy.ts`](../../../src/adapters/controllers/shared/practice-session-idempotency-policy.ts): only `StateChangedConcurrently` is exempt from error caching, so this reason-less transient CONFLICT is cached.
+- [`db/schema.ts`](../../../db/schema.ts#L617-L619): `attempts_session_question_uq` (BUG-105) is the constraint doing the serializing — working as designed; the defect is purely in the error semantics layered on it.
 
 ## Impact
 
@@ -58,9 +58,22 @@ it('maps the double-finalize unique-violation loser to AlreadyEnded, not "alread
 });
 ```
 
+## Resolution
+
+Resolved by PR #563 (squash `a3be3330`) and promoted to production by PR #564 (merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`).
+
+The fix catches the duplicate-attempt loser at the finalize write boundary, re-reads the session through a fresh snapshot after the aborted transaction, and maps the race to `practiceSessionAlreadyEndedError()` when the concurrent winner has ended the session. Genuine active-session per-question conflicts still rethrow unchanged.
+
+## Verification
+
+- Fix PR: #563, squash `a3be3330`.
+- Promotion PR: #564, merge commit `4e923359dfd391206baf6887f3ab4a1e470e3152`.
+- Production deploy: GitHub deployment `5331520979`, Vercel target `https://naltrexone-university-cosiyzvs9-john-h-jungs-projects.vercel.app`, succeeded 2026-07-06T15:13:34Z.
+- Health proof: `https://addictionboards.com/` and the Vercel deployment URL both returned HTTP/2 200 after the promo; Vercel runtime logs for the checked deployment window contained only the two successful HEAD requests and no errors.
+
 ## Related
 
 - BUG-105 (archived) introduced `attempts_session_question_uq` — the constraint is correct; this bug is about the error mapped onto it in a new (finalize) context.
 - [BUG-277](bug-277-exam-expiry-finalize-stale-flush-aborts-finalization.md) — sibling reason-less CONFLICT on the same finalize surface.
-- [DEBT-438](../debt/debt-438-conflict-reason-client-coverage-gaps.md) — the umbrella conflict-reason coverage debt.
+- [DEBT-438](../../debt/debt-438-conflict-reason-client-coverage-gaps.md) — the umbrella conflict-reason coverage debt.
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review (five independent DDIA-lens reviewers; line-level verification against `e3853656`).

@@ -37,5 +37,5 @@ Concrete anomaly: two tabs on a tutor session; a submit for question 10 is in fl
 ## Related
 
 - Archived: [`debt-426-session-wide-lock-defeats-row-concurrency.md`](../_archive/debt/debt-426-session-wide-lock-defeats-row-concurrency.md) (the residual paragraph this corrects).
-- [BUG-278](../bugs/bug-278-end-discard-idempotency-caches-transient-errors-under-fixed-key.md) — same-review finding on the adjacent discard path.
+- [BUG-278](../_archive/bugs/bug-278-end-discard-idempotency-caches-transient-errors-under-fixed-key.md) — same-review finding on the adjacent discard path, resolved before this debt item.
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review; the write-skew extension was independently derived by two of five review lenses and verified line-level against `e3853656`.
