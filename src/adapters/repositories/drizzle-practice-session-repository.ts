@@ -449,15 +449,30 @@ export class DrizzlePracticeSessionRepository
   }
 
   async discard(id: string, userId: string): Promise<void> {
-    await this.db
-      .delete(practiceSessions)
-      .where(
+    await this.db.transaction(async (tx) => {
+      await tx.delete(practiceSessionQuestionStates).where(
         and(
-          eq(practiceSessions.id, id),
-          eq(practiceSessions.userId, userId),
-          isNull(practiceSessions.endedAt),
+          eq(practiceSessionQuestionStates.practiceSessionId, id),
+          sql`exists (
+              select 1
+              from ${practiceSessions}
+              where ${practiceSessions.id} = ${practiceSessionQuestionStates.practiceSessionId}
+                and ${practiceSessions.userId} = ${userId}
+                and ${practiceSessions.endedAt} is null
+            )`,
         ),
       );
+
+      await tx
+        .delete(practiceSessions)
+        .where(
+          and(
+            eq(practiceSessions.id, id),
+            eq(practiceSessions.userId, userId),
+            isNull(practiceSessions.endedAt),
+          ),
+        );
+    });
   }
 
   async end(id: string, userId: string, explicitEndedAt?: Date) {

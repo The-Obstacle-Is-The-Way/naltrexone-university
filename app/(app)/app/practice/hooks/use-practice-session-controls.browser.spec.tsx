@@ -25,6 +25,8 @@ const getIncompletePracticeSession = vi.mocked(
   practiceController.getIncompletePracticeSession,
 );
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 installReportClientErrorMocks(reportClientError);
 
@@ -211,6 +213,9 @@ describe('usePracticeSessionControls (browser)', () => {
 
     expect(endPracticeSession).toHaveBeenCalledWith({
       sessionId,
+      idempotencyKey: expect.stringMatching(UUID_PATTERN),
+    });
+    expect(endPracticeSession.mock.calls[0]?.[0]).not.toMatchObject({
       idempotencyKey: sessionId,
     });
     expect(discardPracticeSession).not.toHaveBeenCalled();
@@ -244,6 +249,9 @@ describe('usePracticeSessionControls (browser)', () => {
 
     expect(discardPracticeSession).toHaveBeenCalledWith({
       sessionId,
+      idempotencyKey: expect.stringMatching(UUID_PATTERN),
+    });
+    expect(discardPracticeSession.mock.calls[0]?.[0]).not.toMatchObject({
       idempotencyKey: sessionId,
     });
     expect(endPracticeSession).not.toHaveBeenCalled();

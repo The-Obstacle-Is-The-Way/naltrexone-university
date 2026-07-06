@@ -144,6 +144,7 @@ describe('practice-page-incomplete-session', () => {
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        idempotencyKey: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         mode: 'tutor',
         endPracticeSessionFn,
         discardPracticeSessionFn,
@@ -155,7 +156,7 @@ describe('practice-page-incomplete-session', () => {
 
       expect(endPracticeSessionFn).toHaveBeenCalledWith({
         sessionId: fixtureSession1Id,
-        idempotencyKey: fixtureSession1Id,
+        idempotencyKey: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
       });
       expect(discardPracticeSessionFn).not.toHaveBeenCalled();
       expect(setSession).toHaveBeenCalledWith(null);
@@ -171,6 +172,7 @@ describe('practice-page-incomplete-session', () => {
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        idempotencyKey: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
         mode: 'exam',
         endPracticeSessionFn,
         discardPracticeSessionFn,
@@ -182,7 +184,7 @@ describe('practice-page-incomplete-session', () => {
 
       expect(discardPracticeSessionFn).toHaveBeenCalledWith({
         sessionId: fixtureSession1Id,
-        idempotencyKey: fixtureSession1Id,
+        idempotencyKey: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
       });
       expect(endPracticeSessionFn).not.toHaveBeenCalled();
       expect(setSession).toHaveBeenCalledWith(null);
@@ -201,6 +203,7 @@ describe('practice-page-incomplete-session', () => {
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        idempotencyKey: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
         mode: 'tutor',
         endPracticeSessionFn,
         discardPracticeSessionFn,
@@ -219,6 +222,38 @@ describe('practice-page-incomplete-session', () => {
       });
     });
 
+    it('rotates the abandon idempotency key when the request fails', async () => {
+      const setStatus = vi.fn();
+      const setError = vi.fn();
+      const setSession = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const endPracticeSessionFn = vi.fn(async () =>
+        err('INTERNAL_ERROR', 'Nope'),
+      );
+      const discardPracticeSessionFn = vi.fn(async () => ok({}));
+
+      await abandonIncompleteSession({
+        sessionId: fixtureSession1Id,
+        idempotencyKey: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+        rotateIdempotencyKey,
+        mode: 'tutor',
+        endPracticeSessionFn,
+        discardPracticeSessionFn,
+        setIncompleteSessionStatus: setStatus,
+        setIncompleteSessionError: setError,
+        setIncompleteSession: setSession,
+        isMounted: () => true,
+      });
+
+      expect(endPracticeSessionFn).toHaveBeenCalledWith({
+        sessionId: fixtureSession1Id,
+        idempotencyKey: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      });
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setStatus).toHaveBeenLastCalledWith('error');
+      expect(setError).toHaveBeenLastCalledWith('Nope');
+    });
+
     it('does not set error state when unmounted after a thrown request', async () => {
       const setStatus = vi.fn();
       const setError = vi.fn();
@@ -230,6 +265,7 @@ describe('practice-page-incomplete-session', () => {
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        idempotencyKey: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
         mode: 'tutor',
         endPracticeSessionFn,
         discardPracticeSessionFn,
@@ -256,6 +292,7 @@ describe('practice-page-incomplete-session', () => {
 
       await abandonIncompleteSession({
         sessionId: fixtureSession1Id,
+        idempotencyKey: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
         mode: 'tutor',
         endPracticeSessionFn,
         discardPracticeSessionFn,

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+  practiceSessionQuestionStates,
   practiceSessions,
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
@@ -314,12 +315,20 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     expect(tx.insert).toHaveBeenCalledTimes(1);
   });
 
-  it('discards an incomplete practice session by deleting the session row', async () => {
+  it('discards an incomplete practice session child-first in one transaction', async () => {
     const deleteWhere = vi.fn(async () => undefined);
     const deleteFrom = vi.fn(() => ({ where: deleteWhere }));
+    const tx = {
+      delete: deleteFrom,
+    };
 
     const db = {
-      delete: deleteFrom,
+      transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
+      delete: () => {
+        throw new Error('unexpected delete outside transaction');
+      },
       insert: () => {
         throw new Error('unexpected insert');
       },
@@ -342,8 +351,13 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
 
     await expect(repo.discard(sessionId, userId)).resolves.toBeUndefined();
 
-    expect(deleteFrom).toHaveBeenCalledWith(practiceSessions);
-    expect(deleteWhere).toHaveBeenCalledTimes(1);
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(deleteFrom).toHaveBeenNthCalledWith(
+      1,
+      practiceSessionQuestionStates,
+    );
+    expect(deleteFrom).toHaveBeenNthCalledWith(2, practiceSessions);
+    expect(deleteWhere).toHaveBeenCalledTimes(2);
   });
 
   it('ends an active practice session', async () => {
