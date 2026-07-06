@@ -41,7 +41,7 @@ function createInput(
     setSessionMode: vi.fn(),
     resetQuestionState: vi.fn(),
     loadSpecificQuestion: vi.fn(),
-    finalizeSession: vi.fn().mockResolvedValue(undefined),
+    finalizeSession: vi.fn().mockResolvedValue(true),
     getPracticeSessionReviewFn: getPracticeSessionReviewMock,
   };
 }
@@ -249,11 +249,13 @@ describe('usePracticeSessionReviewStageState (browser)', () => {
 
   it('finalizes review state when requested', async () => {
     const input = createInput('exam');
+    vi.mocked(input.finalizeSession).mockResolvedValue(true);
     const harness = await renderHook(() =>
       usePracticeSessionReviewStageState(input),
     );
 
-    harness.result.current.onFinalizeReview();
+    const finalized = await harness.result.current.onFinalizeReview();
+    expect(finalized).toBe(true);
 
     await expect
       .poll(() => vi.mocked(input.finalizeSession).mock.calls.length)

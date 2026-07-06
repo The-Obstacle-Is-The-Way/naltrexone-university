@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AttemptConflictMessages,
+  PracticeSessionConflictMessages,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
+import {
   ApplicationError,
   createChoice,
   createPracticeSession,
@@ -209,9 +214,11 @@ describe('SubmitAnswerUseCase', () => {
         choiceId: 'c2',
         sessionId,
       }),
-    ).rejects.toEqual(
-      new ApplicationError('CONFLICT', 'Practice session already ended'),
-    );
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: PracticeSessionConflictMessages.AlreadyEnded,
+      details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
+    });
 
     expect(attempts.getAll()).toEqual([]);
   });
@@ -350,7 +357,7 @@ describe('SubmitAnswerUseCase', () => {
     ).rejects.toEqual(
       new ApplicationError(
         'CONFLICT',
-        'This question has already been answered in this session',
+        AttemptConflictMessages.AlreadyAnsweredInSession,
       ),
     );
 

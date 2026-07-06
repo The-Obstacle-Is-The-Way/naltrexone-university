@@ -9,6 +9,7 @@ import {
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
+  type EndedSessionConflictRecovery,
   type ExamDraftAnswer,
   type ExamDraftSaveResult,
   isExamExpiryDraftSaveConflict,
@@ -37,6 +38,7 @@ export type UsePracticeSessionQuestionFlowInput = {
   onExamServerExpiry?: (
     finalDraftAnswer: ExamDraftAnswer | null,
   ) => Promise<void>;
+  recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
 };
 
 type SubmitOptions = {
@@ -137,6 +139,7 @@ export function usePracticeSessionQuestionFlow(
       setQuestionLoadedAt,
       setQuestion,
       setSessionInfo: applySessionInfo,
+      recoverEndedSessionConflict: input.recoverEndedSessionConflict,
       createRequestSequenceId,
       isLatestRequest,
       isMounted,
@@ -144,6 +147,7 @@ export function usePracticeSessionQuestionFlow(
     [
       input.sessionId,
       input.getNextQuestionFn,
+      input.recoverEndedSessionConflict,
       applySessionInfo,
       createIdempotencyKey,
       createRequestSequenceId,
@@ -418,6 +422,7 @@ export function usePracticeSessionQuestionFlow(
             onSuccess: (result) => {
               captured = result;
             },
+            recoverEndedSessionConflict: input.recoverEndedSessionConflict,
             createRequestSequenceId,
             isLatestRequest,
             isMounted,
@@ -438,6 +443,7 @@ export function usePracticeSessionQuestionFlow(
       createRequestSequenceId,
       input.sessionId,
       input.submitAnswerFn,
+      input.recoverEndedSessionConflict,
       isLatestRequest,
       isMounted,
       question,

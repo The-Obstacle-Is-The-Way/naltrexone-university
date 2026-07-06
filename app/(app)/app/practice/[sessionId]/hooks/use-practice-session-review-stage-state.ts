@@ -26,7 +26,7 @@ export type UsePracticeSessionReviewStageStateInput = {
   setSessionMode: (mode: 'tutor' | 'exam' | null) => void;
   resetQuestionState: () => void;
   loadSpecificQuestion: (questionId: string) => void;
-  finalizeSession: () => Promise<void>;
+  finalizeSession: () => Promise<boolean>;
   getPracticeSessionReviewFn: (
     input: Pick<GetPracticeSessionReviewUseCaseInput, 'sessionId'>,
   ) => Promise<ActionResult<GetPracticeSessionReviewOutput>>;
@@ -41,7 +41,7 @@ export type UsePracticeSessionReviewStageStateOutput = {
   onEndSession: () => void;
   onRetryReview: () => void;
   onOpenReviewQuestion: (questionId: string) => void;
-  onFinalizeReview: () => Promise<void>;
+  onFinalizeReview: () => Promise<boolean>;
 };
 
 export function usePracticeSessionReviewStageState(
@@ -149,7 +149,7 @@ export function usePracticeSessionReviewStageState(
     [input.loadSpecificQuestion],
   );
 
-  const onFinalizeReview = useCallback((): Promise<void> => {
+  const onFinalizeReview = useCallback((): Promise<boolean> => {
     setReview(null);
     setReviewLoadState({ status: 'idle' });
     setIsInReviewStage(false);

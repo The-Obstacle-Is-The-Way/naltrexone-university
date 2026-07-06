@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
+import { err } from '@/src/adapters/controllers/action-result';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import * as tagController from '@/src/adapters/controllers/tag-controller';
 import { ok } from '@/tests/test-helpers/ok';
@@ -25,6 +26,8 @@ const getIncompletePracticeSession = vi.mocked(
   practiceController.getIncompletePracticeSession,
 );
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 installReportClientErrorMocks(reportClientError);
 
@@ -170,7 +173,7 @@ describe('usePracticeSessionControls (browser)', () => {
     });
   });
 
-  it('passes session id as idempotency key when abandoning an incomplete session', async () => {
+  it('passes a generated idempotency key when abandoning an incomplete session', async () => {
     const sessionId = '11111111-1111-1111-1111-111111111111';
 
     getTags.mockResolvedValue(ok({ rows: [] }));
@@ -211,9 +214,77 @@ describe('usePracticeSessionControls (browser)', () => {
 
     expect(endPracticeSession).toHaveBeenCalledWith({
       sessionId,
+      idempotencyKey: expect.stringMatching(UUID_PATTERN),
+    });
+    expect(endPracticeSession.mock.calls[0]?.[0]).not.toMatchObject({
       idempotencyKey: sessionId,
     });
     expect(discardPracticeSession).not.toHaveBeenCalled();
+  });
+
+  it('rotates the generated abandon idempotency key after an abandon failure', async () => {
+    const sessionId = '11111111-1111-1111-1111-111111111113';
+
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    getIncompletePracticeSession.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'tutor',
+        answeredCount: 2,
+        totalCount: 10,
+        startedAt: '2026-02-08T00:00:00.000Z',
+      }),
+    );
+    endPracticeSession
+      .mockResolvedValueOnce(err('INTERNAL_ERROR', 'Nope'))
+      .mockResolvedValueOnce(
+        ok({
+          sessionId,
+          mode: 'tutor',
+          questionCount: 10,
+          endedAt: '2026-02-08T01:00:00.000Z',
+          totals: {
+            answered: 2,
+            correct: 1,
+            accuracy: 0.5,
+            durationSeconds: 120,
+          },
+        }),
+      );
+    countAvailableQuestions.mockResolvedValue(ok({ count: 0 }));
+
+    const screen = await render(<PracticeSessionControlsHookProbe />);
+
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('idle');
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('error');
+
+    const firstCallInput = endPracticeSession.mock.calls[0]?.[0] as
+      | { idempotencyKey?: unknown }
+      | undefined;
+    const firstKey = firstCallInput?.idempotencyKey;
+    expect(firstKey).toEqual(expect.stringMatching(UUID_PATTERN));
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+
+    const secondCallInput = endPracticeSession.mock.calls[1]?.[0] as
+      | { idempotencyKey?: unknown }
+      | undefined;
+    const secondKey = secondCallInput?.idempotencyKey;
+    expect(secondKey).toEqual(expect.stringMatching(UUID_PATTERN));
+    expect(secondKey).not.toBe(firstKey);
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('idle');
   });
 
   it('uses discard instead of end when abandoning an incomplete exam session', async () => {
@@ -244,6 +315,9 @@ describe('usePracticeSessionControls (browser)', () => {
 
     expect(discardPracticeSession).toHaveBeenCalledWith({
       sessionId,
+      idempotencyKey: expect.stringMatching(UUID_PATTERN),
+    });
+    expect(discardPracticeSession.mock.calls[0]?.[0]).not.toMatchObject({
       idempotencyKey: sessionId,
     });
     expect(endPracticeSession).not.toHaveBeenCalled();

@@ -63,6 +63,8 @@ export function createIncompleteSessionEffect<T>(input: {
 
 export async function abandonIncompleteSession<T>(input: {
   sessionId: string;
+  idempotencyKey: string;
+  rotateIdempotencyKey?: () => void;
   mode: 'tutor' | 'exam';
   endPracticeSessionFn: (input: unknown) => Promise<ActionResult<unknown>>;
   discardPracticeSessionFn: (input: unknown) => Promise<ActionResult<unknown>>;
@@ -86,7 +88,7 @@ export async function abandonIncompleteSession<T>(input: {
     res = await withTimeout(
       abandonSessionFn({
         sessionId: input.sessionId,
-        idempotencyKey: input.sessionId,
+        idempotencyKey: input.idempotencyKey,
       }),
       ABANDON_SESSION_TIMEOUT_MS,
     );
@@ -96,6 +98,7 @@ export async function abandonIncompleteSession<T>(input: {
       component: 'PracticePageIncompleteSession',
       action: 'abandonIncompleteSession',
     });
+    input.rotateIdempotencyKey?.();
     input.setIncompleteSessionStatus('error');
     input.setIncompleteSessionError(getThrownErrorMessage(error));
     return;
@@ -103,6 +106,7 @@ export async function abandonIncompleteSession<T>(input: {
   if (!input.isMounted()) return;
 
   if (!res.ok) {
+    input.rotateIdempotencyKey?.();
     input.setIncompleteSessionStatus('error');
     input.setIncompleteSessionError(getActionResultErrorMessage(res));
     return;

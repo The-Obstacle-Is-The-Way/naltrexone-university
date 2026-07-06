@@ -241,15 +241,16 @@ export function usePracticeSessionReviewStage(
     finalizeExamSession,
     reviewStage.onEndSession,
   ]);
-  const onFinalizeReview = useCallback(async (): Promise<void> => {
+  const onFinalizeReview = useCallback(async (): Promise<boolean> => {
     if (input.sessionMode !== 'exam') {
       return reviewStage.onFinalizeReview();
     }
     const finalizedSummary = await finalizeExamSessionForPostReview();
-    if (!input.isMounted()) return;
-    if (!finalizedSummary) return;
+    if (!input.isMounted()) return false;
+    if (!finalizedSummary) return false;
     reviewStage.setReview(null);
     await examResults.enterPostExamReview(finalizedSummary);
+    return true;
   }, [
     examResults.enterPostExamReview,
     finalizeExamSessionForPostReview,

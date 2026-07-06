@@ -29,6 +29,11 @@ export const PracticeSessionConflictMessages = {
     'Practice session state changed concurrently; please retry.',
 } as const;
 
+export const AttemptConflictMessages = {
+  AlreadyAnsweredInSession:
+    'This question has already been answered in this session',
+} as const;
+
 export type ApplicationErrorDetails = Readonly<{
   reason?: PracticeSessionConflictReason;
 }>;

@@ -11,7 +11,7 @@ export type ExamTimerState = {
 export type UseExamTimerInput = {
   deadlineAt: string | null;
   isExamActive: boolean;
-  onExpire: () => void;
+  onExpire: () => boolean | undefined | Promise<boolean | undefined>;
 };
 
 function computeRemainingSeconds(deadlineMs: number, nowMs: number): number {
@@ -61,7 +61,20 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
       }
 
       firedDeadlineMsRef.current = deadlineMs;
-      onExpireRef.current();
+      void (async () => {
+        try {
+          const handled = await onExpireRef.current();
+          if (handled === false && firedDeadlineMsRef.current === deadlineMs) {
+            firedDeadlineMsRef.current = null;
+          }
+        } catch {
+          // onExpire reports its own failures; clear the latch so the next tick
+          // can retry expiry finalization for the same deadline.
+          if (firedDeadlineMsRef.current === deadlineMs) {
+            firedDeadlineMsRef.current = null;
+          }
+        }
+      })();
     }
 
     update();

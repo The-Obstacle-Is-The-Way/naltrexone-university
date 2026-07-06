@@ -14,7 +14,10 @@ import { usePracticeSessionReviewStage } from '@/app/(app)/app/practice/[session
 import { ExamTimer } from '@/app/(app)/app/practice/components/exam-timer';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { usePracticeQuestionFeedback } from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
-import type { ExamDraftAnswer } from '@/app/(app)/app/practice/shared/question-flow-actions';
+import type {
+  EndedSessionConflictRecovery,
+  ExamDraftAnswer,
+} from '@/app/(app)/app/practice/shared/question-flow-actions';
 import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
@@ -37,8 +40,20 @@ import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
+import { EXAM_FINAL_DRAFT_FLUSH_GRACE_MS } from '@/src/domain/services';
 
 const BOOTSTRAP_SUMMARY_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+// Client-side optimization only: avoid sending a draft flush that is already
+// outside the shared server grace window. The server remains authoritative.
+const STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS =
+  EXAM_FINAL_DRAFT_FLUSH_GRACE_MS;
+
+type EndedSessionSummaryRecovery = {
+  sessionId: string;
+  promise: Promise<Awaited<
+    ReturnType<typeof getPracticeSessionSummary>
+  > | null>;
+};
 
 type PracticeSessionPageModelOutput = Omit<
   PracticeSessionPageViewProps,
@@ -51,6 +66,17 @@ type PracticeSessionPageModelOutput = Omit<
   onSubmit: () => void;
 };
 
+function isFinalDraftFlushProvablyStale(input: {
+  deadlineAt: string | null | undefined;
+  nowMs: number;
+}): boolean {
+  if (typeof input.deadlineAt !== 'string') return false;
+  const deadlineMs = Date.parse(input.deadlineAt);
+  if (!Number.isFinite(deadlineMs)) return false;
+
+  return input.nowMs > deadlineMs + STALE_FINAL_DRAFT_FLUSH_AFTER_DEADLINE_MS;
+}
+
 export function usePracticeSessionPageModel(
   sessionId: string,
 ): PracticeSessionPageModelOutput {
@@ -60,6 +86,12 @@ export function usePracticeSessionPageModel(
   const onExamServerExpiryRef = useRef<
     ((finalDraftAnswer: ExamDraftAnswer | null) => Promise<void>) | null
   >(null);
+  const recoverEndedSessionConflictRef =
+    useRef<EndedSessionConflictRecovery | null>(null);
+  const recoverEndedSessionSummaryPromiseRef =
+    useRef<EndedSessionSummaryRecovery | null>(null);
+  const currentSessionIdRef = useRef(sessionId);
+  currentSessionIdRef.current = sessionId;
   const [shouldRetryBootstrap, setShouldRetryBootstrap] = useState(false);
   const onExamServerExpiry = useCallback(
     async (finalDraftAnswer: ExamDraftAnswer | null): Promise<void> => {
@@ -67,6 +99,18 @@ export function usePracticeSessionPageModel(
     },
     [],
   );
+  const recoverEndedSessionConflict = useCallback(
+    async (input: { canCommit: () => boolean }): Promise<boolean> => {
+      return (await recoverEndedSessionConflictRef.current?.(input)) ?? false;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (recoverEndedSessionSummaryPromiseRef.current?.sessionId !== sessionId) {
+      recoverEndedSessionSummaryPromiseRef.current = null;
+    }
+  }, [sessionId]);
 
   const questionFlow = usePracticeSessionQuestionFlow({
     sessionId,
@@ -76,6 +120,7 @@ export function usePracticeSessionPageModel(
     submitAnswerFn: submitAnswer,
     saveExamDraftAnswerFn: saveExamDraftAnswer,
     onExamServerExpiry,
+    recoverEndedSessionConflict,
   });
 
   const reviewStage = usePracticeSessionReviewStage({
@@ -184,16 +229,24 @@ export function usePracticeSessionPageModel(
     isMounted,
   });
 
-  const finalizeExpiredExam = useCallback(() => {
-    if (expiryFinalizeInFlightRef.current) return;
+  const finalizeExpiredExam = useCallback((): Promise<boolean> => {
+    if (expiryFinalizeInFlightRef.current) return Promise.resolve(true);
     expiryFinalizeInFlightRef.current = true;
 
-    void (async () => {
+    return (async () => {
       // BUG-254: capture the on-screen draft BEFORE the save attempt. At the
       // deadline the ordinary draft save is rejected as expired; rather than
       // leaving that doomed save's only effect as an error state, we forward the
       // captured selection to finalization so the server grades it.
-      const finalDraftAnswer = questionFlow.getCurrentExamDraft() ?? undefined;
+      const capturedFinalDraftAnswer = questionFlow.getCurrentExamDraft();
+      const finalDraftAnswer =
+        capturedFinalDraftAnswer &&
+        !isFinalDraftFlushProvablyStale({
+          deadlineAt: questionFlow.sessionInfo?.deadlineAt,
+          nowMs: Date.now(),
+        })
+          ? capturedFinalDraftAnswer
+          : undefined;
       try {
         await questionFlow.saveCurrentExamDraft();
       } catch (error) {
@@ -205,13 +258,30 @@ export function usePracticeSessionPageModel(
         }
       }
 
-      if (!isMounted()) return;
-      await reviewStage.finalizeExamSession(finalDraftAnswer);
+      if (!isMounted()) return false;
+      try {
+        const finalized =
+          await reviewStage.finalizeExamSession(finalDraftAnswer);
+        if (!finalized && isMounted()) {
+          expiryFinalizeInFlightRef.current = false;
+        }
+        return finalized;
+      } catch (error) {
+        if (isMounted()) {
+          expiryFinalizeInFlightRef.current = false;
+          reportClientError(error, {
+            component: 'UsePracticeSessionPageModel',
+            action: 'finalizeExpiredExam',
+          });
+        }
+        return false;
+      }
     })();
   }, [
     isMounted,
     questionFlow.getCurrentExamDraft,
     questionFlow.saveCurrentExamDraft,
+    questionFlow.sessionInfo?.deadlineAt,
     reviewStage.finalizeExamSession,
   ]);
 
@@ -278,6 +348,76 @@ export function usePracticeSessionPageModel(
     },
     [applyBootstrapSummary, isMounted, sessionId],
   );
+
+  const recoverEndedSessionSummary = useCallback(
+    (input: { canCommit: () => boolean }): Promise<boolean> => {
+      if (reviewStage.summary || reviewStage.postExamSummary) {
+        return Promise.resolve(true);
+      }
+      let recovery = recoverEndedSessionSummaryPromiseRef.current;
+      if (recovery?.sessionId !== sessionId) {
+        recovery = null;
+      }
+      if (!recovery) {
+        const recoverySessionId = sessionId;
+        const promise = (async (): Promise<Awaited<
+          ReturnType<typeof getPracticeSessionSummary>
+        > | null> => {
+          try {
+            return await withTimeout(
+              getPracticeSessionSummary({ sessionId: recoverySessionId }),
+              BOOTSTRAP_SUMMARY_TIMEOUT_MS,
+            );
+          } catch (error) {
+            if (isMounted()) {
+              reportClientError(error, {
+                component: 'UsePracticeSessionPageModel',
+                action: 'recoverEndedSessionSummary',
+              });
+            }
+            return null;
+          }
+        })();
+        recovery = { sessionId: recoverySessionId, promise };
+        recoverEndedSessionSummaryPromiseRef.current = recovery;
+        const activeRecovery = recovery;
+        void promise.finally(() => {
+          if (recoverEndedSessionSummaryPromiseRef.current === activeRecovery) {
+            recoverEndedSessionSummaryPromiseRef.current = null;
+          }
+        });
+      }
+
+      const recoverySessionId = recovery.sessionId;
+      return recovery.promise.then((result) => {
+        if (currentSessionIdRef.current !== recoverySessionId) return false;
+        if (!isMounted() || !input.canCommit()) return false;
+        if (!result?.ok) return false;
+
+        setShouldRetryBootstrap(false);
+        applyBootstrapSummary(result.data);
+        return true;
+      });
+    },
+    [
+      applyBootstrapSummary,
+      isMounted,
+      reviewStage.postExamSummary,
+      reviewStage.summary,
+      sessionId,
+    ],
+  );
+
+  useEffect(() => {
+    recoverEndedSessionConflictRef.current = recoverEndedSessionSummary;
+    return () => {
+      if (
+        recoverEndedSessionConflictRef.current === recoverEndedSessionSummary
+      ) {
+        recoverEndedSessionConflictRef.current = null;
+      }
+    };
+  }, [recoverEndedSessionSummary]);
 
   const bootstrapSessionSummary = useCallback(() => {
     const requestId = bootstrapRequestIdRef.current + 1;

@@ -5,7 +5,10 @@ import {
   attempts,
   practiceSessions,
 } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  AttemptConflictMessages,
+} from '@/src/application/errors';
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import { DrizzleAttemptRepository } from './drizzle-attempt-repository';
 
@@ -480,7 +483,7 @@ describe('DrizzleAttemptRepository', () => {
       await expect(promise).rejects.toEqual(
         new ApplicationError(
           'CONFLICT',
-          'This question has already been answered in this session',
+          AttemptConflictMessages.AlreadyAnsweredInSession,
         ),
       );
     });

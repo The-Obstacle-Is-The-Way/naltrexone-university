@@ -201,7 +201,9 @@ test('opens a review question and finalizes the exam', async () => {
 });
 
 test('guards against double-clicking confirm submit before pending state updates', async () => {
-  const onFinalizeReview = vi.fn(() => new Promise<void>(() => {}));
+  const onFinalizeReview = vi.fn(
+    () => new Promise<boolean | undefined>(() => {}),
+  );
 
   const screen = await render(
     <ExamReviewView
@@ -228,7 +230,7 @@ test('guards against double-clicking confirm submit before pending state updates
 });
 
 test('allows submitting again after finalize resolves even when pending state never flips', async () => {
-  const finalizeDeferred = createDeferred<void>();
+  const finalizeDeferred = createDeferred<boolean | undefined>();
   const onFinalizeReview = vi.fn(() => finalizeDeferred.promise);
 
   const screen = await render(
@@ -254,7 +256,7 @@ test('allows submitting again after finalize resolves even when pending state ne
   await screen.getByRole('button', { name: 'Confirm submit' }).click();
   expect(onFinalizeReview).toHaveBeenCalledTimes(1);
 
-  finalizeDeferred.resolve();
+  finalizeDeferred.resolve(undefined);
   await finalizeDeferred.promise;
 
   await expect

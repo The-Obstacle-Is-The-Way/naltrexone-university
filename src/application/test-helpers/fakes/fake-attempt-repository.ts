@@ -1,4 +1,7 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  AttemptConflictMessages,
+} from '@/src/application/errors';
 import type {
   AttemptedQuestionSummary,
   AttemptedQuestionsFilters,
@@ -43,7 +46,7 @@ export class FakeAttemptRepository implements AttemptRepository {
       if (duplicate) {
         throw new ApplicationError(
           'CONFLICT',
-          'This question has already been answered in this session',
+          AttemptConflictMessages.AlreadyAnsweredInSession,
         );
       }
     }

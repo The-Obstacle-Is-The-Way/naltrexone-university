@@ -1,6 +1,9 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
+  practiceSessionQuestionStates,
   practiceSessions,
 } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
@@ -314,12 +317,20 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     expect(tx.insert).toHaveBeenCalledTimes(1);
   });
 
-  it('discards an incomplete practice session by deleting the session row', async () => {
-    const deleteWhere = vi.fn(async () => undefined);
+  it('discards an incomplete practice session child-first in one transaction', async () => {
+    const deleteWhere = vi.fn(async (_where: unknown) => undefined);
     const deleteFrom = vi.fn(() => ({ where: deleteWhere }));
+    const tx = {
+      delete: deleteFrom,
+    };
 
     const db = {
-      delete: deleteFrom,
+      transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
+      delete: () => {
+        throw new Error('unexpected delete outside transaction');
+      },
       insert: () => {
         throw new Error('unexpected insert');
       },
@@ -342,8 +353,28 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
 
     await expect(repo.discard(sessionId, userId)).resolves.toBeUndefined();
 
-    expect(deleteFrom).toHaveBeenCalledWith(practiceSessions);
-    expect(deleteWhere).toHaveBeenCalledTimes(1);
+    expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(db.transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
+    expect(deleteFrom).toHaveBeenNthCalledWith(
+      1,
+      practiceSessionQuestionStates,
+    );
+    expect(deleteFrom).toHaveBeenNthCalledWith(2, practiceSessions);
+    expect(deleteWhere).toHaveBeenCalledTimes(2);
+
+    const childDeleteWhere = deleteWhere.mock.calls[0]?.[0];
+    expect(childDeleteWhere).toBeDefined();
+    const childDeleteSql = new PgDialect().sqlToQuery(
+      childDeleteWhere as unknown as SQL,
+    ).sql;
+    expect(childDeleteSql).toContain(
+      '"practice_session_question_states"."practice_session_id"',
+    );
+    expect(childDeleteSql).toContain('exists');
+    expect(childDeleteSql).toContain('"practice_sessions"."user_id"');
+    expect(childDeleteSql).toContain('"practice_sessions"."ended_at" is null');
   });
 
   it('ends an active practice session', async () => {
