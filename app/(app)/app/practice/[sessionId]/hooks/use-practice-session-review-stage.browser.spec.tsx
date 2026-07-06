@@ -227,7 +227,8 @@ describe('usePracticeSessionReviewStage (browser)', () => {
       usePracticeSessionReviewStage(input),
     );
 
-    await harness.result.current.onFinalizeReview();
+    const finalized = await harness.result.current.onFinalizeReview();
+    expect(finalized).toBeUndefined();
 
     await expect
       .poll(() => harness.result.current.summary?.sessionId ?? null)
