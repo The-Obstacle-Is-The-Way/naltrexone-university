@@ -3,7 +3,7 @@ import {
   AUTH_REDIRECT_QUERY_PARAM,
   toPricingRoute,
   toSignUpRedirectRoute,
-} from '../../lib/routes';
+} from '@/lib/routes';
 
 test('unauthenticated pricing CTA links to sign-up with selected plan context', async ({
   page,
