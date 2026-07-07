@@ -36,7 +36,8 @@ Resolved 2026-07-06.
 - `tests/integration/practice-session-schema-hardening.integration.test.ts` proves a string-typed `params_json` insert fails, corrupt completed rows are skipped/logged while healthy rows still return, corrupt latest-incomplete rows are skipped/logged, and `end()` leaves `ended_at` null when strict mapping fails.
 - `get-next-question-navigation.test.ts`, `get-practice-session-review.test.ts`, `get-completed-session-questions-with-feedback.test.ts`, `get-incomplete-practice-session.test.ts`, and `practice-session-summary.test.ts` pin missing normalized state as `INTERNAL_ERROR` / fail-loud behavior instead of defaulting to unanswered.
 - Local migration proof on 2026-07-06: fresh local DB migration to `0027_early_wallow` emitted `DEBT-439 preflight: practice_sessions rows with non-object params_json = 0`.
-- Post-deploy ledger/data proof will be recorded after the promo deploy that applies `0027_early_wallow` to Development and Production.
+- Production deploy proof for `0027_early_wallow`: deploy `dpl_9z8mi9sufEdyaV2ed7ViocJMQ9jG` (main `5e81a7db`, 2026-07-06) logged `DEBT-439 preflight: practice_sessions rows with non-object params_json = 0` and completed with `migrations applied successfully`.
+- Development post-Preview proof for the subsequent `0028_repair_attempts_selected_choice_index` drift repair (PR #572 Preview deployment `3buS2J26KsaMQyeKgWq5JQwsBfck`, 2026-07-06, read-only query against Neon dev host label `ep-still-frog-ahx7bp6y-pooler`): `drizzle.__drizzle_migrations` count `29`, head `1783386691489`, `has0028 = true`, and `pg_constraint.conname = 'practice_sessions_params_json_object_chk'`.
 
 ## Related
 
