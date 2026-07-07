@@ -199,6 +199,47 @@ describe('useExamTimer', () => {
     await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
   });
 
+  it('preserves a milestone crossed during hidden-tab ticks and announces it on return', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    const onExpire = vi.fn();
+
+    const screen = await render(
+      <TimerProbe
+        initialDeadlineAt="2026-05-22T12:05:10.000Z"
+        onExpire={onExpire}
+      />,
+    );
+
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('310');
+    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    });
+    try {
+      // A throttled background tick fires after the 5-minute threshold has
+      // passed. It must not consume the crossing while the user cannot hear
+      // the announcement.
+      vi.setSystemTime(new Date('2026-05-22T12:00:31.000Z'));
+      await vi.advanceTimersByTimeAsync(1_000);
+      await expect
+        .element(screen.getByTestId('milestone'))
+        .toHaveTextContent('');
+    } finally {
+      Reflect.deleteProperty(document, 'visibilityState');
+    }
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent('5 minutes remaining');
+  });
+
   it('retries an expired deadline when onExpire reports that recovery failed', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
