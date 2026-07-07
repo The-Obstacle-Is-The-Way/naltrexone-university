@@ -1,15 +1,11 @@
 import { cn } from '@/lib/utils';
 
 export const EXAM_TIMER_WARNING_SECONDS = 60;
-export const EXAM_TIMER_MILESTONE_SECONDS = {
-  fiveMinutes: 300,
-  oneMinute: 60,
-  thirtySeconds: 30,
-} as const;
 
 export type ExamTimerProps = {
   remainingSeconds: number;
   isExpired: boolean;
+  milestoneAnnouncement: string | null;
 };
 
 function formatRemainingSeconds(remainingSeconds: number): string {
@@ -19,25 +15,9 @@ function formatRemainingSeconds(remainingSeconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-function getMilestoneAnnouncement(remainingSeconds: number): string | null {
-  if (remainingSeconds === EXAM_TIMER_MILESTONE_SECONDS.fiveMinutes) {
-    return '5 minutes remaining';
-  }
-  if (remainingSeconds === EXAM_TIMER_MILESTONE_SECONDS.oneMinute) {
-    return '1 minute remaining';
-  }
-  if (remainingSeconds === EXAM_TIMER_MILESTONE_SECONDS.thirtySeconds) {
-    return '30 seconds remaining';
-  }
-  return null;
-}
-
 export function ExamTimer(props: ExamTimerProps) {
   const isWarning =
     props.remainingSeconds <= EXAM_TIMER_WARNING_SECONDS || props.isExpired;
-  const milestoneAnnouncement = getMilestoneAnnouncement(
-    props.remainingSeconds,
-  );
 
   return (
     <div
@@ -60,7 +40,7 @@ export function ExamTimer(props: ExamTimerProps) {
         {formatRemainingSeconds(props.remainingSeconds)}
       </span>
       <span className="sr-only" aria-live="polite">
-        {milestoneAnnouncement ?? ''}
+        {props.milestoneAnnouncement ?? ''}
       </span>
       <span className="sr-only" aria-live="assertive">
         {props.isExpired ? 'Time is up. Submitting your exam.' : ''}
