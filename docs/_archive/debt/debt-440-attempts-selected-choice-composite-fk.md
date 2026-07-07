@@ -28,7 +28,8 @@ Resolved 2026-07-06. The plain FK was swapped for the composite one, mirroring 0
 
 - `tests/integration/practice-session-schema-hardening.integration.test.ts` proves inserting an attempt whose `selected_choice_id` belongs to another question fails with an FK violation; `tests/integration/db.integration.test.ts` proves the supporting `attempts_selected_choice_question_idx` exists after migration.
 - Local migration proof on 2026-07-06: fresh local DB migration to `0027_early_wallow` emitted `DEBT-440 preflight: attempts rows with cross-question selected_choice_id = 0`.
-- Post-deploy ledger/data proof will be recorded after the promo deploy that applies `0027_early_wallow` to Development and Production.
+- Production deploy proof for `0027_early_wallow`: deploy `dpl_9z8mi9sufEdyaV2ed7ViocJMQ9jG` (main `5e81a7db`, 2026-07-06) logged `DEBT-440 preflight: attempts rows with cross-question selected_choice_id = 0` and completed with `migrations applied successfully`.
+- Development drift proof: the Neon dev branch applied an early `0027_early_wallow.sql` before `attempts_selected_choice_question_idx` was added to the migration file, so the ledger showed `0027` applied while the child-side index was absent. `0028_repair_attempts_selected_choice_index.sql` repairs that drift idempotently with `CREATE INDEX IF NOT EXISTS`; post-Preview proof will be recorded after this repair PR deploys.
 
 ## Related
 
