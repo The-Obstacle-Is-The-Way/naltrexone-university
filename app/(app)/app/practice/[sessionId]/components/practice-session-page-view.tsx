@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
+import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import {
   PracticeView,
   type PracticeViewProps,
@@ -24,7 +25,6 @@ import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../../practice-page-logic';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
-import { focusElementWithoutScroll } from './focus-element-without-scroll';
 import { renderPracticeSessionExamResults } from './practice-session-exam-results-renderer';
 import { findAdjacentAvailableQuestionId } from './practice-session-question-navigation';
 import { SessionSummaryView } from './session-summary-view';

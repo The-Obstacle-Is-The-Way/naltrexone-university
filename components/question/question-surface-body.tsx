@@ -61,7 +61,14 @@ export function QuestionSurfaceBody({
       {question ? beforeQuestionCard : null}
       {questionCard}
       {feedbackRef && feedbackCard ? (
-        <div ref={feedbackRef}>{feedbackCard}</div>
+        <div
+          ref={feedbackRef}
+          tabIndex={-1}
+          data-testid="answer-feedback-region"
+          className="outline-none ring-focus"
+        >
+          {feedbackCard}
+        </div>
       ) : (
         feedbackCard
       )}
