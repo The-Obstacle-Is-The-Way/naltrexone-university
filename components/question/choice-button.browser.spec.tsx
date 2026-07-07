@@ -1,8 +1,9 @@
 import { expect, test, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ChoiceButton } from './choice-button';
 
-test('calls onClick when selected', async () => {
+test('reports pointer origin for a real pointer click', async () => {
   const onClick = vi.fn();
   const screen = await render(
     <ChoiceButton
@@ -17,42 +18,72 @@ test('calls onClick when selected', async () => {
   await screen.getByRole('radio').click();
 
   expect(onClick).toHaveBeenCalledTimes(1);
+  expect(onClick).toHaveBeenCalledWith('pointer');
 });
 
-test('clears a pointer arm when clicking an already selected radio', async () => {
+test('reports non-pointer origin for keyboard Space selection', async () => {
   const onClick = vi.fn();
   const screen = await render(
     <ChoiceButton
       name="q1"
       label="A"
       textMd="Choice A"
-      selected
+      selected={false}
       onClick={onClick}
     />,
   );
 
-  await screen.getByRole('radio').click();
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  (screen.getByRole('radio').element() as HTMLInputElement).focus();
+  await userEvent.keyboard(' ');
 
-  expect(onClick).not.toHaveBeenCalled();
+  expect(onClick).toHaveBeenCalledTimes(1);
+  expect(onClick).toHaveBeenCalledWith('non-pointer');
 });
 
-test('clears a pending pointer arm timeout on unmount', async () => {
+test('reports non-pointer origin for a programmatic click without pointer events', async () => {
   const onClick = vi.fn();
   const screen = await render(
     <ChoiceButton
       name="q1"
       label="A"
       textMd="Choice A"
-      selected
+      selected={false}
       onClick={onClick}
     />,
   );
 
-  await screen.getByRole('radio').click();
-  screen.unmount();
+  // Assistive-tech activation simulation: dispatches click/change with no
+  // preceding pointerdown, so the arm must stay unset.
+  (screen.getByRole('radio').element() as HTMLInputElement).click();
 
-  expect(onClick).not.toHaveBeenCalled();
+  expect(onClick).toHaveBeenCalledTimes(1);
+  expect(onClick).toHaveBeenCalledWith('non-pointer');
+});
+
+test('keyboard keydown clears a held pointer arm before the selection lands', async () => {
+  const onClick = vi.fn();
+  const screen = await render(
+    <ChoiceButton
+      name="q1"
+      label="A"
+      textMd="Choice A"
+      selected={false}
+      onClick={onClick}
+    />,
+  );
+
+  const radio = screen.getByRole('radio').element() as HTMLInputElement;
+  radio.focus();
+  // Arm the flag with a pointerdown that never completes into a click (a
+  // press-and-hold), then select via Space. The Space keydown must clear the
+  // arm so the resulting change reports non-pointer.
+  const label = radio.closest('label');
+  if (!label) throw new Error('Expected choice label wrapper');
+  label.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+  await userEvent.keyboard(' ');
+
+  expect(onClick).toHaveBeenCalledWith('non-pointer');
+  expect(onClick).not.toHaveBeenCalledWith('pointer');
 });
 
 test('renders a disabled radio input when disabled', async () => {
