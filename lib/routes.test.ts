@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { ROUTES, toPracticeSessionRoute, toQuestionRoute } from './routes';
+import {
+  AUTH_REDIRECT_QUERY_PARAM,
+  PRICING_QUERY_PARAMS,
+  ROUTES,
+  toPracticeSessionRoute,
+  toPricingRoute,
+  toQuestionRoute,
+  toSignUpRedirectRoute,
+} from './routes';
 
 describe('lib/routes', () => {
   it('builds question routes from a slash-free base constant', () => {
@@ -113,6 +121,24 @@ describe('lib/routes', () => {
 
   it('exports a history route constant', () => {
     expect(ROUTES.APP_HISTORY).toBe('/app/history');
+  });
+
+  it('builds pricing routes with shared query parameter names', () => {
+    expect(PRICING_QUERY_PARAMS.plan).toBe('plan');
+    expect(PRICING_QUERY_PARAMS.reason).toBe('reason');
+    expect(toPricingRoute({ plan: 'monthly' })).toBe('/pricing?plan=monthly');
+    expect(toPricingRoute({ reason: 'manage_billing' })).toBe(
+      '/pricing?reason=manage_billing',
+    );
+  });
+
+  it('builds Clerk sign-up redirects with an explicit return destination', () => {
+    const returnDestination = toPricingRoute({ plan: 'annual' });
+
+    expect(AUTH_REDIRECT_QUERY_PARAM).toBe('redirect_url');
+    expect(toSignUpRedirectRoute(returnDestination)).toBe(
+      '/sign-up?redirect_url=%2Fpricing%3Fplan%3Dannual',
+    );
   });
 
   it('builds practice session routes from the practice base path', () => {

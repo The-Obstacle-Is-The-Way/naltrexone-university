@@ -4,7 +4,7 @@ import type {
   ManageBillingLogger,
   RedirectFn,
 } from '@/lib/manage-billing/manage-billing-types';
-import { ROUTES } from '@/lib/routes';
+import { toPricingRoute, toSignUpRedirectRoute } from '@/lib/routes';
 
 export async function runManageBillingAction(deps: {
   createPortalSessionFn: CreatePortalSessionFn;
@@ -15,8 +15,10 @@ export async function runManageBillingAction(deps: {
   return runManageBillingActionCore({
     ...deps,
     redirects: {
-      failure: `${ROUTES.PRICING}?portal=error`,
-      unauthenticated: ROUTES.SIGN_UP,
+      failure: toPricingRoute({ portal: 'error' }),
+      unauthenticated: toSignUpRedirectRoute(
+        toPricingRoute({ reason: 'manage_billing' }),
+      ),
     },
   });
 }

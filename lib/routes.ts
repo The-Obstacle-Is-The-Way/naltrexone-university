@@ -14,6 +14,49 @@ export const ROUTES = {
   APP_QUESTIONS: '/app/questions',
 } as const;
 
+export const AUTH_REDIRECT_QUERY_PARAM = 'redirect_url';
+
+export const PRICING_QUERY_PARAMS = {
+  checkout: 'checkout',
+  plan: 'plan',
+  portal: 'portal',
+  reason: 'reason',
+} as const;
+
+export type PricingPlan = 'monthly' | 'annual';
+
+export type PricingRouteOptions = {
+  checkout?: string | undefined;
+  plan?: PricingPlan | undefined;
+  portal?: string | undefined;
+  reason?: string | undefined;
+};
+
+export function toPricingRoute(options: PricingRouteOptions = {}): string {
+  const params = new URLSearchParams();
+  if (options.checkout) {
+    params.set(PRICING_QUERY_PARAMS.checkout, options.checkout);
+  }
+  if (options.portal) {
+    params.set(PRICING_QUERY_PARAMS.portal, options.portal);
+  }
+  if (options.reason) {
+    params.set(PRICING_QUERY_PARAMS.reason, options.reason);
+  }
+  if (options.plan) {
+    params.set(PRICING_QUERY_PARAMS.plan, options.plan);
+  }
+
+  const qs = params.toString();
+  return qs ? `${ROUTES.PRICING}?${qs}` : ROUTES.PRICING;
+}
+
+export function toSignUpRedirectRoute(returnDestination: string): string {
+  const params = new URLSearchParams();
+  params.set(AUTH_REDIRECT_QUERY_PARAM, returnDestination);
+  return `${ROUTES.SIGN_UP}?${params.toString()}`;
+}
+
 export function toPracticeSessionRoute(sessionId: string): string {
   return `${ROUTES.APP_PRACTICE}/${sessionId}`;
 }
