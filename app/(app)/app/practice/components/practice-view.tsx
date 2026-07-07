@@ -135,10 +135,7 @@ function TutorActionBar(props: TutorActionBarProps) {
     props.onPreviousQuestion && props.hasPreviousQuestion
   );
   const hasNextAction = !isLastQuestion && props.submitResult !== null;
-  const hasSubmitAction =
-    props.canSubmitSelectedChoice &&
-    props.onSubmit &&
-    props.submitResult === null;
+  const hasSubmitAction = !!(props.canSubmitSelectedChoice && props.onSubmit);
   const hasEndSessionAction = !!(
     isLastQuestion &&
     props.submitResult !== null &&
@@ -333,7 +330,10 @@ export function PracticeView(props: PracticeViewProps) {
     sessionInfo.index >= sessionInfo.total - 1;
   const isAnswerLocked = props.isAnswered || props.submitResult !== null;
   const canSubmitSelectedChoice =
-    !isExamMode && props.canSubmit === true && !isAnswerLocked;
+    !isExamMode &&
+    props.canSubmit === true &&
+    !isAnswerLocked &&
+    !props.isPending;
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
