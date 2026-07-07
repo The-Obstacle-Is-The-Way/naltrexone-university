@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-05-28
+**Last Updated:** 2026-07-07
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -132,15 +132,15 @@ Active practice action bars use mode-specific semantics:
 
 | Mode/state | Left cluster | Right cluster | Notes |
 |------------|--------------|---------------|-------|
-| Tutor / Quick Practice, first question pre-feedback (`!hasPreviousQuestion`) | none | none | The choice cards are the primary action; click commits immediately. Do not render a placeholder primary group. |
-| Tutor, middle/last question pre-feedback (`hasPreviousQuestion`) | `Previous` only | none | No footer `Submit`, `Submitting…`, or pre-feedback `Next`. Non-sequential skip is via the question navigator in active sessions. |
+| Tutor / Quick Practice, no selected-uncommitted choice pre-feedback | `Previous` only when available | none | Pointer choice activation commits immediately. Do not render a placeholder primary group. |
+| Tutor / Quick Practice, selected-uncommitted choice pre-feedback | `Previous` when available + filled `Submit` | none | This state is entered by keyboard/AT radio selection, not by normal pointer clicks. No pre-feedback `Next`. |
 | Tutor / Quick Practice, post-feedback non-terminal (`hasNextQuestion`) | `Previous` when available + filled `Next` | `Bookmark` with `sm:ml-auto` when feedback exists | `Next` appears only after feedback has rendered. |
 | Tutor, post-feedback terminal (`!hasNextQuestion`) | `Previous` + filled `End session` | `Bookmark` with `sm:ml-auto` | Header `End session` remains visible too; the duplicate same-label terminal state is intentional. |
 | Exam active session, first question | filled `Next` in `exam-action-primary-group` | none | No empty Previous placeholder; Mark for review lives in the header rail. |
 | Exam active session, middle question | `Previous` + filled `Next` in `exam-action-primary-group` | none | Draft selections do not change footer labels. |
 | Exam active session, final question | `Previous` + filled `Review & Submit` in `exam-action-primary-group` | none | Preserve the hidden `Opens review and submit.` description for assistive tech. |
 
-In tutor mode and Quick Practice, the choice cards themselves act as the primary action pre-feedback. The footer carries only backward navigation before feedback and sequential/terminal navigation after feedback.
+In tutor mode and Quick Practice, pointer activation on a choice is the primary pre-feedback action and commits immediately. Keyboard/AT radio selection is select-only; the action bar renders a filled `Submit` in the same primary cluster only while a selected-uncommitted choice exists. The footer otherwise carries only backward navigation before feedback and sequential/terminal navigation after feedback.
 
 In exam mode, the footer renders a single left cluster containing Previous when applicable and the forward / terminal CTA (`Next` / `Review & Submit`). The footer never contains `Mark for review`; the header action rail owns the Mark/Unmark toggle with `aria-pressed` state.
 

@@ -2,9 +2,9 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
-> **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) (decisions)
+> **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam decisions), [BS-064](../brainstorming/bs-064-radio-choice-modality-split.md) (Tutor/Quick choice modality decision)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
-> **Last Updated:** 2026-06-01
+> **Last Updated:** 2026-07-07
 
 ---
 
@@ -17,6 +17,7 @@ These principles govern both modes. They are derived from BS-055 first-principle
 3. **What you see is what gets saved.** If the UI shows a highlighted selection, that selection must be durable. A visual state that silently disappears on navigation is a contract violation.
 4. **Exam answers are drafts until the exam is submitted.** Like a paper exam — circle, erase, re-circle freely until you hand it in. Nothing is locked until `Submit exam`.
 5. **Tutor answers are locked after feedback.** Once you see the correct answer, your response is permanently recorded. This prevents gaming.
+6. **Choice activation and choice selection are distinct signals.** In Tutor and Quick Practice, pointer activation commits immediately; keyboard/AT radio selection only selects until `Submit` or `Enter` commits the selected choice. In Exam, selection remains a mutable draft.
 
 ### Datetime representation at the controller boundary
 
@@ -34,14 +35,15 @@ Controller input schemas are separate from this output-boundary rule. Client-sup
 
 ### Mental model
 
-Flashcard-style learning. Submit gates the feedback reveal. Each question is a self-contained learn-then-advance cycle.
+Flashcard-style learning. Pointer users get instant choice-to-feedback. Keyboard and assistive-tech users can browse the native radio group safely, then commit the selected choice with `Submit` or `Enter`. Each question is a self-contained learn-then-advance cycle.
 
 ### Flow
 
 ```text
 Question displayed
-  → User selects a choice
-  → User clicks Submit
+  → Pointer activation on a choice: selected choice is submitted immediately
+  → Keyboard/AT radio selection: choice is selected but uncommitted
+  → User clicks Submit or presses Enter to commit the selected choice
   → Feedback appears (correct/incorrect, explanation, clinical pearl)
   → Answer is locked — choices become non-interactive
   → User clicks Next to advance
@@ -49,30 +51,37 @@ Question displayed
 
 ### Action bar layout
 
-**Before submit (answer selected, question 2+):**
+**Before feedback, no selected-uncommitted choice (question 2+):**
 ```text
-[ Previous ]  [ Submit ]  [ Next (outline) ]  [ Bookmark ]
+[ Previous ]
 ```
 
-**After submit (feedback visible, question 2+):**
+**Before feedback, selected-uncommitted choice (question 2+):**
+```text
+[ Previous ]  [ Submit ]
+```
+
+**After feedback (question 2+):**
 ```text
 [ Previous ]  [ Next (default) ]  [ Bookmark ]
 ```
 
 **Q1 (no Previous):**
 ```text
-[ Submit / Next ]  [ Bookmark ]
+[ Submit when selected-uncommitted / Next after feedback ]  [ Bookmark after feedback ]
 ```
 
 **Contract rules:**
 - Previous occupies position 1 when available. On Q1 it is omitted; there is no spacer.
-- Submit occupies position 2 before feedback is revealed. Hidden after feedback is revealed.
-- Next occupies position 3. It is visible before and after submit when there are more questions. Variant changes from outline → default after submit to signal "advance."
-- Bookmark occupies the trailing slot.
+- Pointer activation on a choice bypasses the visible selected-uncommitted state by submitting immediately. This preserves the 2026-05-04 click-to-grade product decision.
+- Keyboard/AT radio selection creates the selected-uncommitted state. Submit occupies the next primary slot in that state and is hidden after feedback is revealed.
+- Enter inside the answer-choice fieldset commits the currently selected-uncommitted choice. Space remains native radio selection and does not commit.
+- Next appears only after feedback has rendered, when there are more questions.
+- Bookmark occupies the trailing slot after feedback exists.
 
 ### Persistence
 
-- Answer is persisted via `submitAnswer` when Submit is clicked. One-shot, permanent.
+- Answer is persisted via `submitAnswer` when a pointer choice activation commits immediately, or when the selected-uncommitted choice is committed via Submit/Enter. One-shot, permanent.
 - `attempts` table unique constraint `(practiceSessionId, questionId)` enforces single-answer-per-question.
 - `timeSpentSeconds` = `now - questionLoadedAt`, captured at submit time.
 
@@ -83,9 +92,7 @@ Question displayed
 
 ### Implementation note
 
-Tutor mode is **unchanged** by BS-055. The current implementation matches this contract, with one exception:
-
-**Known issue (AF-5):** Next is currently visible and clickable before submit. If clicked pre-submit, the selected answer is silently discarded (`runLoadQuestionFlow` resets `selectedChoiceId` at `question-flow-actions.ts:71`). This is a low-severity UX issue in tutor mode because users naturally click Submit first to see feedback, but it should be guarded — either disable Next pre-submit, or save the selection before navigating.
+Tutor mode is unchanged by BS-055's exam overhaul, but its input contract was clarified by [BS-064](../brainstorming/bs-064-radio-choice-modality-split.md) and BUG-274. `ChoiceButton` arms a transient pointer flag on wrapper `pointerdown`; the subsequent radio `change` consumes that flag to report pointer activation, while unarmed changes report non-pointer selection. Held pointer activations stay armed until `change`; stale arms are cleared by arrow/Space keydown and by pointer/click cleanup when no radio change follows. `usePracticeSessionQuestionFlow` selects either way, commits only pointer selections in Tutor, and keeps Exam's existing draft-only guard ahead of the commit path.
 
 ---
 
@@ -211,14 +218,15 @@ The legacy pre-BS-055 behavior that differed from this contract (per-question su
 
 ### Mental model
 
-Lightweight, no-session question flow. Submit → see feedback → get another question.
+Lightweight, no-session question flow. Pointer choice → see feedback → get another question. Keyboard/AT choice → selected-uncommitted → Submit/Enter → see feedback.
 
 ### Flow
 
 ```text
 Question displayed
-  → User selects a choice
-  → User clicks Submit
+  → Pointer activation on a choice submits immediately
+  → Keyboard/AT radio selection chooses without submitting
+  → User clicks Submit or presses Enter to commit the selected choice
   → Feedback appears immediately
   → Next button appears (or "Try again")
   → User clicks Next to get another question
@@ -226,13 +234,15 @@ Question displayed
 
 ### Contract rules
 
-- Next is gated behind submit (not visible pre-submit). This is correct and safe.
+- Pointer activation preserves instant feedback; keyboard/AT selection never commits until Submit/Enter.
+- Submit is visible only while a choice is selected but uncommitted.
+- Next is gated behind feedback (not visible pre-submit). This is correct and safe.
 - No session state, no persistence beyond the `attempts` table row.
 - No navigator, no Previous.
 
 ### Current state
 
-Quick Practice matches its contract. No changes needed (AF-5 safe — Next is hidden pre-submit).
+Quick Practice matches this contract. Next remains hidden before feedback.
 
 ---
 
@@ -330,10 +340,10 @@ Both modes share rendering components but must have separate action contracts. T
 
 | Component | Shared Across Modes | Mode-Specific Behavior |
 |-----------|--------------------|-----------------------|
-| `QuestionCard` | Yes — renders stem + choices | Exam allows re-selection on revisit; tutor locks after submit |
-| `ChoiceButton` | Yes — renders individual choice | State variants differ (exam: selected/unselected only; tutor: selected/correct/incorrect) |
+| `QuestionCard` | Yes — renders stem + choices | Threads pointer vs non-pointer choice origin and owns Enter-to-submit for selected-uncommitted Tutor/Quick choices; exam allows re-selection on revisit; tutor locks after submit |
+| `ChoiceButton` | Yes — renders individual choice | Arms pointer activation on the label wrapper and consumes it on radio change; state variants differ (exam: selected/unselected only; tutor: selected/correct/incorrect) |
 | `QuestionNavigator` | Exam only | N/A for tutor |
-| `PracticeView` action bar | Shared document-flow placement + mode-specific button renderers | **Must branch explicitly.** Tutor session: Previous/Submit/Next/Bookmark before feedback, then Previous/Next/Bookmark after feedback; quick practice omits Previous. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
+| `PracticeView` action bar | Shared document-flow placement + mode-specific button renderers | **Must branch explicitly.** Tutor/Quick: no Submit for pointer clicks; Submit appears only for selected-uncommitted non-pointer choices, then Next/End-session/Bookmark after feedback. Exam: Previous/Next-or-Review-&-Submit/Mark-for-review. Do not evolve as a single conditional matrix. |
 | `PostExamReviewView` footer shell | Shared document-flow placement pattern | Keeps the post-exam sequential review controls at the end of the review content while the whole page scrolls naturally. |
 | `question-flow-actions.ts` | Shared load logic | **Must branch on save.** Tutor: one-shot `submitAnswer`. Exam: draft-save on navigation boundary. |
 | Review stage | Exam only | N/A for tutor |
@@ -345,5 +355,6 @@ Both modes share rendering components but must have separate action contracts. T
 
 - [Practice Modes](./practice-modes.md) — lifecycle, grading, concurrency (data layer)
 - [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) — when correctness/explanations are exposed
-- [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md) — full problem analysis, decisions, and audit findings
+- [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) — full exam interaction analysis, decisions, and audit findings
+- [BS-064](../brainstorming/bs-064-radio-choice-modality-split.md) — Tutor/Quick pointer-vs-keyboard answer modality decision
 - [Bookmark Surface Policy](../frontend/bookmark-surface-policy.md) — where bookmark appears per surface

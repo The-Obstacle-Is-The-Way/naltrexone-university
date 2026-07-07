@@ -56,6 +56,7 @@ export type PracticeSessionPageViewProps = {
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
+  canSubmit?: boolean | undefined;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
   isMarkingForReview?: boolean | undefined;
@@ -70,7 +71,8 @@ export type PracticeSessionPageViewProps = {
   onRetryBookmarks?: (() => void) | undefined;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: (() => void) | undefined;
-  onSelectChoice: (choiceId: string) => void;
+  onSelectChoice: PracticeViewProps['onSelectChoice'];
+  onSubmit?: (() => void) | undefined;
   onNextQuestion: () => void;
   onNavigateQuestion?: ((questionId: string) => void) | undefined;
   onOpenReviewQuestion?: ((questionId: string) => void) | undefined;
@@ -277,6 +279,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       isAnswered={props.isAnswered}
       submitResult={props.submitResult}
       isPending={props.isPending}
+      canSubmit={props.canSubmit}
       bookmarkStatus={props.bookmarkStatus}
       isBookmarked={props.isBookmarked}
       isMarkingForReview={props.isMarkingForReview}
@@ -290,6 +293,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       onToggleBookmark={props.onToggleBookmark}
       onToggleMarkForReview={props.onToggleMarkForReview}
       onSelectChoice={props.onSelectChoice}
+      onSubmit={props.onSubmit}
       onNextQuestion={onNextQuestionResolved}
       onPreviousQuestion={
         props.onNavigateQuestion ? onPreviousQuestion : undefined

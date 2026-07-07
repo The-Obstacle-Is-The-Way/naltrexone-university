@@ -37,7 +37,9 @@ export type UsePracticeQuestionFlowOutput = {
   onTryAgain: () => void;
   onRetryBookmarks: () => void;
   onToggleBookmark: () => Promise<void>;
-  onSelectChoice: (choiceId: string) => void;
+  onSelectChoice: ReturnType<
+    typeof usePracticeQuestionAnswerFlow
+  >['onSelectChoice'];
   onSubmit: () => Promise<void>;
   onNextQuestion: () => void;
 };

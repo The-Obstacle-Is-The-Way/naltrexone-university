@@ -18,6 +18,10 @@ import {
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/shared/transitioned-async-action';
+import {
+  type ChoiceSelectionOrigin,
+  shouldCommitChoiceSelection,
+} from '@/components/question/choice-selection';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
@@ -70,7 +74,7 @@ export type UsePracticeSessionQuestionFlowOutput = {
   onTryAgain: (options?: TryAgainOptions) => void;
   onNextQuestion: () => void;
   onNavigateQuestion: (questionId: string) => void;
-  onSelectChoice: (choiceId: string) => void;
+  onSelectChoice: (choiceId: string, origin?: ChoiceSelectionOrigin) => void;
   onSubmit: (options?: SubmitOptions) => Promise<SubmitAnswerOutput | null>;
   saveCurrentExamDraft: () => Promise<ExamDraftSaveResult>;
   getCurrentExamDraft: () => ExamDraftAnswer | null;
@@ -475,12 +479,13 @@ export function usePracticeSessionQuestionFlow(
   );
 
   const onSelectChoice = useCallback(
-    (choiceId: string): void => {
+    (choiceId: string, origin?: ChoiceSelectionOrigin): void => {
       if (isPending || commitInFlightRef.current) return;
 
       const changed = selectChoice(choiceId);
       if (!changed) return;
       if (question?.session?.mode === 'exam') return;
+      if (!shouldCommitChoiceSelection(origin)) return;
 
       void commitChoice(choiceId);
     },

@@ -22,7 +22,7 @@ test('calls onSelectChoice with the clicked choice id', async () => {
 
   await screen.getByRole('radio', { name: /Choice B/i }).click();
 
-  expect(onSelectChoice).toHaveBeenCalledWith(fixtureChoiceBId);
+  expect(onSelectChoice).toHaveBeenCalledWith(fixtureChoiceBId, 'pointer');
 });
 
 test('disables choices when correctChoiceId is present', async () => {

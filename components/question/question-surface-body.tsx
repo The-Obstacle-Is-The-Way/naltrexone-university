@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode, RefObject } from 'react';
+import type { ChoiceSelectionOrigin } from './choice-selection';
 import { Feedback, type FeedbackProps } from './feedback';
 import { QuestionCard, type QuestionCardChoice } from './question-card';
 
@@ -14,7 +15,9 @@ export type QuestionSurfaceBodyProps = {
   selectedChoiceId: string | null;
   correctChoiceId: string | null;
   disabled: boolean;
-  onSelectChoice: (choiceId: string) => void;
+  canSubmitSelectedChoice?: boolean;
+  onSelectChoice: (choiceId: string, origin?: ChoiceSelectionOrigin) => void;
+  onSubmitSelectedChoice?: (() => void) | undefined;
   feedback?: FeedbackProps | null;
   feedbackRef?: RefObject<HTMLDivElement | null>;
   beforeQuestionCard?: ReactNode;
@@ -25,7 +28,9 @@ export function QuestionSurfaceBody({
   selectedChoiceId,
   correctChoiceId,
   disabled,
+  canSubmitSelectedChoice = false,
   onSelectChoice,
+  onSubmitSelectedChoice,
   feedback = null,
   feedbackRef,
   beforeQuestionCard,
@@ -41,7 +46,9 @@ export function QuestionSurfaceBody({
       selectedChoiceId={selectedChoiceId}
       correctChoiceId={correctChoiceId}
       disabled={disabled}
+      canSubmitSelectedChoice={canSubmitSelectedChoice}
       onSelectChoice={onSelectChoice}
+      onSubmitSelectedChoice={onSubmitSelectedChoice}
     />
   ) : null;
 
