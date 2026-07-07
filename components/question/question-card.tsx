@@ -44,6 +44,15 @@ export function QuestionCard({
         onKeyDown={(event) => {
           if (event.key !== 'Enter') return;
           if (!canSubmitSelectedChoice || !onSubmitSelectedChoice) return;
+          // Only commit for Enter on the radios themselves. Choice markdown
+          // can contain focusable content (links); Enter there must keep its
+          // native behavior instead of grading the answer.
+          if (
+            !(event.target instanceof HTMLInputElement) ||
+            event.target.type !== 'radio'
+          ) {
+            return;
+          }
 
           event.preventDefault();
           onSubmitSelectedChoice();
