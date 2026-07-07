@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useEffect, useId, useRef } from 'react';
 import { ErrorCard } from '@/components/error-card';
+import type { ChoiceSelectionOrigin } from '@/components/question/choice-selection';
 import type { QuestionFeedbackRatingProps } from '@/components/question/question-feedback-rating';
 import { QuestionRatingFooter } from '@/components/question/question-rating-footer';
 import {
@@ -40,6 +41,7 @@ export type PracticeViewProps = {
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
+  canSubmit?: boolean | undefined;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
   isMarkingForReview?: boolean | undefined;
@@ -61,7 +63,8 @@ export type PracticeViewProps = {
   onTryAgain: () => void;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: (() => void) | undefined;
-  onSelectChoice: (choiceId: string) => void;
+  onSelectChoice: (choiceId: string, origin?: ChoiceSelectionOrigin) => void;
+  onSubmit?: (() => void) | undefined;
   onNextQuestion: () => void;
   onPreviousQuestion?: (() => void) | undefined;
   hasPreviousQuestion?: boolean | undefined;
@@ -114,10 +117,13 @@ type TutorActionBarProps = Pick<
   | 'onEndSession'
   | 'onNextQuestion'
   | 'onPreviousQuestion'
+  | 'onSubmit'
   | 'onToggleBookmark'
   | 'questionFeedback'
   | 'submitResult'
->;
+> & {
+  canSubmitSelectedChoice: boolean;
+};
 
 function TutorActionBar(props: TutorActionBarProps) {
   const isActionBarDisabled =
@@ -129,13 +135,20 @@ function TutorActionBar(props: TutorActionBarProps) {
     props.onPreviousQuestion && props.hasPreviousQuestion
   );
   const hasNextAction = !isLastQuestion && props.submitResult !== null;
+  const hasSubmitAction =
+    props.canSubmitSelectedChoice &&
+    props.onSubmit &&
+    props.submitResult === null;
   const hasEndSessionAction = !!(
     isLastQuestion &&
     props.submitResult !== null &&
     props.onEndSession
   );
   const hasPrimaryActions =
-    hasPreviousAction || hasNextAction || hasEndSessionAction;
+    hasPreviousAction ||
+    hasSubmitAction ||
+    hasNextAction ||
+    hasEndSessionAction;
 
   const navigationGroup = hasPrimaryActions ? (
     <div
@@ -163,6 +176,17 @@ function TutorActionBar(props: TutorActionBarProps) {
           onClick={props.onEndSession}
         >
           End session
+        </Button>
+      ) : null}
+
+      {hasSubmitAction ? (
+        <Button
+          type="button"
+          className="rounded-full"
+          disabled={isActionBarDisabled}
+          onClick={props.onSubmit}
+        >
+          Submit
         </Button>
       ) : null}
 
@@ -308,6 +332,8 @@ export function PracticeView(props: PracticeViewProps) {
     typeof sessionInfo.total === 'number' &&
     sessionInfo.index >= sessionInfo.total - 1;
   const isAnswerLocked = props.isAnswered || props.submitResult !== null;
+  const canSubmitSelectedChoice =
+    !isExamMode && props.canSubmit === true && !isAnswerLocked;
   const correctChoiceId = isExamMode
     ? null
     : (props.submitResult?.correctChoiceId ?? null);
@@ -367,8 +393,10 @@ export function PracticeView(props: PracticeViewProps) {
           isBookmarked={props.isBookmarked}
           isPending={props.isPending}
           loadState={props.loadState}
+          canSubmitSelectedChoice={canSubmitSelectedChoice}
           onNextQuestion={props.onNextQuestion}
           onPreviousQuestion={props.onPreviousQuestion}
+          onSubmit={props.onSubmit}
           onEndSession={props.onEndSession}
           onToggleBookmark={props.onToggleBookmark}
           questionFeedback={props.questionFeedback ?? null}
@@ -523,7 +551,15 @@ export function PracticeView(props: PracticeViewProps) {
               props.loadState.status === 'loading' ||
               isAnswerLocked
             }
+            canSubmitSelectedChoice={canSubmitSelectedChoice}
             onSelectChoice={props.onSelectChoice}
+            onSubmitSelectedChoice={
+              props.onSubmit
+                ? () => {
+                    props.onSubmit?.();
+                  }
+                : undefined
+            }
             feedback={feedbackResult}
             feedbackRef={feedbackRef}
           />

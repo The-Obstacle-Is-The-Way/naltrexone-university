@@ -19,6 +19,42 @@ test('calls onClick when selected', async () => {
   expect(onClick).toHaveBeenCalledTimes(1);
 });
 
+test('clears a pointer arm when clicking an already selected radio', async () => {
+  const onClick = vi.fn();
+  const screen = await render(
+    <ChoiceButton
+      name="q1"
+      label="A"
+      textMd="Choice A"
+      selected
+      onClick={onClick}
+    />,
+  );
+
+  await screen.getByRole('radio').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(onClick).not.toHaveBeenCalled();
+});
+
+test('clears a pending pointer arm timeout on unmount', async () => {
+  const onClick = vi.fn();
+  const screen = await render(
+    <ChoiceButton
+      name="q1"
+      label="A"
+      textMd="Choice A"
+      selected
+      onClick={onClick}
+    />,
+  );
+
+  await screen.getByRole('radio').click();
+  screen.unmount();
+
+  expect(onClick).not.toHaveBeenCalled();
+});
+
 test('renders a disabled radio input when disabled', async () => {
   const onClick = vi.fn();
   const screen = await render(

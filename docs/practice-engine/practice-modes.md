@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Ad-hoc, Tutor, and Exam modes — lifecycle, grading, concurrency
-> **Last Verified:** 2026-04-25
+> **Last Verified:** 2026-07-07
 
 ---
 
@@ -26,7 +26,8 @@ The Practice Engine supports two session modes (tutor, exam) plus a stateless Qu
 StartPracticeSession → creates session with shuffled questionIds
     ↓
 [Question loop: getNextQuestion → render → answer drafts / submitAnswer → repeat]
-    ↓ (tutor: explanation shown immediately)
+    ↓ (tutor/quick: pointer activation submits immediately; keyboard/AT selection submits via Submit or Enter)
+    ↓ (tutor: explanation shown immediately after submitAnswer)
     ↓ (exam: draft answer stored on navigation, no explanation)
     ↓ (exam only: user enters review-and-submit stage before final submit)
     ↓
@@ -37,7 +38,7 @@ EndPracticeSession / FinalizeExamAnswers → computes totals from questionStates
 [Summary view: totals + per-question breakdown]
 ```
 
-**Current implementation note:** active exam mode uses draft-save on navigation, mutable answers while the session is in progress, and batch finalization on `Submit exam`. Tutor and Quick Practice continue to use the one-shot `submitAnswer` path.
+**Current implementation note:** active exam mode uses draft-save on navigation, mutable answers while the session is in progress, and batch finalization on `Submit exam`. Tutor and Quick Practice continue to use the one-shot `submitAnswer` path, but answer **selection** and answer **commit** are intentionally split for keyboard/AT users: pointer choice activation calls `submitAnswer` immediately, while native radio arrow/Space/programmatic selection only highlights until the selected-uncommitted choice is committed via Submit or Enter.
 
 ---
 
@@ -73,7 +74,7 @@ This keeps same-day behavior stable for the same user while changing the daily s
 
 `gradeAnswer(question, choiceId)` → `{ isCorrect, correctChoiceId, correctLabel }`. Pure domain function. The write path depends on mode:
 
-1. Quick Practice and active tutor sessions use `submitAnswer`, which inserts an `Attempt` row, updates tutor session `questionStates` when applicable, and returns immediate grading/explanation feedback.
+1. Quick Practice and active tutor sessions use `submitAnswer`, which inserts an `Attempt` row, updates tutor session `questionStates` when applicable, and returns immediate grading/explanation feedback. Pointer choice activation reaches this path immediately; keyboard/AT radio selection reaches it only through the selected-uncommitted Submit/Enter path.
 2. Active exam sessions use `saveExamDraftAnswer` during navigation, which persists mutable draft state without grading feedback or attempt rows.
 3. Exam `Submit exam` uses `finalizeExamAnswers`, which grades each draft answer, creates the final session `Attempt` rows, writes finalized `latest*` session state, ends the session, and unlocks post-exam feedback.
 

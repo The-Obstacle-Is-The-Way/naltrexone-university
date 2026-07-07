@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Markdown } from '@/components/markdown/markdown';
 import { cn } from '@/lib/utils';
+import type { ChoiceSelectionOrigin } from './choice-selection';
 
 export type ChoiceButtonProps = {
   name: string;
@@ -10,8 +12,16 @@ export type ChoiceButtonProps = {
   selected: boolean;
   disabled?: boolean;
   correctness?: 'correct' | 'incorrect' | 'wrong-unselected' | null;
-  onClick: () => void;
+  onClick: (origin: ChoiceSelectionOrigin) => void;
 };
+
+const RADIO_KEYBOARD_SELECTION_KEYS = new Set([
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  ' ',
+]);
 
 export function ChoiceButton({
   name,
@@ -23,11 +33,63 @@ export function ChoiceButton({
   onClick,
 }: ChoiceButtonProps) {
   const choiceTextClassName = 'text-base text-foreground';
+  const pointerActivationArmedRef = useRef(false);
+  const pointerActivationTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   const hasVerdict = correctness === 'correct' || correctness === 'incorrect';
 
+  function clearPointerActivation() {
+    pointerActivationArmedRef.current = false;
+    if (pointerActivationTimeoutRef.current) {
+      clearTimeout(pointerActivationTimeoutRef.current);
+      pointerActivationTimeoutRef.current = null;
+    }
+  }
+
+  function armPointerActivation() {
+    clearPointerActivation();
+    pointerActivationArmedRef.current = true;
+  }
+
+  function schedulePointerActivationClear() {
+    if (pointerActivationTimeoutRef.current) {
+      clearTimeout(pointerActivationTimeoutRef.current);
+    }
+    pointerActivationTimeoutRef.current = setTimeout(() => {
+      pointerActivationArmedRef.current = false;
+      pointerActivationTimeoutRef.current = null;
+    }, 0);
+  }
+
+  useEffect(() => {
+    return () => {
+      pointerActivationArmedRef.current = false;
+      if (pointerActivationTimeoutRef.current) {
+        clearTimeout(pointerActivationTimeoutRef.current);
+        pointerActivationTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <label
+      onPointerDownCapture={() => {
+        if (!disabled) armPointerActivation();
+      }}
+      onPointerCancelCapture={clearPointerActivation}
+      onPointerLeave={(event) => {
+        if (event.buttons !== 0) clearPointerActivation();
+      }}
+      onClickCapture={() => {
+        if (pointerActivationArmedRef.current) schedulePointerActivationClear();
+      }}
+      onKeyDownCapture={(event) => {
+        if (RADIO_KEYBOARD_SELECTION_KEYS.has(event.key)) {
+          clearPointerActivation();
+        }
+      }}
       className={cn(
         'block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors focus-within:border-ring ring-focus-within',
         !hasVerdict &&
@@ -53,7 +115,12 @@ export function ChoiceButton({
         name={name}
         value={label}
         checked={selected}
-        onChange={() => onClick()}
+        onChange={() => {
+          const origin: ChoiceSelectionOrigin =
+            pointerActivationArmedRef.current ? 'pointer' : 'non-pointer';
+          clearPointerActivation();
+          onClick(origin);
+        }}
         disabled={disabled}
         className="sr-only"
       />

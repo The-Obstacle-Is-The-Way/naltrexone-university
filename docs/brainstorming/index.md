@@ -1,7 +1,7 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-20 (owner backlog review — re-verified the 3 Active docs against live code. All three premises still hold and none are superseded, so all stay Active: **BS-044** dark-border tiering — `dark:border-foreground/40` still on `feedback.tsx` inner cards + `notification-provider.tsx` toast shells; **BS-052** bookmark icon toggle — never built, all four surfaces still text pills, no `BookmarkToggle` component; **BS-059** action-bar grouping — Bookmark still sandwiched between nav controls, and a 7th control (`QuestionReportDialog`) has since been added. Fixed BS-059's stale `question-page-client.tsx:371-470` citation. All three are dormant aesthetic polish — parked-but-living, no design decision taken.)
+**Last Updated:** 2026-07-07 (added **BS-064** as the BUG-274 radio-choice modality decision record: pointer choice activation remains instant commit in Tutor/Quick Practice, while keyboard/AT radio selection uses the visible selected-uncommitted Submit/Enter path.)
 
 ---
 
@@ -30,7 +30,8 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-044](./bs-044-dark-mode-border-weight-tiering.md) | Dark Mode Border Weight Tiering — major slices were already consumed by later PRs (`DEBT-280`, `DEBT-289`, `DEBT-301`, `DEBT-302`, `DEBT-307`, `DEBT-312/313/314`); remaining open question is whether read-only cards and subordinate inner borders still need softer dark-mode treatment | Active | [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) |
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — no icon-toggle UI has shipped; production still uses text bookmark pills on the Bookmarks page, tutor/quick-practice action bar, post-exam review, and review/session-review action bars | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Standalone `question-page-client.tsx` action bar still has unresolved multi-state grouping questions; Direction C continuity work was split out, so this doc now owns only the still-undecided standalone layout contract | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
-**Next Brainstorming ID:** BS-064
+| [BS-064](./bs-064-radio-choice-modality-split.md) | Radio Choice Modality Split — records the permanent BUG-274 decision to preserve instant pointer commit while giving keyboard/AT radio selection a selected-uncommitted Submit/Enter path | Decision recorded / implemented | [BUG-274](../bugs/bug-274-radio-choice-arrow-key-auto-commits-answer.md) |
+**Next Brainstorming ID:** BS-065
 
 ---
 
