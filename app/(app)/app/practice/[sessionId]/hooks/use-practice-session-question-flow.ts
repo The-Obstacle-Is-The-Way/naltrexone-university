@@ -74,7 +74,7 @@ export type UsePracticeSessionQuestionFlowOutput = {
   onTryAgain: (options?: TryAgainOptions) => void;
   onNextQuestion: () => void;
   onNavigateQuestion: (questionId: string) => void;
-  onSelectChoice: (choiceId: string, origin?: ChoiceSelectionOrigin) => void;
+  onSelectChoice: (choiceId: string, origin: ChoiceSelectionOrigin) => void;
   onSubmit: (options?: SubmitOptions) => Promise<SubmitAnswerOutput | null>;
   saveCurrentExamDraft: () => Promise<ExamDraftSaveResult>;
   getCurrentExamDraft: () => ExamDraftAnswer | null;
@@ -479,7 +479,7 @@ export function usePracticeSessionQuestionFlow(
   );
 
   const onSelectChoice = useCallback(
-    (choiceId: string, origin?: ChoiceSelectionOrigin): void => {
+    (choiceId: string, origin: ChoiceSelectionOrigin): void => {
       if (isPending || commitInFlightRef.current) return;
 
       const changed = selectChoice(choiceId);

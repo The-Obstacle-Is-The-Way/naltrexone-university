@@ -19,7 +19,7 @@ export type QuestionCardProps = {
   correctChoiceId: string | null;
   disabled?: boolean;
   canSubmitSelectedChoice?: boolean;
-  onSelectChoice: (choiceId: string, origin?: ChoiceSelectionOrigin) => void;
+  onSelectChoice: (choiceId: string, origin: ChoiceSelectionOrigin) => void;
   onSubmitSelectedChoice?: (() => void) | undefined;
 };
 

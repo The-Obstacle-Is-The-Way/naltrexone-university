@@ -202,7 +202,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
@@ -290,7 +290,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
@@ -362,7 +362,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
@@ -439,7 +439,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
@@ -508,7 +508,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
@@ -790,7 +790,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
@@ -985,7 +985,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
@@ -1147,7 +1147,7 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
