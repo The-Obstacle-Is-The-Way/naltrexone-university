@@ -1,18 +1,27 @@
 import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
+import { AuthAwareCta, SubscribePlanCta } from '@/app/pricing/pricing-auth-cta';
 import type { PricingBanner } from '@/app/pricing/types';
-import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PRICING_DATA } from '@/lib/pricing-data';
-import { ROUTES } from '@/lib/routes';
+import {
+  type PricingBillingRecoveryReason,
+  type PricingPlan,
+  ROUTES,
+  toPricingRoute,
+  toSignUpRedirectRoute,
+} from '@/lib/routes';
 
 export type PricingViewProps = {
+  isAuthenticated?: boolean;
   isEntitled: boolean;
   banner: PricingBanner | null;
+  selectedPlan?: PricingPlan | null;
   /** Render trial CTAs for trial-eligible visitors (no subscription row, not entitled). */
   showTrialCtas?: boolean;
   manageBillingAction?: (formData: FormData) => Promise<void>;
+  manageBillingReason?: PricingBillingRecoveryReason;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
   SubscribeButtonComponent?: ComponentType<{ children: ReactNode }>;
@@ -26,15 +35,31 @@ function DefaultButton({ children }: { children: ReactNode }) {
   );
 }
 
+function getPlanSignUpHref(plan: PricingPlan): string {
+  return toSignUpRedirectRoute(toPricingRoute({ plan }));
+}
+
+function getManageBillingSignUpHref(
+  reason: PricingBillingRecoveryReason = 'manage_billing',
+): string {
+  return toSignUpRedirectRoute(toPricingRoute({ reason }));
+}
+
 export function PricingView({
+  isAuthenticated = true,
   isEntitled,
   banner,
+  selectedPlan = null,
   showTrialCtas = false,
   manageBillingAction,
+  manageBillingReason = 'manage_billing',
   subscribeMonthlyAction,
   subscribeAnnualAction,
   SubscribeButtonComponent = DefaultButton,
 }: PricingViewProps) {
+  const isMonthlySelected = selectedPlan === 'monthly';
+  const isAnnualSelected = selectedPlan === 'annual';
+
   return (
     <div data-testid="pricing-root" className="bg-background py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -60,17 +85,18 @@ export function PricingView({
             <span>{banner.message}</span>
             <div className="ml-4 flex items-center gap-3">
               {manageBillingAction ? (
-                <form action={manageBillingAction}>
-                  <IdempotencyKeyField />
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    Manage Billing
-                  </Button>
-                </form>
+                <AuthAwareCta
+                  isAuthenticated={isAuthenticated}
+                  formAction={manageBillingAction}
+                  signUpHref={getManageBillingSignUpHref(manageBillingReason)}
+                  buttonProps={{
+                    variant: 'outline',
+                    size: 'sm',
+                    className: 'rounded-full',
+                  }}
+                >
+                  Manage Billing
+                </AuthAwareCta>
               ) : null}
               <Link
                 href={ROUTES.PRICING}
@@ -109,12 +135,14 @@ export function PricingView({
               Manage billing in Stripe to restore access.
             </p>
             <div className="mt-6">
-              <form action={manageBillingAction}>
-                <IdempotencyKeyField />
-                <Button type="submit" className="rounded-full">
-                  Manage Billing
-                </Button>
-              </form>
+              <AuthAwareCta
+                isAuthenticated={isAuthenticated}
+                formAction={manageBillingAction}
+                signUpHref={getManageBillingSignUpHref(manageBillingReason)}
+                buttonProps={{ className: 'rounded-full' }}
+              >
+                Manage Billing
+              </AuthAwareCta>
             </div>
           </Card>
         ) : (
@@ -126,10 +154,20 @@ export function PricingView({
               Plans
             </h2>
             <div className="mt-6 grid gap-8 md:grid-cols-2">
-              <Card className="p-8">
+              <Card
+                aria-current={isMonthlySelected ? 'true' : undefined}
+                className={
+                  isMonthlySelected ? 'border-2 border-primary p-8' : 'p-8'
+                }
+              >
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.monthly.name}
                 </h3>
+                {isMonthlySelected ? (
+                  <p className="mt-2 text-sm font-medium text-primary">
+                    Selected plan
+                  </p>
+                ) : null}
                 <p className="mt-4 font-display text-4xl font-bold text-foreground">
                   {PRICING_DATA.monthly.price}
                   <span className="text-lg font-normal text-muted-foreground">
@@ -141,27 +179,34 @@ export function PricingView({
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <form
-                  action={subscribeMonthlyAction}
-                  aria-label="Subscribe monthly plan"
-                >
-                  <IdempotencyKeyField />
-                  <SubscribeButtonComponent>
-                    {showTrialCtas
+                <SubscribePlanCta
+                  isAuthenticated={isAuthenticated}
+                  formAction={subscribeMonthlyAction}
+                  signUpHref={getPlanSignUpHref('monthly')}
+                  formAriaLabel="Subscribe monthly plan"
+                  label={
+                    showTrialCtas
                       ? PRICING_DATA.monthly.trialCta
-                      : 'Subscribe Monthly'}
-                  </SubscribeButtonComponent>
-                  {showTrialCtas ? (
-                    <p className="mt-3 text-center text-sm text-muted-foreground">
-                      {PRICING_DATA.monthly.postTrialNote}
-                    </p>
-                  ) : null}
-                </form>
+                      : 'Subscribe Monthly'
+                  }
+                  postTrialNote={
+                    showTrialCtas ? PRICING_DATA.monthly.postTrialNote : null
+                  }
+                  SubscribeButtonComponent={SubscribeButtonComponent}
+                />
               </Card>
-              <Card className="border-2 border-primary p-8">
+              <Card
+                aria-current={isAnnualSelected ? 'true' : undefined}
+                className="border-2 border-primary p-8"
+              >
                 <h3 className="font-heading font-semibold text-foreground">
                   {PRICING_DATA.annual.name}
                 </h3>
+                {isAnnualSelected ? (
+                  <p className="mt-2 text-sm font-medium text-primary">
+                    Selected plan
+                  </p>
+                ) : null}
                 <p className="mt-4 font-display text-4xl font-bold text-foreground">
                   {PRICING_DATA.annual.price}
                   <span className="text-lg font-normal text-muted-foreground">
@@ -176,22 +221,21 @@ export function PricingView({
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <form
-                  action={subscribeAnnualAction}
-                  aria-label="Subscribe annual plan"
-                >
-                  <IdempotencyKeyField />
-                  <SubscribeButtonComponent>
-                    {showTrialCtas
+                <SubscribePlanCta
+                  isAuthenticated={isAuthenticated}
+                  formAction={subscribeAnnualAction}
+                  signUpHref={getPlanSignUpHref('annual')}
+                  formAriaLabel="Subscribe annual plan"
+                  label={
+                    showTrialCtas
                       ? PRICING_DATA.annual.trialCta
-                      : 'Subscribe Annual'}
-                  </SubscribeButtonComponent>
-                  {showTrialCtas ? (
-                    <p className="mt-3 text-center text-sm text-muted-foreground">
-                      {PRICING_DATA.annual.postTrialNote}
-                    </p>
-                  ) : null}
-                </form>
+                      : 'Subscribe Annual'
+                  }
+                  postTrialNote={
+                    showTrialCtas ? PRICING_DATA.annual.postTrialNote : null
+                  }
+                  SubscribeButtonComponent={SubscribeButtonComponent}
+                />
               </Card>
             </div>
           </section>

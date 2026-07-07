@@ -10,6 +10,7 @@ import {
   vi,
 } from 'vitest';
 import { PRICING_DATA } from '@/lib/pricing-data';
+import { ROUTES, toPricingRoute, toSignUpRedirectRoute } from '@/lib/routes';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
 import { FakeUseCase } from '@/src/application/test-helpers/fakes/fake-use-cases';
@@ -17,6 +18,11 @@ import type {
   CheckEntitlementInput,
   CheckEntitlementOutput,
 } from '@/src/application/use-cases/check-entitlement';
+import {
+  findAnchorByHref,
+  findHeadingByText,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -597,6 +603,7 @@ describe('app/pricing', () => {
         checkEntitlementUseCase,
       }),
     ).resolves.toEqual({
+      isAuthenticated: false,
       isEntitled: false,
       reason: null,
       subscriptionStatus: null,
@@ -624,6 +631,7 @@ describe('app/pricing', () => {
     await expect(
       loadPricingData({ authGateway, checkEntitlementUseCase }),
     ).resolves.toEqual({
+      isAuthenticated: true,
       isEntitled: true,
       reason: null,
       subscriptionStatus: null,
@@ -653,6 +661,7 @@ describe('app/pricing', () => {
     await expect(
       loadPricingData({ authGateway, checkEntitlementUseCase }),
     ).resolves.toEqual({
+      isAuthenticated: true,
       isEntitled: false,
       reason: 'manage_billing',
       subscriptionStatus: null,
@@ -680,6 +689,7 @@ describe('app/pricing', () => {
     await expect(
       loadPricingData({ authGateway, checkEntitlementUseCase }),
     ).resolves.toEqual({
+      isAuthenticated: true,
       isEntitled: false,
       reason: 'subscription_required',
       subscriptionStatus: 'canceled',
@@ -714,7 +724,7 @@ describe('app/pricing', () => {
     });
   });
 
-  it('runSubscribeAction redirects to /sign-up when unauthenticated', async () => {
+  it('runSubscribeAction redirects to sign-up with the selected plan return destination when unauthenticated', async () => {
     const createCheckoutSessionFn = vi.fn<CreateCheckoutSessionFn>(
       async () => ({
         ok: false,
@@ -735,7 +745,9 @@ describe('app/pricing', () => {
         },
       );
 
-    await expect(action()).rejects.toThrow('/sign-up');
+    await expect(action()).rejects.toThrow(
+      toSignUpRedirectRoute(toPricingRoute({ plan: 'annual' })),
+    );
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'annual',
       idempotencyKey: undefined,
@@ -1086,6 +1098,37 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe Annual');
   });
 
+  it('uses authenticated entitlement state over stale return reason params', async () => {
+    const checkEntitlementUseCase = new FakeUseCase<
+      CheckEntitlementInput,
+      CheckEntitlementOutput
+    >({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: null,
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
+    const element = await PricingPage({
+      searchParams: Promise.resolve({ reason: 'manage_billing' }),
+      authNavFn: () => <div>AuthNav</div>,
+      deps: {
+        authGateway: new FakeAuthGateway(pricingTestUser),
+        checkEntitlementUseCase,
+      },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain(
+      'Start your free trial to access the app — no card required.',
+    );
+    expect(html).toContain('Start 7-day free trial');
+    expect(html).not.toContain(
+      'Subscription found. Manage billing to resolve payment issues.',
+    );
+    expect(html).not.toContain('Manage Billing');
+  });
+
   it('renders trial CTAs and trial-forward copy for anonymous visitors', async () => {
     const { html } = await renderAnonymousPricingPage({
       reason: 'subscription_required',
@@ -1102,6 +1145,66 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe Annual');
   });
 
+  it('renders anonymous trial CTAs as sign-up links carrying the selected plan', async () => {
+    const { html } = await renderAnonymousPricingPage({
+      reason: 'subscription_required',
+    });
+    const doc = parseHtml(html);
+    const monthlyHref = toSignUpRedirectRoute(
+      toPricingRoute({ plan: 'monthly' }),
+    );
+    const annualHref = toSignUpRedirectRoute(
+      toPricingRoute({ plan: 'annual' }),
+    );
+
+    expect(findAnchorByHref(doc, monthlyHref)?.textContent).toContain(
+      PRICING_DATA.monthly.trialCta,
+    );
+    expect(findAnchorByHref(doc, annualHref)?.textContent).toContain(
+      PRICING_DATA.annual.trialCta,
+    );
+    expect(doc.querySelector('form[aria-label="Subscribe monthly plan"]')).toBe(
+      null,
+    );
+    expect(doc.querySelector('form[aria-label="Subscribe annual plan"]')).toBe(
+      null,
+    );
+  });
+
+  it('renders anonymous standard subscribe links and annual selection when trial copy is disabled', () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isAuthenticated={false}
+        isEntitled={false}
+        banner={null}
+        selectedPlan="annual"
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = parseHtml(html);
+    const monthlyHref = toSignUpRedirectRoute(
+      toPricingRoute({ plan: 'monthly' }),
+    );
+    const annualHref = toSignUpRedirectRoute(
+      toPricingRoute({ plan: 'annual' }),
+    );
+    const annualCard = findHeadingByText(doc, PRICING_DATA.annual.name, {
+      level: 3,
+    })?.closest('[data-slot="card"]');
+
+    expect(findAnchorByHref(doc, monthlyHref)?.textContent).toContain(
+      'Subscribe Monthly',
+    );
+    expect(findAnchorByHref(doc, annualHref)?.textContent).toContain(
+      'Subscribe Annual',
+    );
+    expect(annualCard?.getAttribute('aria-current')).toBe('true');
+    expect(annualCard?.textContent).toContain('Selected plan');
+    expect(html).not.toContain(PRICING_DATA.monthly.postTrialNote);
+    expect(html).not.toContain(PRICING_DATA.annual.postTrialNote);
+  });
+
   it('renders trial CTAs for signed-in first-time users', async () => {
     const html = await renderPricingPageWithEntitlement({
       isEntitled: false,
@@ -1116,6 +1219,99 @@ describe('app/pricing', () => {
     );
     expect(html).toContain('Start 7-day free trial');
     expect(html).not.toContain('Subscribe Monthly');
+  });
+
+  it('keeps signed-in first-time trial CTAs as checkout submit actions', async () => {
+    const html = await renderPricingPageWithEntitlement({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: null,
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
+    const doc = parseHtml(html);
+
+    expect(
+      findAnchorByHref(
+        doc,
+        toSignUpRedirectRoute(toPricingRoute({ plan: 'monthly' })),
+      ),
+    ).toBeNull();
+    expect(
+      doc.querySelector('form[aria-label="Subscribe monthly plan"]'),
+    ).not.toBeNull();
+    expect(
+      doc.querySelector('form[aria-label="Subscribe annual plan"]'),
+    ).not.toBeNull();
+  });
+
+  it('marks the returned plan from the pricing query string', async () => {
+    const checkEntitlementUseCase = new FakeUseCase<
+      CheckEntitlementInput,
+      CheckEntitlementOutput
+    >({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: null,
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
+    const element = await PricingPage({
+      searchParams: Promise.resolve({ plan: 'monthly' }),
+      authNavFn: () => <div>AuthNav</div>,
+      deps: {
+        authGateway: new FakeAuthGateway(pricingTestUser),
+        checkEntitlementUseCase,
+      },
+    });
+    const doc = parseHtml(renderToStaticMarkup(element));
+    const monthlyCard = findHeadingByText(doc, PRICING_DATA.monthly.name, {
+      level: 3,
+    })?.closest('[data-slot="card"]');
+    const annualCard = findHeadingByText(doc, PRICING_DATA.annual.name, {
+      level: 3,
+    })?.closest('[data-slot="card"]');
+
+    expect(monthlyCard?.getAttribute('aria-current')).toBe('true');
+    expect(monthlyCard?.textContent).toContain('Selected plan');
+    expect(annualCard?.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('renders anonymous manage-billing recovery as a sign-up link carrying its return destination', async () => {
+    const { html } = await renderAnonymousPricingPage({
+      reason: 'manage_billing',
+    });
+    const doc = parseHtml(html);
+    const manageBillingHref = toSignUpRedirectRoute(
+      toPricingRoute({ reason: 'manage_billing' }),
+    );
+    const manageBillingLink = findAnchorByHref(doc, manageBillingHref);
+    const bareSignUpManageBillingLinks = Array.from(
+      doc.querySelectorAll<HTMLAnchorElement>(`a[href="${ROUTES.SIGN_UP}"]`),
+    ).filter((anchor) => anchor.textContent?.includes('Manage Billing'));
+
+    expect(manageBillingLink?.textContent).toContain('Manage Billing');
+    expect(doc.querySelector('form button[type="submit"]')).toBeNull();
+    expect(bareSignUpManageBillingLinks).toHaveLength(0);
+  });
+
+  it('renders anonymous payment-processing recovery as a sign-up link carrying its return destination', async () => {
+    const { html } = await renderAnonymousPricingPage({
+      reason: 'payment_processing',
+    });
+    const doc = parseHtml(html);
+    const paymentProcessingHref = toSignUpRedirectRoute(
+      toPricingRoute({ reason: 'payment_processing' }),
+    );
+    const manageBillingHref = toSignUpRedirectRoute(
+      toPricingRoute({ reason: 'manage_billing' }),
+    );
+    const paymentProcessingLink = findAnchorByHref(doc, paymentProcessingHref);
+    const staleManageBillingLink = findAnchorByHref(doc, manageBillingHref);
+
+    expect(paymentProcessingLink?.textContent).toContain('Manage Billing');
+    expect(staleManageBillingLink).toBeNull();
+    expect(doc.querySelector('form button[type="submit"]')).toBeNull();
   });
 
   it('renders ended-access copy and standard CTAs for lapsed subscriptions', async () => {

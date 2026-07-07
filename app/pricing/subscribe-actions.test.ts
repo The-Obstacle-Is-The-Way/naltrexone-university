@@ -4,6 +4,12 @@ import {
   subscribeAnnualAction,
   subscribeMonthlyAction,
 } from '@/app/pricing/subscribe-actions';
+import {
+  AUTH_REDIRECT_QUERY_PARAM,
+  ROUTES,
+  toPricingRoute,
+  toSignUpRedirectRoute,
+} from '@/lib/routes';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 
 function createRedirectFn() {
@@ -57,7 +63,7 @@ describe('app/pricing/subscribe-actions', () => {
     });
   });
 
-  it('redirects to sign-up when checkout session returns UNAUTHENTICATED', async () => {
+  it('preserves the selected plan and return destination when redirecting an unauthenticated checkout attempt', async () => {
     const createCheckoutSessionFn = vi.fn(async () =>
       err('UNAUTHENTICATED', 'Not signed in'),
     );
@@ -70,9 +76,18 @@ describe('app/pricing/subscribe-actions', () => {
         redirectFn,
       }),
     ).rejects.toMatchObject({
-      message: 'redirect:/sign-up',
+      message: `redirect:${toSignUpRedirectRoute(
+        toPricingRoute({ plan: 'monthly' }),
+      )}`,
     });
 
+    const redirectUrl = redirectFn.mock.calls[0]?.[0];
+    if (!redirectUrl) throw new Error('Expected redirect url');
+    const url = new URL(redirectUrl, 'https://example.com');
+    expect(url.pathname).toBe(ROUTES.SIGN_UP);
+    expect(url.searchParams.get(AUTH_REDIRECT_QUERY_PARAM)).toBe(
+      toPricingRoute({ plan: 'monthly' }),
+    );
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
       idempotencyKey: undefined,

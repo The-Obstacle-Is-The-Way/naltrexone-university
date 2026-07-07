@@ -11,7 +11,11 @@ import {
 import type { PricingBanner } from '@/app/pricing/types';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
-import { ROUTES } from '@/lib/routes';
+import {
+  type PricingBillingRecoveryReason,
+  type PricingPlan,
+  ROUTES,
+} from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
@@ -36,6 +40,7 @@ export type PricingPageDeps = {
 };
 
 export type PricingData = {
+  isAuthenticated: boolean;
   isEntitled: boolean;
   reason: NonEntitledReason | null;
   /** null means no subscription record exists (trial-eligible per DEBT-410 D9). */
@@ -48,6 +53,7 @@ export async function loadPricingData(
   const authState = await getRequestAuthState({ deps });
   if (!authState.user) {
     return {
+      isAuthenticated: false,
       // Anonymous pricing visits should not show a banner (DEBT-410 PR-1).
       isEntitled: false,
       reason: null,
@@ -56,6 +62,7 @@ export async function loadPricingData(
   }
 
   return {
+    isAuthenticated: true,
     isEntitled: authState.entitlement.isEntitled,
     reason: authState.entitlement.reason ?? null,
     subscriptionStatus: authState.entitlement.subscriptionStatus ?? null,
@@ -66,7 +73,7 @@ type PricingSearchParams = {
   checkout?: string | string[] | undefined;
   portal?: string | string[] | undefined;
   reason?: string | string[] | undefined;
-  plan?: string;
+  plan?: string | string[] | undefined;
 };
 
 export type PricingTrialContext = {
@@ -158,17 +165,37 @@ export function getPricingBanner(
   return null;
 }
 
+function normalizePricingPlanParam(
+  plan: PricingSearchParams['plan'],
+): PricingPlan | null {
+  const value = normalizeSearchParam(plan);
+  return value === 'monthly' || value === 'annual' ? value : null;
+}
+
+function normalizeBillingRecoveryReason(
+  reason: string | undefined,
+): PricingBillingRecoveryReason | null {
+  return reason === 'manage_billing' || reason === 'payment_processing'
+    ? reason
+    : null;
+}
+
 // Shared by both render paths so banner/CTA decisions cannot drift apart.
 function buildPricingPresentation(
   pricingData: PricingData,
   resolvedSearchParams: PricingSearchParams,
 ): {
   banner: PricingBanner | null;
-  showManageBillingAction: boolean;
+  manageBillingReason: PricingBillingRecoveryReason | null;
+  selectedPlan: PricingPlan | null;
   showTrialCtas: boolean;
 } {
   const reason = normalizeSearchParam(resolvedSearchParams.reason);
-  const effectiveReason = reason ?? pricingData.reason ?? undefined;
+  const selectedPlan = normalizePricingPlanParam(resolvedSearchParams.plan);
+  const effectiveReason = pricingData.isAuthenticated
+    ? (pricingData.reason ?? undefined)
+    : (reason ?? undefined);
+  const manageBillingReason = normalizeBillingRecoveryReason(effectiveReason);
   const banner = getPricingBanner(
     {
       ...resolvedSearchParams,
@@ -181,9 +208,8 @@ function buildPricingPresentation(
 
   return {
     banner,
-    showManageBillingAction:
-      effectiveReason === 'manage_billing' ||
-      effectiveReason === 'payment_processing',
+    manageBillingReason,
+    selectedPlan,
     showTrialCtas:
       !pricingData.isEntitled && pricingData.subscriptionStatus === null,
   };
@@ -200,15 +226,19 @@ export async function DeferredPricingView({
     loadPricingData(deps),
     searchParams,
   ]);
-  const { banner, showManageBillingAction, showTrialCtas } =
+  const { banner, manageBillingReason, selectedPlan, showTrialCtas } =
     buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return (
     <PricingView
+      isAuthenticated={pricingData.isAuthenticated}
       isEntitled={pricingData.isEntitled}
       banner={banner}
+      selectedPlan={selectedPlan}
       showTrialCtas={showTrialCtas}
-      {...(showManageBillingAction ? { manageBillingAction } : {})}
+      {...(manageBillingReason
+        ? { manageBillingAction, manageBillingReason }
+        : {})}
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
       SubscribeButtonComponent={SubscribeButton}
@@ -234,7 +264,7 @@ async function renderInjectedPricingPage(input: {
     input.searchParams,
     resolvedAuthNavFn(),
   ]);
-  const { banner, showManageBillingAction, showTrialCtas } =
+  const { banner, manageBillingReason, selectedPlan, showTrialCtas } =
     buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return MarketingLayout({
@@ -242,10 +272,14 @@ async function renderInjectedPricingPage(input: {
     featuresHref: `${ROUTES.HOME}#features`,
     children: (
       <PricingView
+        isAuthenticated={pricingData.isAuthenticated}
         isEntitled={pricingData.isEntitled}
         banner={banner}
+        selectedPlan={selectedPlan}
         showTrialCtas={showTrialCtas}
-        {...(showManageBillingAction ? { manageBillingAction } : {})}
+        {...(manageBillingReason
+          ? { manageBillingAction, manageBillingReason }
+          : {})}
         subscribeMonthlyAction={subscribeMonthlyAction}
         subscribeAnnualAction={subscribeAnnualAction}
         SubscribeButtonComponent={SubscribeButton}

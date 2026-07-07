@@ -4,12 +4,21 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { findMainLandmarkById, parseHtml } from '@/tests/shared/dom-helpers';
 
 let NotFound: typeof import('./not-found').default;
+let metadata: typeof import('./not-found').metadata;
 
 beforeAll(async () => {
-  NotFound = (await import('./not-found')).default;
+  const notFoundModule = await import('./not-found');
+  NotFound = notFoundModule.default;
+  metadata = notFoundModule.metadata;
 });
 
 describe('app/not-found', () => {
+  it('exports distinct metadata matching the app page-title convention', () => {
+    expect(metadata).toMatchObject({
+      title: 'Page Not Found - Addiction Boards',
+    });
+  });
+
   it('renders a 404 page with a valid skip-link target landmark', () => {
     const html = renderToStaticMarkup(<NotFound />);
     const doc = parseHtml(html);

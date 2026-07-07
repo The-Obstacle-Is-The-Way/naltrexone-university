@@ -1,4 +1,4 @@
-import { ROUTES } from '@/lib/routes';
+import { toPricingRoute, toSignUpRedirectRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 
 type RedirectFn = (url: string) => never;
@@ -31,15 +31,17 @@ export async function runSubscribeAction(
   if (result.ok) return deps.redirectFn(result.data.url);
 
   if (result.error.code === 'UNAUTHENTICATED') {
-    return deps.redirectFn(ROUTES.SIGN_UP);
+    return deps.redirectFn(
+      toSignUpRedirectRoute(toPricingRoute({ plan: input.plan })),
+    );
   }
 
   if (result.error.code === 'ALREADY_SUBSCRIBED') {
-    return deps.redirectFn(`${ROUTES.PRICING}?reason=manage_billing`);
+    return deps.redirectFn(toPricingRoute({ reason: 'manage_billing' }));
   }
 
   if (result.error.code === 'RATE_LIMITED') {
-    return deps.redirectFn(`${ROUTES.PRICING}?checkout=rate_limited`);
+    return deps.redirectFn(toPricingRoute({ checkout: 'rate_limited' }));
   }
 
   deps.logError?.(
@@ -52,9 +54,7 @@ export async function runSubscribeAction(
     'Stripe checkout failed',
   );
 
-  const url = new URL(ROUTES.PRICING, 'https://example.com');
-  url.searchParams.set('checkout', 'error');
-  url.searchParams.set('plan', input.plan);
-
-  return deps.redirectFn(`${url.pathname}${url.search}`);
+  return deps.redirectFn(
+    toPricingRoute({ checkout: 'error', plan: input.plan }),
+  );
 }
