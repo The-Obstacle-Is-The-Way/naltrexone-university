@@ -6,6 +6,7 @@ import { MS_PER_SECOND } from '@/src/domain/services';
 export type ExamTimerState = {
   remainingSeconds: number;
   isExpired: boolean;
+  milestoneAnnouncement: string | null;
 };
 
 export type UseExamTimerInput = {
@@ -18,12 +19,51 @@ function computeRemainingSeconds(deadlineMs: number, nowMs: number): number {
   return Math.max(0, Math.ceil((deadlineMs - nowMs) / MS_PER_SECOND));
 }
 
-function computeState(deadlineMs: number | null): ExamTimerState | null {
+const EXAM_TIMER_MILESTONES = [
+  { seconds: 300, announcement: '5 minutes remaining' },
+  { seconds: 60, announcement: '1 minute remaining' },
+  { seconds: 30, announcement: '30 seconds remaining' },
+] as const;
+
+function getCrossedMilestoneAnnouncement(
+  previousRemainingSeconds: number | null,
+  remainingSeconds: number,
+): string | null {
+  if (previousRemainingSeconds === null || remainingSeconds === 0) {
+    return null;
+  }
+
+  let crossedMilestone: (typeof EXAM_TIMER_MILESTONES)[number] | null = null;
+  for (const milestone of EXAM_TIMER_MILESTONES) {
+    if (
+      previousRemainingSeconds > milestone.seconds &&
+      milestone.seconds >= remainingSeconds
+    ) {
+      if (
+        crossedMilestone === null ||
+        milestone.seconds < crossedMilestone.seconds
+      ) {
+        crossedMilestone = milestone;
+      }
+    }
+  }
+
+  return crossedMilestone?.announcement ?? null;
+}
+
+function computeState(
+  deadlineMs: number | null,
+  previousRemainingSeconds: number | null = null,
+): ExamTimerState | null {
   if (deadlineMs === null) return null;
   const remainingSeconds = computeRemainingSeconds(deadlineMs, Date.now());
   return {
     remainingSeconds,
     isExpired: remainingSeconds === 0,
+    milestoneAnnouncement: getCrossedMilestoneAnnouncement(
+      previousRemainingSeconds,
+      remainingSeconds,
+    ),
   };
 }
 
@@ -36,6 +76,8 @@ function parseDeadline(deadlineAt: string | null): number | null {
 export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
   const onExpireRef = useRef(input.onExpire);
   const firedDeadlineMsRef = useRef<number | null>(null);
+  const previousDeadlineMsRef = useRef<number | null>(null);
+  const previousRemainingSecondsRef = useRef<number | null>(null);
   const deadlineMs =
     input.isExamActive && input.deadlineAt !== null
       ? parseDeadline(input.deadlineAt)
@@ -50,7 +92,13 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
 
   useEffect(() => {
     function update() {
-      const nextState = computeState(deadlineMs);
+      const previousRemainingSeconds =
+        previousDeadlineMsRef.current === deadlineMs
+          ? previousRemainingSecondsRef.current
+          : null;
+      const nextState = computeState(deadlineMs, previousRemainingSeconds);
+      previousDeadlineMsRef.current = deadlineMs;
+      previousRemainingSecondsRef.current = nextState?.remainingSeconds ?? null;
       setState(nextState);
       if (
         !nextState?.isExpired ||

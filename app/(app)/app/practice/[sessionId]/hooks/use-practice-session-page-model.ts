@@ -301,6 +301,7 @@ export function usePracticeSessionPageModel(
     ? createElement(ExamTimer, {
         remainingSeconds: timerState.remainingSeconds,
         isExpired: timerState.isExpired,
+        milestoneAnnouncement: timerState.milestoneAnnouncement,
       })
     : undefined;
 

@@ -21,6 +21,9 @@ function TimerProbe(props: {
         {timer ? String(timer.remainingSeconds) : ''}
       </div>
       <div data-testid="expired">{timer ? String(timer.isExpired) : ''}</div>
+      <div data-testid="milestone">
+        {timer ? (timer.milestoneAnnouncement ?? '') : ''}
+      </div>
       <button
         type="button"
         onClick={() => setDeadlineAt('2026-05-22T11:59:59.000Z')}
@@ -96,6 +99,104 @@ describe('useExamTimer', () => {
 
     window.dispatchEvent(new Event('focus'));
     expect(onExpire).toHaveBeenCalledTimes(1);
+  });
+
+  it('announces a crossed milestone when the next update skips the exact threshold', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    const onExpire = vi.fn();
+
+    const screen = await render(
+      <TimerProbe
+        initialDeadlineAt="2026-05-22T12:05:20.000Z"
+        onExpire={onExpire}
+      />,
+    );
+
+    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+
+    vi.setSystemTime(new Date('2026-05-22T12:00:31.000Z'));
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('289');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent('5 minutes remaining');
+
+    window.dispatchEvent(new Event('focus'));
+
+    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+  });
+
+  it('announces only the lowest milestone crossed by one long update', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    const onExpire = vi.fn();
+
+    const screen = await render(
+      <TimerProbe
+        initialDeadlineAt="2026-05-22T12:05:20.000Z"
+        onExpire={onExpire}
+      />,
+    );
+
+    vi.setSystemTime(new Date('2026-05-22T12:05:00.000Z'));
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('20');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent('30 seconds remaining');
+  });
+
+  it('announces each milestone once during a normal second-by-second countdown', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    const onExpire = vi.fn();
+
+    const screen = await render(
+      <TimerProbe
+        initialDeadlineAt="2026-05-22T12:05:02.000Z"
+        onExpire={onExpire}
+      />,
+    );
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('300');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent('5 minutes remaining');
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+
+    await vi.advanceTimersByTimeAsync(239_000);
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('60');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent('1 minute remaining');
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+
+    await vi.advanceTimersByTimeAsync(29_000);
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('30');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent('30 seconds remaining');
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
   });
 
   it('retries an expired deadline when onExpire reports that recovery failed', async () => {
