@@ -12,6 +12,10 @@ import { usePracticeSessionMarkForReview } from '@/app/(app)/app/practice/[sessi
 import { usePracticeSessionQuestionFlow } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-question-flow';
 import { usePracticeSessionReviewStage } from '@/app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage';
 import { ExamTimer } from '@/app/(app)/app/practice/components/exam-timer';
+import {
+  fireAndForget,
+  logUnhandledAsyncError,
+} from '@/app/(app)/app/practice/fire-and-forget';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { usePracticeQuestionFeedback } from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
 import type {
@@ -491,9 +495,12 @@ export function usePracticeSessionPageModel(
     questionFlow.onTryAgain();
   }, [bootstrapSessionSummary, questionFlow.onTryAgain, shouldRetryBootstrap]);
   const onSubmit = useCallback((): void => {
-    void questionFlow.onSubmit({
-      allowExamCommit: reviewStage.isReviewQuestionActive,
-    });
+    fireAndForget(
+      questionFlow.onSubmit({
+        allowExamCommit: reviewStage.isReviewQuestionActive,
+      }),
+      logUnhandledAsyncError,
+    );
   }, [questionFlow.onSubmit, reviewStage.isReviewQuestionActive]);
 
   const { isMarkingForReview, onToggleMarkForReview } =

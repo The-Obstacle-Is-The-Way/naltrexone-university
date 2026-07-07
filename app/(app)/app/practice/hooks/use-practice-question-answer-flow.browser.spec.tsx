@@ -70,21 +70,21 @@ function PracticeQuestionAnswerFlowProbe() {
       <div data-testid="error-message">{errorMessage}</div>
       <button
         type="button"
-        onClick={() => output.onSelectChoice(fixtureChoice1Id)}
+        onClick={() => output.onSelectChoice(fixtureChoice1Id, 'pointer')}
       >
         select-choice-1
       </button>
       <button
         type="button"
-        onClick={() => output.onSelectChoice(fixtureChoice2Id)}
+        onClick={() => output.onSelectChoice(fixtureChoice2Id, 'pointer')}
       >
         select-choice-2
       </button>
       <button
         type="button"
         onClick={() => {
-          output.onSelectChoice(fixtureChoice1Id);
-          output.onSelectChoice(fixtureChoice2Id);
+          output.onSelectChoice(fixtureChoice1Id, 'pointer');
+          output.onSelectChoice(fixtureChoice2Id, 'pointer');
         }}
       >
         select-choice-1-then-2
@@ -104,7 +104,7 @@ function PracticeQuestionAnswerFlowProbe() {
       <button
         type="button"
         onClick={() => {
-          output.onSelectChoice(fixtureChoice1Id);
+          output.onSelectChoice(fixtureChoice1Id, 'pointer');
           void output.onSubmit();
         }}
       >

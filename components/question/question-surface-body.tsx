@@ -16,7 +16,7 @@ export type QuestionSurfaceBodyProps = {
   correctChoiceId: string | null;
   disabled: boolean;
   canSubmitSelectedChoice?: boolean;
-  onSelectChoice: (choiceId: string, origin?: ChoiceSelectionOrigin) => void;
+  onSelectChoice: (choiceId: string, origin: ChoiceSelectionOrigin) => void;
   onSubmitSelectedChoice?: (() => void) | undefined;
   feedback?: FeedbackProps | null;
   feedbackRef?: RefObject<HTMLDivElement | null>;

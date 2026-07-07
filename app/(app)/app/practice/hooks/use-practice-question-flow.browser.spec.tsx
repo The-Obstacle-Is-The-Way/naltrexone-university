@@ -77,7 +77,7 @@ function PracticeQuestionFlowSubmitProbe() {
       <div data-testid="is-pending">{String(output.isPending)}</div>
       <button
         type="button"
-        onClick={() => output.onSelectChoice(fixtureChoice1Id)}
+        onClick={() => output.onSelectChoice(fixtureChoice1Id, 'pointer')}
       >
         select-choice-1
       </button>

@@ -155,7 +155,7 @@ function MutableSessionRecoveryProbe() {
       </div>
       <button
         type="button"
-        onClick={() => output.onSelectChoice(BROWSER_CHOICE_1_ID)}
+        onClick={() => output.onSelectChoice(BROWSER_CHOICE_1_ID, 'pointer')}
       >
         select-choice-1
       </button>

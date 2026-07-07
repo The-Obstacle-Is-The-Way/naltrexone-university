@@ -36,7 +36,7 @@ export type UsePracticeQuestionAnswerFlowOutput = {
   questionAreaRef: React.RefObject<HTMLElement | null>;
   onTryAgain: () => void;
   onSubmit: () => Promise<void>;
-  onSelectChoice: (choiceId: string, origin?: ChoiceSelectionOrigin) => void;
+  onSelectChoice: (choiceId: string, origin: ChoiceSelectionOrigin) => void;
   onNextQuestion: () => void;
 };
 
@@ -192,7 +192,7 @@ export function usePracticeQuestionAnswerFlow(
   }, [canSubmit, commitChoice, isPending, selectedChoiceId]);
 
   const onSelectChoice = useCallback(
-    (choiceId: string, origin?: ChoiceSelectionOrigin) => {
+    (choiceId: string, origin: ChoiceSelectionOrigin) => {
       if (isPending || commitInFlightRef.current) return;
 
       const changed = selectChoice(choiceId);

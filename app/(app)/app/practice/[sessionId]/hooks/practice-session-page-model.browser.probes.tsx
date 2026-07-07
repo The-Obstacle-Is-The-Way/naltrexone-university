@@ -70,7 +70,7 @@ export function PracticeSessionPageModelHookProbe() {
       {renderActionButtons([
         {
           label: 'select-choice-1',
-          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID),
+          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID, 'pointer'),
         },
         {
           label: 'submit-answer',
@@ -111,7 +111,7 @@ export function PracticeSessionPageModelNavigationProbe() {
       {renderActionButtons([
         {
           label: 'select-choice-1',
-          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID),
+          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID, 'pointer'),
         },
         {
           label: 'submit-answer',
@@ -232,7 +232,7 @@ export function PracticeSessionPageModelReviewProbe() {
         },
         {
           label: 'select-choice-1',
-          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID),
+          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID, 'pointer'),
         },
         {
           label: 'submit-answer',
@@ -258,7 +258,7 @@ export function PracticeSessionPageModelSubmitDuringReviewProbe() {
       {renderActionButtons([
         {
           label: 'select-choice-1',
-          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID),
+          onClick: () => output.onSelectChoice(BROWSER_CHOICE_1_ID, 'pointer'),
         },
         {
           label: 'submit-answer',

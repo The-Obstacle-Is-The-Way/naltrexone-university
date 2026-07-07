@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Markdown } from '@/components/markdown/markdown';
 import { cn } from '@/lib/utils';
 import type { ChoiceSelectionOrigin } from './choice-selection';
@@ -40,13 +40,13 @@ export function ChoiceButton({
 
   const hasVerdict = correctness === 'correct' || correctness === 'incorrect';
 
-  function clearPointerActivation() {
+  const clearPointerActivation = useCallback(() => {
     pointerActivationArmedRef.current = false;
     if (pointerActivationTimeoutRef.current) {
       clearTimeout(pointerActivationTimeoutRef.current);
       pointerActivationTimeoutRef.current = null;
     }
-  }
+  }, []);
 
   function armPointerActivation() {
     clearPointerActivation();
@@ -57,21 +57,10 @@ export function ChoiceButton({
     if (pointerActivationTimeoutRef.current) {
       clearTimeout(pointerActivationTimeoutRef.current);
     }
-    pointerActivationTimeoutRef.current = setTimeout(() => {
-      pointerActivationArmedRef.current = false;
-      pointerActivationTimeoutRef.current = null;
-    }, 0);
+    pointerActivationTimeoutRef.current = setTimeout(clearPointerActivation, 0);
   }
 
-  useEffect(() => {
-    return () => {
-      pointerActivationArmedRef.current = false;
-      if (pointerActivationTimeoutRef.current) {
-        clearTimeout(pointerActivationTimeoutRef.current);
-        pointerActivationTimeoutRef.current = null;
-      }
-    };
-  }, []);
+  useEffect(() => clearPointerActivation, [clearPointerActivation]);
 
   return (
     <label

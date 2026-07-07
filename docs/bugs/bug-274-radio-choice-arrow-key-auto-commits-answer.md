@@ -1,6 +1,7 @@
 # BUG-274: Arrow-Key Navigation Between Answer Choices Auto-Submits and Locks an Unintended Choice
 
-**Status:** Fix implemented on `fix/bug-274-radio-arrow-key-auto-commit`; pending PR merge
+**Status:** Open
+**Resolution State:** Fix implemented and merged to `dev` in PR #582 (merge `a3855c81`); post-merge CodeRabbit findings remediated in the follow-up review PR (Submit pending-state gate, required selection origin, consolidated pointer-arm clearing); pending promotion to `main` and production deploy proof before archival.
 **Severity:** P1
 **Date:** 2026-06-30
 **Confirmed:** 2026-06-30; root-cause citations re-verified against dev head `c1780187` on 2026-07-07; implementation citations updated against branch head on 2026-07-07

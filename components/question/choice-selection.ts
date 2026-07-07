@@ -1,7 +1,7 @@
 export type ChoiceSelectionOrigin = 'pointer' | 'non-pointer';
 
 export function shouldCommitChoiceSelection(
-  origin: ChoiceSelectionOrigin | undefined,
+  origin: ChoiceSelectionOrigin,
 ): boolean {
-  return origin !== 'non-pointer';
+  return origin === 'pointer';
 }
