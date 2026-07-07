@@ -52,21 +52,25 @@ Question displayed
 ### Action bar layout
 
 **Before feedback, no selected-uncommitted choice (question 2+):**
+
 ```text
 [ Previous ]
 ```
 
 **Before feedback, selected-uncommitted choice (question 2+):**
+
 ```text
 [ Previous ]  [ Submit ]
 ```
 
 **After feedback (question 2+):**
+
 ```text
 [ Previous ]  [ Next (default) ]  [ Bookmark ]
 ```
 
 **Q1 (no Previous):**
+
 ```text
 [ Submit when selected-uncommitted / Next after feedback ]  [ Bookmark after feedback ]
 ```
@@ -118,6 +122,7 @@ Question displayed
 ### Action bar layout
 
 **Any non-last question:**
+
 ```text
 [ Previous ]  [ Next ]  ...  [ Mark for review ]
 <---- primary group ---->     <- secondary group ->
