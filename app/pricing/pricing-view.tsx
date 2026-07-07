@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
+import { AuthAwareCta, SubscribePlanCta } from '@/app/pricing/pricing-auth-cta';
 import type { PricingBanner } from '@/app/pricing/types';
-import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PRICING_DATA } from '@/lib/pricing-data';
@@ -80,30 +80,18 @@ export function PricingView({
             <span>{banner.message}</span>
             <div className="ml-4 flex items-center gap-3">
               {manageBillingAction ? (
-                isAuthenticated ? (
-                  <form action={manageBillingAction}>
-                    <IdempotencyKeyField />
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full"
-                    >
-                      Manage Billing
-                    </Button>
-                  </form>
-                ) : (
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                  >
-                    <Link href={getManageBillingSignUpHref()}>
-                      Manage Billing
-                    </Link>
-                  </Button>
-                )
+                <AuthAwareCta
+                  isAuthenticated={isAuthenticated}
+                  formAction={manageBillingAction}
+                  signUpHref={getManageBillingSignUpHref()}
+                  buttonProps={{
+                    variant: 'outline',
+                    size: 'sm',
+                    className: 'rounded-full',
+                  }}
+                >
+                  Manage Billing
+                </AuthAwareCta>
               ) : null}
               <Link
                 href={ROUTES.PRICING}
@@ -142,20 +130,14 @@ export function PricingView({
               Manage billing in Stripe to restore access.
             </p>
             <div className="mt-6">
-              {isAuthenticated ? (
-                <form action={manageBillingAction}>
-                  <IdempotencyKeyField />
-                  <Button type="submit" className="rounded-full">
-                    Manage Billing
-                  </Button>
-                </form>
-              ) : (
-                <Button asChild className="rounded-full">
-                  <Link href={getManageBillingSignUpHref()}>
-                    Manage Billing
-                  </Link>
-                </Button>
-              )}
+              <AuthAwareCta
+                isAuthenticated={isAuthenticated}
+                formAction={manageBillingAction}
+                signUpHref={getManageBillingSignUpHref()}
+                buttonProps={{ className: 'rounded-full' }}
+              >
+                Manage Billing
+              </AuthAwareCta>
             </div>
           </Card>
         ) : (
@@ -192,42 +174,21 @@ export function PricingView({
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                {isAuthenticated ? (
-                  <form
-                    action={subscribeMonthlyAction}
-                    aria-label="Subscribe monthly plan"
-                  >
-                    <IdempotencyKeyField />
-                    <SubscribeButtonComponent>
-                      {showTrialCtas
-                        ? PRICING_DATA.monthly.trialCta
-                        : 'Subscribe Monthly'}
-                    </SubscribeButtonComponent>
-                    {showTrialCtas ? (
-                      <p className="mt-3 text-center text-sm text-muted-foreground">
-                        {PRICING_DATA.monthly.postTrialNote}
-                      </p>
-                    ) : null}
-                  </form>
-                ) : (
-                  <>
-                    <Button
-                      asChild
-                      className="mt-8 h-auto w-full rounded-full py-3 text-base"
-                    >
-                      <Link href={getPlanSignUpHref('monthly')}>
-                        {showTrialCtas
-                          ? PRICING_DATA.monthly.trialCta
-                          : 'Subscribe Monthly'}
-                      </Link>
-                    </Button>
-                    {showTrialCtas ? (
-                      <p className="mt-3 text-center text-sm text-muted-foreground">
-                        {PRICING_DATA.monthly.postTrialNote}
-                      </p>
-                    ) : null}
-                  </>
-                )}
+                <SubscribePlanCta
+                  isAuthenticated={isAuthenticated}
+                  formAction={subscribeMonthlyAction}
+                  signUpHref={getPlanSignUpHref('monthly')}
+                  formAriaLabel="Subscribe monthly plan"
+                  label={
+                    showTrialCtas
+                      ? PRICING_DATA.monthly.trialCta
+                      : 'Subscribe Monthly'
+                  }
+                  postTrialNote={
+                    showTrialCtas ? PRICING_DATA.monthly.postTrialNote : null
+                  }
+                  SubscribeButtonComponent={SubscribeButtonComponent}
+                />
               </Card>
               <Card
                 aria-current={isAnnualSelected ? 'true' : undefined}
@@ -255,42 +216,21 @@ export function PricingView({
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                {isAuthenticated ? (
-                  <form
-                    action={subscribeAnnualAction}
-                    aria-label="Subscribe annual plan"
-                  >
-                    <IdempotencyKeyField />
-                    <SubscribeButtonComponent>
-                      {showTrialCtas
-                        ? PRICING_DATA.annual.trialCta
-                        : 'Subscribe Annual'}
-                    </SubscribeButtonComponent>
-                    {showTrialCtas ? (
-                      <p className="mt-3 text-center text-sm text-muted-foreground">
-                        {PRICING_DATA.annual.postTrialNote}
-                      </p>
-                    ) : null}
-                  </form>
-                ) : (
-                  <>
-                    <Button
-                      asChild
-                      className="mt-8 h-auto w-full rounded-full py-3 text-base"
-                    >
-                      <Link href={getPlanSignUpHref('annual')}>
-                        {showTrialCtas
-                          ? PRICING_DATA.annual.trialCta
-                          : 'Subscribe Annual'}
-                      </Link>
-                    </Button>
-                    {showTrialCtas ? (
-                      <p className="mt-3 text-center text-sm text-muted-foreground">
-                        {PRICING_DATA.annual.postTrialNote}
-                      </p>
-                    ) : null}
-                  </>
-                )}
+                <SubscribePlanCta
+                  isAuthenticated={isAuthenticated}
+                  formAction={subscribeAnnualAction}
+                  signUpHref={getPlanSignUpHref('annual')}
+                  formAriaLabel="Subscribe annual plan"
+                  label={
+                    showTrialCtas
+                      ? PRICING_DATA.annual.trialCta
+                      : 'Subscribe Annual'
+                  }
+                  postTrialNote={
+                    showTrialCtas ? PRICING_DATA.annual.postTrialNote : null
+                  }
+                  SubscribeButtonComponent={SubscribeButtonComponent}
+                />
               </Card>
             </div>
           </section>
