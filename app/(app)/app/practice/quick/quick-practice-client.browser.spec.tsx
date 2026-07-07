@@ -130,4 +130,5 @@ test('submits a keyboard-selected choice from the visible Submit action', async 
   expect(submitAnswer).toHaveBeenCalledWith(
     expect.objectContaining({ choiceId: fixtureChoiceBId }),
   );
+  screen.unmount();
 });
