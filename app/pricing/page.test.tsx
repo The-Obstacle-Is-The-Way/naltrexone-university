@@ -1295,6 +1295,25 @@ describe('app/pricing', () => {
     expect(bareSignUpManageBillingLinks).toHaveLength(0);
   });
 
+  it('renders anonymous payment-processing recovery as a sign-up link carrying its return destination', async () => {
+    const { html } = await renderAnonymousPricingPage({
+      reason: 'payment_processing',
+    });
+    const doc = parseHtml(html);
+    const paymentProcessingHref = toSignUpRedirectRoute(
+      toPricingRoute({ reason: 'payment_processing' }),
+    );
+    const manageBillingHref = toSignUpRedirectRoute(
+      toPricingRoute({ reason: 'manage_billing' }),
+    );
+    const paymentProcessingLink = findAnchorByHref(doc, paymentProcessingHref);
+    const staleManageBillingLink = findAnchorByHref(doc, manageBillingHref);
+
+    expect(paymentProcessingLink?.textContent).toContain('Manage Billing');
+    expect(staleManageBillingLink).toBeNull();
+    expect(doc.querySelector('form button[type="submit"]')).toBeNull();
+  });
+
   it('renders ended-access copy and standard CTAs for lapsed subscriptions', async () => {
     const html = await renderPricingPageWithEntitlement({
       isEntitled: false,

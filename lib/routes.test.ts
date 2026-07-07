@@ -130,6 +130,12 @@ describe('lib/routes', () => {
     expect(toPricingRoute({ reason: 'manage_billing' })).toBe(
       '/pricing?reason=manage_billing',
     );
+    expect(toPricingRoute({ reason: 'payment_processing' })).toBe(
+      '/pricing?reason=payment_processing',
+    );
+    expect(toPricingRoute({ checkout: 'cancel' })).toBe(
+      '/pricing?checkout=cancel',
+    );
   });
 
   it('builds Clerk sign-up redirects with an explicit return destination', () => {

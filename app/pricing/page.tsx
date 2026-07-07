@@ -11,7 +11,11 @@ import {
 import type { PricingBanner } from '@/app/pricing/types';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
-import { type PricingPlan, ROUTES } from '@/lib/routes';
+import {
+  type PricingBillingRecoveryReason,
+  type PricingPlan,
+  ROUTES,
+} from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
@@ -168,14 +172,22 @@ function normalizePricingPlanParam(
   return value === 'monthly' || value === 'annual' ? value : null;
 }
 
+function normalizeBillingRecoveryReason(
+  reason: string | undefined,
+): PricingBillingRecoveryReason | null {
+  return reason === 'manage_billing' || reason === 'payment_processing'
+    ? reason
+    : null;
+}
+
 // Shared by both render paths so banner/CTA decisions cannot drift apart.
 function buildPricingPresentation(
   pricingData: PricingData,
   resolvedSearchParams: PricingSearchParams,
 ): {
   banner: PricingBanner | null;
+  manageBillingReason: PricingBillingRecoveryReason | null;
   selectedPlan: PricingPlan | null;
-  showManageBillingAction: boolean;
   showTrialCtas: boolean;
 } {
   const reason = normalizeSearchParam(resolvedSearchParams.reason);
@@ -183,6 +195,7 @@ function buildPricingPresentation(
   const effectiveReason = pricingData.isAuthenticated
     ? (pricingData.reason ?? undefined)
     : (reason ?? undefined);
+  const manageBillingReason = normalizeBillingRecoveryReason(effectiveReason);
   const banner = getPricingBanner(
     {
       ...resolvedSearchParams,
@@ -195,10 +208,8 @@ function buildPricingPresentation(
 
   return {
     banner,
+    manageBillingReason,
     selectedPlan,
-    showManageBillingAction:
-      effectiveReason === 'manage_billing' ||
-      effectiveReason === 'payment_processing',
     showTrialCtas:
       !pricingData.isEntitled && pricingData.subscriptionStatus === null,
   };
@@ -215,7 +226,7 @@ export async function DeferredPricingView({
     loadPricingData(deps),
     searchParams,
   ]);
-  const { banner, selectedPlan, showManageBillingAction, showTrialCtas } =
+  const { banner, manageBillingReason, selectedPlan, showTrialCtas } =
     buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return (
@@ -225,7 +236,9 @@ export async function DeferredPricingView({
       banner={banner}
       selectedPlan={selectedPlan}
       showTrialCtas={showTrialCtas}
-      {...(showManageBillingAction ? { manageBillingAction } : {})}
+      {...(manageBillingReason
+        ? { manageBillingAction, manageBillingReason }
+        : {})}
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
       SubscribeButtonComponent={SubscribeButton}
@@ -251,7 +264,7 @@ async function renderInjectedPricingPage(input: {
     input.searchParams,
     resolvedAuthNavFn(),
   ]);
-  const { banner, selectedPlan, showManageBillingAction, showTrialCtas } =
+  const { banner, manageBillingReason, selectedPlan, showTrialCtas } =
     buildPricingPresentation(pricingData, resolvedSearchParams);
 
   return MarketingLayout({
@@ -264,7 +277,9 @@ async function renderInjectedPricingPage(input: {
         banner={banner}
         selectedPlan={selectedPlan}
         showTrialCtas={showTrialCtas}
-        {...(showManageBillingAction ? { manageBillingAction } : {})}
+        {...(manageBillingReason
+          ? { manageBillingAction, manageBillingReason }
+          : {})}
         subscribeMonthlyAction={subscribeMonthlyAction}
         subscribeAnnualAction={subscribeAnnualAction}
         SubscribeButtonComponent={SubscribeButton}

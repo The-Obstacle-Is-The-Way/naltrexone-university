@@ -24,12 +24,23 @@ export const PRICING_QUERY_PARAMS = {
 } as const;
 
 export type PricingPlan = 'monthly' | 'annual';
+export type PricingCheckoutStatus = 'cancel' | 'error' | 'rate_limited';
+export type PricingPortalStatus = 'error';
+export type PricingRedirectReason =
+  | 'manage_billing'
+  | 'payment_processing'
+  | 'subscription_canceled'
+  | 'subscription_required';
+export type PricingBillingRecoveryReason = Extract<
+  PricingRedirectReason,
+  'manage_billing' | 'payment_processing'
+>;
 
 export type PricingRouteOptions = {
-  checkout?: string | undefined;
+  checkout?: PricingCheckoutStatus | undefined;
   plan?: PricingPlan | undefined;
-  portal?: string | undefined;
-  reason?: string | undefined;
+  portal?: PricingPortalStatus | undefined;
+  reason?: PricingRedirectReason | undefined;
 };
 
 export function toPricingRoute(options: PricingRouteOptions = {}): string {

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PRICING_DATA } from '@/lib/pricing-data';
 import {
+  type PricingBillingRecoveryReason,
   type PricingPlan,
   ROUTES,
   toPricingRoute,
@@ -20,6 +21,7 @@ export type PricingViewProps = {
   /** Render trial CTAs for trial-eligible visitors (no subscription row, not entitled). */
   showTrialCtas?: boolean;
   manageBillingAction?: (formData: FormData) => Promise<void>;
+  manageBillingReason?: PricingBillingRecoveryReason;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
   SubscribeButtonComponent?: ComponentType<{ children: ReactNode }>;
@@ -37,8 +39,10 @@ function getPlanSignUpHref(plan: PricingPlan): string {
   return toSignUpRedirectRoute(toPricingRoute({ plan }));
 }
 
-function getManageBillingSignUpHref(): string {
-  return toSignUpRedirectRoute(toPricingRoute({ reason: 'manage_billing' }));
+function getManageBillingSignUpHref(
+  reason: PricingBillingRecoveryReason = 'manage_billing',
+): string {
+  return toSignUpRedirectRoute(toPricingRoute({ reason }));
 }
 
 export function PricingView({
@@ -48,6 +52,7 @@ export function PricingView({
   selectedPlan = null,
   showTrialCtas = false,
   manageBillingAction,
+  manageBillingReason = 'manage_billing',
   subscribeMonthlyAction,
   subscribeAnnualAction,
   SubscribeButtonComponent = DefaultButton,
@@ -83,7 +88,7 @@ export function PricingView({
                 <AuthAwareCta
                   isAuthenticated={isAuthenticated}
                   formAction={manageBillingAction}
-                  signUpHref={getManageBillingSignUpHref()}
+                  signUpHref={getManageBillingSignUpHref(manageBillingReason)}
                   buttonProps={{
                     variant: 'outline',
                     size: 'sm',
@@ -133,7 +138,7 @@ export function PricingView({
               <AuthAwareCta
                 isAuthenticated={isAuthenticated}
                 formAction={manageBillingAction}
-                signUpHref={getManageBillingSignUpHref()}
+                signUpHref={getManageBillingSignUpHref(manageBillingReason)}
                 buttonProps={{ className: 'rounded-full' }}
               >
                 Manage Billing
