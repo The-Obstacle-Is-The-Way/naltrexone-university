@@ -112,7 +112,24 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
         previousRemainingSecondsRef.current =
           nextState?.remainingSeconds ?? null;
       }
-      setState(nextState);
+      // Tab return fires visibilitychange and window focus back-to-back; the
+      // second call sees no crossing because the first consumed the baseline.
+      // Keep the announcement until the countdown actually advances so the
+      // live region is not wiped before assistive tech announces it.
+      setState((previous) => {
+        if (
+          nextState !== null &&
+          previous !== null &&
+          nextState.milestoneAnnouncement === null &&
+          nextState.remainingSeconds === previous.remainingSeconds
+        ) {
+          return {
+            ...nextState,
+            milestoneAnnouncement: previous.milestoneAnnouncement,
+          };
+        }
+        return nextState;
+      });
       if (
         !nextState?.isExpired ||
         deadlineMs === null ||

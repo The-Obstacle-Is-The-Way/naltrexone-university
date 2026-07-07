@@ -125,8 +125,16 @@ describe('useExamTimer', () => {
       .element(screen.getByTestId('milestone'))
       .toHaveTextContent('5 minutes remaining');
 
+    // Tab return fires visibilitychange AND window focus back-to-back. The
+    // second update must not wipe the announcement before assistive tech can
+    // announce it — it only clears once the countdown actually advances.
     window.dispatchEvent(new Event('focus'));
 
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^5 minutes remaining$/);
+
+    await vi.advanceTimersByTimeAsync(1_000);
     await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
   });
 
@@ -150,7 +158,7 @@ describe('useExamTimer', () => {
       .toHaveTextContent('20');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent('30 seconds remaining');
+      .toHaveTextContent(/^30 seconds remaining$/);
   });
 
   it('announces each milestone once during a normal second-by-second countdown', async () => {
