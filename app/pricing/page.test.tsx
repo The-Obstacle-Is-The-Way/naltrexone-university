@@ -1140,6 +1140,40 @@ describe('app/pricing', () => {
     );
   });
 
+  it('renders anonymous standard subscribe links and annual selection when trial copy is disabled', () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isAuthenticated={false}
+        isEntitled={false}
+        banner={null}
+        selectedPlan="annual"
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = parseHtml(html);
+    const monthlyHref = toSignUpRedirectRoute(
+      toPricingRoute({ plan: 'monthly' }),
+    );
+    const annualHref = toSignUpRedirectRoute(
+      toPricingRoute({ plan: 'annual' }),
+    );
+    const annualCard = findHeadingByText(doc, PRICING_DATA.annual.name, {
+      level: 3,
+    })?.closest('[data-slot="card"]');
+
+    expect(findAnchorByHref(doc, monthlyHref)?.textContent).toContain(
+      'Subscribe Monthly',
+    );
+    expect(findAnchorByHref(doc, annualHref)?.textContent).toContain(
+      'Subscribe Annual',
+    );
+    expect(annualCard?.getAttribute('aria-current')).toBe('true');
+    expect(annualCard?.textContent).toContain('Selected plan');
+    expect(html).not.toContain(PRICING_DATA.monthly.postTrialNote);
+    expect(html).not.toContain(PRICING_DATA.annual.postTrialNote);
+  });
+
   it('renders trial CTAs for signed-in first-time users', async () => {
     const html = await renderPricingPageWithEntitlement({
       isEntitled: false,
