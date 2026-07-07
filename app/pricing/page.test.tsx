@@ -1098,6 +1098,37 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe Annual');
   });
 
+  it('uses authenticated entitlement state over stale return reason params', async () => {
+    const checkEntitlementUseCase = new FakeUseCase<
+      CheckEntitlementInput,
+      CheckEntitlementOutput
+    >({
+      isEntitled: false,
+      reason: 'subscription_required',
+      subscriptionStatus: null,
+      hasActiveSubscriptionPeriod: false,
+      trialEndsAt: null,
+    });
+    const element = await PricingPage({
+      searchParams: Promise.resolve({ reason: 'manage_billing' }),
+      authNavFn: () => <div>AuthNav</div>,
+      deps: {
+        authGateway: new FakeAuthGateway(pricingTestUser),
+        checkEntitlementUseCase,
+      },
+    });
+    const html = renderToStaticMarkup(element);
+
+    expect(html).toContain(
+      'Start your free trial to access the app — no card required.',
+    );
+    expect(html).toContain('Start 7-day free trial');
+    expect(html).not.toContain(
+      'Subscription found. Manage billing to resolve payment issues.',
+    );
+    expect(html).not.toContain('Manage Billing');
+  });
+
   it('renders trial CTAs and trial-forward copy for anonymous visitors', async () => {
     const { html } = await renderAnonymousPricingPage({
       reason: 'subscription_required',

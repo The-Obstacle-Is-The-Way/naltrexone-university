@@ -180,7 +180,9 @@ function buildPricingPresentation(
 } {
   const reason = normalizeSearchParam(resolvedSearchParams.reason);
   const selectedPlan = normalizePricingPlanParam(resolvedSearchParams.plan);
-  const effectiveReason = reason ?? pricingData.reason ?? undefined;
+  const effectiveReason = pricingData.isAuthenticated
+    ? (pricingData.reason ?? undefined)
+    : (reason ?? undefined);
   const banner = getPricingBanner(
     {
       ...resolvedSearchParams,
