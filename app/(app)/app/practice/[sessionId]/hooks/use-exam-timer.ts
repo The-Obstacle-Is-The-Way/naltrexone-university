@@ -105,12 +105,11 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
           : null;
       const nextState = computeState(deadlineMs, milestoneBaseline);
       previousDeadlineMsRef.current = deadlineMs;
-      if (!isSameDeadline) {
-        previousRemainingSecondsRef.current = null;
-      }
       if (!isDocumentHidden) {
         previousRemainingSecondsRef.current =
           nextState?.remainingSeconds ?? null;
+      } else if (!isSameDeadline) {
+        previousRemainingSecondsRef.current = null;
       }
       // Tab return fires visibilitychange and window focus back-to-back; the
       // second call sees no crossing because the first consumed the baseline.
