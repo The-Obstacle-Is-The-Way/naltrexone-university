@@ -60,13 +60,31 @@ export function ChoiceButton({
     pointerActivationTimeoutRef.current = setTimeout(clearPointerActivation, 0);
   }
 
-  useEffect(() => clearPointerActivation, [clearPointerActivation]);
+  useEffect(() => {
+    // An Alt-Tab (or any window switch) abandons a press with no click,
+    // pointerup, or pointerleave on this element; a surviving arm would
+    // misclassify the next keyboard/AT selection as a pointer commit.
+    window.addEventListener('blur', clearPointerActivation);
+    return () => {
+      window.removeEventListener('blur', clearPointerActivation);
+      clearPointerActivation();
+    };
+  }, [clearPointerActivation]);
 
   return (
     <label
-      onPointerDownCapture={() => {
-        if (!disabled) armPointerActivation();
+      onPointerDownCapture={(event) => {
+        if (disabled) return;
+        // Only a primary-button press can become a click-activation; a
+        // right/middle press fires contextmenu/auxclick with no click, so an
+        // arm here would go stale and hijack a later keyboard selection.
+        if (event.button !== 0) {
+          clearPointerActivation();
+          return;
+        }
+        armPointerActivation();
       }}
+      onContextMenuCapture={clearPointerActivation}
       onPointerCancelCapture={clearPointerActivation}
       onPointerLeave={(event) => {
         if (event.buttons !== 0) clearPointerActivation();
