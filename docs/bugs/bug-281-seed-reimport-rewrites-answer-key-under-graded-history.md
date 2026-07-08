@@ -71,6 +71,18 @@ Contract:
 
 DISCLOSE and REGRADE remain possible future explicit workflows, but they are not defaults. Silent in-place historical key drift is forbidden by default.
 
+## Resolution State
+
+Implementation in progress on `fix/bug-281-seed-key-change-guard`; keep this bug **Open** until the fix merges, promotes to production, and deploy proof is recorded.
+
+Implemented contract:
+
+- `computeAnswerKeyChanges()` detects only `is_correct` changes on existing choice labels; new choices and text/explanation/order changes do not trip the guard.
+- `syncQuestionsFromFiles()` runs the guard inside the existing per-question transaction after locking the question and before mutating question/choice rows.
+- A blocked import throws through the existing per-file wrapper, so the operator sees the question slug, file path, changed labels, and graded row counts.
+- `SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true` explicitly overrides the block and logs the same audit context. The override is intentionally noisy and off by default.
+- Seed operator docs now describe the default block and override flag before a manual content reseed reaches the guard.
+
 ## Failing Test Sketch
 
 ```typescript

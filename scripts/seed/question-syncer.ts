@@ -1,4 +1,4 @@
-import { and, eq, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import matter from 'gray-matter';
 import * as schema from '../../db/schema';
@@ -7,6 +7,8 @@ import {
   sha256Hex,
 } from '../../lib/content/parse-mdx-question';
 import {
+  type AnswerKeyChange,
+  computeAnswerKeyChanges,
   computeChoiceSyncPlan,
   computeReferencedChoiceIds,
   computeTemporarySortOrders,
@@ -20,6 +22,82 @@ export type SeedSyncCounts = {
   updated: number;
   skipped: number;
 };
+
+const ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY_ENV =
+  'SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY';
+
+type GradedHistoryCounts = {
+  attempts: number;
+  practiceSessionStates: number;
+};
+
+function formatAnswerKeyChanges(changes: readonly AnswerKeyChange[]): string {
+  return changes
+    .map((change) => `${change.label}:${change.from}->${change.to}`)
+    .join(', ');
+}
+
+function hasGradedHistory(counts: GradedHistoryCounts): boolean {
+  return counts.attempts > 0 || counts.practiceSessionStates > 0;
+}
+
+function shouldAllowKeyChangesOverGradedHistory(): boolean {
+  return process.env[ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY_ENV] === 'true';
+}
+
+async function countGradedHistoryForQuestion(
+  tx: PostgresJsDatabase<typeof schema>,
+  questionId: string,
+): Promise<GradedHistoryCounts> {
+  const [attemptCount] = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.attempts)
+    .where(eq(schema.attempts.questionId, questionId));
+
+  const [stateCount] = await tx
+    .select({ count: sql<number>`count(*)::int` })
+    .from(schema.practiceSessionQuestionStates)
+    .where(
+      and(
+        eq(schema.practiceSessionQuestionStates.questionId, questionId),
+        isNotNull(schema.practiceSessionQuestionStates.latestIsCorrect),
+      ),
+    );
+
+  return {
+    attempts: attemptCount?.count ?? 0,
+    practiceSessionStates: stateCount?.count ?? 0,
+  };
+}
+
+async function enforceAnswerKeyChangePolicy(input: {
+  tx: PostgresJsDatabase<typeof schema>;
+  questionId: string;
+  slug: string;
+  changes: readonly AnswerKeyChange[];
+}): Promise<void> {
+  if (input.changes.length === 0) return;
+
+  const counts = await countGradedHistoryForQuestion(
+    input.tx,
+    input.questionId,
+  );
+  if (!hasGradedHistory(counts)) return;
+
+  const changeSummary = formatAnswerKeyChanges(input.changes);
+  const countSummary = `attempts=${counts.attempts}, practiceSessionStates=${counts.practiceSessionStates}`;
+
+  if (shouldAllowKeyChangesOverGradedHistory()) {
+    console.warn(
+      `[seed] Overriding answer-key change for "${input.slug}" with ${ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY_ENV}=true (${countSummary}; changes=${changeSummary})`,
+    );
+    return;
+  }
+
+  throw new Error(
+    `Refusing to change answer key for "${input.slug}" because graded history exists (${countSummary}; changes=${changeSummary}). Set ${ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY_ENV}=true to override explicitly.`,
+  );
+}
 
 function extractSeedSlugForError(raw: string): string | null {
   try {
@@ -170,6 +248,24 @@ export async function syncQuestionsFromFiles(
         if (dbHash === fileHash) {
           return 'skipped' as const;
         }
+
+        const answerKeyChanges = computeAnswerKeyChanges({
+          existingChoices: existingChoices.map((choice) => ({
+            id: choice.id,
+            label: choice.label,
+            isCorrect: choice.isCorrect,
+          })),
+          desiredChoices: seedFromFile.choices.map((choice) => ({
+            label: choice.label,
+            isCorrect: choice.is_correct,
+          })),
+        });
+        await enforceAnswerKeyChangePolicy({
+          tx,
+          questionId: lockedQuestion.id,
+          slug: seedFromFile.slug,
+          changes: answerKeyChanges,
+        });
 
         const desiredLabels = new Set(
           seedFromFile.choices.map((choice) => choice.label),
