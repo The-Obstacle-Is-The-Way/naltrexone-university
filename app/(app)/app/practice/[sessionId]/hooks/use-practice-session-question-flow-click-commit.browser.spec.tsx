@@ -81,7 +81,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
 
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     expect(submitAnswerFn).toHaveBeenCalledWith(
@@ -118,7 +118,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
 
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
@@ -154,7 +154,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
     harness.result.current.setSessionMode('tutor');
     await expect.poll(() => harness.result.current.sessionMode).toBe('tutor');
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
 
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
@@ -188,7 +188,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
 
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
@@ -226,7 +226,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
     await expect
       .poll(() => harness.result.current.selectedChoiceId)
       .toBe(fixtureChoice2Id);
@@ -273,8 +273,8 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice1Id);
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice1Id, 'pointer');
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
 
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect
@@ -319,12 +319,12 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice1Id);
+    harness.result.current.onSelectChoice(fixtureChoice1Id, 'pointer');
 
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect.poll(() => harness.result.current.isPending).toBe(true);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
 
     submitDeferred.resolve(ok(createSubmitOutput(fixtureChoice1Id)));
     await expect.poll(() => harness.result.current.isPending).toBe(false);
@@ -358,7 +358,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice1Id);
+    harness.result.current.onSelectChoice(fixtureChoice1Id, 'pointer');
 
     await harness.result.current.onSubmit();
 
@@ -439,13 +439,13 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice1Id);
+    harness.result.current.onSelectChoice(fixtureChoice1Id, 'pointer');
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect
       .poll(() => harness.result.current.submitResult?.correctChoiceId ?? null)
       .toBe(fixtureChoice1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice2Id);
+    harness.result.current.onSelectChoice(fixtureChoice2Id, 'pointer');
 
     expect(submitAnswerFn).toHaveBeenCalledTimes(1);
   });
@@ -476,7 +476,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice1Id);
+    harness.result.current.onSelectChoice(fixtureChoice1Id, 'pointer');
     await expect.poll(() => submitAnswerFn.mock.calls.length).toBe(1);
     await expect
       .poll(() => harness.result.current.submitResult?.correctChoiceId ?? null)
@@ -516,7 +516,7 @@ describe('usePracticeSessionQuestionFlow click-to-commit behavior', () => {
       .poll(() => harness.result.current.question?.questionId)
       .toBe(fixtureQ1Id);
 
-    harness.result.current.onSelectChoice(fixtureChoice1Id);
+    harness.result.current.onSelectChoice(fixtureChoice1Id, 'pointer');
 
     await expect
       .poll(() => harness.result.current.loadState.status)

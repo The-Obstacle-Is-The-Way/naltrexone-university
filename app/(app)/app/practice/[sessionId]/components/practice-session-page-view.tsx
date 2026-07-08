@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
+import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import {
   PracticeView,
   type PracticeViewProps,
@@ -24,7 +25,6 @@ import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { LoadState } from '../../practice-page-logic';
 import { ExamReviewView, QuestionNavigator } from './exam-review-view';
-import { focusElementWithoutScroll } from './focus-element-without-scroll';
 import { renderPracticeSessionExamResults } from './practice-session-exam-results-renderer';
 import { findAdjacentAvailableQuestionId } from './practice-session-question-navigation';
 import { SessionSummaryView } from './session-summary-view';
@@ -56,6 +56,7 @@ export type PracticeSessionPageViewProps = {
   isAnswered: boolean;
   submitResult: SubmitAnswerOutput | null;
   isPending: boolean;
+  canSubmit?: boolean | undefined;
   bookmarkStatus: 'idle' | 'loading' | 'error';
   isBookmarked: boolean;
   isMarkingForReview?: boolean | undefined;
@@ -70,7 +71,8 @@ export type PracticeSessionPageViewProps = {
   onRetryBookmarks?: (() => void) | undefined;
   onToggleBookmark: () => void;
   onToggleMarkForReview?: (() => void) | undefined;
-  onSelectChoice: (choiceId: string) => void;
+  onSelectChoice: PracticeViewProps['onSelectChoice'];
+  onSubmit?: (() => void) | undefined;
   onNextQuestion: () => void;
   onNavigateQuestion?: ((questionId: string) => void) | undefined;
   onOpenReviewQuestion?: ((questionId: string) => void) | undefined;
@@ -277,6 +279,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       isAnswered={props.isAnswered}
       submitResult={props.submitResult}
       isPending={props.isPending}
+      canSubmit={props.canSubmit}
       bookmarkStatus={props.bookmarkStatus}
       isBookmarked={props.isBookmarked}
       isMarkingForReview={props.isMarkingForReview}
@@ -290,6 +293,7 @@ export function PracticeSessionPageView(props: PracticeSessionPageViewProps) {
       onToggleBookmark={props.onToggleBookmark}
       onToggleMarkForReview={props.onToggleMarkForReview}
       onSelectChoice={props.onSelectChoice}
+      onSubmit={props.onSubmit}
       onNextQuestion={onNextQuestionResolved}
       onPreviousQuestion={
         props.onNavigateQuestion ? onPreviousQuestion : undefined

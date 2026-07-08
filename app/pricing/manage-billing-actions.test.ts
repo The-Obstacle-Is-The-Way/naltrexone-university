@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
+import { toPricingRoute, toSignUpRedirectRoute } from '@/lib/routes';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 
 function createRedirectFn(): (url: string) => never {
@@ -25,7 +26,7 @@ describe('app/pricing/manage-billing-actions', () => {
     });
   });
 
-  it('returns redirect to sign-up when portal session creation is unauthenticated', async () => {
+  it('returns a sign-up redirect that preserves the manage-billing destination when portal session creation is unauthenticated', async () => {
     const createPortalSessionFn = async () =>
       err('UNAUTHENTICATED', 'Not signed in');
 
@@ -37,7 +38,9 @@ describe('app/pricing/manage-billing-actions', () => {
         redirectFn,
       }),
     ).rejects.toMatchObject({
-      message: 'redirect:/sign-up',
+      message: `redirect:${toSignUpRedirectRoute(
+        toPricingRoute({ reason: 'manage_billing' }),
+      )}`,
     });
   });
 

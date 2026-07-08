@@ -215,14 +215,18 @@ test('renders session summary branch when summary is present', async () => {
     />,
   );
 
-  await expect.element(screen.getByText('Session Summary')).toBeVisible();
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Session Summary' }))
+    .toHaveFocus();
   await expect.element(screen.getByText('80%')).toBeVisible();
 });
 
 test('renders callback-driven Review Answers button for exam-mode session summaries in the orchestrator', async () => {
   const screen = await renderExamResultsContinuityHarness();
 
-  await expect.element(screen.getByText('Session Summary')).toBeVisible();
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Session Summary' }))
+    .toHaveFocus();
   await expect
     .element(screen.getByRole('button', { name: 'Review Answers' }))
     .toBeVisible();
@@ -317,6 +321,19 @@ test('clicking Review Answers re-enters post-exam review without route ejection'
   await expect
     .element(screen.getByRole('heading', { name: 'Session Summary' }))
     .not.toBeInTheDocument();
+});
+
+test('clicking View Summary from post-exam review focuses the summary heading', async () => {
+  const screen = await renderExamResultsContinuityHarness();
+
+  await screen.getByRole('button', { name: 'Review Answers' }).click();
+  await expectPostExamReviewScoreBanner(screen);
+
+  await screen.getByRole('button', { name: 'View Summary' }).click();
+
+  await expect
+    .element(screen.getByRole('heading', { level: 1, name: 'Session Summary' }))
+    .toHaveFocus();
 });
 
 test('clicking a summary breakdown row opens the exact reviewed question in post-exam review', async () => {

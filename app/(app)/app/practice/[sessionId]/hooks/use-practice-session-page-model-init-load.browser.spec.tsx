@@ -161,7 +161,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(0);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
 
     deferredSummary.resolve(
       errorResult('CONFLICT', 'Practice session has not ended'),
@@ -227,7 +227,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent(BROWSER_SESSION_ID);
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
   });
 
   it('keeps the generic empty state when expired-exam recovery still reports an active session', async () => {
@@ -244,7 +244,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByText('No more questions found.'))
       .toBeVisible();
@@ -266,7 +266,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByText('No more questions found.'))
       .toBeVisible();
@@ -290,10 +290,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('summary-session-id'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByTestId('summary-mode'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
 
     screen.unmount();
     recoverySummary.resolve(
@@ -369,7 +369,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent('ready');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(2);
     expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
   });
@@ -442,7 +442,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent(BROWSER_SESSION_ID);
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
   });
 
   it('retries summary bootstrap before loading questions after a bootstrap error', async () => {
@@ -600,7 +600,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent('error');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByTestId('error-message'))
       .toHaveTextContent('Question load failed');

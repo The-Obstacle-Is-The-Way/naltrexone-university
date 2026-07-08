@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-06-04
+**Last Updated:** 2026-07-07
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -342,7 +342,7 @@ hover:border-foreground/55 hover:bg-foreground/[0.06] dark:hover:border-foregrou
 
 **Design rationale:** Choice buttons are rendered inside `QuestionCard` (`bg-card`) and follow in-card row hierarchy, not standalone page-surface hierarchy. The row is also the direct-action control, so unlike borderless tonal rows it still needs a clearly compliant boundary per [Contrast Policy §3.2](./contrast-policy.md). In light mode, the older `border-border/60 bg-muted/20` recipe was too quiet on white card surfaces; `border-foreground/50 bg-background/50` keeps the required boundary strong while restoring a clean white rest surface. In dark mode, `dark:bg-background/50` intentionally recesses the row beneath the card's 7% surface to about 5.25% lightness, mirroring the crisp feedback-card treatment instead of reviving the muddy DEBT-312 gray veil. Hover and selected fills switch to foreground-based replacements that are evaluated directly against `bg-card`, not layered on top of the recessed rest fill: dark mode steps `5.25 -> 11.3 -> 17.3`, while light mode stays clean at rest and lifts to subtle foreground tints for hover and selected. Keep the hover border/fill tokens on the unselected branch only so selected neutral rows do not regress when hovered.
 
-**Behavior:** In tutor mode and Quick Practice, clicking a choice commits the answer immediately by invoking the submit flow. In exam mode, clicking a choice only selects/drafts the answer; final commit remains deferred to Review & Submit / exam finalization. The `ChoiceButton` primitive and `useQuestionFlowCore` stay mode-agnostic; mode-specific commit wiring lives in `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow` (DEBT-378).
+**Behavior:** In tutor mode and Quick Practice, pointer activation on a choice commits the answer immediately by invoking the submit flow. Keyboard/AT radio selection (arrow keys, Space, or an activation synthesized without `pointerdown`) only selects the choice and exposes the action-bar `Submit` affordance; `Enter` in the choice fieldset commits that selected-uncommitted choice. In exam mode, selecting a choice only selects/drafts the answer; final commit remains deferred to Review & Submit / exam finalization. The `ChoiceButton` primitive reports pointer vs non-pointer origin, while mode-specific commit wiring lives in `usePracticeQuestionAnswerFlow` and `usePracticeSessionQuestionFlow` ([BS-064](../brainstorming/bs-064-radio-choice-modality-split.md)).
 
 ### I-4: Filter Chip
 
@@ -582,7 +582,7 @@ The page header action rail holds one mode-specific persistent action:
 | Exam | outline `Mark for review` / `Unmark review` when `onToggleMarkForReview` is provided | Uses `aria-pressed`, disables while marking, while pending, or while the next question is loading. |
 | No session action | header action link | Falls back to the page-level back link when no session action is available. |
 
-**Removed tutor affordances:** Active tutor sessions no longer render a footer `Submit`, `Submitting…`, pre-feedback `Next`, or footer `View Summary`. Before feedback, the choice cards are the primary action; skip-without-answering is handled by the question navigator in active sessions.
+**Removed tutor affordances:** Active tutor sessions no longer render `Submitting…`, pre-feedback `Next`, or footer `View Summary`. Before feedback, pointer choice activation is the primary action. The footer `Submit` is allowed only for the selected-uncommitted keyboard/AT state introduced by BUG-274; skip-without-answering is handled by the question navigator in active sessions.
 
 ### Dark Mode Behavior (built into button.tsx)
 

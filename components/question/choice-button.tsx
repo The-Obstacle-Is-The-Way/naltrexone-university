@@ -1,7 +1,9 @@
 'use client';
 
+import { useCallback, useEffect, useRef } from 'react';
 import { Markdown } from '@/components/markdown/markdown';
 import { cn } from '@/lib/utils';
+import type { ChoiceSelectionOrigin } from './choice-selection';
 
 export type ChoiceButtonProps = {
   name: string;
@@ -10,8 +12,16 @@ export type ChoiceButtonProps = {
   selected: boolean;
   disabled?: boolean;
   correctness?: 'correct' | 'incorrect' | 'wrong-unselected' | null;
-  onClick: () => void;
+  onClick: (origin: ChoiceSelectionOrigin) => void;
 };
+
+const RADIO_KEYBOARD_SELECTION_KEYS = new Set([
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'ArrowUp',
+  ' ',
+]);
 
 export function ChoiceButton({
   name,
@@ -23,11 +33,70 @@ export function ChoiceButton({
   onClick,
 }: ChoiceButtonProps) {
   const choiceTextClassName = 'text-base text-foreground';
+  const pointerActivationArmedRef = useRef(false);
+  const pointerActivationTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   const hasVerdict = correctness === 'correct' || correctness === 'incorrect';
 
+  const clearPointerActivation = useCallback(() => {
+    pointerActivationArmedRef.current = false;
+    if (pointerActivationTimeoutRef.current) {
+      clearTimeout(pointerActivationTimeoutRef.current);
+      pointerActivationTimeoutRef.current = null;
+    }
+  }, []);
+
+  function armPointerActivation() {
+    clearPointerActivation();
+    pointerActivationArmedRef.current = true;
+  }
+
+  function schedulePointerActivationClear() {
+    if (pointerActivationTimeoutRef.current) {
+      clearTimeout(pointerActivationTimeoutRef.current);
+    }
+    pointerActivationTimeoutRef.current = setTimeout(clearPointerActivation, 0);
+  }
+
+  useEffect(() => {
+    // An Alt-Tab (or any window switch) abandons a press with no click,
+    // pointerup, or pointerleave on this element; a surviving arm would
+    // misclassify the next keyboard/AT selection as a pointer commit.
+    window.addEventListener('blur', clearPointerActivation);
+    return () => {
+      window.removeEventListener('blur', clearPointerActivation);
+      clearPointerActivation();
+    };
+  }, [clearPointerActivation]);
+
   return (
     <label
+      onPointerDownCapture={(event) => {
+        if (disabled) return;
+        // Only a primary-button press can become a click-activation; a
+        // right/middle press fires contextmenu/auxclick with no click, so an
+        // arm here would go stale and hijack a later keyboard selection.
+        if (event.button !== 0) {
+          clearPointerActivation();
+          return;
+        }
+        armPointerActivation();
+      }}
+      onContextMenuCapture={clearPointerActivation}
+      onPointerCancelCapture={clearPointerActivation}
+      onPointerLeave={(event) => {
+        if (event.buttons !== 0) clearPointerActivation();
+      }}
+      onClickCapture={() => {
+        if (pointerActivationArmedRef.current) schedulePointerActivationClear();
+      }}
+      onKeyDownCapture={(event) => {
+        if (RADIO_KEYBOARD_SELECTION_KEYS.has(event.key)) {
+          clearPointerActivation();
+        }
+      }}
       className={cn(
         'block w-full rounded-xl border border-foreground/50 bg-background/50 p-4 text-left shadow-sm transition-colors focus-within:border-ring ring-focus-within',
         !hasVerdict &&
@@ -53,7 +122,12 @@ export function ChoiceButton({
         name={name}
         value={label}
         checked={selected}
-        onChange={() => onClick()}
+        onChange={() => {
+          const origin: ChoiceSelectionOrigin =
+            pointerActivationArmedRef.current ? 'pointer' : 'non-pointer';
+          clearPointerActivation();
+          onClick(origin);
+        }}
         disabled={disabled}
         className="sr-only"
       />

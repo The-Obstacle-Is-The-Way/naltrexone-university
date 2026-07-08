@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
@@ -6,6 +7,39 @@ import { SessionSummaryView } from './session-summary-view';
 const fixtureSession1Id = crypto.randomUUID();
 const fixtureQ1Id = crypto.randomUUID();
 const fixtureQ2Id = crypto.randomUUID();
+
+function createTutorSummary() {
+  return {
+    sessionId: fixtureSession1Id,
+    endedAt: '2026-02-07T00:00:00.000Z',
+    mode: 'tutor' as const,
+    questionCount: 1,
+    totals: {
+      answered: 1,
+      correct: 1,
+      accuracy: 1,
+      durationSeconds: 30,
+    },
+  };
+}
+
+function MountedSummaryRerenderHarness() {
+  const [revision, setRevision] = useState(0);
+
+  return (
+    <>
+      <SessionSummaryView
+        summary={createTutorSummary()}
+        review={null}
+        reviewLoadState={{ status: 'idle' }}
+      />
+      <button type="button" onClick={() => setRevision((value) => value + 1)}>
+        Keep focus here
+      </button>
+      <span data-testid="summary-rerender-count">{revision}</span>
+    </>
+  );
+}
 
 test('renders summary totals and per-question breakdown', async () => {
   const screen = await render(
@@ -363,4 +397,17 @@ test('uses in-session callbacks for exam summary review re-entry when provided',
 
   await screen.getByRole('button', { name: /Stem for q1/i }).click();
   expect(onOpenReviewQuestion).toHaveBeenCalledWith(fixtureQ1Id);
+});
+
+test('does not steal focus when an already-mounted summary re-renders', async () => {
+  const screen = await render(<MountedSummaryRerenderHarness />);
+
+  await screen.getByRole('button', { name: 'Keep focus here' }).click();
+
+  await expect
+    .element(screen.getByTestId('summary-rerender-count'))
+    .toHaveTextContent('1');
+  await expect
+    .element(screen.getByRole('button', { name: 'Keep focus here' }))
+    .toHaveFocus();
 });

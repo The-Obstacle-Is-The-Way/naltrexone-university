@@ -4,6 +4,7 @@ import { useId } from 'react';
 import { Markdown } from '@/components/markdown/markdown';
 import { Card } from '@/components/ui/card';
 import { ChoiceButton } from './choice-button';
+import type { ChoiceSelectionOrigin } from './choice-selection';
 
 export type QuestionCardChoice = {
   id: string;
@@ -17,7 +18,9 @@ export type QuestionCardProps = {
   selectedChoiceId: string | null;
   correctChoiceId: string | null;
   disabled?: boolean;
-  onSelectChoice: (choiceId: string) => void;
+  canSubmitSelectedChoice?: boolean;
+  onSelectChoice: (choiceId: string, origin: ChoiceSelectionOrigin) => void;
+  onSubmitSelectedChoice?: (() => void) | undefined;
 };
 
 export function QuestionCard({
@@ -26,7 +29,9 @@ export function QuestionCard({
   selectedChoiceId,
   correctChoiceId,
   disabled = false,
+  canSubmitSelectedChoice = false,
   onSelectChoice,
+  onSubmitSelectedChoice,
 }: QuestionCardProps) {
   const choiceGroupName = useId();
 
@@ -34,7 +39,25 @@ export function QuestionCard({
     <Card>
       <Markdown content={stemMd} className="text-base text-foreground" />
 
-      <fieldset className="mt-8 space-y-3">
+      <fieldset
+        className="mt-8 space-y-3"
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter') return;
+          if (!canSubmitSelectedChoice || !onSubmitSelectedChoice) return;
+          // Only commit for Enter on the radios themselves. Choice markdown
+          // can contain focusable content (links); Enter there must keep its
+          // native behavior instead of grading the answer.
+          if (
+            !(event.target instanceof HTMLInputElement) ||
+            event.target.type !== 'radio'
+          ) {
+            return;
+          }
+
+          event.preventDefault();
+          onSubmitSelectedChoice();
+        }}
+      >
         <legend className="sr-only">Answer choices</legend>
         {choices.map((choice) => {
           const selected = selectedChoiceId === choice.id;
@@ -56,7 +79,7 @@ export function QuestionCard({
               selected={selected}
               correctness={correctness}
               disabled={disabled || correctChoiceId !== null}
-              onClick={() => onSelectChoice(choice.id)}
+              onClick={(origin) => onSelectChoice(choice.id, origin)}
             />
           );
         })}

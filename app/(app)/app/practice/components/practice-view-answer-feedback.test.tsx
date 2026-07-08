@@ -139,6 +139,49 @@ describe('PracticeView answer feedback', () => {
     );
   });
 
+  it('does not render Submit while the selected choice commit is pending', () => {
+    const question = createFixtureNextQuestion();
+
+    const html = renderToStaticMarkup(
+      <PracticeView
+        sessionInfo={{
+          sessionId: fixtureSession1Id,
+          mode: 'tutor',
+
+          deadlineAt: null,
+
+          index: 1,
+          total: 3,
+          isMarkedForReview: false,
+        }}
+        loadState={{ status: 'ready' }}
+        question={question}
+        selectedChoiceId={fixtureChoice1Id}
+        canSubmit={true}
+        isAnswered={false}
+        submitResult={null}
+        isPending
+        bookmarkStatus="idle"
+        isBookmarked={false}
+        onTryAgain={() => undefined}
+        onToggleBookmark={() => undefined}
+        onSelectChoice={() => undefined}
+        onNextQuestion={() => undefined}
+        onSubmit={() => undefined}
+        onPreviousQuestion={() => undefined}
+        hasPreviousQuestion={true}
+        hasNextQuestion={true}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const actionBar = doc.querySelector('[data-testid="bottom-action-bar"]');
+    if (!actionBar) {
+      throw new Error('Expected bottom action bar to render');
+    }
+
+    expect(actionBar.textContent).not.toContain('Submit');
+  });
+
   it('keeps the middle-question tutor footer to Previous before any commit', () => {
     const question = createFixtureNextQuestion();
 

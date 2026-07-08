@@ -320,3 +320,58 @@ test('renders navigator error with retry action', async () => {
   await screen.getByRole('button', { name: 'Retry navigator' }).click();
   expect(onRetryNavigator).toHaveBeenCalledTimes(1);
 });
+
+test('passes the tutor Submit affordance through to the question surface', async () => {
+  const onSubmit = vi.fn();
+  const fixtureChoiceId = crypto.randomUUID();
+  const screen = await render(
+    <PracticeSessionPageView
+      summary={null}
+      review={null}
+      navigator={null}
+      sessionInfo={{
+        sessionId: fixtureSession1Id,
+        mode: 'tutor',
+
+        deadlineAt: null,
+
+        index: 0,
+        total: 2,
+        isMarkedForReview: false,
+      }}
+      loadState={{ status: 'ready' }}
+      question={{
+        questionId: fixtureQ1Id,
+        slug: 'q-1',
+        stemMd: 'Stem 1',
+        difficulty: 'easy',
+        choices: [
+          { id: fixtureChoiceId, label: 'A', textMd: 'Choice A', sortOrder: 1 },
+        ],
+        session: null,
+      }}
+      selectedChoiceId={fixtureChoiceId}
+      isAnswered={false}
+      submitResult={null}
+      isPending={false}
+      canSubmit={true}
+      bookmarkStatus="idle"
+      isBookmarked={false}
+      onEndSession={noop}
+      onTryAgain={noop}
+      onToggleBookmark={noop}
+      onToggleMarkForReview={noop}
+      onSelectChoice={noop}
+      onSubmit={onSubmit}
+      onNextQuestion={noop}
+      onNavigateQuestion={noop}
+    />,
+  );
+
+  // The orchestrator seam: canSubmit/onSubmit must reach PracticeView so the
+  // keyboard-pending Submit affordance renders and fires in real sessions.
+  const submitButton = screen.getByRole('button', { name: 'Submit' });
+  await expect.element(submitButton).toBeVisible();
+  await submitButton.click();
+  expect(onSubmit).toHaveBeenCalledTimes(1);
+});

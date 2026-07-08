@@ -1,7 +1,12 @@
 import { CircleIcon } from 'lucide-react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/routes';
+
+export const metadata: Metadata = {
+  title: 'Page Not Found - Addiction Boards',
+};
 
 export default function NotFound() {
   return (

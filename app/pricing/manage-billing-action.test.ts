@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { runManageBillingAction } from '@/app/pricing/manage-billing-action';
+import { toPricingRoute, toSignUpRedirectRoute } from '@/lib/routes';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 
 class RedirectError extends Error {
@@ -31,7 +32,7 @@ describe('runManageBillingAction', () => {
     });
   });
 
-  it('returns redirect to /sign-up when portal session creation is unauthenticated', async () => {
+  it('returns redirect to sign-up with the manage-billing return destination when portal session creation is unauthenticated', async () => {
     const redirectFn = (url: string): never => {
       throw new RedirectError(url);
     };
@@ -49,7 +50,7 @@ describe('runManageBillingAction', () => {
       });
 
     await expect(action()).rejects.toMatchObject({
-      url: '/sign-up',
+      url: toSignUpRedirectRoute(toPricingRoute({ reason: 'manage_billing' })),
     });
   });
 

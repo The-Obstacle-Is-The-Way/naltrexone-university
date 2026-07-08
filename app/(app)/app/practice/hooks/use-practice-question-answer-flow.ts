@@ -7,6 +7,10 @@ import {
 } from '@/app/(app)/app/practice/practice-page-logic';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/shared/transitioned-async-action';
+import {
+  type ChoiceSelectionOrigin,
+  shouldCommitChoiceSelection,
+} from '@/components/question/choice-selection';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
@@ -32,7 +36,7 @@ export type UsePracticeQuestionAnswerFlowOutput = {
   questionAreaRef: React.RefObject<HTMLElement | null>;
   onTryAgain: () => void;
   onSubmit: () => Promise<void>;
-  onSelectChoice: (choiceId: string) => void;
+  onSelectChoice: (choiceId: string, origin: ChoiceSelectionOrigin) => void;
   onNextQuestion: () => void;
 };
 
@@ -188,11 +192,12 @@ export function usePracticeQuestionAnswerFlow(
   }, [canSubmit, commitChoice, isPending, selectedChoiceId]);
 
   const onSelectChoice = useCallback(
-    (choiceId: string) => {
+    (choiceId: string, origin: ChoiceSelectionOrigin) => {
       if (isPending || commitInFlightRef.current) return;
 
       const changed = selectChoice(choiceId);
       if (!changed) return;
+      if (!shouldCommitChoiceSelection(origin)) return;
 
       void commitChoice(choiceId);
     },

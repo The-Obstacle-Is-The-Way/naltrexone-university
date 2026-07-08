@@ -1,4 +1,8 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
+import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -42,11 +46,20 @@ export function SessionSummaryView({
     summary.mode === 'exam' && typeof onReviewAnswers === 'function';
   const hasPrimaryFollowUp =
     hasInSessionReviewAction || firstReviewableSlug !== null;
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    focusElementWithoutScroll(headingRef.current);
+  }, []);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold font-heading tracking-tight text-foreground">
+        <h1
+          ref={headingRef}
+          className="text-2xl font-bold font-heading tracking-tight text-foreground outline-none ring-focus"
+          tabIndex={-1}
+        >
           Session Summary
         </h1>
         <p className="mt-1 text-base text-muted-foreground">

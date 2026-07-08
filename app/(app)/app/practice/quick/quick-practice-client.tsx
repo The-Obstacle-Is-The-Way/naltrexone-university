@@ -104,6 +104,7 @@ export default function QuickPracticeClient() {
       isAnswered={questionFlow.isAnswered}
       submitResult={questionFlow.submitResult}
       isPending={questionFlow.isPending}
+      canSubmit={questionFlow.canSubmit}
       bookmarkStatus={questionFlow.bookmarkStatus}
       isBookmarked={questionFlow.isBookmarked}
       questionFeedback={questionFlow.questionFeedback}
@@ -117,6 +118,9 @@ export default function QuickPracticeClient() {
         fireAndForget(questionFlow.onToggleBookmark(), logUnhandledAsyncError);
       }}
       onSelectChoice={questionFlow.onSelectChoice}
+      onSubmit={() => {
+        fireAndForget(questionFlow.onSubmit(), logUnhandledAsyncError);
+      }}
       onNextQuestion={questionFlow.onNextQuestion}
     />
   );
