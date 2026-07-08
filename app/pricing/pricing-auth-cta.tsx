@@ -11,7 +11,10 @@ type AuthAwareCtaProps = {
   signUpHref: string;
   children: ReactNode;
   formAriaLabel?: string;
-  buttonProps?: Omit<ComponentProps<typeof Button>, 'asChild' | 'children'>;
+  buttonProps?: Omit<
+    ComponentProps<typeof Button>,
+    'asChild' | 'children' | 'type'
+  >;
   AuthenticatedButtonComponent?: ComponentType<{ children: ReactNode }>;
   footer?: ReactNode;
 };

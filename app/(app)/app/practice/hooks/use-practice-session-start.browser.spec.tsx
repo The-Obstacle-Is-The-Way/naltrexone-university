@@ -147,7 +147,7 @@ test('ignores stale successful session starts after config changes mid-flight', 
   expect(navigateToSpy).not.toHaveBeenCalled();
   await expect
     .element(screen.getByTestId('session-start-error'))
-    .toHaveTextContent('');
+    .toHaveTextContent(/^$/);
 });
 
 test('ignores stale thrown session start failures after config changes mid-flight', async () => {
@@ -177,5 +177,5 @@ test('ignores stale thrown session start failures after config changes mid-fligh
     .toHaveTextContent('loading');
   await expect
     .element(screen.getByTestId('session-start-error'))
-    .toHaveTextContent('');
+    .toHaveTextContent(/^$/);
 });

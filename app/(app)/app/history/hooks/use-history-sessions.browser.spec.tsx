@@ -122,10 +122,10 @@ describe('useHistorySessions (browser)', () => {
       .toHaveTextContent('idle');
     await expect
       .element(screen.getByTestId('session-id'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByTestId('review-session-id'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
   });
 
   it('transitions to error state when the action result is not ok', async () => {
