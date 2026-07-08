@@ -282,7 +282,7 @@ test('clears derived selection state when the current question becomes null', as
     .toHaveTextContent('false');
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('');
+    .toHaveTextContent(/^$/);
 });
 
 test('returns true from onSelectChoice when selection changes', async () => {
@@ -371,7 +371,7 @@ test('restores exam draft selections without locking the answer', async () => {
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('');
+    .toHaveTextContent(/^$/);
   await expect
     .element(screen.getByTestId('is-answered'))
     .toHaveTextContent('false');
@@ -434,7 +434,7 @@ test('preserves a freshly selected exam choice during same-tick ready resync', a
     .click();
   await expect
     .element(screen.getByTestId('selected-choice-id'))
-    .toHaveTextContent('');
+    .toHaveTextContent(/^$/);
 
   await screen
     .getByRole('button', {

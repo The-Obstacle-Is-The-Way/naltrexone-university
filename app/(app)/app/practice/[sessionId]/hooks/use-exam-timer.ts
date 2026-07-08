@@ -73,6 +73,61 @@ function parseDeadline(deadlineAt: string | null): number | null {
   return Number.isFinite(deadlineMs) ? deadlineMs : null;
 }
 
+/**
+ * Milestone announcements are only meaningful while the tab is visible. A
+ * throttled background tick must neither announce nor advance the baseline,
+ * or it consumes the crossing before the user can hear it; the baseline
+ * stays frozen at the last visible value so the return-to-visible update
+ * announces the lowest crossed milestone. A deadline change always discards
+ * the old baseline — it belongs to a different countdown.
+ */
+export function deriveMilestoneBaseline(input: {
+  isDocumentHidden: boolean;
+  isSameDeadline: boolean;
+  previousBaseline: number | null;
+}): number | null {
+  return !input.isDocumentHidden && input.isSameDeadline
+    ? input.previousBaseline
+    : null;
+}
+
+export function deriveNextMilestoneBaseline(input: {
+  isDocumentHidden: boolean;
+  isSameDeadline: boolean;
+  previousBaseline: number | null;
+  nextRemainingSeconds: number | null;
+}): number | null {
+  if (!input.isDocumentHidden) return input.nextRemainingSeconds;
+  return input.isSameDeadline ? input.previousBaseline : null;
+}
+
+/**
+ * Tab return fires visibilitychange and window focus back-to-back; the second
+ * call sees no crossing because the first consumed the baseline. Keep the
+ * announcement while the countdown has not advanced so the live region is not
+ * wiped before assistive tech announces it — but never across a deadline
+ * change, whose countdown it never belonged to.
+ */
+export function mergeMilestoneAnnouncement(input: {
+  previous: ExamTimerState | null;
+  next: ExamTimerState | null;
+  isSameDeadline: boolean;
+}): ExamTimerState | null {
+  if (
+    input.next !== null &&
+    input.previous !== null &&
+    input.isSameDeadline &&
+    input.next.milestoneAnnouncement === null &&
+    input.next.remainingSeconds === input.previous.remainingSeconds
+  ) {
+    return {
+      ...input.next,
+      milestoneAnnouncement: input.previous.milestoneAnnouncement,
+    };
+  }
+  return input.next;
+}
+
 export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
   const onExpireRef = useRef(input.onExpire);
   const firedDeadlineMsRef = useRef<number | null>(null);
@@ -92,43 +147,31 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
 
   useEffect(() => {
     function update() {
-      // Milestone announcements are only meaningful while the tab is visible.
-      // A throttled background tick must neither announce nor advance the
-      // baseline, or it consumes the crossing before the user can hear it;
-      // the baseline stays frozen at the last visible value so the
-      // return-to-visible update announces the lowest crossed milestone.
       const isDocumentHidden = document.visibilityState === 'hidden';
       const isSameDeadline = previousDeadlineMsRef.current === deadlineMs;
-      const milestoneBaseline =
-        !isDocumentHidden && isSameDeadline
-          ? previousRemainingSecondsRef.current
-          : null;
-      const nextState = computeState(deadlineMs, milestoneBaseline);
+      const previousBaseline = previousRemainingSecondsRef.current;
+      const nextState = computeState(
+        deadlineMs,
+        deriveMilestoneBaseline({
+          isDocumentHidden,
+          isSameDeadline,
+          previousBaseline,
+        }),
+      );
       previousDeadlineMsRef.current = deadlineMs;
-      if (!isDocumentHidden) {
-        previousRemainingSecondsRef.current =
-          nextState?.remainingSeconds ?? null;
-      } else if (!isSameDeadline) {
-        previousRemainingSecondsRef.current = null;
-      }
-      // Tab return fires visibilitychange and window focus back-to-back; the
-      // second call sees no crossing because the first consumed the baseline.
-      // Keep the announcement until the countdown actually advances so the
-      // live region is not wiped before assistive tech announces it.
-      setState((previous) => {
-        if (
-          nextState !== null &&
-          previous !== null &&
-          nextState.milestoneAnnouncement === null &&
-          nextState.remainingSeconds === previous.remainingSeconds
-        ) {
-          return {
-            ...nextState,
-            milestoneAnnouncement: previous.milestoneAnnouncement,
-          };
-        }
-        return nextState;
+      previousRemainingSecondsRef.current = deriveNextMilestoneBaseline({
+        isDocumentHidden,
+        isSameDeadline,
+        previousBaseline,
+        nextRemainingSeconds: nextState?.remainingSeconds ?? null,
       });
+      setState((previous) =>
+        mergeMilestoneAnnouncement({
+          previous,
+          next: nextState,
+          isSameDeadline,
+        }),
+      );
       if (
         !nextState?.isExpired ||
         deadlineMs === null ||

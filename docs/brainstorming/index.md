@@ -31,6 +31,7 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 | [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Bookmark Icon Toggle — no icon-toggle UI has shipped; production still uses text bookmark pills on the Bookmarks page, tutor/quick-practice action bar, post-exam review, and review/session-review action bars | Active | [BS-051](../_archive/brainstorming/bs-051-bookmark-pill-hover-pattern-investigation.md) |
 | [BS-059](./bs-059-practice-session-action-bar-button-arrangement.md) | Standalone `question-page-client.tsx` action bar still has unresolved multi-state grouping questions; Direction C continuity work was split out, so this doc now owns only the still-undecided standalone layout contract | Active | [DEBT-330](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md) |
 | [BS-064](./bs-064-radio-choice-modality-split.md) | Radio Choice Modality Split — records the permanent BUG-274 decision to preserve instant pointer commit while giving keyboard/AT radio selection a selected-uncommitted Submit/Enter path | Decision recorded / implemented | [BUG-274](../bugs/bug-274-radio-choice-arrow-key-auto-commits-answer.md) |
+
 **Next Brainstorming ID:** BS-065
 
 ---

@@ -119,7 +119,9 @@ describe('useExamTimer', () => {
       />,
     );
 
-    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^$/);
 
     vi.setSystemTime(new Date('2026-05-22T12:00:31.000Z'));
     document.dispatchEvent(new Event('visibilitychange'));
@@ -141,7 +143,9 @@ describe('useExamTimer', () => {
       .toHaveTextContent(/^5 minutes remaining$/);
 
     await vi.advanceTimersByTimeAsync(1_000);
-    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^$/);
   });
 
   it('announces only the lowest milestone crossed by one long update', async () => {
@@ -188,7 +192,9 @@ describe('useExamTimer', () => {
       .toHaveTextContent('5 minutes remaining');
 
     await vi.advanceTimersByTimeAsync(1_000);
-    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^$/);
 
     await vi.advanceTimersByTimeAsync(239_000);
     await expect
@@ -199,7 +205,9 @@ describe('useExamTimer', () => {
       .toHaveTextContent('1 minute remaining');
 
     await vi.advanceTimersByTimeAsync(1_000);
-    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^$/);
 
     await vi.advanceTimersByTimeAsync(29_000);
     await expect
@@ -210,7 +218,9 @@ describe('useExamTimer', () => {
       .toHaveTextContent('30 seconds remaining');
 
     await vi.advanceTimersByTimeAsync(1_000);
-    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^$/);
   });
 
   it('preserves a milestone crossed during hidden-tab ticks and announces it on return', async () => {
@@ -228,7 +238,9 @@ describe('useExamTimer', () => {
     await expect
       .element(screen.getByTestId('remaining'))
       .toHaveTextContent('310');
-    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^$/);
 
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -242,7 +254,7 @@ describe('useExamTimer', () => {
       await vi.advanceTimersByTimeAsync(1_000);
       await expect
         .element(screen.getByTestId('milestone'))
-        .toHaveTextContent('');
+        .toHaveTextContent(/^$/);
     } finally {
       Reflect.deleteProperty(document, 'visibilityState');
     }
@@ -286,7 +298,7 @@ describe('useExamTimer', () => {
       await vi.advanceTimersByTimeAsync(1_000);
       await expect
         .element(screen.getByTestId('milestone'))
-        .toHaveTextContent('');
+        .toHaveTextContent(/^$/);
     } finally {
       Reflect.deleteProperty(document, 'visibilityState');
     }
@@ -296,7 +308,9 @@ describe('useExamTimer', () => {
     await expect
       .element(screen.getByTestId('remaining'))
       .toHaveTextContent('289');
-    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^$/);
   });
 
   it('retries an expired deadline when onExpire reports that recovery failed', async () => {
@@ -395,7 +409,9 @@ describe('useExamTimer', () => {
       <TimerProbe initialDeadlineAt={null} onExpire={onExpire} />,
     );
 
-    await expect.element(screen.getByTestId('remaining')).toHaveTextContent('');
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent(/^$/);
 
     await vi.advanceTimersByTimeAsync(5_000);
     expect(onExpire).not.toHaveBeenCalled();

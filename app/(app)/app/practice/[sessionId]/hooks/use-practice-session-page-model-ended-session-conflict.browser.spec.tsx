@@ -198,7 +198,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
       .toHaveTextContent('tutor');
     await expect
       .element(screen.getByTestId('error-message'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
   });
 
   it('keeps the generic load error when ended-session recovery still reports an active session', async () => {
@@ -215,7 +215,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByTestId('load-status'))
       .toHaveTextContent('error');
@@ -240,7 +240,7 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
       .toBe(2);
     await expect
       .element(screen.getByTestId('active-view'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect
       .element(screen.getByTestId('load-status'))
       .toHaveTextContent('error');

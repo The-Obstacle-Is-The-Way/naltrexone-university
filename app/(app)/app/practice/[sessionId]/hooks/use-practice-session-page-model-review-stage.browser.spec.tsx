@@ -413,7 +413,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent('review');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
 
     deferred.resolve(
       ok({
@@ -431,7 +431,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .toHaveTextContent('review');
     await expect
       .element(screen.getByTestId('question-id'))
-      .toHaveTextContent('');
+      .toHaveTextContent(/^$/);
     await expect.poll(() => getNextQuestionMock.mock.calls.length).toBe(1);
   });
 });
