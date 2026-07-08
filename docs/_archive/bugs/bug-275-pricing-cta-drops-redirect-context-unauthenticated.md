@@ -63,7 +63,7 @@ Regression coverage:
 - [`app/pricing/page.test.tsx`](../../../app/pricing/page.test.tsx#L1117-L1231) pins anonymous plan and manage-billing links, signed-in checkout-form preservation, and returned-plan selection.
 - [`app/pricing/subscribe-actions.test.ts`](../../../app/pricing/subscribe-actions.test.ts#L66-L95), [`app/pricing/manage-billing-actions.test.ts`](../../../app/pricing/manage-billing-actions.test.ts#L29-L45), and [`app/pricing/manage-billing-action.test.ts`](../../../app/pricing/manage-billing-action.test.ts#L35-L54) pin the server-action fallbacks.
 
-Status stays Open until this branch merges and deploy proof is recorded, then this bug can be archived.
+Resolved and archived 2026-07-08 — see the Resolution State header for the full fix/promotion/deploy proof chain.
 
 Rejected alternatives:
 - **Rely solely on Clerk's `signUpFallbackRedirectUrl`.** This is correctly fallback-only and must stay that way (BUG-055 precedent, verified: the archived doc explicitly states fallback-not-force preserves return-URL flows); the fix belongs in supplying an explicit `redirect_url` from the pricing action, not in changing the fallback.
