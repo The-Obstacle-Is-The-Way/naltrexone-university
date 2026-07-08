@@ -107,11 +107,12 @@ then repaired the missing supporting index. No unexplained mismatch was found.
    offending migration tag(s) and expected/applied hash prefixes only, with no
    `DATABASE_URL`, hostnames, passwords, provider ids, or full Drizzle hashes.
 7. Allowlist only measured legacy content drift. The allowlist is checked into
-   the repo as tag + applied-hash-prefix/full-hash + reason + repair migration,
-   initially only Development's early `0027_early_wallow` hash repaired by
+   the repo as tag + `when` + expected local full hash + applied legacy full
+   hash + repair migration, initially only Development's early
+   `0027_early_wallow` hash repaired by
    `0028_repair_attempts_selected_choice_index`. Silent skips are forbidden:
-   any allowlisted entry must still have a matching tag and matching known
-   applied hash.
+   any allowlisted entry must still match the tag, `when`, expected hash, and
+   known applied hash.
 8. Add red-first unit coverage for matching hashes, missing rows, ledger-only
    rows, non-allowlisted content mismatch, allowlisted legacy mismatch, and
    secret-free formatting.
