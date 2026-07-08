@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeAnswerKeyChanges,
   computeChoiceSyncPlan,
   computeReferencedChoiceIds,
   computeTemporarySortOrders,
@@ -131,6 +132,61 @@ describe('computeTemporarySortOrders', () => {
 
   it('returns no update plans when there are no existing choices', () => {
     expect(computeTemporarySortOrders([])).toEqual([]);
+  });
+});
+
+describe('computeAnswerKeyChanges', () => {
+  it('detects only isCorrect changes on existing labels', () => {
+    const changes = computeAnswerKeyChanges({
+      existingChoices: [
+        { id: 'choice-a', label: 'A', isCorrect: false },
+        { id: 'choice-b', label: 'B', isCorrect: true },
+      ],
+      desiredChoices: [
+        { label: 'A', isCorrect: true },
+        { label: 'B', isCorrect: false },
+        { label: 'C', isCorrect: false },
+      ],
+    });
+
+    expect(changes).toEqual([
+      { id: 'choice-a', label: 'A', from: false, to: true },
+      { id: 'choice-b', label: 'B', from: true, to: false },
+    ]);
+  });
+
+  it.each([
+    {
+      name: 'same answer key',
+      existingChoices: [
+        { id: 'choice-a', label: 'A', isCorrect: false },
+        { id: 'choice-b', label: 'B', isCorrect: true },
+      ],
+      desiredChoices: [
+        { label: 'A', isCorrect: false },
+        { label: 'B', isCorrect: true },
+      ],
+    },
+    {
+      name: 'new question',
+      existingChoices: [],
+      desiredChoices: [
+        { label: 'A', isCorrect: false },
+        { label: 'B', isCorrect: true },
+      ],
+    },
+    {
+      name: 'new choice only',
+      existingChoices: [{ id: 'choice-a', label: 'A', isCorrect: true }],
+      desiredChoices: [
+        { label: 'A', isCorrect: true },
+        { label: 'B', isCorrect: false },
+      ],
+    },
+  ])('returns no changes for $name', ({ existingChoices, desiredChoices }) => {
+    expect(
+      computeAnswerKeyChanges({ existingChoices, desiredChoices }),
+    ).toEqual([]);
   });
 });
 

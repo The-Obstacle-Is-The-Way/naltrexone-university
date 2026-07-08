@@ -152,6 +152,13 @@ Behavior:
   unless `SEED_INCLUDE_PLACEHOLDERS=true`.
 - When placeholders are excluded, `archivePlaceholderQuestions()` archives
   existing DB rows whose slug matches `placeholder-%`.
+- Seed blocks in-place answer-key flips over existing graded history. If an
+  existing choice's `correct` value changes while attempts or graded
+  practice-session state rows exist for that question, `pnpm db:seed` fails
+  closed with the question slug, changed labels, and graded row counts. Use
+  `SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true` only for an explicit,
+  operator-approved historical-key override; the override logs the same audit
+  context.
 - Seed validation rejects:
   - legacy `domain` tags
   - non-canonical topic / substance / treatment slugs
