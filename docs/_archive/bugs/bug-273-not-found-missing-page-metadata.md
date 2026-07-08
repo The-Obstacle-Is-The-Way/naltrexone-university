@@ -1,6 +1,7 @@
 # BUG-273: `app/not-found.tsx` Is the Only Page Missing Per-Page Metadata
 
-**Status:** Open
+**Status:** Resolved
+**Resolution State:** Fixed in PR #581 (squash `cb58133a` to `dev`): app/not-found.tsx exports per-page metadata following the sibling-page title convention, pinned by test; promoted to `main` via PR #587 (merge `4c380f61`, main/dev trees identical); production deployment `5355265999` succeeded 2026-07-08, `https://addictionboards.com/` returned HTTP/2 200.
 **Severity:** P3
 **Date:** 2026-06-30
 **Confirmed:** 2026-06-30
@@ -27,7 +28,7 @@ Pre-fix actual: the tab showed the generic site title inherited from the root la
 
 ## Root Cause
 
-- Pre-fix, [`app/not-found.tsx`](../../app/not-found.tsx) had no `export const metadata`. It is a plain Server Component (no `'use client'` directive), so nothing prevented adding one — unlike `app/error.tsx`/`app/global-error.tsx`, which both open with `'use client';` as their first line and therefore genuinely cannot export Next.js `metadata` (and `global-error.tsx` correctly compensates by hand-rendering its own `<title>` in its required full HTML document shell, per the already-shipped FE-039/DEBT-179 fix).
+- Pre-fix, [`app/not-found.tsx`](../../../app/not-found.tsx) had no `export const metadata`. It is a plain Server Component (no `'use client'` directive), so nothing prevented adding one — unlike `app/error.tsx`/`app/global-error.tsx`, which both open with `'use client';` as their first line and therefore genuinely cannot export Next.js `metadata` (and `global-error.tsx` correctly compensates by hand-rendering its own `<title>` in its required full HTML document shell, per the already-shipped FE-039/DEBT-179 fix).
 - All 13 other `page.tsx` files in `app/` exported `metadata`, and every one of them follows the identical convention `'<Page Title> - Addiction Boards'` (e.g. `'Home - Addiction Boards'`, `'Pricing - Addiction Boards'`, `'Dashboard - Addiction Boards'`, `'Practice - Addiction Boards'`, `'Question - Addiction Boards'`). There is no `title: { template }` on the root layout, so this suffix is applied manually per page, not automatically.
 
 ## Impact
@@ -36,9 +37,9 @@ Cosmetic / SEO-only. No functional impact — the page renders correctly and is 
 
 ## Proposed Fix / Resolution
 
-Implemented on this branch: [`app/not-found.tsx`](../../app/not-found.tsx#L1-L9) now exports `metadata: Metadata = { title: 'Page Not Found - Addiction Boards' }`, matching the naming convention followed by sibling page metadata such as `app/page.tsx`, `app/pricing/page.tsx`, and `app/(app)/app/dashboard/page.tsx`. No other page sets a `description`, so omitting one here is consistent. A `robots: { index: false }` addition remains optional polish, not a functional gap, because Next's `not-found.tsx` returns a true HTTP 404 status.
+Implemented on this branch: [`app/not-found.tsx`](../../../app/not-found.tsx#L1-L9) now exports `metadata: Metadata = { title: 'Page Not Found - Addiction Boards' }`, matching the naming convention followed by sibling page metadata such as `app/page.tsx`, `app/pricing/page.tsx`, and `app/(app)/app/dashboard/page.tsx`. No other page sets a `description`, so omitting one here is consistent. A `robots: { index: false }` addition remains optional polish, not a functional gap, because Next's `not-found.tsx` returns a true HTTP 404 status.
 
-Regression coverage: [`app/not-found.test.tsx`](../../app/not-found.test.tsx#L15-L20) pins the metadata export alongside the existing render/landmark checks. Status stays Open until this branch merges and deploy proof is recorded, then this bug can be archived.
+Regression coverage: [`app/not-found.test.tsx`](../../../app/not-found.test.tsx#L15-L20) pins the metadata export alongside the existing render/landmark checks. Status stays Open until this branch merges and deploy proof is recorded, then this bug can be archived.
 
 Rejected alternatives:
 - None considered — this is a single-line, low-risk addition with no meaningful alternative approach.
