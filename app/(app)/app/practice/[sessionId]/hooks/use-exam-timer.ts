@@ -92,14 +92,43 @@ export function useExamTimer(input: UseExamTimerInput): ExamTimerState | null {
 
   useEffect(() => {
     function update() {
-      const previousRemainingSeconds =
-        previousDeadlineMsRef.current === deadlineMs
+      // Milestone announcements are only meaningful while the tab is visible.
+      // A throttled background tick must neither announce nor advance the
+      // baseline, or it consumes the crossing before the user can hear it;
+      // the baseline stays frozen at the last visible value so the
+      // return-to-visible update announces the lowest crossed milestone.
+      const isDocumentHidden = document.visibilityState === 'hidden';
+      const isSameDeadline = previousDeadlineMsRef.current === deadlineMs;
+      const milestoneBaseline =
+        !isDocumentHidden && isSameDeadline
           ? previousRemainingSecondsRef.current
           : null;
-      const nextState = computeState(deadlineMs, previousRemainingSeconds);
+      const nextState = computeState(deadlineMs, milestoneBaseline);
       previousDeadlineMsRef.current = deadlineMs;
-      previousRemainingSecondsRef.current = nextState?.remainingSeconds ?? null;
-      setState(nextState);
+      if (!isDocumentHidden) {
+        previousRemainingSecondsRef.current =
+          nextState?.remainingSeconds ?? null;
+      } else if (!isSameDeadline) {
+        previousRemainingSecondsRef.current = null;
+      }
+      // Tab return fires visibilitychange and window focus back-to-back; the
+      // second call sees no crossing because the first consumed the baseline.
+      // Keep the announcement until the countdown actually advances so the
+      // live region is not wiped before assistive tech announces it.
+      setState((previous) => {
+        if (
+          nextState !== null &&
+          previous !== null &&
+          nextState.milestoneAnnouncement === null &&
+          nextState.remainingSeconds === previous.remainingSeconds
+        ) {
+          return {
+            ...nextState,
+            milestoneAnnouncement: previous.milestoneAnnouncement,
+          };
+        }
+        return nextState;
+      });
       if (
         !nextState?.isExpired ||
         deadlineMs === null ||

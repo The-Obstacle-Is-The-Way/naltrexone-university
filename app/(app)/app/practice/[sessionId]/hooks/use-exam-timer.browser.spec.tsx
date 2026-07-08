@@ -30,6 +30,12 @@ function TimerProbe(props: {
       >
         move-deadline-past
       </button>
+      <button
+        type="button"
+        onClick={() => setDeadlineAt('2026-05-22T12:05:21.000Z')}
+      >
+        move-deadline-future
+      </button>
     </>
   );
 }
@@ -125,8 +131,16 @@ describe('useExamTimer', () => {
       .element(screen.getByTestId('milestone'))
       .toHaveTextContent('5 minutes remaining');
 
+    // Tab return fires visibilitychange AND window focus back-to-back. The
+    // second update must not wipe the announcement before assistive tech can
+    // announce it — it only clears once the countdown actually advances.
     window.dispatchEvent(new Event('focus'));
 
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent(/^5 minutes remaining$/);
+
+    await vi.advanceTimersByTimeAsync(1_000);
     await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
   });
 
@@ -150,7 +164,7 @@ describe('useExamTimer', () => {
       .toHaveTextContent('20');
     await expect
       .element(screen.getByTestId('milestone'))
-      .toHaveTextContent('30 seconds remaining');
+      .toHaveTextContent(/^30 seconds remaining$/);
   });
 
   it('announces each milestone once during a normal second-by-second countdown', async () => {
@@ -196,6 +210,92 @@ describe('useExamTimer', () => {
       .toHaveTextContent('30 seconds remaining');
 
     await vi.advanceTimersByTimeAsync(1_000);
+    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+  });
+
+  it('preserves a milestone crossed during hidden-tab ticks and announces it on return', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    const onExpire = vi.fn();
+
+    const screen = await render(
+      <TimerProbe
+        initialDeadlineAt="2026-05-22T12:05:10.000Z"
+        onExpire={onExpire}
+      />,
+    );
+
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('310');
+    await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    });
+    try {
+      // A throttled background tick fires after the 5-minute threshold has
+      // passed. It must not consume the crossing while the user cannot hear
+      // the announcement.
+      vi.setSystemTime(new Date('2026-05-22T12:00:31.000Z'));
+      await vi.advanceTimersByTimeAsync(1_000);
+      await expect
+        .element(screen.getByTestId('milestone'))
+        .toHaveTextContent('');
+    } finally {
+      Reflect.deleteProperty(document, 'visibilityState');
+    }
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await expect
+      .element(screen.getByTestId('milestone'))
+      .toHaveTextContent('5 minutes remaining');
+  });
+
+  it('resets the milestone baseline when the deadline changes while hidden', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-22T12:00:00.000Z'));
+    const onExpire = vi.fn();
+
+    const screen = await render(
+      <TimerProbe
+        initialDeadlineAt="2026-05-22T12:05:10.000Z"
+        onExpire={onExpire}
+      />,
+    );
+
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('310');
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => 'hidden',
+    });
+    try {
+      // The deadline changes while the tab is hidden. The stale 310s baseline
+      // from the old deadline must be discarded: against the new deadline
+      // (remaining ~290s on return) it would fabricate a 5-minute crossing
+      // that never happened.
+      vi.setSystemTime(new Date('2026-05-22T12:00:31.000Z'));
+      await screen
+        .getByRole('button', { name: 'move-deadline-future' })
+        .click();
+      await vi.advanceTimersByTimeAsync(1_000);
+      await expect
+        .element(screen.getByTestId('milestone'))
+        .toHaveTextContent('');
+    } finally {
+      Reflect.deleteProperty(document, 'visibilityState');
+    }
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await expect
+      .element(screen.getByTestId('remaining'))
+      .toHaveTextContent('289');
     await expect.element(screen.getByTestId('milestone')).toHaveTextContent('');
   });
 
