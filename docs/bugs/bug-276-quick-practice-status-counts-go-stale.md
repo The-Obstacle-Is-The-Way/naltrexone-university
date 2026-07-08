@@ -4,6 +4,7 @@
 **Severity:** P3
 **Date:** 2026-06-30
 **Confirmed:** 2026-06-30
+**Re-verified:** 2026-07-08 against `origin/dev` before the BUG-276 fix branch
 **Component:** Practice / Quick Practice / UI State
 
 ---
@@ -30,6 +31,7 @@ Actual: the badges keep showing the stale numbers captured at initial mount. Onl
 
 - [`use-quick-practice-status-counts.ts`](<../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L132-L138>): `serverFilters` is a `useMemo` derived only from `input.filters.tagSlugs` and `input.filters.difficulty`.
 - [`use-quick-practice-status-counts.ts`](<../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L140-L152>): the `useEffect` that fetches counts depends only on `[serverFilters]` — nothing in this hook's dependency array changes as a result of answering or bookmarking, so the effect never re-runs mid-visit.
+- [`quick-practice-client.tsx`](<../../app/(app)/app/practice/quick/quick-practice-client.tsx#L65-L70>) still wires `usePracticeQuestionFlow({ filters })` and `useQuickPracticeStatusCounts({ filters })` independently; no answer/bookmark completion signal crosses from the question-flow hook into the count hook.
 - There are exactly three status categories, not five: [`question-progress-status.ts`](../../src/domain/value-objects/question-progress-status.ts#L1) defines `AllQuestionProgressStatuses = ['unanswered', 'incorrect', 'bookmarked'] as const`, independently confirmed by the existing test `use-quick-practice-status-counts.test.ts#L42` (`toHaveBeenCalledTimes(3)`).
 
 ## Impact

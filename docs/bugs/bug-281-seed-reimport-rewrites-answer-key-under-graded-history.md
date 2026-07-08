@@ -4,6 +4,7 @@
 **Severity:** P3
 **Date:** 2026-07-05
 **Confirmed:** 2026-07-05
+**Re-verified:** 2026-07-08 against `origin/dev`; still decision-gated, no code fix implemented
 **Component:** Content Pipeline / Seed / Review Integrity
 
 ---
@@ -50,6 +51,16 @@ Decide the policy first; the code follows. Options, roughly in order of engineer
 3. **Block-and-fork:** refuse in-place key flips on questions with graded history (mirror the delete guard); require publishing a new question version. Strongest integrity, largest content-workflow change.
 
 Whichever is chosen, the import should at minimum **detect and log** key flips on referenced choices (count + question slugs) so the occurrence stops being silent.
+
+## Decision Required
+
+The owner needs to choose one product/data-integrity policy before implementation:
+
+1. **DISCLOSE.** Add an answer-key/content-change marker to the choice/question data model, then render a completed-review banner when a stored grade predates the key-changing import. Implementation touches the seed syncer, schema/migration, completed-session/post-exam review read models, and review UI copy. Data posture: preserves historical scores exactly as awarded, but makes the mismatch explicit to the user.
+2. **REGRADE.** During a key-changing import, recompute `attempts.is_correct` and `practice_session_question_states.latest_is_correct` for affected rows in the same transaction, with audited row counts and a durable import log. Implementation touches the seed syncer plus both graded-history tables. Data posture: removes the display contradiction, but mutates historical scores and needs a clear audit trail because past performance metrics will change.
+3. **BLOCK.** Refuse in-place `is_correct` flips when graded attempts or practice-session state rows reference the question, unless an explicit override/new-version workflow is provided. Implementation extends the existing delete-path reference guard into a key-change guard in the seed syncer. Data posture: strongest protection against silent history drift, but forces content operations to either fork/version the question or make an explicit override decision.
+
+**Recommendation:** choose **BLOCK** for default seed behavior, with a later explicit override/versioning workflow if the owner wants to support live corrections under history; it makes the integrity invariant impossible to violate silently and keeps regrade/disclosure as deliberate exceptional operations rather than background side effects.
 
 ## Failing Test Sketch
 
