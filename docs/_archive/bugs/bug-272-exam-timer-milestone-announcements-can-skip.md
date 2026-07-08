@@ -13,7 +13,7 @@
 
 The exam timer announces "5 minutes remaining" / "1 minute remaining" / "30 seconds remaining" via a visually-hidden (`sr-only`), `aria-live="polite"` region — this is a screen-reader-only feature; sighted users have no equivalent announcement and are unaffected by this bug (see Impact). The original check was an exact-equality comparison against the current `remainingSeconds` value, with no tracking of whether a threshold was crossed since the last check. The timer recomputes `remainingSeconds` from `Date.now()` whenever the tab regains visibility/focus (in addition to its 1-second interval), so a screen-reader user who backgrounded the exam tab across one of these exact values never received that milestone's announcement — it was simply skipped, not deferred. The safety-critical final "time is up" announcement is structurally immune to this same gap (it is a floor/level condition via `Math.max(0, ...)`, not an exact-equality point condition, so it cannot be "jumped past"), so no exam can fail to warn at expiry; only the non-critical advance warnings could be lost.
 
-**Fix note (2026-07-07):** Implemented in branch; status remains **Open** pending deploy proof. The current implementation announces on threshold crossing in `use-exam-timer.ts` and keeps the existing `sr-only` live-region markup in `exam-timer.tsx`.
+**Fix note (2026-07-07, closed out 2026-07-08):** Resolved and archived 2026-07-08 — see the Resolution State header for the full fix/promotion/deploy proof chain. The current implementation announces on threshold crossing in `use-exam-timer.ts` and keeps the existing `sr-only` live-region markup in `exam-timer.tsx`.
 
 ## Reachability
 

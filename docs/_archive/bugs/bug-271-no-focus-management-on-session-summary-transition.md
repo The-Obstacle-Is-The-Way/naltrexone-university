@@ -15,7 +15,7 @@
 
 Manual Tutor-mode session end and automatic exam-timer expiry reach this view directly and immediately. Manual exam submission does **not** reach it directly: confirming the "Submit exam" dialog first transitions to `PostExamReviewView`, which already has its own deliberate focus management (shipped as DEBT-326) — the real originally-unmanaged transition for the exam path is a separate, later click on that view's plain "View Summary" button.
 
-**Fix note (2026-07-07):** Implemented in branch; status remains **Open** pending deploy proof. The current implementation focuses the summary heading on mount via the existing focus helper and does not refocus on ordinary re-renders of an already-mounted summary.
+**Fix note (2026-07-07, closed out 2026-07-08):** Resolved and archived 2026-07-08 — see the Resolution State header for the full fix/promotion/deploy proof chain. The current implementation focuses the summary heading on mount via the existing focus helper and does not refocus on ordinary re-renders of an already-mounted summary.
 
 ## Reachability
 

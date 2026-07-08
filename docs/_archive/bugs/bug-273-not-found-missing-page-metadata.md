@@ -11,7 +11,7 @@
 
 ## Summary
 
-Before the fix on this branch, every route in the app exported a distinct `metadata` object except `app/not-found.tsx`, which had none. A 404 therefore rendered with the root layout's generic title ("Addiction Boards Question Bank") instead of a distinct, accurate title. This branch adds the missing export; the bug remains **Open** until merge and deploy proof are recorded.
+Before the fix on this branch, every route in the app exported a distinct `metadata` object except `app/not-found.tsx`, which had none. A 404 therefore rendered with the root layout's generic title ("Addiction Boards Question Bank") instead of a distinct, accurate title. This branch added the missing export; resolved and archived 2026-07-08 — see the Resolution State header for the full fix/promotion/deploy proof chain.
 
 ## Reachability
 
@@ -39,7 +39,7 @@ Cosmetic / SEO-only. No functional impact — the page renders correctly and is 
 
 Implemented on this branch: [`app/not-found.tsx`](../../../app/not-found.tsx#L1-L9) now exports `metadata: Metadata = { title: 'Page Not Found - Addiction Boards' }`, matching the naming convention followed by sibling page metadata such as `app/page.tsx`, `app/pricing/page.tsx`, and `app/(app)/app/dashboard/page.tsx`. No other page sets a `description`, so omitting one here is consistent. A `robots: { index: false }` addition remains optional polish, not a functional gap, because Next's `not-found.tsx` returns a true HTTP 404 status.
 
-Regression coverage: [`app/not-found.test.tsx`](../../../app/not-found.test.tsx#L15-L20) pins the metadata export alongside the existing render/landmark checks. Status stays Open until this branch merges and deploy proof is recorded, then this bug can be archived.
+Regression coverage: [`app/not-found.test.tsx`](../../../app/not-found.test.tsx#L15-L20) pins the metadata export alongside the existing render/landmark checks. Resolved and archived 2026-07-08 — see the Resolution State header for the full fix/promotion/deploy proof chain.
 
 Rejected alternatives:
 - None considered — this is a single-line, low-risk addition with no meaningful alternative approach.
