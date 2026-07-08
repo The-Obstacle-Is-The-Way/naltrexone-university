@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   type CredentialHealthCheckServices,
   CredentialValidationError,
+  computeMigrationContentDrift,
   computeMissingMigrations,
   fetchWithTimeout,
   formatSchemaDriftMessage,
@@ -578,14 +579,32 @@ describe('runE2ECredentialHealthCheck', () => {
 });
 
 describe('migration ledger schema-drift preflight', () => {
+  const hashA =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const hashB =
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+  const hashC =
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
   const journalEntries = [
-    { idx: 0, tag: '0000_jazzy_vermin', when: 1769893923091 },
+    {
+      idx: 0,
+      tag: '0000_jazzy_vermin',
+      when: 1769893923091,
+      hash: hashA,
+    },
     {
       idx: 1,
       tag: '0001_attempts_selected_choice_not_null',
       when: 1769942859252,
+      hash: hashB,
     },
-    { idx: 2, tag: '0002_curious_firelord', when: 1770067162278 },
+    {
+      idx: 2,
+      tag: '0002_curious_firelord',
+      when: 1770067162278,
+      hash: hashC,
+    },
   ] as const;
 
   it('passes through silently when every journal migration exists in the ledger', async () => {
@@ -598,14 +617,138 @@ describe('migration ledger schema-drift preflight', () => {
     ).toEqual([]);
 
     const sql = vi.fn(async () => [
-      { createdAt: 1769893923091 },
-      { createdAt: '1769942859252' },
-      { createdAt: 1770067162278n },
+      { createdAt: 1769893923091, hash: hashA },
+      { createdAt: '1769942859252', hash: hashB },
+      { createdAt: 1770067162278n, hash: hashC },
     ]);
 
     await expect(
       verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
     ).resolves.toBeUndefined();
+  });
+
+  it('throws the content-drift code when a ledger row hash differs from the local migration file hash', async () => {
+    const sql = vi.fn(async () => [
+      { createdAt: 1769893923091, hash: hashA },
+      {
+        createdAt: '1769942859252',
+        hash: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      },
+      { createdAt: 1770067162278n, hash: hashC },
+    ]);
+
+    await expect(
+      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
+    ).rejects.toMatchObject({
+      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+      message: expect.stringContaining(
+        'Content drift: 0001_attempts_selected_choice_not_null',
+      ),
+      fix: expect.stringContaining('Do not amend applied migrations'),
+    });
+  });
+
+  it('throws the content-drift code when the ledger contains a migration unknown to the local journal', async () => {
+    const sql = vi.fn(async () => [
+      { createdAt: 1769893923091, hash: hashA },
+      { createdAt: '1769942859252', hash: hashB },
+      { createdAt: 1770067162278n, hash: hashC },
+      {
+        createdAt: 1999999999999,
+        hash: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      },
+    ]);
+
+    await expect(
+      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
+    ).rejects.toMatchObject({
+      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+      message: expect.stringContaining('Ledger-only migrations: 1999999999999'),
+    });
+  });
+
+  it('allows the measured legacy 0027 dev hash repaired by 0028', async () => {
+    const measuredEarly0027Hash =
+      '15124dc7eab8b5ab3e239d13ee1011ea515b96567771270658b47de84b9faf3c';
+    const current0027Hash =
+      '983c3458e8aadd6acaddbce0b514321f0cec4f0a2767b3a74b6442e9f0d4d35d';
+    const sql = vi.fn(async () => [
+      {
+        createdAt: 1783355955875,
+        hash: measuredEarly0027Hash,
+      },
+    ]);
+
+    await expect(
+      verifyMigrationLedger(sql as unknown as postgres.Sql, [
+        {
+          idx: 27,
+          tag: '0027_early_wallow',
+          when: 1783355955875,
+          hash: current0027Hash,
+        },
+      ]),
+    ).resolves.toBeUndefined();
+  });
+
+  it('formats content-drift failures without leaking secrets, hostnames, or full hashes', async () => {
+    const appliedHash =
+      'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+    const databaseUrl =
+      'postgresql://e2e_owner:super-secret-password@ep-private-host.neon.tech/addiction_boards';
+    const sql = vi.fn(async () => [
+      { createdAt: 1769893923091, hash: appliedHash },
+      { createdAt: '1769942859252', hash: hashB },
+      { createdAt: 1770067162278n, hash: hashC },
+    ]);
+
+    try {
+      await verifyMigrationLedger(
+        sql as unknown as postgres.Sql,
+        journalEntries,
+      );
+      throw new Error('Expected verifyMigrationLedger to reject');
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+      });
+      const message = error instanceof Error ? error.message : String(error);
+      expect(message).toContain('expected aaaaaaaaaaaaaaaa');
+      expect(message).toContain('applied dddddddddddddddd');
+      expect(message).not.toContain(databaseUrl);
+      expect(message).not.toContain('ep-private-host.neon.tech');
+      expect(message).not.toContain('super-secret-password');
+      expect(message).not.toContain(hashA);
+      expect(message).not.toContain(appliedHash);
+    }
+  });
+
+  it('computes content drift from local hashes and applied ledger rows', () => {
+    expect(
+      computeMigrationContentDrift(journalEntries, [
+        { createdAt: 1769893923091, hash: hashA },
+        {
+          createdAt: 1769942859252,
+          hash: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        },
+        { createdAt: 1770067162278, hash: hashC },
+        {
+          createdAt: 1999999999999,
+          hash: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        },
+      ]),
+    ).toEqual([
+      {
+        kind: 'hash-mismatch',
+        tag: '0001_attempts_selected_choice_not_null',
+        expectedHashPrefix: 'bbbbbbbbbbbbbbbb',
+        appliedHashPrefix: 'dddddddddddddddd',
+      },
+      {
+        kind: 'ledger-only',
+        createdAt: '1999999999999',
+      },
+    ]);
   });
 
   it('throws the schema-drift code when one or more journal migrations are absent from the ledger', async () => {

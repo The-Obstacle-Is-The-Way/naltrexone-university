@@ -122,8 +122,8 @@ failure output.
 
 ## Verification
 
-- Current source proof: `verifyMigrationLedger` compares journal
-  `entries[].when` to applied `created_at` only; it does not read or compare
+- Pre-implementation source proof: `verifyMigrationLedger` compared journal
+  `entries[].when` to applied `created_at` only; it did not read or compare
   `drizzle.__drizzle_migrations.hash`.
 - Incident proof: `0028_repair_attempts_selected_choice_index.sql` exists only
   because dev recorded the early 0027 as applied before the checked-in 0027 file
@@ -131,6 +131,12 @@ failure output.
 - 2026-07-08 measurement proof: local fresh Docker and Production match all 29
   local migration file hashes; Development has exactly the known
   `0027_early_wallow` content mismatch and no missing or ledger-only rows.
+- Implementation proof: `verifyMigrationLedger` now selects both `created_at`
+  and `hash`, computes local full-file SHA-256 values through
+  `computeMigrationContentDrift()`, fails non-allowlisted content drift with
+  `E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT`, and allows only the measured
+  Development early-0027 hash tied to repair migration
+  `0028_repair_attempts_selected_choice_index`.
 
 ## Related
 
