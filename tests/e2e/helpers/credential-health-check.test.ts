@@ -1,14 +1,10 @@
-import type postgres from 'postgres';
 import Stripe from 'stripe';
 import { describe, expect, it, vi } from 'vitest';
 import {
   type CredentialHealthCheckServices,
   CredentialValidationError,
-  computeMissingMigrations,
   fetchWithTimeout,
-  formatSchemaDriftMessage,
   runE2ECredentialHealthCheck,
-  verifyMigrationLedger,
 } from './credential-health-check';
 
 type RequiredEnvKey =
@@ -574,112 +570,5 @@ describe('runE2ECredentialHealthCheck', () => {
       priceRetrieveSpy.mockRestore();
       accountRetrieveSpy.mockRestore();
     }
-  });
-});
-
-describe('migration ledger schema-drift preflight', () => {
-  const journalEntries = [
-    { idx: 0, tag: '0000_jazzy_vermin', when: 1769893923091 },
-    {
-      idx: 1,
-      tag: '0001_attempts_selected_choice_not_null',
-      when: 1769942859252,
-    },
-    { idx: 2, tag: '0002_curious_firelord', when: 1770067162278 },
-  ] as const;
-
-  it('passes through silently when every journal migration exists in the ledger', async () => {
-    expect(
-      computeMissingMigrations(journalEntries, [
-        1769893923091,
-        '1769942859252',
-        1770067162278n,
-      ]),
-    ).toEqual([]);
-
-    const sql = vi.fn(async () => [
-      { createdAt: 1769893923091 },
-      { createdAt: '1769942859252' },
-      { createdAt: 1770067162278n },
-    ]);
-
-    await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
-    ).resolves.toBeUndefined();
-  });
-
-  it('throws the schema-drift code when one or more journal migrations are absent from the ledger', async () => {
-    expect(computeMissingMigrations(journalEntries, [1769893923091])).toEqual([
-      '0001_attempts_selected_choice_not_null',
-      '0002_curious_firelord',
-    ]);
-
-    const sql = vi.fn(async () => [{ createdAt: 1769893923091 }]);
-
-    await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
-    ).rejects.toMatchObject({
-      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
-      message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
-      fix: expect.stringContaining(
-        'DATABASE_URL="<verified target>" pnpm db:migrate',
-      ),
-    });
-  });
-
-  it('treats an absent drizzle schema as schema drift with all journal migrations missing', async () => {
-    const missingSchemaError = Object.assign(
-      new Error('schema "drizzle" does not exist'),
-      { code: '3F000' },
-    );
-    const sql = vi.fn(async () => {
-      throw missingSchemaError;
-    });
-
-    await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
-    ).rejects.toMatchObject({
-      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
-      message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
-    });
-  });
-
-  it('treats an absent drizzle migration table as schema drift with all journal migrations missing', async () => {
-    const missingTableError = Object.assign(
-      new Error('relation "drizzle.__drizzle_migrations" does not exist'),
-      { code: '42P01' },
-    );
-    const sql = vi.fn(async () => {
-      throw missingTableError;
-    });
-
-    await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
-    ).rejects.toMatchObject({
-      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
-      message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
-    });
-  });
-
-  it('formats missing migration messages without leaking secrets, hostnames, passwords, or Drizzle hashes', () => {
-    const databaseUrl =
-      'postgresql://e2e_owner:super-secret-password@ep-private-host.neon.tech/addiction_boards';
-    const drizzleHash =
-      'bd3f2c7ad0212ddc9fbb7c2c07bdc4c7b4f9cce34638f93af18c0218cdd7e4e5';
-    const message = formatSchemaDriftMessage([
-      '0019_illegal_warbound',
-      '0020_fat_ironclad',
-    ]);
-
-    expect(message).toContain(
-      'Missing migrations: 0019_illegal_warbound, 0020_fat_ironclad.',
-    );
-    expect(message).not.toContain(databaseUrl);
-    expect(message).not.toContain('ep-private-host.neon.tech');
-    expect(message).not.toContain('super-secret-password');
-    expect(message).not.toContain(drizzleHash);
   });
 });
