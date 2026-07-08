@@ -18,6 +18,7 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 
 export type UsePracticeQuestionFlowInput = {
   filters: PracticeFilters;
+  onQuestionProgressChanged?: (() => void) | undefined;
 };
 
 export type UsePracticeQuestionFlowOutput = {
@@ -56,11 +57,13 @@ export function usePracticeQuestionFlow(
     isMounted,
     getNextQuestionFn: getNextQuestion,
     submitAnswerFn: submitAnswer,
+    onQuestionAnswered: input.onQuestionProgressChanged,
   });
 
   const bookmarks = usePracticeQuestionBookmarks({
     question: answerFlow.question,
     isMounted,
+    onBookmarkToggled: input.onQuestionProgressChanged,
   });
   const questionFeedback = usePracticeQuestionFeedback({
     question: answerFlow.question

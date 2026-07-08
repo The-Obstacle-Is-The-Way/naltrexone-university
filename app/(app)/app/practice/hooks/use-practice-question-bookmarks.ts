@@ -14,6 +14,7 @@ import {
 export type UsePracticeQuestionBookmarksInput = {
   question: BookmarkableQuestion | null;
   isMounted: () => boolean;
+  onBookmarkToggled?: ((bookmarked: boolean) => void) | undefined;
 };
 
 export type UsePracticeQuestionBookmarksOutput = {
@@ -98,6 +99,7 @@ export function usePracticeQuestionBookmarks(
           setBookmarkMessage,
           isMounted: input.isMounted,
         });
+        input.onBookmarkToggled?.(bookmarked);
       },
       onBookmarkError: (message: string) => {
         setBookmarkMessage(message);
@@ -116,7 +118,7 @@ export function usePracticeQuestionBookmarks(
       },
       isMounted: input.isMounted,
     });
-  }, [input.question, input.isMounted, isBookmarked]);
+  }, [input.question, input.isMounted, input.onBookmarkToggled, isBookmarked]);
 
   const onRetryBookmarks = useCallback(() => {
     setBookmarkRetryCount((prev) => prev + 1);

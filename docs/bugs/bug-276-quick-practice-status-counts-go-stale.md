@@ -4,6 +4,7 @@
 **Severity:** P3
 **Date:** 2026-06-30
 **Confirmed:** 2026-06-30
+**Re-verified:** 2026-07-08 against `origin/dev`; fix implemented on `fix/bug-276-quick-practice-counts`, deploy proof pending
 **Component:** Practice / Quick Practice / UI State
 
 ---
@@ -28,8 +29,8 @@ Actual: the badges keep showing the stale numbers captured at initial mount. Onl
 
 ## Root Cause
 
-- [`use-quick-practice-status-counts.ts`](<../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L132-L138>): `serverFilters` is a `useMemo` derived only from `input.filters.tagSlugs` and `input.filters.difficulty`.
-- [`use-quick-practice-status-counts.ts`](<../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L140-L152>): the `useEffect` that fetches counts depends only on `[serverFilters]` — nothing in this hook's dependency array changes as a result of answering or bookmarking, so the effect never re-runs mid-visit.
+- Pre-fix, [`use-quick-practice-status-counts.ts`](<../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L134-L156>) derived `serverFilters` only from `input.filters.tagSlugs` and `input.filters.difficulty`, and its fetch effect depended only on those filters.
+- Pre-fix, [`quick-practice-client.tsx`](<../../app/(app)/app/practice/quick/quick-practice-client.tsx#L65-L70>) wired `usePracticeQuestionFlow({ filters })` and `useQuickPracticeStatusCounts({ filters })` independently; no answer/bookmark completion signal crossed from the question-flow hook into the count hook.
 - There are exactly three status categories, not five: [`question-progress-status.ts`](../../src/domain/value-objects/question-progress-status.ts#L1) defines `AllQuestionProgressStatuses = ['unanswered', 'incorrect', 'bookmarked'] as const`, independently confirmed by the existing test `use-quick-practice-status-counts.test.ts#L42` (`toHaveBeenCalledTimes(3)`).
 
 ## Impact
@@ -45,6 +46,16 @@ Re-run (or otherwise invalidate) the status-count fetch whenever a question in t
 Rejected alternatives:
 - **Poll on an interval.** Adds unnecessary load and latency for a UI element that only needs to change in response to the user's own actions, not external state — though see the cost note above, since a naive per-commit refetch has its own, different cost profile worth designing around.
 - **Derive counts purely client-side from in-memory session state.** The counts must reflect the user's full historical status across all matching questions (not just ones touched this visit), which requires a server query; the fix should trigger that existing query more often, not replace it.
+
+## Resolution State
+
+Implemented on `fix/bug-276-quick-practice-counts`, pending merge and production proof:
+
+- [`quick-practice-client.tsx`](<../../app/(app)/app/practice/quick/quick-practice-client.tsx#L55-L77>) owns a `statusCountsRefreshSignal`, passes its incrementer into `usePracticeQuestionFlow`, and passes the signal into `useQuickPracticeStatusCounts`.
+- [`use-practice-question-flow.ts`](<../../app/(app)/app/practice/hooks/use-practice-question-flow.ts#L55-L67>) forwards that callback to both successful answer commits and successful bookmark toggles.
+- [`use-practice-question-answer-flow.ts`](<../../app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts#L153-L163>) invokes the callback via the existing submit `onSuccess` seam only after `submitAnswer` succeeds.
+- [`use-practice-question-bookmarks.ts`](<../../app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts#L92-L102>) invokes the callback only from `onBookmarkToggled`, the post-success bookmark path.
+- [`use-quick-practice-status-counts.ts`](<../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L125-L156>) treats the signal as an invalidation-only effect dependency; the existing three-status server count query remains the source of truth.
 
 ## Failing Test Sketch
 

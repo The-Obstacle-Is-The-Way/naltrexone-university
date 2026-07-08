@@ -119,6 +119,7 @@ export async function submitAnswerForQuestion(input: {
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
+  onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -143,6 +144,7 @@ export async function submitAnswerForQuestion(input: {
     nowMs: input.nowMs,
     setLoadState: input.setLoadState,
     setSubmitResult: input.setSubmitResult,
+    onSuccess: input.onSuccess,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,

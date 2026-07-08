@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { PracticeView } from '@/app/(app)/app/practice/components';
 import {
   fireAndForget,
@@ -52,6 +52,7 @@ export default function QuickPracticeClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const status = useMemo(() => parseStatusParam(searchParams), [searchParams]);
+  const [statusCountsRefreshSignal, setStatusCountsRefreshSignal] = useState(0);
 
   const filters: PracticeFilters = useMemo(
     () => ({
@@ -62,11 +63,17 @@ export default function QuickPracticeClient() {
     [status],
   );
 
+  const refreshStatusCounts = useCallback(() => {
+    setStatusCountsRefreshSignal((prev) => prev + 1);
+  }, []);
+
   const questionFlow = usePracticeQuestionFlow({
     filters,
+    onQuestionProgressChanged: refreshStatusCounts,
   });
   const counts = useQuickPracticeStatusCounts({
     filters,
+    refreshSignal: statusCountsRefreshSignal,
   });
 
   return (

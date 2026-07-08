@@ -23,6 +23,7 @@ export type UsePracticeQuestionAnswerFlowInput = {
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
+  onQuestionAnswered?: (() => void) | undefined;
 };
 
 export type UsePracticeQuestionAnswerFlowOutput = {
@@ -158,6 +159,7 @@ export function usePracticeQuestionAnswerFlow(
             nowMs: Date.now,
             setLoadState,
             setSubmitResult,
+            onSuccess: input.onQuestionAnswered,
             createRequestSequenceId,
             isLatestRequest,
             isMounted,
@@ -174,6 +176,7 @@ export function usePracticeQuestionAnswerFlow(
     },
     [
       createRequestSequenceId,
+      input.onQuestionAnswered,
       input.submitAnswerFn,
       isLatestRequest,
       isMounted,
