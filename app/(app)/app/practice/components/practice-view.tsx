@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useEffect, useId, useRef } from 'react';
+import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import { ErrorCard } from '@/components/error-card';
 import type { ChoiceSelectionOrigin } from '@/components/question/choice-selection';
 import type { QuestionFeedbackRatingProps } from '@/components/question/question-feedback-rating';
@@ -366,6 +367,10 @@ export function PracticeView(props: PracticeViewProps) {
   useEffect(() => {
     if (!feedbackResult) return;
     feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Committing removes the control that was activated (the Submit button
+    // unmounts; the radios become disabled), which would drop keyboard focus
+    // to <body>. Move it to the feedback the user needs to read next.
+    focusElementWithoutScroll(feedbackRef.current);
   }, [feedbackResult]);
 
   const actionBar = props.question ? (

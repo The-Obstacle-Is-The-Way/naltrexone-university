@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import type { PracticeViewProps } from '@/app/(app)/app/practice/components/practice-view';
 import { Feedback } from '@/components/question/feedback';
 import { QuestionCard } from '@/components/question/question-card';
@@ -13,7 +14,6 @@ import type {
   GetCompletedSessionQuestionsWithFeedbackOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import { QuestionNavigator } from './exam-review-view';
-import { focusElementWithoutScroll } from './focus-element-without-scroll';
 
 type PostExamReviewViewProps = {
   summary: EndPracticeSessionOutput;

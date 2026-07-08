@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
+import { focusElementWithoutScroll } from '@/app/(app)/app/practice/components/focus-element-without-scroll';
 import { SessionBreakdownList } from '@/app/(app)/app/shared/components/session-breakdown-list';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,7 +13,6 @@ import type {
   GetPracticeSessionReviewOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import type { LoadState } from '../../practice-page-logic';
-import { focusElementWithoutScroll } from './focus-element-without-scroll';
 
 export function SessionSummaryView({
   summary,
