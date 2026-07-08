@@ -124,7 +124,9 @@ export function createQuickPracticeStatusCountsEffect(input: {
 
 export function useQuickPracticeStatusCounts(input: {
   filters: PracticeFilters;
+  refreshSignal?: number | undefined;
 }): QuickPracticeStatusCounts {
+  const refreshSignal = input.refreshSignal ?? 0;
   const [counts, setCounts] = useState<QuickPracticeStatusCounts>(() =>
     createEmptyQuickPracticeStatusCounts(),
   );
@@ -138,6 +140,8 @@ export function useQuickPracticeStatusCounts(input: {
   );
 
   useEffect(() => {
+    // Read solely to invalidate the effect after local answer/bookmark commits.
+    void refreshSignal;
     return createQuickPracticeStatusCountsEffect({
       countAvailableQuestionsFn: countAvailableQuestions,
       filters: serverFilters,
@@ -149,7 +153,7 @@ export function useQuickPracticeStatusCounts(input: {
         });
       },
     });
-  }, [serverFilters]);
+  }, [serverFilters, refreshSignal]);
 
   return counts;
 }
