@@ -1,21 +1,22 @@
 # BUG-276: Quick Practice Status-Count Badges Go Stale After a Single Answer or Bookmark
 
-**Status:** Open
+**Status:** Resolved
+**Resolution State:** Fixed in PR #592 (squash `e71c7334` to `dev`): Quick Practice now increments a refresh signal after successful answer commits and bookmark toggles, and `useQuickPracticeStatusCounts` treats that signal as an invalidation-only effect dependency. Promoted to `main` via PR #593 (merge `3545c83c`, main/dev trees identical); production deployment `At5uoiHGyfphqa1bWjF7GjzgWLMh` completed 2026-07-08, CI passed on the merge commit, and `https://addictionboards.com/` returned HTTP/2 200.
 **Severity:** P3
 **Date:** 2026-06-30
 **Confirmed:** 2026-06-30
-**Re-verified:** 2026-07-08 against `origin/dev`; fix implemented on `fix/bug-276-quick-practice-counts`, deploy proof pending
+**Re-verified:** 2026-07-08 against `origin/dev`; fixed, promoted, and production-verified the same day
 **Component:** Practice / Quick Practice / UI State
 
 ---
 
 ## Summary
 
-The Quick Practice mode picker shows segmented-control labels like "Unanswered (12)" / "Incorrect (3)" / "Bookmarked (5)" from `useQuickPracticeStatusCounts`. The hook's fetch effect only re-runs when the selected tags/difficulty filters change — never when a question is answered or bookmarked. The counts shown are accurate at page load and become stale after the very next status-changing action, for the remainder of that visit.
+Before PR #592, the Quick Practice mode picker showed segmented-control labels like "Unanswered (12)" / "Incorrect (3)" / "Bookmarked (5)" from `useQuickPracticeStatusCounts`, but that hook's fetch effect only re-ran when the selected tags/difficulty filters changed — never when a question was answered or bookmarked. The counts shown were accurate at page load and became stale after the very next status-changing action, for the remainder of that visit.
 
 ## Reachability
 
-Reachable by any signed-in entitled user on `/app/practice/quick` (the default Quick Practice route, no special params required) who answers **or bookmarks** even a single question in a visit — the segmented control renders persistently alongside the question view, so the stale badge is visible on the very next glance, not just after multiple questions.
+Pre-fix, this was reachable by any signed-in entitled user on `/app/practice/quick` (the default Quick Practice route, no special params required) who answered **or bookmarked** even a single question in a visit — the segmented control renders persistently alongside the question view, so the stale badge was visible on the very next glance, not just after multiple questions.
 
 ## Reproduction
 
@@ -25,13 +26,13 @@ Reachable by any signed-in entitled user on `/app/practice/quick` (the default Q
 
 Expected: counts reflect the user's progress (e.g. "Unanswered" decreasing, "Incorrect"/"Bookmarked" increasing as applicable).
 
-Actual: the badges keep showing the stale numbers captured at initial mount. Only a full reload/remount re-fetches them. The underlying question-selection logic itself is unaffected — the next question served still correctly respects live status — only the displayed count is wrong.
+Pre-fix actual: the badges kept showing the stale numbers captured at initial mount. Only a full reload/remount re-fetched them. The underlying question-selection logic itself was unaffected — the next question served still correctly respected live status — only the displayed count was wrong.
 
 ## Root Cause
 
-- Pre-fix, [`use-quick-practice-status-counts.ts`](<../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L134-L156>) derived `serverFilters` only from `input.filters.tagSlugs` and `input.filters.difficulty`, and its fetch effect depended only on those filters.
-- Pre-fix, [`quick-practice-client.tsx`](<../../app/(app)/app/practice/quick/quick-practice-client.tsx#L65-L70>) wired `usePracticeQuestionFlow({ filters })` and `useQuickPracticeStatusCounts({ filters })` independently; no answer/bookmark completion signal crossed from the question-flow hook into the count hook.
-- There are exactly three status categories, not five: [`question-progress-status.ts`](../../src/domain/value-objects/question-progress-status.ts#L1) defines `AllQuestionProgressStatuses = ['unanswered', 'incorrect', 'bookmarked'] as const`, independently confirmed by the existing test `use-quick-practice-status-counts.test.ts#L42` (`toHaveBeenCalledTimes(3)`).
+- Pre-fix, `useQuickPracticeStatusCounts` accepted only `filters`, derived `serverFilters` only from `input.filters.tagSlugs` and `input.filters.difficulty`, and its fetch effect depended only on those filters. The current fixed counterpart is [`use-quick-practice-status-counts.ts`](<../../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L125-L156>), where `refreshSignal` is read solely as an invalidation dependency.
+- Pre-fix, `QuickPracticeClient` wired `usePracticeQuestionFlow({ filters })` and `useQuickPracticeStatusCounts({ filters })` independently; no answer/bookmark completion signal crossed from the question-flow hook into the count hook. The current fixed counterpart is [`quick-practice-client.tsx`](<../../../app/(app)/app/practice/quick/quick-practice-client.tsx#L55-L77>), where the client owns and forwards `statusCountsRefreshSignal`.
+- There are exactly three status categories, not five: [`question-progress-status.ts`](../../../src/domain/value-objects/question-progress-status.ts#L1) defines `AllQuestionProgressStatuses = ['unanswered', 'incorrect', 'bookmarked'] as const`, independently confirmed by the existing test `use-quick-practice-status-counts.test.ts#L42` (`toHaveBeenCalledTimes(3)`).
 
 ## Impact
 
@@ -49,13 +50,13 @@ Rejected alternatives:
 
 ## Resolution State
 
-Implemented on `fix/bug-276-quick-practice-counts`, pending merge and production proof:
+Implemented and production-verified:
 
-- [`quick-practice-client.tsx`](<../../app/(app)/app/practice/quick/quick-practice-client.tsx#L55-L77>) owns a `statusCountsRefreshSignal`, passes its incrementer into `usePracticeQuestionFlow`, and passes the signal into `useQuickPracticeStatusCounts`.
-- [`use-practice-question-flow.ts`](<../../app/(app)/app/practice/hooks/use-practice-question-flow.ts#L55-L67>) forwards that callback to both successful answer commits and successful bookmark toggles.
-- [`use-practice-question-answer-flow.ts`](<../../app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts#L153-L163>) invokes the callback via the existing submit `onSuccess` seam only after `submitAnswer` succeeds.
-- [`use-practice-question-bookmarks.ts`](<../../app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts#L92-L102>) invokes the callback only from `onBookmarkToggled`, the post-success bookmark path.
-- [`use-quick-practice-status-counts.ts`](<../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L125-L156>) treats the signal as an invalidation-only effect dependency; the existing three-status server count query remains the source of truth.
+- [`quick-practice-client.tsx`](<../../../app/(app)/app/practice/quick/quick-practice-client.tsx#L55-L77>) owns a `statusCountsRefreshSignal`, passes its incrementer into `usePracticeQuestionFlow`, and passes the signal into `useQuickPracticeStatusCounts`.
+- [`use-practice-question-flow.ts`](<../../../app/(app)/app/practice/hooks/use-practice-question-flow.ts#L55-L67>) forwards that callback to both successful answer commits and successful bookmark toggles.
+- [`use-practice-question-answer-flow.ts`](<../../../app/(app)/app/practice/hooks/use-practice-question-answer-flow.ts#L153-L163>) invokes the callback via the existing submit `onSuccess` seam only after `submitAnswer` succeeds.
+- [`use-practice-question-bookmarks.ts`](<../../../app/(app)/app/practice/hooks/use-practice-question-bookmarks.ts#L92-L102>) invokes the callback only from `onBookmarkToggled`, the post-success bookmark path.
+- [`use-quick-practice-status-counts.ts`](<../../../app/(app)/app/practice/hooks/use-quick-practice-status-counts.ts#L125-L156>) treats the signal as an invalidation-only effect dependency; the existing three-status server count query remains the source of truth.
 
 ## Failing Test Sketch
 
@@ -94,7 +95,9 @@ it('refetches status counts after a question is answered', async () => {
 });
 ```
 
-Today this fails because `useQuickPracticeStatusCounts` accepts only `filters`, so there is no `refreshSignal` input to rerender with and the effect's dependency array has no signal tied to in-session progress.
+Pre-fix, this failed because `useQuickPracticeStatusCounts` accepted only `filters`, so there was no `refreshSignal` input to rerender with and the effect's dependency array had no signal tied to in-session progress.
+
+Resolved and archived 2026-07-08 — see the Resolution State header for the full fix/promotion/deploy proof chain.
 
 ## Related
 
