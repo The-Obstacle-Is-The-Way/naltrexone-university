@@ -4,7 +4,7 @@
 **Severity:** P3
 **Date:** 2026-07-05
 **Confirmed:** 2026-07-05
-**Re-verified:** 2026-07-08 against `origin/dev`; still decision-gated, no code fix implemented
+**Re-verified:** 2026-07-08 against `origin/dev`; still live at branch start, owner selected BLOCK for implementation
 **Component:** Content Pipeline / Seed / Review Integrity
 
 ---
@@ -19,7 +19,20 @@ The trigger is exactly the well-intentioned case: a content editor fixing a misk
 
 ## Reachability
 
-Requires a content re-import (`db:seed` / the question-syncer pipeline) that changes `is_correct` on a question that has existing attempts or session state. Content-fix imports are routine; whether any has yet flipped a key under live history is unknown — the defect is in the pipeline, and nothing prevents or even logs the occurrence.
+Requires a content re-import (`db:seed` / the question-syncer pipeline) that changes `is_correct` on an existing choice for a question with graded history. Content-fix imports are routine; whether any has yet flipped a key under live history is unknown — the defect is in the pipeline, and nothing prevents or even logs the occurrence.
+
+The only live answer-key writer found in repo code is the seed syncer:
+
+- [`question-syncer.ts`](../../scripts/seed/question-syncer.ts#L108-L117) inserts choices for new questions.
+- [`question-syncer.ts`](../../scripts/seed/question-syncer.ts#L268-L287) upserts existing choices and currently rewrites `isCorrect` unconditionally.
+- Runtime answer paths write graded history (`attempts.is_correct` and `practice_session_question_states.latest_is_correct`) but do not mutate `choices.is_correct`.
+
+Operational audit:
+
+- CI migrates, then seeds a fresh service DB, then runs tests ([`ci.yml`](../../.github/workflows/ci.yml#L105-L117)). No attempts or practice-session state rows exist before seed in the normal CI order, so the BLOCK guard cannot trip there.
+- Hermetic local E2E creates/migrates/seeds its isolated Docker DB before Playwright runs ([`e2e-local-orchestrator.ts`](../../scripts/e2e-local-orchestrator.ts#L75-L93)). It therefore cannot trip during baseline seed; later specs may create attempts/state, but they do not reseed inside the same run.
+- Long-lived local DBs and manual shared-environment content imports can legitimately reseed over historical attempts/state. Because imported content is gitignored and clone-specific, this is the practical place the guard can trip. The escape hatch is an explicit env var, not silent default behavior.
+- Production deploys run migrations and build only (`"pnpm db:migrate && pnpm build"` in [`vercel.json`](../../vercel.json#L1-L4)); content seed remains manual (`db:seed` / `db:seed:all`) and is not part of deploy.
 
 ## Reproduction
 
@@ -33,7 +46,7 @@ Actual: the result badge says "Correct" (stored grade) while the recomputed key 
 
 ## Root Cause
 
-- [`question-syncer.ts`](../../scripts/seed/question-syncer.ts#L269-L287): the choice upsert's `onConflictDoUpdate` sets `isCorrect: choice.is_correct` with no check against existing attempt/state references — asymmetric with the same file's delete path, which does check ([`question-syncer.ts`](../../scripts/seed/question-syncer.ts#L195-L243)).
+- [`question-syncer.ts`](../../scripts/seed/question-syncer.ts#L268-L287): the choice upsert's `onConflictDoUpdate` sets `isCorrect: choice.is_correct` with no check against existing attempt/state references — asymmetric with the same file's delete path, which does check ([`question-syncer.ts`](../../scripts/seed/question-syncer.ts#L194-L254)).
 - Completed-session/post-exam review dual-sources correctness: stored grade for the badge, recomputed key for the highlight — [`get-completed-session-questions-with-feedback.ts`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L141-L152) reads the stored attempt/state grade, while [`get-completed-session-questions-with-feedback.ts`](../../src/application/use-cases/get-completed-session-questions-with-feedback.ts#L164-L195) derives the correct choice from the current `Question` choices.
 
 Neither half is individually wrong; the system simply has no answer-key versioning and no policy for key changes under history.
@@ -44,23 +57,31 @@ Users see self-contradictory grading on a medical-education product — trust-de
 
 ## Proposed Fix
 
-Decide the policy first; the code follows. Options, roughly in order of engineering honesty:
+Owner ruling: **BLOCK**.
 
-1. **Disclose (cheapest honest fix):** stamp `choices.updated_at`/an answer-key version on key changes; review surfaces compare against `attempts.answered_at` and render a "this question's content was updated after your attempt" notice instead of a silent contradiction.
-2. **Regrade:** on key-changing import, recompute `is_correct` for affected attempts/state rows in the same transaction (auditable via `GET DIAGNOSTICS` row counts per `docs/dev/migration-authoring.md` norms). Changes historical scores — needs product sign-off.
-3. **Block-and-fork:** refuse in-place key flips on questions with graded history (mirror the delete guard); require publishing a new question version. Strongest integrity, largest content-workflow change.
+Extend the existing seed delete-path reference guard instead of adding a parallel policy. The seed importer must refuse to change `choices.is_correct` in place when graded history exists for the question, unless an explicit override is set.
 
-Whichever is chosen, the import should at minimum **detect and log** key flips on referenced choices (count + question slugs) so the occurrence stops being silent.
+Contract:
 
-## Decision Required
+- **Graded history:** count `attempts` rows for the question and `practice_session_question_states` rows for the question with `latest_is_correct IS NOT NULL`. Draft-only state and other ungraded state do not count; finalize grades against the current key at finalize time, and blocking draft-only correction would protect no historical score.
+- **Trip condition:** only an `is_correct` change on an existing `(question_id, label)` choice trips the guard. Text, explanation, ordering, tags, question stem, difficulty, status, new choices, and unreferenced key flips remain importable.
+- **Failure shape:** fail fast using the existing `syncQuestionsFromFiles()` per-file wrapper, so the final thrown error includes the question slug and absolute file path. The inner guard message must name the question slug, flipped labels, and graded row counts.
+- **Batch semantics:** unchanged. `syncQuestionsFromFiles()` processes files sequentially and stops on the first failure; later files are untouched.
+- **Override:** `SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true` permits the flip and logs loudly with question slug, changed labels, and graded row counts. The name follows the existing seed env flag style (`SEED_INCLUDE_PLACEHOLDERS`).
 
-The owner needs to choose one product/data-integrity policy before implementation:
+DISCLOSE and REGRADE remain possible future explicit workflows, but they are not defaults. Silent in-place historical key drift is forbidden by default.
 
-1. **DISCLOSE.** Add an answer-key/content-change marker to the choice/question data model, then render a completed-review banner when a stored grade predates the key-changing import. Implementation touches the seed syncer, schema/migration, completed-session/post-exam review read models, and review UI copy. Data posture: preserves historical scores exactly as awarded, but makes the mismatch explicit to the user.
-2. **REGRADE.** During a key-changing import, recompute `attempts.is_correct` and `practice_session_question_states.latest_is_correct` for affected rows in the same transaction, with audited row counts and a durable import log. Implementation touches the seed syncer plus both graded-history tables. Data posture: removes the display contradiction, but mutates historical scores and needs a clear audit trail because past performance metrics will change.
-3. **BLOCK.** Refuse in-place `is_correct` flips when graded attempts or practice-session state rows reference the question, unless an explicit override/new-version workflow is provided. Implementation extends the existing delete-path reference guard into a key-change guard in the seed syncer. Data posture: strongest protection against silent history drift, but forces content operations to either fork/version the question or make an explicit override decision.
+## Resolution State
 
-**Recommendation:** choose **BLOCK** for default seed behavior, with a later explicit override/versioning workflow if the owner wants to support live corrections under history; it makes the integrity invariant impossible to violate silently and keeps regrade/disclosure as deliberate exceptional operations rather than background side effects.
+Implementation in progress on `fix/bug-281-seed-key-change-guard`; keep this bug **Open** until the fix merges, promotes to production, and deploy proof is recorded.
+
+Implemented contract:
+
+- `computeAnswerKeyChanges()` detects only `is_correct` changes on existing choice labels; new choices and text/explanation/order changes do not trip the guard.
+- `syncQuestionsFromFiles()` runs the guard inside the existing per-question transaction after locking the question and before mutating question/choice rows.
+- A blocked import throws through the existing per-file wrapper, so the operator sees the question slug, file path, changed labels, and graded row counts.
+- `SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true` explicitly overrides the block and logs the same audit context. The override is intentionally noisy and off by default.
+- Seed operator docs now describe the default block and override flag before a manual content reseed reaches the guard.
 
 ## Failing Test Sketch
 
@@ -69,11 +90,10 @@ it('does not silently flip is_correct on a choice referenced by graded history',
   await seedQuestionWithAttempt({ correctLabel: 'B', userSelected: 'B' }); // graded correct
   await runQuestionSync({ ...sameQuestion, correctLabel: 'C' });           // key change
 
-  // Today: silent flip; stored attempt says correct, current key says C.
-  // Expected (policy-dependent — sketch pins the "detect" baseline):
-  expect(syncReport.keyChangesOnGradedQuestions).toEqual([
-    expect.objectContaining({ slug: question.slug, from: 'B', to: 'C' }),
-  ]);
+  await expect(sync).rejects.toThrow(
+    /Refusing to change answer key for .* because graded history exists/,
+  );
+  await expect(readCurrentCorrectLabels(question.slug)).resolves.toEqual(['B']);
 });
 ```
 

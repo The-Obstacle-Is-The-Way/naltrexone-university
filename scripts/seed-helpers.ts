@@ -5,6 +5,17 @@ export type ChoiceRef = {
   label: string;
 };
 
+type AnswerKeyChoiceRef = ChoiceRef & {
+  isCorrect: boolean;
+};
+
+export type AnswerKeyChange = {
+  id: string;
+  label: string;
+  from: boolean;
+  to: boolean;
+};
+
 type AttemptChoiceReferenceRow = {
   selectedChoiceId: string | null;
 };
@@ -59,6 +70,30 @@ export function computeChoiceSyncPlan(input: {
   }
 
   return { deleteChoiceIds };
+}
+
+export function computeAnswerKeyChanges(input: {
+  existingChoices: readonly AnswerKeyChoiceRef[];
+  desiredChoices: ReadonlyArray<{ label: string; isCorrect: boolean }>;
+}): AnswerKeyChange[] {
+  const existingByLabel = new Map(
+    input.existingChoices.map((choice) => [choice.label, choice]),
+  );
+
+  const changes: AnswerKeyChange[] = [];
+  for (const desired of input.desiredChoices) {
+    const existing = existingByLabel.get(desired.label);
+    if (!existing || existing.isCorrect === desired.isCorrect) continue;
+
+    changes.push({
+      id: existing.id,
+      label: existing.label,
+      from: existing.isCorrect,
+      to: desired.isCorrect,
+    });
+  }
+
+  return changes;
 }
 
 export function computeTemporarySortOrders(

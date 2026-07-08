@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { and, asc, eq } from 'drizzle-orm';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
 import { syncQuestionsFromFiles } from '@/scripts/seed/question-syncer';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -17,8 +21,11 @@ import {
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 const LOCK_WAIT_TIMEOUT_MS = 5_000;
+const ORIGINAL_ENV = snapshotProcessEnv();
 
 afterEach(async () => {
+  vi.restoreAllMocks();
+  restoreProcessEnv(ORIGINAL_ENV);
   await cleanupAfterEach(db, cleanup);
 });
 
@@ -129,6 +136,48 @@ function buildSeedQuestionWithExistingChoices(slug: string): string {
   ].join('\n');
 }
 
+function buildSeedQuestionWithAnswerKey(input: {
+  slug: string;
+  correctLabel: 'A' | 'B';
+  choiceAText?: string;
+  choiceBText?: string;
+}): string {
+  const choiceACorrect = input.correctLabel === 'A';
+  const choiceBCorrect = input.correctLabel === 'B';
+
+  return [
+    '---',
+    `slug: ${input.slug}`,
+    'difficulty: easy',
+    'status: published',
+    'tags:',
+    '  - slug: general',
+    '    name: General',
+    '    kind: topic',
+    '  - slug: alcohol',
+    '    name: Alcohol',
+    '    kind: substance',
+    'choices:',
+    '  - label: A',
+    `    text: ${input.choiceAText ?? 'Choice A'}`,
+    `    correct: ${choiceACorrect}`,
+    ...(choiceACorrect ? [] : ['    explanation: Choice A is not correct.']),
+    '  - label: B',
+    `    text: ${input.choiceBText ?? 'Choice B'}`,
+    `    correct: ${choiceBCorrect}`,
+    ...(choiceBCorrect ? [] : ['    explanation: Choice B is not correct.']),
+    '---',
+    '',
+    '## Stem',
+    '',
+    '# Stem',
+    '',
+    '## Explanation',
+    '',
+    '# Explanation',
+  ].join('\n');
+}
+
 function buildSeedQuestionWithInvalidTag(slug: string): string {
   return [
     '---',
@@ -194,6 +243,70 @@ async function waitForBlockedQuestionLock(input: {
   throw new Error(
     'Timed out waiting for seed sync to block on question row lock',
   );
+}
+
+async function insertGradedAttempt(input: {
+  userId: string;
+  questionId: string;
+  selectedChoiceId: string;
+  isCorrect: boolean;
+}): Promise<void> {
+  await db.insert(schema.attempts).values({
+    userId: input.userId,
+    questionId: input.questionId,
+    selectedChoiceId: input.selectedChoiceId,
+    isCorrect: input.isCorrect,
+    isOmitted: false,
+    timeSpentSeconds: 1,
+  });
+}
+
+async function markPracticeSessionStateGraded(input: {
+  userId: string;
+  questionId: string;
+  selectedChoiceId: string;
+  isCorrect: boolean;
+}): Promise<void> {
+  const sessions = new DrizzlePracticeSessionRepository(db);
+  const session = await sessions.create({
+    userId: input.userId,
+    mode: 'exam',
+    paramsJson: {
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [input.questionId],
+    },
+  });
+
+  await db
+    .update(schema.practiceSessionQuestionStates)
+    .set({
+      latestSelectedChoiceId: input.selectedChoiceId,
+      latestIsCorrect: input.isCorrect,
+      latestAnsweredAt: new Date('2026-07-08T12:00:00.000Z'),
+    })
+    .where(
+      and(
+        eq(schema.practiceSessionQuestionStates.practiceSessionId, session.id),
+        eq(schema.practiceSessionQuestionStates.questionId, input.questionId),
+      ),
+    );
+}
+
+async function readCorrectLabels(questionId: string): Promise<string[]> {
+  const rows = await db
+    .select({ label: schema.choices.label })
+    .from(schema.choices)
+    .where(
+      and(
+        eq(schema.choices.questionId, questionId),
+        eq(schema.choices.isCorrect, true),
+      ),
+    )
+    .orderBy(asc(schema.choices.sortOrder));
+
+  return rows.map((row) => row.label);
 }
 
 describe('BUG-266 seed choice sync guard', () => {
@@ -384,6 +497,193 @@ describe('BUG-266 seed choice sync guard', () => {
         closeConnection(monitorSql),
       ]);
     }
+  });
+});
+
+describe('BUG-281 seed answer-key change guard', () => {
+  it('refuses to flip the answer key when graded history exists and leaves the key unchanged', async () => {
+    delete process.env.SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY;
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-seed-key-guard-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    await insertGradedAttempt({
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+    });
+    await markPracticeSessionStateGraded({
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+    });
+
+    await expect(
+      syncQuestionsFromFiles(db, [
+        {
+          absolutePath: `/tmp/${question.slug}.mdx`,
+          raw: buildSeedQuestionWithAnswerKey({
+            slug: question.slug,
+            correctLabel: 'A',
+          }),
+        },
+      ]),
+    ).rejects.toThrow(
+      new RegExp(
+        `Failed to sync seed question "${question.slug}".*Refusing to change answer key for "${question.slug}".*graded history exists.*attempts=1.*practiceSessionStates=1`,
+      ),
+    );
+
+    await expect(readCorrectLabels(question.id)).resolves.toEqual(['B']);
+  });
+
+  it('allows an explicit override and logs the graded history it overrode', async () => {
+    process.env.SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY = 'true';
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-seed-key-override-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    await insertGradedAttempt({
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+    });
+
+    await expect(
+      syncQuestionsFromFiles(db, [
+        {
+          absolutePath: `/tmp/${question.slug}.mdx`,
+          raw: buildSeedQuestionWithAnswerKey({
+            slug: question.slug,
+            correctLabel: 'A',
+          }),
+        },
+      ]),
+    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `Overriding answer-key change for "${question.slug}"`,
+      ),
+    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('attempts=1'));
+    await expect(readCorrectLabels(question.id)).resolves.toEqual(['A']);
+  });
+
+  it('allows a key flip when the question has no graded history', async () => {
+    delete process.env.SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY;
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-seed-key-ungraded-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+
+    await expect(
+      syncQuestionsFromFiles(db, [
+        {
+          absolutePath: `/tmp/${question.slug}.mdx`,
+          raw: buildSeedQuestionWithAnswerKey({
+            slug: question.slug,
+            correctLabel: 'A',
+          }),
+        },
+      ]),
+    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+
+    await expect(readCorrectLabels(question.id)).resolves.toEqual(['A']);
+  });
+
+  it('allows text-only edits over graded history', async () => {
+    delete process.env.SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY;
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-seed-key-text-only-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    await insertGradedAttempt({
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+    });
+
+    await expect(
+      syncQuestionsFromFiles(db, [
+        {
+          absolutePath: `/tmp/${question.slug}.mdx`,
+          raw: buildSeedQuestionWithAnswerKey({
+            slug: question.slug,
+            correctLabel: 'B',
+            choiceBText: 'Updated Choice B',
+          }),
+        },
+      ]),
+    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+
+    const [choiceB] = await db
+      .select({ textMd: schema.choices.textMd })
+      .from(schema.choices)
+      .where(
+        and(
+          eq(schema.choices.questionId, question.id),
+          eq(schema.choices.label, 'B'),
+        ),
+      );
+
+    expect(choiceB?.textMd).toBe('Updated Choice B');
+    await expect(readCorrectLabels(question.id)).resolves.toEqual(['B']);
+  });
+
+  it('stops the seed batch after a guarded key flip failure', async () => {
+    delete process.env.SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY;
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-seed-key-batch-fail-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const skippedSlug = `it-seed-key-batch-skipped-${randomUUID()}`;
+    await insertGradedAttempt({
+      userId: user.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+    });
+
+    await expect(
+      syncQuestionsFromFiles(db, [
+        {
+          absolutePath: `/tmp/${question.slug}.mdx`,
+          raw: buildSeedQuestionWithAnswerKey({
+            slug: question.slug,
+            correctLabel: 'A',
+          }),
+        },
+        {
+          absolutePath: `/tmp/${skippedSlug}.mdx`,
+          raw: buildSeedQuestionWithAnswerKey({
+            slug: skippedSlug,
+            correctLabel: 'B',
+          }),
+        },
+      ]),
+    ).rejects.toThrow(`Failed to sync seed question "${question.slug}"`);
+
+    const laterRows = await db
+      .select({ id: schema.questions.id })
+      .from(schema.questions)
+      .where(eq(schema.questions.slug, skippedSlug));
+
+    expect(laterRows).toEqual([]);
   });
 });
 

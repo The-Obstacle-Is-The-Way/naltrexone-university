@@ -51,6 +51,15 @@ For seeds, and for any manual deploy-target migration fallback, use an explicit,
 
 **Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment schema migration runs via the Vercel Build Command (`pnpm db:migrate && pnpm build`); reseeding remains a manual operator step.
 
+Manual reseeds refuse in-place answer-key flips over existing graded history by
+default. If `pnpm db:seed` reports
+`Refusing to change answer key ... because graded history exists`, treat that as
+a content-data decision point: fork/version the question, accept the blocked
+import, or rerun only with an explicit operator override:
+`SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true DATABASE_URL="<target>" pnpm db:seed`.
+The override logs the affected question slug, changed labels, and graded row
+counts.
+
 ---
 
 ## 3. Data-Affecting Migration Pattern
