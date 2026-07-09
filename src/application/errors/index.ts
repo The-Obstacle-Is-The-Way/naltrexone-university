@@ -1,9 +1,12 @@
 export {
+  type ApplicationConflictReason,
+  ApplicationConflictReasons,
   ApplicationError,
   type ApplicationErrorCode,
   ApplicationErrorCodes,
   type ApplicationErrorDetails,
   AttemptConflictMessages,
+  isApplicationConflictReason,
   isApplicationError,
   isPracticeSessionConflictReason,
   PracticeSessionConflictMessages,

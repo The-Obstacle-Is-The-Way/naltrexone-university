@@ -1,5 +1,9 @@
 import { delay } from '@/src/adapters/shared/delay';
-import { ApplicationError, isApplicationError } from '@/src/application/errors';
+import {
+  ApplicationConflictReasons,
+  ApplicationError,
+  isApplicationError,
+} from '@/src/application/errors';
 import type { Logger, LoggerContext } from '@/src/application/ports/logger';
 import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
@@ -340,5 +344,11 @@ export async function withIdempotency<T>(input: {
   throw new ApplicationError(
     'CONFLICT',
     'Request timed out waiting for idempotency key. The concurrent request may still be in progress or may have failed.',
+    undefined,
+    {
+      details: {
+        reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+      },
+    },
   );
 }
