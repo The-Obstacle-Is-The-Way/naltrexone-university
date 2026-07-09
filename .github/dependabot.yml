@@ -57,6 +57,13 @@ updates:
       interval: daily
       time: '09:00'
       timezone: America/New_York
+    # Security-only entry. Without this limit the entry also emits ungrouped
+    # version-update PRs against main (defaults: no target-branch, no cooldown,
+    # versioning-strategy increase), bypassing the dev-targeted flow above —
+    # that is how PRs #604/#605 and the #465 major arrived. Zero disables
+    # version updates only; security updates run under a separate internal
+    # limit of ten that this setting does not touch.
+    open-pull-requests-limit: 0
     commit-message:
       prefix: chore(deps)
     groups:
@@ -93,6 +100,8 @@ updates:
       interval: daily
       time: '09:00'
       timezone: America/New_York
+    # Security-only entry: same rationale as the npm security entry above.
+    open-pull-requests-limit: 0
     commit-message:
       prefix: chore(deps)
     groups:
