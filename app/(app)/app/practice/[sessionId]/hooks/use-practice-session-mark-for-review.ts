@@ -9,16 +9,22 @@ import {
 } from 'react';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
+  getActionResultPracticeSessionConflictReason,
+  STATE_CHANGED_CONCURRENTLY_NOTICE,
+} from '@/app/(app)/app/practice/shared/question-flow-actions';
+import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/shared/error-message-helpers';
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
+import { useNotification } from '@/components/ui/notification-provider';
 import {
   reportClientError,
   shouldReportClientError,
 } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 
@@ -59,6 +65,7 @@ export function usePracticeSessionMarkForReview(
   onToggleMarkForReview: () => Promise<void>;
 } {
   const [isMarkingForReview, setIsMarkingForReview] = useState(false);
+  const { notify } = useNotification();
   const isMarkingRef = useRef(false);
   const markRequestIdempotencyKeyRef = useRef<string | null>(null);
   const currentQuestionIdRef = useRef<string | null>(null);
@@ -111,6 +118,17 @@ export function usePracticeSessionMarkForReview(
     if (!input.isMounted()) return;
 
     if (!res.ok) {
+      const reason = getActionResultPracticeSessionConflictReason(res);
+      if (reason === PracticeSessionConflictReasons.StateChangedConcurrently) {
+        notify({
+          message: STATE_CHANGED_CONCURRENTLY_NOTICE,
+          tone: 'info',
+        });
+        isMarkingRef.current = false;
+        setIsMarkingForReview(false);
+        return;
+      }
+
       if (shouldReportClientError(res.error)) {
         reportClientError(res.error, {
           component: 'UsePracticeSessionMarkForReview',
@@ -164,6 +182,7 @@ export function usePracticeSessionMarkForReview(
     input.setReview,
     input.applySessionInfo,
     input.setPracticeSessionQuestionMarkFn,
+    notify,
   ]);
 
   return { isMarkingForReview, onToggleMarkForReview };

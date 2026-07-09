@@ -14,6 +14,9 @@ import type {
 } from '@/src/adapters/controllers/action-result';
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
 import {
+  type ApplicationConflictReason,
+  ApplicationConflictReasons,
+  isApplicationConflictReason,
   isPracticeSessionConflictReason,
   type PracticeSessionConflictReason,
   PracticeSessionConflictReasons,
@@ -24,6 +27,8 @@ import { MS_PER_SECOND } from '@/src/domain/services';
 const LOAD_QUESTION_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 const SAVE_DRAFT_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 const SUBMIT_ANSWER_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
+export const STATE_CHANGED_CONCURRENTLY_NOTICE =
+  'That question changed in another tab. Please try again.';
 
 export type RequestSequencingHooks = {
   createRequestSequenceId: () => number;
@@ -46,7 +51,7 @@ export type ExamDraftSaveResult =
   | {
       ok: false;
       code: ActionErrorCode | null;
-      reason?: PracticeSessionConflictReason;
+      reason?: ApplicationConflictReason;
     };
 
 function assertRequestSequencingHooks(input: {
@@ -215,9 +220,16 @@ export function isExamExpiryDraftSaveConflict(
 export function getActionResultPracticeSessionConflictReason(
   result: ActionResult<unknown>,
 ): PracticeSessionConflictReason | undefined {
+  const reason = getActionResultConflictReason(result);
+  return isPracticeSessionConflictReason(reason) ? reason : undefined;
+}
+
+export function getActionResultConflictReason(
+  result: ActionResult<unknown>,
+): ApplicationConflictReason | undefined {
   if (result.ok) return undefined;
   const reason = result.error.details?.reason;
-  return isPracticeSessionConflictReason(reason) ? reason : undefined;
+  return isApplicationConflictReason(reason) ? reason : undefined;
 }
 
 export function isPracticeSessionAlreadyEndedActionConflict(
@@ -226,6 +238,15 @@ export function isPracticeSessionAlreadyEndedActionConflict(
   return (
     getActionResultPracticeSessionConflictReason(result) ===
     PracticeSessionConflictReasons.AlreadyEnded
+  );
+}
+
+export function isConcurrentRequestInProgressActionConflict(
+  result: ActionResult<unknown>,
+): boolean {
+  return (
+    getActionResultConflictReason(result) ===
+    ApplicationConflictReasons.ConcurrentRequestInProgress
   );
 }
 
@@ -252,6 +273,7 @@ export async function maybeSaveDraftBeforeNavigation<
     selectedChoiceId: string | null;
     cumulativeMs: number;
   }) => void;
+  onStateChangedConcurrently?: () => void;
 }): Promise<ExamDraftSaveResult> {
   if (!input.question) return { ok: true };
   if (input.question.session?.mode !== 'exam') return { ok: true };
@@ -285,11 +307,15 @@ export async function maybeSaveDraftBeforeNavigation<
   }
 
   if (!res.ok) {
-    input.setLoadState({
-      status: 'error',
-      message: getActionResultErrorMessage(res),
-    });
-    const reason = getActionResultPracticeSessionConflictReason(res);
+    const reason = getActionResultConflictReason(res);
+    if (reason === PracticeSessionConflictReasons.StateChangedConcurrently) {
+      input.onStateChangedConcurrently?.();
+    } else {
+      input.setLoadState({
+        status: 'error',
+        message: getActionResultErrorMessage(res),
+      });
+    }
     return {
       ok: false,
       code: res.error.code,

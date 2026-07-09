@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationConflictReasons,
+  ApplicationError,
+} from '@/src/application/errors';
 import {
   FakeIdempotencyKeyRepository,
   FakeLogger,
@@ -399,6 +402,9 @@ describe('withIdempotency', () => {
       }),
     ).rejects.toMatchObject({
       code: 'CONFLICT',
+      details: {
+        reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+      },
       message: expect.stringContaining(
         'Request timed out waiting for idempotency key',
       ),
@@ -443,7 +449,12 @@ describe('withIdempotency', () => {
         zombieThresholdMs: 60_000,
         execute,
       }),
-    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: {
+        reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+      },
+    });
     expect(execute).not.toHaveBeenCalled();
 
     nowMs += 31_000;

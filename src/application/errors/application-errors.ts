@@ -14,10 +14,20 @@ export const ApplicationErrorCodes = [
 
 export type ApplicationErrorCode = (typeof ApplicationErrorCodes)[number];
 
-export const PracticeSessionConflictReasons = {
+export const ApplicationConflictReasons = {
   AlreadyEnded: 'practice_session_already_ended',
   ExamTimeExpired: 'exam_time_expired',
   StateChangedConcurrently: 'practice_session_state_changed_concurrently',
+  ConcurrentRequestInProgress: 'concurrent_request_in_progress',
+} as const;
+
+export type ApplicationConflictReason =
+  (typeof ApplicationConflictReasons)[keyof typeof ApplicationConflictReasons];
+
+export const PracticeSessionConflictReasons = {
+  AlreadyEnded: ApplicationConflictReasons.AlreadyEnded,
+  ExamTimeExpired: ApplicationConflictReasons.ExamTimeExpired,
+  StateChangedConcurrently: ApplicationConflictReasons.StateChangedConcurrently,
 } as const;
 
 export type PracticeSessionConflictReason =
@@ -35,12 +45,24 @@ export const AttemptConflictMessages = {
 } as const;
 
 export type ApplicationErrorDetails = Readonly<{
-  reason?: PracticeSessionConflictReason;
+  reason?: ApplicationConflictReason;
 }>;
+
+const applicationConflictReasonValues = new Set<string>(
+  Object.values(ApplicationConflictReasons),
+);
 
 const practiceSessionConflictReasonValues = new Set<string>(
   Object.values(PracticeSessionConflictReasons),
 );
+
+export function isApplicationConflictReason(
+  value: unknown,
+): value is ApplicationConflictReason {
+  return (
+    typeof value === 'string' && applicationConflictReasonValues.has(value)
+  );
+}
 
 export function isPracticeSessionConflictReason(
   value: unknown,

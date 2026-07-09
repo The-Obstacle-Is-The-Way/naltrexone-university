@@ -2,6 +2,7 @@ import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import {
   type EndedSessionConflictRecovery,
   type ExamDraftAnswer,
+  isConcurrentRequestInProgressActionConflict,
   type NullQuestionRecovery,
   runLoadQuestionFlow,
   runSubmitAnswerFlow,
@@ -33,6 +34,10 @@ import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answ
 // Reviewed in DEBT-224 audit (2026-02-18).
 const END_SESSION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 const SESSION_REVIEW_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
+const CONCURRENT_REQUEST_SUMMARY_RECOVERY_ATTEMPTS = 2;
+const CONCURRENT_REQUEST_SUMMARY_RETRY_DELAY_MS = 100;
+const CONCURRENT_REQUEST_STILL_PROCESSING_MESSAGE =
+  'Your previous request is still processing. Please try again shortly.';
 type SessionIdInput = { sessionId: string };
 type LoadNextQuestionOptions = {
   recoverNullQuestion?: NullQuestionRecovery | undefined;
@@ -45,6 +50,10 @@ type PracticeSessionFinalizationOutput =
   | EndPracticeSessionOutput
   | FinalizeExamAnswersOutput
   | GetPracticeSessionSummaryOutput;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export async function loadNextQuestion(input: {
   sessionId: string;
@@ -224,32 +233,53 @@ export async function endSession(input: {
   if (!isMounted()) return false;
   if (!res.ok) {
     let recoveryErrorMessage: string | null = null;
+    const isConcurrentRequestInProgress =
+      isConcurrentRequestInProgressActionConflict(res);
 
     if (res.error.code === 'CONFLICT') {
-      try {
-        const summaryRes = await withTimeout(
-          input.getPracticeSessionSummaryFn({
-            sessionId: input.sessionId,
-          }),
-          END_SESSION_TIMEOUT_MS,
-        );
-        if (!isMounted()) return false;
-        if (summaryRes.ok) {
-          input.setSummary(summaryRes.data);
-          input.resetQuestionState();
-          input.setLoadState({ status: 'ready' });
-          return true;
+      const recoveryAttempts = isConcurrentRequestInProgress
+        ? CONCURRENT_REQUEST_SUMMARY_RECOVERY_ATTEMPTS
+        : 1;
+
+      for (let attempt = 0; attempt < recoveryAttempts; attempt += 1) {
+        if (attempt > 0) {
+          await delay(CONCURRENT_REQUEST_SUMMARY_RETRY_DELAY_MS);
+          if (!isMounted()) return false;
         }
 
-        recoveryErrorMessage = getActionResultErrorMessage(summaryRes);
-      } catch (error) {
-        if (!isMounted()) return false;
-        reportClientError(error, {
-          component: 'PracticeSessionPageLogic',
-          action: 'getPracticeSessionSummary',
-        });
-        recoveryErrorMessage = getThrownErrorMessage(error);
+        try {
+          const summaryRes = await withTimeout(
+            input.getPracticeSessionSummaryFn({
+              sessionId: input.sessionId,
+            }),
+            END_SESSION_TIMEOUT_MS,
+          );
+          if (!isMounted()) return false;
+          if (summaryRes.ok) {
+            input.setSummary(summaryRes.data);
+            input.resetQuestionState();
+            input.setLoadState({ status: 'ready' });
+            return true;
+          }
+
+          recoveryErrorMessage = getActionResultErrorMessage(summaryRes);
+        } catch (error) {
+          if (!isMounted()) return false;
+          reportClientError(error, {
+            component: 'PracticeSessionPageLogic',
+            action: 'getPracticeSessionSummary',
+          });
+          recoveryErrorMessage = getThrownErrorMessage(error);
+        }
       }
+    }
+
+    if (isConcurrentRequestInProgress) {
+      input.setLoadState({
+        status: 'error',
+        message: CONCURRENT_REQUEST_STILL_PROCESSING_MESSAGE,
+      });
+      return false;
     }
 
     input.rotateIdempotencyKey?.();
