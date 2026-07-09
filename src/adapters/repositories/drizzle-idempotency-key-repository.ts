@@ -4,7 +4,7 @@ import {
   ApplicationError,
   type ApplicationErrorCode,
   type ApplicationErrorDetails,
-  isPracticeSessionConflictReason,
+  isApplicationConflictReason,
 } from '@/src/application/errors';
 import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
@@ -23,7 +23,7 @@ function toApplicationErrorDetails(
 
   const reason = (value as { reason?: unknown }).reason;
   if (reason === undefined) return undefined;
-  if (!isPracticeSessionConflictReason(reason)) return undefined;
+  if (!isApplicationConflictReason(reason)) return undefined;
 
   return { reason };
 }

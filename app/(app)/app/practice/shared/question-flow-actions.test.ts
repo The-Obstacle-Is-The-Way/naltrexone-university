@@ -9,6 +9,7 @@ import {
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
@@ -1076,8 +1077,9 @@ describe('question-flow-actions', () => {
     });
   });
 
-  it('preserves draft-save conflict details for client-side recovery decisions', async () => {
+  it('returns transient draft-save state conflicts without promoting a global load error', async () => {
     const loadStates: AsyncLoadStateWithIdle[] = [];
+    const transientNotices: string[] = [];
     const saveExamDraftAnswerFn = vi
       .fn<
         (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
@@ -1087,7 +1089,59 @@ describe('question-flow-actions', () => {
         error: {
           code: 'CONFLICT',
           message: 'Practice session state changed concurrently; please retry.',
-          details: { reason: 'practice_session_state_changed_concurrently' },
+          details: {
+            reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+          },
+        },
+      } as ActionResult<SaveExamDraftAnswerOutput>);
+
+    const saveResult = await maybeSaveDraftBeforeNavigation({
+      sessionId: fixtureSession1Id,
+      question: {
+        questionId: fixtureQuestion1Id,
+        session: {
+          sessionId: fixtureSession1Id,
+          mode: 'exam',
+
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+
+          index: 0,
+          total: 2,
+        },
+      },
+      selectedChoiceId: fixtureChoice1Id,
+      currentCumulativeMs: 50_000,
+      lastSavedDraftSelectedChoiceId: null,
+      lastSavedDraftCumulativeMs: 0,
+      saveExamDraftAnswerFn,
+      setLoadState: (state) => {
+        loadStates.push(state);
+      },
+      onStateChangedConcurrently: () => {
+        transientNotices.push('state-changed');
+      },
+    });
+
+    expect(saveResult).toEqual({
+      ok: false,
+      code: 'CONFLICT',
+      reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+    });
+    expect(loadStates).toEqual([]);
+    expect(transientNotices).toEqual(['state-changed']);
+  });
+
+  it('keeps reasonless draft-save conflicts on the generic global load error path', async () => {
+    const loadStates: AsyncLoadStateWithIdle[] = [];
+    const saveExamDraftAnswerFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SaveExamDraftAnswerOutput>>
+      >()
+      .mockResolvedValue({
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Draft save conflicted',
         },
       } as ActionResult<SaveExamDraftAnswerOutput>);
 
@@ -1115,14 +1169,10 @@ describe('question-flow-actions', () => {
       },
     });
 
-    expect(saveResult).toEqual({
-      ok: false,
-      code: 'CONFLICT',
-      reason: 'practice_session_state_changed_concurrently',
-    });
+    expect(saveResult).toEqual({ ok: false, code: 'CONFLICT' });
     expect(loadStates.at(-1)).toEqual({
       status: 'error',
-      message: 'Practice session state changed concurrently; please retry.',
+      message: 'Draft save conflicted',
     });
   });
 

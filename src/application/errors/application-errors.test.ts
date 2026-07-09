@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ApplicationConflictReasons,
   ApplicationError,
   ApplicationErrorCodes,
+  isApplicationConflictReason,
   isApplicationError,
   PracticeSessionConflictReasons,
   practiceSessionAlreadyEndedError,
@@ -52,13 +54,27 @@ describe('ApplicationError', () => {
   it('preserves explicit client-facing details when provided', () => {
     const error = new ApplicationError('CONFLICT', 'Conflict', undefined, {
       details: {
-        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+        reason: ApplicationConflictReasons.StateChangedConcurrently,
       },
     });
 
     expect(error.details).toEqual({
-      reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+      reason: ApplicationConflictReasons.StateChangedConcurrently,
     });
+  });
+
+  it('accepts application-wide conflict reasons including idempotency wait timeouts', () => {
+    expect(
+      isApplicationConflictReason(
+        ApplicationConflictReasons.StateChangedConcurrently,
+      ),
+    ).toBe(true);
+    expect(
+      isApplicationConflictReason(
+        ApplicationConflictReasons.ConcurrentRequestInProgress,
+      ),
+    ).toBe(true);
+    expect(isApplicationConflictReason('unknown_reason')).toBe(false);
   });
 
   it('creates a structured already-ended practice-session conflict', () => {

@@ -15,6 +15,7 @@ import {
   isExamExpiryDraftSaveConflict,
   maybeSaveDraftBeforeNavigation,
   type NullQuestionRecovery,
+  STATE_CHANGED_CONCURRENTLY_NOTICE,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import { useQuestionFlowCore } from '@/app/(app)/app/practice/shared/use-question-flow-core';
 import { runTransitionedAsyncAction } from '@/app/(app)/app/shared/transitioned-async-action';
@@ -22,6 +23,7 @@ import {
   type ChoiceSelectionOrigin,
   shouldCommitChoiceSelection,
 } from '@/components/question/choice-selection';
+import { useNotification } from '@/components/ui/notification-provider';
 import { reportClientError } from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
@@ -106,6 +108,7 @@ export function usePracticeSessionQuestionFlow(
     canSubmit,
     onSelectChoice: selectChoice,
   } = useQuestionFlowCore({ isMounted: input.isMounted });
+  const { notify } = useNotification();
 
   const [sessionInfo, setSessionInfo] = useState<NextQuestion['session']>(null);
   const [sessionMode, setSessionMode] = useState<'tutor' | 'exam' | null>(null);
@@ -281,6 +284,12 @@ export function usePracticeSessionQuestionFlow(
             currentExamDraftEnteredAtRef.current = nowMs;
           }
         },
+        onStateChangedConcurrently: () => {
+          notify({
+            message: STATE_CHANGED_CONCURRENTLY_NOTICE,
+            tone: 'info',
+          });
+        },
       });
 
       if (!saveResult.ok) return saveResult;
@@ -295,6 +304,7 @@ export function usePracticeSessionQuestionFlow(
       input.sessionId,
       question,
       selectedChoiceId,
+      notify,
       setLoadState,
       setQuestion,
     ]);
