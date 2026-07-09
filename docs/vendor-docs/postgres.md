@@ -79,11 +79,11 @@ Create a `dev` branch in Neon Console. Branches are isolated and cheap.
 ### Option 2: Local Postgres (Docker)
 
 ```bash
-# Start local Postgres
+# Start local Postgres (per-clone dynamic host port — see docs/dev/integration-tests.md)
 pnpm db:test:up
 
-# Run with local connection
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test"
+# Run with the resolved local connection
+DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
 ```
 
 ---
