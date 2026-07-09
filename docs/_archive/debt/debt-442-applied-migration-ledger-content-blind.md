@@ -1,47 +1,50 @@
 # DEBT-442: Applied Migrations Are Mutable and Ledger Verification Is Content-Blind
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-07-06
+**Resolved:** 2026-07-09
 
 ---
 
 ## Description
 
-The repo now has a concrete migration-drift incident that the existing schema
-drift guard cannot detect. During the schema-hardening tail sweep, the Neon dev
-branch applied an early `0027_early_wallow.sql` through a Preview deploy before
-the child-side `attempts_selected_choice_question_idx` index was added to the
-same checked-in migration file. Production later applied the final file and is
-complete. Dev's Drizzle ledger recorded migration `0027` as applied, so a
-ledger-presence check sees no missing migration even though the applied database
-shape differs from the file currently in git.
+Before this resolution, the repo had a concrete migration-drift incident that
+the existing schema drift guard could not detect. During the schema-hardening
+tail sweep, the Neon dev branch applied an early `0027_early_wallow.sql`
+through a Preview deploy before the child-side
+`attempts_selected_choice_question_idx` index was added to the same checked-in
+migration file. Production later applied the final file and is complete. Dev's
+Drizzle ledger recorded migration `0027` as applied, so a ledger-presence check
+saw no missing migration even though the applied database shape differed from
+the file currently in git.
 
-The current DEBT-391 preflight is useful but content-blind:
+Before this was resolved, the DEBT-391 preflight was useful but content-blind:
 
-- [`verifyMigrationLedger`](../../tests/e2e/helpers/credential-health-check.ts)
+- [`verifyMigrationLedger`](../../../tests/e2e/helpers/credential-health-check.ts)
   reads `db/migrations/meta/_journal.json` and compares journal
   `entries[].when` against `drizzle.__drizzle_migrations.created_at`.
 - Drizzle's applied ledger also stores a `hash`, but the preflight does not
   compare that stored hash to the local migration file content.
 
-That means "all migration timestamps exist" can still be false comfort when a
+That meant "all migration timestamps exist" could still be false comfort when a
 previously-applied migration file was amended after one environment had already
-run it. The immediate drift is repaired by
-`0028_repair_attempts_selected_choice_index.sql`; this debt is the systemic
+run it. The immediate drift was repaired by
+`0028_repair_attempts_selected_choice_index.sql`; this debt shipped the systemic
 guardrail so the same class fails loudly next time.
 
 ## Impact
 
-Medium operational risk. This does not imply current production drift, and the
-known 0027 dev drift is repaired by a new idempotent migration. The risk is that
-future applied-after-amend drift remains invisible to automated verification
-until an application path depends on the missing object or constraint.
+Medium operational risk before resolution. This did not imply production drift,
+and the known 0027 dev drift had already been repaired by an idempotent
+migration. The risk was that future applied-after-amend drift would remain
+invisible to automated verification until an application path depended on the
+missing object or constraint.
 
 ## Resolution
 
-Extend the DEBT-391 migration-ledger verification to compare applied migration
-content, not just migration presence.
+Resolved by extending the DEBT-391 migration-ledger verification to compare
+applied migration content, not just migration presence.
 
 ### Measurement Gate — 2026-07-08
 
@@ -58,14 +61,14 @@ Hash algorithm proof:
   `DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate`, every one of the 29
   ledger rows matched `sha256(readFileSync("db/migrations/<tag>.sql", "utf8"))`.
 
-Current preflight seam and run-mode proof:
+Pre-implementation preflight seam and run-mode proof:
 
 - `tests/e2e/helpers/credential-health-check.ts` wires
   `verifyMigrationLedger(sql)` between database connectivity and the
   idempotency-schema check on the same single Postgres connection.
-- `verifyMigrationLedger` currently queries only `created_at`, compares it with
-  `_journal.json` `entries[].when`, and therefore detects missing migrations
-  but not content drift.
+- Before this resolution, `verifyMigrationLedger` queried only `created_at`,
+  compared it with `_journal.json` `entries[].when`, and therefore detected
+  missing migrations but not content drift.
 - Normal local `pnpm test:e2e` is hermetic: `scripts/run-local-e2e.ts` delegates
   to `scripts/e2e-local-orchestrator.ts`, which starts the resolver-scoped
   Docker Postgres, runs `pnpm db:migrate`, seeds, then runs Playwright.
@@ -139,11 +142,39 @@ failure output.
   Development early-0027 hash tied to repair migration
   `0028_repair_attempts_selected_choice_index`.
 
+## Resolution State — 2026-07-09
+
+Shipped via PR
+[#600](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/600)
+to `dev`, squash merge `0ccad08b`, after CodeRabbit approved exact head
+`b319b3b7` and CI/Codecov/Vercel preview passed. Promoted via PR
+[#601](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/601)
+to `main`, merge commit `5f70b344`, after CodeRabbit approved exact head
+`0ccad08b` with no actionable comments and CI/Codecov/Vercel preview passed.
+
+Production proof:
+
+- GitHub Actions main CI run
+  [`28983985694`](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/28983985694)
+  passed on `5f70b344`, including typecheck, lint, migration, seed, unit,
+  integration, browser, build, and E2E smoke.
+- The deploy job in that run passed at 2026-07-09T00:06:04Z and confirmed that
+  production deployment is handled by Vercel Git integration on `main`.
+- Vercel reported the `5f70b344` deployment as successful:
+  `https://vercel.com/john-h-jungs-projects/naltrexone-university/EQJvLT6KgSC2DokbG32WpB8sXdT2`.
+- Production smoke check against `https://addictionboards.com` returned
+  `HTTP/2 200` at 2026-07-09T00:06:28Z.
+
+Final state: `verifyMigrationLedger()` is no longer content-blind. Future
+amended-after-apply migrations fail the existing E2E credential preflight with
+`E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT`, except for the single measured
+and repaired Development early-0027 legacy hash.
+
 ## Related
 
 - `0028_repair_attempts_selected_choice_index.sql` — the immediate idempotent
   repair for the 0027 dev drift.
-- Archived [DEBT-391](../_archive/debt/debt-391-local-e2e-schema-drift-preflight.md)
+- Archived [DEBT-391](./debt-391-local-e2e-schema-drift-preflight.md)
   — the existing ledger-presence preflight to extend.
-- Archived [DEBT-440](../_archive/debt/debt-440-attempts-selected-choice-composite-fk.md)
+- Archived [DEBT-440](./debt-440-attempts-selected-choice-composite-fk.md)
   — the schema-hardening item whose amended migration exposed this gap.
