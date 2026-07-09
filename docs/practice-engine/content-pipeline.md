@@ -434,11 +434,14 @@ Recommended end-to-end sanity check:
 
 ```bash
 pnpm db:test:reset
-DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:migrate
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
 pnpm content:import:drafts -- --status published
-SEED_INCLUDE_PLACEHOLDERS=false DATABASE_URL=postgresql://postgres:postgres@localhost:5434/addiction_boards_test pnpm db:seed
+SEED_INCLUDE_PLACEHOLDERS=false DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 pnpm dev
 ```
+
+The test DB host port is per-clone (resolved by `scripts/resolve-local-test-target.ts`); never hardcode `localhost:5434`. See `docs/dev/integration-tests.md`.
 
 ---
 
