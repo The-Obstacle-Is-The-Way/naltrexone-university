@@ -37,5 +37,5 @@ No behavior changed. A structural split remains possible later if this updater g
 ## Related
 
 - Archived DEBT-426 (lock redesign that created the two calling contexts) and BUG-268 (the `40001` composition-root retry that owns RR-path retries).
-- [DEBT-437](../../debt/debt-437-tutor-submit-vs-end-write-skew-and-debt-426-residual-wording.md) — adjacent semantics-accuracy item on the same surface.
+- [DEBT-437](./debt-437-tutor-submit-vs-end-write-skew-and-debt-426-residual-wording.md) — adjacent semantics-accuracy item on the same surface; resolved as Accepted, no code change (owner ruling 2026-07-09).
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review (isolation lens, including postgres-js/drizzle nested-transaction semantics verification against `e3853656`).
