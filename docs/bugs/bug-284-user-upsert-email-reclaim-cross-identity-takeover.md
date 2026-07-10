@@ -69,6 +69,14 @@ The original proposal to check only whether the old Clerk ID still exists was re
 
 Required regression proof: use real persistence for the uniqueness behavior and cover both raw-db and tx-bound callers. Pin (1) A moves `X → Y`, then different person B claims X: A keeps the original `users.id`/history and B gets a distinct row; (2) old Clerk ID absent: no automatic reassignment without an explicit continuity proof; (3) B already owns a row: a stable typed conflict is returned without mutating either row; and (4) any retained same-person recovery requires the chosen positive proof and leaves a structured audit event.
 
+## Resolution State
+
+**Implemented 2026-07-10 on `fix/bug-283-284-user-upsert-identity`; PR and deploy proof pending. Status remains Open until the fix is merged and production proof is recorded.** The failure analysis above describes the branch point, `origin/dev` at `64204014`.
+
+- [`DrizzleUserRepository.upsertByClerkId`](../../src/adapters/repositories/drizzle-user-repository.ts#L74-L135) now scopes its insert to a nested transaction/savepoint and converts `users_email_uq` into a non-mutating `UserEmailOwnershipConflictError` carrying the stable `user_email_owned_by_another_identity` reason. It no longer rewrites `clerk_user_id` by email.
+- [`ensureClerkUser`](../../src/adapters/gateways/clerk-user-provisioner.ts#L77-L224) is the shared sign-in/webhook identity-resolution seam. It blocks immediately when the incoming Clerk ID already owns a local row, fails closed when the existing Clerk identity is absent or unverifiable, and only synchronizes the existing row through the non-inserting `updateEmailByClerkId` path when Clerk positively reports that identity at a different email. Every two-ID path emits one structured log containing both Clerk IDs and no email address.
+- The real-Postgres regression in [`user-repository.integration.test.ts`](../../tests/integration/user-repository.integration.test.ts#L273-L374) proves the moved owner retains its original `users.id`, Stripe customer/subscription linkage, attempt, and bookmark while the incoming identity receives a distinct row. Unit coverage separately pins absent-owner fail-closed behavior and the no-mutation actor-already-owns-a-row rule on raw and webhook callers.
+
 ## Related
 
 - [BUG-283](./bug-283-clerk-webhook-email-reclaim-dead-in-transaction.md) — the mechanical sibling on the same fallback: inside the Clerk webhook transaction the recovery UPDATE never runs at all (25P02). Today that dead path confines both this bug's takeover behavior and its `users_clerk_user_id_uq` classification to the raw-db sign-in surface; fixing BUG-283 without fixing this semantic bug would extend them to the webhook path.
