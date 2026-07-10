@@ -160,6 +160,71 @@ describe('processStripeWebhook failure boundary', () => {
     });
   });
 
+  it('logs a non-Error failure-persistence rejection without replacing the processing error', async () => {
+    const processingError = new ApplicationError(
+      'CONFLICT',
+      'Stripe customer id is already mapped to a different user',
+    );
+    const persistenceError = 'failure ledger unavailable';
+    const harness = createAbortedTransactionDeps({
+      paymentGateway: createPaymentGateway('evt_non_error_persistence_failure'),
+      processingError,
+      transactionError: new Error('raw Postgres 23505'),
+      persistenceError,
+    });
+
+    await expect(
+      processStripeWebhook(harness.deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      }),
+    ).rejects.toBe(processingError);
+
+    expect(harness.logger.errorCalls).toContainEqual({
+      context: {
+        eventId: 'evt_non_error_persistence_failure',
+        error: persistenceError,
+      },
+      msg: 'Failed to persist Stripe webhook failure state',
+    });
+  });
+
+  it('persists and rethrows a transaction rejection when no processing error was captured', async () => {
+    const eventId = 'evt_transaction_rejection';
+    const stripeEvents = new FakeStripeEventRepository();
+    const transactionError = new Error('transaction could not start');
+    let transactionCallCount = 0;
+    const deps: StripeWebhookDeps = {
+      paymentGateway: createPaymentGateway(eventId),
+      logger: new FakeLogger(),
+      now: () => new Date(),
+      transaction: async (fn) => {
+        transactionCallCount += 1;
+        if (transactionCallCount === 1) throw transactionError;
+
+        return fn({
+          stripeEvents,
+          subscriptions: new FakeSubscriptionRepository(),
+          stripeCustomers: new FakeStripeCustomerRepository(),
+        });
+      },
+    };
+
+    await expect(
+      processStripeWebhook(deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      }),
+    ).rejects.toBe(transactionError);
+
+    expect(transactionCallCount).toBe(2);
+    const stored = await stripeEvents.lock(eventId);
+    expect(JSON.parse(stored.error ?? '{}')).toMatchObject({
+      name: 'Error',
+      message: transactionError.message,
+    });
+  });
+
   it('persists and rethrows a non-Error processing failure without replacing it', async () => {
     const processingError = 'raw processing failure';
     const eventId = 'evt_non_error_failure';
