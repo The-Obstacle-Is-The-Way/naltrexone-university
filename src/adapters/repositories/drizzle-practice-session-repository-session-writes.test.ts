@@ -377,6 +377,142 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     expect(childDeleteSql).toContain('"practice_sessions"."ended_at" is null');
   });
 
+  it('returns the practice session loaded from one repeatable-read snapshot before updating', async () => {
+    const endedAt = new Date('2026-02-01T01:02:03.000Z');
+    const row = {
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [firstQuestionId],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+    const snapshotState = createStateRow({
+      practiceSessionId: sessionId,
+      questionId: firstQuestionId,
+      position: 0,
+      latestSelectedChoiceId: selectedChoiceId,
+      latestIsCorrect: true,
+    });
+    const snapshotDb = {
+      query: {
+        practiceSessions: {
+          findFirst: vi.fn(async () => row),
+        },
+      },
+      select: createStateSelect([snapshotState]),
+    };
+    const updateReturning = vi.fn(async () => [{ ...row, endedAt }]);
+    const db = {
+      transaction: vi.fn(
+        async (fn: (client: typeof snapshotDb) => Promise<unknown>) =>
+          fn(snapshotDb),
+      ),
+      query: {
+        practiceSessions: {
+          findFirst: async () => {
+            throw new Error('unexpected session read outside snapshot');
+          },
+        },
+      },
+      select: () => {
+        throw new Error('unexpected state read outside snapshot');
+      },
+      update: vi.fn(() => ({
+        set: () => ({
+          where: () => ({ returning: updateReturning }),
+        }),
+      })),
+    } as const;
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.end(sessionId, userId, endedAt)).resolves.toMatchObject({
+      id: sessionId,
+      endedAt,
+      questionStates: [
+        {
+          questionId: firstQuestionId,
+          latestSelectedChoiceId: selectedChoiceId,
+          latestIsCorrect: true,
+        },
+      ],
+    });
+    expect(db.transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
+  });
+
+  it.each([
+    { currentEndedAt: null, expectedCode: 'NOT_FOUND' },
+    {
+      currentEndedAt: new Date('2026-02-01T01:03:00.000Z'),
+      expectedCode: 'CONFLICT',
+    },
+  ] as const)('keeps the guarded-update fallback as $expectedCode', async ({
+    currentEndedAt,
+    expectedCode,
+  }) => {
+    const row = {
+      id: sessionId,
+      userId,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [firstQuestionId],
+      },
+      startedAt: new Date('2026-02-01T00:00:00.000Z'),
+      endedAt: null,
+    } as const;
+    const findFirst = vi
+      .fn()
+      .mockResolvedValueOnce(row)
+      .mockResolvedValueOnce(
+        currentEndedAt === null ? null : { ...row, endedAt: currentEndedAt },
+      );
+    const stateRows = [
+      createStateRow({
+        practiceSessionId: sessionId,
+        questionId: firstQuestionId,
+        position: 0,
+      }),
+    ];
+    const tx = {
+      query: { practiceSessions: { findFirst } },
+      select: createStateSelect(stateRows),
+    };
+    const db = {
+      transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
+        fn(tx),
+      ),
+      query: tx.query,
+      select: tx.select,
+      update: vi.fn(() => ({
+        set: () => ({
+          where: () => ({ returning: async () => [] }),
+        }),
+      })),
+    } as const;
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.end(sessionId, userId)).rejects.toMatchObject({
+      code: expectedCode,
+    });
+    expect(db.update).toHaveBeenCalledTimes(1);
+  });
+
   it('ends an active practice session', async () => {
     const now = new Date('2026-02-01T01:02:03.000Z');
     const nowFn = vi.fn(() => now);
@@ -405,7 +541,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
 
-    const db = {
+    const readDb = {
       query: {
         practiceSessions: {
           findFirst: async () => row,
@@ -426,6 +562,12 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
           position: 1,
         }),
       ]),
+    };
+    const db = {
+      ...readDb,
+      transaction: vi.fn(
+        async (fn: (client: typeof readDb) => Promise<unknown>) => fn(readDb),
+      ),
       update,
       insert: () => {
         throw new Error('unexpected insert');
@@ -491,7 +633,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     const updateSet = vi.fn(() => ({ where: updateWhere }));
     const update = vi.fn(() => ({ set: updateSet }));
 
-    const db = {
+    const readDb = {
       query: {
         practiceSessions: {
           findFirst: async () => row,
@@ -504,6 +646,12 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
           position: 0,
         }),
       ]),
+    };
+    const db = {
+      ...readDb,
+      transaction: vi.fn(
+        async (fn: (client: typeof readDb) => Promise<unknown>) => fn(readDb),
+      ),
       update,
       insert: () => {
         throw new Error('unexpected insert');
@@ -540,12 +688,18 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       endedAt: new Date('2026-02-01T00:01:00.000Z'),
     } as const;
 
-    const db = {
+    const readDb = {
       query: {
         practiceSessions: {
           findFirst: async () => row,
         },
       },
+    };
+    const db = {
+      ...readDb,
+      transaction: vi.fn(
+        async (fn: (client: typeof readDb) => Promise<unknown>) => fn(readDb),
+      ),
       insert: () => {
         throw new Error('unexpected insert');
       },

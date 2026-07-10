@@ -8,6 +8,10 @@
 
 ---
 
+## Resolution State
+
+Implemented on branch `fix/bug-292-293-practice-session-races`; the bug remains Open pending PR review, merge, and production proof.
+
 ## Summary
 
 When [`DrizzlePracticeSessionRepository.end()`](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L569-L611) is called on the raw repository used by standalone `EndPracticeSessionUseCase`, its two pre-reads run on autocommit `this.db`: [`findRowByIdAndUserId` at line 570](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L570) loads the session row, then [`toDomainFromRow` at line 579](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L579) issues a **second** SELECT for `practice_session_question_states` (via [`loadQuestionStateRowsBySessionIds`, line 199](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L199)). Each statement receives a fresh Read Committed snapshot. In contrast, [`findByIdAndUserId` (lines 262–268)](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L262-L268) wraps the same read pair in `inRepeatableRead`. A concurrent parent delete that commits between standalone `end()`'s reads therefore makes the second read see zero state rows for a session row already loaded as live. `tx.sessions.end()` inside exam finalization is not exposed: that repository is bound to the composition-root REPEATABLE READ transaction, so both reads inherit the outer fixed snapshot.

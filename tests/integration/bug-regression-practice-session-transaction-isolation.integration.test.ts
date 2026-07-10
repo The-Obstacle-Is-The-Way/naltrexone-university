@@ -98,6 +98,89 @@ function observeTransactionIsolation(
   }) as DrizzleDb;
 }
 
+function interleaveAfterFirstSessionRead(
+  currentDb: DrizzleDb,
+  input: {
+    sessionId: string;
+    completed: boolean;
+    afterRead: () => Promise<void>;
+  },
+): DrizzleDb {
+  return new Proxy(currentDb, {
+    get(target, property, receiver) {
+      if (property === 'transaction') {
+        return async <T>(
+          fn: (tx: DrizzleDb) => Promise<T>,
+          config?: Parameters<DrizzleDb['transaction']>[1],
+        ): Promise<T> =>
+          target.transaction(
+            async (tx) =>
+              fn(
+                interleaveAfterFirstSessionRead(
+                  tx as unknown as DrizzleDb,
+                  input,
+                ),
+              ),
+            config,
+          );
+      }
+
+      if (property !== 'query') {
+        return Reflect.get(target, property, receiver);
+      }
+
+      const query = Reflect.get(target, property, receiver) as object;
+      return new Proxy(query, {
+        get(queryTarget, tableProperty, queryReceiver) {
+          const tableQuery = Reflect.get(
+            queryTarget,
+            tableProperty,
+            queryReceiver,
+          );
+          if (
+            tableProperty !== 'practiceSessions' ||
+            !tableQuery ||
+            typeof tableQuery !== 'object'
+          ) {
+            return tableQuery;
+          }
+
+          return new Proxy(tableQuery, {
+            get(repositoryTarget, methodProperty, repositoryReceiver) {
+              const method = Reflect.get(
+                repositoryTarget,
+                methodProperty,
+                repositoryReceiver,
+              );
+              if (
+                methodProperty !== 'findFirst' ||
+                typeof method !== 'function'
+              ) {
+                return method;
+              }
+
+              return async (...args: unknown[]) => {
+                const row = await Reflect.apply(method, repositoryTarget, args);
+                if (
+                  !input.completed &&
+                  row &&
+                  typeof row === 'object' &&
+                  'id' in row &&
+                  row.id === input.sessionId
+                ) {
+                  input.completed = true;
+                  await input.afterRead();
+                }
+                return row;
+              };
+            },
+          });
+        },
+      });
+    },
+  }) as DrizzleDb;
+}
+
 describe('BUG-267 practice-session transaction isolation', () => {
   it('opens the finalize exam write transaction at repeatable read in the real driver', async () => {
     const observedIsolationLevels: string[] = [];
@@ -138,6 +221,9 @@ describe('BUG-267 practice-session transaction isolation', () => {
 
     expect(observedIsolationLevels.length).toBeGreaterThan(1);
     expect(observedTransactionDepths).toContain(1);
+    expect(
+      observedTransactionDepths.filter((depth) => depth === 1).length,
+    ).toBeGreaterThanOrEqual(3);
     expect(observedIsolationLevels).toContain('repeatable read');
     expect(observedIsolationLevels).not.toContain('read committed');
   });
@@ -361,6 +447,80 @@ describe('BUG-292 discard serialization-failure ownership', () => {
     ).resolves.toMatchObject({
       id: session.id,
       endedAt: new Date('2026-07-10T12:02:00.000Z'),
+    });
+  });
+});
+
+describe('BUG-293 end pre-read snapshot consistency', () => {
+  it('maps a user-deletion cascade between the logical pre-reads to NOT_FOUND', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-end-user-delete-race-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const repository = new DrizzlePracticeSessionRepository(db);
+    const session = await repository.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+    const interleaving = {
+      sessionId: session.id,
+      completed: false,
+      afterRead: async () => {
+        await concurrent.sql.begin(async (tx) => {
+          await tx`SET LOCAL lock_timeout = '2s'`;
+          await tx`SET LOCAL statement_timeout = '5s'`;
+          await tx`DELETE FROM users WHERE id = ${user.id}`;
+        });
+      },
+    };
+    const interleavedRepository = new DrizzlePracticeSessionRepository(
+      interleaveAfterFirstSessionRead(db, interleaving),
+    );
+
+    await expect(
+      interleavedRepository.end(session.id, user.id),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Practice session not found',
+    });
+    expect(interleaving.completed).toBe(true);
+  });
+
+  it('keeps genuinely missing normalized question state fail-loud', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-end-genuine-state-corruption-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const repository = new DrizzlePracticeSessionRepository(db);
+    const session = await repository.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+    await db
+      .delete(schema.practiceSessionQuestionStates)
+      .where(
+        eq(schema.practiceSessionQuestionStates.practiceSessionId, session.id),
+      );
+
+    await expect(repository.end(session.id, user.id)).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: `Practice session ${session.id} is missing normalized question state`,
     });
   });
 });
