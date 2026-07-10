@@ -1277,6 +1277,40 @@ describe('reconcileStripeSubscriptions', () => {
     ).resolves.toBeNull();
   });
 
+  it('acquires the subscription lock before writing the Stripe customer mapping', async () => {
+    const calls: string[] = [];
+    class OrderedSubscriptionRepository extends FakeSubscriptionRepository {
+      override async upsert(
+        input: Parameters<FakeSubscriptionRepository['upsert']>[0],
+      ) {
+        calls.push('subscriptions.upsert');
+        return super.upsert(input);
+      }
+    }
+    class OrderedStripeCustomerRepository extends FakeStripeCustomerRepository {
+      override async insert(
+        ...args: Parameters<FakeStripeCustomerRepository['insert']>
+      ) {
+        calls.push('stripeCustomers.insert');
+        return super.insert(...args);
+      }
+    }
+    const local = createUserSubscriptionFixture('sub_lock_order');
+    const scenario = createReconciliationTestScenario({
+      stripe: createStripeFromFixtures({ fixtures: [{ fixture: local }] }),
+      localSubscriptions: [row(primaryUserId, local.id)],
+      subscriptions: new OrderedSubscriptionRepository(),
+      stripeCustomers: new OrderedStripeCustomerRepository(),
+    });
+
+    await expect(scenario.run({ dryRun: true })).resolves.toMatchObject({
+      updated: 1,
+      failed: 0,
+    });
+
+    expect(calls).toEqual(['subscriptions.upsert', 'stripeCustomers.insert']);
+  });
+
   it('selects canonical by highest currentPeriodEnd even when local row is blocking', async () => {
     const local = createUserSubscriptionFixture('sub_local', {
       status: 'active',

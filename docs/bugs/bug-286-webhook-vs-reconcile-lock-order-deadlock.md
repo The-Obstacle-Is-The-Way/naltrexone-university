@@ -5,6 +5,7 @@
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (Cycle B2 independently re-derived the AB-BA cycle from source, installed driver behavior, and PostgreSQL lock semantics)
 **Component:** Stripe webhook / checkout success / reconcile cron
+**Resolution State:** Implemented on branch `fix/bug-285-286-stripe-failure-domain-lock-order` for PR "Fix BUG-285/286: durable Stripe webhook failure state + canonical subscription-writer lock order" (pending review, merge, and production proof). Phase B makes all three writers acquire advisory(user) → `stripe_subscriptions` → `stripe_customers`, pins the job call order in unit coverage, and proves both writer pairs complete under deterministic real-Postgres interleavings.
 
 ---
 

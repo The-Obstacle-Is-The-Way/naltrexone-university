@@ -238,6 +238,9 @@ export async function syncCheckoutSuccess(
 
   const currentPeriodEnd = new Date(currentPeriodEndSeconds * MS_PER_SECOND);
 
+  // Canonical multi-repository lock order: advisory(user) in
+  // subscriptions.upsert -> stripe_subscriptions row -> stripe_customers row.
+  // Keep every writer in this order to avoid AB-BA deadlocks.
   const write = await d.transaction(
     async ({ stripeCustomers, subscriptions }) => {
       const result = await subscriptions.upsert({

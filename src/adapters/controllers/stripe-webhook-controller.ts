@@ -157,6 +157,9 @@ export async function processStripeWebhook(
 
         try {
           if (event.subscriptionUpdate) {
+            // Canonical multi-repository lock order: advisory(user) in
+            // subscriptions.upsert -> stripe_subscriptions row ->
+            // stripe_customers row. Keep every writer in this order.
             const write = await subscriptions.upsert({
               userId: event.subscriptionUpdate.userId,
               externalSubscriptionId:
