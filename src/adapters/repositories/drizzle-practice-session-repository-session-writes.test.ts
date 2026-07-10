@@ -377,6 +377,36 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     expect(childDeleteSql).toContain('"practice_sessions"."ended_at" is null');
   });
 
+  it('throws NOT_FOUND when the repeatable-read snapshot has no practice session', async () => {
+    const readDb = {
+      query: {
+        practiceSessions: {
+          findFirst: vi.fn(async () => null),
+        },
+      },
+    };
+    const db = {
+      transaction: vi.fn(
+        async (fn: (client: typeof readDb) => Promise<unknown>) => fn(readDb),
+      ),
+      update: () => {
+        throw new Error('unexpected update');
+      },
+    } as const;
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    await expect(repo.end(sessionId, userId)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Practice session not found',
+    });
+    expect(db.transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
+  });
+
   it('returns the practice session loaded from one repeatable-read snapshot before updating', async () => {
     const endedAt = new Date('2026-02-01T01:02:03.000Z');
     const row = {

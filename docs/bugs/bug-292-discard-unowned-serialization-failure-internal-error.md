@@ -10,7 +10,7 @@
 
 ## Resolution State
 
-Implemented on branch `fix/bug-292-293-practice-session-races`; the bug remains Open pending PR review, merge, and production proof.
+Implemented in [PR #627](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/627) on branch `fix/bug-292-293-practice-session-races`; the bug remains Open pending merge and production proof.
 
 ## Summary
 
