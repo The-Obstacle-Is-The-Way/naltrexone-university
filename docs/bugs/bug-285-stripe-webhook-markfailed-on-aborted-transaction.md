@@ -5,7 +5,7 @@
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (multi-agent adversarial sweep; Cycle B1 re-audit confirmed the failure-domain defect and narrowed its production reachability/logging claims)
 **Component:** Stripe webhook / event ledger
-**Resolution State:** Implemented on branch `fix/bug-285-286-stripe-failure-domain-lock-order` for PR "Fix BUG-285/286: durable Stripe webhook failure state + canonical subscription-writer lock order" (pending review, merge, and production proof). Phase A moves failure persistence to a fresh transaction, preserves the original processing error, and adds unit plus real-Postgres aborted-transaction regressions.
+**Resolution State:** Implemented on branch `fix/bug-285-286-stripe-failure-domain-lock-order` in [PR #626](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/626), "Fix BUG-285/286: durable Stripe webhook failure state + canonical subscription-writer lock order" (pending review, merge, and production proof). Phase A moves failure persistence to a fresh transaction, preserves the original processing error, and adds unit plus real-Postgres aborted-transaction regressions.
 
 ---
 
