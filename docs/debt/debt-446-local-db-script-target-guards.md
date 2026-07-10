@@ -1,6 +1,6 @@
 # DEBT-446: Bare `db:migrate`/`db:seed` Can Silently Target a Remote Database, and Production Seeding Lacks an Enforced Consent Gate
 
-**Status:** Active
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
 
@@ -18,7 +18,7 @@ separate consent token or showing a database change plan.
 
 **Verification boundary (2026-07-10):** this read-only audit parsed, but did not
 connect to, this clone's ignored `.env.local`; its `DATABASE_URL` is on line 7
-and resolves to the recorded `ep-still-frog...` non-production host. That file
+and resolves to an audited non-production Neon host. That file
 is not repository state and says nothing about another clone. Likewise,
 `db:seed:all` pulls current Vercel values at runtime; the repository proves the
 pull and target-comparison logic, not today's dashboard values or branch-specific
@@ -183,9 +183,13 @@ labels.
    compute every target's per-question insert/update/delete plan without writes;
    then require `SEED_CONFIRM_PRODUCTION=<production-host/database>` matching the
    printed target before any environment is mutated. A missing/mismatched token
-   exits non-zero.
+   exits with a non-zero status. The token is target consent only, not plan
+   freshness: another writer can change the database between plan generation and
+   execution, so either re-validate the plan (recompute or compare a target
+   revision) immediately before writing, or state in the runbook that the
+   approved plan can be stale and the write phase re-derives its own diff.
 2. Simpler alternative: remove Production from `db:seed:all` and expose a
-   separate deliberate `db:seed:prod` command with the same exact target token.
+   separate deliberate `db:seed:prod` command with the same target token.
 3. Do not claim a lone corpus hash proves freshness or ancestry. A durable
    freshness fence requires a canonical monotonic corpus revision (plus the
    manifest hash and audit timestamp) that the target can compare with the local

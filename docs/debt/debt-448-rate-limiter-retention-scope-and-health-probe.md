@@ -1,6 +1,6 @@
 # DEBT-448: Rate Limiter — 90-Day Retention of 60-Second Windows, Five Unmetered Practice Write-Capable Paths, Health-Probe Diagnostic Masking
 
-**Status:** Active
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
 

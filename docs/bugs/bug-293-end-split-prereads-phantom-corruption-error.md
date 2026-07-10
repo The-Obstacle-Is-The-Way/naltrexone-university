@@ -1,6 +1,6 @@
 # BUG-293: Standalone `end()` Splits Its Pre-Reads Across Autocommit Statements — Concurrent Account Deletion Yields a False Corruption Error
 
-**Status:** Active
+**Status:** Open
 **Severity:** P4
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-10 (Cycle B4 adversarial re-audit against `9afd936c`; concurrent-discard leg refuted, account-deletion leg confirmed)

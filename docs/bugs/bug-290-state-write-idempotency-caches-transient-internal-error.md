@@ -1,6 +1,6 @@
 # BUG-290: State-Write Idempotency Policy Caches Transient INTERNAL_ERROR — Submit Re-Click and Mark Toggle Replay the Stale Failure
 
-**Status:** Active
+**Status:** Open
 **Severity:** P3
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (multi-agent adversarial sweep; independently re-verified at source before filing)

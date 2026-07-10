@@ -1,6 +1,6 @@
 # DEBT-443: Idempotency Cache Durability and Evolution Gaps — Schema-Drift Replay Poisoning, Asymmetric Error Records, Production-Dead Lifecycle Cache Branch
 
-**Status:** Active
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
 
@@ -44,7 +44,7 @@ No wrong observable behavior today: an end request made with a fresh key after t
 - **Rejected:** deleting the completed row, treating a version mismatch as a cache miss, or falling back to raw/unvalidated JSON. The first two can re-execute a committed effect; the last returns a payload that violates the current controller contract.
 
 **Part 2:**
-- **Option 1 (recommended):** define one versioned, validated public-error envelope and a pure normalization seam shared by first-response mapping and cache serialization. Preserve all safe `ApplicationError` fields; normalize `ZodError` to the same `VALIDATION_ERROR` / `Invalid input` / flattened fields shape on first response and replay; normalize every other unknown error to the same generic `INTERNAL_ERROR` / `Internal error` public record while retaining raw diagnostics only in logs or causes. Evolve `details` through an explicit codec, treat existing rows as a legacy version, and align fake and Drizzle contract tests around identical accepted/rejected shapes.
+- **Option 1 (recommended):** define one versioned, validated public-error envelope and a pure normalization seam shared by first-response mapping and cache serialization. Preserve all safe `ApplicationError` fields; normalize `ZodError` to the same `VALIDATION_ERROR` / `Invalid input` / flattened fields shape on first response and replay; normalize every other unknown error to the same generic `INTERNAL_ERROR` / `Internal error` public record while retaining raw diagnostics only in logs or causes. Evolve `details` through an explicit codec, treat existing rows as a legacy version, and align fake and Drizzle contract tests around identical accepted/rejected shapes. The envelope contract must be explicit per channel: `code` and `message` preserved; `details` through the codec; `fieldErrors` either persisted (which requires extending `IdempotencyKeyError`, both repositories, and the stored-JSON shape, since the current port omits it) or documented as intentionally dropped with the first response normalized to match — an implementation that leaves first-vs-replay divergence intact does not satisfy this option. Legacy rows written before the envelope shipped must decode as the baseline version and replay to the same `ActionResult` their first execution produced.
 - **Option 2 (explicit narrowing):** document and type a smaller durable public contract, but still normalize `ZodError` and unknown failures to the same safe first-response shapes before persistence. This may intentionally omit `fieldErrors`/new details only if first execution omits them too; it must not preserve today's raw-message replay.
 - **Rejected:** passing arbitrary JSONB keys through as `ApplicationErrorDetails`. That would trade the current explicit allowlist for an unchecked type assertion at the persistence boundary.
 

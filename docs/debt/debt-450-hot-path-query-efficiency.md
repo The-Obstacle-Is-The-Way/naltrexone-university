@@ -1,6 +1,6 @@
 # DEBT-450: Hot-Path Query Efficiency — Finalize Statement Amplification, History/Bookmark Over-Hydration, Lifetime Counts, and Duplicate Window Ranking
 
-**Status:** Active
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
 

@@ -1,6 +1,6 @@
 # DEBT-453: Duplicated Data Contracts — Difficulty Set Re-encoded Across 10 Production Files, Effective Selection Computed Four Times, Write/Read Schema Coupling, Dead `deleteById` Port Method
 
-**Status:** Active
+**Status:** Open
 **Priority:** P4
 **Date:** 2026-07-09
 

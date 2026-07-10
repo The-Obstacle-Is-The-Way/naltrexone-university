@@ -1,6 +1,6 @@
 # BUG-287: Reconcile Cron Can Revert a Newer Webhook-Applied Subscription State to Its Stale Phase-1 Snapshot (No Recency Fence)
 
-**Status:** Active
+**Status:** Open
 **Severity:** P3
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (Cycle B2 independently re-derived the stale-write interleavings and replaced the non-causal timestamp fix)

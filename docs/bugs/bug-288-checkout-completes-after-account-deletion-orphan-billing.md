@@ -1,6 +1,6 @@
 # BUG-288: Checkout Can Complete After Clerk Account Deletion and Create an Untracked Stripe Subscription
 
-**Status:** Active
+**Status:** Open
 **Severity:** P2
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (Cycle B2 independently re-derived the post-deletion Checkout path, raised severity, and replaced the schema-invalid queue fix)

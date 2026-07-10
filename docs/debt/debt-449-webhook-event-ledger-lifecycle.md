@@ -1,6 +1,6 @@
 # DEBT-449: Webhook Event-Ledger Lifecycle — Partial/Asymmetric Retention and Cron Completion-Bookkeeping Gap
 
-**Status:** Active
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
 

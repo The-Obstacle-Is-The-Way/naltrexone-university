@@ -1,6 +1,6 @@
 # DEBT-444: Hot-Path Prune Transactions Can Contend Without SKIP LOCKED and Lack Direct Real-Postgres Coverage (`idempotency_keys` + `rate_limits`)
 
-**Status:** Active
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
 
@@ -51,7 +51,7 @@ Note recorded by the verifier: parts 1 and 2 are the same request-path cleanup/o
 
 ## Verification
 
-- **Part 1:** the chosen owner is explicit: either the keyed request path issues no prune statements and a scheduled job owns cleanup, or the request path emits one bounded candidate-lock/delete statement. The scheduled option proves a multi-batch backlog drains within its work cap and documents capacity against observed creation; either option uses a controlled-overlap integration test to prove workers do not wait on the same candidate rows. ADR-015 records the owner.
+- **Part 1:** the chosen owner is explicit: either the keyed request path issues no prune statements and a scheduled job owns cleanup, or the request path emits one bounded candidate-lock/delete statement. The scheduled option proves a multi-batch backlog drains within its work cap and documents capacity against observed creation; either option uses a deterministic controlled-overlap integration test: an explicit lock-holder transaction takes the candidate rows behind a synchronization barrier before the workers run, and a database lock timeout (or an equivalent lock-wait observation such as `pg_locks`) bounds the assertion — the workers must complete within the bound while the candidates stay locked, not merely finish eventually. ADR-015 records the owner.
 - **Part 2:** the equivalent controlled-overlap proof covers `rate_limits`; if a shared implementation is extracted, both table-specific key predicates remain directly exercised.
 - **Part 3:** named real-Postgres integration tests directly assert each prune method's deleted count, limit, expired-row deletion, and live-row preservation.
 

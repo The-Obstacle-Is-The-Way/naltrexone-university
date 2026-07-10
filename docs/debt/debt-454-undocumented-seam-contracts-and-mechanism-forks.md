@@ -1,6 +1,6 @@
 # DEBT-454: Undocumented Per-Context Seam Contracts and Mechanism Forks — `end()` Dead/Live Recovery Split, Convention-Only Lock Preconditions, Forked DB Retry Loop
 
-**Status:** Active
+**Status:** Open
 **Priority:** P4
 **Date:** 2026-07-09
 

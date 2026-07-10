@@ -1,6 +1,6 @@
 # BUG-285: Stripe Webhook `markFailed` Runs on the Already-Aborted Transaction — Failure State Never Persists and the Top-Level Error Is Replaced
 
-**Status:** Active
+**Status:** Open
 **Severity:** P3
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (multi-agent adversarial sweep; Cycle B1 re-audit confirmed the failure-domain defect and narrowed its production reachability/logging claims)

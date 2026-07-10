@@ -1,6 +1,6 @@
 # BUG-286: Reconcile Phase 4 Inverts the Subscription-Writer Lock Order and Enables an AB-BA Deadlock (40P01)
 
-**Status:** Active
+**Status:** Open
 **Severity:** P3
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (Cycle B2 independently re-derived the AB-BA cycle from source, installed driver behavior, and PostgreSQL lock semantics)

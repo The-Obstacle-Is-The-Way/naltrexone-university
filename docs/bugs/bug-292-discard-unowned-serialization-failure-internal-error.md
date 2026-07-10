@@ -1,6 +1,6 @@
 # BUG-292: `discard()` Owns a REPEATABLE READ Transaction With No Serialization-Failure Retry or Mapping
 
-**Status:** Active
+**Status:** Open
 **Severity:** P3
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-10 (Cycle B4 adversarial re-audit against `9afd936c`; core mechanism confirmed with corrected driver-error shape)

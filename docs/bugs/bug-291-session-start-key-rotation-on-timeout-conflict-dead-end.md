@@ -1,6 +1,6 @@
 # BUG-291: Session Start Rotates Its Idempotency Key on Client Timeout, Turning a Committed Start Into an Incomplete-Session CONFLICT Dead-End
 
-**Status:** Active
+**Status:** Open
 **Severity:** P3
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (multi-agent adversarial sweep; independently re-verified at source before filing)

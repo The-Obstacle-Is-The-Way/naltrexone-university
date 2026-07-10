@@ -1,6 +1,6 @@
 # BUG-284: User Upsert Email-Conflict Fallback Treats Email as Identity — Cross-Identity Row Takeover and Sign-In Lockout
 
-**Status:** Active
+**Status:** Open
 **Severity:** P2
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (multi-agent adversarial sweep; Cycle B1 re-audit confirmed the defect, corrected the caller-specific failure modes, and rejected the original unsafe fix)

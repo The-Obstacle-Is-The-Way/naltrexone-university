@@ -1,6 +1,6 @@
 # DEBT-445: Build-Time Migration Pipeline Guardrails -- Shared-Preview Ledger Blast Radius, No Deploy-Time Ledger Check, Missing Expand/Contract and Restore-Loss Documentation
 
-**Status:** Active
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
 
@@ -36,12 +36,14 @@ scoping](https://vercel.com/docs/environment-variables#preview-environment-varia
 Under the last measured provider topology, a feature-branch Preview without a
 branch-specific override uses the shared Neon `dev` database documented in
 [deployment-environments.md](../dev/deployment-environments.md#L25). The
-installed Drizzle PostgreSQL migrator
-(`node_modules/drizzle-orm/pg-core/dialect.cjs:58-72`, verified directly) reads
-only the ledger row with the greatest `created_at`, then applies a local
-migration only when
+installed Drizzle PostgreSQL migrator — version-scoped to the locked
+`drizzle-orm@0.45.2` (`node_modules/drizzle-orm/pg-core/dialect.cjs:58-72`,
+verified directly against that build) — reads only the ledger row with the
+greatest `created_at`, then applies a local migration only when
 `Number(lastDbMigration.created_at) < migration.folderMillis`. It does not
-compare every journal entry with every ledger row.
+compare every journal entry with every ledger row. A drizzle-orm upgrade must
+re-verify this behavior, or the journal-order regression below makes the
+assumption test-enforced either way.
 
 If a feature Preview applies an unmerged migration at `when=T2`, a later
 checkout whose legitimate migration has `when <= T2` is skipped on that shared

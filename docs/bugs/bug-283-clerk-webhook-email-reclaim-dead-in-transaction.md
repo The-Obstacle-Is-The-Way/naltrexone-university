@@ -1,6 +1,6 @@
 # BUG-283: Clerk Webhook Email-Reclaim Fallback Is Dead Inside the Webhook Transaction (25P02 → Deterministic 500s)
 
-**Status:** Active
+**Status:** Open
 **Severity:** P3
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (multi-agent adversarial sweep; independently re-verified at source before filing; Cycle B1 re-audit confirmed the defect and corrected the event/recovery details)

@@ -1,6 +1,6 @@
 # BUG-289: Default Idempotency Policy Caches Transient Errors on Billing/Bookmark/Feedback Actions Whose Client Keys Do Not Rotate on Failure
 
-**Status:** Active
+**Status:** Open
 **Severity:** P3
 **Date:** 2026-07-09
 **Confirmed:** 2026-07-09 (multi-agent adversarial sweep; independently re-verified at source before filing)

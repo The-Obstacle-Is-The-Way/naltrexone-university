@@ -1,6 +1,6 @@
 # DEBT-447: DB Connection/Session Policy Is Repo-Unspecified — Three Timeouts Unset, Runtime Pooler Host Unenforced, Vendor Doc Recommends Banned `push`
 
-**Status:** Active
+**Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
 

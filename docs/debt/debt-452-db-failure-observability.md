@@ -1,6 +1,6 @@
 # DEBT-452: DB Failure Observability — Cause-Dropping `INTERNAL_ERROR` Wrapping and Raw SQL/Params Reaching Logs Through Pino Serialization
 
-**Status:** Active
+**Status:** Open
 **Priority:** P4
 **Date:** 2026-07-09
 
