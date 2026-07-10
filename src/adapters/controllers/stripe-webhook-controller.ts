@@ -33,7 +33,9 @@ export type StripeWebhookDeps = {
   now: () => Date;
 };
 
-type StripeWebhookTxResult = { ok: true } | { ok: false; error: unknown };
+type StripeWebhookEvent = Awaited<
+  ReturnType<PaymentGateway['processWebhookEvent']>
+>;
 
 const STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
 const STRIPE_EVENTS_PRUNE_LIMIT = 100;
@@ -60,11 +62,43 @@ function toErrorData(error: unknown): string {
   return JSON.stringify({ message: 'Unknown error', raw: String(error) });
 }
 
+async function persistFailure(
+  deps: StripeWebhookDeps,
+  event: StripeWebhookEvent,
+  error: unknown,
+): Promise<void> {
+  const errorData = toErrorData(error);
+
+  try {
+    await deps.transaction(async ({ stripeEvents }) => {
+      await stripeEvents.claim(event.eventId, event.type);
+      const current = await stripeEvents.lock(event.eventId);
+
+      if (current.processedAt !== null && current.error === null) {
+        return;
+      }
+
+      await stripeEvents.markFailed(event.eventId, errorData);
+    });
+  } catch (persistError) {
+    deps.logger.error(
+      {
+        eventId: event.eventId,
+        error:
+          persistError instanceof Error
+            ? persistError.message
+            : String(persistError),
+      },
+      'Failed to persist Stripe webhook failure state',
+    );
+  }
+}
+
 export async function processStripeWebhook(
   deps: StripeWebhookDeps,
   input: StripeWebhookInput,
 ): Promise<void> {
-  let event: Awaited<ReturnType<PaymentGateway['processWebhookEvent']>>;
+  let event: StripeWebhookEvent;
   try {
     event = await deps.paymentGateway.processWebhookEvent(
       input.rawBody,
@@ -98,61 +132,64 @@ export async function processStripeWebhook(
     throw error;
   }
 
-  const txResult = await deps.transaction(
-    async ({
-      stripeEvents,
-      subscriptions,
-      stripeCustomers,
-    }): Promise<StripeWebhookTxResult> => {
-      const claimed = await stripeEvents.claim(event.eventId, event.type);
-      if (!claimed) {
-        const snapshot = await stripeEvents.peek(event.eventId);
-        if (
-          snapshot &&
-          snapshot.processedAt !== null &&
-          snapshot.error === null
-        ) {
-          return { ok: true };
-        }
-      }
+  let processingError: unknown;
+  let hasProcessingError = false;
 
-      const current = await stripeEvents.lock(event.eventId);
-      if (current.processedAt !== null && current.error === null) {
-        return { ok: true };
-      }
-
-      try {
-        if (event.subscriptionUpdate) {
-          const write = await subscriptions.upsert({
-            userId: event.subscriptionUpdate.userId,
-            externalSubscriptionId:
-              event.subscriptionUpdate.externalSubscriptionId,
-            plan: event.subscriptionUpdate.plan,
-            status: event.subscriptionUpdate.status,
-            currentPeriodEnd: event.subscriptionUpdate.currentPeriodEnd,
-            cancelAtPeriodEnd: event.subscriptionUpdate.cancelAtPeriodEnd,
-          });
-
-          if (write.persisted) {
-            await stripeCustomers.insert(
-              event.subscriptionUpdate.userId,
-              event.subscriptionUpdate.externalCustomerId,
-              { conflictStrategy: 'authoritative' },
-            );
+  try {
+    await deps.transaction(
+      async ({ stripeEvents, subscriptions, stripeCustomers }) => {
+        const claimed = await stripeEvents.claim(event.eventId, event.type);
+        if (!claimed) {
+          const snapshot = await stripeEvents.peek(event.eventId);
+          if (
+            snapshot &&
+            snapshot.processedAt !== null &&
+            snapshot.error === null
+          ) {
+            return;
           }
         }
 
-        await stripeEvents.markProcessed(event.eventId);
-        return { ok: true };
-      } catch (error) {
-        await stripeEvents.markFailed(event.eventId, toErrorData(error));
-        return { ok: false, error };
-      }
-    },
-  );
+        const current = await stripeEvents.lock(event.eventId);
+        if (current.processedAt !== null && current.error === null) {
+          return;
+        }
 
-  if (!txResult.ok) {
-    throw txResult.error;
+        try {
+          if (event.subscriptionUpdate) {
+            const write = await subscriptions.upsert({
+              userId: event.subscriptionUpdate.userId,
+              externalSubscriptionId:
+                event.subscriptionUpdate.externalSubscriptionId,
+              plan: event.subscriptionUpdate.plan,
+              status: event.subscriptionUpdate.status,
+              currentPeriodEnd: event.subscriptionUpdate.currentPeriodEnd,
+              cancelAtPeriodEnd: event.subscriptionUpdate.cancelAtPeriodEnd,
+            });
+
+            if (write.persisted) {
+              await stripeCustomers.insert(
+                event.subscriptionUpdate.userId,
+                event.subscriptionUpdate.externalCustomerId,
+                { conflictStrategy: 'authoritative' },
+              );
+            }
+          }
+
+          await stripeEvents.markProcessed(event.eventId);
+        } catch (error) {
+          processingError = error;
+          hasProcessingError = true;
+          throw error;
+        }
+      },
+    );
+  } catch (transactionError) {
+    const originalError = hasProcessingError
+      ? processingError
+      : transactionError;
+    await persistFailure(deps, event, originalError);
+    throw originalError;
   }
 
   // Best-effort cleanup: prune old stripe events.

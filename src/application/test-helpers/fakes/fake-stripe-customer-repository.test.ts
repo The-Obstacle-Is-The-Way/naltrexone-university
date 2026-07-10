@@ -45,6 +45,8 @@ describe('FakeStripeCustomerRepository', () => {
 
       await expect(repo.insert('user-1', 'cus_456')).rejects.toMatchObject({
         code: 'CONFLICT',
+        message:
+          'Stripe customer already exists with a different stripeCustomerId',
       });
     });
 
@@ -54,6 +56,7 @@ describe('FakeStripeCustomerRepository', () => {
 
       await expect(repo.insert('user-2', 'cus_123')).rejects.toMatchObject({
         code: 'CONFLICT',
+        message: 'Stripe customer id is already mapped to a different user',
       });
     });
   });

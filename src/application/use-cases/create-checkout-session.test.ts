@@ -82,7 +82,7 @@ class EmptyAfterConflictStripeCustomerRepository extends FakeStripeCustomerRepos
   override async insert(): Promise<void> {
     throw new ApplicationError(
       'CONFLICT',
-      'User is already mapped to a different Stripe customer',
+      'Stripe customer already exists with a different stripeCustomerId',
     );
   }
 }
@@ -667,7 +667,8 @@ describe('CreateCheckoutSessionUseCase', () => {
       message: 'Stripe customer mapping disappeared after conflict',
       cause: expect.objectContaining({
         code: 'CONFLICT',
-        message: 'User is already mapped to a different Stripe customer',
+        message:
+          'Stripe customer already exists with a different stripeCustomerId',
       }),
     });
 

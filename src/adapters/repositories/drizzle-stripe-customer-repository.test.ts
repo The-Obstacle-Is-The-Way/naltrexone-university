@@ -99,6 +99,8 @@ describe('DrizzleStripeCustomerRepository', () => {
 
     await expect(repo.insert(userId, 'cus_new')).rejects.toMatchObject({
       code: 'CONFLICT',
+      message:
+        'Stripe customer already exists with a different stripeCustomerId',
     });
   });
 
@@ -184,6 +186,7 @@ describe('DrizzleStripeCustomerRepository', () => {
     );
     await expect(repo.insert(userId, 'cus_123')).rejects.toMatchObject({
       code: 'CONFLICT',
+      message: 'Stripe customer id is already mapped to a different user',
     });
   });
 
