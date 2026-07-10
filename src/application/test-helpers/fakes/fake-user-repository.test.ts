@@ -152,6 +152,45 @@ describe('FakeUserRepository', () => {
         }),
       ).resolves.toBeNull();
     });
+
+    it('rejects synchronizing an email owned by another identity', async () => {
+      const repo = new FakeUserRepository();
+      const observedAt = new Date('2026-02-02T00:00:00.000Z');
+      const first = await repo.upsertByClerkId('clerk-1', 'first@example.com');
+      const second = await repo.upsertByClerkId(
+        'clerk-2',
+        'second@example.com',
+      );
+
+      await expect(
+        repo.updateEmailByClerkId('clerk-2', 'first@example.com', {
+          observedAt,
+        }),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        existingClerkUserId: 'clerk-1',
+      });
+      await expect(repo.findByClerkId('clerk-1')).resolves.toEqual(first);
+      await expect(repo.findByClerkId('clerk-2')).resolves.toEqual(second);
+    });
+
+    it('preserves a newer email observation during synchronization', async () => {
+      const repo = new FakeUserRepository();
+      const newer = new Date('2026-02-02T00:00:00.000Z');
+      const older = new Date('2026-02-01T00:00:00.000Z');
+      const existing = await repo.upsertByClerkId(
+        'clerk-1',
+        'current@example.com',
+        { observedAt: newer },
+      );
+
+      await expect(
+        repo.updateEmailByClerkId('clerk-1', 'stale@example.com', {
+          observedAt: older,
+        }),
+      ).resolves.toEqual(existing);
+      await expect(repo.findByClerkId('clerk-1')).resolves.toEqual(existing);
+    });
   });
 
   describe('deleteByClerkId', () => {

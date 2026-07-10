@@ -298,6 +298,19 @@ describe('DrizzleUserRepository', () => {
     });
   });
 
+  describe('updateEmailByClerkId', () => {
+    it('maps persistence failures to INTERNAL_ERROR', async () => {
+      const db = createDbMock();
+      db._mocks.updateReturning.mockRejectedValue(new Error('boom'));
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.updateEmailByClerkId('clerk_1', 'new@example.com'),
+      ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    });
+  });
+
   describe('deleteByClerkId', () => {
     it('returns false when no user row exists', async () => {
       const db = createDbMock();

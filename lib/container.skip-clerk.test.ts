@@ -78,6 +78,8 @@ describe('container (skip clerk)', () => {
 
   describe('when NEXT_PUBLIC_SKIP_CLERK is not true', () => {
     let createContainer: typeof import('./container').createContainer;
+    let clerkClient: ReturnType<typeof vi.fn>;
+    let getUser: ReturnType<typeof vi.fn>;
     let currentUser: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
@@ -92,7 +94,10 @@ describe('container (skip clerk)', () => {
       }));
 
       currentUser = vi.fn(async () => null);
+      getUser = vi.fn(async (clerkUserId: string) => ({ id: clerkUserId }));
+      clerkClient = vi.fn(async () => ({ users: { getUser } }));
       vi.doMock('@clerk/nextjs/server', () => ({
+        clerkClient,
         currentUser,
       }));
 
@@ -124,6 +129,31 @@ describe('container (skip clerk)', () => {
         container.createBillingControllerDeps().getClerkUserId(),
       ).resolves.toBeNull();
       expect(currentUser).toHaveBeenCalledTimes(2);
+    });
+
+    it('loads a Clerk user by ID through the SDK client', async () => {
+      const container = createContainer({
+        primitives: {
+          db: {} as unknown as DrizzleDb,
+          env: {
+            NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_m',
+            NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_a',
+            STRIPE_WEBHOOK_SECRET: 'whsec',
+            NEXT_PUBLIC_APP_URL: 'https://app.example.com',
+          } as unknown as typeof import('./env').env,
+          logger:
+            new FakeLogger() as unknown as typeof import('./logger').logger,
+          getStripe: () =>
+            ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
+          now: () => new Date('2026-02-01T00:00:00Z'),
+        },
+      });
+
+      await expect(container.getClerkUserById('clerk_owner')).resolves.toEqual({
+        id: 'clerk_owner',
+      });
+      expect(clerkClient).toHaveBeenCalledTimes(1);
+      expect(getUser).toHaveBeenCalledWith('clerk_owner');
     });
   });
 });
