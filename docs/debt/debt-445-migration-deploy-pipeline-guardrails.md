@@ -1,4 +1,4 @@
-# DEBT-445: Build-Time Migration Pipeline Guardrails — Preview-Branch Blast Radius, No Deploy-Time Ledger Check, Missing Expand/Contract and Restore-Loss Documentation
+# DEBT-445: Build-Time Migration Pipeline Guardrails -- Shared-Preview Ledger Blast Radius, No Deploy-Time Ledger Check, Missing Expand/Contract and Restore-Loss Documentation
 
 **Status:** Active
 **Priority:** P3
@@ -8,60 +8,283 @@
 
 ## Description
 
-The entire migration lifecycle runs through one unscoped seam: [`vercel.json`](../../vercel.json#L3)'s `buildCommand: "pnpm db:migrate && pnpm build"` applies checked-in migrations on every git-triggered build — Production, and every Preview build of every branch — while the drizzle pg migrator itself consults only the single last ledger row. Four related gaps cluster around this seam: unmerged branches can pollute the shared Neon `dev` ledger and set a silent-skip high-water mark; no deploy path ever runs the DEBT-442 content-hash guard; the old-code/new-schema serving window during every build is absent from the durable migration-authoring checklist; and the rollback runbook's PITR step omits that restore discards post-migration writes with no reconciliation plan for webhook-fed state.
+The repository-defined deploy seam is [`vercel.json`](../../vercel.json#L3)'s
+`buildCommand: "pnpm db:migrate && pnpm build"`. Every Vercel deployment that
+uses this configuration runs the checked-in Drizzle migrator before building
+the application. Four related gaps cluster around that seam: a shared Preview
+database can accept an unmerged migration and create a ledger high-water mark;
+the repository deploy path never runs the DEBT-442 content-hash guard; the
+old-code/new-schema serving window is absent from the durable migration-authoring
+checklist; and the rollback runbook's PITR step omits write-loss and
+externally-fed-state reconciliation.
 
-### 1. Preview builds auto-migrate the shared dev database; drizzle's `created_at` high-water mark silently skips out-of-order migrations
+**Verification boundary (2026-07-10):** the repository proves the Build Command
+and the intended environment contract. It does not encode the current Vercel
+`DATABASE_URL` values, branch-specific Preview overrides, Ignored Build Step,
+Deployment Checks, or Rolling Releases settings. Archived
+[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md#L78)
+records a redacted 2026-06-16 provider audit in which the default Preview and
+Development values shared one non-production host and no branch override was
+observed. That is the last recorded provider proof, not a live setting re-check
+in this read-only audit. Vercel supports branch-specific Preview variables, so
+the live target of a particular Preview deployment remains
+**unverifiable from the repository** ([Vercel environment-variable
+scoping](https://vercel.com/docs/environment-variables#preview-environment-variables)).
 
-Vercel Preview and Development resolve to the same Neon `dev` host ([deployment-environments.md](../dev/deployment-environments.md#L30), [#L39](../dev/deployment-environments.md#L39)), so every Preview build of every non-main branch runs `pnpm db:migrate` against it. The drizzle pg migrator (`node_modules/drizzle-orm/pg-core/dialect.cjs:58-72`, verified directly) selects only the last ledger row (`order by created_at desc limit 1`) and applies a migration only when `Number(lastDbMigration.created_at) < migration.folderMillis`. An unmerged branch migration applied to dev by a Preview build therefore becomes a permanent high-water mark: any later-merged migration with an equal-or-earlier journal timestamp is skipped silently — build green, no ledger row. This root cause already fired once (dev applied an early `0027_early_wallow.sql` via a Preview deploy; `0028` is the repair — [DEBT-442](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L14)). The documented multi-clone workflow makes stale-worktree timestamps realistic: branch A's abandoned `0029` at `when=T1` on dev skips a legitimate later merge with `when <= T1`, and dev/Preview then serve code whose schema change never applied (the silent-write-failure pattern at [deployment-environments.md § Missing Database Migration](../dev/deployment-environments.md#L131)). Nothing detects this automatically: `verifyMigrationLedger` runs only in E2E global setup ([global.setup.ts](../../tests/e2e/global.setup.ts#L3) → [credential-health-check.ts#L654](../../tests/e2e/helpers/credential-health-check.ts#L654)), local E2E is hermetic Docker (DEBT-411), CI E2E uses a throwaway Postgres, and `E2E_USE_EXISTING_DATABASE` appears in no CI workflow (verified). Production is insulated in the common case — distinct host, migrations arrive in `main` merge order — so blast radius is non-production.
+### 1. A shared Preview database plus Drizzle's last-row high-water mark can silently skip out-of-order migrations
 
-### 2. Production/Preview deploys never run the DEBT-442 content-hash guard
+Under the last measured provider topology, a feature-branch Preview without a
+branch-specific override uses the shared Neon `dev` database documented in
+[deployment-environments.md](../dev/deployment-environments.md#L25). The
+installed Drizzle PostgreSQL migrator
+(`node_modules/drizzle-orm/pg-core/dialect.cjs:58-72`, verified directly) reads
+only the ledger row with the greatest `created_at`, then applies a local
+migration only when
+`Number(lastDbMigration.created_at) < migration.folderMillis`. It does not
+compare every journal entry with every ledger row.
 
-The drift guard shipped for DEBT-442 — [`verifyMigrationLedger`](../../tests/e2e/helpers/credential-health-check.ts#L362) comparing `drizzle.__drizzle_migrations.hash` against SHA-256 of local migration files via [`computeMigrationContentDrift`](../../tests/e2e/helpers/credential-health-check.ts#L380), with the measured `0027` allowlist — is wired only into the E2E credential preflight, which never executes on a Vercel deploy. The build-path migrator is last-row-timestamp-only (part 1): it never re-compares stored hashes of applied rows and skips any file whose `folderMillis` predates the last applied row. A migration amended after prod (or dev, the exact `0027` shape) already applied its earlier version, or a backport with an older `folderMillis`, deploys green with nothing applied — schema silently diverges from what the code, all tests, and every fresh environment assume, surfacing later as a failed dependent migration or runtime query error. The archived DEBT-442 doc itself names "another deploy-target health check" as the un-shipped high-value path ([#L78](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L78)) but no register item tracked it. This stays debt, not bug: prod measured hash-clean on 2026-07-08 (all 29 rows match); the gap is detection/operability, gated on an amend-after-apply or backport precondition.
+If a feature Preview applies an unmerged migration at `when=T2`, a later
+checkout whose legitimate migration has `when <= T2` is skipped on that shared
+target. The ledger row persists until explicit repair; the migrator returns
+success without adding the skipped row. The same timestamp/merge-order hazard
+can reach Production even without Preview pollution: a migration generated at
+`T1` but merged after a migration generated at `T2` is also below Production's
+last-row high-water mark. The current journal has 29 strictly increasing
+`entries[].when` values, but no test enforces that property.
+
+The recorded early-0027 incident is adjacent evidence, not proof that this exact
+out-of-order scenario has occurred. Development applied an early version of
+`0027_early_wallow.sql` through a Preview deploy; the file was then amended at
+the same journal timestamp, Drizzle did not revisit it, and `0028` repaired the
+schema ([DEBT-442 incident](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L12)).
+That incident proves that Preview can apply pre-merge migration content and that
+the migrator does not revalidate an applied timestamp. No known incident in the
+register proves that an orphaned later timestamp has yet skipped a distinct
+earlier migration.
+
+No repository-defined deploy check detects either ledger shape directly.
+`verifyMigrationLedger` runs from E2E global setup
+([global.setup.ts](../../tests/e2e/global.setup.ts#L3) to
+[credential-health-check.ts](../../tests/e2e/helpers/credential-health-check.ts#L654));
+normal local E2E uses freshly migrated Docker, CI E2E uses CI's throwaway
+Postgres, and no workflow sets `E2E_USE_EXISTING_DATABASE`. A target can
+therefore remain drifted until an intentional persistent-target E2E preflight or
+runtime failure exposes it (the failure pattern documented at
+[deployment-environments.md](../dev/deployment-environments.md#L131)).
+
+### 2. The repository deploy path does not run the DEBT-442 content-hash guard
+
+DEBT-442 extended [`verifyMigrationLedger`](../../tests/e2e/helpers/credential-health-check.ts#L362)
+to compare ledger hashes with full-file SHA-256 values through
+[`computeMigrationContentDrift`](../../tests/e2e/helpers/credential-health-check.ts#L325),
+including one exact allowlist entry for Development's repaired early-0027
+content. That guard is wired only into the E2E credential preflight. The
+repository Build Command runs `db:migrate` and `build`, not the guard; whether a
+dashboard-only deployment check provides any equivalent protection is
+unverifiable from the repository.
+
+The build-path migrator does not re-compare hashes for applied rows. An
+amended-after-apply file, a ledger-only migration from another branch, or a
+backported migration below the last `created_at` can therefore leave the schema
+different from the checkout while `db:migrate` exits successfully. The build
+may still fail if it exercises the missing schema, but it can also pass and
+defer discovery to runtime or a later dependent migration. DEBT-442 explicitly
+left a deploy-target health check as the high-value unshipped path
+([lines 77-80](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L77)).
+
+The last recorded read-only proof, on 2026-07-08, found Production matching all
+29 local migration hashes and Development carrying only the known allowlisted
+0027 mismatch, with no missing or ledger-only rows
+([measurement table](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L82)).
+This audit did not query either live database. The gap is therefore latent
+detection/operability debt, not evidence of current unexplained drift.
 
 ### 3. The old-code/new-schema deploy window is absent from the durable migration-authoring checklist
 
-`pnpm db:migrate` commits schema changes at the start of every multi-minute build while the previous deployment keeps serving traffic, and the repo routinely ships migrations atomically with dependent code (0018's one-shot omitted-attempt backfill; the 0021–0025 batch). The expand/contract N-1 compatibility rule exists — constraint #3 of archived [BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md#L80) — but was never carried into [migration-authoring.md](../dev/migration-authoring.md#L5), the self-described "durable review checklist," whose five sections have no deployed-code-compatibility item; [deployment-procedure.md](../dev/deployment-procedure.md#L16) notes the old deployment stays up during the build only as a fail-closed safety property, never naming the compatibility window. Concrete failure shapes: a future CHECK/NOT NULL/FK on an existing live-written table makes old-code writes fail with 23514 for the whole build window; a one-shot backfill like [0018's `NOT EXISTS` scan](../../db/migrations/0018_backfill-omitted-exam-attempts.sql#L37) never re-runs, so a mid-window exam finalize by old code permanently loses its omitted-attempt rows. [`vercel.test.ts`](../../vercel.test.ts#L10) pins only the command string. Verifier correction: the candidate's claim that 0023/0024's CHECKs could 23514 old-code writes is **refuted** for those specific migrations — `practice_session_question_states` was created in `0021` in the same deploy batch, so old code never wrote to it; the real 0021–0025 window exposure was old code writing `params_json.questionStates` the already-run backfill could never pick up. The rollback half of this lens is already documented in [database-rollbacks.md](../dev/database-rollbacks.md#L16). Preconditions today are narrow (contracting migration + concurrent user writes in a minutes-long window; production practice-session traffic was 0 rows at the DEBT-425/0025 audit), so this is pattern debt, not a live defect.
+Drizzle commits all pending PostgreSQL migrations before `pnpm build` starts.
+For Production, and for any existing Preview alias that a new deployment will
+replace, the previous deployment can continue serving against the newly changed
+schema until Vercel promotes the successful replacement. Dashboard-configured
+Rolling Releases could extend mixed-version serving beyond the build, but that
+setting is unverifiable from the repository. Vercel documents that production
+traffic is switched by promotion/rollback at the routing layer rather than by
+rebuilding the old deployment ([rollback behavior](https://vercel.com/docs/deployments/rollback-production-deployment#2-roll-back-immediately)).
 
-### 4. Rollback runbook step 3 (PITR/snapshot restore) omits write-loss and webhook-state reconciliation
+The expand/contract N-1 compatibility rule exists as constraint 3 in archived
+[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md#L76),
+but it was not carried into [migration-authoring.md](../dev/migration-authoring.md#L5),
+the durable review checklist. [deployment-procedure.md](../dev/deployment-procedure.md#L16)
+states that the old deployment remains up when migration/build fails, but does
+not ask authors to prove old-code compatibility after a successful migration
+and before promotion.
 
-[database-rollbacks.md](../dev/database-rollbacks.md#L16) is the project's only rollback runbook, and its sole remedy for old-code/new-schema incompatibility is "provider-level recovery such as PITR or snapshot restore" — with no warning that a restore rewinds every write since the restore point. Because migrations run in the buildCommand while Vercel instant-rollback reverts only code, the scenario is reachable on any bad deploy (drizzle is forward-only, [#L3](../dev/database-rollbacks.md#L3)). A restore silently loses `attempts`/`practice_sessions` and desynchronizes externally-fed state: already-acknowledged Stripe/Clerk webhooks are not redelivered, so `subscriptions` diverge until the once-daily reconcile cron ([vercel.json#L6](../../vercel.json#L6)); Clerk user sync has no reconciler at all (grep of `src/` and `app/` finds only Stripe reconcile jobs); and a rewound [`idempotency_keys`](../../db/schema.ts#L293) ledger no longer remembers billing side effects that already executed externally, so retries can re-execute them ([`stripe_events`](../../db/schema.ts#L210), [`clerk_events`](../../db/schema.ts#L228)). Archived [DEBT-060](../_archive/debt/debt-060-no-rollback-migrations.md#L16) settled fix-forward + PITR-as-last-resort and created this runbook, but never ruled on documenting PITR's write-loss consequences; its verification item "validate PITR/snapshot procedures with Neon" remains unchecked ([#L23](../_archive/debt/debt-060-no-rollback-migrations.md#L23)). Verifier caveat: that Vercel instant-rollback does not re-run the buildCommand is platform behavior not verifiable from the repo, but the runbook's own step 3 presupposes the old-code/new-schema state.
+Concrete failure shapes are:
+
+- a contracting CHECK, NOT NULL, or foreign-key change on a table still written
+  by old code can reject writes during the window (`23514`, `23502`, and `23503`
+  respectively);
+- a one-shot backfill such as [0018's `NOT EXISTS`
+  scan](../../db/migrations/0018_backfill-omitted-exam-attempts.sql#L37) cannot
+  see rows old code creates after the migration commits;
+- in the 0021-0025 Track A batch, the relevant exposure was not 0023/0024's
+  constraints (old code never wrote the new state table), but old code starting
+  or updating sessions only in `params_json` after
+  [0021's backfill](../../db/migrations/0021_flaky_domino.sql#L27), leaving the
+  relational source of truth absent or stale for the new deployment.
+
+[`vercel.test.ts`](../../vercel.test.ts#L10) pins only the command string. The
+rollback side has a dedicated runbook, but the authoring-side compatibility
+question is absent. Preconditions are narrow -- a contracting migration or
+one-shot backfill plus old-code writes in the serving window -- so this remains
+pattern debt rather than a demonstrated current data defect.
+
+### 4. The rollback runbook omits restore write-loss and external-state reconciliation
+
+[database-rollbacks.md](../dev/database-rollbacks.md#L10) is the dedicated
+database rollback runbook. Its last-resort step says to use PITR or snapshot
+restore when old code is incompatible with the migrated schema, but does not
+state the recovery-point loss or reconciliation work that follows. This path is
+reachable for a schema-bearing deployment whose migration committed and whose
+application build or runtime then requires an incompatible code rollback; it is
+not a consequence of every bad deploy.
+
+Neon's current Instant Restore documentation says restore is a complete
+overwrite, not a merge: all schema and data changes after the selected point are
+excluded. Neon preserves the pre-restore head in an automatic backup branch,
+but the target connection is cut over as part of restore; it is not a separate
+pre-cutover validation branch
+([Neon Instant Restore](https://neon.com/docs/introduction/branch-restore#overwrite-not-a-merge)).
+The runbook mentions none of this.
+
+A restore can therefore rewind application rows and local processing ledgers.
+For this repository:
+
+- Stripe and Clerk automatically retry failed webhook deliveries, not database
+  state that was later rewound after a successful response. Stripe supports
+  manual resend only within documented windows, and Clerk documents replay for
+  failed/missing messages
+  ([Stripe delivery behavior](https://docs.stripe.com/webhooks#event-delivery-behaviors),
+  [Clerk retry/replay](https://clerk.com/docs/guides/development/webhooks/overview#how-clerk-handles-delivery-issues)).
+- the daily Stripe reconciliation route
+  ([vercel.json](../../vercel.json#L4)) can reconstruct current customer and
+  subscription mappings for rows it can scan, but it is not a general replay of
+  every lost Stripe event;
+- Clerk has no bulk reconciler. Active users are lazily upserted on authenticated
+  requests ([clerk-auth-gateway.ts](../../src/adapters/gateways/clerk-auth-gateway.ts#L48)),
+  but post-restore `user.deleted` and other lost event effects still require an
+  explicit provider-to-database audit;
+- rewinding [`idempotency_keys`](../../db/schema.ts#L291),
+  [`stripe_events`](../../db/schema.ts#L208), or
+  [`clerk_events`](../../db/schema.ts#L226) removes local replay evidence.
+  Retried operations can re-enter execution, although deterministic Stripe
+  idempotency keys collapse some provider calls; duplicate-effect risk is
+  operation- and provider-retention-dependent, not automatic.
+
+Archived [DEBT-060](../_archive/debt/debt-060-no-rollback-migrations.md#L14)
+settled fix-forward plus PITR as last resort, but its Neon procedure validation
+remains unchecked ([line 23](../_archive/debt/debt-060-no-rollback-migrations.md#L23)).
 
 ## Impact
 
-Today: no wrong observable behavior — prod is hash-clean, dev's one drift instance (0027/0028) is repaired, and zero corrupt state exists. The cost is a cluster of silent-failure modes with one prior real occurrence (part 1's root cause fired in the 0027 incident) and no automatic detection on the targets that matter. Part 1 (P3): recurrence breaks dev and all Preview deployments with generic internal errors, detected only by manual deploy-target preflight or runtime breakage. Part 2 (P3): the same drift class on production deploys green and surfaces later, decoupled from the deploy that introduced it. Part 3 (P3): a future contracting migration or one-shot backfill can 23514 live writes or permanently lose rows for the duration of a build window, with nothing in the durable checklist prompting the author. Part 4 (P3): the documented incident procedure, followed as written, converts a code bug into silent data loss and billing/auth-state divergence. At scale (real traffic, more contributors, more clones), the multi-clone timestamp hazard and the build-window write volume both grow.
+The last recorded operational proof found no unexplained migration drift; this
+read-only audit did not re-query live databases. Part 1 is a latent silent-skip
+path that can break a shared Preview target and, under out-of-order merge
+timestamps, Production. Part 2 is the exact detection class exposed by the
+0027 incident: deploy-time migration can report success without proving applied
+content matches the checkout. Part 3 can reject or omit writes during a
+schema-bearing build window. Part 4 leaves an incident responder without the
+recovery-point-loss and reconciliation steps needed to use PITR safely. Each
+part remains P3: the blast radius can be serious, but each requires a migration
+or incident precondition and no current unexplained live drift is recorded.
 
 ## Proposed Resolution
 
-**Part 1 — Preview-migrate root cause:**
-1. **(RECOMMENDED)** Scope migration execution by environment: replace the flat buildCommand with a small wrapper (e.g. `scripts/vercel-build.ts`) that runs `pnpm db:migrate` only when `VERCEL_ENV=production` or `VERCEL_GIT_COMMIT_REF` is `main`/`dev`, and plain `pnpm build` otherwise. Preserves BUG-241's fail-closed auto-migrate on the branches that own each database while ending unmerged-branch pollution of the shared dev ledger.
-2. Automate the existing guard for the shared dev target — a scheduled or post-deploy job (Vercel cron or GitHub Actions with the Preview-scope `DATABASE_URL`) running `verifyMigrationLedger` so drift fails loudly without a manual preflight.
-3. Add a cheap CI unit test asserting `db/migrations/meta/_journal.json` `entries[].when` is strictly increasing with `idx`, blocking out-of-order timestamps from stale second-clone worktrees (mitigates silent-skip, not the orphaned-branch-row mode).
+**Part 1 -- shared Preview migration authority:**
 
-**Part 2 — deploy-time ledger check:**
-- **A (RECOMMENDED):** Extract the DEBT-442 drift logic (`computeMissingMigrations` + `computeMigrationContentDrift` + allowlist) from `tests/e2e` into a shared script (e.g. `scripts/verify-migration-ledger.ts`) and run it in the buildCommand between `pnpm db:migrate` and `pnpm build` — content-drifted or silently-skipped migrations fail the deploy loudly and secret-free, reusing the single existing seam per DEBT-442's design rule.
-- **B:** Run the same shared check as a scheduled GitHub Actions job against the dev and prod Neon `DATABASE_URL`s (read-only, secret-free output), catching drift within a day.
-- **C:** Accept-and-document — an explicit owner ruling that deploy-path ledger verification is out of scope given append-only migration discipline.
+1. **Recommended:** give schema-bearing Preview deployments isolated database
+   branches and let each Preview migrate its own branch. Neon's Vercel
+   integration supports a branch per Preview deployment
+   ([Neon preview-branch integration](https://neon.com/blog/neon-vercel-native-integration)).
+   This preserves BUG-241's migrate-before-build contract and keeps feature
+   previews functional without polluting a shared ledger.
+2. If the shared Preview database is retained, designate an explicit migration
+   authority (for example, `dev`) and fail a feature Preview that introduces a
+   migration unless it has a branch-specific database. Do not merely skip
+   migration and serve schema-dependent code against the old shared schema.
+3. Add a CI test requiring `_journal.json` `entries[].when` to be unique and
+   strictly increasing by `idx`. This blocks an out-of-order checked-in journal,
+   but does not by itself detect a ledger-only row left by an unmerged Preview;
+   the exact target-ledger check in part 2 is still required.
 
-**Part 3 — authoring checklist:**
-1. **(RECOMMENDED)** Add a "Deployed-Code Compatibility" section to `docs/dev/migration-authoring.md` (the DEBT-430 mechanism for lock scope): every migration PR must answer "is this schema compatible with the code currently serving production for the duration of the build?"; mandate expand/contract splits for contracting changes; flag one-shot backfills whose scan can be outrun by old-code writes (0018 as the documented caution). Promote archived BUG-241 constraint #3 into this section.
-2. Add one sentence to `docs/dev/deployment-procedure.md` naming the build window, cross-linking the new section and `database-rollbacks.md`.
-3. (Optional, heavier) Prefer re-runnable/idempotent post-cutover backfills (or a follow-up sweep migration like 0026) over scan-once statements in the pre-serve migration transaction.
+**Part 2 -- deploy-target ledger check:**
 
-**Part 4 — rollback runbook:**
-1. **(RECOMMENDED)** Amend `database-rollbacks.md` step 3 with an explicit write-loss warning and a post-restore reconciliation checklist: enumerate at-risk tables (`attempts`, `practice_sessions`, `subscriptions`, `stripe_events`, `clerk_events`, `idempotency_keys`); state that Stripe/Clerk do not redeliver acknowledged webhooks; require triggering `/api/cron/reconcile-stripe-subscriptions` immediately after any restore; note Clerk user-sync has no reconciler (manual Svix resend or user audit); flag that a rewound `idempotency_keys` ledger makes billing retries unsafe until audited; note Neon PITR restores to a new branch, enabling a diff of lost writes before cutover.
-2. Add the expand/contract compatibility rule to the runbook so step 3 becomes nearly unreachable.
-3. Close DEBT-060's unchecked item by validating and documenting the Neon branch-restore procedure end-to-end.
+1. **Recommended:** extract the DEBT-442 helpers and allowlist from `tests/e2e`
+   into one shared, thin CLI used by both E2E and deploys. Before migration,
+   reject applied-row hash mismatches and ledger-only rows without treating
+   expected pending journal entries as failure. Run `pnpm db:migrate`, then run
+   the exact missing-row plus content check before `pnpm build`. This prevents a
+   known-drift target from being mutated further and proves the post-migrate
+   ledger exactly matches the checkout.
+2. A scheduled read-only job against persistent dev and prod targets is useful
+   defense in depth, but it detects drift after a deployment window and is not a
+   substitute for the build-path check.
+3. Accept-and-document remains an owner option only if append-only migration
+   discipline and manual target checks are explicitly judged sufficient.
+
+**Part 3 -- authoring checklist:**
+
+1. Add a "Deployed-Code Compatibility" section to
+   `docs/dev/migration-authoring.md`: every migration PR must answer whether the
+   migrated schema remains compatible with the currently serving code until
+   promotion; contracting changes require expand/contract; one-shot backfills
+   must account for old-code writes that can arrive after the scan.
+2. Cross-link that rule from `docs/dev/deployment-procedure.md` and the rollback
+   runbook.
+3. Prefer re-runnable, bounded post-cutover backfills or a deliberate follow-up
+   sweep when a one-shot pre-build scan cannot close the write window.
+
+**Part 4 -- rollback runbook:**
+
+1. Add an explicit Recovery Point Objective warning: Neon Instant Restore
+   overwrites the target and excludes all changes after the chosen point. Require
+   Time Travel Assist before restore and preserve/use the automatic backup branch
+   to diff and reconcile post-point writes after restore.
+2. Add a reconciliation checklist covering, at minimum, user/practice/attempt
+   rows, Stripe subscription/customer state, webhook ledgers, pending
+   cancellations, and idempotency keys. Run and review the Stripe reconciler,
+   use provider event history/manual resend where retained and supported, audit
+   Clerk users/deletions against the provider, and hold unsafe billing retries
+   until local/provider idempotency state is understood.
+3. Validate this procedure on a non-production Neon branch and close DEBT-060's
+   unchecked provider-validation item with an evidence-backed walkthrough.
 
 ## Verification
 
-- **Part 1:** A unit test on the build wrapper pinning migrate-vs-skip per `VERCEL_ENV`/`VERCEL_GIT_COMMIT_REF`; update `vercel.test.ts` to pin the new buildCommand; the journal-monotonicity unit test if option 3 ships; a Preview deploy log from a non-main branch showing no `db:migrate` step.
-- **Part 2:** The shared verifier script exists outside `tests/e2e` with the E2E preflight consuming the same module; a deploy (or scheduled-job run) log showing the ledger check executing against the deploy target and passing; a seeded-drift rehearsal showing it failing loudly and secret-free.
-- **Part 3:** `migration-authoring.md` contains the "Deployed-Code Compatibility" section with the expand/contract mandate and the 0018 caution; `deployment-procedure.md` names the build window; the next migration PR's review answers the compatibility question.
-- **Part 4:** `database-rollbacks.md` step 3 carries the write-loss warning and reconciliation checklist; DEBT-060's Neon PITR validation item is checked with a documented branch-restore walkthrough.
+- **Part 1:** a Preview with a new migration gets an isolated target and applies
+  it without changing the shared dev ledger; or, under the shared-target option,
+  the same Preview fails closed before build. A unit test pins the branch policy,
+  and a journal test rejects duplicate/non-increasing `when` values.
+- **Part 2:** E2E and deploy consume the same verifier module; a known applied
+  hash mismatch and ledger-only row fail before migration; a pending migration
+  applies; the exact post-migrate check passes; and messages contain tags/hash
+  prefixes but no URLs, hosts, credentials, or provider identifiers.
+- **Part 3:** the migration-authoring checklist contains the N-1 compatibility
+  question, error-code examples, expand/contract rule, and one-shot-backfill
+  caution; the next migration PR records its answer.
+- **Part 4:** the rollback runbook documents Neon's overwrite/backup-branch
+  semantics, RPO, and the operation-specific reconciliation checklist; a
+  non-production restore exercise records the before/after branch and
+  reconciliation evidence.
 
 ## Related
 
-- [DEBT-442](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md) (resolved 2026-07-09) — shipped the content-hash/ledger-drift detection this item wants executed on deploy targets; recorded the 0027/0028 incident that is part 1's prior occurrence.
-- [BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) — created the buildCommand auto-migrate and the expand/contract constraint #3 that part 3 promotes into the durable checklist.
-- [DEBT-060](../_archive/debt/debt-060-no-rollback-migrations.md) — settled fix-forward + PITR; its unchecked Neon-validation item is part 4's option 3.
-- Found during the 2026-07-09 DDIA-lens adversarial database-seam sweep (12 finder lenses, per-candidate adversarial verification, dedup against the full archived register).
+- [DEBT-442](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md)
+  (resolved 2026-07-09) -- shipped content-hash/ledger-drift detection and
+  recorded the 0027/0028 incident.
+- [BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md)
+  -- created the Build Command migration and the expand/contract constraint.
+- [DEBT-060](../_archive/debt/debt-060-no-rollback-migrations.md) -- settled
+  fix-forward plus PITR; provider-procedure validation remains unchecked.
+- Found during the 2026-07-09 DDIA-lens adversarial database-seam sweep (12
+  finder lenses, per-candidate adversarial verification, dedup against the full
+  archived register).
