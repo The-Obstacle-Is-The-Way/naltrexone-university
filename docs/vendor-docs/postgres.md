@@ -82,8 +82,9 @@ Create a `dev` branch in Neon Console. Branches are isolated and cheap.
 # Start local Postgres (per-clone dynamic host port — see docs/dev/integration-tests.md)
 pnpm db:test:up
 
-# Run with the resolved local connection
-DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
+# Prefix commands with the resolved local connection (a bare assignment
+# is not exported to child processes)
+DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" pnpm db:migrate
 ```
 
 ---
