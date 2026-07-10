@@ -8,6 +8,10 @@
 
 ---
 
+## Resolution State
+
+Implemented on branch `fix/bug-292-293-practice-session-races`; the bug remains Open pending PR review, merge, and production proof.
+
 ## Summary
 
 [`DrizzlePracticeSessionRepository.discard`](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L539-L567) runs both guarded DELETEs (child `practice_session_question_states` rows, then the parent `practice_sessions` row) inside a self-opened `{ isolationLevel: 'repeatable read' }` transaction with no try/catch, retry, or PostgreSQL-error mapping. The two composition-root REPEATABLE READ state-write workflows — finalize and session-backed submit — instead run through [`runPracticeSessionStateWriteTransaction`](../../lib/container/use-cases.ts#L79-L109), whose retryable set is exactly `'40001'`/`'40P01'` ([use-cases.ts#L47-L50](../../lib/container/use-cases.ts#L47-L50)). [DEBT-441's resolution](../_archive/debt/debt-441-updater-dead-stale-retry-paths-under-rr.md) documents that transaction-bound updater failures belong to that runner. [`DiscardPracticeSessionUseCase` is wired with a bare repository](../../lib/container/use-cases.ts#L157-L160), so its repository-owned RR write has no equivalent serialization-failure owner.

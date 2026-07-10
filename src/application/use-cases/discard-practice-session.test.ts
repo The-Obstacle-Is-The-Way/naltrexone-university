@@ -15,6 +15,12 @@ import { GetCompletedSessionQuestionsWithFeedbackUseCase } from './get-completed
 import { GetSessionHistoryUseCase } from './get-session-history';
 import { StartPracticeSessionUseCase } from './start-practice-session';
 
+function createDiscardPracticeSessionUseCase(
+  sessions: FakePracticeSessionRepository,
+): DiscardPracticeSessionUseCase {
+  return new DiscardPracticeSessionUseCase(async (fn) => fn(sessions));
+}
+
 describe('DiscardPracticeSessionUseCase', () => {
   it('removes the caller incomplete session and makes it non-reviewable', async () => {
     const userId = 'user-1';
@@ -52,7 +58,7 @@ describe('DiscardPracticeSessionUseCase', () => {
       }),
     ]);
 
-    await new DiscardPracticeSessionUseCase(sessions).execute({
+    await createDiscardPracticeSessionUseCase(sessions).execute({
       userId,
       sessionId,
     });
@@ -87,7 +93,7 @@ describe('DiscardPracticeSessionUseCase', () => {
 
   it('is idempotent when the session is missing or already discarded', async () => {
     const sessions = new FakePracticeSessionRepository([]);
-    const useCase = new DiscardPracticeSessionUseCase(sessions);
+    const useCase = createDiscardPracticeSessionUseCase(sessions);
 
     await expect(
       useCase.execute({ userId: 'user-1', sessionId: 'missing' }),
@@ -106,7 +112,7 @@ describe('DiscardPracticeSessionUseCase', () => {
     });
     const sessions = new FakePracticeSessionRepository([session]);
 
-    await new DiscardPracticeSessionUseCase(sessions).execute({
+    await createDiscardPracticeSessionUseCase(sessions).execute({
       userId: 'other-user',
       sessionId: 'session-1',
     });
@@ -126,7 +132,7 @@ describe('DiscardPracticeSessionUseCase', () => {
     });
     const sessions = new FakePracticeSessionRepository([session]);
 
-    await new DiscardPracticeSessionUseCase(sessions).execute({
+    await createDiscardPracticeSessionUseCase(sessions).execute({
       userId: 'user-1',
       sessionId: 'session-ended',
     });
@@ -147,7 +153,7 @@ describe('DiscardPracticeSessionUseCase', () => {
     ]);
 
     await expect(
-      new DiscardPracticeSessionUseCase(sessions).execute({
+      createDiscardPracticeSessionUseCase(sessions).execute({
         userId: 'user-1',
         sessionId: 'session-tutor',
       }),
@@ -181,7 +187,7 @@ describe('DiscardPracticeSessionUseCase', () => {
       }),
     ]);
 
-    await new DiscardPracticeSessionUseCase(sessions).execute({
+    await createDiscardPracticeSessionUseCase(sessions).execute({
       userId,
       sessionId: 'session-old',
     });

@@ -8,7 +8,10 @@ import {
   vi,
 } from 'vitest';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
@@ -144,6 +147,111 @@ function createPracticeSessionStateWriteFixture(mode: 'exam' | 'tutor') {
 }
 
 describe('container factories — practice session state write transactions', () => {
+  it.each([
+    '40001',
+    '40P01',
+  ] as const)('retries the complete discard transaction on %s with a fresh transaction handle', async (code) => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const transactionHandles: DrizzleDb[] = [];
+    const repositoryHandles: Array<DrizzleDb | undefined> = [];
+    const postgresFailure = { code };
+    const drizzleFailure = new Error('Failed query', {
+      cause: postgresFailure,
+    });
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      const tx = createUnexpectedNestedTransactionDb();
+      transactionHandles.push(tx);
+      const result = await fn(tx);
+      if (transactionHandles.length === 1) {
+        throw drizzleFailure;
+      }
+      return result;
+    });
+
+    const container = createContainer({
+      primitives: {
+        db: createTransactionOnlyDb(transaction),
+      },
+      repositories: {
+        createPracticeSessionRepository: (dbOverride) => {
+          repositoryHandles.push(dbOverride);
+          return fixture.sessions;
+        },
+      },
+    } satisfies ContainerOverrides);
+    const result = container.createDiscardPracticeSessionUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+
+    await vi.runAllTimersAsync();
+
+    await expect(result).resolves.toEqual({ discarded: true });
+    expect(transaction).toHaveBeenCalledTimes(2);
+    expect(transactionHandles).toHaveLength(2);
+    expect(transactionHandles[0]).not.toBe(transactionHandles[1]);
+    expect(repositoryHandles).toEqual(transactionHandles);
+    expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
+      isolationLevel: 'repeatable read',
+    });
+  });
+
+  it('maps exhausted discard serialization failures to a typed state-changed CONFLICT', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const postgresFailure = { code: '40001' };
+    const drizzleFailure = new Error('Failed query', {
+      cause: postgresFailure,
+    });
+    const transaction = vi.fn<TestTransaction>(async () => {
+      throw drizzleFailure;
+    });
+
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+    const result = container.createDiscardPracticeSessionUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+    const rejection = expect(result).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: {
+        reason: PracticeSessionConflictReasons.StateChangedConcurrently,
+      },
+      cause: drizzleFailure,
+    });
+
+    await vi.runAllTimersAsync();
+    await rejection;
+    expect(transaction).toHaveBeenCalledTimes(3);
+  });
+
+  it('passes through a non-retryable discard failure without replaying it', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const nonRetryableFailure = new Error('connection closed during commit');
+    const transaction = vi.fn<TestTransaction>(async () => {
+      throw nonRetryableFailure;
+    });
+
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+
+    await expect(
+      container.createDiscardPracticeSessionUseCase().execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+      }),
+    ).rejects.toBe(nonRetryableFailure);
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
   it('opens finalize exam write transactions at repeatable read isolation', async () => {
     const fixture = createPracticeSessionStateWriteFixture('exam');
     const tx = createUnexpectedNestedTransactionDb();
