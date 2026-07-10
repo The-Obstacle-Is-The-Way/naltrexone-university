@@ -161,6 +161,44 @@ describe('ensureClerkUser', () => {
     ]);
   });
 
+  it('fails closed when Clerk confirms the existing identity still owns the email', async () => {
+    const userRepository = new FakeUserRepository();
+    const logger = new FakeLogger();
+    await userRepository.upsertByClerkId('clerk_owner', 'reused@example.com');
+
+    await expect(
+      ensureClerkUser(
+        {
+          userRepository,
+          getClerkUserById: async () => ({
+            id: 'clerk_owner',
+            updatedAt: new Date('2026-02-02T00:00:00.000Z'),
+            emailAddresses: [{ emailAddress: 'reused@example.com' }],
+          }),
+          logger,
+        },
+        {
+          clerkUserId: 'clerk_incoming',
+          email: 'reused@example.com',
+          observedAt: new Date('2026-02-03T00:00:00.000Z'),
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { reason: 'user_email_owned_by_another_identity' },
+    });
+    expect(logger.warnCalls).toEqual([
+      {
+        context: {
+          existingClerkUserId: 'clerk_owner',
+          incomingClerkUserId: 'clerk_incoming',
+          resolution: 'blocked_existing_identity_still_owns_email',
+        },
+        msg: 'Blocked Clerk user email ownership conflict',
+      },
+    ]);
+  });
+
   it('fails closed when the stored owner email cannot be synchronized', async () => {
     const userRepository = new FakeUserRepository();
     const logger = new FakeLogger();
