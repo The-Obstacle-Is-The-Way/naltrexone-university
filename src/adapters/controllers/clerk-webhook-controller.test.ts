@@ -191,6 +191,22 @@ class TransactionalUserStore {
 
         return user;
       },
+      updateEmailByClerkId: async (
+        clerkId: string,
+        email: string,
+        options?: Parameters<FakeUserRepository['upsertByClerkId']>[2],
+      ) => {
+        const existing = readVisibleUser(clerkId);
+        if (!existing) return null;
+
+        const observedAt = options?.observedAt ?? new Date();
+        const user =
+          existing.updatedAt >= observedAt
+            ? existing
+            : { ...existing, email, updatedAt: observedAt };
+        stagedUsers.set(clerkId, user);
+        return user;
+      },
       deleteByClerkId: async (clerkId: string) => {
         const existing = readVisibleUser(clerkId);
         if (!existing) return false;
@@ -329,6 +345,7 @@ function createDeps() {
     cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
       cancelCalls.push(stripeCustomerId);
     },
+    getClerkUserById: async () => null,
     logger,
   };
 }
@@ -396,6 +413,68 @@ describe('processClerkWebhook', () => {
       deps.userRepository.findByClerkId('clerk_1'),
     ).resolves.toMatchObject({
       email: 'new@example.com',
+    });
+  });
+
+  it('fails closed without mutating either row when a tx-bound update claims another identity email', async () => {
+    const baseDeps = createDeps();
+    const originalOwner = await baseDeps.userRepository.upsertByClerkId(
+      'clerk_owner',
+      'held@example.com',
+      { observedAt: new Date('2026-02-01T00:00:00Z') },
+    );
+    const incomingOwner = await baseDeps.userRepository.upsertByClerkId(
+      'clerk_incoming',
+      'incoming@example.com',
+      { observedAt: new Date('2026-02-01T00:00:00Z') },
+    );
+    const deps = {
+      ...baseDeps,
+      getClerkUserById: async () => ({
+        id: 'clerk_owner',
+        updatedAt: 1769904004000,
+        emailAddresses: [{ emailAddress: 'owner-new@example.com' }],
+      }),
+    };
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: {
+              id: 'clerk_incoming',
+              primary_email_address_id: 'email_1',
+              updated_at: 1769904003000,
+              email_addresses: [
+                { id: 'email_1', email_address: 'held@example.com' },
+              ],
+            },
+          },
+          'evt_user_updated_email_owner_conflict',
+        ),
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      existingClerkUserId: 'clerk_owner',
+      details: {
+        reason: 'user_email_owned_by_another_identity',
+      },
+    });
+    await expect(
+      deps.userRepository.findByClerkId('clerk_owner'),
+    ).resolves.toEqual(originalOwner);
+    await expect(
+      deps.userRepository.findByClerkId('clerk_incoming'),
+    ).resolves.toEqual(incomingOwner);
+    expect(deps.logger.warnCalls).toContainEqual({
+      context: {
+        existingClerkUserId: 'clerk_owner',
+        incomingClerkUserId: 'clerk_incoming',
+        resolution: 'blocked_incoming_identity_already_exists',
+      },
+      msg: 'Blocked Clerk user email ownership conflict',
     });
   });
 
@@ -562,6 +641,7 @@ describe('processClerkWebhook', () => {
       cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
         cancelCalls.push(stripeCustomerId);
       },
+      getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
 
@@ -705,6 +785,7 @@ describe('processClerkWebhook', () => {
       cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
         cancelCalls.push(stripeCustomerId);
       },
+      getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
 
@@ -860,6 +941,7 @@ describe('processClerkWebhook', () => {
           stripeCustomerRepository,
         }),
       cancelStripeCustomerSubscriptions: async () => undefined,
+      getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
 
@@ -942,6 +1024,7 @@ describe('processClerkWebhook', () => {
         return result;
       },
       cancelStripeCustomerSubscriptions: async () => undefined,
+      getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
 
@@ -993,6 +1076,7 @@ describe('processClerkWebhook', () => {
       new FakePendingStripeCancellationRepository();
     const userRepository = new ThrowingUserRepository(rawError);
     const stripeCustomerRepository = new FakeStripeCustomerRepository();
+    let transactionCount = 0;
 
     const deps = {
       clerkEvents,
@@ -1008,15 +1092,18 @@ describe('processClerkWebhook', () => {
           userRepository: ThrowingUserRepository;
           stripeCustomerRepository: FakeStripeCustomerRepository;
         }) => Promise<T>,
-      ) =>
-        fn({
+      ) => {
+        transactionCount += 1;
+        return fn({
           clerkEvents,
           deletedClerkUsers,
           pendingStripeCancellations,
           userRepository,
           stripeCustomerRepository,
-        }),
+        });
+      },
       cancelStripeCustomerSubscriptions: async () => undefined,
+      getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
 
@@ -1054,6 +1141,7 @@ describe('processClerkWebhook', () => {
     };
     expect(parsedError.message).toBe('Unknown error');
     expect(parsedError.raw).toBe(`${'x'.repeat(1000)}...`);
+    expect(transactionCount).toBe(2);
   });
 
   it('rejects user.updated when the payload is missing email addresses', async () => {

@@ -1,6 +1,7 @@
 import {
   ClerkAuthGateway,
   type ClerkUserLike,
+  type ClerkUserLookup,
   DrizzleRateLimiter,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
@@ -16,14 +17,23 @@ export function createGatewayFactories(input: {
   repositories: RepositoryFactories;
   stripePriceIds: StripePriceIds;
   getClerkUser: () => Promise<ClerkUserLike | null>;
+  getClerkUserById: ClerkUserLookup;
 }): GatewayFactories {
-  const { primitives, repositories, getClerkUser, stripePriceIds } = input;
+  const {
+    primitives,
+    repositories,
+    getClerkUser,
+    getClerkUserById,
+    stripePriceIds,
+  } = input;
 
   return {
     createAuthGateway: () =>
       new ClerkAuthGateway({
         userRepository: repositories.createUserRepository(),
         getClerkUser,
+        getClerkUserById,
+        logger: primitives.logger,
       }),
     createPaymentGateway: () =>
       new StripePaymentGateway({

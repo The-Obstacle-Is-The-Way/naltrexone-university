@@ -1,11 +1,16 @@
 import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import * as schema from '@/db/schema';
+import { ClerkAuthGateway } from '@/src/adapters/gateways/clerk-auth-gateway';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   cleanupAfterEach,
   closeConnection,
   createCleanupState,
   createIntegrationDb,
+  createQuestion,
 } from './helpers';
 
 const { db, sql } = createIntegrationDb();
@@ -161,7 +166,7 @@ describe('DrizzleUserRepository', () => {
     });
   });
 
-  it('updates clerkUserId when a different clerkId arrives for the same email', async () => {
+  it('rejects a different Clerk identity for an existing email without reassigning the row', async () => {
     const firstObservedAt = new Date('2026-02-01T00:00:00.000Z');
     const secondObservedAt = new Date('2026-02-01T00:00:01.000Z');
     const repo = new DrizzleUserRepository(
@@ -175,23 +180,23 @@ describe('DrizzleUserRepository', () => {
     const first = await repo.upsertByClerkId(clerkId1, email);
     cleanup.userIds.push(first.id);
 
-    const second = await repo.upsertByClerkId(clerkId2, email);
+    await expect(repo.upsertByClerkId(clerkId2, email)).rejects.toMatchObject({
+      code: 'CONFLICT',
+      existingClerkUserId: clerkId1,
+      details: {
+        reason: 'user_email_owned_by_another_identity',
+      },
+    });
 
-    expect(second).toMatchObject({
+    await expect(repo.findByClerkId(clerkId1)).resolves.toMatchObject({
       id: first.id,
       email,
       createdAt: firstObservedAt,
-      updatedAt: secondObservedAt,
     });
-
-    await expect(repo.findByClerkId(clerkId2)).resolves.toMatchObject({
-      id: first.id,
-      email,
-    });
-    await expect(repo.findByClerkId(clerkId1)).resolves.toBeNull();
+    await expect(repo.findByClerkId(clerkId2)).resolves.toBeNull();
   });
 
-  it('preserves existing clerkUserId when stale observedAt arrives during email conflict', async () => {
+  it('rejects stale cross-identity observations instead of returning the existing identity', async () => {
     const repo = new DrizzleUserRepository(db);
     const email = `it-${randomUUID()}@example.com`;
     const clerkId1 = `user_${randomUUID().replaceAll('-', '')}`;
@@ -204,15 +209,13 @@ describe('DrizzleUserRepository', () => {
     });
     cleanup.userIds.push(first.id);
 
-    const stale = await repo.upsertByClerkId(clerkId2, email, {
-      observedAt: t1,
-    });
-
-    expect(stale).toMatchObject({
-      id: first.id,
-      email,
-      createdAt: t2,
-      updatedAt: t2,
+    await expect(
+      repo.upsertByClerkId(clerkId2, email, {
+        observedAt: t1,
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      existingClerkUserId: clerkId1,
     });
 
     await expect(repo.findByClerkId(clerkId1)).resolves.toMatchObject({
@@ -220,6 +223,154 @@ describe('DrizzleUserRepository', () => {
       email,
     });
     await expect(repo.findByClerkId(clerkId2)).resolves.toBeNull();
+  });
+
+  it('keeps an outer transaction usable after classifying an email conflict', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const email = `it-${randomUUID()}@example.com`;
+    const existingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const incomingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const existing = await repo.upsertByClerkId(existingClerkId, email);
+    const incoming = await repo.upsertByClerkId(
+      incomingClerkId,
+      `it-${randomUUID()}@example.com`,
+    );
+    cleanup.userIds.push(existing.id);
+    cleanup.userIds.push(incoming.id);
+
+    await db.transaction(async (tx) => {
+      const txRepo = new DrizzleUserRepository(tx);
+      let caught: unknown;
+
+      try {
+        await txRepo.upsertByClerkId(incomingClerkId, email);
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toMatchObject({
+        code: 'CONFLICT',
+        existingClerkUserId: existingClerkId,
+        details: {
+          reason: 'user_email_owned_by_another_identity',
+        },
+      });
+      await expect(
+        txRepo.findByClerkId(existingClerkId),
+      ).resolves.toMatchObject({
+        id: existing.id,
+        email,
+      });
+      await expect(
+        txRepo.findByClerkId(incomingClerkId),
+      ).resolves.toMatchObject({
+        id: incoming.id,
+        email: incoming.email,
+      });
+    });
+  });
+
+  it('synchronizes a moved owner before creating a distinct incoming identity on the raw-db path', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const logger = new FakeLogger();
+    const reusedEmail = `it-${randomUUID()}@example.com`;
+    const movedEmail = `it-${randomUUID()}@example.com`;
+    const existingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const incomingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const t1 = new Date('2026-02-01T00:00:00.000Z');
+    const t2 = new Date('2026-02-01T01:00:00.000Z');
+    const t3 = new Date('2026-02-01T02:00:00.000Z');
+    const existing = await repo.upsertByClerkId(existingClerkId, reusedEmail, {
+      observedAt: t1,
+    });
+    cleanup.userIds.push(existing.id);
+    const question = await createQuestion(db, cleanup, {
+      slug: `bug-284-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'medium',
+    });
+    await db.insert(schema.stripeCustomers).values({
+      userId: existing.id,
+      stripeCustomerId: `cus_${randomUUID().replaceAll('-', '')}`,
+    });
+    await db.insert(schema.stripeSubscriptions).values({
+      userId: existing.id,
+      stripeSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
+      status: 'active',
+      priceId: 'price_bug_284',
+      currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+    });
+    await db.insert(schema.bookmarks).values({
+      userId: existing.id,
+      questionId: question.id,
+    });
+    await db.insert(schema.attempts).values({
+      userId: existing.id,
+      questionId: question.id,
+      selectedChoiceId: question.correctChoiceId,
+      isCorrect: true,
+    });
+    const deps = {
+      userRepository: repo,
+      logger,
+      getClerkUser: async () => ({
+        id: incomingClerkId,
+        updatedAt: t3.getTime(),
+        emailAddresses: [{ emailAddress: reusedEmail }],
+      }),
+      getClerkUserById: async (clerkUserId: string) =>
+        clerkUserId === existingClerkId
+          ? {
+              id: existingClerkId,
+              updatedAt: t2.getTime(),
+              emailAddresses: [{ emailAddress: movedEmail }],
+            }
+          : null,
+    };
+    const gateway = new ClerkAuthGateway(deps);
+
+    const incoming = await gateway.requireUser();
+    cleanup.userIds.push(incoming.id);
+
+    expect(incoming.id).not.toBe(existing.id);
+    await expect(repo.findByClerkId(existingClerkId)).resolves.toMatchObject({
+      id: existing.id,
+      email: movedEmail,
+    });
+    await expect(repo.findByClerkId(incomingClerkId)).resolves.toMatchObject({
+      id: incoming.id,
+      email: reusedEmail,
+    });
+    await expect(
+      db.query.stripeCustomers.findFirst({
+        where: eq(schema.stripeCustomers.userId, existing.id),
+      }),
+    ).resolves.toMatchObject({ userId: existing.id });
+    await expect(
+      db.query.stripeSubscriptions.findFirst({
+        where: eq(schema.stripeSubscriptions.userId, existing.id),
+      }),
+    ).resolves.toMatchObject({ userId: existing.id });
+    await expect(
+      db.query.bookmarks.findFirst({
+        where: eq(schema.bookmarks.userId, existing.id),
+      }),
+    ).resolves.toMatchObject({ userId: existing.id });
+    await expect(
+      db.query.attempts.findFirst({
+        where: eq(schema.attempts.userId, existing.id),
+      }),
+    ).resolves.toMatchObject({ userId: existing.id });
+    expect(logger.infoCalls).toEqual([
+      {
+        context: {
+          existingClerkUserId: existingClerkId,
+          incomingClerkUserId: incomingClerkId,
+          resolution: 'existing_identity_email_synchronized',
+        },
+        msg: 'Resolved Clerk user email ownership conflict',
+      },
+    ]);
   });
 
   it('deletes by clerk id and returns false when missing', async () => {

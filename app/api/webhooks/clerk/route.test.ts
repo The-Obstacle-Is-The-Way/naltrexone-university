@@ -57,6 +57,7 @@ function createTestDeps() {
       },
     },
     createRateLimiter: () => rateLimiter,
+    getClerkUserById: async () => null,
     transaction,
   }));
 

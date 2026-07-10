@@ -1,5 +1,9 @@
 // WHY large-file: this adapter controller keeps Clerk webhook validation, idempotency, tombstone, and Stripe-cancellation coordination in one transactional boundary.
 import { z } from 'zod';
+import {
+  type ClerkUserLookup,
+  ensureClerkUser,
+} from '@/src/adapters/gateways/clerk-user-provisioner';
 import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
@@ -32,6 +36,7 @@ export type ClerkWebhookDeps = {
   cancelStripeCustomerSubscriptions: (
     stripeCustomerId: string,
   ) => Promise<void>;
+  getClerkUserById: ClerkUserLookup;
   logger: Logger;
 };
 
@@ -282,9 +287,18 @@ export async function processClerkWebhook(
           const observedAt =
             observedAtMs === null ? null : new Date(observedAtMs);
 
-          await userRepository.upsertByClerkId(clerkUserId, email, {
-            observedAt: observedAt ?? new Date(),
-          });
+          await ensureClerkUser(
+            {
+              userRepository,
+              getClerkUserById: deps.getClerkUserById,
+              logger: deps.logger,
+            },
+            {
+              clerkUserId,
+              email,
+              observedAt: observedAt ?? new Date(),
+            },
+          );
 
           // A delete can commit between the pre-check above and the upsert under
           // READ COMMITTED. Re-check tombstone state before committing the update.

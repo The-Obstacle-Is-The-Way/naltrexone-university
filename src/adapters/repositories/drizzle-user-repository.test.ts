@@ -28,7 +28,7 @@ function createDbMock() {
   const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
   const deleteFn = vi.fn(() => ({ where: deleteWhere }));
 
-  return {
+  const db = {
     query: {
       users: {
         findFirst: queryFindFirst,
@@ -37,6 +37,14 @@ function createDbMock() {
     insert,
     update: updateFn,
     delete: deleteFn,
+  } as const;
+  const transaction = vi.fn(
+    async <T>(fn: (tx: typeof db) => Promise<T>): Promise<T> => fn(db),
+  );
+
+  return {
+    ...db,
+    transaction,
     _mocks: {
       queryFindFirst,
       insertReturning,
@@ -49,6 +57,7 @@ function createDbMock() {
       deleteReturning,
       deleteWhere,
       deleteFn,
+      transaction,
     },
   } as const;
 }
@@ -162,6 +171,7 @@ describe('DrizzleUserRepository', () => {
         createdAt: now,
         updatedAt: now,
       });
+      expect(db._mocks.transaction).toHaveBeenCalledTimes(1);
     });
 
     it('uses observedAt for createdAt/updatedAt on insert values', async () => {
@@ -229,7 +239,7 @@ describe('DrizzleUserRepository', () => {
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
     });
 
-    it('returns updated user when users_email_uq conflict occurs', async () => {
+    it('returns a typed non-mutating conflict when another Clerk identity owns the email', async () => {
       const observedAt = new Date('2026-02-01T00:30:00Z');
       const db = createDbMock();
       const row = {
@@ -242,45 +252,49 @@ describe('DrizzleUserRepository', () => {
         code: '23505',
         constraint: 'users_email_uq',
       });
+      db._mocks.queryFindFirst.mockResolvedValue({
+        clerkUserId: 'clerk_1',
+      });
       db._mocks.updateReturning.mockResolvedValue([row]);
 
       const repo = new DrizzleUserRepository(db as unknown as RepoDb);
 
-      await expect(
-        repo.upsertByClerkId('clerk_2', 'a@example.com', { observedAt }),
-      ).resolves.toEqual({
-        id: row.id,
-        email: row.email,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
+      const promise = repo.upsertByClerkId('clerk_2', 'a@example.com', {
+        observedAt,
       });
 
-      expect(db._mocks.updateFn).toHaveBeenCalledTimes(1);
-      expect(db._mocks.updateSet).toHaveBeenCalledWith(
-        expect.objectContaining({
-          clerkUserId: expect.anything(),
-          updatedAt: expect.anything(),
-        }),
-      );
-      expect(db._mocks.updateWhere).toHaveBeenCalledTimes(1);
+      await expect(promise).rejects.toMatchObject({
+        code: 'CONFLICT',
+        existingClerkUserId: 'clerk_1',
+        details: {
+          reason: 'user_email_owned_by_another_identity',
+        },
+      });
+      expect(db._mocks.updateFn).not.toHaveBeenCalled();
     });
 
-    it('maps fallback update errors to ApplicationError when email-conflict update fails', async () => {
+    it('reports the current email owner when the incoming identity already owns another row', async () => {
       const db = createDbMock();
       db._mocks.insertReturning.mockRejectedValue({
         code: '23505',
         constraint: 'users_email_uq',
       });
-      db._mocks.updateReturning.mockRejectedValue({
-        code: '23505',
-        constraint: 'users_clerk_user_id_uq',
+      db._mocks.queryFindFirst.mockResolvedValue({
+        clerkUserId: 'clerk_1',
       });
 
       const repo = new DrizzleUserRepository(db as unknown as RepoDb);
 
       const promise = repo.upsertByClerkId('clerk_2', 'a@example.com');
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
+      await expect(promise).rejects.toMatchObject({
+        code: 'CONFLICT',
+        existingClerkUserId: 'clerk_1',
+        details: {
+          reason: 'user_email_owned_by_another_identity',
+        },
+      });
+      expect(db._mocks.updateFn).not.toHaveBeenCalled();
     });
   });
 

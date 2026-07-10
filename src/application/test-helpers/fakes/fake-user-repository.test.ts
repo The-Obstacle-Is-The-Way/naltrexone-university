@@ -53,21 +53,27 @@ describe('FakeUserRepository', () => {
       expect(second.email).toBe('new@example.com');
     });
 
-    it('migrates clerkUserId when different clerkId arrives for existing email', async () => {
+    it('rejects a different Clerk identity for an existing email without mutating either identity', async () => {
       const repo = new FakeUserRepository();
 
       const first = await repo.upsertByClerkId('clerk-1', 'user@example.com');
-      const second = await repo.upsertByClerkId('clerk-2', 'user@example.com');
-
-      expect(second.id).toBe(first.id);
-      expect(second.email).toBe('user@example.com');
-      await expect(repo.findByClerkId('clerk-2')).resolves.toMatchObject({
-        id: first.id,
+      await expect(
+        repo.upsertByClerkId('clerk-2', 'user@example.com'),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        existingClerkUserId: 'clerk-1',
+        details: {
+          reason: 'user_email_owned_by_another_identity',
+        },
       });
-      await expect(repo.findByClerkId('clerk-1')).resolves.toBeNull();
+      await expect(repo.findByClerkId('clerk-1')).resolves.toMatchObject({
+        id: first.id,
+        email: 'user@example.com',
+      });
+      await expect(repo.findByClerkId('clerk-2')).resolves.toBeNull();
     });
 
-    it('preserves clerkUserId when stale observedAt arrives for email conflict', async () => {
+    it('rejects stale cross-identity observations instead of returning the other identity', async () => {
       const repo = new FakeUserRepository();
       const t2 = new Date('2026-02-01T02:00:00.000Z');
       const t1 = new Date('2026-02-01T01:00:00.000Z');
@@ -75,11 +81,14 @@ describe('FakeUserRepository', () => {
       const first = await repo.upsertByClerkId('clerk-1', 'user@example.com', {
         observedAt: t2,
       });
-      const stale = await repo.upsertByClerkId('clerk-2', 'user@example.com', {
-        observedAt: t1,
+      await expect(
+        repo.upsertByClerkId('clerk-2', 'user@example.com', {
+          observedAt: t1,
+        }),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        existingClerkUserId: 'clerk-1',
       });
-
-      expect(stale.id).toBe(first.id);
       await expect(repo.findByClerkId('clerk-1')).resolves.toMatchObject({
         id: first.id,
       });
@@ -102,7 +111,10 @@ describe('FakeUserRepository', () => {
         repo.upsertByClerkId('clerk-2', 'a@example.com', { observedAt: t2 }),
       ).rejects.toMatchObject({
         code: 'CONFLICT',
-        message: 'User could not be upserted due to a uniqueness constraint',
+        existingClerkUserId: 'clerk-1',
+        details: {
+          reason: 'user_email_owned_by_another_identity',
+        },
       });
 
       await expect(repo.findByClerkId('clerk-1')).resolves.toMatchObject({
@@ -113,6 +125,32 @@ describe('FakeUserRepository', () => {
         id: userB.id,
         email: 'b@example.com',
       });
+    });
+
+    it('synchronizes an existing identity email without inserting a missing identity', async () => {
+      const repo = new FakeUserRepository();
+      const t1 = new Date('2026-02-01T01:00:00.000Z');
+      const t2 = new Date('2026-02-01T02:00:00.000Z');
+      const original = await repo.upsertByClerkId(
+        'clerk-1',
+        'old@example.com',
+        { observedAt: t1 },
+      );
+
+      await expect(
+        repo.updateEmailByClerkId('clerk-1', 'new@example.com', {
+          observedAt: t2,
+        }),
+      ).resolves.toMatchObject({
+        id: original.id,
+        email: 'new@example.com',
+        updatedAt: t2,
+      });
+      await expect(
+        repo.updateEmailByClerkId('clerk-missing', 'new@example.com', {
+          observedAt: t2,
+        }),
+      ).resolves.toBeNull();
     });
   });
 

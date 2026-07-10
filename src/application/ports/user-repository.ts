@@ -29,6 +29,7 @@ export interface UserRepository {
    * - If user doesn't exist, creates a new user row.
    * - If user exists with same email, returns existing user.
    * - If user exists with different email, updates the email.
+   * - If another Clerk identity owns the email, fails with a typed conflict.
    *
    * This handles race conditions with ON CONFLICT gracefully.
    */
@@ -37,6 +38,17 @@ export interface UserRepository {
     email: string,
     options?: UpsertUserByClerkIdOptions,
   ): Promise<User>;
+
+  /**
+   * Synchronize an existing Clerk identity's email without creating a row.
+   *
+   * Returns null when the Clerk identity is not present locally.
+   */
+  updateEmailByClerkId(
+    clerkId: string,
+    email: string,
+    options?: UpsertUserByClerkIdOptions,
+  ): Promise<User | null>;
 
   /**
    * Delete a user by their external Clerk ID.
