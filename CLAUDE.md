@@ -82,25 +82,19 @@ pnpm build                  # Production build
 
 ### Integration Test DB (Local Only)
 
-Integration tests require a local Postgres container with migrations **and** seed data. All steps are mandatory:
-
-```bash
-pnpm db:test:up                                    # Start Docker Postgres (port 5434)
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate
-DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:seed
-pnpm test:integration                              # Now tests will pass
-```
+Integration tests require a local Postgres container with migrations **and** seed data. The test DB uses a **per-clone dynamic host port** (resolved by `scripts/resolve-local-test-target.ts`) — never hardcode a port. Canonical guide: `docs/dev/integration-tests.md`.
 
 ```bash
 # One-liner: local setup from scratch (matches CI order)
-pnpm db:test:up && DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="postgresql://postgres:postgres@localhost:5434/addiction_boards_test" pnpm db:seed && pnpm test:integration
+TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
 ```
 
+- **Never hardcode `localhost:5434`** — that is only a raw-invocation fallback (`docker-compose.yml`'s `${DB_TEST_PORT:-5434}` mapping and `.env.test`'s matching no-override URL); the wrappers override both per clone. A wrong port fails *silently*: drizzle-kit swallows the connection error and exits 1 with no message, then `pnpm test:integration` fails en masse on missing tables. Inspect the real target with `pnpm local:test:target` (formats: `json`, `database-url`, `app-url`, `env`).
 - **Never use `drizzle-kit push`** — it skips migration files (missing `pgcrypto`, constraints)
-- **Always prefix with `DATABASE_URL=...`** — without it, drizzle-kit reads `.env.local` (remote Neon DB)
+- **Always prefix with the resolved `DATABASE_URL=...`** — without it, drizzle-kit reads `.env.local` (remote Neon DB)
 - **Seeding is required** — `tag-taxonomy-census` tests fail without it
 - **CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`** — plain `pnpm db:seed` is enough locally, but the flag gives exact CI seed parity
-- Only needed for `pnpm test:integration`. Unit/browser/build tests don't touch the DB.
+- Only needed for `pnpm test:integration` (it self-resolves the target when `DATABASE_URL` is unset, but migrate/seed prep is manual). `pnpm test:e2e` is hermetic — it starts, migrates, and seeds the same per-clone DB itself. Unit/browser/build tests don't touch the DB.
 
 ### ⚠️ Full Quality Gate (BEFORE EVERY PUSH — not just PRs)
 
