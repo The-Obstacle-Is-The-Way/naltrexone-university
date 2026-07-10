@@ -155,8 +155,10 @@ export function createUseCaseFactories(input: {
         repositories.createQuestionRepository(),
       ),
     createDiscardPracticeSessionUseCase: () =>
-      new DiscardPracticeSessionUseCase(
-        repositories.createPracticeSessionRepository(),
+      new DiscardPracticeSessionUseCase(async (fn) =>
+        runPracticeSessionStateWriteTransaction(primitives, async (tx) =>
+          fn(repositories.createPracticeSessionRepository(tx)),
+        ),
       ),
     createEndPracticeSessionUseCase: () =>
       new EndPracticeSessionUseCase(

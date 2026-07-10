@@ -567,16 +567,21 @@ export class DrizzlePracticeSessionRepository
   }
 
   async end(id: string, userId: string, explicitEndedAt?: Date) {
-    const existingRow = await this.findRowByIdAndUserId(this.db, id, userId);
-    if (!existingRow) {
-      throw new ApplicationError('NOT_FOUND', 'Practice session not found');
-    }
+    const existingSession = await this.inRepeatableRead(async (db) => {
+      const existingRow = await this.findRowByIdAndUserId(db, id, userId);
+      if (!existingRow) {
+        throw new ApplicationError('NOT_FOUND', 'Practice session not found');
+      }
 
-    if (existingRow.endedAt) {
-      throw new ApplicationError('CONFLICT', 'Practice session already ended');
-    }
+      if (existingRow.endedAt) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Practice session already ended',
+        );
+      }
 
-    const existingSession = await this.toDomainFromRow(this.db, existingRow);
+      return this.toDomainFromRow(db, existingRow);
+    });
     const endedAt = explicitEndedAt ?? this.now();
     const [updated] = await this.db
       .update(practiceSessions)
