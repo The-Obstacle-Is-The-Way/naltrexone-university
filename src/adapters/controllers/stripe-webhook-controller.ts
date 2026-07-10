@@ -40,6 +40,13 @@ type StripeWebhookEvent = Awaited<
 const STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
 const STRIPE_EVENTS_PRUNE_LIMIT = 100;
 
+function isSuccessfullyProcessed(event: {
+  processedAt: Date | null;
+  error: string | null;
+}): boolean {
+  return event.processedAt !== null && event.error === null;
+}
+
 function toErrorData(error: unknown): string {
   if (isApplicationError(error)) {
     return JSON.stringify({
@@ -74,7 +81,7 @@ async function persistFailure(
       await stripeEvents.claim(event.eventId, event.type);
       const current = await stripeEvents.lock(event.eventId);
 
-      if (current.processedAt !== null && current.error === null) {
+      if (isSuccessfullyProcessed(current)) {
         return;
       }
 
@@ -141,17 +148,13 @@ export async function processStripeWebhook(
         const claimed = await stripeEvents.claim(event.eventId, event.type);
         if (!claimed) {
           const snapshot = await stripeEvents.peek(event.eventId);
-          if (
-            snapshot &&
-            snapshot.processedAt !== null &&
-            snapshot.error === null
-          ) {
+          if (snapshot && isSuccessfullyProcessed(snapshot)) {
             return;
           }
         }
 
         const current = await stripeEvents.lock(event.eventId);
-        if (current.processedAt !== null && current.error === null) {
+        if (isSuccessfullyProcessed(current)) {
           return;
         }
 

@@ -152,6 +152,43 @@ function stripeSubscription(input: {
   };
 }
 
+function createReconciliationStripeClient(
+  subscription: ReturnType<typeof stripeSubscription>,
+): ReconcileStripeSubscriptionsDeps['stripe'] {
+  function unexpectedCall(operation: string): never {
+    throw new Error(`Unexpected Stripe call: ${operation}`);
+  }
+
+  return {
+    customers: {
+      create: async () => unexpectedCall('customers.create'),
+    },
+    checkout: {
+      sessions: {
+        create: async () => unexpectedCall('checkout.sessions.create'),
+        list: async () => unexpectedCall('checkout.sessions.list'),
+        retrieve: async () => unexpectedCall('checkout.sessions.retrieve'),
+        expire: async () => unexpectedCall('checkout.sessions.expire'),
+      },
+    },
+    subscriptions: {
+      retrieve: async () => subscription,
+      list: async () => ({
+        data: [{ id: subscription.id, status: subscription.status }],
+      }),
+      cancel: async () => subscription,
+    },
+    billingPortal: {
+      sessions: {
+        create: async () => unexpectedCall('billingPortal.sessions.create'),
+      },
+    },
+    webhooks: {
+      constructEvent: () => unexpectedCall('webhooks.constructEvent'),
+    },
+  };
+}
+
 async function runWebhookWriter(input: {
   userId: string;
   externalCustomerId: string;
@@ -318,15 +355,7 @@ describe('Stripe subscription writer lock order', () => {
       externalCustomerId,
       externalSubscriptionId,
     });
-    const stripe = {
-      subscriptions: {
-        retrieve: async () => normalizedSubscription,
-        list: async () => ({
-          data: [{ id: externalSubscriptionId, status: 'active' as const }],
-        }),
-        cancel: async () => normalizedSubscription,
-      },
-    } as unknown as ReconcileStripeSubscriptionsDeps['stripe'];
+    const stripe = createReconciliationStripeClient(normalizedSubscription);
 
     const reconciliationPromise = reconcileStripeSubscriptions(
       { limit: 1, offset: 0, dryRun: true, concurrency: 1 },

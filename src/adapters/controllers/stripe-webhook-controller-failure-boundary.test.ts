@@ -160,6 +160,29 @@ describe('processStripeWebhook failure boundary', () => {
     });
   });
 
+  it('persists and rethrows a non-Error processing failure without replacing it', async () => {
+    const processingError = 'raw processing failure';
+    const eventId = 'evt_non_error_failure';
+    const harness = createAbortedTransactionDeps({
+      paymentGateway: createPaymentGateway(eventId),
+      processingError,
+      transactionError: new Error('raw Postgres statement error'),
+    });
+
+    await expect(
+      processStripeWebhook(harness.deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      }),
+    ).rejects.toBe(processingError);
+
+    const stored = await harness.stripeEvents.lock(eventId);
+    expect(JSON.parse(stored.error ?? '{}')).toEqual({
+      message: 'Unknown error',
+      raw: processingError,
+    });
+  });
+
   it('does not overwrite an event completed before fresh failure persistence locks it', async () => {
     const eventId = 'evt_concurrently_processed';
     const stripeEvents = new FakeStripeEventRepository();
