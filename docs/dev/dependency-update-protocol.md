@@ -107,6 +107,7 @@ The current `.github/dependabot.yml` intentionally separates concerns:
 - `versioning-strategy: increase-if-necessary` keeps `package.json` ranges stable when the existing range already admits the update, reducing manifest churn.
 - Group-level `applies-to: version-updates` makes it explicit that routine grouped PRs target freshness, not advisories.
 - Separate `applies-to: security-updates` entries omit cooldown so security advisories are not delayed by the maturity window.
+- The security-only entries set `open-pull-requests-limit: 0` (PR #611). A Dependabot entry emits version updates as well as security updates by default, so without the limit these no-`target-branch` entries also opened ungrouped version PRs straight at `main` with default `increase` semantics (the #604/#605 leak; the #465 `actions/checkout` major merged that way). Zero disables version updates only: per GitHub's dependabot-options-reference, `open-pull-requests-limit` does not carry the security-updates badge, and security updates run under a separate internal limit of ten — GitHub's own security-updates guide recommends exactly this limit-0 + `applies-to: security-updates` + no-`target-branch` shape for "security updates only" entries.
 - `@types/node` semver-major updates are ignored until a deliberate runtime-alignment PR moves the repo to a new active LTS major.
 - `@biomejs/biome` is split from the catch-all npm group so lint contract changes arrive as their own reviewable PR.
 
@@ -116,4 +117,4 @@ These settings do not prove package contents are benign. They only shape Dependa
 
 Dependabot tells us a version exists. It does not vouch for the package contents.
 
-Malicious-publish defenses are tracked in DEBT-394: pnpm `minimumReleaseAge`, `blockExoticSubdeps`, `trustPolicy`, and `strictDepBuilds` / `allowBuilds`. Keep Dependabot `cooldown.default-days: 7` matched to DEBT-394's planned `minimumReleaseAge: 10080` so Dependabot does not open PRs for versions pnpm policy intentionally refuses to install.
+Malicious-publish defenses shipped under DEBT-394 and are live in `pnpm-workspace.yaml`: `minimumReleaseAge: 10080`, `blockExoticSubdeps`, `trustPolicy`, and `strictDepBuilds` / `allowBuilds`. Keep Dependabot `cooldown.default-days: 7` matched to `minimumReleaseAge: 10080` so Dependabot does not open PRs for versions pnpm policy intentionally refuses to install. Age-gate exceptions (`minimumReleaseAgeExclude`) are temporary by design — see docs/dev/supply-chain-overrides.md; the block is removed entirely when its last entry ages in (issue #539 precedent).
