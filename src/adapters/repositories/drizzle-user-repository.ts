@@ -1,6 +1,9 @@
 import { eq, sql } from 'drizzle-orm';
 import { users } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  UserEmailOwnershipConflictError,
+} from '@/src/application/errors';
 import type {
   UpsertUserByClerkIdOptions,
   UserRepository,
@@ -45,6 +48,34 @@ export class DrizzleUserRepository implements UserRepository {
     return new ApplicationError('INTERNAL_ERROR', 'Failed to ensure user row');
   }
 
+  private async mapEmailWriteError(
+    error: unknown,
+    clerkId: string,
+    email: string,
+  ): Promise<ApplicationError> {
+    if (
+      isPostgresUniqueViolation(error) &&
+      getPostgresConstraintName(error) === 'users_email_uq'
+    ) {
+      try {
+        const owner = await this.db.query.users.findFirst({
+          columns: { clerkUserId: true },
+          where: eq(users.email, email),
+        });
+
+        if (owner && owner.clerkUserId !== clerkId) {
+          return new UserEmailOwnershipConflictError(owner.clerkUserId, {
+            cause: error,
+          });
+        }
+      } catch (lookupError) {
+        return this.mapDbError(lookupError);
+      }
+    }
+
+    return this.mapDbError(error);
+  }
+
   async findByClerkId(clerkId: string): Promise<User | null> {
     const row = await this.db.query.users.findFirst({
       where: eq(users.clerkUserId, clerkId),
@@ -77,60 +108,65 @@ export class DrizzleUserRepository implements UserRepository {
     const observedAtParam = sql.param(observedAt, users.updatedAt);
 
     try {
-      const [row] = await this.db
-        .insert(users)
-        .values({
-          clerkUserId: clerkId,
-          email,
-          createdAt: observedAt,
-          updatedAt: observedAt,
-        })
-        .onConflictDoUpdate({
-          target: users.clerkUserId,
-          set: {
-            email: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${email} ELSE ${users.email} END`,
-            updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
-          },
-        })
-        .returning();
+      const row = await this.db.transaction(async (tx) => {
+        const [upserted] = await tx
+          .insert(users)
+          .values({
+            clerkUserId: clerkId,
+            email,
+            createdAt: observedAt,
+            updatedAt: observedAt,
+          })
+          .onConflictDoUpdate({
+            target: users.clerkUserId,
+            set: {
+              email: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${email} ELSE ${users.email} END`,
+              updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
+            },
+          })
+          .returning();
 
-      if (!row) {
-        throw new ApplicationError(
-          'INTERNAL_ERROR',
-          'Failed to ensure user row',
-        );
-      }
+        if (!upserted) {
+          throw new ApplicationError(
+            'INTERNAL_ERROR',
+            'Failed to ensure user row',
+          );
+        }
+
+        return upserted;
+      });
 
       return this.toDomain(row);
     } catch (error) {
-      if (
-        isPostgresUniqueViolation(error) &&
-        getPostgresConstraintName(error) === 'users_email_uq'
-      ) {
-        try {
-          const [row] = await this.db
-            .update(users)
-            .set({
-              clerkUserId: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${clerkId} ELSE ${users.clerkUserId} END`,
-              updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
-            })
-            .where(eq(users.email, email))
-            .returning();
+      throw await this.mapEmailWriteError(error, clerkId, email);
+    }
+  }
 
-          if (!row) {
-            throw new ApplicationError(
-              'INTERNAL_ERROR',
-              'Failed to ensure user row',
-            );
-          }
+  async updateEmailByClerkId(
+    clerkId: string,
+    email: string,
+    options?: UpsertUserByClerkIdOptions,
+  ): Promise<User | null> {
+    const observedAt = options?.observedAt ?? this.now();
+    const observedAtParam = sql.param(observedAt, users.updatedAt);
 
-          return this.toDomain(row);
-        } catch (updateError) {
-          throw this.mapDbError(updateError);
-        }
-      }
+    try {
+      const row = await this.db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(users)
+          .set({
+            email: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${email} ELSE ${users.email} END`,
+            updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
+          })
+          .where(eq(users.clerkUserId, clerkId))
+          .returning();
 
-      throw this.mapDbError(error);
+        return updated ?? null;
+      });
+
+      return row ? this.toDomain(row) : null;
+    } catch (error) {
+      throw await this.mapEmailWriteError(error, clerkId, email);
     }
   }
 

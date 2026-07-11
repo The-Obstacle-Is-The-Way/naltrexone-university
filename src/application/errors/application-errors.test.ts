@@ -77,6 +77,15 @@ describe('ApplicationError', () => {
     expect(isApplicationConflictReason('unknown_reason')).toBe(false);
   });
 
+  it('recognizes user email ownership conflicts without exposing identity metadata', () => {
+    expect(ApplicationConflictReasons).toMatchObject({
+      UserEmailOwnedByAnotherIdentity: 'user_email_owned_by_another_identity',
+    });
+    expect(
+      isApplicationConflictReason('user_email_owned_by_another_identity'),
+    ).toBe(true);
+  });
+
   it('creates a structured already-ended practice-session conflict', () => {
     const error = practiceSessionAlreadyEndedError();
 

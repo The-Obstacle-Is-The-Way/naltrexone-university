@@ -36,6 +36,7 @@ export type ClerkWebhookRouteContainer = {
   logger: Logger;
   stripe: StripeClient;
   createRateLimiter: () => RateLimiter;
+  getClerkUserById: ClerkWebhookDeps['getClerkUserById'];
   transaction: <T>(
     fn: (tx: ClerkWebhookTransaction) => Promise<T>,
   ) => Promise<T>;
@@ -113,6 +114,7 @@ export function createWebhookHandler(
               container.stripe,
               container.logger,
             ),
+          getClerkUserById: container.getClerkUserById,
           logger: container.logger,
         },
         event,

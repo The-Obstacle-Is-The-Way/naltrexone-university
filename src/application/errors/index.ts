@@ -9,9 +9,12 @@ export {
   isApplicationConflictReason,
   isApplicationError,
   isPracticeSessionConflictReason,
+  isUserEmailOwnershipConflictError,
   PracticeSessionConflictMessages,
   type PracticeSessionConflictReason,
   PracticeSessionConflictReasons,
   practiceSessionAlreadyEndedError,
   practiceSessionStateChangedConcurrentlyError,
+  UserConflictMessages,
+  UserEmailOwnershipConflictError,
 } from './application-errors';

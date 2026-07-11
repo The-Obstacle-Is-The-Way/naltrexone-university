@@ -1124,6 +1124,7 @@ describe('clerk webhook controller (integration)', () => {
           }),
         ),
       cancelStripeCustomerSubscriptions,
+      getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
 
@@ -1211,6 +1212,7 @@ describe('clerk webhook controller (integration)', () => {
           }),
         ),
       cancelStripeCustomerSubscriptions,
+      getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
 
@@ -1288,6 +1290,7 @@ describe('clerk webhook controller (integration)', () => {
           }),
         ),
       cancelStripeCustomerSubscriptions: vi.fn(async () => undefined),
+      getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
 

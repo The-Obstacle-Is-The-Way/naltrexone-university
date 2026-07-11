@@ -1,7 +1,20 @@
-// WHY large-file: this adapter controller keeps Clerk webhook validation, idempotency, tombstone, and Stripe-cancellation coordination in one transactional boundary.
+// WHY large-file: this adapter controller coordinates Clerk webhook validation, idempotency, tombstones, and post-commit Stripe cancellation across short transaction boundaries.
 import { z } from 'zod';
+import {
+  applyClerkUserEmailOwnershipResolution,
+  type ClerkUserIdentity,
+  type ClerkUserLookup,
+  clerkIdentityConflictLogContext,
+  resolveClerkUserEmailOwnershipConflict,
+  validateClerkUserEmailOwnershipConflict,
+} from '@/src/adapters/gateways/clerk-user-provisioner';
 import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
-import { ApplicationError, isApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  isApplicationError,
+  isUserEmailOwnershipConflictError,
+  type UserEmailOwnershipConflictError,
+} from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
   ClerkEventRepository,
@@ -32,6 +45,7 @@ export type ClerkWebhookDeps = {
   cancelStripeCustomerSubscriptions: (
     stripeCustomerId: string,
   ) => Promise<void>;
+  getClerkUserById: ClerkUserLookup;
   logger: Logger;
 };
 
@@ -141,9 +155,37 @@ function getPrimaryEmailOrNull(data: ClerkUserDataLike): string | null {
 }
 
 type ClerkWebhookPostCommitAction = {
+  kind: 'cancel-stripe-subscriptions';
   eventId: string;
   stripeCustomerId: string;
 };
+
+type ClerkWebhookIdentityResolutionRequest = {
+  kind: 'resolve-email-ownership';
+  identity: ClerkUserIdentity;
+  conflict: UserEmailOwnershipConflictError;
+};
+
+type ClerkWebhookTransactionOutcome =
+  | ClerkWebhookPostCommitAction
+  | ClerkWebhookIdentityResolutionRequest
+  | null;
+
+async function claimUnprocessedClerkEvent(
+  clerkEvents: ClerkEventRepository,
+  event: ClerkWebhookEvent,
+): Promise<boolean> {
+  const claimed = await clerkEvents.claim(event.eventId, event.type);
+  if (!claimed) {
+    const snapshot = await clerkEvents.peek(event.eventId);
+    if (snapshot && snapshot.processedAt !== null && snapshot.error === null) {
+      return false;
+    }
+  }
+
+  const current = await clerkEvents.lock(event.eventId);
+  return current.processedAt === null || current.error !== null;
+}
 
 function toErrorData(error: unknown): string {
   if (isApplicationError(error)) {
@@ -217,28 +259,15 @@ export async function processClerkWebhook(
   let postCommitAction: ClerkWebhookPostCommitAction | null = null;
 
   try {
-    postCommitAction = await deps.transaction(
+    const transactionOutcome = await deps.transaction(
       async ({
         clerkEvents,
         deletedClerkUsers,
         pendingStripeCancellations,
         userRepository,
         stripeCustomerRepository,
-      }): Promise<ClerkWebhookPostCommitAction | null> => {
-        const claimed = await clerkEvents.claim(event.eventId, event.type);
-        if (!claimed) {
-          const snapshot = await clerkEvents.peek(event.eventId);
-          if (
-            snapshot &&
-            snapshot.processedAt !== null &&
-            snapshot.error === null
-          ) {
-            return null;
-          }
-        }
-
-        const current = await clerkEvents.lock(event.eventId);
-        if (current.processedAt !== null && current.error === null) {
+      }): Promise<ClerkWebhookTransactionOutcome> => {
+        if (!(await claimUnprocessedClerkEvent(clerkEvents, event))) {
           return null;
         }
 
@@ -282,9 +311,30 @@ export async function processClerkWebhook(
           const observedAt =
             observedAtMs === null ? null : new Date(observedAtMs);
 
-          await userRepository.upsertByClerkId(clerkUserId, email, {
+          const identity = {
+            clerkUserId,
+            email,
             observedAt: observedAt ?? new Date(),
-          });
+          } satisfies ClerkUserIdentity;
+
+          try {
+            await userRepository.upsertByClerkId(clerkUserId, email, {
+              observedAt: identity.observedAt,
+            });
+          } catch (error) {
+            if (!isUserEmailOwnershipConflictError(error)) throw error;
+
+            await validateClerkUserEmailOwnershipConflict(
+              { userRepository, logger: deps.logger },
+              identity,
+              error,
+            );
+            return {
+              kind: 'resolve-email-ownership',
+              identity,
+              conflict: error,
+            };
+          }
 
           // A delete can commit between the pre-check above and the upsert under
           // READ COMMITTED. Re-check tombstone state before committing the update.
@@ -317,6 +367,7 @@ export async function processClerkWebhook(
 
         if (pendingCancellation) {
           return {
+            kind: 'cancel-stripe-subscriptions',
             eventId: event.eventId,
             stripeCustomerId: pendingCancellation.stripeCustomerId,
           };
@@ -346,9 +397,70 @@ export async function processClerkWebhook(
           event.eventId,
           stripeCustomerId,
         );
-        return { eventId: event.eventId, stripeCustomerId };
+        return {
+          kind: 'cancel-stripe-subscriptions',
+          eventId: event.eventId,
+          stripeCustomerId,
+        };
       },
     );
+
+    if (transactionOutcome?.kind === 'resolve-email-ownership') {
+      const resolution = await resolveClerkUserEmailOwnershipConflict(
+        {
+          getClerkUserById: deps.getClerkUserById,
+          logger: deps.logger,
+        },
+        transactionOutcome.identity,
+        transactionOutcome.conflict,
+      );
+
+      await deps.transaction(
+        async ({ clerkEvents, deletedClerkUsers, userRepository }) => {
+          if (!(await claimUnprocessedClerkEvent(clerkEvents, event))) {
+            deps.logger.info(
+              clerkIdentityConflictLogContext(
+                resolution.existingClerkUserId,
+                transactionOutcome.identity.clerkUserId,
+                'identity_resolution_superseded_by_processed_event',
+              ),
+              'Skipped Clerk user email ownership resolution',
+            );
+            return;
+          }
+
+          await deletedClerkUsers.lock(transactionOutcome.identity.clerkUserId);
+          if (
+            await deletedClerkUsers.exists(
+              transactionOutcome.identity.clerkUserId,
+            )
+          ) {
+            deps.logger.info(
+              clerkIdentityConflictLogContext(
+                resolution.existingClerkUserId,
+                transactionOutcome.identity.clerkUserId,
+                'identity_resolution_blocked_by_deletion_tombstone',
+              ),
+              'Skipped Clerk user email ownership resolution',
+            );
+            await clerkEvents.markProcessed(event.eventId);
+            return;
+          }
+
+          await applyClerkUserEmailOwnershipResolution(
+            { userRepository, logger: deps.logger },
+            transactionOutcome.identity,
+            transactionOutcome.conflict,
+            resolution,
+          );
+
+          await clerkEvents.markProcessed(event.eventId);
+        },
+      );
+      return;
+    }
+
+    postCommitAction = transactionOutcome;
   } catch (error) {
     await persistFailure(deps, event, error);
     throw error;
