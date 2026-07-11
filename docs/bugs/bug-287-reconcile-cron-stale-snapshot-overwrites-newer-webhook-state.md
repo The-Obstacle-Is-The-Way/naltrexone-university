@@ -11,7 +11,7 @@
 ## Resolution State
 
 - Implementation branch: `fix/bug-287-subscription-version-fence`.
-- Pull request: **Fix BUG-287: optimistic observation-version fence for subscription writes** (URL pending completion of the required local gate).
+- Pull request: [#635 — Fix BUG-287: optimistic observation-version fence for subscription writes](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/635).
 - The implementation uses the decided monotonic observation-version CAS and bounded whole-operation retries across reconcile, webhook, and checkout-success writers. It does not add or consult local request timestamps, Stripe event `created`, or a Stripe-state timestamp.
 - Status remains **Open** until the merged change has post-deploy production proof.
 
