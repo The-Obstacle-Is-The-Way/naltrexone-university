@@ -299,6 +299,29 @@ describe('DrizzleUserRepository', () => {
   });
 
   describe('updateEmailByClerkId', () => {
+    it('returns a typed conflict when another Clerk identity owns the target email', async () => {
+      const db = createDbMock();
+      db._mocks.updateReturning.mockRejectedValue({
+        code: '23505',
+        constraint: 'users_email_uq',
+      });
+      db._mocks.queryFindFirst.mockResolvedValue({
+        clerkUserId: 'clerk_owner',
+      });
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.updateEmailByClerkId('clerk_incoming', 'owned@example.com'),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        existingClerkUserId: 'clerk_owner',
+        details: {
+          reason: 'user_email_owned_by_another_identity',
+        },
+      });
+    });
+
     it('maps persistence failures to INTERNAL_ERROR', async () => {
       const db = createDbMock();
       db._mocks.updateReturning.mockRejectedValue(new Error('boom'));

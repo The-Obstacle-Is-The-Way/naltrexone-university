@@ -48,6 +48,34 @@ export class DrizzleUserRepository implements UserRepository {
     return new ApplicationError('INTERNAL_ERROR', 'Failed to ensure user row');
   }
 
+  private async mapEmailWriteError(
+    error: unknown,
+    clerkId: string,
+    email: string,
+  ): Promise<ApplicationError> {
+    if (
+      isPostgresUniqueViolation(error) &&
+      getPostgresConstraintName(error) === 'users_email_uq'
+    ) {
+      try {
+        const owner = await this.db.query.users.findFirst({
+          columns: { clerkUserId: true },
+          where: eq(users.email, email),
+        });
+
+        if (owner && owner.clerkUserId !== clerkId) {
+          return new UserEmailOwnershipConflictError(owner.clerkUserId, {
+            cause: error,
+          });
+        }
+      } catch (lookupError) {
+        return this.mapDbError(lookupError);
+      }
+    }
+
+    return this.mapDbError(error);
+  }
+
   async findByClerkId(clerkId: string): Promise<User | null> {
     const row = await this.db.query.users.findFirst({
       where: eq(users.clerkUserId, clerkId),
@@ -110,27 +138,7 @@ export class DrizzleUserRepository implements UserRepository {
 
       return this.toDomain(row);
     } catch (error) {
-      if (
-        isPostgresUniqueViolation(error) &&
-        getPostgresConstraintName(error) === 'users_email_uq'
-      ) {
-        try {
-          const owner = await this.db.query.users.findFirst({
-            columns: { clerkUserId: true },
-            where: eq(users.email, email),
-          });
-
-          if (owner && owner.clerkUserId !== clerkId) {
-            throw new UserEmailOwnershipConflictError(owner.clerkUserId, {
-              cause: error,
-            });
-          }
-        } catch (lookupError) {
-          throw this.mapDbError(lookupError);
-        }
-      }
-
-      throw this.mapDbError(error);
+      throw await this.mapEmailWriteError(error, clerkId, email);
     }
   }
 
@@ -143,18 +151,22 @@ export class DrizzleUserRepository implements UserRepository {
     const observedAtParam = sql.param(observedAt, users.updatedAt);
 
     try {
-      const [row] = await this.db
-        .update(users)
-        .set({
-          email: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${email} ELSE ${users.email} END`,
-          updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
-        })
-        .where(eq(users.clerkUserId, clerkId))
-        .returning();
+      const row = await this.db.transaction(async (tx) => {
+        const [updated] = await tx
+          .update(users)
+          .set({
+            email: sql`CASE WHEN ${users.updatedAt} < ${observedAtParam} THEN ${email} ELSE ${users.email} END`,
+            updatedAt: sql`GREATEST(${users.updatedAt}, ${observedAtParam})`,
+          })
+          .where(eq(users.clerkUserId, clerkId))
+          .returning();
+
+        return updated ?? null;
+      });
 
       return row ? this.toDomain(row) : null;
     } catch (error) {
-      throw this.mapDbError(error);
+      throw await this.mapEmailWriteError(error, clerkId, email);
     }
   }
 

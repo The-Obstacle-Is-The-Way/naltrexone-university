@@ -225,6 +225,90 @@ describe('DrizzleUserRepository', () => {
     await expect(repo.findByClerkId(clerkId2)).resolves.toBeNull();
   });
 
+  it('reports the current owner when email synchronization collides with another identity', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const ownedEmail = `it-${randomUUID()}@example.com`;
+    const otherEmail = `it-${randomUUID()}@example.com`;
+    const ownerClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const incomingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const owner = await repo.upsertByClerkId(ownerClerkId, ownedEmail);
+    const incoming = await repo.upsertByClerkId(incomingClerkId, otherEmail);
+    cleanup.userIds.push(owner.id, incoming.id);
+
+    await expect(
+      repo.updateEmailByClerkId(incomingClerkId, ownedEmail, {
+        observedAt: new Date(incoming.updatedAt.getTime() - 1),
+      }),
+    ).resolves.toEqual(incoming);
+
+    await expect(
+      repo.updateEmailByClerkId(incomingClerkId, ownedEmail, {
+        observedAt: new Date(
+          Math.max(owner.updatedAt.getTime(), incoming.updatedAt.getTime()) + 1,
+        ),
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      existingClerkUserId: ownerClerkId,
+      details: {
+        reason: 'user_email_owned_by_another_identity',
+      },
+    });
+    await expect(repo.findByClerkId(ownerClerkId)).resolves.toMatchObject({
+      id: owner.id,
+      email: ownedEmail,
+    });
+    await expect(repo.findByClerkId(incomingClerkId)).resolves.toMatchObject({
+      id: incoming.id,
+      email: otherEmail,
+    });
+  });
+
+  it('keeps an outer transaction usable after email synchronization collides with another identity', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const ownedEmail = `it-${randomUUID()}@example.com`;
+    const otherEmail = `it-${randomUUID()}@example.com`;
+    const ownerClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const incomingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const owner = await repo.upsertByClerkId(ownerClerkId, ownedEmail);
+    const incoming = await repo.upsertByClerkId(incomingClerkId, otherEmail);
+    cleanup.userIds.push(owner.id, incoming.id);
+    const observedAt = new Date(
+      Math.max(owner.updatedAt.getTime(), incoming.updatedAt.getTime()) + 1,
+    );
+
+    await db.transaction(async (tx) => {
+      const txRepo = new DrizzleUserRepository(tx);
+      let caught: unknown;
+
+      try {
+        await txRepo.updateEmailByClerkId(incomingClerkId, ownedEmail, {
+          observedAt,
+        });
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toMatchObject({
+        code: 'CONFLICT',
+        existingClerkUserId: ownerClerkId,
+        details: {
+          reason: 'user_email_owned_by_another_identity',
+        },
+      });
+      await expect(txRepo.findByClerkId(ownerClerkId)).resolves.toMatchObject({
+        id: owner.id,
+        email: ownedEmail,
+      });
+      await expect(
+        txRepo.findByClerkId(incomingClerkId),
+      ).resolves.toMatchObject({
+        id: incoming.id,
+        email: otherEmail,
+      });
+    });
+  });
+
   it('keeps an outer transaction usable after classifying an email conflict', async () => {
     const repo = new DrizzleUserRepository(db);
     const email = `it-${randomUUID()}@example.com`;

@@ -155,11 +155,15 @@ describe('FakeUserRepository', () => {
 
     it('rejects synchronizing an email owned by another identity', async () => {
       const repo = new FakeUserRepository();
+      const initialObservedAt = new Date('2026-02-01T00:00:00.000Z');
       const observedAt = new Date('2026-02-02T00:00:00.000Z');
-      const first = await repo.upsertByClerkId('clerk-1', 'first@example.com');
+      const first = await repo.upsertByClerkId('clerk-1', 'first@example.com', {
+        observedAt: initialObservedAt,
+      });
       const second = await repo.upsertByClerkId(
         'clerk-2',
         'second@example.com',
+        { observedAt: initialObservedAt },
       );
 
       await expect(
@@ -171,6 +175,27 @@ describe('FakeUserRepository', () => {
         existingClerkUserId: 'clerk-1',
       });
       await expect(repo.findByClerkId('clerk-1')).resolves.toEqual(first);
+      await expect(repo.findByClerkId('clerk-2')).resolves.toEqual(second);
+    });
+
+    it('ignores a stale synchronization even when the requested email belongs to another identity', async () => {
+      const repo = new FakeUserRepository();
+      const newer = new Date('2026-02-02T00:00:00.000Z');
+      const older = new Date('2026-02-01T00:00:00.000Z');
+      await repo.upsertByClerkId('clerk-1', 'first@example.com', {
+        observedAt: newer,
+      });
+      const second = await repo.upsertByClerkId(
+        'clerk-2',
+        'second@example.com',
+        { observedAt: newer },
+      );
+
+      await expect(
+        repo.updateEmailByClerkId('clerk-2', 'first@example.com', {
+          observedAt: older,
+        }),
+      ).resolves.toEqual(second);
       await expect(repo.findByClerkId('clerk-2')).resolves.toEqual(second);
     });
 

@@ -94,14 +94,14 @@ export class FakeUserRepository implements UserRepository {
     const existing = this.byClerkId.get(clerkId);
     if (!existing) return null;
 
-    const existingClerkIdForEmail = this.byEmail.get(email);
-    if (existingClerkIdForEmail && existingClerkIdForEmail !== clerkId) {
-      throw new UserEmailOwnershipConflictError(existingClerkIdForEmail);
-    }
-
     const observedAt = options?.observedAt ?? new Date();
     if (existing.user.updatedAt >= observedAt) {
       return existing.user;
+    }
+
+    const existingClerkIdForEmail = this.byEmail.get(email);
+    if (existingClerkIdForEmail && existingClerkIdForEmail !== clerkId) {
+      throw new UserEmailOwnershipConflictError(existingClerkIdForEmail);
     }
 
     const updatedUser: User = {

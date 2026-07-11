@@ -43,6 +43,7 @@ export interface UserRepository {
    * Synchronize an existing Clerk identity's email without creating a row.
    *
    * Returns null when the Clerk identity is not present locally.
+   * Fails with a typed conflict when another Clerk identity owns the email.
    */
   updateEmailByClerkId(
     clerkId: string,
