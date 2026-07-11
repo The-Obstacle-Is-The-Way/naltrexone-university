@@ -1,24 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { SubscriptionUpsertInput } from '@/src/application/ports/repositories';
+import type {
+  SubscriptionUpsertInput,
+  SubscriptionUpsertResult,
+} from '@/src/application/ports/repositories';
 import type { Subscription } from '@/src/domain/entities';
-
-type ContractUpsertInput = SubscriptionUpsertInput & {
-  expectedVersion: number | null;
-};
-
-type ContractUpsertResult =
-  | { persisted: true }
-  | {
-      persisted: false;
-      reason: 'write_guard_rejected';
-      current: Subscription;
-    }
-  | { persisted: false; reason: 'version_conflict' };
 
 export type SubscriptionObservationVersionContractRepository = {
   findByUserId(userId: string): Promise<Subscription | null>;
   findObservationVersionByUserId(userId: string): Promise<number | null>;
-  upsert(input: ContractUpsertInput): Promise<ContractUpsertResult>;
+  upsert(input: SubscriptionUpsertInput): Promise<SubscriptionUpsertResult>;
 };
 
 export type SubscriptionObservationVersionContractHarness = {
@@ -37,7 +27,7 @@ function createUpsertInput(
   externalSubscriptionId: string,
   expectedVersion: number | null,
   overrides: Partial<SubscriptionUpsertInput> = {},
-): ContractUpsertInput {
+): SubscriptionUpsertInput {
   return {
     userId: harness.userId,
     externalSubscriptionId,

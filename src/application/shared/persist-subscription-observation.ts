@@ -37,6 +37,8 @@ export async function persistSubscriptionObservation<TObservation>(
   let expectedUserId = input.userId;
 
   if (expectedUserId === null) {
+    // This retrieve is discovery-only. The observation written below must be
+    // re-retrieved after the local version is known, so do not reuse it.
     const discovery = await input.retrieve();
     expectedUserId = input.getUserId(discovery);
   }
