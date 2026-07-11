@@ -28,6 +28,14 @@ class FailingSubscriptionRepository extends FakeSubscriptionRepository {
   }
 }
 
+class ConcurrentlyCompletingStripeEventRepository extends FakeStripeEventRepository {
+  override async peek(eventId: string) {
+    const snapshot = await super.peek(eventId);
+    await this.markProcessed(eventId);
+    return snapshot;
+  }
+}
+
 class ThrowingPaymentGateway extends FakePaymentGateway {
   constructor(private readonly error: unknown) {
     super({
@@ -575,6 +583,50 @@ describe('processStripeWebhook', () => {
 
     expect(insertSpy).not.toHaveBeenCalled();
     expect(lockSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not reprocess an event completed between peek and lock', async () => {
+    const userId = crypto.randomUUID();
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_concurrent_completion',
+        type: 'customer.subscription.updated',
+        subscriptionUpdate: {
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+    const stripeEvents = new ConcurrentlyCompletingStripeEventRepository();
+    await stripeEvents.claim(
+      'evt_concurrent_completion',
+      'customer.subscription.updated',
+    );
+    const { deps, subscriptions } = createDeps({
+      paymentGateway,
+      stripeEvents,
+    });
+    const upsertSpy = vi.spyOn(subscriptions, 'upsert');
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    expect(upsertSpy).not.toHaveBeenCalled();
+    await expect(
+      stripeEvents.lock('evt_concurrent_completion'),
+    ).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
   });
 
   it('returns call to prune processed stripe events when event already processed', async () => {
