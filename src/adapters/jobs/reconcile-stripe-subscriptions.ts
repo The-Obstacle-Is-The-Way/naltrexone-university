@@ -229,12 +229,10 @@ export async function reconcileStripeSubscriptions(
         }
 
         // Phase 4: persist canonical subscription and customer mapping atomically.
+        // Canonical multi-repository lock order: advisory(user) in
+        // subscriptions.upsert -> stripe_subscriptions row -> stripe_customers
+        // row. Keep every writer in this order to avoid AB-BA deadlocks.
         await deps.transaction(async ({ stripeCustomers, subscriptions }) => {
-          await stripeCustomers.insert(
-            canonical.userId,
-            canonical.externalCustomerId,
-            { conflictStrategy: 'authoritative' },
-          );
           await subscriptions.upsert({
             userId: canonical.userId,
             externalSubscriptionId: canonical.externalSubscriptionId,
@@ -243,6 +241,11 @@ export async function reconcileStripeSubscriptions(
             currentPeriodEnd: canonical.currentPeriodEnd,
             cancelAtPeriodEnd: canonical.cancelAtPeriodEnd,
           });
+          await stripeCustomers.insert(
+            canonical.userId,
+            canonical.externalCustomerId,
+            { conflictStrategy: 'authoritative' },
+          );
         });
 
         if (duplicateIds.length > 0) {

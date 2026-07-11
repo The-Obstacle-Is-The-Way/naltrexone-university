@@ -35,7 +35,7 @@ export class FakeStripeCustomerRepository implements StripeCustomerRepository {
       if (conflictStrategy !== 'authoritative') {
         throw new ApplicationError(
           'CONFLICT',
-          'User is already mapped to a different Stripe customer',
+          'Stripe customer already exists with a different stripeCustomerId',
         );
       }
       this.customerIdToUserId.delete(existingCustomerId);
@@ -44,7 +44,7 @@ export class FakeStripeCustomerRepository implements StripeCustomerRepository {
     if (existingUserId && existingUserId !== userId) {
       throw new ApplicationError(
         'CONFLICT',
-        'Stripe customer is already mapped to a different user',
+        'Stripe customer id is already mapped to a different user',
       );
     }
 
