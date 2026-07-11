@@ -78,6 +78,7 @@ function createDeps(overrides: {
   return {
     deps: {
       paymentGateway: overrides.paymentGateway,
+      subscriptionVersions: subscriptions,
       logger,
       now: () => new Date(),
       transaction: async (fn) =>
@@ -280,6 +281,7 @@ describe('processStripeWebhook', () => {
       status: 'active',
       currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      expectedVersion: null,
     });
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
@@ -339,6 +341,7 @@ describe('processStripeWebhook', () => {
       status: 'active',
       currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      expectedVersion: null,
     });
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',

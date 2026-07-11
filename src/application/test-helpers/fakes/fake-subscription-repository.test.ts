@@ -12,6 +12,7 @@ function makeUpsertInput(
     status: 'active',
     currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
+    expectedVersion: null,
     ...overrides,
   };
 }
@@ -48,6 +49,7 @@ describe('FakeSubscriptionRepository', () => {
       await repo.upsert(makeUpsertInput());
       await repo.upsert(
         makeUpsertInput({
+          expectedVersion: 1,
           externalSubscriptionId: 'sub_456',
           plan: 'annual',
           status: 'active',
@@ -79,6 +81,7 @@ describe('FakeSubscriptionRepository', () => {
       );
       const write = await repo.upsert(
         makeUpsertInput({
+          expectedVersion: 1,
           externalSubscriptionId: 'sub_superseded',
           status: 'canceled',
           currentPeriodEnd: new Date('2026-01-31T00:00:00.000Z'),
@@ -116,6 +119,7 @@ describe('FakeSubscriptionRepository', () => {
       );
       const write = await repo.upsert(
         makeUpsertInput({
+          expectedVersion: 1,
           externalSubscriptionId: 'sub_current',
           status: 'canceled',
           currentPeriodEnd: new Date('2026-01-31T00:00:00.000Z'),
@@ -144,6 +148,7 @@ describe('FakeSubscriptionRepository', () => {
       );
       const write = await repo.upsert(
         makeUpsertInput({
+          expectedVersion: 1,
           externalSubscriptionId: 'sub_superseded',
           status: 'canceled',
           currentPeriodEnd: new Date('2026-06-01T00:00:00.000Z'),
@@ -186,6 +191,7 @@ describe('FakeSubscriptionRepository', () => {
 
       const write = await repo.upsert(
         makeUpsertInput({
+          expectedVersion: 0,
           externalSubscriptionId: 'sub_superseded',
           status: 'canceled',
           currentPeriodEnd: new Date('2026-06-01T00:00:00.000Z'),
@@ -250,6 +256,7 @@ describe('FakeSubscriptionRepository', () => {
 
     await repo.upsert(
       makeUpsertInput({
+        expectedVersion: 1,
         externalSubscriptionId: 'sub_456',
         plan: 'annual',
         status: 'canceled',

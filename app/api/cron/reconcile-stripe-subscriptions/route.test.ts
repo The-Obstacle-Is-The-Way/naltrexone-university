@@ -235,15 +235,17 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     const pageDeps = reconcileStripeSubscriptions.mock.calls[0]?.[1];
     if (!pageDeps) throw new Error('expected single-page deps');
     container.db.query.stripeSubscriptions.findMany.mockResolvedValueOnce([
-      { userId: 'user_1', stripeSubscriptionId: 'sub_1' },
+      { userId: 'user_1', stripeSubscriptionId: 'sub_1', version: 3 },
     ]);
     await expect(
       pageDeps.listLocalSubscriptions({ limit: 2, offset: 3 }),
-    ).resolves.toEqual([{ userId: 'user_1', stripeSubscriptionId: 'sub_1' }]);
+    ).resolves.toEqual([
+      { userId: 'user_1', stripeSubscriptionId: 'sub_1', version: 3 },
+    ]);
     const query =
       container.db.query.stripeSubscriptions.findMany.mock.calls.at(-1)?.[0];
     expect(query).toMatchObject({
-      columns: { userId: true, stripeSubscriptionId: true },
+      columns: { userId: true, stripeSubscriptionId: true, version: true },
       limit: 2,
       offset: 3,
     });

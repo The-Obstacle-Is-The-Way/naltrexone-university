@@ -57,6 +57,10 @@ export type CheckoutSuccessTransaction = {
 
 export type CheckoutSuccessDeps = {
   authGateway: AuthGateway;
+  subscriptionVersions: Pick<
+    SubscriptionRepository,
+    'findObservationVersionByUserId'
+  >;
   getClerkAuth: () => Promise<ClerkAuthLike>;
   logger: CheckoutSuccessLogger;
   stripe: StripeClientLike;
@@ -98,7 +102,7 @@ export type CheckoutSuccessContainerLike = {
     transaction: <T>(fn: (tx: unknown) => Promise<T>) => Promise<T>;
   };
   createStripeCustomerRepository: (tx: unknown) => StripeCustomerRepository;
-  createSubscriptionRepository: (tx: unknown) => SubscriptionRepository;
+  createSubscriptionRepository: (tx?: unknown) => SubscriptionRepository;
 };
 
 export type CheckoutSuccessModuleLoaders = {

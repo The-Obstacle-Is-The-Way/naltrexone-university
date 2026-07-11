@@ -197,6 +197,7 @@ describe('Stripe repositories', () => {
     await repo.upsert({
       userId: user.id,
       externalSubscriptionId: stripeSubscriptionId1,
+      expectedVersion: null,
       status: 'active',
       plan: 'monthly',
       currentPeriodEnd: periodEnd1,
@@ -223,6 +224,7 @@ describe('Stripe repositories', () => {
     await repo.upsert({
       userId: user.id,
       externalSubscriptionId: stripeSubscriptionId2,
+      expectedVersion: 1,
       status: 'active',
       plan: 'annual',
       currentPeriodEnd: periodEnd2,
@@ -267,6 +269,7 @@ describe('Stripe repositories', () => {
     await repo.upsert({
       userId: user.id,
       externalSubscriptionId: currentSubscriptionId,
+      expectedVersion: null,
       status: 'active',
       plan: 'annual',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -276,6 +279,7 @@ describe('Stripe repositories', () => {
     await repo.upsert({
       userId: user.id,
       externalSubscriptionId: supersededSubscriptionId,
+      expectedVersion: 1,
       status: 'canceled',
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-05-31T00:00:00.000Z'),
@@ -317,6 +321,7 @@ describe('Stripe repositories', () => {
     await repo.upsert({
       userId: user.id,
       externalSubscriptionId: stripeSubscriptionId,
+      expectedVersion: null,
       status: 'active',
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -326,6 +331,7 @@ describe('Stripe repositories', () => {
     await repo.upsert({
       userId: user.id,
       externalSubscriptionId: stripeSubscriptionId,
+      expectedVersion: 1,
       status: 'canceled',
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-05-31T00:00:00.000Z'),
@@ -356,6 +362,7 @@ describe('Stripe repositories', () => {
     await repo.upsert({
       userId: userA.id,
       externalSubscriptionId: stripeSubscriptionId,
+      expectedVersion: null,
       status: 'active',
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
@@ -366,6 +373,7 @@ describe('Stripe repositories', () => {
       repo.upsert({
         userId: userB.id,
         externalSubscriptionId: stripeSubscriptionId,
+        expectedVersion: null,
         status: 'active',
         plan: 'monthly',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),

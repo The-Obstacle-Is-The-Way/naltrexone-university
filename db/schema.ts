@@ -186,6 +186,7 @@ export const stripeSubscriptions = pgTable(
       withTimezone: true,
     }).notNull(),
     cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    version: integer('version').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
