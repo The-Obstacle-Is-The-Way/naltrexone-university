@@ -19,6 +19,7 @@ export const ApplicationConflictReasons = {
   ExamTimeExpired: 'exam_time_expired',
   StateChangedConcurrently: 'practice_session_state_changed_concurrently',
   ConcurrentRequestInProgress: 'concurrent_request_in_progress',
+  UserEmailOwnedByAnotherIdentity: 'user_email_owned_by_another_identity',
 } as const;
 
 export type ApplicationConflictReason =
@@ -42,6 +43,11 @@ export const PracticeSessionConflictMessages = {
 export const AttemptConflictMessages = {
   AlreadyAnsweredInSession:
     'This question has already been answered in this session',
+} as const;
+
+export const UserConflictMessages = {
+  EmailOwnedByAnotherIdentity:
+    'Email is already associated with another identity',
 } as const;
 
 export type ApplicationErrorDetails = Readonly<{
@@ -91,6 +97,31 @@ export class ApplicationError extends Error {
       this.details = options.details;
     }
   }
+}
+
+export class UserEmailOwnershipConflictError extends ApplicationError {
+  constructor(
+    public readonly existingClerkUserId: string,
+    options?: { cause?: unknown },
+  ) {
+    super(
+      'CONFLICT',
+      UserConflictMessages.EmailOwnedByAnotherIdentity,
+      undefined,
+      {
+        ...(options?.cause !== undefined ? { cause: options.cause } : {}),
+        details: {
+          reason: ApplicationConflictReasons.UserEmailOwnedByAnotherIdentity,
+        },
+      },
+    );
+  }
+}
+
+export function isUserEmailOwnershipConflictError(
+  error: unknown,
+): error is UserEmailOwnershipConflictError {
+  return error instanceof UserEmailOwnershipConflictError;
 }
 
 export function practiceSessionAlreadyEndedError(options?: {

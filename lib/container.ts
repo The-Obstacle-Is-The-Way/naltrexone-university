@@ -62,6 +62,13 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     return currentUser();
   };
 
+  const getClerkUserById = async (clerkUserId: string) => {
+    if (process.env.NEXT_PUBLIC_SKIP_CLERK === 'true') return null;
+    const { clerkClient } = await import('@clerk/nextjs/server');
+    const client = await clerkClient();
+    return client.users.getUser(clerkUserId);
+  };
+
   const repositoryFactories = createRepositoryFactories(
     primitives,
     stripePriceIds,
@@ -76,6 +83,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
     repositories,
     stripePriceIds,
     getClerkUser,
+    getClerkUserById,
   });
   const gateways = {
     ...gatewayFactories,
@@ -106,6 +114,7 @@ export function createContainer(overrides: ContainerOverrides = {}) {
 
   return {
     ...primitives,
+    getClerkUserById,
     get stripe() {
       return primitives.getStripe();
     },

@@ -38,6 +38,7 @@ export const POST = createWebhookHandler(
       logger: container.logger,
       stripe: container.stripe,
       createRateLimiter: container.createRateLimiter,
+      getClerkUserById: container.getClerkUserById,
       transaction: async (fn) =>
         container.db.transaction(async (tx) =>
           fn({
