@@ -23,7 +23,11 @@ type StripeSubscriptionFixture = {
   };
 };
 
-type LocalSubscriptionRow = { userId: string; stripeSubscriptionId: string };
+type LocalSubscriptionRow = {
+  userId: string;
+  stripeSubscriptionId: string;
+  version: number | null;
+};
 
 const primaryUserId = crypto.randomUUID();
 const secondaryUserId = crypto.randomUUID();
@@ -237,7 +241,7 @@ function row(
   userId: string,
   stripeSubscriptionId: string,
 ): LocalSubscriptionRow {
-  return { userId, stripeSubscriptionId };
+  return { userId, stripeSubscriptionId, version: null };
 }
 
 function createSingleRowScenario(input: {
@@ -293,6 +297,7 @@ describe('reconcileStripeSubscriptions', () => {
     const rows = Array.from({ length: 12 }, (_, i) => ({
       userId: crypto.randomUUID(),
       stripeSubscriptionId: `sub_${i + 1}`,
+      version: null,
     }));
 
     const subscriptionsById: Record<string, StripeSubscriptionFixture> = {};
@@ -1249,6 +1254,7 @@ describe('reconcileStripeSubscriptions', () => {
       status: 'active',
       currentPeriodEnd: new Date(localPeriodEnd * 1000),
       cancelAtPeriodEnd: false,
+      expectedVersion: null,
     });
 
     const scenario = createReconciliationTestScenario({
@@ -1469,6 +1475,7 @@ describe('reconcileStripeSubscriptions', () => {
       status: 'active',
       currentPeriodEnd: new Date(1_700_000_000 * 1000),
       cancelAtPeriodEnd: false,
+      expectedVersion: null,
     });
 
     const scenario = createReconciliationTestScenario({
@@ -1524,6 +1531,7 @@ describe('reconcileStripeSubscriptions', () => {
       status: 'active',
       currentPeriodEnd: new Date(1_700_000_000 * 1000),
       cancelAtPeriodEnd: false,
+      expectedVersion: null,
     });
 
     const scenario = createReconciliationTestScenario({

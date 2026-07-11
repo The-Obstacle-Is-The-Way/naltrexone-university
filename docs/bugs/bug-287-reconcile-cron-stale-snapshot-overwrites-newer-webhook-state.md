@@ -8,6 +8,13 @@
 
 ---
 
+## Resolution State
+
+- Implementation branch: `fix/bug-287-subscription-version-fence`.
+- Pull request: [#635 — Fix BUG-287: optimistic observation-version fence for subscription writes](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/635).
+- The implementation uses the decided monotonic observation-version CAS and bounded whole-operation retries across reconcile, webhook, and checkout-success writers. It does not add or consult local request timestamps, Stripe event `created`, or a Stripe-state timestamp.
+- Status remains **Open** until the merged change has post-deploy production proof.
+
 ## Summary
 
 [`shouldPersistSubscriptionWrite`](../../src/domain/services/subscription-write-guard.ts#L38-L42) unconditionally persists any write whose `subscriptionIdentity` matches the stored row, and [`stripe_subscriptions`](../../db/schema.ts#L173-L194) stores no Stripe-side version or state timestamp — [`updatedAt` is set to the database write time](../../src/adapters/repositories/drizzle-subscription-repository.ts#L84), not the time the state was observed at Stripe. The daily production reconcile cron ([`vercel.json`](../../vercel.json#L6-L7): `dryRun=false&scope=all`, `0 8 * * *` UTC) snapshots each subscription in [Phase 1](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L91-L102) but writes it only in [Phase 4](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L232-L246), after a `subscriptions.list` round-trip plus sequential per-blocking-subscription retrieves under retry/backoff — and when the customer has no blocking subscriptions, [the canonical value remains the stale Phase-1 snapshot](../../src/adapters/jobs/reconcile-stripe-subscriptions.ts#L136). [Vercel invokes configured cron jobs against the production deployment](https://vercel.com/docs/cron-jobs#how-cron-jobs-work).

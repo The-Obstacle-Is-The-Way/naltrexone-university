@@ -204,6 +204,13 @@
       "when": 1783386691489,
       "tag": "0028_repair_attempts_selected_choice_index",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1783792133462,
+      "tag": "0029_medical_starfox",
+      "breakpoints": true
     }
   ]
 }

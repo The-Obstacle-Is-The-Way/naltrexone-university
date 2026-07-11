@@ -4,6 +4,7 @@ import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-pri
 import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
+import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
 import {
   determineNonEntitledReason,
   MS_PER_SECOND,
@@ -161,106 +162,130 @@ export async function syncCheckoutSuccess(
     subscriptionId,
   });
 
-  const subscription = await retry(
-    () => d.stripe.subscriptions.retrieve(subscriptionId),
-    {
-      ...DEFAULT_RETRY_OPTIONS,
-      shouldRetry: isTransientExternalError,
-      onRetry: createStripeOnRetry(d.logger, { subscriptionId }),
-    },
-  );
+  const retrieveObservation = async () => {
+    const subscription = await retry(
+      () => d.stripe.subscriptions.retrieve(subscriptionId),
+      {
+        ...DEFAULT_RETRY_OPTIONS,
+        shouldRetry: isTransientExternalError,
+        onRetry: createStripeOnRetry(d.logger, { subscriptionId }),
+      },
+    );
 
-  const metadataUserId = subscription.metadata?.user_id;
-  assertions.assertNonEmptyString(metadataUserId, 'missing_user_id', {
-    sessionId,
-    metadataUserId: metadataUserId ?? null,
-  });
-  // Prevent cross-account leakage if the user switches accounts mid-checkout.
-  if (metadataUserId !== user.id) {
-    fail('user_id_mismatch', {
+    const metadataUserId = subscription.metadata?.user_id;
+    assertions.assertNonEmptyString(metadataUserId, 'missing_user_id', {
       sessionId,
-      metadataUserId,
-      userId: user.id,
+      metadataUserId: metadataUserId ?? null,
     });
-  }
-
-  const stripeStatus = subscription.status;
-  // Reject malformed subscription objects and unexpected statuses.
-  assertions.assertNonEmptyString(stripeStatus, 'invalid_subscription_status', {
-    sessionId,
-    status: stripeStatus ?? null,
-  });
-  assertions.assertStripeSubscriptionStatus(
-    stripeStatus,
-    'invalid_subscription_status',
-    {
-      sessionId,
-      status: stripeStatus,
-    },
-  );
-  const status: SubscriptionStatus =
-    stripeSubscriptionStatusToSubscriptionStatus(stripeStatus);
-
-  const subscriptionItem = subscription.items?.data?.[0];
-
-  const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
-  // Entitlement depends on a current billing period end timestamp.
-  assertions.assertNumber(
-    currentPeriodEndSeconds,
-    'missing_current_period_end',
-    {
-      sessionId,
-      currentPeriodEndSeconds: currentPeriodEndSeconds ?? null,
-    },
-  );
-
-  const cancelAtPeriodEnd = subscription.cancel_at_period_end;
-  // We persist cancel-at-period-end to display accurately in billing UI.
-  assertions.assertBoolean(cancelAtPeriodEnd, 'missing_cancel_at_period_end', {
-    sessionId,
-    cancelAtPeriodEnd: cancelAtPeriodEnd ?? null,
-  });
-
-  const priceId = subscriptionItem?.price?.id;
-  // We map the Stripe price id back to a domain plan (monthly/annual).
-  assertions.assertNonEmptyString(priceId, 'missing_price_id', {
-    sessionId,
-    priceId: priceId ?? null,
-  });
-
-  const plan = getSubscriptionPlanFromPriceId(priceId, d.priceIds);
-  // Mismatched price IDs usually means environment misconfiguration.
-  assertions.assertNotNull(plan, 'unknown_plan', {
-    sessionId,
-    priceId,
-    configuredPriceIds: d.priceIds,
-  });
-
-  const currentPeriodEnd = new Date(currentPeriodEndSeconds * MS_PER_SECOND);
-
-  // Canonical multi-repository lock order: advisory(user) in
-  // subscriptions.upsert -> stripe_subscriptions row -> stripe_customers row.
-  // Keep every writer in this order to avoid AB-BA deadlocks.
-  const write = await d.transaction(
-    async ({ stripeCustomers, subscriptions }) => {
-      const result = await subscriptions.upsert({
+    // Prevent cross-account leakage if the user switches accounts mid-checkout.
+    if (metadataUserId !== user.id) {
+      fail('user_id_mismatch', {
+        sessionId,
+        metadataUserId,
         userId: user.id,
-        externalSubscriptionId: subscriptionId,
-        plan,
-        status,
-        currentPeriodEnd,
-        cancelAtPeriodEnd,
       });
+    }
 
-      if (result.persisted) {
-        await stripeCustomers.insert(user.id, stripeCustomerId, {
-          conflictStrategy: 'authoritative',
+    const stripeStatus = subscription.status;
+    // Reject malformed subscription objects and unexpected statuses.
+    assertions.assertNonEmptyString(
+      stripeStatus,
+      'invalid_subscription_status',
+      {
+        sessionId,
+        status: stripeStatus ?? null,
+      },
+    );
+    assertions.assertStripeSubscriptionStatus(
+      stripeStatus,
+      'invalid_subscription_status',
+      {
+        sessionId,
+        status: stripeStatus,
+      },
+    );
+    const status: SubscriptionStatus =
+      stripeSubscriptionStatusToSubscriptionStatus(stripeStatus);
+
+    const subscriptionItem = subscription.items?.data?.[0];
+    const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
+    // Entitlement depends on a current billing period end timestamp.
+    assertions.assertNumber(
+      currentPeriodEndSeconds,
+      'missing_current_period_end',
+      {
+        sessionId,
+        currentPeriodEndSeconds: currentPeriodEndSeconds ?? null,
+      },
+    );
+
+    const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    // We persist cancel-at-period-end to display accurately in billing UI.
+    assertions.assertBoolean(
+      cancelAtPeriodEnd,
+      'missing_cancel_at_period_end',
+      {
+        sessionId,
+        cancelAtPeriodEnd: cancelAtPeriodEnd ?? null,
+      },
+    );
+
+    const priceId = subscriptionItem?.price?.id;
+    // We map the Stripe price id back to a domain plan (monthly/annual).
+    assertions.assertNonEmptyString(priceId, 'missing_price_id', {
+      sessionId,
+      priceId: priceId ?? null,
+    });
+
+    const plan = getSubscriptionPlanFromPriceId(priceId, d.priceIds);
+    // Mismatched price IDs usually means environment misconfiguration.
+    assertions.assertNotNull(plan, 'unknown_plan', {
+      sessionId,
+      priceId,
+      configuredPriceIds: d.priceIds,
+    });
+
+    return {
+      cancelAtPeriodEnd,
+      currentPeriodEnd: new Date(currentPeriodEndSeconds * MS_PER_SECOND),
+      externalSubscriptionId: subscriptionId,
+      plan,
+      status,
+      userId: metadataUserId,
+    };
+  };
+
+  const { observation, write } = await persistSubscriptionObservation({
+    userId: user.id,
+    readVersion: (userId) =>
+      d.subscriptionVersions.findObservationVersionByUserId(userId),
+    retrieve: retrieveObservation,
+    getUserId: (subscription) => subscription.userId,
+    persist: (subscription, expectedVersion) =>
+      d.transaction(async ({ stripeCustomers, subscriptions }) => {
+        // Canonical multi-repository lock order: advisory(user) in
+        // subscriptions.upsert -> stripe_subscriptions row -> stripe_customers
+        // row. Keep every writer in this order to avoid AB-BA deadlocks.
+        const result = await subscriptions.upsert({
+          userId: subscription.userId,
+          externalSubscriptionId: subscription.externalSubscriptionId,
+          plan: subscription.plan,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          expectedVersion,
         });
-      }
 
-      return result;
-    },
-  );
+        if (result.persisted) {
+          await stripeCustomers.insert(user.id, stripeCustomerId, {
+            conflictStrategy: 'authoritative',
+          });
+        }
+
+        return result;
+      }),
+  });
+  const { currentPeriodEnd, status } = observation;
 
   const effectiveStatus = write.persisted ? status : write.current.status;
   const effectiveCurrentPeriodEnd = write.persisted

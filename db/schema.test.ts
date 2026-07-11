@@ -1,3 +1,4 @@
+import { getTableColumns } from 'drizzle-orm';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { DAY_MS } from '@/src/domain/services/time-constants';
 import type {
@@ -10,6 +11,7 @@ import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
   practiceSessionQuestionStates,
   practiceSessions,
+  stripeSubscriptions,
 } from './schema';
 
 // Drizzle stores extra config (indexes, constraints) behind internal Symbols.
@@ -201,5 +203,19 @@ describe('db schema exports', () => {
     expectTypeOf<NewPendingStripeCancellation>().toEqualTypeOf<
       typeof pendingStripeCancellations.$inferInsert
     >();
+  });
+});
+
+describe('stripeSubscriptions schema', () => {
+  it('stores a non-null observation version starting at zero', () => {
+    const columns = getTableColumns(stripeSubscriptions) as Record<
+      string,
+      { default: unknown; notNull: boolean }
+    >;
+
+    expect(columns.version).toMatchObject({
+      default: 0,
+      notNull: true,
+    });
   });
 });

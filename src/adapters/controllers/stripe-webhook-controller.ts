@@ -3,7 +3,7 @@ import {
   isE2EOwnerMismatchEvent,
   isMissingStripeSubscriptionUserIdError,
 } from '@/src/adapters/shared/stripe-subscription-errors';
-import { isApplicationError } from '@/src/application/errors';
+import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
@@ -11,6 +11,7 @@ import type {
   StripeEventRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
+import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
 import { DAY_MS } from '@/src/domain/services';
 
 export type StripeWebhookInput = {
@@ -26,6 +27,10 @@ export type StripeWebhookTransaction = {
 
 export type StripeWebhookDeps = {
   paymentGateway: PaymentGateway;
+  subscriptionVersions: Pick<
+    SubscriptionRepository,
+    'findObservationVersionByUserId'
+  >;
   transaction: <T>(
     fn: (tx: StripeWebhookTransaction) => Promise<T>,
   ) => Promise<T>;
@@ -36,6 +41,11 @@ export type StripeWebhookDeps = {
 type StripeWebhookEvent = Awaited<
   ReturnType<PaymentGateway['processWebhookEvent']>
 >;
+type StripeSubscriptionUpdate = NonNullable<
+  StripeWebhookEvent['subscriptionUpdate']
+>;
+
+class StripeWebhookAlreadyProcessed extends Error {}
 
 const STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
 const STRIPE_EVENTS_PRUNE_LIMIT = 100;
@@ -143,8 +153,99 @@ export async function processStripeWebhook(
   let hasProcessingError = false;
 
   try {
-    await deps.transaction(
-      async ({ stripeEvents, subscriptions, stripeCustomers }) => {
+    if (event.subscriptionUpdate) {
+      const discoveredUserId = event.subscriptionUpdate.userId;
+      const retrieveSubscriptionUpdate =
+        async (): Promise<StripeSubscriptionUpdate> => {
+          const refreshedEvent = await deps.paymentGateway.processWebhookEvent(
+            input.rawBody,
+            input.signature,
+          );
+          if (
+            refreshedEvent.eventId !== event.eventId ||
+            refreshedEvent.type !== event.type ||
+            !refreshedEvent.subscriptionUpdate
+          ) {
+            throw new ApplicationError(
+              'CONFLICT',
+              'Stripe webhook changed during subscription refresh',
+            );
+          }
+          return refreshedEvent.subscriptionUpdate;
+        };
+
+      try {
+        await persistSubscriptionObservation({
+          userId: discoveredUserId,
+          readVersion: (userId) =>
+            deps.subscriptionVersions.findObservationVersionByUserId(userId),
+          retrieve: retrieveSubscriptionUpdate,
+          getUserId: (subscriptionUpdate) => subscriptionUpdate.userId,
+          persist: (subscriptionUpdate, expectedVersion) =>
+            deps.transaction(
+              async ({ stripeEvents, subscriptions, stripeCustomers }) => {
+                const claimed = await stripeEvents.claim(
+                  event.eventId,
+                  event.type,
+                );
+                if (!claimed) {
+                  const snapshot = await stripeEvents.peek(event.eventId);
+                  if (snapshot && isSuccessfullyProcessed(snapshot)) {
+                    throw new StripeWebhookAlreadyProcessed();
+                  }
+                }
+
+                const current = await stripeEvents.lock(event.eventId);
+                if (isSuccessfullyProcessed(current)) {
+                  throw new StripeWebhookAlreadyProcessed();
+                }
+
+                try {
+                  // Canonical multi-repository lock order: advisory(user) in
+                  // subscriptions.upsert -> stripe_subscriptions row ->
+                  // stripe_customers row. Keep every writer in this order.
+                  const write = await subscriptions.upsert({
+                    userId: subscriptionUpdate.userId,
+                    externalSubscriptionId:
+                      subscriptionUpdate.externalSubscriptionId,
+                    plan: subscriptionUpdate.plan,
+                    status: subscriptionUpdate.status,
+                    currentPeriodEnd: subscriptionUpdate.currentPeriodEnd,
+                    cancelAtPeriodEnd: subscriptionUpdate.cancelAtPeriodEnd,
+                    expectedVersion,
+                  });
+                  if (!write.persisted && write.reason === 'version_conflict') {
+                    return write;
+                  }
+
+                  if (write.persisted) {
+                    await stripeCustomers.insert(
+                      subscriptionUpdate.userId,
+                      subscriptionUpdate.externalCustomerId,
+                      { conflictStrategy: 'authoritative' },
+                    );
+                  }
+
+                  await stripeEvents.markProcessed(event.eventId);
+                  return write;
+                } catch (error) {
+                  if (error instanceof StripeWebhookAlreadyProcessed) {
+                    throw error;
+                  }
+                  processingError = error;
+                  hasProcessingError = true;
+                  throw error;
+                }
+              },
+            ),
+        });
+      } catch (error) {
+        if (!(error instanceof StripeWebhookAlreadyProcessed)) {
+          throw error;
+        }
+      }
+    } else {
+      await deps.transaction(async ({ stripeEvents }) => {
         const claimed = await stripeEvents.claim(event.eventId, event.type);
         if (!claimed) {
           const snapshot = await stripeEvents.peek(event.eventId);
@@ -159,37 +260,14 @@ export async function processStripeWebhook(
         }
 
         try {
-          if (event.subscriptionUpdate) {
-            // Canonical multi-repository lock order: advisory(user) in
-            // subscriptions.upsert -> stripe_subscriptions row ->
-            // stripe_customers row. Keep every writer in this order.
-            const write = await subscriptions.upsert({
-              userId: event.subscriptionUpdate.userId,
-              externalSubscriptionId:
-                event.subscriptionUpdate.externalSubscriptionId,
-              plan: event.subscriptionUpdate.plan,
-              status: event.subscriptionUpdate.status,
-              currentPeriodEnd: event.subscriptionUpdate.currentPeriodEnd,
-              cancelAtPeriodEnd: event.subscriptionUpdate.cancelAtPeriodEnd,
-            });
-
-            if (write.persisted) {
-              await stripeCustomers.insert(
-                event.subscriptionUpdate.userId,
-                event.subscriptionUpdate.externalCustomerId,
-                { conflictStrategy: 'authoritative' },
-              );
-            }
-          }
-
           await stripeEvents.markProcessed(event.eventId);
         } catch (error) {
           processingError = error;
           hasProcessingError = true;
           throw error;
         }
-      },
-    );
+      });
+    }
   } catch (transactionError) {
     const originalError = hasProcessingError
       ? processingError

@@ -24,6 +24,7 @@ export async function getCheckoutSuccessDeps(
 
   return {
     authGateway: container.createAuthGateway(),
+    subscriptionVersions: container.createSubscriptionRepository(),
     getClerkAuth: auth,
     logger: container.logger,
     stripe: getStripe(),

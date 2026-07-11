@@ -219,6 +219,10 @@ async function runWebhookWriter(input: {
   await processStripeWebhook(
     {
       paymentGateway,
+      subscriptionVersions: new DrizzleSubscriptionRepository(
+        subscriptionWriter.db,
+        priceIds,
+      ),
       logger: new FakeLogger(),
       now: () => new Date(),
       transaction: async (fn) =>
@@ -256,6 +260,10 @@ async function runCheckoutSuccessWriter(input: {
   });
   const deps: CheckoutSuccessDeps = {
     authGateway,
+    subscriptionVersions: new DrizzleSubscriptionRepository(
+      subscriptionWriter.db,
+      priceIds,
+    ),
     getClerkAuth: async () => ({
       userId: input.userId,
       redirectToSignIn: () => {
@@ -364,7 +372,11 @@ describe('Stripe subscription writer lock order', () => {
         priceIds,
         logger: new FakeLogger(),
         listLocalSubscriptions: async () => [
-          { userId: user.id, stripeSubscriptionId: externalSubscriptionId },
+          {
+            userId: user.id,
+            stripeSubscriptionId: externalSubscriptionId,
+            version: null,
+          },
         ],
         transaction: async (fn) => {
           try {

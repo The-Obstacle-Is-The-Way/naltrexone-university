@@ -172,6 +172,7 @@ describe('DrizzleSubscriptionRepository', () => {
         status: 'active',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
+        expectedVersion: null,
       }),
     ).resolves.toEqual({ persisted: true });
     expect(nowFn).toHaveBeenCalledTimes(1);
@@ -224,6 +225,7 @@ describe('DrizzleSubscriptionRepository', () => {
         status: 'active',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
+        expectedVersion: null,
       }),
     ).resolves.toEqual({ persisted: true });
 
@@ -274,6 +276,7 @@ describe('DrizzleSubscriptionRepository', () => {
         status: 'active',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
+        expectedVersion: null,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
@@ -319,6 +322,7 @@ describe('DrizzleSubscriptionRepository', () => {
         status: 'active',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
+        expectedVersion: null,
       });
       expect.unreachable('Expected upsert to throw');
     } catch (error) {

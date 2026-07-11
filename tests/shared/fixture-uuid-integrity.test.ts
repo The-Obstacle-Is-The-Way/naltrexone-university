@@ -105,6 +105,7 @@ describe('fixture UUID integrity', () => {
       status: 'active',
       currentPeriodEnd: new Date(),
       cancelAtPeriodEnd: false,
+      expectedVersion: null,
     });
     const subscription =
       await subscriptionRepository.findByUserId(subscriptionUserId);

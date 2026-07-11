@@ -1,0 +1,1 @@
+ALTER TABLE "stripe_subscriptions" ADD COLUMN "version" integer DEFAULT 0 NOT NULL;

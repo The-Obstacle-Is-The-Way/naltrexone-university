@@ -19,6 +19,7 @@ export function createControllerFactories(input: {
   return {
     createStripeWebhookDeps: () => ({
       paymentGateway: gateways.createPaymentGateway(),
+      subscriptionVersions: repositories.createSubscriptionRepository(),
       logger: primitives.logger,
       now: primitives.now,
       transaction: async (fn) =>

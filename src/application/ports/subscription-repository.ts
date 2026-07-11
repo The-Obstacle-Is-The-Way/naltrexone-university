@@ -11,14 +11,22 @@ export type SubscriptionUpsertInput = {
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
+  expectedVersion: number | null;
 };
 
 export type SubscriptionUpsertResult =
   | { persisted: true }
-  | { persisted: false; current: Subscription };
+  | {
+      persisted: false;
+      reason: 'write_guard_rejected';
+      current: Subscription;
+    }
+  | { persisted: false; reason: 'version_conflict' };
 
 export interface SubscriptionRepository {
   findByUserId(userId: string): Promise<Subscription | null>;
+
+  findObservationVersionByUserId(userId: string): Promise<number | null>;
 
   findByExternalSubscriptionId(
     externalSubscriptionId: string,

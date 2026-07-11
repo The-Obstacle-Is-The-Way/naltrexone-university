@@ -9,6 +9,7 @@ import type {
 export type StripeSubscriptionRefRow = {
   userId: string;
   stripeSubscriptionId: string;
+  version: number | null;
 };
 
 export type ReconcileStripeSubscriptionsInput = {
