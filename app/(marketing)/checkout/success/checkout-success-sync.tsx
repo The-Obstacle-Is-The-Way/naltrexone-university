@@ -4,6 +4,7 @@ import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-pri
 import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
+import { ApplicationError } from '@/src/application/errors';
 import {
   determineNonEntitledReason,
   MS_PER_SECOND,
@@ -261,6 +262,13 @@ export async function syncCheckoutSuccess(
       return result;
     },
   );
+
+  if (!write.persisted && write.reason === 'version_conflict') {
+    throw new ApplicationError(
+      'CONFLICT',
+      'Subscription observation version conflict',
+    );
+  }
 
   const effectiveStatus = write.persisted ? status : write.current.status;
   const effectiveCurrentPeriodEnd = write.persisted

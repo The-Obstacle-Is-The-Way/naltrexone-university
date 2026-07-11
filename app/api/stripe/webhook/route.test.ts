@@ -45,6 +45,7 @@ function createTestDeps() {
     },
     subscriptions: {
       findByUserId: async () => null,
+      findObservationVersionByUserId: async () => null,
       findByExternalSubscriptionId: async () => null,
       upsert: async () => ({ persisted: true }) as const,
     },

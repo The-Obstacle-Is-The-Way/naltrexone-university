@@ -11,6 +11,7 @@ type SubscriptionSnapshot = {
   byUserId: ReadonlyArray<readonly [string, Subscription]>;
   externalSubscriptionIdByUserId: ReadonlyArray<readonly [string, string]>;
   userIdByExternalSubscriptionId: ReadonlyArray<readonly [string, string]>;
+  observationVersionByUserId: ReadonlyArray<readonly [string, number]>;
 };
 
 type FakeSubscriptionSeed =
@@ -18,6 +19,7 @@ type FakeSubscriptionSeed =
   | {
       subscription: Subscription;
       externalSubscriptionId: string;
+      version?: number;
     };
 
 function cloneSubscription(subscription: Subscription): Subscription {
@@ -39,6 +41,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
   private readonly byUserId = new Map<string, Subscription>();
   private readonly externalSubscriptionIdByUserId = new Map<string, string>();
   private readonly userIdByExternalSubscriptionId = new Map<string, string>();
+  private readonly observationVersionByUserId = new Map<string, number>();
 
   constructor(
     subscriptions: readonly FakeSubscriptionSeed[] = [],
@@ -47,6 +50,10 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     for (const seed of subscriptions) {
       const subscription = isMappedSeed(seed) ? seed.subscription : seed;
       this.byUserId.set(subscription.userId, cloneSubscription(subscription));
+      this.observationVersionByUserId.set(
+        subscription.userId,
+        isMappedSeed(seed) ? (seed.version ?? 0) : 0,
+      );
 
       if (isMappedSeed(seed)) {
         this.externalSubscriptionIdByUserId.set(
@@ -65,6 +72,10 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     return this.byUserId.get(userId) ?? null;
   }
 
+  async findObservationVersionByUserId(userId: string): Promise<number | null> {
+    return this.observationVersionByUserId.get(userId) ?? null;
+  }
+
   async findByExternalSubscriptionId(
     externalSubscriptionId: string,
   ): Promise<Subscription | null> {
@@ -78,19 +89,18 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
   async upsert(
     input: SubscriptionUpsertInput,
   ): Promise<SubscriptionUpsertResult> {
-    const mappedUserId = this.userIdByExternalSubscriptionId.get(
-      input.externalSubscriptionId,
-    );
-
-    if (mappedUserId && mappedUserId !== input.userId) {
-      throw new ApplicationError(
-        'CONFLICT',
-        'External subscription id is already mapped to a different user',
-      );
-    }
-
     const now = this.now();
     const existing = this.byUserId.get(input.userId);
+    const storedVersion = existing
+      ? (this.observationVersionByUserId.get(input.userId) ?? 0)
+      : null;
+    if (
+      input.expectedVersion !== undefined &&
+      storedVersion !== input.expectedVersion
+    ) {
+      return { persisted: false, reason: 'version_conflict' };
+    }
+
     const existingExternalSubscriptionId =
       this.externalSubscriptionIdByUserId.get(input.userId);
     if (
@@ -110,7 +120,21 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
         now,
       })
     ) {
-      return { persisted: false, current: cloneSubscription(existing) };
+      return {
+        persisted: false,
+        reason: 'write_guard_rejected',
+        current: cloneSubscription(existing),
+      };
+    }
+
+    const mappedUserId = this.userIdByExternalSubscriptionId.get(
+      input.externalSubscriptionId,
+    );
+    if (mappedUserId && mappedUserId !== input.userId) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'External subscription id is already mapped to a different user',
+      );
     }
 
     const subscription: Subscription = {
@@ -144,6 +168,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       input.externalSubscriptionId,
       input.userId,
     );
+    this.observationVersionByUserId.set(input.userId, (storedVersion ?? 0) + 1);
     return { persisted: true };
   }
 
@@ -158,6 +183,9 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       ],
       userIdByExternalSubscriptionId: [
         ...this.userIdByExternalSubscriptionId.entries(),
+      ],
+      observationVersionByUserId: [
+        ...this.observationVersionByUserId.entries(),
       ],
     };
   }
@@ -182,6 +210,11 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       userId,
     ] of snapshot.userIdByExternalSubscriptionId) {
       this.userIdByExternalSubscriptionId.set(externalSubscriptionId, userId);
+    }
+
+    this.observationVersionByUserId.clear();
+    for (const [userId, version] of snapshot.observationVersionByUserId) {
+      this.observationVersionByUserId.set(userId, version);
     }
   }
 }

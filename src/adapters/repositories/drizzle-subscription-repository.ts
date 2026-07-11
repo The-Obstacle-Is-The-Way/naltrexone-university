@@ -58,6 +58,15 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findObservationVersionByUserId(userId: string) {
+    const row = await this.db.query.stripeSubscriptions.findFirst({
+      columns: { version: true },
+      where: eq(stripeSubscriptions.userId, userId),
+    });
+
+    return row?.version ?? null;
+  }
+
   async findByExternalSubscriptionId(externalSubscriptionId: string) {
     const row = await this.db.query.stripeSubscriptions.findFirst({
       where: eq(
@@ -87,6 +96,14 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
           .from(stripeSubscriptions)
           .where(eq(stripeSubscriptions.userId, input.userId))
           .for('update');
+        const storedVersion = existingRow ? existingRow.version : null;
+        if (
+          input.expectedVersion !== undefined &&
+          storedVersion !== input.expectedVersion
+        ) {
+          return { persisted: false, reason: 'version_conflict' };
+        }
+
         if (
           existingRow &&
           !shouldPersistSubscriptionWrite({
@@ -105,9 +122,14 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
             now: updatedAt,
           })
         ) {
-          return { persisted: false, current: this.toDomain(existingRow) };
+          return {
+            persisted: false,
+            reason: 'write_guard_rejected',
+            current: this.toDomain(existingRow),
+          };
         }
 
+        const nextVersion = (storedVersion ?? 0) + 1;
         await tx
           .insert(stripeSubscriptions)
           .values({
@@ -117,6 +139,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
             priceId,
             currentPeriodEnd: input.currentPeriodEnd,
             cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+            version: nextVersion,
             updatedAt,
           })
           .onConflictDoUpdate({
@@ -127,6 +150,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
               priceId,
               currentPeriodEnd: input.currentPeriodEnd,
               cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+              version: nextVersion,
               updatedAt,
             },
           });
