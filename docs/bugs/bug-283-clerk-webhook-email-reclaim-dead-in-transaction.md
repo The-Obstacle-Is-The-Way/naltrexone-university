@@ -59,6 +59,7 @@ Severity rationale: P3 rather than P2 because the trigger precondition is narrow
 
 - [`DrizzleUserRepository.upsertByClerkId`](../../src/adapters/repositories/drizzle-user-repository.ts#L74-L135) now runs the insert attempt inside `this.db.transaction`. With the installed postgres-js Drizzle driver this is `BEGIN` on the raw DB and `SAVEPOINT` on an existing transaction, so the outer webhook transaction remains usable after `users_email_uq` is caught.
 - The tx-bound real-Postgres regression in [`user-repository.integration.test.ts`](../../tests/integration/user-repository.integration.test.ts#L228-L271) catches the typed conflict and then successfully reads both unchanged rows through the same outer transaction; this is the direct proof that the former `25P02` path is closed.
+- [`processClerkWebhook`](../../src/adapters/controllers/clerk-webhook-controller.ts#L254-L468) now commits its local conflict-detection transaction before the Clerk owner lookup and retry loop. A fresh transaction reclaims the event row, rechecks the incoming identity's deletion tombstone, and applies the already-resolved identity change only if both guards still permit it; no Clerk API call or retry backoff runs while a database transaction is open.
 - `processClerkWebhook` still invokes `persistFailure` through a separate `deps.transaction` after processing failure. Its regression now explicitly pins two transaction invocations (processing plus fresh failure persistence); the implementation was not rewritten as part of this fix.
 
 ## Related

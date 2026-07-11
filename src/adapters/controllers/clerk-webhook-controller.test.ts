@@ -478,6 +478,179 @@ describe('processClerkWebhook', () => {
     });
   });
 
+  it('releases the webhook transaction before resolving an email ownership conflict through Clerk', async () => {
+    const baseDeps = createDeps();
+    await baseDeps.userRepository.upsertByClerkId(
+      'clerk_owner',
+      'held@example.com',
+      { observedAt: new Date('2026-02-01T00:00:00Z') },
+    );
+    let transactionDepth = 0;
+    let transactionCount = 0;
+    let lookupTransactionDepth: number | null = null;
+    const deps = {
+      ...baseDeps,
+      transaction: async <T>(
+        fn: Parameters<typeof baseDeps.transaction<T>>[0],
+      ): Promise<T> => {
+        transactionCount += 1;
+        transactionDepth += 1;
+        try {
+          return await baseDeps.transaction(fn);
+        } finally {
+          transactionDepth -= 1;
+        }
+      },
+      getClerkUserById: async () => {
+        lookupTransactionDepth = transactionDepth;
+        return {
+          id: 'clerk_owner',
+          updatedAt: 1769904004000,
+          emailAddresses: [{ emailAddress: 'owner-new@example.com' }],
+        };
+      },
+    };
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_incoming',
+            primary_email_address_id: 'email_1',
+            updated_at: 1769904003000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'held@example.com' },
+            ],
+          },
+        },
+        'evt_user_updated_resolve_outside_transaction',
+      ),
+    );
+
+    expect(lookupTransactionDepth).toBe(0);
+    expect(transactionCount).toBe(2);
+    await expect(
+      deps.userRepository.findByClerkId('clerk_owner'),
+    ).resolves.toMatchObject({ email: 'owner-new@example.com' });
+    await expect(
+      deps.userRepository.findByClerkId('clerk_incoming'),
+    ).resolves.toMatchObject({ email: 'held@example.com' });
+  });
+
+  it('does not apply a resolved email ownership conflict after another worker processes the event', async () => {
+    const baseDeps = createDeps();
+    const originalOwner = await baseDeps.userRepository.upsertByClerkId(
+      'clerk_owner',
+      'held@example.com',
+      { observedAt: new Date('2026-02-01T00:00:00Z') },
+    );
+    const eventId = 'evt_user_updated_processed_during_resolution';
+    const deps = {
+      ...baseDeps,
+      getClerkUserById: async () => {
+        await baseDeps.clerkEvents.markProcessed(eventId);
+        return {
+          id: 'clerk_owner',
+          updatedAt: 1769904004000,
+          emailAddresses: [{ emailAddress: 'owner-new@example.com' }],
+        };
+      },
+    };
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_incoming',
+            primary_email_address_id: 'email_1',
+            updated_at: 1769904003000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'held@example.com' },
+            ],
+          },
+        },
+        eventId,
+      ),
+    );
+
+    await expect(
+      deps.userRepository.findByClerkId('clerk_owner'),
+    ).resolves.toEqual(originalOwner);
+    await expect(
+      deps.userRepository.findByClerkId('clerk_incoming'),
+    ).resolves.toBeNull();
+    expect(deps.logger.infoCalls).toContainEqual({
+      context: {
+        existingClerkUserId: 'clerk_owner',
+        incomingClerkUserId: 'clerk_incoming',
+        resolution: 'identity_resolution_superseded_by_processed_event',
+      },
+      msg: 'Skipped Clerk user email ownership resolution',
+    });
+  });
+
+  it('does not apply a resolved email ownership conflict after the incoming identity is deleted', async () => {
+    const baseDeps = createDeps();
+    const originalOwner = await baseDeps.userRepository.upsertByClerkId(
+      'clerk_owner',
+      'held@example.com',
+      { observedAt: new Date('2026-02-01T00:00:00Z') },
+    );
+    const eventId = 'evt_user_updated_deleted_during_resolution';
+    const deps = {
+      ...baseDeps,
+      getClerkUserById: async () => {
+        await baseDeps.deletedClerkUsers.markDeleted('clerk_incoming');
+        return {
+          id: 'clerk_owner',
+          updatedAt: 1769904004000,
+          emailAddresses: [{ emailAddress: 'owner-new@example.com' }],
+        };
+      },
+    };
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.updated',
+          data: {
+            id: 'clerk_incoming',
+            primary_email_address_id: 'email_1',
+            updated_at: 1769904003000,
+            email_addresses: [
+              { id: 'email_1', email_address: 'held@example.com' },
+            ],
+          },
+        },
+        eventId,
+      ),
+    );
+
+    await expect(
+      deps.userRepository.findByClerkId('clerk_owner'),
+    ).resolves.toEqual(originalOwner);
+    await expect(
+      deps.userRepository.findByClerkId('clerk_incoming'),
+    ).resolves.toBeNull();
+    await expect(baseDeps.clerkEvents.peek(eventId)).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
+    expect(deps.logger.infoCalls).toContainEqual({
+      context: {
+        existingClerkUserId: 'clerk_owner',
+        incomingClerkUserId: 'clerk_incoming',
+        resolution: 'identity_resolution_blocked_by_deletion_tombstone',
+      },
+      msg: 'Skipped Clerk user email ownership resolution',
+    });
+  });
+
   it('ignores user.updated when no email addresses are present', async () => {
     const deps = createDeps();
 
