@@ -74,9 +74,9 @@ The original proposal to check only whether the old Clerk ID still exists was re
 
 Required regression proof: use real persistence for the uniqueness behavior and cover both raw-db and tx-bound callers. Pin (1) A moves `X → Y`, then different person B claims X: A keeps the original `users.id`/history and B gets a distinct row; (2) old Clerk ID absent: no automatic reassignment without an explicit continuity proof; (3) B already owns a row: a stable typed conflict is returned without mutating either row; and (4) any retained same-person recovery requires the chosen positive proof and leaves a structured audit event.
 
-## Resolution State
+## Implementation Notes (fix branch)
 
-**Implemented 2026-07-10 on `fix/bug-283-284-user-upsert-identity`; PR and deploy proof pending. Status remains Open until the fix is merged and production proof is recorded.** The failure analysis above describes the branch point, `origin/dev` at `64204014`.
+**Implemented 2026-07-10 on `fix/bug-283-284-user-upsert-identity`; merged and production-verified 2026-07-11 — see the Resolution section above.** The failure analysis above describes the branch point, `origin/dev` at `64204014`.
 
 - [`DrizzleUserRepository`](../../../src/adapters/repositories/drizzle-user-repository.ts#L18-L173) now maps `users_email_uq` consistently for both upsert and existing-row email synchronization, returning a non-mutating `UserEmailOwnershipConflictError` with the stable `user_email_owned_by_another_identity` reason and current owner ID. Both constraint-raising writes are scoped to a nested transaction/savepoint so classification leaves a transaction-bound caller usable, and the repository no longer rewrites `clerk_user_id` by email.
 - [`clerk-user-provisioner.ts`](../../../src/adapters/gateways/clerk-user-provisioner.ts#L86-L321) is the shared identity-resolution module. `ensureClerkUser` orchestrates the raw-db sign-in path; the webhook uses the same validation, external-resolution, and apply functions as separate phases so Clerk lookup retries run outside its database transactions. Both callers revalidate that the incoming Clerk ID is absent and that the same local owner still holds the email before synchronizing through the non-inserting `updateEmailByClerkId` path. Every two-ID outcome emits one structured log containing both Clerk IDs and no email address.

@@ -13,9 +13,9 @@
 Fixed in PR #627 (squash `0c1221af` to dev), promoted via PR #629 (main `cca0470d`); production deploy succeeded and `https://addictionboards.com/` returned HTTP/2 200. Standalone `end()`'s two pre-reads now run in one `inRepeatableRead` snapshot mirroring `findByIdAndUserId`; the guarded UPDATE and its `!updated` NOT_FOUND/CONFLICT fallback are unchanged. A user-deletion cascade committing between the logical pre-reads now maps to NOT_FOUND instead of the corruption signature, while genuinely missing state stays fail-loud — both pinned in `tests/integration/bug-regression-practice-session-transaction-isolation.integration.test.ts`.
 
 
-## Resolution State
+## Implementation Notes (fix branch)
 
-Implemented in [PR #627](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/627) on branch `fix/bug-292-293-practice-session-races`; the bug remains Open pending merge and production proof.
+Implemented in [PR #627](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/627) on branch `fix/bug-292-293-practice-session-races`; merged and production-verified 2026-07-11 — see the Resolution section above.
 
 ## Summary
 

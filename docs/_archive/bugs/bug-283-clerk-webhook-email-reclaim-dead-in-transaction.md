@@ -58,9 +58,9 @@ Severity rationale: P3 rather than P2 because the trigger precondition is narrow
 2. Avoid the failed statement entirely: pre-read the conflicting rows or use a single-statement design, but keep identity ownership outside the persistence adapter and account for races. A pre-SELECT alone is not sufficient without a constraint-safe race path.
 3. **(Mandatory either way)** Add a tx-bound integration regression that runs the email-conflict scenario inside `db.transaction(async (tx) => new DrizzleUserRepository(tx)...)`, plus semantic cases proving a different human is never merged and an actor-already-has-a-row conflict is typed. The existing BUG-147 integration test exercises only the raw-db path ([`user-repository.integration.test.ts#L167-L170`](../../../tests/integration/user-repository.integration.test.ts#L167)).
 
-## Resolution State
+## Implementation Notes (fix branch)
 
-**Implemented 2026-07-10 on `fix/bug-283-284-user-upsert-identity`; PR and deploy proof pending. Status remains Open until the fix is merged and production proof is recorded.** The failure analysis above describes the branch point, `origin/dev` at `64204014`.
+**Implemented 2026-07-10 on `fix/bug-283-284-user-upsert-identity`; merged and production-verified 2026-07-11 — see the Resolution section above.** The failure analysis above describes the branch point, `origin/dev` at `64204014`.
 
 - [`DrizzleUserRepository.upsertByClerkId`](../../../src/adapters/repositories/drizzle-user-repository.ts#L74-L135) now runs the insert attempt inside `this.db.transaction`. With the installed postgres-js Drizzle driver this is `BEGIN` on the raw DB and `SAVEPOINT` on an existing transaction, so the outer webhook transaction remains usable after `users_email_uq` is caught.
 - The tx-bound real-Postgres regression in [`user-repository.integration.test.ts`](../../../tests/integration/user-repository.integration.test.ts#L228-L271) catches the typed conflict and then successfully reads both unchanged rows through the same outer transaction; this is the direct proof that the former `25P02` path is closed.

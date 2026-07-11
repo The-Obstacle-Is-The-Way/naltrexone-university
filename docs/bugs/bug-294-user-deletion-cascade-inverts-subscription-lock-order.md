@@ -26,7 +26,7 @@ A Clerk `user.deleted` transaction must interleave with an in-flight subscriptio
 
 Expected: all writers touching both tables for one user serialize on one canonical order.
 
-Actual: AB-BA deadlock. Neither side retries `40P01` in-process — the Stripe webhook persists failure state and rethrows (500; Stripe redelivers), and the Clerk webhook has no `40001`/`40P01` handling (500; Svix redelivers) — so the failure is transient and self-healing via provider redelivery, at the cost of one incident-shaped 500 plus a durable failed-event row per occurrence.
+Actual: AB-BA deadlock. Neither side retries `40P01` in-process — the Stripe webhook persists failure state and rethrows (500; Stripe redelivers), and the Clerk webhook has no `40001`/`40P01` handling (500; Svix redelivers) — so the deadlock victim is eligible for provider redelivery, at the cost of one incident-shaped 500 plus a durable failed-event row per occurrence. Redelivery does not necessarily restore subscription state: if the deletion committed, the redelivered subscription write fails the missing-user FK — the separate BUG-288 residue.
 
 ## Root Cause
 
@@ -35,7 +35,7 @@ Actual: AB-BA deadlock. Neither side retries `40P01` in-process — the Stripe w
 
 ## Impact
 
-Transient `40P01` on the payment path or the deletion path whenever account deletion races a subscription write for the same user; self-healing via Stripe/Svix redelivery (the retried webhook succeeds once the deletion has committed — the subscription upsert then hits the missing-user FK path, which is BUG-288's separate concern). No data loss or corruption; one alert-worthy 500 and triage noise per occurrence. P3: same grade and rationale as the resolved BUG-286 — indefinitely reproducible in the payment path, narrow per-occurrence window, no persistent wrong state.
+A `40P01` abort on the payment path or the deletion path whenever account deletion races a subscription write for the same user. The deadlock itself is transient: the victim is redelivered by Stripe/Svix, and the redelivery either succeeds (the deletion lost the race) or fails the missing-user FK because the deletion committed — the separate BUG-288 residue, not a restored subscription. No data loss or corruption; one alert-worthy 500 and triage noise per occurrence. P3: same grade and rationale as the resolved BUG-286 — indefinitely reproducible in the payment path, narrow per-occurrence window, no persistent wrong state.
 
 ## Proposed Fix
 
