@@ -94,10 +94,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     const storedVersion = existing
       ? (this.observationVersionByUserId.get(input.userId) ?? 0)
       : null;
-    if (
-      input.expectedVersion !== undefined &&
-      storedVersion !== input.expectedVersion
-    ) {
+    if (storedVersion !== input.expectedVersion) {
       return { persisted: false, reason: 'version_conflict' };
     }
 

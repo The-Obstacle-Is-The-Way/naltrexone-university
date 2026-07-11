@@ -71,6 +71,7 @@ describe('Stripe webhook failure boundary', () => {
       await processStripeWebhook(
         {
           paymentGateway,
+          subscriptionVersions: new DrizzleSubscriptionRepository(db, priceIds),
           logger: new FakeLogger(),
           now: () => new Date(),
           transaction: async (fn) =>

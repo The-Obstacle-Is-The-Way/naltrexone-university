@@ -58,6 +58,7 @@ function createTestDeps() {
   const logger = new FakeLogger();
   const deps: StripeWebhookDeps = {
     paymentGateway: createPaymentGatewayStub(),
+    subscriptionVersions: tx.subscriptions,
     logger,
     now: () => new Date('2026-02-01T00:00:00.000Z'),
     transaction: async (fn) => fn(tx),
@@ -247,6 +248,9 @@ describe('POST /api/stripe/webhook', () => {
 
     const deps: StripeWebhookDeps = {
       paymentGateway: createPaymentGatewayStub(),
+      subscriptionVersions: {
+        findObservationVersionByUserId: async () => null,
+      },
       logger: new FakeLogger(),
       now: () => new Date('2026-02-01T00:00:00.000Z'),
       transaction:

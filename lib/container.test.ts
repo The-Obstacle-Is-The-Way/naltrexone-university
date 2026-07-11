@@ -589,13 +589,16 @@ describe('container factories', () => {
     });
 
     const deps: StripeWebhookDeps = container.createStripeWebhookDeps();
+    expect(deps.subscriptionVersions).toBe(
+      createSubscriptionRepository.mock.results[0]?.value,
+    );
 
     await deps.transaction(async (repoDeps) => {
       expect(repoDeps.stripeEvents).toBe(
         createStripeEventRepository.mock.results[0]?.value,
       );
       expect(repoDeps.subscriptions).toBe(
-        createSubscriptionRepository.mock.results[0]?.value,
+        createSubscriptionRepository.mock.results[1]?.value,
       );
       expect(repoDeps.stripeCustomers).toBe(
         createStripeCustomerRepository.mock.results[0]?.value,
@@ -604,7 +607,7 @@ describe('container factories', () => {
 
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(createStripeEventRepository).toHaveBeenCalledWith(tx);
-    expect(createSubscriptionRepository).toHaveBeenCalledWith(tx);
+    expect(createSubscriptionRepository.mock.calls).toEqual([[], [tx]]);
     expect(createStripeCustomerRepository).toHaveBeenCalledWith(tx);
   });
 });

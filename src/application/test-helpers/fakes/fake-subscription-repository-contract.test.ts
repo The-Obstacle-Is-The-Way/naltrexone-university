@@ -4,7 +4,7 @@ import { FakeSubscriptionRepository } from './fake-subscription-repository';
 runSubscriptionObservationVersionContract(
   'FakeSubscriptionRepository',
   async () => ({
-    repository: new FakeSubscriptionRepository() as never,
+    repository: new FakeSubscriptionRepository(),
     userId: crypto.randomUUID(),
     externalSubscriptionId: (label) => `sub_${label}_${crypto.randomUUID()}`,
   }),

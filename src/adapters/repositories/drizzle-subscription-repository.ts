@@ -97,10 +97,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
           .where(eq(stripeSubscriptions.userId, input.userId))
           .for('update');
         const storedVersion = existingRow ? existingRow.version : null;
-        if (
-          input.expectedVersion !== undefined &&
-          storedVersion !== input.expectedVersion
-        ) {
+        if (storedVersion !== input.expectedVersion) {
           return { persisted: false, reason: 'version_conflict' };
         }
 

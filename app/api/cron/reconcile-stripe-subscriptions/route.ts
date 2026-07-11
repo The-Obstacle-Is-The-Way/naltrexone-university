@@ -199,6 +199,7 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
           columns: {
             userId: true,
             stripeSubscriptionId: true,
+            version: true,
           },
           orderBy: (subs, { asc }) => [asc(subs.userId)],
           limit,
@@ -208,6 +209,7 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
         return rows.map((row) => ({
           userId: row.userId,
           stripeSubscriptionId: row.stripeSubscriptionId,
+          version: row.version,
         }));
       },
       transaction: async (fn) =>

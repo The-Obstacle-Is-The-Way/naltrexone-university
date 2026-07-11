@@ -61,6 +61,9 @@ describe('runCheckoutSuccessPage', () => {
 
     const deps = {
       authGateway,
+      subscriptionVersions: {
+        findObservationVersionByUserId: async () => null,
+      },
       getClerkAuth: async () => ({
         userId: null,
         redirectToSignIn,
@@ -132,6 +135,7 @@ describe('runCheckoutSuccessPage', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -225,6 +229,7 @@ describe('runCheckoutSuccessPage', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -309,6 +314,7 @@ describe('runCheckoutSuccessPage', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -395,6 +401,7 @@ describe('runCheckoutSuccessPage', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -558,6 +565,7 @@ describe('syncCheckoutSuccess retry logging', () => {
 
       const deps = {
         authGateway: new FakeAuthGateway(user),
+        subscriptionVersions: subscriptions,
         getClerkAuth: async () => ({
           userId: 'clerk_user_1',
           redirectToSignIn: () => {
@@ -650,6 +658,7 @@ describe('syncCheckoutSuccess retry logging', () => {
 
       const deps = {
         authGateway: new FakeAuthGateway(user),
+        subscriptionVersions: subscriptions,
         getClerkAuth: async () => ({
           userId: 'clerk_user_1',
           redirectToSignIn: () => {
@@ -818,6 +827,9 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway,
+      subscriptionVersions: {
+        findObservationVersionByUserId: async () => null,
+      },
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -903,6 +915,7 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -983,6 +996,7 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -1063,6 +1077,7 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -1133,6 +1148,7 @@ describe('syncCheckoutSuccess', () => {
     await subscriptions.upsert({
       userId: user.id,
       externalSubscriptionId: 'sub_current',
+      expectedVersion: null,
       plan: 'annual',
       status: 'active',
       currentPeriodEnd: protectedPeriodEnd,
@@ -1141,6 +1157,7 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -1222,6 +1239,7 @@ describe('syncCheckoutSuccess', () => {
     await subscriptions.upsert({
       userId: user.id,
       externalSubscriptionId: 'sub_current',
+      expectedVersion: null,
       plan: 'annual',
       status: 'active',
       currentPeriodEnd: protectedPeriodEnd,
@@ -1230,6 +1248,7 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -1309,6 +1328,7 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -1388,6 +1408,7 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {
@@ -1466,6 +1487,7 @@ describe('syncCheckoutSuccess', () => {
 
     const deps = {
       authGateway: new FakeAuthGateway(user),
+      subscriptionVersions: subscriptions,
       getClerkAuth: async () => ({
         userId: 'clerk_user_1',
         redirectToSignIn: () => {

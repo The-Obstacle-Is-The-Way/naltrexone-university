@@ -56,12 +56,14 @@ function createAbortedTransactionDeps(input: {
   transactionCallCount: () => number;
 } {
   const stripeEvents = input.stripeEvents ?? new FakeStripeEventRepository();
+  const subscriptionVersions = new FakeSubscriptionRepository();
   const logger = new FakeLogger();
   let transactionCallCount = 0;
 
   return {
     deps: {
       paymentGateway: input.paymentGateway,
+      subscriptionVersions,
       logger,
       now: () => new Date(),
       transaction: async (fn) => {
@@ -196,6 +198,7 @@ describe('processStripeWebhook failure boundary', () => {
     let transactionCallCount = 0;
     const deps: StripeWebhookDeps = {
       paymentGateway: createPaymentGateway(eventId),
+      subscriptionVersions: new FakeSubscriptionRepository(),
       logger: new FakeLogger(),
       now: () => new Date(),
       transaction: async (fn) => {

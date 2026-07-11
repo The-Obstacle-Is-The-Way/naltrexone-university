@@ -11,7 +11,7 @@ export type SubscriptionUpsertInput = {
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
-  expectedVersion?: number | null;
+  expectedVersion: number | null;
 };
 
 export type SubscriptionUpsertResult =
