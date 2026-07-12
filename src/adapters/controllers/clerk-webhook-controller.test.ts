@@ -5,7 +5,7 @@ import {
   FakeClerkEventRepository,
   FakeDeletedClerkUserRepository,
   FakeLogger,
-  FakePendingStripeCancellationRepository,
+  FakePendingStripeCustomerCleanupRepository,
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -69,6 +69,8 @@ class ConcurrentStripeSyncRepository extends FakeStripeCustomerRepository {
 
 class TombstoneDuringUpsertUserRepository extends FakeUserRepository {
   private shouldSimulateDelete = false;
+  readonly deletionCallOrder: string[] = [];
+  lastUpsertedUserId: string | null = null;
 
   constructor(
     private readonly deletedClerkUsers: FakeDeletedClerkUserRepository,
@@ -95,7 +97,31 @@ class TombstoneDuringUpsertUserRepository extends FakeUserRepository {
       await this.deletedClerkUsers.markDeleted(clerkId);
     }
 
-    return super.upsertByClerkId(clerkId, email, options);
+    const user = await super.upsertByClerkId(clerkId, email, options);
+    this.lastUpsertedUserId = user.id;
+    return user;
+  }
+
+  override async acquireSubscriptionWriteLock(userId: string): Promise<void> {
+    this.deletionCallOrder.push(`subscription-lock:${userId}`);
+  }
+
+  override async deleteByClerkId(clerkId: string): Promise<boolean> {
+    this.deletionCallOrder.push(`delete:${clerkId}`);
+    return super.deleteByClerkId(clerkId);
+  }
+}
+
+class CallOrderUserRepository extends FakeUserRepository {
+  readonly deletionCallOrder: string[] = [];
+
+  override async acquireSubscriptionWriteLock(userId: string): Promise<void> {
+    this.deletionCallOrder.push(`subscription-lock:${userId}`);
+  }
+
+  override async deleteByClerkId(clerkId: string): Promise<boolean> {
+    this.deletionCallOrder.push(`delete:${clerkId}`);
+    return super.deleteByClerkId(clerkId);
   }
 }
 
@@ -161,6 +187,7 @@ class TransactionalUserStore {
     return {
       findByClerkId: async (clerkId: string) => readVisibleUser(clerkId),
       lockByClerkId: async (clerkId: string) => readVisibleUser(clerkId),
+      acquireSubscriptionWriteLock: async () => undefined,
       upsertByClerkId: async (
         clerkId: string,
         email: string,
@@ -309,27 +336,26 @@ function withEventId(
   return eventWithId;
 }
 
-function createDeps() {
-  const cancelCalls: string[] = [];
+function createDeps(userRepository = new FakeUserRepository()) {
+  const customerDeleteCalls: string[] = [];
   const logger = new FakeLogger();
   const clerkEvents = new FakeClerkEventRepository();
   const deletedClerkUsers = new FakeDeletedClerkUserRepository();
-  const pendingStripeCancellations =
-    new FakePendingStripeCancellationRepository();
-  const userRepository = new FakeUserRepository();
+  const pendingStripeCustomerCleanups =
+    new FakePendingStripeCustomerCleanupRepository();
   const stripeCustomerRepository = new FakeStripeCustomerRepository();
 
   return {
     clerkEvents,
     deletedClerkUsers,
-    pendingStripeCancellations,
+    pendingStripeCustomerCleanups,
     userRepository,
     stripeCustomerRepository,
     transaction: async <T>(
       fn: (tx: {
         clerkEvents: FakeClerkEventRepository;
         deletedClerkUsers: FakeDeletedClerkUserRepository;
-        pendingStripeCancellations: FakePendingStripeCancellationRepository;
+        pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository;
         userRepository: FakeUserRepository;
         stripeCustomerRepository: FakeStripeCustomerRepository;
       }) => Promise<T>,
@@ -337,13 +363,13 @@ function createDeps() {
       fn({
         clerkEvents,
         deletedClerkUsers,
-        pendingStripeCancellations,
+        pendingStripeCustomerCleanups,
         userRepository,
         stripeCustomerRepository,
       }),
-    cancelCalls,
-    cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
-      cancelCalls.push(stripeCustomerId);
+    customerDeleteCalls,
+    deleteStripeCustomer: async (stripeCustomerId: string) => {
+      customerDeleteCalls.push(stripeCustomerId);
     },
     getClerkUserById: async () => null,
     logger,
@@ -752,7 +778,7 @@ describe('processClerkWebhook', () => {
     });
   });
 
-  it('cancels Stripe subscriptions and deletes the user when receiving user.deleted', async () => {
+  it('deletes the Stripe customer and local user when receiving user.deleted', async () => {
     const deps = createDeps();
     const user = await deps.userRepository.upsertByClerkId(
       'clerk_1',
@@ -768,21 +794,122 @@ describe('processClerkWebhook', () => {
     );
     await processClerkWebhook(deps, event);
 
-    expect(deps.cancelCalls).toEqual(['cus_123']);
+    expect(deps.customerDeleteCalls).toEqual(['cus_123']);
     await expect(
       deps.userRepository.findByClerkId('clerk_1'),
     ).resolves.toBeNull();
   });
 
-  it('does not cancel Stripe subscriptions when local user deletion fails', async () => {
+  it('executes the Stripe customer-deletion obligation and clears it on success', async () => {
+    const deleteCustomerCalls: string[] = [];
+    const deps = {
+      ...createDeps(),
+      deleteStripeCustomer: async (stripeCustomerId: string) => {
+        deleteCustomerCalls.push(stripeCustomerId);
+      },
+    };
+    const user = await deps.userRepository.upsertByClerkId(
+      'clerk_customer_cleanup',
+      'customer-cleanup@example.com',
+    );
+    await deps.stripeCustomerRepository.insert(user.id, 'cus_cleanup');
+
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.deleted',
+          data: { id: 'clerk_customer_cleanup' },
+        },
+        'evt_customer_cleanup',
+      ),
+    );
+
+    expect(deleteCustomerCalls).toEqual(['cus_cleanup']);
+    await expect(
+      deps.pendingStripeCustomerCleanups.findByEventId('evt_customer_cleanup'),
+    ).resolves.toBeNull();
+    await expect(
+      deps.clerkEvents.peek('evt_customer_cleanup'),
+    ).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
+  });
+
+  it('retains the customer-deletion obligation when Stripe cleanup fails', async () => {
+    const cleanupError = new Error('customer delete failed');
+    const deps = {
+      ...createDeps(),
+      deleteStripeCustomer: async () => {
+        throw cleanupError;
+      },
+    };
+    const user = await deps.userRepository.upsertByClerkId(
+      'clerk_customer_cleanup_failure',
+      'customer-cleanup-failure@example.com',
+    );
+    await deps.stripeCustomerRepository.insert(user.id, 'cus_cleanup_failure');
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.deleted',
+            data: { id: 'clerk_customer_cleanup_failure' },
+          },
+          'evt_customer_cleanup_failure',
+        ),
+      ),
+    ).rejects.toBe(cleanupError);
+
+    await expect(
+      deps.pendingStripeCustomerCleanups.findByEventId(
+        'evt_customer_cleanup_failure',
+      ),
+    ).resolves.toEqual({ stripeCustomerId: 'cus_cleanup_failure' });
+    await expect(
+      deps.clerkEvents.peek('evt_customer_cleanup_failure'),
+    ).resolves.toMatchObject({
+      processedAt: null,
+      error: expect.stringContaining('customer delete failed'),
+    });
+  });
+
+  it('acquires the subscription writer lock before the main user.deleted delete', async () => {
+    const userRepository = new CallOrderUserRepository();
+    const deps = createDeps(userRepository);
+    const user = await userRepository.upsertByClerkId(
+      'clerk_lock_order',
+      'lock-order@example.com',
+    );
+    await processClerkWebhook(
+      deps,
+      withEventId(
+        {
+          type: 'user.deleted',
+          data: { id: 'clerk_lock_order' },
+        },
+        'evt_user_deleted_lock_order',
+      ),
+    );
+
+    expect(userRepository.deletionCallOrder).toEqual([
+      `subscription-lock:${user.id}`,
+      'delete:clerk_lock_order',
+    ]);
+  });
+
+  it('does not delete the Stripe customer when local user deletion fails', async () => {
     const deleteError = new Error('delete failed');
     const clerkEvents = new FakeClerkEventRepository();
     const deletedClerkUsers = new FakeDeletedClerkUserRepository();
-    const pendingStripeCancellations =
-      new FakePendingStripeCancellationRepository();
+    const pendingStripeCustomerCleanups =
+      new FakePendingStripeCustomerCleanupRepository();
     const userRepository = new DeleteFailingUserRepository(deleteError);
     const stripeCustomerRepository = new FakeStripeCustomerRepository();
-    const cancelCalls: string[] = [];
+    const customerDeleteCalls: string[] = [];
 
     const user = await userRepository.upsertByClerkId(
       'clerk_delete_failure',
@@ -799,7 +926,7 @@ describe('processClerkWebhook', () => {
         fn: (tx: {
           clerkEvents: FakeClerkEventRepository;
           deletedClerkUsers: FakeDeletedClerkUserRepository;
-          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository;
           userRepository: DeleteFailingUserRepository;
           stripeCustomerRepository: FakeStripeCustomerRepository;
         }) => Promise<T>,
@@ -807,12 +934,12 @@ describe('processClerkWebhook', () => {
         fn({
           clerkEvents,
           deletedClerkUsers,
-          pendingStripeCancellations,
+          pendingStripeCustomerCleanups,
           userRepository,
           stripeCustomerRepository,
         }),
-      cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
-        cancelCalls.push(stripeCustomerId);
+      deleteStripeCustomer: async (stripeCustomerId: string) => {
+        customerDeleteCalls.push(stripeCustomerId);
       },
       getClerkUserById: async () => null,
       logger: new FakeLogger(),
@@ -831,7 +958,7 @@ describe('processClerkWebhook', () => {
       ),
     ).rejects.toBe(deleteError);
 
-    expect(cancelCalls).toEqual([]);
+    expect(customerDeleteCalls).toEqual([]);
     await expect(
       userRepository.findByClerkId('clerk_delete_failure'),
     ).resolves.toMatchObject({ email: 'delete-failure@example.com' });
@@ -854,7 +981,7 @@ describe('processClerkWebhook', () => {
       ),
     );
 
-    expect(deps.cancelCalls).toEqual([]);
+    expect(deps.customerDeleteCalls).toEqual([]);
   });
 
   it('still deletes a stray local user when a tombstone already exists', async () => {
@@ -878,13 +1005,13 @@ describe('processClerkWebhook', () => {
       ),
     );
 
-    expect(deps.cancelCalls).toEqual(['cus_stray']);
+    expect(deps.customerDeleteCalls).toEqual(['cus_stray']);
     await expect(
       deps.userRepository.findByClerkId('clerk_stray'),
     ).resolves.toBeNull();
   });
 
-  it('keeps the local delete committed when post-commit Stripe cancellation fails', async () => {
+  it('keeps the local delete committed when post-commit Stripe customer deletion fails', async () => {
     const deps = createDeps();
     const user = await deps.userRepository.upsertByClerkId(
       'clerk_post_commit_cancel',
@@ -892,10 +1019,10 @@ describe('processClerkWebhook', () => {
     );
     await deps.stripeCustomerRepository.insert(user.id, 'cus_post_commit');
 
-    let shouldFailCancel = true;
-    deps.cancelStripeCustomerSubscriptions = async () => {
-      if (shouldFailCancel) {
-        throw new Error('stripe cancel failed');
+    let shouldFailCustomerDelete = true;
+    deps.deleteStripeCustomer = async () => {
+      if (shouldFailCustomerDelete) {
+        throw new Error('stripe customer delete failed');
       }
     };
 
@@ -908,7 +1035,7 @@ describe('processClerkWebhook', () => {
     );
 
     await expect(processClerkWebhook(deps, event)).rejects.toThrow(
-      'stripe cancel failed',
+      'stripe customer delete failed',
     );
 
     await expect(
@@ -918,7 +1045,7 @@ describe('processClerkWebhook', () => {
       deps.deletedClerkUsers.exists('clerk_post_commit_cancel'),
     ).resolves.toBe(true);
 
-    shouldFailCancel = false;
+    shouldFailCustomerDelete = false;
     await expect(processClerkWebhook(deps, event)).resolves.toBeUndefined();
   });
 
@@ -927,23 +1054,23 @@ describe('processClerkWebhook', () => {
     const stripeCustomerRepository = new ConcurrentStripeSyncRepository(
       (userId) => !userRepository.isUserLocked(userId),
     );
-    const cancelCalls: string[] = [];
+    const customerDeleteCalls: string[] = [];
     const clerkEvents = new FakeClerkEventRepository();
     const deletedClerkUsers = new FakeDeletedClerkUserRepository();
-    const pendingStripeCancellations =
-      new FakePendingStripeCancellationRepository();
+    const pendingStripeCustomerCleanups =
+      new FakePendingStripeCustomerCleanupRepository();
 
     const deps = {
       clerkEvents,
       deletedClerkUsers,
-      pendingStripeCancellations,
+      pendingStripeCustomerCleanups,
       userRepository,
       stripeCustomerRepository,
       transaction: async <T>(
         fn: (tx: {
           clerkEvents: FakeClerkEventRepository;
           deletedClerkUsers: FakeDeletedClerkUserRepository;
-          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository;
           userRepository: DeletionBarrierUserRepository;
           stripeCustomerRepository: ConcurrentStripeSyncRepository;
         }) => Promise<T>,
@@ -951,12 +1078,12 @@ describe('processClerkWebhook', () => {
         fn({
           clerkEvents,
           deletedClerkUsers,
-          pendingStripeCancellations,
+          pendingStripeCustomerCleanups,
           userRepository,
           stripeCustomerRepository,
         }),
-      cancelStripeCustomerSubscriptions: async (stripeCustomerId: string) => {
-        cancelCalls.push(stripeCustomerId);
+      deleteStripeCustomer: async (stripeCustomerId: string) => {
+        customerDeleteCalls.push(stripeCustomerId);
       },
       getClerkUserById: async () => null,
       logger: new FakeLogger(),
@@ -980,7 +1107,7 @@ describe('processClerkWebhook', () => {
 
     expect(stripeCustomerRepository.concurrentInsertAttempts).toBe(1);
     expect(stripeCustomerRepository.concurrentInsertBlocked).toBe(1);
-    expect(cancelCalls).toEqual([]);
+    expect(customerDeleteCalls).toEqual([]);
     await expect(
       stripeCustomerRepository.peekStoredMapping(user.id),
     ).resolves.toBeNull();
@@ -1084,8 +1211,8 @@ describe('processClerkWebhook', () => {
   it('does not recreate a user when deletion commits between the tombstone check and upsert', async () => {
     const clerkEvents = new FakeClerkEventRepository();
     const deletedClerkUsers = new FakeDeletedClerkUserRepository();
-    const pendingStripeCancellations =
-      new FakePendingStripeCancellationRepository();
+    const pendingStripeCustomerCleanups =
+      new FakePendingStripeCustomerCleanupRepository();
     const userRepository = new TombstoneDuringUpsertUserRepository(
       deletedClerkUsers,
     );
@@ -1094,14 +1221,14 @@ describe('processClerkWebhook', () => {
     const deps = {
       clerkEvents,
       deletedClerkUsers,
-      pendingStripeCancellations,
+      pendingStripeCustomerCleanups,
       userRepository,
       stripeCustomerRepository,
       transaction: async <T>(
         fn: (tx: {
           clerkEvents: FakeClerkEventRepository;
           deletedClerkUsers: FakeDeletedClerkUserRepository;
-          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository;
           userRepository: TombstoneDuringUpsertUserRepository;
           stripeCustomerRepository: FakeStripeCustomerRepository;
         }) => Promise<T>,
@@ -1109,11 +1236,11 @@ describe('processClerkWebhook', () => {
         fn({
           clerkEvents,
           deletedClerkUsers,
-          pendingStripeCancellations,
+          pendingStripeCustomerCleanups,
           userRepository,
           stripeCustomerRepository,
         }),
-      cancelStripeCustomerSubscriptions: async () => undefined,
+      deleteStripeCustomer: async () => undefined,
       getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
@@ -1145,6 +1272,10 @@ describe('processClerkWebhook', () => {
     await expect(deletedClerkUsers.exists('clerk_delete_wins')).resolves.toBe(
       true,
     );
+    expect(userRepository.deletionCallOrder).toEqual([
+      `subscription-lock:${userRepository.lastUpsertedUserId}`,
+      'delete:clerk_delete_wins',
+    ]);
   });
 
   it('keeps user.deleted terminal when delete starts before user.updated commits', async () => {
@@ -1162,8 +1293,8 @@ describe('processClerkWebhook', () => {
       },
     );
     const clerkEvents = new FakeClerkEventRepository();
-    const pendingStripeCancellations =
-      new FakePendingStripeCancellationRepository();
+    const pendingStripeCustomerCleanups =
+      new FakePendingStripeCustomerCleanupRepository();
     const stripeCustomerRepository = new FakeStripeCustomerRepository();
     let txCount = 0;
 
@@ -1174,7 +1305,7 @@ describe('processClerkWebhook', () => {
           deletedClerkUsers: ReturnType<
             TransactionalDeletedClerkUserStore['createRepository']
           >;
-          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository;
           userRepository: ReturnType<
             TransactionalUserStore['createRepository']
           >;
@@ -1188,7 +1319,7 @@ describe('processClerkWebhook', () => {
         const result = await fn({
           clerkEvents,
           deletedClerkUsers,
-          pendingStripeCancellations,
+          pendingStripeCustomerCleanups,
           userRepository,
           stripeCustomerRepository,
         });
@@ -1196,7 +1327,7 @@ describe('processClerkWebhook', () => {
         deletedClerkUsers.commit();
         return result;
       },
-      cancelStripeCustomerSubscriptions: async () => undefined,
+      deleteStripeCustomer: async () => undefined,
       getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };
@@ -1245,8 +1376,8 @@ describe('processClerkWebhook', () => {
     };
     const clerkEvents = new FakeClerkEventRepository();
     const deletedClerkUsers = new FakeDeletedClerkUserRepository();
-    const pendingStripeCancellations =
-      new FakePendingStripeCancellationRepository();
+    const pendingStripeCustomerCleanups =
+      new FakePendingStripeCustomerCleanupRepository();
     const userRepository = new ThrowingUserRepository(rawError);
     const stripeCustomerRepository = new FakeStripeCustomerRepository();
     let transactionCount = 0;
@@ -1254,14 +1385,14 @@ describe('processClerkWebhook', () => {
     const deps = {
       clerkEvents,
       deletedClerkUsers,
-      pendingStripeCancellations,
+      pendingStripeCustomerCleanups,
       userRepository,
       stripeCustomerRepository,
       transaction: async <T>(
         fn: (tx: {
           clerkEvents: FakeClerkEventRepository;
           deletedClerkUsers: FakeDeletedClerkUserRepository;
-          pendingStripeCancellations: FakePendingStripeCancellationRepository;
+          pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository;
           userRepository: ThrowingUserRepository;
           stripeCustomerRepository: FakeStripeCustomerRepository;
         }) => Promise<T>,
@@ -1270,12 +1401,12 @@ describe('processClerkWebhook', () => {
         return fn({
           clerkEvents,
           deletedClerkUsers,
-          pendingStripeCancellations,
+          pendingStripeCustomerCleanups,
           userRepository,
           stripeCustomerRepository,
         });
       },
-      cancelStripeCustomerSubscriptions: async () => undefined,
+      deleteStripeCustomer: async () => undefined,
       getClerkUserById: async () => null,
       logger: new FakeLogger(),
     };

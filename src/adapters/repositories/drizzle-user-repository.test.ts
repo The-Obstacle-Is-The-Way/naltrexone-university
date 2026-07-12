@@ -37,6 +37,7 @@ function createDbMock() {
     insert,
     update: updateFn,
     delete: deleteFn,
+    execute: vi.fn(async () => undefined),
   } as const;
   const transaction = vi.fn(
     async <T>(fn: (tx: typeof db) => Promise<T>): Promise<T> => fn(db),
@@ -365,6 +366,19 @@ describe('DrizzleUserRepository', () => {
       const promise = repo.deleteByClerkId('clerk_1');
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    });
+  });
+
+  describe('acquireSubscriptionWriteLock', () => {
+    it('acquires the transaction-scoped subscription writer lock', async () => {
+      const db = createDbMock();
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.acquireSubscriptionWriteLock(userId),
+      ).resolves.toBeUndefined();
+
+      expect(db.execute).toHaveBeenCalledTimes(1);
     });
   });
 });

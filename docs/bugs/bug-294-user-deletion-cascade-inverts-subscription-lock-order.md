@@ -45,6 +45,10 @@ A `40P01` abort on the payment path or the deletion path whenever account deleti
 
 Coordinate with BUG-288 (its fix modifies the same `user.deleted` flow); implementing both in one batch avoids touching the deletion transaction twice.
 
+## Resolution State
+
+**2026-07-11:** Phase A is implemented on branch `fix/bug-288-294-deletion-lifecycle` in [PR #634](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/634), **“Fix BUG-288/294: deletion-owned Stripe customer lifecycle + conforming deletion lock order.”** The deletion path now takes the canonical per-user subscription-writer advisory lock before both user DELETE sites, and the real-Postgres lock-order suite covers webhook-shaped and reconcile-shaped counterparties. Status remains Open pending merge and post-merge production proof.
+
 ## Related
 
 - [BUG-286 (archived, resolved PR #626)](../_archive/bugs/bug-286-webhook-vs-reconcile-lock-order-deadlock.md) — established the canonical order for the three explicit writers; this is the residual fourth-writer inversion, partially created by that fix's reconcile reorder. Not a duplicate: BUG-286's doc scoped the cascade writer out of its refuted-leg analysis entirely.

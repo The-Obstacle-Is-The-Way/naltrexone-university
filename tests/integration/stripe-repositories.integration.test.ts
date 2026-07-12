@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
-import { drainPendingStripeCancellations } from '@/src/adapters/jobs/drain-pending-stripe-cancellations';
-import { DrizzlePendingStripeCancellationRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-cancellation-repository';
+import { drainPendingStripeCustomerCleanups } from '@/src/adapters/jobs/drain-pending-stripe-customer-cleanups';
+import { DrizzlePendingStripeCustomerCleanupRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
@@ -56,12 +56,12 @@ describe('Stripe repositories', () => {
     });
   });
 
-  it('drains stale pending Stripe cancellations and leaves fresh rows untouched', async () => {
+  it('drains stale pending Stripe customer cleanups and leaves fresh rows untouched', async () => {
     const staleEventId = `evt_${randomUUID().replaceAll('-', '')}`;
     const freshEventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    const repo = new DrizzlePendingStripeCancellationRepository(db);
+    const repo = new DrizzlePendingStripeCustomerCleanupRepository(db);
     const logger = new FakeLogger();
-    const canceledCustomerIds: string[] = [];
+    const deletedCustomerIds: string[] = [];
 
     try {
       await db.insert(schema.clerkEvents).values([
@@ -90,15 +90,15 @@ describe('Stripe repositories', () => {
         },
       ]);
 
-      const result = await drainPendingStripeCancellations(
+      const result = await drainPendingStripeCustomerCleanups(
         {
           olderThan: new Date('2026-06-12T12:15:00.000Z'),
           dryRun: false,
         },
         {
-          pendingStripeCancellations: repo,
-          cancelStripeCustomerSubscriptions: async (stripeCustomerId) => {
-            canceledCustomerIds.push(stripeCustomerId);
+          pendingStripeCustomerCleanups: repo,
+          deleteStripeCustomer: async (stripeCustomerId) => {
+            deletedCustomerIds.push(stripeCustomerId);
           },
           logger,
         },
@@ -111,7 +111,7 @@ describe('Stripe repositories', () => {
         failures: [],
         dryRun: false,
       });
-      expect(canceledCustomerIds).toEqual(['cus_stale']);
+      expect(deletedCustomerIds).toEqual(['cus_stale']);
       await expect(repo.findByEventId(staleEventId)).resolves.toBeNull();
       await expect(repo.findByEventId(freshEventId)).resolves.toEqual({
         stripeCustomerId: 'cus_fresh',

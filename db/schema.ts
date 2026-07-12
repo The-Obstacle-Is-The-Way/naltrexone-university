@@ -256,7 +256,7 @@ export const deletedClerkUsers = pgTable(
   }),
 );
 
-// pending_stripe_cancellations
+// pending_stripe_cancellations (legacy physical name for customer-cleanup obligations)
 export const pendingStripeCancellations = pgTable(
   'pending_stripe_cancellations',
   {

@@ -11,7 +11,7 @@ import {
   DrizzleClerkEventRepository,
   DrizzleDeletedClerkUserRepository,
   DrizzleIdempotencyKeyRepository,
-  DrizzlePendingStripeCancellationRepository,
+  DrizzlePendingStripeCustomerCleanupRepository,
   DrizzlePracticeSessionRepository,
   DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
@@ -111,7 +111,7 @@ describe('container factories', () => {
     expect(typeof container.createClerkEventRepository).toBe('function');
     expect(typeof container.createDeletedClerkUserRepository).toBe('function');
     expect(typeof container.createIdempotencyKeyRepository).toBe('function');
-    expect(typeof container.createPendingStripeCancellationRepository).toBe(
+    expect(typeof container.createPendingStripeCustomerCleanupRepository).toBe(
       'function',
     );
     expect(typeof container.createPracticeSessionRepository).toBe('function');
@@ -194,8 +194,8 @@ describe('container factories', () => {
       DrizzleIdempotencyKeyRepository,
     );
     expect(
-      container.createPendingStripeCancellationRepository(),
-    ).toBeInstanceOf(DrizzlePendingStripeCancellationRepository);
+      container.createPendingStripeCustomerCleanupRepository(),
+    ).toBeInstanceOf(DrizzlePendingStripeCustomerCleanupRepository);
     expect(container.createPracticeSessionRepository()).toBeInstanceOf(
       DrizzlePracticeSessionRepository,
     );

@@ -18,17 +18,8 @@ import type { RateLimiter } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 
 type StripeClient = {
-  subscriptions: {
-    list: (params: {
-      customer: string;
-      status: 'all';
-      limit?: number;
-    }) => AsyncIterable<{ id: string; status: string }>;
-    cancel: (
-      subscriptionId: string,
-      params?: undefined,
-      options?: { idempotencyKey?: string },
-    ) => Promise<unknown>;
+  customers: {
+    del: (stripeCustomerId: string) => Promise<unknown>;
   };
 };
 
@@ -43,7 +34,7 @@ export type ClerkWebhookRouteContainer = {
 };
 
 type VerifyWebhookFn = (req: Request) => Promise<ClerkWebhookEvent>;
-type CancelStripeCustomerSubscriptionsFn = (
+type DeleteStripeCustomerFn = (
   stripe: StripeClient,
   logger: Logger,
   stripeCustomerId: string,
@@ -56,7 +47,7 @@ export function createWebhookHandler(
     deps: ClerkWebhookDeps,
     event: ClerkWebhookEvent,
   ) => Promise<void>,
-  cancelStripeCustomerSubscriptions: CancelStripeCustomerSubscriptionsFn,
+  deleteStripeCustomer: DeleteStripeCustomerFn,
 ) {
   return async function POST(req: Request) {
     const container = createContainer();
@@ -108,12 +99,11 @@ export function createWebhookHandler(
       await processClerkWebhook(
         {
           transaction: container.transaction,
-          cancelStripeCustomerSubscriptions:
-            cancelStripeCustomerSubscriptions.bind(
-              null,
-              container.stripe,
-              container.logger,
-            ),
+          deleteStripeCustomer: deleteStripeCustomer.bind(
+            null,
+            container.stripe,
+            container.logger,
+          ),
           getClerkUserById: container.getClerkUserById,
           logger: container.logger,
         },

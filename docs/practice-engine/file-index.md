@@ -34,7 +34,7 @@ ports/
   attempt-repository.ts, bookmark-repository.ts, practice-session-repository.ts,
   question-repository.ts, tag-repository.ts,
   clerk-event-repository.ts, deleted-clerk-user-repository.ts,
-  idempotency-key-repository.ts, pending-stripe-cancellation-repository.ts,
+  idempotency-key-repository.ts, pending-stripe-customer-cleanup-repository.ts,
   stripe-customer-repository.ts, stripe-event-repository.ts,
   subscription-repository.ts, user-repository.ts,
   billing.ts, bookmarks.ts, gateways.ts, logger.ts,
@@ -56,7 +56,7 @@ test-helpers/
   fakes/
     fake-attempt-repository.ts, fake-bookmark-repository.ts,
     fake-clerk-event-repository.ts, fake-deleted-clerk-user-repository.ts,
-    fake-idempotency-key-repository.ts, fake-pending-stripe-cancellation-repository.ts,
+    fake-idempotency-key-repository.ts, fake-pending-stripe-customer-cleanup-repository.ts,
     fake-practice-session-repository.ts, fake-question-repository.ts,
     fake-stripe-customer-repository.ts, fake-stripe-event-repository.ts,
     fake-subscription-repository.ts, fake-tag-repository.ts,
@@ -85,7 +85,7 @@ repositories/
   drizzle-idempotency-key-repository.ts,
   drizzle-clerk-event-repository.ts, drizzle-deleted-clerk-user-repository.ts,
   drizzle-stripe-customer-repository.ts, drizzle-stripe-event-repository.ts,
-  drizzle-pending-stripe-cancellation-repository.ts,
+  drizzle-pending-stripe-customer-cleanup-repository.ts,
   attempt-row-mappers.ts, practice-session-params.ts,
   practice-session-question-state-updater.ts,
   postgres-errors.ts, index.ts

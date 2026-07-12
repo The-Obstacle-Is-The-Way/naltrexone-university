@@ -49,6 +49,10 @@ Money can move wrong: on the paid returning-user path, recurring charges can con
 
 Verification caveat carried from the finding: every code link was read and verified in a read-only audit (nothing executed). The load-bearing vendor premises are now linked to Stripe's official Checkout expiration, webhook retry, Session-expiration, and Customer-deletion documentation above; no live Stripe account or database was touched.
 
+## Resolution State
+
+**2026-07-11:** Phase B is implemented on branch `fix/bug-288-294-deletion-lifecycle` in [PR #634](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/634), **“Fix BUG-288/294: deletion-owned Stripe customer lifecycle + conforming deletion lock order.”** Both the inline `user.deleted` completion and the daily durable-obligation drain now delete the Stripe Customer through the Stripe gateway; resolved deleted-customer responses and missing-customer 404s are idempotent success, while failures retain the obligation. Stripe retains deleted Customer history for accounting while removing payment details and preventing new subscriptions, matching the account-deletion request and data-minimisation posture. The physical table name `pending_stripe_cancellations` remains as an explicitly deferred rename residue; ports, adapters, fakes, and use-case names now describe customer cleanup. Status remains Open pending owner ratification in review, merge, and post-merge production proof.
+
 ## Related
 
 - [BUG-246](../_archive/bugs/bug-246-deleted-account-stripe-cancellation-no-drain.md) — fixed the drain for cancellations that FAILED at deletion time; it explicitly scoped its gap as "strictly the absence of any drain after Svix retries" and did not rule on subscriptions created after a successful deletion. Its drain cannot fire here because the pending row is deleted on success. Not a duplicate.

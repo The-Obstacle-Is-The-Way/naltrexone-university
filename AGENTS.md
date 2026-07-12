@@ -524,7 +524,7 @@ If a fake class exists (e.g., `FakeAttemptRepository`), you MUST use it. Do NOT 
 
 **Available fakes source of truth:** `src/application/test-helpers/fakes/index.ts`.
 
-Common examples include `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeQuestionFeedbackRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeClerkEventRepository`, `FakeDeletedClerkUserRepository`, `FakePendingStripeCancellationRepository`, `FakeLogger`, `FakeAuthGateway`, `FakePaymentGateway`, and `FakeRateLimiter`. Use-case fakes also exist (e.g. `FakeSubmitAnswerUseCase`, `FakeGetNextQuestionUseCase`). Check the barrel export before adding or listing a fake.
+Common examples include `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeQuestionFeedbackRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeClerkEventRepository`, `FakeDeletedClerkUserRepository`, `FakePendingStripeCustomerCleanupRepository`, `FakeLogger`, `FakeAuthGateway`, `FakePaymentGateway`, and `FakeRateLimiter`. Use-case fakes also exist (e.g. `FakeSubmitAnswerUseCase`, `FakeGetNextQuestionUseCase`). Check the barrel export before adding or listing a fake.
 
 **The Decision Tree:**
 ```

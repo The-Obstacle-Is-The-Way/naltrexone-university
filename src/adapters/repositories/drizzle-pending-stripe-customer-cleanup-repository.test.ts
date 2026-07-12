@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { pendingStripeCancellations } from '@/db/schema';
-import { DrizzlePendingStripeCancellationRepository } from './drizzle-pending-stripe-cancellation-repository';
+import { DrizzlePendingStripeCustomerCleanupRepository } from './drizzle-pending-stripe-customer-cleanup-repository';
 
 type RepoDb = ConstructorParameters<
-  typeof DrizzlePendingStripeCancellationRepository
+  typeof DrizzlePendingStripeCustomerCleanupRepository
 >[0];
 
-describe('DrizzlePendingStripeCancellationRepository', () => {
-  it('returns null when no pending cancellation exists', async () => {
+describe('DrizzlePendingStripeCustomerCleanupRepository', () => {
+  it('returns null when no pending customer cleanup exists', async () => {
     const db = {
       select: () => ({
         from: () => ({
@@ -18,7 +18,7 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
       }),
     } as const;
 
-    const repo = new DrizzlePendingStripeCancellationRepository(
+    const repo = new DrizzlePendingStripeCustomerCleanupRepository(
       db as unknown as RepoDb,
     );
 
@@ -36,7 +36,7 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
       }),
     } as const;
 
-    const repo = new DrizzlePendingStripeCancellationRepository(
+    const repo = new DrizzlePendingStripeCustomerCleanupRepository(
       db as unknown as RepoDb,
     );
 
@@ -45,7 +45,7 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
     });
   });
 
-  it('upserts scheduled cancellations by event id', async () => {
+  it('upserts scheduled customer cleanups by event id', async () => {
     const onConflictDoUpdate = vi.fn(async () => undefined);
     const insertValues = vi.fn(() => ({
       onConflictDoUpdate,
@@ -57,7 +57,7 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
       }),
     } as const;
 
-    const repo = new DrizzlePendingStripeCancellationRepository(
+    const repo = new DrizzlePendingStripeCustomerCleanupRepository(
       db as unknown as RepoDb,
     );
 
@@ -72,7 +72,7 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
     });
   });
 
-  it('deletes pending cancellations by event id', async () => {
+  it('deletes pending customer cleanups by event id', async () => {
     const where = vi.fn(async () => undefined);
     const deleteFn = vi.fn(() => ({ where }));
 
@@ -80,7 +80,7 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
       delete: deleteFn,
     } as const;
 
-    const repo = new DrizzlePendingStripeCancellationRepository(
+    const repo = new DrizzlePendingStripeCustomerCleanupRepository(
       db as unknown as RepoDb,
     );
 
@@ -89,7 +89,7 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
     expect(where).toHaveBeenCalledTimes(1);
   });
 
-  it('lists stale pending cancellations ordered by creation time', async () => {
+  it('lists a bounded batch of stale pending customer cleanups ordered by creation time', async () => {
     const rows = [
       {
         eventId: 'evt_old',
@@ -97,18 +97,19 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
         createdAt: new Date('2026-06-12T12:00:00.000Z'),
       },
     ];
-    const orderBy = vi.fn(async () => rows);
+    const limit = vi.fn(async () => rows);
+    const orderBy = vi.fn(() => ({ limit }));
     const where = vi.fn(() => ({ orderBy }));
     const from = vi.fn(() => ({ where }));
     const select = vi.fn(() => ({ from }));
 
     const db = { select } as const;
-    const repo = new DrizzlePendingStripeCancellationRepository(
+    const repo = new DrizzlePendingStripeCustomerCleanupRepository(
       db as unknown as RepoDb,
     );
 
     await expect(
-      repo.listStale(new Date('2026-06-12T12:15:00.000Z')),
+      repo.listStale(new Date('2026-06-12T12:15:00.000Z'), 25),
     ).resolves.toEqual(rows);
     expect(select).toHaveBeenCalledWith({
       eventId: pendingStripeCancellations.eventId,
@@ -118,5 +119,6 @@ describe('DrizzlePendingStripeCancellationRepository', () => {
     expect(from).toHaveBeenCalledWith(pendingStripeCancellations);
     expect(where).toHaveBeenCalledTimes(1);
     expect(orderBy).toHaveBeenCalledTimes(1);
+    expect(limit).toHaveBeenCalledWith(25);
   });
 });

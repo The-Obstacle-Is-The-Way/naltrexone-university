@@ -14,6 +14,7 @@ import {
   getPostgresConstraintName,
   isPostgresUniqueViolation,
 } from './postgres-errors';
+import { acquireSubscriptionWriteLock } from './subscription-write-lock';
 
 export class DrizzleUserRepository implements UserRepository {
   constructor(
@@ -97,6 +98,10 @@ export class DrizzleUserRepository implements UserRepository {
       .for('update');
 
     return row ? this.toDomain(row) : null;
+  }
+
+  async acquireSubscriptionWriteLock(userId: string): Promise<void> {
+    await acquireSubscriptionWriteLock(this.db, userId);
   }
 
   async upsertByClerkId(

@@ -24,6 +24,14 @@ export interface UserRepository {
   lockByClerkId(clerkId: string): Promise<User | null>;
 
   /**
+   * Acquire the transaction-scoped lock shared by every subscription writer.
+   *
+   * IMPORTANT: This must be called inside a transaction before deleting a
+   * user whose FK cascades can mutate subscription tables.
+   */
+  acquireSubscriptionWriteLock(userId: string): Promise<void>;
+
+  /**
    * Upsert a user by their Clerk ID.
    *
    * - If user doesn't exist, creates a new user row.

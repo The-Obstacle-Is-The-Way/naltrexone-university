@@ -11,7 +11,7 @@ import {
   FakeClerkEventRepository,
   FakeDeletedClerkUserRepository,
   FakeLogger,
-  FakePendingStripeCancellationRepository,
+  FakePendingStripeCustomerCleanupRepository,
   FakeStripeCustomerRepository,
   FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -36,13 +36,13 @@ function createTestDeps() {
   const stripeCustomerRepository = new FakeStripeCustomerRepository();
   const clerkEvents = new FakeClerkEventRepository();
   const deletedClerkUsers = new FakeDeletedClerkUserRepository();
-  const pendingStripeCancellations =
-    new FakePendingStripeCancellationRepository();
+  const pendingStripeCustomerCleanups =
+    new FakePendingStripeCustomerCleanupRepository();
   const transaction = vi.fn(async (fn) =>
     fn({
       clerkEvents,
       deletedClerkUsers,
-      pendingStripeCancellations,
+      pendingStripeCustomerCleanups,
       userRepository,
       stripeCustomerRepository,
     }),
@@ -51,9 +51,8 @@ function createTestDeps() {
   const createContainer = vi.fn<() => ClerkWebhookRouteContainer>(() => ({
     logger,
     stripe: {
-      subscriptions: {
-        list: async function* () {},
-        cancel: async () => undefined,
+      customers: {
+        del: async () => ({ deleted: true }),
       },
     },
     createRateLimiter: () => rateLimiter,
@@ -66,19 +65,19 @@ function createTestDeps() {
     vi.fn<
       (deps: ClerkWebhookDeps, event: ClerkWebhookEvent) => Promise<void>
     >();
-  const cancelStripeCustomerSubscriptions = vi.fn(async () => undefined);
+  const deleteStripeCustomer = vi.fn(async () => undefined);
 
   return {
     POST: createWebhookHandler(
       createContainer,
       verifyWebhook,
       processClerkWebhook,
-      cancelStripeCustomerSubscriptions,
+      deleteStripeCustomer,
     ),
     createContainer,
     verifyWebhook,
     processClerkWebhook,
-    cancelStripeCustomerSubscriptions,
+    deleteStripeCustomer,
     logger,
     userRepository,
     stripeCustomerRepository,
