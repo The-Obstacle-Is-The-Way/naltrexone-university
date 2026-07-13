@@ -32,6 +32,7 @@ import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
 import {
+  IdempotentActionNames,
   shouldCacheQuestionRatingError,
   shouldCacheQuestionReportError,
 } from './shared/idempotency-error-policy';
@@ -145,7 +146,7 @@ export const rateQuestion = createAction({
 
     async function enforceRatingRateLimit(): Promise<void> {
       const rateLimit = await d.rateLimiter.limit({
-        key: `question-feedback:rateQuestion:${userId}`,
+        key: `${IdempotentActionNames.QuestionRating}:${userId}`,
         ...QUESTION_RATING_RATE_LIMIT,
       });
       if (!rateLimit.success) {
@@ -159,7 +160,7 @@ export const rateQuestion = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'question-feedback:rateQuestion',
+      action: IdempotentActionNames.QuestionRating,
       idempotencyKey,
       outputSchema: RateQuestionOutputSchema,
       beforeExecute: enforceRatingRateLimit,
@@ -203,7 +204,7 @@ export const submitQuestionReport = createAction({
 
     async function enforceReportRateLimit(): Promise<void> {
       const rateLimit = await d.rateLimiter.limit({
-        key: `question-feedback:submitQuestionReport:${userId}`,
+        key: `${IdempotentActionNames.QuestionReport}:${userId}`,
         ...QUESTION_REPORT_RATE_LIMIT,
       });
       if (!rateLimit.success) {
@@ -217,12 +218,14 @@ export const submitQuestionReport = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'question-feedback:submitQuestionReport',
+      action: IdempotentActionNames.QuestionReport,
       idempotencyKey,
       outputSchema: SubmitQuestionReportOutputSchema,
       beforeExecute: enforceReportRateLimit,
       shouldCacheError: shouldCacheQuestionReportError,
-      outcomeStoreFailurePolicy: 'cache-error-and-throw',
+      // The feedback row owns a durable request token, so reclaim-time
+      // re-execution returns the original report instead of appending a duplicate.
+      outcomeStoreFailurePolicy: 'return-result',
       execute: submit,
     });
   },

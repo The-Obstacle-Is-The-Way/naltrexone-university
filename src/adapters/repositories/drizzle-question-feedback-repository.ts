@@ -1,7 +1,10 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { questionFeedback } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
-import type { QuestionFeedbackRepository } from '@/src/application/ports/repositories';
+import type {
+  QuestionFeedbackRecordOptions,
+  QuestionFeedbackRepository,
+} from '@/src/application/ports/repositories';
 import type {
   NewQuestionFeedback,
   QuestionRatingFeedback,
@@ -16,7 +19,7 @@ export class DrizzleQuestionFeedbackRepository
 
   async record(
     event: NewQuestionFeedback,
-    options?: { idempotencyKey?: string },
+    options?: QuestionFeedbackRecordOptions,
   ) {
     let row: (typeof questionFeedback)['$inferSelect'] | undefined;
     try {

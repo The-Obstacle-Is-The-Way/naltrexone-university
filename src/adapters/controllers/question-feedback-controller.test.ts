@@ -42,6 +42,12 @@ type QuestionFeedbackControllerTestDeps = QuestionFeedbackControllerDeps & {
   };
 };
 
+class StoreResultFailingIdempotencyKeyRepository extends FakeIdempotencyKeyRepository {
+  override async storeResult(): Promise<void> {
+    throw new Error('store result failed');
+  }
+}
+
 function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
@@ -498,6 +504,38 @@ describe('question-feedback-controller', () => {
         idempotencyKey,
       });
       expect(deps.rateLimiter.inputs).toHaveLength(1);
+    });
+
+    it('returns the committed report when idempotency outcome storage fails', async () => {
+      const deps = createDeps({
+        submitQuestionReportOutput: { feedbackId },
+      });
+      const idempotencyRepository =
+        new StoreResultFailingIdempotencyKeyRepository(deps.now);
+      deps.idempotencyKeyRepository = idempotencyRepository;
+
+      const result = await submitQuestionReport(
+        {
+          questionId,
+          category: 'other',
+          comment: 'Looks stale.',
+          idempotencyKey,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: { feedbackId } });
+      expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
+      await expect(
+        idempotencyRepository.find(
+          deps._fixtures.userId,
+          'question-feedback:submitQuestionReport',
+          idempotencyKey,
+        ),
+      ).resolves.toMatchObject({
+        completedAt: null,
+        error: null,
+      });
     });
 
     it('replays a cached report while the reused key is rate limited', async () => {

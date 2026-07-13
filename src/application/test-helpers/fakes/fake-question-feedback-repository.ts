@@ -1,4 +1,7 @@
-import type { QuestionFeedbackRepository } from '@/src/application/ports/repositories';
+import type {
+  QuestionFeedbackRecordOptions,
+  QuestionFeedbackRepository,
+} from '@/src/application/ports/repositories';
 import type {
   NewQuestionFeedback,
   QuestionFeedback,
@@ -23,7 +26,7 @@ export class FakeQuestionFeedbackRepository
 
   async record(
     event: NewQuestionFeedback,
-    options?: { idempotencyKey?: string },
+    options?: QuestionFeedbackRecordOptions,
   ): Promise<QuestionFeedback> {
     this.recordCalls.push(event);
 
