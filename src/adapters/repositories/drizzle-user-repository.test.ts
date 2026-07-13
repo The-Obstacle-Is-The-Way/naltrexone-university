@@ -39,7 +39,7 @@ function createDbMock() {
     insert,
     update: updateFn,
     delete: deleteFn,
-    execute: vi.fn(async () => undefined),
+    execute: vi.fn(async (_sql: unknown) => undefined),
   } as const;
   const transaction = vi.fn(
     async <T>(fn: (tx: typeof db) => Promise<T>): Promise<T> => fn(db),
