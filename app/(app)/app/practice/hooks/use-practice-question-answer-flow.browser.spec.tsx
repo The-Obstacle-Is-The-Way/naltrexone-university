@@ -240,6 +240,9 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
         choiceId: fixtureChoice2Id,
       }),
     );
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
   });
 
   it('does not double-commit when two selections happen in the same event', async () => {
@@ -530,6 +533,15 @@ describe('usePracticeQuestionAnswerFlow (browser)', () => {
     expect(submitAnswerMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ choiceId: fixtureChoice1Id }),
     );
+    await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await expect
+      .element(screen.getByTestId('can-submit'))
+      .toHaveTextContent('false');
   });
 
   it('reports unexpected submit orchestration errors', async () => {
