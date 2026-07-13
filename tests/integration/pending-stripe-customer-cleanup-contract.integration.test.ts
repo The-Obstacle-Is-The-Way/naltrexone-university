@@ -36,6 +36,7 @@ type ContractHarness = {
     stripeCustomerId: string,
     createdAt: Date,
   ): Promise<void>;
+  seedEvent(eventId: string): Promise<void>;
 };
 
 function createFakeHarness(): ContractHarness {
@@ -47,22 +48,27 @@ function createFakeHarness(): ContractHarness {
       now = createdAt;
       await repo.schedule(eventId, stripeCustomerId);
     },
+    seedEvent: async () => undefined,
   };
 }
 
 function createRealHarness(): ContractHarness {
   const repo = new DrizzlePendingStripeCustomerCleanupRepository(db);
+  const seedEvent = async (eventId: string) => {
+    seededClerkEventIds.push(eventId);
+    await db
+      .insert(schema.clerkEvents)
+      .values({ id: eventId, type: 'user.deleted' });
+  };
   return {
     repo,
     seed: async (eventId, stripeCustomerId, createdAt) => {
-      seededClerkEventIds.push(eventId);
-      await db
-        .insert(schema.clerkEvents)
-        .values({ id: eventId, type: 'user.deleted', createdAt });
+      await seedEvent(eventId);
       await db
         .insert(schema.pendingStripeCancellations)
         .values({ eventId, stripeCustomerId, createdAt });
     },
+    seedEvent,
   };
 }
 
@@ -78,6 +84,21 @@ describe.each(
   const t1 = new Date('2026-06-12T12:01:00.000Z');
   const t2 = new Date('2026-06-12T12:02:00.000Z');
   const cutoffAfterAll = new Date('2026-06-12T12:15:00.000Z');
+
+  it('schedule() inserts a new obligation that is findable and listable', async () => {
+    const harness = createHarness();
+    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    await harness.seedEvent(eventId);
+
+    await harness.repo.schedule(eventId, 'cus_inserted');
+
+    await expect(harness.repo.findByEventId(eventId)).resolves.toEqual({
+      stripeCustomerId: 'cus_inserted',
+    });
+    const farFutureCutoff = new Date(Date.now() + 60 * 60 * 1000);
+    const rows = await harness.repo.listStale(farFutureCutoff, 100);
+    expect(rows.map((row) => row.eventId)).toContain(eventId);
+  });
 
   it('finds a scheduled obligation by event id and deletes idempotently', async () => {
     const harness = createHarness();
