@@ -185,9 +185,13 @@ export class DrizzleUserRepository implements UserRepository {
       return !!deleted;
     } catch (error) {
       if (error instanceof ApplicationError) throw error;
+      // Preserve the driver error (e.g. SQLSTATE 40P01 from a cascade lock
+      // cycle) so failed-event rows and logs can distinguish deadlocks.
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'Failed to delete user by clerkId',
+        undefined,
+        { cause: error },
       );
     }
   }

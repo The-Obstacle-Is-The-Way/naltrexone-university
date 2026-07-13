@@ -119,6 +119,13 @@ class CallOrderUserRepository extends FakeUserRepository {
     this.deletionCallOrder.push(`subscription-lock:${userId}`);
   }
 
+  override async lockByClerkId(
+    clerkId: string,
+  ): Promise<Awaited<ReturnType<FakeUserRepository['lockByClerkId']>>> {
+    this.deletionCallOrder.push(`lock-row:${clerkId}`);
+    return super.lockByClerkId(clerkId);
+  }
+
   override async deleteByClerkId(clerkId: string): Promise<boolean> {
     this.deletionCallOrder.push(`delete:${clerkId}`);
     return super.deleteByClerkId(clerkId);
@@ -877,7 +884,7 @@ describe('processClerkWebhook', () => {
     });
   });
 
-  it('acquires the subscription writer lock before the main user.deleted delete', async () => {
+  it('acquires the subscription writer lock before the users-row lock and delete', async () => {
     const userRepository = new CallOrderUserRepository();
     const deps = createDeps(userRepository);
     const user = await userRepository.upsertByClerkId(
@@ -895,8 +902,12 @@ describe('processClerkWebhook', () => {
       ),
     );
 
+    // Advisory before any users-row lock: subscription writers hold the
+    // advisory while their INSERTs take FK share locks on the users row, so
+    // the inverse acquisition order here would form an AB-BA cycle (BUG-294).
     expect(userRepository.deletionCallOrder).toEqual([
       `subscription-lock:${user.id}`,
+      'lock-row:clerk_lock_order',
       'delete:clerk_lock_order',
     ]);
   });

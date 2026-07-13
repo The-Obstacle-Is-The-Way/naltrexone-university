@@ -381,20 +381,33 @@ export async function processClerkWebhook(
         }
 
         await deletedClerkUsers.lock(clerkUserId);
-        const user = await userRepository.lockByClerkId(clerkUserId);
+        // User deletion is the fourth subscription writer. Its FK cascade
+        // order is fixed (stripe_customers -> stripe_subscriptions), and the
+        // other writers' INSERTs take FK share locks on the users row while
+        // holding the advisory — so the advisory must come BEFORE any
+        // users-row lock here or the two lock classes form an AB-BA cycle.
+        // Resolve the local id without locking, then lock in canonical order.
+        const preliminaryUser = await userRepository.findByClerkId(clerkUserId);
         let stripeCustomerId: string | null = null;
 
-        if (user) {
-          const stripeCustomer = await stripeCustomerRepository.findByUserId(
-            user.id,
-          );
-          stripeCustomerId = stripeCustomer?.stripeCustomerId ?? null;
-
-          // User deletion is the fourth subscription writer. Its FK cascade
-          // order is fixed (stripe_customers -> stripe_subscriptions), so it
-          // takes the canonical advisory(user) lock before DELETE.
-          await userRepository.acquireSubscriptionWriteLock(user.id);
-          await userRepository.deleteByClerkId(clerkUserId);
+        if (preliminaryUser) {
+          await userRepository.acquireSubscriptionWriteLock(preliminaryUser.id);
+          const user = await userRepository.lockByClerkId(clerkUserId);
+          if (user) {
+            if (user.id !== preliminaryUser.id) {
+              // The row was recreated between the two reads; also serialize
+              // on the id whose cascade is about to fire.
+              await userRepository.acquireSubscriptionWriteLock(user.id);
+            }
+            // Read the customer mapping only while holding the advisory:
+            // mapping writers serialize on it, so the captured id cannot be
+            // repointed to a different Stripe customer before the cascade.
+            const stripeCustomer = await stripeCustomerRepository.findByUserId(
+              user.id,
+            );
+            stripeCustomerId = stripeCustomer?.stripeCustomerId ?? null;
+            await userRepository.deleteByClerkId(clerkUserId);
+          }
         }
 
         await deletedClerkUsers.markDeleted(clerkUserId);
