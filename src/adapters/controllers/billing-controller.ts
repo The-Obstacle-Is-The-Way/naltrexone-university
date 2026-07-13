@@ -24,6 +24,7 @@ import type {
 import { createAction } from './create-action';
 import { executeIdempotent } from './shared/execute-idempotent';
 import {
+  IdempotentActionNames,
   shouldCacheCheckoutSessionError,
   shouldCachePortalSessionError,
 } from './shared/idempotency-error-policy';
@@ -131,7 +132,7 @@ export const createCheckoutSession = createAction({
 
     async function enforceCheckoutRateLimit(): Promise<void> {
       const checkoutRateLimit = await d.rateLimiter.limit({
-        key: `billing:createCheckoutSession:${user.id}`,
+        key: `${IdempotentActionNames.Checkout}:${user.id}`,
         ...CHECKOUT_SESSION_RATE_LIMIT,
       });
       if (!checkoutRateLimit.success) {
@@ -145,7 +146,7 @@ export const createCheckoutSession = createAction({
     return executeIdempotent({
       d,
       userId: user.id,
-      action: 'billing:createCheckoutSession',
+      action: IdempotentActionNames.Checkout,
       idempotencyKey,
       outputSchema: CreateCheckoutSessionOutputSchema,
       beforeExecute: enforceCheckoutRateLimit,
@@ -179,7 +180,7 @@ export const createPortalSession = createAction({
 
     async function enforcePortalRateLimit(): Promise<void> {
       const portalRateLimit = await d.rateLimiter.limit({
-        key: `billing:createPortalSession:${user.id}`,
+        key: `${IdempotentActionNames.Portal}:${user.id}`,
         ...PORTAL_SESSION_RATE_LIMIT,
       });
       if (!portalRateLimit.success) {
@@ -193,7 +194,7 @@ export const createPortalSession = createAction({
     return executeIdempotent({
       d,
       userId: user.id,
-      action: 'billing:createPortalSession',
+      action: IdempotentActionNames.Portal,
       idempotencyKey,
       outputSchema: CreatePortalSessionOutputSchema,
       beforeExecute: enforcePortalRateLimit,

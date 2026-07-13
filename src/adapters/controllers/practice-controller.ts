@@ -67,7 +67,10 @@ import {
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
-import { shouldCacheQuestionMarkError } from './shared/idempotency-error-policy';
+import {
+  IdempotentActionNames,
+  shouldCacheQuestionMarkError,
+} from './shared/idempotency-error-policy';
 import {
   shouldCachePracticeSessionLifecycleError,
   shouldCachePracticeSessionStateWriteError,
@@ -198,7 +201,7 @@ export const startPracticeSession = createAction({
 
     async function enforceStartRateLimit(): Promise<void> {
       const rate = await d.rateLimiter.limit({
-        key: `practice:startPracticeSession:${userId}`,
+        key: `${IdempotentActionNames.StartPracticeSession}:${userId}`,
         ...START_PRACTICE_SESSION_RATE_LIMIT,
       });
       if (!rate.success) {
@@ -212,7 +215,7 @@ export const startPracticeSession = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'practice:startPracticeSession',
+      action: IdempotentActionNames.StartPracticeSession,
       idempotencyKey,
       outputSchema: StartPracticeSessionOutputSchema,
       beforeExecute: enforceStartRateLimit,
@@ -426,7 +429,7 @@ export const setPracticeSessionQuestionMark = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'practice:setPracticeSessionQuestionMark',
+      action: IdempotentActionNames.QuestionMark,
       idempotencyKey,
       outputSchema: SetPracticeSessionQuestionMarkOutputSchema,
       shouldCacheError: shouldCacheQuestionMarkError,

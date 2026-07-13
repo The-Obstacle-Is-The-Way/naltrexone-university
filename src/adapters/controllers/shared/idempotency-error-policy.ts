@@ -144,6 +144,25 @@ export function rotateIdempotencyKeyAfterDeterminateError(
   return true;
 }
 
+export function rotateGeneratedIdempotencyKeyAfterDeterminateError(
+  action: IdempotentActionName,
+  error: PublicActionError,
+  input: {
+    createIdempotencyKey?: (() => string) | undefined;
+    setIdempotencyKey?: ((key: string) => void) | undefined;
+  },
+): boolean {
+  const { createIdempotencyKey, setIdempotencyKey } = input;
+
+  return rotateIdempotencyKeyAfterDeterminateError(
+    action,
+    error,
+    createIdempotencyKey && setIdempotencyKey
+      ? () => setIdempotencyKey(createIdempotencyKey())
+      : undefined,
+  );
+}
+
 function shouldCache(action: IdempotentActionName, error: unknown): boolean {
   return classifyIdempotencyExecutionError(action, error) !== 'abort';
 }

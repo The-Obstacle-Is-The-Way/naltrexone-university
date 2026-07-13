@@ -8,6 +8,7 @@ import {
 } from '@/src/application/errors';
 import {
   IdempotentActionNames,
+  rotateGeneratedIdempotencyKeyAfterDeterminateError,
   rotateIdempotencyKeyAfterDeterminateError,
   shouldCacheBookmarkError,
   shouldCacheCheckoutSessionError,
@@ -174,6 +175,56 @@ describe('question-mark idempotency error policy', () => {
 });
 
 describe('client idempotency-key rotation policy', () => {
+  it('generates and stores a replacement key only when both collaborators are available', () => {
+    let generatedKeys = 0;
+    let storedKey: string | null = null;
+    const error = new ApplicationError('NOT_FOUND', 'Question not found');
+
+    expect(
+      rotateGeneratedIdempotencyKeyAfterDeterminateError(
+        IdempotentActionNames.Bookmark,
+        error,
+        {
+          createIdempotencyKey: () => {
+            generatedKeys += 1;
+            return 'idem_2';
+          },
+          setIdempotencyKey: (key) => {
+            storedKey = key;
+          },
+        },
+      ),
+    ).toBe(true);
+    expect(generatedKeys).toBe(1);
+    expect(storedKey).toBe('idem_2');
+
+    expect(
+      rotateGeneratedIdempotencyKeyAfterDeterminateError(
+        IdempotentActionNames.Bookmark,
+        error,
+        {
+          createIdempotencyKey: () => {
+            generatedKeys += 1;
+            return 'idem_3';
+          },
+        },
+      ),
+    ).toBe(false);
+    expect(
+      rotateGeneratedIdempotencyKeyAfterDeterminateError(
+        IdempotentActionNames.Bookmark,
+        error,
+        {
+          setIdempotencyKey: (key) => {
+            storedKey = key;
+          },
+        },
+      ),
+    ).toBe(false);
+    expect(generatedKeys).toBe(1);
+    expect(storedKey).toBe('idem_2');
+  });
+
   it('invokes the supplied rotation only for a determinate cached error', () => {
     let rotations = 0;
 

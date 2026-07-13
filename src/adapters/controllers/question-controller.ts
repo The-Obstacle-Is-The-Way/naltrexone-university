@@ -37,7 +37,10 @@ import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
-import { shouldCacheSubmitAnswerError } from './shared/idempotency-error-policy';
+import {
+  IdempotentActionNames,
+  shouldCacheSubmitAnswerError,
+} from './shared/idempotency-error-policy';
 
 const QuestionFiltersSchema = z
   .object({
@@ -248,7 +251,7 @@ export const submitAnswer = createAction({
 
     async function enforceSubmitAnswerRateLimit(): Promise<void> {
       const rate = await d.rateLimiter.limit({
-        key: `question:submitAnswer:${userId}`,
+        key: `${IdempotentActionNames.SubmitAnswer}:${userId}`,
         ...SUBMIT_ANSWER_RATE_LIMIT,
       });
       if (!rate.success) {
@@ -262,7 +265,7 @@ export const submitAnswer = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'question:submitAnswer',
+      action: IdempotentActionNames.SubmitAnswer,
       idempotencyKey,
       outputSchema: SubmitAnswerOutputSchema,
       beforeExecute: enforceSubmitAnswerRateLimit,
