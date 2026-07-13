@@ -5,6 +5,8 @@ import {
 
 const QUERY_CANCELED_SQLSTATE = '57014';
 
+export type PostgresFailurePhase = 'transaction_body' | 'transaction_boundary';
+
 export function getPostgresErrorCode(error: unknown): string | null {
   if (!error || typeof error !== 'object') return null;
 
@@ -61,7 +63,9 @@ export function isPostgresUniqueViolation(error: unknown): boolean {
 
 export function toRollbackCertainPersistenceError(
   error: unknown,
+  context: { phase: PostgresFailurePhase },
 ): RollbackCertainPersistenceError | null {
+  if (context.phase !== 'transaction_body') return null;
   if (getPostgresErrorCode(error) !== QUERY_CANCELED_SQLSTATE) return null;
   return rollbackCertainPersistenceError({ cause: error });
 }

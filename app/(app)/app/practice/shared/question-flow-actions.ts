@@ -15,7 +15,7 @@ import type {
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   IdempotentActionNames,
-  shouldRotateIdempotencyKeyAfterActionError,
+  rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import {
   type ApplicationConflictReason,
@@ -404,14 +404,11 @@ export async function runSubmitAnswerFlow<
   if (!canCommit()) return;
 
   if (!res.ok) {
-    if (
-      shouldRotateIdempotencyKeyAfterActionError(
-        IdempotentActionNames.SubmitAnswer,
-        res.error,
-      )
-    ) {
-      input.rotateIdempotencyKey?.();
-    }
+    rotateIdempotencyKeyAfterDeterminateError(
+      IdempotentActionNames.SubmitAnswer,
+      res.error,
+      input.rotateIdempotencyKey,
+    );
     const recovery = await tryRecoverEndedSessionConflict({
       result: res,
       recoverEndedSessionConflict: input.recoverEndedSessionConflict,

@@ -65,6 +65,10 @@ export class FakeQuestionFeedbackRepository
     return latest ?? null;
   }
 
+  getAll(): readonly QuestionFeedback[] {
+    return this.events;
+  }
+
   private persistRating(
     event: Extract<NewQuestionFeedback, { kind: 'rating' }>,
   ): QuestionRatingFeedback {

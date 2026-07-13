@@ -102,8 +102,10 @@ export class ApplicationError extends Error {
 
 /**
  * Marks a persistence failure whose owning transaction is known to have
- * rolled back. Idempotency policies may safely abort the claim for this error
- * while keeping generic INTERNAL_ERROR failures conservatively fenced.
+ * rolled back. Construct this only while handling an error thrown from inside
+ * a transaction body, before control returns to the COMMIT boundary.
+ * Idempotency policies may safely abort the claim for this error while keeping
+ * transaction-boundary INTERNAL_ERROR failures conservatively fenced.
  */
 export class RollbackCertainPersistenceError extends ApplicationError {
   readonly determinacy = 'rollback_certain' as const;

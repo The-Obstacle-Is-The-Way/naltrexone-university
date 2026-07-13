@@ -18,6 +18,8 @@ vi.mock('@/lib/report-client-error', () => ({
 import {
   abandonIncompleteSession,
   createIncompleteSessionEffect,
+  createIncompleteSessionLoadGuard,
+  loadIncompleteSession,
 } from './practice-page-incomplete-session';
 
 describe('practice-page-incomplete-session', () => {
@@ -131,6 +133,96 @@ describe('practice-page-incomplete-session', () => {
       expect(setStatus).toHaveBeenCalledWith('loading');
       expect(setError).toHaveBeenCalledTimes(1);
       expect(setError).toHaveBeenCalledWith(null);
+    });
+  });
+
+  describe('loadIncompleteSession', () => {
+    it('does not let an older successful load overwrite a newer one', async () => {
+      const older =
+        createDeferred<ActionResult<{ sessionId: string } | null>>();
+      const newer =
+        createDeferred<ActionResult<{ sessionId: string } | null>>();
+      const newerSessionId = crypto.randomUUID();
+      const state = {
+        status: 'idle' as 'idle' | 'loading' | 'error',
+        error: null as string | null,
+        session: null as { sessionId: string } | null,
+      };
+      const getIncompletePracticeSessionFn = vi
+        .fn()
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(newer.promise);
+      const loadGuard = createIncompleteSessionLoadGuard();
+      const input = {
+        getIncompletePracticeSessionFn,
+        setIncompleteSessionStatus: (status: 'idle' | 'loading' | 'error') => {
+          state.status = status;
+        },
+        setIncompleteSessionError: (error: string | null) => {
+          state.error = error;
+        },
+        setIncompleteSession: (session: { sessionId: string } | null) => {
+          state.session = session;
+        },
+        loadGuard,
+      };
+
+      const olderLoad = loadIncompleteSession(input);
+      const newerLoad = loadIncompleteSession(input);
+      newer.resolve(ok({ sessionId: newerSessionId }));
+      await newerLoad;
+      older.resolve(ok({ sessionId: fixtureSession1Id }));
+      await olderLoad;
+
+      expect(state).toEqual({
+        status: 'idle',
+        error: null,
+        session: { sessionId: newerSessionId },
+      });
+    });
+
+    it('does not let an older rejected load replace a newer success', async () => {
+      const older =
+        createDeferred<ActionResult<{ sessionId: string } | null>>();
+      const newer =
+        createDeferred<ActionResult<{ sessionId: string } | null>>();
+      const state = {
+        status: 'idle' as 'idle' | 'loading' | 'error',
+        error: null as string | null,
+        session: null as { sessionId: string } | null,
+      };
+      const getIncompletePracticeSessionFn = vi
+        .fn()
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(newer.promise);
+      const loadGuard = createIncompleteSessionLoadGuard();
+      const input = {
+        getIncompletePracticeSessionFn,
+        setIncompleteSessionStatus: (status: 'idle' | 'loading' | 'error') => {
+          state.status = status;
+        },
+        setIncompleteSessionError: (error: string | null) => {
+          state.error = error;
+        },
+        setIncompleteSession: (session: { sessionId: string } | null) => {
+          state.session = session;
+        },
+        loadGuard,
+      };
+
+      const olderLoad = loadIncompleteSession(input);
+      const newerLoad = loadIncompleteSession(input);
+      newer.resolve(ok({ sessionId: fixtureSession1Id }));
+      await newerLoad;
+      older.reject(new Error('stale failure'));
+      await olderLoad;
+
+      expect(state).toEqual({
+        status: 'idle',
+        error: null,
+        session: { sessionId: fixtureSession1Id },
+      });
+      expect(reportClientErrorMock).not.toHaveBeenCalled();
     });
   });
 

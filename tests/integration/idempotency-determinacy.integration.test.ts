@@ -45,16 +45,17 @@ afterAll(async () => {
 });
 
 async function throwRealStatementCancellation(): Promise<never> {
-  try {
-    await connection.begin(async (tx) => {
+  await connection.begin(async (tx) => {
+    try {
       await tx`select set_config('statement_timeout', '25ms', true)`;
       await tx`select pg_sleep(0.1)`;
-    });
-  } catch (error) {
-    const rollbackCertainError = toRollbackCertainPersistenceError(error);
-    if (rollbackCertainError) throw rollbackCertainError;
-    throw error;
-  }
+    } catch (error) {
+      const rollbackCertainError = toRollbackCertainPersistenceError(error, {
+        phase: 'transaction_body',
+      });
+      throw rollbackCertainError ?? error;
+    }
+  });
 
   throw new Error('Expected Postgres to cancel the statement');
 }

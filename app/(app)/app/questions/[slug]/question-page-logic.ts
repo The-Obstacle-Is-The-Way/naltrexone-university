@@ -16,7 +16,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import {
   IdempotentActionNames,
-  shouldRotateIdempotencyKeyAfterActionError,
+  rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -286,14 +286,11 @@ export async function submitSelectedAnswer(input: {
   if (!isMounted() || isStale()) return;
 
   if (!res.ok) {
-    if (
-      shouldRotateIdempotencyKeyAfterActionError(
-        IdempotentActionNames.SubmitAnswer,
-        res.error,
-      )
-    ) {
-      input.rotateIdempotencyKey?.();
-    }
+    rotateIdempotencyKeyAfterDeterminateError(
+      IdempotentActionNames.SubmitAnswer,
+      res.error,
+      input.rotateIdempotencyKey,
+    );
     input.setLoadState({
       status: 'error',
       message: getActionResultErrorMessage(res),

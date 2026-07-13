@@ -10,7 +10,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   IdempotentActionNames,
-  shouldRotateIdempotencyKeyAfterActionError,
+  rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import { ApplicationConflictReasons } from '@/src/application/errors';
 
@@ -118,14 +118,11 @@ export async function startSession(input: {
   if (!res.ok) {
     input.setSessionStartStatus('error');
     input.setSessionStartError(getActionResultErrorMessage(res));
-    if (
-      shouldRotateIdempotencyKeyAfterActionError(
-        IdempotentActionNames.StartPracticeSession,
-        res.error,
-      )
-    ) {
-      input.setIdempotencyKey(input.createIdempotencyKey());
-    }
+    rotateIdempotencyKeyAfterDeterminateError(
+      IdempotentActionNames.StartPracticeSession,
+      res.error,
+      () => input.setIdempotencyKey(input.createIdempotencyKey()),
+    );
     if (
       res.error.details?.reason ===
       ApplicationConflictReasons.IncompleteSessionExists

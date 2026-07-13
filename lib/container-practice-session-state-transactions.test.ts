@@ -147,6 +147,18 @@ function createPracticeSessionStateWriteFixture(mode: 'exam' | 'tutor') {
   };
 }
 
+class StatementCancelingAttemptRepository extends FakeAttemptRepository {
+  constructor(private readonly failure: Error) {
+    super();
+  }
+
+  override insert(
+    ..._args: Parameters<FakeAttemptRepository['insert']>
+  ): ReturnType<FakeAttemptRepository['insert']> {
+    return Promise.reject(this.failure);
+  }
+}
+
 describe('container factories — practice session state write transactions', () => {
   it.each([
     '40001',
@@ -478,17 +490,22 @@ describe('container factories — practice session state write transactions', ()
     });
   });
 
-  it('classifies statement cancellation as rollback-certain for session-backed submit', async () => {
+  it('classifies transaction-body statement cancellation as rollback-certain for session-backed submit', async () => {
     const fixture = createPracticeSessionStateWriteFixture('tutor');
     const statementCancellation = new Error('canceling statement', {
       cause: { code: '57014' },
     });
-    const transaction = vi.fn<TestTransaction>(async () => {
-      throw statementCancellation;
-    });
+    const transaction = vi.fn<TestTransaction>(async (fn) =>
+      fn(createUnexpectedNestedTransactionDb()),
+    );
     const container = createPracticeSessionStateWriteContainer({
       transaction,
-      fixture,
+      fixture: {
+        ...fixture,
+        attempts: new StatementCancelingAttemptRepository(
+          statementCancellation,
+        ),
+      },
     });
 
     const promise = container.createSubmitAnswerUseCase().execute({
@@ -503,6 +520,31 @@ describe('container factories — practice session state write transactions', ()
       code: 'INTERNAL_ERROR',
       cause: statementCancellation,
     });
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps transaction-boundary statement cancellation indeterminate for session-backed submit', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('tutor');
+    const statementCancellation = new Error('commit canceled', {
+      cause: { code: '57014' },
+    });
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      await fn(createUnexpectedNestedTransactionDb());
+      throw statementCancellation;
+    });
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+
+    await expect(
+      container.createSubmitAnswerUseCase().execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+        questionId: fixture.questionId,
+        choiceId: fixture.correctChoiceId,
+      }),
+    ).rejects.toBe(statementCancellation);
     expect(transaction).toHaveBeenCalledTimes(1);
   });
 });

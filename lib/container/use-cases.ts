@@ -92,16 +92,20 @@ async function runPracticeSessionStateWriteTransaction<T>(
     attempt += 1
   ) {
     try {
-      return await primitives.db.transaction(
-        async (tx) => action(tx as unknown as DrizzleDb),
-        PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG,
-      );
+      return await primitives.db.transaction(async (tx) => {
+        try {
+          return await action(tx as unknown as DrizzleDb);
+        } catch (error) {
+          const rollbackCertainError = options?.classifyStatementCancellation
+            ? toRollbackCertainPersistenceError(error, {
+                phase: 'transaction_body',
+              })
+            : null;
+          throw rollbackCertainError ?? error;
+        }
+      }, PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG);
     } catch (error) {
       if (!isRetryablePracticeSessionStateWriteFailure(error)) {
-        const rollbackCertainError = options?.classifyStatementCancellation
-          ? toRollbackCertainPersistenceError(error)
-          : null;
-        if (rollbackCertainError) throw rollbackCertainError;
         throw error;
       }
       lastRetryableError = error;

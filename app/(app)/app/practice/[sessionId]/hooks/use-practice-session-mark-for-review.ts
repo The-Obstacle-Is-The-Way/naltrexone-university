@@ -26,7 +26,7 @@ import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   IdempotentActionNames,
-  shouldRotateIdempotencyKeyAfterActionError,
+  rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import { PracticeSessionConflictReasons } from '@/src/application/errors';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
@@ -122,14 +122,13 @@ export function usePracticeSessionMarkForReview(
     if (!input.isMounted()) return;
 
     if (!res.ok) {
-      if (
-        shouldRotateIdempotencyKeyAfterActionError(
-          IdempotentActionNames.QuestionMark,
-          res.error,
-        )
-      ) {
-        markRequestIdempotencyKeyRef.current = null;
-      }
+      rotateIdempotencyKeyAfterDeterminateError(
+        IdempotentActionNames.QuestionMark,
+        res.error,
+        () => {
+          markRequestIdempotencyKeyRef.current = null;
+        },
+      );
       const reason = getActionResultPracticeSessionConflictReason(res);
       if (reason === PracticeSessionConflictReasons.StateChangedConcurrently) {
         notify({

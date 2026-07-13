@@ -8,6 +8,7 @@ import {
 } from '@/src/application/errors';
 import {
   IdempotentActionNames,
+  rotateIdempotencyKeyAfterDeterminateError,
   shouldCacheBookmarkError,
   shouldCacheCheckoutSessionError,
   shouldCachePortalSessionError,
@@ -173,6 +174,30 @@ describe('question-mark idempotency error policy', () => {
 });
 
 describe('client idempotency-key rotation policy', () => {
+  it('invokes the supplied rotation only for a determinate cached error', () => {
+    let rotations = 0;
+
+    expect(
+      rotateIdempotencyKeyAfterDeterminateError(
+        IdempotentActionNames.Bookmark,
+        new ApplicationError('NOT_FOUND', 'Question not found'),
+        () => {
+          rotations += 1;
+        },
+      ),
+    ).toBe(true);
+    expect(
+      rotateIdempotencyKeyAfterDeterminateError(
+        IdempotentActionNames.Bookmark,
+        new ApplicationError('INTERNAL_ERROR', 'Outcome unknown'),
+        () => {
+          rotations += 1;
+        },
+      ),
+    ).toBe(false);
+    expect(rotations).toBe(1);
+  });
+
   it.each([
     [
       IdempotentActionNames.Bookmark,

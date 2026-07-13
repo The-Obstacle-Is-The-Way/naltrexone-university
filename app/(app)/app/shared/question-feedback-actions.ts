@@ -7,7 +7,7 @@ import type {
 } from '@/src/adapters/controllers/question-feedback-controller';
 import {
   IdempotentActionNames,
-  shouldRotateIdempotencyKeyAfterActionError,
+  rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import type {
   QuestionFeedbackCategory,
@@ -84,16 +84,14 @@ export async function rateQuestionForQuestion(input: {
       }
     }
     if (!isMounted()) return;
-    if (
-      input.setRatingIdempotencyKey &&
-      input.createIdempotencyKey &&
-      shouldRotateIdempotencyKeyAfterActionError(
-        IdempotentActionNames.QuestionRating,
-        result.error,
-      )
-    ) {
-      input.setRatingIdempotencyKey(input.createIdempotencyKey());
-    }
+    const { createIdempotencyKey, setRatingIdempotencyKey } = input;
+    rotateIdempotencyKeyAfterDeterminateError(
+      IdempotentActionNames.QuestionRating,
+      result.error,
+      setRatingIdempotencyKey && createIdempotencyKey
+        ? () => setRatingIdempotencyKey(createIdempotencyKey())
+        : undefined,
+    );
     input.setRating(input.currentRating);
     input.setFeedbackStatus('error');
     return;
@@ -169,16 +167,15 @@ export async function submitReportForQuestion(input: {
         // Reporter failures must not block the primary error path.
       }
     }
-    if (
-      isMounted() &&
-      input.setReportIdempotencyKey &&
-      input.createIdempotencyKey &&
-      shouldRotateIdempotencyKeyAfterActionError(
+    if (isMounted()) {
+      const { createIdempotencyKey, setReportIdempotencyKey } = input;
+      rotateIdempotencyKeyAfterDeterminateError(
         IdempotentActionNames.QuestionReport,
         result.error,
-      )
-    ) {
-      input.setReportIdempotencyKey(input.createIdempotencyKey());
+        setReportIdempotencyKey && createIdempotencyKey
+          ? () => setReportIdempotencyKey(createIdempotencyKey())
+          : undefined,
+      );
     }
     return false;
   }

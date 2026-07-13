@@ -15,6 +15,22 @@ const ABANDON_SESSION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export type IncompleteSessionStatus = 'idle' | 'loading' | 'error';
 
+export type IncompleteSessionLoadGuard = {
+  begin: () => () => boolean;
+};
+
+export function createIncompleteSessionLoadGuard(): IncompleteSessionLoadGuard {
+  let latestGeneration = 0;
+
+  return {
+    begin: () => {
+      latestGeneration += 1;
+      const requestGeneration = latestGeneration;
+      return () => requestGeneration === latestGeneration;
+    },
+  };
+}
+
 type LoadIncompleteSessionInput<T> = {
   getIncompletePracticeSessionFn: (
     input: unknown,
@@ -23,6 +39,7 @@ type LoadIncompleteSessionInput<T> = {
   setIncompleteSessionError: (message: string | null) => void;
   setIncompleteSession: (session: T | null) => void;
   isActive?: () => boolean;
+  loadGuard?: IncompleteSessionLoadGuard;
 };
 
 export async function loadIncompleteSession<T>(
@@ -30,7 +47,11 @@ export async function loadIncompleteSession<T>(
 ): Promise<void> {
   const isActive = input.isActive ?? (() => true);
   if (!isActive()) return;
+  const isLatestLoad = input.loadGuard?.begin() ?? (() => true);
+  const canCommit = () => isActive() && isLatestLoad();
+  if (!canCommit()) return;
   input.setIncompleteSessionStatus('loading');
+  if (!canCommit()) return;
   input.setIncompleteSessionError(null);
 
   let res: Awaited<ReturnType<typeof input.getIncompletePracticeSessionFn>>;
@@ -40,24 +61,28 @@ export async function loadIncompleteSession<T>(
       INCOMPLETE_SESSION_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!isActive()) return;
+    if (!canCommit()) return;
     reportClientError(error, {
       component: 'PracticePageIncompleteSession',
       action: 'loadIncompleteSession',
     });
+    if (!canCommit()) return;
     input.setIncompleteSessionStatus('error');
+    if (!canCommit()) return;
     input.setIncompleteSessionError(getThrownErrorMessage(error));
     return;
   }
-  if (!isActive()) return;
+  if (!canCommit()) return;
 
   if (!res.ok) {
     input.setIncompleteSessionStatus('error');
+    if (!canCommit()) return;
     input.setIncompleteSessionError(getActionResultErrorMessage(res));
     return;
   }
 
   input.setIncompleteSession(res.data);
+  if (!canCommit()) return;
   input.setIncompleteSessionStatus('idle');
 }
 

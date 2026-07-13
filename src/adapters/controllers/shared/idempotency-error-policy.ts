@@ -128,6 +128,22 @@ export function shouldRotateIdempotencyKeyAfterActionError(
   return isDeterminateCachedError(action, error);
 }
 
+export function rotateIdempotencyKeyAfterDeterminateError(
+  action: IdempotentActionName,
+  error: PublicActionError,
+  rotateIdempotencyKey?: (() => void) | undefined,
+): boolean {
+  if (
+    !rotateIdempotencyKey ||
+    !shouldRotateIdempotencyKeyAfterActionError(action, error)
+  ) {
+    return false;
+  }
+
+  rotateIdempotencyKey();
+  return true;
+}
+
 function shouldCache(action: IdempotentActionName, error: unknown): boolean {
   return classifyIdempotencyExecutionError(action, error) !== 'abort';
 }

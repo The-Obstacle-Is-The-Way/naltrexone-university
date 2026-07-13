@@ -140,7 +140,13 @@ describe('SubmitQuestionReportUseCase', () => {
     const replay = await useCase.execute({ ...baseInput, comment: 'Changed' });
 
     expect(replay).toEqual(first);
-    expect(feedback.recordCalls).toHaveLength(2);
+    expect(feedback.getAll()).toEqual([
+      expect.objectContaining({
+        id: first.feedbackId,
+        kind: 'report',
+        comment: 'First',
+      }),
+    ]);
   });
 
   it('rejects and records nothing when the attempt belongs to a different question', async () => {

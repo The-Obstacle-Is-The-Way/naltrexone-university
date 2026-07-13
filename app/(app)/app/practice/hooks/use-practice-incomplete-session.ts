@@ -8,6 +8,7 @@ import {
 import {
   abandonIncompleteSession,
   createIncompleteSessionEffect,
+  createIncompleteSessionLoadGuard,
   loadIncompleteSession,
 } from '../practice-page-incomplete-session';
 
@@ -40,6 +41,9 @@ export function usePracticeIncompleteSession(
   const [abandonIdempotencyKey, setAbandonIdempotencyKey] = useState(() =>
     crypto.randomUUID(),
   );
+  const [incompleteSessionLoadGuard] = useState(
+    createIncompleteSessionLoadGuard,
+  );
 
   useEffect(() => {
     return createIncompleteSessionEffect({
@@ -47,8 +51,9 @@ export function usePracticeIncompleteSession(
       setIncompleteSessionStatus,
       setIncompleteSessionError,
       setIncompleteSession,
+      loadGuard: incompleteSessionLoadGuard,
     });
-  }, []);
+  }, [incompleteSessionLoadGuard]);
 
   const refreshIncompleteSession = useCallback(
     () =>
@@ -58,8 +63,9 @@ export function usePracticeIncompleteSession(
         setIncompleteSessionError,
         setIncompleteSession,
         isActive: input.isMounted,
+        loadGuard: incompleteSessionLoadGuard,
       }),
-    [input.isMounted],
+    [incompleteSessionLoadGuard, input.isMounted],
   );
 
   const onAbandonIncompleteSession = useCallback(async () => {

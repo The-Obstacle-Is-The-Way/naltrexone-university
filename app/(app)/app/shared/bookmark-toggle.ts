@@ -3,7 +3,7 @@ import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   IdempotentActionNames,
-  shouldRotateIdempotencyKeyAfterActionError,
+  rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import { STANDARD_MUTATION_TIMEOUT_MS } from './timeout-tiers';
 
@@ -75,16 +75,14 @@ export async function setBookmarkForQuestion(input: {
       }
     }
     if (!isMounted()) return;
-    if (
-      input.setBookmarkIdempotencyKey &&
-      input.createIdempotencyKey &&
-      shouldRotateIdempotencyKeyAfterActionError(
-        IdempotentActionNames.Bookmark,
-        res.error,
-      )
-    ) {
-      input.setBookmarkIdempotencyKey(input.createIdempotencyKey());
-    }
+    const { createIdempotencyKey, setBookmarkIdempotencyKey } = input;
+    rotateIdempotencyKeyAfterDeterminateError(
+      IdempotentActionNames.Bookmark,
+      res.error,
+      setBookmarkIdempotencyKey && createIdempotencyKey
+        ? () => setBookmarkIdempotencyKey(createIdempotencyKey())
+        : undefined,
+    );
     input.onBookmarkError?.('Failed to save bookmark. Please try again.');
     input.setBookmarkStatus('error');
     return;

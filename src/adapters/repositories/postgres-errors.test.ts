@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { isRollbackCertainPersistenceError } from '@/src/application/errors';
 import {
   getPostgresConstraintName,
   getPostgresErrorCode,
   isPostgresUniqueViolation,
+  toRollbackCertainPersistenceError,
 } from './postgres-errors';
 
 describe('postgres-errors', () => {
@@ -47,5 +49,20 @@ describe('postgres-errors', () => {
 
   it('returns false for other Postgres error codes', () => {
     expect(isPostgresUniqueViolation({ code: '23503' })).toBe(false);
+  });
+
+  it('classifies query cancellation only with transaction-body proof', () => {
+    const cancellation = { code: '57014' };
+
+    expect(
+      toRollbackCertainPersistenceError(cancellation, {
+        phase: 'transaction_body',
+      }),
+    ).toSatisfy(isRollbackCertainPersistenceError);
+    expect(
+      toRollbackCertainPersistenceError(cancellation, {
+        phase: 'transaction_boundary',
+      }),
+    ).toBeNull();
   });
 });
