@@ -9,7 +9,7 @@ export {
 } from './fake-gateways';
 export { FakeIdempotencyKeyRepository } from './fake-idempotency-key-repository';
 export { FakeLogger } from './fake-logger';
-export { FakePendingStripeCancellationRepository } from './fake-pending-stripe-cancellation-repository';
+export { FakePendingStripeCustomerCleanupRepository } from './fake-pending-stripe-customer-cleanup-repository';
 export {
   FakePracticeSessionRepository,
   STATE_CHANGED_CONCURRENTLY_MESSAGE,

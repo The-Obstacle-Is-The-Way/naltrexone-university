@@ -4,7 +4,7 @@ import type { BookmarkRepository } from './bookmark-repository';
 import type { ClerkEventRepository } from './clerk-event-repository';
 import type { DeletedClerkUserRepository } from './deleted-clerk-user-repository';
 import type { IdempotencyKeyRepository } from './idempotency-key-repository';
-import type { PendingStripeCancellationRepository } from './pending-stripe-cancellation-repository';
+import type { PendingStripeCustomerCleanupRepository } from './pending-stripe-customer-cleanup-repository';
 import type { PracticeSessionRepository } from './practice-session-repository';
 import type { QuestionFeedbackRepository } from './question-feedback-repository';
 import type { QuestionRepository } from './question-repository';
@@ -14,7 +14,7 @@ import type {
   ClerkEventRepository as ClerkEventRepositoryFromBarrel,
   DeletedClerkUserRepository as DeletedClerkUserRepositoryFromBarrel,
   IdempotencyKeyRepository as IdempotencyKeyRepositoryFromBarrel,
-  PendingStripeCancellationRepository as PendingStripeCancellationRepositoryFromBarrel,
+  PendingStripeCustomerCleanupRepository as PendingStripeCustomerCleanupRepositoryFromBarrel,
   PracticeSessionRepository as PracticeSessionRepositoryFromBarrel,
   QuestionFeedbackRepository as QuestionFeedbackRepositoryFromBarrel,
   QuestionRepository as QuestionRepositoryFromBarrel,
@@ -38,7 +38,7 @@ describe('repository port modules', () => {
     expectTypeOf<BookmarkRepositoryFromBarrel>().toEqualTypeOf<BookmarkRepository>();
     expectTypeOf<ClerkEventRepositoryFromBarrel>().toEqualTypeOf<ClerkEventRepository>();
     expectTypeOf<DeletedClerkUserRepositoryFromBarrel>().toEqualTypeOf<DeletedClerkUserRepository>();
-    expectTypeOf<PendingStripeCancellationRepositoryFromBarrel>().toEqualTypeOf<PendingStripeCancellationRepository>();
+    expectTypeOf<PendingStripeCustomerCleanupRepositoryFromBarrel>().toEqualTypeOf<PendingStripeCustomerCleanupRepository>();
     expectTypeOf<TagRepositoryFromBarrel>().toEqualTypeOf<TagRepository>();
     expectTypeOf<QuestionFeedbackRepositoryFromBarrel>().toEqualTypeOf<QuestionFeedbackRepository>();
     expectTypeOf<SubscriptionRepositoryFromBarrel>().toEqualTypeOf<SubscriptionRepository>();

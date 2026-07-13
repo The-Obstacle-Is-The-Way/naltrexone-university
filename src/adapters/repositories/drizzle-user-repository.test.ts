@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { ApplicationError } from '@/src/application/errors';
@@ -37,6 +39,7 @@ function createDbMock() {
     insert,
     update: updateFn,
     delete: deleteFn,
+    execute: vi.fn(async (_sql: unknown) => undefined),
   } as const;
   const transaction = vi.fn(
     async <T>(fn: (tx: typeof db) => Promise<T>): Promise<T> => fn(db),
@@ -365,6 +368,42 @@ describe('DrizzleUserRepository', () => {
       const promise = repo.deleteByClerkId('clerk_1');
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
       await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    });
+
+    it('preserves the driver error as cause so deadlock SQLSTATEs stay observable', async () => {
+      const db = createDbMock();
+      const deadlock = Object.assign(new Error('deadlock detected'), {
+        code: '40P01',
+      });
+      db._mocks.deleteFn.mockImplementation(() => {
+        throw deadlock;
+      });
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      const promise = repo.deleteByClerkId('clerk_1');
+      await expect(promise).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        cause: deadlock,
+      });
+    });
+  });
+
+  describe('acquireSubscriptionWriteLock', () => {
+    it('takes the canonical transaction-scoped advisory lock on the user id', async () => {
+      const db = createDbMock();
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(
+        repo.acquireSubscriptionWriteLock(userId),
+      ).resolves.toBeUndefined();
+
+      expect(db.execute).toHaveBeenCalledTimes(1);
+      const query = new PgDialect().sqlToQuery(
+        db.execute.mock.calls[0]?.[0] as SQL,
+      );
+      expect(query.sql).toBe('select pg_advisory_xact_lock(hashtext($1))');
+      expect(query.params).toEqual([userId]);
     });
   });
 });

@@ -1,16 +1,23 @@
 import { randomUUID } from 'node:crypto';
-import { sql as drizzleSql } from 'drizzle-orm';
+import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import {
   type CheckoutSuccessDeps,
   syncCheckoutSuccess,
 } from '@/app/(marketing)/checkout/success/checkout-success-sync';
+import * as schema from '@/db/schema';
+import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
+import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
+import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
+import { DrizzlePendingStripeCustomerCleanupRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
+import { acquireSubscriptionWriteLock } from '@/src/adapters/repositories/subscription-write-lock';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   FakeAuthGateway,
@@ -29,7 +36,10 @@ import {
 const control = createIntegrationDb();
 const subscriptionWriter = createIntegrationDb();
 const reconciliationWriter = createIntegrationDb();
+const deletionWriter = createIntegrationDb();
 const cleanup = createCleanupState();
+const clerkEventIds: string[] = [];
+const deletedClerkUserIds: string[] = [];
 
 const priceIds = {
   monthly: 'price_test_monthly',
@@ -55,6 +65,90 @@ class PausingSubscriptionRepository extends DrizzleSubscriptionRepository {
   }
 }
 
+// Hold the exact production advisory + subscription-row locks at the boundary
+// immediately before each coordinator writes stripe_customers.
+class PausingDeletionCounterpartySubscriptionRepository extends DrizzleSubscriptionRepository {
+  constructor(
+    private readonly tx: DrizzleDb,
+    private readonly lockHeld: () => void,
+    private readonly release: Promise<void>,
+  ) {
+    super(tx, priceIds);
+  }
+
+  override async upsert(
+    input: Parameters<DrizzleSubscriptionRepository['upsert']>[0],
+  ) {
+    await acquireSubscriptionWriteLock(this.tx, input.userId);
+    const [existing] = await this.tx
+      .select()
+      .from(schema.stripeSubscriptions)
+      .where(eq(schema.stripeSubscriptions.userId, input.userId))
+      .for('update');
+    if (!existing) {
+      throw new Error('Deletion lock-order fixture is missing a subscription');
+    }
+
+    this.lockHeld();
+    await this.release;
+    return { persisted: true } as const;
+  }
+}
+
+class PausingDeletionStripeCustomerRepository extends DrizzleStripeCustomerRepository {
+  constructor(
+    db: DrizzleDb,
+    private readonly customerRead: () => void,
+    private readonly release: Promise<void>,
+  ) {
+    super(db);
+  }
+
+  override async findByUserId(userId: string) {
+    const customer = await super.findByUserId(userId);
+    this.customerRead();
+    await this.release;
+    return customer;
+  }
+}
+
+class RawDeletionCounterpartyStripeCustomerRepository extends DrizzleStripeCustomerRepository {
+  constructor(private readonly tx: DrizzleDb) {
+    super(tx);
+  }
+
+  override async insert(
+    userId: string,
+    stripeCustomerId: string,
+  ): Promise<void> {
+    // Mirror the production authoritative upsert without translating the raw
+    // Postgres code so the red baseline can prove 40P01 directly.
+    await this.tx
+      .insert(schema.stripeCustomers)
+      .values({ userId, stripeCustomerId })
+      .onConflictDoUpdate({
+        target: schema.stripeCustomers.userId,
+        set: { stripeCustomerId },
+      });
+  }
+}
+
+class RawDeletionUserRepository extends DrizzleUserRepository {
+  constructor(private readonly tx: DrizzleDb) {
+    super(tx);
+  }
+
+  override async deleteByClerkId(clerkId: string): Promise<boolean> {
+    // Mirror the production delete without translating the raw Postgres code
+    // so either deadlock victim remains observable to the test.
+    const [deleted] = await this.tx
+      .delete(schema.users)
+      .where(eq(schema.users.clerkUserId, clerkId))
+      .returning({ id: schema.users.id });
+    return !!deleted;
+  }
+}
+
 class ObservedStripeCustomerRepository extends DrizzleStripeCustomerRepository {
   constructor(
     db: DrizzleDb,
@@ -77,7 +171,7 @@ async function configureSubscriptionWriter(tx: DrizzleDb): Promise<void> {
   await tx.execute(drizzleSql`set local statement_timeout = '6s'`);
 }
 
-async function configureReconciliationWriter(tx: DrizzleDb): Promise<void> {
+async function configureFastDeadlockWriter(tx: DrizzleDb): Promise<void> {
   await tx.execute(drizzleSql`set local deadlock_timeout = '50ms'`);
   await tx.execute(drizzleSql`set local lock_timeout = '4s'`);
   await tx.execute(drizzleSql`set local statement_timeout = '6s'`);
@@ -115,6 +209,36 @@ async function waitForReconciliationState(input: {
   }
 
   throw new Error('Reconciliation writer did not reach a lock wait');
+}
+
+async function waitForDeletionLockState(
+  pid: number,
+): Promise<'waiting-on-advisory' | 'waiting-on-row-lock'> {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const rows = await control.db.execute<{
+      waitEventType: string | null;
+      waitingOnAdvisory: boolean;
+    }>(drizzleSql`
+      select
+        activity.wait_event_type as "waitEventType",
+        exists (
+          select 1
+          from pg_locks
+          where pid = ${pid}
+            and locktype = 'advisory'
+            and not granted
+        ) as "waitingOnAdvisory"
+      from pg_stat_activity activity
+      where activity.pid = ${pid}
+    `);
+    const state = rows[0];
+    if (state?.waitingOnAdvisory) return 'waiting-on-advisory';
+    if (state?.waitEventType === 'Lock') return 'waiting-on-row-lock';
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+
+  throw new Error('Deletion writer did not reach a lock wait');
 }
 
 function findPostgresErrorCode(error: unknown): string | null {
@@ -196,6 +320,7 @@ async function runWebhookWriter(input: {
   eventId: string;
   lockHeld: () => void;
   release: Promise<void>;
+  deletionCounterparty?: boolean;
 }): Promise<void> {
   const paymentGateway = new FakePaymentGateway({
     externalCustomerId: input.externalCustomerId,
@@ -230,12 +355,20 @@ async function runWebhookWriter(input: {
           await configureSubscriptionWriter(tx);
           return fn({
             stripeEvents: new DrizzleStripeEventRepository(tx),
-            subscriptions: new PausingSubscriptionRepository(
-              tx,
-              input.lockHeld,
-              input.release,
-            ),
-            stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+            subscriptions: input.deletionCounterparty
+              ? new PausingDeletionCounterpartySubscriptionRepository(
+                  tx,
+                  input.lockHeld,
+                  input.release,
+                )
+              : new PausingSubscriptionRepository(
+                  tx,
+                  input.lockHeld,
+                  input.release,
+                ),
+            stripeCustomers: input.deletionCounterparty
+              ? new RawDeletionCounterpartyStripeCustomerRepository(tx)
+              : new DrizzleStripeCustomerRepository(tx),
           });
         }),
     },
@@ -303,7 +436,160 @@ async function runCheckoutSuccessWriter(input: {
   });
 }
 
+async function runReconciliationWriter(input: {
+  userId: string;
+  externalCustomerId: string;
+  externalSubscriptionId: string;
+  lockHeld: () => void;
+  release: Promise<void>;
+  onTransactionError: (error: unknown) => void;
+}) {
+  const normalizedSubscription = stripeSubscription(input);
+
+  return reconcileStripeSubscriptions(
+    { limit: 1, offset: 0, dryRun: true, concurrency: 1 },
+    {
+      stripe: createReconciliationStripeClient(normalizedSubscription),
+      priceIds,
+      logger: new FakeLogger(),
+      listLocalSubscriptions: async () => [
+        {
+          userId: input.userId,
+          stripeSubscriptionId: input.externalSubscriptionId,
+          version: null,
+        },
+      ],
+      transaction: async (fn) => {
+        try {
+          return await reconciliationWriter.db.transaction(async (tx) => {
+            await configureSubscriptionWriter(tx);
+            return fn({
+              subscriptions:
+                new PausingDeletionCounterpartySubscriptionRepository(
+                  tx,
+                  input.lockHeld,
+                  input.release,
+                ),
+              stripeCustomers:
+                new RawDeletionCounterpartyStripeCustomerRepository(tx),
+            });
+          });
+        } catch (error) {
+          input.onTransactionError(error);
+          throw error;
+        }
+      },
+    },
+  );
+}
+
+async function runDeletionWriter(input: {
+  clerkUserId: string;
+  eventId: string;
+  backendPid: (pid: number) => void;
+  customerRead: () => void;
+  release: Promise<void>;
+}): Promise<void> {
+  await processClerkWebhook(
+    {
+      transaction: async (fn) =>
+        deletionWriter.db.transaction(async (tx) => {
+          await configureFastDeadlockWriter(tx);
+          input.backendPid(await getBackendPid(tx));
+          return fn({
+            clerkEvents: new DrizzleClerkEventRepository(tx),
+            deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
+            pendingStripeCustomerCleanups:
+              new DrizzlePendingStripeCustomerCleanupRepository(tx),
+            userRepository: new RawDeletionUserRepository(tx),
+            stripeCustomerRepository:
+              new PausingDeletionStripeCustomerRepository(
+                tx,
+                input.customerRead,
+                input.release,
+              ),
+          });
+        }),
+      deleteStripeCustomer: async () => undefined,
+      getClerkUserById: async () => null,
+      logger: new FakeLogger(),
+    },
+    {
+      eventId: input.eventId,
+      type: 'user.deleted',
+      data: { id: input.clerkUserId },
+    },
+  );
+}
+
+async function runFirstInsertWebhookWriter(input: {
+  userId: string;
+  externalCustomerId: string;
+  externalSubscriptionId: string;
+  eventId: string;
+  backendPid: (pid: number) => void;
+}): Promise<void> {
+  const paymentGateway = new FakePaymentGateway({
+    externalCustomerId: input.externalCustomerId,
+    checkoutUrl: 'https://stripe.test/checkout',
+    portalUrl: 'https://stripe.test/portal',
+    webhookResult: {
+      eventId: input.eventId,
+      type: 'customer.subscription.updated',
+      subscriptionUpdate: {
+        userId: input.userId,
+        externalCustomerId: input.externalCustomerId,
+        externalSubscriptionId: input.externalSubscriptionId,
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date('2030-01-01T00:00:00.000Z'),
+        cancelAtPeriodEnd: false,
+      },
+    },
+  });
+
+  // Production repositories, no pause points: the first-insert path must
+  // block at the deletion writer's advisory, not inside its own INSERT's
+  // FK share-lock on the users row.
+  await processStripeWebhook(
+    {
+      paymentGateway,
+      subscriptionVersions: new DrizzleSubscriptionRepository(
+        subscriptionWriter.db,
+        priceIds,
+      ),
+      logger: new FakeLogger(),
+      now: () => new Date(),
+      transaction: async (fn) =>
+        subscriptionWriter.db.transaction(async (tx) => {
+          await configureFastDeadlockWriter(tx);
+          input.backendPid(await getBackendPid(tx));
+          return fn({
+            stripeEvents: new DrizzleStripeEventRepository(tx),
+            subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
+            stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+          });
+        }),
+    },
+    { rawBody: 'raw', signature: 'sig_lock_order_first_insert' },
+  );
+}
+
 afterEach(async () => {
+  if (clerkEventIds.length > 0) {
+    await control.db
+      .delete(schema.clerkEvents)
+      .where(inArray(schema.clerkEvents.id, clerkEventIds));
+    clerkEventIds.length = 0;
+  }
+  if (deletedClerkUserIds.length > 0) {
+    await control.db
+      .delete(schema.deletedClerkUsers)
+      .where(
+        inArray(schema.deletedClerkUsers.clerkUserId, deletedClerkUserIds),
+      );
+    deletedClerkUserIds.length = 0;
+  }
   await cleanupAfterEach(control.db, cleanup);
 });
 
@@ -312,10 +598,191 @@ afterAll(async () => {
     closeConnection(control.sql),
     closeConnection(subscriptionWriter.sql),
     closeConnection(reconciliationWriter.sql),
+    closeConnection(deletionWriter.sql),
   ]);
 });
 
 describe('Stripe subscription writer lock order', () => {
+  it.each([
+    'webhook',
+    'reconcile',
+  ] as const)('serializes the deletion writer and %s writer without a 40P01 deadlock', async (writerKind) => {
+    const user = await createUser(control.db, cleanup);
+    const storedUser = await control.db.query.users.findFirst({
+      columns: { clerkUserId: true },
+      where: eq(schema.users.id, user.id),
+    });
+    if (!storedUser) throw new Error('Failed to reload integration user');
+
+    const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+    const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+    const stripeEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    const clerkEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    if (writerKind === 'webhook') {
+      cleanup.stripeEventIds.push(stripeEventId);
+    }
+    clerkEventIds.push(clerkEventId);
+    deletedClerkUserIds.push(storedUser.clerkUserId);
+
+    await new DrizzleStripeCustomerRepository(control.db).insert(
+      user.id,
+      externalCustomerId,
+    );
+    await new DrizzleSubscriptionRepository(control.db, priceIds).upsert({
+      userId: user.id,
+      externalSubscriptionId,
+      plan: 'monthly',
+      status: 'active',
+      expectedVersion: null,
+      currentPeriodEnd: new Date('2029-01-01T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+    });
+
+    const counterpartyLockHeld = createDeferred<void>();
+    const releaseCounterparty = createDeferred<void>();
+    let reconciliationTransactionError: unknown;
+    const counterpartyPromise =
+      writerKind === 'webhook'
+        ? runWebhookWriter({
+            userId: user.id,
+            externalCustomerId,
+            externalSubscriptionId,
+            eventId: stripeEventId,
+            lockHeld: () => counterpartyLockHeld.resolve(),
+            release: releaseCounterparty.promise,
+            deletionCounterparty: true,
+          })
+        : runReconciliationWriter({
+            userId: user.id,
+            externalCustomerId,
+            externalSubscriptionId,
+            lockHeld: () => counterpartyLockHeld.resolve(),
+            release: releaseCounterparty.promise,
+            onTransactionError: (error) => {
+              reconciliationTransactionError = error;
+            },
+          });
+    await counterpartyLockHeld.promise;
+
+    // The deletion writer now takes the advisory before any users-row lock,
+    // so it must queue at the advisory while the counterparty holds it; the
+    // customer-read pause is pre-released because it happens under the lock.
+    const releaseDeletion = createDeferred<void>();
+    releaseDeletion.resolve();
+    const deletionPid = createDeferred<number>();
+    const deletionPromise = runDeletionWriter({
+      clerkUserId: storedUser.clerkUserId,
+      eventId: clerkEventId,
+      backendPid: (pid) => deletionPid.resolve(pid),
+      customerRead: () => undefined,
+      release: releaseDeletion.promise,
+    });
+
+    const deletionState = await waitForDeletionLockState(
+      await deletionPid.promise,
+    );
+    releaseCounterparty.resolve();
+
+    const [counterpartyResult, deletionResult] = await Promise.allSettled([
+      counterpartyPromise,
+      deletionPromise,
+    ]);
+    const postgresErrorCodes = [
+      reconciliationTransactionError,
+      counterpartyResult.status === 'rejected'
+        ? counterpartyResult.reason
+        : null,
+      deletionResult.status === 'rejected' ? deletionResult.reason : null,
+    ]
+      .map(findPostgresErrorCode)
+      .filter((code): code is string => code !== null);
+
+    expect(postgresErrorCodes).not.toContain('40P01');
+    expect(deletionState).toBe('waiting-on-advisory');
+    expect(counterpartyResult.status).toBe('fulfilled');
+    expect(deletionResult.status).toBe('fulfilled');
+    if (writerKind === 'reconcile') {
+      expect(counterpartyResult).toMatchObject({
+        status: 'fulfilled',
+        value: { updated: 1, failed: 0 },
+      });
+    }
+  });
+
+  it('serializes the deletion writer and a first-insert webhook writer at the advisory lock', async () => {
+    const user = await createUser(control.db, cleanup);
+    const storedUser = await control.db.query.users.findFirst({
+      columns: { clerkUserId: true },
+      where: eq(schema.users.id, user.id),
+    });
+    if (!storedUser) throw new Error('Failed to reload integration user');
+
+    const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+    const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+    const stripeEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    const clerkEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    cleanup.stripeEventIds.push(stripeEventId);
+    clerkEventIds.push(clerkEventId);
+    deletedClerkUserIds.push(storedUser.clerkUserId);
+
+    // Seed ONLY the customer mapping: with no stripe_subscriptions row the
+    // counterparty's production upsert takes the INSERT path, whose FK check
+    // share-locks the users row the deletion writer holds FOR UPDATE.
+    await new DrizzleStripeCustomerRepository(control.db).insert(
+      user.id,
+      externalCustomerId,
+    );
+
+    const deletionCustomerRead = createDeferred<void>();
+    const releaseDeletion = createDeferred<void>();
+    const deletionPid = createDeferred<number>();
+    const deletionPromise = runDeletionWriter({
+      clerkUserId: storedUser.clerkUserId,
+      eventId: clerkEventId,
+      backendPid: (pid) => deletionPid.resolve(pid),
+      customerRead: () => deletionCustomerRead.resolve(),
+      release: releaseDeletion.promise,
+    });
+    await deletionCustomerRead.promise;
+
+    const counterpartyPid = createDeferred<number>();
+    const counterpartyPromise = runFirstInsertWebhookWriter({
+      userId: user.id,
+      externalCustomerId,
+      externalSubscriptionId,
+      eventId: stripeEventId,
+      backendPid: (pid) => counterpartyPid.resolve(pid),
+    });
+
+    // The conforming counterparty must queue at the advisory lock, never at
+    // the users-row share lock inside its INSERT (the pre-fix AB-BA edge).
+    const counterpartyState = await waitForDeletionLockState(
+      await counterpartyPid.promise,
+    );
+    releaseDeletion.resolve();
+
+    const [deletionResult, counterpartyResult] = await Promise.allSettled([
+      deletionPromise,
+      counterpartyPromise,
+    ]);
+
+    expect(counterpartyState).toBe('waiting-on-advisory');
+    expect(deletionResult.status).toBe('fulfilled');
+    expect(counterpartyResult.status).toBe('rejected');
+    const counterpartyError =
+      counterpartyResult.status === 'rejected'
+        ? counterpartyResult.reason
+        : null;
+    // The counterparty loses to the committed deletion at the missing-user
+    // FK (BUG-288's acknowledged residue), not via a 40P01 deadlock.
+    expect(findPostgresErrorCode(counterpartyError)).toBe('23503');
+    await expect(
+      control.db.query.users.findFirst({
+        where: eq(schema.users.id, user.id),
+      }),
+    ).resolves.toBeUndefined();
+  });
+
   it.each([
     'webhook',
     'checkout-success',
@@ -381,7 +848,7 @@ describe('Stripe subscription writer lock order', () => {
         transaction: async (fn) => {
           try {
             return await reconciliationWriter.db.transaction(async (tx) => {
-              await configureReconciliationWriter(tx);
+              await configureFastDeadlockWriter(tx);
               reconciliationPid.resolve(await getBackendPid(tx));
               return fn({
                 subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),

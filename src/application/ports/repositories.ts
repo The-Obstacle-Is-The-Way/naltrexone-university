@@ -3,7 +3,7 @@ export * from './bookmark-repository';
 export * from './clerk-event-repository';
 export * from './deleted-clerk-user-repository';
 export * from './idempotency-key-repository';
-export * from './pending-stripe-cancellation-repository';
+export * from './pending-stripe-customer-cleanup-repository';
 export * from './practice-session-repository';
 export * from './question-feedback-repository';
 export * from './question-repository';

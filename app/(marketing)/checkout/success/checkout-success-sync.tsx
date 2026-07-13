@@ -263,9 +263,9 @@ export async function syncCheckoutSuccess(
     getUserId: (subscription) => subscription.userId,
     persist: (subscription, expectedVersion) =>
       d.transaction(async ({ stripeCustomers, subscriptions }) => {
-        // Canonical multi-repository lock order: advisory(user) in
-        // subscriptions.upsert -> stripe_subscriptions row -> stripe_customers
-        // row. Keep every writer in this order to avoid AB-BA deadlocks.
+        // Stripe webhook, checkout-success, and reconcile use advisory(user)
+        // -> stripe_subscriptions -> stripe_customers. User deletion is the
+        // fourth writer and takes the same advisory before its inverse cascade.
         const result = await subscriptions.upsert({
           userId: subscription.userId,
           externalSubscriptionId: subscription.externalSubscriptionId,

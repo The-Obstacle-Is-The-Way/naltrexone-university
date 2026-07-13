@@ -4,7 +4,7 @@ import {
   DrizzleClerkEventRepository,
   DrizzleDeletedClerkUserRepository,
   DrizzleIdempotencyKeyRepository,
-  DrizzlePendingStripeCancellationRepository,
+  DrizzlePendingStripeCustomerCleanupRepository,
   DrizzlePracticeSessionRepository,
   DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
@@ -35,8 +35,9 @@ export function createRepositoryFactories(
       new DrizzleDeletedClerkUserRepository(dbOverride),
     createIdempotencyKeyRepository: (dbOverride = primitives.db) =>
       new DrizzleIdempotencyKeyRepository(dbOverride, primitives.now),
-    createPendingStripeCancellationRepository: (dbOverride = primitives.db) =>
-      new DrizzlePendingStripeCancellationRepository(dbOverride),
+    createPendingStripeCustomerCleanupRepository: (
+      dbOverride = primitives.db,
+    ) => new DrizzlePendingStripeCustomerCleanupRepository(dbOverride),
     createPracticeSessionRepository: (dbOverride = primitives.db) =>
       new DrizzlePracticeSessionRepository(
         dbOverride,

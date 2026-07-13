@@ -3,7 +3,7 @@ import { createContainer } from '@/lib/container';
 import { createRequestContext, getRequestLogger } from '@/lib/request-context';
 import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
-import { cancelStripeCustomerSubscriptions } from '@/src/adapters/gateways/stripe-subscription-canceler';
+import { deleteStripeCustomer } from '@/src/adapters/gateways/stripe-customer-deleter';
 import { createWebhookHandler } from './handler';
 
 export const maxDuration = 30;
@@ -44,8 +44,8 @@ export const POST = createWebhookHandler(
           fn({
             clerkEvents: container.createClerkEventRepository(tx),
             deletedClerkUsers: container.createDeletedClerkUserRepository(tx),
-            pendingStripeCancellations:
-              container.createPendingStripeCancellationRepository(tx),
+            pendingStripeCustomerCleanups:
+              container.createPendingStripeCustomerCleanupRepository(tx),
             userRepository: container.createUserRepository(tx),
             stripeCustomerRepository:
               container.createStripeCustomerRepository(tx),
@@ -55,5 +55,5 @@ export const POST = createWebhookHandler(
   },
   verifyClerkWebhook,
   processClerkWebhook,
-  cancelStripeCustomerSubscriptions,
+  deleteStripeCustomer,
 );

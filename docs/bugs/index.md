@@ -147,7 +147,7 @@ Every one of these was confirmed against the other branch's actual live registry
 | Answer submission and bookmarks in practice/review | Found BUG-259 through the in-place idempotency/rate-limit interaction; user scoping and stale-load guards otherwise held |
 | Tag/taxonomy selection and quick practice | Clean: visible tag-kind filtering, candidate sorting/shuffling, status pools, and empty-result handling matched tests and ordering policy |
 | Tutor mode and session start/resume | Found the BUG-259 answer-submit rate-limit/idempotency retry wedge; immediate grading, retry semantics, incomplete-session conflict, quick-start idempotency/stale-response guards, and expired-exam summary recovery otherwise held |
-| Clerk lifecycle/webhooks | Clean: `verifyWebhook(req)` is live, event claim/locks/tombstones/pending Stripe cancellation drain cover replay/deletion races |
+| Clerk lifecycle/webhooks | Clean: `verifyWebhook(req)` is live, event claim/locks/tombstones/pending Stripe customer-cleanup drain cover replay/deletion races |
 | Entitlement/access gating | Clean by current product rule: app layout and every app-data server action require `requireEntitledUserId`; no bypass found |
 | Cron/reconciliation | Clean: Vercel cron exists, auth runs before config/rate/work, all-pages job reports early stop; DEBT-422 covers resume/keyset concerns |
 | Stripe replay and billing idempotency | Clean against prior Audit #21 fixes: subscription-write guard prevents stale terminal overwrites; checkout/open-session idempotency and duplicate-sub cancellation remain covered |
