@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ApplicationConflictReasons,
   ApplicationError,
   practiceSessionAlreadyEndedError,
   practiceSessionStateChangedConcurrentlyError,
   rollbackCertainPersistenceError,
 } from '@/src/application/errors';
 import {
+  IdempotentActionNames,
   shouldCacheBookmarkError,
   shouldCacheCheckoutSessionError,
   shouldCachePortalSessionError,
@@ -13,6 +15,7 @@ import {
   shouldCacheQuestionRatingError,
   shouldCacheQuestionReportError,
   shouldCacheSubmitAnswerError,
+  shouldRotateIdempotencyKeyAfterActionError,
 } from './idempotency-error-policy';
 
 const transientCases = [
@@ -166,5 +169,70 @@ describe('question-mark idempotency error policy', () => {
         new ApplicationError('CONFLICT', 'Unclassified conflict'),
       ),
     ).toBe(false);
+  });
+});
+
+describe('client idempotency-key rotation policy', () => {
+  it.each([
+    [
+      IdempotentActionNames.Bookmark,
+      new ApplicationError('NOT_FOUND', 'Question not found'),
+    ],
+    [
+      IdempotentActionNames.QuestionRating,
+      new ApplicationError('VALIDATION_ERROR', 'Invalid rating'),
+    ],
+    [
+      IdempotentActionNames.QuestionReport,
+      new ApplicationError('NOT_FOUND', 'Question not found'),
+    ],
+    [IdempotentActionNames.SubmitAnswer, practiceSessionAlreadyEndedError()],
+    [
+      IdempotentActionNames.QuestionMark,
+      new ApplicationError('NOT_FOUND', 'Question not found'),
+    ],
+    [
+      IdempotentActionNames.StartPracticeSession,
+      new ApplicationError('NOT_FOUND', 'No questions found'),
+    ],
+    [
+      IdempotentActionNames.StartPracticeSession,
+      new ApplicationError('CONFLICT', 'Incomplete session exists', undefined, {
+        details: {
+          reason: ApplicationConflictReasons.IncompleteSessionExists,
+        },
+      }),
+    ],
+  ] as const)('rotates %s after a determinate cached error', (action, error) => {
+    expect(shouldRotateIdempotencyKeyAfterActionError(action, error)).toBe(
+      true,
+    );
+  });
+
+  it.each([
+    [
+      IdempotentActionNames.Bookmark,
+      new ApplicationError('INTERNAL_ERROR', 'Outcome unknown'),
+    ],
+    [
+      IdempotentActionNames.SubmitAnswer,
+      new ApplicationError('INTERNAL_ERROR', 'Outcome unknown'),
+    ],
+    [
+      IdempotentActionNames.QuestionMark,
+      practiceSessionStateChangedConcurrentlyError(),
+    ],
+    [
+      IdempotentActionNames.StartPracticeSession,
+      new ApplicationError('CONFLICT', 'Still running', undefined, {
+        details: {
+          reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+        },
+      }),
+    ],
+  ] as const)('preserves %s after an indeterminate or aborted error', (action, error) => {
+    expect(shouldRotateIdempotencyKeyAfterActionError(action, error)).toBe(
+      false,
+    );
   });
 });

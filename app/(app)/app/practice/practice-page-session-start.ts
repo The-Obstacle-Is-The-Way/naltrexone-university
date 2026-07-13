@@ -8,6 +8,11 @@ import { toPracticeSessionRoute } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import {
+  IdempotentActionNames,
+  shouldRotateIdempotencyKeyAfterActionError,
+} from '@/src/adapters/controllers/shared/idempotency-error-policy';
+import { ApplicationConflictReasons } from '@/src/application/errors';
 
 const SESSION_START_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
@@ -66,6 +71,7 @@ export async function startSession(input: {
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
   reportError?: (error: unknown, context: { action: string }) => void;
+  refreshIncompleteSession?: () => Promise<void>;
   setSessionStartStatus: (status: 'idle' | 'loading' | 'error') => void;
   setSessionStartError: (message: string | null) => void;
   navigateTo: (url: string) => void;
@@ -104,7 +110,6 @@ export async function startSession(input: {
     if (!isMounted()) return;
     input.setSessionStartStatus('error');
     input.setSessionStartError(getThrownErrorMessage(error));
-    input.setIdempotencyKey(input.createIdempotencyKey());
     return;
   }
   if (!isMounted()) return;
@@ -113,7 +118,20 @@ export async function startSession(input: {
   if (!res.ok) {
     input.setSessionStartStatus('error');
     input.setSessionStartError(getActionResultErrorMessage(res));
-    input.setIdempotencyKey(input.createIdempotencyKey());
+    if (
+      shouldRotateIdempotencyKeyAfterActionError(
+        IdempotentActionNames.StartPracticeSession,
+        res.error,
+      )
+    ) {
+      input.setIdempotencyKey(input.createIdempotencyKey());
+    }
+    if (
+      res.error.details?.reason ===
+      ApplicationConflictReasons.IncompleteSessionExists
+    ) {
+      await input.refreshIncompleteSession?.();
+    }
     return;
   }
 

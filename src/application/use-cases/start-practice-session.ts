@@ -4,7 +4,7 @@ import type {
   QuestionDifficulty,
   QuestionProgressStatus,
 } from '@/src/domain/value-objects';
-import { ApplicationError } from '../errors';
+import { ApplicationConflictReasons, ApplicationError } from '../errors';
 import type {
   PracticeSessionRepository,
   QuestionRepository,
@@ -42,6 +42,12 @@ export class StartPracticeSessionUseCase {
       throw new ApplicationError(
         'CONFLICT',
         'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+        undefined,
+        {
+          details: {
+            reason: ApplicationConflictReasons.IncompleteSessionExists,
+          },
+        },
       );
     }
 

@@ -25,6 +25,7 @@ const endPracticeSession = vi.mocked(practiceController.endPracticeSession);
 const getIncompletePracticeSession = vi.mocked(
   practiceController.getIncompletePracticeSession,
 );
+const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -44,6 +45,9 @@ function PracticeSessionControlsHookProbe() {
       <div data-testid="incomplete-load-status">
         {output.incompleteSessionStatus}
       </div>
+      <div data-testid="incomplete-session-id">
+        {output.incompleteSession?.sessionId ?? ''}
+      </div>
       <div data-testid="available-tags">{output.availableTags.length}</div>
       <div data-testid="session-mode">{output.sessionMode}</div>
       <div data-testid="selected-tags">{output.filters.tagSlugs.join(',')}</div>
@@ -58,6 +62,14 @@ function PracticeSessionControlsHookProbe() {
       </button>
       <button type="button" onClick={() => output.onToggleTag('opioids')}>
         toggle-tag-opioids
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          void output.onStartSession();
+        }}
+      >
+        start-session
       </button>
       <button
         type="button"
@@ -321,5 +333,41 @@ describe('usePracticeSessionControls (browser)', () => {
       idempotencyKey: sessionId,
     });
     expect(endPracticeSession).not.toHaveBeenCalled();
+  });
+
+  it('refreshes and exposes the resume panel state after a start conflict', async () => {
+    const sessionId = '11111111-1111-4111-8111-111111111114';
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 20 }));
+    getIncompletePracticeSession
+      .mockResolvedValueOnce(ok(null))
+      .mockResolvedValueOnce(
+        ok({
+          sessionId,
+          mode: 'tutor',
+          answeredCount: 0,
+          totalCount: 20,
+          startedAt: '2026-07-13T00:00:00.000Z',
+        }),
+      );
+    startPracticeSession.mockResolvedValue(
+      err('CONFLICT', 'Incomplete session exists', undefined, {
+        reason: 'incomplete_practice_session_exists',
+      }),
+    );
+
+    const screen = await render(<PracticeSessionControlsHookProbe />);
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'start-session' }).click();
+
+    await expect
+      .poll(() => getIncompletePracticeSession.mock.calls.length)
+      .toBe(2);
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(sessionId);
   });
 });

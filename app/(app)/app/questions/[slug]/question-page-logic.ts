@@ -14,6 +14,10 @@ import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
+import {
+  IdempotentActionNames,
+  shouldRotateIdempotencyKeyAfterActionError,
+} from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import type { GetPreviousAttemptOutput } from '@/src/application/use-cases/get-previous-attempt';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 import type { AttemptRetryOrigin } from '@/src/domain/entities';
@@ -211,6 +215,7 @@ export async function submitSelectedAnswer(input: {
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  rotateIdempotencyKey?: (() => void) | undefined;
   isMounted?: (() => boolean) | undefined;
   isStale?: (() => boolean) | undefined;
 }): Promise<void> {
@@ -281,6 +286,14 @@ export async function submitSelectedAnswer(input: {
   if (!isMounted() || isStale()) return;
 
   if (!res.ok) {
+    if (
+      shouldRotateIdempotencyKeyAfterActionError(
+        IdempotentActionNames.SubmitAnswer,
+        res.error,
+      )
+    ) {
+      input.rotateIdempotencyKey?.();
+    }
     input.setLoadState({
       status: 'error',
       message: getActionResultErrorMessage(res),
@@ -307,6 +320,7 @@ export function createSubmitSelectedAnswerAction(input: {
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  rotateIdempotencyKey?: (() => void) | undefined;
   onUnhandledError?: ((error: unknown) => void) | undefined;
   isMounted?: (() => boolean) | undefined;
   isStale?: (() => boolean) | undefined;

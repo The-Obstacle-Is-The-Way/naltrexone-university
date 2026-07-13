@@ -19,6 +19,7 @@ export const ApplicationConflictReasons = {
   ExamTimeExpired: 'exam_time_expired',
   StateChangedConcurrently: 'practice_session_state_changed_concurrently',
   ConcurrentRequestInProgress: 'concurrent_request_in_progress',
+  IncompleteSessionExists: 'incomplete_practice_session_exists',
   UserEmailOwnedByAnotherIdentity: 'user_email_owned_by_another_identity',
 } as const;
 

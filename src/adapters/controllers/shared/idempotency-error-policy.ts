@@ -1,4 +1,5 @@
 import {
+  ApplicationConflictReasons,
   type ApplicationErrorCode,
   isApplicationError,
   isRollbackCertainPersistenceError,
@@ -13,6 +14,7 @@ export const IdempotentActionNames = {
   QuestionReport: 'question-feedback:submitQuestionReport',
   SubmitAnswer: 'question:submitAnswer',
   QuestionMark: 'practice:setPracticeSessionQuestionMark',
+  StartPracticeSession: 'practice:startPracticeSession',
 } as const;
 
 export type IdempotentActionName =
@@ -51,6 +53,10 @@ const determinateCodesByAction: Record<
     'VALIDATION_ERROR',
     'NOT_FOUND',
   ]),
+  [IdempotentActionNames.StartPracticeSession]: new Set([
+    'VALIDATION_ERROR',
+    'NOT_FOUND',
+  ]),
 };
 
 const terminalPracticeSessionReasons = new Set<string>([
@@ -72,6 +78,16 @@ function isDeterminateCachedError(
     const reason = error.details?.reason;
     return (
       typeof reason === 'string' && terminalPracticeSessionReasons.has(reason)
+    );
+  }
+
+  if (
+    action === IdempotentActionNames.StartPracticeSession &&
+    error.code === 'CONFLICT'
+  ) {
+    return (
+      error.details?.reason ===
+      ApplicationConflictReasons.IncompleteSessionExists
     );
   }
 

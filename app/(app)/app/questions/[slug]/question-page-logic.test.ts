@@ -1022,6 +1022,7 @@ describe('question-page-logic', () => {
         err('INTERNAL_ERROR', 'Internal error'),
       );
       const setLoadState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
 
       await submitSelectedAnswer({
         question: createQuestionOutput(),
@@ -1032,12 +1033,34 @@ describe('question-page-logic', () => {
         nowMs: () => 0,
         setLoadState,
         setSubmitResult: vi.fn(),
+        rotateIdempotencyKey,
       });
 
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Internal error',
       });
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('rotates the submit key after a determinate cached failure', async () => {
+      const rotateIdempotencyKey = vi.fn();
+
+      await submitSelectedAnswer({
+        question: createQuestionOutput(),
+        selectedChoiceId: fixtureChoice1Id,
+        questionLoadedAtMs: null,
+        submitIdempotencyKey: 'idem_1',
+        submitAnswerFn: vi.fn(async () =>
+          err('NOT_FOUND', 'Question not found'),
+        ),
+        nowMs: () => 0,
+        setLoadState: vi.fn(),
+        setSubmitResult: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
     });
 
     it('ignores stale response when isStale callback returns true', async () => {

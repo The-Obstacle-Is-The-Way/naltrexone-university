@@ -107,6 +107,27 @@ describe('question-feedback-actions', () => {
     });
   });
 
+  it('rotates the rating key after a determinate cached failure', async () => {
+    const setRatingKey = vi.fn();
+
+    await rateQuestionForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      currentRating: null,
+      nextRating: 'helpful',
+      ratingIdempotencyKey: firstIdempotencyKey,
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setRatingIdempotencyKey: setRatingKey,
+      rateQuestionFn: vi.fn().mockResolvedValue({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid rating' },
+      }),
+      setRating: vi.fn(),
+      setFeedbackStatus: vi.fn(),
+    });
+
+    expect(setRatingKey).toHaveBeenCalledWith(secondIdempotencyKey);
+  });
+
   it('rolls back thrown rating errors even when the reporter fails', async () => {
     const statuses: string[] = [];
     const ratings: Array<QuestionFeedbackRating | null> = [];
@@ -234,6 +255,25 @@ describe('question-feedback-actions', () => {
     expect(JSON.stringify(logError.mock.calls)).not.toContain(
       'Sensitive free text',
     );
+  });
+
+  it('rotates the report key after a determinate cached failure', async () => {
+    const setReportKey = vi.fn();
+
+    await submitReportForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      category: 'other',
+      comment: null,
+      reportIdempotencyKey: firstIdempotencyKey,
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setReportIdempotencyKey: setReportKey,
+      submitQuestionReportFn: vi.fn().mockResolvedValue({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Question not found' },
+      }),
+    });
+
+    expect(setReportKey).toHaveBeenCalledWith(secondIdempotencyKey);
   });
 
   it('returns false for thrown report errors even when the reporter fails', async () => {

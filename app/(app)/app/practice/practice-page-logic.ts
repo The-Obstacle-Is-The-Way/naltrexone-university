@@ -120,6 +120,7 @@ export async function submitAnswerForQuestion(input: {
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
+  rotateIdempotencyKey?: (() => void) | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
@@ -145,6 +146,7 @@ export async function submitAnswerForQuestion(input: {
     setLoadState: input.setLoadState,
     setSubmitResult: input.setSubmitResult,
     onSuccess: input.onSuccess,
+    rotateIdempotencyKey: input.rotateIdempotencyKey,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,
     isMounted: input.isMounted,

@@ -5,6 +5,10 @@ import type {
   RateQuestionOutput,
   SubmitQuestionReportOutput,
 } from '@/src/adapters/controllers/question-feedback-controller';
+import {
+  IdempotentActionNames,
+  shouldRotateIdempotencyKeyAfterActionError,
+} from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import type {
   QuestionFeedbackCategory,
   QuestionFeedbackRating,
@@ -80,6 +84,16 @@ export async function rateQuestionForQuestion(input: {
       }
     }
     if (!isMounted()) return;
+    if (
+      input.setRatingIdempotencyKey &&
+      input.createIdempotencyKey &&
+      shouldRotateIdempotencyKeyAfterActionError(
+        IdempotentActionNames.QuestionRating,
+        result.error,
+      )
+    ) {
+      input.setRatingIdempotencyKey(input.createIdempotencyKey());
+    }
     input.setRating(input.currentRating);
     input.setFeedbackStatus('error');
     return;
@@ -154,6 +168,17 @@ export async function submitReportForQuestion(input: {
       } catch {
         // Reporter failures must not block the primary error path.
       }
+    }
+    if (
+      isMounted() &&
+      input.setReportIdempotencyKey &&
+      input.createIdempotencyKey &&
+      shouldRotateIdempotencyKeyAfterActionError(
+        IdempotentActionNames.QuestionReport,
+        result.error,
+      )
+    ) {
+      input.setReportIdempotencyKey(input.createIdempotencyKey());
     }
     return false;
   }

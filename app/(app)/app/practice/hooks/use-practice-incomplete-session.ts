@@ -8,6 +8,7 @@ import {
 import {
   abandonIncompleteSession,
   createIncompleteSessionEffect,
+  loadIncompleteSession,
 } from '../practice-page-incomplete-session';
 
 type IncompletePracticeSession =
@@ -21,6 +22,7 @@ export type UsePracticeIncompleteSessionOutput = {
   incompleteSessionStatus: 'idle' | 'loading' | 'error';
   incompleteSessionError: string | null;
   incompleteSession: IncompletePracticeSession | null;
+  refreshIncompleteSession: () => Promise<void>;
   onAbandonIncompleteSession: () => Promise<void>;
 };
 
@@ -48,6 +50,18 @@ export function usePracticeIncompleteSession(
     });
   }, []);
 
+  const refreshIncompleteSession = useCallback(
+    () =>
+      loadIncompleteSession({
+        getIncompletePracticeSessionFn: getIncompletePracticeSession,
+        setIncompleteSessionStatus,
+        setIncompleteSessionError,
+        setIncompleteSession,
+        isActive: input.isMounted,
+      }),
+    [input.isMounted],
+  );
+
   const onAbandonIncompleteSession = useCallback(async () => {
     if (!incompleteSession) return;
 
@@ -69,6 +83,7 @@ export function usePracticeIncompleteSession(
     incompleteSessionStatus,
     incompleteSessionError,
     incompleteSession,
+    refreshIncompleteSession,
     onAbandonIncompleteSession,
   };
 }
