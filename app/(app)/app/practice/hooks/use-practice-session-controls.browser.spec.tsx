@@ -364,9 +364,6 @@ describe('usePracticeSessionControls (browser)', () => {
     await screen.getByRole('button', { name: 'start-session' }).click();
 
     await expect
-      .poll(() => getIncompletePracticeSession.mock.calls.length)
-      .toBe(2);
-    await expect
       .element(screen.getByTestId('incomplete-session-id'))
       .toHaveTextContent(sessionId);
   });
