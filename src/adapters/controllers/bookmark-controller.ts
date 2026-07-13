@@ -23,6 +23,7 @@ import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
+import { shouldCacheBookmarkError } from './shared/idempotency-error-policy';
 
 const SetBookmarkInputSchema = z
   .object({
@@ -107,6 +108,7 @@ export const setBookmark = createAction({
       idempotencyKey,
       outputSchema: SetBookmarkOutputSchema,
       beforeExecute: enforceBookmarkRateLimit,
+      shouldCacheError: shouldCacheBookmarkError,
       execute: setDesiredBookmarkState,
     });
   },

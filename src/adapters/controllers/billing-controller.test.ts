@@ -338,6 +338,25 @@ describe('billing-controller', () => {
       expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
       expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
     });
+
+    it('re-executes checkout after a transient INTERNAL_ERROR under the same key', async () => {
+      const deps = createDeps({
+        checkoutThrows: new ApplicationError(
+          'INTERNAL_ERROR',
+          'Stripe temporarily unavailable',
+        ),
+      });
+      const input = {
+        plan: 'monthly',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      await createCheckoutSession(input, deps);
+      await createCheckoutSession(input, deps);
+
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(2);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(2);
+    });
   });
 
   describe('createPortalSession', () => {
@@ -567,6 +586,24 @@ describe('billing-controller', () => {
       expect(second).toEqual(first);
       expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
       expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
+    });
+
+    it('re-executes portal creation after a transient STRIPE_ERROR under the same key', async () => {
+      const deps = createDeps({
+        portalThrows: new ApplicationError(
+          'STRIPE_ERROR',
+          'Stripe temporarily unavailable',
+        ),
+      });
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      await createPortalSession(input, deps);
+      await createPortalSession(input, deps);
+
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(2);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(2);
     });
   });
 });

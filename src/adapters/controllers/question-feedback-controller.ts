@@ -31,6 +31,10 @@ import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
+import {
+  shouldCacheQuestionRatingError,
+  shouldCacheQuestionReportError,
+} from './shared/idempotency-error-policy';
 
 const zRating = z.enum(AllQuestionFeedbackRatings);
 const zCategory = z.enum(AllQuestionFeedbackCategories);
@@ -135,6 +139,7 @@ export const rateQuestion = createAction({
         attemptId: input.attemptId ?? null,
         practiceSessionId: input.practiceSessionId ?? null,
         rating: input.rating,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       });
     }
 
@@ -158,6 +163,7 @@ export const rateQuestion = createAction({
       idempotencyKey,
       outputSchema: RateQuestionOutputSchema,
       beforeExecute: enforceRatingRateLimit,
+      shouldCacheError: shouldCacheQuestionRatingError,
       execute: rate,
     });
   },
@@ -191,6 +197,7 @@ export const submitQuestionReport = createAction({
         practiceSessionId: input.practiceSessionId ?? null,
         category: input.category,
         comment: input.comment ?? null,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       });
     }
 
@@ -214,6 +221,7 @@ export const submitQuestionReport = createAction({
       idempotencyKey,
       outputSchema: SubmitQuestionReportOutputSchema,
       beforeExecute: enforceReportRateLimit,
+      shouldCacheError: shouldCacheQuestionReportError,
       outcomeStoreFailurePolicy: 'cache-error-and-throw',
       execute: submit,
     });

@@ -125,6 +125,24 @@ describe('SubmitQuestionReportUseCase', () => {
     ]);
   });
 
+  it('returns the original feedback id when a request idempotency key is replayed', async () => {
+    const { useCase, feedback } = makeUseCase();
+    const baseInput = {
+      userId,
+      questionId: 'question-1',
+      attemptId: null,
+      practiceSessionId: null,
+      category: 'incorrect_answer' as const,
+      idempotencyKey: 'request-1',
+    };
+
+    const first = await useCase.execute({ ...baseInput, comment: 'First' });
+    const replay = await useCase.execute({ ...baseInput, comment: 'Changed' });
+
+    expect(replay).toEqual(first);
+    expect(feedback.recordCalls).toHaveLength(2);
+  });
+
   it('rejects and records nothing when the attempt belongs to a different question', async () => {
     const { useCase, feedback } = makeUseCase({
       attempts: new FakeAttemptRepository([

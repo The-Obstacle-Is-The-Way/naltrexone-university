@@ -67,6 +67,7 @@ import {
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
+import { shouldCacheQuestionMarkError } from './shared/idempotency-error-policy';
 import {
   shouldCachePracticeSessionLifecycleError,
   shouldCachePracticeSessionStateWriteError,
@@ -428,7 +429,7 @@ export const setPracticeSessionQuestionMark = createAction({
       action: 'practice:setPracticeSessionQuestionMark',
       idempotencyKey,
       outputSchema: SetPracticeSessionQuestionMarkOutputSchema,
-      shouldCacheError: shouldCachePracticeSessionStateWriteError,
+      shouldCacheError: shouldCacheQuestionMarkError,
       execute: () =>
         d.setPracticeSessionQuestionMarkUseCase.execute({
           userId,

@@ -127,6 +127,29 @@ describe('RateQuestionUseCase', () => {
     ]);
   });
 
+  it('returns the original rating when a request idempotency key is replayed', async () => {
+    const { useCase, feedback } = makeUseCase();
+    const baseInput = {
+      userId,
+      questionId: 'question-1',
+      attemptId: null,
+      practiceSessionId: null,
+      idempotencyKey: 'request-1',
+    } as const;
+
+    const first = await useCase.execute({ ...baseInput, rating: 'helpful' });
+    const replay = await useCase.execute({
+      ...baseInput,
+      rating: 'not_helpful',
+    });
+
+    expect(first).toEqual({ rating: 'helpful' });
+    expect(replay).toEqual(first);
+    await expect(
+      feedback.findLatestRatingByUser(userId, 'question-1'),
+    ).resolves.toMatchObject({ rating: 'helpful' });
+  });
+
   it('rejects and records nothing when the attempt belongs to a different question', async () => {
     const { useCase, feedback } = makeUseCase({
       attempts: new FakeAttemptRepository([

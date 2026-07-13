@@ -21,6 +21,7 @@ import type { DrizzleDb } from '../shared/database-types';
 import {
   getPostgresConstraintName,
   isPostgresUniqueViolation,
+  toRollbackCertainPersistenceError,
 } from './postgres-errors';
 import {
   type PracticeSessionParamsJson,
@@ -523,17 +524,21 @@ export class DrizzlePracticeSessionRepository
     questionId: string;
     markedForReview: boolean;
   }): Promise<PracticeSessionQuestionState> {
-    return updatePracticeSessionQuestionState({
-      db: this.db,
-      now: this.now,
-      sessionId: input.sessionId,
-      userId: input.userId,
-      questionId: input.questionId,
-      updateFn: (current) => ({
-        ...current,
-        markedForReview: input.markedForReview,
-      }),
-    });
+    try {
+      return await updatePracticeSessionQuestionState({
+        db: this.db,
+        now: this.now,
+        sessionId: input.sessionId,
+        userId: input.userId,
+        questionId: input.questionId,
+        updateFn: (current) => ({
+          ...current,
+          markedForReview: input.markedForReview,
+        }),
+      });
+    } catch (error) {
+      throw toRollbackCertainPersistenceError(error) ?? error;
+    }
   }
 
   async discard(id: string, userId: string): Promise<void> {

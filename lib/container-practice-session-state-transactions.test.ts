@@ -10,6 +10,7 @@ import {
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   ApplicationError,
+  isRollbackCertainPersistenceError,
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
 import {
@@ -475,5 +476,33 @@ describe('container factories — practice session state write transactions', ()
     expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
       isolationLevel: 'repeatable read',
     });
+  });
+
+  it('classifies statement cancellation as rollback-certain for session-backed submit', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('tutor');
+    const statementCancellation = new Error('canceling statement', {
+      cause: { code: '57014' },
+    });
+    const transaction = vi.fn<TestTransaction>(async () => {
+      throw statementCancellation;
+    });
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+
+    const promise = container.createSubmitAnswerUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+      questionId: fixture.questionId,
+      choiceId: fixture.correctChoiceId,
+    });
+
+    await expect(promise).rejects.toSatisfy(isRollbackCertainPersistenceError);
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: statementCancellation,
+    });
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 });

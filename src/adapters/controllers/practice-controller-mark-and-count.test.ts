@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  rollbackCertainPersistenceError,
+} from '@/src/application/errors';
 import {
   countAvailableQuestions,
   setPracticeSessionQuestionMark,
@@ -154,6 +157,25 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toHaveLength(1);
+    });
+
+    it('re-executes a mark after a rollback-certain failure under the same key', async () => {
+      const deps = createDeps({
+        setMarkThrows: rollbackCertainPersistenceError({
+          cause: { code: '57014' },
+        }),
+      });
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        questionId: '22222222-2222-2222-2222-222222222222',
+        markedForReview: true,
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      await setPracticeSessionQuestionMark(input, deps);
+      await setPracticeSessionQuestionMark(input, deps);
+
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toHaveLength(2);
     });
   });
 

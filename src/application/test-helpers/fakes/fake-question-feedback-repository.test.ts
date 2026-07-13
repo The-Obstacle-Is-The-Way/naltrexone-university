@@ -105,6 +105,38 @@ describe('FakeQuestionFeedbackRepository', () => {
         rating: 'not_helpful',
       });
     });
+
+    it('returns the original event when a request idempotency key is reused', async () => {
+      const ids = ['feedback-1', 'feedback-2'];
+      const repo = new FakeQuestionFeedbackRepository(
+        [],
+        () => new Date('2026-02-10T00:00:00.000Z'),
+        () => ids.shift() ?? 'feedback-fallback',
+      );
+      const firstEvent = newQuestionRatingFeedback({
+        userId: 'user-1',
+        questionId: 'question-1',
+        attemptId: null,
+        practiceSessionId: null,
+        rating: 'helpful',
+      });
+      const changedReplay = newQuestionRatingFeedback({
+        ...firstEvent,
+        rating: 'not_helpful',
+      });
+
+      const first = await repo.record(firstEvent, {
+        idempotencyKey: 'request-1',
+      });
+      const replay = await repo.record(changedReplay, {
+        idempotencyKey: 'request-1',
+      });
+
+      expect(replay).toEqual(first);
+      await expect(
+        repo.findLatestRatingByUser('user-1', 'question-1'),
+      ).resolves.toMatchObject({ id: 'feedback-1', rating: 'helpful' });
+    });
   });
 
   describe('findLatestRatingByUser', () => {

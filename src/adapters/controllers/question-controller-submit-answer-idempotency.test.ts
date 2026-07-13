@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  rollbackCertainPersistenceError,
+} from '@/src/application/errors';
 import {
   FakeAuthGateway,
   FakeGetNextQuestionUseCase,
@@ -178,5 +181,20 @@ describe('question-controller submitAnswer idempotency', () => {
     expect(second).toEqual(first);
     expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
     expect(deps.rateLimiter.inputs).toHaveLength(1);
+  });
+
+  it('re-executes after a rollback-certain failure under the same key', async () => {
+    const deps = createDeps({
+      submitAnswerThrows: rollbackCertainPersistenceError({
+        cause: { code: '57014' },
+      }),
+    });
+    const input = { questionId, choiceId, idempotencyKey } as const;
+
+    await submitAnswer(input, deps);
+    await submitAnswer(input, deps);
+
+    expect(deps.submitAnswerUseCase.inputs).toHaveLength(2);
+    expect(deps.rateLimiter.inputs).toHaveLength(2);
   });
 });

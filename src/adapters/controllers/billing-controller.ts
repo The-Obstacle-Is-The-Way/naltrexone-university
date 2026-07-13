@@ -23,6 +23,10 @@ import type {
 } from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import { executeIdempotent } from './shared/execute-idempotent';
+import {
+  shouldCacheCheckoutSessionError,
+  shouldCachePortalSessionError,
+} from './shared/idempotency-error-policy';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
 const zIdempotencyKey = zUuid;
@@ -145,6 +149,7 @@ export const createCheckoutSession = createAction({
       idempotencyKey,
       outputSchema: CreateCheckoutSessionOutputSchema,
       beforeExecute: enforceCheckoutRateLimit,
+      shouldCacheError: shouldCacheCheckoutSessionError,
       execute: createNewSession,
     });
   },
@@ -192,6 +197,7 @@ export const createPortalSession = createAction({
       idempotencyKey,
       outputSchema: CreatePortalSessionOutputSchema,
       beforeExecute: enforcePortalRateLimit,
+      shouldCacheError: shouldCachePortalSessionError,
       execute: createNewSession,
     });
   },

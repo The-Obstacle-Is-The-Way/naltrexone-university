@@ -1,4 +1,7 @@
-import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
+import {
+  getPostgresErrorCode,
+  toRollbackCertainPersistenceError,
+} from '@/src/adapters/repositories/postgres-errors';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   ApplicationError,
@@ -79,6 +82,7 @@ function sleep(ms: number): Promise<void> {
 async function runPracticeSessionStateWriteTransaction<T>(
   primitives: ContainerPrimitives,
   action: (tx: DrizzleDb) => Promise<T>,
+  options?: { classifyStatementCancellation?: boolean },
 ): Promise<T> {
   let lastRetryableError: unknown;
 
@@ -94,6 +98,10 @@ async function runPracticeSessionStateWriteTransaction<T>(
       );
     } catch (error) {
       if (!isRetryablePracticeSessionStateWriteFailure(error)) {
+        const rollbackCertainError = options?.classifyStatementCancellation
+          ? toRollbackCertainPersistenceError(error)
+          : null;
+        if (rollbackCertainError) throw rollbackCertainError;
         throw error;
       }
       lastRetryableError = error;
@@ -269,11 +277,14 @@ export function createUseCaseFactories(input: {
         repositories.createPracticeSessionRepository(),
         primitives.logger,
         async (fn) =>
-          runPracticeSessionStateWriteTransaction(primitives, async (tx) =>
-            fn({
-              attempts: repositories.createAttemptRepository(tx),
-              sessions: repositories.createPracticeSessionRepository(tx),
-            }),
+          runPracticeSessionStateWriteTransaction(
+            primitives,
+            async (tx) =>
+              fn({
+                attempts: repositories.createAttemptRepository(tx),
+                sessions: repositories.createPracticeSessionRepository(tx),
+              }),
+            { classifyStatementCancellation: true },
           ),
       ),
     createSetBookmarkUseCase: () =>

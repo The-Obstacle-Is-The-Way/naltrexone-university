@@ -1,3 +1,10 @@
+import {
+  type RollbackCertainPersistenceError,
+  rollbackCertainPersistenceError,
+} from '@/src/application/errors';
+
+const QUERY_CANCELED_SQLSTATE = '57014';
+
 export function getPostgresErrorCode(error: unknown): string | null {
   if (!error || typeof error !== 'object') return null;
 
@@ -50,4 +57,11 @@ export function getPostgresConstraintName(error: unknown): string | null {
 
 export function isPostgresUniqueViolation(error: unknown): boolean {
   return getPostgresErrorCode(error) === '23505';
+}
+
+export function toRollbackCertainPersistenceError(
+  error: unknown,
+): RollbackCertainPersistenceError | null {
+  if (getPostgresErrorCode(error) !== QUERY_CANCELED_SQLSTATE) return null;
+  return rollbackCertainPersistenceError({ cause: error });
 }

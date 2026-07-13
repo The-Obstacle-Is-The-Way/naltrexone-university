@@ -1,0 +1,2 @@
+ALTER TABLE "question_feedback" ADD COLUMN "idempotency_key" uuid;--> statement-breakpoint
+CREATE UNIQUE INDEX "question_feedback_user_kind_idempotency_key_uq" ON "question_feedback" USING btree ("user_id","kind","idempotency_key");

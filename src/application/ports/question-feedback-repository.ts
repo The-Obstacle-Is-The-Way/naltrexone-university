@@ -5,7 +5,10 @@ import type {
 } from '@/src/domain/entities';
 
 export interface QuestionFeedbackRepository {
-  record(event: NewQuestionFeedback): Promise<QuestionFeedback>;
+  record(
+    event: NewQuestionFeedback,
+    options?: { idempotencyKey?: string },
+  ): Promise<QuestionFeedback>;
   /**
    * Latest rating-kind event for (user, question); null if none.
    * Drives thumbs-up/thumbs-down hydration.

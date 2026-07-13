@@ -77,6 +77,45 @@ describe('DrizzleQuestionFeedbackRepository', () => {
     });
   });
 
+  it('deduplicates ambiguous rating replay by request idempotency key', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-feedback-idempotency-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const repo = new DrizzleQuestionFeedbackRepository(db);
+    const request = { idempotencyKey: randomUUID() };
+
+    const first = await repo.record(
+      newQuestionRatingFeedback({
+        userId: user.id,
+        questionId: question.id,
+        attemptId: null,
+        practiceSessionId: null,
+        rating: 'helpful',
+      }),
+      request,
+    );
+    const replay = await repo.record(
+      newQuestionRatingFeedback({
+        userId: user.id,
+        questionId: question.id,
+        attemptId: null,
+        practiceSessionId: null,
+        rating: 'not_helpful',
+      }),
+      request,
+    );
+
+    expect(replay).toEqual(first);
+    const rows = await db
+      .select({ id: schema.questionFeedback.id })
+      .from(schema.questionFeedback)
+      .where(eq(schema.questionFeedback.userId, user.id));
+    expect(rows).toEqual([{ id: first.id }]);
+  });
+
   it('returns latest rating by createdAt and id descending while ignoring reports', async () => {
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {

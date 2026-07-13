@@ -37,7 +37,7 @@ import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
-import { shouldCachePracticeSessionStateWriteError } from './shared/practice-session-idempotency-policy';
+import { shouldCacheSubmitAnswerError } from './shared/idempotency-error-policy';
 
 const QuestionFiltersSchema = z
   .object({
@@ -266,7 +266,7 @@ export const submitAnswer = createAction({
       idempotencyKey,
       outputSchema: SubmitAnswerOutputSchema,
       beforeExecute: enforceSubmitAnswerRateLimit,
-      shouldCacheError: shouldCachePracticeSessionStateWriteError,
+      shouldCacheError: shouldCacheSubmitAnswerError,
       execute: submitOnce,
     });
   },

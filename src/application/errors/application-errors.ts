@@ -99,6 +99,37 @@ export class ApplicationError extends Error {
   }
 }
 
+/**
+ * Marks a persistence failure whose owning transaction is known to have
+ * rolled back. Idempotency policies may safely abort the claim for this error
+ * while keeping generic INTERNAL_ERROR failures conservatively fenced.
+ */
+export class RollbackCertainPersistenceError extends ApplicationError {
+  readonly determinacy = 'rollback_certain' as const;
+
+  constructor(options?: { cause?: unknown }) {
+    super(
+      'INTERNAL_ERROR',
+      'Persistence operation was rolled back; please retry.',
+      undefined,
+      options?.cause !== undefined ? { cause: options.cause } : undefined,
+    );
+    this.name = 'RollbackCertainPersistenceError';
+  }
+}
+
+export function rollbackCertainPersistenceError(options?: {
+  cause?: unknown;
+}): RollbackCertainPersistenceError {
+  return new RollbackCertainPersistenceError(options);
+}
+
+export function isRollbackCertainPersistenceError(
+  error: unknown,
+): error is RollbackCertainPersistenceError {
+  return error instanceof RollbackCertainPersistenceError;
+}
+
 export class UserEmailOwnershipConflictError extends ApplicationError {
   constructor(
     public readonly existingClerkUserId: string,

@@ -14,22 +14,52 @@ export class DrizzleQuestionFeedbackRepository
 {
   constructor(private readonly db: DrizzleDb) {}
 
-  async record(event: NewQuestionFeedback) {
+  async record(
+    event: NewQuestionFeedback,
+    options?: { idempotencyKey?: string },
+  ) {
     let row: (typeof questionFeedback)['$inferSelect'] | undefined;
     try {
-      [row] = await this.db
-        .insert(questionFeedback)
-        .values({
-          userId: event.userId,
-          questionId: event.questionId,
-          attemptId: event.attemptId,
-          practiceSessionId: event.practiceSessionId,
-          kind: event.kind,
-          rating: event.rating,
-          category: event.category,
-          comment: event.comment,
-        })
-        .returning();
+      const values = {
+        userId: event.userId,
+        questionId: event.questionId,
+        attemptId: event.attemptId,
+        practiceSessionId: event.practiceSessionId,
+        kind: event.kind,
+        rating: event.rating,
+        category: event.category,
+        comment: event.comment,
+        ...(options?.idempotencyKey
+          ? { idempotencyKey: options.idempotencyKey }
+          : {}),
+      };
+
+      if (options?.idempotencyKey) {
+        [row] = await this.db
+          .insert(questionFeedback)
+          .values(values)
+          .onConflictDoNothing({
+            target: [
+              questionFeedback.userId,
+              questionFeedback.kind,
+              questionFeedback.idempotencyKey,
+            ],
+          })
+          .returning();
+
+        row ??= await this.db.query.questionFeedback.findFirst({
+          where: and(
+            eq(questionFeedback.userId, event.userId),
+            eq(questionFeedback.kind, event.kind),
+            eq(questionFeedback.idempotencyKey, options.idempotencyKey),
+          ),
+        });
+      } else {
+        [row] = await this.db
+          .insert(questionFeedback)
+          .values(values)
+          .returning();
+      }
     } catch (error) {
       throw new ApplicationError(
         'INTERNAL_ERROR',

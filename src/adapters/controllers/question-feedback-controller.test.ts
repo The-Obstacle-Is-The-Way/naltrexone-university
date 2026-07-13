@@ -194,6 +194,9 @@ describe('question-feedback-controller', () => {
       expect(first).toEqual({ ok: true, data: { rating: null } });
       expect(second).toEqual(first);
       expect(deps.rateQuestionUseCase.inputs).toHaveLength(1);
+      expect(deps.rateQuestionUseCase.inputs[0]).toMatchObject({
+        idempotencyKey,
+      });
       expect(deps.rateLimiter.inputs).toHaveLength(1);
     });
 
@@ -339,6 +342,22 @@ describe('question-feedback-controller', () => {
       expect(deps.rateLimiter.inputs).toHaveLength(1);
     });
 
+    it('re-executes a request-keyed rating after a transient error', async () => {
+      const deps = createDeps({
+        rateQuestionThrows: new ApplicationError(
+          'INTERNAL_ERROR',
+          'database unavailable',
+        ),
+      });
+      const input = { questionId, rating: 'helpful', idempotencyKey } as const;
+
+      await rateQuestion(input, deps);
+      await rateQuestion(input, deps);
+
+      expect(deps.rateQuestionUseCase.inputs).toHaveLength(2);
+      expect(deps.rateLimiter.inputs).toHaveLength(2);
+    });
+
     it('returns ok when deps are loaded from the container', async () => {
       const deps = createDeps({ rateQuestionOutput: { rating: 'helpful' } });
 
@@ -475,6 +494,9 @@ describe('question-feedback-controller', () => {
       expect(first).toEqual({ ok: true, data: { feedbackId } });
       expect(second).toEqual(first);
       expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
+      expect(deps.submitQuestionReportUseCase.inputs[0]).toMatchObject({
+        idempotencyKey,
+      });
       expect(deps.rateLimiter.inputs).toHaveLength(1);
     });
 
@@ -613,6 +635,23 @@ describe('question-feedback-controller', () => {
       expect(second).toEqual(first);
       expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
       expect(deps.rateLimiter.inputs).toHaveLength(1);
+    });
+
+    it('re-executes a request-keyed report after a transient error', async () => {
+      const deps = createDeps({
+        submitQuestionReportThrows: new Error('connection reset'),
+      });
+      const input = {
+        questionId,
+        category: 'other',
+        idempotencyKey,
+      } as const;
+
+      await submitQuestionReport(input, deps);
+      await submitQuestionReport(input, deps);
+
+      expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(2);
+      expect(deps.rateLimiter.inputs).toHaveLength(2);
     });
   });
 });

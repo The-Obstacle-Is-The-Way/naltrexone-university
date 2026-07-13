@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isRollbackCertainPersistenceError } from '@/src/application/errors';
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import {
@@ -743,6 +744,34 @@ describe('DrizzlePracticeSessionRepository question state', () => {
     ).resolves.toMatchObject({
       questionId: secondQuestionId,
       markedForReview: true,
+    });
+  });
+
+  it('classifies statement cancellation as rollback-certain for a mark write', async () => {
+    const statementCancellation = new Error('canceling statement', {
+      cause: { code: '57014' },
+    });
+    const db = {
+      transaction: vi.fn(async () => {
+        throw statementCancellation;
+      }),
+    };
+    type RepoDb = ConstructorParameters<
+      typeof DrizzlePracticeSessionRepository
+    >[0];
+    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+
+    const promise = repo.setQuestionMarkedForReview({
+      sessionId,
+      userId,
+      questionId: secondQuestionId,
+      markedForReview: true,
+    });
+
+    await expect(promise).rejects.toSatisfy(isRollbackCertainPersistenceError);
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: statementCancellation,
     });
   });
 });

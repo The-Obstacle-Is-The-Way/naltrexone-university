@@ -11,6 +11,7 @@ export class FakeQuestionFeedbackRepository
 {
   readonly recordCalls: NewQuestionFeedback[] = [];
   private events: QuestionFeedback[];
+  private readonly eventsByRequestKey = new Map<string, QuestionFeedback>();
 
   constructor(
     seed: readonly QuestionFeedback[] = [],
@@ -20,8 +21,19 @@ export class FakeQuestionFeedbackRepository
     this.events = [...seed];
   }
 
-  async record(event: NewQuestionFeedback): Promise<QuestionFeedback> {
+  async record(
+    event: NewQuestionFeedback,
+    options?: { idempotencyKey?: string },
+  ): Promise<QuestionFeedback> {
     this.recordCalls.push(event);
+
+    const requestKey = options?.idempotencyKey
+      ? `${event.userId}:${event.kind}:${options.idempotencyKey}`
+      : null;
+    if (requestKey) {
+      const existing = this.eventsByRequestKey.get(requestKey);
+      if (existing) return existing;
+    }
 
     const persisted =
       event.kind === 'rating'
@@ -29,6 +41,7 @@ export class FakeQuestionFeedbackRepository
         : this.persistReport(event);
 
     this.events = [...this.events, persisted];
+    if (requestKey) this.eventsByRequestKey.set(requestKey, persisted);
     return persisted;
   }
 
