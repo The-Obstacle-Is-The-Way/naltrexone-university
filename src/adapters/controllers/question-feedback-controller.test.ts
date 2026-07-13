@@ -48,6 +48,15 @@ class StoreResultFailingIdempotencyKeyRepository extends FakeIdempotencyKeyRepos
   }
 }
 
+class StaleClaimIdempotencyKeyRepository extends FakeIdempotencyKeyRepository {
+  override async storeResult(): Promise<void> {
+    throw new ApplicationError(
+      'NOT_FOUND',
+      'Idempotency claim is no longer current',
+    );
+  }
+}
+
 function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
@@ -204,6 +213,21 @@ describe('question-feedback-controller', () => {
         idempotencyKey,
       });
       expect(deps.rateLimiter.inputs).toHaveLength(1);
+    });
+
+    it('returns the committed rating when its idempotency claim was concurrently reclaimed', async () => {
+      const deps = createDeps({ rateQuestionOutput: { rating: 'helpful' } });
+      deps.idempotencyKeyRepository = new StaleClaimIdempotencyKeyRepository(
+        deps.now,
+      );
+
+      const result = await rateQuestion(
+        { questionId, rating: 'helpful', idempotencyKey },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: { rating: 'helpful' } });
+      expect(deps.rateQuestionUseCase.inputs).toHaveLength(1);
     });
 
     it('replays a cached rating while the reused key is rate limited', async () => {
@@ -536,6 +560,28 @@ describe('question-feedback-controller', () => {
         completedAt: null,
         error: null,
       });
+    });
+
+    it('returns the committed report when its idempotency claim was concurrently reclaimed', async () => {
+      const deps = createDeps({
+        submitQuestionReportOutput: { feedbackId },
+      });
+      deps.idempotencyKeyRepository = new StaleClaimIdempotencyKeyRepository(
+        deps.now,
+      );
+
+      const result = await submitQuestionReport(
+        {
+          questionId,
+          category: 'other',
+          comment: 'Looks stale.',
+          idempotencyKey,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: { feedbackId } });
+      expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
     });
 
     it('replays a cached report while the reused key is rate limited', async () => {

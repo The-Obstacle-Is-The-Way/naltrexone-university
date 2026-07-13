@@ -86,6 +86,10 @@ const SubmitQuestionReportOutputSchema = z
   })
   .strict();
 
+// The business row owns a durable request token. Re-execution after either an
+// ordinary outcome-write failure or a fenced claim returns that original row.
+const FEEDBACK_OUTCOME_STORE_FAILURE_POLICY = 'return-result' as const;
+
 export type {
   GetQuestionRatingOutput,
   RateQuestionOutput,
@@ -165,6 +169,7 @@ export const rateQuestion = createAction({
       outputSchema: RateQuestionOutputSchema,
       beforeExecute: enforceRatingRateLimit,
       shouldCacheError: shouldCacheQuestionRatingError,
+      outcomeStoreFailurePolicy: FEEDBACK_OUTCOME_STORE_FAILURE_POLICY,
       execute: rate,
     });
   },
@@ -223,9 +228,7 @@ export const submitQuestionReport = createAction({
       outputSchema: SubmitQuestionReportOutputSchema,
       beforeExecute: enforceReportRateLimit,
       shouldCacheError: shouldCacheQuestionReportError,
-      // The feedback row owns a durable request token, so reclaim-time
-      // re-execution returns the original report instead of appending a duplicate.
-      outcomeStoreFailurePolicy: 'return-result',
+      outcomeStoreFailurePolicy: FEEDBACK_OUTCOME_STORE_FAILURE_POLICY,
       execute: submit,
     });
   },
