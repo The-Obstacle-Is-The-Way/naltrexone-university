@@ -20,6 +20,23 @@ export const SESSION_COUNT_MIN = 1;
 export const SESSION_COUNT_MAX = 100;
 export const DEFAULT_SESSION_COUNT = 20;
 
+type SessionStartErrorReporter = (
+  error: unknown,
+  context: { action: string },
+) => void;
+
+function reportSessionStartError(
+  reportError: SessionStartErrorReporter | undefined,
+  error: unknown,
+  action: 'startSession' | 'refreshIncompleteSession',
+): void {
+  try {
+    reportError?.(error, { action });
+  } catch {
+    // Reporter failures must not block the primary error path.
+  }
+}
+
 export function handleSessionModeChange(
   setSessionMode: (mode: 'tutor' | 'exam') => void,
   event: { target: { value: string } },
@@ -70,7 +87,7 @@ export async function startSession(input: {
   startPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
-  reportError?: (error: unknown, context: { action: string }) => void;
+  reportError?: SessionStartErrorReporter;
   refreshIncompleteSession?: () => Promise<void>;
   setSessionStartStatus: (status: 'idle' | 'loading' | 'error') => void;
   setSessionStartError: (message: string | null) => void;
@@ -102,11 +119,7 @@ export async function startSession(input: {
     );
   } catch (error) {
     if (!isLatestRequest()) return;
-    try {
-      input.reportError?.(error, { action: 'startSession' });
-    } catch {
-      // Reporter failures must not block the primary error path.
-    }
+    reportSessionStartError(input.reportError, error, 'startSession');
     if (!isMounted()) return;
     input.setSessionStartStatus('error');
     input.setSessionStartError(getThrownErrorMessage(error));
@@ -127,7 +140,15 @@ export async function startSession(input: {
       res.error.details?.reason ===
       ApplicationConflictReasons.IncompleteSessionExists
     ) {
-      await input.refreshIncompleteSession?.();
+      try {
+        await input.refreshIncompleteSession?.();
+      } catch (error) {
+        reportSessionStartError(
+          input.reportError,
+          error,
+          'refreshIncompleteSession',
+        );
+      }
     }
     return;
   }

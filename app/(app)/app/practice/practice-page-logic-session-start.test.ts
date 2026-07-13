@@ -258,6 +258,71 @@ describe('practice-page-logic session start', () => {
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
+    it('reports a failed incomplete-session refresh without replacing the primary conflict', async () => {
+      const refreshError = new Error('Refresh failed');
+      const reportError = vi.fn();
+      const setSessionStartStatus = vi.fn();
+      const setSessionStartError = vi.fn();
+
+      await expect(
+        startSession({
+          sessionMode: 'tutor',
+          sessionCount: 20,
+          filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+          idempotencyKey: 'idem_1',
+          createIdempotencyKey: () => 'idem_2',
+          setIdempotencyKey: vi.fn(),
+          startPracticeSessionFn: async () =>
+            err('CONFLICT', 'Incomplete session exists', undefined, {
+              reason: 'incomplete_practice_session_exists',
+            }),
+          refreshIncompleteSession: async () => {
+            throw refreshError;
+          },
+          reportError,
+          setSessionStartStatus,
+          setSessionStartError,
+          navigateTo: vi.fn(),
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(reportError).toHaveBeenCalledWith(refreshError, {
+        action: 'refreshIncompleteSession',
+      });
+      expect(setSessionStartStatus).toHaveBeenLastCalledWith('error');
+      expect(setSessionStartError).toHaveBeenLastCalledWith(
+        'Incomplete session exists',
+      );
+    });
+
+    it('preserves the primary conflict when refresh error reporting also fails', async () => {
+      const refreshError = new Error('Refresh failed');
+
+      await expect(
+        startSession({
+          sessionMode: 'tutor',
+          sessionCount: 20,
+          filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+          idempotencyKey: 'idem_1',
+          createIdempotencyKey: () => 'idem_2',
+          setIdempotencyKey: vi.fn(),
+          startPracticeSessionFn: async () =>
+            err('CONFLICT', 'Incomplete session exists', undefined, {
+              reason: 'incomplete_practice_session_exists',
+            }),
+          refreshIncompleteSession: async () => {
+            throw refreshError;
+          },
+          reportError: () => {
+            throw new Error('Reporter failed');
+          },
+          setSessionStartStatus: vi.fn(),
+          setSessionStartError: vi.fn(),
+          navigateTo: vi.fn(),
+        }),
+      ).resolves.toBeUndefined();
+    });
+
     it('returns without navigating when unmounted during startSession', async () => {
       const deferred =
         createDeferred<
