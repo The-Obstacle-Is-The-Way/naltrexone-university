@@ -127,7 +127,7 @@ describe('DrizzlePendingStripeCustomerCleanupRepository', () => {
   it('filters excluded event ids out of the stale listing', async () => {
     const limit = vi.fn(async () => []);
     const orderBy = vi.fn(() => ({ limit }));
-    const where = vi.fn(() => ({ orderBy }));
+    const where = vi.fn((_clause: unknown) => ({ orderBy }));
     const from = vi.fn(() => ({ where }));
     const select = vi.fn(() => ({ from }));
 
