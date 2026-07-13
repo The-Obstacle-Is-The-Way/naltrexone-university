@@ -8,6 +8,12 @@
 
 ---
 
+## Resolution State
+
+- 2026-07-13: Implemented on branch `fix/bug-289-291-idempotency-determinacy` in [PR #640 — Fix BUG-289/290/291: determinacy-aware idempotency policies + client key lifecycles](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/640).
+- The implementation preserves the start key across indeterminate outcomes and refreshes incomplete-session state after the typed conflict so recovery controls appear without a reload.
+- Status remains **Open** until the merged change has post-deploy production proof.
+
 ## Summary
 
 `startSession` in [`practice-page-session-start.ts`](<../../app/(app)/app/practice/practice-page-session-start.ts#L97-L108>) rotates the idempotency key for **every** thrown error — including the client-side 15s [`withTimeout`](../../lib/with-timeout.ts#L10-L16) `TimeoutError`. `withTimeout` races promises but supplies no abort signal, so the already-started server-action promise is not canceled by this helper. The `/app/*` route declares a 30-second server budget at [`layout.tsx#L18-L20`](<../../app/(app)/app/layout.tsx#L18-L20>); Next.js defines the [`maxDuration`](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config#maxduration) export, and [Vercel documents](https://vercel.com/docs/functions/configuring-functions/duration) that an App Router named export configures the maximum duration and that Vercel terminates invocations which exceed it. Therefore a request can cross the 15-second client deadline and still finish within the server budget; whether that happens often has not been measured.

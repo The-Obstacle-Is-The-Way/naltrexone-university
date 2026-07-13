@@ -8,6 +8,12 @@
 
 ---
 
+## Resolution State
+
+- 2026-07-13: Implemented on branch `fix/bug-289-291-idempotency-determinacy` in [PR #640 — Fix BUG-289/290/291: determinacy-aware idempotency policies + client key lifecycles](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/640).
+- The implementation adds explicit action policies, determinate-only client rotation, and persisted request-token deduplication for feedback writes.
+- Status remains **Open** until the merged change has post-deploy production proof.
+
 ## Summary
 
 `withIdempotency`'s default error policy durably caches **every** `execute()` error for the 24h TTL: [`shouldCacheExecutionError`](../../src/adapters/shared/with-idempotency.ts#L63-L75) returns `true` whenever no `shouldCacheError` policy is passed, and the wait loop [replays `existing.error`](../../src/adapters/shared/with-idempotency.ts#L308-L317) as a fresh `ApplicationError` without re-executing. BUG-278 fixed this on the end/discard abandonment actions and DEBT-435 exempted one typed practice-state conflict, but five idempotent actions still pass no `shouldCacheError`: [`billing:createCheckoutSession`](../../src/adapters/controllers/billing-controller.ts#L141-L149), [`billing:createPortalSession`](../../src/adapters/controllers/billing-controller.ts#L188-L196), [`bookmark:setBookmark`](../../src/adapters/controllers/bookmark-controller.ts#L103-L111), [`question-feedback:rateQuestion`](../../src/adapters/controllers/question-feedback-controller.ts#L154-L162), and [`question-feedback:submitQuestionReport`](../../src/adapters/controllers/question-feedback-controller.ts#L210-L219). The report action's `outcomeStoreFailurePolicy` is a separate knob governing a failed `storeResult` after success; it does not classify `execute()` errors.

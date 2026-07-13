@@ -8,6 +8,12 @@
 
 ---
 
+## Resolution State
+
+- 2026-07-13: Implemented on branch `fix/bug-289-291-idempotency-determinacy` in [PR #640 — Fix BUG-289/290/291: determinacy-aware idempotency policies + client key lifecycles](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/640).
+- The implementation classifies SQLSTATE `57014` at its transaction owners, aborts rollback-certain claims for same-key retry, and preserves conservative fencing for commit-indeterminate submit failures.
+- Status remains **Open** until the merged change has post-deploy production proof.
+
 ## Summary
 
 [`shouldCachePracticeSessionStateWriteError`](../../src/adapters/controllers/shared/practice-session-idempotency-policy.ts#L7-L15) is a denylist with exactly one exemption: it caches every execute error except `details.reason === StateChangedConcurrently`. `question:submitAnswer` runs through the composition-root transaction retry, but that runner recognizes only `40001` and `40P01` ([`use-cases.ts#L41-L50`](../../lib/container/use-cases.ts#L41-L50)); a rollback-certain nonmember such as statement cancellation `57014` escapes after the transaction aborts. `practice:setPracticeSessionQuestionMark` does not use that composition-root runner: its updater retries zero-row version-CAS misses, while a SQL statement/transaction error escapes directly ([`practice-session-question-state-updater.ts#L128-L137`](../../src/adapters/repositories/practice-session-question-state-updater.ts#L128-L137), [`#L174-L193`](../../src/adapters/repositories/practice-session-question-state-updater.ts#L174-L193)). [`toErrorRecord`](../../src/adapters/shared/with-idempotency.ts#L39-L49) normalizes an escaped raw error to `INTERNAL_ERROR`; repository-wrapped database failures already arrive as `ApplicationError('INTERNAL_ERROR')` and retain that code. Either shape is cached for the default 24h TTL. The policy is wired to `question:submitAnswer` ([`question-controller.ts#L262-L270`](../../src/adapters/controllers/question-controller.ts#L262-L270)), `practice:finalizeExamAnswers` ([`practice-controller.ts#L345-L352`](../../src/adapters/controllers/practice-controller.ts#L345-L352)), and `practice:setPracticeSessionQuestionMark` ([`practice-controller.ts#L425-L432`](../../src/adapters/controllers/practice-controller.ts#L425-L432)).
