@@ -1,3 +1,5 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it, vi } from 'vitest';
 import { pendingStripeCancellations } from '@/db/schema';
 import { DrizzlePendingStripeCustomerCleanupRepository } from './drizzle-pending-stripe-customer-cleanup-repository';
@@ -120,5 +122,30 @@ describe('DrizzlePendingStripeCustomerCleanupRepository', () => {
     expect(where).toHaveBeenCalledTimes(1);
     expect(orderBy).toHaveBeenCalledTimes(1);
     expect(limit).toHaveBeenCalledWith(25);
+  });
+
+  it('filters excluded event ids out of the stale listing', async () => {
+    const limit = vi.fn(async () => []);
+    const orderBy = vi.fn(() => ({ limit }));
+    const where = vi.fn(() => ({ orderBy }));
+    const from = vi.fn(() => ({ where }));
+    const select = vi.fn(() => ({ from }));
+
+    const db = { select } as const;
+    const repo = new DrizzlePendingStripeCustomerCleanupRepository(
+      db as unknown as RepoDb,
+    );
+
+    await repo.listStale(new Date('2026-06-12T12:15:00.000Z'), 25, [
+      'evt_failed_1',
+      'evt_failed_2',
+    ]);
+
+    const whereClause = where.mock.calls[0]?.[0] as SQL;
+    const query = new PgDialect().sqlToQuery(whereClause);
+    expect(query.sql).toContain('not in');
+    expect(query.params).toEqual(
+      expect.arrayContaining(['evt_failed_1', 'evt_failed_2']),
+    );
   });
 });

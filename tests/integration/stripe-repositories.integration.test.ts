@@ -109,6 +109,7 @@ describe('Stripe repositories', () => {
         drained: 1,
         failed: 0,
         failures: [],
+        hasMore: false,
         dryRun: false,
       });
       expect(deletedCustomerIds).toEqual(['cus_stale']);

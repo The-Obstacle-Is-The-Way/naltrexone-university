@@ -70,6 +70,64 @@ describe('deleteStripeCustomer', () => {
     ]);
   });
 
+  it('treats a status-shaped 404 as success', async () => {
+    const missingCustomerError = Object.assign(
+      new Error('No such customer: cus_status'),
+      { status: 404 },
+    );
+    const del = vi.fn(async () => {
+      throw missingCustomerError;
+    });
+
+    await expect(
+      deleteStripeCustomer(
+        { customers: { del } },
+        new FakeLogger(),
+        'cus_status',
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(del).toHaveBeenCalledOnce();
+  });
+
+  it('treats a resource_missing error without a numeric status as success', async () => {
+    const rewrappedMissingError = Object.assign(
+      new Error('No such customer: cus_rewrapped'),
+      { rawType: 'invalid_request_error', code: 'resource_missing' },
+    );
+    const del = vi.fn(async () => {
+      throw rewrappedMissingError;
+    });
+
+    await expect(
+      deleteStripeCustomer(
+        { customers: { del } },
+        new FakeLogger(),
+        'cus_rewrapped',
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(del).toHaveBeenCalledOnce();
+  });
+
+  it('propagates a non-404 client error instead of treating it as done', async () => {
+    const authError = Object.assign(new Error('Invalid API key provided'), {
+      statusCode: 401,
+      rawType: 'authentication_error',
+    });
+    const del = vi.fn(async () => {
+      throw authError;
+    });
+    const logger = new FakeLogger();
+
+    await expect(
+      deleteStripeCustomer({ customers: { del } }, logger, 'cus_auth'),
+    ).rejects.toBe(authError);
+
+    expect(del).toHaveBeenCalledOnce();
+    expect(logger.infoCalls).toEqual([]);
+  });
+
   it('does not open the Stripe circuit for repeated missing-customer done-states', async () => {
     const missingCustomerError = Object.assign(new Error('No such customer'), {
       statusCode: 404,

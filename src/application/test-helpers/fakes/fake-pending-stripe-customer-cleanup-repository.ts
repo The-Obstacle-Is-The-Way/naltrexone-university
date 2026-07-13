@@ -26,9 +26,12 @@ export class FakePendingStripeCustomerCleanupRepository
   }
 
   async schedule(eventId: string, stripeCustomerId: string): Promise<void> {
+    // Mirror the SQL ON CONFLICT DO UPDATE: only the customer id is
+    // replaced; the obligation keeps its original staleness clock.
+    const existing = this.pendingByEventId.get(eventId);
     this.pendingByEventId.set(eventId, {
       stripeCustomerId,
-      createdAt: this.now(),
+      createdAt: existing?.createdAt ?? this.now(),
     });
   }
 
@@ -39,9 +42,13 @@ export class FakePendingStripeCustomerCleanupRepository
   async listStale(
     olderThan: Date,
     limit: number,
+    excludeEventIds: readonly string[] = [],
   ): Promise<PendingStripeCustomerCleanup[]> {
     return [...this.pendingByEventId.entries()]
-      .filter(([, pending]) => pending.createdAt < olderThan)
+      .filter(
+        ([eventId, pending]) =>
+          pending.createdAt < olderThan && !excludeEventIds.includes(eventId),
+      )
       .sort(([, a], [, b]) => a.createdAt.getTime() - b.createdAt.getTime())
       .map(([eventId, pending]) => ({
         eventId,

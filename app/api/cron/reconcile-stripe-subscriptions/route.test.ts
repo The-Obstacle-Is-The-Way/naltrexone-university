@@ -139,6 +139,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       drained: 0,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: true,
     });
 
@@ -189,6 +190,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       drained: 1,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: false,
     });
 
@@ -218,6 +220,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
         drained: 1,
         failed: 0,
         failures: [],
+        hasMore: false,
         dryRun: false,
       },
     });
@@ -658,6 +661,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       drained: 1,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: false,
     });
 
@@ -708,6 +712,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       drained: 1,
       failed: 1,
       failures: [{ eventId: 'evt_failed', error: 'cleanup failed' }],
+      hasMore: false,
       dryRun: false,
     });
 
@@ -785,6 +790,7 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
       drained: 0,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: true,
     });
 

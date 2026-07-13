@@ -6,6 +6,7 @@ import {
 import {
   drainPendingStripeCustomerCleanups,
   PENDING_STRIPE_CUSTOMER_CLEANUP_BATCH_LIMIT,
+  PENDING_STRIPE_CUSTOMER_CLEANUP_MAX_PAGES,
 } from './drain-pending-stripe-customer-cleanups';
 
 describe('drainPendingStripeCustomerCleanups', () => {
@@ -35,9 +36,10 @@ describe('drainPendingStripeCustomerCleanups', () => {
     );
 
     expect(result.scanned).toBe(PENDING_STRIPE_CUSTOMER_CLEANUP_BATCH_LIMIT);
+    expect(result.hasMore).toBe(true);
   });
 
-  it('processes at most the configured number of stale obligations', async () => {
+  it('drains follow-up pages until the stale queue is empty', async () => {
     let now = new Date('2026-06-12T12:00:00.000Z');
     const repo = new FakePendingStripeCustomerCleanupRepository(() => now);
     await repo.schedule('evt_first', 'cus_first');
@@ -63,15 +65,94 @@ describe('drainPendingStripeCustomerCleanups', () => {
     );
 
     expect(result).toEqual({
-      scanned: 2,
-      drained: 2,
+      scanned: 3,
+      drained: 3,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: false,
     });
-    expect(deletedCustomerIds).toEqual(['cus_first', 'cus_second']);
-    await expect(repo.findByEventId('evt_third')).resolves.toEqual({
-      stripeCustomerId: 'cus_third',
+    expect(deletedCustomerIds).toEqual([
+      'cus_first',
+      'cus_second',
+      'cus_third',
+    ]);
+    await expect(repo.findByEventId('evt_third')).resolves.toBeNull();
+  });
+
+  it('stops after the page budget and reports the remaining backlog', async () => {
+    const start = new Date('2026-06-12T12:00:00.000Z').getTime();
+    let now = new Date(start);
+    const repo = new FakePendingStripeCustomerCleanupRepository(() => now);
+    for (
+      let index = 0;
+      index < PENDING_STRIPE_CUSTOMER_CLEANUP_MAX_PAGES + 1;
+      index += 1
+    ) {
+      now = new Date(start + index * 1_000);
+      await repo.schedule(`evt_${index}`, `cus_${index}`);
+    }
+    const logger = new FakeLogger();
+
+    const result = await drainPendingStripeCustomerCleanups(
+      {
+        olderThan: new Date('2026-06-12T12:15:00.000Z'),
+        dryRun: false,
+        limit: 1,
+      },
+      {
+        pendingStripeCustomerCleanups: repo,
+        deleteStripeCustomer: async () => undefined,
+        logger,
+      },
+    );
+
+    expect(result.drained).toBe(PENDING_STRIPE_CUSTOMER_CLEANUP_MAX_PAGES);
+    expect(result.hasMore).toBe(true);
+    expect(logger.warnCalls.map((call) => call.msg)).toContain(
+      'Pending Stripe customer cleanup backlog remains after drain run',
+    );
+    await expect(
+      repo.findByEventId(`evt_${PENDING_STRIPE_CUSTOMER_CLEANUP_MAX_PAGES}`),
+    ).resolves.not.toBeNull();
+  });
+
+  it('pages past failing obligations so newer cleanups still drain', async () => {
+    let now = new Date('2026-06-12T12:00:00.000Z');
+    const repo = new FakePendingStripeCustomerCleanupRepository(() => now);
+    await repo.schedule('evt_poison', 'cus_poison');
+    now = new Date('2026-06-12T12:01:00.000Z');
+    await repo.schedule('evt_good', 'cus_good');
+    const logger = new FakeLogger();
+
+    const result = await drainPendingStripeCustomerCleanups(
+      {
+        olderThan: new Date('2026-06-12T12:15:00.000Z'),
+        dryRun: false,
+        limit: 1,
+      },
+      {
+        pendingStripeCustomerCleanups: repo,
+        deleteStripeCustomer: async (stripeCustomerId) => {
+          if (stripeCustomerId === 'cus_poison') {
+            throw new Error('stripe outage');
+          }
+        },
+        logger,
+      },
+    );
+
+    expect(result).toEqual({
+      scanned: 2,
+      drained: 1,
+      failed: 1,
+      failures: [{ eventId: 'evt_poison', error: 'stripe outage' }],
+      hasMore: false,
+      dryRun: false,
+    });
+    await expect(repo.findByEventId('evt_good')).resolves.toBeNull();
+    await expect(repo.findByEventId('evt_poison')).resolves.toEqual({
+      stripeCustomerId: 'cus_poison',
     });
   });
 
@@ -99,6 +180,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       drained: 1,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: false,
     });
     expect(deleteStripeCustomer).toHaveBeenCalledWith('cus_stale');
@@ -132,6 +214,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       drained: 0,
       failed: 1,
       failures: [{ eventId: 'evt_stale', error: 'stripe outage' }],
+      hasMore: false,
       dryRun: false,
     });
     await expect(repo.findByEventId('evt_stale')).resolves.toEqual({
@@ -219,6 +302,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       drained: 0,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: true,
     });
     expect(deleteStripeCustomer).not.toHaveBeenCalled();

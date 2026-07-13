@@ -15,10 +15,20 @@ function getNumberProperty(value: unknown, key: string): number | null {
   return typeof property === 'number' ? property : null;
 }
 
+function getStringProperty(value: unknown, key: string): string | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const property = (value as Record<string, unknown>)[key];
+  return typeof property === 'string' ? property : null;
+}
+
 function isMissingStripeCustomerError(error: unknown): boolean {
   return (
     getNumberProperty(error, 'statusCode') === 404 ||
-    getNumberProperty(error, 'status') === 404
+    getNumberProperty(error, 'status') === 404 ||
+    // Match resource_missing even when a wrapper strips the numeric status,
+    // mirroring the retired canceler's already-canceled predicate (BUG-246).
+    (getStringProperty(error, 'rawType') === 'invalid_request_error' &&
+      getStringProperty(error, 'code') === 'resource_missing')
   );
 }
 

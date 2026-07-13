@@ -1,4 +1,4 @@
-import { asc, eq, lt } from 'drizzle-orm';
+import { and, asc, eq, lt, notInArray } from 'drizzle-orm';
 import { pendingStripeCancellations } from '@/db/schema';
 import type {
   PendingStripeCustomerCleanup,
@@ -49,7 +49,12 @@ export class DrizzlePendingStripeCustomerCleanupRepository
   async listStale(
     olderThan: Date,
     limit: number,
+    excludeEventIds: readonly string[] = [],
   ): Promise<PendingStripeCustomerCleanup[]> {
+    const staleBeforeCutoff = lt(
+      pendingStripeCancellations.createdAt,
+      olderThan,
+    );
     return this.db
       .select({
         eventId: pendingStripeCancellations.eventId,
@@ -57,7 +62,16 @@ export class DrizzlePendingStripeCustomerCleanupRepository
         createdAt: pendingStripeCancellations.createdAt,
       })
       .from(pendingStripeCancellations)
-      .where(lt(pendingStripeCancellations.createdAt, olderThan))
+      .where(
+        excludeEventIds.length > 0
+          ? and(
+              staleBeforeCutoff,
+              notInArray(pendingStripeCancellations.eventId, [
+                ...excludeEventIds,
+              ]),
+            )
+          : staleBeforeCutoff,
+      )
       .orderBy(asc(pendingStripeCancellations.createdAt))
       .limit(limit);
   }

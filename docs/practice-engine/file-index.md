@@ -86,6 +86,7 @@ repositories/
   drizzle-clerk-event-repository.ts, drizzle-deleted-clerk-user-repository.ts,
   drizzle-stripe-customer-repository.ts, drizzle-stripe-event-repository.ts,
   drizzle-pending-stripe-customer-cleanup-repository.ts,
+  subscription-write-lock.ts,
   attempt-row-mappers.ts, practice-session-params.ts,
   practice-session-question-state-updater.ts,
   postgres-errors.ts, index.ts

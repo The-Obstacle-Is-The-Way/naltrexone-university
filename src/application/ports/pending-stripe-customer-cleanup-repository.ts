@@ -14,5 +14,6 @@ export interface PendingStripeCustomerCleanupRepository {
   listStale(
     olderThan: Date,
     limit: number,
+    excludeEventIds?: readonly string[],
   ): Promise<PendingStripeCustomerCleanup[]>;
 }
