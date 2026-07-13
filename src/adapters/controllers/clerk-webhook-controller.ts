@@ -1,4 +1,4 @@
-// WHY large-file: this adapter controller coordinates Clerk webhook validation, idempotency, tombstones, and post-commit Stripe cancellation across short transaction boundaries.
+// WHY large-file: this adapter controller coordinates Clerk webhook validation, idempotency, tombstones, and post-commit Stripe customer deletion across short transaction boundaries.
 import { z } from 'zod';
 import {
   applyClerkUserEmailOwnershipResolution,
@@ -19,7 +19,7 @@ import type { Logger } from '@/src/application/ports/logger';
 import type {
   ClerkEventRepository,
   DeletedClerkUserRepository,
-  PendingStripeCancellationRepository,
+  PendingStripeCustomerCleanupRepository,
   StripeCustomerRepository,
   UserRepository,
 } from '@/src/application/ports/repositories';
@@ -33,7 +33,7 @@ export type ClerkWebhookEvent = {
 export type ClerkWebhookTransaction = {
   clerkEvents: ClerkEventRepository;
   deletedClerkUsers: DeletedClerkUserRepository;
-  pendingStripeCancellations: PendingStripeCancellationRepository;
+  pendingStripeCustomerCleanups: PendingStripeCustomerCleanupRepository;
   userRepository: UserRepository;
   stripeCustomerRepository: StripeCustomerRepository;
 };
@@ -42,9 +42,7 @@ export type ClerkWebhookDeps = {
   transaction: <T>(
     fn: (tx: ClerkWebhookTransaction) => Promise<T>,
   ) => Promise<T>;
-  cancelStripeCustomerSubscriptions: (
-    stripeCustomerId: string,
-  ) => Promise<void>;
+  deleteStripeCustomer: (stripeCustomerId: string) => Promise<void>;
   getClerkUserById: ClerkUserLookup;
   logger: Logger;
 };
@@ -155,7 +153,7 @@ function getPrimaryEmailOrNull(data: ClerkUserDataLike): string | null {
 }
 
 type ClerkWebhookPostCommitAction = {
-  kind: 'cancel-stripe-subscriptions';
+  kind: 'delete-stripe-customer';
   eventId: string;
   stripeCustomerId: string;
 };
@@ -263,7 +261,7 @@ export async function processClerkWebhook(
       async ({
         clerkEvents,
         deletedClerkUsers,
-        pendingStripeCancellations,
+        pendingStripeCustomerCleanups,
         userRepository,
         stripeCustomerRepository,
       }): Promise<ClerkWebhookTransactionOutcome> => {
@@ -318,9 +316,24 @@ export async function processClerkWebhook(
           } satisfies ClerkUserIdentity;
 
           try {
-            await userRepository.upsertByClerkId(clerkUserId, email, {
-              observedAt: identity.observedAt,
-            });
+            const upsertedUser = await userRepository.upsertByClerkId(
+              clerkUserId,
+              email,
+              {
+                observedAt: identity.observedAt,
+              },
+            );
+
+            // A delete can commit between the pre-check and upsert under READ
+            // COMMITTED. On the re-check, deletion is the fourth subscription
+            // writer: take the canonical advisory(user) lock before its
+            // FK-fixed inverse cascade.
+            if (await deletedClerkUsers.exists(clerkUserId)) {
+              await userRepository.acquireSubscriptionWriteLock(
+                upsertedUser.id,
+              );
+              await userRepository.deleteByClerkId(clerkUserId);
+            }
           } catch (error) {
             if (!isUserEmailOwnershipConflictError(error)) throw error;
 
@@ -334,12 +347,6 @@ export async function processClerkWebhook(
               identity,
               conflict: error,
             };
-          }
-
-          // A delete can commit between the pre-check above and the upsert under
-          // READ COMMITTED. Re-check tombstone state before committing the update.
-          if (await deletedClerkUsers.exists(clerkUserId)) {
-            await userRepository.deleteByClerkId(clerkUserId);
           }
 
           await clerkEvents.markProcessed(event.eventId);
@@ -362,28 +369,45 @@ export async function processClerkWebhook(
           );
         }
 
-        const pendingCancellation =
-          await pendingStripeCancellations.findByEventId(event.eventId);
+        const pendingCleanup =
+          await pendingStripeCustomerCleanups.findByEventId(event.eventId);
 
-        if (pendingCancellation) {
+        if (pendingCleanup) {
           return {
-            kind: 'cancel-stripe-subscriptions',
+            kind: 'delete-stripe-customer',
             eventId: event.eventId,
-            stripeCustomerId: pendingCancellation.stripeCustomerId,
+            stripeCustomerId: pendingCleanup.stripeCustomerId,
           };
         }
 
         await deletedClerkUsers.lock(clerkUserId);
-        const user = await userRepository.lockByClerkId(clerkUserId);
+        // User deletion is the fourth subscription writer. Its FK cascade
+        // order is fixed (stripe_customers -> stripe_subscriptions), and the
+        // other writers' INSERTs take FK share locks on the users row while
+        // holding the advisory — so the advisory must come BEFORE any
+        // users-row lock here or the two lock classes form an AB-BA cycle.
+        // Resolve the local id without locking, then lock in canonical order.
+        const preliminaryUser = await userRepository.findByClerkId(clerkUserId);
         let stripeCustomerId: string | null = null;
 
-        if (user) {
-          const stripeCustomer = await stripeCustomerRepository.findByUserId(
-            user.id,
-          );
-          stripeCustomerId = stripeCustomer?.stripeCustomerId ?? null;
-
-          await userRepository.deleteByClerkId(clerkUserId);
+        if (preliminaryUser) {
+          await userRepository.acquireSubscriptionWriteLock(preliminaryUser.id);
+          const user = await userRepository.lockByClerkId(clerkUserId);
+          if (user) {
+            if (user.id !== preliminaryUser.id) {
+              // The row was recreated between the two reads; also serialize
+              // on the id whose cascade is about to fire.
+              await userRepository.acquireSubscriptionWriteLock(user.id);
+            }
+            // Read the customer mapping only while holding the advisory:
+            // mapping writers serialize on it, so the captured id cannot be
+            // repointed to a different Stripe customer before the cascade.
+            const stripeCustomer = await stripeCustomerRepository.findByUserId(
+              user.id,
+            );
+            stripeCustomerId = stripeCustomer?.stripeCustomerId ?? null;
+            await userRepository.deleteByClerkId(clerkUserId);
+          }
         }
 
         await deletedClerkUsers.markDeleted(clerkUserId);
@@ -393,12 +417,12 @@ export async function processClerkWebhook(
           return null;
         }
 
-        await pendingStripeCancellations.schedule(
+        await pendingStripeCustomerCleanups.schedule(
           event.eventId,
           stripeCustomerId,
         );
         return {
-          kind: 'cancel-stripe-subscriptions',
+          kind: 'delete-stripe-customer',
           eventId: event.eventId,
           stripeCustomerId,
         };
@@ -471,13 +495,11 @@ export async function processClerkWebhook(
   }
 
   try {
-    await deps.cancelStripeCustomerSubscriptions(
-      postCommitAction.stripeCustomerId,
-    );
+    await deps.deleteStripeCustomer(postCommitAction.stripeCustomerId);
 
     await deps.transaction(
-      async ({ clerkEvents, pendingStripeCancellations }) => {
-        await pendingStripeCancellations.deleteByEventId(
+      async ({ clerkEvents, pendingStripeCustomerCleanups }) => {
+        await pendingStripeCustomerCleanups.deleteByEventId(
           postCommitAction.eventId,
         );
         await clerkEvents.markProcessed(postCommitAction.eventId);

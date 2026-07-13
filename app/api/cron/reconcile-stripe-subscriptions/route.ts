@@ -1,11 +1,11 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { createContainer } from '@/lib/container';
-import { cancelStripeCustomerSubscriptions } from '@/src/adapters/gateways/stripe-subscription-canceler';
+import { deleteStripeCustomer } from '@/src/adapters/gateways/stripe-customer-deleter';
 import {
-  drainPendingStripeCancellations,
-  PENDING_STRIPE_CANCELLATION_STALE_AFTER_MINUTES,
-} from '@/src/adapters/jobs/drain-pending-stripe-cancellations';
+  drainPendingStripeCustomerCleanups,
+  PENDING_STRIPE_CUSTOMER_CLEANUP_STALE_AFTER_MINUTES,
+} from '@/src/adapters/jobs/drain-pending-stripe-customer-cleanups';
 import { reconcileAllStripeSubscriptionPages } from '@/src/adapters/jobs/reconcile-all-stripe-subscription-pages';
 import {
   RECONCILE_STRIPE_SUBSCRIPTIONS_DEFAULT_CONCURRENCY,
@@ -160,12 +160,12 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
   );
   const offset = parseNonNegativeInt(url.searchParams.get('offset'), 0);
   const dryRun = parseBoolean(url.searchParams.get('dryRun'), true);
-  const pendingCancellationStaleMinutes = parseNonNegativeInt(
-    url.searchParams.get('pendingCancellationStaleMinutes'),
-    PENDING_STRIPE_CANCELLATION_STALE_AFTER_MINUTES,
+  const pendingCustomerCleanupStaleMinutes = parseNonNegativeInt(
+    url.searchParams.get('pendingCustomerCleanupStaleMinutes'),
+    PENDING_STRIPE_CUSTOMER_CLEANUP_STALE_AFTER_MINUTES,
   );
-  const pendingCancellationOlderThan = new Date(
-    Date.now() - pendingCancellationStaleMinutes * 60 * 1000,
+  const pendingCustomerCleanupOlderThan = new Date(
+    Date.now() - pendingCustomerCleanupStaleMinutes * 60 * 1000,
   );
   const concurrencyParam = url.searchParams.get('concurrency');
   const concurrency =
@@ -251,25 +251,25 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
     );
   }
 
-  // BUG-262: run the deleted-account cancellation drain independently of the
+  // BUG-262: run the deleted-account customer-cleanup drain independently of the
   // reconcile result. The two are unrelated maintenance tasks; a reconcile
   // failure (e.g. a first-page Stripe outage) must not skip the drain — that is
-  // the durable safety net for failed post-deletion cancellations (BUG-246).
-  let pendingStripeCancellations: Awaited<
-    ReturnType<typeof drainPendingStripeCancellations>
+  // the durable safety net for failed post-deletion cleanup (BUG-246/BUG-288).
+  let pendingStripeCustomerCleanups: Awaited<
+    ReturnType<typeof drainPendingStripeCustomerCleanups>
   > | null = null;
   let drainFailed = false;
   try {
-    pendingStripeCancellations = await drainPendingStripeCancellations(
+    pendingStripeCustomerCleanups = await drainPendingStripeCustomerCleanups(
       {
-        olderThan: pendingCancellationOlderThan,
+        olderThan: pendingCustomerCleanupOlderThan,
         dryRun,
       },
       {
-        pendingStripeCancellations:
-          container.createPendingStripeCancellationRepository(),
-        cancelStripeCustomerSubscriptions: (stripeCustomerId) =>
-          cancelStripeCustomerSubscriptions(
+        pendingStripeCustomerCleanups:
+          container.createPendingStripeCustomerCleanupRepository(),
+        deleteStripeCustomer: (stripeCustomerId) =>
+          deleteStripeCustomer(
             container.stripe,
             container.logger,
             stripeCustomerId,
@@ -277,10 +277,9 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
         logger: container.logger,
       },
     );
-    // The drain converts per-row cancellation errors into a `failed` count
-    // rather than throwing, so a partial drain failure (a deleted-account
-    // subscription that did NOT get cancelled) must still mark the run failed.
-    drainFailed = pendingStripeCancellations.failed > 0;
+    // The drain converts per-row cleanup errors into a `failed` count rather
+    // than throwing, so a Customer that was not deleted still fails the run.
+    drainFailed = pendingStripeCustomerCleanups.failed > 0;
   } catch (error) {
     drainFailed = true;
     container.logger.error(
@@ -289,7 +288,7 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
         task: 'drain',
         error: error instanceof Error ? error.message : String(error),
       },
-      'Pending Stripe cancellation drain failed',
+      'Pending Stripe customer cleanup drain failed',
     );
   }
 
@@ -301,7 +300,7 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
   }
 
   return NextResponse.json(
-    { ...result, pendingStripeCancellations },
+    { ...result, pendingStripeCustomerCleanups },
     { status: HTTP_OK },
   );
 }

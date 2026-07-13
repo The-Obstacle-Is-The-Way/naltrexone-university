@@ -21,6 +21,8 @@ export class FakeUserRepository implements UserRepository {
     return this.findByClerkId(clerkId);
   }
 
+  async acquireSubscriptionWriteLock(_userId: string): Promise<void> {}
+
   async upsertByClerkId(
     clerkId: string,
     email: string,

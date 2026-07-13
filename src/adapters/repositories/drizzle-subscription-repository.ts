@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { stripeSubscriptions } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -19,6 +19,7 @@ import {
 } from '../gateways/stripe';
 import type { DrizzleDb } from '../shared/database-types';
 import { isPostgresUniqueViolation } from './postgres-errors';
+import { acquireSubscriptionWriteLock } from './subscription-write-lock';
 
 type StripeSubscriptionRow = typeof stripeSubscriptions.$inferSelect;
 
@@ -87,9 +88,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     );
     try {
       return await this.db.transaction(async (tx) => {
-        await tx.execute(
-          sql`select pg_advisory_xact_lock(hashtext(${input.userId}))`,
-        );
+        await acquireSubscriptionWriteLock(tx, input.userId);
         const updatedAt = this.now();
         const [existingRow] = await tx
           .select()

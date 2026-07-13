@@ -253,9 +253,9 @@ export async function reconcileStripeSubscriptions(
           persist: ({ canonical }, expectedVersion) =>
             deps.transaction(async ({ stripeCustomers, subscriptions }) => {
               // Phase 4: persist canonical subscription and customer mapping atomically.
-              // Canonical multi-repository lock order: advisory(user) in
-              // subscriptions.upsert -> stripe_subscriptions row -> stripe_customers
-              // row. Keep every writer in this order to avoid AB-BA deadlocks.
+              // Stripe webhook, checkout-success, and reconcile use advisory(user)
+              // -> stripe_subscriptions -> stripe_customers. User deletion is the
+              // fourth writer and takes the same advisory before its inverse cascade.
               const write = await subscriptions.upsert({
                 userId: canonical.userId,
                 externalSubscriptionId: canonical.externalSubscriptionId,

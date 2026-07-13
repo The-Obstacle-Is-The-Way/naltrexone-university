@@ -201,9 +201,9 @@ export async function processStripeWebhook(
                 }
 
                 try {
-                  // Canonical multi-repository lock order: advisory(user) in
-                  // subscriptions.upsert -> stripe_subscriptions row ->
-                  // stripe_customers row. Keep every writer in this order.
+                  // Stripe webhook, checkout-success, and reconcile use advisory(user)
+                  // -> stripe_subscriptions -> stripe_customers. User deletion is the
+                  // fourth writer and takes the same advisory before its inverse cascade.
                   const write = await subscriptions.upsert({
                     userId: subscriptionUpdate.userId,
                     externalSubscriptionId:

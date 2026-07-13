@@ -20,7 +20,7 @@ import type {
   ClerkEventRepository,
   DeletedClerkUserRepository,
   IdempotencyKeyRepository,
-  PendingStripeCancellationRepository,
+  PendingStripeCustomerCleanupRepository,
   PracticeSessionRepository,
   QuestionFeedbackRepository,
   QuestionRepository,
@@ -84,9 +84,9 @@ export type RepositoryFactories = {
   createIdempotencyKeyRepository: (
     dbOverride?: DrizzleDb,
   ) => IdempotencyKeyRepository;
-  createPendingStripeCancellationRepository: (
+  createPendingStripeCustomerCleanupRepository: (
     dbOverride?: DrizzleDb,
-  ) => PendingStripeCancellationRepository;
+  ) => PendingStripeCustomerCleanupRepository;
   createPracticeSessionRepository: (
     dbOverride?: DrizzleDb,
   ) => PracticeSessionRepository;

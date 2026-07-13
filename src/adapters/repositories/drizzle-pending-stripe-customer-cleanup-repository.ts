@@ -1,13 +1,17 @@
-import { asc, eq, lt } from 'drizzle-orm';
+import { and, asc, eq, lt, notInArray } from 'drizzle-orm';
 import { pendingStripeCancellations } from '@/db/schema';
 import type {
-  PendingStripeCancellation,
-  PendingStripeCancellationRepository,
+  PendingStripeCustomerCleanup,
+  PendingStripeCustomerCleanupRepository,
 } from '@/src/application/ports/repositories';
 import type { DrizzleDb } from '../shared/database-types';
 
-export class DrizzlePendingStripeCancellationRepository
-  implements PendingStripeCancellationRepository
+/**
+ * Persists customer-cleanup obligations in the legacy physical table
+ * `pending_stripe_cancellations`; renaming that table is intentionally deferred.
+ */
+export class DrizzlePendingStripeCustomerCleanupRepository
+  implements PendingStripeCustomerCleanupRepository
 {
   constructor(private readonly db: DrizzleDb) {}
 
@@ -42,7 +46,15 @@ export class DrizzlePendingStripeCancellationRepository
       .where(eq(pendingStripeCancellations.eventId, eventId));
   }
 
-  async listStale(olderThan: Date): Promise<PendingStripeCancellation[]> {
+  async listStale(
+    olderThan: Date,
+    limit: number,
+    excludeEventIds: readonly string[] = [],
+  ): Promise<PendingStripeCustomerCleanup[]> {
+    const staleBeforeCutoff = lt(
+      pendingStripeCancellations.createdAt,
+      olderThan,
+    );
     return this.db
       .select({
         eventId: pendingStripeCancellations.eventId,
@@ -50,7 +62,17 @@ export class DrizzlePendingStripeCancellationRepository
         createdAt: pendingStripeCancellations.createdAt,
       })
       .from(pendingStripeCancellations)
-      .where(lt(pendingStripeCancellations.createdAt, olderThan))
-      .orderBy(asc(pendingStripeCancellations.createdAt));
+      .where(
+        excludeEventIds.length > 0
+          ? and(
+              staleBeforeCutoff,
+              notInArray(pendingStripeCancellations.eventId, [
+                ...excludeEventIds,
+              ]),
+            )
+          : staleBeforeCutoff,
+      )
+      .orderBy(asc(pendingStripeCancellations.createdAt))
+      .limit(limit);
   }
 }

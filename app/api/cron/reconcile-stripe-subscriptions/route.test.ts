@@ -5,12 +5,12 @@ import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 const {
   reconcileStripeSubscriptions,
   reconcileAllStripeSubscriptionPages,
-  drainPendingStripeCancellations,
+  drainPendingStripeCustomerCleanups,
   createContainer,
 } = vi.hoisted(() => ({
   reconcileStripeSubscriptions: vi.fn(),
   reconcileAllStripeSubscriptionPages: vi.fn(),
-  drainPendingStripeCancellations: vi.fn(),
+  drainPendingStripeCustomerCleanups: vi.fn(),
   createContainer: vi.fn(),
 }));
 
@@ -43,9 +43,9 @@ vi.mock('@/lib/container', () => ({
   createContainer,
 }));
 
-vi.mock('@/src/adapters/jobs/drain-pending-stripe-cancellations', () => ({
-  drainPendingStripeCancellations,
-  PENDING_STRIPE_CANCELLATION_STALE_AFTER_MINUTES: 15,
+vi.mock('@/src/adapters/jobs/drain-pending-stripe-customer-cleanups', () => ({
+  drainPendingStripeCustomerCleanups,
+  PENDING_STRIPE_CUSTOMER_CLEANUP_STALE_AFTER_MINUTES: 15,
 }));
 
 import {
@@ -76,12 +76,12 @@ type CronContainer = {
   };
   createStripeCustomerRepository: ReturnType<typeof vi.fn>;
   createSubscriptionRepository: ReturnType<typeof vi.fn>;
-  createPendingStripeCancellationRepository: ReturnType<typeof vi.fn>;
+  createPendingStripeCustomerCleanupRepository: ReturnType<typeof vi.fn>;
 };
 
 function createMockContainer(): CronContainer {
   const rateLimiter = new FakeRateLimiter();
-  const pendingStripeCancellationRepository = {};
+  const pendingStripeCustomerCleanupRepository = {};
 
   return {
     env: {
@@ -107,8 +107,8 @@ function createMockContainer(): CronContainer {
     },
     createStripeCustomerRepository: vi.fn(),
     createSubscriptionRepository: vi.fn(),
-    createPendingStripeCancellationRepository: vi.fn(
-      () => pendingStripeCancellationRepository,
+    createPendingStripeCustomerCleanupRepository: vi.fn(
+      () => pendingStripeCustomerCleanupRepository,
     ),
   };
 }
@@ -134,11 +134,12 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       stoppedEarly: false,
       nextOffset: null,
     });
-    drainPendingStripeCancellations.mockResolvedValue({
+    drainPendingStripeCustomerCleanups.mockResolvedValue({
       scanned: 0,
       drained: 0,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: true,
     });
 
@@ -184,11 +185,12 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       stoppedEarly: false,
       nextOffset: null,
     });
-    drainPendingStripeCancellations.mockResolvedValueOnce({
+    drainPendingStripeCustomerCleanups.mockResolvedValueOnce({
       scanned: 1,
       drained: 1,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: false,
     });
 
@@ -213,11 +215,12 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       pagesScanned: 2,
       stoppedEarly: false,
       nextOffset: null,
-      pendingStripeCancellations: {
+      pendingStripeCustomerCleanups: {
         scanned: 1,
         drained: 1,
         failed: 0,
         failures: [],
+        hasMore: false,
         dryRun: false,
       },
     });
@@ -646,18 +649,19 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(container.logger.error).toHaveBeenCalledTimes(1);
     expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
     // BUG-262: the drain must still run when reconcile throws.
-    expect(drainPendingStripeCancellations).toHaveBeenCalledTimes(1);
+    expect(drainPendingStripeCustomerCleanups).toHaveBeenCalledTimes(1);
   });
 
-  it('still drains pending cancellations when all-pages reconciliation throws (BUG-262)', async () => {
+  it('still drains pending customer cleanups when all-pages reconciliation throws (BUG-262)', async () => {
     reconcileAllStripeSubscriptionPages.mockRejectedValueOnce(
       new Error('boom'),
     );
-    drainPendingStripeCancellations.mockResolvedValueOnce({
+    drainPendingStripeCustomerCleanups.mockResolvedValueOnce({
       scanned: 1,
       drained: 1,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: false,
     });
 
@@ -670,8 +674,8 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
       }),
     );
 
-    // The deleted-account cancellation drain MUST run despite the reconcile failure.
-    expect(drainPendingStripeCancellations).toHaveBeenCalledTimes(1);
+    // The deleted-account cleanup drain MUST run despite the reconcile failure.
+    expect(drainPendingStripeCustomerCleanups).toHaveBeenCalledTimes(1);
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
       error: 'Internal error',
@@ -681,7 +685,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
   });
 
   it('returns 500 and still runs reconcile when only the drain throws', async () => {
-    drainPendingStripeCancellations.mockRejectedValueOnce(new Error('boom'));
+    drainPendingStripeCustomerCleanups.mockRejectedValueOnce(new Error('boom'));
 
     const response = await POST(
       new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
@@ -702,12 +706,13 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(container.logger.error).toHaveBeenCalledTimes(1);
   });
 
-  it('returns 500 when the drain reports partial cancellation failures (failed > 0)', async () => {
-    drainPendingStripeCancellations.mockResolvedValueOnce({
+  it('returns 500 when the drain reports partial customer-cleanup failures (failed > 0)', async () => {
+    drainPendingStripeCustomerCleanups.mockResolvedValueOnce({
       scanned: 2,
       drained: 1,
       failed: 1,
-      failures: [{ eventId: 'evt_failed', error: 'cancel failed' }],
+      failures: [{ eventId: 'evt_failed', error: 'cleanup failed' }],
+      hasMore: false,
       dryRun: false,
     });
 
@@ -755,7 +760,7 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     expect(container.logger.error).toHaveBeenCalledTimes(1);
     expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
     // BUG-262: the drain must still run when single-page reconcile throws.
-    expect(drainPendingStripeCancellations).toHaveBeenCalledTimes(1);
+    expect(drainPendingStripeCustomerCleanups).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -780,11 +785,12 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
       stoppedEarly: false,
       nextOffset: null,
     });
-    drainPendingStripeCancellations.mockResolvedValue({
+    drainPendingStripeCustomerCleanups.mockResolvedValue({
       scanned: 0,
       drained: 0,
       failed: 0,
       failures: [],
+      hasMore: false,
       dryRun: true,
     });
 
@@ -851,9 +857,9 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
     expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
   });
 
-  it('drains pending Stripe cancellations through the same authenticated GET run', async () => {
+  it('drains pending Stripe customer cleanups through the same authenticated GET run', async () => {
     container.stripe = {
-      subscriptions: { list: async function* () {}, cancel: vi.fn() },
+      customers: { del: vi.fn(async () => ({ deleted: true })) },
     };
     const response = await GET(
       new Request(
@@ -875,17 +881,17 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
       },
       expect.any(Object),
     );
-    expect(drainPendingStripeCancellations).toHaveBeenCalledWith(
+    expect(drainPendingStripeCustomerCleanups).toHaveBeenCalledWith(
       expect.objectContaining({
         dryRun: false,
       }),
       expect.objectContaining({
-        pendingStripeCancellations: expect.any(Object),
+        pendingStripeCustomerCleanups: expect.any(Object),
         logger: container.logger,
       }),
     );
     await expect(
-      drainPendingStripeCancellations.mock.calls[0]?.[1].cancelStripeCustomerSubscriptions(
+      drainPendingStripeCustomerCleanups.mock.calls[0]?.[1].deleteStripeCustomer(
         'cus_123',
       ),
     ).resolves.toBeUndefined();
