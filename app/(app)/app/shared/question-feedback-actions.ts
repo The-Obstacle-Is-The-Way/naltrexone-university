@@ -177,7 +177,7 @@ export async function rateQuestionForQuestion(input: {
 
     input.setRating(result.data.rating);
     if (setToken && input.createIdempotencyKey) {
-      setToken({ key: input.createIdempotencyKey(), fingerprint });
+      mintRequestKey(input.createIdempotencyKey, fingerprint, setToken);
     }
     input.setFeedbackStatus('saved');
     return;
@@ -282,7 +282,7 @@ export async function submitReportForQuestion(input: {
     if (!isMounted()) return false;
 
     if (setToken && input.createIdempotencyKey) {
-      setToken({ key: input.createIdempotencyKey(), fingerprint });
+      mintRequestKey(input.createIdempotencyKey, fingerprint, setToken);
     }
     return true;
   }
