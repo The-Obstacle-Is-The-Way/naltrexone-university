@@ -164,10 +164,12 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
         return { persisted: true };
       });
     } catch (error) {
-      if (
-        getPostgresErrorCode(error) === FOREIGN_KEY_VIOLATION_SQLSTATE &&
-        getPostgresConstraintName(error) === SUBSCRIPTION_USER_FOREIGN_KEY
-      ) {
+      const isForeignKeyViolation =
+        getPostgresErrorCode(error) === FOREIGN_KEY_VIOLATION_SQLSTATE;
+      const isSubscriptionUserConstraint =
+        getPostgresConstraintName(error) === SUBSCRIPTION_USER_FOREIGN_KEY;
+
+      if (isForeignKeyViolation && isSubscriptionUserConstraint) {
         throw new SubscriptionUserMissingError(input.userId, { cause: error });
       }
 

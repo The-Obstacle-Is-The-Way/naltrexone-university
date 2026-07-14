@@ -22,7 +22,10 @@ class ThrowingStripeCustomerRepository extends FakeStripeCustomerRepository {
   }
 }
 
-function createPaymentGateway(eventId: string): FakePaymentGateway {
+function createPaymentGateway(
+  eventId: string,
+  userId = crypto.randomUUID(),
+): FakePaymentGateway {
   return new FakePaymentGateway({
     externalCustomerId: 'cus_test',
     checkoutUrl: 'https://stripe/checkout',
@@ -31,7 +34,7 @@ function createPaymentGateway(eventId: string): FakePaymentGateway {
       eventId,
       type: 'customer.subscription.updated',
       subscriptionUpdate: {
-        userId: crypto.randomUUID(),
+        userId,
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -157,6 +160,57 @@ describe('processStripeWebhook failure boundary', () => {
         userId,
       },
       msg: 'Acknowledging Stripe subscription webhook for missing local user',
+    });
+  });
+
+  it('does not overwrite an event completed before missing-user acknowledgement locks it', async () => {
+    const eventId = 'evt_missing_user_concurrently_processed';
+    const userId = crypto.randomUUID();
+    const paymentGateway = createPaymentGateway(eventId, userId);
+    const stripeEvents = new FakeStripeEventRepository();
+    const missingSubscriptions = new FakeSubscriptionRepository();
+    const logger = new FakeLogger();
+    const markProcessed = vi.spyOn(stripeEvents, 'markProcessed');
+    let transactionCallCount = 0;
+    missingSubscriptions.markUserMissing(userId);
+    const deps: StripeWebhookDeps = {
+      paymentGateway,
+      subscriptionVersions: missingSubscriptions,
+      logger,
+      now: () => new Date(),
+      transaction: async (fn) => {
+        transactionCallCount += 1;
+        if (transactionCallCount === 1) {
+          try {
+            return await fn({
+              stripeEvents: new FakeStripeEventRepository(),
+              subscriptions: missingSubscriptions,
+              stripeCustomers: new FakeStripeCustomerRepository(),
+            });
+          } catch (error) {
+            await stripeEvents.claim(eventId, 'customer.subscription.updated');
+            await stripeEvents.markProcessed(eventId);
+            throw error;
+          }
+        }
+
+        return fn({
+          stripeEvents,
+          subscriptions: new FakeSubscriptionRepository(),
+          stripeCustomers: new FakeStripeCustomerRepository(),
+        });
+      },
+    };
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    expect(transactionCallCount).toBe(3);
+    expect(markProcessed).toHaveBeenCalledTimes(1);
+    await expect(stripeEvents.lock(eventId)).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
     });
   });
 
