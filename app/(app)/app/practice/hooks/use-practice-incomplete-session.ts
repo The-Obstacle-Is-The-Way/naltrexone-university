@@ -6,10 +6,12 @@ import {
   getIncompletePracticeSession,
 } from '@/src/adapters/controllers/practice-controller';
 import {
+  type AbandonRequestToken,
   abandonIncompleteSession,
   createIncompleteSessionEffect,
   createIncompleteSessionLoadGuard,
   loadIncompleteSession,
+  resolveAbandonRequestToken,
 } from '../practice-page-incomplete-session';
 
 type IncompletePracticeSession =
@@ -24,7 +26,7 @@ export type UsePracticeIncompleteSessionOutput = {
   incompleteSessionError: string | null;
   incompleteSession: IncompletePracticeSession | null;
   refreshIncompleteSession: () => Promise<void>;
-  onAbandonIncompleteSession: () => Promise<void>;
+  onAbandonIncompleteSession: () => Promise<boolean>;
 };
 
 export function usePracticeIncompleteSession(
@@ -38,9 +40,8 @@ export function usePracticeIncompleteSession(
   >(null);
   const [incompleteSession, setIncompleteSession] =
     useState<IncompletePracticeSession | null>(null);
-  const [abandonIdempotencyKey, setAbandonIdempotencyKey] = useState(() =>
-    crypto.randomUUID(),
-  );
+  const [abandonRequestToken, setAbandonRequestToken] =
+    useState<AbandonRequestToken | null>(null);
   const [incompleteSessionLoadGuard] = useState(
     createIncompleteSessionLoadGuard,
   );
@@ -69,12 +70,25 @@ export function usePracticeIncompleteSession(
   );
 
   const onAbandonIncompleteSession = useCallback(async () => {
-    if (!incompleteSession) return;
+    if (!incompleteSession) return false;
 
-    await abandonIncompleteSession({
+    // The token is bound to the session it targets: a preserved key may only
+    // retry the same session's abandon, never carry a different session.
+    const token = resolveAbandonRequestToken(
+      abandonRequestToken,
+      incompleteSession.sessionId,
+      () => crypto.randomUUID(),
+    );
+    if (token !== abandonRequestToken) setAbandonRequestToken(token);
+
+    return abandonIncompleteSession({
       sessionId: incompleteSession.sessionId,
-      idempotencyKey: abandonIdempotencyKey,
-      rotateIdempotencyKey: () => setAbandonIdempotencyKey(crypto.randomUUID()),
+      idempotencyKey: token.key,
+      rotateIdempotencyKey: () =>
+        setAbandonRequestToken({
+          sessionId: token.sessionId,
+          key: crypto.randomUUID(),
+        }),
       mode: incompleteSession.mode,
       endPracticeSessionFn: endPracticeSession,
       discardPracticeSessionFn: discardPracticeSession,
@@ -83,7 +97,7 @@ export function usePracticeIncompleteSession(
       setIncompleteSession,
       isMounted: input.isMounted,
     });
-  }, [abandonIdempotencyKey, incompleteSession, input.isMounted]);
+  }, [abandonRequestToken, incompleteSession, input.isMounted]);
 
   return {
     incompleteSessionStatus,
