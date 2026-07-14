@@ -3,6 +3,7 @@ import {
   createBookmarksEffect,
   setBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
+import { bookmarkRequestFingerprint } from '@/app/(app)/app/shared/bookmark-toggle';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
@@ -267,7 +268,7 @@ describe('practice-page-logic bookmarks', () => {
   });
 
   describe('setBookmarkForQuestion', () => {
-    it('sets bookmark, forwards desired state and idempotency key, and rotates key on success', async () => {
+    it('sets bookmark, forwards desired state and idempotency key, and retires the key on success', async () => {
       let ids = new Set<string>(['other']);
       const setBookmarkedQuestionIds = vi.fn(
         (next: Set<string> | ((prev: Set<string>) => Set<string>)) => {
@@ -275,15 +276,21 @@ describe('practice-page-logic bookmarks', () => {
         },
       );
       const onBookmarkToggled = vi.fn();
-      const setBookmarkIdempotencyKey = vi.fn();
+      const setBookmarkRequestToken = vi.fn();
       const setBookmarkFn = vi.fn(async () => ok({ bookmarked: true }));
 
       await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
         desiredBookmarked: true,
-        bookmarkIdempotencyKey: 'idem_1',
+        bookmarkRequestToken: {
+          key: 'idem_1',
+          fingerprint: bookmarkRequestFingerprint({
+            questionId: fixtureQuestion1Id,
+            desiredBookmarked: true,
+          }),
+        },
         createIdempotencyKey: () => 'idem_2',
-        setBookmarkIdempotencyKey,
+        setBookmarkRequestToken,
         setBookmarkFn,
         setBookmarkStatus: vi.fn(),
         setBookmarkedQuestionIds,
@@ -297,7 +304,7 @@ describe('practice-page-logic bookmarks', () => {
       });
       expect(ids.has(fixtureQuestion1Id)).toBe(true);
       expect(onBookmarkToggled).toHaveBeenCalledWith(true);
-      expect(setBookmarkIdempotencyKey).toHaveBeenCalledWith('idem_2');
+      expect(setBookmarkRequestToken).toHaveBeenCalledWith(null);
     });
 
     it('sets error state when bookmark write fails', async () => {

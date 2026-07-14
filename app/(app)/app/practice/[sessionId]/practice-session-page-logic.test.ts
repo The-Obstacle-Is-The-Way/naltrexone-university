@@ -110,12 +110,11 @@ describe('practice-session-page-logic', () => {
       const loadFirst = loadNextQuestion({
         sessionId: fixtureSession1Id,
         getNextQuestionFn,
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo,
@@ -126,12 +125,11 @@ describe('practice-session-page-logic', () => {
       const loadSecond = loadNextQuestion({
         sessionId: fixtureSession1Id,
         getNextQuestionFn,
-        createIdempotencyKey: () => 'idem_2',
         nowMs: () => 5678,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo,
@@ -189,7 +187,7 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
       const setQuestionLoadedAt = vi.fn();
       const setQuestion = vi.fn();
       const setSessionInfo = vi.fn();
@@ -210,12 +208,11 @@ describe('practice-session-page-logic', () => {
               },
             }),
           ),
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
@@ -225,7 +222,7 @@ describe('practice-session-page-logic', () => {
         expect.objectContaining({ questionId: fixtureQuestion1Id }),
       );
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
-      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith('idem_1');
+      expect(setSubmitRequestToken).toHaveBeenLastCalledWith(null);
       expect(setSessionInfo).toHaveBeenCalledWith(
         expect.objectContaining({ mode: 'tutor', index: 0 }),
       );
@@ -241,12 +238,11 @@ describe('practice-session-page-logic', () => {
         sessionId: fixtureSession1Id,
         questionId: fixtureQuestion9Id,
         getNextQuestionFn,
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState: vi.fn(),
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
         setSessionInfo: vi.fn(),
@@ -267,12 +263,11 @@ describe('practice-session-page-logic', () => {
         sessionId: fixtureSession1Id,
         fromIndex: 4,
         getNextQuestionFn,
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState: vi.fn(),
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
         setSessionInfo: vi.fn(),
@@ -285,7 +280,7 @@ describe('practice-session-page-logic', () => {
     });
 
     it('preserves sessionInfo when no next question is returned', async () => {
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
       const setQuestionLoadedAt = vi.fn();
       const setQuestion = vi.fn();
       const setSessionInfo = vi.fn();
@@ -293,12 +288,11 @@ describe('practice-session-page-logic', () => {
       await loadNextQuestion({
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => ok(null),
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState: vi.fn(),
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
@@ -306,24 +300,23 @@ describe('practice-session-page-logic', () => {
 
       expect(setQuestion).toHaveBeenCalledWith(null);
       expect(setQuestionLoadedAt).toHaveBeenLastCalledWith(null);
-      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setSubmitRequestToken).toHaveBeenLastCalledWith(null);
       expect(setSessionInfo).not.toHaveBeenCalled();
     });
 
     it('sets error state when controller fails', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
 
       await loadNextQuestion({
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => err('INTERNAL_ERROR', 'Boom'),
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 0,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         setSessionInfo: vi.fn(),
@@ -334,13 +327,13 @@ describe('practice-session-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
-      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setSubmitRequestToken).toHaveBeenLastCalledWith(null);
     });
 
     it('sets error state when controller throws', async () => {
       const setLoadState = vi.fn();
       const setQuestionLoadedAt = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
       const setQuestion = vi.fn();
 
       await loadNextQuestion({
@@ -348,12 +341,11 @@ describe('practice-session-page-logic', () => {
         getNextQuestionFn: async () => {
           throw new Error('Boom');
         },
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 0,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo: vi.fn(),
@@ -361,7 +353,7 @@ describe('practice-session-page-logic', () => {
 
       expect(setQuestion).toHaveBeenCalledWith(null);
       expect(setQuestionLoadedAt).toHaveBeenLastCalledWith(null);
-      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setSubmitRequestToken).toHaveBeenLastCalledWith(null);
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Boom',
@@ -374,19 +366,18 @@ describe('practice-session-page-logic', () => {
 
       const setLoadState = vi.fn();
       const setQuestionLoadedAt = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
       const setQuestion = vi.fn();
       const setSessionInfo = vi.fn();
 
       const promise = loadNextQuestion({
         sessionId: fixtureSession1Id,
         getNextQuestionFn: async () => deferred.promise,
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion,
         setSessionInfo,
@@ -399,7 +390,7 @@ describe('practice-session-page-logic', () => {
 
       expect(setQuestion).not.toHaveBeenCalled();
       expect(setQuestionLoadedAt).not.toHaveBeenCalledWith(1234);
-      expect(setSubmitIdempotencyKey).not.toHaveBeenCalledWith('idem_1');
+      expect(setSubmitRequestToken).toHaveBeenCalledTimes(1);
       expect(setSessionInfo).not.toHaveBeenCalled();
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
@@ -414,12 +405,11 @@ describe('practice-session-page-logic', () => {
         sessionId: fixtureSession1Id,
         startTransition,
         getNextQuestionFn: async () => ok(createFixtureNextQuestion()),
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 0,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
         setSessionInfo: vi.fn(),
@@ -452,7 +442,9 @@ describe('practice-session-page-logic', () => {
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 1000,
-        submitIdempotencyKey: 'idem_1',
+        submitRequestToken: null,
+        createIdempotencyKey: () => 'idem_1',
+        setSubmitRequestToken: vi.fn(),
         submitAnswerFn,
         nowMs: () => 5000,
         setLoadState,
@@ -493,7 +485,9 @@ describe('practice-session-page-logic', () => {
         question: null,
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
-        submitIdempotencyKey: 'idem_1',
+        submitRequestToken: null,
+        createIdempotencyKey: () => 'idem_1',
+        setSubmitRequestToken: vi.fn(),
         submitAnswerFn,
         nowMs: () => 0,
         setLoadState,
@@ -525,7 +519,9 @@ describe('practice-session-page-logic', () => {
         question: createFixtureNextQuestion(),
         selectedChoiceId: null,
         questionLoadedAtMs: 0,
-        submitIdempotencyKey: 'idem_1',
+        submitRequestToken: null,
+        createIdempotencyKey: () => 'idem_1',
+        setSubmitRequestToken: vi.fn(),
         submitAnswerFn,
         nowMs: () => 0,
         setLoadState,
@@ -545,7 +541,9 @@ describe('practice-session-page-logic', () => {
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
-        submitIdempotencyKey: 'idem_1',
+        submitRequestToken: null,
+        createIdempotencyKey: () => 'idem_1',
+        setSubmitRequestToken: vi.fn(),
         submitAnswerFn: async () => err('INTERNAL_ERROR', 'Boom'),
         nowMs: () => 0,
         setLoadState,
@@ -566,7 +564,9 @@ describe('practice-session-page-logic', () => {
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
-        submitIdempotencyKey: 'idem_1',
+        submitRequestToken: null,
+        createIdempotencyKey: () => 'idem_1',
+        setSubmitRequestToken: vi.fn(),
         submitAnswerFn: async () => {
           throw new Error('Boom');
         },
@@ -593,7 +593,9 @@ describe('practice-session-page-logic', () => {
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
-        submitIdempotencyKey: 'idem_1',
+        submitRequestToken: null,
+        createIdempotencyKey: () => 'idem_1',
+        setSubmitRequestToken: vi.fn(),
         submitAnswerFn: async () => deferred.promise,
         nowMs: () => 0,
         setLoadState,
@@ -629,7 +631,9 @@ describe('practice-session-page-logic', () => {
         question: createFixtureNextQuestion(),
         selectedChoiceId: fixtureChoice1Id,
         questionLoadedAtMs: 0,
-        submitIdempotencyKey: 'idem_1',
+        submitRequestToken: null,
+        createIdempotencyKey: () => 'idem_1',
+        setSubmitRequestToken: vi.fn(),
         submitAnswerFn: async () => deferred.promise,
         nowMs: () => 0,
         setLoadState,

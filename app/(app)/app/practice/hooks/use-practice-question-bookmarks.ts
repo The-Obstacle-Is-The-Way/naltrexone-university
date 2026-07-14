@@ -4,7 +4,10 @@ import {
   createBookmarksEffect,
   setBookmarkForQuestion,
 } from '@/app/(app)/app/practice/practice-page-logic';
-import type { BookmarkableQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
+import type {
+  BookmarkableQuestion,
+  BookmarkRequestToken,
+} from '@/app/(app)/app/shared/bookmark-toggle';
 import { reportClientError } from '@/lib/report-client-error';
 import {
   getBookmarks,
@@ -41,7 +44,10 @@ export function usePracticeQuestionBookmarks(
     null,
   );
   const [bookmarkRetryCount, setBookmarkRetryCount] = useState(0);
-  const bookmarkIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
+  const bookmarkRequestTokensRef = useRef<Map<string, BookmarkRequestToken>>(
+    new Map(),
+  );
+  const bookmarkRequestsInFlightRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     return createBookmarksEffect({
@@ -73,51 +79,60 @@ export function usePracticeQuestionBookmarks(
 
   const onToggleBookmark = useCallback(async () => {
     const questionId = input.question?.questionId;
+    if (!questionId) return;
+    if (bookmarkRequestsInFlightRef.current.has(questionId)) return;
+    bookmarkRequestsInFlightRef.current.add(questionId);
     const desiredBookmarked = !isBookmarked;
 
-    await setBookmarkForQuestion({
-      question: input.question,
-      desiredBookmarked,
-      bookmarkIdempotencyKey: questionId
-        ? (bookmarkIdempotencyKeysRef.current.get(questionId) ?? null)
-        : null,
-      createIdempotencyKey: () => crypto.randomUUID(),
-      setBookmarkIdempotencyKey: (key) => {
-        if (!questionId) return;
-        bookmarkIdempotencyKeysRef.current.set(questionId, key);
-      },
-      setBookmarkFn: setBookmark,
-      setBookmarkStatus,
-      setBookmarkedQuestionIds,
-      onBookmarkToggled: (bookmarked: boolean) => {
-        setBookmarkMessage(
-          bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
-        );
-        setBookmarkMessageVersion((prev) => prev + 1);
-        scheduleBookmarkMessageAutoClear({
-          timeoutIdRef: bookmarkMessageTimeoutId,
-          setBookmarkMessage,
-          isMounted: input.isMounted,
-        });
-        input.onBookmarkToggled?.(bookmarked);
-      },
-      onBookmarkError: (message: string) => {
-        setBookmarkMessage(message);
-        setBookmarkMessageVersion((prev) => prev + 1);
-        scheduleBookmarkMessageAutoClear({
-          timeoutIdRef: bookmarkMessageTimeoutId,
-          setBookmarkMessage,
-          isMounted: input.isMounted,
-        });
-      },
-      logError: (_message: string, error: unknown) => {
-        reportClientError(error, {
-          component: 'UsePracticeQuestionBookmarks',
-          action: 'setBookmark',
-        });
-      },
-      isMounted: input.isMounted,
-    });
+    try {
+      await setBookmarkForQuestion({
+        question: input.question,
+        desiredBookmarked,
+        bookmarkRequestToken:
+          bookmarkRequestTokensRef.current.get(questionId) ?? null,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setBookmarkRequestToken: (token) => {
+          if (token) {
+            bookmarkRequestTokensRef.current.set(questionId, token);
+          } else {
+            bookmarkRequestTokensRef.current.delete(questionId);
+          }
+        },
+        setBookmarkFn: setBookmark,
+        setBookmarkStatus,
+        setBookmarkedQuestionIds,
+        onBookmarkToggled: (bookmarked: boolean) => {
+          setBookmarkMessage(
+            bookmarked ? 'Question bookmarked.' : 'Bookmark removed.',
+          );
+          setBookmarkMessageVersion((prev) => prev + 1);
+          scheduleBookmarkMessageAutoClear({
+            timeoutIdRef: bookmarkMessageTimeoutId,
+            setBookmarkMessage,
+            isMounted: input.isMounted,
+          });
+          input.onBookmarkToggled?.(bookmarked);
+        },
+        onBookmarkError: (message: string) => {
+          setBookmarkMessage(message);
+          setBookmarkMessageVersion((prev) => prev + 1);
+          scheduleBookmarkMessageAutoClear({
+            timeoutIdRef: bookmarkMessageTimeoutId,
+            setBookmarkMessage,
+            isMounted: input.isMounted,
+          });
+        },
+        logError: (_message: string, error: unknown) => {
+          reportClientError(error, {
+            component: 'UsePracticeQuestionBookmarks',
+            action: 'setBookmark',
+          });
+        },
+        isMounted: input.isMounted,
+      });
+    } finally {
+      bookmarkRequestsInFlightRef.current.delete(questionId);
+    }
   }, [input.question, input.isMounted, input.onBookmarkToggled, isBookmarked]);
 
   const onRetryBookmarks = useCallback(() => {

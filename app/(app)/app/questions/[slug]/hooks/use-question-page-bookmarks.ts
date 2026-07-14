@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { setBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
+import {
+  type BookmarkRequestToken,
+  setBookmarkForQuestion,
+} from '@/app/(app)/app/shared/bookmark-toggle';
 import {
   reportClientError,
   shouldReportClientError,
@@ -51,7 +54,10 @@ export function useQuestionPageBookmarks(
   });
   const latestBookmarkLookupRequestId = useRef(0);
   const bookmarkStateVersionRef = useRef(0);
-  const bookmarkIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
+  const bookmarkRequestTokensRef = useRef<Map<string, BookmarkRequestToken>>(
+    new Map(),
+  );
+  const bookmarkRequestsInFlightRef = useRef<Set<string>>(new Set());
   const isMountedRef = useRef(input.isMounted);
   isMountedRef.current = input.isMounted;
 
@@ -168,19 +174,25 @@ export function useQuestionPageBookmarks(
     return () => {
       if (!input.question) return;
 
+      const questionId = input.question.questionId;
+      if (bookmarkRequestsInFlightRef.current.has(questionId)) return;
+      bookmarkRequestsInFlightRef.current.add(questionId);
       bookmarkStateVersionRef.current += 1;
       const stateVersion = bookmarkStateVersionRef.current;
-      const questionId = input.question.questionId;
       const desiredBookmarked = !isBookmarked;
 
       void setBookmarkForQuestion({
         question: input.question,
         desiredBookmarked,
-        bookmarkIdempotencyKey:
-          bookmarkIdempotencyKeysRef.current.get(questionId) ?? null,
+        bookmarkRequestToken:
+          bookmarkRequestTokensRef.current.get(questionId) ?? null,
         createIdempotencyKey: () => crypto.randomUUID(),
-        setBookmarkIdempotencyKey: (key) => {
-          bookmarkIdempotencyKeysRef.current.set(questionId, key);
+        setBookmarkRequestToken: (token) => {
+          if (token) {
+            bookmarkRequestTokensRef.current.set(questionId, token);
+          } else {
+            bookmarkRequestTokensRef.current.delete(questionId);
+          }
         },
         setBookmarkFn: setBookmark,
         setBookmarkStatus: (status) => {
@@ -201,6 +213,8 @@ export function useQuestionPageBookmarks(
           });
         },
         isMounted: () => isMountedRef.current(),
+      }).finally(() => {
+        bookmarkRequestsInFlightRef.current.delete(questionId);
       });
     };
   }, [input.question, isBookmarked]);

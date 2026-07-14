@@ -145,6 +145,98 @@ describe('DrizzleQuestionFeedbackRepository', () => {
     });
   });
 
+  it('rejects a reused rating token carrying a different attempt context', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-feedback-attempt-context-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const [attempt] = await db
+      .insert(schema.attempts)
+      .values({
+        userId: user.id,
+        questionId: question.id,
+        isOmitted: true,
+        isCorrect: false,
+      })
+      .returning({ id: schema.attempts.id });
+    if (!attempt) throw new Error('Failed to insert attempt');
+
+    const repo = new DrizzleQuestionFeedbackRepository(db);
+    const request = { idempotencyKey: randomUUID() };
+    const original = newQuestionRatingFeedback({
+      userId: user.id,
+      questionId: question.id,
+      attemptId: null,
+      practiceSessionId: null,
+      rating: 'helpful',
+    });
+
+    await repo.record(original, request);
+
+    await expect(
+      repo.record(
+        newQuestionRatingFeedback({
+          ...original,
+          attemptId: attempt.id,
+        }),
+        request,
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { reason: 'feedback_request_token_reused' },
+    });
+  });
+
+  it('rejects a reused rating token carrying a different practice-session context', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-feedback-session-context-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const [session] = await db
+      .insert(schema.practiceSessions)
+      .values({
+        userId: user.id,
+        mode: 'tutor',
+        paramsJson: {
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: [question.id],
+        },
+      })
+      .returning({ id: schema.practiceSessions.id });
+    if (!session) throw new Error('Failed to insert practice session');
+
+    const repo = new DrizzleQuestionFeedbackRepository(db);
+    const request = { idempotencyKey: randomUUID() };
+    const original = newQuestionRatingFeedback({
+      userId: user.id,
+      questionId: question.id,
+      attemptId: null,
+      practiceSessionId: null,
+      rating: 'helpful',
+    });
+
+    await repo.record(original, request);
+
+    await expect(
+      repo.record(
+        newQuestionRatingFeedback({
+          ...original,
+          practiceSessionId: session.id,
+        }),
+        request,
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { reason: 'feedback_request_token_reused' },
+    });
+  });
+
   it('deduplicates report replays per token and keeps kinds and tokens independent', async () => {
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {

@@ -64,12 +64,11 @@ describe('practice-page-logic loading', () => {
       const loadFirst = loadNextQuestion({
         getNextQuestionFn,
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         createRequestSequenceId,
@@ -79,12 +78,11 @@ describe('practice-page-logic loading', () => {
       const loadSecond = loadNextQuestion({
         getNextQuestionFn,
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
-        createIdempotencyKey: () => 'idem_2',
         nowMs: () => 5678,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
         createRequestSequenceId,
@@ -118,7 +116,7 @@ describe('practice-page-logic loading', () => {
       const setLoadState = vi.fn();
       const setSelectedChoiceId = vi.fn();
       const setSubmitResult = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
       const setQuestionLoadedAt = vi.fn();
       const setQuestion = vi.fn();
 
@@ -129,12 +127,11 @@ describe('practice-page-logic loading', () => {
           difficulty: 'easy',
           status: 'unanswered',
         },
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion,
       });
@@ -149,59 +146,57 @@ describe('practice-page-logic loading', () => {
       expect(setLoadState).toHaveBeenCalledWith({ status: 'loading' });
       expect(setSelectedChoiceId).toHaveBeenCalledWith(null);
       expect(setSubmitResult).toHaveBeenCalledWith(null);
-      expect(setSubmitIdempotencyKey).toHaveBeenCalledWith(null);
+      expect(setSubmitRequestToken).toHaveBeenCalledWith(null);
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(null);
 
       expect(setQuestion).toHaveBeenCalledWith(
         expect.objectContaining({ questionId: fixtureQuestion1Id }),
       );
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(1234);
-      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith('idem_1');
+      expect(setSubmitRequestToken).toHaveBeenLastCalledWith(null);
       expect(setLoadState).toHaveBeenCalledWith({ status: 'ready' });
     });
 
     it('sets loadedAt to null when there is no next question', async () => {
       const setQuestionLoadedAt = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
 
       await loadNextQuestion({
         getNextQuestionFn: async () => ok(null),
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState: vi.fn(),
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion: vi.fn(),
       });
 
       expect(setQuestionLoadedAt).toHaveBeenCalledWith(null);
-      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setSubmitRequestToken).toHaveBeenLastCalledWith(null);
     });
 
     it('sets error state when controller fails', async () => {
       const setLoadState = vi.fn();
       const setQuestion = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
 
       await loadNextQuestion({
         getNextQuestionFn: async () =>
           err('UNSUBSCRIBED', 'Subscription required'),
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt: vi.fn(),
         setQuestion,
       });
 
       expect(setQuestion).toHaveBeenCalledWith(null);
-      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setSubmitRequestToken).toHaveBeenLastCalledWith(null);
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Subscription required',
@@ -211,7 +206,7 @@ describe('practice-page-logic loading', () => {
     it('sets error state when controller throws', async () => {
       const setLoadState = vi.fn();
       const setQuestionLoadedAt = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
       const setQuestion = vi.fn();
 
       await loadNextQuestion({
@@ -219,19 +214,18 @@ describe('practice-page-logic loading', () => {
           throw new Error('Network down');
         },
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion,
       });
 
       expect(setQuestion).toHaveBeenCalledWith(null);
       expect(setQuestionLoadedAt).toHaveBeenLastCalledWith(null);
-      expect(setSubmitIdempotencyKey).toHaveBeenLastCalledWith(null);
+      expect(setSubmitRequestToken).toHaveBeenLastCalledWith(null);
       expect(setLoadState).toHaveBeenCalledWith({
         status: 'error',
         message: 'Network down',
@@ -244,18 +238,17 @@ describe('practice-page-logic loading', () => {
 
       const setLoadState = vi.fn();
       const setQuestionLoadedAt = vi.fn();
-      const setSubmitIdempotencyKey = vi.fn();
+      const setSubmitRequestToken = vi.fn();
       const setQuestion = vi.fn();
 
       const promise = loadNextQuestion({
         getNextQuestionFn: async () => deferred.promise,
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion,
         isMounted: () => mounted,
@@ -267,7 +260,7 @@ describe('practice-page-logic loading', () => {
 
       expect(setQuestion).not.toHaveBeenCalled();
       expect(setQuestionLoadedAt).not.toHaveBeenCalledWith(1234);
-      expect(setSubmitIdempotencyKey).not.toHaveBeenCalledWith('idem_1');
+      expect(setSubmitRequestToken).toHaveBeenCalledTimes(1);
       expect(setLoadState).not.toHaveBeenCalledWith({ status: 'ready' });
     });
   });
@@ -281,12 +274,11 @@ describe('practice-page-logic loading', () => {
         startTransition,
         getNextQuestionFn: async () => ok(createFixtureNextQuestion()),
         filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
-        createIdempotencyKey: () => 'idem_1',
         nowMs: () => 1234,
         setLoadState,
         setSelectedChoiceId: vi.fn(),
         setSubmitResult: vi.fn(),
-        setSubmitIdempotencyKey: vi.fn(),
+        setSubmitRequestToken: vi.fn(),
         setQuestionLoadedAt: vi.fn(),
         setQuestion: vi.fn(),
       });

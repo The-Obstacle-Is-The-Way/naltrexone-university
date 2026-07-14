@@ -32,14 +32,13 @@ describe('question-flow-actions ended-session conflict recovery', () => {
           details: { reason: PracticeSessionConflictReasons.AlreadyEnded },
         },
       }),
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState: (next) => {
         loadState = next;
       },
       setSelectedChoiceId: () => undefined,
       setSubmitResult: () => undefined,
-      setSubmitIdempotencyKey: () => undefined,
+      setSubmitRequestToken: () => undefined,
       setQuestionLoadedAt: () => undefined,
       setQuestion: (next) => {
         question = next;
@@ -65,14 +64,13 @@ describe('question-flow-actions ended-session conflict recovery', () => {
           message: PracticeSessionConflictMessages.AlreadyEnded,
         },
       }),
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState: (next) => {
         loadState = next;
       },
       setSelectedChoiceId: () => undefined,
       setSubmitResult: () => undefined,
-      setSubmitIdempotencyKey: () => undefined,
+      setSubmitRequestToken: () => undefined,
       setQuestionLoadedAt: () => undefined,
       setQuestion: () => undefined,
       recoverEndedSessionConflict,

@@ -395,4 +395,54 @@ describe('useQuestionPageModel (browser)', () => {
       .element(screen.getByTestId('attempt-id'))
       .toHaveTextContent(/^$/);
   });
+
+  it('executes only one submit when the standalone action is invoked twice while pending', async () => {
+    getQuestionBySlug.mockResolvedValue(
+      ok({
+        questionId: QUESTION_PAGE_QUESTION_1_ID,
+        slug: 'q-1',
+        stemMd: 'Stem 1',
+        difficulty: 'easy',
+        choices: [
+          { id: QUESTION_PAGE_CHOICE_1_ID, label: 'A', textMd: 'Choice A' },
+        ],
+      }),
+    );
+    const deferredSubmit =
+      createDeferred<
+        ActionResult<{
+          attemptId: string;
+          isCorrect: boolean;
+          correctChoiceId: string | null;
+          explanationMd: string | null;
+          referenceMd: string | null;
+          choiceExplanations: [];
+        }>
+      >();
+    submitAnswer.mockReturnValue(deferredSubmit.promise);
+
+    const screen = await render(<Probe />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('ready');
+    await screen.getByTestId('select-choice-1').click();
+    await screen.getByTestId('trigger-submit').click();
+    await screen.getByTestId('trigger-submit').click();
+    await expect.poll(() => submitAnswer.mock.calls.length).toBeGreaterThan(0);
+
+    deferredSubmit.resolve(
+      ok({
+        attemptId: QUESTION_PAGE_ATTEMPT_1_ID,
+        isCorrect: true,
+        correctChoiceId: QUESTION_PAGE_CHOICE_1_ID,
+        explanationMd: 'Because q1',
+        referenceMd: null,
+        choiceExplanations: [],
+      }),
+    );
+    await deferredSubmit.promise;
+
+    expect(submitAnswer).toHaveBeenCalledTimes(1);
+  });
 });

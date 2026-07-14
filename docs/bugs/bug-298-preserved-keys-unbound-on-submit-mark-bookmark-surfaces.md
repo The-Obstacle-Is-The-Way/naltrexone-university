@@ -46,6 +46,17 @@ Silent wrong-outcome presentation on core practice surfaces: a grade shown for t
 2. Widen `assertReplayMatchesRequest` to compare `attemptId` and `practiceSessionId` (nullable-safe), keeping it defense in depth for the fenced-claim arm.
 3. Pin each surface with a wrapper-boundary regression (real `withIdempotency` + `FakeIdempotencyKeyRepository`): same-intent retry replays without re-executing; changed intent executes fresh under a new key — the BUG-295 test shape, applied per surface.
 
+## Resolution State (2026-07-14)
+
+Implementation is complete on branch `fix/bug-298-request-identity-binding` and is awaiting review, merge, and production proof. `Status` remains **Open** until that proof exists.
+
+- Extracted BUG-295's fingerprint-bound key type and `resolveRequestKey`/`mintRequestKey` lifecycle into the neutral shared client module `app/(app)/app/shared/idempotency-request-key.ts`; feedback consumes the shared primitive with its existing fingerprints and behavior unchanged.
+- Bound submit tokens to question, selected choice, active practice-session identity, and (for standalone reattempts) retry provenance; bound mark tokens to session, question, and desired mark state; bound bookmark tokens to question and desired state. Same-identity indeterminate failures preserve their key, changed intent mints fresh, and a consumed success retires the token.
+- Added a standalone-submit in-flight fence after a browser red test exposed a lazy-mint double-submit race during self-review.
+- Added per-question in-flight fences to both bookmark owners after review exposed that two synchronous toggles could launch the same claim before React committed the saving state; the guard precedes hydration-version mutation and releases when the request settles.
+- Widened both the Drizzle feedback replay guard and its application fake to reject same-token replays whose nullable attempt or practice-session context differs.
+- TDD coverage includes real-`withIdempotency` wrapper-boundary tests for all submit surfaces and bookmark, browser tests for mark plus the submit/bookmark in-flight fences, fake-repository contract tests, and real-Postgres replay-guard tests for both context fields. Red baselines reproduced stale changed-intent replay with one execution, duplicate launches before state commit, and the missing feedback conflicts before the implementation turned them green.
+
 ## Related
 
 - [BUG-295 (archived)](../_archive/bugs/bug-295-preserved-idempotency-keys-replay-across-changed-intent.md) — the invariant and the fix pattern; its Resolution notes these remaining surfaces.
