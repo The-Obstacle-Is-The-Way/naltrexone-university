@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   discardPracticeSession,
   endPracticeSession,
@@ -40,8 +40,10 @@ export function usePracticeIncompleteSession(
   >(null);
   const [incompleteSession, setIncompleteSession] =
     useState<IncompletePracticeSession | null>(null);
-  const [abandonRequestToken, setAbandonRequestToken] =
-    useState<AbandonRequestToken | null>(null);
+  // A ref, not state: the token drives no rendering, and resolving it
+  // synchronously keeps a double-click on the same session reusing one key
+  // (the second request lands on the first's in-progress claim).
+  const abandonRequestTokenRef = useRef<AbandonRequestToken | null>(null);
   const [incompleteSessionLoadGuard] = useState(
     createIncompleteSessionLoadGuard,
   );
@@ -75,20 +77,21 @@ export function usePracticeIncompleteSession(
     // The token is bound to the session it targets: a preserved key may only
     // retry the same session's abandon, never carry a different session.
     const token = resolveAbandonRequestToken(
-      abandonRequestToken,
+      abandonRequestTokenRef.current,
       incompleteSession.sessionId,
       () => crypto.randomUUID(),
     );
-    if (token !== abandonRequestToken) setAbandonRequestToken(token);
+    abandonRequestTokenRef.current = token;
 
     return abandonIncompleteSession({
       sessionId: incompleteSession.sessionId,
       idempotencyKey: token.key,
-      rotateIdempotencyKey: () =>
-        setAbandonRequestToken({
+      rotateIdempotencyKey: () => {
+        abandonRequestTokenRef.current = {
           sessionId: token.sessionId,
           key: crypto.randomUUID(),
-        }),
+        };
+      },
       mode: incompleteSession.mode,
       endPracticeSessionFn: endPracticeSession,
       discardPracticeSessionFn: discardPracticeSession,
@@ -97,7 +100,7 @@ export function usePracticeIncompleteSession(
       setIncompleteSession,
       isMounted: input.isMounted,
     });
-  }, [abandonRequestToken, incompleteSession, input.isMounted]);
+  }, [incompleteSession, input.isMounted]);
 
   return {
     incompleteSessionStatus,
