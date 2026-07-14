@@ -12,6 +12,7 @@
 
 - 2026-07-13: Implemented on branch `fix/bug-289-291-idempotency-determinacy` in [PR #640 — Fix BUG-289/290/291: determinacy-aware idempotency policies + client key lifecycles](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/640).
 - The implementation classifies SQLSTATE `57014` at its transaction owners, aborts rollback-certain claims for same-key retry, and preserves conservative fencing for commit-indeterminate submit failures.
+- 2026-07-14 (pre-merge adversarial review, same PR): the classifier initially stopped at a wrapper's own non-SQLSTATE `code` property, so a cancellation wrapped by `DrizzleAttemptRepository.insert` as `ApplicationError('INTERNAL_ERROR', { cause })` — the likeliest victim, this doc's own wrapping caveat — was still fenced and cached. `getPostgresErrorCode` now accepts only SQLSTATE-shaped codes and traverses `cause` chains, pinned by a container test using the production wrap shape and by the real-Postgres determinacy suite.
 - Status remains **Open** until the merged change has post-deploy production proof.
 
 ## Summary

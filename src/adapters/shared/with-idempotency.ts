@@ -20,7 +20,7 @@ const ERROR_MESSAGE_LIMIT = 1000;
 
 /**
  * Owner-selected handling after execute has succeeded but the cache outcome
- * cannot be stored. `return-result` is an explicit guarantee that the business
+ * cannot be stored. `return-result` is an owner assertion that the business
  * result remains authoritative and replay-safe even if the claim was fenced.
  * Without that opt-in, stale-claim errors continue to propagate.
  */

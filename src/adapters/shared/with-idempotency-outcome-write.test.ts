@@ -155,7 +155,7 @@ describe('withIdempotency outcome writes', () => {
     expect(logger.errorCalls).toHaveLength(0);
   });
 
-  it('returns the committed result after a stale-claim outcome failure when the owner explicitly guarantees replay safety', async () => {
+  it('returns the committed result after a stale-claim outcome failure when the owner asserts replay safety', async () => {
     const staleClaimError = new ApplicationError(
       'NOT_FOUND',
       'Idempotency claim is no longer current',

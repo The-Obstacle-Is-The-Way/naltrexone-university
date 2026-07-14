@@ -12,6 +12,7 @@
 
 - 2026-07-13: Implemented on branch `fix/bug-289-291-idempotency-determinacy` in [PR #640 — Fix BUG-289/290/291: determinacy-aware idempotency policies + client key lifecycles](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/640).
 - The implementation adds explicit action policies, determinate-only client rotation, and persisted request-token deduplication for feedback writes.
+- 2026-07-14 (pre-merge adversarial review, same PR): checkout no longer caches `ALREADY_SUBSCRIBED` and portal no longer caches `NOT_FOUND` — both derive from mutable state (`currentPeriodEnd > now`; a customer a later checkout can create) and the billing surfaces use mount-fixed keys with no rotation, so nothing user-mutable is cacheable there. The feedback token now enforces request identity: a replayed row must match the request's question and payload or the repository surfaces a typed `feedback_request_token_reused` CONFLICT (both adapters and the fake), and the client helpers mint a fresh key and retry once on that reason — a changed vote or edited report can no longer be silently replaced by the original committed row. The report use case gained the same kind guard as rating.
 - Status remains **Open** until the merged change has post-deploy production proof.
 
 ## Summary

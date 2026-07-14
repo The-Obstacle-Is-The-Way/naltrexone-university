@@ -12,6 +12,7 @@
 
 - 2026-07-13: Implemented on branch `fix/bug-289-291-idempotency-determinacy` in [PR #640 — Fix BUG-289/290/291: determinacy-aware idempotency policies + client key lifecycles](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/640).
 - The implementation preserves the start key across indeterminate outcomes and refreshes incomplete-session state after the typed conflict so recovery controls appear without a reload.
+- 2026-07-14 (pre-merge adversarial review, same PR): the initial implementation left `startPracticeSession` on the wrapper's cache-all default while removing the client's blanket rotation — a preserved key could replay a cached transient error for the full TTL (the dead-end this doc describes, recreated). Fixed: start now has an explicit `shouldCacheStartPracticeSessionError` policy (transients abort the claim so the preserved key re-executes; pinned on real Postgres), the incomplete-session refresh fires on EVERY failed start result so the committed-session `cache-error-and-throw` arm is genuinely actionable, the race-loser unique-violation path now carries the typed `IncompleteSessionExists` reason (the recovery panel fires on the race interleaving too), and `abandonIncompleteSession` follows the same determinacy rule (preserve on thrown/`ConcurrentRequestInProgress`; rotate only on cached terminal conflicts).
 - Status remains **Open** until the merged change has post-deploy production proof.
 
 ## Summary
