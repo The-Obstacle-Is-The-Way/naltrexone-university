@@ -234,7 +234,7 @@ describe('usePracticeSessionControls (browser)', () => {
     expect(discardPracticeSession).not.toHaveBeenCalled();
   });
 
-  it('rotates the generated abandon idempotency key after an abandon failure', async () => {
+  it('preserves the generated abandon idempotency key across a non-cached failure', async () => {
     const sessionId = '11111111-1111-1111-1111-111111111113';
 
     getTags.mockResolvedValue(ok({ rows: [] }));
@@ -293,7 +293,9 @@ describe('usePracticeSessionControls (browser)', () => {
       | undefined;
     const secondKey = secondCallInput?.idempotencyKey;
     expect(secondKey).toEqual(expect.stringMatching(UUID_PATTERN));
-    expect(secondKey).not.toBe(firstKey);
+    // INTERNAL_ERROR aborts the claim server-side, so the same-key retry is
+    // the intended re-execution path; rotating would orphan it.
+    expect(secondKey).toBe(firstKey);
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
       .toHaveTextContent('idle');
