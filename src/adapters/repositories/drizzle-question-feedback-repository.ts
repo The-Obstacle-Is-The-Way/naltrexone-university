@@ -17,7 +17,8 @@ import { toQuestionFeedbackDomain } from './question-feedback-row-mappers';
 
 /**
  * A replayed row must correspond to the same logical request: the token
- * dedupes retries of ONE intent, not reuse across questions or payloads.
+ * dedupes retries of ONE intent, not reuse across questions, contexts, or
+ * payloads.
  * A mismatch is surfaced as a typed conflict so callers can mint a fresh
  * key instead of silently absorbing another request's outcome.
  */
@@ -27,6 +28,8 @@ function assertReplayMatchesRequest(
 ): void {
   const matches =
     row.questionId === event.questionId &&
+    row.attemptId === event.attemptId &&
+    row.practiceSessionId === event.practiceSessionId &&
     (event.kind === 'rating'
       ? row.rating === event.rating
       : row.category === event.category && row.comment === event.comment);
