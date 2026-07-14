@@ -43,6 +43,21 @@ describe('FakeSubscriptionRepository', () => {
       });
     });
 
+    it('throws typed user_missing without writing when the local user is missing', async () => {
+      const repo = new FakeSubscriptionRepository();
+      repo.markUserMissing('user_1');
+
+      await expect(repo.upsert(makeUpsertInput())).rejects.toMatchObject({
+        name: 'SubscriptionUserMissingError',
+        reason: 'user_missing',
+        userId: 'user_1',
+      });
+      await expect(repo.findByUserId('user_1')).resolves.toBeNull();
+      await expect(
+        repo.findByExternalSubscriptionId('sub_123'),
+      ).resolves.toBeNull();
+    });
+
     it('replaces externalSubscriptionId for the same user on re-upsert', async () => {
       const repo = new FakeSubscriptionRepository();
 

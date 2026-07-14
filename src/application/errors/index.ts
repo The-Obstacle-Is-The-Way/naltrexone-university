@@ -10,6 +10,7 @@ export {
   isApplicationError,
   isPracticeSessionConflictReason,
   isRollbackCertainPersistenceError,
+  isSubscriptionUserMissingError,
   isUserEmailOwnershipConflictError,
   PracticeSessionConflictMessages,
   type PracticeSessionConflictReason,
@@ -18,6 +19,7 @@ export {
   practiceSessionStateChangedConcurrentlyError,
   RollbackCertainPersistenceError,
   rollbackCertainPersistenceError,
+  SubscriptionUserMissingError,
   UserConflictMessages,
   UserEmailOwnershipConflictError,
 } from './application-errors';

@@ -768,19 +768,28 @@ describe('Stripe subscription writer lock order', () => {
 
     expect(counterpartyState).toBe('waiting-on-advisory');
     expect(deletionResult.status).toBe('fulfilled');
-    expect(counterpartyResult.status).toBe('rejected');
-    const counterpartyError =
-      counterpartyResult.status === 'rejected'
-        ? counterpartyResult.reason
-        : null;
     // The counterparty loses to the committed deletion at the missing-user
-    // FK (BUG-288's acknowledged residue), not via a 40P01 deadlock.
-    expect(findPostgresErrorCode(counterpartyError)).toBe('23503');
+    // FK without a 40P01 deadlock. BUG-296 classifies that exact FK and
+    // acknowledges the terminal webhook instead of surfacing a 500.
+    expect(counterpartyResult.status).toBe('fulfilled');
     await expect(
       control.db.query.users.findFirst({
         where: eq(schema.users.id, user.id),
       }),
     ).resolves.toBeUndefined();
+    await expect(
+      control.db.query.stripeSubscriptions.findFirst({
+        where: eq(schema.stripeSubscriptions.userId, user.id),
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      control.db.query.stripeEvents.findFirst({
+        where: eq(schema.stripeEvents.id, stripeEventId),
+      }),
+    ).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
   });
 
   it.each([

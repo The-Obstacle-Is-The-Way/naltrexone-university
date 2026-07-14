@@ -104,6 +104,62 @@ function createAbortedTransactionDeps(input: {
 }
 
 describe('processStripeWebhook failure boundary', () => {
+  it('acknowledges and records a subscription event when the local user is missing', async () => {
+    const userId = crypto.randomUUID();
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_deleted_user',
+        type: 'customer.subscription.deleted',
+        subscriptionUpdate: {
+          userId,
+          externalCustomerId: 'cus_deleted_user',
+          externalSubscriptionId: 'sub_deleted_user',
+          plan: 'monthly',
+          status: 'canceled',
+          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+    const stripeEvents = new FakeStripeEventRepository();
+    const subscriptions = new FakeSubscriptionRepository();
+    const stripeCustomers = new FakeStripeCustomerRepository();
+    const logger = new FakeLogger();
+    subscriptions.markUserMissing(userId);
+    const insertCustomer = vi.spyOn(stripeCustomers, 'insert');
+    const deps: StripeWebhookDeps = {
+      paymentGateway,
+      subscriptionVersions: subscriptions,
+      logger,
+      now: () => new Date(),
+      transaction: async (fn) =>
+        fn({ stripeEvents, subscriptions, stripeCustomers }),
+    };
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+
+    await expect(stripeEvents.lock('evt_deleted_user')).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
+    expect(insertCustomer).not.toHaveBeenCalled();
+    expect(logger.warnCalls).toContainEqual({
+      context: {
+        reason: 'user_missing',
+        eventId: 'evt_deleted_user',
+        eventType: 'customer.subscription.deleted',
+        stripeCustomerId: 'cus_deleted_user',
+        userId,
+      },
+      msg: 'Acknowledging Stripe subscription webhook for missing local user',
+    });
+  });
+
   it('persists processing failure in a fresh transaction and throws the original mapped error', async () => {
     const processingError = new ApplicationError(
       'CONFLICT',

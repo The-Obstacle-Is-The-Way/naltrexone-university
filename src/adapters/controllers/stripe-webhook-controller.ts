@@ -3,7 +3,11 @@ import {
   isE2EOwnerMismatchEvent,
   isMissingStripeSubscriptionUserIdError,
 } from '@/src/adapters/shared/stripe-subscription-errors';
-import { ApplicationError, isApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  isApplicationError,
+  isSubscriptionUserMissingError,
+} from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
@@ -109,6 +113,22 @@ async function persistFailure(
       'Failed to persist Stripe webhook failure state',
     );
   }
+}
+
+async function persistAcknowledgedOutcome(
+  deps: StripeWebhookDeps,
+  event: StripeWebhookEvent,
+): Promise<void> {
+  await deps.transaction(async ({ stripeEvents }) => {
+    await stripeEvents.claim(event.eventId, event.type);
+    const current = await stripeEvents.lock(event.eventId);
+
+    if (isSuccessfullyProcessed(current)) {
+      return;
+    }
+
+    await stripeEvents.markProcessed(event.eventId);
+  });
 }
 
 export async function processStripeWebhook(
@@ -240,7 +260,21 @@ export async function processStripeWebhook(
             ),
         });
       } catch (error) {
-        if (!(error instanceof StripeWebhookAlreadyProcessed)) {
+        if (error instanceof StripeWebhookAlreadyProcessed) {
+          // Another delivery committed this event first.
+        } else if (isSubscriptionUserMissingError(error)) {
+          await persistAcknowledgedOutcome(deps, event);
+          deps.logger.warn(
+            {
+              reason: 'user_missing',
+              eventId: event.eventId,
+              eventType: event.type,
+              stripeCustomerId: event.subscriptionUpdate.externalCustomerId,
+              userId: error.userId,
+            },
+            'Acknowledging Stripe subscription webhook for missing local user',
+          );
+        } else {
           throw error;
         }
       }

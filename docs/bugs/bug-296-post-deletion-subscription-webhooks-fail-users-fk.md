@@ -8,6 +8,12 @@
 
 ---
 
+## Resolution State
+
+Implemented on branch `fix/bug-296-post-deletion-webhook-fk-ack` with BUG-288 Option 3's narrowly scoped defense-in-depth behavior. `DrizzleSubscriptionRepository.upsert` now inspects the database error cause chain and throws typed `SubscriptionUserMissingError` only when SQLSTATE `23503` and constraint `stripe_subscriptions_user_id_users_id_fk` both match. The webhook controller records that event as processed in a fresh transaction, skips the customer mapping write, and emits a structured warning containing the event id/type, Stripe customer id, local user id, and `user_missing` reason. All other foreign-key violations remain `INTERNAL_ERROR` failures.
+
+TDD coverage was added before implementation at the repository boundary (deep cause-chain exact match plus wrong-constraint control), fake boundary (`FakeSubscriptionRepository.markUserMissing`), controller boundary (processed event, no customer write, structured warning), and real-Postgres HTTP boundary (deleted-user event returns 200 with a non-failed `stripe_events` row; a different `stripe_customers` user FK still returns 500 and records `INTERNAL_ERROR`). The existing deletion-vs-first-insert lock-order regression now also pins the acknowledged, non-resurrecting outcome after the deletion commits. The document remains **Status: Open** until wave-close archival with production proof.
+
 ## Summary
 
 The BUG-288 fix (PR #634) made account deletion delete the Stripe Customer via [`stripe-customer-deleter.ts#L46-L49`](../../src/adapters/gateways/stripe-customer-deleter.ts#L46-L49) after the local deletion transaction commits. Stripe documents that [deleting a Customer immediately cancels its active subscriptions](https://docs.stripe.com/api/customers/delete), and each cancellation emits a `customer.subscription.deleted` webhook whose subscription object still carries the `metadata.user_id` our checkout stamped at creation. When that event arrives, the normalizer resolves the now-deleted local UUID ([`stripe-subscription-normalizer.ts#L32`](../../src/adapters/gateways/stripe/stripe-subscription-normalizer.ts#L32)), the controller's persist transaction calls `subscriptions.upsert` ([`stripe-webhook-controller.ts#L207`](../../src/adapters/controllers/stripe-webhook-controller.ts#L207)), and — because the cascade already removed the `stripe_subscriptions` row — the INSERT violates `stripe_subscriptions_user_id_users_id_fk` ([`db/schema.ts#L179`](../../db/schema.ts#L179), [`0000_jazzy_vermin.sql#L112`](../../db/migrations/0000_jazzy_vermin.sql#L112)).
