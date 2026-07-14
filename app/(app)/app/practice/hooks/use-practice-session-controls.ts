@@ -50,11 +50,11 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
   const incompleteOnAbandon = incomplete.onAbandonIncompleteSession;
   const retireStartIdempotencyKey = sessionStart.retireIdempotencyKey;
   const onAbandonIncompleteSession = useCallback(async () => {
-    const abandoned = await incompleteOnAbandon();
-    // A successful abandon resolves the session that the preserved start
-    // key's cached outcome refers to; the next start is a new intent and
-    // must execute under a fresh key instead of replaying it.
-    if (abandoned) retireStartIdempotencyKey();
+    const recoveryResolved = await incompleteOnAbandon();
+    // Local success or an authoritative refresh proving absence consumes the
+    // recovery lifecycle that the preserved start key refers to. A failed or
+    // indeterminate refresh leaves the key untouched.
+    if (recoveryResolved) retireStartIdempotencyKey();
   }, [incompleteOnAbandon, retireStartIdempotencyKey]);
 
   return {

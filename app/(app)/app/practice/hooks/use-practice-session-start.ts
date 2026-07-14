@@ -3,6 +3,7 @@ import { reportClientError } from '@/lib/report-client-error';
 import { startPracticeSession } from '@/src/adapters/controllers/practice-controller';
 import { navigateTo } from '../client-navigation';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
+import type { IncompleteSessionRefreshOutcome } from '../practice-page-incomplete-session';
 import {
   createDifficultyChangeHandler,
   createSessionCountBlurHandler,
@@ -17,7 +18,9 @@ import {
 
 export type UsePracticeSessionStartInput = {
   isMounted: () => boolean;
-  refreshIncompleteSession?: () => Promise<void>;
+  refreshIncompleteSession: () => Promise<
+    IncompleteSessionRefreshOutcome<unknown>
+  >;
 };
 
 export type UsePracticeSessionStartOutput = {
@@ -151,9 +154,7 @@ export function usePracticeSessionStart(
             action: context.action,
           });
         },
-        ...(input.refreshIncompleteSession
-          ? { refreshIncompleteSession: input.refreshIncompleteSession }
-          : {}),
+        refreshIncompleteSession: input.refreshIncompleteSession,
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,

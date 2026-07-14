@@ -1,10 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
-import {
-  ApplicationConflictReasons,
-  PracticeSessionConflictReasons,
-} from '@/src/application/errors';
+import { ApplicationConflictReasons } from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 const { fixtureSession1Id } = vi.hoisted(() => ({
@@ -142,6 +139,38 @@ describe('practice-page-incomplete-session', () => {
   });
 
   describe('loadIncompleteSession', () => {
+    it('returns a typed loaded outcome for an authoritative absence', async () => {
+      const setStatus = vi.fn();
+      const setError = vi.fn();
+      const setSession = vi.fn();
+
+      const outcome = await loadIncompleteSession({
+        getIncompletePracticeSessionFn: async () => ok(null),
+        setIncompleteSessionStatus: setStatus,
+        setIncompleteSessionError: setError,
+        setIncompleteSession: setSession,
+      });
+
+      expect(outcome).toEqual({ kind: 'loaded', session: null });
+      expect(setSession).toHaveBeenCalledWith(null);
+      expect(setStatus).toHaveBeenLastCalledWith('idle');
+    });
+
+    it('returns a typed failure without replacing the last session', async () => {
+      const setSession = vi.fn();
+
+      const outcome = await loadIncompleteSession({
+        getIncompletePracticeSessionFn: async () =>
+          err('INTERNAL_ERROR', 'Refresh failed'),
+        setIncompleteSessionStatus: vi.fn(),
+        setIncompleteSessionError: vi.fn(),
+        setIncompleteSession: setSession,
+      });
+
+      expect(outcome).toEqual({ kind: 'failed' });
+      expect(setSession).not.toHaveBeenCalled();
+    });
+
     it('does not let an older successful load overwrite a newer one', async () => {
       const older =
         createDeferred<ActionResult<{ sessionId: string } | null>>();
@@ -175,15 +204,20 @@ describe('practice-page-incomplete-session', () => {
       const olderLoad = loadIncompleteSession(input);
       const newerLoad = loadIncompleteSession(input);
       newer.resolve(ok({ sessionId: newerSessionId }));
-      await newerLoad;
+      const newerOutcome = await newerLoad;
       older.resolve(ok({ sessionId: fixtureSession1Id }));
-      await olderLoad;
+      const olderOutcome = await olderLoad;
 
       expect(state).toEqual({
         status: 'idle',
         error: null,
         session: { sessionId: newerSessionId },
       });
+      expect(newerOutcome).toEqual({
+        kind: 'loaded',
+        session: { sessionId: newerSessionId },
+      });
+      expect(olderOutcome).toEqual({ kind: 'ignored' });
     });
 
     it('does not let an older rejected load replace a newer success', async () => {
@@ -461,15 +495,13 @@ describe('practice-page-incomplete-session', () => {
       expect(setError).toHaveBeenLastCalledWith('Nope');
     });
 
-    it('rotates the abandon idempotency key after a cached terminal conflict', async () => {
+    it('does not infer resolution or rotate the key from a bare conflict', async () => {
       const setStatus = vi.fn();
       const setError = vi.fn();
       const setSession = vi.fn();
       const rotateIdempotencyKey = vi.fn();
       const endPracticeSessionFn = vi.fn(async () =>
-        err('CONFLICT', 'Session already ended', undefined, {
-          reason: PracticeSessionConflictReasons.AlreadyEnded,
-        }),
+        err('CONFLICT', 'Practice session already ended'),
       );
       const discardPracticeSessionFn = vi.fn(async () => ok({}));
 
@@ -486,10 +518,12 @@ describe('practice-page-incomplete-session', () => {
         isMounted: () => true,
       });
 
-      // Terminal conflicts are the only outcomes the lifecycle policy caches,
-      // so a fresh key is required for the next distinct abandon attempt.
-      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      // The abandon surface emits a bare conflict. Only an authoritative
+      // refresh can establish resolution; broad-code/message inference would
+      // discard the same-key retry handle on an unproven state.
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
       expect(setStatus).toHaveBeenLastCalledWith('error');
+      expect(setSession).not.toHaveBeenCalled();
     });
 
     it('preserves the abandon idempotency key on a concurrent-request conflict', async () => {

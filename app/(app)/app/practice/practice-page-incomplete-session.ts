@@ -9,12 +9,22 @@ import {
 import { reportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import { PracticeSessionConflictReasons } from '@/src/application/errors';
 
 const INCOMPLETE_SESSION_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 const ABANDON_SESSION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export type IncompleteSessionStatus = 'idle' | 'loading' | 'error';
+
+export type IncompleteSessionRefreshOutcome<T> =
+  | { kind: 'loaded'; session: T | null }
+  | { kind: 'failed' }
+  | { kind: 'ignored' };
+
+export function refreshProvesNoIncompleteSession<T>(
+  outcome: IncompleteSessionRefreshOutcome<T> | undefined,
+): outcome is { kind: 'loaded'; session: null } {
+  return outcome?.kind === 'loaded' && outcome.session === null;
+}
 
 export type IncompleteSessionLoadGuard = {
   begin: () => () => boolean;
@@ -45,14 +55,14 @@ type LoadIncompleteSessionInput<T> = {
 
 export async function loadIncompleteSession<T>(
   input: LoadIncompleteSessionInput<T>,
-): Promise<void> {
+): Promise<IncompleteSessionRefreshOutcome<T>> {
   const isActive = input.isActive ?? (() => true);
-  if (!isActive()) return;
+  if (!isActive()) return { kind: 'ignored' };
   const isLatestLoad = input.loadGuard?.begin() ?? (() => true);
   const canCommit = () => isActive() && isLatestLoad();
-  if (!canCommit()) return;
+  if (!canCommit()) return { kind: 'ignored' };
   input.setIncompleteSessionStatus('loading');
-  if (!canCommit()) return;
+  if (!canCommit()) return { kind: 'ignored' };
   input.setIncompleteSessionError(null);
 
   let res: Awaited<ReturnType<typeof input.getIncompletePracticeSessionFn>>;
@@ -62,29 +72,30 @@ export async function loadIncompleteSession<T>(
       INCOMPLETE_SESSION_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!canCommit()) return;
+    if (!canCommit()) return { kind: 'ignored' };
     reportClientError(error, {
       component: 'PracticePageIncompleteSession',
       action: 'loadIncompleteSession',
     });
-    if (!canCommit()) return;
+    if (!canCommit()) return { kind: 'ignored' };
     input.setIncompleteSessionStatus('error');
-    if (!canCommit()) return;
+    if (!canCommit()) return { kind: 'ignored' };
     input.setIncompleteSessionError(getThrownErrorMessage(error));
-    return;
+    return { kind: 'failed' };
   }
-  if (!canCommit()) return;
+  if (!canCommit()) return { kind: 'ignored' };
 
   if (!res.ok) {
     input.setIncompleteSessionStatus('error');
-    if (!canCommit()) return;
+    if (!canCommit()) return { kind: 'ignored' };
     input.setIncompleteSessionError(getActionResultErrorMessage(res));
-    return;
+    return { kind: 'failed' };
   }
 
   input.setIncompleteSession(res.data);
-  if (!canCommit()) return;
+  if (!canCommit()) return { kind: 'ignored' };
   input.setIncompleteSessionStatus('idle');
+  return { kind: 'loaded', session: res.data };
 }
 
 export function createIncompleteSessionEffect<T>(
@@ -99,17 +110,6 @@ export function createIncompleteSessionEffect<T>(
   return () => {
     mounted = false;
   };
-}
-
-function isCachedTerminalLifecycleConflict(
-  res: Extract<ActionResult<unknown>, { ok: false }>,
-): boolean {
-  if (res.error.code !== 'CONFLICT') return false;
-  const reason = res.error.details?.reason;
-  return (
-    reason === PracticeSessionConflictReasons.AlreadyEnded ||
-    reason === PracticeSessionConflictReasons.ExamTimeExpired
-  );
 }
 
 /**
@@ -179,12 +179,9 @@ export async function abandonIncompleteSession<T>(input: {
   if (!input.isMounted()) return false;
 
   if (!res.ok) {
-    // Rotate only for the terminal conflicts the lifecycle policy caches;
-    // every other failure aborts the claim server-side, so the same-key
-    // retry re-executes (rotating would orphan that path).
-    if (isCachedTerminalLifecycleConflict(res)) {
-      input.rotateIdempotencyKey?.();
-    }
+    // Do not infer lifecycle resolution from a broad conflict. The owner
+    // refreshes authoritative incomplete-session state after every failed
+    // abandon and retires keys only when that read proves absence.
     input.setIncompleteSessionStatus('error');
     input.setIncompleteSessionError(getActionResultErrorMessage(res));
     return false;

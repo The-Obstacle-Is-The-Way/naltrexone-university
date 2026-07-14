@@ -10,7 +10,9 @@ import {
   abandonIncompleteSession,
   createIncompleteSessionEffect,
   createIncompleteSessionLoadGuard,
+  type IncompleteSessionRefreshOutcome,
   loadIncompleteSession,
+  refreshProvesNoIncompleteSession,
   resolveAbandonRequestToken,
 } from '../practice-page-incomplete-session';
 
@@ -25,7 +27,9 @@ export type UsePracticeIncompleteSessionOutput = {
   incompleteSessionStatus: 'idle' | 'loading' | 'error';
   incompleteSessionError: string | null;
   incompleteSession: IncompletePracticeSession | null;
-  refreshIncompleteSession: () => Promise<void>;
+  refreshIncompleteSession: () => Promise<
+    IncompleteSessionRefreshOutcome<IncompletePracticeSession>
+  >;
   onAbandonIncompleteSession: () => Promise<boolean>;
 };
 
@@ -83,7 +87,7 @@ export function usePracticeIncompleteSession(
     );
     abandonRequestTokenRef.current = token;
 
-    return abandonIncompleteSession({
+    const abandoned = await abandonIncompleteSession({
       sessionId: incompleteSession.sessionId,
       idempotencyKey: token.key,
       rotateIdempotencyKey: () => {
@@ -100,7 +104,15 @@ export function usePracticeIncompleteSession(
       setIncompleteSession,
       isMounted: input.isMounted,
     });
-  }, [incompleteSession, input.isMounted]);
+
+    if (abandoned) return true;
+
+    // A failed abandon result says nothing reliable about current lifecycle
+    // state. Converge through the same authoritative refresh seam used by a
+    // failed start, and report resolution only when that read proves absence.
+    const refreshOutcome = await refreshIncompleteSession();
+    return refreshProvesNoIncompleteSession(refreshOutcome);
+  }, [incompleteSession, input.isMounted, refreshIncompleteSession]);
 
   return {
     incompleteSessionStatus,

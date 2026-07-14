@@ -21,6 +21,10 @@ describe('usePracticeSessionStart', () => {
     const output = renderHook(() =>
       usePracticeSessionStart({
         isMounted: () => true,
+        refreshIncompleteSession: async () => ({
+          kind: 'loaded',
+          session: null,
+        }),
       }),
     );
 
