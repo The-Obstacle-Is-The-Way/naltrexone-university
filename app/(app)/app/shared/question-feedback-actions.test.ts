@@ -4,10 +4,23 @@ import type {
   RateQuestionOutput,
   SubmitQuestionReportOutput,
 } from '@/src/adapters/controllers/question-feedback-controller';
+import {
+  IdempotentActionNames,
+  shouldCacheQuestionRatingError,
+  shouldCacheQuestionReportError,
+} from '@/src/adapters/controllers/shared/idempotency-error-policy';
+import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
+import {
+  FakeIdempotencyKeyRepository,
+  FakeLogger,
+} from '@/src/application/test-helpers/fakes';
 import type { QuestionFeedbackRating } from '@/src/domain/value-objects';
 import { ok } from '@/tests/test-helpers/ok';
 import {
+  type FeedbackRequestToken,
   rateQuestionForQuestion,
+  ratingRequestFingerprint,
+  reportRequestFingerprint,
   submitReportForQuestion,
 } from './question-feedback-actions';
 
@@ -18,21 +31,26 @@ const firstIdempotencyKey = '44444444-4444-4444-8444-444444444444';
 const secondIdempotencyKey = '55555555-5555-4555-8555-555555555555';
 
 describe('question-feedback-actions', () => {
-  it('optimistically records a rating and rotates the idempotency key after success', async () => {
+  it('optimistically records a rating and rotates the request token after success', async () => {
     const statuses: string[] = [];
     const ratings: Array<QuestionFeedbackRating | null> = [];
-    const setRatingKey = vi.fn();
+    const setRatingToken = vi.fn();
+    const question = { questionId, attemptId, practiceSessionId };
+    const fingerprint = ratingRequestFingerprint({
+      question,
+      rating: 'helpful',
+    });
     const rateQuestionFn = vi
       .fn<(input: unknown) => Promise<ActionResult<RateQuestionOutput>>>()
       .mockResolvedValue(ok({ rating: 'helpful' }));
 
     await rateQuestionForQuestion({
-      question: { questionId, attemptId, practiceSessionId },
+      question,
       currentRating: null,
       nextRating: 'helpful',
-      ratingIdempotencyKey: firstIdempotencyKey,
+      ratingRequestToken: { key: firstIdempotencyKey, fingerprint },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setRatingIdempotencyKey: setRatingKey,
+      setRatingRequestToken: setRatingToken,
       rateQuestionFn,
       setRating: (rating) => ratings.push(rating),
       setFeedbackStatus: (status) => statuses.push(status),
@@ -47,28 +65,43 @@ describe('question-feedback-actions', () => {
     });
     expect(ratings).toEqual(['helpful', 'helpful']);
     expect(statuses).toEqual(['saving', 'saved']);
-    expect(setRatingKey).toHaveBeenCalledWith(secondIdempotencyKey);
+    expect(setRatingToken).toHaveBeenCalledWith({
+      key: secondIdempotencyKey,
+      fingerprint,
+    });
   });
 
-  it('initializes a rating idempotency key before the first rating write', async () => {
-    const setRatingKey = vi.fn();
+  it('initializes a rating request token before the first rating write', async () => {
+    const setRatingToken = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
+    const fingerprint = ratingRequestFingerprint({
+      question,
+      rating: 'helpful',
+    });
     const rateQuestionFn = vi
       .fn<(input: unknown) => Promise<ActionResult<RateQuestionOutput>>>()
       .mockResolvedValue(ok({ rating: 'helpful' }));
 
     await rateQuestionForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       currentRating: null,
       nextRating: 'helpful',
-      ratingIdempotencyKey: null,
+      ratingRequestToken: null,
       createIdempotencyKey: () => firstIdempotencyKey,
-      setRatingIdempotencyKey: setRatingKey,
+      setRatingRequestToken: setRatingToken,
       rateQuestionFn,
       setRating: vi.fn(),
       setFeedbackStatus: vi.fn(),
     });
 
-    expect(setRatingKey).toHaveBeenCalledWith(firstIdempotencyKey);
+    expect(setRatingToken).toHaveBeenNthCalledWith(1, {
+      key: firstIdempotencyKey,
+      fingerprint,
+    });
     expect(rateQuestionFn).toHaveBeenCalledWith({
       questionId,
       attemptId: null,
@@ -78,18 +111,66 @@ describe('question-feedback-actions', () => {
     });
   });
 
+  it('mints a fresh key when the preserved rating token was minted for a different intent', async () => {
+    const setRatingToken = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
+    const rateQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<RateQuestionOutput>>>()
+      .mockResolvedValue(ok({ rating: 'not_helpful' }));
+
+    await rateQuestionForQuestion({
+      question,
+      currentRating: 'helpful',
+      nextRating: 'not_helpful',
+      // The stored token was minted for the 'helpful' vote: reusing its key
+      // for the changed vote would replay the committed 'helpful' outcome.
+      ratingRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: ratingRequestFingerprint({ question, rating: 'helpful' }),
+      },
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setRatingRequestToken: setRatingToken,
+      rateQuestionFn,
+      setRating: vi.fn(),
+      setFeedbackStatus: vi.fn(),
+    });
+
+    expect(rateQuestionFn).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: secondIdempotencyKey }),
+    );
+    expect(setRatingToken).toHaveBeenNthCalledWith(1, {
+      key: secondIdempotencyKey,
+      fingerprint: ratingRequestFingerprint({
+        question,
+        rating: 'not_helpful',
+      }),
+    });
+  });
+
   it('rolls back the optimistic rating when the write fails', async () => {
     const statuses: string[] = [];
     const ratings: Array<QuestionFeedbackRating | null> = [];
     const logError = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
 
     await rateQuestionForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       currentRating: 'not_helpful',
       nextRating: null,
-      ratingIdempotencyKey: firstIdempotencyKey,
+      ratingRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: ratingRequestFingerprint({ question, rating: null }),
+      },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setRatingIdempotencyKey: vi.fn(),
+      setRatingRequestToken: vi.fn(),
       rateQuestionFn: vi.fn().mockResolvedValue({
         ok: false,
         error: { code: 'INTERNAL_ERROR', message: 'Nope' },
@@ -107,16 +188,25 @@ describe('question-feedback-actions', () => {
     });
   });
 
-  it('rotates the rating key after a determinate cached failure', async () => {
-    const setRatingKey = vi.fn();
+  it('rotates the rating token after a determinate cached failure', async () => {
+    const setRatingToken = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
+    const fingerprint = ratingRequestFingerprint({
+      question,
+      rating: 'helpful',
+    });
 
     await rateQuestionForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       currentRating: null,
       nextRating: 'helpful',
-      ratingIdempotencyKey: firstIdempotencyKey,
+      ratingRequestToken: { key: firstIdempotencyKey, fingerprint },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setRatingIdempotencyKey: setRatingKey,
+      setRatingRequestToken: setRatingToken,
       rateQuestionFn: vi.fn().mockResolvedValue({
         ok: false,
         error: { code: 'VALIDATION_ERROR', message: 'Invalid rating' },
@@ -125,18 +215,29 @@ describe('question-feedback-actions', () => {
       setFeedbackStatus: vi.fn(),
     });
 
-    expect(setRatingKey).toHaveBeenCalledWith(secondIdempotencyKey);
+    expect(setRatingToken).toHaveBeenCalledWith({
+      key: secondIdempotencyKey,
+      fingerprint,
+    });
   });
 
   it('rolls back thrown rating errors even when the reporter fails', async () => {
     const statuses: string[] = [];
     const ratings: Array<QuestionFeedbackRating | null> = [];
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
 
     await rateQuestionForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       currentRating: 'not_helpful',
       nextRating: 'helpful',
-      ratingIdempotencyKey: firstIdempotencyKey,
+      ratingRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: ratingRequestFingerprint({ question, rating: 'helpful' }),
+      },
       rateQuestionFn: vi.fn().mockRejectedValue(new Error('Network down')),
       setRating: (rating) => ratings.push(rating),
       setFeedbackStatus: (status) => statuses.push(status),
@@ -152,12 +253,20 @@ describe('question-feedback-actions', () => {
   it('does not roll back a failed rating after unmount', async () => {
     const statuses: string[] = [];
     const ratings: Array<QuestionFeedbackRating | null> = [];
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
 
     await rateQuestionForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       currentRating: 'not_helpful',
       nextRating: null,
-      ratingIdempotencyKey: firstIdempotencyKey,
+      ratingRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: ratingRequestFingerprint({ question, rating: null }),
+      },
       rateQuestionFn: vi.fn().mockRejectedValue(new Error('Network down')),
       setRating: (rating) => ratings.push(rating),
       setFeedbackStatus: (status) => statuses.push(status),
@@ -168,8 +277,14 @@ describe('question-feedback-actions', () => {
     expect(statuses).toEqual(['saving']);
   });
 
-  it('submits report context and rotates its idempotency key only after success', async () => {
-    const setReportKey = vi.fn();
+  it('submits report context and rotates its request token only after success', async () => {
+    const setReportToken = vi.fn();
+    const question = { questionId, attemptId, practiceSessionId };
+    const fingerprint = reportRequestFingerprint({
+      question,
+      category: 'ambiguous_wording',
+      comment: 'Needs a clearer stem.',
+    });
     const submitQuestionReportFn = vi
       .fn<
         (input: unknown) => Promise<ActionResult<SubmitQuestionReportOutput>>
@@ -177,12 +292,12 @@ describe('question-feedback-actions', () => {
       .mockResolvedValue(ok({ feedbackId: crypto.randomUUID() }));
 
     const didSubmit = await submitReportForQuestion({
-      question: { questionId, attemptId, practiceSessionId },
+      question,
       category: 'ambiguous_wording',
       comment: 'Needs a clearer stem.',
-      reportIdempotencyKey: firstIdempotencyKey,
+      reportRequestToken: { key: firstIdempotencyKey, fingerprint },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setReportIdempotencyKey: setReportKey,
+      setReportRequestToken: setReportToken,
       submitQuestionReportFn,
     });
 
@@ -195,11 +310,24 @@ describe('question-feedback-actions', () => {
       comment: 'Needs a clearer stem.',
       idempotencyKey: firstIdempotencyKey,
     });
-    expect(setReportKey).toHaveBeenCalledWith(secondIdempotencyKey);
+    expect(setReportToken).toHaveBeenCalledWith({
+      key: secondIdempotencyKey,
+      fingerprint,
+    });
   });
 
-  it('initializes a report idempotency key before the first submit', async () => {
-    const setReportKey = vi.fn();
+  it('initializes a report request token before the first submit', async () => {
+    const setReportToken = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
+    const fingerprint = reportRequestFingerprint({
+      question,
+      category: 'incorrect_answer',
+      comment: null,
+    });
     const submitQuestionReportFn = vi
       .fn<
         (input: unknown) => Promise<ActionResult<SubmitQuestionReportOutput>>
@@ -207,17 +335,20 @@ describe('question-feedback-actions', () => {
       .mockResolvedValue(ok({ feedbackId: crypto.randomUUID() }));
 
     const didSubmit = await submitReportForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       category: 'incorrect_answer',
       comment: null,
-      reportIdempotencyKey: null,
+      reportRequestToken: null,
       createIdempotencyKey: () => firstIdempotencyKey,
-      setReportIdempotencyKey: setReportKey,
+      setReportRequestToken: setReportToken,
       submitQuestionReportFn,
     });
 
     expect(didSubmit).toBe(true);
-    expect(setReportKey).toHaveBeenCalledWith(firstIdempotencyKey);
+    expect(setReportToken).toHaveBeenNthCalledWith(1, {
+      key: firstIdempotencyKey,
+      fingerprint,
+    });
     expect(submitQuestionReportFn).toHaveBeenCalledWith({
       questionId,
       attemptId: null,
@@ -228,16 +359,74 @@ describe('question-feedback-actions', () => {
     });
   });
 
-  it('does not include free-text report comments in error log context', async () => {
-    const logError = vi.fn();
+  it('mints a fresh key when the preserved report token was minted for a different intent', async () => {
+    const setReportToken = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
+    const submitQuestionReportFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SubmitQuestionReportOutput>>
+      >()
+      .mockResolvedValue(ok({ feedbackId: crypto.randomUUID() }));
 
     const didSubmit = await submitReportForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
+      category: 'other',
+      comment: 'Edited comment',
+      // The stored token belongs to the original submission: reusing its key
+      // for the edited report would replay the original as a success.
+      reportRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: reportRequestFingerprint({
+          question,
+          category: 'other',
+          comment: 'Original comment',
+        }),
+      },
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setReportRequestToken: setReportToken,
+      submitQuestionReportFn,
+    });
+
+    expect(didSubmit).toBe(true);
+    expect(submitQuestionReportFn).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: secondIdempotencyKey }),
+    );
+    expect(setReportToken).toHaveBeenNthCalledWith(1, {
+      key: secondIdempotencyKey,
+      fingerprint: reportRequestFingerprint({
+        question,
+        category: 'other',
+        comment: 'Edited comment',
+      }),
+    });
+  });
+
+  it('does not include free-text report comments in error log context', async () => {
+    const logError = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
+
+    const didSubmit = await submitReportForQuestion({
+      question,
       category: 'other',
       comment: 'Sensitive free text',
-      reportIdempotencyKey: firstIdempotencyKey,
+      reportRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: reportRequestFingerprint({
+          question,
+          category: 'other',
+          comment: 'Sensitive free text',
+        }),
+      },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setReportIdempotencyKey: vi.fn(),
+      setReportRequestToken: vi.fn(),
       submitQuestionReportFn: vi.fn().mockResolvedValue({
         ok: false,
         error: { code: 'INTERNAL_ERROR', message: 'Nope' },
@@ -257,31 +446,57 @@ describe('question-feedback-actions', () => {
     );
   });
 
-  it('rotates the report key after a determinate cached failure', async () => {
-    const setReportKey = vi.fn();
-
-    await submitReportForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+  it('rotates the report token after a determinate cached failure', async () => {
+    const setReportToken = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
+    const fingerprint = reportRequestFingerprint({
+      question,
       category: 'other',
       comment: null,
-      reportIdempotencyKey: firstIdempotencyKey,
+    });
+
+    await submitReportForQuestion({
+      question,
+      category: 'other',
+      comment: null,
+      reportRequestToken: { key: firstIdempotencyKey, fingerprint },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setReportIdempotencyKey: setReportKey,
+      setReportRequestToken: setReportToken,
       submitQuestionReportFn: vi.fn().mockResolvedValue({
         ok: false,
         error: { code: 'NOT_FOUND', message: 'Question not found' },
       }),
     });
 
-    expect(setReportKey).toHaveBeenCalledWith(secondIdempotencyKey);
+    expect(setReportToken).toHaveBeenCalledWith({
+      key: secondIdempotencyKey,
+      fingerprint,
+    });
   });
 
   it('returns false for thrown report errors even when the reporter fails', async () => {
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
+
     const didSubmit = await submitReportForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       category: 'other',
       comment: 'Sensitive free text',
-      reportIdempotencyKey: firstIdempotencyKey,
+      reportRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: reportRequestFingerprint({
+          question,
+          category: 'other',
+          comment: 'Sensitive free text',
+        }),
+      },
       submitQuestionReportFn: vi
         .fn()
         .mockRejectedValue(new Error('Network down')),
@@ -294,9 +509,14 @@ describe('question-feedback-actions', () => {
   });
 
   it('mints a fresh key and retries once when a changed rating hits a reused token', async () => {
-    const setRatingKey = vi.fn();
+    const setRatingToken = vi.fn();
     const ratings: Array<QuestionFeedbackRating | null> = [];
     const statuses: string[] = [];
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
     const rateQuestionFn = vi
       .fn<(input: unknown) => Promise<ActionResult<RateQuestionOutput>>>()
       .mockResolvedValueOnce({
@@ -310,12 +530,18 @@ describe('question-feedback-actions', () => {
       .mockResolvedValueOnce(ok({ rating: 'not_helpful' }));
 
     await rateQuestionForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       currentRating: 'helpful',
       nextRating: 'not_helpful',
-      ratingIdempotencyKey: firstIdempotencyKey,
+      ratingRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: ratingRequestFingerprint({
+          question,
+          rating: 'not_helpful',
+        }),
+      },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setRatingIdempotencyKey: setRatingKey,
+      setRatingRequestToken: setRatingToken,
       rateQuestionFn,
       setRating: (rating) => ratings.push(rating),
       setFeedbackStatus: (status) => statuses.push(status),
@@ -332,7 +558,12 @@ describe('question-feedback-actions', () => {
   });
 
   it('mints a fresh key and retries once when an edited report hits a reused token', async () => {
-    const setReportKey = vi.fn();
+    const setReportToken = vi.fn();
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
     const submitQuestionReportFn = vi
       .fn<
         (input: unknown) => Promise<ActionResult<SubmitQuestionReportOutput>>
@@ -348,12 +579,19 @@ describe('question-feedback-actions', () => {
       .mockResolvedValueOnce(ok({ feedbackId: questionId }));
 
     const didSubmit = await submitReportForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       category: 'other',
       comment: 'Edited comment',
-      reportIdempotencyKey: firstIdempotencyKey,
+      reportRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: reportRequestFingerprint({
+          question,
+          category: 'other',
+          comment: 'Edited comment',
+        }),
+      },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setReportIdempotencyKey: setReportKey,
+      setReportRequestToken: setReportToken,
       submitQuestionReportFn,
     });
 
@@ -365,6 +603,11 @@ describe('question-feedback-actions', () => {
   });
 
   it('does not retry a reused-token conflict more than once', async () => {
+    const question = {
+      questionId,
+      attemptId: null,
+      practiceSessionId: null,
+    };
     const rateQuestionFn = vi
       .fn<(input: unknown) => Promise<ActionResult<RateQuestionOutput>>>()
       .mockResolvedValue({
@@ -378,12 +621,18 @@ describe('question-feedback-actions', () => {
     const statuses: string[] = [];
 
     await rateQuestionForQuestion({
-      question: { questionId, attemptId: null, practiceSessionId: null },
+      question,
       currentRating: 'helpful',
       nextRating: 'not_helpful',
-      ratingIdempotencyKey: firstIdempotencyKey,
+      ratingRequestToken: {
+        key: firstIdempotencyKey,
+        fingerprint: ratingRequestFingerprint({
+          question,
+          rating: 'not_helpful',
+        }),
+      },
       createIdempotencyKey: () => secondIdempotencyKey,
-      setRatingIdempotencyKey: vi.fn(),
+      setRatingRequestToken: vi.fn(),
       rateQuestionFn,
       setRating: vi.fn(),
       setFeedbackStatus: (status) => statuses.push(status),
@@ -391,5 +640,213 @@ describe('question-feedback-actions', () => {
 
     expect(rateQuestionFn).toHaveBeenCalledTimes(2);
     expect(statuses.at(-1)).toBe('error');
+  });
+
+  // These regressions span the real wrapper boundary: withIdempotency replays
+  // a completed cached outcome BEFORE execute() runs, so any request-identity
+  // guard inside execute() cannot protect this path. The client's preserved
+  // key must therefore never travel with a different request than the one it
+  // was minted for.
+  describe('request identity across the idempotency wrapper', () => {
+    function createRatingServer() {
+      const repo = new FakeIdempotencyKeyRepository();
+      const logger = new FakeLogger();
+      const executions: Array<{
+        rating: QuestionFeedbackRating | null;
+        key: string;
+      }> = [];
+
+      return {
+        executions,
+        handle: (req: {
+          rating: QuestionFeedbackRating | null;
+          idempotencyKey: string;
+        }): Promise<RateQuestionOutput> =>
+          withIdempotency<RateQuestionOutput>({
+            repo,
+            logger,
+            userId: 'user-1',
+            action: IdempotentActionNames.QuestionRating,
+            key: req.idempotencyKey,
+            now: () => new Date(),
+            shouldCacheError: shouldCacheQuestionRatingError,
+            execute: async () => {
+              executions.push({
+                rating: req.rating,
+                key: req.idempotencyKey,
+              });
+              return { rating: req.rating };
+            },
+          }),
+      };
+    }
+
+    function createReportServer() {
+      const repo = new FakeIdempotencyKeyRepository();
+      const logger = new FakeLogger();
+      const executions: Array<{ comment: string | null; key: string }> = [];
+
+      return {
+        executions,
+        handle: (req: {
+          comment: string | null;
+          idempotencyKey: string;
+        }): Promise<SubmitQuestionReportOutput> =>
+          withIdempotency<SubmitQuestionReportOutput>({
+            repo,
+            logger,
+            userId: 'user-1',
+            action: IdempotentActionNames.QuestionReport,
+            key: req.idempotencyKey,
+            now: () => new Date(),
+            shouldCacheError: shouldCacheQuestionReportError,
+            execute: async () => {
+              executions.push({
+                comment: req.comment,
+                key: req.idempotencyKey,
+              });
+              return { feedbackId: crypto.randomUUID() };
+            },
+          }),
+      };
+    }
+
+    type RatingRequest = {
+      rating: QuestionFeedbackRating | null;
+      idempotencyKey: string;
+    };
+    type ReportRequest = { comment: string | null; idempotencyKey: string };
+
+    it('replays the committed outcome of a lost response for a same-intent retry without re-executing', async () => {
+      const server = createRatingServer();
+      let storedToken: FeedbackRequestToken | null = null;
+      const ratings: Array<QuestionFeedbackRating | null> = [];
+      const statuses: string[] = [];
+
+      // First attempt: the server commits and caches success, but the
+      // response is lost to the client (outcome-indeterminate).
+      await rateQuestionForQuestion({
+        question: { questionId, attemptId: null, practiceSessionId: null },
+        currentRating: null,
+        nextRating: 'helpful',
+        ratingRequestToken: storedToken,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setRatingRequestToken: (token) => {
+          storedToken = token;
+        },
+        rateQuestionFn: async (input) => {
+          await server.handle(input as RatingRequest);
+          throw new Error('response lost');
+        },
+        setRating: vi.fn(),
+        setFeedbackStatus: vi.fn(),
+      });
+
+      // Same-intent retry: the preserved key is the handle to the committed
+      // outcome and must replay it without a second execution.
+      await rateQuestionForQuestion({
+        question: { questionId, attemptId: null, practiceSessionId: null },
+        currentRating: null,
+        nextRating: 'helpful',
+        ratingRequestToken: storedToken,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setRatingRequestToken: (token) => {
+          storedToken = token;
+        },
+        rateQuestionFn: async (input) =>
+          ok(await server.handle(input as RatingRequest)),
+        setRating: (rating) => ratings.push(rating),
+        setFeedbackStatus: (status) => statuses.push(status),
+      });
+
+      expect(server.executions).toHaveLength(1);
+      expect(ratings.at(-1)).toBe('helpful');
+      expect(statuses.at(-1)).toBe('saved');
+    });
+
+    it('re-executes a changed vote instead of replaying the committed outcome of a lost response', async () => {
+      const server = createRatingServer();
+      let storedToken: FeedbackRequestToken | null = null;
+      const ratings: Array<QuestionFeedbackRating | null> = [];
+      const statuses: string[] = [];
+
+      await rateQuestionForQuestion({
+        question: { questionId, attemptId: null, practiceSessionId: null },
+        currentRating: null,
+        nextRating: 'helpful',
+        ratingRequestToken: storedToken,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setRatingRequestToken: (token) => {
+          storedToken = token;
+        },
+        rateQuestionFn: async (input) => {
+          await server.handle(input as RatingRequest);
+          throw new Error('response lost');
+        },
+        setRating: vi.fn(),
+        setFeedbackStatus: vi.fn(),
+      });
+
+      // The changed vote is a NEW request: it must execute under a fresh key,
+      // not silently receive the cached 'helpful' as a saved success.
+      await rateQuestionForQuestion({
+        question: { questionId, attemptId: null, practiceSessionId: null },
+        currentRating: null,
+        nextRating: 'not_helpful',
+        ratingRequestToken: storedToken,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setRatingRequestToken: (token) => {
+          storedToken = token;
+        },
+        rateQuestionFn: async (input) =>
+          ok(await server.handle(input as RatingRequest)),
+        setRating: (rating) => ratings.push(rating),
+        setFeedbackStatus: (status) => statuses.push(status),
+      });
+
+      expect(server.executions).toHaveLength(2);
+      expect(server.executions[1]?.rating).toBe('not_helpful');
+      expect(server.executions[0]?.key).not.toBe(server.executions[1]?.key);
+      expect(ratings.at(-1)).toBe('not_helpful');
+      expect(statuses.at(-1)).toBe('saved');
+    });
+
+    it('re-executes an edited report instead of replaying the committed outcome of a lost response', async () => {
+      const server = createReportServer();
+      let storedToken: FeedbackRequestToken | null = null;
+
+      await submitReportForQuestion({
+        question: { questionId, attemptId: null, practiceSessionId: null },
+        category: 'other',
+        comment: 'First',
+        reportRequestToken: storedToken,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setReportRequestToken: (token) => {
+          storedToken = token;
+        },
+        submitQuestionReportFn: async (input) => {
+          await server.handle(input as ReportRequest);
+          throw new Error('response lost');
+        },
+      });
+
+      const didSubmit = await submitReportForQuestion({
+        question: { questionId, attemptId: null, practiceSessionId: null },
+        category: 'other',
+        comment: 'Changed',
+        reportRequestToken: storedToken,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setReportRequestToken: (token) => {
+          storedToken = token;
+        },
+        submitQuestionReportFn: async (input) =>
+          ok(await server.handle(input as ReportRequest)),
+      });
+
+      expect(didSubmit).toBe(true);
+      expect(server.executions).toHaveLength(2);
+      expect(server.executions[1]?.comment).toBe('Changed');
+      expect(server.executions[0]?.key).not.toBe(server.executions[1]?.key);
+    });
   });
 });

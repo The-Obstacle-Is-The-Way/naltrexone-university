@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type FeedbackQuestionContext,
+  type FeedbackRequestToken,
   rateQuestionForQuestion,
   submitReportForQuestion,
 } from '@/app/(app)/app/shared/question-feedback-actions';
@@ -56,8 +57,12 @@ export function usePracticeQuestionFeedback(
   const [isReportOpen, setIsReportOpen] = useState(false);
   const latestRatingLookupRequestId = useRef(0);
   const feedbackStateVersionRef = useRef(0);
-  const ratingIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
-  const reportIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
+  const ratingRequestTokensRef = useRef<Map<string, FeedbackRequestToken>>(
+    new Map(),
+  );
+  const reportRequestTokensRef = useRef<Map<string, FeedbackRequestToken>>(
+    new Map(),
+  );
   const isMountedRef = useRef(input.isMounted);
   isMountedRef.current = input.isMounted;
   const questionId = input.question?.questionId ?? null;
@@ -143,11 +148,11 @@ export function usePracticeQuestionFeedback(
         question: questionContext,
         currentRating: rating,
         nextRating,
-        ratingIdempotencyKey:
-          ratingIdempotencyKeysRef.current.get(questionId) ?? null,
+        ratingRequestToken:
+          ratingRequestTokensRef.current.get(questionId) ?? null,
         createIdempotencyKey: () => crypto.randomUUID(),
-        setRatingIdempotencyKey: (key) => {
-          ratingIdempotencyKeysRef.current.set(questionId, key);
+        setRatingRequestToken: (token) => {
+          ratingRequestTokensRef.current.set(questionId, token);
         },
         rateQuestionFn: rateQuestion,
         setRating: (nextRatingState) => {
@@ -188,11 +193,11 @@ export function usePracticeQuestionFeedback(
         question: questionContext,
         category: report.category,
         comment: report.comment,
-        reportIdempotencyKey:
-          reportIdempotencyKeysRef.current.get(questionId) ?? null,
+        reportRequestToken:
+          reportRequestTokensRef.current.get(questionId) ?? null,
         createIdempotencyKey: () => crypto.randomUUID(),
-        setReportIdempotencyKey: (key) => {
-          reportIdempotencyKeysRef.current.set(questionId, key);
+        setReportRequestToken: (token) => {
+          reportRequestTokensRef.current.set(questionId, token);
         },
         submitQuestionReportFn: submitQuestionReport,
         logError: (_message, context) => {

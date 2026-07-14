@@ -36,6 +36,7 @@ export type UsePracticeSessionStartOutput = {
   onDifficultyChange: PracticeSessionStarterProps['onDifficultyChange'];
   onStatusChange: PracticeSessionStarterProps['onStatusChange'];
   onStartSession: () => Promise<void>;
+  retireIdempotencyKey: () => void;
 };
 
 export function usePracticeSessionStart(
@@ -64,6 +65,14 @@ export function usePracticeSessionStart(
     startSessionIdempotencyKeyRef.current = key;
     setStartSessionIdempotencyKeyState(key);
   }, []);
+
+  // A key preserved across an indeterminate start outcome refers to a session
+  // that recovery may since have resolved; the owner of that resolution calls
+  // this so the next start executes as a new intent instead of replaying the
+  // stale cached outcome.
+  const retireIdempotencyKey = useCallback(() => {
+    setStartSessionIdempotencyKey(crypto.randomUUID());
+  }, [setStartSessionIdempotencyKey]);
 
   const onSessionModeChange = useMemo(
     () =>
@@ -175,5 +184,6 @@ export function usePracticeSessionStart(
     onDifficultyChange,
     onStatusChange,
     onStartSession,
+    retireIdempotencyKey,
   };
 }

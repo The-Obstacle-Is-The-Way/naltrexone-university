@@ -4,6 +4,7 @@ import * as reportClientError from '@/lib/report-client-error';
 import { err } from '@/src/adapters/controllers/action-result';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import * as tagController from '@/src/adapters/controllers/tag-controller';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { usePracticeSessionControls } from './use-practice-session-controls';
@@ -335,6 +336,232 @@ describe('usePracticeSessionControls (browser)', () => {
       idempotencyKey: sessionId,
     });
     expect(endPracticeSession).not.toHaveBeenCalled();
+  });
+
+  it('retires the preserved start key after the recovery session is abandoned', async () => {
+    const sessionId = '11111111-1111-4111-8111-111111111115';
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 20 }));
+    getIncompletePracticeSession
+      .mockResolvedValueOnce(ok(null))
+      .mockResolvedValueOnce(
+        ok({
+          sessionId,
+          mode: 'tutor',
+          answeredCount: 0,
+          totalCount: 20,
+          startedAt: '2026-07-14T00:00:00.000Z',
+        }),
+      )
+      .mockResolvedValue(ok(null));
+    // The cache-error-and-throw arm: the start committed but its outcome
+    // store failed, so the preserved key replays a cached INTERNAL_ERROR.
+    startPracticeSession.mockResolvedValue(
+      err(
+        'INTERNAL_ERROR',
+        'Idempotency outcome could not be recorded after committed success',
+      ),
+    );
+    endPracticeSession.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'tutor',
+        questionCount: 20,
+        endedAt: '2026-07-14T01:00:00.000Z',
+        totals: {
+          answered: 0,
+          correct: 0,
+          accuracy: 0,
+          durationSeconds: 60,
+        },
+      }),
+    );
+
+    const screen = await render(<PracticeSessionControlsHookProbe />);
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(sessionId);
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(/^$/);
+
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await vi.waitFor(() =>
+      expect(startPracticeSession).toHaveBeenCalledTimes(2),
+    );
+
+    const firstKey = (
+      startPracticeSession.mock.calls[0]?.[0] as
+        | { idempotencyKey?: unknown }
+        | undefined
+    )?.idempotencyKey;
+    const secondKey = (
+      startPracticeSession.mock.calls[1]?.[0] as
+        | { idempotencyKey?: unknown }
+        | undefined
+    )?.idempotencyKey;
+    expect(firstKey).toEqual(expect.stringMatching(UUID_PATTERN));
+    expect(secondKey).toEqual(expect.stringMatching(UUID_PATTERN));
+    // Abandoning the recovery session consumed everything the preserved key's
+    // outcome referred to; the next start is a new intent and must not replay
+    // the stale cached outcome for session A.
+    expect(secondKey).not.toBe(firstKey);
+  });
+
+  it('reuses one abandon key when a second click races the first request', async () => {
+    const sessionId = '11111111-1111-4111-8111-111111111118';
+    const summary = ok({
+      sessionId,
+      mode: 'tutor' as const,
+      questionCount: 20,
+      endedAt: '2026-07-14T01:00:00.000Z',
+      totals: {
+        answered: 0,
+        correct: 0,
+        accuracy: 0,
+        durationSeconds: 60,
+      },
+    });
+    const deferred = createDeferred<typeof summary>();
+
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 20 }));
+    getIncompletePracticeSession
+      .mockResolvedValueOnce(
+        ok({
+          sessionId,
+          mode: 'tutor',
+          answeredCount: 0,
+          totalCount: 20,
+          startedAt: '2026-07-14T00:00:00.000Z',
+        }),
+      )
+      .mockResolvedValue(ok(null));
+    endPracticeSession
+      .mockImplementationOnce(() => deferred.promise)
+      .mockResolvedValueOnce(summary);
+
+    const screen = await render(<PracticeSessionControlsHookProbe />);
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(sessionId);
+
+    // Both clicks target the same session while the first request is still
+    // in flight: they must share one key so the second lands on the first's
+    // in-progress claim instead of executing a second abandon.
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+    await vi.waitFor(() => expect(endPracticeSession).toHaveBeenCalledTimes(2));
+    deferred.resolve(summary);
+
+    const firstKey = (
+      endPracticeSession.mock.calls[0]?.[0] as
+        | { idempotencyKey?: unknown }
+        | undefined
+    )?.idempotencyKey;
+    const secondKey = (
+      endPracticeSession.mock.calls[1]?.[0] as
+        | { idempotencyKey?: unknown }
+        | undefined
+    )?.idempotencyKey;
+    expect(firstKey).toEqual(expect.stringMatching(UUID_PATTERN));
+    expect(secondKey).toBe(firstKey);
+  });
+
+  it('scopes the abandon key to its target session across the recovery flow', async () => {
+    const sessionAId = '11111111-1111-4111-8111-111111111116';
+    const sessionBId = '11111111-1111-4111-8111-111111111117';
+    const summaryFor = (sessionId: string) =>
+      ok({
+        sessionId,
+        mode: 'tutor' as const,
+        questionCount: 20,
+        endedAt: '2026-07-14T01:00:00.000Z',
+        totals: {
+          answered: 0,
+          correct: 0,
+          accuracy: 0,
+          durationSeconds: 60,
+        },
+      });
+
+    getTags.mockResolvedValue(ok({ rows: [] }));
+    countAvailableQuestions.mockResolvedValue(ok({ count: 20 }));
+    getIncompletePracticeSession
+      .mockResolvedValueOnce(
+        ok({
+          sessionId: sessionAId,
+          mode: 'tutor',
+          answeredCount: 0,
+          totalCount: 20,
+          startedAt: '2026-07-14T00:00:00.000Z',
+        }),
+      )
+      .mockResolvedValueOnce(
+        ok({
+          sessionId: sessionBId,
+          mode: 'tutor',
+          answeredCount: 0,
+          totalCount: 20,
+          startedAt: '2026-07-14T00:30:00.000Z',
+        }),
+      )
+      .mockResolvedValue(ok(null));
+    endPracticeSession
+      .mockResolvedValueOnce(summaryFor(sessionAId))
+      .mockResolvedValueOnce(summaryFor(sessionBId));
+    startPracticeSession.mockResolvedValue(err('INTERNAL_ERROR', 'Nope'));
+
+    const screen = await render(<PracticeSessionControlsHookProbe />);
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(sessionAId);
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(/^$/);
+
+    // A failed start surfaces the next incomplete session (B) on this mount.
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(sessionBId);
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+    await vi.waitFor(() => expect(endPracticeSession).toHaveBeenCalledTimes(2));
+
+    const firstCall = endPracticeSession.mock.calls[0]?.[0] as
+      | { sessionId?: unknown; idempotencyKey?: unknown }
+      | undefined;
+    const secondCall = endPracticeSession.mock.calls[1]?.[0] as
+      | { sessionId?: unknown; idempotencyKey?: unknown }
+      | undefined;
+    expect(firstCall?.sessionId).toBe(sessionAId);
+    expect(secondCall?.sessionId).toBe(sessionBId);
+    // Session A's completed abandon outcome must not be replayed for B: the
+    // key is bound to the session it was minted for.
+    expect(secondCall?.idempotencyKey).toEqual(
+      expect.stringMatching(UUID_PATTERN),
+    );
+    expect(secondCall?.idempotencyKey).not.toBe(firstCall?.idempotencyKey);
   });
 
   it('refreshes and exposes the resume panel state after a start conflict', async () => {

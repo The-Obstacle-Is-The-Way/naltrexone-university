@@ -24,6 +24,7 @@ import {
   createIncompleteSessionEffect,
   createIncompleteSessionLoadGuard,
   loadIncompleteSession,
+  resolveAbandonRequestToken,
 } from './practice-page-incomplete-session';
 
 describe('practice-page-incomplete-session', () => {
@@ -230,6 +231,55 @@ describe('practice-page-incomplete-session', () => {
     });
   });
 
+  describe('resolveAbandonRequestToken', () => {
+    it('reuses the stored token for the session it was minted for', () => {
+      const token = { sessionId: fixtureSession1Id, key: crypto.randomUUID() };
+
+      const resolved = resolveAbandonRequestToken(
+        token,
+        fixtureSession1Id,
+        () => crypto.randomUUID(),
+      );
+
+      expect(resolved).toBe(token);
+    });
+
+    it('mints a fresh token when the target session differs', () => {
+      const otherSessionId = crypto.randomUUID();
+      const token = { sessionId: otherSessionId, key: crypto.randomUUID() };
+      const freshKey = crypto.randomUUID();
+
+      // A key that carried one session's abandon must never travel with a
+      // different session: the wrapper would replay the completed outcome and
+      // the new session would never end.
+      const resolved = resolveAbandonRequestToken(
+        token,
+        fixtureSession1Id,
+        () => freshKey,
+      );
+
+      expect(resolved).toEqual({
+        sessionId: fixtureSession1Id,
+        key: freshKey,
+      });
+    });
+
+    it('mints a token when none is stored', () => {
+      const freshKey = crypto.randomUUID();
+
+      const resolved = resolveAbandonRequestToken(
+        null,
+        fixtureSession1Id,
+        () => freshKey,
+      );
+
+      expect(resolved).toEqual({
+        sessionId: fixtureSession1Id,
+        key: freshKey,
+      });
+    });
+  });
+
   describe('abandonIncompleteSession', () => {
     it('ends a tutor session and clears local state on success', async () => {
       const setStatus = vi.fn();
@@ -285,6 +335,60 @@ describe('practice-page-incomplete-session', () => {
       expect(endPracticeSessionFn).not.toHaveBeenCalled();
       expect(setSession).toHaveBeenCalledWith(null);
       expect(setStatus).toHaveBeenLastCalledWith('idle');
+    });
+
+    it('rotates the abandon idempotency key and reports success after a consumed success', async () => {
+      const rotateIdempotencyKey = vi.fn();
+      const endPracticeSessionFn = vi.fn(async () => ok({}));
+
+      const abandoned = await abandonIncompleteSession({
+        sessionId: fixtureSession1Id,
+        idempotencyKey: '99999999-9999-4999-8999-999999999999',
+        rotateIdempotencyKey,
+        mode: 'tutor',
+        endPracticeSessionFn,
+        discardPracticeSessionFn: vi.fn(async () => ok({})),
+        setIncompleteSessionStatus: vi.fn(),
+        setIncompleteSessionError: vi.fn(),
+        setIncompleteSession: vi.fn(),
+        isMounted: () => true,
+      });
+
+      // A consumed success is terminal for this key: the panel clears, so any
+      // later abandon necessarily targets a different session and must not
+      // replay this outcome.
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(abandoned).toBe(true);
+    });
+
+    it('reports failure for a non-ok result and a thrown request', async () => {
+      const base = {
+        sessionId: fixtureSession1Id,
+        mode: 'tutor' as const,
+        discardPracticeSessionFn: vi.fn(async () => ok({})),
+        setIncompleteSessionStatus: vi.fn(),
+        setIncompleteSessionError: vi.fn(),
+        setIncompleteSession: vi.fn(),
+        isMounted: () => true,
+      };
+
+      await expect(
+        abandonIncompleteSession({
+          ...base,
+          idempotencyKey: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+          endPracticeSessionFn: vi.fn(async () => err('INTERNAL_ERROR', 'no')),
+        }),
+      ).resolves.toBe(false);
+
+      await expect(
+        abandonIncompleteSession({
+          ...base,
+          idempotencyKey: 'bbbbbbbb-1111-4111-8111-bbbbbbbbbbbb',
+          endPracticeSessionFn: vi.fn(async () => {
+            throw new Error('boom');
+          }),
+        }),
+      ).resolves.toBe(false);
     });
 
     it('sets error state when the request throws and is still mounted', async () => {
