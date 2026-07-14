@@ -1,6 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { stripeSubscriptions } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  SubscriptionUserMissingError,
+} from '@/src/application/errors';
 import type {
   SubscriptionRepository,
   SubscriptionUpsertInput,
@@ -18,10 +21,18 @@ import {
   subscriptionStatusToStripeSubscriptionStatus,
 } from '../gateways/stripe';
 import type { DrizzleDb } from '../shared/database-types';
-import { isPostgresUniqueViolation } from './postgres-errors';
+import {
+  getPostgresConstraintName,
+  getPostgresErrorCode,
+  isPostgresUniqueViolation,
+} from './postgres-errors';
 import { acquireSubscriptionWriteLock } from './subscription-write-lock';
 
 type StripeSubscriptionRow = typeof stripeSubscriptions.$inferSelect;
+
+const FOREIGN_KEY_VIOLATION_SQLSTATE = '23503';
+const SUBSCRIPTION_USER_FOREIGN_KEY =
+  'stripe_subscriptions_user_id_users_id_fk';
 
 export class DrizzleSubscriptionRepository implements SubscriptionRepository {
   constructor(
@@ -153,6 +164,15 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
         return { persisted: true };
       });
     } catch (error) {
+      const isForeignKeyViolation =
+        getPostgresErrorCode(error) === FOREIGN_KEY_VIOLATION_SQLSTATE;
+      const isSubscriptionUserConstraint =
+        getPostgresConstraintName(error) === SUBSCRIPTION_USER_FOREIGN_KEY;
+
+      if (isForeignKeyViolation && isSubscriptionUserConstraint) {
+        throw new SubscriptionUserMissingError(input.userId, { cause: error });
+      }
+
       if (isPostgresUniqueViolation(error)) {
         throw new ApplicationError(
           'CONFLICT',

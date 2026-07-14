@@ -27,6 +27,18 @@ describe('postgres-errors', () => {
     expect(isPostgresUniqueViolation({ cause: { code: '23505' } })).toBe(true);
   });
 
+  it('extracts a constraint name from a deep cause chain', () => {
+    expect(
+      getPostgresConstraintName({
+        cause: {
+          cause: {
+            constraint: 'stripe_subscriptions_user_id_users_id_fk',
+          },
+        },
+      }),
+    ).toBe('stripe_subscriptions_user_id_users_id_fk');
+  });
+
   it('returns null/false when code is missing', () => {
     expect(getPostgresErrorCode(new Error('boom'))).toBeNull();
     expect(getPostgresConstraintName(new Error('boom'))).toBeNull();

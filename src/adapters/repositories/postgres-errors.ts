@@ -47,15 +47,15 @@ export function getPostgresConstraintName(error: unknown): string | null {
     return null;
   };
 
-  if (!error || typeof error !== 'object') return null;
+  let current: unknown = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth += 1) {
+    if (!current || typeof current !== 'object') return null;
 
-  const topLevelName = getConstraintName(error);
-  if (topLevelName) return topLevelName;
+    const constraintName = getConstraintName(current);
+    if (constraintName) return constraintName;
 
-  if ('cause' in error) {
-    const cause = (error as { cause?: unknown }).cause;
-    const causeName = getConstraintName(cause);
-    if (causeName) return causeName;
+    if (!('cause' in current)) return null;
+    current = (current as { cause?: unknown }).cause;
   }
 
   return null;
