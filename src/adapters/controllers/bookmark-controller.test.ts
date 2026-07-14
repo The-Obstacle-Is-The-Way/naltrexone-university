@@ -386,6 +386,23 @@ describe('bookmark-controller', () => {
       expect(deps.rateLimiter.inputs).toHaveLength(1);
     });
 
+    it('re-executes the desired bookmark write after a transient error under the same key', async () => {
+      const deps = createDeps({
+        setBookmarkThrows: new Error('connection reset'),
+      });
+      const input = {
+        questionId: '11111111-1111-1111-1111-111111111111',
+        bookmarked: true,
+        idempotencyKey: '22222222-2222-2222-2222-222222222222',
+      } as const;
+
+      await setBookmark(input, deps);
+      await setBookmark(input, deps);
+
+      expect(deps.setBookmarkUseCase.inputs).toHaveLength(2);
+      expect(deps.rateLimiter.inputs).toHaveLength(2);
+    });
+
     it('returns ok when deps are loaded from the container', async () => {
       const deps = createDeps({ setBookmarkOutput: { bookmarked: true } });
 

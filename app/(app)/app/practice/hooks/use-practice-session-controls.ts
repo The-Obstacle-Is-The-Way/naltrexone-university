@@ -36,12 +36,15 @@ export type UsePracticeSessionControlsOutput = {
 
 export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
   const isMounted = useIsMounted();
-  const sessionStart = usePracticeSessionStart({ isMounted });
+  const incomplete = usePracticeIncompleteSession({ isMounted });
+  const sessionStart = usePracticeSessionStart({
+    isMounted,
+    refreshIncompleteSession: incomplete.refreshIncompleteSession,
+  });
   const availableCount = usePracticeAvailableQuestionsCount({
     filters: sessionStart.filters,
   });
   const tags = usePracticeSessionTags();
-  const incomplete = usePracticeIncompleteSession({ isMounted });
 
   return {
     filters: sessionStart.filters,

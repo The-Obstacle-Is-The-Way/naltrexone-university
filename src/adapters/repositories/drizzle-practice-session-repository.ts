@@ -5,7 +5,10 @@ import {
   practiceSessionQuestionStates,
   practiceSessions,
 } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationConflictReasons,
+  ApplicationError,
+} from '@/src/application/errors';
 import type { Logger } from '@/src/application/ports/logger';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type {
@@ -412,9 +415,18 @@ export class DrizzlePracticeSessionRepository
         getPostgresConstraintName(error) ===
           PRACTICE_SESSIONS_USER_INCOMPLETE_UQ
       ) {
+        // Carry the same typed reason as the use-case pre-check so the
+        // race-loser path also renders the Resume/Abandon recovery and the
+        // client rotates its key determinately.
         throw new ApplicationError(
           'CONFLICT',
           'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+          undefined,
+          {
+            details: {
+              reason: ApplicationConflictReasons.IncompleteSessionExists,
+            },
+          },
         );
       }
       throw new ApplicationError(
@@ -529,6 +541,7 @@ export class DrizzlePracticeSessionRepository
       sessionId: input.sessionId,
       userId: input.userId,
       questionId: input.questionId,
+      classifyStatementCancellation: true,
       updateFn: (current) => ({
         ...current,
         markedForReview: input.markedForReview,

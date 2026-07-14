@@ -588,6 +588,7 @@ describe('question-flow-actions', () => {
 
   it('commits error state when submit request throws', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'ready' };
+    const rotateIdempotencyKey = vi.fn();
 
     await runSubmitAnswerFlow({
       question: { questionId: fixtureQuestion1Id },
@@ -603,9 +604,11 @@ describe('question-flow-actions', () => {
         loadState = next;
       },
       setSubmitResult: () => undefined,
+      rotateIdempotencyKey,
     });
 
     expect(loadState).toEqual({ status: 'error', message: 'Submit failed' });
+    expect(rotateIdempotencyKey).not.toHaveBeenCalled();
   });
 
   it('throws when request sequencing hooks are partially provided for submit flow', async () => {
@@ -637,6 +640,7 @@ describe('question-flow-actions', () => {
 
   it('commits error state when submit response is non-ok', async () => {
     let loadState: AsyncLoadStateWithIdle = { status: 'ready' };
+    const rotateIdempotencyKey = vi.fn();
 
     await runSubmitAnswerFlow({
       question: { questionId: fixtureQuestion1Id },
@@ -653,9 +657,59 @@ describe('question-flow-actions', () => {
         loadState = next;
       },
       setSubmitResult: () => undefined,
+      rotateIdempotencyKey,
     });
 
     expect(loadState).toEqual({ status: 'error', message: 'boom' });
+    expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+  });
+
+  it('rotates the submit key after a determinate cached failure', async () => {
+    const rotateIdempotencyKey = vi.fn();
+
+    await runSubmitAnswerFlow({
+      question: { questionId: fixtureQuestion1Id },
+      selectedChoiceId: fixtureChoice1Id,
+      questionLoadedAtMs: 1000,
+      submitIdempotencyKey: 'idemp_1',
+      submitAnswerFn: async () => ({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Question not found' },
+      }),
+      buildSubmitInput: () => ({}),
+      nowMs: () => 3500,
+      setLoadState: () => undefined,
+      setSubmitResult: () => undefined,
+      rotateIdempotencyKey,
+    });
+
+    expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the submit key while a concurrent same-key request may still finish', async () => {
+    const rotateIdempotencyKey = vi.fn();
+
+    await runSubmitAnswerFlow({
+      question: { questionId: fixtureQuestion1Id },
+      selectedChoiceId: fixtureChoice1Id,
+      questionLoadedAtMs: 1000,
+      submitIdempotencyKey: 'idemp_1',
+      submitAnswerFn: async () => ({
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Request is still running',
+          details: { reason: 'concurrent_request_in_progress' },
+        },
+      }),
+      buildSubmitInput: () => ({}),
+      nowMs: () => 3500,
+      setLoadState: () => undefined,
+      setSubmitResult: () => undefined,
+      rotateIdempotencyKey,
+    });
+
+    expect(rotateIdempotencyKey).not.toHaveBeenCalled();
   });
 
   it('bails out without committing when question is missing', async () => {

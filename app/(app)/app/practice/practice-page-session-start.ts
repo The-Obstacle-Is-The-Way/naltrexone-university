@@ -8,12 +8,33 @@ import { toPracticeSessionRoute } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
+import {
+  IdempotentActionNames,
+  rotateIdempotencyKeyAfterDeterminateError,
+} from '@/src/adapters/controllers/shared/idempotency-error-policy';
 
 const SESSION_START_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
 export const SESSION_COUNT_MIN = 1;
 export const SESSION_COUNT_MAX = 100;
 export const DEFAULT_SESSION_COUNT = 20;
+
+type SessionStartErrorReporter = (
+  error: unknown,
+  context: { action: string },
+) => void;
+
+function reportSessionStartError(
+  reportError: SessionStartErrorReporter | undefined,
+  error: unknown,
+  action: 'startSession' | 'refreshIncompleteSession',
+): void {
+  try {
+    reportError?.(error, { action });
+  } catch {
+    // Reporter failures must not block the primary error path.
+  }
+}
 
 export function handleSessionModeChange(
   setSessionMode: (mode: 'tutor' | 'exam') => void,
@@ -65,7 +86,8 @@ export async function startSession(input: {
   startPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
-  reportError?: (error: unknown, context: { action: string }) => void;
+  reportError?: SessionStartErrorReporter;
+  refreshIncompleteSession?: () => Promise<void>;
   setSessionStartStatus: (status: 'idle' | 'loading' | 'error') => void;
   setSessionStartError: (message: string | null) => void;
   navigateTo: (url: string) => void;
@@ -96,15 +118,10 @@ export async function startSession(input: {
     );
   } catch (error) {
     if (!isLatestRequest()) return;
-    try {
-      input.reportError?.(error, { action: 'startSession' });
-    } catch {
-      // Reporter failures must not block the primary error path.
-    }
+    reportSessionStartError(input.reportError, error, 'startSession');
     if (!isMounted()) return;
     input.setSessionStartStatus('error');
     input.setSessionStartError(getThrownErrorMessage(error));
-    input.setIdempotencyKey(input.createIdempotencyKey());
     return;
   }
   if (!isMounted()) return;
@@ -113,7 +130,24 @@ export async function startSession(input: {
   if (!res.ok) {
     input.setSessionStartStatus('error');
     input.setSessionStartError(getActionResultErrorMessage(res));
-    input.setIdempotencyKey(input.createIdempotencyKey());
+    rotateIdempotencyKeyAfterDeterminateError(
+      IdempotentActionNames.StartPracticeSession,
+      res.error,
+      () => input.setIdempotencyKey(input.createIdempotencyKey()),
+    );
+    // Refresh on EVERY failed result, not just the typed conflict: a start
+    // whose session committed but whose outcome-store write failed replays a
+    // cached INTERNAL_ERROR on retry, and only this refetch can surface the
+    // committed session's Resume/Abandon recovery for that arm.
+    try {
+      await input.refreshIncompleteSession?.();
+    } catch (error) {
+      reportSessionStartError(
+        input.reportError,
+        error,
+        'refreshIncompleteSession',
+      );
+    }
     return;
   }
 

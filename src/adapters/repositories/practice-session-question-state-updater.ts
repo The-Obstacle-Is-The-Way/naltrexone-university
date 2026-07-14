@@ -7,6 +7,7 @@ import {
 } from '@/src/application/errors';
 import type { PracticeSessionQuestionState } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
+import { toRollbackCertainPersistenceError } from './postgres-errors';
 import { parsePracticeSessionParamsJson } from './practice-session-params';
 
 const UPDATE_QUESTION_STATE_MAX_RETRIES = 3;
@@ -115,6 +116,25 @@ function toPersistenceUpdate(state: PracticeSessionQuestionState) {
   };
 }
 
+async function runQuestionStateTransaction<T>(input: {
+  db: DrizzleDb;
+  classifyStatementCancellation: boolean;
+  action: (tx: DrizzleDb) => Promise<T>;
+}): Promise<T> {
+  return input.db.transaction(async (tx) => {
+    try {
+      return await input.action(tx as unknown as DrizzleDb);
+    } catch (error) {
+      const rollbackCertainError = input.classifyStatementCancellation
+        ? toRollbackCertainPersistenceError(error, {
+            phase: 'transaction_body',
+          })
+        : null;
+      throw rollbackCertainError ?? error;
+    }
+  });
+}
+
 export async function updatePracticeSessionQuestionState(input: {
   db: DrizzleDb;
   now: () => Date;
@@ -124,6 +144,7 @@ export async function updatePracticeSessionQuestionState(input: {
   updateFn: (
     current: PracticeSessionQuestionState,
   ) => PracticeSessionQuestionState;
+  classifyStatementCancellation?: boolean;
 }): Promise<PracticeSessionQuestionState> {
   // Standalone callers open fresh top-level READ COMMITTED transactions here, so
   // this loop can observe a newer row version on retry. Repositories bound to a
@@ -134,46 +155,53 @@ export async function updatePracticeSessionQuestionState(input: {
     attempt < UPDATE_QUESTION_STATE_MAX_RETRIES;
     attempt += 1
   ) {
-    const attemptResult = await input.db.transaction(async (tx) => {
-      const txDb = tx as unknown as DrizzleDb;
-      const existing = await findQuestionStateSnapshot({
-        ...input,
-        db: txDb,
-      });
-      if (existing.endedAt) {
-        throw practiceSessionAlreadyEndedError();
-      }
+    const attemptResult = await runQuestionStateTransaction({
+      db: input.db,
+      classifyStatementCancellation:
+        input.classifyStatementCancellation ?? false,
+      action: async (txDb) => {
+        const existing = await findQuestionStateSnapshot({
+          ...input,
+          db: txDb,
+        });
+        if (existing.endedAt) {
+          throw practiceSessionAlreadyEndedError();
+        }
 
-      const updatedState = input.updateFn(existing.state);
-      if (updatedState === existing.state) {
-        return { status: 'updated' as const, state: existing.state };
-      }
+        const updatedState = input.updateFn(existing.state);
+        if (updatedState === existing.state) {
+          return { status: 'updated' as const, state: existing.state };
+        }
 
-      const [updated] = await txDb
-        .update(practiceSessionQuestionStates)
-        .set({
-          ...toPersistenceUpdate(updatedState),
-          version: sql`${practiceSessionQuestionStates.version} + 1`,
-          updatedAt: input.now(),
-        })
-        .where(
-          and(
-            eq(practiceSessionQuestionStates.id, existing.row.id),
-            eq(practiceSessionQuestionStates.version, existing.row.version),
-            sql`exists (
+        const [updated] = await txDb
+          .update(practiceSessionQuestionStates)
+          .set({
+            ...toPersistenceUpdate(updatedState),
+            version: sql`${practiceSessionQuestionStates.version} + 1`,
+            updatedAt: input.now(),
+          })
+          .where(
+            and(
+              eq(practiceSessionQuestionStates.id, existing.row.id),
+              eq(practiceSessionQuestionStates.version, existing.row.version),
+              sql`exists (
               select 1
               from ${practiceSessions}
               where ${practiceSessions.id} = ${practiceSessionQuestionStates.practiceSessionId}
                 and ${practiceSessions.userId} = ${input.userId}
                 and ${practiceSessions.endedAt} is null
             )`,
-          ),
-        )
-        .returning();
+            ),
+          )
+          .returning();
 
-      return updated
-        ? { status: 'updated' as const, state: toDomainQuestionState(updated) }
-        : { status: 'stale' as const };
+        return updated
+          ? {
+              status: 'updated' as const,
+              state: toDomainQuestionState(updated),
+            }
+          : { status: 'stale' as const };
+      },
     });
 
     if (attemptResult.status === 'updated') {
@@ -181,12 +209,15 @@ export async function updatePracticeSessionQuestionState(input: {
     }
   }
 
-  const finalSnapshot = await input.db.transaction(async (tx) =>
-    findQuestionStateSnapshot({
-      ...input,
-      db: tx as unknown as DrizzleDb,
-    }),
-  );
+  const finalSnapshot = await runQuestionStateTransaction({
+    db: input.db,
+    classifyStatementCancellation: input.classifyStatementCancellation ?? false,
+    action: (txDb) =>
+      findQuestionStateSnapshot({
+        ...input,
+        db: txDb,
+      }),
+  });
   if (finalSnapshot.endedAt) {
     throw practiceSessionAlreadyEndedError();
   }

@@ -301,22 +301,11 @@ describe('billing-controller', () => {
       });
     });
 
-    it('keeps genuine checkout use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+    it('re-executes a reused key after ALREADY_SUBSCRIBED instead of caching it', async () => {
+      // ALREADY_SUBSCRIBED depends on currentPeriodEnd > now, which can lapse
+      // within the cache TTL while the billing surface's mount-fixed key
+      // never rotates — so the claim aborts and every retry re-evaluates.
       const deps = createDeps({
-        rateLimiter: new FakeRateLimiter([
-          {
-            success: true,
-            limit: 10,
-            remaining: 9,
-            retryAfterSeconds: 0,
-          },
-          {
-            success: false,
-            limit: 10,
-            remaining: 0,
-            retryAfterSeconds: 60,
-          },
-        ]),
         checkoutThrows: new ApplicationError(
           'ALREADY_SUBSCRIBED',
           'Already subscribed',
@@ -335,8 +324,26 @@ describe('billing-controller', () => {
         error: { code: 'ALREADY_SUBSCRIBED', message: 'Already subscribed' },
       });
       expect(second).toEqual(first);
-      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
-      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(2);
+    });
+
+    it('re-executes checkout after a transient INTERNAL_ERROR under the same key', async () => {
+      const deps = createDeps({
+        checkoutThrows: new ApplicationError(
+          'INTERNAL_ERROR',
+          'Stripe temporarily unavailable',
+        ),
+      });
+      const input = {
+        plan: 'monthly',
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      await createCheckoutSession(input, deps);
+      await createCheckoutSession(input, deps);
+
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(2);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(2);
     });
   });
 
@@ -532,22 +539,11 @@ describe('billing-controller', () => {
       });
     });
 
-    it('keeps genuine portal use-case ApplicationErrors cached when idempotencyKey is reused', async () => {
+    it('re-executes a reused key after a missing-customer NOT_FOUND instead of caching it', async () => {
+      // A Stripe customer can be created by a later checkout while the
+      // billing page's mount-fixed key is still live; the retry must
+      // re-evaluate rather than replay a stale not-found for the TTL.
       const deps = createDeps({
-        rateLimiter: new FakeRateLimiter([
-          {
-            success: true,
-            limit: 20,
-            remaining: 19,
-            retryAfterSeconds: 0,
-          },
-          {
-            success: false,
-            limit: 20,
-            remaining: 0,
-            retryAfterSeconds: 60,
-          },
-        ]),
         portalThrows: new ApplicationError(
           'NOT_FOUND',
           'Stripe customer not found',
@@ -565,8 +561,25 @@ describe('billing-controller', () => {
         error: { code: 'NOT_FOUND', message: 'Stripe customer not found' },
       });
       expect(second).toEqual(first);
-      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
-      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(2);
+    });
+
+    it('re-executes portal creation after a transient STRIPE_ERROR under the same key', async () => {
+      const deps = createDeps({
+        portalThrows: new ApplicationError(
+          'STRIPE_ERROR',
+          'Stripe temporarily unavailable',
+        ),
+      });
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      await createPortalSession(input, deps);
+      await createPortalSession(input, deps);
+
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(2);
+      expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(2);
     });
   });
 });

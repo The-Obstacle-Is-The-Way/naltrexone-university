@@ -159,6 +159,8 @@ export function usePracticeQuestionAnswerFlow(
             nowMs: Date.now,
             setLoadState,
             setSubmitResult,
+            rotateIdempotencyKey: () =>
+              setSubmitIdempotencyKey(createIdempotencyKey()),
             onSuccess: input.onQuestionAnswered,
             createRequestSequenceId,
             isLatestRequest,
@@ -176,6 +178,7 @@ export function usePracticeQuestionAnswerFlow(
     },
     [
       createRequestSequenceId,
+      createIdempotencyKey,
       input.onQuestionAnswered,
       input.submitAnswerFn,
       isLatestRequest,
@@ -184,6 +187,7 @@ export function usePracticeQuestionAnswerFlow(
       questionLoadedAt,
       submitIdempotencyKey,
       setLoadState,
+      setSubmitIdempotencyKey,
       setSubmitResult,
       startTransition,
     ],

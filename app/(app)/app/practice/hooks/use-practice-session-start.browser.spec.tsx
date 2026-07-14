@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
+import { TimeoutError } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
@@ -37,6 +39,7 @@ function getIdempotencyKey(input: unknown): string {
 
 function Probe() {
   const output = usePracticeSessionStart({ isMounted: () => true });
+  const [settledStarts, setSettledStarts] = useState(0);
   const sessionStartError =
     output.sessionStartStatus === 'error'
       ? (output.sessionStartError ?? '')
@@ -47,6 +50,7 @@ function Probe() {
       <div data-testid="status">{output.filters.status}</div>
       <div data-testid="session-start-status">{output.sessionStartStatus}</div>
       <div data-testid="session-start-error">{sessionStartError}</div>
+      <div data-testid="settled-starts">{settledStarts}</div>
       <button
         type="button"
         data-testid="set-incorrect"
@@ -57,19 +61,16 @@ function Probe() {
       <button
         type="button"
         data-testid="start"
-        onClick={() => void output.onStartSession()}
+        onClick={() => {
+          void output.onStartSession().finally(() => {
+            setSettledStarts((count) => count + 1);
+          });
+        }}
       >
         Start
       </button>
     </>
   );
-}
-
-// flushDeferredSettlement yields long enough for deferred promise handlers and
-// the resulting React state updates to flush. If this ever flakes, replace the
-// heuristic with a condition-based wait or increase the timeout deliberately.
-async function flushDeferredSettlement(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 10));
 }
 
 beforeEach(() => {
@@ -119,6 +120,36 @@ test('reports thrown session start failures', async () => {
   });
 });
 
+test('reuses the session start key after a timeout and reaches the recorded success', async () => {
+  startPracticeSession
+    .mockRejectedValueOnce(new TimeoutError(15_000))
+    .mockResolvedValueOnce(
+      ok({
+        sessionId: fixtureSession1Id,
+        requestedCount: 20,
+        actualCount: 20,
+      }),
+    );
+
+  const screen = await render(<Probe />);
+
+  await screen.getByTestId('start').click();
+  await expect
+    .element(screen.getByTestId('session-start-status'))
+    .toHaveTextContent('error');
+  const firstKey = getIdempotencyKey(startPracticeSession.mock.calls[0]?.[0]);
+
+  await screen.getByTestId('start').click();
+  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(2);
+  await expect.poll(() => navigateToSpy.mock.calls.length).toBe(1);
+  const secondKey = getIdempotencyKey(startPracticeSession.mock.calls[1]?.[0]);
+
+  expect(secondKey).toBe(firstKey);
+  expect(navigateToSpy).toHaveBeenCalledWith(
+    `/app/practice/${fixtureSession1Id}`,
+  );
+});
+
 test('ignores stale successful session starts after config changes mid-flight', async () => {
   const deferred = createDeferred<ActionResult<StartPracticeSessionOutput>>();
   startPracticeSession.mockReturnValue(deferred.promise);
@@ -142,7 +173,9 @@ test('ignores stale successful session starts after config changes mid-flight', 
     ok: true,
     data: { sessionId: fixtureSession1Id, requestedCount: 20, actualCount: 20 },
   });
-  await flushDeferredSettlement();
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('1');
 
   expect(navigateToSpy).not.toHaveBeenCalled();
   await expect
@@ -168,7 +201,9 @@ test('ignores stale thrown session start failures after config changes mid-fligh
 
   deferred.reject(new Error('Stale failure'));
   await expect(deferred.promise).rejects.toThrow('Stale failure');
-  await flushDeferredSettlement();
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('1');
 
   expect(navigateToSpy).not.toHaveBeenCalled();
   expect(reportClientErrorSpy).not.toHaveBeenCalled();

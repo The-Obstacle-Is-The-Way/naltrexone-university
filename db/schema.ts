@@ -691,6 +691,7 @@ export const questionFeedback = pgTable(
     rating: questionFeedbackRatingEnum('rating'),
     category: questionFeedbackCategoryEnum('category'),
     comment: text('comment'),
+    idempotencyKey: uuid('idempotency_key'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -724,6 +725,9 @@ export const questionFeedback = pgTable(
       desc(t.createdAt),
       desc(t.id),
     ),
+    userKindIdempotencyKeyUq: uniqueIndex(
+      'question_feedback_user_kind_idempotency_key_uq',
+    ).on(t.userId, t.kind, t.idempotencyKey),
     kindShapeCheck: check(
       'question_feedback_kind_shape_chk',
       // Rating NULL is a valid append-only retraction event.

@@ -107,6 +107,27 @@ describe('question-feedback-actions', () => {
     });
   });
 
+  it('rotates the rating key after a determinate cached failure', async () => {
+    const setRatingKey = vi.fn();
+
+    await rateQuestionForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      currentRating: null,
+      nextRating: 'helpful',
+      ratingIdempotencyKey: firstIdempotencyKey,
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setRatingIdempotencyKey: setRatingKey,
+      rateQuestionFn: vi.fn().mockResolvedValue({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid rating' },
+      }),
+      setRating: vi.fn(),
+      setFeedbackStatus: vi.fn(),
+    });
+
+    expect(setRatingKey).toHaveBeenCalledWith(secondIdempotencyKey);
+  });
+
   it('rolls back thrown rating errors even when the reporter fails', async () => {
     const statuses: string[] = [];
     const ratings: Array<QuestionFeedbackRating | null> = [];
@@ -236,6 +257,25 @@ describe('question-feedback-actions', () => {
     );
   });
 
+  it('rotates the report key after a determinate cached failure', async () => {
+    const setReportKey = vi.fn();
+
+    await submitReportForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      category: 'other',
+      comment: null,
+      reportIdempotencyKey: firstIdempotencyKey,
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setReportIdempotencyKey: setReportKey,
+      submitQuestionReportFn: vi.fn().mockResolvedValue({
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'Question not found' },
+      }),
+    });
+
+    expect(setReportKey).toHaveBeenCalledWith(secondIdempotencyKey);
+  });
+
   it('returns false for thrown report errors even when the reporter fails', async () => {
     const didSubmit = await submitReportForQuestion({
       question: { questionId, attemptId: null, practiceSessionId: null },
@@ -251,5 +291,105 @@ describe('question-feedback-actions', () => {
     });
 
     expect(didSubmit).toBe(false);
+  });
+
+  it('mints a fresh key and retries once when a changed rating hits a reused token', async () => {
+    const setRatingKey = vi.fn();
+    const ratings: Array<QuestionFeedbackRating | null> = [];
+    const statuses: string[] = [];
+    const rateQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<RateQuestionOutput>>>()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Feedback request token was reused with a different request',
+          details: { reason: 'feedback_request_token_reused' },
+        },
+      })
+      .mockResolvedValueOnce(ok({ rating: 'not_helpful' }));
+
+    await rateQuestionForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      currentRating: 'helpful',
+      nextRating: 'not_helpful',
+      ratingIdempotencyKey: firstIdempotencyKey,
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setRatingIdempotencyKey: setRatingKey,
+      rateQuestionFn,
+      setRating: (rating) => ratings.push(rating),
+      setFeedbackStatus: (status) => statuses.push(status),
+    });
+
+    expect(rateQuestionFn).toHaveBeenCalledTimes(2);
+    expect(rateQuestionFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ idempotencyKey: secondIdempotencyKey }),
+    );
+    // The changed vote lands instead of being silently replaced by the
+    // original committed rating.
+    expect(ratings.at(-1)).toBe('not_helpful');
+    expect(statuses.at(-1)).toBe('saved');
+  });
+
+  it('mints a fresh key and retries once when an edited report hits a reused token', async () => {
+    const setReportKey = vi.fn();
+    const submitQuestionReportFn = vi
+      .fn<
+        (input: unknown) => Promise<ActionResult<SubmitQuestionReportOutput>>
+      >()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Feedback request token was reused with a different request',
+          details: { reason: 'feedback_request_token_reused' },
+        },
+      })
+      .mockResolvedValueOnce(ok({ feedbackId: questionId }));
+
+    const didSubmit = await submitReportForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      category: 'other',
+      comment: 'Edited comment',
+      reportIdempotencyKey: firstIdempotencyKey,
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setReportIdempotencyKey: setReportKey,
+      submitQuestionReportFn,
+    });
+
+    expect(didSubmit).toBe(true);
+    expect(submitQuestionReportFn).toHaveBeenCalledTimes(2);
+    expect(submitQuestionReportFn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ idempotencyKey: secondIdempotencyKey }),
+    );
+  });
+
+  it('does not retry a reused-token conflict more than once', async () => {
+    const rateQuestionFn = vi
+      .fn<(input: unknown) => Promise<ActionResult<RateQuestionOutput>>>()
+      .mockResolvedValue({
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Feedback request token was reused with a different request',
+          details: { reason: 'feedback_request_token_reused' },
+        },
+      });
+    const statuses: string[] = [];
+
+    await rateQuestionForQuestion({
+      question: { questionId, attemptId: null, practiceSessionId: null },
+      currentRating: 'helpful',
+      nextRating: 'not_helpful',
+      ratingIdempotencyKey: firstIdempotencyKey,
+      createIdempotencyKey: () => secondIdempotencyKey,
+      setRatingIdempotencyKey: vi.fn(),
+      rateQuestionFn,
+      setRating: vi.fn(),
+      setFeedbackStatus: (status) => statuses.push(status),
+    });
+
+    expect(rateQuestionFn).toHaveBeenCalledTimes(2);
+    expect(statuses.at(-1)).toBe('error');
   });
 });

@@ -88,6 +88,44 @@ describe('bookmark-toggle', () => {
       expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
     });
 
+    it('rotates the idempotency key after a determinate cached failure', async () => {
+      const setBookmarkIdempotencyKey = vi.fn();
+
+      await setBookmarkForQuestion({
+        question: createFixtureNextQuestion(),
+        desiredBookmarked: true,
+        bookmarkIdempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setBookmarkIdempotencyKey,
+        setBookmarkFn: vi.fn(async () =>
+          err('NOT_FOUND', 'Question not found'),
+        ),
+        setBookmarkStatus: vi.fn(),
+        setBookmarkedQuestionIds: vi.fn(),
+      });
+
+      expect(setBookmarkIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    });
+
+    it('preserves the idempotency key after a thrown transport failure', async () => {
+      const setBookmarkIdempotencyKey = vi.fn();
+
+      await setBookmarkForQuestion({
+        question: createFixtureNextQuestion(),
+        desiredBookmarked: true,
+        bookmarkIdempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setBookmarkIdempotencyKey,
+        setBookmarkFn: vi.fn(async () => {
+          throw new Error('Network down');
+        }),
+        setBookmarkStatus: vi.fn(),
+        setBookmarkedQuestionIds: vi.fn(),
+      });
+
+      expect(setBookmarkIdempotencyKey).not.toHaveBeenCalled();
+    });
+
     it('reports an error state when the set-bookmark request returns a non-ok result', async () => {
       const setBookmarkStatus = vi.fn();
       const setBookmarkedQuestionIds = vi.fn();

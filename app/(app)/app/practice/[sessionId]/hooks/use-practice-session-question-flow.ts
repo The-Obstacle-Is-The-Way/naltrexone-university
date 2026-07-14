@@ -433,6 +433,8 @@ export function usePracticeSessionQuestionFlow(
             nowMs: Date.now,
             setLoadState,
             setSubmitResult,
+            rotateIdempotencyKey: () =>
+              setSubmitIdempotencyKey(createIdempotencyKey()),
             onSuccess: (result) => {
               captured = result;
             },
@@ -455,6 +457,7 @@ export function usePracticeSessionQuestionFlow(
     },
     [
       createRequestSequenceId,
+      createIdempotencyKey,
       input.sessionId,
       input.submitAnswerFn,
       input.recoverEndedSessionConflict,
@@ -464,6 +467,7 @@ export function usePracticeSessionQuestionFlow(
       questionLoadedAt,
       submitIdempotencyKey,
       setLoadState,
+      setSubmitIdempotencyKey,
       setSubmitResult,
       startTransition,
     ],

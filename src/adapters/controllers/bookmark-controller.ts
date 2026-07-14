@@ -23,6 +23,10 @@ import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
+import {
+  IdempotentActionNames,
+  shouldCacheBookmarkError,
+} from './shared/idempotency-error-policy';
 
 const SetBookmarkInputSchema = z
   .object({
@@ -89,7 +93,7 @@ export const setBookmark = createAction({
 
     async function enforceBookmarkRateLimit(): Promise<void> {
       const rate = await d.rateLimiter.limit({
-        key: `bookmark:setBookmark:${userId}`,
+        key: `${IdempotentActionNames.Bookmark}:${userId}`,
         ...BOOKMARK_MUTATION_RATE_LIMIT,
       });
       if (!rate.success) {
@@ -103,10 +107,11 @@ export const setBookmark = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'bookmark:setBookmark',
+      action: IdempotentActionNames.Bookmark,
       idempotencyKey,
       outputSchema: SetBookmarkOutputSchema,
       beforeExecute: enforceBookmarkRateLimit,
+      shouldCacheError: shouldCacheBookmarkError,
       execute: setDesiredBookmarkState,
     });
   },

@@ -1,7 +1,13 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { questionFeedback } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
-import type { QuestionFeedbackRepository } from '@/src/application/ports/repositories';
+import {
+  ApplicationConflictReasons,
+  ApplicationError,
+} from '@/src/application/errors';
+import type {
+  QuestionFeedbackRecordOptions,
+  QuestionFeedbackRepository,
+} from '@/src/application/ports/repositories';
 import type {
   NewQuestionFeedback,
   QuestionRatingFeedback,
@@ -9,27 +15,84 @@ import type {
 import type { DrizzleDb } from '../shared/database-types';
 import { toQuestionFeedbackDomain } from './question-feedback-row-mappers';
 
+/**
+ * A replayed row must correspond to the same logical request: the token
+ * dedupes retries of ONE intent, not reuse across questions or payloads.
+ * A mismatch is surfaced as a typed conflict so callers can mint a fresh
+ * key instead of silently absorbing another request's outcome.
+ */
+function assertReplayMatchesRequest(
+  row: (typeof questionFeedback)['$inferSelect'],
+  event: NewQuestionFeedback,
+): void {
+  const matches =
+    row.questionId === event.questionId &&
+    (event.kind === 'rating'
+      ? row.rating === event.rating
+      : row.category === event.category && row.comment === event.comment);
+  if (matches) return;
+
+  throw new ApplicationError(
+    'CONFLICT',
+    'Feedback request token was reused with a different request',
+    undefined,
+    {
+      details: { reason: ApplicationConflictReasons.FeedbackRequestReused },
+    },
+  );
+}
+
 export class DrizzleQuestionFeedbackRepository
   implements QuestionFeedbackRepository
 {
   constructor(private readonly db: DrizzleDb) {}
 
-  async record(event: NewQuestionFeedback) {
+  async record(
+    event: NewQuestionFeedback,
+    options?: QuestionFeedbackRecordOptions,
+  ) {
     let row: (typeof questionFeedback)['$inferSelect'] | undefined;
     try {
-      [row] = await this.db
-        .insert(questionFeedback)
-        .values({
-          userId: event.userId,
-          questionId: event.questionId,
-          attemptId: event.attemptId,
-          practiceSessionId: event.practiceSessionId,
-          kind: event.kind,
-          rating: event.rating,
-          category: event.category,
-          comment: event.comment,
-        })
-        .returning();
+      const values = {
+        userId: event.userId,
+        questionId: event.questionId,
+        attemptId: event.attemptId,
+        practiceSessionId: event.practiceSessionId,
+        kind: event.kind,
+        rating: event.rating,
+        category: event.category,
+        comment: event.comment,
+        ...(options?.idempotencyKey
+          ? { idempotencyKey: options.idempotencyKey }
+          : {}),
+      };
+
+      if (options?.idempotencyKey) {
+        [row] = await this.db
+          .insert(questionFeedback)
+          .values(values)
+          .onConflictDoNothing({
+            target: [
+              questionFeedback.userId,
+              questionFeedback.kind,
+              questionFeedback.idempotencyKey,
+            ],
+          })
+          .returning();
+
+        row ??= await this.db.query.questionFeedback.findFirst({
+          where: and(
+            eq(questionFeedback.userId, event.userId),
+            eq(questionFeedback.kind, event.kind),
+            eq(questionFeedback.idempotencyKey, options.idempotencyKey),
+          ),
+        });
+      } else {
+        [row] = await this.db
+          .insert(questionFeedback)
+          .values(values)
+          .returning();
+      }
     } catch (error) {
       throw new ApplicationError(
         'INTERNAL_ERROR',
@@ -45,6 +108,8 @@ export class DrizzleQuestionFeedbackRepository
         'Failed to insert question feedback',
       );
     }
+
+    assertReplayMatchesRequest(row, event);
 
     return toQuestionFeedbackDomain(row);
   }

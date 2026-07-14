@@ -42,6 +42,21 @@ type QuestionFeedbackControllerTestDeps = QuestionFeedbackControllerDeps & {
   };
 };
 
+class StoreResultFailingIdempotencyKeyRepository extends FakeIdempotencyKeyRepository {
+  override async storeResult(): Promise<void> {
+    throw new Error('store result failed');
+  }
+}
+
+class StaleClaimIdempotencyKeyRepository extends FakeIdempotencyKeyRepository {
+  override async storeResult(): Promise<void> {
+    throw new ApplicationError(
+      'NOT_FOUND',
+      'Idempotency claim is no longer current',
+    );
+  }
+}
+
 function createDeps(overrides?: {
   user?: User | null;
   isEntitled?: boolean;
@@ -194,7 +209,25 @@ describe('question-feedback-controller', () => {
       expect(first).toEqual({ ok: true, data: { rating: null } });
       expect(second).toEqual(first);
       expect(deps.rateQuestionUseCase.inputs).toHaveLength(1);
+      expect(deps.rateQuestionUseCase.inputs[0]).toMatchObject({
+        idempotencyKey,
+      });
       expect(deps.rateLimiter.inputs).toHaveLength(1);
+    });
+
+    it('returns the committed rating when its idempotency claim was concurrently reclaimed', async () => {
+      const deps = createDeps({ rateQuestionOutput: { rating: 'helpful' } });
+      deps.idempotencyKeyRepository = new StaleClaimIdempotencyKeyRepository(
+        deps.now,
+      );
+
+      const result = await rateQuestion(
+        { questionId, rating: 'helpful', idempotencyKey },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: { rating: 'helpful' } });
+      expect(deps.rateQuestionUseCase.inputs).toHaveLength(1);
     });
 
     it('replays a cached rating while the reused key is rate limited', async () => {
@@ -339,6 +372,22 @@ describe('question-feedback-controller', () => {
       expect(deps.rateLimiter.inputs).toHaveLength(1);
     });
 
+    it('re-executes a request-keyed rating after a transient error', async () => {
+      const deps = createDeps({
+        rateQuestionThrows: new ApplicationError(
+          'INTERNAL_ERROR',
+          'database unavailable',
+        ),
+      });
+      const input = { questionId, rating: 'helpful', idempotencyKey } as const;
+
+      await rateQuestion(input, deps);
+      await rateQuestion(input, deps);
+
+      expect(deps.rateQuestionUseCase.inputs).toHaveLength(2);
+      expect(deps.rateLimiter.inputs).toHaveLength(2);
+    });
+
     it('returns ok when deps are loaded from the container', async () => {
       const deps = createDeps({ rateQuestionOutput: { rating: 'helpful' } });
 
@@ -475,7 +524,64 @@ describe('question-feedback-controller', () => {
       expect(first).toEqual({ ok: true, data: { feedbackId } });
       expect(second).toEqual(first);
       expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
+      expect(deps.submitQuestionReportUseCase.inputs[0]).toMatchObject({
+        idempotencyKey,
+      });
       expect(deps.rateLimiter.inputs).toHaveLength(1);
+    });
+
+    it('returns the committed report when idempotency outcome storage fails', async () => {
+      const deps = createDeps({
+        submitQuestionReportOutput: { feedbackId },
+      });
+      const idempotencyRepository =
+        new StoreResultFailingIdempotencyKeyRepository(deps.now);
+      deps.idempotencyKeyRepository = idempotencyRepository;
+
+      const result = await submitQuestionReport(
+        {
+          questionId,
+          category: 'other',
+          comment: 'Looks stale.',
+          idempotencyKey,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: { feedbackId } });
+      expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
+      await expect(
+        idempotencyRepository.find(
+          deps._fixtures.userId,
+          'question-feedback:submitQuestionReport',
+          idempotencyKey,
+        ),
+      ).resolves.toMatchObject({
+        completedAt: null,
+        error: null,
+      });
+    });
+
+    it('returns the committed report when its idempotency claim was concurrently reclaimed', async () => {
+      const deps = createDeps({
+        submitQuestionReportOutput: { feedbackId },
+      });
+      deps.idempotencyKeyRepository = new StaleClaimIdempotencyKeyRepository(
+        deps.now,
+      );
+
+      const result = await submitQuestionReport(
+        {
+          questionId,
+          category: 'other',
+          comment: 'Looks stale.',
+          idempotencyKey,
+        },
+        deps,
+      );
+
+      expect(result).toEqual({ ok: true, data: { feedbackId } });
+      expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
     });
 
     it('replays a cached report while the reused key is rate limited', async () => {
@@ -613,6 +719,23 @@ describe('question-feedback-controller', () => {
       expect(second).toEqual(first);
       expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(1);
       expect(deps.rateLimiter.inputs).toHaveLength(1);
+    });
+
+    it('re-executes a request-keyed report after a transient error', async () => {
+      const deps = createDeps({
+        submitQuestionReportThrows: new Error('connection reset'),
+      });
+      const input = {
+        questionId,
+        category: 'other',
+        idempotencyKey,
+      } as const;
+
+      await submitQuestionReport(input, deps);
+      await submitQuestionReport(input, deps);
+
+      expect(deps.submitQuestionReportUseCase.inputs).toHaveLength(2);
+      expect(deps.rateLimiter.inputs).toHaveLength(2);
     });
   });
 });

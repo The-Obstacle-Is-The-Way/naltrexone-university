@@ -75,6 +75,7 @@ describe('database migrations', () => {
     expect(indexes).toContain(
       'question_feedback_practice_session_created_at_idx',
     );
+    expect(indexes).toContain('question_feedback_user_kind_idempotency_key_uq');
   });
 
   it('creates practice-session question-state foreign-key support indexes', async () => {

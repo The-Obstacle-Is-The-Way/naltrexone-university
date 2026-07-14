@@ -16,6 +16,7 @@ export type SubmitQuestionReportInput = {
   practiceSessionId: string | null;
   category: QuestionFeedbackCategory;
   comment: string | null;
+  idempotencyKey?: string;
 };
 
 export type SubmitQuestionReportOutput = {
@@ -50,11 +51,22 @@ export class SubmitQuestionReportUseCase {
 
     const saved = await this.feedback.record(
       newQuestionReportFeedback({
-        ...input,
+        userId: input.userId,
+        questionId: input.questionId,
         attemptId: context.attemptId,
         practiceSessionId: context.practiceSessionId,
+        category: input.category,
+        comment: input.comment,
       }),
+      input.idempotencyKey
+        ? { idempotencyKey: input.idempotencyKey }
+        : undefined,
     );
+
+    if (saved.kind !== 'report') {
+      throw new ApplicationError('INTERNAL_ERROR', 'Invalid report replay');
+    }
+
     return { feedbackId: saved.id };
   }
 }

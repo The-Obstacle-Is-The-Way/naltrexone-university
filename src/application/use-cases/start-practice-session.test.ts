@@ -281,6 +281,9 @@ describe('StartPracticeSessionUseCase', () => {
       }),
     ).rejects.toMatchObject({
       code: 'CONFLICT',
+      details: {
+        reason: 'incomplete_practice_session_exists',
+      },
     });
   });
 });

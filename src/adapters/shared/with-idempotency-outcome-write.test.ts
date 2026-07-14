@@ -155,6 +155,39 @@ describe('withIdempotency outcome writes', () => {
     expect(logger.errorCalls).toHaveLength(0);
   });
 
+  it('returns the committed result after a stale-claim outcome failure when the owner asserts replay safety', async () => {
+    const staleClaimError = new ApplicationError(
+      'NOT_FOUND',
+      'Idempotency claim is no longer current',
+    );
+    class StaleClaimRepo extends FakeIdempotencyKeyRepository {
+      override async storeResult(): Promise<void> {
+        throw staleClaimError;
+      }
+    }
+
+    const now = () => new Date('2026-02-08T00:00:00.000Z');
+    const repo = new StaleClaimRepo(now);
+    const logger = new FakeLogger();
+    const committedResult = { feedbackId: crypto.randomUUID() };
+    const execute = vi.fn(async () => committedResult);
+
+    await expect(
+      withIdempotency({
+        repo,
+        userId: appUserId,
+        action: 'question-feedback:submitQuestionReport',
+        key: '15151515-1515-1515-1515-151515151516',
+        now,
+        logger,
+        outcomeStoreFailurePolicy: 'return-result',
+        execute,
+      }),
+    ).resolves.toEqual(committedResult);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(logger.errorCalls).toHaveLength(1);
+  });
+
   it('logs non-error storeResult failures and returns the committed result', async () => {
     class StoreResultFailingRepo extends FakeIdempotencyKeyRepository {
       override async storeResult(): Promise<void> {

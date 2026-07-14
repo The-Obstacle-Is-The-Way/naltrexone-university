@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationConflictReasons } from '@/src/application/errors';
 import { newQuestionRatingFeedback } from '@/src/domain/entities';
 import {
   createQuestionRatingFeedback,
@@ -103,6 +104,64 @@ describe('FakeQuestionFeedbackRepository', () => {
       ).resolves.toMatchObject({
         id: second.id,
         rating: 'not_helpful',
+      });
+    });
+
+    it('returns the original event when a request idempotency key is reused', async () => {
+      const ids = ['feedback-1', 'feedback-2'];
+      const repo = new FakeQuestionFeedbackRepository(
+        [],
+        () => new Date('2026-02-10T00:00:00.000Z'),
+        () => ids.shift() ?? 'feedback-fallback',
+      );
+      const firstEvent = newQuestionRatingFeedback({
+        userId: 'user-1',
+        questionId: 'question-1',
+        attemptId: null,
+        practiceSessionId: null,
+        rating: 'helpful',
+      });
+      const first = await repo.record(firstEvent, {
+        idempotencyKey: 'request-1',
+      });
+      const replay = await repo.record(firstEvent, {
+        idempotencyKey: 'request-1',
+      });
+
+      expect(replay).toEqual(first);
+      await expect(
+        repo.findLatestRatingByUser('user-1', 'question-1'),
+      ).resolves.toMatchObject({ id: 'feedback-1', rating: 'helpful' });
+    });
+
+    it('rejects a reused request idempotency key carrying a different payload', async () => {
+      const repo = new FakeQuestionFeedbackRepository(
+        [],
+        () => new Date('2026-02-10T00:00:00.000Z'),
+      );
+      const firstEvent = newQuestionRatingFeedback({
+        userId: 'user-1',
+        questionId: 'question-1',
+        attemptId: null,
+        practiceSessionId: null,
+        rating: 'helpful',
+      });
+      const changedReplay = newQuestionRatingFeedback({
+        ...firstEvent,
+        rating: 'not_helpful',
+      });
+
+      await repo.record(firstEvent, { idempotencyKey: 'request-1' });
+
+      // A changed intent under the old token must surface, not silently
+      // replay the original vote.
+      await expect(
+        repo.record(changedReplay, { idempotencyKey: 'request-1' }),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        details: {
+          reason: ApplicationConflictReasons.FeedbackRequestReused,
+        },
       });
     });
   });

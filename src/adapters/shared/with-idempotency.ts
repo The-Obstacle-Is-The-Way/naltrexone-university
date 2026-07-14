@@ -18,6 +18,12 @@ const DEFAULT_MAX_WAIT_MS = 2_000;
 const DEFAULT_POLL_INTERVAL_MS = 50;
 const ERROR_MESSAGE_LIMIT = 1000;
 
+/**
+ * Owner-selected handling after execute has succeeded but the cache outcome
+ * cannot be stored. `return-result` is an owner assertion that the business
+ * result remains authoritative and replay-safe even if the claim was fenced.
+ * Without that opt-in, stale-claim errors continue to propagate.
+ */
 export type IdempotencyOutcomeStoreFailurePolicy =
   | 'return-result'
   | 'cache-error-and-throw';
@@ -229,9 +235,12 @@ export async function withIdempotency<T>(input: {
           resultJson: result,
         });
       } catch (storeResultError) {
-        if (
+        const isStaleClaim =
           isApplicationError(storeResultError) &&
-          storeResultError.code === 'NOT_FOUND'
+          storeResultError.code === 'NOT_FOUND';
+        if (
+          isStaleClaim &&
+          input.outcomeStoreFailurePolicy !== 'return-result'
         ) {
           throw storeResultError;
         }
