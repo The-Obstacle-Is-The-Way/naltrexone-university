@@ -8,6 +8,12 @@
 
 ---
 
+## Resolution State
+
+Implemented on branch `fix/bug-297-checkout-cas-exhaustion-fallback`. The shared observation helper now throws `SubscriptionObservationAttemptsExhaustedError` only when all bounded version-CAS attempts are exhausted. The checkout-success display path discriminates that exact typed outcome, reads the current subscription row, and renders entitlement from that row; a missing fallback row rethrows the typed error. Generic `CONFLICT` errors, including the user-changed-during-refresh outcome, continue to propagate unchanged. The Stripe webhook controller and its per-attempt retrieval path are untouched.
+
+TDD coverage was added before implementation at the helper boundary (typed exhaustion shape plus a same-code/same-message wrong-shape control) and checkout-success boundary (all attempts lose to concurrent writes but the current active row renders the paid-success state; the user-changed conflict still throws). Existing webhook CAS tests remain regression coverage for the unchanged path. This document remains **Status: Open** until wave-close archival with production proof.
+
 ## Summary
 
 The BUG-287 fix (PR #635) gave every Stripe-refresh writer a bounded observation-version CAS: [`persist-subscription-observation.ts#L69-L74`](../../src/application/shared/persist-subscription-observation.ts#L69-L74) throws `ApplicationError('CONFLICT', 'Subscription observation version conflicted after 3 attempts')` when three consecutive read-version → Stripe-retrieve → persist attempts each lose to a concurrent writer. On the checkout-success page, nothing catches that throw: `syncCheckoutSuccess` calls the loop bare ([`checkout-success-sync.tsx#L258`](<../../app/(marketing)/checkout/success/checkout-success-sync.tsx#L258>)), the page awaits it bare ([`page.tsx#L43`](<../../app/(marketing)/checkout/success/page.tsx#L43>)), and the exhaustion lands in the route error boundary ([`error.tsx`](<../../app/(marketing)/checkout/success/error.tsx>)) — a paying user sees "Checkout error" moments after a successful payment, even though their subscription row is fully correct (written by the webhooks that out-raced the page).

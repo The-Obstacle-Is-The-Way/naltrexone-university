@@ -182,6 +182,24 @@ export function isSubscriptionUserMissingError(
   return error instanceof SubscriptionUserMissingError;
 }
 
+export class SubscriptionObservationAttemptsExhaustedError extends ApplicationError {
+  readonly reason = 'version_conflict_attempts_exhausted' as const;
+
+  constructor(public readonly attempts: number) {
+    super(
+      'CONFLICT',
+      `Subscription observation version conflicted after ${attempts} attempts`,
+    );
+    this.name = 'SubscriptionObservationAttemptsExhaustedError';
+  }
+}
+
+export function isSubscriptionObservationAttemptsExhaustedError(
+  error: unknown,
+): error is SubscriptionObservationAttemptsExhaustedError {
+  return error instanceof SubscriptionObservationAttemptsExhaustedError;
+}
+
 export function practiceSessionAlreadyEndedError(options?: {
   cause?: unknown;
 }): ApplicationError {
