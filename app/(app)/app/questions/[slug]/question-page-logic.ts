@@ -3,7 +3,15 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/shared/error-message-helpers';
+import {
+  mintRequestKey,
+  resolveRequestKey,
+} from '@/app/(app)/app/shared/idempotency-request-key';
 import type { AsyncLoadState } from '@/app/(app)/app/shared/load-state';
+import {
+  type SubmitAnswerRequestToken,
+  submitAnswerRequestFingerprint,
+} from '@/app/(app)/app/shared/submit-answer-request-key';
 import {
   STANDARD_MUTATION_TIMEOUT_MS,
   STANDARD_READ_TIMEOUT_MS,
@@ -114,12 +122,11 @@ export async function loadQuestion(input: {
   getQuestionBySlugFn: (
     input: unknown,
   ) => Promise<ActionResult<GetQuestionBySlugOutput>>;
-  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  setSubmitIdempotencyKey: (key: string | null) => void;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
   setSessionUnansweredReveal?:
@@ -134,7 +141,7 @@ export async function loadQuestion(input: {
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
-  input.setSubmitIdempotencyKey(null);
+  input.setSubmitRequestToken(null);
   input.setQuestionLoadedAt(null);
   input.setSessionUnansweredReveal?.(null);
 
@@ -171,7 +178,7 @@ export async function loadQuestion(input: {
 
   input.setQuestion(res.data);
   input.setQuestionLoadedAt(input.nowMs());
-  input.setSubmitIdempotencyKey(input.createIdempotencyKey());
+  input.setSubmitRequestToken(null);
   input.setLoadState({ status: 'ready' });
 }
 
@@ -181,12 +188,11 @@ export function createLoadQuestionAction(input: {
   getQuestionBySlugFn: (
     input: unknown,
   ) => Promise<ActionResult<GetQuestionBySlugOutput>>;
-  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  setSubmitIdempotencyKey: (key: string | null) => void;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: GetQuestionBySlugOutput | null) => void;
   setSessionUnansweredReveal?:
@@ -208,14 +214,15 @@ export async function submitSelectedAnswer(input: {
   mode?: QuestionMode | null | undefined;
   sessionId?: string | undefined;
   questionLoadedAtMs: number | null;
-  submitIdempotencyKey: string | null;
+  submitRequestToken: SubmitAnswerRequestToken | null;
+  createIdempotencyKey: () => string;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   retryProvenance?: RetryProvenance | null | undefined;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
-  rotateIdempotencyKey?: (() => void) | undefined;
   isMounted?: (() => boolean) | undefined;
   isStale?: (() => boolean) | undefined;
 }): Promise<void> {
@@ -237,6 +244,18 @@ export async function submitSelectedAnswer(input: {
           ),
         );
 
+  const fingerprint = submitAnswerRequestFingerprint({
+    questionId: input.question.questionId,
+    selectedChoiceId: input.selectedChoiceId,
+    retryProvenance: input.retryProvenance ?? null,
+  });
+  const requestIdempotencyKey = resolveRequestKey(
+    input.submitRequestToken,
+    fingerprint,
+    input.createIdempotencyKey,
+    input.setSubmitRequestToken,
+  );
+
   let res: ActionResult<SubmitAnswerOutput>;
   const submitInput: {
     questionId: string;
@@ -250,8 +269,8 @@ export async function submitSelectedAnswer(input: {
     questionId: input.question.questionId,
     choiceId: input.selectedChoiceId,
     timeSpentSeconds,
-    ...(input.submitIdempotencyKey !== null
-      ? { idempotencyKey: input.submitIdempotencyKey }
+    ...(requestIdempotencyKey !== undefined
+      ? { idempotencyKey: requestIdempotencyKey }
       : {}),
   };
 
@@ -289,7 +308,13 @@ export async function submitSelectedAnswer(input: {
     rotateIdempotencyKeyAfterDeterminateError(
       IdempotentActionNames.SubmitAnswer,
       res.error,
-      input.rotateIdempotencyKey,
+      () => {
+        mintRequestKey(
+          input.createIdempotencyKey,
+          fingerprint,
+          input.setSubmitRequestToken,
+        );
+      },
     );
     input.setLoadState({
       status: 'error',
@@ -298,6 +323,7 @@ export async function submitSelectedAnswer(input: {
     return;
   }
 
+  input.setSubmitRequestToken(null);
   input.setSubmitResult(res.data);
   input.onSuccess?.(res.data);
   input.setLoadState({ status: 'ready' });
@@ -310,14 +336,15 @@ export function createSubmitSelectedAnswerAction(input: {
   mode?: QuestionMode | null | undefined;
   sessionId?: string | undefined;
   questionLoadedAtMs: number | null;
-  submitIdempotencyKey: string | null;
+  submitRequestToken: SubmitAnswerRequestToken | null;
+  createIdempotencyKey: () => string;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   retryProvenance?: RetryProvenance | null | undefined;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
-  rotateIdempotencyKey?: (() => void) | undefined;
   onUnhandledError?: ((error: unknown) => void) | undefined;
   isMounted?: (() => boolean) | undefined;
   isStale?: (() => boolean) | undefined;
@@ -331,11 +358,10 @@ export function createSubmitSelectedAnswerAction(input: {
 }
 
 export function reattemptQuestion(input: {
-  createIdempotencyKey: () => string;
   nowMs: () => number;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  setSubmitIdempotencyKey: (key: string | null) => void;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number) => void;
   setSessionUnansweredReveal?:
     | ((reveal: SessionUnansweredReveal | null) => void)
@@ -343,7 +369,7 @@ export function reattemptQuestion(input: {
 }): void {
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
-  input.setSubmitIdempotencyKey(input.createIdempotencyKey());
+  input.setSubmitRequestToken(null);
   input.setQuestionLoadedAt(input.nowMs());
   input.setSessionUnansweredReveal?.(null);
 }

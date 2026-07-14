@@ -12,6 +12,14 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/shared/error-message-helpers';
 import {
+  mintRequestKey,
+  resolveRequestKey,
+} from '@/app/(app)/app/shared/idempotency-request-key';
+import {
+  type SubmitAnswerRequestToken,
+  submitAnswerRequestFingerprint,
+} from '@/app/(app)/app/shared/submit-answer-request-key';
+import {
   STANDARD_MUTATION_TIMEOUT_MS,
   STANDARD_READ_TIMEOUT_MS,
 } from '@/app/(app)/app/shared/timeout-tiers';
@@ -62,12 +70,11 @@ export async function loadNextQuestion(input: {
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
-  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  setSubmitIdempotencyKey: (key: string | null) => void;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
@@ -88,12 +95,11 @@ export async function loadNextQuestion(input: {
         : {}),
     },
     getQuestionFn: input.getNextQuestionFn,
-    createIdempotencyKey: input.createIdempotencyKey,
     nowMs: input.nowMs,
     setLoadState: input.setLoadState,
     setSelectedChoiceId: input.setSelectedChoiceId,
     setSubmitResult: input.setSubmitResult,
-    setSubmitIdempotencyKey: input.setSubmitIdempotencyKey,
+    setSubmitRequestToken: input.setSubmitRequestToken,
     setQuestionLoadedAt: input.setQuestionLoadedAt,
     setQuestion: input.setQuestion,
     onLoaded: (question) => {
@@ -115,12 +121,11 @@ export function createLoadNextQuestionAction(input: {
   getNextQuestionFn: (
     input: unknown,
   ) => Promise<ActionResult<NextQuestion | null>>;
-  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
-  setSubmitIdempotencyKey: (key: string | null) => void;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: NextQuestion | null) => void;
   setSessionInfo: (info: NextQuestion['session']) => void;
@@ -144,23 +149,38 @@ export async function submitAnswerForQuestion(input: {
   question: NextQuestion | null;
   selectedChoiceId: string | null;
   questionLoadedAtMs: number | null;
-  submitIdempotencyKey: string | null;
+  submitRequestToken: SubmitAnswerRequestToken | null;
+  createIdempotencyKey: () => string;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   submitAnswerFn: (input: unknown) => Promise<ActionResult<SubmitAnswerOutput>>;
   nowMs: () => number;
   setLoadState: (state: LoadState) => void;
   setSubmitResult: (result: SubmitAnswerOutput | null) => void;
   onSuccess?: ((result: SubmitAnswerOutput) => void) | undefined;
-  rotateIdempotencyKey?: (() => void) | undefined;
   recoverEndedSessionConflict?: EndedSessionConflictRecovery | undefined;
   createRequestSequenceId?: (() => number) | undefined;
   isLatestRequest?: ((requestId: number) => boolean) | undefined;
   isMounted?: (() => boolean) | undefined;
 }): Promise<void> {
+  if (!input.question || !input.selectedChoiceId) return;
+
+  const fingerprint = submitAnswerRequestFingerprint({
+    questionId: input.question.questionId,
+    selectedChoiceId: input.selectedChoiceId,
+    sessionId: input.sessionId,
+  });
+  const requestIdempotencyKey = resolveRequestKey(
+    input.submitRequestToken,
+    fingerprint,
+    input.createIdempotencyKey,
+    input.setSubmitRequestToken,
+  );
+
   return runSubmitAnswerFlow({
     question: input.question,
     selectedChoiceId: input.selectedChoiceId,
     questionLoadedAtMs: input.questionLoadedAtMs,
-    submitIdempotencyKey: input.submitIdempotencyKey,
+    submitIdempotencyKey: requestIdempotencyKey ?? null,
     submitAnswerFn: input.submitAnswerFn,
     buildSubmitInput: ({
       question,
@@ -177,8 +197,17 @@ export async function submitAnswerForQuestion(input: {
     nowMs: input.nowMs,
     setLoadState: input.setLoadState,
     setSubmitResult: input.setSubmitResult,
-    onSuccess: input.onSuccess,
-    rotateIdempotencyKey: input.rotateIdempotencyKey,
+    onSuccess: (result) => {
+      input.setSubmitRequestToken(null);
+      input.onSuccess?.(result);
+    },
+    rotateIdempotencyKey: () => {
+      mintRequestKey(
+        input.createIdempotencyKey,
+        fingerprint,
+        input.setSubmitRequestToken,
+      );
+    },
     recoverEndedSessionConflict: input.recoverEndedSessionConflict,
     createRequestSequenceId: input.createRequestSequenceId,
     isLatestRequest: input.isLatestRequest,

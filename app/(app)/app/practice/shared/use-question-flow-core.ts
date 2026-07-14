@@ -13,6 +13,7 @@ import {
   type LoadState,
 } from '@/app/(app)/app/practice/practice-page-logic';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
+import type { SubmitAnswerRequestToken } from '@/app/(app)/app/shared/submit-answer-request-key';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
 
@@ -46,8 +47,8 @@ export type UseQuestionFlowCoreOutput = {
   startTransition: (fn: () => void) => void;
   questionLoadedAt: number | null;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
-  submitIdempotencyKey: string | null;
-  setSubmitIdempotencyKey: (key: string | null) => void;
+  submitRequestToken: SubmitAnswerRequestToken | null;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   createIdempotencyKey: () => string;
   createRequestSequenceId: () => number;
   isLatestRequest: (requestId: number) => boolean;
@@ -77,9 +78,8 @@ export function useQuestionFlowCore(
   });
   const [isPending, startTransition] = useTransition();
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
-  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
-    string | null
-  >(null);
+  const [submitRequestToken, setSubmitRequestToken] =
+    useState<SubmitAnswerRequestToken | null>(null);
   const latestQuestionRequestId = useRef(0);
   const isMountedFnRef = useRef(input.isMounted);
 
@@ -278,8 +278,8 @@ export function useQuestionFlowCore(
     startTransition,
     questionLoadedAt,
     setQuestionLoadedAt,
-    submitIdempotencyKey,
-    setSubmitIdempotencyKey,
+    submitRequestToken,
+    setSubmitRequestToken,
     createIdempotencyKey,
     createRequestSequenceId,
     isLatestRequest,

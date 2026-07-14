@@ -16,6 +16,11 @@ import {
   getActionResultErrorMessage,
   getThrownErrorMessage,
 } from '@/app/(app)/app/shared/error-message-helpers';
+import {
+  createRequestFingerprint,
+  type FingerprintBoundIdempotencyKey,
+  resolveRequestKey,
+} from '@/app/(app)/app/shared/idempotency-request-key';
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { useNotification } from '@/components/ui/notification-provider';
 import {
@@ -33,6 +38,18 @@ import type { NextQuestion } from '@/src/application/use-cases/get-next-question
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 
 const MARK_FOR_REVIEW_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
+
+export function markForReviewRequestFingerprint(input: {
+  sessionId: string;
+  questionId: string;
+  markedForReview: boolean;
+}): string {
+  return createRequestFingerprint([
+    input.sessionId,
+    input.questionId,
+    input.markedForReview,
+  ]);
+}
 
 export type SetPracticeSessionQuestionMarkFn = (input: {
   sessionId: string;
@@ -71,7 +88,9 @@ export function usePracticeSessionMarkForReview(
   const [isMarkingForReview, setIsMarkingForReview] = useState(false);
   const { notify } = useNotification();
   const isMarkingRef = useRef(false);
-  const markRequestIdempotencyKeyRef = useRef<string | null>(null);
+  const markRequestTokenRef = useRef<FingerprintBoundIdempotencyKey | null>(
+    null,
+  );
   const currentQuestionIdRef = useRef<string | null>(null);
   currentQuestionIdRef.current = input.question?.questionId ?? null;
 
@@ -83,15 +102,23 @@ export function usePracticeSessionMarkForReview(
 
     const requestQuestionId = input.question.questionId;
     const markedForReview = !input.sessionInfo.isMarkedForReview;
+    const fingerprint = markForReviewRequestFingerprint({
+      sessionId: input.sessionId,
+      questionId: requestQuestionId,
+      markedForReview,
+    });
     isMarkingRef.current = true;
     setIsMarkingForReview(true);
 
     let res: Awaited<ReturnType<SetPracticeSessionQuestionMarkFn>>;
-    if (!markRequestIdempotencyKeyRef.current) {
-      markRequestIdempotencyKeyRef.current = crypto.randomUUID();
-    }
-
-    const requestIdempotencyKey = markRequestIdempotencyKeyRef.current;
+    const requestIdempotencyKey = resolveRequestKey(
+      markRequestTokenRef.current,
+      fingerprint,
+      () => crypto.randomUUID(),
+      (token) => {
+        markRequestTokenRef.current = token;
+      },
+    );
 
     try {
       res = await withTimeout(
@@ -99,7 +126,9 @@ export function usePracticeSessionMarkForReview(
           sessionId: input.sessionId,
           questionId: input.question.questionId,
           markedForReview,
-          idempotencyKey: requestIdempotencyKey,
+          ...(requestIdempotencyKey
+            ? { idempotencyKey: requestIdempotencyKey }
+            : {}),
         }),
         MARK_FOR_REVIEW_TIMEOUT_MS,
       );
@@ -126,7 +155,7 @@ export function usePracticeSessionMarkForReview(
         IdempotentActionNames.QuestionMark,
         res.error,
         () => {
-          markRequestIdempotencyKeyRef.current = null;
+          markRequestTokenRef.current = null;
         },
       );
       const reason = getActionResultPracticeSessionConflictReason(res);
@@ -180,7 +209,7 @@ export function usePracticeSessionMarkForReview(
       };
     });
 
-    markRequestIdempotencyKeyRef.current = null;
+    markRequestTokenRef.current = null;
     isMarkingRef.current = false;
     setIsMarkingForReview(false);
   }, [

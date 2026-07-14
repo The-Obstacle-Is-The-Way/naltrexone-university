@@ -6,10 +6,19 @@ import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
 import { NotificationProvider } from '@/components/ui/notification-provider';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
+  IdempotentActionNames,
+  shouldCacheQuestionMarkError,
+} from '@/src/adapters/controllers/shared/idempotency-error-policy';
+import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
+import {
   PracticeSessionConflictMessages,
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
+import {
+  FakeIdempotencyKeyRepository,
+  FakeLogger,
+} from '@/src/application/test-helpers/fakes';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { GetPracticeSessionReviewOutput } from '@/src/application/use-cases/get-practice-session-review';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
@@ -326,5 +335,146 @@ describe('usePracticeSessionMarkForReview (browser)', () => {
       .element(screen.getByRole('button', { name: 'Mark for review' }))
       .toHaveAttribute('aria-pressed', 'false');
     await expect.element(screen.getByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('executes a changed desired mark state under a fresh key after a lost response', async () => {
+    const repo = new FakeIdempotencyKeyRepository();
+    const logger = new FakeLogger();
+    const executions: Array<{
+      idempotencyKey: string;
+      markedForReview: boolean;
+    }> = [];
+    let loseResponse = true;
+    const setPracticeSessionQuestionMarkFn: SetPracticeSessionQuestionMarkFn =
+      async (request) => {
+        const result = await withIdempotency({
+          repo,
+          logger,
+          userId: 'user-1',
+          action: IdempotentActionNames.QuestionMark,
+          key: request.idempotencyKey ?? 'missing-key',
+          now: () => new Date(),
+          shouldCacheError: shouldCacheQuestionMarkError,
+          execute: async () => {
+            executions.push({
+              idempotencyKey: request.idempotencyKey ?? 'missing-key',
+              markedForReview: request.markedForReview,
+            });
+            return {
+              questionId: request.questionId,
+              markedForReview: request.markedForReview,
+            };
+          },
+        });
+
+        if (loseResponse) {
+          loseResponse = false;
+          throw new Error('response lost after commit');
+        }
+        return ok(result);
+      };
+
+    const harness = await renderHook(
+      (props: { markedForReview: boolean } = { markedForReview: false }) =>
+        usePracticeSessionMarkForReview({
+          question: createNextQuestion({
+            questionId: fixtureQuestion1Id,
+            slug: 'question-1',
+          }),
+          sessionMode: 'exam',
+          sessionInfo: {
+            sessionId: fixtureSession1Id,
+            mode: 'exam',
+            deadlineAt: '2099-05-22T12:02:24.000Z',
+            index: 0,
+            total: 10,
+            isMarkedForReview: props.markedForReview,
+          },
+          sessionId: fixtureSession1Id,
+          applySessionInfo: vi.fn(),
+          setLoadState: vi.fn(),
+          setReview: vi.fn(),
+          isMounted: () => true,
+          setPracticeSessionQuestionMarkFn,
+        }),
+      { initialProps: { markedForReview: false } },
+    );
+
+    await harness.result.current.onToggleMarkForReview();
+    await harness.rerender({ markedForReview: true });
+    await harness.result.current.onToggleMarkForReview();
+
+    expect(executions).toHaveLength(2);
+    expect(executions.map((request) => request.markedForReview)).toEqual([
+      true,
+      false,
+    ]);
+    expect(executions[1]?.idempotencyKey).not.toBe(
+      executions[0]?.idempotencyKey,
+    );
+  });
+
+  it('replays the same mark intent and retires its key after the outcome is consumed', async () => {
+    const repo = new FakeIdempotencyKeyRepository();
+    const logger = new FakeLogger();
+    const executionKeys: string[] = [];
+    let loseResponse = true;
+    const setPracticeSessionQuestionMarkFn: SetPracticeSessionQuestionMarkFn =
+      async (request) => {
+        const result = await withIdempotency({
+          repo,
+          logger,
+          userId: 'user-1',
+          action: IdempotentActionNames.QuestionMark,
+          key: request.idempotencyKey ?? 'missing-key',
+          now: () => new Date(),
+          shouldCacheError: shouldCacheQuestionMarkError,
+          execute: async () => {
+            executionKeys.push(request.idempotencyKey ?? 'missing-key');
+            return {
+              questionId: request.questionId,
+              markedForReview: request.markedForReview,
+            };
+          },
+        });
+
+        if (loseResponse) {
+          loseResponse = false;
+          throw new Error('response lost after commit');
+        }
+        return ok(result);
+      };
+
+    const harness = await renderHook(() =>
+      usePracticeSessionMarkForReview({
+        question: createNextQuestion({
+          questionId: fixtureQuestion1Id,
+          slug: 'question-1',
+        }),
+        sessionMode: 'exam',
+        sessionInfo: {
+          sessionId: fixtureSession1Id,
+          mode: 'exam',
+          deadlineAt: '2099-05-22T12:02:24.000Z',
+          index: 0,
+          total: 10,
+          isMarkedForReview: false,
+        },
+        sessionId: fixtureSession1Id,
+        applySessionInfo: vi.fn(),
+        setLoadState: vi.fn(),
+        setReview: vi.fn(),
+        isMounted: () => true,
+        setPracticeSessionQuestionMarkFn,
+      }),
+    );
+
+    await harness.result.current.onToggleMarkForReview();
+    await harness.result.current.onToggleMarkForReview();
+    expect(executionKeys).toHaveLength(1);
+
+    await harness.result.current.onToggleMarkForReview();
+    expect(executionKeys).toHaveLength(2);
+    expect(executionKeys[1]).not.toBe(executionKeys[0]);
   });
 });

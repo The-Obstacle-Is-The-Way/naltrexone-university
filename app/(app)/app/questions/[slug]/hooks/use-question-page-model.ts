@@ -16,6 +16,7 @@ import {
   type SessionUnansweredReveal,
 } from '@/app/(app)/app/questions/[slug]/question-page-logic';
 import { selectChoiceIfAllowed } from '@/app/(app)/app/shared/question-guards';
+import type { SubmitAnswerRequestToken } from '@/app/(app)/app/shared/submit-answer-request-key';
 import { reportClientError } from '@/lib/report-client-error';
 import type { QuestionMode, QuestionOrigin } from '@/lib/routes';
 import { useIsMounted } from '@/lib/use-is-mounted';
@@ -97,9 +98,8 @@ export function useQuestionPageModel(
   const [sessionUnansweredReveal, setSessionUnansweredReveal] =
     useState<SessionUnansweredReveal | null>(null);
   const [questionLoadedAt, setQuestionLoadedAt] = useState<number | null>(null);
-  const [submitIdempotencyKey, setSubmitIdempotencyKey] = useState<
-    string | null
-  >(null);
+  const [submitRequestToken, setSubmitRequestToken] =
+    useState<SubmitAnswerRequestToken | null>(null);
   const [loadState, setLoadState] = useState<LoadState>({
     status: 'loading',
   });
@@ -109,6 +109,10 @@ export function useQuestionPageModel(
   latestSlugRef.current = input.slug;
   const latestLoadQuestionRequestId = useRef(0);
   const latestSubmitRequestId = useRef(0);
+  const submitInFlightRef = useRef<{
+    requestId: number;
+    slug: string;
+  } | null>(null);
   const pendingRetryProvenanceRef = useRef<RetryProvenance | null>(null);
   const normalizedReviewIds = useMemo(
     () =>
@@ -133,12 +137,11 @@ export function useQuestionPageModel(
         slug: input.slug,
         startTransition,
         getQuestionBySlugFn: getQuestionBySlug,
-        createIdempotencyKey: () => crypto.randomUUID(),
         nowMs: Date.now,
         setLoadState,
         setSelectedChoiceId,
         setSubmitResult,
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setQuestion,
         setSessionUnansweredReveal,
@@ -245,10 +248,13 @@ export function useQuestionPageModel(
 
   const onSubmit = useMemo(
     () => () => {
+      if (submitInFlightRef.current?.slug === input.slug) return;
+
       latestSubmitRequestId.current += 1;
       const requestId = latestSubmitRequestId.current;
       const requestSlug = input.slug;
       const retryProvenance = pendingRetryProvenanceRef.current;
+      submitInFlightRef.current = { requestId, slug: requestSlug };
 
       const runSubmit = createSubmitSelectedAnswerAction({
         startTransition,
@@ -257,14 +263,14 @@ export function useQuestionPageModel(
         mode: input.mode,
         sessionId: normalizedSessionId,
         questionLoadedAtMs: questionLoadedAt,
-        submitIdempotencyKey,
+        submitRequestToken,
+        createIdempotencyKey: () => crypto.randomUUID(),
+        setSubmitRequestToken,
         retryProvenance,
         submitAnswerFn: submitAnswer,
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
-        rotateIdempotencyKey: () =>
-          setSubmitIdempotencyKey(crypto.randomUUID()),
         onSuccess: () => {
           if (
             retryProvenance?.retryOrigin === 'session_review' &&
@@ -287,14 +293,18 @@ export function useQuestionPageModel(
           latestSlugRef.current !== requestSlug,
       });
 
-      void runSubmit();
+      void runSubmit().finally(() => {
+        if (submitInFlightRef.current?.requestId === requestId) {
+          submitInFlightRef.current = null;
+        }
+      });
     },
     [
       input.slug,
       question,
       questionLoadedAt,
       selectedChoiceId,
-      submitIdempotencyKey,
+      submitRequestToken,
       input.mode,
       normalizedSessionId,
       isMounted,
@@ -319,11 +329,10 @@ export function useQuestionPageModel(
       };
 
       reattemptQuestion({
-        createIdempotencyKey: () => crypto.randomUUID(),
         nowMs: Date.now,
         setSelectedChoiceId,
         setSubmitResult,
-        setSubmitIdempotencyKey,
+        setSubmitRequestToken,
         setQuestionLoadedAt,
         setSessionUnansweredReveal,
       });
@@ -344,7 +353,7 @@ export function useQuestionPageModel(
       setSelectedChoiceId(null);
       setSubmitResult(null);
       setSessionUnansweredReveal(null);
-      setSubmitIdempotencyKey(crypto.randomUUID());
+      setSubmitRequestToken(null);
       setQuestionLoadedAt(Date.now());
       resetReviewHydrationState();
     };

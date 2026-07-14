@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
-import { setBookmarkForQuestion } from './bookmark-toggle';
+import {
+  bookmarkRequestFingerprint,
+  setBookmarkForQuestion,
+} from './bookmark-toggle';
 
 const { fixtureQuestion1Id, fixtureChoice1Id } = vi.hoisted(() => ({
   fixtureQuestion1Id: crypto.randomUUID(),
@@ -27,30 +30,35 @@ function createFixtureNextQuestion(
 
 describe('bookmark-toggle', () => {
   describe('setBookmarkForQuestion', () => {
-    it('rotates the idempotency key after a successful set-bookmark request', async () => {
+    it('retires the idempotency key after a successful set-bookmark request', async () => {
       const setBookmarkStatus = vi.fn();
       const setBookmarkedQuestionIds = vi.fn();
       const onBookmarkToggled = vi.fn();
       const createIdempotencyKey = vi
         .fn<() => string>()
-        .mockReturnValueOnce('idem_1')
-        .mockReturnValueOnce('idem_2');
-      const setBookmarkIdempotencyKey = vi.fn();
+        .mockReturnValueOnce('idem_1');
+      const setBookmarkRequestToken = vi.fn();
 
       await setBookmarkForQuestion({
         question: createFixtureNextQuestion({ questionId: fixtureQuestion1Id }),
         desiredBookmarked: true,
         createIdempotencyKey,
-        setBookmarkIdempotencyKey,
+        setBookmarkRequestToken,
         setBookmarkFn: vi.fn(async () => ok({ bookmarked: true })),
         setBookmarkStatus,
         setBookmarkedQuestionIds,
         onBookmarkToggled,
       });
 
-      expect(createIdempotencyKey).toHaveBeenCalledTimes(2);
-      expect(setBookmarkIdempotencyKey).toHaveBeenNthCalledWith(1, 'idem_1');
-      expect(setBookmarkIdempotencyKey).toHaveBeenNthCalledWith(2, 'idem_2');
+      expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setBookmarkRequestToken).toHaveBeenNthCalledWith(1, {
+        key: 'idem_1',
+        fingerprint: bookmarkRequestFingerprint({
+          questionId: fixtureQuestion1Id,
+          desiredBookmarked: true,
+        }),
+      });
+      expect(setBookmarkRequestToken).toHaveBeenNthCalledWith(2, null);
       expect(setBookmarkStatus).toHaveBeenNthCalledWith(1, 'loading');
       expect(setBookmarkStatus).toHaveBeenNthCalledWith(2, 'idle');
       expect(setBookmarkedQuestionIds).toHaveBeenCalledTimes(1);
@@ -63,8 +71,8 @@ describe('bookmark-toggle', () => {
         .fn<() => string>()
         .mockReturnValueOnce('idem_1')
         .mockReturnValueOnce('idem_2');
-      const setBookmarkIdempotencyKey = vi.fn((key: string) => {
-        events.push(`persist:${key}`);
+      const setBookmarkRequestToken = vi.fn((token) => {
+        events.push(`persist:${token?.key ?? 'retired'}`);
       });
       const setBookmarkFn = vi.fn(async (input: unknown) => {
         events.push(
@@ -77,26 +85,30 @@ describe('bookmark-toggle', () => {
         question: createFixtureNextQuestion(),
         desiredBookmarked: true,
         createIdempotencyKey,
-        setBookmarkIdempotencyKey,
+        setBookmarkRequestToken,
         setBookmarkFn,
         setBookmarkStatus: vi.fn(),
         setBookmarkedQuestionIds: vi.fn(),
       });
 
       expect(events).toEqual(['persist:idem_1', 'request:idem_1']);
-      expect(setBookmarkIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setBookmarkRequestToken).toHaveBeenCalledTimes(1);
       expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
     });
 
     it('rotates the idempotency key after a determinate cached failure', async () => {
-      const setBookmarkIdempotencyKey = vi.fn();
+      const fingerprint = bookmarkRequestFingerprint({
+        questionId: fixtureQuestion1Id,
+        desiredBookmarked: true,
+      });
+      const setBookmarkRequestToken = vi.fn();
 
       await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
         desiredBookmarked: true,
-        bookmarkIdempotencyKey: 'idem_1',
+        bookmarkRequestToken: { key: 'idem_1', fingerprint },
         createIdempotencyKey: () => 'idem_2',
-        setBookmarkIdempotencyKey,
+        setBookmarkRequestToken,
         setBookmarkFn: vi.fn(async () =>
           err('NOT_FOUND', 'Question not found'),
         ),
@@ -104,18 +116,25 @@ describe('bookmark-toggle', () => {
         setBookmarkedQuestionIds: vi.fn(),
       });
 
-      expect(setBookmarkIdempotencyKey).toHaveBeenCalledWith('idem_2');
+      expect(setBookmarkRequestToken).toHaveBeenCalledWith({
+        key: 'idem_2',
+        fingerprint,
+      });
     });
 
     it('preserves the idempotency key after a thrown transport failure', async () => {
-      const setBookmarkIdempotencyKey = vi.fn();
+      const fingerprint = bookmarkRequestFingerprint({
+        questionId: fixtureQuestion1Id,
+        desiredBookmarked: true,
+      });
+      const setBookmarkRequestToken = vi.fn();
 
       await setBookmarkForQuestion({
         question: createFixtureNextQuestion(),
         desiredBookmarked: true,
-        bookmarkIdempotencyKey: 'idem_1',
+        bookmarkRequestToken: { key: 'idem_1', fingerprint },
         createIdempotencyKey: () => 'idem_2',
-        setBookmarkIdempotencyKey,
+        setBookmarkRequestToken,
         setBookmarkFn: vi.fn(async () => {
           throw new Error('Network down');
         }),
@@ -123,7 +142,7 @@ describe('bookmark-toggle', () => {
         setBookmarkedQuestionIds: vi.fn(),
       });
 
-      expect(setBookmarkIdempotencyKey).not.toHaveBeenCalled();
+      expect(setBookmarkRequestToken).not.toHaveBeenCalled();
     });
 
     it('reports an error state when the set-bookmark request returns a non-ok result', async () => {
@@ -152,7 +171,7 @@ describe('bookmark-toggle', () => {
 
     it('returns early when no question is available', async () => {
       const createIdempotencyKey = vi.fn<() => string>();
-      const setBookmarkIdempotencyKey = vi.fn();
+      const setBookmarkRequestToken = vi.fn();
       const setBookmarkFn = vi.fn();
       const setBookmarkStatus = vi.fn();
       const setBookmarkedQuestionIds = vi.fn();
@@ -161,14 +180,14 @@ describe('bookmark-toggle', () => {
         question: null,
         desiredBookmarked: true,
         createIdempotencyKey,
-        setBookmarkIdempotencyKey,
+        setBookmarkRequestToken,
         setBookmarkFn,
         setBookmarkStatus,
         setBookmarkedQuestionIds,
       });
 
       expect(createIdempotencyKey).not.toHaveBeenCalled();
-      expect(setBookmarkIdempotencyKey).not.toHaveBeenCalled();
+      expect(setBookmarkRequestToken).not.toHaveBeenCalled();
       expect(setBookmarkFn).not.toHaveBeenCalled();
       expect(setBookmarkStatus).not.toHaveBeenCalled();
       expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
@@ -180,15 +199,14 @@ describe('bookmark-toggle', () => {
       const onBookmarkToggled = vi.fn();
       const createIdempotencyKey = vi
         .fn<() => string>()
-        .mockReturnValueOnce('idem_1')
-        .mockReturnValueOnce('idem_2');
-      const setBookmarkIdempotencyKey = vi.fn();
+        .mockReturnValueOnce('idem_1');
+      const setBookmarkRequestToken = vi.fn();
 
       await setBookmarkForQuestion({
         question: createFixtureNextQuestion({ questionId: fixtureQuestion1Id }),
         desiredBookmarked: true,
         createIdempotencyKey,
-        setBookmarkIdempotencyKey,
+        setBookmarkRequestToken,
         setBookmarkFn: vi.fn(async () => ok({ bookmarked: true })),
         setBookmarkStatus,
         setBookmarkedQuestionIds,
@@ -200,8 +218,14 @@ describe('bookmark-toggle', () => {
       expect(setBookmarkStatus).toHaveBeenCalledWith('loading');
       expect(setBookmarkedQuestionIds).not.toHaveBeenCalled();
       expect(onBookmarkToggled).not.toHaveBeenCalled();
-      expect(setBookmarkIdempotencyKey).toHaveBeenCalledTimes(1);
-      expect(setBookmarkIdempotencyKey).toHaveBeenCalledWith('idem_1');
+      expect(setBookmarkRequestToken).toHaveBeenCalledTimes(1);
+      expect(setBookmarkRequestToken).toHaveBeenCalledWith({
+        key: 'idem_1',
+        fingerprint: bookmarkRequestFingerprint({
+          questionId: fixtureQuestion1Id,
+          desiredBookmarked: true,
+        }),
+      });
       expect(createIdempotencyKey).toHaveBeenCalledTimes(1);
     });
 

@@ -14,6 +14,12 @@ import type {
   QuestionFeedbackCategory,
   QuestionFeedbackRating,
 } from '@/src/domain/value-objects';
+import {
+  createRequestFingerprint,
+  type FingerprintBoundIdempotencyKey,
+  mintRequestKey,
+  resolveRequestKey,
+} from './idempotency-request-key';
 import { STANDARD_MUTATION_TIMEOUT_MS } from './timeout-tiers';
 
 const QUESTION_FEEDBACK_MUTATION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
@@ -26,16 +32,13 @@ const QUESTION_FEEDBACK_MUTATION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
  * request's fingerprint matches. The repository's typed reused-token conflict
  * remains as defense in depth for the fenced-claim arm.
  */
-export type FeedbackRequestToken = {
-  key: string;
-  fingerprint: string;
-};
+export type FeedbackRequestToken = FingerprintBoundIdempotencyKey;
 
 export function ratingRequestFingerprint(input: {
   question: FeedbackQuestionContext;
   rating: QuestionFeedbackRating | null;
 }): string {
-  return JSON.stringify([
+  return createRequestFingerprint([
     input.question.questionId,
     input.question.attemptId ?? null,
     input.question.practiceSessionId ?? null,
@@ -48,7 +51,7 @@ export function reportRequestFingerprint(input: {
   category: QuestionFeedbackCategory;
   comment: string | null;
 }): string {
-  return JSON.stringify([
+  return createRequestFingerprint([
     input.question.questionId,
     input.question.attemptId ?? null,
     input.question.practiceSessionId ?? null,
@@ -68,36 +71,6 @@ function isFeedbackRequestReusedConflict(error: {
     error.code === 'CONFLICT' &&
     error.details?.reason === ApplicationConflictReasons.FeedbackRequestReused
   );
-}
-
-// Reuses the preserved key only when it was minted for this exact request;
-// any intent change mints fresh so the wrapper cannot replay another
-// request's committed outcome.
-function resolveRequestKey(
-  preservedToken: FeedbackRequestToken | null | undefined,
-  fingerprint: string,
-  createIdempotencyKey: (() => string) | undefined,
-  setToken: ((token: FeedbackRequestToken) => void) | undefined,
-): string | undefined {
-  const preservedKey =
-    preservedToken?.fingerprint === fingerprint
-      ? preservedToken.key
-      : undefined;
-  const key = preservedKey ?? createIdempotencyKey?.();
-  if (!preservedKey && key) {
-    setToken?.({ key, fingerprint });
-  }
-  return key;
-}
-
-function mintRequestKey(
-  createIdempotencyKey: () => string,
-  fingerprint: string,
-  setToken: ((token: FeedbackRequestToken) => void) | undefined,
-): string {
-  const key = createIdempotencyKey();
-  setToken?.({ key, fingerprint });
-  return key;
 }
 
 export type FeedbackQuestionContext = {

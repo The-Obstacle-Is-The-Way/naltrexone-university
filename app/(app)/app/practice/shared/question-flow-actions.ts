@@ -3,6 +3,7 @@ import {
   getThrownErrorMessage,
 } from '@/app/(app)/app/shared/error-message-helpers';
 import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
+import type { SubmitAnswerRequestToken } from '@/app/(app)/app/shared/submit-answer-request-key';
 import {
   STANDARD_MUTATION_TIMEOUT_MS,
   STANDARD_READ_TIMEOUT_MS,
@@ -109,7 +110,6 @@ export function buildTimeSpentSeconds(
 export async function runLoadQuestionFlow<TQuestion>(input: {
   requestInput: unknown;
   getQuestionFn: (input: unknown) => Promise<ActionResult<TQuestion | null>>;
-  createIdempotencyKey: () => string;
   nowMs: () => number;
   setLoadState: (state: AsyncLoadStateWithIdle) => void;
   setSelectedChoiceId: (choiceId: string | null) => void;
@@ -117,7 +117,7 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
     result: SubmitAnswerOutput | null,
     questionId?: string | null,
   ) => void;
-  setSubmitIdempotencyKey: (key: string | null) => void;
+  setSubmitRequestToken: (token: SubmitAnswerRequestToken | null) => void;
   setQuestionLoadedAt: (loadedAtMs: number | null) => void;
   setQuestion: (question: TQuestion | null) => void;
   onLoaded?: ((question: TQuestion | null) => void) | undefined;
@@ -139,7 +139,7 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
   input.setLoadState({ status: 'loading' });
   input.setSelectedChoiceId(null);
   input.setSubmitResult(null);
-  input.setSubmitIdempotencyKey(null);
+  input.setSubmitRequestToken(null);
   input.setQuestionLoadedAt(null);
 
   let res: ActionResult<TQuestion | null>;
@@ -158,7 +158,7 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
     input.setQuestion(null);
     input.setSelectedChoiceId(null);
     input.setSubmitResult(null);
-    input.setSubmitIdempotencyKey(null);
+    input.setSubmitRequestToken(null);
     input.setQuestionLoadedAt(null);
     input.onLoaded?.(null);
     return;
@@ -180,7 +180,7 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
     input.setQuestion(null);
     input.setSelectedChoiceId(null);
     input.setSubmitResult(null);
-    input.setSubmitIdempotencyKey(null);
+    input.setSubmitRequestToken(null);
     input.setQuestionLoadedAt(null);
     input.onLoaded?.(null);
     return;
@@ -194,7 +194,7 @@ export async function runLoadQuestionFlow<TQuestion>(input: {
 
   input.setQuestion(res.data);
   input.setQuestionLoadedAt(res.data ? input.nowMs() : null);
-  input.setSubmitIdempotencyKey(res.data ? input.createIdempotencyKey() : null);
+  input.setSubmitRequestToken(null);
   input.onLoaded?.(res.data);
   input.setLoadState({ status: 'ready' });
 }

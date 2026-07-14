@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { setBookmarkForQuestion } from '@/app/(app)/app/shared/bookmark-toggle';
+import {
+  type BookmarkRequestToken,
+  setBookmarkForQuestion,
+} from '@/app/(app)/app/shared/bookmark-toggle';
 import {
   reportClientError,
   shouldReportClientError,
@@ -51,7 +54,9 @@ export function useQuestionPageBookmarks(
   });
   const latestBookmarkLookupRequestId = useRef(0);
   const bookmarkStateVersionRef = useRef(0);
-  const bookmarkIdempotencyKeysRef = useRef<Map<string, string>>(new Map());
+  const bookmarkRequestTokensRef = useRef<Map<string, BookmarkRequestToken>>(
+    new Map(),
+  );
   const isMountedRef = useRef(input.isMounted);
   isMountedRef.current = input.isMounted;
 
@@ -176,11 +181,15 @@ export function useQuestionPageBookmarks(
       void setBookmarkForQuestion({
         question: input.question,
         desiredBookmarked,
-        bookmarkIdempotencyKey:
-          bookmarkIdempotencyKeysRef.current.get(questionId) ?? null,
+        bookmarkRequestToken:
+          bookmarkRequestTokensRef.current.get(questionId) ?? null,
         createIdempotencyKey: () => crypto.randomUUID(),
-        setBookmarkIdempotencyKey: (key) => {
-          bookmarkIdempotencyKeysRef.current.set(questionId, key);
+        setBookmarkRequestToken: (token) => {
+          if (token) {
+            bookmarkRequestTokensRef.current.set(questionId, token);
+          } else {
+            bookmarkRequestTokensRef.current.delete(questionId);
+          }
         },
         setBookmarkFn: setBookmark,
         setBookmarkStatus: (status) => {
