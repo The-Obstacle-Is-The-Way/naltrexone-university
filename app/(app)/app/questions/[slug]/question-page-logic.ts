@@ -247,6 +247,7 @@ export async function submitSelectedAnswer(input: {
   const fingerprint = submitAnswerRequestFingerprint({
     questionId: input.question.questionId,
     selectedChoiceId: input.selectedChoiceId,
+    sessionId: input.sessionId ?? null,
     retryProvenance: input.retryProvenance ?? null,
   });
   const requestIdempotencyKey = resolveRequestKey(

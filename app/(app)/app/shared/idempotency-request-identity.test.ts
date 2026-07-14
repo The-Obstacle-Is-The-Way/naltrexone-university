@@ -175,12 +175,14 @@ function createPracticeSessionSurface(sessionId: string): SubmitSurface {
 
 function createStandaloneSurface(
   retryProvenance: RetryProvenance | null = null,
+  sessionId?: string,
 ): SubmitSurface {
   return async (input) => {
     let submitted: SubmitAnswerOutput | null = null;
     await submitSelectedAnswer({
       question: standaloneQuestion,
       selectedChoiceId: input.choiceId,
+      sessionId,
       questionLoadedAtMs: 0,
       submitRequestToken: input.tokenCell.current,
       retryProvenance,
@@ -333,6 +335,28 @@ describe('submit identity context', () => {
       retryOfAttemptId: retryProvenance.retryOfAttemptId,
       retryOrigin: retryProvenance.retryOrigin,
     });
+    expect(server.executions[1]?.idempotencyKey).not.toBe(oldKey);
+  });
+
+  it('binds a standalone submit key to the session context', async () => {
+    const server = createSubmitServer();
+    const tokenCell: TokenCell = { current: null };
+
+    await loseSubmitResponse(
+      createStandaloneSurface(null, sessionAId),
+      server,
+      tokenCell,
+      choiceAId,
+    );
+    const oldKey = tokenCell.current?.key;
+    await receiveSubmitResponse(
+      createStandaloneSurface(null, sessionBId),
+      server,
+      tokenCell,
+      choiceAId,
+    );
+
+    expect(server.executions).toHaveLength(2);
     expect(server.executions[1]?.idempotencyKey).not.toBe(oldKey);
   });
 });
