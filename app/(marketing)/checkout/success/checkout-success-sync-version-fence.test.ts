@@ -73,8 +73,10 @@ function currentSubscription(): Subscription {
 function createHarness(subscriptions: FakeSubscriptionRepository): {
   deps: CheckoutSuccessDeps;
   getSubscriptionRetrieveCount: () => number;
+  logger: FakeLogger;
 } {
   const stripeCustomers = new FakeStripeCustomerRepository();
+  const logger = new FakeLogger();
   let subscriptionRetrieveCount = 0;
   const deps: CheckoutSuccessDeps = {
     authGateway: new FakeAuthGateway(user),
@@ -85,7 +87,7 @@ function createHarness(subscriptions: FakeSubscriptionRepository): {
         throw new Error('Unexpected sign-in redirect');
       },
     }),
-    logger: new FakeLogger(),
+    logger,
     stripe: {
       checkout: {
         sessions: {
@@ -124,6 +126,7 @@ function createHarness(subscriptions: FakeSubscriptionRepository): {
   return {
     deps,
     getSubscriptionRetrieveCount: () => subscriptionRetrieveCount,
+    logger,
   };
 }
 
@@ -136,7 +139,8 @@ describe('syncCheckoutSuccess observation-version fence', () => {
         version: 7,
       },
     ]);
-    const { deps, getSubscriptionRetrieveCount } = createHarness(subscriptions);
+    const { deps, getSubscriptionRetrieveCount, logger } =
+      createHarness(subscriptions);
 
     const element = await runCheckoutSuccessPage(
       { searchParams: Promise.resolve({ session_id: 'cs_123' }) },
@@ -155,6 +159,16 @@ describe('syncCheckoutSuccess observation-version fence', () => {
     expect(subscriptions.inputs).toHaveLength(
       SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS,
     );
+    expect(logger.infoCalls).toEqual([
+      {
+        context: {
+          attempts: SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS,
+          reason: 'version_conflict_attempts_exhausted',
+          userId: user.id,
+        },
+        msg: 'Checkout success recovered entitlement from current row after CAS exhaustion',
+      },
+    ]);
   });
 
   it('propagates the user-changed-during-refresh conflict', async () => {
@@ -179,7 +193,7 @@ describe('syncCheckoutSuccess observation-version fence', () => {
 
   it('rethrows typed exhaustion when no current subscription row exists', async () => {
     const subscriptions = new AlwaysConflictingSubscriptionRepository();
-    const { deps } = createHarness(subscriptions);
+    const { deps, logger } = createHarness(subscriptions);
 
     await expect(
       syncCheckoutSuccess({ sessionId: 'cs_123' }, deps, () => {
@@ -191,5 +205,15 @@ describe('syncCheckoutSuccess observation-version fence', () => {
       reason: 'version_conflict_attempts_exhausted',
       attempts: SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS,
     });
+    expect(logger.errorCalls).toEqual([
+      {
+        context: {
+          attempts: SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS,
+          reason: 'version_conflict_attempts_exhausted',
+          userId: user.id,
+        },
+        msg: 'Checkout success CAS exhausted with no current subscription row',
+      },
+    ]);
   });
 });

@@ -300,13 +300,26 @@ export async function syncCheckoutSuccess(
       throw error;
     }
 
+    const logContext = {
+      attempts: error.attempts,
+      reason: error.reason,
+      userId: user.id,
+    };
     const current = await d.transaction(({ subscriptions }) =>
       subscriptions.findByUserId(user.id),
     );
     if (current === null) {
+      d.logger.error(
+        logContext,
+        'Checkout success CAS exhausted with no current subscription row',
+      );
       throw error;
     }
 
+    d.logger.info(
+      logContext,
+      'Checkout success recovered entitlement from current row after CAS exhaustion',
+    );
     effectiveSubscription = current;
   }
 
