@@ -4,6 +4,7 @@ import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-pri
 import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
+import { isSubscriptionObservationAttemptsExhaustedError } from '@/src/application/errors';
 import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
 import {
   determineNonEntitledReason,
@@ -39,6 +40,11 @@ type RetryLogInput = {
   maxAttempts: number;
   delayMs: number;
   error: unknown;
+};
+
+type EffectiveSubscription = {
+  status: SubscriptionStatus;
+  currentPeriodEnd: Date;
 };
 
 function createStripeOnRetry(
@@ -255,42 +261,70 @@ export async function syncCheckoutSuccess(
     };
   };
 
-  const { observation, write } = await persistSubscriptionObservation({
-    userId: user.id,
-    readVersion: (userId) =>
-      d.subscriptionVersions.findObservationVersionByUserId(userId),
-    retrieve: retrieveObservation,
-    getUserId: (subscription) => subscription.userId,
-    persist: (subscription, expectedVersion) =>
-      d.transaction(async ({ stripeCustomers, subscriptions }) => {
-        // Stripe webhook, checkout-success, and reconcile use advisory(user)
-        // -> stripe_subscriptions -> stripe_customers. User deletion is the
-        // fourth writer and takes the same advisory before its inverse cascade.
-        const result = await subscriptions.upsert({
-          userId: subscription.userId,
-          externalSubscriptionId: subscription.externalSubscriptionId,
-          plan: subscription.plan,
-          status: subscription.status,
-          currentPeriodEnd: subscription.currentPeriodEnd,
-          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-          expectedVersion,
-        });
-
-        if (result.persisted) {
-          await stripeCustomers.insert(user.id, stripeCustomerId, {
-            conflictStrategy: 'authoritative',
+  let effectiveSubscription: EffectiveSubscription;
+  try {
+    const { observation, write } = await persistSubscriptionObservation({
+      userId: user.id,
+      readVersion: (userId) =>
+        d.subscriptionVersions.findObservationVersionByUserId(userId),
+      retrieve: retrieveObservation,
+      getUserId: (subscription) => subscription.userId,
+      persist: (subscription, expectedVersion) =>
+        d.transaction(async ({ stripeCustomers, subscriptions }) => {
+          // Stripe webhook, checkout-success, and reconcile use advisory(user)
+          // -> stripe_subscriptions -> stripe_customers. User deletion is the
+          // fourth writer and takes the same advisory before its inverse cascade.
+          const result = await subscriptions.upsert({
+            userId: subscription.userId,
+            externalSubscriptionId: subscription.externalSubscriptionId,
+            plan: subscription.plan,
+            status: subscription.status,
+            currentPeriodEnd: subscription.currentPeriodEnd,
+            cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+            expectedVersion,
           });
-        }
 
-        return result;
-      }),
-  });
-  const { currentPeriodEnd, status } = observation;
+          if (result.persisted) {
+            await stripeCustomers.insert(user.id, stripeCustomerId, {
+              conflictStrategy: 'authoritative',
+            });
+          }
 
-  const effectiveStatus = write.persisted ? status : write.current.status;
-  const effectiveCurrentPeriodEnd = write.persisted
-    ? currentPeriodEnd
-    : write.current.currentPeriodEnd;
+          return result;
+        }),
+    });
+
+    effectiveSubscription = write.persisted ? observation : write.current;
+  } catch (error) {
+    if (!isSubscriptionObservationAttemptsExhaustedError(error)) {
+      throw error;
+    }
+
+    const logContext = {
+      attempts: error.attempts,
+      reason: error.reason,
+      userId: user.id,
+    };
+    const current = await d.transaction(({ subscriptions }) =>
+      subscriptions.findByUserId(user.id),
+    );
+    if (current === null) {
+      d.logger.error(
+        logContext,
+        'Checkout success CAS exhausted with no current subscription row',
+      );
+      throw error;
+    }
+
+    d.logger.info(
+      logContext,
+      'Checkout success recovered entitlement from current row after CAS exhaustion',
+    );
+    effectiveSubscription = current;
+  }
+
+  const effectiveStatus = effectiveSubscription.status;
+  const effectiveCurrentPeriodEnd = effectiveSubscription.currentPeriodEnd;
   const hasActiveSubscriptionPeriod =
     effectiveCurrentPeriodEnd.getTime() > Date.now();
   const isEntitled =
