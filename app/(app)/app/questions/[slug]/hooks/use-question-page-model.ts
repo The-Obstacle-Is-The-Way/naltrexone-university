@@ -263,6 +263,8 @@ export function useQuestionPageModel(
         nowMs: Date.now,
         setLoadState,
         setSubmitResult,
+        rotateIdempotencyKey: () =>
+          setSubmitIdempotencyKey(crypto.randomUUID()),
         onSuccess: () => {
           if (
             retryProvenance?.retryOrigin === 'session_review' &&

@@ -77,6 +77,128 @@ describe('DrizzleQuestionFeedbackRepository', () => {
     });
   });
 
+  it('deduplicates ambiguous rating replay by request idempotency key', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-feedback-idempotency-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const repo = new DrizzleQuestionFeedbackRepository(db);
+    const request = { idempotencyKey: randomUUID() };
+    const rating = newQuestionRatingFeedback({
+      userId: user.id,
+      questionId: question.id,
+      attemptId: null,
+      practiceSessionId: null,
+      rating: 'helpful',
+    });
+
+    const first = await repo.record(rating, request);
+    const replay = await repo.record(rating, request);
+
+    expect(replay).toEqual(first);
+    const rows = await db
+      .select({ id: schema.questionFeedback.id })
+      .from(schema.questionFeedback)
+      .where(eq(schema.questionFeedback.userId, user.id));
+    expect(rows).toEqual([{ id: first.id }]);
+  });
+
+  it('rejects a reused rating token carrying a changed payload', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-feedback-reused-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const repo = new DrizzleQuestionFeedbackRepository(db);
+    const request = { idempotencyKey: randomUUID() };
+
+    await repo.record(
+      newQuestionRatingFeedback({
+        userId: user.id,
+        questionId: question.id,
+        attemptId: null,
+        practiceSessionId: null,
+        rating: 'helpful',
+      }),
+      request,
+    );
+
+    // A changed vote under the retained token must surface a typed conflict
+    // instead of silently replaying the original committed rating.
+    await expect(
+      repo.record(
+        newQuestionRatingFeedback({
+          userId: user.id,
+          questionId: question.id,
+          attemptId: null,
+          practiceSessionId: null,
+          rating: 'not_helpful',
+        }),
+        request,
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { reason: 'feedback_request_token_reused' },
+    });
+  });
+
+  it('deduplicates report replays per token and keeps kinds and tokens independent', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-feedback-kinds-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const repo = new DrizzleQuestionFeedbackRepository(db);
+    const sharedToken = randomUUID();
+    const report = newQuestionReportFeedback({
+      userId: user.id,
+      questionId: question.id,
+      attemptId: null,
+      practiceSessionId: null,
+      category: 'incorrect_answer',
+      comment: 'The keyed answer appears wrong.',
+    });
+
+    // Same token, same report payload: one row, original returned.
+    const firstReport = await repo.record(report, {
+      idempotencyKey: sharedToken,
+    });
+    const reportReplay = await repo.record(report, {
+      idempotencyKey: sharedToken,
+    });
+    expect(reportReplay).toEqual(firstReport);
+
+    // Same token, different kind: the (user_id, kind, idempotency_key) index
+    // scopes dedupe per kind, so a rating under the same token is a new row.
+    const crossKindRating = await repo.record(
+      newQuestionRatingFeedback({
+        userId: user.id,
+        questionId: question.id,
+        attemptId: null,
+        practiceSessionId: null,
+        rating: 'helpful',
+      }),
+      { idempotencyKey: sharedToken },
+    );
+    expect(crossKindRating.id).not.toBe(firstReport.id);
+
+    // Distinct tokens: a second report persists as its own row.
+    const secondReport = await repo.record(report, {
+      idempotencyKey: randomUUID(),
+    });
+    expect(secondReport.id).not.toBe(firstReport.id);
+
+    const rows = await db
+      .select({ id: schema.questionFeedback.id })
+      .from(schema.questionFeedback)
+      .where(eq(schema.questionFeedback.userId, user.id));
+    expect(rows).toHaveLength(3);
+  });
+
   it('returns latest rating by createdAt and id descending while ignoring reports', async () => {
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {

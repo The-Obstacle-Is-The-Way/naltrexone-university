@@ -1,4 +1,7 @@
-import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
+import {
+  getPostgresErrorCode,
+  toRollbackCertainPersistenceError,
+} from '@/src/adapters/repositories/postgres-errors';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   ApplicationError,
@@ -79,6 +82,7 @@ function sleep(ms: number): Promise<void> {
 async function runPracticeSessionStateWriteTransaction<T>(
   primitives: ContainerPrimitives,
   action: (tx: DrizzleDb) => Promise<T>,
+  options?: { classifyStatementCancellation?: boolean },
 ): Promise<T> {
   let lastRetryableError: unknown;
 
@@ -88,10 +92,18 @@ async function runPracticeSessionStateWriteTransaction<T>(
     attempt += 1
   ) {
     try {
-      return await primitives.db.transaction(
-        async (tx) => action(tx as unknown as DrizzleDb),
-        PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG,
-      );
+      return await primitives.db.transaction(async (tx) => {
+        try {
+          return await action(tx as unknown as DrizzleDb);
+        } catch (error) {
+          const rollbackCertainError = options?.classifyStatementCancellation
+            ? toRollbackCertainPersistenceError(error, {
+                phase: 'transaction_body',
+              })
+            : null;
+          throw rollbackCertainError ?? error;
+        }
+      }, PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG);
     } catch (error) {
       if (!isRetryablePracticeSessionStateWriteFailure(error)) {
         throw error;
@@ -269,11 +281,14 @@ export function createUseCaseFactories(input: {
         repositories.createPracticeSessionRepository(),
         primitives.logger,
         async (fn) =>
-          runPracticeSessionStateWriteTransaction(primitives, async (tx) =>
-            fn({
-              attempts: repositories.createAttemptRepository(tx),
-              sessions: repositories.createPracticeSessionRepository(tx),
-            }),
+          runPracticeSessionStateWriteTransaction(
+            primitives,
+            async (tx) =>
+              fn({
+                attempts: repositories.createAttemptRepository(tx),
+                sessions: repositories.createPracticeSessionRepository(tx),
+              }),
+            { classifyStatementCancellation: true },
           ),
       ),
     createSetBookmarkUseCase: () =>

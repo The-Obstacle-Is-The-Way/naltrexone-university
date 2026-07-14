@@ -134,7 +134,7 @@ describe('practice-page-logic session start', () => {
 
       expect(setSessionStartStatus).toHaveBeenCalledWith('error');
       expect(setSessionStartError).toHaveBeenCalledWith('Boom');
-      expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 
     it('reports thrown session start errors while preserving error UI state', async () => {
@@ -169,7 +169,7 @@ describe('practice-page-logic session start', () => {
       });
       expect(setSessionStartStatus).toHaveBeenCalledWith('error');
       expect(setSessionStartError).toHaveBeenCalledWith('Boom');
-      expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 
     it('preserves session start error handling when reportError throws', async () => {
@@ -208,7 +208,144 @@ describe('practice-page-logic session start', () => {
       });
       expect(setSessionStartStatus).toHaveBeenCalledWith('error');
       expect(setSessionStartError).toHaveBeenCalledWith('Boom');
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('preserves the key when a concurrent same-key request may still finish', async () => {
+      const setIdempotencyKey = vi.fn();
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () =>
+          err('CONFLICT', 'Request is still running', undefined, {
+            reason: 'concurrent_request_in_progress',
+          }),
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('refreshes recovery state and rotates after a typed incomplete-session conflict', async () => {
+      const setIdempotencyKey = vi.fn();
+      const refreshIncompleteSession = vi.fn(async () => undefined);
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () =>
+          err('CONFLICT', 'Incomplete session exists', undefined, {
+            reason: 'incomplete_practice_session_exists',
+          }),
+        refreshIncompleteSession,
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    });
+
+    it('refreshes recovery state after a non-conflict failure so a committed session can surface', async () => {
+      const setIdempotencyKey = vi.fn();
+      const refreshIncompleteSession = vi.fn(async () => undefined);
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        // The cache-error-and-throw arm replays INTERNAL_ERROR after a
+        // committed session; only the refetch can render Resume/Abandon.
+        startPracticeSessionFn: async () =>
+          err('INTERNAL_ERROR', 'Failed to start practice session'),
+        refreshIncompleteSession,
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('reports a failed incomplete-session refresh without replacing the primary conflict', async () => {
+      const refreshError = new Error('Refresh failed');
+      const reportError = vi.fn();
+      const setSessionStartStatus = vi.fn();
+      const setSessionStartError = vi.fn();
+
+      await expect(
+        startSession({
+          sessionMode: 'tutor',
+          sessionCount: 20,
+          filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+          idempotencyKey: 'idem_1',
+          createIdempotencyKey: () => 'idem_2',
+          setIdempotencyKey: vi.fn(),
+          startPracticeSessionFn: async () =>
+            err('CONFLICT', 'Incomplete session exists', undefined, {
+              reason: 'incomplete_practice_session_exists',
+            }),
+          refreshIncompleteSession: async () => {
+            throw refreshError;
+          },
+          reportError,
+          setSessionStartStatus,
+          setSessionStartError,
+          navigateTo: vi.fn(),
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(reportError).toHaveBeenCalledWith(refreshError, {
+        action: 'refreshIncompleteSession',
+      });
+      expect(setSessionStartStatus).toHaveBeenLastCalledWith('error');
+      expect(setSessionStartError).toHaveBeenLastCalledWith(
+        'Incomplete session exists',
+      );
+    });
+
+    it('preserves the primary conflict when refresh error reporting also fails', async () => {
+      const refreshError = new Error('Refresh failed');
+
+      await expect(
+        startSession({
+          sessionMode: 'tutor',
+          sessionCount: 20,
+          filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+          idempotencyKey: 'idem_1',
+          createIdempotencyKey: () => 'idem_2',
+          setIdempotencyKey: vi.fn(),
+          startPracticeSessionFn: async () =>
+            err('CONFLICT', 'Incomplete session exists', undefined, {
+              reason: 'incomplete_practice_session_exists',
+            }),
+          refreshIncompleteSession: async () => {
+            throw refreshError;
+          },
+          reportError: () => {
+            throw new Error('Reporter failed');
+          },
+          setSessionStartStatus: vi.fn(),
+          setSessionStartError: vi.fn(),
+          navigateTo: vi.fn(),
+        }),
+      ).resolves.toBeUndefined();
     });
 
     it('returns without navigating when unmounted during startSession', async () => {

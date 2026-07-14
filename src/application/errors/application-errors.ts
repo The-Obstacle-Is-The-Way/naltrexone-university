@@ -19,7 +19,9 @@ export const ApplicationConflictReasons = {
   ExamTimeExpired: 'exam_time_expired',
   StateChangedConcurrently: 'practice_session_state_changed_concurrently',
   ConcurrentRequestInProgress: 'concurrent_request_in_progress',
+  IncompleteSessionExists: 'incomplete_practice_session_exists',
   UserEmailOwnedByAnotherIdentity: 'user_email_owned_by_another_identity',
+  FeedbackRequestReused: 'feedback_request_token_reused',
 } as const;
 
 export type ApplicationConflictReason =
@@ -97,6 +99,39 @@ export class ApplicationError extends Error {
       this.details = options.details;
     }
   }
+}
+
+/**
+ * Marks a persistence failure whose owning transaction is known to have
+ * rolled back. Construct this only while handling an error thrown from inside
+ * a transaction body, before control returns to the COMMIT boundary.
+ * Idempotency policies may safely abort the claim for this error while keeping
+ * transaction-boundary INTERNAL_ERROR failures conservatively fenced.
+ */
+export class RollbackCertainPersistenceError extends ApplicationError {
+  readonly determinacy = 'rollback_certain' as const;
+
+  constructor(options?: { cause?: unknown }) {
+    super(
+      'INTERNAL_ERROR',
+      'Persistence operation was rolled back; please retry.',
+      undefined,
+      options?.cause !== undefined ? { cause: options.cause } : undefined,
+    );
+    this.name = 'RollbackCertainPersistenceError';
+  }
+}
+
+export function rollbackCertainPersistenceError(options?: {
+  cause?: unknown;
+}): RollbackCertainPersistenceError {
+  return new RollbackCertainPersistenceError(options);
+}
+
+export function isRollbackCertainPersistenceError(
+  error: unknown,
+): error is RollbackCertainPersistenceError {
+  return error instanceof RollbackCertainPersistenceError;
 }
 
 export class UserEmailOwnershipConflictError extends ApplicationError {

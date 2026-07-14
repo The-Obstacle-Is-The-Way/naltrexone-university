@@ -19,6 +19,7 @@ describe('usePracticeIncompleteSession', () => {
     expect(output.incompleteSessionStatus).toBe('loading');
     expect(output.incompleteSessionError).toBeNull();
     expect(output.incompleteSession).toBeNull();
+    expect(typeof output.refreshIncompleteSession).toBe('function');
     expect(typeof output.onAbandonIncompleteSession).toBe('function');
   });
 });

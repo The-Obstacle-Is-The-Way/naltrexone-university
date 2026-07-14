@@ -137,6 +137,16 @@ describe('usePracticeSessionPageModel (browser)', () => {
         markedCount: 0,
       }),
     );
+    submitAnswerMock.mockResolvedValue(
+      ok({
+        attemptId: BROWSER_ATTEMPT_1_ID,
+        isCorrect: true,
+        correctChoiceId: BROWSER_CHOICE_1_ID,
+        explanationMd: 'Because',
+        referenceMd: null,
+        choiceExplanations: [],
+      } satisfies SubmitAnswerOutput),
+    );
 
     const screen = await render(<PracticeSessionPageModelHookProbe />);
 
@@ -152,8 +162,17 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .element(screen.getByTestId('selected-choice-id'))
       .toHaveTextContent(BROWSER_CHOICE_1_ID);
     await expect
+      .element(screen.getByTestId('is-pending'))
+      .toHaveTextContent('false');
+    await expect
       .element(screen.getByTestId('can-submit'))
-      .toHaveTextContent('true');
+      .toHaveTextContent('false');
+    expect(submitAnswerMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        questionId: BROWSER_QUESTION_1_ID,
+        choiceId: BROWSER_CHOICE_1_ID,
+      }),
+    );
   });
 
   it('uses transition pending state for session answer submit without switching to loading status', async () => {

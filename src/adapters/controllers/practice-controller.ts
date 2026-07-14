@@ -68,6 +68,11 @@ import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
 import {
+  IdempotentActionNames,
+  shouldCacheQuestionMarkError,
+  shouldCacheStartPracticeSessionError,
+} from './shared/idempotency-error-policy';
+import {
   shouldCachePracticeSessionLifecycleError,
   shouldCachePracticeSessionStateWriteError,
 } from './shared/practice-session-idempotency-policy';
@@ -197,7 +202,7 @@ export const startPracticeSession = createAction({
 
     async function enforceStartRateLimit(): Promise<void> {
       const rate = await d.rateLimiter.limit({
-        key: `practice:startPracticeSession:${userId}`,
+        key: `${IdempotentActionNames.StartPracticeSession}:${userId}`,
         ...START_PRACTICE_SESSION_RATE_LIMIT,
       });
       if (!rate.success) {
@@ -211,10 +216,14 @@ export const startPracticeSession = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'practice:startPracticeSession',
+      action: IdempotentActionNames.StartPracticeSession,
       idempotencyKey,
       outputSchema: StartPracticeSessionOutputSchema,
       beforeExecute: enforceStartRateLimit,
+      // Abort claims for transient failures so the client's preserved key
+      // re-executes instead of replaying a poisoned error; cache only the
+      // determinate outcomes in the start policy's vetted set.
+      shouldCacheError: shouldCacheStartPracticeSessionError,
       outcomeStoreFailurePolicy: 'cache-error-and-throw',
       execute: createNewSession,
     });
@@ -425,10 +434,10 @@ export const setPracticeSessionQuestionMark = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'practice:setPracticeSessionQuestionMark',
+      action: IdempotentActionNames.QuestionMark,
       idempotencyKey,
       outputSchema: SetPracticeSessionQuestionMarkOutputSchema,
-      shouldCacheError: shouldCachePracticeSessionStateWriteError,
+      shouldCacheError: shouldCacheQuestionMarkError,
       execute: () =>
         d.setPracticeSessionQuestionMarkUseCase.execute({
           userId,

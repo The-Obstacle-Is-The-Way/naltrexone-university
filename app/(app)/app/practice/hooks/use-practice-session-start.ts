@@ -17,6 +17,7 @@ import {
 
 export type UsePracticeSessionStartInput = {
   isMounted: () => boolean;
+  refreshIncompleteSession?: () => Promise<void>;
 };
 
 export type UsePracticeSessionStartOutput = {
@@ -141,6 +142,9 @@ export function usePracticeSessionStart(
             action: context.action,
           });
         },
+        ...(input.refreshIncompleteSession
+          ? { refreshIncompleteSession: input.refreshIncompleteSession }
+          : {}),
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,
@@ -152,6 +156,7 @@ export function usePracticeSessionStart(
       sessionCount,
       startSessionIdempotencyKey,
       input.isMounted,
+      input.refreshIncompleteSession,
       setStartSessionIdempotencyKey,
     ],
   );

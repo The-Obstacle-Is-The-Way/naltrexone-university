@@ -31,6 +31,11 @@ import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
 import { executeIdempotent } from './shared/execute-idempotent';
+import {
+  IdempotentActionNames,
+  shouldCacheQuestionRatingError,
+  shouldCacheQuestionReportError,
+} from './shared/idempotency-error-policy';
 
 const zRating = z.enum(AllQuestionFeedbackRatings);
 const zCategory = z.enum(AllQuestionFeedbackCategories);
@@ -80,6 +85,10 @@ const SubmitQuestionReportOutputSchema = z
     feedbackId: zUuid,
   })
   .strict();
+
+// The business row owns a durable request token. Re-execution after either an
+// ordinary outcome-write failure or a fenced claim returns that original row.
+const FEEDBACK_OUTCOME_STORE_FAILURE_POLICY = 'return-result' as const;
 
 export type {
   GetQuestionRatingOutput,
@@ -135,12 +144,13 @@ export const rateQuestion = createAction({
         attemptId: input.attemptId ?? null,
         practiceSessionId: input.practiceSessionId ?? null,
         rating: input.rating,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       });
     }
 
     async function enforceRatingRateLimit(): Promise<void> {
       const rateLimit = await d.rateLimiter.limit({
-        key: `question-feedback:rateQuestion:${userId}`,
+        key: `${IdempotentActionNames.QuestionRating}:${userId}`,
         ...QUESTION_RATING_RATE_LIMIT,
       });
       if (!rateLimit.success) {
@@ -154,10 +164,12 @@ export const rateQuestion = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'question-feedback:rateQuestion',
+      action: IdempotentActionNames.QuestionRating,
       idempotencyKey,
       outputSchema: RateQuestionOutputSchema,
       beforeExecute: enforceRatingRateLimit,
+      shouldCacheError: shouldCacheQuestionRatingError,
+      outcomeStoreFailurePolicy: FEEDBACK_OUTCOME_STORE_FAILURE_POLICY,
       execute: rate,
     });
   },
@@ -191,12 +203,13 @@ export const submitQuestionReport = createAction({
         practiceSessionId: input.practiceSessionId ?? null,
         category: input.category,
         comment: input.comment ?? null,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
       });
     }
 
     async function enforceReportRateLimit(): Promise<void> {
       const rateLimit = await d.rateLimiter.limit({
-        key: `question-feedback:submitQuestionReport:${userId}`,
+        key: `${IdempotentActionNames.QuestionReport}:${userId}`,
         ...QUESTION_REPORT_RATE_LIMIT,
       });
       if (!rateLimit.success) {
@@ -210,11 +223,12 @@ export const submitQuestionReport = createAction({
     return executeIdempotent({
       d,
       userId,
-      action: 'question-feedback:submitQuestionReport',
+      action: IdempotentActionNames.QuestionReport,
       idempotencyKey,
       outputSchema: SubmitQuestionReportOutputSchema,
       beforeExecute: enforceReportRateLimit,
-      outcomeStoreFailurePolicy: 'cache-error-and-throw',
+      shouldCacheError: shouldCacheQuestionReportError,
+      outcomeStoreFailurePolicy: FEEDBACK_OUTCOME_STORE_FAILURE_POLICY,
       execute: submit,
     });
   },

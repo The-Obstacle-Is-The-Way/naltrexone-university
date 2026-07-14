@@ -142,9 +142,15 @@ describe('usePracticeSessionMarkForReview', () => {
     const setReview = vi.fn();
     const error = new Error('Mark for review failed');
 
-    const setPracticeSessionQuestionMarkFn = vi.fn(async () => {
-      throw error;
-    });
+    const setPracticeSessionQuestionMarkFn = vi
+      .fn()
+      .mockRejectedValueOnce(error)
+      .mockResolvedValueOnce(
+        ok({
+          questionId: fixtureQuestion1Id,
+          markedForReview: true,
+        }),
+      );
 
     const output = renderHook(() =>
       usePracticeSessionMarkForReview({
@@ -181,6 +187,13 @@ describe('usePracticeSessionMarkForReview', () => {
       component: 'UsePracticeSessionMarkForReview',
       action: 'toggleMarkForReview',
     });
+
+    const firstKey =
+      setPracticeSessionQuestionMarkFn.mock.calls[0]?.[0]?.idempotencyKey;
+    await output.onToggleMarkForReview();
+    const secondKey =
+      setPracticeSessionQuestionMarkFn.mock.calls[1]?.[0]?.idempotencyKey;
+    expect(secondKey).toBe(firstKey);
   });
 
   it('sets loadState error when mark-for-review request returns an error result', async () => {
@@ -233,6 +246,50 @@ describe('usePracticeSessionMarkForReview', () => {
         action: 'toggleMarkForReview',
       },
     );
+  });
+
+  it('rotates the mark key after a determinate cached failure', async () => {
+    const setPracticeSessionQuestionMarkFn = vi
+      .fn()
+      .mockResolvedValueOnce(err('NOT_FOUND', 'Question not found'))
+      .mockResolvedValueOnce(
+        ok({
+          questionId: fixtureQuestion1Id,
+          markedForReview: true,
+        }),
+      );
+    const sessionInfo = {
+      sessionId: fixtureSession1Id,
+      mode: 'exam' as const,
+      deadlineAt: '2099-05-22T12:02:24.000Z',
+      index: 0,
+      total: 10,
+      isMarkedForReview: false,
+    };
+    const output = renderHook(() =>
+      usePracticeSessionMarkForReview({
+        question: createFixtureNextQuestion(),
+        sessionMode: 'exam',
+        sessionInfo,
+        sessionId: fixtureSession1Id,
+        applySessionInfo: vi.fn(),
+        setLoadState: vi.fn(),
+        setReview: vi.fn(),
+        isMounted: () => true,
+        setPracticeSessionQuestionMarkFn,
+      }),
+    );
+
+    await output.onToggleMarkForReview();
+    await output.onToggleMarkForReview();
+
+    const firstKey =
+      setPracticeSessionQuestionMarkFn.mock.calls[0]?.[0]?.idempotencyKey;
+    const secondKey =
+      setPracticeSessionQuestionMarkFn.mock.calls[1]?.[0]?.idempotencyKey;
+    expect(firstKey).toEqual(expect.any(String));
+    expect(secondKey).toEqual(expect.any(String));
+    expect(secondKey).not.toBe(firstKey);
   });
 
   it('uses the mutation timeout tier for mark-for-review requests', async () => {

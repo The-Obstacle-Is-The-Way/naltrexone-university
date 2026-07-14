@@ -6,7 +6,10 @@ import {
   practiceSessionQuestionStates,
   practiceSessions,
 } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationConflictReasons,
+  ApplicationError,
+} from '@/src/application/errors';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import {
   createStateRow,
@@ -182,12 +185,16 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
 
     const promise = repo.create({ userId: userId, mode: 'exam', paramsJson });
 
-    await expect(promise).rejects.toEqual(
-      new ApplicationError(
-        'CONFLICT',
+    // The race-loser path must carry the same typed reason as the use-case
+    // pre-check so the client's Resume/Abandon recovery fires on it.
+    await expect(promise).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message:
         'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
-      ),
-    );
+      details: {
+        reason: ApplicationConflictReasons.IncompleteSessionExists,
+      },
+    });
   });
 
   it('wraps unexpected insert failures in INTERNAL_ERROR with cause', async () => {

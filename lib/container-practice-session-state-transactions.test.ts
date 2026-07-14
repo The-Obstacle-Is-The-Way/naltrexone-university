@@ -10,6 +10,7 @@ import {
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   ApplicationError,
+  isRollbackCertainPersistenceError,
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
 import {
@@ -144,6 +145,18 @@ function createPracticeSessionStateWriteFixture(mode: 'exam' | 'tutor') {
     attempts: new FakeAttemptRepository(),
     sessions: new FakePracticeSessionRepository([session]),
   };
+}
+
+class StatementCancelingAttemptRepository extends FakeAttemptRepository {
+  constructor(private readonly failure: Error) {
+    super();
+  }
+
+  override insert(
+    ..._args: Parameters<FakeAttemptRepository['insert']>
+  ): ReturnType<FakeAttemptRepository['insert']> {
+    return Promise.reject(this.failure);
+  }
 }
 
 describe('container factories — practice session state write transactions', () => {
@@ -475,5 +488,96 @@ describe('container factories — practice session state write transactions', ()
     expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
       isolationLevel: 'repeatable read',
     });
+  });
+
+  it('classifies transaction-body statement cancellation as rollback-certain for session-backed submit', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('tutor');
+    const statementCancellation = new Error('canceling statement', {
+      cause: { code: '57014' },
+    });
+    const transaction = vi.fn<TestTransaction>(async (fn) =>
+      fn(createUnexpectedNestedTransactionDb()),
+    );
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture: {
+        ...fixture,
+        attempts: new StatementCancelingAttemptRepository(
+          statementCancellation,
+        ),
+      },
+    });
+
+    const promise = container.createSubmitAnswerUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+      questionId: fixture.questionId,
+      choiceId: fixture.correctChoiceId,
+    });
+
+    await expect(promise).rejects.toSatisfy(isRollbackCertainPersistenceError);
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: statementCancellation,
+    });
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('classifies a repository-wrapped statement cancellation as rollback-certain', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('tutor');
+    // DrizzleAttemptRepository wraps driver errors as
+    // ApplicationError('INTERNAL_ERROR', { cause }); the owner must classify
+    // through that wrapper, not stop at its non-SQLSTATE code property.
+    const wrappedCancellation = new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to insert attempt',
+      undefined,
+      { cause: { code: '57014' } },
+    );
+    const transaction = vi.fn<TestTransaction>(async (fn) =>
+      fn(createUnexpectedNestedTransactionDb()),
+    );
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture: {
+        ...fixture,
+        attempts: new StatementCancelingAttemptRepository(wrappedCancellation),
+      },
+    });
+
+    const promise = container.createSubmitAnswerUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+      questionId: fixture.questionId,
+      choiceId: fixture.correctChoiceId,
+    });
+
+    await expect(promise).rejects.toSatisfy(isRollbackCertainPersistenceError);
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps transaction-boundary statement cancellation indeterminate for session-backed submit', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('tutor');
+    const statementCancellation = new Error('commit canceled', {
+      cause: { code: '57014' },
+    });
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      await fn(createUnexpectedNestedTransactionDb());
+      throw statementCancellation;
+    });
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+
+    await expect(
+      container.createSubmitAnswerUseCase().execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+        questionId: fixture.questionId,
+        choiceId: fixture.correctChoiceId,
+      }),
+    ).rejects.toBe(statementCancellation);
+    expect(transaction).toHaveBeenCalledTimes(1);
   });
 });

@@ -15,6 +15,7 @@ export type RateQuestionInput = {
   attemptId: string | null;
   practiceSessionId: string | null;
   rating: QuestionFeedbackRating | null;
+  idempotencyKey?: string;
 };
 
 export type RateQuestionOutput = {
@@ -45,7 +46,7 @@ export class RateQuestionUseCase {
       { attempts: this.attempts, sessions: this.sessions },
     );
 
-    await this.feedback.record(
+    const saved = await this.feedback.record(
       newQuestionRatingFeedback({
         userId: input.userId,
         questionId: input.questionId,
@@ -53,8 +54,15 @@ export class RateQuestionUseCase {
         practiceSessionId: context.practiceSessionId,
         rating: input.rating,
       }),
+      input.idempotencyKey
+        ? { idempotencyKey: input.idempotencyKey }
+        : undefined,
     );
 
-    return { rating: input.rating };
+    if (saved.kind !== 'rating') {
+      throw new ApplicationError('INTERNAL_ERROR', 'Invalid rating replay');
+    }
+
+    return { rating: saved.rating };
   }
 }
