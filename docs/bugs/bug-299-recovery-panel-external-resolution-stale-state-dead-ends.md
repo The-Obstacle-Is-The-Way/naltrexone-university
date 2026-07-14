@@ -50,7 +50,7 @@ Same-mount dead-ends on the practice-start surface the wave was hardening: a sta
 - **Branch:** `fix/bug-299-recovery-panel-external-resolution`
 - **Approach:** implemented an explicit `IncompleteSessionRefreshOutcome` owned by the incomplete-session hook. Every failed abandon now converges through that existing refresh seam, and only an authoritative successful `null` observation signals the controls/start-key owner to retire the preserved key. Failed, superseded, and still-present outcomes preserve the key and last authoritative panel. Start-result recovery uses the same absence proof and refuses stale-request or already-rotated double retirement.
 - **Tests:** red-first unit failures pinned the missing typed outcome and missing start-key retirement; four red Chromium sequences pinned the tutor bare-conflict dead-end, timeout preservation, refresh-failure containment, and second-tab resolution. The exam-discard self-heal remained green as the control. Follow-up race assertions cover superseded reads, determinate-error single rotation, and a newer intent arriving during refresh.
-- **Delivery:** implementation is complete on the branch; PR review, merge, promotion, and production proof remain pending. Status stays Open until wave-close archival.
+- **Delivery:** [PR #652](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/652) carries the implementation. Status stays Open until wave-close archival records post-promotion production proof.
 
 ## Related
 
