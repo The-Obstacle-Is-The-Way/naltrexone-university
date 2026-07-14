@@ -1,6 +1,6 @@
 # BUG-295: Preserved Idempotency Keys Replay Committed Outcomes Across Changed Request Intent
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P3
 **Date:** 2026-07-14
 **Confirmed:** 2026-07-14 (post-merge adversarial review of PR #640; both legs validated from first principles against the merged code, feedback leg additionally reproduced by an independent tracer — second request `not_helpful` returned the cached `helpful` with `executions: 1`)
@@ -8,15 +8,21 @@
 
 ---
 
+## Resolution (2026-07-14)
+
+Fixed in [PR #642](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/642) (squash `980a9bd4` to dev; CodeRabbit formal APPROVED review object on the exact final head `f022ce5d`), promoted via PR #643 (main `cde6ccd8`, main/dev trees byte-identical); main CI succeeded and `https://addictionboards.com/` returned HTTP/2 200. All three legs of the Fix section shipped: `FeedbackRequestToken { key, fingerprint }` minted on any intent change, with the key-lifecycle logic extracted into shared `resolveRequestKey`/`mintRequestKey` helpers at CodeRabbit's review, and a wrapper-boundary regression (real `withIdempotency` + `FakeIdempotencyKeyRepository`) pinning same-intent replay without re-execution against changed-intent fresh execution; a session-scoped `AbandonRequestToken` resolved **synchronously from a ref** — a state-resolved token opened a double-click double-mint race caught in self-review, now pinned in the browser suite — and rotated on consumed success; and start-key retirement composed at the controls layer, with the full start → recovery → abandon → start-again sequence pinned in `use-practice-session-controls.browser.spec.tsx`.
+
+Residuals filed from the wave-2 close review: this doc's invariant was implemented for the feedback tokens and the local abandon-success arm only — [BUG-298](../../bugs/bug-298-preserved-keys-unbound-on-submit-mark-bookmark-surfaces.md) covers the unswept sibling surfaces (submit-answer choice binding, mark-for-review, bookmark direction, and the server guard's missing attempt/session context fields), and [BUG-299](../../bugs/bug-299-recovery-panel-external-resolution-stale-state-dead-ends.md) covers recovery-panel resolutions that bypass the local abandon-success arm (terminal lifecycle conflicts, second-tab resolution) and therefore never refresh the panel or retire the start key.
+
 ## Summary
 
 PR #640 (BUG-289/290/291) correctly taught clients to **preserve** idempotency keys across outcome-indeterminate failures — the preserved key is the only handle to a possibly-committed result. But preservation shipped without the other half of the invariant: **a preserved key must be bound to the request identity it was minted for, and retired once its outcome is consumed by another surface.** Two legs violate it.
 
-`withIdempotency` returns a completed cached outcome **before** `execute()` runs ([`with-idempotency.ts#L328-L343`](../../src/adapters/shared/with-idempotency.ts#L328-L343)). Any guard that lives inside `execute()` — including PR #640's repository-level `feedback_request_token_reused` check — therefore protects only the fenced-claim arm (feedback row committed, wrapper outcome missing). On the normal committed-and-cached replay path, nothing compares the incoming request to the one that produced the cached outcome.
+`withIdempotency` returns a completed cached outcome **before** `execute()` runs ([`with-idempotency.ts#L328-L343`](../../../src/adapters/shared/with-idempotency.ts#L328-L343)). Any guard that lives inside `execute()` — including PR #640's repository-level `feedback_request_token_reused` check — therefore protects only the fenced-claim arm (feedback row committed, wrapper outcome missing). On the normal committed-and-cached replay path, nothing compares the incoming request to the one that produced the cached outcome.
 
 ## Leg 1 — Feedback: changed vote / edited report silently replaced
 
-The client stores rating/report keys **per question**, not per request ([`use-practice-question-feedback.ts#L59-L60`](<../../app/(app)/app/practice/hooks/use-practice-question-feedback.ts#L59-L60>)). Keys rotate on success and on determinate cached errors, and re-key once on the typed reused-token conflict — but a key preserved across a thrown/indeterminate outcome is reused verbatim for whatever the user asks next.
+The client stores rating/report keys **per question**, not per request ([`use-practice-question-feedback.ts#L59-L60`](<../../../app/(app)/app/practice/hooks/use-practice-question-feedback.ts#L59-L60>)). Keys rotate on success and on determinate cached errors, and re-key once on the typed reused-token conflict — but a key preserved across a thrown/indeterminate outcome is reused verbatim for whatever the user asks next.
 
 Interleaving:
 
@@ -29,7 +35,7 @@ The user's changed vote is silently dropped. The edited-report variant is worse:
 
 ## Leg 2 — Recovery lifecycle: abandon/start keys never retired
 
-The abandon key is a single mount-scoped UUID, not bound to the session it targets, and not rotated when its success outcome is consumed ([`use-practice-incomplete-session.ts#L41-L43`](<../../app/(app)/app/practice/hooks/use-practice-incomplete-session.ts#L41-L43>), success path [`practice-page-incomplete-session.ts#L172-L173`](<../../app/(app)/app/practice/practice-page-incomplete-session.ts#L172-L173>)). The start key rotates on every config change but nothing retires it when the recovery session is resolved by abandonment ([`use-practice-session-controls.ts#L69-L70`](<../../app/(app)/app/practice/hooks/use-practice-session-controls.ts#L69-L70>)).
+The abandon key is a single mount-scoped UUID, not bound to the session it targets, and not rotated when its success outcome is consumed ([`use-practice-incomplete-session.ts#L41-L43`](<../../../app/(app)/app/practice/hooks/use-practice-incomplete-session.ts#L41-L43>), success path [`practice-page-incomplete-session.ts#L172-L173`](<../../../app/(app)/app/practice/practice-page-incomplete-session.ts#L172-L173>)). The start key rotates on every config change but nothing retires it when the recovery session is resolved by abandonment ([`use-practice-session-controls.ts#L69-L70`](<../../../app/(app)/app/practice/hooks/use-practice-session-controls.ts#L69-L70>)).
 
 Compound interleaving (all within one mount, using only the recovery flow PR #640 built):
 
@@ -52,5 +58,5 @@ Silent user-intent drop on the feedback surface (changed vote / edited report re
 
 - [BUG-289](./bug-289-idempotency-caches-transient-errors-billing-bookmark-feedback.md) — its repository-level request-identity guard is necessary but only reaches the fenced-claim arm; resolution note amended.
 - [BUG-291](./bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — the dead-end this doc's Leg 2 recreates via the recovery flow; resolution note amended.
-- [DEBT-456](../debt/debt-456-client-conflict-reason-discrimination-gaps.md) — client conflict-reason discrimination gaps; the reused-token conflict consumer list grows with this fix.
+- [DEBT-456](../../debt/debt-456-client-conflict-reason-discrimination-gaps.md) — client conflict-reason discrimination gaps; the reused-token conflict consumer list grows with this fix.
 - PR #640 — the wave-2 idempotency PR whose preservation rules this filing completes.
