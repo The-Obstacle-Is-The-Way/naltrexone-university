@@ -43,6 +43,46 @@ describe('FakeSubscriptionRepository', () => {
       });
     });
 
+    it('throws typed user_missing without writing when the local user is missing', async () => {
+      const repo = new FakeSubscriptionRepository();
+      repo.markUserMissing('user_1');
+
+      await expect(repo.upsert(makeUpsertInput())).rejects.toMatchObject({
+        name: 'SubscriptionUserMissingError',
+        reason: 'user_missing',
+        userId: 'user_1',
+      });
+      await expect(repo.findByUserId('user_1')).resolves.toBeNull();
+      await expect(
+        repo.findByExternalSubscriptionId('sub_123'),
+      ).resolves.toBeNull();
+    });
+
+    it('removes existing mappings and restores missing-user state from a snapshot', async () => {
+      const repo = new FakeSubscriptionRepository();
+      await repo.upsert(makeUpsertInput());
+      repo.markUserMissing('user_1');
+      const snapshot = repo.snapshot();
+      const restoredRepo = new FakeSubscriptionRepository();
+
+      restoredRepo.restore(snapshot);
+
+      await expect(restoredRepo.findByUserId('user_1')).resolves.toBeNull();
+      await expect(
+        restoredRepo.findByExternalSubscriptionId('sub_123'),
+      ).resolves.toBeNull();
+      await expect(
+        restoredRepo.findObservationVersionByUserId('user_1'),
+      ).resolves.toBeNull();
+      await expect(
+        restoredRepo.upsert(makeUpsertInput()),
+      ).rejects.toMatchObject({
+        name: 'SubscriptionUserMissingError',
+        reason: 'user_missing',
+        userId: 'user_1',
+      });
+    });
+
     it('replaces externalSubscriptionId for the same user on re-upsert', async () => {
       const repo = new FakeSubscriptionRepository();
 

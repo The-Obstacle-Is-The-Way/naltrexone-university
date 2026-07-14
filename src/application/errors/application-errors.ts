@@ -159,6 +159,29 @@ export function isUserEmailOwnershipConflictError(
   return error instanceof UserEmailOwnershipConflictError;
 }
 
+export class SubscriptionUserMissingError extends ApplicationError {
+  readonly reason = 'user_missing' as const;
+
+  constructor(
+    public readonly userId: string,
+    options?: { cause?: unknown },
+  ) {
+    super(
+      'NOT_FOUND',
+      'Subscription user does not exist',
+      undefined,
+      options?.cause !== undefined ? { cause: options.cause } : undefined,
+    );
+    this.name = 'SubscriptionUserMissingError';
+  }
+}
+
+export function isSubscriptionUserMissingError(
+  error: unknown,
+): error is SubscriptionUserMissingError {
+  return error instanceof SubscriptionUserMissingError;
+}
+
 export function practiceSessionAlreadyEndedError(options?: {
   cause?: unknown;
 }): ApplicationError {

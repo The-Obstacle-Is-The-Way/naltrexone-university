@@ -15,6 +15,46 @@ describe('DrizzleSubscriptionRepository', () => {
   ) =>
     new DrizzleSubscriptionRepository(db as unknown as RepoDb, priceIds, nowFn);
 
+  const priceIds = {
+    monthly: 'price_monthly',
+    annual: 'price_annual',
+  } as const;
+
+  const createUpsertInput = () => ({
+    userId,
+    externalSubscriptionId: 'sub_123',
+    plan: 'monthly' as const,
+    status: 'active' as const,
+    currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
+    cancelAtPeriodEnd: false,
+    expectedVersion: null,
+  });
+
+  const createFailingUpsertDb = (dbError: unknown) => {
+    const tx = {
+      execute: async () => undefined,
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            for: async () => [],
+          }),
+        }),
+      }),
+      insert: () => ({
+        values: () => ({
+          onConflictDoUpdate: async () => {
+            throw dbError;
+          },
+        }),
+      }),
+    };
+
+    return {
+      transaction: async (callback: (txArg: unknown) => Promise<unknown>) =>
+        callback(tx),
+    };
+  };
+
   it('returns null from findByUserId when no subscription row exists', async () => {
     const db = {
       query: {
@@ -279,6 +319,44 @@ describe('DrizzleSubscriptionRepository', () => {
         expectedVersion: null,
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('throws typed user_missing for the exact users foreign-key violation through a cause chain', async () => {
+    const dbError = {
+      cause: {
+        cause: {
+          code: '23503',
+          constraint: 'stripe_subscriptions_user_id_users_id_fk',
+        },
+      },
+    };
+    const repo = createRepo(createFailingUpsertDb(dbError), priceIds);
+
+    await expect(repo.upsert(createUpsertInput())).rejects.toMatchObject({
+      name: 'SubscriptionUserMissingError',
+      reason: 'user_missing',
+      userId,
+      cause: dbError,
+    });
+  });
+
+  it('keeps a different foreign-key violation classified as INTERNAL_ERROR', async () => {
+    const dbError = {
+      cause: {
+        cause: {
+          code: '23503',
+          constraint: 'some_other_user_id_fk',
+        },
+      },
+    };
+    const repo = createRepo(createFailingUpsertDb(dbError), priceIds);
+
+    const promise = repo.upsert(createUpsertInput());
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: dbError,
+    });
   });
 
   it('throws INTERNAL_ERROR on unexpected database failures during upsert', async () => {

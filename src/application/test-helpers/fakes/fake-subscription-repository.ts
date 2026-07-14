@@ -1,4 +1,7 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  SubscriptionUserMissingError,
+} from '@/src/application/errors';
 import type {
   SubscriptionRepository,
   SubscriptionUpsertInput,
@@ -12,6 +15,7 @@ type SubscriptionSnapshot = {
   externalSubscriptionIdByUserId: ReadonlyArray<readonly [string, string]>;
   userIdByExternalSubscriptionId: ReadonlyArray<readonly [string, string]>;
   observationVersionByUserId: ReadonlyArray<readonly [string, number]>;
+  missingUserIds: ReadonlyArray<string>;
 };
 
 type FakeSubscriptionSeed =
@@ -42,6 +46,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
   private readonly externalSubscriptionIdByUserId = new Map<string, string>();
   private readonly userIdByExternalSubscriptionId = new Map<string, string>();
   private readonly observationVersionByUserId = new Map<string, number>();
+  private readonly missingUserIds = new Set<string>();
 
   constructor(
     subscriptions: readonly FakeSubscriptionSeed[] = [],
@@ -86,9 +91,26 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     return this.byUserId.get(userId) ?? null;
   }
 
+  markUserMissing(userId: string): void {
+    this.missingUserIds.add(userId);
+    this.byUserId.delete(userId);
+    this.observationVersionByUserId.delete(userId);
+
+    const externalSubscriptionId =
+      this.externalSubscriptionIdByUserId.get(userId);
+    this.externalSubscriptionIdByUserId.delete(userId);
+    if (externalSubscriptionId) {
+      this.userIdByExternalSubscriptionId.delete(externalSubscriptionId);
+    }
+  }
+
   async upsert(
     input: SubscriptionUpsertInput,
   ): Promise<SubscriptionUpsertResult> {
+    if (this.missingUserIds.has(input.userId)) {
+      throw new SubscriptionUserMissingError(input.userId);
+    }
+
     const now = this.now();
     const existing = this.byUserId.get(input.userId);
     const storedVersion = existing
@@ -184,6 +206,7 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       observationVersionByUserId: [
         ...this.observationVersionByUserId.entries(),
       ],
+      missingUserIds: [...this.missingUserIds],
     };
   }
 
@@ -212,6 +235,11 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     this.observationVersionByUserId.clear();
     for (const [userId, version] of snapshot.observationVersionByUserId) {
       this.observationVersionByUserId.set(userId, version);
+    }
+
+    this.missingUserIds.clear();
+    for (const userId of snapshot.missingUserIds) {
+      this.missingUserIds.add(userId);
     }
   }
 }
