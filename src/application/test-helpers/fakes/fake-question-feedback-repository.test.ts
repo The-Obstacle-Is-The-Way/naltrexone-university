@@ -164,6 +164,62 @@ describe('FakeQuestionFeedbackRepository', () => {
         },
       });
     });
+
+    it('rejects a reused request idempotency key carrying a different attempt context', async () => {
+      const repo = new FakeQuestionFeedbackRepository();
+      const firstEvent = newQuestionRatingFeedback({
+        userId: 'user-1',
+        questionId: 'question-1',
+        attemptId: 'attempt-1',
+        practiceSessionId: 'session-1',
+        rating: 'helpful',
+      });
+
+      await repo.record(firstEvent, { idempotencyKey: 'request-1' });
+
+      await expect(
+        repo.record(
+          newQuestionRatingFeedback({
+            ...firstEvent,
+            attemptId: 'attempt-2',
+          }),
+          { idempotencyKey: 'request-1' },
+        ),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        details: {
+          reason: ApplicationConflictReasons.FeedbackRequestReused,
+        },
+      });
+    });
+
+    it('rejects a reused request idempotency key carrying a different practice-session context', async () => {
+      const repo = new FakeQuestionFeedbackRepository();
+      const firstEvent = newQuestionRatingFeedback({
+        userId: 'user-1',
+        questionId: 'question-1',
+        attemptId: 'attempt-1',
+        practiceSessionId: 'session-1',
+        rating: 'helpful',
+      });
+
+      await repo.record(firstEvent, { idempotencyKey: 'request-1' });
+
+      await expect(
+        repo.record(
+          newQuestionRatingFeedback({
+            ...firstEvent,
+            practiceSessionId: 'session-2',
+          }),
+          { idempotencyKey: 'request-1' },
+        ),
+      ).rejects.toMatchObject({
+        code: 'CONFLICT',
+        details: {
+          reason: ApplicationConflictReasons.FeedbackRequestReused,
+        },
+      });
+    });
   });
 
   describe('findLatestRatingByUser', () => {

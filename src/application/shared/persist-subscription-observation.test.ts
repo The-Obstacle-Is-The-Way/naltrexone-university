@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
+import {
+  ApplicationError,
+  isSubscriptionObservationAttemptsExhaustedError,
+} from '@/src/application/errors';
 import type { SubscriptionUpsertResult } from '@/src/application/ports/repositories';
 import {
   persistSubscriptionObservation,
@@ -210,7 +214,7 @@ describe('persistSubscriptionObservation', () => {
     expect(persist).not.toHaveBeenCalled();
   });
 
-  it('throws a bounded conflict after three fresh retrieves', async () => {
+  it('throws a typed exhaustion outcome after three fresh retrieves', async () => {
     const retrieve = vi.fn(async () => ({ sequence: 1, userId }));
     const readVersion = vi.fn(async () => 2);
     const persist = vi.fn(async () => versionConflict());
@@ -224,7 +228,10 @@ describe('persistSubscriptionObservation', () => {
         persist,
       }),
     ).rejects.toMatchObject({
+      name: 'SubscriptionObservationAttemptsExhaustedError',
       code: 'CONFLICT',
+      reason: 'version_conflict_attempts_exhausted',
+      attempts: SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS,
       message: `Subscription observation version conflicted after ${SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS} attempts`,
     });
     expect(readVersion).toHaveBeenCalledTimes(
@@ -236,5 +243,14 @@ describe('persistSubscriptionObservation', () => {
     expect(persist).toHaveBeenCalledTimes(
       SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS,
     );
+  });
+
+  it('does not classify a same-message generic conflict as attempts exhausted', () => {
+    const error = new ApplicationError(
+      'CONFLICT',
+      `Subscription observation version conflicted after ${SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS} attempts`,
+    );
+
+    expect(isSubscriptionObservationAttemptsExhaustedError(error)).toBe(false);
   });
 });

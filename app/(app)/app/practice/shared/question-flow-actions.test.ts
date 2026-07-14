@@ -83,7 +83,7 @@ describe('question-flow-actions', () => {
       referenceMd: null,
       choiceExplanations: [],
     };
-    let submitIdempotencyKey: string | null = 'idemp_1';
+    let submitRequestToken: unknown = { key: 'idemp_1', fingerprint: 'old' };
     let questionLoadedAt: number | null = 1234;
     let question: unknown = { questionId: fixtureQuestion1Id };
 
@@ -96,8 +96,8 @@ describe('question-flow-actions', () => {
     const setSubmitResult = (next: SubmitAnswerOutput | null) => {
       submitResult = next;
     };
-    const setSubmitIdempotencyKey = (next: string | null) => {
-      submitIdempotencyKey = next;
+    const setSubmitRequestToken = (next: unknown) => {
+      submitRequestToken = next;
     };
     const setQuestionLoadedAt = (next: number | null) => {
       questionLoadedAt = next;
@@ -120,7 +120,7 @@ describe('question-flow-actions', () => {
           referenceMd: null,
           choiceExplanations: [],
         });
-        setSubmitIdempotencyKey('idemp_2');
+        setSubmitRequestToken({ key: 'idemp_2', fingerprint: 'new' });
         setQuestionLoadedAt(5678);
         setQuestion({ questionId: fixtureQuestion2Id });
 
@@ -129,12 +129,11 @@ describe('question-flow-actions', () => {
           error: { code: 'INTERNAL_ERROR', message: 'boom' },
         };
       },
-      createIdempotencyKey: () => 'idemp_3',
       nowMs: () => 9999,
       setLoadState,
       setSelectedChoiceId,
       setSubmitResult,
-      setSubmitIdempotencyKey,
+      setSubmitRequestToken,
       setQuestionLoadedAt,
       setQuestion,
     });
@@ -143,7 +142,7 @@ describe('question-flow-actions', () => {
     expect(question).toBeNull();
     expect(selectedChoiceId).toBeNull();
     expect(submitResult).toBeNull();
-    expect(submitIdempotencyKey).toBeNull();
+    expect(submitRequestToken).toBeNull();
     expect(questionLoadedAt).toBeNull();
   });
 
@@ -158,7 +157,7 @@ describe('question-flow-actions', () => {
       referenceMd: null,
       choiceExplanations: [],
     };
-    let submitIdempotencyKey: string | null = 'idemp_1';
+    let submitRequestToken: unknown = { key: 'idemp_1', fingerprint: 'old' };
     let questionLoadedAt: number | null = 1234;
     let question: unknown = null;
 
@@ -170,7 +169,6 @@ describe('question-flow-actions', () => {
         ok: true,
         data: { questionId: fixtureQuestion1Id },
       }),
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState: (next) => {
         loadState = next;
@@ -181,8 +179,8 @@ describe('question-flow-actions', () => {
       setSubmitResult: (next) => {
         submitResult = next;
       },
-      setSubmitIdempotencyKey: (next) => {
-        submitIdempotencyKey = next;
+      setSubmitRequestToken: (next) => {
+        submitRequestToken = next;
       },
       setQuestionLoadedAt: (next) => {
         questionLoadedAt = next;
@@ -196,7 +194,7 @@ describe('question-flow-actions', () => {
     expect(loadState).toEqual({ status: 'ready' });
     expect(question).toEqual({ questionId: fixtureQuestion1Id });
     expect(questionLoadedAt).toBe(9999);
-    expect(submitIdempotencyKey).toBe('idemp_new');
+    expect(submitRequestToken).toBeNull();
     expect(selectedChoiceId).toBeNull();
     expect(submitResult).toBeNull();
     expect(onLoaded).toHaveBeenCalledWith({ questionId: fixtureQuestion1Id });
@@ -214,12 +212,11 @@ describe('question-flow-actions', () => {
         ok: true,
         data: null,
       }),
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState,
       setSelectedChoiceId: () => undefined,
       setSubmitResult: () => undefined,
-      setSubmitIdempotencyKey: () => undefined,
+      setSubmitRequestToken: () => undefined,
       setQuestionLoadedAt: () => undefined,
       setQuestion,
       onLoaded,
@@ -245,14 +242,13 @@ describe('question-flow-actions', () => {
         ok: true,
         data: null,
       }),
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState: (next) => {
         loadState = next;
       },
       setSelectedChoiceId: () => undefined,
       setSubmitResult: () => undefined,
-      setSubmitIdempotencyKey: () => undefined,
+      setSubmitRequestToken: () => undefined,
       setQuestionLoadedAt: () => undefined,
       setQuestion: (next) => {
         question = next;
@@ -276,12 +272,11 @@ describe('question-flow-actions', () => {
         ok: true,
         data: { questionId: fixtureQuestion1Id },
       }),
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState: () => undefined,
       setSelectedChoiceId: () => undefined,
       setSubmitResult: () => undefined,
-      setSubmitIdempotencyKey: () => undefined,
+      setSubmitRequestToken: () => undefined,
       setQuestionLoadedAt: () => undefined,
       setQuestion: () => undefined,
       recoverNullQuestion,
@@ -303,14 +298,16 @@ describe('question-flow-actions', () => {
         referenceMd: null,
         choiceExplanations: [],
       };
-      let submitIdempotencyKey: string | null = 'idemp_1';
+      let submitRequestToken: unknown = {
+        key: 'idemp_1',
+        fingerprint: 'old',
+      };
       let questionLoadedAt: number | null = 1234;
       let question: unknown = { questionId: fixtureQuestionOldId };
 
       const promise = runLoadQuestionFlow({
         requestInput: {},
         getQuestionFn: async () => new Promise<never>(() => {}),
-        createIdempotencyKey: () => 'idemp_new',
         nowMs: () => 9999,
         setLoadState: (next) => {
           loadState = next;
@@ -321,8 +318,8 @@ describe('question-flow-actions', () => {
         setSubmitResult: (next) => {
           submitResult = next;
         },
-        setSubmitIdempotencyKey: (next) => {
-          submitIdempotencyKey = next;
+        setSubmitRequestToken: (next) => {
+          submitRequestToken = next;
         },
         setQuestionLoadedAt: (next) => {
           questionLoadedAt = next;
@@ -342,7 +339,7 @@ describe('question-flow-actions', () => {
       expect(question).toBeNull();
       expect(selectedChoiceId).toBeNull();
       expect(submitResult).toBeNull();
-      expect(submitIdempotencyKey).toBeNull();
+      expect(submitRequestToken).toBeNull();
       expect(questionLoadedAt).toBeNull();
     } finally {
       vi.useRealTimers();
@@ -360,7 +357,7 @@ describe('question-flow-actions', () => {
       referenceMd: null,
       choiceExplanations: [],
     };
-    let submitIdempotencyKey: string | null = 'idemp_1';
+    let submitRequestToken: unknown = { key: 'idemp_1', fingerprint: 'old' };
     let questionLoadedAt: number | null = 1234;
     let question: unknown = { questionId: fixtureQuestionOldId };
 
@@ -371,7 +368,6 @@ describe('question-flow-actions', () => {
       getQuestionFn: async () => {
         throw new Error('Network down');
       },
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState: (next) => {
         loadState = next;
@@ -382,8 +378,8 @@ describe('question-flow-actions', () => {
       setSubmitResult: (next) => {
         submitResult = next;
       },
-      setSubmitIdempotencyKey: (next) => {
-        submitIdempotencyKey = next;
+      setSubmitRequestToken: (next) => {
+        submitRequestToken = next;
       },
       setQuestionLoadedAt: (next) => {
         questionLoadedAt = next;
@@ -398,7 +394,7 @@ describe('question-flow-actions', () => {
     expect(question).toBeNull();
     expect(selectedChoiceId).toBeNull();
     expect(submitResult).toBeNull();
-    expect(submitIdempotencyKey).toBeNull();
+    expect(submitRequestToken).toBeNull();
     expect(questionLoadedAt).toBeNull();
     expect(onLoaded).toHaveBeenCalledWith(null);
   });
@@ -411,12 +407,11 @@ describe('question-flow-actions', () => {
           ok: true,
           data: { questionId: fixtureQuestion1Id },
         }),
-        createIdempotencyKey: () => 'idemp_new',
         nowMs: () => 9999,
         setLoadState: () => undefined,
         setSelectedChoiceId: () => undefined,
         setSubmitResult: () => undefined,
-        setSubmitIdempotencyKey: () => undefined,
+        setSubmitRequestToken: () => undefined,
         setQuestionLoadedAt: () => undefined,
         setQuestion: () => undefined,
         createRequestSequenceId: () => 1,
@@ -435,7 +430,7 @@ describe('question-flow-actions', () => {
       referenceMd: null,
       choiceExplanations: [],
     };
-    let submitIdempotencyKey: string | null = 'idemp_1';
+    let submitRequestToken: unknown = { key: 'idemp_1', fingerprint: 'old' };
     let questionLoadedAt: number | null = 1234;
     let question: unknown = { questionId: fixtureQuestionOldId };
 
@@ -447,7 +442,6 @@ describe('question-flow-actions', () => {
         ok: true,
         data: { questionId: fixtureQuestionNewId },
       }),
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState: (next) => {
         loadState = next;
@@ -458,8 +452,8 @@ describe('question-flow-actions', () => {
       setSubmitResult: (next) => {
         submitResult = next;
       },
-      setSubmitIdempotencyKey: (next) => {
-        submitIdempotencyKey = next;
+      setSubmitRequestToken: (next) => {
+        submitRequestToken = next;
       },
       setQuestionLoadedAt: (next) => {
         questionLoadedAt = next;
@@ -476,7 +470,7 @@ describe('question-flow-actions', () => {
     expect(question).toEqual({ questionId: fixtureQuestionOldId });
     expect(selectedChoiceId).toBeNull();
     expect(submitResult).toBeNull();
-    expect(submitIdempotencyKey).toBeNull();
+    expect(submitRequestToken).toBeNull();
     expect(questionLoadedAt).toBeNull();
     expect(onLoaded).not.toHaveBeenCalled();
   });
@@ -490,14 +484,13 @@ describe('question-flow-actions', () => {
     const promise = runLoadQuestionFlow({
       requestInput: {},
       getQuestionFn: async () => deferred.promise,
-      createIdempotencyKey: () => 'idemp_new',
       nowMs: () => 9999,
       setLoadState: (next) => {
         loadState = next;
       },
       setSelectedChoiceId: () => undefined,
       setSubmitResult: () => undefined,
-      setSubmitIdempotencyKey: () => undefined,
+      setSubmitRequestToken: () => undefined,
       setQuestionLoadedAt: () => undefined,
       setQuestion: (next) => {
         question = next;

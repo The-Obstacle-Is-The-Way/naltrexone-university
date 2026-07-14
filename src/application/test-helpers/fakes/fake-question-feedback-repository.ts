@@ -14,13 +14,16 @@ import type {
 } from '@/src/domain/entities';
 
 // Mirror the Drizzle adapter: a replayed row must correspond to the same
-// logical request (same question and payload), or a typed conflict surfaces.
+// logical request (same question, attempt/session context, and payload), or a
+// typed conflict surfaces.
 function assertReplayMatchesRequest(
   existing: QuestionFeedback,
   event: NewQuestionFeedback,
 ): void {
   const matches =
     existing.questionId === event.questionId &&
+    existing.attemptId === event.attemptId &&
+    existing.practiceSessionId === event.practiceSessionId &&
     (event.kind === 'rating'
       ? existing.kind === 'rating' && existing.rating === event.rating
       : existing.kind === 'report' &&

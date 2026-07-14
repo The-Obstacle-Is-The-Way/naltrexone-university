@@ -1,4 +1,7 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  SubscriptionObservationAttemptsExhaustedError,
+} from '@/src/application/errors';
 import type { SubscriptionUpsertResult } from '@/src/application/ports/repositories';
 
 export const SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS = 3;
@@ -67,9 +70,8 @@ export async function persistSubscriptionObservation<TObservation>(
     }
 
     if (attempt === SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS) {
-      throw new ApplicationError(
-        'CONFLICT',
-        `Subscription observation version conflicted after ${SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS} attempts`,
+      throw new SubscriptionObservationAttemptsExhaustedError(
+        SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS,
       );
     }
 

@@ -5,6 +5,11 @@ import {
   IdempotentActionNames,
   rotateGeneratedIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
+import {
+  createRequestFingerprint,
+  type FingerprintBoundIdempotencyKey,
+  resolveRequestKey,
+} from './idempotency-request-key';
 import { STANDARD_MUTATION_TIMEOUT_MS } from './timeout-tiers';
 
 const SET_BOOKMARK_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
@@ -13,12 +18,21 @@ export type BookmarkableQuestion = {
   questionId: string;
 };
 
+export type BookmarkRequestToken = FingerprintBoundIdempotencyKey;
+
+export function bookmarkRequestFingerprint(input: {
+  questionId: string;
+  desiredBookmarked: boolean;
+}): string {
+  return createRequestFingerprint([input.questionId, input.desiredBookmarked]);
+}
+
 export async function setBookmarkForQuestion(input: {
   question: BookmarkableQuestion | null;
   desiredBookmarked: boolean;
-  bookmarkIdempotencyKey?: string | null;
+  bookmarkRequestToken?: BookmarkRequestToken | null;
   createIdempotencyKey?: () => string;
-  setBookmarkIdempotencyKey?: (key: string) => void;
+  setBookmarkRequestToken?: (token: BookmarkRequestToken | null) => void;
   setBookmarkFn: (
     input: unknown,
   ) => Promise<ActionResult<{ bookmarked: boolean }>>;
@@ -35,12 +49,16 @@ export async function setBookmarkForQuestion(input: {
 
   const isMounted = input.isMounted ?? (() => true);
   const questionId = input.question.questionId;
-  const requestIdempotencyKey =
-    input.bookmarkIdempotencyKey ?? input.createIdempotencyKey?.();
-
-  if (!input.bookmarkIdempotencyKey && requestIdempotencyKey) {
-    input.setBookmarkIdempotencyKey?.(requestIdempotencyKey);
-  }
+  const fingerprint = bookmarkRequestFingerprint({
+    questionId,
+    desiredBookmarked: input.desiredBookmarked,
+  });
+  const requestIdempotencyKey = resolveRequestKey(
+    input.bookmarkRequestToken,
+    fingerprint,
+    input.createIdempotencyKey,
+    input.setBookmarkRequestToken,
+  );
 
   input.setBookmarkStatus('loading');
 
@@ -80,7 +98,9 @@ export async function setBookmarkForQuestion(input: {
       res.error,
       {
         createIdempotencyKey: input.createIdempotencyKey,
-        setIdempotencyKey: input.setBookmarkIdempotencyKey,
+        setIdempotencyKey: input.setBookmarkRequestToken
+          ? (key) => input.setBookmarkRequestToken?.({ key, fingerprint })
+          : undefined,
       },
     );
     input.onBookmarkError?.('Failed to save bookmark. Please try again.');
@@ -98,8 +118,6 @@ export async function setBookmarkForQuestion(input: {
   });
 
   input.onBookmarkToggled?.(input.desiredBookmarked);
-  if (input.setBookmarkIdempotencyKey && input.createIdempotencyKey) {
-    input.setBookmarkIdempotencyKey(input.createIdempotencyKey());
-  }
+  input.setBookmarkRequestToken?.(null);
   input.setBookmarkStatus('idle');
 }
