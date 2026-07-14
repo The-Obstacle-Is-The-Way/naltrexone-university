@@ -70,6 +70,36 @@ function isFeedbackRequestReusedConflict(error: {
   );
 }
 
+// Reuses the preserved key only when it was minted for this exact request;
+// any intent change mints fresh so the wrapper cannot replay another
+// request's committed outcome.
+function resolveRequestKey(
+  preservedToken: FeedbackRequestToken | null | undefined,
+  fingerprint: string,
+  createIdempotencyKey: (() => string) | undefined,
+  setToken: ((token: FeedbackRequestToken) => void) | undefined,
+): string | undefined {
+  const preservedKey =
+    preservedToken?.fingerprint === fingerprint
+      ? preservedToken.key
+      : undefined;
+  const key = preservedKey ?? createIdempotencyKey?.();
+  if (!preservedKey && key) {
+    setToken?.({ key, fingerprint });
+  }
+  return key;
+}
+
+function mintRequestKey(
+  createIdempotencyKey: () => string,
+  fingerprint: string,
+  setToken: ((token: FeedbackRequestToken) => void) | undefined,
+): string {
+  const key = createIdempotencyKey();
+  setToken?.({ key, fingerprint });
+  return key;
+}
+
 export type FeedbackQuestionContext = {
   questionId: string;
   attemptId?: string | null;
@@ -99,15 +129,12 @@ export async function rateQuestionForQuestion(input: {
     question: input.question,
     rating: input.nextRating,
   });
-  const preservedKey =
-    input.ratingRequestToken?.fingerprint === fingerprint
-      ? input.ratingRequestToken.key
-      : undefined;
-  let requestIdempotencyKey = preservedKey ?? input.createIdempotencyKey?.();
-
-  if (!preservedKey && requestIdempotencyKey) {
-    setToken?.({ key: requestIdempotencyKey, fingerprint });
-  }
+  let requestIdempotencyKey = resolveRequestKey(
+    input.ratingRequestToken,
+    fingerprint,
+    input.createIdempotencyKey,
+    setToken,
+  );
 
   input.setFeedbackStatus('saving');
   input.setRating(input.nextRating);
@@ -143,8 +170,11 @@ export async function rateQuestionForQuestion(input: {
         isFeedbackRequestReusedConflict(result.error) &&
         input.createIdempotencyKey
       ) {
-        requestIdempotencyKey = input.createIdempotencyKey();
-        setToken?.({ key: requestIdempotencyKey, fingerprint });
+        requestIdempotencyKey = mintRequestKey(
+          input.createIdempotencyKey,
+          fingerprint,
+          setToken,
+        );
         continue;
       }
       if (shouldReportClientError(result.error)) {
@@ -203,15 +233,12 @@ export async function submitReportForQuestion(input: {
     category: input.category,
     comment: input.comment,
   });
-  const preservedKey =
-    input.reportRequestToken?.fingerprint === fingerprint
-      ? input.reportRequestToken.key
-      : undefined;
-  let requestIdempotencyKey = preservedKey ?? input.createIdempotencyKey?.();
-
-  if (!preservedKey && requestIdempotencyKey) {
-    setToken?.({ key: requestIdempotencyKey, fingerprint });
-  }
+  let requestIdempotencyKey = resolveRequestKey(
+    input.reportRequestToken,
+    fingerprint,
+    input.createIdempotencyKey,
+    setToken,
+  );
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let result: ActionResult<SubmitQuestionReportOutput>;
@@ -246,8 +273,11 @@ export async function submitReportForQuestion(input: {
         isFeedbackRequestReusedConflict(result.error) &&
         input.createIdempotencyKey
       ) {
-        requestIdempotencyKey = input.createIdempotencyKey();
-        setToken?.({ key: requestIdempotencyKey, fingerprint });
+        requestIdempotencyKey = mintRequestKey(
+          input.createIdempotencyKey,
+          fingerprint,
+          setToken,
+        );
         continue;
       }
       if (shouldReportClientError(result.error)) {
