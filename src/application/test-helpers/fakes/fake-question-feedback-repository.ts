@@ -1,3 +1,7 @@
+import {
+  ApplicationConflictReasons,
+  ApplicationError,
+} from '@/src/application/errors';
 import type {
   QuestionFeedbackRecordOptions,
   QuestionFeedbackRepository,
@@ -8,6 +12,31 @@ import type {
   QuestionRatingFeedback,
   QuestionReportFeedback,
 } from '@/src/domain/entities';
+
+// Mirror the Drizzle adapter: a replayed row must correspond to the same
+// logical request (same question and payload), or a typed conflict surfaces.
+function assertReplayMatchesRequest(
+  existing: QuestionFeedback,
+  event: NewQuestionFeedback,
+): void {
+  const matches =
+    existing.questionId === event.questionId &&
+    (event.kind === 'rating'
+      ? existing.kind === 'rating' && existing.rating === event.rating
+      : existing.kind === 'report' &&
+        existing.category === event.category &&
+        existing.comment === event.comment);
+  if (matches) return;
+
+  throw new ApplicationError(
+    'CONFLICT',
+    'Feedback request token was reused with a different request',
+    undefined,
+    {
+      details: { reason: ApplicationConflictReasons.FeedbackRequestReused },
+    },
+  );
+}
 
 export class FakeQuestionFeedbackRepository
   implements QuestionFeedbackRepository
@@ -35,7 +64,10 @@ export class FakeQuestionFeedbackRepository
       : null;
     if (requestKey) {
       const existing = this.eventsByRequestKey.get(requestKey);
-      if (existing) return existing;
+      if (existing) {
+        assertReplayMatchesRequest(existing, event);
+        return existing;
+      }
     }
 
     const persisted =

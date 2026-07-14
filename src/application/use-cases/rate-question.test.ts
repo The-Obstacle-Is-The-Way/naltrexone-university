@@ -138,16 +138,33 @@ describe('RateQuestionUseCase', () => {
     } as const;
 
     const first = await useCase.execute({ ...baseInput, rating: 'helpful' });
-    const replay = await useCase.execute({
-      ...baseInput,
-      rating: 'not_helpful',
-    });
+    const replay = await useCase.execute({ ...baseInput, rating: 'helpful' });
 
     expect(first).toEqual({ rating: 'helpful' });
     expect(replay).toEqual(first);
     await expect(
       feedback.findLatestRatingByUser(userId, 'question-1'),
     ).resolves.toMatchObject({ rating: 'helpful' });
+  });
+
+  it('rejects a replayed request idempotency key carrying a changed rating', async () => {
+    const { useCase } = makeUseCase();
+    const baseInput = {
+      userId,
+      questionId: 'question-1',
+      attemptId: null,
+      practiceSessionId: null,
+      idempotencyKey: 'request-1',
+    } as const;
+
+    await useCase.execute({ ...baseInput, rating: 'helpful' });
+
+    await expect(
+      useCase.execute({ ...baseInput, rating: 'not_helpful' }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { reason: 'feedback_request_token_reused' },
+    });
   });
 
   it('rejects and records nothing when the attempt belongs to a different question', async () => {

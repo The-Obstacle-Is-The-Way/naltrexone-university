@@ -21,6 +21,7 @@ export const ApplicationConflictReasons = {
   ConcurrentRequestInProgress: 'concurrent_request_in_progress',
   IncompleteSessionExists: 'incomplete_practice_session_exists',
   UserEmailOwnedByAnotherIdentity: 'user_email_owned_by_another_identity',
+  FeedbackRequestReused: 'feedback_request_token_reused',
 } as const;
 
 export type ApplicationConflictReason =

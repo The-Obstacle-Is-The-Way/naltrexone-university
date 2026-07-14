@@ -62,6 +62,11 @@ export class SubmitQuestionReportUseCase {
         ? { idempotencyKey: input.idempotencyKey }
         : undefined,
     );
+
+    if (saved.kind !== 'report') {
+      throw new ApplicationError('INTERNAL_ERROR', 'Invalid report replay');
+    }
+
     return { feedbackId: saved.id };
   }
 }

@@ -1,6 +1,9 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { questionFeedback } from '@/db/schema';
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationConflictReasons,
+  ApplicationError,
+} from '@/src/application/errors';
 import type {
   QuestionFeedbackRecordOptions,
   QuestionFeedbackRepository,
@@ -11,6 +14,33 @@ import type {
 } from '@/src/domain/entities';
 import type { DrizzleDb } from '../shared/database-types';
 import { toQuestionFeedbackDomain } from './question-feedback-row-mappers';
+
+/**
+ * A replayed row must correspond to the same logical request: the token
+ * dedupes retries of ONE intent, not reuse across questions or payloads.
+ * A mismatch is surfaced as a typed conflict so callers can mint a fresh
+ * key instead of silently absorbing another request's outcome.
+ */
+function assertReplayMatchesRequest(
+  row: (typeof questionFeedback)['$inferSelect'],
+  event: NewQuestionFeedback,
+): void {
+  const matches =
+    row.questionId === event.questionId &&
+    (event.kind === 'rating'
+      ? row.rating === event.rating
+      : row.category === event.category && row.comment === event.comment);
+  if (matches) return;
+
+  throw new ApplicationError(
+    'CONFLICT',
+    'Feedback request token was reused with a different request',
+    undefined,
+    {
+      details: { reason: ApplicationConflictReasons.FeedbackRequestReused },
+    },
+  );
+}
 
 export class DrizzleQuestionFeedbackRepository
   implements QuestionFeedbackRepository
@@ -78,6 +108,8 @@ export class DrizzleQuestionFeedbackRepository
         'Failed to insert question feedback',
       );
     }
+
+    assertReplayMatchesRequest(row, event);
 
     return toQuestionFeedbackDomain(row);
   }

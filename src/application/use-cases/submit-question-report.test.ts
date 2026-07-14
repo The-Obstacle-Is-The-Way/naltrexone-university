@@ -10,6 +10,7 @@ import {
   createAttempt,
   createPracticeSession,
   createQuestion,
+  createQuestionRatingFeedback,
 } from '@/src/domain/test-helpers';
 import { SubmitQuestionReportUseCase } from './submit-question-report';
 
@@ -137,7 +138,7 @@ describe('SubmitQuestionReportUseCase', () => {
     };
 
     const first = await useCase.execute({ ...baseInput, comment: 'First' });
-    const replay = await useCase.execute({ ...baseInput, comment: 'Changed' });
+    const replay = await useCase.execute({ ...baseInput, comment: 'First' });
 
     expect(replay).toEqual(first);
     expect(feedback.getAll()).toEqual([
@@ -147,6 +148,55 @@ describe('SubmitQuestionReportUseCase', () => {
         comment: 'First',
       }),
     ]);
+  });
+
+  it('throws INTERNAL_ERROR when a replay returns a non-report row', async () => {
+    const { useCase, feedback } = makeUseCase();
+    // Defense-in-depth behind the repository's replay guard: a store that
+    // hands back the wrong kind must not surface its id as a report.
+    const ratingRow = createQuestionRatingFeedback({
+      userId,
+      questionId: 'question-1',
+    });
+    feedback.record = async () => ratingRow;
+
+    await expect(
+      useCase.execute({
+        userId,
+        questionId: 'question-1',
+        attemptId: null,
+        practiceSessionId: null,
+        category: 'incorrect_answer',
+        comment: 'First',
+        idempotencyKey: 'request-1',
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Invalid report replay',
+    });
+  });
+
+  it('rejects a replayed request idempotency key carrying an edited report', async () => {
+    const { useCase } = makeUseCase();
+    const baseInput = {
+      userId,
+      questionId: 'question-1',
+      attemptId: null,
+      practiceSessionId: null,
+      category: 'incorrect_answer' as const,
+      idempotencyKey: 'request-1',
+    };
+
+    await useCase.execute({ ...baseInput, comment: 'First' });
+
+    // The edited report must surface a typed conflict, not silently return
+    // the original submission's id as success.
+    await expect(
+      useCase.execute({ ...baseInput, comment: 'Changed' }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      details: { reason: 'feedback_request_token_reused' },
+    });
   });
 
   it('rejects and records nothing when the attempt belongs to a different question', async () => {
