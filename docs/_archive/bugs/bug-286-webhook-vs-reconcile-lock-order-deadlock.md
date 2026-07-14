@@ -11,7 +11,7 @@
 
 ## Resolution (2026-07-11)
 
-Fixed in PR #626 (squash `8e011843` to dev), promoted via PR #631 (main `c12d608b`); production deploy succeeded and `https://addictionboards.com/` returned HTTP/2 200. Reconcile Phase 4 was reordered to `subscriptions.upsert` before `stripeCustomers.insert`, so all three explicit writers share the canonical order advisory(user) → `stripe_subscriptions` → `stripe_customers`, documented with contract comments at each coordinator; pinned by the parameterized real-Postgres interleaving regression in `tests/integration/stripe-subscription-writer-lock-order.integration.test.ts`. Residual filed from the wave-close review as [BUG-294](../../bugs/bug-294-user-deletion-cascade-inverts-subscription-lock-order.md): the `ON DELETE CASCADE` writer on the user-deletion path is a fourth writer hard-wired to the inverse order and is not covered by this fix.
+Fixed in PR #626 (squash `8e011843` to dev), promoted via PR #631 (main `c12d608b`); production deploy succeeded and `https://addictionboards.com/` returned HTTP/2 200. Reconcile Phase 4 was reordered to `subscriptions.upsert` before `stripeCustomers.insert`, so all three explicit writers share the canonical order advisory(user) → `stripe_subscriptions` → `stripe_customers`, documented with contract comments at each coordinator; pinned by the parameterized real-Postgres interleaving regression in `tests/integration/stripe-subscription-writer-lock-order.integration.test.ts`. Residual filed from the wave-close review as [BUG-294](./bug-294-user-deletion-cascade-inverts-subscription-lock-order.md): the `ON DELETE CASCADE` writer on the user-deletion path is a fourth writer hard-wired to the inverse order and is not covered by this fix.
 
 
 ## Summary
