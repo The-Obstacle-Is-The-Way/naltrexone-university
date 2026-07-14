@@ -57,6 +57,7 @@ export function useQuestionPageBookmarks(
   const bookmarkRequestTokensRef = useRef<Map<string, BookmarkRequestToken>>(
     new Map(),
   );
+  const bookmarkRequestsInFlightRef = useRef<Set<string>>(new Set());
   const isMountedRef = useRef(input.isMounted);
   isMountedRef.current = input.isMounted;
 
@@ -173,9 +174,11 @@ export function useQuestionPageBookmarks(
     return () => {
       if (!input.question) return;
 
+      const questionId = input.question.questionId;
+      if (bookmarkRequestsInFlightRef.current.has(questionId)) return;
+      bookmarkRequestsInFlightRef.current.add(questionId);
       bookmarkStateVersionRef.current += 1;
       const stateVersion = bookmarkStateVersionRef.current;
-      const questionId = input.question.questionId;
       const desiredBookmarked = !isBookmarked;
 
       void setBookmarkForQuestion({
@@ -210,6 +213,8 @@ export function useQuestionPageBookmarks(
           });
         },
         isMounted: () => isMountedRef.current(),
+      }).finally(() => {
+        bookmarkRequestsInFlightRef.current.delete(questionId);
       });
     };
   }, [input.question, isBookmarked]);

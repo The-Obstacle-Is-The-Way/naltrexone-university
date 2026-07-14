@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import {
@@ -130,6 +132,30 @@ describe('useQuestionPageBookmarks (browser)', () => {
       bookmarked: true,
       idempotencyKey: expect.any(String),
     });
+    await expect
+      .element(screen.getByTestId('bookmark-status'))
+      .toHaveTextContent('idle');
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
+  });
+
+  it('starts only one bookmark request when the toggle is invoked twice while pending', async () => {
+    const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
+    setBookmark.mockReturnValue(deferred.promise);
+    const screen = await render(<Probe />);
+
+    await expect
+      .element(screen.getByTestId('is-bookmark-hydrated'))
+      .toHaveTextContent('true');
+    await screen.getByTestId('trigger-toggle-bookmark').click();
+    await screen.getByTestId('trigger-toggle-bookmark').click();
+    await expect.poll(() => setBookmark.mock.calls.length).toBeGreaterThan(0);
+
+    deferred.resolve(ok({ bookmarked: true }));
+    await deferred.promise;
+
+    expect(setBookmark).toHaveBeenCalledTimes(1);
     await expect
       .element(screen.getByTestId('bookmark-status'))
       .toHaveTextContent('idle');

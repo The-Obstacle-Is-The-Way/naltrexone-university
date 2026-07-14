@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { usePracticeQuestionBookmarks } from './use-practice-question-bookmarks';
 
@@ -145,5 +147,23 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
     await expect
       .element(screen.getByTestId('is-bookmarked'))
       .toHaveTextContent('false');
+  });
+
+  it('starts only one bookmark request per question when the toggle is invoked twice while pending', async () => {
+    const deferred = createDeferred<ActionResult<{ bookmarked: boolean }>>();
+    setBookmark.mockReturnValue(deferred.promise);
+    const screen = await render(<PracticeQuestionBookmarksProbe />);
+
+    await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
+    await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
+    await expect.poll(() => setBookmark.mock.calls.length).toBeGreaterThan(0);
+
+    deferred.resolve(ok({ bookmarked: true }));
+    await deferred.promise;
+
+    expect(setBookmark).toHaveBeenCalledTimes(1);
+    await expect
+      .element(screen.getByTestId('is-bookmarked'))
+      .toHaveTextContent('true');
   });
 });
