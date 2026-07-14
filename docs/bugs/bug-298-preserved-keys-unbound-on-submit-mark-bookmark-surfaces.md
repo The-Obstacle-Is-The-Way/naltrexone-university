@@ -48,7 +48,7 @@ Silent wrong-outcome presentation on core practice surfaces: a grade shown for t
 
 ## Resolution State (2026-07-14)
 
-Implementation merged to `dev` through PR #647 (`b665d7ce`) and is awaiting production promotion after a final review follow-up on branch `fix/bug-298-request-identity-binding`. `Status` remains **Open** until production proof exists.
+Implementation merged to `dev` through PR #647 (`b665d7ce`). Follow-up PR #650 on branch `fix/bug-298-request-identity-binding` applies the promotion-review helper reuse and awaits exact-head CodeRabbit approval before merging; production promotion remains held in PR #649. `Status` remains **Open** until production proof exists.
 
 - Extracted BUG-295's fingerprint-bound key type and `resolveRequestKey`/`mintRequestKey` lifecycle into the neutral shared client module `app/(app)/app/shared/idempotency-request-key.ts`; feedback consumes the shared primitive with its existing fingerprints and behavior unchanged.
 - Bound submit tokens to question, selected choice, active practice-session identity, and (for standalone reattempts) retry provenance; bound mark tokens to session, question, and desired mark state; bound bookmark tokens to question and desired state. Same-identity indeterminate failures preserve their key, changed intent mints fresh, and a consumed success retires the token.
