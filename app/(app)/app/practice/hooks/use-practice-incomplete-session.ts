@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   discardPracticeSession,
   endPracticeSession,
@@ -6,10 +6,12 @@ import {
   getIncompletePracticeSession,
 } from '@/src/adapters/controllers/practice-controller';
 import {
+  type AbandonRequestToken,
   abandonIncompleteSession,
   createIncompleteSessionEffect,
   createIncompleteSessionLoadGuard,
   loadIncompleteSession,
+  resolveAbandonRequestToken,
 } from '../practice-page-incomplete-session';
 
 type IncompletePracticeSession =
@@ -24,7 +26,7 @@ export type UsePracticeIncompleteSessionOutput = {
   incompleteSessionError: string | null;
   incompleteSession: IncompletePracticeSession | null;
   refreshIncompleteSession: () => Promise<void>;
-  onAbandonIncompleteSession: () => Promise<void>;
+  onAbandonIncompleteSession: () => Promise<boolean>;
 };
 
 export function usePracticeIncompleteSession(
@@ -38,9 +40,10 @@ export function usePracticeIncompleteSession(
   >(null);
   const [incompleteSession, setIncompleteSession] =
     useState<IncompletePracticeSession | null>(null);
-  const [abandonIdempotencyKey, setAbandonIdempotencyKey] = useState(() =>
-    crypto.randomUUID(),
-  );
+  // A ref, not state: the token drives no rendering, and resolving it
+  // synchronously keeps a double-click on the same session reusing one key
+  // (the second request lands on the first's in-progress claim).
+  const abandonRequestTokenRef = useRef<AbandonRequestToken | null>(null);
   const [incompleteSessionLoadGuard] = useState(
     createIncompleteSessionLoadGuard,
   );
@@ -69,12 +72,26 @@ export function usePracticeIncompleteSession(
   );
 
   const onAbandonIncompleteSession = useCallback(async () => {
-    if (!incompleteSession) return;
+    if (!incompleteSession) return false;
 
-    await abandonIncompleteSession({
+    // The token is bound to the session it targets: a preserved key may only
+    // retry the same session's abandon, never carry a different session.
+    const token = resolveAbandonRequestToken(
+      abandonRequestTokenRef.current,
+      incompleteSession.sessionId,
+      () => crypto.randomUUID(),
+    );
+    abandonRequestTokenRef.current = token;
+
+    return abandonIncompleteSession({
       sessionId: incompleteSession.sessionId,
-      idempotencyKey: abandonIdempotencyKey,
-      rotateIdempotencyKey: () => setAbandonIdempotencyKey(crypto.randomUUID()),
+      idempotencyKey: token.key,
+      rotateIdempotencyKey: () => {
+        abandonRequestTokenRef.current = {
+          sessionId: token.sessionId,
+          key: crypto.randomUUID(),
+        };
+      },
       mode: incompleteSession.mode,
       endPracticeSessionFn: endPracticeSession,
       discardPracticeSessionFn: discardPracticeSession,
@@ -83,7 +100,7 @@ export function usePracticeIncompleteSession(
       setIncompleteSession,
       isMounted: input.isMounted,
     });
-  }, [abandonIdempotencyKey, incompleteSession, input.isMounted]);
+  }, [incompleteSession, input.isMounted]);
 
   return {
     incompleteSessionStatus,

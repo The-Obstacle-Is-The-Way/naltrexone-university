@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useIsMounted } from '@/lib/use-is-mounted';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
 import type { PracticeFilters } from '../practice-page-logic';
@@ -46,6 +47,16 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
   });
   const tags = usePracticeSessionTags();
 
+  const incompleteOnAbandon = incomplete.onAbandonIncompleteSession;
+  const retireStartIdempotencyKey = sessionStart.retireIdempotencyKey;
+  const onAbandonIncompleteSession = useCallback(async () => {
+    const abandoned = await incompleteOnAbandon();
+    // A successful abandon resolves the session that the preserved start
+    // key's cached outcome refers to; the next start is a new intent and
+    // must execute under a fresh key instead of replaying it.
+    if (abandoned) retireStartIdempotencyKey();
+  }, [incompleteOnAbandon, retireStartIdempotencyKey]);
+
   return {
     filters: sessionStart.filters,
     sessionMode: sessionStart.sessionMode,
@@ -67,6 +78,6 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
     onDifficultyChange: sessionStart.onDifficultyChange,
     onStatusChange: sessionStart.onStatusChange,
     onStartSession: sessionStart.onStartSession,
-    onAbandonIncompleteSession: incomplete.onAbandonIncompleteSession,
+    onAbandonIncompleteSession,
   };
 }

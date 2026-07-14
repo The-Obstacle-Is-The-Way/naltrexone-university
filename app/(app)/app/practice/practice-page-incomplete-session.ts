@@ -112,6 +112,27 @@ function isCachedTerminalLifecycleConflict(
   );
 }
 
+/**
+ * An abandon idempotency key bound to the session it was minted for. The
+ * wrapper replays a completed cached outcome for a reused key, so a key that
+ * carried one session's abandon must never travel with a different session:
+ * the replayed success would clear the panel without ending the new session.
+ */
+export type AbandonRequestToken = {
+  sessionId: string;
+  key: string;
+};
+
+export function resolveAbandonRequestToken(
+  token: AbandonRequestToken | null,
+  sessionId: string,
+  createIdempotencyKey: () => string,
+): AbandonRequestToken {
+  if (token && token.sessionId === sessionId) return token;
+  return { sessionId, key: createIdempotencyKey() };
+}
+
+/** Resolves true only when the abandon completed successfully while mounted. */
 export async function abandonIncompleteSession<T>(input: {
   sessionId: string;
   idempotencyKey: string;
@@ -123,8 +144,8 @@ export async function abandonIncompleteSession<T>(input: {
   setIncompleteSessionError: (message: string | null) => void;
   setIncompleteSession: (session: T | null) => void;
   isMounted: () => boolean;
-}): Promise<void> {
-  if (!input.isMounted()) return;
+}): Promise<boolean> {
+  if (!input.isMounted()) return false;
 
   input.setIncompleteSessionStatus('loading');
   input.setIncompleteSessionError(null);
@@ -144,7 +165,7 @@ export async function abandonIncompleteSession<T>(input: {
       ABANDON_SESSION_TIMEOUT_MS,
     );
   } catch (error) {
-    if (!input.isMounted()) return;
+    if (!input.isMounted()) return false;
     reportClientError(error, {
       component: 'PracticePageIncompleteSession',
       action: 'abandonIncompleteSession',
@@ -153,9 +174,9 @@ export async function abandonIncompleteSession<T>(input: {
     // the preserved key is the only handle to its recorded outcome.
     input.setIncompleteSessionStatus('error');
     input.setIncompleteSessionError(getThrownErrorMessage(error));
-    return;
+    return false;
   }
-  if (!input.isMounted()) return;
+  if (!input.isMounted()) return false;
 
   if (!res.ok) {
     // Rotate only for the terminal conflicts the lifecycle policy caches;
@@ -166,9 +187,14 @@ export async function abandonIncompleteSession<T>(input: {
     }
     input.setIncompleteSessionStatus('error');
     input.setIncompleteSessionError(getActionResultErrorMessage(res));
-    return;
+    return false;
   }
 
+  // A consumed success is terminal for this key: the panel clears, so any
+  // later abandon necessarily targets a different session and must not
+  // replay this outcome.
+  input.rotateIdempotencyKey?.();
   input.setIncompleteSession(null);
   input.setIncompleteSessionStatus('idle');
+  return true;
 }
