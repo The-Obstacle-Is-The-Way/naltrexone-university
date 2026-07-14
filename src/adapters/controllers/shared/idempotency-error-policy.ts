@@ -34,8 +34,12 @@ const determinateCodesByAction: Record<
   IdempotentActionName,
   ReadonlySet<ApplicationErrorCode>
 > = {
-  [IdempotentActionNames.Checkout]: new Set(['ALREADY_SUBSCRIBED']),
-  [IdempotentActionNames.Portal]: new Set(['NOT_FOUND']),
+  // Billing surfaces use mount-fixed keys with no client rotation, so any
+  // cached outcome outlives the state it was derived from: ALREADY_SUBSCRIBED
+  // depends on currentPeriodEnd > now and portal NOT_FOUND on a customer that
+  // a later checkout can create. Nothing user-mutable is cacheable here.
+  [IdempotentActionNames.Checkout]: new Set([]),
+  [IdempotentActionNames.Portal]: new Set([]),
   [IdempotentActionNames.Bookmark]: new Set(['NOT_FOUND']),
   [IdempotentActionNames.QuestionRating]: new Set([
     'VALIDATION_ERROR',
@@ -187,3 +191,6 @@ export const shouldCacheSubmitAnswerError = (error: unknown): boolean =>
 
 export const shouldCacheQuestionMarkError = (error: unknown): boolean =>
   shouldCache(IdempotentActionNames.QuestionMark, error);
+
+export const shouldCacheStartPracticeSessionError = (error: unknown): boolean =>
+  shouldCache(IdempotentActionNames.StartPracticeSession, error);

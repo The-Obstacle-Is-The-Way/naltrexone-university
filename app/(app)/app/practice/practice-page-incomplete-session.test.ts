@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import {
+  ApplicationConflictReasons,
+  PracticeSessionConflictReasons,
+} from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 const { fixtureSession1Id } = vi.hoisted(() => ({
@@ -309,7 +313,9 @@ describe('practice-page-incomplete-session', () => {
 
       expect(setStatus).toHaveBeenLastCalledWith('error');
       expect(setError).toHaveBeenLastCalledWith('boom');
-      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      // A thrown transport/timeout error is outcome-indeterminate: the
+      // preserved key is the only handle to a possibly-committed abandon.
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
       expect(setSession).not.toHaveBeenCalled();
       expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
         component: 'PracticePageIncompleteSession',
@@ -317,7 +323,7 @@ describe('practice-page-incomplete-session', () => {
       });
     });
 
-    it('rotates the abandon idempotency key when the request fails', async () => {
+    it('preserves the abandon idempotency key for a non-cached internal error', async () => {
       const setStatus = vi.fn();
       const setError = vi.fn();
       const setSession = vi.fn();
@@ -344,9 +350,73 @@ describe('practice-page-incomplete-session', () => {
         sessionId: fixtureSession1Id,
         idempotencyKey: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
       });
-      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      // The lifecycle policy aborts the claim for INTERNAL_ERROR, so the
+      // same-key retry re-executes; rotating would orphan that path.
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
       expect(setStatus).toHaveBeenLastCalledWith('error');
       expect(setError).toHaveBeenLastCalledWith('Nope');
+    });
+
+    it('rotates the abandon idempotency key after a cached terminal conflict', async () => {
+      const setStatus = vi.fn();
+      const setError = vi.fn();
+      const setSession = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const endPracticeSessionFn = vi.fn(async () =>
+        err('CONFLICT', 'Session already ended', undefined, {
+          reason: PracticeSessionConflictReasons.AlreadyEnded,
+        }),
+      );
+      const discardPracticeSessionFn = vi.fn(async () => ok({}));
+
+      await abandonIncompleteSession({
+        sessionId: fixtureSession1Id,
+        idempotencyKey: '11111111-2222-3333-4444-555555555555',
+        rotateIdempotencyKey,
+        mode: 'tutor',
+        endPracticeSessionFn,
+        discardPracticeSessionFn,
+        setIncompleteSessionStatus: setStatus,
+        setIncompleteSessionError: setError,
+        setIncompleteSession: setSession,
+        isMounted: () => true,
+      });
+
+      // Terminal conflicts are the only outcomes the lifecycle policy caches,
+      // so a fresh key is required for the next distinct abandon attempt.
+      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setStatus).toHaveBeenLastCalledWith('error');
+    });
+
+    it('preserves the abandon idempotency key on a concurrent-request conflict', async () => {
+      const setStatus = vi.fn();
+      const setError = vi.fn();
+      const setSession = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const endPracticeSessionFn = vi.fn(async () =>
+        err('CONFLICT', 'Request already in progress', undefined, {
+          reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+        }),
+      );
+      const discardPracticeSessionFn = vi.fn(async () => ok({}));
+
+      await abandonIncompleteSession({
+        sessionId: fixtureSession1Id,
+        idempotencyKey: '66666666-7777-8888-9999-aaaaaaaaaaaa',
+        rotateIdempotencyKey,
+        mode: 'tutor',
+        endPracticeSessionFn,
+        discardPracticeSessionFn,
+        setIncompleteSessionStatus: setStatus,
+        setIncompleteSessionError: setError,
+        setIncompleteSession: setSession,
+        isMounted: () => true,
+      });
+
+      // The original request may still be running; the preserved key is the
+      // handle to its recorded outcome.
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+      expect(setStatus).toHaveBeenLastCalledWith('error');
     });
 
     it('does not set error state when unmounted after a thrown request', async () => {

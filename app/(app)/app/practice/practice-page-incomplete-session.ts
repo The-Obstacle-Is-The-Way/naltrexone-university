@@ -9,6 +9,7 @@ import {
 import { reportClientError } from '@/lib/report-client-error';
 import { withTimeout } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { PracticeSessionConflictReasons } from '@/src/application/errors';
 
 const INCOMPLETE_SESSION_TIMEOUT_MS = STANDARD_READ_TIMEOUT_MS;
 const ABANDON_SESSION_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
@@ -100,6 +101,17 @@ export function createIncompleteSessionEffect<T>(
   };
 }
 
+function isCachedTerminalLifecycleConflict(
+  res: Extract<ActionResult<unknown>, { ok: false }>,
+): boolean {
+  if (res.error.code !== 'CONFLICT') return false;
+  const reason = res.error.details?.reason;
+  return (
+    reason === PracticeSessionConflictReasons.AlreadyEnded ||
+    reason === PracticeSessionConflictReasons.ExamTimeExpired
+  );
+}
+
 export async function abandonIncompleteSession<T>(input: {
   sessionId: string;
   idempotencyKey: string;
@@ -137,7 +149,8 @@ export async function abandonIncompleteSession<T>(input: {
       component: 'PracticePageIncompleteSession',
       action: 'abandonIncompleteSession',
     });
-    input.rotateIdempotencyKey?.();
+    // Outcome-indeterminate: the abandon may have committed server-side, and
+    // the preserved key is the only handle to its recorded outcome.
     input.setIncompleteSessionStatus('error');
     input.setIncompleteSessionError(getThrownErrorMessage(error));
     return;
@@ -145,7 +158,12 @@ export async function abandonIncompleteSession<T>(input: {
   if (!input.isMounted()) return;
 
   if (!res.ok) {
-    input.rotateIdempotencyKey?.();
+    // Rotate only for the terminal conflicts the lifecycle policy caches;
+    // every other failure aborts the claim server-side, so the same-key
+    // retry re-executes (rotating would orphan that path).
+    if (isCachedTerminalLifecycleConflict(res)) {
+      input.rotateIdempotencyKey?.();
+    }
     input.setIncompleteSessionStatus('error');
     input.setIncompleteSessionError(getActionResultErrorMessage(res));
     return;

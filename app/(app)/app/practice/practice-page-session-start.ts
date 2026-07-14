@@ -12,7 +12,6 @@ import {
   IdempotentActionNames,
   rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
-import { ApplicationConflictReasons } from '@/src/application/errors';
 
 const SESSION_START_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
@@ -136,19 +135,18 @@ export async function startSession(input: {
       res.error,
       () => input.setIdempotencyKey(input.createIdempotencyKey()),
     );
-    if (
-      res.error.details?.reason ===
-      ApplicationConflictReasons.IncompleteSessionExists
-    ) {
-      try {
-        await input.refreshIncompleteSession?.();
-      } catch (error) {
-        reportSessionStartError(
-          input.reportError,
-          error,
-          'refreshIncompleteSession',
-        );
-      }
+    // Refresh on EVERY failed result, not just the typed conflict: a start
+    // whose session committed but whose outcome-store write failed replays a
+    // cached INTERNAL_ERROR on retry, and only this refetch can surface the
+    // committed session's Resume/Abandon recovery for that arm.
+    try {
+      await input.refreshIncompleteSession?.();
+    } catch (error) {
+      reportSessionStartError(
+        input.reportError,
+        error,
+        'refreshIncompleteSession',
+      );
     }
     return;
   }

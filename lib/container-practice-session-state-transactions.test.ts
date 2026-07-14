@@ -523,6 +523,39 @@ describe('container factories — practice session state write transactions', ()
     expect(transaction).toHaveBeenCalledTimes(1);
   });
 
+  it('classifies a repository-wrapped statement cancellation as rollback-certain', async () => {
+    const fixture = createPracticeSessionStateWriteFixture('tutor');
+    // DrizzleAttemptRepository wraps driver errors as
+    // ApplicationError('INTERNAL_ERROR', { cause }); the owner must classify
+    // through that wrapper, not stop at its non-SQLSTATE code property.
+    const wrappedCancellation = new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to insert attempt',
+      undefined,
+      { cause: { code: '57014' } },
+    );
+    const transaction = vi.fn<TestTransaction>(async (fn) =>
+      fn(createUnexpectedNestedTransactionDb()),
+    );
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture: {
+        ...fixture,
+        attempts: new StatementCancelingAttemptRepository(wrappedCancellation),
+      },
+    });
+
+    const promise = container.createSubmitAnswerUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+      questionId: fixture.questionId,
+      choiceId: fixture.correctChoiceId,
+    });
+
+    await expect(promise).rejects.toSatisfy(isRollbackCertainPersistenceError);
+    expect(transaction).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps transaction-boundary statement cancellation indeterminate for session-backed submit', async () => {
     const fixture = createPracticeSessionStateWriteFixture('tutor');
     const statementCancellation = new Error('commit canceled', {

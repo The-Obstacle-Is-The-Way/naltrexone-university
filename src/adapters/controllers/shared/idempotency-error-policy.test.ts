@@ -16,6 +16,7 @@ import {
   shouldCacheQuestionMarkError,
   shouldCacheQuestionRatingError,
   shouldCacheQuestionReportError,
+  shouldCacheStartPracticeSessionError,
   shouldCacheSubmitAnswerError,
   shouldRotateIdempotencyKeyAfterActionError,
 } from './idempotency-error-policy';
@@ -49,21 +50,70 @@ describe.each([
 });
 
 describe('checkout idempotency error policy', () => {
-  it('caches the determinate already-subscribed outcome', () => {
+  it('aborts the time-dependent already-subscribed outcome', () => {
+    // currentPeriodEnd > now can lapse within the cache TTL and the billing
+    // surfaces use mount-fixed keys with no rotation, so a cached
+    // ALREADY_SUBSCRIBED could pin a lapsed user out of re-checkout.
     expect(
       shouldCacheCheckoutSessionError(
         new ApplicationError('ALREADY_SUBSCRIBED', 'Already subscribed'),
       ),
+    ).toBe(false);
+  });
+});
+
+describe('portal idempotency error policy', () => {
+  it('aborts the mutable customer-not-found outcome', () => {
+    // A Stripe customer can be created by a later checkout while the billing
+    // page's mount-fixed key is still live; the retry must re-execute.
+    expect(
+      shouldCachePortalSessionError(
+        new ApplicationError('NOT_FOUND', 'Stripe customer not found'),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('bookmark idempotency error policy', () => {
+  it('caches the audited not-found outcome', () => {
+    expect(
+      shouldCacheBookmarkError(new ApplicationError('NOT_FOUND', 'Not found')),
     ).toBe(true);
   });
 });
 
-describe.each([
-  ['portal', shouldCachePortalSessionError],
-  ['bookmark', shouldCacheBookmarkError],
-] as const)('%s idempotency error policy', (_name, policy) => {
-  it('caches the audited not-found outcome', () => {
-    expect(policy(new ApplicationError('NOT_FOUND', 'Not found'))).toBe(true);
+describe('start-practice-session idempotency error policy', () => {
+  it.each(transientCases)('aborts a transient %s', (_name, error) => {
+    expect(shouldCacheStartPracticeSessionError(error)).toBe(false);
+  });
+
+  it.each([
+    'VALIDATION_ERROR',
+    'NOT_FOUND',
+  ] as const)('caches the determinate %s outcome', (code) => {
+    expect(
+      shouldCacheStartPracticeSessionError(new ApplicationError(code, code)),
+    ).toBe(true);
+  });
+
+  it('caches the typed incomplete-session conflict', () => {
+    expect(
+      shouldCacheStartPracticeSessionError(
+        new ApplicationError('CONFLICT', 'Incomplete session', undefined, {
+          details: {
+            reason: ApplicationConflictReasons.IncompleteSessionExists,
+          },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('aborts an unvetted bare conflict', () => {
+    expect(
+      shouldCacheStartPracticeSessionError(
+        new ApplicationError('CONFLICT', 'Conflict'),
+      ),
+    ).toBe(false);
   });
 });
 

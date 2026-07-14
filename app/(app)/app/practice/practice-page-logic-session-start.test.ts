@@ -258,6 +258,31 @@ describe('practice-page-logic session start', () => {
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
+    it('refreshes recovery state after a non-conflict failure so a committed session can surface', async () => {
+      const setIdempotencyKey = vi.fn();
+      const refreshIncompleteSession = vi.fn(async () => undefined);
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        // The cache-error-and-throw arm replays INTERNAL_ERROR after a
+        // committed session; only the refetch can render Resume/Abandon.
+        startPracticeSessionFn: async () =>
+          err('INTERNAL_ERROR', 'Failed to start practice session'),
+        refreshIncompleteSession,
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
+    });
+
     it('reports a failed incomplete-session refresh without replacing the primary conflict', async () => {
       const refreshError = new Error('Refresh failed');
       const reportError = vi.fn();

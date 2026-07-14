@@ -6,12 +6,16 @@ import {
 } from '@/src/adapters/controllers/question-controller';
 import {
   shouldCacheQuestionMarkError,
+  shouldCacheStartPracticeSessionError,
   shouldCacheSubmitAnswerError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { toRollbackCertainPersistenceError } from '@/src/adapters/repositories/postgres-errors';
 import { withIdempotency } from '@/src/adapters/shared/with-idempotency';
-import { practiceSessionAlreadyEndedError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  practiceSessionAlreadyEndedError,
+} from '@/src/application/errors';
 import {
   FakeAuthGateway,
   FakeGetNextQuestionUseCase,
@@ -68,12 +72,17 @@ describe('idempotency determinacy with real Postgres', () => {
       'practice:setPracticeSessionQuestionMark',
       shouldCacheQuestionMarkError,
     ],
+    [
+      'start practice session',
+      'practice:startPracticeSession',
+      shouldCacheStartPracticeSessionError,
+    ],
   ] as const)('aborts and re-executes %s after rollback-certain 57014', async (_name, action, shouldCacheError) => {
     const user = await createUser(db, cleanup);
     const repo = new DrizzleIdempotencyKeyRepository(db);
     const logger = new FakeLogger();
     const key = randomUUID();
-    const now = () => new Date('2026-07-13T00:00:00.000Z');
+    const now = () => new Date();
     let executionCount = 0;
     let injectCancellation = true;
     const execute = async () => {
@@ -117,6 +126,53 @@ describe('idempotency determinacy with real Postgres', () => {
     expect(executionCount).toBe(2);
   });
 
+  it('aborts and re-executes session start after a transient internal error', async () => {
+    const user = await createUser(db, cleanup);
+    const repo = new DrizzleIdempotencyKeyRepository(db);
+    const logger = new FakeLogger();
+    const key = randomUUID();
+    const action = 'practice:startPracticeSession';
+    const now = () => new Date();
+    let executionCount = 0;
+    const execute = async () => {
+      executionCount += 1;
+      if (executionCount === 1) {
+        throw new ApplicationError('INTERNAL_ERROR', 'database unavailable');
+      }
+      return { sessionId: randomUUID() };
+    };
+
+    // Pre-policy, the wrapper default cached this transient error for the
+    // full TTL and the client's preserved key replayed it on every Start
+    // click — the session-start dead-end this policy exists to prevent.
+    await expect(
+      withIdempotency({
+        repo,
+        logger,
+        userId: user.id,
+        action,
+        key,
+        now,
+        shouldCacheError: shouldCacheStartPracticeSessionError,
+        execute,
+      }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    await expect(repo.find(user.id, action, key)).resolves.toBeNull();
+
+    const retry = await withIdempotency({
+      repo,
+      logger,
+      userId: user.id,
+      action,
+      key,
+      now,
+      shouldCacheError: shouldCacheStartPracticeSessionError,
+      execute,
+    });
+    expect(retry).toMatchObject({ sessionId: expect.any(String) });
+    expect(executionCount).toBe(2);
+  });
+
   it('replays a cached terminal submit ActionResult without re-execution', async () => {
     const persistedUser = await createUser(db, cleanup);
     const user = createDomainUser({
@@ -134,7 +190,9 @@ describe('idempotency determinacy with real Postgres', () => {
       },
       practiceSessionAlreadyEndedError(),
     );
-    const now = new Date('2026-07-13T00:00:00.000Z');
+    // A live timestamp: the stored outcome's 24h TTL is evaluated against the
+    // database clock, so a pinned past date turns this test into a time bomb.
+    const now = new Date();
     const deps: QuestionControllerDeps = {
       authGateway: new FakeAuthGateway(user),
       logger: new FakeLogger(),

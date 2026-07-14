@@ -70,6 +70,7 @@ import { executeIdempotent } from './shared/execute-idempotent';
 import {
   IdempotentActionNames,
   shouldCacheQuestionMarkError,
+  shouldCacheStartPracticeSessionError,
 } from './shared/idempotency-error-policy';
 import {
   shouldCachePracticeSessionLifecycleError,
@@ -219,6 +220,10 @@ export const startPracticeSession = createAction({
       idempotencyKey,
       outputSchema: StartPracticeSessionOutputSchema,
       beforeExecute: enforceStartRateLimit,
+      // Abort claims for transient failures so the client's preserved key
+      // re-executes instead of replaying a poisoned error; cache only the
+      // determinate outcomes in the start policy's vetted set.
+      shouldCacheError: shouldCacheStartPracticeSessionError,
       outcomeStoreFailurePolicy: 'cache-error-and-throw',
       execute: createNewSession,
     });

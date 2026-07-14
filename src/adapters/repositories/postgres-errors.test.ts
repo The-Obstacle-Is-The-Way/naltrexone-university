@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { isRollbackCertainPersistenceError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  isRollbackCertainPersistenceError,
+} from '@/src/application/errors';
 import {
   getPostgresConstraintName,
   getPostgresErrorCode,
@@ -63,6 +66,38 @@ describe('postgres-errors', () => {
       toRollbackCertainPersistenceError(cancellation, {
         phase: 'transaction_boundary',
       }),
+    ).toBeNull();
+  });
+
+  it('traverses an ApplicationError wrapper to the driver SQLSTATE', () => {
+    // Repository adapters wrap raw cancellations as
+    // ApplicationError('INTERNAL_ERROR', { cause }); the wrapper's own code
+    // property is not a SQLSTATE and must not short-circuit classification.
+    const wrapped = new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to record attempt',
+      undefined,
+      { cause: { code: '57014' } },
+    );
+
+    expect(getPostgresErrorCode(wrapped)).toBe('57014');
+    expect(
+      toRollbackCertainPersistenceError(wrapped, {
+        phase: 'transaction_body',
+      }),
+    ).toSatisfy(isRollbackCertainPersistenceError);
+    expect(
+      isPostgresUniqueViolation(
+        new ApplicationError('CONFLICT', 'wrapped unique', undefined, {
+          cause: { code: '23505' },
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('does not report a non-SQLSTATE application code as a postgres code', () => {
+    expect(
+      getPostgresErrorCode(new ApplicationError('INTERNAL_ERROR', 'boom')),
     ).toBeNull();
   });
 });
