@@ -48,14 +48,17 @@ export function usePracticeSessionControls(): UsePracticeSessionControlsOutput {
   const tags = usePracticeSessionTags();
 
   const incompleteOnAbandon = incomplete.onAbandonIncompleteSession;
-  const retireStartIdempotencyKey = sessionStart.retireIdempotencyKey;
+  const captureStartIdempotencyKeyRetirement =
+    sessionStart.captureIdempotencyKeyRetirement;
   const onAbandonIncompleteSession = useCallback(async () => {
+    const retireStartKeyIfUnchanged = captureStartIdempotencyKeyRetirement();
     const recoveryResolved = await incompleteOnAbandon();
     // Local success or an authoritative refresh proving absence consumes the
     // recovery lifecycle that the preserved start key refers to. A failed or
-    // indeterminate refresh leaves the key untouched.
-    if (recoveryResolved) retireStartIdempotencyKey();
-  }, [incompleteOnAbandon, retireStartIdempotencyKey]);
+    // indeterminate refresh leaves the key untouched, as does a newer start
+    // intent that arrived while recovery was pending.
+    if (recoveryResolved) retireStartKeyIfUnchanged();
+  }, [captureStartIdempotencyKeyRetirement, incompleteOnAbandon]);
 
   return {
     filters: sessionStart.filters,

@@ -46,6 +46,6 @@ describe('usePracticeSessionStart', () => {
     expect(typeof output.onDifficultyChange).toBe('function');
     expect(typeof output.onStatusChange).toBe('function');
     expect(typeof output.onStartSession).toBe('function');
-    expect(typeof output.retireIdempotencyKey).toBe('function');
+    expect(typeof output.captureIdempotencyKeyRetirement).toBe('function');
   });
 });

@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { Button } from '@/components/ui/button';
 import * as reportClientError from '@/lib/report-client-error';
 import { TimeoutError } from '@/lib/with-timeout';
 import { err } from '@/src/adapters/controllers/action-result';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import * as tagController from '@/src/adapters/controllers/tag-controller';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { usePracticeSessionControls } from './use-practice-session-controls';
@@ -38,22 +40,26 @@ function RecoveryHookProbe() {
       <div data-testid="incomplete-session-id">
         {output.incompleteSession?.sessionId ?? ''}
       </div>
-      <button
+      <div data-testid="session-start-status">{output.sessionStartStatus}</div>
+      <Button
         type="button"
         onClick={() => {
           void output.onStartSession();
         }}
       >
         start-session
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
         onClick={() => {
           void output.onAbandonIncompleteSession();
         }}
       >
         abandon-incomplete-session
-      </button>
+      </Button>
+      <Button type="button" onClick={() => output.onSessionModeChange('exam')}>
+        change-start-intent
+      </Button>
     </>
   );
 }
@@ -305,5 +311,73 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     expect(firstStartKey).toEqual(expect.stringMatching(UUID_PATTERN));
     expect(secondStartKey).toEqual(expect.stringMatching(UUID_PATTERN));
     expect(secondStartKey).not.toBe(firstStartKey);
+  });
+
+  it('does not retire a newer in-flight start intent when abandon recovery resolves', async () => {
+    const sessionId = '11111111-1111-4111-8111-111111111124';
+    const abandonResult =
+      createDeferred<
+        Awaited<ReturnType<typeof practiceController.endPracticeSession>>
+      >();
+    const startResult =
+      createDeferred<
+        Awaited<ReturnType<typeof practiceController.startPracticeSession>>
+      >();
+    arrangeControlDependencies();
+    getIncompletePracticeSession
+      .mockResolvedValueOnce(
+        ok({
+          sessionId,
+          mode: 'tutor',
+          answeredCount: 0,
+          totalCount: 20,
+          startedAt: '2026-07-14T00:00:00.000Z',
+        }),
+      )
+      .mockResolvedValue(ok(null));
+    endPracticeSession.mockImplementation(() => abandonResult.promise);
+    startPracticeSession.mockImplementation(() => startResult.promise);
+
+    const screen = await render(<RecoveryHookProbe />);
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(sessionId);
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+    await vi.waitFor(() => expect(endPracticeSession).toHaveBeenCalledTimes(1));
+
+    await screen.getByRole('button', { name: 'change-start-intent' }).click();
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await vi.waitFor(() =>
+      expect(startPracticeSession).toHaveBeenCalledTimes(1),
+    );
+    await expect
+      .element(screen.getByTestId('session-start-status'))
+      .toHaveTextContent('loading');
+
+    abandonResult.resolve(
+      ok({
+        sessionId,
+        mode: 'tutor',
+        questionCount: 20,
+        endedAt: '2026-07-14T01:00:00.000Z',
+        totals: {
+          answered: 0,
+          correct: 0,
+          accuracy: 0,
+          durationSeconds: 60,
+        },
+      }),
+    );
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(/^$/);
+
+    startResult.resolve(err('VALIDATION_ERROR', 'Start request is invalid'));
+    await expect
+      .element(screen.getByTestId('session-start-status'))
+      .toHaveTextContent('error');
   });
 });
