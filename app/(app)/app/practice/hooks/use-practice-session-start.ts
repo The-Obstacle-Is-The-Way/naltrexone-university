@@ -3,6 +3,7 @@ import { reportClientError } from '@/lib/report-client-error';
 import { startPracticeSession } from '@/src/adapters/controllers/practice-controller';
 import { navigateTo } from '../client-navigation';
 import type { PracticeSessionStarterProps } from '../components/practice-session-starter';
+import type { IncompleteSessionRefreshOutcome } from '../practice-page-incomplete-session';
 import {
   createDifficultyChangeHandler,
   createSessionCountBlurHandler,
@@ -17,7 +18,9 @@ import {
 
 export type UsePracticeSessionStartInput = {
   isMounted: () => boolean;
-  refreshIncompleteSession?: () => Promise<void>;
+  refreshIncompleteSession: () => Promise<
+    IncompleteSessionRefreshOutcome<unknown>
+  >;
 };
 
 export type UsePracticeSessionStartOutput = {
@@ -36,7 +39,7 @@ export type UsePracticeSessionStartOutput = {
   onDifficultyChange: PracticeSessionStarterProps['onDifficultyChange'];
   onStatusChange: PracticeSessionStarterProps['onStatusChange'];
   onStartSession: () => Promise<void>;
-  retireIdempotencyKey: () => void;
+  captureIdempotencyKeyRetirement: () => () => boolean;
 };
 
 export function usePracticeSessionStart(
@@ -66,12 +69,17 @@ export function usePracticeSessionStart(
     setStartSessionIdempotencyKeyState(key);
   }, []);
 
-  // A key preserved across an indeterminate start outcome refers to a session
-  // that recovery may since have resolved; the owner of that resolution calls
-  // this so the next start executes as a new intent instead of replaying the
-  // stale cached outcome.
-  const retireIdempotencyKey = useCallback(() => {
-    setStartSessionIdempotencyKey(crypto.randomUUID());
+  // Capture the key whose recovery lifecycle is being resolved. The returned
+  // fence refuses to retire a newer intent that arrived while recovery was
+  // awaiting an external result.
+  const captureIdempotencyKeyRetirement = useCallback(() => {
+    const capturedKey = startSessionIdempotencyKeyRef.current;
+
+    return () => {
+      if (startSessionIdempotencyKeyRef.current !== capturedKey) return false;
+      setStartSessionIdempotencyKey(crypto.randomUUID());
+      return true;
+    };
   }, [setStartSessionIdempotencyKey]);
 
   const onSessionModeChange = useMemo(
@@ -151,9 +159,7 @@ export function usePracticeSessionStart(
             action: context.action,
           });
         },
-        ...(input.refreshIncompleteSession
-          ? { refreshIncompleteSession: input.refreshIncompleteSession }
-          : {}),
+        refreshIncompleteSession: input.refreshIncompleteSession,
         setSessionStartStatus,
         setSessionStartError,
         navigateTo,
@@ -184,6 +190,6 @@ export function usePracticeSessionStart(
     onDifficultyChange,
     onStatusChange,
     onStartSession,
-    retireIdempotencyKey,
+    captureIdempotencyKeyRetirement,
   };
 }

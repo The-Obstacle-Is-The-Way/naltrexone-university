@@ -21,6 +21,10 @@ vi.mock('../client-navigation', { spy: true });
 const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 const navigateToSpy = vi.mocked(clientNavigation.navigateTo);
+const refreshIncompleteSession = async () => ({
+  kind: 'loaded' as const,
+  session: null,
+});
 
 installReportClientErrorMocks(reportClientError);
 
@@ -38,7 +42,10 @@ function getIdempotencyKey(input: unknown): string {
 }
 
 function Probe() {
-  const output = usePracticeSessionStart({ isMounted: () => true });
+  const output = usePracticeSessionStart({
+    isMounted: () => true,
+    refreshIncompleteSession,
+  });
   const [settledStarts, setSettledStarts] = useState(0);
   const sessionStartError =
     output.sessionStartStatus === 'error'
