@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  claimRequestKeySlot,
   createRequestFingerprint,
+  createRequestKeySlotStore,
   mintRequestKey,
   resolveRequestKey,
 } from './idempotency-request-key';
@@ -55,6 +57,37 @@ describe('fingerprint-bound idempotency request keys', () => {
     expect(setToken).toHaveBeenCalledWith({
       key: 'replacement-key',
       fingerprint,
+    });
+  });
+
+  it('rejects token writes from a superseded owner generation', () => {
+    const slots = createRequestKeySlotStore();
+    const firstOwner = claimRequestKeySlot(slots, 'question-1');
+    firstOwner.setToken({ key: 'first-key', fingerprint: 'first-request' });
+
+    const secondOwner = claimRequestKeySlot(slots, 'question-1');
+    secondOwner.setToken({ key: 'second-key', fingerprint: 'second-request' });
+    firstOwner.setToken({ key: 'stale-key', fingerprint: 'first-request' });
+
+    const nextOwner = claimRequestKeySlot(slots, 'question-1');
+    expect(nextOwner.token).toEqual({
+      key: 'second-key',
+      fingerprint: 'second-request',
+    });
+  });
+
+  it('allows every token transition made by the current owner generation', () => {
+    const slots = createRequestKeySlotStore();
+    const owner = claimRequestKeySlot(slots, 'question-1');
+
+    owner.setToken({ key: 'initial-key', fingerprint: 'request' });
+    owner.setToken({ key: 'retry-key', fingerprint: 'request' });
+    owner.setToken({ key: 'retired-key', fingerprint: 'request' });
+
+    const nextOwner = claimRequestKeySlot(slots, 'question-1');
+    expect(nextOwner.token).toEqual({
+      key: 'retired-key',
+      fingerprint: 'request',
     });
   });
 });
