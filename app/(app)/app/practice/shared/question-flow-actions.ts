@@ -16,11 +16,11 @@ import type {
 import type { SaveExamDraftAnswerOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   IdempotentActionNames,
+  isConcurrentRequestInProgressError,
   rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import {
   type ApplicationConflictReason,
-  ApplicationConflictReasons,
   isApplicationConflictReason,
   isPracticeSessionConflictReason,
   type PracticeSessionConflictReason,
@@ -248,10 +248,7 @@ export function isPracticeSessionAlreadyEndedActionConflict(
 export function isConcurrentRequestInProgressActionConflict(
   result: ActionResult<unknown>,
 ): boolean {
-  return (
-    getActionResultConflictReason(result) ===
-    ApplicationConflictReasons.ConcurrentRequestInProgress
-  );
+  return !result.ok && isConcurrentRequestInProgressError(result.error);
 }
 
 export async function maybeSaveDraftBeforeNavigation<
