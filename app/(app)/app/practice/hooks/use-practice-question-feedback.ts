@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  claimRequestKeySlot,
+  createRequestKeySlotStore,
+} from '@/app/(app)/app/shared/idempotency-request-key';
+import {
   type FeedbackQuestionContext,
-  type FeedbackRequestToken,
   rateQuestionForQuestion,
   submitReportForQuestion,
 } from '@/app/(app)/app/shared/question-feedback-actions';
@@ -57,12 +60,8 @@ export function usePracticeQuestionFeedback(
   const [isReportOpen, setIsReportOpen] = useState(false);
   const latestRatingLookupRequestId = useRef(0);
   const feedbackStateVersionRef = useRef(0);
-  const ratingRequestTokensRef = useRef<Map<string, FeedbackRequestToken>>(
-    new Map(),
-  );
-  const reportRequestTokensRef = useRef<Map<string, FeedbackRequestToken>>(
-    new Map(),
-  );
+  const ratingRequestKeySlotsRef = useRef(createRequestKeySlotStore());
+  const reportRequestKeySlotsRef = useRef(createRequestKeySlotStore());
   const isMountedRef = useRef(input.isMounted);
   isMountedRef.current = input.isMounted;
   const questionId = input.question?.questionId ?? null;
@@ -143,17 +142,18 @@ export function usePracticeQuestionFeedback(
       feedbackStateVersionRef.current += 1;
       const stateVersion = feedbackStateVersionRef.current;
       const questionId = questionContext.questionId;
+      const requestKeyOwner = claimRequestKeySlot(
+        ratingRequestKeySlotsRef.current,
+        questionId,
+      );
 
       void rateQuestionForQuestion({
         question: questionContext,
         currentRating: rating,
         nextRating,
-        ratingRequestToken:
-          ratingRequestTokensRef.current.get(questionId) ?? null,
+        ratingRequestToken: requestKeyOwner.token,
         createIdempotencyKey: () => crypto.randomUUID(),
-        setRatingRequestToken: (token) => {
-          ratingRequestTokensRef.current.set(questionId, token);
-        },
+        setRatingRequestToken: requestKeyOwner.setToken,
         rateQuestionFn: rateQuestion,
         setRating: (nextRatingState) => {
           if (!isMountedRef.current()) return;
@@ -189,16 +189,17 @@ export function usePracticeQuestionFeedback(
       if (!questionContext) return false;
 
       const questionId = questionContext.questionId;
+      const requestKeyOwner = claimRequestKeySlot(
+        reportRequestKeySlotsRef.current,
+        questionId,
+      );
       return submitReportForQuestion({
         question: questionContext,
         category: report.category,
         comment: report.comment,
-        reportRequestToken:
-          reportRequestTokensRef.current.get(questionId) ?? null,
+        reportRequestToken: requestKeyOwner.token,
         createIdempotencyKey: () => crypto.randomUUID(),
-        setReportRequestToken: (token) => {
-          reportRequestTokensRef.current.set(questionId, token);
-        },
+        setReportRequestToken: requestKeyOwner.setToken,
         submitQuestionReportFn: submitQuestionReport,
         logError: (_message, context) => {
           reportClientError(context, {

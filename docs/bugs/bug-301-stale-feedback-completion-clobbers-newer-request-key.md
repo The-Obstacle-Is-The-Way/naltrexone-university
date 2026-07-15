@@ -53,6 +53,12 @@ Identity binding answers “does this token describe this request?” It does no
 2. Preserve K-B after B's indeterminate failure. Do not solve the race by rotating on thrown/timeout outcomes or by disabling navigation indefinitely; both would violate the determinacy rule or couple unrelated UI ownership.
 3. Cover rating and report with browser tests using deferred A/B responses across reattempt/navigation/dialog close. Add a real-`withIdempotency` + fake-repository boundary test proving B executes once when its original key is preserved and twice under the pre-fix clobber sequence.
 
+## Resolution State
+
+Implementation completed on `fix/bug-301-feedback-token-ownership` on 2026-07-15; PR review, promotion, and production proof remain pending. The neutral `idempotency-request-key.ts` module now owns a reusable generation-fenced request-key slot: each invocation claims the slot, current-generation retry/success/error transitions remain writable, and a superseded invocation's token writes are ignored. `usePracticeQuestionFeedback` applies that owner claim to both rating and report before launching the shared helpers, covering the practice question flow, practice-session page model, and standalone question page through their existing shared hook.
+
+Red-first coverage reproduces both stale-completion failures in Chromium (reattempted rating and edited report after dialog close), pins the slot's compare-and-set contract, and exercises the lost-response interleaving through real `withIdempotency`, `RateQuestionUseCase`, and `FakeQuestionFeedbackRepository`; the newer key replays without a duplicate append-only write. Existing control tests continue to pin consumed-success rotation, determinate-error rotation, and the helper's same-generation reused-token retry. No server or schema changes are part of this fix. Status remains **Open** until wave-close archival after production proof.
+
 ## Related
 
 - [BUG-295 (archived)](../_archive/bugs/bug-295-preserved-idempotency-keys-replay-across-changed-intent.md) — established fingerprint-bound preservation and retirement for feedback tokens.
