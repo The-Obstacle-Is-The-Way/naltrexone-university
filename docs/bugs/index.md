@@ -22,7 +22,16 @@ Bug reports document issues discovered in the codebase along with their root cau
 - Bugs discovered only on an unmerged implementation branch may be marked resolved and archived in the same PR once the fix is implemented, red-first regression coverage or equivalent focused proof is green, and the PR still goes through the normal CI and review gate before merge. These docs must state that the defect was branch-local or fixed before the branch shipped, so future readers do not mistake the archive for post-deploy proof.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-300
+**Next Bug ID:** BUG-302
+
+**Fix-wave-3 close review (2026-07-14):** the combined diff `ba457afd...76de5ba3` (65 files; BUG-296/297/298/299 plus the BUG-298 follow-up and promos) was audited through independent concurrency/race, idempotency-lifecycle, error-classification, cross-batch, test-integrity, architecture, and security lenses. Three candidates survived source-level deduplication and were each confirmed by a 3-verifier panel; none was above P3 and none was revert-grade:
+
+| Bug | Family | Priority | Summary |
+|-----|--------|----------|---------|
+| [BUG-300](./bug-300-concurrent-start-refresh-retires-pending-key.md) | Practice / session start / idempotency determinacy | P4 | BUG-299's loaded-null retirement can discard the start key after `ConcurrentRequestInProgress` while the original same-key request is still running and may commit after the refresh. The single-session constraint prevents duplication and the next conflict refresh recovers, but the only replay handle is lost and the user incurs a needless error/recovery round trip. |
+| [BUG-301](./bug-301-stale-feedback-completion-clobbers-newer-request-key.md) | Question feedback / client key ownership | P3 | Rating/report UI state is generation-fenced, but token setters are not: a stale request completion can overwrite a newer possibly-committed request's preserved key, so retry mints a fresh key and can append the logical feedback twice. |
+
+Companion filing: [DEBT-458](../debt/debt-458-stripe-webhook-acknowledgement-error-causality.md) (P4 — BUG-296's handled missing-user error remains globally preferred when the separate acknowledgement transaction fails, so the durable failure ledger and thrown error misdiagnose the current failure). The previously refuted BUG-298 attempt-reset-fence claim was rechecked with no new evidence and was not refiled.
 
 **Wave-2 fix close (2026-07-14):** four fix batches (PR #635 → promo #636; PR #634 → promo #638; PR #640 → promo #641; PR #642 → promo #643) resolved and archived BUG-287, BUG-288 (P2), BUG-289, BUG-290, BUG-291, BUG-294, and BUG-295 with full local gates and per-promo production proof (main CI success, `addictionboards.com` HTTP/2 200, main/dev trees identical at each promo). CodeRabbit approval was exact-final-head on #635/#640/#642; #634's merge-gate letter violation (formal decision still CHANGES_REQUESTED at merge) is recorded in BUG-288/294's Resolution sections. An 8-lens adversarial cross-batch regression review of the combined wave diff (152 files over `318549f5...cde6ccd8`, including the #639 dependency promo; 25 raw → 14 deduped → 12 confirmed by per-candidate 3-verifier panels, 2 refuted, none above P3, no revert-grade regression) produced the residue filings below — BUG-296 additionally fulfills BUG-288's explicit archival condition:
 
