@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
@@ -49,8 +49,9 @@ function getIdempotencyKey(input: unknown): string {
 }
 
 function Probe() {
+  const isMounted = useCallback(() => true, []);
   const output = usePracticeSessionStart({
-    isMounted: () => true,
+    isMounted,
     refreshIncompleteSession,
   });
   const [settledStarts, setSettledStarts] = useState(0);
@@ -88,9 +89,10 @@ function Probe() {
 }
 
 function RecoveryProbe() {
-  const incomplete = usePracticeIncompleteSession({ isMounted: () => true });
+  const isMounted = useCallback(() => true, []);
+  const incomplete = usePracticeIncompleteSession({ isMounted });
   const sessionStart = usePracticeSessionStart({
-    isMounted: () => true,
+    isMounted,
     refreshIncompleteSession: incomplete.refreshIncompleteSession,
   });
   const [settledStarts, setSettledStarts] = useState(0);
