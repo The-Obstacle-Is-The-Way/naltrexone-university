@@ -235,7 +235,10 @@ describe('practice-page-logic session start', () => {
 
     it('refreshes recovery state and rotates after a typed incomplete-session conflict', async () => {
       const setIdempotencyKey = vi.fn();
-      const refreshIncompleteSession = vi.fn(async () => undefined);
+      const refreshIncompleteSession = vi.fn(async () => ({
+        kind: 'loaded' as const,
+        session: null,
+      }));
 
       await startSession({
         sessionMode: 'tutor',
@@ -255,12 +258,18 @@ describe('practice-page-logic session start', () => {
       });
 
       expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
+      // The determinate conflict already consumed and rotated its cached key;
+      // authoritative absence must not mint a second replacement.
+      expect(setIdempotencyKey).toHaveBeenCalledTimes(1);
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
     });
 
     it('refreshes recovery state after a non-conflict failure so a committed session can surface', async () => {
       const setIdempotencyKey = vi.fn();
-      const refreshIncompleteSession = vi.fn(async () => undefined);
+      const refreshIncompleteSession = vi.fn(async () => ({
+        kind: 'loaded' as const,
+        session: { sessionId: fixtureSession1Id },
+      }));
 
       await startSession({
         sessionMode: 'tutor',
@@ -280,6 +289,93 @@ describe('practice-page-logic session start', () => {
       });
 
       expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('retires a preserved start key when refresh proves no incomplete session remains', async () => {
+      const setIdempotencyKey = vi.fn();
+      const refreshIncompleteSession = vi.fn(async () => ({
+        kind: 'loaded' as const,
+        session: null,
+      }));
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        // The preserved key replays the post-commit outcome-store failure.
+        // Authoritative absence means the referred-to session was resolved
+        // elsewhere, so replay can no longer recover anything useful.
+        startPracticeSessionFn: async () =>
+          err('INTERNAL_ERROR', 'Failed to record committed start outcome'),
+        refreshIncompleteSession,
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
+      expect(setIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    });
+
+    it('preserves a start key when the incomplete-session refresh fails', async () => {
+      const setIdempotencyKey = vi.fn();
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () =>
+          err('INTERNAL_ERROR', 'Failed to record committed start outcome'),
+        refreshIncompleteSession: async () => ({ kind: 'failed' as const }),
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('does not retire a newer intent key when an older refresh proves absence', async () => {
+      const refresh = createDeferred<{
+        kind: 'loaded';
+        session: null;
+      }>();
+      const refreshStarted = createDeferred<void>();
+      const setIdempotencyKey = vi.fn();
+      let latestKey = 'idem_1';
+
+      const start = startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        getLatestIdempotencyKey: () => latestKey,
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () =>
+          err('INTERNAL_ERROR', 'Failed to record committed start outcome'),
+        refreshIncompleteSession: async () => {
+          refreshStarted.resolve();
+          return refresh.promise;
+        },
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      await refreshStarted.promise;
+      latestKey = 'newer-intent-key';
+      refresh.resolve({ kind: 'loaded', session: null });
+      await start;
+
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 

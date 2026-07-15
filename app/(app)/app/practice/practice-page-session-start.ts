@@ -12,6 +12,10 @@ import {
   IdempotentActionNames,
   rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
+import {
+  type IncompleteSessionRefreshOutcome,
+  refreshProvesNoIncompleteSession,
+} from './practice-page-incomplete-session';
 
 const SESSION_START_TIMEOUT_MS = STANDARD_MUTATION_TIMEOUT_MS;
 
@@ -87,7 +91,9 @@ export async function startSession(input: {
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
   reportError?: SessionStartErrorReporter;
-  refreshIncompleteSession?: () => Promise<void>;
+  refreshIncompleteSession?: () => Promise<
+    IncompleteSessionRefreshOutcome<unknown>
+  >;
   setSessionStartStatus: (status: 'idle' | 'loading' | 'error') => void;
   setSessionStartError: (message: string | null) => void;
   navigateTo: (url: string) => void;
@@ -130,17 +136,28 @@ export async function startSession(input: {
   if (!res.ok) {
     input.setSessionStartStatus('error');
     input.setSessionStartError(getActionResultErrorMessage(res));
-    rotateIdempotencyKeyAfterDeterminateError(
-      IdempotentActionNames.StartPracticeSession,
-      res.error,
-      () => input.setIdempotencyKey(input.createIdempotencyKey()),
-    );
+    const rotatedAfterDeterminateError =
+      rotateIdempotencyKeyAfterDeterminateError(
+        IdempotentActionNames.StartPracticeSession,
+        res.error,
+        () => input.setIdempotencyKey(input.createIdempotencyKey()),
+      );
     // Refresh on EVERY failed result, not just the typed conflict: a start
     // whose session committed but whose outcome-store write failed replays a
     // cached INTERNAL_ERROR on retry, and only this refetch can surface the
     // committed session's Resume/Abandon recovery for that arm.
     try {
-      await input.refreshIncompleteSession?.();
+      const refreshOutcome = await input.refreshIncompleteSession?.();
+      if (
+        !rotatedAfterDeterminateError &&
+        isMounted() &&
+        isLatestRequest() &&
+        refreshProvesNoIncompleteSession(refreshOutcome)
+      ) {
+        // The key's possibly committed session has been resolved elsewhere;
+        // no same-key replay can recover a live session now.
+        input.setIdempotencyKey(input.createIdempotencyKey());
+      }
     } catch (error) {
       reportSessionStartError(
         input.reportError,

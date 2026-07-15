@@ -277,7 +277,8 @@ describe('usePracticeSessionControls (browser)', () => {
       .click();
     await expect
       .element(screen.getByTestId('incomplete-load-status'))
-      .toHaveTextContent('error');
+      .toHaveTextContent('idle');
+    expect(getIncompletePracticeSession).toHaveBeenCalledTimes(2);
 
     const firstCallInput = endPracticeSession.mock.calls[0]?.[0] as
       | { idempotencyKey?: unknown }
@@ -302,7 +303,7 @@ describe('usePracticeSessionControls (browser)', () => {
       .toHaveTextContent('idle');
   });
 
-  it('uses discard instead of end when abandoning an incomplete exam session', async () => {
+  it('keeps the exam discard self-heal path unchanged', async () => {
     const sessionId = '11111111-1111-1111-1111-111111111112';
 
     getTags.mockResolvedValue(ok({ rows: [] }));
@@ -336,6 +337,12 @@ describe('usePracticeSessionControls (browser)', () => {
       idempotencyKey: sessionId,
     });
     expect(endPracticeSession).not.toHaveBeenCalled();
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(/^$/);
+    // An idempotent discard success is already authoritative; no recovery
+    // refetch is needed to clear the local panel.
+    expect(getIncompletePracticeSession).toHaveBeenCalledTimes(1);
   });
 
   it('retires the preserved start key after the recovery session is abandoned', async () => {
