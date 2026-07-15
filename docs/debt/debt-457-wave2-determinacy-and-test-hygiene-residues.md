@@ -25,6 +25,6 @@ The only unit test of the fake's snapshot/restore pair ([`fake-subscription-repo
 
 ## Related
 
-- [BUG-297](../bugs/bug-297-checkout-success-version-cas-exhaustion-uncaught-conflict.md) — the same version-fence seam's user-facing exhaustion leg (bug-grade, filed separately).
+- [BUG-297 (archived)](../_archive/bugs/bug-297-checkout-success-version-cas-exhaustion-uncaught-conflict.md) — the same version-fence seam's user-facing exhaustion leg (bug-grade, fixed and production-verified).
 - [BUG-291 (archived)](../_archive/bugs/bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — the determinacy rule Item 1 completes.
 - [DEBT-455](./debt-455-fake-user-repository-fidelity-divergences.md) — fake-fidelity precedent for Item 3.
