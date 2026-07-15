@@ -22,7 +22,10 @@ const reportClientError = vi.mocked(clientError.reportClientError);
 
 const questionId = '11111111-1111-4111-8111-111111111111';
 const attemptId = '22222222-2222-4222-8222-222222222222';
+const reattemptId = '44444444-4444-4444-8444-444444444444';
 const practiceSessionId = '33333333-3333-4333-8333-333333333333';
+const initialReportComment = 'Needs a clearer stem.';
+const editedReportComment = 'The revised stem is still ambiguous.';
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
@@ -40,10 +43,12 @@ function Probe({
   isMounted?: () => boolean;
 }) {
   const [isReviewMode, setIsReviewMode] = useState(initialReviewMode);
+  const [currentAttemptId, setCurrentAttemptId] = useState(attemptId);
+  const [reportComment, setReportComment] = useState(initialReportComment);
   const output = usePracticeQuestionFeedback({
     question: {
       questionId,
-      attemptId,
+      attemptId: currentAttemptId,
       practiceSessionId,
     },
     isReviewMode,
@@ -57,6 +62,8 @@ function Probe({
       <div data-testid="is-report-open">
         {output.isReportOpen ? 'true' : 'false'}
       </div>
+      <div data-testid="attempt-id">{currentAttemptId}</div>
+      <div data-testid="report-comment">{reportComment}</div>
       <button type="button" onClick={() => output.onRate('helpful')}>
         rate-helpful
       </button>
@@ -74,7 +81,7 @@ function Probe({
         onClick={() => {
           void output.submitReport({
             category: 'ambiguous_wording',
-            comment: 'Needs a clearer stem.',
+            comment: reportComment,
           });
         }}
       >
@@ -83,8 +90,33 @@ function Probe({
       <button type="button" onClick={() => setIsReviewMode(false)}>
         leave-review
       </button>
+      <button type="button" onClick={() => setCurrentAttemptId(reattemptId)}>
+        reattempt
+      </button>
+      <button
+        type="button"
+        onClick={() => setReportComment(editedReportComment)}
+      >
+        edit-report
+      </button>
     </>
   );
+}
+
+function requestKeyAt(
+  calls: readonly (readonly unknown[])[],
+  index: number,
+): string | undefined {
+  const request = calls[index]?.[0];
+  if (!request || typeof request !== 'object') return undefined;
+  if (!('idempotencyKey' in request)) return undefined;
+  return typeof request.idempotencyKey === 'string'
+    ? request.idempotencyKey
+    : undefined;
+}
+
+async function waitForAsyncContinuation(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
 describe('usePracticeQuestionFeedback (browser)', () => {
@@ -193,6 +225,49 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     });
   });
 
+  it('preserves a newer reattempt rating key after the stale request completes', async () => {
+    const staleResponse =
+      createDeferred<Awaited<ReturnType<typeof rateQuestion>>>();
+    rateQuestion
+      .mockReturnValueOnce(staleResponse.promise)
+      .mockRejectedValueOnce(new Error('newer response lost after commit'))
+      .mockResolvedValueOnce(ok({ rating: 'helpful' }));
+
+    const screen = await render(<Probe />);
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'rate-helpful' }).click();
+    await expect.poll(() => rateQuestion.mock.calls.length).toBe(1);
+    const firstKey = requestKeyAt(rateQuestion.mock.calls, 0);
+
+    await screen.getByRole('button', { name: 'reattempt' }).click();
+    await expect
+      .element(screen.getByTestId('attempt-id'))
+      .toHaveTextContent(reattemptId);
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'rate-helpful' }).click();
+    await expect.poll(() => rateQuestion.mock.calls.length).toBe(2);
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('error');
+    const newerKey = requestKeyAt(rateQuestion.mock.calls, 1);
+    expect(newerKey).toEqual(expect.any(String));
+    expect(newerKey).not.toBe(firstKey);
+
+    staleResponse.resolve(ok({ rating: 'helpful' }));
+    await waitForAsyncContinuation();
+
+    await screen.getByRole('button', { name: 'rate-helpful' }).click();
+    await expect.poll(() => rateQuestion.mock.calls.length).toBe(3);
+
+    expect(requestKeyAt(rateQuestion.mock.calls, 2)).toBe(newerKey);
+  });
+
   it('rolls back a retraction when the write fails', async () => {
     getQuestionRating.mockResolvedValue(ok({ rating: 'not_helpful' }));
     rateQuestion.mockResolvedValue({
@@ -240,7 +315,7 @@ describe('usePracticeQuestionFeedback (browser)', () => {
       attemptId,
       practiceSessionId,
       category: 'ambiguous_wording',
-      comment: 'Needs a clearer stem.',
+      comment: initialReportComment,
       idempotencyKey: expect.any(String),
     });
 
@@ -248,6 +323,83 @@ describe('usePracticeQuestionFeedback (browser)', () => {
     await expect
       .element(screen.getByTestId('is-report-open'))
       .toHaveTextContent('false');
+  });
+
+  it('preserves a newer edited-report key after the stale dialog request completes', async () => {
+    const staleResponse =
+      createDeferred<Awaited<ReturnType<typeof submitQuestionReport>>>();
+    submitQuestionReport
+      .mockReturnValueOnce(staleResponse.promise)
+      .mockRejectedValueOnce(new Error('newer response lost after commit'))
+      .mockResolvedValueOnce(ok({ feedbackId: crypto.randomUUID() }));
+
+    const screen = await render(<Probe />);
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'open-report' }).click();
+    await screen.getByRole('button', { name: 'submit-report' }).click();
+    await expect.poll(() => submitQuestionReport.mock.calls.length).toBe(1);
+    const firstKey = requestKeyAt(submitQuestionReport.mock.calls, 0);
+
+    await screen.getByRole('button', { name: 'close-report' }).click();
+    await screen.getByRole('button', { name: 'edit-report' }).click();
+    await expect
+      .element(screen.getByTestId('report-comment'))
+      .toHaveTextContent(editedReportComment);
+    await screen.getByRole('button', { name: 'open-report' }).click();
+    await screen.getByRole('button', { name: 'submit-report' }).click();
+    await expect.poll(() => submitQuestionReport.mock.calls.length).toBe(2);
+    await expect.poll(() => reportClientError.mock.calls.length).toBe(1);
+    const newerKey = requestKeyAt(submitQuestionReport.mock.calls, 1);
+    expect(newerKey).toEqual(expect.any(String));
+    expect(newerKey).not.toBe(firstKey);
+
+    staleResponse.resolve(ok({ feedbackId: crypto.randomUUID() }));
+    await waitForAsyncContinuation();
+
+    await screen.getByRole('button', { name: 'submit-report' }).click();
+    await expect.poll(() => submitQuestionReport.mock.calls.length).toBe(3);
+
+    expect(requestKeyAt(submitQuestionReport.mock.calls, 2)).toBe(newerKey);
+  });
+
+  it('commits reused-token retry and success rotations for one owner generation', async () => {
+    rateQuestion
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: 'Feedback request token was reused with a different request',
+          details: { reason: 'feedback_request_token_reused' },
+        },
+      })
+      .mockResolvedValueOnce(ok({ rating: 'helpful' }))
+      .mockResolvedValueOnce(ok({ rating: 'helpful' }));
+
+    const screen = await render(<Probe />);
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'rate-helpful' }).click();
+    await expect.poll(() => rateQuestion.mock.calls.length).toBe(2);
+    await expect
+      .element(screen.getByTestId('feedback-status'))
+      .toHaveTextContent('saved');
+
+    const initialKey = requestKeyAt(rateQuestion.mock.calls, 0);
+    const retryKey = requestKeyAt(rateQuestion.mock.calls, 1);
+    expect(retryKey).toEqual(expect.any(String));
+    expect(retryKey).not.toBe(initialKey);
+
+    await screen.getByRole('button', { name: 'rate-helpful' }).click();
+    await expect.poll(() => rateQuestion.mock.calls.length).toBe(3);
+
+    const retiredKey = requestKeyAt(rateQuestion.mock.calls, 2);
+    expect(retiredKey).toEqual(expect.any(String));
+    expect(retiredKey).not.toBe(retryKey);
   });
 
   it('reports submit-report failures through the client error reporter', async () => {
