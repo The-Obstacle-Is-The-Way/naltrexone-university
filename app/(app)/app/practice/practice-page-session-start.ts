@@ -10,6 +10,7 @@ import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import {
   IdempotentActionNames,
+  isConcurrentRequestInProgressError,
   rotateIdempotencyKeyAfterDeterminateError,
 } from '@/src/adapters/controllers/shared/idempotency-error-policy';
 import {
@@ -136,6 +137,9 @@ export async function startSession(input: {
   if (!res.ok) {
     input.setSessionStartStatus('error');
     input.setSessionStartError(getActionResultErrorMessage(res));
+    const concurrentRequestMayStillFinish = isConcurrentRequestInProgressError(
+      res.error,
+    );
     const rotatedAfterDeterminateError =
       rotateIdempotencyKeyAfterDeterminateError(
         IdempotentActionNames.StartPracticeSession,
@@ -150,12 +154,13 @@ export async function startSession(input: {
       const refreshOutcome = await input.refreshIncompleteSession?.();
       if (
         !rotatedAfterDeterminateError &&
+        !concurrentRequestMayStillFinish &&
         isMounted() &&
         isLatestRequest() &&
         refreshProvesNoIncompleteSession(refreshOutcome)
       ) {
-        // The key's possibly committed session has been resolved elsewhere;
-        // no same-key replay can recover a live session now.
+        // The key's possibly committed session has been resolved elsewhere,
+        // and no same-key request remains known to be running.
         input.setIdempotencyKey(input.createIdempotencyKey());
       }
     } catch (error) {

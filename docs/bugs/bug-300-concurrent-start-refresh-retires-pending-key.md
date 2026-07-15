@@ -54,6 +54,14 @@ The refresh outcome models authoritative state **at the read snapshot**, but key
 2. Preserve the existing loaded-null retirement for completed outcomes whose possibly committed session has since been resolved elsewhere; do not regress BUG-299's second-tab recovery.
 3. Add a production-shaped unit test that supplies the refresh callback to the concurrent-result case and asserts K1 is preserved, plus a browser sequence covering client timeout → same-key concurrent result → pre-commit null refresh → late original completion → same-key recovery.
 
+## Resolution State
+
+- **Approach:** Added a shared controller-boundary predicate that recognizes only `CONFLICT` plus `ApplicationConflictReasons.ConcurrentRequestInProgress`. The practice start flow still performs its authoritative refresh after every failed result, but a loaded-null refresh can retire the key only when that exact concurrent outcome is absent. Determinate rotation and every other loaded-null retirement path remain unchanged; the server idempotency wrapper is untouched.
+- **Tests:** Upgraded the production-shaped session-start unit case to cover typed concurrent failure plus loaded-null refresh, retained controls for determinate single rotation and non-concurrent loaded-null retirement, added concurrent live-session convergence coverage, asserted the shared predicate against correct and wrong shapes, and added a Vitest Browser sequence covering timeout → same-key concurrent retry → pre-commit null refresh → late commit → same-key recovery into the Resume/Abandon panel.
+- **Branch:** `fix/bug-300-concurrent-start-retirement-guard`
+
+Status remains **Open** pending wave-close archival with production proof.
+
 ## Related
 
 - [BUG-291 (archived)](../_archive/bugs/bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — established that `ConcurrentRequestInProgress` is indeterminate and must preserve the start key.

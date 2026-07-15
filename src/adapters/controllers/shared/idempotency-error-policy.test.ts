@@ -8,6 +8,7 @@ import {
 } from '@/src/application/errors';
 import {
   IdempotentActionNames,
+  isConcurrentRequestInProgressError,
   rotateGeneratedIdempotencyKeyAfterDeterminateError,
   rotateIdempotencyKeyAfterDeterminateError,
   shouldCacheBookmarkError,
@@ -225,6 +226,39 @@ describe('question-mark idempotency error policy', () => {
 });
 
 describe('client idempotency-key rotation policy', () => {
+  it('identifies only the typed concurrent-request conflict', () => {
+    expect(
+      isConcurrentRequestInProgressError({
+        code: 'CONFLICT',
+        details: {
+          reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+        },
+      }),
+    ).toBe(true);
+
+    expect(
+      isConcurrentRequestInProgressError({
+        code: 'INTERNAL_ERROR',
+        details: {
+          reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isConcurrentRequestInProgressError({
+        code: 'CONFLICT',
+        details: {
+          reason: ApplicationConflictReasons.IncompleteSessionExists,
+        },
+      }),
+    ).toBe(false);
+    expect(
+      isConcurrentRequestInProgressError({
+        code: 'CONFLICT',
+      }),
+    ).toBe(false);
+  });
+
   it('generates and stores a replacement key only when both collaborators are available', () => {
     let generatedKeys = 0;
     let storedKey: string | null = null;
