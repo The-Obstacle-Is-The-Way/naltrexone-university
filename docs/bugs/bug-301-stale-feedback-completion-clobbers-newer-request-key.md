@@ -56,7 +56,7 @@ Identity binding answers “does this token describe this request?” It does no
 ## Related
 
 - [BUG-295 (archived)](../_archive/bugs/bug-295-preserved-idempotency-keys-replay-across-changed-intent.md) — established fingerprint-bound preservation and retirement for feedback tokens.
-- [BUG-298](./bug-298-preserved-keys-unbound-on-submit-mark-bookmark-surfaces.md) — completed identity binding across sibling surfaces and extracted the neutral key primitive; this finding is the distinct asynchronous ownership gap.
+- [BUG-298 (archived)](../_archive/bugs/bug-298-preserved-keys-unbound-on-submit-mark-bookmark-surfaces.md) — completed identity binding across sibling surfaces and extracted the neutral key primitive; this finding is the distinct asynchronous ownership gap.
 - [BUG-289 (archived)](../_archive/bugs/bug-289-idempotency-caches-transient-errors-billing-bookmark-feedback.md) — owns feedback's determinacy-aware server policy and request-token persistence mechanism.
 
 Found during the 2026-07-14 fix-wave-3 close adversarial regression review of `ba457afd...76de5ba3` (independent finder lenses and a 3-verifier panel).

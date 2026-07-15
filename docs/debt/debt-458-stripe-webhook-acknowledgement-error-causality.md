@@ -45,7 +45,7 @@ The route still returns a retryable 500, Stripe redelivers, and a later healthy 
 
 ## Related
 
-- [BUG-296](../bugs/bug-296-post-deletion-subscription-webhooks-fail-users-fk.md) — introduced the handled missing-user acknowledgement transaction whose failure exposes this stale-error selection.
+- [BUG-296 (archived)](../_archive/bugs/bug-296-post-deletion-subscription-webhooks-fail-users-fk.md) — introduced the handled missing-user acknowledgement transaction whose failure exposes this stale-error selection.
 - [BUG-285 (archived)](../_archive/bugs/bug-285-stripe-webhook-markfailed-on-aborted-transaction.md) — established fresh-transaction failure persistence and the need to retain the actual primary failure.
 - [DEBT-452](./debt-452-db-failure-observability.md) — complementary error-diagnostic projection and logging safety work.
 

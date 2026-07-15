@@ -57,7 +57,7 @@ The refresh outcome models authoritative state **at the read snapshot**, but key
 ## Related
 
 - [BUG-291 (archived)](../_archive/bugs/bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — established that `ConcurrentRequestInProgress` is indeterminate and must preserve the start key.
-- [BUG-299](./bug-299-recovery-panel-external-resolution-stale-state-dead-ends.md) — introduced the over-broad absence-based retirement while correctly closing the external-resolution dead ends.
+- [BUG-299 (archived)](../_archive/bugs/bug-299-recovery-panel-external-resolution-stale-state-dead-ends.md) — introduced the over-broad absence-based retirement while correctly closing the external-resolution dead ends.
 - [BUG-295 (archived)](../_archive/bugs/bug-295-preserved-idempotency-keys-replay-across-changed-intent.md) — register law for preserving the only handle to a possibly committed result and retiring it only after consumption.
 
 Found during the 2026-07-14 fix-wave-3 close adversarial regression review of `ba457afd...76de5ba3` (independent finder lenses and a 3-verifier panel).
