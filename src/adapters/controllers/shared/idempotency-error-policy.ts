@@ -30,6 +30,16 @@ type PublicActionError = {
   details?: { reason?: string } | undefined;
 };
 
+export function isConcurrentRequestInProgressError(
+  error: PublicActionError,
+): boolean {
+  return (
+    error.code === 'CONFLICT' &&
+    error.details?.reason ===
+      ApplicationConflictReasons.ConcurrentRequestInProgress
+  );
+}
+
 const determinateCodesByAction: Record<
   IdempotentActionName,
   ReadonlySet<ApplicationErrorCode>

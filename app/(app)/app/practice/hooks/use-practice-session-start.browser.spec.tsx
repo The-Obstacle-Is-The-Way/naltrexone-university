@@ -4,12 +4,16 @@ import { render } from 'vitest-browser-react';
 import * as reportClientError from '@/lib/report-client-error';
 import { TimeoutError } from '@/lib/with-timeout';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import { err } from '@/src/adapters/controllers/action-result';
 import type { StartPracticeSessionOutput } from '@/src/adapters/controllers/practice-controller';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
+import { ApplicationConflictReasons } from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import * as clientNavigation from '../client-navigation';
+import { IncompleteSessionCard } from '../components/incomplete-session-card';
+import { usePracticeIncompleteSession } from './use-practice-incomplete-session';
 import { usePracticeSessionStart } from './use-practice-session-start';
 
 const fixtureSession1Id = crypto.randomUUID();
@@ -19,6 +23,9 @@ vi.mock('@/lib/report-client-error', { spy: true });
 vi.mock('../client-navigation', { spy: true });
 
 const startPracticeSession = vi.mocked(practiceController.startPracticeSession);
+const getIncompletePracticeSession = vi.mocked(
+  practiceController.getIncompletePracticeSession,
+);
 const reportClientErrorSpy = vi.mocked(reportClientError.reportClientError);
 const navigateToSpy = vi.mocked(clientNavigation.navigateTo);
 const refreshIncompleteSession = async () => ({
@@ -70,6 +77,42 @@ function Probe() {
         data-testid="start"
         onClick={() => {
           void output.onStartSession().finally(() => {
+            setSettledStarts((count) => count + 1);
+          });
+        }}
+      >
+        Start
+      </button>
+    </>
+  );
+}
+
+function RecoveryProbe() {
+  const incomplete = usePracticeIncompleteSession({ isMounted: () => true });
+  const sessionStart = usePracticeSessionStart({
+    isMounted: () => true,
+    refreshIncompleteSession: incomplete.refreshIncompleteSession,
+  });
+  const [settledStarts, setSettledStarts] = useState(0);
+
+  if (incomplete.incompleteSession) {
+    return (
+      <IncompleteSessionCard
+        session={incomplete.incompleteSession}
+        isPending={incomplete.incompleteSessionStatus === 'loading'}
+        onAbandon={() => undefined}
+      />
+    );
+  }
+
+  return (
+    <>
+      <div data-testid="recovery-settled-starts">{settledStarts}</div>
+      <button
+        type="button"
+        data-testid="recovery-start"
+        onClick={() => {
+          void sessionStart.onStartSession().finally(() => {
             setSettledStarts((count) => count + 1);
           });
         }}
@@ -155,6 +198,66 @@ test('reuses the session start key after a timeout and reaches the recorded succ
   expect(navigateToSpy).toHaveBeenCalledWith(
     `/app/practice/${fixtureSession1Id}`,
   );
+});
+
+test('recovers a late concurrent start with the preserved key and renders the session panel', async () => {
+  const committedSession = {
+    sessionId: fixtureSession1Id,
+    mode: 'tutor' as const,
+    answeredCount: 0,
+    totalCount: 20,
+    startedAt: '2026-07-15T00:00:00.000Z',
+  };
+  let originalRequestCommitted = false;
+
+  getIncompletePracticeSession.mockImplementation(async () =>
+    ok(originalRequestCommitted ? committedSession : null),
+  );
+  startPracticeSession
+    .mockRejectedValueOnce(new TimeoutError(15_000))
+    .mockResolvedValue(
+      err('CONFLICT', 'Request is still running', undefined, {
+        reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+      }),
+    );
+
+  const screen = await render(<RecoveryProbe />);
+  await expect
+    .poll(() => getIncompletePracticeSession.mock.calls.length)
+    .toBe(1);
+
+  await screen.getByTestId('recovery-start').click();
+  await expect
+    .element(screen.getByTestId('recovery-settled-starts'))
+    .toHaveTextContent('1');
+  const firstKey = getIdempotencyKey(startPracticeSession.mock.calls[0]?.[0]);
+
+  await screen.getByTestId('recovery-start').click();
+  await expect
+    .element(screen.getByTestId('recovery-settled-starts'))
+    .toHaveTextContent('2');
+  const concurrentRetryKey = getIdempotencyKey(
+    startPracticeSession.mock.calls[1]?.[0],
+  );
+  expect(concurrentRetryKey).toBe(firstKey);
+  await expect
+    .poll(() => getIncompletePracticeSession.mock.calls.length)
+    .toBe(2);
+
+  originalRequestCommitted = true;
+
+  await screen.getByTestId('recovery-start').click();
+  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(3);
+  const recoveryRetryKey = getIdempotencyKey(
+    startPracticeSession.mock.calls[2]?.[0],
+  );
+  expect(recoveryRetryKey).toBe(firstKey);
+  await expect
+    .element(screen.getByRole('link', { name: 'Resume session' }))
+    .toHaveAttribute('href', `/app/practice/${fixtureSession1Id}`);
+  await expect
+    .element(screen.getByRole('button', { name: 'Abandon session' }))
+    .toBeVisible();
 });
 
 test('ignores stale successful session starts after config changes mid-flight', async () => {

@@ -3,6 +3,7 @@ import { startSession } from '@/app/(app)/app/practice/practice-page-logic';
 import { toPracticeSessionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
+import { ApplicationConflictReasons } from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 const { fixtureSession1Id } = vi.hoisted(() => ({
@@ -213,6 +214,10 @@ describe('practice-page-logic session start', () => {
 
     it('preserves the key when a concurrent same-key request may still finish', async () => {
       const setIdempotencyKey = vi.fn();
+      const refreshIncompleteSession = vi.fn(async () => ({
+        kind: 'loaded' as const,
+        session: null,
+      }));
 
       await startSession({
         sessionMode: 'tutor',
@@ -223,13 +228,43 @@ describe('practice-page-logic session start', () => {
         setIdempotencyKey,
         startPracticeSessionFn: async () =>
           err('CONFLICT', 'Request is still running', undefined, {
-            reason: 'concurrent_request_in_progress',
+            reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
           }),
+        refreshIncompleteSession,
         setSessionStartStatus: vi.fn(),
         setSessionStartError: vi.fn(),
         navigateTo: vi.fn(),
       });
 
+      expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('preserves the key and refreshes the panel when a concurrent request already committed', async () => {
+      const setIdempotencyKey = vi.fn();
+      const refreshIncompleteSession = vi.fn(async () => ({
+        kind: 'loaded' as const,
+        session: { sessionId: fixtureSession1Id },
+      }));
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        startPracticeSessionFn: async () =>
+          err('CONFLICT', 'Request is still running', undefined, {
+            reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+          }),
+        refreshIncompleteSession,
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
       expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 
