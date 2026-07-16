@@ -57,7 +57,8 @@ function createDeferred<T>() {
 
 function createRatingServer() {
   const feedback = new FakeQuestionFeedbackRepository();
-  const idempotencyKeys = new FakeIdempotencyKeyRepository();
+  const now = () => new Date('2026-07-15T00:00:00.000Z');
+  const idempotencyKeys = new FakeIdempotencyKeyRepository(now);
   const rateQuestion = new RateQuestionUseCase(
     feedback,
     new FakeQuestionRepository([
@@ -91,7 +92,7 @@ function createRatingServer() {
         userId,
         action: IdempotentActionNames.QuestionRating,
         key: request.idempotencyKey,
-        now: () => new Date('2026-07-15T00:00:00.000Z'),
+        now,
         shouldCacheError: shouldCacheQuestionRatingError,
         execute: async () => {
           executions.push(request.idempotencyKey);
