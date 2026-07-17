@@ -392,6 +392,82 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     expect(secondStartKey).toBe(firstStartKey);
   });
 
+  it('preserves a timed-out start key when abandoning an unrelated refreshed session', async () => {
+    const sessionId = '11111111-1111-4111-8111-111111111129';
+    const initialRefresh =
+      createDeferred<
+        Awaited<
+          ReturnType<typeof practiceController.getIncompletePracticeSession>
+        >
+      >();
+    const incompleteSession = {
+      sessionId,
+      mode: 'tutor' as const,
+      answeredCount: 0,
+      totalCount: 20,
+      startedAt: '2026-07-17T00:00:00.000Z',
+    };
+    arrangeControlDependencies();
+    getIncompletePracticeSession
+      .mockImplementationOnce(() => initialRefresh.promise)
+      .mockResolvedValue(ok(null));
+    startPracticeSession
+      .mockRejectedValueOnce(new TimeoutError(15_000))
+      .mockResolvedValue(err('INTERNAL_ERROR', 'Recorded start failed'));
+    endPracticeSession.mockResolvedValue(
+      ok({
+        sessionId,
+        mode: 'tutor',
+        questionCount: 20,
+        endedAt: '2026-07-17T01:00:00.000Z',
+        totals: {
+          answered: 0,
+          correct: 0,
+          accuracy: 0,
+          durationSeconds: 60,
+        },
+      }),
+    );
+
+    const screen = await render(<RecoveryHookProbe />);
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('loading');
+
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await expect
+      .element(screen.getByTestId('session-start-status'))
+      .toHaveTextContent('error');
+    const timedOutStartKey = getCallIdempotencyKey(
+      startPracticeSession.mock.calls,
+      0,
+    );
+
+    initialRefresh.resolve(ok(incompleteSession));
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(sessionId);
+
+    await screen
+      .getByRole('button', { name: 'abandon-incomplete-session' })
+      .click();
+    await expect
+      .element(screen.getByTestId('incomplete-session-id'))
+      .toHaveTextContent(/^$/);
+
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await vi.waitFor(() =>
+      expect(startPracticeSession).toHaveBeenCalledTimes(2),
+    );
+    const retriedStartKey = getCallIdempotencyKey(
+      startPracticeSession.mock.calls,
+      1,
+    );
+
+    expect(timedOutStartKey).toEqual(expect.stringMatching(UUID_PATTERN));
+    expect(retriedStartKey).toBe(timedOutStartKey);
+  });
+
   it('allows retirement after a same-key result consumes concurrent uncertainty', async () => {
     const sessionId = '11111111-1111-4111-8111-111111111126';
     const incompleteSession = {

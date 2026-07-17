@@ -47,12 +47,13 @@ Implementation is complete on
 remains Open until wave-5 archival records production proof.
 
 - `usePracticeSessionStart` now owns per-key concurrent-execution uncertainty.
-  Each Start invocation claims the key's current settled version. The typed
-  `concurrent_request_in_progress` result marks that key uncertain; a returned
-  same-key settled result clears it. Compare-and-set versioning prevents a
-  delayed concurrent observation from overwriting a newer settled observation.
-  Thrown transport and timeout outcomes publish no settled observation, so
-  their key remains preserved.
+  Each Start invocation claims the key's current settled version and marks the
+  execution uncertain before awaiting the controller. A returned same-key
+  settled result clears that uncertainty; the typed
+  `concurrent_request_in_progress` result preserves it. Compare-and-set
+  versioning prevents a delayed concurrent observation from overwriting a newer
+  settled observation. Thrown transport and timeout outcomes publish no settled
+  observation, so their key remains preserved.
 - `captureIdempotencyKeyRetirement` still rejects a superseded captured key and
   now also rejects a captured key whose same-key execution may still commit.
   Authoritative incomplete-session refresh continues to own panel convergence,
@@ -60,10 +61,11 @@ remains Open until wave-5 archival records production proof.
 - Red-first Chromium proof reproduced the defect through the production
   `usePracticeSessionControls` hook: typed concurrent result → refresh renders
   session S → successful abandon S → next Start carried a fresh UUID instead of
-  the preserved key. The green suite proves same-key reuse, settlement clearing,
-  and stale-observation compare-and-set ordering. Existing controls remain green
-  for ordinary abandon retirement, second-tab proven-absence retirement,
-  BUG-300's immediate-refresh guard, and BUG-291's thrown-outcome preservation.
+  the preserved key. The green suite proves same-key reuse, thrown/timeout
+  preservation across unrelated-session abandon, settlement clearing, and
+  stale-observation compare-and-set ordering. Existing controls remain green for
+  ordinary abandon retirement, second-tab proven-absence retirement, BUG-300's
+  immediate-refresh guard, and BUG-291's thrown-outcome preservation.
 - A use-case orchestration test inserts and ends another tab's session during
   candidate selection—after the initial incomplete-session precheck and before
   the original `sessions.create`—then proves the original request can create its

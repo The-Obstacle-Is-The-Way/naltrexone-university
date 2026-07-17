@@ -87,7 +87,7 @@ export function usePracticeSessionStart(
     setStartSessionIdempotencyKeyState(key);
   }, []);
 
-  const claimConcurrentExecutionUncertainty = useCallback(
+  const claimStartExecutionUncertainty = useCallback(
     (idempotencyKey: string) => {
       if (
         startExecutionUncertaintyRef.current.idempotencyKey !== idempotencyKey
@@ -98,6 +98,10 @@ export function usePracticeSessionStart(
       }
       const claimedSettledVersion =
         startExecutionUncertaintyRef.current.settledVersion;
+      startExecutionUncertaintyRef.current = {
+        ...startExecutionUncertaintyRef.current,
+        mayStillFinish: true,
+      };
 
       return (mayStillFinish: boolean) => {
         const current = startExecutionUncertaintyRef.current;
@@ -201,8 +205,9 @@ export function usePracticeSessionStart(
   );
 
   const onStartSession = useCallback(() => {
-    const setConcurrentExecutionUncertainty =
-      claimConcurrentExecutionUncertainty(startSessionIdempotencyKey);
+    const setConcurrentExecutionUncertainty = claimStartExecutionUncertainty(
+      startSessionIdempotencyKey,
+    );
 
     return startSession({
       sessionMode,
@@ -227,7 +232,7 @@ export function usePracticeSessionStart(
       isMounted: input.isMounted,
     });
   }, [
-    claimConcurrentExecutionUncertainty,
+    claimStartExecutionUncertainty,
     filters,
     sessionMode,
     sessionCount,
