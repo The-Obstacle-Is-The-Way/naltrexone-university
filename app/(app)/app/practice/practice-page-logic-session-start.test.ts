@@ -113,6 +113,7 @@ describe('practice-page-logic session start', () => {
       const setSessionStartStatus = vi.fn();
       const setSessionStartError = vi.fn();
       const setIdempotencyKey = vi.fn();
+      const setConcurrentExecutionUncertainty = vi.fn();
 
       await startSession({
         sessionMode: 'tutor',
@@ -125,6 +126,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        setConcurrentExecutionUncertainty,
         startPracticeSessionFn: async () => {
           throw new Error('Boom');
         },
@@ -136,6 +138,7 @@ describe('practice-page-logic session start', () => {
       expect(setSessionStartStatus).toHaveBeenCalledWith('error');
       expect(setSessionStartError).toHaveBeenCalledWith('Boom');
       expect(setIdempotencyKey).not.toHaveBeenCalled();
+      expect(setConcurrentExecutionUncertainty).not.toHaveBeenCalled();
     });
 
     it('reports thrown session start errors while preserving error UI state', async () => {
@@ -214,6 +217,7 @@ describe('practice-page-logic session start', () => {
 
     it('preserves the key when a concurrent same-key request may still finish', async () => {
       const setIdempotencyKey = vi.fn();
+      const setConcurrentExecutionUncertainty = vi.fn();
       const refreshIncompleteSession = vi.fn(async () => ({
         kind: 'loaded' as const,
         session: null,
@@ -226,6 +230,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        setConcurrentExecutionUncertainty,
         startPracticeSessionFn: async () =>
           err('CONFLICT', 'Request is still running', undefined, {
             reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
@@ -238,6 +243,9 @@ describe('practice-page-logic session start', () => {
 
       expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
       expect(setIdempotencyKey).not.toHaveBeenCalled();
+      expect(setConcurrentExecutionUncertainty).toHaveBeenCalledExactlyOnceWith(
+        true,
+      );
     });
 
     it('preserves the key and refreshes the panel when a concurrent request already committed', async () => {
@@ -301,6 +309,7 @@ describe('practice-page-logic session start', () => {
 
     it('refreshes recovery state after a non-conflict failure so a committed session can surface', async () => {
       const setIdempotencyKey = vi.fn();
+      const setConcurrentExecutionUncertainty = vi.fn();
       const refreshIncompleteSession = vi.fn(async () => ({
         kind: 'loaded' as const,
         session: { sessionId: fixtureSession1Id },
@@ -313,6 +322,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        setConcurrentExecutionUncertainty,
         // The cache-error-and-throw arm replays INTERNAL_ERROR after a
         // committed session; only the refetch can render Resume/Abandon.
         startPracticeSessionFn: async () =>
@@ -325,6 +335,9 @@ describe('practice-page-logic session start', () => {
 
       expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
       expect(setIdempotencyKey).not.toHaveBeenCalled();
+      expect(setConcurrentExecutionUncertainty).toHaveBeenCalledExactlyOnceWith(
+        false,
+      );
     });
 
     it('retires a preserved start key when refresh proves no incomplete session remains', async () => {

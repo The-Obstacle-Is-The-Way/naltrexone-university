@@ -42,6 +42,12 @@ export type UsePracticeSessionStartOutput = {
   captureIdempotencyKeyRetirement: () => () => boolean;
 };
 
+type StartExecutionUncertainty = {
+  idempotencyKey: string;
+  settledVersion: number;
+  mayStillFinish: boolean;
+};
+
 export function usePracticeSessionStart(
   input: UsePracticeSessionStartInput,
 ): UsePracticeSessionStartOutput {
@@ -58,6 +64,11 @@ export function usePracticeSessionStart(
   const [startSessionIdempotencyKey, setStartSessionIdempotencyKeyState] =
     useState(() => crypto.randomUUID());
   const startSessionIdempotencyKeyRef = useRef(startSessionIdempotencyKey);
+  const startExecutionUncertaintyRef = useRef<StartExecutionUncertainty>({
+    idempotencyKey: startSessionIdempotencyKey,
+    settledVersion: 0,
+    mayStillFinish: false,
+  });
   const [sessionStartStatus, setSessionStartStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
@@ -66,17 +77,64 @@ export function usePracticeSessionStart(
   );
   const setStartSessionIdempotencyKey = useCallback((key: string) => {
     startSessionIdempotencyKeyRef.current = key;
+    if (startExecutionUncertaintyRef.current.idempotencyKey !== key) {
+      startExecutionUncertaintyRef.current = {
+        idempotencyKey: key,
+        settledVersion: 0,
+        mayStillFinish: false,
+      };
+    }
     setStartSessionIdempotencyKeyState(key);
   }, []);
 
+  const claimConcurrentExecutionUncertainty = useCallback(
+    (idempotencyKey: string) => {
+      if (
+        startExecutionUncertaintyRef.current.idempotencyKey !== idempotencyKey
+      ) {
+        // A stale render may still invoke an old handler after a newer intent
+        // owns the slot. It must not replace the newer key's uncertainty.
+        return () => {};
+      }
+      const claimedSettledVersion =
+        startExecutionUncertaintyRef.current.settledVersion;
+
+      return (mayStillFinish: boolean) => {
+        const current = startExecutionUncertaintyRef.current;
+        if (
+          current.idempotencyKey !== idempotencyKey ||
+          current.settledVersion !== claimedSettledVersion
+        ) {
+          return;
+        }
+
+        startExecutionUncertaintyRef.current = mayStillFinish
+          ? { ...current, mayStillFinish: true }
+          : {
+              ...current,
+              settledVersion: current.settledVersion + 1,
+              mayStillFinish: false,
+            };
+      };
+    },
+    [],
+  );
+
   // Capture the key whose recovery lifecycle is being resolved. The returned
-  // fence refuses to retire a newer intent that arrived while recovery was
-  // awaiting an external result.
+  // fence refuses to retire either a newer intent or a captured key whose
+  // same-key execution may still commit.
   const captureIdempotencyKeyRetirement = useCallback(() => {
     const capturedKey = startSessionIdempotencyKeyRef.current;
 
     return () => {
       if (startSessionIdempotencyKeyRef.current !== capturedKey) return false;
+      const uncertainty = startExecutionUncertaintyRef.current;
+      if (
+        uncertainty.idempotencyKey === capturedKey &&
+        uncertainty.mayStillFinish
+      ) {
+        return false;
+      }
       setStartSessionIdempotencyKey(crypto.randomUUID());
       return true;
     };
@@ -142,39 +200,42 @@ export function usePracticeSessionStart(
     [setStartSessionIdempotencyKey],
   );
 
-  const onStartSession = useMemo(
-    () =>
-      startSession.bind(null, {
-        sessionMode,
-        sessionCount,
-        filters,
-        idempotencyKey: startSessionIdempotencyKey,
-        getLatestIdempotencyKey: () => startSessionIdempotencyKeyRef.current,
-        createIdempotencyKey: () => crypto.randomUUID(),
-        setIdempotencyKey: setStartSessionIdempotencyKey,
-        startPracticeSessionFn: startPracticeSession,
-        reportError: (error, context) => {
-          reportClientError(error, {
-            component: 'UsePracticeSessionStart',
-            action: context.action,
-          });
-        },
-        refreshIncompleteSession: input.refreshIncompleteSession,
-        setSessionStartStatus,
-        setSessionStartError,
-        navigateTo,
-        isMounted: input.isMounted,
-      }),
-    [
-      filters,
+  const onStartSession = useCallback(() => {
+    const setConcurrentExecutionUncertainty =
+      claimConcurrentExecutionUncertainty(startSessionIdempotencyKey);
+
+    return startSession({
       sessionMode,
       sessionCount,
-      startSessionIdempotencyKey,
-      input.isMounted,
-      input.refreshIncompleteSession,
-      setStartSessionIdempotencyKey,
-    ],
-  );
+      filters,
+      idempotencyKey: startSessionIdempotencyKey,
+      getLatestIdempotencyKey: () => startSessionIdempotencyKeyRef.current,
+      createIdempotencyKey: () => crypto.randomUUID(),
+      setIdempotencyKey: setStartSessionIdempotencyKey,
+      setConcurrentExecutionUncertainty,
+      startPracticeSessionFn: startPracticeSession,
+      reportError: (error, context) => {
+        reportClientError(error, {
+          component: 'UsePracticeSessionStart',
+          action: context.action,
+        });
+      },
+      refreshIncompleteSession: input.refreshIncompleteSession,
+      setSessionStartStatus,
+      setSessionStartError,
+      navigateTo,
+      isMounted: input.isMounted,
+    });
+  }, [
+    claimConcurrentExecutionUncertainty,
+    filters,
+    sessionMode,
+    sessionCount,
+    startSessionIdempotencyKey,
+    input.isMounted,
+    input.refreshIncompleteSession,
+    setStartSessionIdempotencyKey,
+  ]);
 
   return {
     filters,
