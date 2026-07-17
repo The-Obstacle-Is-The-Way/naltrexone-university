@@ -53,6 +53,31 @@ The first owner was fixed without propagating equivalent stale-completion author
 3. Do not cancel or rotate the hook's preserved idempotency key when the dialog closes; BUG-291/301 determinacy remains authoritative.
 4. Add Chromium sequences for stale success and stale failure across close/reopen, plus an ordinary single-submit control.
 
+## Resolution State
+
+Implementation is complete on
+`fix/bug-302-report-dialog-stale-completion` as of 2026-07-17; Status remains
+Open until wave-5 archival records production proof.
+
+- `QuestionReportDialog` now owns a monotonically increasing submission
+  generation. Starting a submission claims the current generation; closing or
+  resetting the dialog advances it. Every post-`await` success, returned
+  failure, and thrown-failure continuation verifies ownership before it may
+  notify, change `isSubmitting`, reset form state, or close the dialog.
+- The feedback hook, token-slot generation CAS, fingerprints, and idempotency
+  key determinacy behavior are unchanged. The rating surface was audited and
+  has no equivalent presentation continuation: it delegates synchronously to
+  the already generation-fenced hook.
+- Red-first Chromium proof reproduced three failures on the pre-fix component:
+  stale success closed the reopened dialog, while stale returned and thrown
+  failures re-enabled the newer submission. The same focused suite is green
+  after the owner-generation fence, including the existing ordinary
+  single-submit close/success-toast control.
+- PR number, exact approved head, squash SHA, full-gate evidence, and promotion
+  proof are delivery facts recorded after their respective steps; the wave-5
+  close will replace this implementation-state note with the complete immutable
+  chain.
+
 ## Related
 
 - [BUG-301 (archived)](../_archive/bugs/bug-301-stale-feedback-completion-clobbers-newer-request-key.md) — correctly fences the token slot but does not own dialog presentation state.

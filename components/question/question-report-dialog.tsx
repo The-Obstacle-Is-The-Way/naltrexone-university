@@ -193,8 +193,10 @@ export function QuestionReportDialog({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const firstCategoryInputRef = useRef<HTMLInputElement>(null);
+  const submissionGenerationRef = useRef(0);
 
-  function resetForm() {
+  function resetDialogLifecycle() {
+    submissionGenerationRef.current += 1;
     setCategory(null);
     setComment('');
     setValidationError(null);
@@ -202,7 +204,7 @@ export function QuestionReportDialog({
   }
 
   function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) resetForm();
+    if (!nextOpen) resetDialogLifecycle();
     onOpenChange(nextOpen);
   }
 
@@ -217,6 +219,8 @@ export function QuestionReportDialog({
 
     setValidationError(null);
     setIsSubmitting(true);
+    const submissionGeneration = submissionGenerationRef.current + 1;
+    submissionGenerationRef.current = submissionGeneration;
 
     const trimmedComment = comment.trim();
     try {
@@ -224,6 +228,8 @@ export function QuestionReportDialog({
         category,
         comment: trimmedComment.length > 0 ? trimmedComment : null,
       });
+
+      if (submissionGenerationRef.current !== submissionGeneration) return;
 
       if (!didSubmit) {
         notify({
@@ -238,9 +244,11 @@ export function QuestionReportDialog({
         message: 'Thanks — our editors will take a look.',
         tone: 'success',
       });
-      resetForm();
+      resetDialogLifecycle();
       onOpenChange(false);
     } catch {
+      if (submissionGenerationRef.current !== submissionGeneration) return;
+
       notify({
         message: "Couldn't send your feedback. Check your connection.",
         tone: 'error',
