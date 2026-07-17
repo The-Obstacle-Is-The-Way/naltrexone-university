@@ -1,9 +1,10 @@
 # DEBT-459: The Button Mandate Is Ambiguous for Test-Only Probe Controls
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-07-16
 **Confirmed:** 2026-07-16 (fix-wave-4 close precedent adjudication; confirmed by the frontend rule text, the production-only scanner contract, and repository-wide test practice)
+**Resolved:** 2026-07-17
 
 ---
 
@@ -33,9 +34,31 @@ The ambiguity creates recurring false-positive review work and inconsistent test
 3. Keep `components/theme-token-regression-source-scan.ts` unchanged except for a nearby contract comment if needed; its current glob behavior already implements the ruling.
 4. Verify a synthetic raw button still fails in production UI while an equivalent browser-test probe is excluded, and confirm review guidance no longer requests a production Button dependency for hook-only probes.
 
+## Resolution
+
+Resolved on 2026-07-17 on branch
+`debt/459-test-probe-button-rule-scope`:
+
+1. `AGENTS.md`, `.claude/rules/frontend.md`, and
+   `docs/frontend/standards.md` now state the same boundary: the shared
+   `<Button>` mandate governs production UI; native semantic controls are
+   allowed only in test-only hook/state-machine probes covered by the existing
+   `*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and `*.probes.tsx`
+   exclusions; tests of Button/design-system behavior still use `<Button>`.
+2. `components/theme-token-regression-source-scan.ts` remains unchanged
+   because its existing production globs and exclusions already implement the
+   ruling.
+3. A temporary `components/debt-459-production-probe.tsx` containing a raw
+   `<button>` made the source-scan regression test fail with the expected
+   file-and-line diagnostic. After removing that file, the same test passed
+   while a temporary
+   `components/debt-459-browser-probe.browser.spec.tsx` raw-button probe was
+   present, proving the test-only exclusion. Both temporary files were removed
+   before commit.
+
 ## Related
 
-- [DEBT-398 (archived)](../_archive/debt/debt-398-design-system-enforcement-gap.md) — explicitly selected production-only source scanning and the test/probe ignore globs.
-- [DEBT-399 (archived)](../_archive/debt/debt-399-component-system-bypass-cleanup.md) — removed every temporary production raw-button bypass.
+- [DEBT-398 (archived)](./debt-398-design-system-enforcement-gap.md) — explicitly selected production-only source scanning and the test/probe ignore globs.
+- [DEBT-399 (archived)](./debt-399-component-system-bypass-cleanup.md) — removed every temporary production raw-button bypass.
 
 Filed during the 2026-07-16 fix-wave-4 close review after adjudicating the BUG-299/BUG-301 CodeRabbit precedent.

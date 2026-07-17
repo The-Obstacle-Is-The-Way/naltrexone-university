@@ -74,10 +74,14 @@ coverage.
 
 ### 4. Component-system mandate
 
-All interactive click targets MUST use the `<Button>` component
-(standards.md § 2). Raw `<button>` is allowed only inside
-`components/ui/` primitives and app-shell disclosure toggles per
-Pattern Registry I-6.
+All production UI interactive click targets MUST use the `<Button>`
+component (standards.md § 2). Raw `<button>` is allowed in production
+only inside `components/ui/` primitives and app-shell disclosure toggles
+per Pattern Registry I-6. The production scanner intentionally excludes
+`*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and
+`*.probes.tsx`; native semantic controls are allowed there only in
+test-only hook/state-machine probes, while tests whose subject is Button
+or design-system behavior must still use `<Button>`.
 
 DEBT-399 completed the cleanup of existing bypass sites. Only the
 documented `components/mobile-nav.tsx` Pattern Registry I-6 app-shell
