@@ -73,6 +73,12 @@ Open until wave-5 archival records production proof.
   failures re-enabled the newer submission. The same focused suite is green
   after the owner-generation fence, including the existing ordinary
   single-submit close/success-toast control.
+- Exact-head review identified that the initial race matrix did not isolate
+  close-only invalidation from a newer submission's generation claim. A
+  mutation check with the close-generation increment removed failed on an
+  obsolete third `onOpenChange` call; the restored fence passes the added
+  close-only Chromium sequence. Dialog-removal assertions now use Browser Mode
+  retryable locators rather than manual DOM polling.
 - PR number, exact approved head, squash SHA, full-gate evidence, and promotion
   proof are delivery facts recorded after their respective steps; the wave-5
   close will replace this implementation-state note with the complete immutable

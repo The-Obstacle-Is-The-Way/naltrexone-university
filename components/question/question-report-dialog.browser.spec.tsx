@@ -8,16 +8,23 @@ import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
 function DialogProbe({
   submitReport = async () => true,
+  onOpenChangeObserved,
 }: {
   submitReport?: Parameters<typeof QuestionReportDialog>[0]['submitReport'];
+  onOpenChangeObserved?: (open: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
+
+  function handleOpenChange(nextOpen: boolean) {
+    onOpenChangeObserved?.(nextOpen);
+    setOpen(nextOpen);
+  }
 
   return (
     <NotificationProvider>
       <QuestionReportDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={handleOpenChange}
         submitReport={submitReport}
       />
     </NotificationProvider>
@@ -63,7 +70,7 @@ test('validates category, submits selected feedback, closes, and returns focus',
   await expect
     .element(screen.getByText('Thanks — our editors will take a look.'))
     .toBeVisible();
-  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
   await expect.element(trigger).toHaveFocus();
 });
 
@@ -86,7 +93,7 @@ test('stale success cannot close or reset a newer report submission', async () =
   await expect.poll(() => submitReport.mock.calls.length).toBe(1);
 
   await userEvent.keyboard('{Escape}');
-  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
 
   await trigger.click();
   await screen.getByRole('radio', { name: 'Other' }).click();
@@ -115,7 +122,51 @@ test('stale success cannot close or reset a newer report submission', async () =
   await expect
     .element(screen.getByText('Thanks — our editors will take a look.'))
     .toBeVisible();
-  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('closing the dialog alone supersedes its in-flight submission', async () => {
+  const firstSubmission = createDeferred<boolean>();
+  const secondSubmission = createDeferred<boolean>();
+  const submitReport = vi
+    .fn()
+    .mockReturnValueOnce(firstSubmission.promise)
+    .mockReturnValueOnce(secondSubmission.promise);
+  const onOpenChangeObserved = vi.fn();
+  const screen = await render(
+    <DialogProbe
+      submitReport={submitReport}
+      onOpenChangeObserved={onOpenChangeObserved}
+    />,
+  );
+  const trigger = screen.getByRole('button', { name: 'Give feedback' });
+
+  await trigger.click();
+  await screen.getByRole('radio', { name: 'Ambiguous wording' }).click();
+  await screen.getByRole('button', { name: 'Submit feedback' }).click();
+  await expect.poll(() => submitReport.mock.calls.length).toBe(1);
+
+  await userEvent.keyboard('{Escape}');
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+  const openChangeCountAfterClose = onOpenChangeObserved.mock.calls.length;
+
+  firstSubmission.resolve(true);
+  await waitForUiCommit();
+
+  expect(onOpenChangeObserved).toHaveBeenCalledTimes(openChangeCountAfterClose);
+  expect(visibleNotificationMessages()).toEqual([]);
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+
+  await trigger.click();
+  await screen.getByRole('radio', { name: 'Other' }).click();
+  await screen.getByRole('button', { name: 'Submit feedback' }).click();
+  await expect.poll(() => submitReport.mock.calls.length).toBe(2);
+
+  secondSubmission.resolve(true);
+  await expect
+    .element(screen.getByText('Thanks — our editors will take a look.'))
+    .toBeVisible();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
 });
 
 test('stale failed result cannot notify or re-enable a newer report submission', async () => {
@@ -133,7 +184,7 @@ test('stale failed result cannot notify or re-enable a newer report submission',
   await screen.getByRole('button', { name: 'Submit feedback' }).click();
   await expect.poll(() => submitReport.mock.calls.length).toBe(1);
   await userEvent.keyboard('{Escape}');
-  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
 
   await trigger.click();
   await screen.getByRole('radio', { name: 'Other' }).click();
@@ -181,7 +232,7 @@ test('stale thrown failure cannot notify or re-enable a newer report submission'
   await screen.getByRole('button', { name: 'Submit feedback' }).click();
   await expect.poll(() => submitReport.mock.calls.length).toBe(1);
   await userEvent.keyboard('{Escape}');
-  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
 
   await trigger.click();
   await screen.getByRole('radio', { name: 'Typo or formatting' }).click();
@@ -207,7 +258,7 @@ test('stale thrown failure cannot notify or re-enable a newer report submission'
   await expect
     .element(screen.getByText('Thanks — our editors will take a look.'))
     .toBeVisible();
-  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
 });
 
 test('keeps the dialog open on submit failure and closes on Escape with focus return', async () => {
@@ -232,7 +283,7 @@ test('keeps the dialog open on submit failure and closes on Escape with focus re
 
   await userEvent.keyboard('{Escape}');
 
-  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
   await expect.element(trigger).toHaveFocus();
 });
 
@@ -246,7 +297,7 @@ test('cancels, resets the form, and returns focus to the trigger', async () => {
   await userEvent.keyboard('Temporary note');
   await screen.getByRole('button', { name: 'Cancel' }).click();
 
-  await expect.poll(() => document.querySelector('[role="dialog"]')).toBeNull();
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
   await expect.element(trigger).toHaveFocus();
 
   await trigger.click();
