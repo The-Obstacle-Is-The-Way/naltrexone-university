@@ -1,7 +1,7 @@
 'use client';
 
 import type * as React from 'react';
-import { useId, useRef, useState } from 'react';
+import { useCallback, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -194,17 +194,28 @@ export function QuestionReportDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const firstCategoryInputRef = useRef<HTMLInputElement>(null);
   const submissionGenerationRef = useRef(0);
+  const previousOpenRef = useRef(open);
 
-  function resetDialogLifecycle() {
+  const resetDialogLifecycle = useCallback(() => {
     submissionGenerationRef.current += 1;
     setCategory(null);
     setComment('');
     setValidationError(null);
     setIsSubmitting(false);
-  }
+  }, []);
+
+  useLayoutEffect(() => {
+    const wasOpen = previousOpenRef.current;
+    previousOpenRef.current = open;
+
+    if (wasOpen && !open) resetDialogLifecycle();
+  }, [open, resetDialogLifecycle]);
 
   function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) resetDialogLifecycle();
+    if (!nextOpen) {
+      previousOpenRef.current = false;
+      resetDialogLifecycle();
+    }
     onOpenChange(nextOpen);
   }
 
@@ -244,8 +255,7 @@ export function QuestionReportDialog({
         message: 'Thanks — our editors will take a look.',
         tone: 'success',
       });
-      resetDialogLifecycle();
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch {
       if (submissionGenerationRef.current !== submissionGeneration) return;
 

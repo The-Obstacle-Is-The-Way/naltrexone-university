@@ -6,12 +6,18 @@ import { QuestionReportDialog } from '@/components/question/question-report-dial
 import { NotificationProvider } from '@/components/ui/notification-provider';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 
+const REPORT_SUCCESS_MESSAGE = 'Thanks — our editors will take a look.';
+const REPORT_FAILURE_MESSAGE =
+  "Couldn't send your feedback. Check your connection.";
+
 function DialogProbe({
   submitReport = async () => true,
   onOpenChangeObserved,
+  openOverride,
 }: {
   submitReport?: Parameters<typeof QuestionReportDialog>[0]['submitReport'];
   onOpenChangeObserved?: (open: boolean) => void;
+  openOverride?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -23,22 +29,11 @@ function DialogProbe({
   return (
     <NotificationProvider>
       <QuestionReportDialog
-        open={open}
+        open={openOverride ?? open}
         onOpenChange={handleOpenChange}
         submitReport={submitReport}
       />
     </NotificationProvider>
-  );
-}
-
-async function waitForUiCommit(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-}
-
-function visibleNotificationMessages(): string[] {
-  return Array.from(
-    document.querySelectorAll('[data-testid="app-toast"]'),
-    (toast) => toast.textContent?.trim() ?? '',
   );
 }
 
@@ -67,9 +62,7 @@ test('validates category, submits selected feedback, closes, and returns focus',
     category: 'ambiguous_wording',
     comment: 'Needs a clearer stem.',
   });
-  await expect
-    .element(screen.getByText('Thanks — our editors will take a look.'))
-    .toBeVisible();
+  await expect.element(screen.getByText(REPORT_SUCCESS_MESSAGE)).toBeVisible();
   await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
   await expect.element(trigger).toHaveFocus();
 });
@@ -104,7 +97,7 @@ test('stale success cannot close or reset a newer report submission', async () =
   await expect.poll(() => submitReport.mock.calls.length).toBe(2);
 
   firstSubmission.resolve(true);
-  await waitForUiCommit();
+  await firstSubmission.promise;
 
   await expect.element(screen.getByRole('dialog')).toBeVisible();
   await expect
@@ -116,12 +109,12 @@ test('stale success cannot close or reset a newer report submission', async () =
   await expect
     .element(screen.getByRole('button', { name: 'Submit feedback' }))
     .toBeDisabled();
-  expect(visibleNotificationMessages()).toEqual([]);
+  await expect
+    .element(screen.getByText(REPORT_SUCCESS_MESSAGE))
+    .not.toBeInTheDocument();
 
   secondSubmission.resolve(true);
-  await expect
-    .element(screen.getByText('Thanks — our editors will take a look.'))
-    .toBeVisible();
+  await expect.element(screen.getByText(REPORT_SUCCESS_MESSAGE)).toBeVisible();
   await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
 });
 
@@ -151,11 +144,13 @@ test('closing the dialog alone supersedes its in-flight submission', async () =>
   const openChangeCountAfterClose = onOpenChangeObserved.mock.calls.length;
 
   firstSubmission.resolve(true);
-  await waitForUiCommit();
+  await firstSubmission.promise;
 
   expect(onOpenChangeObserved).toHaveBeenCalledTimes(openChangeCountAfterClose);
-  expect(visibleNotificationMessages()).toEqual([]);
   await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+  await expect
+    .element(screen.getByText(REPORT_SUCCESS_MESSAGE))
+    .not.toBeInTheDocument();
 
   await trigger.click();
   await screen.getByRole('radio', { name: 'Other' }).click();
@@ -163,10 +158,79 @@ test('closing the dialog alone supersedes its in-flight submission', async () =>
   await expect.poll(() => submitReport.mock.calls.length).toBe(2);
 
   secondSubmission.resolve(true);
-  await expect
-    .element(screen.getByText('Thanks — our editors will take a look.'))
-    .toBeVisible();
+  await expect.element(screen.getByText(REPORT_SUCCESS_MESSAGE)).toBeVisible();
   await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('a controlled close supersedes the in-flight submission before reopening', async () => {
+  const firstSubmission = createDeferred<boolean>();
+  const secondSubmission = createDeferred<boolean>();
+  const submitReport = vi
+    .fn()
+    .mockReturnValueOnce(firstSubmission.promise)
+    .mockReturnValueOnce(secondSubmission.promise);
+  const onOpenChangeObserved = vi.fn();
+  const screen = await render(
+    <DialogProbe
+      openOverride
+      submitReport={submitReport}
+      onOpenChangeObserved={onOpenChangeObserved}
+    />,
+  );
+
+  await screen.getByRole('radio', { name: 'Ambiguous wording' }).click();
+  await screen
+    .getByRole('textbox', { name: 'Add details (optional)' })
+    .fill('Externally closed report A');
+  await screen.getByRole('button', { name: 'Submit feedback' }).click();
+  await expect.poll(() => submitReport.mock.calls.length).toBe(1);
+
+  await screen.rerender(
+    <DialogProbe
+      openOverride={false}
+      submitReport={submitReport}
+      onOpenChangeObserved={onOpenChangeObserved}
+    />,
+  );
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+
+  await screen.rerender(
+    <DialogProbe
+      openOverride
+      submitReport={submitReport}
+      onOpenChangeObserved={onOpenChangeObserved}
+    />,
+  );
+  await expect
+    .element(screen.getByRole('button', { name: 'Submit feedback' }))
+    .toBeEnabled();
+  await expect
+    .element(screen.getByRole('textbox', { name: 'Add details (optional)' }))
+    .toHaveValue('');
+
+  await screen.getByRole('radio', { name: 'Other' }).click();
+  await screen
+    .getByRole('textbox', { name: 'Add details (optional)' })
+    .fill('Current report B');
+  await screen.getByRole('button', { name: 'Submit feedback' }).click();
+  await expect.poll(() => submitReport.mock.calls.length).toBe(2);
+
+  firstSubmission.resolve(true);
+  await firstSubmission.promise;
+
+  await expect.element(screen.getByRole('dialog')).toBeVisible();
+  await expect
+    .element(screen.getByRole('textbox', { name: 'Add details (optional)' }))
+    .toHaveValue('Current report B');
+  await expect
+    .element(screen.getByRole('button', { name: 'Submit feedback' }))
+    .toBeDisabled();
+  await expect
+    .element(screen.getByText(REPORT_SUCCESS_MESSAGE))
+    .not.toBeInTheDocument();
+
+  secondSubmission.resolve(true);
+  await expect.element(screen.getByText(REPORT_SUCCESS_MESSAGE)).toBeVisible();
 });
 
 test('stale failed result cannot notify or re-enable a newer report submission', async () => {
@@ -195,7 +259,7 @@ test('stale failed result cannot notify or re-enable a newer report submission',
   await expect.poll(() => submitReport.mock.calls.length).toBe(2);
 
   firstSubmission.resolve(false);
-  await waitForUiCommit();
+  await firstSubmission.promise;
 
   await expect.element(screen.getByRole('dialog')).toBeVisible();
   await expect
@@ -204,14 +268,12 @@ test('stale failed result cannot notify or re-enable a newer report submission',
   await expect
     .element(screen.getByRole('button', { name: 'Submit feedback' }))
     .toBeDisabled();
-  expect(visibleNotificationMessages()).toEqual([]);
+  await expect
+    .element(screen.getByText(REPORT_FAILURE_MESSAGE))
+    .not.toBeInTheDocument();
 
   secondSubmission.resolve(false);
-  await expect
-    .element(
-      screen.getByText("Couldn't send your feedback. Check your connection."),
-    )
-    .toBeVisible();
+  await expect.element(screen.getByText(REPORT_FAILURE_MESSAGE)).toBeVisible();
   await expect
     .element(screen.getByRole('button', { name: 'Submit feedback' }))
     .toBeEnabled();
@@ -242,8 +304,12 @@ test('stale thrown failure cannot notify or re-enable a newer report submission'
   await screen.getByRole('button', { name: 'Submit feedback' }).click();
   await expect.poll(() => submitReport.mock.calls.length).toBe(2);
 
-  firstSubmission.reject(new Error('Obsolete network failure'));
-  await waitForUiCommit();
+  const obsoleteFailure = new Error('Obsolete network failure');
+  const rejectedSubmission = expect(firstSubmission.promise).rejects.toThrow(
+    obsoleteFailure.message,
+  );
+  firstSubmission.reject(obsoleteFailure);
+  await rejectedSubmission;
 
   await expect.element(screen.getByRole('dialog')).toBeVisible();
   await expect
@@ -252,12 +318,12 @@ test('stale thrown failure cannot notify or re-enable a newer report submission'
   await expect
     .element(screen.getByRole('button', { name: 'Submit feedback' }))
     .toBeDisabled();
-  expect(visibleNotificationMessages()).toEqual([]);
+  await expect
+    .element(screen.getByText(REPORT_FAILURE_MESSAGE))
+    .not.toBeInTheDocument();
 
   secondSubmission.resolve(true);
-  await expect
-    .element(screen.getByText('Thanks — our editors will take a look.'))
-    .toBeVisible();
+  await expect.element(screen.getByText(REPORT_SUCCESS_MESSAGE)).toBeVisible();
   await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
 });
 
@@ -271,11 +337,7 @@ test('keeps the dialog open on submit failure and closes on Escape with focus re
   await screen.getByRole('button', { name: 'Submit feedback' }).click();
 
   await expect.poll(() => submitReport.mock.calls.length).toBe(1);
-  await expect
-    .element(
-      screen.getByText("Couldn't send your feedback. Check your connection."),
-    )
-    .toBeVisible();
+  await expect.element(screen.getByText(REPORT_FAILURE_MESSAGE)).toBeVisible();
   await expect.element(screen.getByRole('dialog')).toBeVisible();
   await expect
     .element(screen.getByRole('heading', { name: 'Give feedback' }))
@@ -319,10 +381,6 @@ test('keeps the dialog open when submit throws', async () => {
   await screen.getByRole('button', { name: 'Submit feedback' }).click();
 
   await expect.poll(() => submitReport.mock.calls.length).toBe(1);
-  await expect
-    .element(
-      screen.getByText("Couldn't send your feedback. Check your connection."),
-    )
-    .toBeVisible();
+  await expect.element(screen.getByText(REPORT_FAILURE_MESSAGE)).toBeVisible();
   await expect.element(screen.getByRole('dialog')).toBeVisible();
 });

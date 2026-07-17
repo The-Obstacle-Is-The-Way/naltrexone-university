@@ -60,10 +60,11 @@ Implementation is complete on
 Open until wave-5 archival records production proof.
 
 - `QuestionReportDialog` now owns a monotonically increasing submission
-  generation. Starting a submission claims the current generation; closing or
-  resetting the dialog advances it. Every post-`await` success, returned
-  failure, and thrown-failure continuation verifies ownership before it may
-  notify, change `isSubmitting`, reset form state, or close the dialog.
+  generation. Starting a submission claims the current generation; both
+  dialog-originated closes and externally controlled `open: true -> false`
+  transitions advance it and reset the form. Every post-`await` success,
+  returned failure, and thrown-failure continuation verifies ownership before
+  it may notify, change `isSubmitting`, reset form state, or close the dialog.
 - The feedback hook, token-slot generation CAS, fingerprints, and idempotency
   key determinacy behavior are unchanged. The rating surface was audited and
   has no equivalent presentation continuation: it delegates synchronously to
@@ -79,6 +80,11 @@ Open until wave-5 archival records production proof.
   obsolete third `onOpenChange` call; the restored fence passes the added
   close-only Chromium sequence. Dialog-removal assertions now use Browser Mode
   retryable locators rather than manual DOM polling.
+- A post-cooldown full review then exposed the controlled-prop close seam. Its
+  red Chromium sequence reopened with A's Submit state still disabled. A layout
+  transition fence now invalidates and resets before paint, and the green test
+  proves B survives A's later completion. Stale-toast checks await the settled
+  request and use exact retryable Browser Mode message locators.
 - PR number, exact approved head, squash SHA, full-gate evidence, and promotion
   proof are delivery facts recorded after their respective steps; the wave-5
   close will replace this implementation-state note with the complete immutable
