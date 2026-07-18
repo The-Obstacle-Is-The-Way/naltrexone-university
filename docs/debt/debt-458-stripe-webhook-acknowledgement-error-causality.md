@@ -4,6 +4,7 @@
 **Priority:** P4
 **Date:** 2026-07-14
 **Confirmed:** 2026-07-14 (fix-wave-3 combined-diff adversarial review; confirmed 3/3 by independent verification panels and reproduced through the production controller with fakes)
+**Re-verified accurate against `ddad8eee` on 2026-07-18.**
 
 ---
 

@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
+**Re-verified accurate against `ddad8eee` on 2026-07-18.**
 
 ---
 

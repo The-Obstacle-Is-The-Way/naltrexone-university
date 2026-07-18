@@ -1,6 +1,6 @@
 # BUG-302: A Stale Report Completion Closes and Resets a Newer Report Dialog
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P4
 **Date:** 2026-07-16
 **Confirmed:** 2026-07-16 (fix-wave-4 combined-diff adversarial review; confirmed 3/3 by source ownership tracing, a real Chromium component reproduction, and an idempotency-impact verifier)
@@ -12,7 +12,7 @@
 
 BUG-301 correctly prevents an obsolete rating/report request from mutating the current idempotency-token slot. The visible report dialog has a separate asynchronous owner, however, and does not fence the `Promise<boolean>` returned by the hook. Closing the dialog while report A is pending resets the form and permits report B. When A later succeeds, its old `handleSubmit` continuation unconditionally calls `resetForm()` and `onOpenChange(false)`, closing B's dialog and erasing B's in-progress form while B is still running.
 
-The vulnerable continuation is in [`question-report-dialog.tsx`](../../components/question/question-report-dialog.tsx):
+The vulnerable continuation is in [`question-report-dialog.tsx`](../../../components/question/question-report-dialog.tsx):
 
 ```ts
 const didSubmit = await submitReport(...);
@@ -53,12 +53,15 @@ The first owner was fixed without propagating equivalent stale-completion author
 3. Do not cancel or rotate the hook's preserved idempotency key when the dialog closes; BUG-291/301 determinacy remains authoritative.
 4. Add Chromium sequences for stale success and stale failure across close/reopen, plus an ordinary single-submit control.
 
-## Resolution State
+## Resolution
 
-Implementation is merged to `dev` as of 2026-07-18; promotion PR
-[#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
-remains open, and Status remains Open until wave-5 archival records production
-proof.
+Resolved and production-verified on 2026-07-18. Initial fix PR
+[#663](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/663)
+received CodeRabbit formal APPROVED on exact head `f40ce2ce`, then
+squash-merged as `feb7652e`. Promotion-review hardening PR
+[#666](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/666)
+closed the component-unmount continuation seam, received formal APPROVED on
+exact head `6761c676`, and squash-merged as `7cc09e91`.
 
 - `QuestionReportDialog` now owns a monotonically increasing submission
   generation. Starting a submission claims the current generation; both
@@ -92,19 +95,18 @@ proof.
   parent `onOpenChange`. A red Chromium test observed that stale callback; an
   unmount-only layout-effect cleanup now invalidates ownership without changing
   the feedback hook or idempotency-key lifecycle.
-- Initial fix PR
-  [#663](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/663)
-  received formal CodeRabbit approval on exact head `f40ce2ce` and
-  squash-merged to `dev` as `feb7652e`. Promotion-review follow-up PR
-  [#666](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/666)
-  closed the unmount seam, received formal approval on exact head `6761c676`,
-  and squash-merged as `7cc09e91`. Both heads passed the full local gate before
-  push; production proof is intentionally deferred to the open promotion and
-  wave-5 close.
+- Both implementation heads passed the full local gate before push. Promotion
+  PR [#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
+  received CodeRabbit formal APPROVED review `4728788574` on its exact final
+  head `ddad8eee` and merged to `main` as `fd2e6fc8`. Fresh terminal-close proof
+  found main and dev byte-identical at tree `3964a0e8`; main CI run
+  [29652695750](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/29652695750)
+  succeeded through unit, integration, browser, build, E2E, and deploy, and
+  `https://addictionboards.com/` returned HTTP 200.
 
 ## Related
 
-- [BUG-301 (archived)](../_archive/bugs/bug-301-stale-feedback-completion-clobbers-newer-request-key.md) — correctly fences the token slot but does not own dialog presentation state.
-- [BUG-295 (archived)](../_archive/bugs/bug-295-preserved-idempotency-keys-replay-across-changed-intent.md) — establishes preservation and consumption rules for feedback keys.
+- [BUG-301 (archived)](./bug-301-stale-feedback-completion-clobbers-newer-request-key.md) — correctly fences the token slot but does not own dialog presentation state.
+- [BUG-295 (archived)](./bug-295-preserved-idempotency-keys-replay-across-changed-intent.md) — establishes preservation and consumption rules for feedback keys.
 
 Found during the 2026-07-16 fix-wave-4 close adversarial review of `ade71553...53ef2e2f`.

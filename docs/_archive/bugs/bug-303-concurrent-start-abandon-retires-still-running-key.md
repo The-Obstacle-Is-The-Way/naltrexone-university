@@ -1,6 +1,6 @@
 # BUG-303: Abandoning a Refreshed Session Can Retire the Key for a Different Still-Running Start
 
-**Status:** Open
+**Status:** Resolved
 **Severity:** P4
 **Date:** 2026-07-16
 **Confirmed:** 2026-07-16 (fix-wave-4 combined-diff adversarial review; confirmed 3/3 by client-owner tracing, a production-hook Chromium reproduction, and the server write-order verifier)
@@ -10,9 +10,9 @@
 
 ## Summary
 
-BUG-300 correctly prevents the immediate loaded-null refresh inside `startSession` from retiring a key after `ConcurrentRequestInProgress`. That uncertainty is local to the one helper invocation. It is not carried to BUG-299's later capture-then-retire owner: [`captureIdempotencyKeyRetirement`](<../../app/(app)/app/practice/hooks/use-practice-session-start.ts>) remembers only the key value, and [`use-practice-session-controls.ts`](<../../app/(app)/app/practice/hooks/use-practice-session-controls.ts>) retires it after any successful recovery-panel abandon.
+BUG-300 correctly prevents the immediate loaded-null refresh inside `startSession` from retiring a key after `ConcurrentRequestInProgress`. That uncertainty is local to the one helper invocation. It is not carried to BUG-299's later capture-then-retire owner: [`captureIdempotencyKeyRetirement`](<../../../app/(app)/app/practice/hooks/use-practice-session-start.ts>) remembers only the key value, and [`use-practice-session-controls.ts`](<../../../app/(app)/app/practice/hooks/use-practice-session-controls.ts>) retires it after any successful recovery-panel abandon.
 
-A refreshed incomplete session is not proven to be the effect of the still-running same-key request. The server's [`StartPracticeSessionUseCase`](../../src/application/use-cases/start-practice-session.ts) performs `findLatestIncompleteByUserId`, then lists/shuffles candidate questions, and only later calls `sessions.create`. A different tab can create session S during that gap. The concurrent retry can refresh S; if the user abandons S before the original request reaches `create`, the original request can then create a different session T under the preserved key K. The abandon path has already replaced K, losing the only replay handle to T.
+A refreshed incomplete session is not proven to be the effect of the still-running same-key request. The server's [`StartPracticeSessionUseCase`](../../../src/application/use-cases/start-practice-session.ts) performs `findLatestIncompleteByUserId`, then lists/shuffles candidate questions, and only later calls `sessions.create`. A different tab can create session S during that gap. The concurrent retry can refresh S; if the user abandons S before the original request reaches `create`, the original request can then create a different session T under the preserved key K. The abandon path has already replaced K, losing the only replay handle to T.
 
 ## Reproduction
 
@@ -40,14 +40,35 @@ The lifecycle owner models “this captured key has not changed” but not “th
 3. Make the capture-then-retire callback refuse retirement while its captured key remains uncertain, while preserving BUG-299 retirement for ordinary post-commit error recovery and external resolution.
 4. Add a production-hook Chromium sequence matching the interleaving above and a server/use-case orchestration test proving S can be ended between A's precheck and create.
 
-## Resolution State
+## Resolution
 
-Implementation began on `fix/bug-303-abandon-retires-running-start-key` on
-2026-07-17 and received four merged promotion-review hardening follow-ups by
-2026-07-18. Promotion PR
-[#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
-remains open, and Status remains Open until wave-5 archival records production
-proof.
+Resolved and production-verified on 2026-07-18. Initial fix PR
+[#664](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/664)
+received CodeRabbit formal APPROVED on exact head `5bb9fcc9` and squash-merged
+as `27621e37`. Five promotion-review hardening rounds then made the final
+ownership model explicit and coherent:
+
+1. PR [#666](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/666)
+   replaced key-wide settlement with per-invocation claims (APPROVED exact head
+   `6761c676`, squash `7cc09e91`).
+2. PR [#667](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/667)
+   added production-continuation test barriers (APPROVED exact head `618b299c`,
+   squash `9f8b83db`).
+3. PR [#668](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/668)
+   fenced null-refresh retirement through the owner gate (APPROVED exact head
+   `eb32f0c5`, squash `aadc4c96`).
+4. PR [#669](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/669)
+   fixed reverse-order claim settlement (APPROVED exact head `4a4df243`, squash
+   `e9e6d1c4`).
+5. PR [#671](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/671)
+   stabilized the final browser continuation proofs (APPROVED exact head
+   `364dc8f4`, squash `1343c3d1`).
+
+Documentation corrections also received exact-head formal approval: PR
+[#670](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/670)
+(`402846ff` → `f6b3aecd`) and PR
+[#672](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/672)
+(`45aa2c9f` → `ddad8eee`).
 
 - `usePracticeSessionStart` now owns per-key concurrent-execution uncertainty.
   Each accepted Start invocation receives an opaque claim identity and enters
@@ -98,29 +119,19 @@ proof.
   candidate selection—after the initial incomplete-session precheck and before
   the original `sessions.create`—then proves the original request can create its
   distinct session. This pins why session S cannot identify request A.
-- Initial fix PR
-  [#664](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/664)
-  received formal CodeRabbit approval on exact head `5bb9fcc9` and
-  squash-merged to `dev` as `27621e37`. Promotion-review PR
-  [#666](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/666)
-  replaced key-wide settlement with per-invocation claims (approved head
-  `6761c676`, squash `7cc09e91`); test-hygiene PR
-  [#667](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/667)
-  added production-continuation barriers (approved head `618b299c`, squash
-  `9f8b83db`); and owner-gate PR
-  [#668](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/668)
-  fenced null-refresh retirement (approved head `eb32f0c5`, squash
-  `aadc4c96`); and final causal-order PR
-  [#669](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/669)
-  received formal approval on exact head `4a4df243` after the full 27-minute
-  rate-limit cooldown and squash-merged as `e9e6d1c4`. Each head passed the full
-  local gate before push. Production proof remains deferred to the open
-  promotion and wave-5 close.
+- Each implementation head passed the full local gate before push. Promotion PR
+  [#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
+  received CodeRabbit formal APPROVED review `4728788574` on its exact final
+  head `ddad8eee` and merged to `main` as `fd2e6fc8`. Fresh terminal-close proof
+  found main and dev byte-identical at tree `3964a0e8`; main CI run
+  [29652695750](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/29652695750)
+  succeeded through unit, integration, browser, build, E2E, and deploy, and
+  `https://addictionboards.com/` returned HTTP 200.
 
 ## Related
 
-- [BUG-300 (archived)](../_archive/bugs/bug-300-concurrent-start-refresh-retires-pending-key.md) — fixes immediate refresh retirement but does not propagate uncertainty to the later abandon owner.
-- [BUG-299 (archived)](../_archive/bugs/bug-299-recovery-panel-external-resolution-stale-state-dead-ends.md) — owns authoritative recovery convergence and capture-then-retire fencing.
-- [BUG-291 (archived)](../_archive/bugs/bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — establishes that a possibly committed Start must retain its key.
+- [BUG-300 (archived)](./bug-300-concurrent-start-refresh-retires-pending-key.md) — fixes immediate refresh retirement but does not propagate uncertainty to the later abandon owner.
+- [BUG-299 (archived)](./bug-299-recovery-panel-external-resolution-stale-state-dead-ends.md) — owns authoritative recovery convergence and capture-then-retire fencing.
+- [BUG-291 (archived)](./bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — establishes that a possibly committed Start must retain its key.
 
 Found during the 2026-07-16 fix-wave-4 close adversarial review of `ade71553...53ef2e2f`.

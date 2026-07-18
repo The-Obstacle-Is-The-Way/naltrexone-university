@@ -6,6 +6,7 @@
 **Scope:** Five deferred enhancements identified during BS-033 analysis. None are bugs — all are polish or new features. Build when prioritized.
 
 **Audit verified:** 2026-04-27 against `87284372`.
+**Re-verified accurate against `ddad8eee` on 2026-07-18.**
 
 ---
 
