@@ -4,6 +4,7 @@
 **Priority:** P4
 **Date:** 2026-07-14
 **Component:** Practice end/finalize client, Stripe webhook version fence, subscription fake test
+**Re-verified accurate against `ddad8eee` on 2026-07-18.**
 
 ---
 
