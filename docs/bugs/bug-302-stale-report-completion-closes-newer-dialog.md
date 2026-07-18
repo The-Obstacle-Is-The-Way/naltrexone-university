@@ -55,9 +55,10 @@ The first owner was fixed without propagating equivalent stale-completion author
 
 ## Resolution State
 
-Implementation is complete on
-`fix/bug-302-report-dialog-stale-completion` as of 2026-07-17; Status remains
-Open until wave-5 archival records production proof.
+Implementation is merged to `dev` as of 2026-07-18; promotion PR
+[#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
+remains open, and Status remains Open until wave-5 archival records production
+proof.
 
 - `QuestionReportDialog` now owns a monotonically increasing submission
   generation. Starting a submission claims the current generation; both
@@ -91,10 +92,15 @@ Open until wave-5 archival records production proof.
   parent `onOpenChange`. A red Chromium test observed that stale callback; an
   unmount-only layout-effect cleanup now invalidates ownership without changing
   the feedback hook or idempotency-key lifecycle.
-- PR number, exact approved head, squash SHA, full-gate evidence, and promotion
-  proof are delivery facts recorded after their respective steps; the wave-5
-  close will replace this implementation-state note with the complete immutable
-  chain.
+- Initial fix PR
+  [#663](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/663)
+  received formal CodeRabbit approval on exact head `f40ce2ce` and
+  squash-merged to `dev` as `feb7652e`. Promotion-review follow-up PR
+  [#666](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/666)
+  closed the unmount seam, received formal approval on exact head `6761c676`,
+  and squash-merged as `7cc09e91`. Both heads passed the full local gate before
+  push; production proof is intentionally deferred to the open promotion and
+  wave-5 close.
 
 ## Related
 
