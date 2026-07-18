@@ -110,10 +110,11 @@ proof.
   [#668](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/668)
   fenced null-refresh retirement (approved head `eb32f0c5`, squash
   `aadc4c96`). Each head passed the full local gate before push. The final
-  reverse-order correction is being completed on
-  `fix/bug-303-reverse-order-claim-settlement`; its immutable PR and merge facts
-  will be recorded after delivery, while production proof remains deferred to
-  the open promotion and wave-5 close.
+  reverse-order correction is under review in PR
+  [#669](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/669)
+  from `fix/bug-303-reverse-order-claim-settlement`; its exact approved head and
+  squash facts will be recorded after delivery, while production proof remains
+  deferred to the open promotion and wave-5 close.
 
 ## Related
 
