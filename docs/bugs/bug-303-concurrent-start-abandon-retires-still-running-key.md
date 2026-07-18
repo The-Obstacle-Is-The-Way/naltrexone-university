@@ -43,20 +43,26 @@ The lifecycle owner models “this captured key has not changed” but not “th
 ## Resolution State
 
 Implementation began on `fix/bug-303-abandon-retires-running-start-key` on
-2026-07-17 and received two promotion-review hardening follow-ups on 2026-07-18.
-Status remains Open until wave-5 archival records production proof.
+2026-07-17 and received three merged promotion-review hardening follow-ups by
+2026-07-18. Promotion PR
+[#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
+remains open, and Status remains Open until wave-5 archival records production
+proof.
 
 - `usePracticeSessionStart` now owns per-key concurrent-execution uncertainty.
-  Each accepted Start invocation receives an ordered claim identity and enters
+  Each accepted Start invocation receives an opaque claim identity and enters
   the key's unsettled-claim set before awaiting the controller. A returned
-  non-concurrent result consumes its own and older same-key claims, but never a
-  later outstanding claim that could still acquire the released transient
-  wrapper claim. A typed `concurrent_request_in_progress` result releases its
-  local claim while preserving generation-fenced uncertainty about the other
-  execution. A handler captured by an obsolete render is rejected before it can
-  submit stale intent or mutate the current request state. Thrown transport and
-  timeout outcomes publish no settled observation, so their claim remains
-  preserved.
+  non-concurrent result settles only its reporting claim: client launch order
+  never stands in for server acquisition order. A typed
+  `concurrent_request_in_progress` result releases its reporting claim and
+  raises a versioned uncertainty generation. Only a same-key invocation
+  launched after observing that exact generation may consume it; an
+  already-running invocation cannot clear a later server observation merely
+  because its response arrives later. A handler captured by an obsolete render
+  is rejected before it can submit stale intent or mutate the current request
+  state. Thrown transport and timeout outcomes release their local claim by
+  raising a new uncertainty generation; the key remains preserved until a
+  causally later same-key result consumes that generation.
 - `captureIdempotencyKeyRetirement` still rejects a superseded captured key and
   now also rejects a captured key whose same-key execution may still commit.
   Authoritative incomplete-session refresh continues to own panel convergence,
@@ -77,18 +83,38 @@ Status remains Open until wave-5 archival records production proof.
   preservation across unrelated-session abandon, claim-scoped settlement,
   preservation while a later same-key invocation remains unresolved,
   preservation when an earlier `INTERNAL_ERROR` refresh proves absence while a
-  later same-key invocation remains unresolved,
-  stale-observation generation ordering, and zero controller/UI effects from a
-  stale render's handler. Existing controls remain green for ordinary abandon
-  retirement, second-tab proven-absence retirement, BUG-300's immediate-refresh
-  guard, and BUG-291's thrown-outcome preservation.
+  later same-key invocation remains unresolved, preservation when a
+  later-launched claim settles before an earlier invocation reaches the server,
+  conservative handling when a concurrent observation arrives after a
+  pre-existing result, causal consumption by a retry launched after observed
+  uncertainty, and zero controller/UI effects from a stale render's handler.
+  Existing controls remain green for ordinary abandon retirement, second-tab
+  proven-absence retirement, BUG-300's immediate-refresh guard, and BUG-291's
+  thrown-outcome preservation. The claim-order scenarios now live in a focused
+  446-line browser spec; the original recovery spec is 698 lines, so neither
+  triggers the repository's 800-line test-file warning.
 - A use-case orchestration test inserts and ends another tab's session during
   candidate selection—after the initial incomplete-session precheck and before
   the original `sessions.create`—then proves the original request can create its
   distinct session. This pins why session S cannot identify request A.
-- PR number, exact approved head, squash SHA, full-gate evidence, and promotion
-  proof are delivery facts recorded after their respective steps; the wave-5
-  close will replace this implementation-state note with the immutable chain.
+- Initial fix PR
+  [#664](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/664)
+  received formal CodeRabbit approval on exact head `5bb9fcc9` and
+  squash-merged to `dev` as `27621e37`. Promotion-review PR
+  [#666](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/666)
+  replaced key-wide settlement with per-invocation claims (approved head
+  `6761c676`, squash `7cc09e91`); test-hygiene PR
+  [#667](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/667)
+  added production-continuation barriers (approved head `618b299c`, squash
+  `9f8b83db`); and owner-gate PR
+  [#668](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/668)
+  fenced null-refresh retirement (approved head `eb32f0c5`, squash
+  `aadc4c96`). Each head passed the full local gate before push. The final
+  reverse-order correction is under review in PR
+  [#669](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/669)
+  from `fix/bug-303-reverse-order-claim-settlement`; its exact approved head and
+  squash facts will be recorded after delivery, while production proof remains
+  deferred to the open promotion and wave-5 close.
 
 ## Related
 
