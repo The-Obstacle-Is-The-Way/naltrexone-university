@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ installReportClientErrorMocks(reportClientError);
 function RecoveryHookProbe() {
   const output = usePracticeSessionControls();
   const originalOnStartSessionRef = useRef(output.onStartSession);
+  const [settledStarts, setSettledStarts] = useState(0);
 
   return (
     <>
@@ -44,10 +45,13 @@ function RecoveryHookProbe() {
         {output.incompleteSession?.sessionId ?? ''}
       </div>
       <div data-testid="session-start-status">{output.sessionStartStatus}</div>
+      <div data-testid="settled-starts">{settledStarts}</div>
       <Button
         type="button"
         onClick={() => {
-          void output.onStartSession();
+          void output.onStartSession().finally(() => {
+            setSettledStarts((count) => count + 1);
+          });
         }}
       >
         start-session
@@ -144,6 +148,9 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await vi.waitFor(() =>
       expect(startPracticeSession).toHaveBeenCalledTimes(2),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('2');
     const secondStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -314,6 +321,9 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await vi.waitFor(() =>
       expect(startPracticeSession).toHaveBeenCalledTimes(2),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('2');
     const secondStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -383,6 +393,9 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await vi.waitFor(() =>
       expect(startPracticeSession).toHaveBeenCalledTimes(2),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('2');
     const secondStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -459,6 +472,9 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await vi.waitFor(() =>
       expect(startPracticeSession).toHaveBeenCalledTimes(2),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('2');
     const retriedStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -538,6 +554,9 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await vi.waitFor(() =>
       expect(startPracticeSession).toHaveBeenCalledTimes(3),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('3');
     const thirdStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       2,
@@ -619,6 +638,9 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await vi.waitFor(() =>
       expect(startPracticeSession).toHaveBeenCalledTimes(2),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('2');
     const nextStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       1,
@@ -694,5 +716,8 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await expect
       .element(screen.getByTestId('session-start-status'))
       .toHaveTextContent('error');
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('1');
   });
 });

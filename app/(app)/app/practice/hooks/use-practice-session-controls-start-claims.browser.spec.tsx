@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ installReportClientErrorMocks(reportClientError);
 
 function StartClaimProbe() {
   const output = usePracticeSessionControls();
+  const [settledStarts, setSettledStarts] = useState(0);
 
   return (
     <>
@@ -40,10 +42,13 @@ function StartClaimProbe() {
       <div data-testid="incomplete-session-id">
         {output.incompleteSession?.sessionId ?? ''}
       </div>
+      <div data-testid="settled-starts">{settledStarts}</div>
       <Button
         type="button"
         onClick={() => {
-          void output.onStartSession();
+          void output.onStartSession().finally(() => {
+            setSettledStarts((count) => count + 1);
+          });
         }}
       >
         start-session
@@ -145,6 +150,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
       .toHaveTextContent(sessionId);
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('1');
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -178,6 +186,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         refreshCountBeforeLaterSettlement + 1,
       ),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('2');
 
     const refreshCountBeforeThirdSettlement =
       getIncompletePracticeSession.mock.calls.length;
@@ -188,6 +199,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         refreshCountBeforeThirdSettlement + 1,
       ),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('3');
   });
 
   it('preserves the key when a settled failure proves absence while a later same-key invocation remains unsettled', async () => {
@@ -237,6 +251,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         refreshCountBeforeFirstSettlement + 1,
       ),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('1');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -263,6 +280,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         refreshCountBeforeLaterSettlement + 1,
       ),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('2');
 
     const refreshCountBeforeThirdSettlement =
       getIncompletePracticeSession.mock.calls.length;
@@ -273,6 +293,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         refreshCountBeforeThirdSettlement + 1,
       ),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('3');
   });
 
   it('preserves the key when a later claim settles before an earlier invocation', async () => {
@@ -324,6 +347,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         refreshCountBeforeLaterSettlement + 1,
       ),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('1');
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
@@ -342,10 +368,11 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         err('INTERNAL_ERROR', 'Earlier request settled'),
       );
       await Promise.all([retryResult.promise, earlierUnsettledResult.promise]);
-      await vi.waitFor(() =>
-        expect(
-          getIncompletePracticeSession.mock.calls.length,
-        ).toBeGreaterThanOrEqual(refreshCountBeforeCleanup + 1),
+      await expect
+        .element(screen.getByTestId('settled-starts'))
+        .toHaveTextContent('3');
+      expect(getIncompletePracticeSession.mock.calls.length).toBe(
+        refreshCountBeforeCleanup + 2,
       );
     }
   });
@@ -420,9 +447,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
         reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
       }),
     );
-    await vi.waitFor(() =>
-      expect(getIncompletePracticeSession).toHaveBeenCalledTimes(3),
-    );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('2');
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -435,6 +462,9 @@ describe('usePracticeSessionControls start-claim ordering (browser)', () => {
     await vi.waitFor(() =>
       expect(startPracticeSession).toHaveBeenCalledTimes(3),
     );
+    await expect
+      .element(screen.getByTestId('settled-starts'))
+      .toHaveTextContent('3');
     const thirdStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       2,
