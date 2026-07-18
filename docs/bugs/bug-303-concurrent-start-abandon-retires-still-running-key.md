@@ -47,15 +47,16 @@ Implementation is complete on
 remains Open until wave-5 archival records production proof.
 
 - `usePracticeSessionStart` now owns per-key concurrent-execution uncertainty.
-  Each Start invocation claims the key's current settled version and marks the
-  execution uncertain before awaiting the controller. A returned same-key
-  settled result clears that uncertainty; the typed
-  `concurrent_request_in_progress` result preserves it. Compare-and-set
-  versioning prevents a delayed concurrent observation from overwriting a newer
-  settled observation. A handler captured by an obsolete render is rejected
-  before it can submit stale intent or mutate the current request state. Thrown
-  transport and timeout outcomes publish no settled observation, so their key
-  remains preserved.
+  Each accepted Start invocation receives an ordered claim identity and enters
+  the key's unsettled-claim set before awaiting the controller. A returned
+  non-concurrent result consumes its own and older same-key claims, but never a
+  later outstanding claim that could still acquire the released transient
+  wrapper claim. A typed `concurrent_request_in_progress` result releases its
+  local claim while preserving generation-fenced uncertainty about the other
+  execution. A handler captured by an obsolete render is rejected before it can
+  submit stale intent or mutate the current request state. Thrown transport and
+  timeout outcomes publish no settled observation, so their claim remains
+  preserved.
 - `captureIdempotencyKeyRetirement` still rejects a superseded captured key and
   now also rejects a captured key whose same-key execution may still commit.
   Authoritative incomplete-session refresh continues to own panel convergence,
@@ -64,11 +65,12 @@ remains Open until wave-5 archival records production proof.
   `usePracticeSessionControls` hook: typed concurrent result → refresh renders
   session S → successful abandon S → next Start carried a fresh UUID instead of
   the preserved key. The green suite proves same-key reuse, thrown/timeout
-  preservation across unrelated-session abandon, settlement clearing,
-  stale-observation compare-and-set ordering, and zero controller/UI effects
-  from a stale render's handler. Existing controls remain green for ordinary
-  abandon retirement, second-tab proven-absence retirement, BUG-300's
-  immediate-refresh guard, and BUG-291's thrown-outcome preservation.
+  preservation across unrelated-session abandon, claim-scoped settlement,
+  preservation while a later same-key invocation remains unresolved,
+  stale-observation generation ordering, and zero controller/UI effects from a
+  stale render's handler. Existing controls remain green for ordinary abandon
+  retirement, second-tab proven-absence retirement, BUG-300's immediate-refresh
+  guard, and BUG-291's thrown-outcome preservation.
 - A use-case orchestration test inserts and ends another tab's session during
   candidate selection—after the initial incomplete-session precheck and before
   the original `sessions.create`—then proves the original request can create its

@@ -211,6 +211,12 @@ export function QuestionReportDialog({
     if (wasOpen && !open) resetDialogLifecycle();
   }, [open, resetDialogLifecycle]);
 
+  useLayoutEffect(() => {
+    return () => {
+      submissionGenerationRef.current += 1;
+    };
+  }, []);
+
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       previousOpenRef.current = false;

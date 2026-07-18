@@ -137,10 +137,10 @@ export async function startSession(input: {
 
   const concurrentRequestMayStillFinish =
     !res.ok && isConcurrentRequestInProgressError(res.error);
-  // A returned same-key result is authoritative about the wrapper execution:
-  // only the typed concurrent result leaves another execution able to commit.
-  // Thrown transport outcomes never reach this observation and remain
-  // indeterminate.
+  // Each invocation publishes through its owner-issued claim observer. A
+  // returned non-concurrent result settles that claim; the typed concurrent
+  // result retains uncertainty about another execution. Thrown transport
+  // outcomes never reach this observation and remain indeterminate.
   input.setConcurrentExecutionUncertainty?.(concurrentRequestMayStillFinish);
 
   if (!res.ok) {

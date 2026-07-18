@@ -85,6 +85,12 @@ Open until wave-5 archival records production proof.
   transition fence now invalidates and resets before paint, and the green test
   proves B survives A's later completion. Stale-toast checks await the settled
   request and use exact retryable Browser Mode message locators.
+- The combined promotion review exposed the remaining component-removal seam:
+  unmounting did not advance the owner generation, so the removed dialog's
+  continuation could still notify through the surviving provider and call the
+  parent `onOpenChange`. A red Chromium test observed that stale callback; an
+  unmount-only layout-effect cleanup now invalidates ownership without changing
+  the feedback hook or idempotency-key lifecycle.
 - PR number, exact approved head, squash SHA, full-gate evidence, and promotion
   proof are delivery facts recorded after their respective steps; the wave-5
   close will replace this implementation-state note with the complete immutable

@@ -67,6 +67,41 @@ test('validates category, submits selected feedback, closes, and returns focus',
   await expect.element(trigger).toHaveFocus();
 });
 
+test('unmounting supersedes an in-flight report submission', async () => {
+  const submission = createDeferred<boolean>();
+  const submitReport = vi.fn().mockReturnValue(submission.promise);
+  const onOpenChange = vi.fn();
+  const screen = await render(
+    <NotificationProvider>
+      <QuestionReportDialog
+        open
+        onOpenChange={onOpenChange}
+        submitReport={submitReport}
+      />
+    </NotificationProvider>,
+  );
+
+  await screen.getByRole('radio', { name: 'Ambiguous wording' }).click();
+  await screen.getByRole('button', { name: 'Submit feedback' }).click();
+  await expect.poll(() => submitReport.mock.calls.length).toBe(1);
+
+  await screen.rerender(
+    <NotificationProvider>
+      <div>Report dialog removed</div>
+    </NotificationProvider>,
+  );
+  await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+  const openChangeCountAfterUnmount = onOpenChange.mock.calls.length;
+
+  submission.resolve(true);
+  await submission.promise;
+
+  expect(onOpenChange).toHaveBeenCalledTimes(openChangeCountAfterUnmount);
+  await expect
+    .element(screen.getByText(REPORT_SUCCESS_MESSAGE))
+    .not.toBeInTheDocument();
+});
+
 test('stale success cannot close or reset a newer report submission', async () => {
   const firstSubmission = createDeferred<boolean>();
   const secondSubmission = createDeferred<boolean>();
