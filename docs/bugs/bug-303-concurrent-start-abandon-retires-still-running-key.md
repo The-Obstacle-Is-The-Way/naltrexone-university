@@ -43,7 +43,7 @@ The lifecycle owner models “this captured key has not changed” but not “th
 ## Resolution State
 
 Implementation began on `fix/bug-303-abandon-retires-running-start-key` on
-2026-07-17 and received three merged promotion-review hardening follow-ups by
+2026-07-17 and received four merged promotion-review hardening follow-ups by
 2026-07-18. Promotion PR
 [#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
 remains open, and Status remains Open until wave-5 archival records production
@@ -109,12 +109,12 @@ proof.
   `9f8b83db`); and owner-gate PR
   [#668](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/668)
   fenced null-refresh retirement (approved head `eb32f0c5`, squash
-  `aadc4c96`). Each head passed the full local gate before push. The final
-  reverse-order correction is under review in PR
+  `aadc4c96`); and final causal-order PR
   [#669](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/669)
-  from `fix/bug-303-reverse-order-claim-settlement`; its exact approved head and
-  squash facts will be recorded after delivery, while production proof remains
-  deferred to the open promotion and wave-5 close.
+  received formal approval on exact head `4a4df243` after the full 27-minute
+  rate-limit cooldown and squash-merged as `e9e6d1c4`. Each head passed the full
+  local gate before push. Production proof remains deferred to the open
+  promotion and wave-5 close.
 
 ## Related
 
