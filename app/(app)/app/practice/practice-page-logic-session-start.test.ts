@@ -144,7 +144,9 @@ describe('practice-page-logic session start', () => {
       expect(setSessionStartStatus).toHaveBeenCalledWith('error');
       expect(setSessionStartError).toHaveBeenCalledWith('Boom');
       expect(setIdempotencyKey).not.toHaveBeenCalled();
-      expect(setConcurrentExecutionUncertainty).not.toHaveBeenCalled();
+      expect(setConcurrentExecutionUncertainty).toHaveBeenCalledExactlyOnceWith(
+        true,
+      );
     });
 
     it('reports thrown session start errors while preserving error UI state', async () => {

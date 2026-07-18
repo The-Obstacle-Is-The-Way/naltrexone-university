@@ -202,6 +202,37 @@ test('reuses the session start key after a timeout and reaches the recorded succ
   );
 });
 
+test('retires timeout uncertainty after a causally later retry proves absence', async () => {
+  startPracticeSession
+    .mockRejectedValueOnce(new TimeoutError(15_000))
+    .mockResolvedValue(err('INTERNAL_ERROR', 'Recorded start failed'));
+
+  const screen = await render(<Probe />);
+
+  await screen.getByTestId('start').click();
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('1');
+  const timedOutKey = getIdempotencyKey(
+    startPracticeSession.mock.calls[0]?.[0],
+  );
+
+  await screen.getByTestId('start').click();
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('2');
+  const consumingRetryKey = getIdempotencyKey(
+    startPracticeSession.mock.calls[1]?.[0],
+  );
+
+  await screen.getByTestId('start').click();
+  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(3);
+  const nextKey = getIdempotencyKey(startPracticeSession.mock.calls[2]?.[0]);
+
+  expect(consumingRetryKey).toBe(timedOutKey);
+  expect(nextKey).not.toBe(timedOutKey);
+});
+
 test('recovers a late concurrent start with the preserved key and renders the session panel', async () => {
   const committedSession = {
     sessionId: fixtureSession1Id,

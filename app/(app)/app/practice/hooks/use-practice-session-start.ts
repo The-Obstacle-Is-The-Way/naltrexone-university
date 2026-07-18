@@ -46,7 +46,7 @@ type StartExecutionUncertainty = {
   idempotencyKey: string;
   nextClaimId: number;
   unsettledClaimIds: ReadonlySet<number>;
-  settledVersion: number;
+  concurrentUncertaintyVersion: number;
   concurrentExecutionMayStillFinish: boolean;
 };
 
@@ -72,7 +72,7 @@ export function usePracticeSessionStart(
     idempotencyKey: startSessionIdempotencyKey,
     nextClaimId: 1,
     unsettledClaimIds: new Set(),
-    settledVersion: 0,
+    concurrentUncertaintyVersion: 0,
     concurrentExecutionMayStillFinish: false,
   });
   const [sessionStartStatus, setSessionStartStatus] = useState<
@@ -88,7 +88,7 @@ export function usePracticeSessionStart(
         idempotencyKey: key,
         nextClaimId: 1,
         unsettledClaimIds: new Set(),
-        settledVersion: 0,
+        concurrentUncertaintyVersion: 0,
         concurrentExecutionMayStillFinish: false,
       };
     }
@@ -106,8 +106,10 @@ export function usePracticeSessionStart(
         return null;
       }
       const claimId = startExecutionUncertaintyRef.current.nextClaimId;
-      const claimedSettledVersion =
-        startExecutionUncertaintyRef.current.settledVersion;
+      const claimedConcurrentUncertaintyVersion =
+        startExecutionUncertaintyRef.current.concurrentUncertaintyVersion;
+      const claimObservedConcurrentUncertainty =
+        startExecutionUncertaintyRef.current.concurrentExecutionMayStillFinish;
       const unsettledClaimIds = new Set(
         startExecutionUncertaintyRef.current.unsettledClaimIds,
       );
@@ -134,26 +136,31 @@ export function usePracticeSessionStart(
           startExecutionUncertaintyRef.current = {
             ...current,
             unsettledClaimIds: remainingClaimIds,
-            concurrentExecutionMayStillFinish:
-              current.concurrentExecutionMayStillFinish ||
-              current.settledVersion === claimedSettledVersion,
+            concurrentUncertaintyVersion:
+              current.concurrentUncertaintyVersion + 1,
+            concurrentExecutionMayStillFinish: true,
           };
           return;
         }
 
-        // A settled same-key result consumes indeterminate claims launched no
-        // later than itself. Claims launched after it may still acquire a
-        // released transient wrapper claim and must keep fencing retirement.
-        for (const remainingClaimId of remainingClaimIds) {
-          if (remainingClaimId <= claimId) {
-            remainingClaimIds.delete(remainingClaimId);
-          }
-        }
+        // Client claim identities do not encode server acquisition order.
+        // This result settles only its reporting invocation; every other
+        // invocation must publish its own outcome before retirement is safe.
+        // It may consume concurrent uncertainty only when it was launched
+        // after observing that exact uncertainty generation. A result from an
+        // already-running invocation cannot causally order a later server
+        // observation, regardless of client response order.
+        const consumesObservedConcurrentUncertainty =
+          claimObservedConcurrentUncertainty &&
+          current.concurrentUncertaintyVersion ===
+            claimedConcurrentUncertaintyVersion;
         startExecutionUncertaintyRef.current = {
           ...current,
           unsettledClaimIds: remainingClaimIds,
-          settledVersion: current.settledVersion + 1,
-          concurrentExecutionMayStillFinish: false,
+          concurrentExecutionMayStillFinish:
+            consumesObservedConcurrentUncertainty
+              ? false
+              : current.concurrentExecutionMayStillFinish,
         };
       };
     },

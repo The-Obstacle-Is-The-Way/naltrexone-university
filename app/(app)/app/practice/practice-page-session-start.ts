@@ -126,6 +126,10 @@ export async function startSession(input: {
       SESSION_START_TIMEOUT_MS,
     );
   } catch (error) {
+    // A thrown transport/timeout outcome is indeterminate: release this
+    // invocation's local claim while preserving key-wide uncertainty until a
+    // causally later same-key result consumes it.
+    input.setConcurrentExecutionUncertainty?.(true);
     if (!isLatestRequest()) return;
     reportSessionStartError(input.reportError, error, 'startSession');
     if (!isMounted()) return;
