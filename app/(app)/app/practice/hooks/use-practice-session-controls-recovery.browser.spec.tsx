@@ -558,6 +558,10 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
       createDeferred<
         Awaited<ReturnType<typeof practiceController.startPracticeSession>>
       >();
+    const thirdSettledResult =
+      createDeferred<
+        Awaited<ReturnType<typeof practiceController.startPracticeSession>>
+      >();
     const incompleteSession = {
       sessionId,
       mode: 'tutor' as const,
@@ -573,7 +577,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     startPracticeSession
       .mockImplementationOnce(() => firstSettledResult.promise)
       .mockImplementationOnce(() => laterUnsettledResult.promise)
-      .mockResolvedValue(err('INTERNAL_ERROR', 'Recorded start failed'));
+      .mockImplementationOnce(() => thirdSettledResult.promise);
     endPracticeSession.mockResolvedValue(
       ok({
         sessionId,
@@ -631,12 +635,29 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     expect(firstStartKey).toEqual(expect.stringMatching(UUID_PATTERN));
     expect(thirdStartKey).toBe(firstStartKey);
 
+    const refreshCountBeforeLaterSettlement =
+      getIncompletePracticeSession.mock.calls.length;
     laterUnsettledResult.resolve(
       err('CONFLICT', 'Request is still running', undefined, {
         reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
       }),
     );
     await laterUnsettledResult.promise;
+    await vi.waitFor(() =>
+      expect(getIncompletePracticeSession).toHaveBeenCalledTimes(
+        refreshCountBeforeLaterSettlement + 1,
+      ),
+    );
+
+    const refreshCountBeforeThirdSettlement =
+      getIncompletePracticeSession.mock.calls.length;
+    thirdSettledResult.resolve(err('INTERNAL_ERROR', 'Recorded start failed'));
+    await thirdSettledResult.promise;
+    await vi.waitFor(() =>
+      expect(getIncompletePracticeSession).toHaveBeenCalledTimes(
+        refreshCountBeforeThirdSettlement + 1,
+      ),
+    );
   });
 
   it('does not let a stale concurrent observation override a later settled result', async () => {
