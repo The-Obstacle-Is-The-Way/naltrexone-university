@@ -44,8 +44,10 @@ export type UsePracticeSessionStartOutput = {
 
 type StartExecutionUncertainty = {
   idempotencyKey: string;
+  nextClaimId: number;
+  unsettledClaimIds: ReadonlySet<number>;
   settledVersion: number;
-  mayStillFinish: boolean;
+  concurrentExecutionMayStillFinish: boolean;
 };
 
 type StartExecutionUncertaintyObservation = (mayStillFinish: boolean) => void;
@@ -68,8 +70,10 @@ export function usePracticeSessionStart(
   const startSessionIdempotencyKeyRef = useRef(startSessionIdempotencyKey);
   const startExecutionUncertaintyRef = useRef<StartExecutionUncertainty>({
     idempotencyKey: startSessionIdempotencyKey,
+    nextClaimId: 1,
+    unsettledClaimIds: new Set(),
     settledVersion: 0,
-    mayStillFinish: false,
+    concurrentExecutionMayStillFinish: false,
   });
   const [sessionStartStatus, setSessionStartStatus] = useState<
     'idle' | 'loading' | 'error'
@@ -82,8 +86,10 @@ export function usePracticeSessionStart(
     if (startExecutionUncertaintyRef.current.idempotencyKey !== key) {
       startExecutionUncertaintyRef.current = {
         idempotencyKey: key,
+        nextClaimId: 1,
+        unsettledClaimIds: new Set(),
         settledVersion: 0,
-        mayStillFinish: false,
+        concurrentExecutionMayStillFinish: false,
       };
     }
     setStartSessionIdempotencyKeyState(key);
@@ -99,29 +105,56 @@ export function usePracticeSessionStart(
         // mutate the newer request's UI state.
         return null;
       }
+      const claimId = startExecutionUncertaintyRef.current.nextClaimId;
       const claimedSettledVersion =
         startExecutionUncertaintyRef.current.settledVersion;
+      const unsettledClaimIds = new Set(
+        startExecutionUncertaintyRef.current.unsettledClaimIds,
+      );
+      unsettledClaimIds.add(claimId);
       startExecutionUncertaintyRef.current = {
         ...startExecutionUncertaintyRef.current,
-        mayStillFinish: true,
+        nextClaimId: claimId + 1,
+        unsettledClaimIds,
       };
 
       return (mayStillFinish: boolean) => {
         const current = startExecutionUncertaintyRef.current;
         if (
           current.idempotencyKey !== idempotencyKey ||
-          current.settledVersion !== claimedSettledVersion
+          !current.unsettledClaimIds.has(claimId)
         ) {
           return;
         }
 
-        startExecutionUncertaintyRef.current = mayStillFinish
-          ? { ...current, mayStillFinish: true }
-          : {
-              ...current,
-              settledVersion: current.settledVersion + 1,
-              mayStillFinish: false,
-            };
+        const remainingClaimIds = new Set(current.unsettledClaimIds);
+        remainingClaimIds.delete(claimId);
+
+        if (mayStillFinish) {
+          startExecutionUncertaintyRef.current = {
+            ...current,
+            unsettledClaimIds: remainingClaimIds,
+            concurrentExecutionMayStillFinish:
+              current.concurrentExecutionMayStillFinish ||
+              current.settledVersion === claimedSettledVersion,
+          };
+          return;
+        }
+
+        // A settled same-key result consumes indeterminate claims launched no
+        // later than itself. Claims launched after it may still acquire a
+        // released transient wrapper claim and must keep fencing retirement.
+        for (const remainingClaimId of remainingClaimIds) {
+          if (remainingClaimId <= claimId) {
+            remainingClaimIds.delete(remainingClaimId);
+          }
+        }
+        startExecutionUncertaintyRef.current = {
+          ...current,
+          unsettledClaimIds: remainingClaimIds,
+          settledVersion: current.settledVersion + 1,
+          concurrentExecutionMayStillFinish: false,
+        };
       };
     },
     [],
@@ -138,7 +171,8 @@ export function usePracticeSessionStart(
       const uncertainty = startExecutionUncertaintyRef.current;
       if (
         uncertainty.idempotencyKey === capturedKey &&
-        uncertainty.mayStillFinish
+        (uncertainty.unsettledClaimIds.size > 0 ||
+          uncertainty.concurrentExecutionMayStillFinish)
       ) {
         return false;
       }
