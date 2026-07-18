@@ -286,4 +286,66 @@ describe('StartPracticeSessionUseCase', () => {
       },
     });
   });
+
+  it('can create after another session starts and ends between the incomplete check and create', async () => {
+    const userId = 'user-1';
+    const questions = [
+      createQuestion({
+        id: 'q1',
+        difficulty: 'easy',
+        tags: [],
+      }),
+    ];
+    const sessions = new FakePracticeSessionRepository();
+
+    class InterleavingQuestionRepository extends FakeQuestionRepository {
+      interleavedSessionId: string | null = null;
+
+      override async listPublishedCandidateIds(
+        filters: Parameters<
+          FakeQuestionRepository['listPublishedCandidateIds']
+        >[0],
+      ): Promise<readonly string[]> {
+        const interleaved = await sessions.create({
+          userId,
+          mode: 'tutor',
+          paramsJson: {
+            questionIds: ['q1'],
+            tagSlugs: [],
+            difficulties: [],
+          },
+        });
+        this.interleavedSessionId = interleaved.id;
+        await sessions.end(interleaved.id, userId);
+        return super.listPublishedCandidateIds(filters);
+      }
+    }
+
+    const questionRepository = new InterleavingQuestionRepository(questions);
+    const useCase = new StartPracticeSessionUseCase(
+      questionRepository,
+      sessions,
+    );
+
+    const result = await useCase.execute({
+      userId,
+      mode: 'tutor',
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+    });
+
+    expect(questionRepository.interleavedSessionId).not.toBeNull();
+    expect(result.sessionId).not.toBe(questionRepository.interleavedSessionId);
+    await expect(
+      sessions.findByIdAndUserId(
+        questionRepository.interleavedSessionId ?? '',
+        userId,
+      ),
+    ).resolves.toMatchObject({ endedAt: expect.any(Date) });
+    await expect(
+      sessions.findByIdAndUserId(result.sessionId, userId),
+    ).resolves.toMatchObject({ endedAt: null });
+    expect(sessions.createInputs).toHaveLength(2);
+  });
 });

@@ -88,6 +88,7 @@ export async function startSession(input: {
   getLatestIdempotencyKey?: () => string;
   createIdempotencyKey: () => string;
   setIdempotencyKey: (key: string) => void;
+  setConcurrentExecutionUncertainty?: (mayStillFinish: boolean) => void;
   startPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
@@ -134,12 +135,17 @@ export async function startSession(input: {
   if (!isMounted()) return;
   if (!isLatestRequest()) return;
 
+  const concurrentRequestMayStillFinish =
+    !res.ok && isConcurrentRequestInProgressError(res.error);
+  // A returned same-key result is authoritative about the wrapper execution:
+  // only the typed concurrent result leaves another execution able to commit.
+  // Thrown transport outcomes never reach this observation and remain
+  // indeterminate.
+  input.setConcurrentExecutionUncertainty?.(concurrentRequestMayStillFinish);
+
   if (!res.ok) {
     input.setSessionStartStatus('error');
     input.setSessionStartError(getActionResultErrorMessage(res));
-    const concurrentRequestMayStillFinish = isConcurrentRequestInProgressError(
-      res.error,
-    );
     const rotatedAfterDeterminateError =
       rotateIdempotencyKeyAfterDeterminateError(
         IdempotentActionNames.StartPracticeSession,

@@ -40,6 +40,43 @@ The lifecycle owner models “this captured key has not changed” but not “th
 3. Make the capture-then-retire callback refuse retirement while its captured key remains uncertain, while preserving BUG-299 retirement for ordinary post-commit error recovery and external resolution.
 4. Add a production-hook Chromium sequence matching the interleaving above and a server/use-case orchestration test proving S can be ended between A's precheck and create.
 
+## Resolution State
+
+Implementation is complete on
+`fix/bug-303-abandon-retires-running-start-key` as of 2026-07-17; Status
+remains Open until wave-5 archival records production proof.
+
+- `usePracticeSessionStart` now owns per-key concurrent-execution uncertainty.
+  Each Start invocation claims the key's current settled version and marks the
+  execution uncertain before awaiting the controller. A returned same-key
+  settled result clears that uncertainty; the typed
+  `concurrent_request_in_progress` result preserves it. Compare-and-set
+  versioning prevents a delayed concurrent observation from overwriting a newer
+  settled observation. A handler captured by an obsolete render is rejected
+  before it can submit stale intent or mutate the current request state. Thrown
+  transport and timeout outcomes publish no settled observation, so their key
+  remains preserved.
+- `captureIdempotencyKeyRetirement` still rejects a superseded captured key and
+  now also rejects a captured key whose same-key execution may still commit.
+  Authoritative incomplete-session refresh continues to own panel convergence,
+  but the per-user session it returns is never treated as request identity.
+- Red-first Chromium proof reproduced the defect through the production
+  `usePracticeSessionControls` hook: typed concurrent result → refresh renders
+  session S → successful abandon S → next Start carried a fresh UUID instead of
+  the preserved key. The green suite proves same-key reuse, thrown/timeout
+  preservation across unrelated-session abandon, settlement clearing,
+  stale-observation compare-and-set ordering, and zero controller/UI effects
+  from a stale render's handler. Existing controls remain green for ordinary
+  abandon retirement, second-tab proven-absence retirement, BUG-300's
+  immediate-refresh guard, and BUG-291's thrown-outcome preservation.
+- A use-case orchestration test inserts and ends another tab's session during
+  candidate selection—after the initial incomplete-session precheck and before
+  the original `sessions.create`—then proves the original request can create its
+  distinct session. This pins why session S cannot identify request A.
+- PR number, exact approved head, squash SHA, full-gate evidence, and promotion
+  proof are delivery facts recorded after their respective steps; the wave-5
+  close will replace this implementation-state note with the immutable chain.
+
 ## Related
 
 - [BUG-300 (archived)](../_archive/bugs/bug-300-concurrent-start-refresh-retires-pending-key.md) — fixes immediate refresh retirement but does not propagate uncertainty to the later abandon owner.
