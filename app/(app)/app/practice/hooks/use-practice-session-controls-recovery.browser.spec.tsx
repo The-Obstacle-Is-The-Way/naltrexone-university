@@ -660,6 +660,91 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     );
   });
 
+  it('preserves the key when a settled failure proves absence while a later same-key invocation remains unsettled', async () => {
+    const firstSettledResult =
+      createDeferred<
+        Awaited<ReturnType<typeof practiceController.startPracticeSession>>
+      >();
+    const laterUnsettledResult =
+      createDeferred<
+        Awaited<ReturnType<typeof practiceController.startPracticeSession>>
+      >();
+    const thirdSettledResult =
+      createDeferred<
+        Awaited<ReturnType<typeof practiceController.startPracticeSession>>
+      >();
+    arrangeControlDependencies();
+    getIncompletePracticeSession.mockResolvedValue(ok(null));
+    startPracticeSession
+      .mockImplementationOnce(() => firstSettledResult.promise)
+      .mockImplementationOnce(() => laterUnsettledResult.promise)
+      .mockImplementationOnce(() => thirdSettledResult.promise);
+
+    const screen = await render(<RecoveryHookProbe />);
+    await expect
+      .element(screen.getByTestId('incomplete-load-status'))
+      .toHaveTextContent('idle');
+
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await vi.waitFor(() =>
+      expect(startPracticeSession).toHaveBeenCalledTimes(2),
+    );
+    const firstStartKey = getCallIdempotencyKey(
+      startPracticeSession.mock.calls,
+      0,
+    );
+    expect(getCallIdempotencyKey(startPracticeSession.mock.calls, 1)).toBe(
+      firstStartKey,
+    );
+
+    const refreshCountBeforeFirstSettlement =
+      getIncompletePracticeSession.mock.calls.length;
+    firstSettledResult.resolve(err('INTERNAL_ERROR', 'Recorded start failed'));
+    await firstSettledResult.promise;
+    await vi.waitFor(() =>
+      expect(getIncompletePracticeSession).toHaveBeenCalledTimes(
+        refreshCountBeforeFirstSettlement + 1,
+      ),
+    );
+
+    await screen.getByRole('button', { name: 'start-session' }).click();
+    await vi.waitFor(() =>
+      expect(startPracticeSession).toHaveBeenCalledTimes(3),
+    );
+    const thirdStartKey = getCallIdempotencyKey(
+      startPracticeSession.mock.calls,
+      2,
+    );
+
+    expect(firstStartKey).toEqual(expect.stringMatching(UUID_PATTERN));
+    expect(thirdStartKey).toBe(firstStartKey);
+
+    const refreshCountBeforeLaterSettlement =
+      getIncompletePracticeSession.mock.calls.length;
+    laterUnsettledResult.resolve(
+      err('CONFLICT', 'Request is still running', undefined, {
+        reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+      }),
+    );
+    await laterUnsettledResult.promise;
+    await vi.waitFor(() =>
+      expect(getIncompletePracticeSession).toHaveBeenCalledTimes(
+        refreshCountBeforeLaterSettlement + 1,
+      ),
+    );
+
+    const refreshCountBeforeThirdSettlement =
+      getIncompletePracticeSession.mock.calls.length;
+    thirdSettledResult.resolve(err('INTERNAL_ERROR', 'Recorded start failed'));
+    await thirdSettledResult.promise;
+    await vi.waitFor(() =>
+      expect(getIncompletePracticeSession).toHaveBeenCalledTimes(
+        refreshCountBeforeThirdSettlement + 1,
+      ),
+    );
+  });
+
   it('does not let a stale concurrent observation override a later settled result', async () => {
     const sessionId = '11111111-1111-4111-8111-111111111127';
     const settledResult =

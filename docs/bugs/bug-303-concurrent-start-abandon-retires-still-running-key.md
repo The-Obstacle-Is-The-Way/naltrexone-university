@@ -42,9 +42,9 @@ The lifecycle owner models “this captured key has not changed” but not “th
 
 ## Resolution State
 
-Implementation is complete on
-`fix/bug-303-abandon-retires-running-start-key` as of 2026-07-17; Status
-remains Open until wave-5 archival records production proof.
+Implementation began on `fix/bug-303-abandon-retires-running-start-key` on
+2026-07-17 and received two promotion-review hardening follow-ups on 2026-07-18.
+Status remains Open until wave-5 archival records production proof.
 
 - `usePracticeSessionStart` now owns per-key concurrent-execution uncertainty.
   Each accepted Start invocation receives an ordered claim identity and enters
@@ -61,12 +61,23 @@ remains Open until wave-5 archival records production proof.
   now also rejects a captured key whose same-key execution may still commit.
   Authoritative incomplete-session refresh continues to own panel convergence,
   but the per-user session it returns is never treated as request identity.
+- The first promotion follow-up replaced key-wide settlement with ordered
+  per-invocation claims. A later full review then exposed the remaining inline
+  bypass: an earlier `INTERNAL_ERROR` followed by authoritative absence could
+  still rotate directly inside `startSession` while a later same-key claim was
+  unsettled. On `fix/bug-303-null-refresh-claim-fence`, proven-absence
+  retirement now goes through a required owner-issued retirement gate captured
+  after the invocation claims the key. The helper retains request-local error
+  classification, while the hook remains the sole owner of key-wide retirement
+  eligibility.
 - Red-first Chromium proof reproduced the defect through the production
   `usePracticeSessionControls` hook: typed concurrent result → refresh renders
   session S → successful abandon S → next Start carried a fresh UUID instead of
   the preserved key. The green suite proves same-key reuse, thrown/timeout
   preservation across unrelated-session abandon, claim-scoped settlement,
   preservation while a later same-key invocation remains unresolved,
+  preservation when an earlier `INTERNAL_ERROR` refresh proves absence while a
+  later same-key invocation remains unresolved,
   stale-observation generation ordering, and zero controller/UI effects from a
   stale render's handler. Existing controls remain green for ordinary abandon
   retirement, second-tab proven-absence retirement, BUG-300's immediate-refresh

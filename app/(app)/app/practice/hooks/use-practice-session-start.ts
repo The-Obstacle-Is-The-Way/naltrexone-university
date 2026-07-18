@@ -248,6 +248,8 @@ export function usePracticeSessionStart(
     if (!setConcurrentExecutionUncertainty) {
       return Promise.resolve();
     }
+    const tryRetireIdempotencyKeyAfterProvenAbsence =
+      captureIdempotencyKeyRetirement();
 
     return startSession({
       sessionMode,
@@ -257,6 +259,7 @@ export function usePracticeSessionStart(
       getLatestIdempotencyKey: () => startSessionIdempotencyKeyRef.current,
       createIdempotencyKey: () => crypto.randomUUID(),
       setIdempotencyKey: setStartSessionIdempotencyKey,
+      tryRetireIdempotencyKeyAfterProvenAbsence,
       setConcurrentExecutionUncertainty,
       startPracticeSessionFn: startPracticeSession,
       reportError: (error, context) => {
@@ -272,6 +275,7 @@ export function usePracticeSessionStart(
       isMounted: input.isMounted,
     });
   }, [
+    captureIdempotencyKeyRetirement,
     claimStartExecutionUncertainty,
     filters,
     sessionMode,

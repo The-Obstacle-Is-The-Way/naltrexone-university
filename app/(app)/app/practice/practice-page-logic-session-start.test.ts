@@ -10,6 +10,8 @@ const { fixtureSession1Id } = vi.hoisted(() => ({
   fixtureSession1Id: crypto.randomUUID(),
 }));
 
+const refuseStartKeyRetirement = () => false;
+
 describe('practice-page-logic session start', () => {
   describe('startSession', () => {
     it('sets error state when controller fails', async () => {
@@ -28,6 +30,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn: async () => err('NOT_FOUND', 'No questions'),
         setSessionStartStatus,
         setSessionStartError,
@@ -61,6 +64,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn,
         setSessionStartStatus: vi.fn(),
         setSessionStartError: vi.fn(),
@@ -98,6 +102,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey: vi.fn(),
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn,
         setSessionStartStatus: vi.fn(),
         setSessionStartError: vi.fn(),
@@ -126,6 +131,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         setConcurrentExecutionUncertainty,
         startPracticeSessionFn: async () => {
           throw new Error('Boom');
@@ -159,6 +165,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn: async () => {
           throw error;
         },
@@ -197,6 +204,7 @@ describe('practice-page-logic session start', () => {
           idempotencyKey: 'idem_1',
           createIdempotencyKey: () => 'idem_2',
           setIdempotencyKey,
+          tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
           startPracticeSessionFn: async () => {
             throw error;
           },
@@ -218,6 +226,7 @@ describe('practice-page-logic session start', () => {
     it('preserves the key when a concurrent same-key request may still finish', async () => {
       const setIdempotencyKey = vi.fn();
       const setConcurrentExecutionUncertainty = vi.fn();
+      const tryRetireIdempotencyKeyAfterProvenAbsence = vi.fn(() => false);
       const refreshIncompleteSession = vi.fn(async () => ({
         kind: 'loaded' as const,
         session: null,
@@ -230,6 +239,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence,
         setConcurrentExecutionUncertainty,
         startPracticeSessionFn: async () =>
           err('CONFLICT', 'Request is still running', undefined, {
@@ -243,6 +253,9 @@ describe('practice-page-logic session start', () => {
 
       expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
       expect(setIdempotencyKey).not.toHaveBeenCalled();
+      expect(tryRetireIdempotencyKeyAfterProvenAbsence).toHaveBeenCalledTimes(
+        1,
+      );
       expect(setConcurrentExecutionUncertainty).toHaveBeenCalledExactlyOnceWith(
         true,
       );
@@ -262,6 +275,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn: async () =>
           err('CONFLICT', 'Request is still running', undefined, {
             reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
@@ -290,6 +304,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn: async () =>
           err('CONFLICT', 'Incomplete session exists', undefined, {
             reason: 'incomplete_practice_session_exists',
@@ -322,6 +337,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         setConcurrentExecutionUncertainty,
         // The cache-error-and-throw arm replays INTERNAL_ERROR after a
         // committed session; only the refetch can render Resume/Abandon.
@@ -342,6 +358,10 @@ describe('practice-page-logic session start', () => {
 
     it('retires a preserved start key when refresh proves no incomplete session remains', async () => {
       const setIdempotencyKey = vi.fn();
+      const tryRetireIdempotencyKeyAfterProvenAbsence = vi.fn(() => {
+        setIdempotencyKey('idem_2');
+        return true;
+      });
       const refreshIncompleteSession = vi.fn(async () => ({
         kind: 'loaded' as const,
         session: null,
@@ -354,6 +374,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence,
         // The preserved key replays the post-commit outcome-store failure.
         // Authoritative absence means the referred-to session was resolved
         // elsewhere, so replay can no longer recover anything useful.
@@ -366,8 +387,40 @@ describe('practice-page-logic session start', () => {
       });
 
       expect(refreshIncompleteSession).toHaveBeenCalledTimes(1);
+      expect(tryRetireIdempotencyKeyAfterProvenAbsence).toHaveBeenCalledTimes(
+        1,
+      );
       expect(setIdempotencyKey).toHaveBeenCalledTimes(1);
       expect(setIdempotencyKey).toHaveBeenCalledWith('idem_2');
+    });
+
+    it('does not bypass the owner when proven-absence retirement is refused', async () => {
+      const setIdempotencyKey = vi.fn();
+      const tryRetireIdempotencyKeyAfterProvenAbsence = vi.fn(() => false);
+
+      await startSession({
+        sessionMode: 'tutor',
+        sessionCount: 20,
+        filters: { tagSlugs: [], difficulty: null, status: 'unanswered' },
+        idempotencyKey: 'idem_1',
+        createIdempotencyKey: () => 'idem_2',
+        setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence,
+        startPracticeSessionFn: async () =>
+          err('INTERNAL_ERROR', 'Failed to record committed start outcome'),
+        refreshIncompleteSession: async () => ({
+          kind: 'loaded' as const,
+          session: null,
+        }),
+        setSessionStartStatus: vi.fn(),
+        setSessionStartError: vi.fn(),
+        navigateTo: vi.fn(),
+      });
+
+      expect(tryRetireIdempotencyKeyAfterProvenAbsence).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(setIdempotencyKey).not.toHaveBeenCalled();
     });
 
     it('preserves a start key when the incomplete-session refresh fails', async () => {
@@ -380,6 +433,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn: async () =>
           err('INTERNAL_ERROR', 'Failed to record committed start outcome'),
         refreshIncompleteSession: async () => ({ kind: 'failed' as const }),
@@ -408,6 +462,7 @@ describe('practice-page-logic session start', () => {
         getLatestIdempotencyKey: () => latestKey,
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn: async () =>
           err('INTERNAL_ERROR', 'Failed to record committed start outcome'),
         refreshIncompleteSession: async () => {
@@ -441,6 +496,7 @@ describe('practice-page-logic session start', () => {
           idempotencyKey: 'idem_1',
           createIdempotencyKey: () => 'idem_2',
           setIdempotencyKey: vi.fn(),
+          tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
           startPracticeSessionFn: async () =>
             err('CONFLICT', 'Incomplete session exists', undefined, {
               reason: 'incomplete_practice_session_exists',
@@ -475,6 +531,7 @@ describe('practice-page-logic session start', () => {
           idempotencyKey: 'idem_1',
           createIdempotencyKey: () => 'idem_2',
           setIdempotencyKey: vi.fn(),
+          tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
           startPracticeSessionFn: async () =>
             err('CONFLICT', 'Incomplete session exists', undefined, {
               reason: 'incomplete_practice_session_exists',
@@ -516,6 +573,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey: vi.fn(),
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn: async () => deferred.promise,
         setSessionStartStatus: vi.fn(),
         setSessionStartError: vi.fn(),
@@ -564,6 +622,7 @@ describe('practice-page-logic session start', () => {
         idempotencyKey: 'idem_1',
         createIdempotencyKey: () => 'idem_2',
         setIdempotencyKey,
+        tryRetireIdempotencyKeyAfterProvenAbsence: refuseStartKeyRetirement,
         startPracticeSessionFn: async () => deferred.promise,
         reportError,
         setSessionStartStatus,

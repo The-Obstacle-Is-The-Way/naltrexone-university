@@ -88,6 +88,7 @@ export async function startSession(input: {
   getLatestIdempotencyKey?: () => string;
   createIdempotencyKey: () => string;
   setIdempotencyKey: (key: string) => void;
+  tryRetireIdempotencyKeyAfterProvenAbsence: () => boolean;
   setConcurrentExecutionUncertainty?: (mayStillFinish: boolean) => void;
   startPracticeSessionFn: (
     input: unknown,
@@ -160,14 +161,15 @@ export async function startSession(input: {
       const refreshOutcome = await input.refreshIncompleteSession?.();
       if (
         !rotatedAfterDeterminateError &&
-        !concurrentRequestMayStillFinish &&
         isMounted() &&
         isLatestRequest() &&
         refreshProvesNoIncompleteSession(refreshOutcome)
       ) {
-        // The key's possibly committed session has been resolved elsewhere,
-        // and no same-key request remains known to be running.
-        input.setIdempotencyKey(input.createIdempotencyKey());
+        // Authoritative absence can consume this recovery outcome, but only
+        // the key owner can prove that no other same-key claim may still
+        // commit. Keep that key-wide policy out of this invocation-local
+        // helper.
+        input.tryRetireIdempotencyKeyAfterProvenAbsence();
       }
     } catch (error) {
       reportSessionStartError(
