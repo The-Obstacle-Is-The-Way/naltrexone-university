@@ -48,6 +48,8 @@ type StartExecutionUncertainty = {
   mayStillFinish: boolean;
 };
 
+type StartExecutionUncertaintyObservation = (mayStillFinish: boolean) => void;
+
 export function usePracticeSessionStart(
   input: UsePracticeSessionStartInput,
 ): UsePracticeSessionStartOutput {
@@ -88,13 +90,14 @@ export function usePracticeSessionStart(
   }, []);
 
   const claimStartExecutionUncertainty = useCallback(
-    (idempotencyKey: string) => {
+    (idempotencyKey: string): StartExecutionUncertaintyObservation | null => {
       if (
         startExecutionUncertaintyRef.current.idempotencyKey !== idempotencyKey
       ) {
         // A stale render may still invoke an old handler after a newer intent
-        // owns the slot. It must not replace the newer key's uncertainty.
-        return () => {};
+        // owns the slot. Reject it before it can submit obsolete intent or
+        // mutate the newer request's UI state.
+        return null;
       }
       const claimedSettledVersion =
         startExecutionUncertaintyRef.current.settledVersion;
@@ -208,6 +211,9 @@ export function usePracticeSessionStart(
     const setConcurrentExecutionUncertainty = claimStartExecutionUncertainty(
       startSessionIdempotencyKey,
     );
+    if (!setConcurrentExecutionUncertainty) {
+      return Promise.resolve();
+    }
 
     return startSession({
       sessionMode,

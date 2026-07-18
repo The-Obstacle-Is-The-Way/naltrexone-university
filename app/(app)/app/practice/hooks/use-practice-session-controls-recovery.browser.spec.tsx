@@ -643,7 +643,7 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     expect(thirdStartKey).not.toBe(firstStartKey);
   });
 
-  it('does not let a stale start handler erase uncertainty owned by a newer key', async () => {
+  it('rejects a stale start handler without changing the newer request state', async () => {
     const sessionId = '11111111-1111-4111-8111-111111111128';
     const incompleteSession = {
       sessionId,
@@ -687,6 +687,9 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await expect
       .element(screen.getByTestId('incomplete-session-id'))
       .toHaveTextContent(sessionId);
+    await expect
+      .element(screen.getByTestId('session-start-status'))
+      .toHaveTextContent('error');
     const currentStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
       0,
@@ -695,14 +698,10 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
     await screen
       .getByRole('button', { name: 'start-original-handler' })
       .click();
-    await vi.waitFor(() =>
-      expect(startPracticeSession).toHaveBeenCalledTimes(2),
-    );
-    const staleStartKey = getCallIdempotencyKey(
-      startPracticeSession.mock.calls,
-      1,
-    );
-    expect(staleStartKey).not.toBe(currentStartKey);
+    expect(startPracticeSession).toHaveBeenCalledTimes(1);
+    await expect
+      .element(screen.getByTestId('session-start-status'))
+      .toHaveTextContent('error');
 
     await screen
       .getByRole('button', { name: 'abandon-incomplete-session' })
@@ -713,11 +712,11 @@ describe('usePracticeSessionControls recovery convergence (browser)', () => {
 
     await screen.getByRole('button', { name: 'start-session' }).click();
     await vi.waitFor(() =>
-      expect(startPracticeSession).toHaveBeenCalledTimes(3),
+      expect(startPracticeSession).toHaveBeenCalledTimes(2),
     );
     const nextStartKey = getCallIdempotencyKey(
       startPracticeSession.mock.calls,
-      2,
+      1,
     );
 
     expect(currentStartKey).toEqual(expect.stringMatching(UUID_PATTERN));
