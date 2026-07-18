@@ -99,7 +99,7 @@ the mandatory pattern enforcement summary.
 ### Button
 
 **Component:** `components/ui/button.tsx`
-**ALWAYS** use `<Button>` for interactive click targets by default. Raw `<button>` is allowed only inside `components/ui/` primitives and app-shell disclosure toggles that follow Pattern Registry `I-6`.
+**ALWAYS** use `<Button>` for production UI interactive click targets by default. Raw `<button>` is allowed in production only inside `components/ui/` primitives and app-shell disclosure toggles that follow Pattern Registry `I-6`. The production scanner intentionally excludes `*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and `*.probes.tsx`; native semantic controls are allowed there only in test-only hook/state-machine probes, while tests whose subject is Button or design-system behavior must still use `<Button>`.
 
 ```tsx
 // Standard button

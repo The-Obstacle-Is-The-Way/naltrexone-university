@@ -88,6 +88,8 @@ export async function startSession(input: {
   getLatestIdempotencyKey?: () => string;
   createIdempotencyKey: () => string;
   setIdempotencyKey: (key: string) => void;
+  tryRetireIdempotencyKeyAfterProvenAbsence: () => boolean;
+  setConcurrentExecutionUncertainty?: (mayStillFinish: boolean) => void;
   startPracticeSessionFn: (
     input: unknown,
   ) => Promise<ActionResult<StartPracticeSessionOutput>>;
@@ -124,6 +126,10 @@ export async function startSession(input: {
       SESSION_START_TIMEOUT_MS,
     );
   } catch (error) {
+    // A thrown transport/timeout outcome is indeterminate: release this
+    // invocation's local claim while preserving key-wide uncertainty until a
+    // causally later same-key result consumes it.
+    input.setConcurrentExecutionUncertainty?.(true);
     if (!isLatestRequest()) return;
     reportSessionStartError(input.reportError, error, 'startSession');
     if (!isMounted()) return;
@@ -134,12 +140,17 @@ export async function startSession(input: {
   if (!isMounted()) return;
   if (!isLatestRequest()) return;
 
+  const concurrentRequestMayStillFinish =
+    !res.ok && isConcurrentRequestInProgressError(res.error);
+  // Each invocation publishes through its owner-issued claim observer. A
+  // returned non-concurrent result settles that claim; the typed concurrent
+  // result retains uncertainty about another execution. Thrown transport
+  // outcomes never reach this observation and remain indeterminate.
+  input.setConcurrentExecutionUncertainty?.(concurrentRequestMayStillFinish);
+
   if (!res.ok) {
     input.setSessionStartStatus('error');
     input.setSessionStartError(getActionResultErrorMessage(res));
-    const concurrentRequestMayStillFinish = isConcurrentRequestInProgressError(
-      res.error,
-    );
     const rotatedAfterDeterminateError =
       rotateIdempotencyKeyAfterDeterminateError(
         IdempotentActionNames.StartPracticeSession,
@@ -154,14 +165,15 @@ export async function startSession(input: {
       const refreshOutcome = await input.refreshIncompleteSession?.();
       if (
         !rotatedAfterDeterminateError &&
-        !concurrentRequestMayStillFinish &&
         isMounted() &&
         isLatestRequest() &&
         refreshProvesNoIncompleteSession(refreshOutcome)
       ) {
-        // The key's possibly committed session has been resolved elsewhere,
-        // and no same-key request remains known to be running.
-        input.setIdempotencyKey(input.createIdempotencyKey());
+        // Authoritative absence can consume this recovery outcome, but only
+        // the key owner can prove that no other same-key claim may still
+        // commit. Keep that key-wide policy out of this invocation-local
+        // helper.
+        input.tryRetireIdempotencyKeyAfterProvenAbsence();
       }
     } catch (error) {
       reportSessionStartError(

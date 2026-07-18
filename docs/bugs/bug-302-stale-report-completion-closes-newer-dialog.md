@@ -53,6 +53,55 @@ The first owner was fixed without propagating equivalent stale-completion author
 3. Do not cancel or rotate the hook's preserved idempotency key when the dialog closes; BUG-291/301 determinacy remains authoritative.
 4. Add Chromium sequences for stale success and stale failure across close/reopen, plus an ordinary single-submit control.
 
+## Resolution State
+
+Implementation is merged to `dev` as of 2026-07-18; promotion PR
+[#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
+remains open, and Status remains Open until wave-5 archival records production
+proof.
+
+- `QuestionReportDialog` now owns a monotonically increasing submission
+  generation. Starting a submission claims the current generation; both
+  dialog-originated closes and externally controlled `open: true -> false`
+  transitions advance it and reset the form. Every post-`await` success,
+  returned failure, and thrown-failure continuation verifies ownership before
+  it may notify, change `isSubmitting`, reset form state, or close the dialog.
+- The feedback hook, token-slot generation CAS, fingerprints, and idempotency
+  key determinacy behavior are unchanged. The rating surface was audited and
+  has no equivalent presentation continuation: it delegates synchronously to
+  the already generation-fenced hook.
+- Red-first Chromium proof reproduced three failures on the pre-fix component:
+  stale success closed the reopened dialog, while stale returned and thrown
+  failures re-enabled the newer submission. The same focused suite is green
+  after the owner-generation fence, including the existing ordinary
+  single-submit close/success-toast control.
+- Exact-head review identified that the initial race matrix did not isolate
+  close-only invalidation from a newer submission's generation claim. A
+  mutation check with the close-generation increment removed failed on an
+  obsolete third `onOpenChange` call; the restored fence passes the added
+  close-only Chromium sequence. Dialog-removal assertions now use Browser Mode
+  retryable locators rather than manual DOM polling.
+- A post-cooldown full review then exposed the controlled-prop close seam. Its
+  red Chromium sequence reopened with A's Submit state still disabled. A layout
+  transition fence now invalidates and resets before paint, and the green test
+  proves B survives A's later completion. Stale-toast checks await the settled
+  request and use exact retryable Browser Mode message locators.
+- The combined promotion review exposed the remaining component-removal seam:
+  unmounting did not advance the owner generation, so the removed dialog's
+  continuation could still notify through the surviving provider and call the
+  parent `onOpenChange`. A red Chromium test observed that stale callback; an
+  unmount-only layout-effect cleanup now invalidates ownership without changing
+  the feedback hook or idempotency-key lifecycle.
+- Initial fix PR
+  [#663](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/663)
+  received formal CodeRabbit approval on exact head `f40ce2ce` and
+  squash-merged to `dev` as `feb7652e`. Promotion-review follow-up PR
+  [#666](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/666)
+  closed the unmount seam, received formal approval on exact head `6761c676`,
+  and squash-merged as `7cc09e91`. Both heads passed the full local gate before
+  push; production proof is intentionally deferred to the open promotion and
+  wave-5 close.
+
 ## Related
 
 - [BUG-301 (archived)](../_archive/bugs/bug-301-stale-feedback-completion-clobbers-newer-request-key.md) — correctly fences the token slot but does not own dialog presentation state.

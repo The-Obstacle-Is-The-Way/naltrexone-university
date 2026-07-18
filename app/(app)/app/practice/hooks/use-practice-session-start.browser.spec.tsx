@@ -97,30 +97,28 @@ function RecoveryProbe() {
   });
   const [settledStarts, setSettledStarts] = useState(0);
 
-  if (incomplete.incompleteSession) {
-    return (
-      <IncompleteSessionCard
-        session={incomplete.incompleteSession}
-        isPending={incomplete.incompleteSessionStatus === 'loading'}
-        onAbandon={() => undefined}
-      />
-    );
-  }
-
   return (
     <>
       <div data-testid="recovery-settled-starts">{settledStarts}</div>
-      <button
-        type="button"
-        data-testid="recovery-start"
-        onClick={() => {
-          void sessionStart.onStartSession().finally(() => {
-            setSettledStarts((count) => count + 1);
-          });
-        }}
-      >
-        Start
-      </button>
+      {incomplete.incompleteSession ? (
+        <IncompleteSessionCard
+          session={incomplete.incompleteSession}
+          isPending={incomplete.incompleteSessionStatus === 'loading'}
+          onAbandon={() => undefined}
+        />
+      ) : (
+        <button
+          type="button"
+          data-testid="recovery-start"
+          onClick={() => {
+            void sessionStart.onStartSession().finally(() => {
+              setSettledStarts((count) => count + 1);
+            });
+          }}
+        >
+          Start
+        </button>
+      )}
     </>
   );
 }
@@ -142,7 +140,9 @@ test('rotates the session start idempotency key when changing status', async () 
   const screen = await render(<Probe />);
 
   await screen.getByTestId('start').click();
-  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(1);
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('1');
   const firstKey = getIdempotencyKey(startPracticeSession.mock.calls[0]?.[0]);
 
   await screen.getByTestId('set-incorrect').click();
@@ -151,7 +151,9 @@ test('rotates the session start idempotency key when changing status', async () 
     .toHaveTextContent('incorrect');
 
   await screen.getByTestId('start').click();
-  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(2);
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('2');
   const secondKey = getIdempotencyKey(startPracticeSession.mock.calls[1]?.[0]);
 
   expect(secondKey).not.toBe(firstKey);
@@ -165,7 +167,9 @@ test('reports thrown session start failures', async () => {
 
   await screen.getByTestId('start').click();
 
-  await expect.poll(() => reportClientErrorSpy.mock.calls.length).toBe(1);
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('1');
   expect(reportClientErrorSpy).toHaveBeenCalledWith(error, {
     component: 'UsePracticeSessionStart',
     action: 'startSession',
@@ -192,14 +196,48 @@ test('reuses the session start key after a timeout and reaches the recorded succ
   const firstKey = getIdempotencyKey(startPracticeSession.mock.calls[0]?.[0]);
 
   await screen.getByTestId('start').click();
-  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(2);
-  await expect.poll(() => navigateToSpy.mock.calls.length).toBe(1);
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('2');
   const secondKey = getIdempotencyKey(startPracticeSession.mock.calls[1]?.[0]);
 
   expect(secondKey).toBe(firstKey);
   expect(navigateToSpy).toHaveBeenCalledWith(
     `/app/practice/${fixtureSession1Id}`,
   );
+});
+
+test('retires timeout uncertainty after a causally later retry proves absence', async () => {
+  startPracticeSession
+    .mockRejectedValueOnce(new TimeoutError(15_000))
+    .mockResolvedValue(err('INTERNAL_ERROR', 'Recorded start failed'));
+
+  const screen = await render(<Probe />);
+
+  await screen.getByTestId('start').click();
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('1');
+  const timedOutKey = getIdempotencyKey(
+    startPracticeSession.mock.calls[0]?.[0],
+  );
+
+  await screen.getByTestId('start').click();
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('2');
+  const consumingRetryKey = getIdempotencyKey(
+    startPracticeSession.mock.calls[1]?.[0],
+  );
+
+  await screen.getByTestId('start').click();
+  await expect
+    .element(screen.getByTestId('settled-starts'))
+    .toHaveTextContent('3');
+  const nextKey = getIdempotencyKey(startPracticeSession.mock.calls[2]?.[0]);
+
+  expect(consumingRetryKey).toBe(timedOutKey);
+  expect(nextKey).not.toBe(timedOutKey);
 });
 
 test('recovers a late concurrent start with the preserved key and renders the session panel', async () => {
@@ -249,7 +287,9 @@ test('recovers a late concurrent start with the preserved key and renders the se
   originalRequestCommitted = true;
 
   await screen.getByTestId('recovery-start').click();
-  await expect.poll(() => startPracticeSession.mock.calls.length).toBe(3);
+  await expect
+    .element(screen.getByTestId('recovery-settled-starts'))
+    .toHaveTextContent('3');
   const recoveryRetryKey = getIdempotencyKey(
     startPracticeSession.mock.calls[2]?.[0],
   );

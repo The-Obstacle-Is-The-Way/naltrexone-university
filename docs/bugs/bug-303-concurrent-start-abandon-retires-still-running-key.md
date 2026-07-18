@@ -40,6 +40,83 @@ The lifecycle owner models “this captured key has not changed” but not “th
 3. Make the capture-then-retire callback refuse retirement while its captured key remains uncertain, while preserving BUG-299 retirement for ordinary post-commit error recovery and external resolution.
 4. Add a production-hook Chromium sequence matching the interleaving above and a server/use-case orchestration test proving S can be ended between A's precheck and create.
 
+## Resolution State
+
+Implementation began on `fix/bug-303-abandon-retires-running-start-key` on
+2026-07-17 and received four merged promotion-review hardening follow-ups by
+2026-07-18. Promotion PR
+[#665](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/665)
+remains open, and Status remains Open until wave-5 archival records production
+proof.
+
+- `usePracticeSessionStart` now owns per-key concurrent-execution uncertainty.
+  Each accepted Start invocation receives an opaque claim identity and enters
+  the key's unsettled-claim set before awaiting the controller. A returned
+  non-concurrent result settles only its reporting claim: client launch order
+  never stands in for server acquisition order. A typed
+  `concurrent_request_in_progress` result releases its reporting claim and
+  raises a versioned uncertainty generation. Only a same-key invocation
+  launched after observing that exact generation may consume it; an
+  already-running invocation cannot clear a later server observation merely
+  because its response arrives later. A handler captured by an obsolete render
+  is rejected before it can submit stale intent or mutate the current request
+  state. Thrown transport and timeout outcomes release their local claim by
+  raising a new uncertainty generation; the key remains preserved until a
+  causally later same-key result consumes that generation.
+- `captureIdempotencyKeyRetirement` still rejects a superseded captured key and
+  now also rejects a captured key whose same-key execution may still commit.
+  Authoritative incomplete-session refresh continues to own panel convergence,
+  but the per-user session it returns is never treated as request identity.
+- The first promotion follow-up replaced key-wide settlement with ordered
+  per-invocation claims. A later full review then exposed the remaining inline
+  bypass: an earlier `INTERNAL_ERROR` followed by authoritative absence could
+  still rotate directly inside `startSession` while a later same-key claim was
+  unsettled. On `fix/bug-303-null-refresh-claim-fence`, proven-absence
+  retirement now goes through a required owner-issued retirement gate captured
+  after the invocation claims the key. The helper retains request-local error
+  classification, while the hook remains the sole owner of key-wide retirement
+  eligibility.
+- Red-first Chromium proof reproduced the defect through the production
+  `usePracticeSessionControls` hook: typed concurrent result → refresh renders
+  session S → successful abandon S → next Start carried a fresh UUID instead of
+  the preserved key. The green suite proves same-key reuse, thrown/timeout
+  preservation across unrelated-session abandon, claim-scoped settlement,
+  preservation while a later same-key invocation remains unresolved,
+  preservation when an earlier `INTERNAL_ERROR` refresh proves absence while a
+  later same-key invocation remains unresolved, preservation when a
+  later-launched claim settles before an earlier invocation reaches the server,
+  conservative handling when a concurrent observation arrives after a
+  pre-existing result, causal consumption by a retry launched after observed
+  uncertainty, and zero controller/UI effects from a stale render's handler.
+  Existing controls remain green for ordinary abandon retirement, second-tab
+  proven-absence retirement, BUG-300's immediate-refresh guard, and BUG-291's
+  thrown-outcome preservation. The claim-order scenarios live in a focused
+  browser spec, and both browser specs remain below the repository's 800-line
+  test-file warning after the completion-barrier hardening in PR
+  [#671](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/671).
+- A use-case orchestration test inserts and ends another tab's session during
+  candidate selection—after the initial incomplete-session precheck and before
+  the original `sessions.create`—then proves the original request can create its
+  distinct session. This pins why session S cannot identify request A.
+- Initial fix PR
+  [#664](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/664)
+  received formal CodeRabbit approval on exact head `5bb9fcc9` and
+  squash-merged to `dev` as `27621e37`. Promotion-review PR
+  [#666](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/666)
+  replaced key-wide settlement with per-invocation claims (approved head
+  `6761c676`, squash `7cc09e91`); test-hygiene PR
+  [#667](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/667)
+  added production-continuation barriers (approved head `618b299c`, squash
+  `9f8b83db`); and owner-gate PR
+  [#668](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/668)
+  fenced null-refresh retirement (approved head `eb32f0c5`, squash
+  `aadc4c96`); and final causal-order PR
+  [#669](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/669)
+  received formal approval on exact head `4a4df243` after the full 27-minute
+  rate-limit cooldown and squash-merged as `e9e6d1c4`. Each head passed the full
+  local gate before push. Production proof remains deferred to the open
+  promotion and wave-5 close.
+
 ## Related
 
 - [BUG-300 (archived)](../_archive/bugs/bug-300-concurrent-start-refresh-retires-pending-key.md) — fixes immediate refresh retirement but does not propagate uncertainty to the later abandon owner.
