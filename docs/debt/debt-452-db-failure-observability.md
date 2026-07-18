@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P4
 **Date:** 2026-07-09
+**2026-07-18 staleness audit:** Stale but real against `ddad8eee`. BUG-285 has long since moved Stripe failure persistence to a fresh transaction; this doc now treats that as the current baseline while retaining the cause-projection and safe-logging gaps.
 
 ---
 
@@ -35,13 +36,13 @@ Related route-level log sites use the key `error` rather than `err` ([Clerk hand
 
 ## Impact
 
-Today: no mapped user-response defect and no current PII-bearing unwrapped path identified. Part 1 makes Clerk failure rows and reconciliation failures materially less diagnosable; Stripe webhook persistence is already separately broken for the direct-statement-abort class under BUG-285. Part 2 is an active SQL/internal-identifier disclosure channel and a latent PII channel if wrapping discipline regresses. P4 remains appropriate: this is operational/security hardening with no confirmed current PII disclosure or correctness failure attributable to these seams.
+Today: no mapped user-response defect and no current PII-bearing unwrapped path identified. Part 1 makes Clerk and Stripe failure rows plus reconciliation failures materially less diagnosable; BUG-285 already supplies the Stripe ledger's fresh-transaction durability, but the stored projection remains cause-less. Part 2 is an active SQL/internal-identifier disclosure channel and a latent PII channel if wrapping discipline regresses. P4 remains appropriate: this is operational/security hardening with no confirmed current PII disclosure or correctness failure attributable to these seams.
 
 ## Proposed Resolution
 
 **Part 1 (cause-dropping wrappers):**
 
-1. **Recommended:** Add `{ cause: error }` to the three generic mappings, matching sibling repositories, and replace the duplicate webhook `toErrorData()` helpers with one bounded diagnostic projector that allowlists safe fields (wrapper code/message plus cause class, PostgreSQL code, and constraint name). Do **not** serialize raw cause message/detail/query/params. This enriches Clerk's durable failure row and gives Stripe/reconcile callers a stable diagnostic object; it does not resolve BUG-285's aborted-transaction persistence failure.
+1. **Recommended:** Add `{ cause: error }` to the three generic mappings, matching sibling repositories, and replace the duplicate webhook `toErrorData()` helpers with one bounded diagnostic projector that allowlists safe fields (wrapper code/message plus cause class, PostgreSQL code, and constraint name). Do **not** serialize raw cause message/detail/query/params. This enriches both durable webhook ledgers and gives reconciliation callers a stable diagnostic object; BUG-285's fresh-transaction persistence remains the separate durability owner.
 2. Minimal: repo-side `{ cause: error }` only — preserves provenance for callers that deliberately inspect it, but current webhook serialization remains generic and route-level Pino handling can expose cause messages unless part 2 ships too.
 3. Broader hygiene sweep: lint-style audit for `new ApplicationError('INTERNAL_ERROR'` in catch blocks without `cause` across `src/adapters/` to prevent recurrence.
 
@@ -53,7 +54,7 @@ Today: no mapped user-response defect and no current PII-bearing unwrapped path 
 
 ## Verification
 
-- **Part 1:** Unit tests asserting the three generic mappings attach the original cause; projector tests proving safe code/constraint fields survive while raw message/detail/query/params do not; a Clerk-controller test proving the safe diagnostic reaches `clerk_events.error`; and a reconciliation test proving the safe diagnostic is logged/returned. Do not claim a Stripe failure-row test closes BUG-285 unless it uses a fresh persistence transaction.
+- **Part 1:** Unit tests asserting the three generic mappings attach the original cause; projector tests proving safe code/constraint fields survive while raw message/detail/query/params do not; Clerk- and Stripe-controller tests proving the safe diagnostic reaches each durable ledger through its existing fresh persistence transaction; and a reconciliation test proving the safe diagnostic is logged/returned.
 - **Part 2:** A unit test that logs a real `DrizzleQueryError` containing a sentinel email in params through both `{ err }` and `{ error }` keys and asserts the sentinel, SQL, raw cause message/detail, and params-bearing stack are absent. Pin useful safe fields separately.
 - Docs: note the chosen serializer contract next to the security note in `lib/logger.ts`.
 

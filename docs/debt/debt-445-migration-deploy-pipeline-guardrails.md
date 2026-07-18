@@ -3,6 +3,7 @@
 **Status:** Open
 **Priority:** P3
 **Date:** 2026-07-09
+**2026-07-18 staleness audit:** Stale but real against `ddad8eee`. The local journal census advanced from 29 to 31 entries (through `0030_nasty_forge`); the four guardrail gaps remain. Historical live-ledger measurements below remain dated evidence and were not rewritten as current production claims.
 
 ---
 
@@ -51,7 +52,7 @@ target. The ledger row persists until explicit repair; the migrator returns
 success without adding the skipped row. The same timestamp/merge-order hazard
 can reach Production even without Preview pollution: a migration generated at
 `T1` but merged after a migration generated at `T2` is also below Production's
-last-row high-water mark. The current journal has 29 strictly increasing
+last-row high-water mark. The current journal has 31 strictly increasing
 `entries[].when` values, but no test enforces that property.
 
 The recorded early-0027 incident is adjacent evidence, not proof that this exact
