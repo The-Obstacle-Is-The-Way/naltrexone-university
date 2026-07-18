@@ -90,9 +90,10 @@ proof.
   uncertainty, and zero controller/UI effects from a stale render's handler.
   Existing controls remain green for ordinary abandon retirement, second-tab
   proven-absence retirement, BUG-300's immediate-refresh guard, and BUG-291's
-  thrown-outcome preservation. The claim-order scenarios now live in a focused
-  446-line browser spec; the original recovery spec is 698 lines, so neither
-  triggers the repository's 800-line test-file warning.
+  thrown-outcome preservation. The claim-order scenarios live in a focused
+  browser spec, and both browser specs remain below the repository's 800-line
+  test-file warning after the completion-barrier hardening in PR
+  [#671](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/671).
 - A use-case orchestration test inserts and ends another tab's session during
   candidate selection—after the initial incomplete-session precheck and before
   the original `sessions.create`—then proves the original request can create its
