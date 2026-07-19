@@ -66,7 +66,7 @@ No wrong observable behavior today: an end request made with a fresh key after t
 
 ## Verification
 
-- **Part 1:** a pre-deploy cached fixture is replayed through the post-deploy decoder and mapped to the current output without calling `execute`; unknown/invalid versions still produce the existing `INTERNAL_ERROR` with `cause`, preserve the completed row, and never re-execute. For the compatibility-window option, pin both the previous and current strict shapes.
+- **Part 1:** a pre-deploy cached fixture is replayed through the post-deploy decoder and mapped to the current output without calling `execute`; unknown/invalid cached shapes still produce the existing `INTERNAL_ERROR` with `cause`, preserve the completed row, and never re-execute. Pin both the previous and current strict shapes.
 - **Part 2:** controller-level same-key tests prove first and replayed `ActionResult`s are identical for an `ApplicationError` with fields/details and for invalid keyed portal/finalize output. A raw execute error yields generic public text on both requests, and its cached public record contains no raw message. Drizzle/fake round trips accept and reject the same detail shapes; an existing row without newer optional fields remains replayable.
 - **Part 3:** rewritten controller/policy tests prove production-shaped bare end/discard conflicts are declined and re-executed, and a fake-vs-real contract test pins code, message, and absent `details.reason`.
 
