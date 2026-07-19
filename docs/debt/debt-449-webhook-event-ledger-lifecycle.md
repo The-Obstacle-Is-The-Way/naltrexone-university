@@ -1,11 +1,21 @@
 # DEBT-449: Webhook Event-Ledger Lifecycle — Partial/Asymmetric Retention and Cron Completion-Bookkeeping Gap
 
 **Status:** Open
-**Priority:** P3
+**Priority:** P4
 **Date:** 2026-07-09
 **2026-07-18 staleness audit:** Stale but real against `ddad8eee`. The account-deletion obligation is customer cleanup, and the drain is bounded to 25 rows × 3 pages with `hasMore`; the physical `pending_stripe_cancellations` table name remains intentional residue. The event-retention and completion-bookkeeping gaps remain.
 
 ---
+
+## Direction (2026-07-19 forest review)
+
+| Part | Verdict | Chosen option | Rejected as disproportionate | One-line rationale |
+| --- | --- | --- | --- | --- |
+| 1a. Policy naming and Stripe batch duplication | **FIX (Option A, minimal form)** | Reuse `PRUNE_BATCH_LIMIT` and name/document four distinct policies: processed Stripe rows are webhook-pruned after 90 days; unresolved Stripe rows are retained until successful replay/operator resolution; handled Clerk rows are retained; pending customer cleanup is owned only by the daily drain. | Option C's archive/tombstone subsystem; a generalized cross-table retention constant or maintenance owner. | (a) Deletes a literal and makes current ownership explicit without new state; (b) all four source policies are proven even though live volume is unmeasured; (c) Blast radius: ambiguous ownership can invite an unsafe future prune of unresolved work or duplicate cleanup owners. Fix cost: one shared-constant import plus local policy names/documentation; (d) supplies one batch-size source and correct names; (e) prevents accidental ownership overlap with DEBT-444/448. |
+| 1b. Automatic Clerk pruning | **PARK** | Do not add a Clerk prune port/repository method or schedule now. Revive only after two consecutive monthly production censuses show either at least 1,000,000 handled `clerk_events` rows or at least 1 GiB for the table plus indexes, or Neon reports measurable backup/storage/latency impact attributable to that table. | Option A's speculative Clerk prune implementation today; Option C's archive/tombstone subsystem. | (a) Avoids a new delete contract and cascade-sensitive owner; (b) absence of cleanup is real but row count/cost are unmeasured; (c) Blast radius: retained handled events can consume growing storage/backup capacity. Cure cost: a new cascade-sensitive delete contract, tests, schedule, and owner whose mistake can erase a live customer-cleanup obligation; (d) defers code rather than inventing an unused abstraction; (e) keeps the daily drain as the sole pending-obligation owner and requires any revived prune to exclude pending children. |
+| 2. Drain completion bookkeeping | **FIX (Option 2, minimal form)** | Inject a `completePendingStripeCustomerCleanup(eventId)` callback into the drain; the route implements it as one transaction that deletes the pending row and marks the Clerk event processed. | Option 1's shared inline/scheduled finisher abstraction; Option 3's replay-dependent acceptance. | (a) Adds one explicit dependency rather than a cross-path abstraction; (b) successful drain with stale failed Clerk status is directly reachable today; (c) Blast radius: completed external cleanup can remain durably recorded as a failed Clerk event until replay. Fix cost: one injected two-write transaction callback; (d) makes the transaction boundary explicit and fake-testable; (e) leaves cleanup cadence/ownership unchanged. |
+
+No generalized event-ledger cleanup service or cross-table “90-day” policy will be introduced: equal numbers do not create shared semantics. Processed Stripe cleanup stays in the successful Stripe webhook path, pending customer cleanup stays in the existing daily drain, and Clerk pruning remains parked until the named production measurement fires. With growth machinery parked and the remaining fix limited to DRY/policy naming plus P4 bookkeeping, the doc is re-tiered from P3 to P4.
 
 ## Description
 
@@ -13,7 +23,7 @@ The two provider-event ledgers have different, only partly explicit lifecycle po
 
 > **Wave-2 update (2026-07-12, PR #634):** the deletion-time Stripe machinery this item cites was generalized from subscription cancellation to customer deletion. Renames: `drain-pending-stripe-cancellations.ts`/`.test.ts` → `drain-pending-stripe-customer-cleanups.ts`/`.test.ts`; `FakePendingStripeCancellationRepository` → `FakePendingStripeCustomerCleanupRepository`; the port is now `PendingStripeCustomerCleanupRepository` (physical table `pending_stripe_cancellations` unchanged — rename explicitly deferred). Part 2's gap carries over **verbatim**: the renamed drain's deps are still `{ pendingStripeCustomerCleanups, deleteStripeCustomer, logger }` with no `ClerkEventRepository`/transaction finisher, so a successful drain still leaves the originating Clerk event failed. Two recorded invariants changed: the drain now processes bounded pages (25 × 3 per run, this-run failures excluded between pages, `hasMore` + warning on remaining backlog) rather than every stale row per run — so BUG-246's "drain cadence shorter than any future Clerk prune horizon" rule must be sized against worst-case backlog age (observable via the backlog warning), not one run; and per-row failures still fail the cron run, but a *truncated* clean run reports `hasMore` instead of silence. Durable per-row attempt tracking/backoff remains an open candidate for this item's resolution.
 
-### 1. Retention is partial and asymmetric; all `clerk_events` and failed Stripe rows lack a repo-owned terminal policy (P3)
+### 1. Retention is partial and asymmetric; all `clerk_events` and failed Stripe rows lack a repo-owned terminal policy (P4 after direction review)
 
 [`stripe-webhook-controller.ts`](../../src/adapters/controllers/stripe-webhook-controller.ts#L38) defines `STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS` and a local `STRIPE_EVENTS_PRUNE_LIMIT = 100`. After a successful delivery it best-effort calls `pruneProcessedBefore(cutoff, 100)` ([lines 158–169](../../src/adapters/controllers/stripe-webhook-controller.ts#L158)). The repository predicate is narrower than “the table is retained for 90 days”: it deletes only rows whose `processed_at` is non-null and older than the cutoff ([`drizzle-stripe-event-repository.ts:83-118`](../../src/adapters/repositories/drizzle-stripe-event-repository.ts#L83)). Failed/unprocessed rows have `processed_at = null` ([lines 71–76](../../src/adapters/repositories/drizzle-stripe-event-repository.ts#L71)) and are never eligible. That matches archived [BUG-027](../_archive/bugs/bug-027-stripe-events-unbounded-growth.md), whose shipped scope was explicitly “successfully-processed rows” while retaining failed/unprocessed rows for debugging; it does **not** establish a 90-day cap on all `stripe_events`. **Wave-1 update (2026-07-11):** [BUG-285's fix (PR #626)](../_archive/bugs/bug-285-stripe-webhook-markfailed-on-aborted-transaction.md) now persists failure rows in a fresh transaction even for driver-aborting failures that previously rolled back row-less, so the class of permanently retained failed Stripe rows is strictly larger than when this item was filed — raising the value of an explicit failed-row retention policy.
 
@@ -35,35 +45,37 @@ No failed-webhook audit UI or automated `processed_at IS NULL AND error IS NOT N
 
 ## Impact
 
-No current user-facing or billing error is established. Part 1 leaves handled Clerk rows and failed/unprocessed Stripe rows without a bounded repository lifecycle; the actual live cardinality, storage/backup cost, and any provider-side retention requirement are unverified. Its P3 driver is the combination of indefinite growth and a money-path FK that makes an indiscriminate future Clerk prune unsafe. Part 2 is P4 operations hygiene: successful cron recovery may remain labeled failed until a later delivery/replay, but the Stripe customer cleanup is complete and failed drain work remains durably queued for the next run.
+No current user-facing or billing error is established. Part 1 leaves handled Clerk rows and failed/unprocessed Stripe rows without a bounded repository lifecycle; the actual live cardinality, storage/backup cost, and any provider-side retention requirement are unverified. The 2026-07-19 direction review parks automatic Clerk pruning until measured growth and keeps unresolved Stripe retention as an explicit safety policy, leaving only cheap policy/DRY work. Part 2 is P4 operations hygiene: successful cron recovery may remain labeled failed until a later delivery/replay, but the Stripe customer cleanup is complete and failed drain work remains durably queued for the next run. The surviving active scope is therefore P4.
 
 ## Proposed Resolution
 
 **Part 1:**
 
-- **Option A (recommended):** make each table/state policy explicit rather than inventing one cross-table “90-day” constant. Reuse `PRUNE_BATCH_LIMIT` in the Stripe controller. Keep a named processed-Stripe retention constant; decide separately whether processed Clerk events need a retention horizon. If they do, add a `pruneProcessedBefore`-style Clerk port/repository method whose predicate requires `processed_at IS NOT NULL` **and** `NOT EXISTS` an outstanding customer-cleanup child in the legacy-named `pending_stripe_cancellations` table. If cleanup moves to the daily maintenance route, run the customer-cleanup drain before that prune. Keep failed/unprocessed event rows until an explicit recovery/archive decision preserves dedup semantics; do not silently age-delete unresolved outcomes.
-- **Option B (minimal):** document the accepted asymmetry near the constants/controller inventory: processed Stripe events are eligible after 90 days; failed/unprocessed Stripe rows and every Clerk row are retained; pending customer-cleanup children prohibit indiscriminate Clerk age pruning. Add monitoring/alert thresholds if indefinite failed-row retention is intentional.
-- **Option C:** archive terminal event records outside the hot ledgers while retaining a compact provider-event-id tombstone. This bounds primary-table width without making an old redelivery look unclaimed, but is a larger schema/operations design.
+- **Option A (CHOSEN FOR CURRENT WORK, minimal form):** make each table/state policy explicit rather than inventing one cross-table “90-day” constant. Reuse `PRUNE_BATCH_LIMIT` in the Stripe controller and name the processed-Stripe 90-day retention for that state only. Document beside the owning ports/controllers that unresolved Stripe outcomes remain until successful replay or explicit operator resolution, all handled Clerk rows remain retained, and pending customer-cleanup obligations are owned by the daily drain. Do not add a Clerk delete method in this fix.
+- **Option B (FOLDED INTO A):** documentation-only acceptance correctly describes the asymmetry but leaves the duplicate batch literal. The chosen minimal fix is the same documentation plus the cheap DRY correction.
+- **Option C (REJECTED BY DIRECTION REVIEW):** archive terminal events behind compact tombstones. This adds schema, copy/delete operations, restore/debug procedures, and another durable state for an unmeasured storage projection.
+
+**Parked subpart:** automatic Clerk pruning may be reconsidered only when the Direction table's production census trigger fires. A revived design must preserve unresolved outcomes and use a predicate that excludes any event with an outstanding `pending_stripe_cancellations` child; it must not silently age-delete a customer-cleanup obligation.
 
 **Part 2:**
 
-- **Option 1 (recommended):** extract one completion seam used by both inline and scheduled finishers. Keep the external Stripe call outside the database transaction; after idempotently successful customer deletion, transactionally delete the pending row and call `clerkEvents.markProcessed(eventId)`. If that bookkeeping transaction fails, rollback leaves the pending row for the idempotent next drain attempt.
-- **Option 2 (smaller):** add a transaction callback/`ClerkEventRepository` dependency to `DrainPendingStripeCustomerCleanupsDeps` and perform the same two writes in its success branch, without extracting the inline helper. Preserve the current per-row failure behavior: a real Stripe failure logs and retains the row.
-- **Option 3 (document-only):** accept that cron completion may leave stale Clerk status and rely on later provider replay. This is behaviorally safe but leaves lifecycle policy state-dependent, so it is not preferred.
+- **Option 1 (REJECTED BY DIRECTION REVIEW):** extract one completion seam shared by inline and scheduled finishers. The inline path is already correct, so coupling it to a new abstraction adds a second change surface without closing additional risk.
+- **Option 2 (CHOSEN, minimal form):** add an explicit `completePendingStripeCustomerCleanup(eventId)` dependency to `DrainPendingStripeCustomerCleanupsDeps`. The composition root/route supplies a transaction callback that constructs transaction-bound pending-cleanup and Clerk-event repositories, deletes the pending row, and calls `clerkEvents.markProcessed(eventId)` atomically. Keep the external Stripe call outside that transaction. If completion bookkeeping fails, rollback leaves the pending row for the idempotent next drain attempt; a real Stripe failure keeps the same retain-and-log behavior.
+- **Option 3 (REJECTED BY DIRECTION REVIEW):** rely on provider replay to repair stale bookkeeping. Safe customer cleanup does not make a known-wrong durable event status a useful accepted state when the transaction callback is this small.
 
 ## Verification
 
 **Part 1:**
 
 - A source check proves `STRIPE_EVENTS_PRUNE_LIMIT` is gone and both event policies are named independently from `rate_limits`; it must not require the unrelated numeric `90` to appear only once across `src/adapters/`.
-- If Clerk pruning ships, extend `drizzle-clerk-event-repository.test.ts` and a real-Postgres integration suite to prove: an old processed row without a pending child is eligible; an old event with a pending child is preserved; failed/unprocessed rows follow the explicitly chosen policy; the batch limit is honored.
+- No Clerk prune method, scheduled call site, or new event archive table is added. If the parked trigger later fires, move that subpart back to active direction review before implementing it.
 - Preserve the archived BUG-027 contract that unresolved Stripe outcomes are not deleted merely because they are old.
 
 **Part 2:**
 
-- Extend `drain-pending-stripe-customer-cleanups.test.ts` using `FakePendingStripeCustomerCleanupRepository` and `FakeClerkEventRepository`: a successful drain deletes the pending row, sets `processedAt`, and clears the stale error; a Stripe failure retains the row; a later successful run drains that same retained row.
+- Extend `drain-pending-stripe-customer-cleanups.test.ts` with an injected completion callback backed by `FakePendingStripeCustomerCleanupRepository` and `FakeClerkEventRepository`: a successful drain deletes the pending row, sets `processedAt`, and clears the stale error; a Stripe failure never calls completion and retains the row; a later successful run drains that same retained row.
 - Extend `tests/integration/stripe-repositories.integration.test.ts` to prove the pending-row delete and Clerk-event transition commit together and roll back together.
-- Keep the inline webhook post-commit tests green against the same completion seam if Option 1 ships.
+- Keep the inline webhook post-commit tests green and otherwise unchanged; no shared finisher is introduced.
 
 ## Related
 
