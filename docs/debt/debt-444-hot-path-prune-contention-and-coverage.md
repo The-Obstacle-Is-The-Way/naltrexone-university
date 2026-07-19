@@ -62,8 +62,8 @@ Note recorded by the verifier: parts 1 and 2 are the same request-path cleanup/o
 
 ## Verification
 
-- **Part 1:** the keyed request path emits one bounded candidate-lock/delete statement and no explicit prune transaction. A deterministic real-Postgres case holds the oldest candidates locked behind a synchronization barrier and uses a local lock timeout to prove the pruner completes within the bound by skipping them; it also proves later unlocked expired rows can be selected. ADR-015 continues to name the request path as owner and records the one-statement shape.
-- **Part 2:** the equivalent bounded lock-holder proof covers `rate_limits`, with `(key, window_start)` directly exercised and no generalized maintenance owner introduced.
+- **Part 1:** the keyed request path emits one bounded candidate-lock/delete statement and no explicit prune transaction. A deterministic real-Postgres case holds the oldest candidates locked behind a synchronization barrier, invokes the pruner, and separately asserts successful completion with no timeout/error, preservation of the locked candidates, and deletion of later unlocked expired rows. A local `lock_timeout` is only an auxiliary guard against a hanging regression; the successful outcome and row-state assertions prove `SKIP LOCKED` behavior. ADR-015 continues to name the request path as owner and records the one-statement shape.
+- **Part 2:** the equivalent successful-completion proof covers `rate_limits`, directly exercising `(key, window_start)`, preserving locked candidates, deleting later unlocked expired rows, and using `lock_timeout` only as a hang guard; no generalized maintenance owner is introduced.
 - **Part 3:** named real-Postgres integration tests directly assert each prune method's deleted count, limit, expired-row deletion, and live-row preservation.
 
 ## Related
