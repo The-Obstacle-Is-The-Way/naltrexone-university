@@ -7,6 +7,18 @@
 
 ---
 
+## Direction (2026-07-20 forest review)
+
+| Part | Verdict | Chosen option | Rejected as disproportionate | One-line rationale |
+| --- | --- | --- | --- | --- |
+| 1a. Application session bounds | **FIX (Option 1, minimal form)** | Add `statement_timeout: '30s'`, `lock_timeout: '5s'`, and `idle_in_transaction_session_timeout: '60s'` beside UTC in `POSTGRES_CONNECTION_PARAMETERS`; the 30-second database backstop intentionally trails the verified 10–15-second user-visible timers, which do not cancel the query. Pin values and prove SQLSTATE `57014`, `55P03`, and `25P03` respectively in resolver-scoped disposable Postgres. | Option 3's repo-unspecified/dashboard-owned acceptance and any migration-runner rewrite bundled into the runtime fix. | (a) Reuses the existing startup-parameter object with no new layer; (b) all three repo-level bounds are proven absent and PostgreSQL's disabled defaults remain reachable on any target without an external override, while live role settings are unverified; (c) Blast radius: one application statement, lock wait, or abandoned transaction can outlive the user-visible budget and hold scarce DB resources. Fix cost: three conservative settings plus focused tests, accepting the remaining bounded database window after a user-visible timeout instead of cutting database work off at the UI timer; (d) one policy object and real semantic verification; (e) does not move deploy drift or target ownership. |
+| 1b. Migration-session lock bound | **PARK** | Do not claim the application startup settings cover Drizzle Kit. Revive when a resolver-scoped proof demonstrates a supported setting reaches the actual `db:migrate` transaction, or when a Preview/Production migration records a lock wait of at least 30 seconds; then prefer the proven startup/session mechanism over a custom migration runner. | Option 2's unproven custom/alternate migration runner today and a `SET` on a different connection. | (a) Avoids rewriting the deploy seam; (b) migration lock waiting is possible but no incident or proven Drizzle Kit mechanism is recorded; (c) Blast radius: a schema-bearing deploy can remain blocked and queue conflicting work. Cure cost: replacing or wrapping the migration runner without connection-level proof is scarier; (d) refuses a placebo setting; (e) keeps deploy-path changes under DEBT-445 rather than creating an adjacent unverified owner. |
+| 2a. Explicit pool size | **FIX (Option 1, minimal form)** | Set postgres.js `max: 10` explicitly with the existing SPEC-029 rationale and a regression test; do not reopen capacity sizing. | A new capacity model, adaptive pool, or provider telemetry project before preserving the already-decided value. | (a) Converts a driver default into local source truth; (b) the value is deliberate and current but implicit; (c) Blast radius: an upstream default change silently alters per-instance connection demand. Fix cost: one option and test; (d) documentation/code now agree; (e) no new target classifier. |
+| 2b. Pooler-host enforcement | **ACCEPT (Option 3)** | Document that runtime Neon URLs should be pooled, the same `DATABASE_URL` currently serves runtime and migration, and provider values remain owner-verifiable; add no fail-closed or warn-level classifier now. | Option 2's split URL contract and pre-migrate fail-closed hostname gate; a duplicate target classifier beside DEBT-446. | (a) Adds no second URL policy mechanism; (b) the misconfiguration is conditional and no connection-exhaustion incident/current provider mismatch is measured; (c) Blast radius: a provider-side swap to a direct endpoint could exhaust backend connections as instances multiply. Cure cost: splitting runtime/migration secrets and gating deploys before migration can create a broader outage than the unmeasured risk; (d) accurate source-linked documentation is sufficient for the accepted state; (e) DEBT-446 remains the sole generic target classifier. Accepted failure: a dashboard operator can point runtime `DATABASE_URL` at a direct Neon host and the repository will not block deployment before connection pressure appears. |
+| 3. Vendor page drift | **FIX (Option 2, pointers-to-source form)** | Replace copied connection/config snippets with pointers to `lib/db.ts`, `lib/db-connection-options.ts`, `package.json`, and the migration runbooks; retain only operational rationale, the actual single-URL state, and an explicit never-`push` warning. | Option 1's refreshed copied implementation sample, a proposed `DIRECT_URL` contract, and any affirmative `drizzle-kit push` instruction. | (a) Deletes duplicate implementation facts; (b) the page currently recommends a banned command and is already version/config stale; (c) Blast radius: an operator can bypass checked-in migration history. Fix cost: a short source-linked page; (d) removes wrong docs and duplicate sources of truth; (e) target consent remains owned by DEBT-446 and deploy verification by DEBT-445. |
+
+Application sessions get conservative database-side bounds through the existing connection parameter seam, but those settings must not be misrepresented as migration-session coverage. The migration lock mechanism stays parked until it is proven on Drizzle Kit's actual connection; pooler enforcement is explicitly accepted rather than duplicated beside DEBT-446. The vendor page becomes a durable pointer map, while DEBT-445 remains the build-path drift owner.
+
 ## Description
 
 The production database seam — [`lib/db.ts`](../../lib/db.ts#L15), its environment plumbing, and its designated reference [`docs/vendor-docs/postgres.md`](../../docs/vendor-docs/postgres.md) — leaves three operational policies implicit. The repository does not configure database-side statement/lock/idle-transaction timeouts; the application pool size remains an accepted driver default while the pooled-host requirement is prose-only; and the vendor doc recommends a schema command the repository bans. These are latent configuration/documentation risks, not evidence of a current production incident.
@@ -52,24 +64,74 @@ Archived [BUG-240](../_archive/bugs/bug-240-question-feedback-migrations-not-app
 ## Proposed Resolution
 
 **Part 1:**
-- **Option 1 (recommended):** define separate, documented application values for `statement_timeout`, `lock_timeout`, and `idle_in_transaction_session_timeout` in `POSTGRES_CONNECTION_PARAMETERS`. Choose values from measured legitimate query/transaction duration and the shortest relevant server-side budget; do not hardcode the original candidate's unsupported 25-second example. Keep `lock_timeout < statement_timeout` so the lock-specific error can fire first. Document the expected SQLSTATE/error mapping and postgres.js reconnect behavior after an idle-transaction session is terminated.
-- **Option 2 (also required if deploy-lock risk is addressed):** add a migration-session lock timeout to the actual `pnpm db:migrate` connection. A `SET` issued on some separate connection is ineffective. Preserve `vercel.json`'s migrate-then-build ordering, use a driver-supported startup/session setting or a tested migration runner, and prove the setting covers Drizzle's migration transaction before adopting it. Codify the rule in `docs/dev/migration-authoring.md`.
-- **Option 3:** owner-ACCEPT the repository-unspecified policy, but record which Neon role/database setting owns each timeout and how operators verify it without printing credentials.
+- **CHOSEN (Option 1, minimal form):** set
+  `statement_timeout: '30s'`, `lock_timeout: '5s'`, and
+  `idle_in_transaction_session_timeout: '60s'` in
+  `POSTGRES_CONNECTION_PARAMETERS`. The 30-second statement bound is an
+  intentional database backstop, not the user-visible budget: the verified
+  10–15-second `Promise.race` tiers can return first without cancelling the
+  query, and the contract accepts the remaining portion of that bounded
+  database window rather than cutting legitimate work off at the UI timer.
+  Five seconds lets the lock-specific failure fire first, and sixty seconds
+  allows ordinary transactional gaps while terminating an abandoned transaction.
+  Document postgres.js recovery after the terminated session and verify
+  SQLSTATE `57014` (statement), `55P03` (lock), and `25P03` (idle transaction).
+- **PARKED (Option 2):** do not claim the application setting covers
+  `pnpm db:migrate`, issue `SET` on a separate connection, or replace Drizzle
+  Kit speculatively. Revive only when a resolver-scoped disposable proof shows
+  a supported startup/session mechanism reaches Drizzle's actual migration
+  transaction, or a deployed migration records a lock wait of at least 30
+  seconds. The durable authoring guide should state the distinction now.
+- **REJECTED BY DIRECTION REVIEW (Option 3):** unverified Neon dashboard/role
+  settings do not substitute for a repo-owned application-session policy.
 
 **Part 2:**
-- **Option 1 (recommended):** first measure/record the Vercel instance-concurrency assumption and current Neon client/backend limits, then set `max` explicitly to the resulting value (which may remain 10). Extend the existing [`db-connection-options.test.ts`](../../lib/db-connection-options.test.ts) or extract a typed client-options object so the decision is regression-tested.
-- **Option 2 (recommended with 1):** make the runtime-vs-migration URL contract executable. For Neon deploys, validate a pooled application `DATABASE_URL` and, if direct migration connections are desired, use a distinct migration variable in `drizzle.config.ts`. Any fail-closed target preflight must run **before** `pnpm db:migrate` in `vercel.json`, then keep `pnpm db:migrate && pnpm build` in that order; a `lib/env.ts`-only check runs during build after migrations and is not sufficient as the sole preflight. Local resolver-supplied Docker URLs must remain valid, and no port may be hardcoded.
-- **Option 3:** if enforcement is rejected, document that `DATABASE_URL` is pooled for runtime, identify the dashboard owner, and add a value-free deployment check that reports only pooled/direct classification.
+- **CHOSEN (Option 1, minimal form):** set `max: 10` explicitly in the
+  postgres.js options, retain SPEC-029's existing serverless rationale, and pin
+  it in a regression test. No new capacity-sizing or adaptive-pool project is
+  authorized by this debt.
+- **REJECTED BY DIRECTION REVIEW (Option 2):** do not split runtime/migration
+  variables or add a fail-closed hostname preflight without a measured
+  connection incident. Such a preflight would run before migration, duplicate
+  DEBT-446's target policy, and could block every deploy on a documentation-level
+  assumption.
+- **ACCEPT (Option 3, documentation-only):** document the actual one-URL state,
+  the intended pooled runtime endpoint, and provider-side ownership. Do not add
+  a warn-only classifier that fails to close the risk. Accepted failure: a
+  dashboard operator can point runtime `DATABASE_URL` at a direct Neon host and
+  the repository will not block deployment before connection pressure appears.
 
 **Part 3:**
-- **Recommended:** rewrite `docs/vendor-docs/postgres.md` to name only checked-in `pnpm db:migrate` for schema application, add an explicit “never `drizzle-kit push`” warning, distinguish the actual one-URL state from any proposed split, and sync package versions plus the `lib/db.ts` sample (`idle_timeout: 20`, imported `POSTGRES_CONNECTION_PARAMETERS`).
-- **Alternative:** replace copied connection code with pointers to `lib/db.ts` and `lib/db-connection-options.ts`, retaining only operational rationale and commands so implementation details do not drift twice.
+- **REJECTED BY DIRECTION REVIEW (Option 1):** do not refresh a copied
+  `lib/db.ts` sample or hand-maintained dependency versions; that leaves a
+  second source to drift again.
+- **CHOSEN (Option 2, pointers-to-source form):** rewrite
+  `docs/vendor-docs/postgres.md` to point to `lib/db.ts`,
+  `lib/db-connection-options.ts`, `package.json`, and the migration runbooks.
+  Retain only operational rationale and checked-in commands, describe the actual
+  single-`DATABASE_URL` state, and say explicitly never to use
+  `drizzle-kit push`.
 
 ## Verification
 
-- **Part 1:** extend `lib/db-connection-options.test.ts` to pin the three settings. In a resolver-scoped disposable integration database, prove an over-budget statement returns SQLSTATE `57014`, a lock wait fails within the chosen lock budget, and an idle transaction is terminated as documented. Exercise the same migration command/session mechanism used by `pnpm db:migrate`; do not use a hardcoded database port or a remote database.
-- **Part 2:** unit-test the explicit client options and value-safe hostname classifier. Test pooled Neon, direct Neon, and local/Docker URLs; test that the deploy preflight precedes migration while `pnpm db:migrate && pnpm build` remains ordered. Record sizing inputs without connection strings, credentials, or raw provider identifiers.
-- **Part 3:** `docs/vendor-docs/postgres.md` contains no affirmative `drizzle-kit push` instruction, clearly labels actual versus proposed environment variables, and either matches or defers to the current source files. Run the docs link check.
+- **Part 1a:** extend `lib/db-connection-options.test.ts` to pin all three
+  values. In resolver-scoped disposable Postgres, prove an over-budget
+  statement returns SQLSTATE `57014`, a held-lock wait returns `55P03` within
+  the configured budget, and an idle transaction terminates with `25P03`; prove
+  a fresh pooled connection remains usable afterward. Do not use a hardcoded
+  port or remote database.
+- **Part 1b:** no migration-runner implementation test is authorized while
+  parked. Revival requires the actual `pnpm db:migrate` connection proof or
+  recorded 30-second deploy lock wait named above.
+- **Part 2a:** unit-test the explicit postgres.js `max: 10` option and retain the
+  SPEC-029 rationale.
+- **Part 2b:** documentation names the accepted one-URL/pooler risk and does not
+  claim provider settings are repo-verified; no hostname classifier or deploy
+  gate is added.
+- **Part 3:** `docs/vendor-docs/postgres.md` contains no affirmative
+  `drizzle-kit push` instruction, clearly labels the actual single-URL state,
+  and points to current source files instead of copying implementation/version
+  details. Run the docs link check.
 
 ## Related
 
