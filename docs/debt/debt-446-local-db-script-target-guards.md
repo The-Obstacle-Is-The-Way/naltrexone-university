@@ -11,12 +11,12 @@
 
 | Part | Verdict | Chosen option | Rejected as disproportionate | One-line rationale |
 | --- | --- | --- | --- | --- |
-| 1. Migrate/studio target boundary | **FIX (Option 1, minimal shared form)** | One shared target helper must see an explicitly supplied `DATABASE_URL` before fallback config loads, classify only loopback as LOCAL and every other host as REMOTE, print `host[:port]/database`, and require `DB_TARGET_ACK=<host[:port]>/<database>` for a direct REMOTE human-shell invocation; apply it to migrate and studio. | Separate migrate/studio classifiers, interactive prompts, config files, boolean acknowledgments, and a CI/Vercel env-var bypass matrix. | (a) Consolidates existing redaction/classification instead of adding policy copies; (b) DEBT-240 proves the ignored-file Production precondition occurred; (c) Blast radius: a bare command can migrate or expose an editor against the wrong remote database. Fix cost: one helper plus thin wrappers, while explicit loopback/resolver and non-interactive managed URLs remain unchanged; (d) one source of truth and exact consent are clean-code wins; (e) the same helper also owns seed classification. |
-| 2. Seed target boundary | **FIX (Option 1, minimal shared form)** | Route direct seed through the same explicit-target helper and exact REMOTE human-shell acknowledgment before opening Postgres; preserve BUG-266/281 guards and existing explicit CI/resolver callers. | A seed-only classifier, fallback loading, interactive prompts, or weakening existing content-integrity guards. | (a) Reuses the Part 1 seam; (b) stale same-slug writes are source-proven and the wrong-target precondition is historical; (c) Blast radius: a stale clone can overwrite remote question content and archive placeholders. Fix cost: the same wrapper boundary and tests; (d) removes semantic duplication; (e) migration, seed, and batch seed share one classification/consent vocabulary. |
-| 3a. Production seed consent | **FIX (Option 2, minimal form)** | Remove Production from `db:seed:all`; add a dedicated `db:seed:prod` that uses the same helper and refuses unless the owner supplies the exact redacted Production target token. The non-production batch continues to de-duplicate/plan targets through the shared helper. | Option 1's two-phase per-question plan/revalidation protocol and any second Production-only consent implementation. | (a) Deletes Production from an omnibus loop and reuses one token; (b) unattended Production inclusion is code-proven; (c) Blast radius: one broad command can overwrite Production from a stale private corpus. Fix cost: one narrower command and existing exact-target consent; (d) command names make intent honest; (e) no duplicate target owner or redaction logic. |
+| 1. Migrate/studio target boundary | **FIX (Option 1, minimal shared form)** | One shared target helper must see an explicitly supplied `DATABASE_URL` before fallback config loads, classify only loopback as LOCAL and every other host as REMOTE, print `host[:port]/database`, and require `DB_TARGET_ACK=<exact-redacted-target-set>` for every human-shell invocation containing REMOTE targets; apply it to migrate and studio. Checked-in CI/Vercel/resolver wrappers alone may call an internal managed mode that is not exposed as an environment variable or CLI flag. | Separate migrate/studio classifiers, interactive prompts, config files, boolean acknowledgments, a caller-selectable bypass, and a CI/Vercel env-var matrix. | (a) Consolidates existing redaction/classification instead of adding policy copies; (b) DEBT-240 proves the ignored-file Production precondition occurred; (c) Blast radius: a bare command can migrate or expose an editor against the wrong remote database. Fix cost: one helper plus thin wrappers, while explicit loopback/resolver and checked-in managed callers remain unchanged; (d) one source of truth and non-self-issued exact consent are clean-code wins; (e) the same helper also owns seed classification. |
+| 2. Seed target boundary | **FIX (Option 1, minimal shared form)** | Route direct and batch seed through the same explicit-target helper before opening Postgres. Human REMOTE runs, including `db:seed:all`, must acknowledge the exact sorted/de-duplicated remote target set and may not self-authorize; preserve BUG-266/281 guards and the internal managed mode used only by checked-in CI/E2E/resolver callers. | A seed-only classifier, fallback loading, interactive prompts, a caller-selectable managed bypass, or weakening existing content-integrity guards. | (a) Reuses the Part 1 seam; (b) stale same-slug writes are source-proven and the wrong-target precondition is historical; (c) Blast radius: a stale clone can overwrite remote question content and archive placeholders. Fix cost: the same wrapper boundary and one exact plan token; (d) removes semantic duplication and makes batch consent independent; (e) migration, seed, and batch seed share one classification/consent vocabulary. |
+| 3a. Production seed consent | **FIX (Option 2, minimal form)** | `db:seed:all` resolves Vercel's named Development, Preview, and Production identities through the existing pull seam, rejects any non-production target equal to the resolved Production target, and executes only local/Development/Preview after exact human REMOTE-set consent. Dedicated `db:seed:prod` resolves only the named Vercel Production identity itself and requires the same helper's exact token; it does not accept a caller-supplied target URL. | Option 1's two-phase per-question plan/revalidation protocol, a new target allowlist/config file, and any second Production-only classifier or consent implementation. | (a) Deletes Production from the omnibus execution loop while reusing its existing named-environment fence and one token; (b) unattended Production inclusion is code-proven; (c) Blast radius: one broad command or arbitrary target input can overwrite Production from a stale private corpus. Fix cost: split the existing environment-labeled script without a new identity registry; (d) command names and provider-resolved identity make intent honest; (e) no duplicate target owner, redaction, or consent logic. |
 | 3b. Per-question plan/freshness fence | **PARK** | Do not build the per-question database plan, plan revalidation, or canonical monotonic corpus revision now. Revive after a recorded seed run overwrites newer same-slug content from an older clone, or after the corpus gains a second independent writer for which ordering cannot be established by the current single source. | Option 1's plan/revalidation machinery and Option 3's new durable corpus-revision state before either trigger. | (a) Avoids a new planning/version protocol; (b) stale overwrite is reachable but no incident is recorded and hashes prove difference, not ancestry; (c) Blast radius: a stale seed can require a corrective current-corpus reseed. Cure cost: database diff plans, revalidation, and durable ordering state, which is heavier today; (d) no speculative abstraction; (e) target authorization remains one shared concern while content ancestry stays separately parked. |
 
-The cluster gets one target classifier and one consent token: explicit URL presence is checked before fallback loading, logs contain only `host[:port]/database`, direct human REMOTE operations require the exact token, and existing explicit CI/Vercel/resolver paths remain non-interactive. `db:seed:all` becomes truthfully non-production, while Production moves to a dedicated command using that same boundary. A database diff/version protocol is parked until the named content-history evidence exists.
+The cluster gets one target classifier and one consent token: explicit URL presence is checked before fallback loading, logs contain only `host[:port]/database`, every human REMOTE operation acknowledges the exact sorted/de-duplicated target set, and only checked-in CI/Vercel/resolver wrappers can call the helper's non-user-selectable managed mode. `db:seed:all` keeps the existing named Vercel Production resolution solely as an exclusion fence but executes only local/Development/Preview; `db:seed:prod` resolves the named Production identity itself and uses the same consent boundary. A database diff/version protocol is parked until the named content-history evidence exists.
 
 ## Description
 
@@ -171,11 +171,13 @@ labels.
    Including an explicit port in both display and consent keeps distinct remote
    endpoints distinct. CI, resolver-scoped local tests, and Vercel already
    inject explicit URLs, so no broad `CI`/`VERCEL` bypass matrix is authorized.
-2. **CHOSEN (same helper policy):** for an explicitly supplied REMOTE URL in a
-   direct human-operated shell, require
-   `DB_TARGET_ACK=<host[:port]>/<database>` to match the printed target exactly.
-   Explicit non-interactive managed deploys keep passing without a prompt; a
-   generic `remote-dev` or boolean acknowledgment is forbidden.
+2. **CHOSEN (same helper policy):** for a human-operated invocation containing
+   one or more REMOTE URLs, require `DB_TARGET_ACK` to match the exact sorted,
+   de-duplicated set of printed `host[:port]/database` targets. A direct command
+   therefore acknowledges a one-target set. Only checked-in CI, Vercel, E2E,
+   and resolver wrappers may call an internal managed mode; it must not be
+   exposed as an environment variable or CLI flag. A generic `remote-dev`,
+   boolean acknowledgment, or caller-selectable bypass is forbidden.
 3. **CHOSEN (same helper policy):** apply the same redacted display and
    acknowledgment to `db:studio`; it is an editor, not a read-only exception.
    Do not create a studio-specific classifier or config file.
@@ -185,11 +187,13 @@ labels.
 1. **CHOSEN (Option 1, minimal shared form):** move fallback resolution behind the same explicit-target helper. Direct
    `db:seed` should require an explicit URL, print the redacted target, and
    require exact REMOTE acknowledgment in a human shell before opening Postgres.
-2. **CHOSEN (same helper policy):** preserve existing explicit callers: CI,
-   local E2E/integration bootstrap, and the non-production `db:seed:all`
-   orchestrator. The orchestrator must use the shared helper for each
-   de-duplicated target and may pass the exact key it just classified; direct
-   bare seed can no longer infer any target from an ignored file.
+2. **CHOSEN (same helper policy):** preserve existing checked-in CI and local
+   E2E/integration bootstrap callers through the helper's internal managed
+   mode. `db:seed:all` is a human-operated batch, not a managed caller: it must
+   present the exact sorted/de-duplicated REMOTE target set and compare it with
+   owner-supplied `DB_TARGET_ACK`; it may not pass or synthesize the token it
+   just classified. Direct bare seed can no longer infer any target from an
+   ignored file.
 3. **CHOSEN (unchanged safety law):** keep BUG-266 and BUG-281 guards
    independent. Target authorization must not weaken reference integrity or
    graded-history protection.
@@ -200,12 +204,18 @@ labels.
    two-phase per-question plan/revalidation protocol now. Such a protocol and a
    target revision become eligible only after the Part 3b revive trigger. A
    printed plan without ancestry or revalidation would overstate safety.
-2. **CHOSEN (Option 2, minimal form):** remove Production from
-   `db:seed:all` and expose a separate deliberate `db:seed:prod` command. It
-   must use the same target helper and require the owner to supply
-   `DB_TARGET_ACK=<production-host[:port]/database>` matching the redacted target
-   before the first write. `db:seed:all` retains its existing non-production
-   target plan, de-duplication, and fail-fast behavior.
+2. **CHOSEN (Option 2, minimal form):** split the existing named-environment
+   script without adding an identity registry. `db:seed:all` still resolves
+   Vercel Development, Preview, and Production through the existing
+   `vercel env pull --environment=...` seam, rejects any local/Development/
+   Preview target equal to the resolved Production target, executes only the
+   non-production targets, and requires the owner-supplied exact REMOTE-set
+   token before the first write. A separate `db:seed:prod` resolves its target
+   internally from `--environment=production`, refuses a caller-supplied
+   `DATABASE_URL`, and requires the same helper to match
+   `DB_TARGET_ACK=<production-host[:port]/database>`. The named Vercel
+   environment is the trusted identity boundary; no new allowlist/config file
+   or Production-only classifier is authorized.
 3. **PARKED / REJECTED BY DIRECTION REVIEW:** do not add a canonical monotonic
    corpus revision, manifest audit state, or freshness table without the Part
    3b trigger. Different hashes prove only "different," not which corpus is
@@ -219,18 +229,22 @@ acceptance criteria for the chosen dedicated Production command.
 ## Verification
 
 - **Part 1:** unit tests prove implicit fallback refusal, loopback LOCAL
-  classification, all-other-hosts REMOTE classification, exact REMOTE
+  classification, all-other-hosts REMOTE classification, exact REMOTE-set
   human-shell acknowledgment, credential-free `host[:port]/database` formatting,
-  unchanged explicit Vercel/CI/resolver invocation, and the same helper behavior
-  for migrate and studio; `vercel.test.ts` still pins migrate-before-build.
+  rejection of caller-selected managed mode, unchanged checked-in
+  Vercel/CI/resolver invocation, and the same helper behavior for migrate and
+  studio; `vercel.test.ts` still pins migrate-before-build.
 - **Part 2:** direct bare seed fails before opening Postgres; resolver/CI URLs
-  pass; an unacknowledged manual REMOTE URL fails; `db:seed:all` uses the shared
-  helper for its explicit non-production targets; logs never contain
-  credentials; BUG-266/281 tests remain unchanged.
-- **Part 3a:** hermetic script tests prove `db:seed:all` never includes
-  Production, `db:seed:prod` fails before opening Postgres when the exact target
-  token is missing/mismatched, and the confirmed path preserves the existing
-  target de-duplication and fail-fast behavior.
+  pass; an unacknowledged manual REMOTE URL or batch fails; `db:seed:all` cannot
+  self-authorize and uses the shared helper for its explicit non-production
+  targets; logs never contain credentials; BUG-266/281 tests remain unchanged.
+- **Part 3a:** hermetic script tests prove `db:seed:all` resolves the named
+  Production environment only as a fence, rejects a local/Development/Preview
+  target equal to it, never executes Production, and requires the exact
+  owner-supplied REMOTE target-set token. `db:seed:prod` ignores/refuses an
+  arbitrary caller `DATABASE_URL`, resolves the named Production environment,
+  and fails before opening Postgres when its exact token is missing/mismatched;
+  confirmed paths preserve target de-duplication and fail-fast behavior.
 - **Part 3b:** no implementation verification is authorized while parked.
   Revival requires the recorded stale-corpus overwrite or second-independent-
   writer evidence named in the Direction table.
