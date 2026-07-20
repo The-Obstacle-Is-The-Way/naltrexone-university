@@ -12,11 +12,11 @@
 | Part | Verdict | Chosen option | Rejected as disproportionate | One-line rationale |
 | --- | --- | --- | --- | --- |
 | 1a. Journal ordering | **FIX (Option 3, minimal form)** | Add one pure CI/unit test requiring `_journal.json` `when` values to be unique and strictly increasing by `idx`. | Option 2's shared-target feature-branch policy engine as the repo fallback. | (a) One invariant test adds no runtime state; (b) out-of-order merge timestamps are mechanically reachable and the current 31-entry journal is ordered only by discipline; (c) Blast radius: an older migration can be silently skipped below the ledger high-water mark. Fix cost: one deterministic JSON test; (d) pins the append-only journal law; (e) complements, rather than duplicates, the target-ledger verifier. |
-| 1b. Preview isolation | **OWNER-GATED (Option 1)** | Owner manually enables Neon/Vercel Preview Branching: connect the existing Neon storage resource to Preview, enable **Advanced Options → Deployments Configuration → Required → Preview** plus **Resource must be active before deployment**, then verify a schema-bearing Preview receives its deployment-specific `DATABASE_URL`, changes only its generated Neon branch/ledger, and follows the provider's deployment-retention cleanup. | Option 2's fail-closed shared-target build policy and any repo script that mutates live Neon/Vercel configuration. | (a) Provider-native isolation deletes shared-ledger coupling without repo orchestration; (b) early 0027 proves a Preview can apply pre-merge content, while current dashboard state is not repo-verifiable; (c) Blast radius: one feature Preview can poison a shared ledger. Fix cost: an owner dashboard change and one safe Preview proof, not a new deploy authority; (d) uses the provider's existing lifecycle; (e) provider isolation does not replace the repo build-path verifier. |
+| 1b. Preview isolation | **OWNER-GATED (Option 1)** | Owner manually configures Preview Branching for the existing project through **Neon Console → Integrations → Add/Manage Vercel → Link Existing Neon Account**, selects the Vercel project plus Neon project/database/role, verifies the integration will branch only from an approved non-production data parent (hard stop if it would clone Production data), enables **Automatically delete obsolete Neon branches**, then proves a schema-bearing Preview receives the generated branch URL and changes only that branch/ledger. | Option 2's fail-closed shared-target build policy; the new-account Vercel-managed integration path for this existing project; and any repo script that mutates live Neon/Vercel configuration. | (a) Provider-native isolation deletes shared-ledger coupling without repo orchestration; (b) early 0027 proves a Preview can apply pre-merge content, while current integration/parent state is not repo-verifiable; (c) Blast radius: one feature Preview can poison a shared ledger, while a wrong parent can expose Production data to Preview. Fix cost: an owner dashboard change and one safe Preview proof, not a new deploy authority; (d) uses the provider's existing lifecycle; (e) provider isolation does not replace the repo build-path verifier. |
 | 2. Deploy-target ledger/content check | **FIX (Option 1, minimal form)** | Extract the existing DEBT-442 verifier and exact early-0027 allowlist into one thin shared module/CLI; the build path runs a pre-migrate content/ledger-only check, `db:migrate`, the exact post-migrate check, then `build`, while E2E consumes the same module. | Option 2's scheduled persistent-target job; Option 3's manual append-only acceptance; a second verifier or allowlist. | (a) Reuses and relocates proven code instead of adding another detector; (b) early 0027 demonstrated this exact content-blind deploy class; (c) Blast radius: migrate can exit successfully against a checkout-incompatible target and defer failure to runtime. Fix cost: one extraction, two CLI modes, and build-command tests; (d) one verifier/allowlist remains the source of truth; (e) deploy-time drift detection is owned by the repo build path, with E2E as a second consumer rather than a second owner. |
 | 3. N-1 authoring contract | **FIX (Option 1, minimal form)** | Add the deployed-code compatibility question, expand/contract rule, and one-shot-backfill write-window caution to `migration-authoring.md`, with links from deployment and rollback docs. | A migration DSL, new runner, or PR-template attestation as a substitute for the durable checklist. | (a) Corrects the missing source of truth without machinery; (b) the migrate-before-build serving window is certain for schema-bearing deploys; (c) Blast radius: old code can reject or omit writes after the migration commits. Fix cost: a short checklist and cross-links; (d) consolidates the rule now stranded in BUG-241; (e) does not create another deploy gate. |
 | 4a. Restore-loss runbook | **FIX (Options 1 + 2, minimal form)** | Document Neon overwrite/RPO/automatic-backup-branch semantics and one operation-specific post-point reconciliation checklist. | A generic disaster-recovery subsystem or automated provider replay/archive machinery. | (a) Adds decision-critical runbook facts, not state; (b) the provider explicitly overwrites rather than merges and preserves a pre-restore backup branch; (c) Blast radius: PITR can rewind user, billing, webhook, and idempotency state. Fix cost: one warning and bounded checklist; (d) correct documentation is the clean fix; (e) uses existing reconcilers/provider history without inventing a new owner. |
-| 4b. Restore exercise | **OWNER-GATED (Option 3)** | Owner manually creates or selects a disposable non-production Neon root branch, records a harmless before-point write, uses **Restore → From history** with Time Travel Assist, confirms the automatic `{branch}_old_{timestamp}` backup and overwritten target state, then records the reconciliation evidence without touching Production. | Performing a live Production restore in a fix wave or scripting provider restore operations from this repo. | (a) The exercise validates an external control without permanent repo machinery; (b) DEBT-060's provider walkthrough remains unchecked; (c) Blast radius of an unpracticed Production restore is avoidable write loss. Exercise cost is bounded but provider-mutating, so only the owner may schedule it; (d) evidence closes the stale checklist; (e) the runbook remains the repo owner while execution remains provider/owner-gated. |
+| 4b. Restore exercise | **OWNER-GATED (Option 3)** | Owner manually uses a disposable non-production Neon project/root branch, records a harmless before-point write, uses **Restore → From history** with Time Travel Assist, confirms the automatic `{branch}_old_{timestamp}` backup and overwritten target state, then records the reconciliation evidence without touching Production. | Performing a live Production restore in a fix wave, assuming an ordinary child branch supports Instant Restore, or scripting provider restore operations from this repo. | (a) The exercise validates an external control without permanent repo machinery; (b) DEBT-060's provider walkthrough remains unchecked; (c) Blast radius of an unpracticed Production restore is avoidable write loss. Exercise cost is bounded but provider-mutating, so only the owner may schedule it; (d) evidence closes the stale checklist; (e) the runbook remains the repo owner while execution remains provider/owner-gated. |
 
 Deploy-time drift detection belongs to the repository build path: one DEBT-442 verifier and one allowlist serve both the deploy CLI and E2E, while the journal-order test prevents a separate checkout-only failure shape. Provider Preview isolation is the preferred topology but cannot be inferred, changed, or treated as a substitute from git. Restore documentation is fixable now; the provider-mutating Preview and restore exercises remain named owner steps.
 
@@ -217,15 +217,17 @@ or incident precondition and no current unexplained live drift is recorded.
 
 **Part 1 -- shared Preview migration authority:**
 
-1. **OWNER-GATED (Option 1):** the owner enables provider-native Preview
-   Branching for the existing Neon/Vercel connection: select the Preview
-   environment, enable **Advanced Options → Deployments Configuration →
-   Required → Preview** and **Resource must be active before deployment**, then
-   prove with one schema-bearing Preview that its deployment-specific
-   `DATABASE_URL` changes only the generated Preview branch and ledger. Confirm
-   the provider's deployment-retention cleanup policy for obsolete branches.
-   The repository must not script this live provider mutation or assume it is
-   complete.
+1. **OWNER-GATED (Option 1):** the owner configures Preview Branching for this
+   existing Neon project through **Neon Console → Integrations → Add/Manage
+   Vercel → Link Existing Neon Account**, then selects the Vercel project and
+   Neon project/database/role. Before connecting, verify the integration will
+   branch from an approved non-production data parent; if the available
+   integration would clone Production/default-branch data, stop and choose a
+   safe non-production parent/topology instead of enabling it. Enable
+   **Automatically delete obsolete Neon branches**, then prove with one
+   schema-bearing Preview that the dynamically injected URL changes only the
+   generated `preview/<git-branch>` branch and ledger. The repository must not
+   script this live provider mutation or assume it is complete.
 2. **REJECTED BY DIRECTION REVIEW:** do not add a shared-target feature-branch
    migration-authority/fail-closed policy. There is no existing execution seam
    for that policy, and it would preserve the coupled database while adding
@@ -277,11 +279,12 @@ or incident precondition and no current unexplained live drift is recorded.
    use provider event history/manual resend where retained and supported, audit
    Clerk users/deletions against the provider, and hold unsafe billing retries
    until local/provider idempotency state is understood.
-3. **OWNER-GATED (Option 3):** the owner validates the procedure on a
-   disposable non-production Neon **root** branch: create a harmless post-point
-   write, use **Restore → From history** and Time Travel Assist, confirm the
-   automatic `{branch}_old_{timestamp}` backup plus target overwrite, and record
-   before/after and reconciliation evidence. This wave must not run the exercise
+3. **OWNER-GATED (Option 3):** the owner validates the procedure in a
+   disposable non-production Neon project on its **root** branch (ordinary child
+   branches do not support Instant Restore): create a harmless post-point write,
+   use **Restore → From history** and Time Travel Assist, confirm the automatic
+   `{branch}_old_{timestamp}` backup plus target overwrite, and record before/
+   after and reconciliation evidence. This wave must not run the exercise
    against Production or script it against live provider infrastructure.
 
 ## Verification
@@ -289,10 +292,11 @@ or incident precondition and no current unexplained live drift is recorded.
 - **Part 1a:** a unit test rejects duplicate or non-increasing journal `when`
   values and passes the current 31-entry journal.
 - **Part 1b (owner-gated):** the owner records provider evidence that a
-  schema-bearing Preview receives a deployment-specific Neon branch/URL, changes
-  only that branch's ledger, and has an understood deployment-retention cleanup
-  path. Repo verification must continue to describe this as unverified until
-  that evidence exists.
+  schema-bearing Preview receives a generated Neon branch/URL from an approved
+  non-production data parent, changes only that branch's ledger, and deletes
+  obsolete branches through the selected integration lifecycle. Repo
+  verification must continue to describe this as unverified until that evidence
+  exists.
 - **Part 2:** E2E and deploy consume the same verifier module; a known applied
   hash mismatch and ledger-only row fail before migration; a pending migration
   applies; the exact post-migrate check passes; and messages contain tags/hash
