@@ -89,7 +89,7 @@ importers:
         version: 0.0.1
       stripe:
         specifier: ^22.3.0
-        version: 22.3.0(@types/node@24.13.3)
+        version: 22.3.1(@types/node@24.13.3)
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.6.0
@@ -5245,8 +5245,8 @@ packages:
     resolution: {integrity: sha512-uCC2VHvQRYu+lMh4My/sFNmF2klFymLX1wHJeXnbEJERpV/ZsVuonzerjfrGpIGF7LBVa1O7i9kjiWvJiFck8g==}
     engines: {node: '>=0.10.0'}
 
-  stripe@22.3.0:
-    resolution: {integrity: sha512-ypO6xjVrMWs9SmIMeHr8naCx3dAQ0clxMdUTxn7Ejd7hmY9meBGfE+N4pVHkf9sUNebAHp6uJo6mV3GxDIc2cA==}
+  stripe@22.3.1:
+    resolution: {integrity: sha512-6XSLN0KK0IdfXqDHqMg6CDoO3eO62ye9dhzw0fZp55AUOzHR1YRJOqYHTsuCi4QJ4Ni/usEmXtq69c9ghKDmYw==}
     engines: {node: '>=18'}
     peerDependencies:
       '@types/node': '>=18'
@@ -11434,7 +11434,7 @@ snapshots:
 
   strip-bom-string@1.0.0: {}
 
-  stripe@22.3.0(@types/node@24.13.3):
+  stripe@22.3.1(@types/node@24.13.3):
     optionalDependencies:
       '@types/node': 24.13.3
 
