@@ -11,12 +11,12 @@
 
 | Part | Verdict | Chosen option | Rejected as disproportionate | One-line rationale |
 | --- | --- | --- | --- | --- |
-| 1. Migrate/studio target boundary | **FIX (Option 1, minimal shared form)** | One shared target helper must see an explicitly supplied `DATABASE_URL` before fallback config loads, classify only loopback as LOCAL and every other host as REMOTE, print `hostname/database`, and require `DB_TARGET_ACK=<hostname>/<database>` for a direct REMOTE human-shell invocation; apply it to migrate and studio. | Separate migrate/studio classifiers, interactive prompts, config files, boolean acknowledgments, and a CI/Vercel env-var bypass matrix. | (a) Consolidates existing redaction/classification instead of adding policy copies; (b) DEBT-240 proves the ignored-file Production precondition occurred; (c) Blast radius: a bare command can migrate or expose an editor against the wrong remote database. Fix cost: one helper plus thin wrappers, while explicit loopback/resolver and non-interactive managed URLs remain unchanged; (d) one source of truth and exact consent are clean-code wins; (e) the same helper also owns seed classification. |
+| 1. Migrate/studio target boundary | **FIX (Option 1, minimal shared form)** | One shared target helper must see an explicitly supplied `DATABASE_URL` before fallback config loads, classify only loopback as LOCAL and every other host as REMOTE, print `host[:port]/database`, and require `DB_TARGET_ACK=<host[:port]>/<database>` for a direct REMOTE human-shell invocation; apply it to migrate and studio. | Separate migrate/studio classifiers, interactive prompts, config files, boolean acknowledgments, and a CI/Vercel env-var bypass matrix. | (a) Consolidates existing redaction/classification instead of adding policy copies; (b) DEBT-240 proves the ignored-file Production precondition occurred; (c) Blast radius: a bare command can migrate or expose an editor against the wrong remote database. Fix cost: one helper plus thin wrappers, while explicit loopback/resolver and non-interactive managed URLs remain unchanged; (d) one source of truth and exact consent are clean-code wins; (e) the same helper also owns seed classification. |
 | 2. Seed target boundary | **FIX (Option 1, minimal shared form)** | Route direct seed through the same explicit-target helper and exact REMOTE human-shell acknowledgment before opening Postgres; preserve BUG-266/281 guards and existing explicit CI/resolver callers. | A seed-only classifier, fallback loading, interactive prompts, or weakening existing content-integrity guards. | (a) Reuses the Part 1 seam; (b) stale same-slug writes are source-proven and the wrong-target precondition is historical; (c) Blast radius: a stale clone can overwrite remote question content and archive placeholders. Fix cost: the same wrapper boundary and tests; (d) removes semantic duplication; (e) migration, seed, and batch seed share one classification/consent vocabulary. |
 | 3a. Production seed consent | **FIX (Option 2, minimal form)** | Remove Production from `db:seed:all`; add a dedicated `db:seed:prod` that uses the same helper and refuses unless the owner supplies the exact redacted Production target token. The non-production batch continues to de-duplicate/plan targets through the shared helper. | Option 1's two-phase per-question plan/revalidation protocol and any second Production-only consent implementation. | (a) Deletes Production from an omnibus loop and reuses one token; (b) unattended Production inclusion is code-proven; (c) Blast radius: one broad command can overwrite Production from a stale private corpus. Fix cost: one narrower command and existing exact-target consent; (d) command names make intent honest; (e) no duplicate target owner or redaction logic. |
 | 3b. Per-question plan/freshness fence | **PARK** | Do not build the per-question database plan, plan revalidation, or canonical monotonic corpus revision now. Revive after a recorded seed run overwrites newer same-slug content from an older clone, or after the corpus gains a second independent writer for which ordering cannot be established by the current single source. | Option 1's plan/revalidation machinery and Option 3's new durable corpus-revision state before either trigger. | (a) Avoids a new planning/version protocol; (b) stale overwrite is reachable but no incident is recorded and hashes prove difference, not ancestry; (c) Blast radius: a stale seed can require a corrective current-corpus reseed. Cure cost: database diff plans, revalidation, and durable ordering state, which is heavier today; (d) no speculative abstraction; (e) target authorization remains one shared concern while content ancestry stays separately parked. |
 
-The cluster gets one target classifier and one consent token: explicit URL presence is checked before fallback loading, logs contain only `hostname/database`, direct human REMOTE operations require the exact token, and existing explicit CI/Vercel/resolver paths remain non-interactive. `db:seed:all` becomes truthfully non-production, while Production moves to a dedicated command using that same boundary. A database diff/version protocol is parked until the named content-history evidence exists.
+The cluster gets one target classifier and one consent token: explicit URL presence is checked before fallback loading, logs contain only `host[:port]/database`, direct human REMOTE operations require the exact token, and existing explicit CI/Vercel/resolver paths remain non-interactive. `db:seed:all` becomes truthfully non-production, while Production moves to a dedicated command using that same boundary. A database diff/version protocol is parked until the named content-history evidence exists.
 
 ## Description
 
@@ -167,12 +167,13 @@ labels.
    `process.env.DATABASE_URL` **before** Drizzle imports the fallback-loading
    config. Refuse an implicit fallback, classify `localhost`, `127.0.0.1`, and
    `::1` as LOCAL and every other host as REMOTE, print only
-   `hostname/database`, and then invoke Drizzle Kit with the explicit value. CI,
-   resolver-scoped local tests, and Vercel already inject explicit URLs, so no
-   broad `CI`/`VERCEL` bypass matrix is authorized.
+   `host[:port]/database`, and then invoke Drizzle Kit with the explicit value.
+   Including an explicit port in both display and consent keeps distinct remote
+   endpoints distinct. CI, resolver-scoped local tests, and Vercel already
+   inject explicit URLs, so no broad `CI`/`VERCEL` bypass matrix is authorized.
 2. **CHOSEN (same helper policy):** for an explicitly supplied REMOTE URL in a
    direct human-operated shell, require
-   `DB_TARGET_ACK=<hostname>/<database>` to match the printed target exactly.
+   `DB_TARGET_ACK=<host[:port]>/<database>` to match the printed target exactly.
    Explicit non-interactive managed deploys keep passing without a prompt; a
    generic `remote-dev` or boolean acknowledgment is forbidden.
 3. **CHOSEN (same helper policy):** apply the same redacted display and
@@ -202,9 +203,9 @@ labels.
 2. **CHOSEN (Option 2, minimal form):** remove Production from
    `db:seed:all` and expose a separate deliberate `db:seed:prod` command. It
    must use the same target helper and require the owner to supply
-   `DB_TARGET_ACK=<production-host/database>` matching the redacted target before
-   the first write. `db:seed:all` retains its existing non-production target
-   plan, de-duplication, and fail-fast behavior.
+   `DB_TARGET_ACK=<production-host[:port]/database>` matching the redacted target
+   before the first write. `db:seed:all` retains its existing non-production
+   target plan, de-duplication, and fail-fast behavior.
 3. **PARKED / REJECTED BY DIRECTION REVIEW:** do not add a canonical monotonic
    corpus revision, manifest audit state, or freshness table without the Part
    3b trigger. Different hashes prove only "different," not which corpus is
@@ -219,7 +220,7 @@ acceptance criteria for the chosen dedicated Production command.
 
 - **Part 1:** unit tests prove implicit fallback refusal, loopback LOCAL
   classification, all-other-hosts REMOTE classification, exact REMOTE
-  human-shell acknowledgment, credential-free `hostname/database` formatting,
+  human-shell acknowledgment, credential-free `host[:port]/database` formatting,
   unchanged explicit Vercel/CI/resolver invocation, and the same helper behavior
   for migrate and studio; `vercel.test.ts` still pins migrate-before-build.
 - **Part 2:** direct bare seed fails before opening Postgres; resolver/CI URLs
