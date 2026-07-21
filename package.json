@@ -31,7 +31,8 @@
     "db:test:reset": "tsx scripts/run-local-test-db.ts reset",
     "local:test:target": "tsx scripts/resolve-local-test-target.ts",
     "content:import:drafts": "tsx scripts/import-draft-questions.ts",
-    "db:seed:all": "bash scripts/seed-all-environments.sh"
+    "db:seed:all": "bash scripts/seed-all-environments.sh",
+    "db:seed:prod": "tsx scripts/seed-production.ts"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json}": [
