@@ -1,6 +1,7 @@
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import {
   createPracticeSessionStateMap,
+  getEffectiveSelectedChoiceId,
   requirePracticeSessionQuestionState,
 } from '@/src/application/shared/practice-session-state';
 import type { PracticeSession } from '@/src/domain/entities';
@@ -17,21 +18,6 @@ export type GetIncompletePracticeSessionOutput = {
   startedAt: string;
 } | null;
 
-function getIncompleteSelectedChoiceId(
-  session: {
-    mode: 'tutor' | 'exam';
-    endedAt: Date | null;
-  },
-  state: {
-    latestSelectedChoiceId: string | null;
-    draftSelectedChoiceId: string | null;
-  },
-): string | null {
-  return session.mode === 'exam' && session.endedAt === null
-    ? (state.draftSelectedChoiceId ?? state.latestSelectedChoiceId)
-    : state.latestSelectedChoiceId;
-}
-
 function countIncompleteAnsweredQuestions(session: PracticeSession): number {
   const stateByQuestionId = createPracticeSessionStateMap(session);
   return session.questionIds.reduce((count, questionId) => {
@@ -41,7 +27,7 @@ function countIncompleteAnsweredQuestions(session: PracticeSession): number {
       stateByQuestionId,
     });
 
-    return getIncompleteSelectedChoiceId(session, state) !== null
+    return getEffectiveSelectedChoiceId(session, state) !== null
       ? count + 1
       : count;
   }, 0);
