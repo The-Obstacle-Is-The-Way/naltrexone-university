@@ -12,6 +12,7 @@ import type {
   GetPreviousAttemptInput,
   GetPreviousAttemptOutput,
 } from '@/src/application/use-cases';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 import { createAction } from './create-action';
 import type { CheckEntitlementUseCase } from './require-entitled-user-id';
 import { requireEntitledUserId } from './require-entitled-user-id';
@@ -28,7 +29,7 @@ export type GetQuestionBySlugOutput = {
   questionId: string;
   slug: string;
   stemMd: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: QuestionDifficulty;
   choices: Array<{
     id: string;
     label: string;

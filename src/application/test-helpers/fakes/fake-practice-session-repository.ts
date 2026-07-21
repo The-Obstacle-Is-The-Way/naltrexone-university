@@ -1,4 +1,5 @@
 import {
+  ApplicationConflictReasons,
   ApplicationError,
   PracticeSessionConflictMessages,
   practiceSessionAlreadyEndedError,
@@ -177,6 +178,24 @@ export class FakePracticeSessionRepository
     mode: 'tutor' | 'exam';
     paramsJson: unknown;
   }): Promise<PracticeSession> {
+    if (
+      this.sessions.some(
+        (session) =>
+          session.userId === input.userId && session.endedAt === null,
+      )
+    ) {
+      throw new ApplicationError(
+        'CONFLICT',
+        'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+        undefined,
+        {
+          details: {
+            reason: ApplicationConflictReasons.IncompleteSessionExists,
+          },
+        },
+      );
+    }
+
     this.createInputs.push(input);
     const params = input.paramsJson as {
       questionIds: string[];

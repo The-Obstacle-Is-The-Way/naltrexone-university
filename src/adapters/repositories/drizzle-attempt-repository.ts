@@ -211,15 +211,6 @@ export class DrizzleAttemptRepository implements AttemptRepository {
     return toAttemptDomain(row);
   }
 
-  async deleteById(id: string, userId: string): Promise<boolean> {
-    const deleted = await this.db
-      .delete(attempts)
-      .where(and(eq(attempts.id, id), eq(attempts.userId, userId)))
-      .returning({ id: attempts.id });
-
-    return deleted.length > 0;
-  }
-
   async findByUserId(
     userId: string,
     page: PageOptions,

@@ -15,5 +15,7 @@ export async function acquireSubscriptionWriteLock(
   db: SubscriptionWriteLockDb,
   userId: string,
 ): Promise<void> {
+  // Transaction precondition: callers must pass a callback transaction handle;
+  // an autocommit call releases this xact lock before protected statements run.
   await db.execute(sql`select pg_advisory_xact_lock(hashtext(${userId}))`);
 }

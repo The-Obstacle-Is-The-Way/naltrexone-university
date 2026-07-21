@@ -4,6 +4,18 @@ import type {
   PracticeSessionQuestionState,
 } from '@/src/domain/entities';
 
+export function getEffectiveSelectedChoiceId(
+  session: Pick<PracticeSession, 'mode' | 'endedAt'>,
+  state: Pick<
+    PracticeSessionQuestionState,
+    'latestSelectedChoiceId' | 'draftSelectedChoiceId'
+  >,
+): string | null {
+  return session.mode === 'exam' && session.endedAt === null
+    ? (state.draftSelectedChoiceId ?? state.latestSelectedChoiceId)
+    : state.latestSelectedChoiceId;
+}
+
 export function createPracticeSessionStateMap(
   session: Pick<PracticeSession, 'questionStates'>,
 ): Map<string, PracticeSessionQuestionState> {

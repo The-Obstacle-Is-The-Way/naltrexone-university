@@ -114,7 +114,7 @@ Answer-key exposure in active exam contexts is governed by the [Exam Answer Secr
 
 Ports define what the application layer needs from the outside world. The actual `AttemptRepository` is composed of 7 segregated sub-interfaces following ISP:
 
-- `AttemptWriter` — `insert`, `deleteById`
+- `AttemptWriter` — `insert`
 - `AttemptHistoryReader` — `findByUserId` (paginated)
 - `AttemptSessionReader` — `findBySessionId`
 - `AttemptStatsReader` — counts, recent, streak data
@@ -137,7 +137,7 @@ Every practice-engine use case has a colocated test file. All tests use fakes fr
 | Repository | Port Interface | Methods | Key Patterns |
 |-----------|---------------|---------|-------------|
 | `DrizzleQuestionRepository` | `QuestionRepository` | 5 | Relational loading with `with:` clause; tag-filtered candidate query uses `INNER JOIN + GROUP BY` |
-| `DrizzleAttemptRepository` | `AttemptRepository` (composite) | 14 | `row_number()` window function selects latest attempt per question (attempted-question summaries); partial unique index `(practiceSessionId, questionId)` prevents duplicate session answers |
+| `DrizzleAttemptRepository` | `AttemptRepository` (composite) | 15 | `row_number()` window function selects latest attempt per question (attempted-question summaries); partial unique index `(practiceSessionId, questionId)` prevents duplicate session answers |
 | `DrizzlePracticeSessionRepository` | `PracticeSessionRepository` | 9 | Optimistic concurrency (CAS) with 3 retries for `recordQuestionAnswer`, `saveDraftAnswer`, `finalizeDraftAnswer`, and `setQuestionMarkedForReview`; Zod validation on `paramsJson` read/write |
 | `DrizzleBookmarkRepository` | `BookmarkRepository` | 4 | `ON CONFLICT DO NOTHING` for idempotent add |
 | `DrizzleTagRepository` | `TagRepository` | 1 | `SELECT DISTINCT` with join to published questions only |

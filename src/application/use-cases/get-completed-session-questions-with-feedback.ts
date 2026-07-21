@@ -17,6 +17,7 @@ import {
 } from '@/src/application/shared/shuffled-choice-views';
 import {
   isOmittedOutcome,
+  type QuestionDifficulty,
   selectedChoiceIdOrNull,
 } from '@/src/domain/value-objects';
 
@@ -31,7 +32,7 @@ export type AvailableCompletedSessionQuestionWithFeedbackRow = {
   questionId: string;
   slug: string;
   stemMd: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: QuestionDifficulty;
   order: number;
   isAnswered: boolean;
   isCorrect: boolean | null;
@@ -82,6 +83,25 @@ type ReviewSeed = {
   markedForReview: boolean;
   selectedChoiceId: string | null;
 };
+
+function warnOnCorrectnessDivergence(
+  logger: Logger,
+  context: {
+    sessionId: string;
+    questionId: string;
+    attemptIsCorrect: boolean;
+    stateLatestIsCorrect: boolean;
+  },
+): void {
+  try {
+    logger.warn(
+      context,
+      'Attempt correctness diverges from practice session question state',
+    );
+  } catch {
+    // Best-effort detection must not change the completed-session read result.
+  }
+}
 
 export class GetCompletedSessionQuestionsWithFeedbackUseCase {
   constructor(
@@ -134,6 +154,18 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
       });
 
       const attempt = attemptByQuestionId.get(questionId);
+      if (
+        attempt &&
+        state.latestIsCorrect !== null &&
+        attempt.isCorrect !== state.latestIsCorrect
+      ) {
+        warnOnCorrectnessDivergence(this.logger, {
+          sessionId: session.id,
+          questionId,
+          attemptIsCorrect: attempt.isCorrect,
+          stateLatestIsCorrect: state.latestIsCorrect,
+        });
+      }
       const selectedChoiceId = attempt
         ? selectedChoiceIdOrNull(attempt.outcome)
         : state.latestSelectedChoiceId;

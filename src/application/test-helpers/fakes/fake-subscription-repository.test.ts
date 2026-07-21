@@ -288,21 +288,42 @@ describe('FakeSubscriptionRepository', () => {
   });
 
   it('restores repository state from a snapshot', async () => {
-    const repo = new FakeSubscriptionRepository();
+    const repo = new FakeSubscriptionRepository(
+      [],
+      () => new Date('2027-02-01T00:00:00.000Z'),
+    );
 
-    await repo.upsert(makeUpsertInput());
+    await expect(repo.upsert(makeUpsertInput())).resolves.toEqual({
+      persisted: true,
+    });
 
     const snapshot = repo.snapshot();
 
-    await repo.upsert(
-      makeUpsertInput({
-        expectedVersion: 1,
-        externalSubscriptionId: 'sub_456',
-        plan: 'annual',
-        status: 'canceled',
-        currentPeriodEnd: new Date('2027-01-31T00:00:00.000Z'),
-        cancelAtPeriodEnd: true,
-      }),
+    await expect(
+      repo.upsert(
+        makeUpsertInput({
+          expectedVersion: 1,
+          externalSubscriptionId: 'sub_456',
+          plan: 'annual',
+          status: 'active',
+          currentPeriodEnd: new Date('2028-01-31T00:00:00.000Z'),
+          cancelAtPeriodEnd: true,
+        }),
+      ),
+    ).resolves.toEqual({ persisted: true });
+
+    await expect(
+      repo.findByExternalSubscriptionId('sub_123'),
+    ).resolves.toBeNull();
+    await expect(
+      repo.findByExternalSubscriptionId('sub_456'),
+    ).resolves.toMatchObject({
+      userId: 'user_1',
+      plan: 'annual',
+      status: 'active',
+    });
+    await expect(repo.findObservationVersionByUserId('user_1')).resolves.toBe(
+      2,
     );
 
     repo.restore(snapshot);
@@ -314,6 +335,9 @@ describe('FakeSubscriptionRepository', () => {
       plan: 'monthly',
       status: 'active',
     });
+    await expect(repo.findObservationVersionByUserId('user_1')).resolves.toBe(
+      1,
+    );
     await expect(
       repo.findByExternalSubscriptionId('sub_456'),
     ).resolves.toBeNull();
