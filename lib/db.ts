@@ -15,6 +15,9 @@ const globalForDb = globalThis as unknown as {
 const conn =
   globalForDb.conn ??
   postgres(connectionString, {
+    // SPEC-029: ten connections is appropriate for Vercel serverless with
+    // the intended Neon pooled endpoint.
+    max: 10,
     idle_timeout: 20,
     connection: POSTGRES_CONNECTION_PARAMETERS,
   });
