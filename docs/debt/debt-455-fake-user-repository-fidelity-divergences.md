@@ -7,6 +7,15 @@
 
 ---
 
+## Direction (2026-07-21 forest review)
+
+| Part | Verdict | Chosen option | Rejected as disproportionate | One-line rationale |
+| --- | --- | --- | --- | --- |
+| 1. Ownership-check ordering | **FIX (Steps 1 + 3, minimal form)** | Move the fake's existing-identity staleness/same-email decisions ahead of the foreign-email ownership lookup, then add the mirrored fake test and the missing real-Postgres stale-existing-identity/foreign-email integration case. | A partial fake-only change without real-side proof; a generalized fake contract harness or full Cartesian matrix beyond the two demonstrated divergences. | (a) Reorders existing logic and adds no abstraction; (b) fake and real outcomes were directly reproduced; (c) Blast radius: a future replay test can certify a CONFLICT where production silently preserves newer state. Fix cost: one local reorder plus one paired scenario; (d) LSP requires fake/real semantic parity; (e) applies the campaign-wide fake-fidelity law. |
+| 2. Same-email `updatedAt` bump | **FIX (Steps 2 + 3, minimal form)** | Apply the real adapter's `GREATEST(updatedAt, observedAt)` behavior before the fake's same-email return and pin the clock effect in paired contract-style coverage. | Leaving timestamp semantics implicit; fixing only the returned object without updating stored fake state; a new clock abstraction. | (a) One assignment aligns the existing fake; (b) the three-timestamp divergence was directly reproduced; (c) Blast radius: a later stale event can mutate the fake after production would reject it. Fix cost: one stored-state update plus a focused test; (d) production-shaped fixtures must observe the same state transition; (e) matches DEBT-451.4, DEBT-443.3, and DEBT-457.3. |
+
+Both parts are mandatory fake-fidelity repairs: no smaller form closes the demonstrated LSP gaps, and neither adds production machinery. Tests must execute production-shaped scenarios and prove the mutation/no-mutation state, not merely compare return values. Broader repository-wide fake frameworks are outside this debt.
+
 ## Description
 
 Two fidelity divergences between [`FakeUserRepository`](../../src/application/test-helpers/fakes/fake-user-repository.ts) and [`DrizzleUserRepository`](../../src/adapters/repositories/drizzle-user-repository.ts) introduced with the PR #628 identity fix, both empirically confirmed during the 2026-07-11 wave-1 close review by running the same scenarios against the fake and real Postgres. No currently shipped test passes for the wrong reason; the risk is that future tests written against the fake encode anti-production semantics.
@@ -25,9 +34,9 @@ Test-infrastructure fidelity only — production behavior is unaffected and no e
 
 ## Proposed Resolution
 
-1. In `FakeUserRepository.upsertByClerkId`, move the byEmail ownership check after the existing-row same-email/staleness guards, mirroring `updateEmailByClerkId`'s corrected ordering and the SQL arbiter/CASE semantics.
-2. In the same-email branch, set `updatedAt = max(existing.updatedAt, observedAt)` before returning.
-3. Add mirrored fake tests for both behaviors: the existing+stale+foreign-email no-op (asserting no throw and no mutation, matching the real adapter), and the `updatedAt` bump on same-email re-upsert (mirroring the integration assertion). Add the missing real-side integration case for existing+stale+foreign-email through `upsertByClerkId` (currently covered only for non-existing incoming identities).
+1. **CHOSEN, minimal form:** In `FakeUserRepository.upsertByClerkId`, move the byEmail ownership check after the existing-row same-email/staleness guards, mirroring `updateEmailByClerkId`'s corrected ordering and the SQL arbiter/CASE semantics.
+2. **CHOSEN, minimal form:** In the same-email branch, set and store `updatedAt = max(existing.updatedAt, observedAt)` before returning.
+3. **CHOSEN, required proof:** Add mirrored fake tests for both behaviors: the existing+stale+foreign-email no-op (asserting no throw and no mutation, matching the real adapter), and the `updatedAt` bump on same-email re-upsert (mirroring the integration assertion). Add the missing real-side integration case for existing+stale+foreign-email through `upsertByClerkId` (currently covered only for non-existing incoming identities). A generalized repository-wide fake contract harness is rejected as disproportionate.
 
 ## Verification
 

@@ -8,6 +8,14 @@
 
 ---
 
+## Direction (2026-07-21 forest review)
+
+| Part | Verdict | Chosen option | Rejected as disproportionate | One-line rationale |
+| --- | --- | --- | --- | --- |
+| 1. Missing-user acknowledgement causality | **FIX (minimal phase-owned form)** | Introduce one small function boundary or typed phase result that ends processing-error ownership when `SubscriptionUserMissingError` is classified handled; if the fresh acknowledgement transaction then fails, persist and throw that acknowledgement failure. Preserve ordinary same-transaction processing precedence, BUG-285 fresh failure persistence, and add the fake controller regression plus retry-success control. | Another global precedence flag/branch, a generic error-precedence framework, or changes to BUG-296's handled missing-user outcome. | (a) Makes the existing phase boundary explicit without a framework; (b) the wrong error was reproduced through the production controller with fakes; (c) Blast radius: retry remains safe but ledger/throw/log identify the already-handled FK instead of the transaction blocking acknowledgement. Fix cost: one narrow phase result/function and two tests; (d) each error has one owning phase; (e) complements DEBT-452's later projection seam rather than duplicating it. |
+
+The controller must select the causally current primary error before DEBT-452 projects it for storage or logging. A handled business outcome ends the earlier processing phase's ownership; a failure in its separate acknowledgement transaction is therefore primary. Ordinary same-transaction error precedence and fresh-transaction failure-ledger durability remain unchanged.
+
 ## Description
 
 BUG-296 made a subscription write that fails the exact missing-user FK a handled done-state: the controller rolls back that failed transaction, then marks the Stripe event processed in a fresh acknowledgement transaction. The controller's pre-existing error-preservation flags cross that new phase boundary and select the wrong primary error if acknowledgement itself fails.
@@ -36,9 +44,14 @@ The route still returns a retryable 500, Stripe redelivers, and a later healthy 
 
 ## Proposed Resolution
 
-1. Make transaction-phase ownership explicit. Once `SubscriptionUserMissingError` has been classified as handled, an acknowledgement failure must become the primary error persisted and thrown. Prefer a small function boundary or typed phase result over adding more global error-precedence branches.
-2. Preserve the existing same-transaction primary-error behavior for ordinary subscription writes and non-subscription events; do not regress BUG-285's fresh-transaction failure ledger.
-3. Add a controller test with fakes in which the subscription transaction throws missing-user, the acknowledgement transaction fails, and the failure-ledger transaction succeeds. Assert that the acknowledgement error — not `SubscriptionUserMissingError` — is both stored and thrown. Add a retry-success control proving the later delivery still acknowledges normally.
+1. **CHOSEN, minimal form:** Make transaction-phase ownership explicit with one small function boundary or typed phase result. Once `SubscriptionUserMissingError` has been classified as handled, an acknowledgement failure becomes the primary error persisted and thrown. A generic error-precedence framework or another mutable global precedence flag is rejected.
+2. **CHOSEN, required invariant:** Preserve the existing same-transaction primary-error behavior for ordinary subscription writes and non-subscription events; do not regress BUG-285's fresh-transaction failure ledger or BUG-296's handled missing-user outcome.
+3. **CHOSEN, required proof:** Add a controller test with fakes in which the subscription transaction throws missing-user, the acknowledgement transaction fails, and the failure-ledger transaction succeeds. Assert that the acknowledgement error — not `SubscriptionUserMissingError` — is both stored and thrown. Add a retry-success control proving the later delivery still acknowledges normally.
+
+## Verification
+
+- Controller test: missing-user processing rolls back, acknowledgement fails, fresh failure persistence succeeds, and the exact acknowledgement error is both stored and rethrown.
+- Control: the same event on a later healthy delivery acknowledges successfully; ordinary processing failures still preserve their mapped same-transaction error through BUG-285's fresh failure transaction.
 
 ## Relationship to DEBT-452
 
