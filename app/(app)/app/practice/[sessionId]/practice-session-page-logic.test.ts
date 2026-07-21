@@ -32,6 +32,7 @@ import {
   loadNextQuestion,
   submitAnswerForQuestion,
 } from '@/app/(app)/app/practice/[sessionId]/practice-session-page-logic';
+import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import type {
@@ -949,7 +950,7 @@ describe('practice-session-page-logic', () => {
       });
     });
 
-    it('calls rotateIdempotencyKey when controller throws', async () => {
+    it('preserves the idempotency key when the controller throws a transport error', async () => {
       const rotateIdempotencyKey = vi.fn();
 
       await endSession({
@@ -965,7 +966,35 @@ describe('practice-session-page-logic', () => {
         rotateIdempotencyKey,
       });
 
-      expect(rotateIdempotencyKey).toHaveBeenCalledTimes(1);
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it('preserves the idempotency key when the controller times out', async () => {
+      vi.useFakeTimers();
+      try {
+        const rotateIdempotencyKey = vi.fn();
+        const pending =
+          createDeferred<ActionResult<EndPracticeSessionOutput>>();
+
+        const promise = endSession({
+          sessionId: fixtureSession1Id,
+          endSessionIdempotencyKey: 'idem_1',
+          finalizeSessionFn: async () => pending.promise,
+          getPracticeSessionSummaryFn:
+            createUnusedGetPracticeSessionSummaryFn(),
+          setLoadState: vi.fn(),
+          setSummary: vi.fn(),
+          resetQuestionState: vi.fn(),
+          rotateIdempotencyKey,
+        });
+
+        await vi.advanceTimersByTimeAsync(STANDARD_MUTATION_TIMEOUT_MS);
+        await promise;
+
+        expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('does not call rotateIdempotencyKey on success', async () => {

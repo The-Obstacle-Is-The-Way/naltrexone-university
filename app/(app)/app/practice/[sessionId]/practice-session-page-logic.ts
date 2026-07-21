@@ -246,7 +246,6 @@ export async function endSession(input: {
       component: 'PracticeSessionPageLogic',
       action: 'endSession',
     });
-    input.rotateIdempotencyKey?.();
     input.setLoadState({
       status: 'error',
       message: getThrownErrorMessage(error),
