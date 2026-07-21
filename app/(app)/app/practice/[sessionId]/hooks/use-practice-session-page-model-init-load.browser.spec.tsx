@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { STANDARD_READ_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import { PracticeSessionConflictMessages } from '@/src/application/errors';
+import {
+  ApplicationConflictReasons,
+  PracticeSessionConflictMessages,
+  UserConflictMessages,
+} from '@/src/application/errors';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 
@@ -174,6 +178,29 @@ describe('usePracticeSessionPageModel (browser)', () => {
       .element(screen.getByTestId('question-id'))
       .toHaveTextContent(BROWSER_QUESTION_1_ID);
     expect(callOrder).toEqual(['summary', 'question']);
+  });
+
+  it('shows the server error without reloading when bootstrap reports an email-ownership conflict', async () => {
+    getPracticeSessionSummaryMock.mockResolvedValue(
+      errorResult(
+        'CONFLICT',
+        UserConflictMessages.EmailOwnedByAnotherIdentity,
+        {
+          reason: ApplicationConflictReasons.UserEmailOwnedByAnotherIdentity,
+        },
+      ),
+    );
+
+    const screen = await render(<PracticeSessionPageModelSummaryProbe />);
+
+    await expect
+      .element(screen.getByTestId('load-status'))
+      .toHaveTextContent('error');
+    await expect
+      .element(screen.getByTestId('error-message'))
+      .toHaveTextContent(UserConflictMessages.EmailOwnedByAnotherIdentity);
+    expect(getPracticeSessionSummaryMock).toHaveBeenCalledTimes(1);
+    expect(getNextQuestionMock).not.toHaveBeenCalled();
   });
 
   it('shows the summary when resuming an exam that expires during getNextQuestion', async () => {

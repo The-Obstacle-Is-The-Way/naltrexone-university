@@ -388,7 +388,10 @@ export class FakePracticeSessionRepository
     }
 
     if (existing.endedAt) {
-      throw practiceSessionAlreadyEndedError();
+      throw new ApplicationError(
+        'CONFLICT',
+        PracticeSessionConflictMessages.AlreadyEnded,
+      );
     }
 
     const ended: PracticeSession = {

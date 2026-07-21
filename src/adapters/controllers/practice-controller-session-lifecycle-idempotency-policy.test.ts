@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  ApplicationError,
-  PracticeSessionConflictReasons,
-  practiceSessionAlreadyEndedError,
-} from '@/src/application/errors';
+import { ApplicationError } from '@/src/application/errors';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import type {
   DiscardPracticeSessionInput,
@@ -69,15 +65,21 @@ describe('practice-controller lifecycle idempotency policy', () => {
     expect(endUseCase.inputs).toHaveLength(2);
   });
 
-  it('caches terminal end-session conflicts with structured reasons', async () => {
-    const terminalError = practiceSessionAlreadyEndedError();
-    const endUseCase = {
-      inputs: [] as EndPracticeSessionInput[],
-      async execute(input: EndPracticeSessionInput) {
-        this.inputs.push(input);
-        throw terminalError;
-      },
-    };
+  it('does not cache a production-shaped bare end-session conflict', async () => {
+    const endOutput = {
+      sessionId: '22222222-2222-2222-2222-222222222222',
+      endedAt: '2026-02-01T00:00:00.000Z',
+      mode: 'tutor',
+      questionCount: 1,
+      totals: { answered: 0, correct: 0, accuracy: 0, durationSeconds: 0 },
+    } as const satisfies EndPracticeSessionOutput;
+    const endUseCase = createOneTimeFailureUseCase<
+      EndPracticeSessionInput,
+      EndPracticeSessionOutput
+    >({
+      output: endOutput,
+      error: new ApplicationError('CONFLICT', 'Practice session already ended'),
+    });
     const deps = {
       ...createDeps(),
       endPracticeSessionUseCase: endUseCase,
@@ -88,20 +90,18 @@ describe('practice-controller lifecycle idempotency policy', () => {
     } as const;
 
     const first = await endPracticeSession(input, deps);
-    const second = await endPracticeSession(input, deps);
-
     expect(first).toEqual({
       ok: false,
       error: {
         code: 'CONFLICT',
         message: 'Practice session already ended',
-        details: {
-          reason: PracticeSessionConflictReasons.AlreadyEnded,
-        },
       },
     });
-    expect(second).toEqual(first);
-    expect(endUseCase.inputs).toHaveLength(1);
+    await expect(endPracticeSession(input, deps)).resolves.toEqual({
+      ok: true,
+      data: endOutput,
+    });
+    expect(endUseCase.inputs).toHaveLength(2);
   });
 
   it('does not cache non-terminal discard use-case ApplicationErrors when idempotencyKey is reused', async () => {
@@ -172,20 +172,22 @@ describe('practice-controller lifecycle idempotency policy', () => {
     expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(2);
   });
 
-  it('caches terminal discard conflicts with structured reasons', async () => {
-    const terminalError = practiceSessionAlreadyEndedError();
-    const discardUseCase = {
-      inputs: [] as DiscardPracticeSessionInput[],
-      async execute(input: DiscardPracticeSessionInput) {
-        this.inputs.push(input);
-        throw terminalError;
-      },
-    };
+  it('does not cache a production-shaped bare discard conflict', async () => {
+    const discardUseCase = createOneTimeFailureUseCase<
+      DiscardPracticeSessionInput,
+      DiscardPracticeSessionOutput
+    >({
+      output: { discarded: true },
+      error: new ApplicationError(
+        'CONFLICT',
+        'Practice session cannot be discarded',
+      ),
+    });
     const deps = {
       ...createDeps({
         rateLimiter: new FakeRateLimiter([
           { success: true, limit: 20, remaining: 19, retryAfterSeconds: 0 },
-          { success: false, limit: 20, remaining: 0, retryAfterSeconds: 60 },
+          { success: true, limit: 20, remaining: 18, retryAfterSeconds: 0 },
         ]),
       }),
       discardPracticeSessionUseCase: discardUseCase,
@@ -196,20 +198,18 @@ describe('practice-controller lifecycle idempotency policy', () => {
     } as const;
 
     const first = await discardPracticeSession(input, deps);
-    const second = await discardPracticeSession(input, deps);
-
     expect(first).toEqual({
       ok: false,
       error: {
         code: 'CONFLICT',
-        message: 'Practice session already ended',
-        details: {
-          reason: PracticeSessionConflictReasons.AlreadyEnded,
-        },
+        message: 'Practice session cannot be discarded',
       },
     });
-    expect(second).toEqual(first);
-    expect(discardUseCase.inputs).toHaveLength(1);
-    expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(1);
+    await expect(discardPracticeSession(input, deps)).resolves.toEqual({
+      ok: true,
+      data: { discarded: true },
+    });
+    expect(discardUseCase.inputs).toHaveLength(2);
+    expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(2);
   });
 });

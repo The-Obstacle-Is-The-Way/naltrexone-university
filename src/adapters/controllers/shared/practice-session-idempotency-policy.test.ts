@@ -49,32 +49,21 @@ describe('shouldCachePracticeSessionStateWriteError', () => {
 });
 
 describe('shouldCachePracticeSessionLifecycleError', () => {
-  it('caches only monotone terminal practice-session conflicts', () => {
-    expect(
-      shouldCachePracticeSessionLifecycleError(
-        practiceSessionAlreadyEndedError(),
-      ),
-    ).toBe(true);
-    expect(
-      shouldCachePracticeSessionLifecycleError(
-        new ApplicationError('CONFLICT', 'Exam time expired', undefined, {
-          details: {
-            reason: PracticeSessionConflictReasons.ExamTimeExpired,
-          },
-        }),
-      ),
-    ).toBe(true);
+  it('does not cache production-shaped bare end or discard conflicts', () => {
+    const lifecycleConflicts = [
+      new ApplicationError('CONFLICT', 'Practice session already ended'),
+      new ApplicationError('CONFLICT', 'Practice session cannot be discarded'),
+    ];
+
+    for (const error of lifecycleConflicts) {
+      expect(shouldCachePracticeSessionLifecycleError(error)).toBe(false);
+    }
   });
 
-  it('does not cache transient, unmapped, or non-terminal lifecycle failures', () => {
+  it('does not cache transient or non-conflict lifecycle failures', () => {
     expect(
       shouldCachePracticeSessionLifecycleError(
         practiceSessionStateChangedConcurrentlyError(),
-      ),
-    ).toBe(false);
-    expect(
-      shouldCachePracticeSessionLifecycleError(
-        new ApplicationError('CONFLICT', 'Plain conflict'),
       ),
     ).toBe(false);
     expect(
