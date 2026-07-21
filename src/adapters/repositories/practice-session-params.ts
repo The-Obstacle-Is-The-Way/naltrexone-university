@@ -14,6 +14,17 @@ import { zUuid } from '../shared/zod-schemas';
 
 const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
 
+/**
+ * Load-bearing persisted-data compatibility contract.
+ *
+ * This schema validates both new writes and every stored
+ * practice_sessions.params_json row. Narrowing a limit or removing an enum
+ * value requires a predeploy data audit plus any needed repair/contract
+ * migration before the narrower reader ships. Widening a limit or adding an
+ * enum value requires expand-first readers, including supported rollback
+ * targets; otherwise enabling the new writes requires an explicit data-fenced
+ * rollback policy and a tested downgrade/repair path.
+ */
 const practiceSessionParamsSchema = z
   .object({
     count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),

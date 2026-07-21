@@ -28,6 +28,7 @@ export const MAX_DRAFT_CUMULATIVE_MS = SAVE_EXAM_DRAFT_MAX_CUMULATIVE_MS;
  * Rationale:
  * - Prevents excessively large `params_json` payloads and sessions that would be slow to start/render.
  * - Matches SSOT input constraints for `startPracticeSession` (docs/specs/master_spec.md §4.5.5).
+ * - Changes must follow the persisted-data compatibility contract documented at `practiceSessionParamsSchema`.
  */
 
 /** Max questions per practice session. */
