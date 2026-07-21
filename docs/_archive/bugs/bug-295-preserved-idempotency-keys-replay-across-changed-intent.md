@@ -58,5 +58,5 @@ Silent user-intent drop on the feedback surface (changed vote / edited report re
 
 - [BUG-289](./bug-289-idempotency-caches-transient-errors-billing-bookmark-feedback.md) — its repository-level request-identity guard is necessary but only reaches the fenced-claim arm; resolution note amended.
 - [BUG-291](./bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — the dead-end this doc's Leg 2 recreates via the recovery flow; resolution note amended.
-- [DEBT-456](../../debt/debt-456-client-conflict-reason-discrimination-gaps.md) — client conflict-reason discrimination gaps; the reused-token conflict consumer list grows with this fix.
+- [DEBT-456](../debt/debt-456-client-conflict-reason-discrimination-gaps.md) — client conflict-reason discrimination gaps; the reused-token conflict consumer list grows with this fix.
 - PR #640 — the wave-2 idempotency PR whose preservation rules this filing completes.

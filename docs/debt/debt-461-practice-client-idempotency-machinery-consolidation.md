@@ -83,6 +83,6 @@ No current wrong behavior — the machinery is correct and heavily tested. The c
 
 - Archived arc that built the family: BUG-289 (billing/bookmark/feedback caching and determinate rotation), BUG-290 (submit/mark caching and determinacy), BUG-291 (start determinacy), BUG-295 + BUG-298 (key-to-intent binding + sweep), BUG-300 (typed concurrent-start discrimination), BUG-301 (generation-CAS), BUG-302 (dialog fencing), and BUG-303 (claim/uncertainty retirement fences).
 - [DEBT-426 (archived, resolved 2026-07-03)](../_archive/debt/debt-426-session-wide-lock-defeats-row-concurrency.md) — the server-side concurrency redesign; its resolution did not touch the client machinery.
-- [DEBT-456](./debt-456-client-conflict-reason-discrimination-gaps.md) / [DEBT-457](./debt-457-wave2-determinacy-and-test-hygiene-residues.md) — pinned FW-2 directions that finalize client recovery/determinacy semantics; hard sequencing dependency for Phase B only.
+- [DEBT-456](../_archive/debt/debt-456-client-conflict-reason-discrimination-gaps.md) / [DEBT-457](../_archive/debt/debt-457-wave2-determinacy-and-test-hygiene-residues.md) — pinned FW-2 directions that finalize client recovery/determinacy semantics; hard sequencing dependency for Phase B only.
 - Direction-campaign precedent: PARK/measure-first discipline does not apply here (this is maintainability, not scale) — but the "minimal chosen option" law does: Phase A is mandatory before any Phase B code.
 - Filed 2026-07-21 from the post-campaign complexity assessment (owner-requested); facts verified against source at `fc3c910c`.
