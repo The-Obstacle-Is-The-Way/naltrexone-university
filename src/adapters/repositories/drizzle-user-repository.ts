@@ -86,6 +86,8 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async lockByClerkId(clerkId: string): Promise<User | null> {
+    // Transaction precondition: FOR UPDATE protects the following identity
+    // workflow only when this repository was constructed from its callback tx.
     const [row] = await this.db
       .select({
         id: users.id,
@@ -101,6 +103,8 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async acquireSubscriptionWriteLock(userId: string): Promise<void> {
+    // Transaction precondition: the shared xact lock spans later subscription
+    // or deletion writes only when this repository is bound to the caller's tx.
     await acquireSubscriptionWriteLock(this.db, userId);
   }
 

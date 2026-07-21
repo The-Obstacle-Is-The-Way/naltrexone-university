@@ -9,6 +9,9 @@ export class DrizzleDeletedClerkUserRepository
   constructor(private readonly db: DrizzleDb) {}
 
   async lock(clerkUserId: string): Promise<void> {
+    // Transaction precondition: this xact lock protects later statements only
+    // when the repository was constructed from the surrounding callback tx.
+    // Its hashtextextended Clerk-tombstone domain is intentionally distinct.
     await this.db.execute(
       sql`SELECT pg_advisory_xact_lock(hashtextextended(${clerkUserId}, 0))`,
     );
