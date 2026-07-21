@@ -110,16 +110,16 @@ export function formatMigrationContentDriftMessage(
       (drift) =>
         `${drift.tag} (expected ${drift.expectedHashPrefix}, applied ${drift.appliedHashPrefix})`,
     );
-  const ledgerOnlyRows = contentDrifts
-    .filter((drift) => drift.kind === 'ledger-only')
-    .map((drift) => drift.createdAt);
+  const ledgerOnlyRowCount = contentDrifts.filter(
+    (drift) => drift.kind === 'ledger-only',
+  ).length;
 
   const parts = [];
   if (hashMismatches.length > 0) {
     parts.push(`Content drift: ${hashMismatches.join(', ')}.`);
   }
-  if (ledgerOnlyRows.length > 0) {
-    parts.push(`Ledger-only migrations: ${ledgerOnlyRows.join(', ')}.`);
+  if (ledgerOnlyRowCount > 0) {
+    parts.push(`Ledger-only migrations detected: ${ledgerOnlyRowCount}.`);
   }
 
   return `The migration ledger has content drift. ${parts.join(' ')}`;

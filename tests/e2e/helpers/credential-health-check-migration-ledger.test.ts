@@ -86,7 +86,7 @@ describe('migration ledger schema-drift preflight', () => {
       ),
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
-      message: expect.stringContaining('Ledger-only migrations: 1999999999999'),
+      message: expect.stringContaining('Ledger-only migrations detected: 1'),
     });
   });
 
@@ -145,7 +145,7 @@ describe('migration ledger schema-drift preflight', () => {
       verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
-      message: expect.stringContaining('Ledger-only migrations: 1999999999999'),
+      message: expect.stringContaining('Ledger-only migrations detected: 1'),
     });
   });
 
