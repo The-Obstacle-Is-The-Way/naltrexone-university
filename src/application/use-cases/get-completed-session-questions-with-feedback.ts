@@ -84,6 +84,25 @@ type ReviewSeed = {
   selectedChoiceId: string | null;
 };
 
+function warnOnCorrectnessDivergence(
+  logger: Logger,
+  context: {
+    sessionId: string;
+    questionId: string;
+    attemptIsCorrect: boolean;
+    stateLatestIsCorrect: boolean;
+  },
+): void {
+  try {
+    logger.warn(
+      context,
+      'Attempt correctness diverges from practice session question state',
+    );
+  } catch {
+    // Best-effort detection must not change the completed-session read result.
+  }
+}
+
 export class GetCompletedSessionQuestionsWithFeedbackUseCase {
   constructor(
     private readonly sessions: PracticeSessionRepository,
@@ -135,6 +154,18 @@ export class GetCompletedSessionQuestionsWithFeedbackUseCase {
       });
 
       const attempt = attemptByQuestionId.get(questionId);
+      if (
+        attempt &&
+        state.latestIsCorrect !== null &&
+        attempt.isCorrect !== state.latestIsCorrect
+      ) {
+        warnOnCorrectnessDivergence(this.logger, {
+          sessionId: session.id,
+          questionId,
+          attemptIsCorrect: attempt.isCorrect,
+          stateLatestIsCorrect: state.latestIsCorrect,
+        });
+      }
       const selectedChoiceId = attempt
         ? selectedChoiceIdOrNull(attempt.outcome)
         : state.latestSelectedChoiceId;
