@@ -103,10 +103,10 @@ jobs:
           fi
 
       - name: Migrate DB
-        run: pnpm db:migrate
+        run: pnpm exec tsx scripts/internal/run-managed-db-migrate.ts
 
       - name: Seed DB (placeholder content)
-        run: pnpm db:seed
+        run: pnpm exec tsx scripts/internal/run-managed-db-seed.ts
         env:
           SEED_INCLUDE_PLACEHOLDERS: 'true'
 
