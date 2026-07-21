@@ -1,162 +1,68 @@
-# Postgres Vendor Documentation
+# Postgres Operations Source Map
 
-**Driver Package:** `postgres` ^3.4.8
-**ORM:** `drizzle-orm` ^0.45.1
-**Hosting:** Neon (serverless Postgres)
-**Dashboard:** https://console.neon.tech
-**Driver Docs:** https://github.com/porsager/postgres
+This application uses postgres.js with Drizzle ORM against Neon Postgres. This
+page records operational intent and points to checked-in sources; it does not
+copy connection configuration or dependency versions that can drift.
 
----
+## Sources of Truth
 
-## Our Setup
+- [`lib/db.ts`](../../lib/db.ts) owns the application connection singleton,
+  postgres.js pool options, and Drizzle wiring.
+- [`lib/db-connection-options.ts`](../../lib/db-connection-options.ts) owns the
+  PostgreSQL startup/session parameters used by application connections.
+- [`package.json`](../../package.json) owns the supported `db:*` command entry
+  points and their target-safety wrappers.
+- [Migration Authoring](../dev/migration-authoring.md) owns migration file,
+  lock-scope, N-1 compatibility, and never-`push` rules.
+- [Deployment Procedure](../dev/deployment-procedure.md) owns the deploy-time
+  pre-check, migration, exact post-check, and build sequence.
+- [Database Rollbacks](../dev/database-rollbacks.md) owns fix-forward, restore,
+  recovery-point-loss, and reconciliation procedures.
 
-We use the `postgres` package (porsager/postgres) directly with Drizzle ORM — **not** `@neondatabase/serverless`.
+Dependency versions are recorded only in `package.json` and the lockfile. Read
+the installed postgres.js and Drizzle release notes when upgrading them; do not
+add version copies to this page.
 
-```typescript
-// lib/db.ts
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+## Actual Connection Contract
 
-const conn = postgres(env.DATABASE_URL, {
-  connection: { TimeZone: 'UTC' },
-});
-export const db = drizzle(conn, { schema });
-```
+The repository currently has one connection variable: `DATABASE_URL`. The same
+explicit URL supplies application runtime connections and Drizzle Kit
+migrations. There is no repo-defined `DIRECT_URL` split.
 
----
+Neon runtime URLs are intended to use a pooled endpoint so serverless instances
+share provider backend capacity. The repository deliberately pins the
+per-instance postgres.js pool size, but it does not reject a direct Neon
+hostname. Current Vercel/Neon values and connection headroom remain
+owner-verifiable provider state, not facts proven by this repository.
 
-## Connection Types
+The development singleton limits hot-reload connection proliferation.
+Database-side application session bounds limit abandoned transactions, lock
+waits, and long-running statements after user-visible timers return. Those
+application parameters do **not** prove equivalent coverage for Drizzle Kit's
+migration transaction.
 
-### Pooled Connection (Primary)
+## Operator Rules
 
-Use for all application queries. The `-pooler` suffix routes through PgBouncer.
+Never use `drizzle-kit push` for this repository. It bypasses the checked-in
+migration journal and can omit extensions, constraints, data repairs, custom
+SQL, and ledger history. Generate a migration file, review it, and apply it
+through the guarded `db:migrate` entry point instead.
 
-```text
-DATABASE_URL=postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/dbname?sslmode=require
-```
+Database commands require an explicitly supplied `DATABASE_URL`; ignored
+dotenv files are not an authorization source. Loopback targets run as local.
+Remote migrate, seed, and Studio commands require the exact credential-free
+`DB_TARGET_ACK` printed by the shared target guard. Checked-in CI, Vercel, E2E,
+and resolver wrappers use the internal managed boundary rather than a
+caller-selectable flag or environment bypass.
 
-### Direct Connection (Migrations)
+For local disposable Postgres, resolve the clone-specific target through
+[`scripts/resolve-local-test-target.ts`](../../scripts/resolve-local-test-target.ts)
+and follow [Integration Tests](../dev/integration-tests.md). Never hardcode a
+shared local port.
 
-Use for `drizzle-kit push`, schema operations. No `-pooler` suffix.
+## Primary Vendor References
 
-```text
-DIRECT_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/dbname?sslmode=require
-```
-
----
-
-## Singleton Pattern
-
-We use a singleton to avoid creating multiple connections in development (hot reload):
-
-```typescript
-const globalForDb = globalThis as unknown as { conn: postgres.Sql | undefined };
-
-const conn = globalForDb.conn ?? postgres(connectionString, options);
-if (process.env.NODE_ENV !== 'production') {
-  globalForDb.conn = conn;
-}
-```
-
----
-
-## Environment Variables
-
-| Variable | Purpose | Required |
-|----------|---------|----------|
-| `DATABASE_URL` | Application queries (pooled) | Yes |
-
-**Note:** We use a single `DATABASE_URL` for both queries and migrations. For large schema changes, consider adding a `DIRECT_URL` for migrations.
-
----
-
-## Local Development
-
-### Option 1: Use Neon Dev Branch
-
-Create a `dev` branch in Neon Console. Branches are isolated and cheap.
-
-### Option 2: Local Postgres (Docker)
-
-```bash
-# Start local Postgres (per-clone dynamic host port — see docs/dev/integration-tests.md)
-pnpm db:test:up
-
-# Prefix commands with the resolved local connection (a bare assignment
-# is not exported to child processes)
-DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" pnpm db:migrate
-```
-
----
-
-## Migration Commands
-
-```bash
-# Generate migration from schema changes
-pnpm db:generate
-
-# Apply migrations
-pnpm db:migrate
-
-# Open Drizzle Studio
-pnpm db:studio
-
-# Seed database
-pnpm db:seed
-```
-
----
-
-## Connection Options
-
-From `lib/db-connection-options.ts`:
-
-```typescript
-export const POSTGRES_CONNECTION_PARAMETERS = {
-  TimeZone: 'UTC',
-} as const;
-```
-
-We set `TimeZone: 'UTC'` to ensure consistent timestamp handling regardless of server timezone.
-
----
-
-## Neon-Specific Notes
-
-### Scale-to-Zero
-
-Neon can pause computes after inactivity. First request after pause has cold start latency (500ms-2s).
-
-**For production:** Consider disabling scale-to-zero or using keep-alive requests.
-
-### Connection Limits
-
-- Pooled connections: Up to 10,000 concurrent
-- Direct connections: Limited by compute size
-
-### Branching
-
-Neon supports database branches for:
-- Development environments
-- Preview deployments
-- Testing migrations safely
-
----
-
-## Upgrade Checklist
-
-When upgrading `postgres` or `drizzle-orm`:
-
-- [ ] Check [postgres changelog](https://github.com/porsager/postgres/releases)
-- [ ] Check [Drizzle changelog](https://github.com/drizzle-team/drizzle-orm/releases)
-- [ ] Test migrations work
-- [ ] Test queries work
-- [ ] Update this doc with new version
-
----
-
-## Sources
-
-- [postgres.js GitHub](https://github.com/porsager/postgres)
-- [Drizzle + Postgres.js](https://orm.drizzle.team/docs/get-started-postgresql#postgresjs)
-- [Neon Connection Pooling](https://neon.com/docs/connect/connection-pooling)
+- [postgres.js](https://github.com/porsager/postgres)
+- [Drizzle with postgres.js](https://orm.drizzle.team/docs/get-started-postgresql#postgresjs)
+- [Neon connection pooling](https://neon.com/docs/connect/connection-pooling)
+- [PostgreSQL client connection defaults](https://www.postgresql.org/docs/current/runtime-config-client.html)
