@@ -45,6 +45,25 @@ export class FakeUserRepository implements UserRepository {
       observedAt.getTime(),
     );
 
+    const existing = this.byClerkId.get(clerkId);
+
+    if (existing) {
+      if (existing.user.email === email) {
+        const updatedUser: User = {
+          ...existing.user,
+          updatedAt: new Date(
+            Math.max(existing.user.updatedAt.getTime(), observedAt.getTime()),
+          ),
+        };
+        this.byClerkId.set(clerkId, { user: updatedUser, clerkId });
+        return updatedUser;
+      }
+
+      if (existing.user.updatedAt >= observedAt) {
+        return existing.user;
+      }
+    }
+
     const existingClerkIdForEmail = this.byEmail.get(email);
     if (existingClerkIdForEmail && existingClerkIdForEmail !== clerkId) {
       const existingByEmail = this.byClerkId.get(existingClerkIdForEmail);
@@ -55,16 +74,7 @@ export class FakeUserRepository implements UserRepository {
       this.byEmail.delete(email);
     }
 
-    const existing = this.byClerkId.get(clerkId);
-
     if (existing) {
-      if (existing.user.email === email) {
-        return existing.user;
-      }
-
-      if (existing.user.updatedAt >= observedAt) {
-        return existing.user;
-      }
       const updatedUser: User = {
         ...existing.user,
         email,
