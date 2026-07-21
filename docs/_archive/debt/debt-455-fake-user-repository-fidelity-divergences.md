@@ -1,9 +1,10 @@
 # DEBT-455: `FakeUserRepository` Diverges From Real Upsert Semantics — Ownership-Check Ordering and the Missing `updatedAt` Bump
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-07-11
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
+**Resolved:** 2026-07-21 — FW-1 reordered the fake's existing-identity staleness/same-email decisions ahead of foreign-email ownership and made the same-email path store `max(existing.updatedAt, observedAt)`. Paired production-shaped fake and real-PostgreSQL tests now pin the demonstrated stale/foreign-email no-op and monotonic timestamp behavior without adding a generalized contract harness.
 
 ---
 
@@ -18,15 +19,15 @@ Both parts are mandatory fake-fidelity repairs: no smaller form closes the demon
 
 ## Description
 
-Two fidelity divergences between [`FakeUserRepository`](../../src/application/test-helpers/fakes/fake-user-repository.ts) and [`DrizzleUserRepository`](../../src/adapters/repositories/drizzle-user-repository.ts) introduced with the PR #628 identity fix, both empirically confirmed during the 2026-07-11 wave-1 close review by running the same scenarios against the fake and real Postgres. No currently shipped test passes for the wrong reason; the risk is that future tests written against the fake encode anti-production semantics.
+Two fidelity divergences between [`FakeUserRepository`](../../../src/application/test-helpers/fakes/fake-user-repository.ts) and [`DrizzleUserRepository`](../../../src/adapters/repositories/drizzle-user-repository.ts) introduced with the PR #628 identity fix, both empirically confirmed during the 2026-07-11 wave-1 close review by running the same scenarios against the fake and real Postgres. No currently shipped test passes for the wrong reason; the risk is that future tests written against the fake encode anti-production semantics.
 
 ### 1. `upsertByClerkId` checks email ownership before the staleness clock-guard, inverting real ordering for existing identities
 
-For an **existing** incoming identity with a **stale** `observedAt` and a target email **owned by another identity**, the fake throws `UserEmailOwnershipConflictError` (the byEmail check at [fake-user-repository.ts#L46-L54](../../src/application/test-helpers/fakes/fake-user-repository.ts#L46) runs before the `updatedAt >= observedAt` guard at [#L63-L65](../../src/application/test-helpers/fakes/fake-user-repository.ts#L63)), while real Postgres resolves the `ON CONFLICT (clerk_user_id)` arbiter first and the CASE clock-guard keeps the old email ([drizzle-user-repository.ts#L120-L127](../../src/adapters/repositories/drizzle-user-repository.ts#L120)) — no `users_email_uq` violation, a silent no-op commit. The mid-PR stale-ordering correction went only to `updateEmailByClerkId` (which the fake orders correctly and pins at [fake-user-repository.test.ts#L181-L200](../../src/application/test-helpers/fakes/fake-user-repository.test.ts#L181)), so the fake's two methods now disagree with each other on ordering. The input shape is production-real: [clerk-webhook-controller.ts#L321-L322](../../src/adapters/controllers/clerk-webhook-controller.ts#L321) passes event-derived `observedAt` into `upsertByClerkId`, so an out-of-order `user.updated` replay after an email moved between accounts hits exactly this case — production silently no-ops where the fake fails closed.
+For an **existing** incoming identity with a **stale** `observedAt` and a target email **owned by another identity**, the fake throws `UserEmailOwnershipConflictError` (the byEmail check at [fake-user-repository.ts#L46-L54](../../../src/application/test-helpers/fakes/fake-user-repository.ts#L46) runs before the `updatedAt >= observedAt` guard at [#L63-L65](../../../src/application/test-helpers/fakes/fake-user-repository.ts#L63)), while real Postgres resolves the `ON CONFLICT (clerk_user_id)` arbiter first and the CASE clock-guard keeps the old email ([drizzle-user-repository.ts#L120-L127](../../../src/adapters/repositories/drizzle-user-repository.ts#L120)) — no `users_email_uq` violation, a silent no-op commit. The mid-PR stale-ordering correction went only to `updateEmailByClerkId` (which the fake orders correctly and pins at [fake-user-repository.test.ts#L181-L200](../../../src/application/test-helpers/fakes/fake-user-repository.test.ts#L181)), so the fake's two methods now disagree with each other on ordering. The input shape is production-real: [clerk-webhook-controller.ts#L321-L322](../../../src/adapters/controllers/clerk-webhook-controller.ts#L321) passes event-derived `observedAt` into `upsertByClerkId`, so an out-of-order `user.updated` replay after an email moved between accounts hits exactly this case — production silently no-ops where the fake fails closed.
 
 ### 2. Same-email early return skips the `GREATEST(updatedAt)` bump the real adapter always applies
 
-On unchanged email the fake returns the stored user without touching `updatedAt` ([fake-user-repository.ts#L58-L61](../../src/application/test-helpers/fakes/fake-user-repository.ts#L58)), but the real upsert unconditionally executes `updatedAt = GREATEST(users.updatedAt, observedAt)` ([drizzle-user-repository.ts#L124](../../src/adapters/repositories/drizzle-user-repository.ts#L124)), pinned by [user-repository.integration.test.ts#L131-L140](../../tests/integration/user-repository.integration.test.ts#L131). Divergent scenario (executed): `upsert(X, t1)` → `upsert(X, t3)` → `updateEmailByClerkId(Y, t2)` with `t1 < t2 < t3`: real Postgres holds `updatedAt = t3` and rejects `t2` as stale (email stays X); the fake holds `t1` and applies Y. No fake test asserts the bump ([fake-user-repository.test.ts#L35-L45](../../src/application/test-helpers/fakes/fake-user-repository.test.ts#L35) checks only id/email).
+On unchanged email the fake returns the stored user without touching `updatedAt` ([fake-user-repository.ts#L58-L61](../../../src/application/test-helpers/fakes/fake-user-repository.ts#L58)), but the real upsert unconditionally executes `updatedAt = GREATEST(users.updatedAt, observedAt)` ([drizzle-user-repository.ts#L124](../../../src/adapters/repositories/drizzle-user-repository.ts#L124)), pinned by [user-repository.integration.test.ts#L131-L140](../../../tests/integration/user-repository.integration.test.ts#L131). Divergent scenario (executed): `upsert(X, t1)` → `upsert(X, t3)` → `updateEmailByClerkId(Y, t2)` with `t1 < t2 < t3`: real Postgres holds `updatedAt = t3` and rejects `t2` as stale (email stays X); the fake holds `t1` and applies Y. No fake test asserts the bump ([fake-user-repository.test.ts#L35-L45](../../../src/application/test-helpers/fakes/fake-user-repository.test.ts#L35) checks only id/email).
 
 ## Impact
 
@@ -44,6 +45,6 @@ Contract-style paired tests: the same scenario table executed against `FakeUserR
 
 ## Related
 
-- [BUG-284 (archived, resolved PR #628)](../_archive/bugs/bug-284-user-upsert-email-reclaim-cross-identity-takeover.md) — the fix that introduced both methods; its regression matrix covers the fresh-observation paths, not these stale-path orderings.
-- [DEBT-451](./debt-451-attempts-integrity-enforcement-and-verification-gaps.md) part 4 and [DEBT-443](./debt-443-idempotency-cache-durability-and-evolution.md) part 3 — the register's fake-fidelity precedents.
+- [BUG-284 (archived, resolved PR #628)](../bugs/bug-284-user-upsert-email-reclaim-cross-identity-takeover.md) — the fix that introduced both methods; its regression matrix covers the fresh-observation paths, not these stale-path orderings.
+- [DEBT-451](./debt-451-attempts-integrity-enforcement-and-verification-gaps.md) part 4 and [DEBT-443](../../debt/debt-443-idempotency-cache-durability-and-evolution.md) part 3 — the register's fake-fidelity precedents.
 - Found during the 2026-07-11 wave-1 close adversarial regression review; both divergences reproduced by executing the scenarios against the fake and real Postgres.

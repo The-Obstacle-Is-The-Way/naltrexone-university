@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  ApplicationConflictReasons,
   ApplicationError,
   PracticeSessionConflictReasons,
 } from '@/src/application/errors';
@@ -282,6 +283,27 @@ describe('FakePracticeSessionRepository', () => {
         draftCumulativeMs: 0,
       },
     ]);
+  });
+
+  it('rejects creating a second incomplete session for one user with the production conflict contract', async () => {
+    const repo = new FakePracticeSessionRepository();
+    const paramsJson = {
+      questionIds: ['question-1'],
+      tagSlugs: [],
+      difficulties: [],
+    };
+    await repo.create({ userId: 'user-1', mode: 'exam', paramsJson });
+
+    await expect(
+      repo.create({ userId: 'user-1', mode: 'tutor', paramsJson }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message:
+        'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+      details: {
+        reason: ApplicationConflictReasons.IncompleteSessionExists,
+      },
+    });
   });
 
   it('ignores stale draft saves when a newer draft snapshot already exists', async () => {

@@ -89,7 +89,7 @@ Companion filing from the same review: [DEBT-457](../debt/debt-457-wave2-determi
 |-----|--------|----------|---------|
 | [BUG-294](../_archive/bugs/bug-294-user-deletion-cascade-inverts-subscription-lock-order.md) | Clerk webhook / account deletion / Stripe billing | P3 | The `user.deleted` flow's `ON DELETE CASCADE` is a fourth subscription writer hard-wired to the inverse of the BUG-286 canonical lock order (`stripe_customers` before `stripe_subscriptions`, no advisory lock) — 40P01 reproduced on real Postgres against a concurrent subscription writer; the reconcile-vs-cascade pair was newly created by PR #626's Phase-4 reorder. Fix: acquire the subscription writers' advisory lock inside the deletion transaction; coordinate with BUG-288. **Resolved 2026-07-13** (PR #634, promo #638; first-insert AB-BA pair caught pre-merge and fixed in-PR; production-verified). |
 
-Companion filings from the same review: [DEBT-455](../debt/debt-455-fake-user-repository-fidelity-divergences.md) (P4) and [DEBT-456](../debt/debt-456-client-conflict-reason-discrimination-gaps.md) (P4); DEBT-443/449/452/454 received post-wave accuracy annotations.
+Companion filings from the same review: [DEBT-455](../_archive/debt/debt-455-fake-user-repository-fidelity-divergences.md) (P4, resolved) and [DEBT-456](../debt/debt-456-client-conflict-reason-discrimination-gaps.md) (P4); DEBT-443/449/452/454 received post-wave accuracy annotations.
 
 **Latest sweep (2026-07-09) — DDIA-lens adversarial database-seam sweep (12 book-branded finder lenses, per-candidate adversarial verification, archive-wide dedup):**
 

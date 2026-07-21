@@ -15,7 +15,163 @@ import {
 import { omittedOutcome } from '@/src/domain/value-objects';
 import { GetCompletedSessionQuestionsWithFeedbackUseCase } from './get-completed-session-questions-with-feedback';
 
+class ThrowingWarnLogger extends FakeLogger {
+  override warn(): void {
+    throw new Error('logger unavailable');
+  }
+}
+
+function createCorrectnessComparisonFixture(input: {
+  attemptIsCorrect: boolean | undefined;
+  stateIsCorrect: boolean | null;
+  logger?: FakeLogger;
+}) {
+  const userId = 'user-1';
+  const sessionId = 'session-1';
+  const questionId = 'q1';
+  const choiceId = 'q1-choice-a';
+  const question = createQuestion({
+    id: questionId,
+    slug: 'q-1',
+    choices: [
+      createChoice({
+        id: choiceId,
+        questionId,
+        label: 'A',
+        isCorrect: true,
+      }),
+    ],
+  });
+  const session = createPracticeSession({
+    id: sessionId,
+    userId,
+    mode: 'exam',
+    endedAt: new Date('2026-03-19T12:00:00.000Z'),
+    questionIds: [questionId],
+    questionStates: [
+      {
+        questionId,
+        markedForReview: false,
+        latestSelectedChoiceId: choiceId,
+        latestIsCorrect: input.stateIsCorrect,
+        latestAnsweredAt:
+          input.stateIsCorrect === null
+            ? null
+            : new Date('2026-03-19T11:58:00.000Z'),
+      },
+    ],
+  });
+  const attempts =
+    input.attemptIsCorrect === undefined
+      ? []
+      : [
+          createAttempt({
+            id: 'attempt-1',
+            userId,
+            questionId,
+            practiceSessionId: sessionId,
+            selectedChoiceId: choiceId,
+            isCorrect: input.attemptIsCorrect,
+          }),
+        ];
+  const logger = input.logger ?? new FakeLogger();
+
+  return {
+    userId,
+    sessionId,
+    logger,
+    useCase: new GetCompletedSessionQuestionsWithFeedbackUseCase(
+      new FakePracticeSessionRepository([session]),
+      new FakeQuestionRepository([question]),
+      new FakeAttemptRepository(attempts),
+      logger,
+    ),
+  };
+}
+
 describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
+  it('warns on attempt-state correctness divergence while preserving the attempt-preferred output', async () => {
+    const fixture = createCorrectnessComparisonFixture({
+      attemptIsCorrect: true,
+      stateIsCorrect: false,
+    });
+
+    const output = await fixture.useCase.execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+
+    expect(output.rows[0]).toMatchObject({ isCorrect: true });
+    expect(fixture.logger.warnCalls).toEqual([
+      {
+        context: {
+          sessionId: fixture.sessionId,
+          questionId: 'q1',
+          attemptIsCorrect: true,
+          stateLatestIsCorrect: false,
+        },
+        msg: 'Attempt correctness diverges from practice session question state',
+      },
+    ]);
+  });
+
+  it('does not warn when attempt and state correctness agree', async () => {
+    const fixture = createCorrectnessComparisonFixture({
+      attemptIsCorrect: false,
+      stateIsCorrect: false,
+    });
+
+    await fixture.useCase.execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+
+    expect(fixture.logger.warnCalls).toEqual([]);
+  });
+
+  it.each([
+    {
+      name: 'the attempt is missing',
+      attemptIsCorrect: undefined,
+      stateIsCorrect: true,
+    },
+    {
+      name: 'the state is ungraded',
+      attemptIsCorrect: true,
+      stateIsCorrect: null,
+    },
+  ])('does not warn when $name', async ({
+    attemptIsCorrect,
+    stateIsCorrect,
+  }) => {
+    const fixture = createCorrectnessComparisonFixture({
+      attemptIsCorrect,
+      stateIsCorrect,
+    });
+
+    await fixture.useCase.execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+
+    expect(fixture.logger.warnCalls).toEqual([]);
+  });
+
+  it('preserves the attempt-preferred output when divergence logging fails', async () => {
+    const fixture = createCorrectnessComparisonFixture({
+      attemptIsCorrect: true,
+      stateIsCorrect: false,
+      logger: new ThrowingWarnLogger(),
+    });
+
+    await expect(
+      fixture.useCase.execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+      }),
+    ).resolves.toMatchObject({ rows: [{ isCorrect: true }] });
+  });
+
   it('returns full feedback rows for a completed exam session', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';

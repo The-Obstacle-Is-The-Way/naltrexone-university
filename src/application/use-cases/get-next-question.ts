@@ -20,6 +20,7 @@ import type {
 } from '../ports/repositories';
 import {
   createPracticeSessionStateMap,
+  getEffectiveSelectedChoiceId,
   requirePracticeSessionQuestionState,
 } from '../shared/practice-session-state';
 import {
@@ -83,21 +84,6 @@ export type GetNextQuestionOutput = NextQuestion | null;
 export type ExpiredExamFinalizer = {
   execute: (input: { userId: string; sessionId: string }) => Promise<unknown>;
 };
-
-function getSessionSelectedChoiceId(
-  session: {
-    mode: PracticeMode;
-    endedAt: Date | null;
-  },
-  state: {
-    latestSelectedChoiceId: string | null;
-    draftSelectedChoiceId: string | null;
-  },
-): string | null {
-  return session.mode === 'exam' && session.endedAt === null
-    ? (state.draftSelectedChoiceId ?? state.latestSelectedChoiceId)
-    : state.latestSelectedChoiceId;
-}
 
 export class GetNextQuestionUseCase {
   constructor(
@@ -209,7 +195,7 @@ export class GetNextQuestionUseCase {
       const nextUnanswered =
         orderedStates
           .slice(startIndex + 1)
-          .find((state) => !getSessionSelectedChoiceId(session, state))
+          .find((state) => !getEffectiveSelectedChoiceId(session, state))
           ?.questionId ?? null;
 
       if (nextUnanswered) return nextUnanswered;
@@ -218,13 +204,16 @@ export class GetNextQuestionUseCase {
       const wrappedUnanswered =
         orderedStates
           .slice(0, startIndex)
-          .find((state) => !getSessionSelectedChoiceId(session, state))
+          .find((state) => !getEffectiveSelectedChoiceId(session, state))
           ?.questionId ?? null;
 
       if (wrappedUnanswered) return wrappedUnanswered;
 
       const currentState = orderedStates[startIndex];
-      if (currentState && !getSessionSelectedChoiceId(session, currentState)) {
+      if (
+        currentState &&
+        !getEffectiveSelectedChoiceId(session, currentState)
+      ) {
         return currentState.questionId;
       }
 
@@ -251,7 +240,7 @@ export class GetNextQuestionUseCase {
     const choiceViews = buildShuffledChoiceViews(question, userId);
     const choices = this.mapChoiceViewsForOutput(choiceViews);
     const isAnswered =
-      typeof getSessionSelectedChoiceId(session, targetState) === 'string';
+      typeof getEffectiveSelectedChoiceId(session, targetState) === 'string';
     const isTutor = session.mode === 'tutor';
     const showCorrectness = shouldShowExplanation(session);
     const previousSubmission =
@@ -276,9 +265,10 @@ export class GetNextQuestionUseCase {
         latestIsCorrect: showCorrectness ? targetState.latestIsCorrect : null,
         ...(session.mode === 'exam'
           ? {
-              draftSelectedChoiceId:
-                targetState.draftSelectedChoiceId ??
-                targetState.latestSelectedChoiceId,
+              draftSelectedChoiceId: getEffectiveSelectedChoiceId(
+                session,
+                targetState,
+              ),
               draftCumulativeMs: targetState.draftCumulativeMs,
             }
           : {}),

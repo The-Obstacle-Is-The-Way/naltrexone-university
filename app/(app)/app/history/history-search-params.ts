@@ -1,11 +1,15 @@
 import { ROUTES } from '@/lib/routes';
 import { normalizeSearchParam } from '@/lib/search-params';
 import { MAX_PAGINATION_LIMIT } from '@/src/adapters/shared/validation-limits';
+import {
+  isValidDifficulty,
+  type QuestionDifficulty,
+} from '@/src/domain/value-objects';
 
 export type HistoryTab = 'sessions' | 'questions';
 export type SessionModeFilter = 'all' | 'tutor' | 'exam';
 
-export type DifficultyFilter = 'easy' | 'medium' | 'hard';
+export type DifficultyFilter = QuestionDifficulty;
 
 export type ResultFilter = 'correct' | 'incorrect';
 export type SourceFilter = 'tutor' | 'exam' | 'adhoc';
@@ -53,9 +57,7 @@ export function parseDifficultyFilter(
   value: string | string[] | undefined,
 ): DifficultyFilter | null {
   const normalized = normalizeSearchParam(value);
-  if (normalized === 'easy') return normalized;
-  if (normalized === 'medium') return normalized;
-  if (normalized === 'hard') return normalized;
+  if (normalized && isValidDifficulty(normalized)) return normalized;
   return null;
 }
 

@@ -18,6 +18,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 import { DAY_MS } from '@/src/domain/services/time-constants';
+import { AllDifficulties } from '@/src/domain/value-objects/question-difficulty';
 
 // WHY: This file exceeds the 300-line soft guideline intentionally.
 // DEBT-234 enforces a warning threshold at 350 lines; DEBT-224 keeps 300 as the design guideline.
@@ -27,11 +28,10 @@ import { DAY_MS } from '@/src/domain/services/time-constants';
 /**
  * ENUMS
  */
-export const questionDifficultyEnum = pgEnum('question_difficulty', [
-  'easy',
-  'medium',
-  'hard',
-]);
+export const questionDifficultyEnum = pgEnum(
+  'question_difficulty',
+  AllDifficulties,
+);
 
 export const questionStatusEnum = pgEnum('question_status', [
   'draft',

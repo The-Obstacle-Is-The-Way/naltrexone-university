@@ -58,7 +58,6 @@ export type RecentAttempt = Attempt & {
 
 export interface AttemptWriter {
   insert(input: AttemptInsertInput): Promise<Attempt>;
-  deleteById(id: string, userId: string): Promise<boolean>;
 }
 
 export interface AttemptHistoryReader {

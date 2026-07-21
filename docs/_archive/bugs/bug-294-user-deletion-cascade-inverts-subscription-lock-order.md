@@ -61,5 +61,5 @@ Coordinate with BUG-288 (its fix modifies the same `user.deleted` flow); impleme
 
 - [BUG-286 (archived, resolved PR #626)](./bug-286-webhook-vs-reconcile-lock-order-deadlock.md) — established the canonical order for the three explicit writers; this is the residual fourth-writer inversion, partially created by that fix's reconcile reorder. Not a duplicate: BUG-286's doc scoped the cascade writer out of its refuted-leg analysis entirely.
 - [BUG-288](./bug-288-checkout-completes-after-account-deletion-orphan-billing.md) — same `user.deleted` flow; fix batches should be coordinated.
-- [DEBT-454](../../debt/debt-454-undocumented-seam-contracts-and-mechanism-forks.md) — documents the `hashtext` vs `hashtextextended` divergence that prevents the deletion path's existing advisory lock from serializing with subscription writers.
+- [DEBT-454](../debt/debt-454-undocumented-seam-contracts-and-mechanism-forks.md) — documents the `hashtext` vs `hashtextextended` divergence that prevents the deletion path's existing advisory lock from serializing with subscription writers.
 - Found during the 2026-07-11 wave-1 close adversarial regression review (6 lenses over the combined fix diff, refute-biased verification); the deadlock was reproduced against real Postgres during verification.

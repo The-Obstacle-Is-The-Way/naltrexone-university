@@ -4,6 +4,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
+import { ApplicationConflictReasons } from '@/src/application/errors';
 import { answeredOutcome, omittedOutcome } from '@/src/domain/value-objects';
 import {
   cleanupAfterEach,
@@ -591,6 +592,42 @@ describe('DrizzlePracticeSessionRepository + DrizzleAttemptRepository', () => {
 
     await expect(sessionRepo.end(created.id, user.id)).rejects.toMatchObject({
       code: 'CONFLICT',
+    });
+  });
+
+  it('maps the real duplicate-incomplete-session constraint to the resume-or-abandon conflict', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-duplicate-incomplete-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const paramsJson = {
+      count: 1,
+      tagSlugs: [],
+      difficulties: [],
+      questionIds: [question.id],
+    };
+    await sessionRepo.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson,
+    });
+
+    await expect(
+      sessionRepo.create({
+        userId: user.id,
+        mode: 'tutor',
+        paramsJson,
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message:
+        'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+      details: {
+        reason: ApplicationConflictReasons.IncompleteSessionExists,
+      },
     });
   });
 

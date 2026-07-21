@@ -52,6 +52,67 @@ afterAll(async () => {
 });
 
 describe('DrizzleUserRepository', () => {
+  it.each([
+    'upsertByClerkId',
+    'updateEmailByClerkId',
+  ] as const)('ignores a stale existing-identity write to a foreign-owned email through %s', async (operation) => {
+    const repo = new DrizzleUserRepository(db);
+    const staleObservedAt = new Date('2026-02-01T00:00:00.000Z');
+    const currentObservedAt = new Date('2026-02-02T00:00:00.000Z');
+    const ownerClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const incomingClerkId = `user_${randomUUID().replaceAll('-', '')}`;
+    const ownedEmail = `it-${randomUUID()}@example.com`;
+    const incomingEmail = `it-${randomUUID()}@example.com`;
+    const owner = await repo.upsertByClerkId(ownerClerkId, ownedEmail, {
+      observedAt: currentObservedAt,
+    });
+    const incoming = await repo.upsertByClerkId(
+      incomingClerkId,
+      incomingEmail,
+      { observedAt: currentObservedAt },
+    );
+    cleanup.userIds.push(owner.id, incoming.id);
+
+    await expect(
+      repo[operation](incomingClerkId, ownedEmail, {
+        observedAt: staleObservedAt,
+      }),
+    ).resolves.toEqual(incoming);
+    await expect(repo.findByClerkId(incomingClerkId)).resolves.toEqual(
+      incoming,
+    );
+  });
+
+  it.each([
+    'upsertByClerkId',
+    'updateEmailByClerkId',
+  ] as const)('stores the newer observation timestamp for a same-email write through %s', async (operation) => {
+    const repo = new DrizzleUserRepository(db);
+    const initialObservedAt = new Date('2026-02-01T00:00:00.000Z');
+    const newerObservedAt = new Date('2026-02-02T00:00:00.000Z');
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+    const email = `it-${randomUUID()}@example.com`;
+    const existing = await repo.upsertByClerkId(clerkUserId, email, {
+      observedAt: initialObservedAt,
+    });
+    cleanup.userIds.push(existing.id);
+
+    await expect(
+      repo[operation](clerkUserId, email, {
+        observedAt: newerObservedAt,
+      }),
+    ).resolves.toMatchObject({
+      id: existing.id,
+      email,
+      updatedAt: newerObservedAt,
+    });
+    await expect(repo.findByClerkId(clerkUserId)).resolves.toMatchObject({
+      id: existing.id,
+      email,
+      updatedAt: newerObservedAt,
+    });
+  });
+
   it('throws when scripted time is drawn more times than configured', () => {
     const observedAt = new Date('2026-02-01T00:00:00.000Z');
     const now = createScriptedNow(observedAt);

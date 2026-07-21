@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { zDifficulty } from '@/src/adapters/shared/zod-schemas';
 import {
   CANONICAL_SUBSTANCE_SLUGS,
   CANONICAL_TOPIC_SLUGS,
@@ -72,7 +73,7 @@ export const QuestionFrontmatterSchema = z
       .string()
       .min(1)
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-    difficulty: z.enum(['easy', 'medium', 'hard']),
+    difficulty: zDifficulty,
     status: z.enum(['draft', 'published', 'archived']),
     tags: z.array(TagFrontmatterSchema).max(50),
     choices: z.array(ChoiceFrontmatterSchema).min(2).max(5),

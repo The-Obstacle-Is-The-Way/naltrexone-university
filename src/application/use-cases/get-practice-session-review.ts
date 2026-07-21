@@ -8,9 +8,11 @@ import { enrichWithQuestion } from '@/src/application/shared/enrich-with-questio
 import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
 import {
   createPracticeSessionStateMap,
+  getEffectiveSelectedChoiceId,
   requirePracticeSessionQuestionState,
 } from '@/src/application/shared/practice-session-state';
 import { shouldShowExplanation as sessionShouldShowExplanation } from '@/src/domain/services';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
 export type GetPracticeSessionReviewInput = {
   userId: string;
@@ -22,7 +24,7 @@ export type AvailablePracticeSessionReviewRow = {
   questionId: string;
   slug: string;
   stemMd: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: QuestionDifficulty;
   order: number; // 1-based
   isAnswered: boolean;
   isCorrect: boolean | null;
@@ -52,21 +54,6 @@ export type GetPracticeSessionReviewOutput = {
   markedCount: number;
   rows: PracticeSessionReviewRow[];
 };
-
-function getReviewSelectedChoiceId(
-  session: {
-    mode: 'tutor' | 'exam';
-    endedAt: Date | null;
-  },
-  state: {
-    latestSelectedChoiceId: string | null;
-    draftSelectedChoiceId: string | null;
-  },
-): string | null {
-  return session.mode === 'exam' && session.endedAt === null
-    ? (state.draftSelectedChoiceId ?? state.latestSelectedChoiceId)
-    : state.latestSelectedChoiceId;
-}
 
 export class GetPracticeSessionReviewUseCase {
   constructor(
@@ -113,7 +100,7 @@ export class GetPracticeSessionReviewUseCase {
         questionId,
         stateByQuestionId,
       });
-      const isAnswered = getReviewSelectedChoiceId(session, state) !== null;
+      const isAnswered = getEffectiveSelectedChoiceId(session, state) !== null;
       const isOmitted =
         session.mode === 'exam' &&
         session.endedAt !== null &&

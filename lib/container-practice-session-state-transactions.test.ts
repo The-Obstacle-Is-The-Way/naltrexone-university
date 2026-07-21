@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   afterAll,
   afterEach,
@@ -15,6 +17,7 @@ import {
 } from '@/src/application/errors';
 import {
   FakeAttemptRepository,
+  FakeLogger,
   FakePracticeSessionRepository,
   FakeQuestionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -90,11 +93,17 @@ function createPracticeSessionStateWriteContainer(input: {
     'questions' | 'attempts' | 'sessions'
   >;
   now?: () => Date;
+  logger?: FakeLogger;
 }) {
   return createContainer({
     primitives: {
       db: createTransactionOnlyDb(input.transaction),
       now: input.now ?? (() => new Date('2026-02-01T00:01:00.000Z')),
+      ...(input.logger
+        ? {
+            logger: input.logger as unknown as typeof import('./logger').logger,
+          }
+        : {}),
     },
     repositories: {
       createQuestionRepository: vi.fn(() => input.fixture.questions),
@@ -156,6 +165,12 @@ class StatementCancelingAttemptRepository extends FakeAttemptRepository {
     ..._args: Parameters<FakeAttemptRepository['insert']>
   ): ReturnType<FakeAttemptRepository['insert']> {
     return Promise.reject(this.failure);
+  }
+}
+
+class ThrowingRetryWarnLogger extends FakeLogger {
+  override warn(): void {
+    throw new Error('logger unavailable');
   }
 }
 
@@ -346,6 +361,132 @@ describe('container factories — practice session state write transactions', ()
       sessionId: fixture.sessionId,
     });
     expect(transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits in the 25-49ms and 50-99ms ranges with nonzero deterministic jitter', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const tx = createUnexpectedNestedTransactionDb();
+    const serializationFailure = { code: '40001' };
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      if (transaction.mock.calls.length <= 2) {
+        throw serializationFailure;
+      }
+      return fn(tx);
+    });
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+    });
+
+    const result = container.createFinalizeExamAnswersUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+
+    await vi.advanceTimersByTimeAsync(36);
+    expect(transaction).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(transaction).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(74);
+    expect(transaction).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(result).resolves.toMatchObject({
+      sessionId: fixture.sessionId,
+    });
+    expect(transaction).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    '40001',
+    '40P01',
+  ] as const)('logs one safe retry observation for %s', async (code) => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const logger = new FakeLogger();
+    const tx = createUnexpectedNestedTransactionDb();
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      if (transaction.mock.calls.length === 1) {
+        throw { code };
+      }
+      return fn(tx);
+    });
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+      logger,
+    });
+
+    const result = container.createFinalizeExamAnswersUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+    await vi.runAllTimersAsync();
+    await result;
+
+    expect(logger.warnCalls).toEqual([
+      {
+        context: {
+          attempt: 1,
+          max: 3,
+          code,
+          delay: 37,
+        },
+        msg: 'Retrying practice session state write transaction',
+      },
+    ]);
+  });
+
+  it('continues retrying when retry observation logging fails', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+    const fixture = createPracticeSessionStateWriteFixture('exam');
+    const tx = createUnexpectedNestedTransactionDb();
+    const transaction = vi.fn<TestTransaction>(async (fn) => {
+      if (transaction.mock.calls.length === 1) {
+        throw { code: '40001' };
+      }
+      return fn(tx);
+    });
+    const container = createPracticeSessionStateWriteContainer({
+      transaction,
+      fixture,
+      logger: new ThrowingRetryWarnLogger(),
+    });
+
+    const result = container.createFinalizeExamAnswersUseCase().execute({
+      userId: fixture.userId,
+      sessionId: fixture.sessionId,
+    });
+    await vi.runAllTimersAsync();
+
+    await expect(result).resolves.toMatchObject({
+      sessionId: fixture.sessionId,
+    });
+    expect(transaction).toHaveBeenCalledTimes(2);
+  });
+
+  it('wraps exactly finalize, session-backed submit, and discard with the DB retry runner', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'lib/container/use-cases.ts'),
+      'utf8',
+    );
+
+    expect(
+      source.match(/runPracticeSessionStateWriteTransaction\(/g),
+    ).toHaveLength(3);
+    expect(source).toMatch(
+      /createFinalizeExamAnswersUseCase[\s\S]{0,800}runPracticeSessionStateWriteTransaction/,
+    );
+    expect(source).toMatch(
+      /createDiscardPracticeSessionUseCase[\s\S]{0,400}runPracticeSessionStateWriteTransaction/,
+    );
+    expect(source).toMatch(
+      /createSubmitAnswerUseCase[\s\S]{0,500}runPracticeSessionStateWriteTransaction/,
+    );
   });
 
   it('retries finalize exam write transactions when a retryable failure is wrapped in ApplicationError', async () => {

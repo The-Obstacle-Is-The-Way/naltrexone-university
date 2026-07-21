@@ -40,6 +40,8 @@ export class DrizzleClerkEventRepository implements ClerkEventRepository {
   async lock(
     eventId: string,
   ): Promise<{ processedAt: Date | null; error: string | null }> {
+    // Transaction precondition: FOR UPDATE protects subsequent processing only
+    // when this repository was constructed from the webhook callback tx.
     const [row] = await this.db
       .select({
         processedAt: clerkEvents.processedAt,

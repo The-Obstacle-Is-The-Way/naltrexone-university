@@ -10,10 +10,19 @@ import {
   type ApplicationErrorCode,
 } from '@/src/application/errors';
 import type { PracticeSession } from '@/src/domain/entities';
-import { zUuid } from '../shared/zod-schemas';
+import { zDifficulty, zUuid } from '../shared/zod-schemas';
 
-const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
-
+/**
+ * Load-bearing persisted-data compatibility contract.
+ *
+ * This schema validates both new writes and every stored
+ * practice_sessions.params_json row. Narrowing a limit or removing an enum
+ * value requires a predeploy data audit plus any needed repair/contract
+ * migration before the narrower reader ships. Widening a limit or adding an
+ * enum value requires expand-first readers, including supported rollback
+ * targets; otherwise enabling the new writes requires an explicit data-fenced
+ * rollback policy and a tested downgrade/repair path.
+ */
 const practiceSessionParamsSchema = z
   .object({
     count: z.number().int().min(1).max(MAX_PRACTICE_SESSION_QUESTIONS),
@@ -21,7 +30,7 @@ const practiceSessionParamsSchema = z
       .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
       .max(MAX_PRACTICE_SESSION_TAG_FILTERS),
     difficulties: z
-      .array(questionDifficultySchema)
+      .array(zDifficulty)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
     // DEBT-433: this array's order is mirrored by
     // practice_session_question_states.position. Direct data repairs or

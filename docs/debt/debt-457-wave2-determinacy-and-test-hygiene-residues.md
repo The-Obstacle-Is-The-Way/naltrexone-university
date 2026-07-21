@@ -5,6 +5,7 @@
 **Date:** 2026-07-14
 **Component:** Practice end/finalize client, Stripe webhook version fence, subscription fake test
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
+**FW-1 update:** 2026-07-21 — Item 3 is resolved: its public-contract mutation is guard-passing, the test proves both rows and `observationVersionByUserId` change before restore, and proves both revert afterward. Remaining active scope is Item 1 for FW-2; Item 2 remains a closed **ACCEPT** decision.
 
 ---
 
@@ -32,7 +33,7 @@ The BUG-287 fix's webhook integration re-runs `processWebhookEvent` — which pe
 
 ## Item 3 — `FakeSubscriptionRepository.snapshot()/restore()` test is vacuous
 
-The only unit test of the fake's snapshot/restore pair ([`fake-subscription-repository.test.ts#L290`](../../src/application/test-helpers/fakes/fake-subscription-repository.test.ts#L290)) performs its pre-restore mutation through `upsert`, which the fake's write guard silently rejects under the default real clock — so the post-restore assertions pass even if `restore()` is a no-op. The wave-2 `observationVersionByUserId` state added to the fake is therefore untested on the restore path. **CHOSEN, minimal form:** make the mutation guard-passing through the public fake contract, assert it took effect **before** restoring, then assert restore reverted both rows and observation versions. Direct private-state manipulation and a broader fake transaction framework are rejected. Same fake-fidelity family as [DEBT-455](./debt-455-fake-user-repository-fidelity-divergences.md).
+The only unit test of the fake's snapshot/restore pair ([`fake-subscription-repository.test.ts#L290`](../../src/application/test-helpers/fakes/fake-subscription-repository.test.ts#L290)) performed its pre-restore mutation through `upsert`, which the fake's write guard silently rejected under the default real clock — so the post-restore assertions passed even if `restore()` was a no-op. The wave-2 `observationVersionByUserId` state added to the fake was therefore untested on the restore path. **RESOLVED 2026-07-21:** FW-1 made the mutation guard-passing through the public fake contract, proved both rows and observation versions changed before restore, and then proved both reverted. Direct private-state manipulation and a broader fake transaction framework remained rejected. Same fake-fidelity family as [DEBT-455](../_archive/debt/debt-455-fake-user-repository-fidelity-divergences.md).
 
 ## Verification
 
@@ -44,4 +45,4 @@ The only unit test of the fake's snapshot/restore pair ([`fake-subscription-repo
 
 - [BUG-297 (archived)](../_archive/bugs/bug-297-checkout-success-version-cas-exhaustion-uncaught-conflict.md) — the same version-fence seam's user-facing exhaustion leg (bug-grade, fixed and production-verified).
 - [BUG-291 (archived)](../_archive/bugs/bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — the determinacy rule Item 1 completes.
-- [DEBT-455](./debt-455-fake-user-repository-fidelity-divergences.md) — fake-fidelity precedent for Item 3.
+- [DEBT-455](../_archive/debt/debt-455-fake-user-repository-fidelity-divergences.md) — fake-fidelity precedent for Item 3.

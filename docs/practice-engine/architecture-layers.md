@@ -114,7 +114,7 @@ Answer-key exposure in active exam contexts is governed by the [Exam Answer Secr
 
 Ports define what the application layer needs from the outside world. The actual `AttemptRepository` is composed of 7 segregated sub-interfaces following ISP:
 
-- `AttemptWriter` — `insert`, `deleteById`
+- `AttemptWriter` — `insert`
 - `AttemptHistoryReader` — `findByUserId` (paginated)
 - `AttemptSessionReader` — `findBySessionId`
 - `AttemptStatsReader` — counts, recent, streak data

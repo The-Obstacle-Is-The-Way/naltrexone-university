@@ -160,6 +160,8 @@ export class DrizzlePracticeSessionRepository
   private async inRepeatableRead<T>(
     action: (db: DrizzleDb) => Promise<T>,
   ): Promise<T> {
+    // On a tx-bound this.db, this nests as a SAVEPOINT that inherits the outer
+    // snapshot; drizzle ignores this isolation config for the nested call.
     return this.db.transaction((tx) => action(tx as unknown as DrizzleDb), {
       isolationLevel: 'repeatable read',
     });
@@ -608,6 +610,13 @@ export class DrizzlePracticeSessionRepository
       )
       .returning();
 
+    // Per-context contract: standalone READ COMMITTED can reach this branch
+    // after a concurrent committed end, and the fresh top-level re-read below
+    // correctly returns CONFLICT. Under a tx-bound REPEATABLE READ caller the
+    // guarded UPDATE raises 40001, owned by
+    // runPracticeSessionStateWriteTransaction; this 0-row recovery is dead in
+    // that context and MUST NOT be relied on because its nested re-read would
+    // inherit the stale outer snapshot.
     if (!updated) {
       const current = await this.findByIdAndUserId(id, userId);
       if (!current) {

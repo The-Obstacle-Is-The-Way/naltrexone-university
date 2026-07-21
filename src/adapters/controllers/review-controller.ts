@@ -6,6 +6,7 @@ import {
   MAX_PAGINATION_LIMIT,
   MAX_PAGINATION_OFFSET,
 } from '@/src/adapters/shared/validation-limits';
+import { zDifficulty } from '@/src/adapters/shared/zod-schemas';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   GetAttemptedQuestionsInput,
@@ -21,7 +22,7 @@ const GetAttemptedQuestionsInputSchema = z
     offset: z.number().int().min(0).max(MAX_PAGINATION_OFFSET),
     result: z.enum(['correct', 'incorrect']).optional(),
     source: z.enum(['tutor', 'exam', 'adhoc']).optional(),
-    difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+    difficulty: zDifficulty.optional(),
     tagSlug: z.string().min(1).optional(),
     sort: z
       .enum(['recent', 'incorrect-first', 'correct-first', 'difficulty'])

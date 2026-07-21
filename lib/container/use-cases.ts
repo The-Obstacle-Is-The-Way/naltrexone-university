@@ -52,15 +52,17 @@ const RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES = new Set([
   '40P01',
 ]);
 
-function isRetryablePracticeSessionStateWriteFailure(error: unknown): boolean {
+function getRetryablePracticeSessionStateWriteCode(
+  error: unknown,
+): string | null {
   const postgresError =
     error instanceof ApplicationError
       ? (error as { cause?: unknown }).cause
       : error;
   const code = getPostgresErrorCode(postgresError);
-  return (
-    code !== null && RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES.has(code)
-  );
+  return code !== null && RETRYABLE_PRACTICE_SESSION_STATE_WRITE_CODES.has(code)
+    ? code
+    : null;
 }
 
 function getPracticeSessionStateWriteRetryDelayMs(attempt: number): number {
@@ -84,6 +86,10 @@ async function runPracticeSessionStateWriteTransaction<T>(
   action: (tx: DrizzleDb) => Promise<T>,
   options?: { classifyStatementCancellation?: boolean },
 ): Promise<T> {
+  // This is intentionally separate from the generic adapter retry helper: each
+  // attempt must open a fresh top-level REPEATABLE READ transaction. Only the
+  // 40001/40P01 SQLSTATE allowlist retries, with base-plus-uniform jitter, and
+  // exhaustion maps to the typed state-changed-concurrently application error.
   let lastRetryableError: unknown;
 
   for (
@@ -105,12 +111,27 @@ async function runPracticeSessionStateWriteTransaction<T>(
         }
       }, PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG);
     } catch (error) {
-      if (!isRetryablePracticeSessionStateWriteFailure(error)) {
+      const retryableCode = getRetryablePracticeSessionStateWriteCode(error);
+      if (retryableCode === null) {
         throw error;
       }
       lastRetryableError = error;
       if (attempt + 1 < PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_ATTEMPTS) {
-        await sleep(getPracticeSessionStateWriteRetryDelayMs(attempt));
+        const delay = getPracticeSessionStateWriteRetryDelayMs(attempt);
+        try {
+          primitives.logger.warn(
+            {
+              attempt: attempt + 1,
+              max: PRACTICE_SESSION_STATE_WRITE_TRANSACTION_MAX_ATTEMPTS,
+              code: retryableCode,
+              delay,
+            },
+            'Retrying practice session state write transaction',
+          );
+        } catch {
+          // Retry observation is best effort and must not change write behavior.
+        }
+        await sleep(delay);
       }
     }
   }
