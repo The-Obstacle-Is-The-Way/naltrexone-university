@@ -1,6 +1,6 @@
 # Migration Authoring
 
-**Last Updated:** 2026-07-04
+**Last Updated:** 2026-07-21
 
 This guide is the durable review checklist for Drizzle migration files. It
 complements [Deployment Procedure](./deployment-procedure.md), which describes
@@ -78,17 +78,51 @@ Small or empty tables can accept the standard lock cost, but the migration must
 say so in a nearby SQL comment. `0026_track_a_tail_sweep.sql` does this for its
 bounded cleanup over the small `practice_sessions` table.
 
+The application-session bounds in `lib/db-connection-options.ts` apply only to
+connections created by `lib/db.ts`. They are not evidence that Drizzle Kit's
+migration transaction has a statement or lock timeout. Do not claim migration
+timeout coverage unless it is proven on the actual `pnpm db:migrate` connection.
+
+## Deployed-Code Compatibility
+
+Every migration PR must answer this N-1 question explicitly: **after the
+migration commits, can the currently serving deployment continue to read and
+write correctly until the new deployment is promoted?** The deploy pipeline
+migrates before it builds and promotes replacement code, so old code and the
+new schema necessarily overlap.
+
+Use expand/contract across deployments for contracting changes:
+
+1. Expand with an additive schema that both N-1 and new code can use.
+2. Deploy code that reads/writes the expanded shape and stops depending on the
+   old shape.
+3. Contract only in a later migration after N-1 code can no longer serve.
+
+Do not introduce a constraint that rejects writes the serving code can still
+produce. Common failure codes are `23514` for a CHECK violation, `23502` for a
+NOT NULL violation, and `23503` for a foreign-key violation.
+
+One-shot backfills have the same compatibility window. A scan that runs during
+migration cannot see rows that N-1 code inserts or updates after that scan
+commits. When the serving code can still create the legacy shape, prefer a
+re-runnable bounded post-cutover backfill or schedule a deliberate follow-up
+sweep after promotion; do not describe the pre-build scan as complete coverage.
+
 ## Deployment Contract
 
 Never use `drizzle-kit push` for this repository. It bypasses checked-in
 migration files and can miss extensions, constraints, custom SQL, and ledger
 history.
 
-Git-triggered Vercel Preview and Production deploys run the checked-in migration
-journal through the configured Build Command:
+Git-triggered Vercel Preview and Production deploys run a content/ledger
+pre-check, the checked-in migration journal, an exact post-check, and then the
+application build through the configured Build Command:
 
 ```bash
-pnpm db:migrate && pnpm build
+pnpm exec tsx scripts/verify-migration-ledger.ts pre \
+  && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts \
+  && pnpm exec tsx scripts/verify-migration-ledger.ts post \
+  && pnpm build
 ```
 
 For any manual fallback or operator-run migration, pass the intended database
