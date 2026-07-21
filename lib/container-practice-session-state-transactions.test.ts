@@ -474,19 +474,34 @@ describe('container factories — practice session state write transactions', ()
       resolve(process.cwd(), 'lib/container/use-cases.ts'),
       'utf8',
     );
+    const getFactoryBody = (startMarker: string, endMarker: string) => {
+      const start = source.indexOf(startMarker);
+      const end = source.indexOf(endMarker, start);
+
+      expect(start).toBeGreaterThanOrEqual(0);
+      expect(end).toBeGreaterThan(start);
+      return source.slice(start, end);
+    };
+    const factoryBodies = [
+      getFactoryBody(
+        'const createFinalizeExamAnswersUseCase =',
+        '\n\n  return {',
+      ),
+      getFactoryBody(
+        'createDiscardPracticeSessionUseCase:',
+        'createEndPracticeSessionUseCase:',
+      ),
+      getFactoryBody('createSubmitAnswerUseCase:', 'createSetBookmarkUseCase:'),
+    ];
 
     expect(
       source.match(/runPracticeSessionStateWriteTransaction\(/g),
     ).toHaveLength(3);
-    expect(source).toMatch(
-      /createFinalizeExamAnswersUseCase[\s\S]{0,800}runPracticeSessionStateWriteTransaction/,
-    );
-    expect(source).toMatch(
-      /createDiscardPracticeSessionUseCase[\s\S]{0,400}runPracticeSessionStateWriteTransaction/,
-    );
-    expect(source).toMatch(
-      /createSubmitAnswerUseCase[\s\S]{0,500}runPracticeSessionStateWriteTransaction/,
-    );
+    for (const factoryBody of factoryBodies) {
+      expect(
+        factoryBody.match(/runPracticeSessionStateWriteTransaction\(/g),
+      ).toHaveLength(1);
+    }
   });
 
   it('retries finalize exam write transactions when a retryable failure is wrapped in ApplicationError', async () => {
