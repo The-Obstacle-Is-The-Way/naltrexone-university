@@ -10,6 +10,8 @@ import {
   ApplicationConflictReasons,
   ApplicationError,
 } from '@/src/application/errors';
+import { FakePracticeSessionRepository } from '@/src/application/test-helpers/fakes';
+import { createPracticeSession } from '@/src/domain/test-helpers';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import {
   createStateRow,
@@ -710,7 +712,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     expect(nowFn).not.toHaveBeenCalled();
   });
 
-  it('throws CONFLICT when the practice session is already ended', async () => {
+  it('matches the fake already-ended end error contract', async () => {
     const row = {
       id: sessionId,
       userId: userId,
@@ -748,13 +750,42 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
     type RepoDb = ConstructorParameters<
       typeof DrizzlePracticeSessionRepository
     >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
-
-    await expect(repo.end(sessionId, userId)).rejects.toBeInstanceOf(
-      ApplicationError,
+    const realRepository = new DrizzlePracticeSessionRepository(
+      db as unknown as RepoDb,
     );
-    await expect(repo.end(sessionId, userId)).rejects.toMatchObject({
-      code: 'CONFLICT',
+    const fakeRepository = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: sessionId,
+        userId,
+        mode: 'tutor',
+        endedAt: row.endedAt,
+      }),
+    ]);
+
+    const results = await Promise.allSettled([
+      realRepository.end(sessionId, userId),
+      fakeRepository.end(sessionId, userId),
+    ]);
+    const errorShapes = results.map((result) => {
+      expect(result.status).toBe('rejected');
+      if (result.status !== 'rejected') {
+        throw new Error('Expected already-ended end() to reject');
+      }
+
+      expect(result.reason).toBeInstanceOf(ApplicationError);
+      const error = result.reason as ApplicationError;
+      expect(error).toMatchObject({
+        code: 'CONFLICT',
+        message: 'Practice session already ended',
+      });
+      expect(error.details?.reason).toBeUndefined();
+      return {
+        code: error.code,
+        message: error.message,
+        reason: error.details?.reason,
+      };
     });
+
+    expect(errorShapes[1]).toEqual(errorShapes[0]);
   });
 });
