@@ -131,6 +131,121 @@ async function persistAcknowledgedOutcome(
   });
 }
 
+async function processSubscriptionWebhook(
+  deps: StripeWebhookDeps,
+  input: StripeWebhookInput,
+  event: StripeWebhookEvent,
+  subscriptionUpdate: StripeSubscriptionUpdate,
+): Promise<void> {
+  let processingError: unknown;
+  let hasProcessingError = false;
+  const discoveredUserId = subscriptionUpdate.userId;
+  const retrieveSubscriptionUpdate =
+    async (): Promise<StripeSubscriptionUpdate> => {
+      const refreshedEvent = await deps.paymentGateway.processWebhookEvent(
+        input.rawBody,
+        input.signature,
+      );
+      if (
+        refreshedEvent.eventId !== event.eventId ||
+        refreshedEvent.type !== event.type ||
+        !refreshedEvent.subscriptionUpdate
+      ) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Stripe webhook changed during subscription refresh',
+        );
+      }
+      return refreshedEvent.subscriptionUpdate;
+    };
+
+  try {
+    await persistSubscriptionObservation({
+      userId: discoveredUserId,
+      readVersion: (userId) =>
+        deps.subscriptionVersions.findObservationVersionByUserId(userId),
+      retrieve: retrieveSubscriptionUpdate,
+      getUserId: (nextSubscriptionUpdate) => nextSubscriptionUpdate.userId,
+      persist: (nextSubscriptionUpdate, expectedVersion) =>
+        deps.transaction(
+          async ({ stripeEvents, subscriptions, stripeCustomers }) => {
+            const claimed = await stripeEvents.claim(event.eventId, event.type);
+            if (!claimed) {
+              const snapshot = await stripeEvents.peek(event.eventId);
+              if (snapshot && isSuccessfullyProcessed(snapshot)) {
+                throw new StripeWebhookAlreadyProcessed();
+              }
+            }
+
+            const current = await stripeEvents.lock(event.eventId);
+            if (isSuccessfullyProcessed(current)) {
+              throw new StripeWebhookAlreadyProcessed();
+            }
+
+            try {
+              // Stripe webhook, checkout-success, and reconcile use advisory(user)
+              // -> stripe_subscriptions -> stripe_customers. User deletion is the
+              // fourth writer and takes the same advisory before its inverse cascade.
+              const write = await subscriptions.upsert({
+                userId: nextSubscriptionUpdate.userId,
+                externalSubscriptionId:
+                  nextSubscriptionUpdate.externalSubscriptionId,
+                plan: nextSubscriptionUpdate.plan,
+                status: nextSubscriptionUpdate.status,
+                currentPeriodEnd: nextSubscriptionUpdate.currentPeriodEnd,
+                cancelAtPeriodEnd: nextSubscriptionUpdate.cancelAtPeriodEnd,
+                expectedVersion,
+              });
+              if (!write.persisted && write.reason === 'version_conflict') {
+                return write;
+              }
+
+              if (write.persisted) {
+                await stripeCustomers.insert(
+                  nextSubscriptionUpdate.userId,
+                  nextSubscriptionUpdate.externalCustomerId,
+                  { conflictStrategy: 'authoritative' },
+                );
+              }
+
+              await stripeEvents.markProcessed(event.eventId);
+              return write;
+            } catch (error) {
+              if (error instanceof StripeWebhookAlreadyProcessed) {
+                throw error;
+              }
+              processingError = error;
+              hasProcessingError = true;
+              throw error;
+            }
+          },
+        ),
+    });
+  } catch (transactionError) {
+    if (transactionError instanceof StripeWebhookAlreadyProcessed) {
+      // Another delivery committed this event first.
+      return;
+    }
+
+    if (isSubscriptionUserMissingError(transactionError)) {
+      await persistAcknowledgedOutcome(deps, event);
+      deps.logger.warn(
+        {
+          reason: 'user_missing',
+          eventId: event.eventId,
+          eventType: event.type,
+          stripeCustomerId: subscriptionUpdate.externalCustomerId,
+          userId: transactionError.userId,
+        },
+        'Acknowledging Stripe subscription webhook for missing local user',
+      );
+      return;
+    }
+
+    throw hasProcessingError ? processingError : transactionError;
+  }
+}
+
 export async function processStripeWebhook(
   deps: StripeWebhookDeps,
   input: StripeWebhookInput,
@@ -174,110 +289,12 @@ export async function processStripeWebhook(
 
   try {
     if (event.subscriptionUpdate) {
-      const discoveredUserId = event.subscriptionUpdate.userId;
-      const retrieveSubscriptionUpdate =
-        async (): Promise<StripeSubscriptionUpdate> => {
-          const refreshedEvent = await deps.paymentGateway.processWebhookEvent(
-            input.rawBody,
-            input.signature,
-          );
-          if (
-            refreshedEvent.eventId !== event.eventId ||
-            refreshedEvent.type !== event.type ||
-            !refreshedEvent.subscriptionUpdate
-          ) {
-            throw new ApplicationError(
-              'CONFLICT',
-              'Stripe webhook changed during subscription refresh',
-            );
-          }
-          return refreshedEvent.subscriptionUpdate;
-        };
-
-      try {
-        await persistSubscriptionObservation({
-          userId: discoveredUserId,
-          readVersion: (userId) =>
-            deps.subscriptionVersions.findObservationVersionByUserId(userId),
-          retrieve: retrieveSubscriptionUpdate,
-          getUserId: (subscriptionUpdate) => subscriptionUpdate.userId,
-          persist: (subscriptionUpdate, expectedVersion) =>
-            deps.transaction(
-              async ({ stripeEvents, subscriptions, stripeCustomers }) => {
-                const claimed = await stripeEvents.claim(
-                  event.eventId,
-                  event.type,
-                );
-                if (!claimed) {
-                  const snapshot = await stripeEvents.peek(event.eventId);
-                  if (snapshot && isSuccessfullyProcessed(snapshot)) {
-                    throw new StripeWebhookAlreadyProcessed();
-                  }
-                }
-
-                const current = await stripeEvents.lock(event.eventId);
-                if (isSuccessfullyProcessed(current)) {
-                  throw new StripeWebhookAlreadyProcessed();
-                }
-
-                try {
-                  // Stripe webhook, checkout-success, and reconcile use advisory(user)
-                  // -> stripe_subscriptions -> stripe_customers. User deletion is the
-                  // fourth writer and takes the same advisory before its inverse cascade.
-                  const write = await subscriptions.upsert({
-                    userId: subscriptionUpdate.userId,
-                    externalSubscriptionId:
-                      subscriptionUpdate.externalSubscriptionId,
-                    plan: subscriptionUpdate.plan,
-                    status: subscriptionUpdate.status,
-                    currentPeriodEnd: subscriptionUpdate.currentPeriodEnd,
-                    cancelAtPeriodEnd: subscriptionUpdate.cancelAtPeriodEnd,
-                    expectedVersion,
-                  });
-                  if (!write.persisted && write.reason === 'version_conflict') {
-                    return write;
-                  }
-
-                  if (write.persisted) {
-                    await stripeCustomers.insert(
-                      subscriptionUpdate.userId,
-                      subscriptionUpdate.externalCustomerId,
-                      { conflictStrategy: 'authoritative' },
-                    );
-                  }
-
-                  await stripeEvents.markProcessed(event.eventId);
-                  return write;
-                } catch (error) {
-                  if (error instanceof StripeWebhookAlreadyProcessed) {
-                    throw error;
-                  }
-                  processingError = error;
-                  hasProcessingError = true;
-                  throw error;
-                }
-              },
-            ),
-        });
-      } catch (error) {
-        if (error instanceof StripeWebhookAlreadyProcessed) {
-          // Another delivery committed this event first.
-        } else if (isSubscriptionUserMissingError(error)) {
-          await persistAcknowledgedOutcome(deps, event);
-          deps.logger.warn(
-            {
-              reason: 'user_missing',
-              eventId: event.eventId,
-              eventType: event.type,
-              stripeCustomerId: event.subscriptionUpdate.externalCustomerId,
-              userId: error.userId,
-            },
-            'Acknowledging Stripe subscription webhook for missing local user',
-          );
-        } else {
-          throw error;
-        }
-      }
+      await processSubscriptionWebhook(
+        deps,
+        input,
+        event,
+        event.subscriptionUpdate,
+      );
     } else {
       await deps.transaction(async ({ stripeEvents }) => {
         const claimed = await stripeEvents.claim(event.eventId, event.type);
