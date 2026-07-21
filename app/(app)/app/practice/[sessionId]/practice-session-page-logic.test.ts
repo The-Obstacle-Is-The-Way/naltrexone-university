@@ -38,7 +38,10 @@ import type {
   EndPracticeSessionOutput,
   GetPracticeSessionReviewOutput,
 } from '@/src/adapters/controllers/practice-controller';
-import { ApplicationConflictReasons } from '@/src/application/errors';
+import {
+  ApplicationConflictReasons,
+  UserConflictMessages,
+} from '@/src/application/errors';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
 import type { SubmitAnswerOutput } from '@/src/application/use-cases/submit-answer';
@@ -769,90 +772,101 @@ describe('practice-session-page-logic', () => {
       expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
     });
 
-    it('briefly re-polls summary when the idempotency wrapper reports a concurrent request still in progress', async () => {
-      vi.useFakeTimers();
-      try {
-        const setLoadState = vi.fn();
-        const setSummary = vi.fn();
-        const resetQuestionState = vi.fn();
-        const getPracticeSessionSummaryFn = vi
-          .fn<() => Promise<ActionResult<EndPracticeSessionOutput>>>()
-          .mockResolvedValueOnce(
-            err('CONFLICT', 'Practice session has not ended'),
-          )
-          .mockResolvedValueOnce(ok(successfulEndSessionOutput));
+    it('shows the server error without summary recovery or key rotation for an email-ownership conflict', async () => {
+      const setLoadState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const getPracticeSessionSummaryFn = vi.fn(async () =>
+        err('INTERNAL_ERROR', 'Summary recovery should not run'),
+      );
 
-        const promise = endSession({
-          sessionId: fixtureSession1Id,
-          endSessionIdempotencyKey: 'idem_1',
-          finalizeSessionFn: async () =>
-            err(
-              'CONFLICT',
-              'Request timed out waiting for idempotency key. The concurrent request may still be in progress or may have failed.',
-              undefined,
-              {
-                reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
-              },
-            ),
-          getPracticeSessionSummaryFn,
-          setLoadState,
-          setSummary,
-          resetQuestionState,
-        });
+      await endSession({
+        sessionId: fixtureSession1Id,
+        endSessionIdempotencyKey: 'idem_1',
+        finalizeSessionFn: async () =>
+          err(
+            'CONFLICT',
+            UserConflictMessages.EmailOwnedByAnotherIdentity,
+            undefined,
+            {
+              reason:
+                ApplicationConflictReasons.UserEmailOwnedByAnotherIdentity,
+            },
+          ),
+        getPracticeSessionSummaryFn,
+        setLoadState,
+        setSummary: vi.fn(),
+        resetQuestionState: vi.fn(),
+        rotateIdempotencyKey,
+      });
 
-        await vi.runAllTimersAsync();
-        await promise;
-
-        expect(getPracticeSessionSummaryFn).toHaveBeenCalledTimes(2);
-        expect(setSummary).toHaveBeenCalledWith(successfulEndSessionOutput);
-        expect(resetQuestionState).toHaveBeenCalledTimes(1);
-        expect(setLoadState).toHaveBeenLastCalledWith({ status: 'ready' });
-      } finally {
-        vi.useRealTimers();
-      }
+      expect(getPracticeSessionSummaryFn).not.toHaveBeenCalled();
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+      expect(setLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: UserConflictMessages.EmailOwnedByAnotherIdentity,
+      });
     });
 
-    it('keeps the idempotency key and reports still-processing when concurrent request recovery cannot resolve a summary', async () => {
-      vi.useFakeTimers();
-      try {
-        const setLoadState = vi.fn();
-        const rotateIdempotencyKey = vi.fn();
-        const getPracticeSessionSummaryFn = vi
-          .fn<() => Promise<ActionResult<EndPracticeSessionOutput>>>()
-          .mockResolvedValue(err('CONFLICT', 'Practice session has not ended'));
+    it('shows the server error without summary recovery or key rotation for a known non-session conflict', async () => {
+      const serverMessage =
+        'Request timed out waiting for idempotency key. The concurrent request may still be in progress or may have failed.';
+      const setLoadState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const getPracticeSessionSummaryFn = vi.fn();
 
-        const promise = endSession({
-          sessionId: fixtureSession1Id,
-          endSessionIdempotencyKey: 'idem_1',
-          finalizeSessionFn: async () =>
-            err(
-              'CONFLICT',
-              'Request timed out waiting for idempotency key. The concurrent request may still be in progress or may have failed.',
-              undefined,
-              {
-                reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
-              },
-            ),
-          getPracticeSessionSummaryFn,
-          setLoadState,
-          setSummary: vi.fn(),
-          resetQuestionState: vi.fn(),
-          rotateIdempotencyKey,
-        });
+      await endSession({
+        sessionId: fixtureSession1Id,
+        endSessionIdempotencyKey: 'idem_1',
+        finalizeSessionFn: async () =>
+          err('CONFLICT', serverMessage, undefined, {
+            reason: ApplicationConflictReasons.ConcurrentRequestInProgress,
+          }),
+        getPracticeSessionSummaryFn,
+        setLoadState,
+        setSummary: vi.fn(),
+        resetQuestionState: vi.fn(),
+        rotateIdempotencyKey,
+      });
 
-        await vi.runAllTimersAsync();
-        await promise;
+      expect(getPracticeSessionSummaryFn).not.toHaveBeenCalled();
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+      expect(setLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: serverMessage,
+      });
+    });
 
-        expect(getPracticeSessionSummaryFn).toHaveBeenCalledTimes(2);
-        expect(rotateIdempotencyKey).not.toHaveBeenCalled();
-        expect(setLoadState).toHaveBeenLastCalledWith({
-          status: 'error',
-          message:
-            'Your previous request is still processing. Please try again shortly.',
-        });
-      } finally {
-        vi.useRealTimers();
-      }
+    it('shows the server error without summary recovery or key rotation for an unknown conflict reason', async () => {
+      const serverMessage = 'A future conflict occurred';
+      const setLoadState = vi.fn();
+      const rotateIdempotencyKey = vi.fn();
+      const getPracticeSessionSummaryFn = vi.fn();
+      const unknownConflict = {
+        ok: false,
+        error: {
+          code: 'CONFLICT',
+          message: serverMessage,
+          details: { reason: 'future_conflict_reason' },
+        },
+      } as unknown as ActionResult<EndPracticeSessionOutput>;
+
+      await endSession({
+        sessionId: fixtureSession1Id,
+        endSessionIdempotencyKey: 'idem_1',
+        finalizeSessionFn: async () => unknownConflict,
+        getPracticeSessionSummaryFn,
+        setLoadState,
+        setSummary: vi.fn(),
+        resetQuestionState: vi.fn(),
+        rotateIdempotencyKey,
+      });
+
+      expect(getPracticeSessionSummaryFn).not.toHaveBeenCalled();
+      expect(rotateIdempotencyKey).not.toHaveBeenCalled();
+      expect(setLoadState).toHaveBeenLastCalledWith({
+        status: 'error',
+        message: serverMessage,
+      });
     });
 
     it('returns an error when summary recovery fails and endPracticeSession returns CONFLICT', async () => {
