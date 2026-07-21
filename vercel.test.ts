@@ -7,7 +7,9 @@ describe('vercel cron configuration', () => {
       readFileSync(new URL('./vercel.json', import.meta.url), 'utf8'),
     );
 
-    expect(config.buildCommand).toBe('pnpm db:migrate && pnpm build');
+    expect(config.buildCommand).toBe(
+      'pnpm exec tsx scripts/verify-migration-ledger.ts pre && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts && pnpm exec tsx scripts/verify-migration-ledger.ts post && pnpm build',
+    );
   });
 
   it('schedules Stripe reconciliation in all-pages live mode', () => {
