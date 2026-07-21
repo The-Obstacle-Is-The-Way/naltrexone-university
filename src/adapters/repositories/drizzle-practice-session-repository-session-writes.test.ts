@@ -778,7 +778,7 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
         code: 'CONFLICT',
         message: 'Practice session already ended',
       });
-      expect(error.details?.reason).toBeUndefined();
+      expect(error.details).toBeUndefined();
       return {
         code: error.code,
         message: error.message,

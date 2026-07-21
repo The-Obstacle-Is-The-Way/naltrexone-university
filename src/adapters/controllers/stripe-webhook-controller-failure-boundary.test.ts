@@ -66,6 +66,8 @@ function createMissingUserAcknowledgementHarness(input: {
     now: () => new Date(),
     transaction: async (fn) => {
       transactionCallCount += 1;
+      // Per delivery: 0 = subscription write, 1 = acknowledgement,
+      // and 2 = fresh failure persistence.
       const deliveryTransactionIndex = (transactionCallCount - 1) % 3;
 
       if (deliveryTransactionIndex === 0) {

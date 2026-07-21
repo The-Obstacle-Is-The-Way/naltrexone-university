@@ -40,6 +40,7 @@ import type {
   GetPracticeSessionReviewOutput,
 } from '@/src/adapters/controllers/practice-controller';
 import {
+  type ApplicationConflictReason,
   ApplicationConflictReasons,
   UserConflictMessages,
 } from '@/src/application/errors';
@@ -842,14 +843,9 @@ describe('practice-session-page-logic', () => {
       const setLoadState = vi.fn();
       const rotateIdempotencyKey = vi.fn();
       const getPracticeSessionSummaryFn = vi.fn();
-      const unknownConflict = {
-        ok: false,
-        error: {
-          code: 'CONFLICT',
-          message: serverMessage,
-          details: { reason: 'future_conflict_reason' },
-        },
-      } as unknown as ActionResult<EndPracticeSessionOutput>;
+      const unknownConflict = err('CONFLICT', serverMessage, undefined, {
+        reason: 'future_conflict_reason' as ApplicationConflictReason,
+      });
 
       await endSession({
         sessionId: fixtureSession1Id,
