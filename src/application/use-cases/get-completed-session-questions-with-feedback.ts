@@ -17,6 +17,7 @@ import {
 } from '@/src/application/shared/shuffled-choice-views';
 import {
   isOmittedOutcome,
+  type QuestionDifficulty,
   selectedChoiceIdOrNull,
 } from '@/src/domain/value-objects';
 
@@ -31,7 +32,7 @@ export type AvailableCompletedSessionQuestionWithFeedbackRow = {
   questionId: string;
   slug: string;
   stemMd: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: QuestionDifficulty;
   order: number;
   isAnswered: boolean;
   isCorrect: boolean | null;

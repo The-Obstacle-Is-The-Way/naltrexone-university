@@ -12,6 +12,7 @@ import {
   requirePracticeSessionQuestionState,
 } from '@/src/application/shared/practice-session-state';
 import { shouldShowExplanation as sessionShouldShowExplanation } from '@/src/domain/services';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
 export type GetPracticeSessionReviewInput = {
   userId: string;
@@ -23,7 +24,7 @@ export type AvailablePracticeSessionReviewRow = {
   questionId: string;
   slug: string;
   stemMd: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: QuestionDifficulty;
   order: number; // 1-based
   isAnswered: boolean;
   isCorrect: boolean | null;

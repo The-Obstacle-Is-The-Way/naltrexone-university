@@ -10,9 +10,7 @@ import {
   type ApplicationErrorCode,
 } from '@/src/application/errors';
 import type { PracticeSession } from '@/src/domain/entities';
-import { zUuid } from '../shared/zod-schemas';
-
-const questionDifficultySchema = z.enum(['easy', 'medium', 'hard']);
+import { zDifficulty, zUuid } from '../shared/zod-schemas';
 
 /**
  * Load-bearing persisted-data compatibility contract.
@@ -32,7 +30,7 @@ const practiceSessionParamsSchema = z
       .array(z.string().min(1).max(MAX_TAG_SLUG_LENGTH))
       .max(MAX_PRACTICE_SESSION_TAG_FILTERS),
     difficulties: z
-      .array(questionDifficultySchema)
+      .array(zDifficulty)
       .max(MAX_PRACTICE_SESSION_DIFFICULTY_FILTERS),
     // DEBT-433: this array's order is mirrored by
     // practice_session_question_states.position. Direct data repairs or
