@@ -74,6 +74,6 @@ No user-facing defect. Two real costs: (1) **register integrity** — the five P
 ## Related
 
 - [DEBT-101 (archived)](../_archive/debt/debt-101-add-sentry-error-tracking.md) — added the error-tracking layer this item extends but did not choose a performance-tracing policy; [DEBT-241 (archived)](../_archive/debt/debt-241-sentry-dsn-missing-from-vercel-environments.md) later recorded the DSN dashboard action and the still-zero sample rates.
-- [DEBT-450](./debt-450-hot-path-query-efficiency.md) parts 1/3b/4/5 and [DEBT-457](./debt-457-wave2-determinacy-and-test-hygiene-residues.md) part 2 — the five parked verdicts whose triggers this item unblocks; [DEBT-349 (deferred)](../_archive/debt/debt-349-cross-request-published-content-caching.md) — same dependency.
+- [DEBT-450](./debt-450-hot-path-query-efficiency.md) parts 1/3b/4/5 and [DEBT-457](../_archive/debt/debt-457-wave2-determinacy-and-test-hygiene-residues.md) part 2 — the five parked verdicts whose triggers this item unblocks; [DEBT-349 (deferred)](../_archive/debt/debt-349-cross-request-published-content-caching.md) — same dependency.
 - [DEBT-452](./debt-452-db-failure-observability.md) — the diagnostic allowlist law extended here to telemetry attributes.
 - Filed 2026-07-21 from the post-campaign complexity assessment (owner-requested); facts verified against source at `fc3c910c`.

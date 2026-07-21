@@ -1,10 +1,11 @@
 # DEBT-458: Stripe Missing-User Acknowledgement Failures Are Replaced by the Earlier Processing Error
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P4
 **Date:** 2026-07-14
 **Confirmed:** 2026-07-14 (fix-wave-3 combined-diff adversarial review; confirmed 3/3 by independent verification panels and reproduced through the production controller with fakes)
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
+**Resolved:** 2026-07-21 — FW-2 extracted the subscription processing phase so its same-transaction primary-error selection ends before the handled missing-user acknowledgement transaction. An acknowledgement failure is now persisted and thrown as primary; a later healthy delivery acknowledges normally, while ordinary processing precedence and fresh failure-ledger persistence remain unchanged.
 
 ---
 
@@ -20,7 +21,7 @@ The controller must select the causally current primary error before DEBT-452 pr
 
 BUG-296 made a subscription write that fails the exact missing-user FK a handled done-state: the controller rolls back that failed transaction, then marks the Stripe event processed in a fresh acknowledgement transaction. The controller's pre-existing error-preservation flags cross that new phase boundary and select the wrong primary error if acknowledgement itself fails.
 
-The subscription transaction stores its caught `SubscriptionUserMissingError` in `processingError` and sets `hasProcessingError` ([`stripe-webhook-controller.ts#L251-L257`](../../src/adapters/controllers/stripe-webhook-controller.ts#L251-L257)). The missing-user catch then awaits `persistAcknowledgedOutcome` ([lines 262-276](../../src/adapters/controllers/stripe-webhook-controller.ts#L262-L276)). If that separate transaction throws, the outer catch receives the acknowledgement failure as `transactionError` but discards it whenever the stale flag is set:
+Before FW-2, the subscription transaction stored its caught `SubscriptionUserMissingError` in `processingError` and set `hasProcessingError`. The missing-user catch then awaited `persistAcknowledgedOutcome`; if that separate transaction threw, the outer catch received the acknowledgement failure as `transactionError` but discarded it whenever the stale flag was set:
 
 ```ts
 const originalError = hasProcessingError
@@ -30,7 +31,9 @@ await persistFailure(deps, event, originalError);
 throw originalError;
 ```
 
-([`stripe-webhook-controller.ts#L305-L310`](../../src/adapters/controllers/stripe-webhook-controller.ts#L305-L310))
+(pre-resolution `stripe-webhook-controller.ts#L305-L310`)
+
+> **Resolution anchor correction (2026-07-21, FW-2):** [`processSubscriptionWebhook`](../../../src/adapters/controllers/stripe-webhook-controller.ts#L134) now owns same-transaction selection through line 245; its handled missing-user acknowledgement is lines 230-242, and acknowledgement failures cross into the outer failure-ledger boundary at [`processStripeWebhook` lines 290-327](../../../src/adapters/controllers/stripe-webhook-controller.ts#L290) without the earlier phase's flags.
 
 A fake-boundary reproduction ran the expected three transactions: subscription processing failed missing-user, acknowledgement threw `ack transaction unavailable`, and failure-ledger persistence succeeded. The controller stored and threw `SubscriptionUserMissingError / NOT_FOUND`; the actual acknowledgement failure was absent.
 
@@ -55,12 +58,12 @@ The route still returns a retryable 500, Stripe redelivers, and a later healthy 
 
 ## Relationship to DEBT-452
 
-[DEBT-452](./debt-452-db-failure-observability.md) owns cause-dropping repository wrappers and the safe projection of database diagnostics into logs/ledgers. This finding is earlier in the pipeline: the controller selects the wrong error object before any projector runs. A complete DEBT-452 fix cannot recover an acknowledgement failure that this control flow discarded, so the items should be cross-linked but not merged.
+[DEBT-452](../../debt/debt-452-db-failure-observability.md) owns cause-dropping repository wrappers and the safe projection of database diagnostics into logs/ledgers. This finding is earlier in the pipeline: the controller selects the wrong error object before any projector runs. A complete DEBT-452 fix cannot recover an acknowledgement failure that this control flow discarded, so the items should be cross-linked but not merged.
 
 ## Related
 
-- [BUG-296 (archived)](../_archive/bugs/bug-296-post-deletion-subscription-webhooks-fail-users-fk.md) — introduced the handled missing-user acknowledgement transaction whose failure exposes this stale-error selection.
-- [BUG-285 (archived)](../_archive/bugs/bug-285-stripe-webhook-markfailed-on-aborted-transaction.md) — established fresh-transaction failure persistence and the need to retain the actual primary failure.
-- [DEBT-452](./debt-452-db-failure-observability.md) — complementary error-diagnostic projection and logging safety work.
+- [BUG-296 (archived)](../bugs/bug-296-post-deletion-subscription-webhooks-fail-users-fk.md) — introduced the handled missing-user acknowledgement transaction whose failure exposes this stale-error selection.
+- [BUG-285 (archived)](../bugs/bug-285-stripe-webhook-markfailed-on-aborted-transaction.md) — established fresh-transaction failure persistence and the need to retain the actual primary failure.
+- [DEBT-452](../../debt/debt-452-db-failure-observability.md) — complementary error-diagnostic projection and logging safety work.
 
 Found during the 2026-07-14 fix-wave-3 close adversarial regression review of `ba457afd...76de5ba3` (independent finder lenses and a 3-verifier panel).

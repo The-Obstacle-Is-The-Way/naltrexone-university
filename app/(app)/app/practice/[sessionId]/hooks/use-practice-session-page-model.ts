@@ -18,9 +18,10 @@ import {
 } from '@/app/(app)/app/practice/fire-and-forget';
 import { usePracticeQuestionBookmarks } from '@/app/(app)/app/practice/hooks/use-practice-question-bookmarks';
 import { usePracticeQuestionFeedback } from '@/app/(app)/app/practice/hooks/use-practice-question-feedback';
-import type {
-  EndedSessionConflictRecovery,
-  ExamDraftAnswer,
+import {
+  type EndedSessionConflictRecovery,
+  type ExamDraftAnswer,
+  getActionResultPracticeSessionConflictReason,
 } from '@/app/(app)/app/practice/shared/question-flow-actions';
 import {
   getActionResultErrorMessage,
@@ -443,7 +444,15 @@ export function usePracticeSessionPageModel(
           return;
         }
 
-        if (result.error.code === 'CONFLICT') {
+        const practiceSessionConflictReason =
+          getActionResultPracticeSessionConflictReason(result);
+        const isLegacyReasonlessConflict =
+          result.error.code === 'CONFLICT' &&
+          result.error.details?.reason === undefined;
+        if (
+          practiceSessionConflictReason !== undefined ||
+          isLegacyReasonlessConflict
+        ) {
           questionFlow.onTryAgain({
             recoverNullQuestion: () =>
               recoverBootstrapSummaryAfterNullQuestion(requestId),

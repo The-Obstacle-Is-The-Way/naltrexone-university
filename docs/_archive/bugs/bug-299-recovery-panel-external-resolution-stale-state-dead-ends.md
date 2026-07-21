@@ -59,6 +59,6 @@ Final wave proof: main CI run [29383288782](https://github.com/The-Obstacle-Is-T
 - [BUG-295 (archived)](./bug-295-preserved-idempotency-keys-replay-across-changed-intent.md) — introduced retirement through the local abandon-success arm; its Resolution notes this residual family.
 - [BUG-291 (archived)](./bug-291-session-start-key-rotation-on-timeout-conflict-dead-end.md) — the original dead-end class; its recovery-panel refresh is the mechanism leg 2 shows is necessary but not sufficient.
 - [BUG-282 (archived)](./bug-282-tutor-two-tab-ended-session-dead-end-loop.md) — precedent that two-tab practice interleavings are register-grade reachable.
-- [DEBT-456](../../debt/debt-456-client-conflict-reason-discrimination-gaps.md) — the targeted-arm pattern the terminal-conflict handling should follow.
+- [DEBT-456](../debt/debt-456-client-conflict-reason-discrimination-gaps.md) — the targeted-arm pattern the terminal-conflict handling should follow.
 
 Found during the 2026-07-14 wave-2 close adversarial regression review (8 finder lenses, 3-verifier panels per candidate).

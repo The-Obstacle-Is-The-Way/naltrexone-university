@@ -46,6 +46,59 @@ function createPaymentGateway(
   });
 }
 
+function createMissingUserAcknowledgementHarness(input: {
+  eventId: string;
+  acknowledgementError: Error;
+}) {
+  const userId = crypto.randomUUID();
+  const paymentGateway = createPaymentGateway(input.eventId, userId);
+  const stripeEvents = new FakeStripeEventRepository();
+  const missingSubscriptions = new FakeSubscriptionRepository();
+  const logger = new FakeLogger();
+  let acknowledgementShouldFail = true;
+  let transactionCallCount = 0;
+  missingSubscriptions.markUserMissing(userId);
+
+  const deps: StripeWebhookDeps = {
+    paymentGateway,
+    subscriptionVersions: missingSubscriptions,
+    logger,
+    now: () => new Date(),
+    transaction: async (fn) => {
+      transactionCallCount += 1;
+      // Per delivery: 0 = subscription write, 1 = acknowledgement,
+      // and 2 = fresh failure persistence.
+      const deliveryTransactionIndex = (transactionCallCount - 1) % 3;
+
+      if (deliveryTransactionIndex === 0) {
+        return fn({
+          stripeEvents: new FakeStripeEventRepository(),
+          subscriptions: missingSubscriptions,
+          stripeCustomers: new FakeStripeCustomerRepository(),
+        });
+      }
+
+      if (deliveryTransactionIndex === 1 && acknowledgementShouldFail) {
+        throw input.acknowledgementError;
+      }
+
+      return fn({
+        stripeEvents,
+        subscriptions: new FakeSubscriptionRepository(),
+        stripeCustomers: new FakeStripeCustomerRepository(),
+      });
+    },
+  };
+
+  return {
+    deps,
+    stripeEvents,
+    allowAcknowledgement: () => {
+      acknowledgementShouldFail = false;
+    },
+  };
+}
+
 function createAbortedTransactionDeps(input: {
   paymentGateway: FakePaymentGateway;
   processingError: unknown;
@@ -107,6 +160,56 @@ function createAbortedTransactionDeps(input: {
 }
 
 describe('processStripeWebhook failure boundary', () => {
+  it('persists and throws the acknowledgement failure after handling a missing subscription user', async () => {
+    const eventId = 'evt_missing_user_ack_failure';
+    const acknowledgementError = new Error('ack transaction unavailable');
+    const harness = createMissingUserAcknowledgementHarness({
+      eventId,
+      acknowledgementError,
+    });
+
+    await expect(
+      processStripeWebhook(harness.deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      }),
+    ).rejects.toBe(acknowledgementError);
+
+    const stored = await harness.stripeEvents.lock(eventId);
+    expect(JSON.parse(stored.error ?? '{}')).toMatchObject({
+      name: 'Error',
+      message: acknowledgementError.message,
+    });
+  });
+
+  it('acknowledges a missing-user event on a later healthy delivery', async () => {
+    const eventId = 'evt_missing_user_ack_retry';
+    const acknowledgementError = new Error('ack transaction unavailable');
+    const harness = createMissingUserAcknowledgementHarness({
+      eventId,
+      acknowledgementError,
+    });
+
+    await expect(
+      processStripeWebhook(harness.deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      }),
+    ).rejects.toBe(acknowledgementError);
+    harness.allowAcknowledgement();
+
+    await expect(
+      processStripeWebhook(harness.deps, {
+        rawBody: 'raw',
+        signature: 'sig',
+      }),
+    ).resolves.toBeUndefined();
+    await expect(harness.stripeEvents.lock(eventId)).resolves.toMatchObject({
+      processedAt: expect.any(Date),
+      error: null,
+    });
+  });
+
   it('acknowledges and records a subscription event when the local user is missing', async () => {
     const userId = crypto.randomUUID();
     const paymentGateway = new FakePaymentGateway({

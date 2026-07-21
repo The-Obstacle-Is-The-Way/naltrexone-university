@@ -57,6 +57,6 @@ A user-visible "Checkout error" at the moment of payment, with correct underlyin
 
 - [BUG-287 (archived)](./bug-287-reconcile-cron-stale-snapshot-overwrites-newer-webhook-state.md) — the fix that introduced the CAS loop; its Resolution notes this residual.
 - [BUG-242 (archived)](./bug-242-stale-subscription-webhook-overwrites-active-row.md) — the re-fetch design that makes each CAS attempt span a live Stripe retrieve.
-- [DEBT-457](../../debt/debt-457-wave2-determinacy-and-test-hygiene-residues.md) — records the version-fence's per-attempt double-retrieve cost on the webhook path from the same review.
+- [DEBT-457](../debt/debt-457-wave2-determinacy-and-test-hygiene-residues.md) — records the version-fence's per-attempt double-retrieve cost on the webhook path from the same review.
 
 Found during the 2026-07-14 wave-2 close adversarial regression review (8 finder lenses over the combined wave diff, 3-verifier panels per candidate, dedup against known accepted residues).

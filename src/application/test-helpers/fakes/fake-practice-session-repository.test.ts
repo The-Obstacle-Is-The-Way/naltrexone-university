@@ -85,9 +85,9 @@ describe('FakePracticeSessionRepository', () => {
     await expect(repo.end('session-1', 'user-1')).rejects.toMatchObject({
       code: 'CONFLICT',
       message: 'Practice session already ended',
-      details: {
-        reason: PracticeSessionConflictReasons.AlreadyEnded,
-      },
+    });
+    await expect(repo.end('session-1', 'user-1')).rejects.toMatchObject({
+      details: undefined,
     });
   });
 
