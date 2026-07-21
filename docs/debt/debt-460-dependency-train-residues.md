@@ -27,7 +27,7 @@ The residues:
 
 ### Part 2 — Clerk `createRouteMatcher` deprecation (surfaced by #678)
 
-#678 moved `@clerk/nextjs` 7.5.13 → 7.5.17 in the lockfile (an in-range bump; `package.json` was untouched for Clerk). The installed 7.5.17 marks the API deprecated at `node_modules/@clerk/nextjs/dist/types/server/routeMatcher.d.ts:16`:
+PR `#678` moved `@clerk/nextjs` 7.5.13 → 7.5.17 in the lockfile (an in-range bump; `package.json` was untouched for Clerk). The installed 7.5.17 marks the API deprecated at `node_modules/@clerk/nextjs/dist/types/server/routeMatcher.d.ts:16`:
 
 > `@deprecated This function will be removed in the next major version. Use resource-based auth checks instead.`
 
