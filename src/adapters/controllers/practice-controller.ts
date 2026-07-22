@@ -467,18 +467,15 @@ export const setPracticeSessionQuestionMark = createAction({
     const userId = await requireEntitledUserId(d, meta);
 
     const { sessionId, questionId, markedForReview, idempotencyKey } = input;
+    const action = IdempotentActionNames.QuestionMark;
 
     return executeIdempotent({
       d,
       userId,
-      action: IdempotentActionNames.QuestionMark,
+      action,
       idempotencyKey,
       outputSchema: SetPracticeSessionQuestionMarkOutputSchema,
-      beforeExecute: mutationBeforeExecute(
-        'practice:setPracticeSessionQuestionMark',
-        userId,
-        d,
-      ),
+      beforeExecute: mutationBeforeExecute(action, userId, d),
       shouldCacheError: shouldCacheQuestionMarkError,
       execute: () =>
         d.setPracticeSessionQuestionMarkUseCase.execute({
