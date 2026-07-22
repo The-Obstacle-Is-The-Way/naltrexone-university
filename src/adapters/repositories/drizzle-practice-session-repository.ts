@@ -93,13 +93,11 @@ export class DrizzlePracticeSessionRepository
   ): PracticeSessionQuestionState[] {
     if (rows.length > params.questionIds.length) {
       this.corruptRow(
-        sessionId,
         `Practice session ${sessionId} has inconsistent normalized question state`,
       );
     }
     if (rows.length < params.questionIds.length) {
       this.corruptRow(
-        sessionId,
         `Practice session ${sessionId} is missing normalized question state`,
       );
     }
@@ -109,7 +107,6 @@ export class DrizzlePracticeSessionRepository
       const row = rowsByQuestionId.get(questionId);
       if (!row || row.position !== position) {
         this.corruptRow(
-          sessionId,
           `Practice session ${sessionId} is missing normalized question state`,
         );
       }
@@ -125,13 +122,11 @@ export class DrizzlePracticeSessionRepository
   }): void {
     if (input.actualQuestionIds.length > input.expectedQuestionIds.length) {
       this.corruptRow(
-        input.sessionId,
         `Practice session ${input.sessionId} has inconsistent normalized question state`,
       );
     }
     if (input.actualQuestionIds.length < input.expectedQuestionIds.length) {
       this.corruptRow(
-        input.sessionId,
         `Practice session ${input.sessionId} is missing normalized question state`,
       );
     }
@@ -143,13 +138,12 @@ export class DrizzlePracticeSessionRepository
       )
     ) {
       this.corruptRow(
-        input.sessionId,
         `Practice session ${input.sessionId} is missing normalized question state`,
       );
     }
   }
 
-  private corruptRow(_sessionId: string, message: string): never {
+  private corruptRow(message: string): never {
     throw new CorruptPracticeSessionRowError(
       new ApplicationError('INTERNAL_ERROR', message),
     );
@@ -510,7 +504,6 @@ export class DrizzlePracticeSessionRepository
             });
             if (row.endedAt === null) {
               this.corruptRow(
-                row.id,
                 `Completed practice session ${row.id} is missing ended_at`,
               );
             }
