@@ -1,5 +1,4 @@
 import { delay } from '@/src/adapters/shared/delay';
-import { toIdempotencyPublicError } from '@/src/adapters/shared/to-idempotency-public-error';
 import {
   ApplicationConflictReasons,
   ApplicationError,
@@ -12,6 +11,7 @@ import {
 } from '@/src/application/ports/repositories';
 import { DAY_MS } from '@/src/domain/services';
 import { PRUNE_BATCH_LIMIT } from './prune-constants';
+import { toIdempotencyPublicError } from './to-idempotency-public-error';
 
 const DEFAULT_TTL_MS = DAY_MS;
 const DEFAULT_MAX_WAIT_MS = 2_000;

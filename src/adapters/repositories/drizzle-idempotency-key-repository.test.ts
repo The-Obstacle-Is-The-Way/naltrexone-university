@@ -356,6 +356,42 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       });
     });
 
+    it('fails loudly with a cause when a cached error code is empty', async () => {
+      const expiresAt = new Date('2026-02-08T01:00:00.000Z');
+      const completedAt = new Date('2026-02-08T00:00:00.000Z');
+      const selectWhere = vi.fn(async () => [
+        {
+          resultJson: null,
+          errorCode: '',
+          errorMessage: 'corrupt error',
+          expiresAt,
+          completedAt,
+        },
+      ]);
+      const selectFrom = vi.fn(() => ({ where: selectWhere }));
+      const select = vi.fn(() => ({ from: selectFrom }));
+
+      const db = {
+        select,
+      } as unknown as RepoDb;
+
+      const repo = new DrizzleIdempotencyKeyRepository(
+        db,
+        () => new Date('2026-02-08T00:00:00.000Z'),
+      );
+
+      await expect(
+        repo.find(
+          '11111111-1111-1111-1111-111111111111',
+          'question:submitAnswer',
+          'idem-1',
+        ),
+      ).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        cause: expect.any(Error),
+      });
+    });
+
     it('returns completed records even when resultJson is null', async () => {
       const expiresAt = new Date('2026-02-08T01:00:00.000Z');
       const completedAt = new Date('2026-02-08T00:00:00.000Z');
