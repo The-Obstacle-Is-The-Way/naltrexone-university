@@ -26,7 +26,7 @@ export class GetBookmarksUseCase {
       if (!summary.isAvailable) {
         this.logger.warn(
           { questionId: summary.questionId },
-          'Bookmark references missing question',
+          'Bookmark references unavailable or unpublished question',
         );
       }
     }

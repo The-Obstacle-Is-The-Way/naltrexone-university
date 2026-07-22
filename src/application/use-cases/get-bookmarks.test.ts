@@ -88,7 +88,7 @@ describe('GetBookmarksUseCase', () => {
     expect(logger.warnCalls).toEqual([
       {
         context: { questionId: orphanedQuestionId },
-        msg: 'Bookmark references missing question',
+        msg: 'Bookmark references unavailable or unpublished question',
       },
     ]);
   });
