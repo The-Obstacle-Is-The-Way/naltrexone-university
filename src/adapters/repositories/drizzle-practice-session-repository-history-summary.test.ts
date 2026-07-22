@@ -205,4 +205,30 @@ describe('DrizzlePracticeSessionRepository history summaries', () => {
       }),
     ]);
   });
+
+  it('skips and logs a completed summary missing ended_at', async () => {
+    const { db } = createDb([{ ...createSummaryRow(), endedAt: null }]);
+    const logger = new FakeLogger();
+    const repo = new DrizzlePracticeSessionRepository(
+      db,
+      () => new Date(),
+      logger,
+    );
+
+    await expect(
+      repo.findCompletedHistorySummariesByUserId(userId, 10, 0),
+    ).resolves.toEqual({ rows: [], total: 1 });
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({
+          sessionId,
+          error: expect.objectContaining({
+            code: 'INTERNAL_ERROR',
+            message: `Completed practice session ${sessionId} is missing ended_at`,
+          }),
+        }),
+        msg: 'Skipping corrupt completed practice session row',
+      }),
+    ]);
+  });
 });
