@@ -1,9 +1,10 @@
 # DEBT-448: Rate Limiter — Current 90-Day Retention, Target 24-Hour Horizon, Practice Admission Gaps, Health-Probe Diagnostic Masking
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-07-09
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
+**Resolved:** 2026-07-22 — FW-4 completed Parts 1, 2a, and 2b with the rate-limit-specific 24-hour target cutoff, direct 120/minute exam-draft admission, and cache-miss-only end/finalize/mark admission through `beforeExecute`. Parts 2c and 3 remain closed as the Direction table's ACCEPT decisions, with both accepted-failure sentences preserved verbatim below. Re-verified against `456023e3b9c07edf774d48f10c361e7556e70ec6` before this disposition.
 
 ---
 
