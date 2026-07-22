@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  FakeClerkEventRepository,
   FakeLogger,
   FakePendingStripeCustomerCleanupRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -8,6 +9,30 @@ import {
   PENDING_STRIPE_CUSTOMER_CLEANUP_BATCH_LIMIT,
   PENDING_STRIPE_CUSTOMER_CLEANUP_MAX_PAGES,
 } from './drain-pending-stripe-customer-cleanups';
+
+function createFakeCompletion(
+  pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository,
+  clerkEvents: FakeClerkEventRepository,
+): (eventId: string) => Promise<void> {
+  return async (eventId) => {
+    const pendingSnapshot = pendingStripeCustomerCleanups.snapshot();
+    const clerkSnapshot = clerkEvents.snapshot();
+    try {
+      await pendingStripeCustomerCleanups.deleteByEventId(eventId);
+      await clerkEvents.markProcessed(eventId);
+    } catch (error) {
+      pendingStripeCustomerCleanups.restore(pendingSnapshot);
+      clerkEvents.restore(clerkSnapshot);
+      throw error;
+    }
+  };
+}
+
+function deletePendingCompletion(
+  pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository,
+): (eventId: string) => Promise<void> {
+  return (eventId) => pendingStripeCustomerCleanups.deleteByEventId(eventId);
+}
 
 describe('drainPendingStripeCustomerCleanups', () => {
   it('uses a bounded default when no batch limit is configured', async () => {
@@ -30,6 +55,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer: async () => undefined,
         logger: new FakeLogger(),
       },
@@ -57,6 +83,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer: async (stripeCustomerId) => {
           deletedCustomerIds.push(stripeCustomerId);
         },
@@ -102,6 +129,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer: async () => undefined,
         logger,
       },
@@ -133,6 +161,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer: async (stripeCustomerId) => {
           if (stripeCustomerId === 'cus_poison') {
             throw new Error('stripe outage');
@@ -170,6 +199,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer,
         logger: new FakeLogger(),
       },
@@ -185,6 +215,62 @@ describe('drainPendingStripeCustomerCleanups', () => {
     });
     expect(deleteStripeCustomer).toHaveBeenCalledWith('cus_stale');
     await expect(repo.findByEventId('evt_stale')).resolves.toBeNull();
+  });
+
+  it('completes retained cleanup bookkeeping after a later successful drain', async () => {
+    const repo = new FakePendingStripeCustomerCleanupRepository(
+      () => new Date('2026-06-12T12:00:00.000Z'),
+    );
+    const clerkEvents = new FakeClerkEventRepository();
+    await clerkEvents.claim('evt_stale', 'user.deleted');
+    await clerkEvents.markFailed('evt_stale', 'stale cleanup failure');
+    await repo.schedule('evt_stale', 'cus_stale');
+    const deleteStripeCustomer = vi
+      .fn<(stripeCustomerId: string) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('stripe outage'))
+      .mockResolvedValueOnce(undefined);
+    const deps = {
+      pendingStripeCustomerCleanups: repo,
+      completePendingStripeCustomerCleanup: createFakeCompletion(
+        repo,
+        clerkEvents,
+      ),
+      deleteStripeCustomer,
+      logger: new FakeLogger(),
+    };
+
+    const first = await drainPendingStripeCustomerCleanups(
+      {
+        olderThan: new Date('2026-06-12T12:15:00.000Z'),
+        dryRun: false,
+      },
+      deps,
+    );
+
+    expect(first.failed).toBe(1);
+    await expect(repo.findByEventId('evt_stale')).resolves.toEqual({
+      stripeCustomerId: 'cus_stale',
+    });
+    await expect(clerkEvents.peek('evt_stale')).resolves.toEqual({
+      processedAt: null,
+      error: 'stale cleanup failure',
+    });
+
+    const second = await drainPendingStripeCustomerCleanups(
+      {
+        olderThan: new Date('2026-06-12T12:15:00.000Z'),
+        dryRun: false,
+      },
+      deps,
+    );
+
+    expect(second.failed).toBe(0);
+    expect(second.drained).toBe(1);
+    await expect(repo.findByEventId('evt_stale')).resolves.toBeNull();
+    await expect(clerkEvents.peek('evt_stale')).resolves.toEqual({
+      processedAt: expect.any(Date),
+      error: null,
+    });
   });
 
   it('keeps a stale obligation and logs the failure when customer deletion fails', async () => {
@@ -204,6 +290,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer,
         logger,
       },
@@ -242,6 +329,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer,
         logger: new FakeLogger(),
       },
@@ -266,6 +354,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer,
         logger: new FakeLogger(),
       },
@@ -292,6 +381,7 @@ describe('drainPendingStripeCustomerCleanups', () => {
       },
       {
         pendingStripeCustomerCleanups: repo,
+        completePendingStripeCustomerCleanup: deletePendingCompletion(repo),
         deleteStripeCustomer,
         logger: new FakeLogger(),
       },
