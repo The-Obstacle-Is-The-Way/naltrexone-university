@@ -11,6 +11,11 @@ describe('GetBookmarkQuestionIdsUseCase', () => {
         createdAt: new Date('2026-07-20T10:00:00.000Z'),
       },
       {
+        userId: 'user-1',
+        questionId: 'question-2',
+        createdAt: new Date('2026-07-20T10:02:00.000Z'),
+      },
+      {
         userId: 'user-2',
         questionId: 'question-other-user',
         createdAt: new Date('2026-07-20T10:01:00.000Z'),
@@ -19,7 +24,7 @@ describe('GetBookmarkQuestionIdsUseCase', () => {
     const useCase = new GetBookmarkQuestionIdsUseCase(bookmarks);
 
     await expect(useCase.execute({ userId: 'user-1' })).resolves.toEqual({
-      questionIds: ['question-1'],
+      questionIds: ['question-2', 'question-1'],
     });
   });
 });

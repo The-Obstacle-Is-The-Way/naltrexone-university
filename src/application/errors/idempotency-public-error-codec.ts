@@ -62,7 +62,7 @@ function decodeFieldErrors(value: unknown): Record<string, string[]> {
     invalidRecord('fieldErrors exceeds the field-count bound');
   }
 
-  const fieldErrors: Record<string, string[]> = {};
+  const fieldErrorEntries: Array<[string, string[]]> = [];
   for (const [fieldName, messages] of entries) {
     if (
       fieldName.length === 0 ||
@@ -81,10 +81,10 @@ function decodeFieldErrors(value: unknown): Record<string, string[]> {
       invalidRecord('fieldErrors contains an invalid message');
     }
 
-    fieldErrors[fieldName] = [...messages];
+    fieldErrorEntries.push([fieldName, [...messages]]);
   }
 
-  return fieldErrors;
+  return Object.fromEntries(fieldErrorEntries);
 }
 
 function decodeDetails(value: unknown): ApplicationErrorDetails {

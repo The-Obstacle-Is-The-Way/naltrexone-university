@@ -10,6 +10,11 @@ describe('GetBookmarkStatusUseCase', () => {
         questionId: 'question-1',
         createdAt: new Date('2026-07-20T10:00:00.000Z'),
       },
+      {
+        userId: 'user-2',
+        questionId: 'question-2',
+        createdAt: new Date('2026-07-20T10:01:00.000Z'),
+      },
     ]);
     const useCase = new GetBookmarkStatusUseCase(bookmarks);
 
@@ -18,6 +23,9 @@ describe('GetBookmarkStatusUseCase', () => {
     ).resolves.toEqual({ bookmarked: true });
     await expect(
       useCase.execute({ userId: 'user-1', questionId: 'question-2' }),
+    ).resolves.toEqual({ bookmarked: false });
+    await expect(
+      useCase.execute({ userId: 'user-2', questionId: 'question-1' }),
     ).resolves.toEqual({ bookmarked: false });
   });
 });

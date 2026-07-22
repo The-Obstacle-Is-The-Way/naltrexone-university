@@ -79,6 +79,19 @@ export const PUBLIC_ERROR_CODEC_CORPUS: readonly PublicErrorCodecCorpusCase[] =
       },
     },
     {
+      name: 'preserves __proto__ as an own field-error key',
+      input: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid input',
+        fieldErrors: Object.fromEntries([['__proto__', ['Invalid']]]),
+      },
+      expected: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid input',
+        fieldErrors: Object.fromEntries([['__proto__', ['Invalid']]]),
+      },
+    },
+    {
       name: 'accepts the exact messages-per-field boundary',
       input: {
         code: 'VALIDATION_ERROR',
