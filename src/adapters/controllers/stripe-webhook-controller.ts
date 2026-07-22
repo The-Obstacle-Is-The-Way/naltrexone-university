@@ -1,11 +1,10 @@
-import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import {
   isE2EOwnerMismatchEvent,
   isMissingStripeSubscriptionUserIdError,
 } from '@/src/adapters/shared/stripe-subscription-errors';
 import {
   ApplicationError,
-  isApplicationError,
   isSubscriptionUserMissingError,
 } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
@@ -61,34 +60,12 @@ function isSuccessfullyProcessed(event: {
   return event.processedAt !== null && event.error === null;
 }
 
-function toErrorData(error: unknown): string {
-  if (isApplicationError(error)) {
-    return JSON.stringify({
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      fieldErrors: error.fieldErrors ?? undefined,
-      stack: error.stack?.slice(0, STACK_TRACE_LIMIT),
-    });
-  }
-
-  if (error instanceof Error) {
-    return JSON.stringify({
-      name: error.name,
-      message: error.message,
-      stack: error.stack?.slice(0, STACK_TRACE_LIMIT),
-    });
-  }
-
-  return JSON.stringify({ message: 'Unknown error', raw: String(error) });
-}
-
 async function persistFailure(
   deps: StripeWebhookDeps,
   event: StripeWebhookEvent,
   error: unknown,
 ): Promise<void> {
-  const errorData = toErrorData(error);
+  const errorData = JSON.stringify(projectSafeErrorDiagnostics(error));
 
   try {
     await deps.transaction(async ({ stripeEvents }) => {
