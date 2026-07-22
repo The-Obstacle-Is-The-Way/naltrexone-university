@@ -53,6 +53,12 @@ export async function executeIdempotent<TOutput>({
     action,
     key: idempotencyKey,
     now: d.now,
+    // Release contract: an incompatible keyed-action output change must add
+    // change-local replay parsers and pre-deploy fixtures for every writer
+    // shape (including rollback targets) that can coexist inside the 24-hour
+    // TTL. Retain each shape until its last writer has been absent for one
+    // full TTL; do not replace this strict boundary with a cache miss or raw
+    // JSON fallback. See docs/dev/deployment-procedure.md.
     parseResult: (value) => outputSchema.parse(value),
     ...(beforeExecute ? { beforeExecute } : {}),
     ...(shouldCacheError ? { shouldCacheError } : {}),
