@@ -3,6 +3,7 @@ import {
   ApplicationError,
   rollbackCertainPersistenceError,
 } from '@/src/application/errors';
+import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import {
   countAvailableQuestions,
   setPracticeSessionQuestionMark,
@@ -131,7 +132,9 @@ describe('practice-controller', () => {
     });
 
     it('returns the cached mark result when idempotencyKey is reused', async () => {
+      const rateLimiter = new FakeRateLimiter();
       const deps = createDeps({
+        rateLimiter,
         setMarkOutput: {
           questionId: '22222222-2222-2222-2222-222222222222',
           markedForReview: true,
@@ -157,6 +160,71 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toHaveLength(1);
+      expect(rateLimiter.inputs).toHaveLength(1);
+    });
+
+    it('limits a fresh keyed mark before executing the use case', async () => {
+      const rateLimiter = new FakeRateLimiter({
+        success: false,
+        limit: 60,
+        remaining: 0,
+        retryAfterSeconds: 30,
+      });
+      const deps = createDeps({ rateLimiter });
+
+      const result = await setPracticeSessionQuestionMark(
+        {
+          sessionId: '11111111-1111-1111-1111-111111111111',
+          questionId: '22222222-2222-2222-2222-222222222222',
+          markedForReview: true,
+          idempotencyKey: '33333333-3333-3333-3333-333333333333',
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toEqual([]);
+      expect(rateLimiter.inputs).toEqual([
+        {
+          key: `practice:setPracticeSessionQuestionMark:${deps._fixtures.userId}`,
+          limit: 60,
+          windowMs: 60_000,
+        },
+      ]);
+    });
+
+    it('replays a cached mark error without another limiter admission', async () => {
+      const rateLimiter = new FakeRateLimiter([
+        { success: true, limit: 60, remaining: 59, retryAfterSeconds: 0 },
+        { success: false, limit: 60, remaining: 0, retryAfterSeconds: 30 },
+      ]);
+      const deps = createDeps({
+        rateLimiter,
+        setMarkThrows: new ApplicationError('NOT_FOUND', 'Question not found'),
+      });
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        questionId: '22222222-2222-2222-2222-222222222222',
+        markedForReview: true,
+        idempotencyKey: '33333333-3333-3333-3333-333333333333',
+      } as const;
+
+      const first = await setPracticeSessionQuestionMark(input, deps);
+      const second = await setPracticeSessionQuestionMark(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Question not found',
+        },
+      });
+      expect(second).toEqual(first);
+      expect(deps.setPracticeSessionQuestionMarkUseCase.inputs).toHaveLength(1);
+      expect(rateLimiter.inputs).toHaveLength(1);
     });
 
     it('re-executes a mark after a rollback-certain failure under the same key', async () => {

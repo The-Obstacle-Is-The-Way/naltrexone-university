@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { EXAM_DRAFT_SAVE_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import { MAX_DRAFT_CUMULATIVE_MS } from '@/src/adapters/shared/validation-limits';
 import { ApplicationError } from '@/src/application/errors';
+import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import { saveExamDraftAnswer } from './practice-controller';
 import { createDeps } from './practice-controller-test-helpers';
 
@@ -219,6 +221,50 @@ describe('practice-controller', () => {
           cumulativeMs: 50_000,
         },
       ]);
+    });
+
+    it('limits the 121st draft save within the per-user minute', async () => {
+      const rateLimiter = new FakeRateLimiter([
+        ...Array.from({ length: EXAM_DRAFT_SAVE_RATE_LIMIT.limit }, () => ({
+          success: true,
+          limit: EXAM_DRAFT_SAVE_RATE_LIMIT.limit,
+          remaining: 1,
+          retryAfterSeconds: 0,
+        })),
+        {
+          success: false,
+          limit: EXAM_DRAFT_SAVE_RATE_LIMIT.limit,
+          remaining: 0,
+          retryAfterSeconds: 1,
+        },
+      ]);
+      const deps = createDeps({ rateLimiter });
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        questionId: '22222222-2222-2222-2222-222222222222',
+        selectedChoiceId: '33333333-3333-3333-3333-333333333333',
+        cumulativeMs: 50_000,
+      } as const;
+
+      for (let call = 0; call < EXAM_DRAFT_SAVE_RATE_LIMIT.limit; call++) {
+        await expect(saveExamDraftAnswer(input, deps)).resolves.toMatchObject({
+          ok: true,
+        });
+      }
+      await expect(saveExamDraftAnswer(input, deps)).resolves.toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+
+      expect(deps.saveExamDraftAnswerUseCase.inputs).toHaveLength(
+        EXAM_DRAFT_SAVE_RATE_LIMIT.limit,
+      );
+      expect(rateLimiter.inputs).toHaveLength(
+        EXAM_DRAFT_SAVE_RATE_LIMIT.limit + 1,
+      );
+      expect(new Set(rateLimiter.inputs.map(({ key }) => key))).toEqual(
+        new Set([`practice:saveExamDraftAnswer:${deps._fixtures.userId}`]),
+      );
     });
 
     it('surfaces expired exam draft saves as a CONFLICT ActionResult', async () => {
