@@ -24,7 +24,7 @@ import {
   endPracticeSessionMock,
   errorResult,
   finalizeExamAnswersMock,
-  getBookmarksMock,
+  getBookmarkQuestionIdsMock,
   getCompletedSessionQuestionsWithFeedbackMock,
   getNextQuestionMock,
   getPracticeSessionReviewMock,
@@ -261,7 +261,7 @@ describe('usePracticeSessionPageModel (browser)', () => {
         },
       }),
     );
-    getBookmarksMock.mockResolvedValue(ok({ rows: [] }));
+    getBookmarkQuestionIdsMock.mockResolvedValue(ok({ questionIds: [] }));
     const unansweredRow = createReviewRow({
       questionId: BROWSER_QUESTION_1_ID,
       order: 1,

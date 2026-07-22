@@ -10,7 +10,7 @@ import type {
 } from '@/app/(app)/app/shared/bookmark-toggle';
 import { reportClientError } from '@/lib/report-client-error';
 import {
-  getBookmarks,
+  getBookmarkQuestionIds,
   setBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 
@@ -52,7 +52,7 @@ export function usePracticeQuestionBookmarks(
   useEffect(() => {
     return createBookmarksEffect({
       bookmarkRetryCount,
-      getBookmarksFn: getBookmarks,
+      getBookmarkQuestionIdsFn: getBookmarkQuestionIds,
       setBookmarkedQuestionIds,
       setBookmarkStatus,
       setBookmarkRetryCount,

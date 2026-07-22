@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 type PracticeSessionPageModelBrowserMocks = {
   getNextQuestionMock: ReturnType<typeof vi.fn>;
   submitAnswerMock: ReturnType<typeof vi.fn>;
-  getBookmarksMock: ReturnType<typeof vi.fn>;
+  getBookmarkQuestionIdsMock: ReturnType<typeof vi.fn>;
   setBookmarkMock: ReturnType<typeof vi.fn>;
   getPracticeSessionReviewMock: ReturnType<typeof vi.fn>;
   getCompletedSessionQuestionsWithFeedbackMock: ReturnType<typeof vi.fn>;
@@ -18,7 +18,7 @@ const practiceSessionPageModelBrowserMocks =
   vi.hoisted<PracticeSessionPageModelBrowserMocks>(() => ({
     getNextQuestionMock: vi.fn(),
     submitAnswerMock: vi.fn(),
-    getBookmarksMock: vi.fn(),
+    getBookmarkQuestionIdsMock: vi.fn(),
     setBookmarkMock: vi.fn(),
     getPracticeSessionReviewMock: vi.fn(),
     getCompletedSessionQuestionsWithFeedbackMock: vi.fn(),
@@ -35,7 +35,8 @@ vi.mock('@/src/adapters/controllers/question-controller', () => ({
 }));
 
 vi.mock('@/src/adapters/controllers/bookmark-controller', () => ({
-  getBookmarks: practiceSessionPageModelBrowserMocks.getBookmarksMock,
+  getBookmarkQuestionIds:
+    practiceSessionPageModelBrowserMocks.getBookmarkQuestionIdsMock,
   setBookmark: practiceSessionPageModelBrowserMocks.setBookmarkMock,
 }));
 

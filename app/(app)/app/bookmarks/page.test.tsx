@@ -14,6 +14,8 @@ import type {
 import { getStemPreview } from '@/src/adapters/shared/stem-preview';
 import {
   FakeAuthGateway,
+  FakeGetBookmarkQuestionIdsUseCase,
+  FakeGetBookmarkStatusUseCase,
   FakeGetBookmarksUseCase,
   FakeIdempotencyKeyRepository,
   FakeLogger,
@@ -121,6 +123,12 @@ function createBookmarkActionControllerDeps(overrides?: {
       overrides?.setBookmarkOutput ?? { bookmarked: false },
     ),
     getBookmarksUseCase: new FakeGetBookmarksUseCase({ rows: [] }),
+    getBookmarkQuestionIdsUseCase: new FakeGetBookmarkQuestionIdsUseCase({
+      questionIds: [],
+    }),
+    getBookmarkStatusUseCase: new FakeGetBookmarkStatusUseCase({
+      bookmarked: false,
+    }),
     now: () => now,
   };
 }

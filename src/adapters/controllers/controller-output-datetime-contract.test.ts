@@ -65,8 +65,18 @@ const ZOD_SOURCE_WRAPPER_METHODS = new Set([
 const EXPECTED_SCHEMALESS_ACTIONS: readonly PassThroughAction[] = [
   {
     filePath: 'src/adapters/controllers/bookmark-controller.ts',
+    action: 'getBookmarkQuestionIds',
+    datetimeFields: [],
+  },
+  {
+    filePath: 'src/adapters/controllers/bookmark-controller.ts',
     action: 'getBookmarks',
     datetimeFields: ['rows[].bookmarkedAt'],
+  },
+  {
+    filePath: 'src/adapters/controllers/bookmark-controller.ts',
+    action: 'getBookmarkStatus',
+    datetimeFields: [],
   },
   {
     filePath: 'src/adapters/controllers/practice-controller.ts',

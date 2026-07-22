@@ -24,3 +24,20 @@ export type BookmarkRow = AvailableBookmarkRow | UnavailableBookmarkRow;
 export type GetBookmarksOutput = {
   rows: BookmarkRow[];
 };
+
+export type GetBookmarkQuestionIdsInput = {
+  userId: string;
+};
+
+export type GetBookmarkQuestionIdsOutput = {
+  questionIds: string[];
+};
+
+export type GetBookmarkStatusInput = {
+  userId: string;
+  questionId: string;
+};
+
+export type GetBookmarkStatusOutput = {
+  bookmarked: boolean;
+};

@@ -17,7 +17,9 @@ const fixtureChoice1Id = crypto.randomUUID();
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
 
-const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const getBookmarkQuestionIds = vi.mocked(
+  bookmarkController.getBookmarkQuestionIds,
+);
 const setBookmark = vi.mocked(bookmarkController.setBookmark);
 const getNextQuestion = vi.mocked(questionController.getNextQuestion);
 const submitAnswer = vi.mocked(questionController.submitAnswer);
@@ -102,7 +104,7 @@ describe('usePracticeQuestionFlow (browser)', () => {
         }),
       ),
     );
-    getBookmarks.mockResolvedValue(ok({ rows: [] }));
+    getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
 
     const screen = await render(<PracticeQuestionFlowHookProbe />);
 
@@ -122,7 +124,7 @@ describe('usePracticeQuestionFlow (browser)', () => {
 
   it('transitions to error state when question loading throws', async () => {
     getNextQuestion.mockRejectedValue(new Error('Network down'));
-    getBookmarks.mockResolvedValue(ok({ rows: [] }));
+    getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
 
     const screen = await render(<PracticeQuestionFlowHookProbe />);
 
@@ -143,7 +145,7 @@ describe('usePracticeQuestionFlow (browser)', () => {
         }),
       ),
     );
-    getBookmarks.mockResolvedValue(ok({ rows: [] }));
+    getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
     setBookmark.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<PracticeQuestionFlowBookmarkProbe />);
@@ -167,7 +169,7 @@ describe('usePracticeQuestionFlow (browser)', () => {
     const deferred = createDeferred<ActionResult<SubmitAnswerOutput>>();
 
     getNextQuestion.mockResolvedValue(ok(createNextQuestion()));
-    getBookmarks.mockResolvedValue(ok({ rows: [] }));
+    getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
     submitAnswer.mockImplementation(async () => deferred.promise);
 
     const screen = await render(<PracticeQuestionFlowSubmitProbe />);

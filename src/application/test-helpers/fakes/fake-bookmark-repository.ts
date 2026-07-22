@@ -1,5 +1,7 @@
+import type { BookmarkSummary } from '@/src/application/ports/bookmark-repository';
 import type { BookmarkRepository } from '@/src/application/ports/repositories';
 import type { Bookmark } from '@/src/domain/entities';
+import type { QuestionDifficulty } from '@/src/domain/value-objects';
 
 export class FakeBookmarkRepository implements BookmarkRepository {
   private readonly bookmarks = new Map<string, Bookmark>();
@@ -7,6 +9,10 @@ export class FakeBookmarkRepository implements BookmarkRepository {
   constructor(
     seed: readonly Bookmark[] = [],
     private readonly now: () => Date = () => new Date(),
+    private readonly publishedQuestionSummariesById: ReadonlyMap<
+      string,
+      { slug: string; stemMd: string; difficulty: QuestionDifficulty }
+    > = new Map(),
   ) {
     for (const bookmark of seed) {
       this.bookmarks.set(
@@ -52,6 +58,37 @@ export class FakeBookmarkRepository implements BookmarkRepository {
         result.push(bookmark);
       }
     }
-    return result;
+    return result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async listQuestionIdsByUserId(userId: string): Promise<readonly string[]> {
+    return (await this.listByUserId(userId)).map(
+      (bookmark) => bookmark.questionId,
+    );
+  }
+
+  async listSummariesByUserId(
+    userId: string,
+  ): Promise<readonly BookmarkSummary[]> {
+    return (await this.listByUserId(userId)).map((bookmark) => {
+      const question = this.publishedQuestionSummariesById.get(
+        bookmark.questionId,
+      );
+      if (!question) {
+        return {
+          isAvailable: false,
+          questionId: bookmark.questionId,
+          bookmarkedAt: bookmark.createdAt,
+        };
+      }
+      return {
+        isAvailable: true,
+        questionId: bookmark.questionId,
+        slug: question.slug,
+        stemMd: question.stemMd,
+        difficulty: question.difficulty,
+        bookmarkedAt: bookmark.createdAt,
+      };
+    });
   }
 }
