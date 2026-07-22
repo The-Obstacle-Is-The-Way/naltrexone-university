@@ -23,10 +23,16 @@ export function toIdempotencyPublicError(
   }
 
   if (error instanceof ZodError) {
-    const flattened = z.flattenError(error).fieldErrors;
+    const flattened = z.flattenError(error);
     const fieldErrors: Record<string, string[]> = {};
-    for (const [field, messages] of Object.entries(flattened)) {
+    for (const [field, messages] of Object.entries(flattened.fieldErrors)) {
       if (Array.isArray(messages)) fieldErrors[field] = messages;
+    }
+    if (flattened.formErrors.length > 0) {
+      fieldErrors._root = [
+        ...(fieldErrors._root ?? []),
+        ...flattened.formErrors,
+      ];
     }
 
     return {

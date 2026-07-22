@@ -127,19 +127,20 @@ export class DrizzleIdempotencyKeyRepository
 
     return {
       resultJson: row.resultJson ?? null,
-      error: row.errorCode
-        ? decodeIdempotencyPublicError({
-            code: row.errorCode,
-            message: row.errorMessage,
-            ...(row.errorFieldErrors !== null &&
-            row.errorFieldErrors !== undefined
-              ? { fieldErrors: row.errorFieldErrors }
-              : {}),
-            ...(row.errorDetails !== null && row.errorDetails !== undefined
-              ? { details: row.errorDetails }
-              : {}),
-          })
-        : null,
+      error:
+        row.errorCode !== null && row.errorCode !== undefined
+          ? decodeIdempotencyPublicError({
+              code: row.errorCode,
+              message: row.errorMessage,
+              ...(row.errorFieldErrors !== null &&
+              row.errorFieldErrors !== undefined
+                ? { fieldErrors: row.errorFieldErrors }
+                : {}),
+              ...(row.errorDetails !== null && row.errorDetails !== undefined
+                ? { details: row.errorDetails }
+                : {}),
+            })
+          : null,
       completedAt: row.completedAt,
       expiresAt: row.expiresAt,
     };
