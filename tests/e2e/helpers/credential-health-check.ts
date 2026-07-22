@@ -1,9 +1,10 @@
-import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import postgres from 'postgres';
 import Stripe from 'stripe';
-import migrationJournal from '../../../db/migrations/meta/_journal.json';
+import {
+  createPostgresMigrationLedgerQuery,
+  MigrationLedgerVerificationError,
+  verifyMigrationLedger as verifySharedMigrationLedger,
+} from '@/scripts/migration-ledger';
 
 export const CLERK_API_BASE = 'https://api.clerk.com/v1';
 export const CLERK_API_TIMEOUT_MS = 15_000;
@@ -71,69 +72,6 @@ type ResolvedEnv = {
   stripeSecretKey?: string;
   stripeMonthlyPriceId?: string;
 };
-
-export type MigrationJournalEntry = {
-  idx: number;
-  tag: string;
-  when: number;
-  hash?: string;
-};
-
-type MigrationLedgerCreatedAt = number | string | bigint | null | undefined;
-type MigrationLedgerHash = string | null | undefined;
-type MigrationLedgerRow = {
-  createdAt: MigrationLedgerCreatedAt;
-  hash: MigrationLedgerHash;
-};
-type MigrationJournalHashEntry = MigrationJournalEntry & { hash: string };
-type KnownLegacyMigrationHashDrift = {
-  tag: string;
-  when: number;
-  expectedHash: string;
-  appliedHash: string;
-  repairMigrationTag: string;
-};
-type MigrationContentDrift =
-  | {
-      kind: 'hash-mismatch';
-      tag: string;
-      expectedHashPrefix: string;
-      appliedHashPrefix: string;
-    }
-  | {
-      kind: 'ledger-only';
-      createdAt: string;
-    };
-
-const SCHEMA_DRIFT_MIGRATIONS_CODE = 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS';
-const SCHEMA_DRIFT_MIGRATIONS_FIX =
-  'For local runs, confirm .env.local points at the intended non-production database, then run: DATABASE_URL="<verified target>" pnpm db:migrate';
-const SCHEMA_DRIFT_MIGRATION_CONTENT_CODE =
-  'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT';
-const SCHEMA_DRIFT_MIGRATION_CONTENT_FIX =
-  'Do not amend applied migrations. Restore the migration file to the applied content or add a new forward repair migration; update the legacy allowlist only for a measured repaired drift.';
-
-const HASH_PREFIX_LENGTH = 16;
-
-const KNOWN_LEGACY_MIGRATION_HASH_DRIFTS: readonly KnownLegacyMigrationHashDrift[] =
-  [
-    {
-      tag: '0027_early_wallow',
-      when: 1783355955875,
-      expectedHash:
-        '983c3458e8aadd6acaddbce0b514321f0cec4f0a2767b3a74b6442e9f0d4d35d',
-      appliedHash:
-        '15124dc7eab8b5ab3e239d13ee1011ea515b96567771270658b47de84b9faf3c',
-      repairMigrationTag: '0028_repair_attempts_selected_choice_index',
-    },
-  ] as const;
-
-const MIGRATION_JOURNAL_ENTRIES: readonly MigrationJournalEntry[] =
-  migrationJournal.entries.map(({ idx, tag, when }) => ({
-    idx,
-    tag,
-    when,
-  }));
 
 const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
   {
@@ -205,203 +143,19 @@ export async function fetchWithTimeout(
   }
 }
 
-export function computeMissingMigrations(
-  journalEntries: readonly MigrationJournalEntry[],
-  appliedCreatedAt: readonly MigrationLedgerCreatedAt[],
-): string[] {
-  const appliedMigrationTimes = new Set(
-    appliedCreatedAt
-      .map((createdAt) => Number(createdAt))
-      .filter((createdAt) => Number.isFinite(createdAt)),
-  );
-
-  return journalEntries
-    .filter((entry) => !appliedMigrationTimes.has(entry.when))
-    .map((entry) => entry.tag);
-}
-
-export function formatSchemaDriftMessage(
-  missingMigrationTags: readonly string[],
-): string {
-  return `The database used by E2E is behind the repo migration journal. Missing migrations: ${missingMigrationTags.join(', ')}.`;
-}
-
-function hashPrefix(hash: MigrationLedgerHash): string {
-  return typeof hash === 'string' && hash.length > 0
-    ? hash.slice(0, HASH_PREFIX_LENGTH)
-    : 'missing';
-}
-
-export function formatMigrationContentDriftMessage(
-  contentDrifts: readonly MigrationContentDrift[],
-): string {
-  const hashMismatches = contentDrifts
-    .filter((drift) => drift.kind === 'hash-mismatch')
-    .map(
-      (drift) =>
-        `${drift.tag} (expected ${drift.expectedHashPrefix}, applied ${drift.appliedHashPrefix})`,
-    );
-  const ledgerOnlyRows = contentDrifts
-    .filter((drift) => drift.kind === 'ledger-only')
-    .map((drift) => drift.createdAt);
-
-  const parts = [];
-  if (hashMismatches.length > 0) {
-    parts.push(`Content drift: ${hashMismatches.join(', ')}.`);
-  }
-  if (ledgerOnlyRows.length > 0) {
-    parts.push(`Ledger-only migrations: ${ledgerOnlyRows.join(', ')}.`);
-  }
-
-  return `The database used by E2E has migration ledger content drift. ${parts.join(' ')}`;
-}
-
-function createMigrationContentDriftError(
-  contentDrifts: readonly MigrationContentDrift[],
-): CredentialValidationError {
-  return new CredentialValidationError(
-    SCHEMA_DRIFT_MIGRATION_CONTENT_CODE,
-    formatMigrationContentDriftMessage(contentDrifts),
-    SCHEMA_DRIFT_MIGRATION_CONTENT_FIX,
-  );
-}
-
-function createSchemaDriftMigrationsError(
-  missingMigrationTags: readonly string[],
-  options?: ErrorOptions,
-): CredentialValidationError {
-  return new CredentialValidationError(
-    SCHEMA_DRIFT_MIGRATIONS_CODE,
-    formatSchemaDriftMessage(missingMigrationTags),
-    SCHEMA_DRIFT_MIGRATIONS_FIX,
-    options,
-  );
-}
-
-function isMissingMigrationLedgerError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const code = (error as { code?: unknown }).code;
-  return code === '3F000' || code === '42P01';
-}
-
-function readMigrationFileHash(entry: MigrationJournalEntry): string {
-  if (typeof entry.hash === 'string') return entry.hash;
-
-  const migrationPath = join(
-    process.cwd(),
-    'db',
-    'migrations',
-    `${entry.tag}.sql`,
-  );
-  const query = readFileSync(migrationPath, 'utf8');
-  return createHash('sha256').update(query).digest('hex');
-}
-
-function withMigrationFileHashes(
-  journalEntries: readonly MigrationJournalEntry[],
-): MigrationJournalHashEntry[] {
-  return journalEntries.map((entry) => ({
-    ...entry,
-    hash: readMigrationFileHash(entry),
-  }));
-}
-
-function isAllowedLegacyMigrationHashDrift(
-  journalEntry: MigrationJournalHashEntry,
-  appliedHash: MigrationLedgerHash,
-  allowlist: readonly KnownLegacyMigrationHashDrift[],
-): boolean {
-  if (typeof appliedHash !== 'string') return false;
-
-  return allowlist.some(
-    (allowed) =>
-      allowed.tag === journalEntry.tag &&
-      allowed.when === journalEntry.when &&
-      allowed.expectedHash === journalEntry.hash &&
-      allowed.appliedHash === appliedHash,
-  );
-}
-
-export function computeMigrationContentDrift(
-  journalEntries: readonly MigrationJournalHashEntry[],
-  appliedMigrations: readonly MigrationLedgerRow[],
-  allowlist: readonly KnownLegacyMigrationHashDrift[] = KNOWN_LEGACY_MIGRATION_HASH_DRIFTS,
-): MigrationContentDrift[] {
-  const journalByCreatedAt = new Map(
-    journalEntries.map((entry) => [String(entry.when), entry]),
-  );
-  const contentDrifts: MigrationContentDrift[] = [];
-
-  for (const migration of appliedMigrations) {
-    const createdAt = String(migration.createdAt);
-    const journalEntry = journalByCreatedAt.get(createdAt);
-
-    if (!journalEntry) {
-      contentDrifts.push({ kind: 'ledger-only', createdAt });
-      continue;
-    }
-
-    if (journalEntry.hash === migration.hash) continue;
-    if (
-      isAllowedLegacyMigrationHashDrift(journalEntry, migration.hash, allowlist)
-    ) {
-      continue;
-    }
-
-    contentDrifts.push({
-      kind: 'hash-mismatch',
-      tag: journalEntry.tag,
-      expectedHashPrefix: hashPrefix(journalEntry.hash),
-      appliedHashPrefix: hashPrefix(migration.hash),
-    });
-  }
-
-  return contentDrifts;
-}
-
-export async function verifyMigrationLedger(
-  sql: postgres.Sql,
-  journalEntries: readonly MigrationJournalEntry[] = MIGRATION_JOURNAL_ENTRIES,
-): Promise<void> {
+export async function verifyMigrationLedger(sql: postgres.Sql): Promise<void> {
   try {
-    const appliedMigrations = await sql<MigrationLedgerRow[]>`
-      SELECT created_at AS "createdAt", hash
-      FROM drizzle.__drizzle_migrations
-    `;
-    const missingMigrationTags = computeMissingMigrations(
-      journalEntries,
-      appliedMigrations.map((migration) => migration.createdAt),
-    );
-
-    if (missingMigrationTags.length > 0) {
-      throw createSchemaDriftMigrationsError(missingMigrationTags);
-    }
-
-    const contentDrifts = computeMigrationContentDrift(
-      withMigrationFileHashes(journalEntries),
-      appliedMigrations,
-    );
-    if (contentDrifts.length > 0) {
-      throw createMigrationContentDriftError(contentDrifts);
-    }
+    await verifySharedMigrationLedger(createPostgresMigrationLedgerQuery(sql));
   } catch (error) {
-    if (error instanceof CredentialValidationError) {
-      throw error;
-    }
-
-    if (isMissingMigrationLedgerError(error)) {
-      throw createSchemaDriftMigrationsError(
-        journalEntries.map((entry) => entry.tag),
-        { cause: error instanceof Error ? error : undefined },
+    if (error instanceof MigrationLedgerVerificationError) {
+      throw new CredentialValidationError(
+        error.code,
+        error.message,
+        error.fix,
+        { cause: error },
       );
     }
-
-    throw new CredentialValidationError(
-      SCHEMA_DRIFT_MIGRATIONS_CODE,
-      'Unable to verify the Drizzle migration ledger.',
-      SCHEMA_DRIFT_MIGRATIONS_FIX,
-      { cause: error instanceof Error ? error : undefined },
-    );
+    throw error;
   }
 }
 

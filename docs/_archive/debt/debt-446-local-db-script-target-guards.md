@@ -1,9 +1,10 @@
 # DEBT-446: Bare `db:migrate`/`db:seed` Can Silently Target a Remote Database, and Production Seeding Lacks an Enforced Consent Gate
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-07-09
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
+**Resolved:** 2026-07-21 — FW-5 implemented Parts 1, 2, and 3a with one explicit-target classifier/redactor/serializer, exact canonical remote-set consent for human commands, checked-in internal managed callers, guarded migrate/studio/seed entry points, a non-production-only batch seed with the named Production identity as an exclusion fence, and a dedicated named-Production seed command. Part 3b remains PARKED behind its recorded stale-clone overwrite or second-independent-writer trigger; no plan/freshness machinery was added.
 
 ---
 
@@ -19,6 +20,12 @@
 The cluster gets one target classifier/serializer and one consent token: explicit URL presence is checked before fallback loading, logs contain only `host[:port]/database`, every human REMOTE operation acknowledges the canonical JSON array of sorted unique redacted targets, and only checked-in CI/Vercel/resolver wrappers can call the helper's non-user-selectable managed mode. `db:seed:all` keeps the existing named Vercel Production resolution solely as an exclusion fence but executes only local/Development/Preview; `db:seed:prod` resolves the named Production identity itself and uses the same consent boundary. A database diff/version protocol is parked until the named content-history evidence exists.
 
 ## Description
+
+> **Historical evidence snapshot:** The findings below preserve the repository
+> state re-verified on 2026-07-18 at
+> [`ddad8eee51a3f0fb122d52cfdcfd6eb3102cfe32`](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/tree/ddad8eee51a3f0fb122d52cfdcfd6eb3102cfe32).
+> Present-tense statements and line citations in this archived section refer to
+> that immutable pre-FW-5 revision; relative links may now open remediated files.
 
 The manual database scripts resolve targets from `.env.local`/`.env` fallbacks
 or from Vercel-pulled environment files, then mutate the resolved
@@ -42,10 +49,10 @@ audit.
 
 ### 1. Bare `pnpm db:migrate` falls back to `.env.local`/`.env` with no target guard
 
-[`drizzle.config.ts`](../../drizzle.config.ts#L4) loads `.env.local`, then
+[`drizzle.config.ts`](../../../drizzle.config.ts#L4) loads `.env.local`, then
 `.env`, without overriding an already supplied shell value. Its only application
-guard is non-emptiness ([lines 9-12](../../drizzle.config.ts#L9)).
-[`package.json`](../../package.json#L24) maps `db:migrate` directly to
+guard is non-emptiness ([lines 9-12](../../../drizzle.config.ts#L9)).
+[`package.json`](../../../package.json#L24) maps `db:migrate` directly to
 `drizzle-kit migrate` and `db:studio` directly to `drizzle-kit studio`.
 
 With no shell `DATABASE_URL`, a bare migration therefore uses the first value in
@@ -54,39 +61,39 @@ host. The installed Drizzle Kit command prints the selected driver and migration
 progress, not the target hostname/database, and has no repository target guard.
 `db:migrate` mutates immediately; `db:studio` does not mutate merely by starting,
 but opens an interactive editor against the same implicit target and can mutate
-it. The protections are prose-only: [CLAUDE.md](../../CLAUDE.md#L94) and
-[migration-authoring.md](../dev/migration-authoring.md#L94) require an explicit
+it. The protections are prose-only: [CLAUDE.md](../../../CLAUDE.md#L94) and
+[migration-authoring.md](../../dev/migration-authoring.md#L94) require an explicit
 host-verified URL. The closest code precedent is
-[`seed-all-environments.sh`](../../scripts/seed-all-environments.sh#L132), which
+[`seed-all-environments.sh`](../../../scripts/seed-all-environments.sh#L132), which
 computes redacted target keys and rejects Production/non-production aliasing.
 
 This fallback did **not** cause the early-0027 incident. The DEBT-442 record says
 Development applied early 0027 through a Vercel Preview build, where Vercel
 supplied `DATABASE_URL`; it was not a bare local command
-([incident proof](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L12)).
+([incident proof](./debt-442-applied-migration-ledger-content-blind.md#L12)).
 The severe local variant has nevertheless occurred: archived
-[DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md#L12)
+[DEBT-240](./debt-240-local-dev-database-url-points-to-production.md#L12)
 records this ignored file pointing at Production for about two weeks. That fix
 changed one clone's value, not the fallback mechanism.
 
 ### 2. Bare `pnpm db:seed` can overwrite remote content without target or freshness checks
 
-[`scripts/seed.ts`](../../scripts/seed.ts#L11) loads the same fallback chain;
-`runSeed()` checks only that a URL exists ([lines 14-20](../../scripts/seed.ts#L14)).
+[`scripts/seed.ts`](../../../scripts/seed.ts#L11) loads the same fallback chain;
+`runSeed()` checks only that a URL exists ([lines 14-20](../../../scripts/seed.ts#L14)).
 It opens the connection without printing the hostname. For each local question
 whose canonical hash differs from the database, the syncer then:
 
 - overwrites `stem_md`, `explanation_md`, `reference_md`, `difficulty`, and
   `status` without a source-version/freshness comparison
-  ([question-syncer.ts](../../scripts/seed/question-syncer.ts#L247),
-  [update](../../scripts/seed/question-syncer.ts#L278));
+  ([question-syncer.ts](../../../scripts/seed/question-syncer.ts#L247),
+  [update](../../../scripts/seed/question-syncer.ts#L278));
 - deletes choices absent from that local question only when no attempt or
   normalized session state references them
-  ([delete](../../scripts/seed/question-syncer.ts#L341));
+  ([delete](../../../scripts/seed/question-syncer.ts#L341));
 - when `SEED_INCLUDE_PLACEHOLDERS` is not `true`, archives every
   `placeholder-%` question
-  ([seed.ts](../../scripts/seed.ts#L35),
-  [placeholder-archiver.ts](../../scripts/seed/placeholder-archiver.ts#L8)).
+  ([seed.ts](../../../scripts/seed.ts#L35),
+  [placeholder-archiver.ts](../../../scripts/seed/placeholder-archiver.ts#L8)).
 
 The successful command logs aggregate insert/update/skip counts and the local
 content root, but not the target or a per-question before/after plan. A stale
@@ -97,42 +104,42 @@ mapping was not re-queried in this audit.
 
 Two destructive legs are already fail-closed. Choice deletion throws when an
 attempt or practice-session state references the choice
-([seed-helpers.ts](../../scripts/seed-helpers.ts#L63)), and an answer-key flip
+([seed-helpers.ts](../../../scripts/seed-helpers.ts#L63)), and an answer-key flip
 over graded history throws unless the explicit BUG-281 override is set
-([question-syncer.ts](../../scripts/seed/question-syncer.ts#L73)). The original
+([question-syncer.ts](../../../scripts/seed/question-syncer.ts#L73)). The original
 candidate's "remaps `attempts.selectedChoiceId`" claim remains refuted. Those
 guards protect references and stored grades; they do not provide target
 selection, content freshness, or text-change review. Existing docs warn about
-the fallback ([integration-tests.md](../dev/integration-tests.md#L163),
-[deployment-procedure.md](../dev/deployment-procedure.md#L120)), but operator
+the fallback ([integration-tests.md](../../dev/integration-tests.md#L163),
+[deployment-procedure.md](../../dev/deployment-procedure.md#L120)), but operator
 discipline is the only target control.
 
 ### 3. `db:seed:all` announces, then seeds, Production without enforced consent or a database diff
 
-[`seed-all-environments.sh`](../../scripts/seed-all-environments.sh#L112) pulls
+[`seed-all-environments.sh`](../../../scripts/seed-all-environments.sh#L112) pulls
 Development, default Preview, and Production values into a temporary directory,
 adds Production to the target list
-([lines 142-145](../../scripts/seed-all-environments.sh#L142)), and runs
+([lines 142-145](../../../scripts/seed-all-environments.sh#L142)), and runs
 `db:seed` for every unique target
-([lines 166-169](../../scripts/seed-all-environments.sh#L166)). It correctly:
+([lines 166-169](../../../scripts/seed-all-environments.sh#L166)). It correctly:
 
 - prints a credential-free `label -> host/database` plan, including the explicit
   label `Vercel production`
-  ([lines 147-150](../../scripts/seed-all-environments.sh#L147));
+  ([lines 147-150](../../../scripts/seed-all-environments.sh#L147));
 - deduplicates targets and refuses if Production's key equals any local,
   Development, or Preview key
-  ([lines 132-140](../../scripts/seed-all-environments.sh#L132));
+  ([lines 132-140](../../../scripts/seed-all-environments.sh#L132));
 - offers `--plan`, which stops before import or database writes
-  ([lines 152-155](../../scripts/seed-all-environments.sh#L152)).
+  ([lines 152-155](../../../scripts/seed-all-environments.sh#L152)).
 
 It does **not** require `--plan`, a separate Production acknowledgment, or a
 per-question database diff. With a valid private `recall.md`/`vignettes.md`
 corpus (the importer fails before seeding if none exists at
-[`import-draft-questions.ts`](../../scripts/import-draft-questions.ts#L69)), the
+[`import-draft-questions.ts`](../../../scripts/import-draft-questions.ts#L69)), the
 live path deletes generated files, rebuilds them from clone-local draft
 subdirectories, then seeds Production. Both the private draft subdirectories
 and generated imported questions are gitignored
-([`.gitignore`](../../.gitignore#L54), [draft rules](../../.gitignore#L58)).
+([`.gitignore`](../../../.gitignore#L54), [draft rules](../../../.gitignore#L58)).
 
 A stale-but-different same-slug corpus does not qualify for the hash skip and is
 therefore written. The BUG-266/BUG-281 guards protect referenced choices and
@@ -260,17 +267,17 @@ acceptance criteria for the chosen dedicated Production command.
 
 ## Related
 
-- [DEBT-240](../_archive/debt/debt-240-local-dev-database-url-points-to-production.md)
+- [DEBT-240](./debt-240-local-dev-database-url-points-to-production.md)
   -- fixed the ignored `.env.local` value, not the fallback mechanism.
-- [DEBT-411](../_archive/debt/debt-411-local-e2e-flakiness-and-error-masking.md)
+- [DEBT-411](./debt-411-local-e2e-flakiness-and-error-masking.md)
   -- moved normal local E2E to resolver-scoped Docker.
-- [DEBT-442](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md)
+- [DEBT-442](./debt-442-applied-migration-ledger-content-blind.md)
   -- shipped persistent-target ledger/content detection and records the
   Preview-deploy mechanism behind early 0027.
-- [BUG-266](../_archive/bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md)
-  and [BUG-281](../_archive/bugs/bug-281-seed-reimport-rewrites-answer-key-under-graded-history.md)
+- [BUG-266](../bugs/bug-266-practice-session-question-states-fk-breaks-content-sync.md)
+  and [BUG-281](../bugs/bug-281-seed-reimport-rewrites-answer-key-under-graded-history.md)
   -- shipped the referenced-choice and graded-answer-key guards.
-- [DEBT-343](../_archive/debt/debt-343-scripts-cleanup.md) -- created
+- [DEBT-343](./debt-343-scripts-cleanup.md) -- created
   `seed-all-environments.sh` with target deduplication and alias rejection; it
   did not decide a Production consent gate.
 - Found during the 2026-07-09 DDIA-lens adversarial database-seam sweep (12

@@ -1,13 +1,21 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import type postgres from 'postgres';
 import { describe, expect, it, vi } from 'vitest';
 import {
   computeMigrationContentDrift,
   computeMissingMigrations,
   formatSchemaDriftMessage,
+  type MigrationLedgerQuery,
+  type MigrationLedgerRow,
   verifyMigrationLedger,
-} from './credential-health-check';
+  verifyMigrationLedgerBeforeMigration,
+} from '@/scripts/migration-ledger';
+
+function createMigrationLedgerSql(
+  query: () => Promise<MigrationLedgerRow[]>,
+): MigrationLedgerQuery {
+  return { readAppliedMigrations: vi.fn(query) };
+}
 
 describe('migration ledger schema-drift preflight', () => {
   const hashA =
@@ -47,19 +55,62 @@ describe('migration ledger schema-drift preflight', () => {
       ]),
     ).toEqual([]);
 
-    const sql = vi.fn(async () => [
+    const sql = createMigrationLedgerSql(async () => [
       { createdAt: 1769893923091, hash: hashA },
       { createdAt: '1769942859252', hash: hashB },
       { createdAt: 1770067162278n, hash: hashC },
     ]);
 
     await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
+      verifyMigrationLedger(sql, journalEntries),
     ).resolves.toBeUndefined();
   });
 
+  it('allows expected pending journal entries before migration', async () => {
+    const sql = createMigrationLedgerSql(async () => [
+      { createdAt: 1769893923091, hash: hashA },
+    ]);
+
+    await expect(
+      verifyMigrationLedgerBeforeMigration(sql, journalEntries),
+    ).resolves.toBeUndefined();
+  });
+
+  it('rejects ledger-only rows before migration', async () => {
+    const sql = createMigrationLedgerSql(async () => [
+      { createdAt: 1769893923091, hash: hashA },
+      {
+        createdAt: 1999999999999,
+        hash: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      },
+    ]);
+
+    await expect(
+      verifyMigrationLedgerBeforeMigration(sql, journalEntries),
+    ).rejects.toMatchObject({
+      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+      message: expect.stringContaining('Ledger-only migrations detected: 1'),
+    });
+  });
+
+  it('rejects applied-row content drift before migration', async () => {
+    const sql = createMigrationLedgerSql(async () => [
+      {
+        createdAt: 1769893923091,
+        hash: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      },
+    ]);
+
+    await expect(
+      verifyMigrationLedgerBeforeMigration(sql, journalEntries),
+    ).rejects.toMatchObject({
+      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+      message: expect.stringContaining('Content drift: 0000_jazzy_vermin'),
+    });
+  });
+
   it('throws the content-drift code when a ledger row hash differs from the local migration file hash', async () => {
-    const sql = vi.fn(async () => [
+    const sql = createMigrationLedgerSql(async () => [
       { createdAt: 1769893923091, hash: hashA },
       {
         createdAt: '1769942859252',
@@ -69,7 +120,7 @@ describe('migration ledger schema-drift preflight', () => {
     ]);
 
     await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
+      verifyMigrationLedger(sql, journalEntries),
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
       message: expect.stringContaining(
@@ -80,7 +131,7 @@ describe('migration ledger schema-drift preflight', () => {
   });
 
   it('throws the content-drift code when the ledger contains a migration unknown to the local journal', async () => {
-    const sql = vi.fn(async () => [
+    const sql = createMigrationLedgerSql(async () => [
       { createdAt: 1769893923091, hash: hashA },
       { createdAt: '1769942859252', hash: hashB },
       { createdAt: 1770067162278n, hash: hashC },
@@ -91,10 +142,10 @@ describe('migration ledger schema-drift preflight', () => {
     ]);
 
     await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
+      verifyMigrationLedger(sql, journalEntries),
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
-      message: expect.stringContaining('Ledger-only migrations: 1999999999999'),
+      message: expect.stringContaining('Ledger-only migrations detected: 1'),
     });
   });
 
@@ -103,7 +154,7 @@ describe('migration ledger schema-drift preflight', () => {
       '15124dc7eab8b5ab3e239d13ee1011ea515b96567771270658b47de84b9faf3c';
     const current0027Hash =
       '983c3458e8aadd6acaddbce0b514321f0cec4f0a2767b3a74b6442e9f0d4d35d';
-    const sql = vi.fn(async () => [
+    const sql = createMigrationLedgerSql(async () => [
       {
         createdAt: 1783355955875,
         hash: measuredEarly0027Hash,
@@ -111,7 +162,7 @@ describe('migration ledger schema-drift preflight', () => {
     ]);
 
     await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, [
+      verifyMigrationLedger(sql, [
         {
           idx: 27,
           tag: '0027_early_wallow',
@@ -127,12 +178,12 @@ describe('migration ledger schema-drift preflight', () => {
     const migrationHash = createHash('sha256')
       .update(readFileSync(`db/migrations/${migrationTag}.sql`, 'utf8'))
       .digest('hex');
-    const sql = vi.fn(async () => [
+    const sql = createMigrationLedgerSql(async () => [
       { createdAt: 1769893923091, hash: migrationHash },
     ]);
 
     await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, [
+      verifyMigrationLedger(sql, [
         {
           idx: 0,
           tag: migrationTag,
@@ -147,17 +198,14 @@ describe('migration ledger schema-drift preflight', () => {
       'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
     const databaseUrl =
       'postgresql://e2e_owner:super-secret-password@ep-private-host.neon.tech/addiction_boards';
-    const sql = vi.fn(async () => [
+    const sql = createMigrationLedgerSql(async () => [
       { createdAt: 1769893923091, hash: appliedHash },
       { createdAt: '1769942859252', hash: hashB },
       { createdAt: 1770067162278n, hash: hashC },
     ]);
 
     try {
-      await verifyMigrationLedger(
-        sql as unknown as postgres.Sql,
-        journalEntries,
-      );
+      await verifyMigrationLedger(sql, journalEntries);
       throw new Error('Expected verifyMigrationLedger to reject');
     } catch (error) {
       expect(error).toMatchObject({
@@ -231,17 +279,17 @@ describe('migration ledger schema-drift preflight', () => {
       '0002_curious_firelord',
     ]);
 
-    const sql = vi.fn(async () => [{ createdAt: 1769893923091 }]);
+    const sql = createMigrationLedgerSql(async () => [
+      { createdAt: 1769893923091, hash: hashA },
+    ]);
 
     await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
+      verifyMigrationLedger(sql, journalEntries),
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
       message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
-      fix: expect.stringContaining(
-        'DATABASE_URL="<verified target>" pnpm db:migrate',
-      ),
+        'The migration ledger is behind the repo journal. Missing migrations: 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
+      fix: expect.stringContaining('checked-in migration command'),
     });
   });
 
@@ -250,16 +298,16 @@ describe('migration ledger schema-drift preflight', () => {
       new Error('schema "drizzle" does not exist'),
       { code: '3F000' },
     );
-    const sql = vi.fn(async () => {
+    const sql = createMigrationLedgerSql(async () => {
       throw missingSchemaError;
     });
 
     await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
+      verifyMigrationLedger(sql, journalEntries),
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
       message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
+        'The migration ledger is behind the repo journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
     });
   });
 
@@ -268,16 +316,16 @@ describe('migration ledger schema-drift preflight', () => {
       new Error('relation "drizzle.__drizzle_migrations" does not exist'),
       { code: '42P01' },
     );
-    const sql = vi.fn(async () => {
+    const sql = createMigrationLedgerSql(async () => {
       throw missingTableError;
     });
 
     await expect(
-      verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
+      verifyMigrationLedger(sql, journalEntries),
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
       message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
+        'The migration ledger is behind the repo journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
     });
   });
 

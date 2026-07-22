@@ -1,7 +1,7 @@
 # Deployment Procedure
 
 > **Parent:** [Deployment Environments](./deployment-environments.md)
-> **Last Updated:** 2026-06-16
+> **Last Updated:** 2026-07-21
 
 ---
 
@@ -10,10 +10,24 @@
 [BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed. The Vercel Build Command is set in `vercel.json` (`buildCommand`) to run:
 
 ```bash
-pnpm db:migrate && pnpm build
+pnpm exec tsx scripts/verify-migration-ledger.ts pre \
+  && pnpm exec tsx scripts/internal/run-managed-db-migrate.ts \
+  && pnpm exec tsx scripts/verify-migration-ledger.ts post \
+  && pnpm build
 ```
 
-so Vercel applies checked-in Drizzle migrations to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, so the currently-serving deployment stays up.
+The pre-check rejects applied-row content drift and ledger-only rows while
+allowing expected pending journal entries. Vercel then applies checked-in
+Drizzle migrations to the environment-scoped `DATABASE_URL`; the post-check
+requires the ledger to match the checkout exactly before building. This is live
+on Preview/Development builds immediately and on Production once the change is
+on `main`. Any failed check or migration fails the build closed, so the
+currently-serving deployment stays up.
+
+Migration authors must also answer the N-1 compatibility question in
+[Migration Authoring → Deployed-Code Compatibility](./migration-authoring.md#deployed-code-compatibility):
+the currently serving code must remain compatible with the migrated schema
+until promotion.
 
 Vercel still does **not** automatically run:
 
@@ -30,8 +44,8 @@ For seeds, and for any manual deploy-target migration fallback, use an explicit,
 1. CI (GitHub Actions)
    └─ pnpm typecheck
    └─ pnpm lint:ci
-   └─ pnpm db:migrate            # CI database only
-   └─ SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
+   └─ pnpm exec tsx scripts/internal/run-managed-db-migrate.ts # CI database only
+   └─ SEED_INCLUDE_PLACEHOLDERS=true pnpm exec tsx scripts/internal/run-managed-db-seed.ts
    └─ pnpm test:coverage
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # pushes + same-repo PRs
@@ -40,23 +54,35 @@ For seeds, and for any manual deploy-target migration fallback, use an explicit,
    └─ Must pass before merge
 
 2. Vercel (automatic on push/merge)
-   └─ buildCommand (vercel.json): pnpm db:migrate && pnpm build
+   └─ buildCommand (vercel.json): pre-check → managed migrate → exact post-check → build
    └─ Preview: any non-main branch
    └─ Production: main branch
 
 3. Operator
    └─ Verify the Vercel build ran the migration before serving; manual migrate only as fallback
-   └─ DATABASE_URL="<target>" pnpm db:seed                                    # if content changed
+   └─ Obtain the exact DB_TARGET_ACK for DATABASE_URL, then run the manual seed # if content changed
 ```
 
-**Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment schema migration runs via the Vercel Build Command (`pnpm db:migrate && pnpm build`); reseeding remains a manual operator step.
+**Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment schema migration and ledger verification run via the Vercel Build Command; reseeding remains a manual operator step.
+
+For a manual Preview or Production reseed, export the verified target, run the
+guard once without an acknowledgement, and confirm it refuses before opening
+Postgres while printing the required credential-free JSON token. Copy that
+token byte-for-byte into `DB_TARGET_ACK`, then repeat the seed:
+
+```bash
+export DATABASE_URL="<verified-target>"
+pnpm db:seed # expected refusal; copy the exact required DB_TARGET_ACK JSON
+export DB_TARGET_ACK='["host/database"]'
+pnpm db:seed
+```
 
 Manual reseeds refuse in-place answer-key flips over existing graded history by
 default. If `pnpm db:seed` reports
 `Refusing to change answer key ... because graded history exists`, treat that as
 a content-data decision point: fork/version the question, accept the blocked
 import, or rerun only with an explicit operator override:
-`SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true DATABASE_URL="<target>" pnpm db:seed`.
+`SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true DATABASE_URL="<target>" DB_TARGET_ACK='["host/database"]' pnpm db:seed`.
 The override logs the affected question slug, changed labels, and graded row
 counts.
 
