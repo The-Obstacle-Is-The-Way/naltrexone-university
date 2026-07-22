@@ -48,12 +48,14 @@ migration journal and can omit extensions, constraints, data repairs, custom
 SQL, and ledger history. Generate a migration file, review it, and apply it
 through the guarded `db:migrate` entry point instead.
 
-Database commands require an explicitly supplied `DATABASE_URL`; ignored
-dotenv files are not an authorization source. Loopback targets run as local.
-Remote migrate, seed, and Studio commands require the exact credential-free
-`DB_TARGET_ACK` printed by the shared target guard. Checked-in CI, Vercel, E2E,
-and resolver wrappers use the internal managed boundary rather than a
-caller-selectable flag or environment bypass.
+Direct database commands require an explicitly supplied `DATABASE_URL`;
+ignored dotenv files are not an authorization source. Loopback targets run as
+local. `db:seed:all` and `db:seed:prod` instead resolve named Vercel environment
+URLs internally, and `db:seed:prod` rejects a caller-supplied `DATABASE_URL`.
+Remote migrate, seed, and Studio commands, including the provider-resolved seed
+sets, require the exact credential-free `DB_TARGET_ACK` printed by the shared
+target guard. Checked-in CI, Vercel, E2E, and resolver wrappers use the internal
+managed boundary rather than a caller-selectable flag or environment bypass.
 
 For local disposable Postgres, resolve the clone-specific target through
 [`scripts/resolve-local-test-target.ts`](../../scripts/resolve-local-test-target.ts)

@@ -7,8 +7,10 @@ describe('Drizzle migration journal ordering', () => {
       (left, right) => left.idx - right.idx,
     );
     const timestamps = entriesByIdx.map((entry) => entry.when);
+    const indexes = entriesByIdx.map((entry) => entry.idx);
 
     expect(new Set(timestamps).size).toBe(timestamps.length);
+    expect(new Set(indexes).size).toBe(indexes.length);
 
     for (let index = 1; index < entriesByIdx.length; index += 1) {
       const previous = entriesByIdx[index - 1];

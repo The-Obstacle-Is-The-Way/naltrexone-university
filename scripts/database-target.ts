@@ -91,6 +91,8 @@ function parseDatabaseUrl(databaseUrl: string): URL {
     }
     return parsed;
   } catch {
+    // Suppress parser/protocol details so every invalid URL uses one stable,
+    // credential-free operator error.
     throw new Error('The explicitly supplied DATABASE_URL is invalid.');
   }
 }

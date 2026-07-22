@@ -1,19 +1,11 @@
 import { once } from 'node:events';
 import { createConnection } from 'node:net';
 import postgres from 'postgres';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { POSTGRES_CONNECTION_PARAMETERS } from '@/lib/db-connection-options';
+import { resolveIntegrationDatabaseUrl } from '@/tests/shared/resolve-integration-database-url';
 
-function requireDatabaseUrl(): string {
-  const value = process.env.DATABASE_URL;
-  if (!value) {
-    throw new Error('DATABASE_URL is required for database session proofs');
-  }
-
-  return value;
-}
-
-const databaseUrl = requireDatabaseUrl();
+const databaseUrl = resolveIntegrationDatabaseUrl();
 
 const TEST_STATEMENT_TIMEOUT = '100ms';
 const TEST_LOCK_TIMEOUT = '100ms';
@@ -96,6 +88,27 @@ async function expectSqlState(
 
 describe('application database session bounds', () => {
   const connections: ReturnType<typeof postgres>[] = [];
+
+  beforeAll(async () => {
+    const sql = postgres(databaseUrl, { max: 1 });
+    try {
+      const [readiness] = await sql<
+        { migrationCount: number; tagCount: number }[]
+      >`
+        select
+          (select count(*)::int from drizzle.__drizzle_migrations) as "migrationCount",
+          (select count(*)::int from tags) as "tagCount"
+      `;
+
+      if (!readiness?.migrationCount || !readiness.tagCount) {
+        throw new Error(
+          'Database session proofs require a migrated and seeded local test target.',
+        );
+      }
+    } finally {
+      await sql.end({ timeout: 1 });
+    }
+  });
 
   afterAll(async () => {
     await Promise.all(

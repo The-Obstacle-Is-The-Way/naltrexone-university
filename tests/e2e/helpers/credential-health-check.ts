@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import {
   MigrationLedgerVerificationError,
   verifyMigrationLedger as verifySharedMigrationLedger,
-} from '../../../scripts/migration-ledger';
+} from '@/scripts/migration-ledger';
 
 export const CLERK_API_BASE = 'https://api.clerk.com/v1';
 export const CLERK_API_TIMEOUT_MS = 15_000;
