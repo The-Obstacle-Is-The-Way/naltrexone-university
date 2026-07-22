@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { StripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeLogger,
   FakeStripeCustomerRepository,
@@ -497,10 +498,19 @@ describe('reconcileStripeSubscriptions', () => {
     expect(scenario.logger.errorCalls).toContainEqual({
       context: expect.objectContaining({
         stripeSubscriptionId: 'sub_missing_metadata',
-        error: 'Stripe subscription metadata.user_id is required',
+        error: {
+          name: 'ApplicationError',
+          code: 'STRIPE_ERROR',
+        },
       }),
       msg: 'Stripe subscription reconciliation failed',
     });
+    const projectedErrorLogs = scenario.logger.errorCalls.filter(
+      ({ msg }) => msg === 'Stripe subscription reconciliation failed',
+    );
+    expect(JSON.stringify(projectedErrorLogs)).not.toContain(
+      'Stripe subscription metadata.user_id is required',
+    );
   });
 
   it('keeps reconciliation fail-closed when Stripe subscription e2e owner differs from configured owner', async () => {
@@ -529,11 +539,19 @@ describe('reconcileStripeSubscriptions', () => {
     expect(scenario.logger.errorCalls).toContainEqual({
       context: expect.objectContaining({
         stripeSubscriptionId: 'sub_owner_mismatch',
-        error:
-          'Stripe subscription metadata.e2e_owner does not match this webhook owner',
+        error: {
+          name: 'ApplicationError',
+          code: 'STRIPE_ERROR',
+        },
       }),
       msg: 'Stripe subscription reconciliation failed',
     });
+    const projectedErrorLogs = scenario.logger.errorCalls.filter(
+      ({ msg }) => msg === 'Stripe subscription reconciliation failed',
+    );
+    expect(JSON.stringify(projectedErrorLogs)).not.toContain(
+      'Stripe subscription metadata.e2e_owner does not match this webhook owner',
+    );
   });
 
   it('fails loudly when the local subscription list contains holes (internal invariant)', async () => {
@@ -1560,6 +1578,56 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
     ).resolves.toBeNull();
+  });
+
+  it('logs safe database diagnostics while returning a generic failure string', async () => {
+    const subscription = createUserSubscriptionFixture('sub_diagnostics');
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: subscription }],
+    });
+    const postgresError = Object.assign(
+      new Error('duplicate key exposes raw reconciliation text'),
+      {
+        code: '23505',
+        constraint: 'stripe_customers_stripe_customer_id_unique',
+        detail: 'Key (stripe_customer_id)=(cus_reconcile_raw) exists',
+      },
+    );
+    const databaseError = new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to upsert Stripe customer mapping',
+      undefined,
+      { cause: postgresError },
+    );
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      localSubscriptions: [row(primaryUserId, subscription.id)],
+      transaction: async () => {
+        throw databaseError;
+      },
+    });
+
+    const result = await scenario.run();
+
+    expectSingleFailure(result, {
+      stripeSubscriptionId: subscription.id,
+      error: 'Failed to upsert Stripe customer mapping',
+    });
+    expect(scenario.logger.errorCalls).toContainEqual({
+      context: {
+        stripeSubscriptionId: subscription.id,
+        error: {
+          name: 'ApplicationError',
+          code: 'INTERNAL_ERROR',
+          sqlState: '23505',
+          constraint: 'stripe_customers_stripe_customer_id_unique',
+        },
+      },
+      msg: 'Stripe subscription reconciliation failed',
+    });
+    const serializedLog = JSON.stringify(scenario.logger.errorCalls);
+    expect(serializedLog).not.toContain('raw reconciliation');
+    expect(serializedLog).not.toContain('cus_reconcile_raw');
   });
 
   it('breaks ties deterministically when multiple blocking subscriptions share the same currentPeriodEnd', async () => {

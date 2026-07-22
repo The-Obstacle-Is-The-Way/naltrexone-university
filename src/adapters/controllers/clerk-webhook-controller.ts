@@ -8,10 +8,9 @@ import {
   resolveClerkUserEmailOwnershipConflict,
   validateClerkUserEmailOwnershipConflict,
 } from '@/src/adapters/gateways/clerk-user-provisioner';
-import { STACK_TRACE_LIMIT } from '@/src/adapters/shared/error-logging-constants';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import {
   ApplicationError,
-  isApplicationError,
   isUserEmailOwnershipConflictError,
   type UserEmailOwnershipConflictError,
 } from '@/src/application/errors';
@@ -185,41 +184,12 @@ async function claimUnprocessedClerkEvent(
   return current.processedAt === null || current.error !== null;
 }
 
-function toErrorData(error: unknown): string {
-  if (isApplicationError(error)) {
-    return JSON.stringify({
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      fieldErrors: error.fieldErrors ?? undefined,
-      stack: error.stack?.slice(0, STACK_TRACE_LIMIT),
-    });
-  }
-
-  if (error instanceof Error) {
-    return JSON.stringify({
-      name: error.name,
-      message: error.message,
-      stack: error.stack?.slice(0, STACK_TRACE_LIMIT),
-    });
-  }
-
-  const raw = String(error);
-  return JSON.stringify({
-    message: 'Unknown error',
-    raw:
-      raw.length > STACK_TRACE_LIMIT
-        ? `${raw.slice(0, STACK_TRACE_LIMIT)}...`
-        : raw,
-  });
-}
-
 async function persistFailure(
   deps: ClerkWebhookDeps,
   event: ClerkWebhookEvent,
   error: unknown,
 ): Promise<void> {
-  const errorData = toErrorData(error);
+  const errorData = JSON.stringify(projectSafeErrorDiagnostics(error));
 
   try {
     await deps.transaction(async ({ clerkEvents }) => {
@@ -236,10 +206,7 @@ async function persistFailure(
     deps.logger.error(
       {
         eventId: event.eventId,
-        error:
-          persistError instanceof Error
-            ? persistError.message
-            : String(persistError),
+        error: projectSafeErrorDiagnostics(persistError),
       },
       'Failed to persist Clerk webhook failure state',
     );

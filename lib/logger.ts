@@ -19,6 +19,8 @@ const level =
  * Structured JSON logger (Vercel-friendly).
  *
  * Security note: do not log PII (emails) or secrets. Prefer logging internal IDs.
+ * Raw unknown errors at `err`/`error` seams must pass through
+ * `projectSafeErrorDiagnostics`; Pino redaction is not that boundary.
  */
 export const logger = pino({
   level,

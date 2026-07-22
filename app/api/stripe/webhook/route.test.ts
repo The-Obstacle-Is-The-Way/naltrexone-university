@@ -125,7 +125,7 @@ describe('POST /api/stripe/webhook', () => {
   });
 
   it('returns 400 when signature verification fails', async () => {
-    const { POST, processStripeWebhook } = createTestDeps();
+    const { POST, processStripeWebhook, loggerError } = createTestDeps();
 
     processStripeWebhook.mockRejectedValue(
       new ApplicationError(
@@ -146,10 +146,19 @@ describe('POST /api/stripe/webhook', () => {
     await expect(res.json()).resolves.toEqual({
       error: 'Webhook validation failed',
     });
+    expect(loggerError).toHaveBeenCalledWith(
+      {
+        error: {
+          name: 'ApplicationError',
+          code: 'INVALID_WEBHOOK_SIGNATURE',
+        },
+      },
+      'Stripe webhook validation failed',
+    );
   });
 
   it('returns 400 when payload validation fails', async () => {
-    const { POST, processStripeWebhook } = createTestDeps();
+    const { POST, processStripeWebhook, loggerError } = createTestDeps();
 
     processStripeWebhook.mockRejectedValue(
       new ApplicationError('INVALID_WEBHOOK_PAYLOAD', 'Invalid payload'),
@@ -167,6 +176,15 @@ describe('POST /api/stripe/webhook', () => {
     await expect(res.json()).resolves.toEqual({
       error: 'Webhook validation failed',
     });
+    expect(loggerError).toHaveBeenCalledWith(
+      {
+        error: {
+          name: 'ApplicationError',
+          code: 'INVALID_WEBHOOK_PAYLOAD',
+        },
+      },
+      'Stripe webhook validation failed',
+    );
   });
 
   it('returns 429 when rate limited', async () => {
@@ -214,6 +232,10 @@ describe('POST /api/stripe/webhook', () => {
     });
     expect(processStripeWebhook).not.toHaveBeenCalled();
     expect(loggerError).toHaveBeenCalledTimes(1);
+    expect(loggerError).toHaveBeenCalledWith(
+      { error: { name: 'Error' } },
+      'Stripe webhook rate limiter failed',
+    );
   });
 
   it('returns 500 when processing fails unexpectedly', async () => {
@@ -233,6 +255,10 @@ describe('POST /api/stripe/webhook', () => {
       error: 'Webhook processing failed',
     });
     expect(loggerError).toHaveBeenCalledTimes(1);
+    expect(loggerError).toHaveBeenCalledWith(
+      { error: { name: 'Error' } },
+      'Stripe webhook failed',
+    );
   });
 
   it('passes container-created deps into processStripeWebhook', async () => {

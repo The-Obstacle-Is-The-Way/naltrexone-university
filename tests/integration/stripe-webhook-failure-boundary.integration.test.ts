@@ -103,11 +103,13 @@ describe('Stripe webhook failure boundary', () => {
       type: 'customer.subscription.updated',
       processedAt: null,
     });
-    expect(JSON.parse(failedEvent?.error ?? '{}')).toMatchObject({
+    expect(JSON.parse(failedEvent?.error ?? '{}')).toEqual({
       name: 'ApplicationError',
       code: 'CONFLICT',
-      message: 'Stripe customer id is already mapped to a different user',
     });
+    expect(failedEvent?.error).not.toContain(
+      'Stripe customer id is already mapped to a different user',
+    );
 
     await expect(
       new DrizzleSubscriptionRepository(db, priceIds).findByUserId(

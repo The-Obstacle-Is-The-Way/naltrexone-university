@@ -1,5 +1,6 @@
 import { ZodError, z } from 'zod';
 import { logger } from '@/lib/logger';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type {
   ApplicationErrorCode,
   ApplicationErrorDetails,
@@ -69,7 +70,10 @@ export function handleError(
       (error as { digest?: unknown }).digest === 'DYNAMIC_SERVER_USAGE'
     )
   ) {
-    errorLogger.error({ err: error }, 'Unhandled error in controller');
+    errorLogger.error(
+      { err: projectSafeErrorDiagnostics(error) },
+      'Unhandled error in controller',
+    );
   }
   return err('INTERNAL_ERROR', 'Internal error');
 }

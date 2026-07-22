@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
+import { ApplicationError } from '@/src/application/errors';
 import {
   FakeClerkEventRepository,
   FakeDeletedClerkUserRepository,
@@ -876,12 +877,15 @@ describe('processClerkWebhook', () => {
         'evt_customer_cleanup_failure',
       ),
     ).resolves.toEqual({ stripeCustomerId: 'cus_cleanup_failure' });
-    await expect(
-      deps.clerkEvents.peek('evt_customer_cleanup_failure'),
-    ).resolves.toMatchObject({
+    const storedEvent = await deps.clerkEvents.peek(
+      'evt_customer_cleanup_failure',
+    );
+    expect(storedEvent).toMatchObject({
       processedAt: null,
-      error: expect.stringContaining('customer delete failed'),
+      error: expect.any(String),
     });
+    expect(JSON.parse(storedEvent?.error ?? '{}')).toEqual({ name: 'Error' });
+    expect(storedEvent?.error).not.toContain('customer delete failed');
   });
 
   it('acquires the subscription writer lock before the users-row lock and delete', async () => {
@@ -1449,13 +1453,101 @@ describe('processClerkWebhook', () => {
       );
     const serializedError = storedEvent?.[1].error;
     expect(serializedError).toBeTruthy();
+    expect(JSON.parse(serializedError ?? '{}')).toEqual({});
+    expect(serializedError).not.toContain('Unknown error');
+    expect(serializedError).not.toContain('x'.repeat(1205));
+    expect(transactionCount).toBe(2);
+  });
 
-    const parsedError = JSON.parse(serializedError ?? '{}') as {
-      message?: string;
-      raw?: string;
+  it('persists only safe driver diagnostics for a failed Clerk event', async () => {
+    const postgresError = Object.assign(
+      new Error('duplicate key exposes raw Clerk user text'),
+      {
+        code: '23505',
+        constraint: 'users_email_uq',
+        detail: 'Key (email)=(clerk-ledger-sentinel@example.com) exists',
+      },
+    );
+    const databaseError = new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to ensure user row',
+      undefined,
+      { cause: postgresError },
+    );
+    const clerkEvents = new FakeClerkEventRepository();
+    const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCustomerCleanups =
+      new FakePendingStripeCustomerCleanupRepository();
+    const userRepository = new ThrowingUserRepository(databaseError);
+    const stripeCustomerRepository = new FakeStripeCustomerRepository();
+    let transactionCount = 0;
+
+    const deps = {
+      clerkEvents,
+      deletedClerkUsers,
+      pendingStripeCustomerCleanups,
+      userRepository,
+      stripeCustomerRepository,
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository;
+          userRepository: ThrowingUserRepository;
+          stripeCustomerRepository: FakeStripeCustomerRepository;
+        }) => Promise<T>,
+      ) => {
+        transactionCount += 1;
+        return fn({
+          clerkEvents,
+          deletedClerkUsers,
+          pendingStripeCustomerCleanups,
+          userRepository,
+          stripeCustomerRepository,
+        });
+      },
+      deleteStripeCustomer: async () => undefined,
+      getClerkUserById: async () => null,
+      logger: new FakeLogger(),
     };
-    expect(parsedError.message).toBe('Unknown error');
-    expect(parsedError.raw).toBe(`${'x'.repeat(1000)}...`);
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: {
+              id: 'clerk_truncate',
+              primary_email_address_id: 'email_1',
+              updated_at: 1769904003000,
+              email_addresses: [
+                { id: 'email_1', email_address: 'truncate@example.com' },
+              ],
+            },
+          },
+          'evt_user_updated_truncate_unknown_error',
+        ),
+      ),
+    ).rejects.toBe(databaseError);
+
+    const storedEvent = clerkEvents
+      .snapshot()
+      .find(
+        ([eventId]) => eventId === 'evt_user_updated_truncate_unknown_error',
+      );
+    const serializedError = storedEvent?.[1].error;
+    expect(serializedError).toBeTruthy();
+
+    const parsedError = JSON.parse(serializedError ?? '{}');
+    expect(parsedError).toEqual({
+      name: 'ApplicationError',
+      code: 'INTERNAL_ERROR',
+      sqlState: '23505',
+      constraint: 'users_email_uq',
+    });
+    expect(serializedError).not.toContain('raw Clerk user');
+    expect(serializedError).not.toContain('clerk-ledger-sentinel@example.com');
     expect(transactionCount).toBe(2);
   });
 

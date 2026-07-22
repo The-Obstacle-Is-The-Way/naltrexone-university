@@ -77,6 +77,8 @@ export class DrizzleStripeCustomerRepository
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'Failed to upsert Stripe customer mapping',
+        undefined,
+        { cause: error },
       );
     }
   }

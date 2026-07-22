@@ -13,6 +13,7 @@ import {
   HTTP_TOO_MANY_REQUESTS,
 } from '@/src/adapters/shared/http-status';
 import { CLERK_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { isApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
@@ -74,7 +75,10 @@ export function createWebhookHandler(
         );
       }
     } catch (error) {
-      container.logger.error({ error }, 'Clerk webhook rate limiter failed');
+      container.logger.error(
+        { error: projectSafeErrorDiagnostics(error) },
+        'Clerk webhook rate limiter failed',
+      );
       return NextResponse.json(
         { error: 'Rate limiter unavailable' },
         { status: HTTP_SERVICE_UNAVAILABLE },
@@ -86,7 +90,10 @@ export function createWebhookHandler(
       event = await verifyWebhook(req);
     } catch (error) {
       container.logger.error(
-        { route: '/api/webhooks/clerk', error },
+        {
+          route: '/api/webhooks/clerk',
+          error: projectSafeErrorDiagnostics(error),
+        },
         'Clerk webhook signature verification failed',
       );
       return NextResponse.json(
@@ -116,14 +123,20 @@ export function createWebhookHandler(
         isApplicationError(error) &&
         error.code === 'INVALID_WEBHOOK_PAYLOAD'
       ) {
-        container.logger.error({ error }, 'Clerk webhook payload invalid');
+        container.logger.error(
+          { error: projectSafeErrorDiagnostics(error) },
+          'Clerk webhook payload invalid',
+        );
         return NextResponse.json(
           { error: 'Webhook validation failed' },
           { status: HTTP_BAD_REQUEST },
         );
       }
 
-      container.logger.error({ error }, 'Clerk webhook failed');
+      container.logger.error(
+        { error: projectSafeErrorDiagnostics(error) },
+        'Clerk webhook failed',
+      );
       return NextResponse.json(
         { error: 'Webhook processing failed' },
         { status: HTTP_INTERNAL_SERVER_ERROR },

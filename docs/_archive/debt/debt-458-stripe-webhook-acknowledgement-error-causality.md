@@ -58,12 +58,12 @@ The route still returns a retryable 500, Stripe redelivers, and a later healthy 
 
 ## Relationship to DEBT-452
 
-[DEBT-452](../../debt/debt-452-db-failure-observability.md) owns cause-dropping repository wrappers and the safe projection of database diagnostics into logs/ledgers. This finding is earlier in the pipeline: the controller selects the wrong error object before any projector runs. A complete DEBT-452 fix cannot recover an acknowledgement failure that this control flow discarded, so the items should be cross-linked but not merged.
+[DEBT-452](./debt-452-db-failure-observability.md) owns cause-dropping repository wrappers and the safe projection of database diagnostics into logs/ledgers. This finding is earlier in the pipeline: the controller selects the wrong error object before any projector runs. A complete DEBT-452 fix cannot recover an acknowledgement failure that this control flow discarded, so the items should be cross-linked but not merged.
 
 ## Related
 
 - [BUG-296 (archived)](../bugs/bug-296-post-deletion-subscription-webhooks-fail-users-fk.md) — introduced the handled missing-user acknowledgement transaction whose failure exposes this stale-error selection.
 - [BUG-285 (archived)](../bugs/bug-285-stripe-webhook-markfailed-on-aborted-transaction.md) — established fresh-transaction failure persistence and the need to retain the actual primary failure.
-- [DEBT-452](../../debt/debt-452-db-failure-observability.md) — complementary error-diagnostic projection and logging safety work.
+- [DEBT-452](./debt-452-db-failure-observability.md) — complementary error-diagnostic projection and logging safety work.
 
 Found during the 2026-07-14 fix-wave-3 close adversarial regression review of `ba457afd...76de5ba3` (independent finder lenses and a 3-verifier panel).

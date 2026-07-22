@@ -190,13 +190,14 @@ describe('DrizzleStripeCustomerRepository', () => {
     });
   });
 
-  it('throws INTERNAL_ERROR on unexpected database failures', async () => {
+  it('preserves unexpected database failures as the INTERNAL_ERROR cause', async () => {
+    const databaseError = new Error('db down');
     const db = {
       insert: () => ({
         values: () => ({
           onConflictDoUpdate: () => ({
             returning: async () => {
-              throw new Error('db down');
+              throw databaseError;
             },
           }),
         }),
@@ -215,6 +216,7 @@ describe('DrizzleStripeCustomerRepository', () => {
 
     await expect(repo.insert(userId, 'cus_123')).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
+      cause: databaseError,
     });
   });
 });
