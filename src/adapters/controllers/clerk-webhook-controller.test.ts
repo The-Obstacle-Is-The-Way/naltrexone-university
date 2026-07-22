@@ -1385,6 +1385,80 @@ describe('processClerkWebhook', () => {
     ).resolves.toBe(true);
   });
 
+  it('truncates unknown raw errors before persisting failed Clerk events', async () => {
+    const rawError = {
+      toString: () => 'x'.repeat(1205),
+    };
+    const clerkEvents = new FakeClerkEventRepository();
+    const deletedClerkUsers = new FakeDeletedClerkUserRepository();
+    const pendingStripeCustomerCleanups =
+      new FakePendingStripeCustomerCleanupRepository();
+    const userRepository = new ThrowingUserRepository(rawError);
+    const stripeCustomerRepository = new FakeStripeCustomerRepository();
+    let transactionCount = 0;
+
+    const deps = {
+      clerkEvents,
+      deletedClerkUsers,
+      pendingStripeCustomerCleanups,
+      userRepository,
+      stripeCustomerRepository,
+      transaction: async <T>(
+        fn: (tx: {
+          clerkEvents: FakeClerkEventRepository;
+          deletedClerkUsers: FakeDeletedClerkUserRepository;
+          pendingStripeCustomerCleanups: FakePendingStripeCustomerCleanupRepository;
+          userRepository: ThrowingUserRepository;
+          stripeCustomerRepository: FakeStripeCustomerRepository;
+        }) => Promise<T>,
+      ) => {
+        transactionCount += 1;
+        return fn({
+          clerkEvents,
+          deletedClerkUsers,
+          pendingStripeCustomerCleanups,
+          userRepository,
+          stripeCustomerRepository,
+        });
+      },
+      deleteStripeCustomer: async () => undefined,
+      getClerkUserById: async () => null,
+      logger: new FakeLogger(),
+    };
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        withEventId(
+          {
+            type: 'user.updated',
+            data: {
+              id: 'clerk_truncate',
+              primary_email_address_id: 'email_1',
+              updated_at: 1769904003000,
+              email_addresses: [
+                { id: 'email_1', email_address: 'truncate@example.com' },
+              ],
+            },
+          },
+          'evt_user_updated_truncate_unknown_error',
+        ),
+      ),
+    ).rejects.toBe(rawError);
+
+    const storedEvent = clerkEvents
+      .snapshot()
+      .find(
+        ([eventId]) => eventId === 'evt_user_updated_truncate_unknown_error',
+      );
+    const serializedError = storedEvent?.[1].error;
+    expect(serializedError).toBeTruthy();
+    expect(JSON.parse(serializedError ?? '{}')).toEqual({});
+    expect(serializedError).not.toContain('Unknown error');
+    expect(serializedError).not.toContain('x'.repeat(1205));
+    expect(transactionCount).toBe(2);
+  });
+
   it('persists only safe driver diagnostics for a failed Clerk event', async () => {
     const postgresError = Object.assign(
       new Error('duplicate key exposes raw Clerk user text'),

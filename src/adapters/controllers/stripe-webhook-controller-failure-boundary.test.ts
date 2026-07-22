@@ -176,10 +176,10 @@ describe('processStripeWebhook failure boundary', () => {
     ).rejects.toBe(acknowledgementError);
 
     const stored = await harness.stripeEvents.lock(eventId);
-    expect(JSON.parse(stored.error ?? '{}')).toMatchObject({
+    expect(JSON.parse(stored.error ?? '{}')).toEqual({
       name: 'Error',
-      message: acknowledgementError.message,
     });
+    expect(stored.error).not.toContain(acknowledgementError.message);
   });
 
   it('acknowledges a missing-user event on a later healthy delivery', async () => {
@@ -338,11 +338,11 @@ describe('processStripeWebhook failure boundary', () => {
 
     expect(harness.transactionCallCount()).toBe(2);
     const stored = await harness.stripeEvents.lock(eventId);
-    expect(JSON.parse(stored.error ?? '{}')).toMatchObject({
+    expect(JSON.parse(stored.error ?? '{}')).toEqual({
       name: 'ApplicationError',
       code: 'CONFLICT',
-      message: 'Stripe customer id is already mapped to a different user',
     });
+    expect(stored.error).not.toContain(processingError.message);
   });
 
   it('throws the original processing error when fresh failure persistence also fails', async () => {
@@ -369,10 +369,13 @@ describe('processStripeWebhook failure boundary', () => {
     expect(harness.logger.errorCalls).toContainEqual({
       context: {
         eventId: 'evt_persistence_failure',
-        error: persistenceError.message,
+        error: { name: 'Error' },
       },
       msg: 'Failed to persist Stripe webhook failure state',
     });
+    expect(JSON.stringify(harness.logger.errorCalls)).not.toContain(
+      persistenceError.message,
+    );
   });
 
   it('logs a non-Error failure-persistence rejection without replacing the processing error', async () => {
@@ -398,10 +401,13 @@ describe('processStripeWebhook failure boundary', () => {
     expect(harness.logger.errorCalls).toContainEqual({
       context: {
         eventId: 'evt_non_error_persistence_failure',
-        error: persistenceError,
+        error: {},
       },
       msg: 'Failed to persist Stripe webhook failure state',
     });
+    expect(JSON.stringify(harness.logger.errorCalls)).not.toContain(
+      persistenceError,
+    );
   });
 
   it('persists and rethrows a transaction rejection when no processing error was captured', async () => {
@@ -435,10 +441,10 @@ describe('processStripeWebhook failure boundary', () => {
 
     expect(transactionCallCount).toBe(2);
     const stored = await stripeEvents.lock(eventId);
-    expect(JSON.parse(stored.error ?? '{}')).toMatchObject({
+    expect(JSON.parse(stored.error ?? '{}')).toEqual({
       name: 'Error',
-      message: transactionError.message,
     });
+    expect(stored.error).not.toContain(transactionError.message);
   });
 
   it('persists and rethrows a non-Error processing failure without replacing it', async () => {
@@ -458,10 +464,8 @@ describe('processStripeWebhook failure boundary', () => {
     ).rejects.toBe(processingError);
 
     const stored = await harness.stripeEvents.lock(eventId);
-    expect(JSON.parse(stored.error ?? '{}')).toEqual({
-      message: 'Unknown error',
-      raw: processingError,
-    });
+    expect(JSON.parse(stored.error ?? '{}')).toEqual({});
+    expect(stored.error).not.toContain(processingError);
   });
 
   it('does not overwrite an event completed before fresh failure persistence locks it', async () => {

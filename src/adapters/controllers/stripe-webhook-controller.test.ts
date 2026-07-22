@@ -566,6 +566,7 @@ describe('processStripeWebhook', () => {
       }),
       msg: 'Stripe event pruning failed',
     });
+    expect(JSON.stringify(logger.warnCalls)).not.toContain('boom');
   });
 
   it('still succeeds when pruning processed stripe events fails', async () => {
@@ -786,5 +787,6 @@ describe('processStripeWebhook', () => {
     expect(errorData).toEqual({
       name: 'Error',
     });
+    expect(stored.error).not.toContain('boom');
   });
 });

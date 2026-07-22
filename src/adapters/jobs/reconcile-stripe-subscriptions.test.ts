@@ -505,6 +505,12 @@ describe('reconcileStripeSubscriptions', () => {
       }),
       msg: 'Stripe subscription reconciliation failed',
     });
+    const projectedErrorLogs = scenario.logger.errorCalls.filter(
+      ({ msg }) => msg === 'Stripe subscription reconciliation failed',
+    );
+    expect(JSON.stringify(projectedErrorLogs)).not.toContain(
+      'Stripe subscription metadata.user_id is required',
+    );
   });
 
   it('keeps reconciliation fail-closed when Stripe subscription e2e owner differs from configured owner', async () => {
@@ -540,6 +546,12 @@ describe('reconcileStripeSubscriptions', () => {
       }),
       msg: 'Stripe subscription reconciliation failed',
     });
+    const projectedErrorLogs = scenario.logger.errorCalls.filter(
+      ({ msg }) => msg === 'Stripe subscription reconciliation failed',
+    );
+    expect(JSON.stringify(projectedErrorLogs)).not.toContain(
+      'Stripe subscription metadata.e2e_owner does not match this webhook owner',
+    );
   });
 
   it('fails loudly when the local subscription list contains holes (internal invariant)', async () => {

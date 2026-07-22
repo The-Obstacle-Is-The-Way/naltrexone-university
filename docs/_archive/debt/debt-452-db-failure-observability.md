@@ -4,6 +4,7 @@
 **Priority:** P4
 **Date:** 2026-07-09
 **Resolved:** 2026-07-21 — FW-3 preserved the two remaining repository causes, introduced one bounded class/application-code/SQLSTATE/constraint projector for both webhook ledgers and reconciliation diagnostics, and projected every named raw `err`/`error` logger seam. Real-Drizzle/Pino sentinel coverage proves SQL, params, messages, details, stacks, cause text, and arbitrary values do not cross the diagnostic boundary; public `ActionResult` behavior is unchanged.
+**2026-07-21 owner continuation ruling:** The FW-3 prompt's over-broad test-freeze constraint was corrected while leaving the Direction table unchanged; 13 existing ledger/log-shape assertions now expect the safe projection, with primary-error selection, thrown-error identity, retry, and transaction/control-flow assertions preserved.
 **2026-07-18 staleness audit:** Stale but real against `ddad8eee`. BUG-285 has long since moved Stripe failure persistence to a fresh transaction; this doc now treats that as the current baseline while retaining the cause-projection and safe-logging gaps.
 **2026-07-21 FW-3 anchor correction:** All code anchors below were re-stamped against the final implementation: repository cause arms, shared projector, fresh ledger persistence, reconciliation log/result split, action fallback, route seams, logger contract, and sentinel proof now point to their post-FW-3 locations.
 
