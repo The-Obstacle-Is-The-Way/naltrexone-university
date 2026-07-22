@@ -496,14 +496,7 @@ export class DrizzlePracticeSessionRepository
             ),
           )
           .where(this.completedSessionCondition(userId, mode))
-          .groupBy(
-            practiceSessions.id,
-            practiceSessions.userId,
-            practiceSessions.mode,
-            practiceSessions.paramsJson,
-            practiceSessions.startedAt,
-            practiceSessions.endedAt,
-          )
+          .groupBy(practiceSessions.id)
           .orderBy(
             desc(practiceSessions.endedAt),
             desc(practiceSessions.startedAt),

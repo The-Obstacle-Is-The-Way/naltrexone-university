@@ -1,3 +1,4 @@
+import { ZodError } from 'zod';
 import { logger } from '@/lib/logger';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { toIdempotencyPublicError } from '@/src/adapters/shared/to-idempotency-public-error';
@@ -51,6 +52,7 @@ export function handleError(
 
   if (
     !isApplicationError(error) &&
+    !(error instanceof ZodError) &&
     !(
       typeof error === 'object' &&
       error !== null &&

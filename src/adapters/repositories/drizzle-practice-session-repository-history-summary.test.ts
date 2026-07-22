@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { practiceSessions } from '@/db/schema';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 
@@ -36,6 +37,7 @@ function createDb(summaryRows: readonly Record<string, unknown>[]) {
   return {
     db: { transaction } as unknown as RepoDb,
     select,
+    summaryGroupBy,
     transaction,
   };
 }
@@ -66,7 +68,9 @@ function createSummaryRow(
 
 describe('DrizzlePracticeSessionRepository history summaries', () => {
   it('returns one consumer-shaped summary row for an aggregated session', async () => {
-    const { db, select, transaction } = createDb([createSummaryRow()]);
+    const { db, select, summaryGroupBy, transaction } = createDb([
+      createSummaryRow(),
+    ]);
     const repo = new DrizzlePracticeSessionRepository(db);
 
     await expect(
@@ -101,6 +105,7 @@ describe('DrizzlePracticeSessionRepository history summaries', () => {
       'startedAt',
       'userId',
     ]);
+    expect(summaryGroupBy).toHaveBeenCalledWith(practiceSessions.id);
     expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
       isolationLevel: 'repeatable read',
     });

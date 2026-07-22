@@ -90,14 +90,15 @@ describe('action-result', () => {
     });
   });
 
-  it('handleError maps ZodError to VALIDATION_ERROR with fieldErrors', async () => {
+  it('handleError maps ZodError to VALIDATION_ERROR without logging routine validation', async () => {
     const { handleError } = await import('./action-result');
+    const fakeLogger = new FakeLogger();
     const schema = z.object({ email: z.string().email() }).strict();
     const parsed = schema.safeParse({ email: 'not-an-email' });
     expect(parsed.success).toBe(false);
     if (parsed.success) throw new Error('Expected schema to reject');
 
-    expect(handleError(parsed.error)).toMatchObject({
+    expect(handleError(parsed.error, { logger: fakeLogger })).toMatchObject({
       ok: false,
       error: {
         code: 'VALIDATION_ERROR',
@@ -105,6 +106,7 @@ describe('action-result', () => {
         fieldErrors: { email: expect.any(Array) },
       },
     });
+    expect(fakeLogger.errorCalls).toHaveLength(0);
   });
 
   it('handleError maps unknown errors to INTERNAL_ERROR, logs them, and does not leak details', async () => {
