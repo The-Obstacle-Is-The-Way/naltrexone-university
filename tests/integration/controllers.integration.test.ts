@@ -1237,10 +1237,13 @@ describe('clerk webhook controller (integration)', () => {
     await expect(
       pendingStripeCustomerCleanupRepository.findByEventId(eventId),
     ).resolves.toEqual({ stripeCustomerId });
-    await expect(clerkEventRepository.peek(eventId)).resolves.toMatchObject({
+    const storedEvent = await clerkEventRepository.peek(eventId);
+    expect(storedEvent).toMatchObject({
       processedAt: null,
-      error: expect.stringContaining('stripe customer delete failed'),
+      error: expect.any(String),
     });
+    expect(JSON.parse(storedEvent?.error ?? '{}')).toEqual({ name: 'Error' });
+    expect(storedEvent?.error).not.toContain('stripe customer delete failed');
 
     shouldFailCustomerDelete = false;
     await expect(processClerkWebhook(deps, event)).resolves.toBeUndefined();
