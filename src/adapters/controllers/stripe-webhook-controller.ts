@@ -1,3 +1,4 @@
+import { PRUNE_BATCH_LIMIT } from '@/src/adapters/shared/prune-constants';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import {
   isE2EOwnerMismatchEvent,
@@ -50,8 +51,15 @@ type StripeSubscriptionUpdate = NonNullable<
 
 class StripeWebhookAlreadyProcessed extends Error {}
 
-const STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
-const STRIPE_EVENTS_PRUNE_LIMIT = 100;
+// Provider-event lifecycle policies are intentionally distinct:
+// - Processed Stripe events are webhook-pruned after 90 days.
+// - Unresolved Stripe events are retained until successful replay or operator
+//   resolution; age alone never makes them eligible for pruning.
+// - Handled Clerk events are retained; automatic pruning remains parked behind
+//   its production census/impact trigger.
+// - The inline user.deleted path owns immediate customer cleanup, while the
+//   daily drain owns retries and fallback.
+const PROCESSED_STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
 
 function isSuccessfullyProcessed(event: {
   processedAt: Date | null;
@@ -304,14 +312,13 @@ export async function processStripeWebhook(
   // Best-effort cleanup: prune old stripe events.
   // Idempotency keys and rate limits are pruned in their own hot paths
   // (withIdempotency and DrizzleRateLimiter.limit respectively).
-  const cutoff = new Date(deps.now().getTime() - STRIPE_EVENTS_RETENTION_MS);
+  const cutoff = new Date(
+    deps.now().getTime() - PROCESSED_STRIPE_EVENTS_RETENTION_MS,
+  );
 
   try {
     await deps.transaction(async ({ stripeEvents }) => {
-      await stripeEvents.pruneProcessedBefore(
-        cutoff,
-        STRIPE_EVENTS_PRUNE_LIMIT,
-      );
+      await stripeEvents.pruneProcessedBefore(cutoff, PRUNE_BATCH_LIMIT);
     });
   } catch (error) {
     deps.logger.warn(
