@@ -63,4 +63,30 @@ describe('projectSafeErrorDiagnostics', () => {
       projectSafeErrorDiagnostics({ raw: 'sentinel@example.com' }),
     ).toEqual({});
   });
+
+  it('bounds traversal of a cyclic cause chain', () => {
+    const cyclicError = new Error('raw cyclic message');
+    Object.assign(cyclicError, { cause: cyclicError });
+
+    expect(() => projectSafeErrorDiagnostics(cyclicError)).not.toThrow();
+    expect(projectSafeErrorDiagnostics(cyclicError)).toEqual({
+      name: 'Error',
+    });
+  });
+
+  it('does not inspect causes beyond the traversal depth limit', () => {
+    const tooDeepPostgresError = Object.assign(
+      new Error('raw cause beyond the depth limit'),
+      {
+        code: '23505',
+        constraint: 'too_deep_constraint',
+      },
+    );
+    let causeChain: unknown = tooDeepPostgresError;
+    for (let depth = 0; depth < 8; depth += 1) {
+      causeChain = { cause: causeChain };
+    }
+
+    expect(projectSafeErrorDiagnostics(causeChain)).toEqual({});
+  });
 });
