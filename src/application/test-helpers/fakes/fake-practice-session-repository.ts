@@ -7,6 +7,7 @@ import {
 } from '@/src/application/errors';
 import type { PracticeSessionRepository } from '@/src/application/ports/repositories';
 import type { PracticeSession } from '@/src/domain/entities';
+import { computeSessionStats } from '@/src/domain/services';
 import type {
   AnswerOutcome,
   PracticeMode,
@@ -27,7 +28,12 @@ export class FakePracticeSessionRepository
     paramsJson: unknown;
   }> = [];
 
-  constructor(seed: readonly PracticeSession[] = []) {
+  constructor(
+    seed: readonly PracticeSession[] = [],
+    private readonly options: {
+      publishedQuestionSlugsById?: ReadonlyMap<string, string>;
+    } = {},
+  ) {
     this.sessions = seed.map((session) =>
       this.withNormalizedQuestionStates(session),
     );
@@ -170,6 +176,40 @@ export class FakePracticeSessionRepository
           ? []
           : completed.slice(safeOffset, safeOffset + safeLimit),
       total: completed.length,
+    };
+  }
+
+  async findCompletedHistorySummariesByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+    mode?: PracticeMode | null,
+  ) {
+    const page = await this.findCompletedByUserId(userId, limit, offset, mode);
+
+    return {
+      rows: page.rows.flatMap((session) => {
+        if (session.endedAt === null) return [];
+        const { answered, correct } = computeSessionStats(
+          session.questionStates,
+        );
+        return [
+          {
+            sessionId: session.id,
+            mode: session.mode,
+            questionCount: session.questionIds.length,
+            firstQuestionSlug:
+              this.options.publishedQuestionSlugsById?.get(
+                session.questionIds[0] ?? '',
+              ) ?? null,
+            answered,
+            correct,
+            startedAt: session.startedAt,
+            endedAt: session.endedAt,
+          },
+        ];
+      }),
+      total: page.total,
     };
   }
 
