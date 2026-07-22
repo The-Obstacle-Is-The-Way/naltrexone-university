@@ -44,8 +44,8 @@ For seeds, and for any manual deploy-target migration fallback, use an explicit,
 1. CI (GitHub Actions)
    └─ pnpm typecheck
    └─ pnpm lint:ci
-   └─ pnpm db:migrate            # CI database only
-   └─ SEED_INCLUDE_PLACEHOLDERS=true pnpm db:seed
+   └─ pnpm exec tsx scripts/internal/run-managed-db-migrate.ts # CI database only
+   └─ SEED_INCLUDE_PLACEHOLDERS=true pnpm exec tsx scripts/internal/run-managed-db-seed.ts
    └─ pnpm test:coverage
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # pushes + same-repo PRs
@@ -60,17 +60,29 @@ For seeds, and for any manual deploy-target migration fallback, use an explicit,
 
 3. Operator
    └─ Verify the Vercel build ran the migration before serving; manual migrate only as fallback
-   └─ DATABASE_URL="<target>" pnpm db:seed                                    # if content changed
+   └─ Obtain the exact DB_TARGET_ACK for DATABASE_URL, then run the manual seed # if content changed
 ```
 
 **Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment schema migration and ledger verification run via the Vercel Build Command; reseeding remains a manual operator step.
+
+For a manual Preview or Production reseed, export the verified target, run the
+guard once without an acknowledgement, and confirm it refuses before opening
+Postgres while printing the required credential-free JSON token. Copy that
+token byte-for-byte into `DB_TARGET_ACK`, then repeat the seed:
+
+```bash
+export DATABASE_URL="<verified-target>"
+pnpm db:seed # expected refusal; copy the exact required DB_TARGET_ACK JSON
+export DB_TARGET_ACK='["host/database"]'
+pnpm db:seed
+```
 
 Manual reseeds refuse in-place answer-key flips over existing graded history by
 default. If `pnpm db:seed` reports
 `Refusing to change answer key ... because graded history exists`, treat that as
 a content-data decision point: fork/version the question, accept the blocked
 import, or rerun only with an explicit operator override:
-`SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true DATABASE_URL="<target>" pnpm db:seed`.
+`SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY=true DATABASE_URL="<target>" DB_TARGET_ACK='["host/database"]' pnpm db:seed`.
 The override logs the affected question slug, changed labels, and graded row
 counts.
 

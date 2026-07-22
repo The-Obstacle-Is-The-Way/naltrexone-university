@@ -21,6 +21,12 @@ The cluster gets one target classifier/serializer and one consent token: explici
 
 ## Description
 
+> **Historical evidence snapshot:** The findings below preserve the repository
+> state re-verified on 2026-07-18 at
+> [`ddad8eee51a3f0fb122d52cfdcfd6eb3102cfe32`](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/tree/ddad8eee51a3f0fb122d52cfdcfd6eb3102cfe32).
+> Present-tense statements and line citations in this archived section refer to
+> that immutable pre-FW-5 revision; relative links may now open remediated files.
+
 The manual database scripts resolve targets from `.env.local`/`.env` fallbacks
 or from Vercel-pulled environment files, then mutate the resolved
 `DATABASE_URL`. Bare `db:migrate` and `db:seed` have no target-classification or

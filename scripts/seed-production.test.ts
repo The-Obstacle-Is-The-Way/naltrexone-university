@@ -75,6 +75,23 @@ describe('db:seed:prod', () => {
     expect(dependencies.seedDatabase).not.toHaveBeenCalled();
   });
 
+  it('prints the confirmed Production plan without preparing or seeding in plan-only mode', async () => {
+    const dependencies = createDependencies();
+
+    await runProductionSeed({
+      acknowledgement: '["prod-host/proddb"]',
+      dependencies,
+      env: {},
+      planOnly: true,
+    });
+
+    expect(dependencies.log).toHaveBeenCalledWith(
+      '=== Plan complete (no imports or seeds run) ===',
+    );
+    expect(dependencies.prepareCorpus).not.toHaveBeenCalled();
+    expect(dependencies.seedDatabase).not.toHaveBeenCalled();
+  });
+
   it('registers the dedicated Production command', () => {
     expect(packageJson.scripts['db:seed:prod']).toBe(
       'tsx scripts/seed-production.ts',

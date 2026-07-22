@@ -12,6 +12,28 @@ type SeedEnvironmentRuntime = {
   cleanup: () => Promise<void>;
 };
 
+type SeedProcessOptions = {
+  env: NodeJS.ProcessEnv;
+  stdio: 'inherit' | ['inherit', 'ignore', 'inherit'];
+  timeout: number;
+  killSignal: NodeJS.Signals;
+};
+
+export type SeedProcessSpawner = (
+  command: string,
+  args: string[],
+  options: SeedProcessOptions,
+) => ChildProcess;
+
+type SeedEnvironmentFileReader = (filePath: string) => Promise<Buffer>;
+
+export const SEED_ENVIRONMENT_COMMAND_TIMEOUT_MS = 5 * 60_000;
+
+const spawnSeedProcess: SeedProcessSpawner = (command, args, options) =>
+  spawn(command, args, options);
+const readSeedEnvironmentFile: SeedEnvironmentFileReader = (filePath) =>
+  readFile(filePath);
+
 export function createSeedEnvironmentRuntime(
   tempDirectory: string,
 ): SeedEnvironmentRuntime {
@@ -42,13 +64,17 @@ async function pullVercelDatabaseUrl(
   return readDatabaseUrlFromFile(outputPath);
 }
 
-async function readDatabaseUrlFromFile(filePath: string): Promise<string> {
+export async function readDatabaseUrlFromFile(
+  filePath: string,
+  readEnvironmentFile: SeedEnvironmentFileReader = readSeedEnvironmentFile,
+): Promise<string> {
   let parsed: Record<string, string>;
   try {
-    parsed = dotenv.parse(await readFile(filePath));
-  } catch {
+    parsed = dotenv.parse(await readEnvironmentFile(filePath));
+  } catch (error) {
     throw new Error(
       `Unable to read the required environment file ${filePath}.`,
+      { cause: error },
     );
   }
 
@@ -89,16 +115,19 @@ async function seedDatabase(databaseUrl: string): Promise<void> {
   );
 }
 
-async function runProcess(
+export async function runProcess(
   command: string,
   args: readonly string[],
   env: NodeJS.ProcessEnv,
   quiet = false,
+  spawnProcess: SeedProcessSpawner = spawnSeedProcess,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const child: ChildProcess = spawn(command, [...args], {
+    const child = spawnProcess(command, [...args], {
       env,
       stdio: quiet ? ['inherit', 'ignore', 'inherit'] : 'inherit',
+      timeout: SEED_ENVIRONMENT_COMMAND_TIMEOUT_MS,
+      killSignal: 'SIGTERM',
     });
 
     child.on('error', reject);

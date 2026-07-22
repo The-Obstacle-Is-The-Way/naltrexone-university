@@ -22,6 +22,12 @@ Application sessions get conservative database-side bounds through the existing 
 
 ## Description
 
+> **Historical evidence snapshot:** The findings below preserve the repository
+> state re-verified on 2026-07-18 at
+> [`ddad8eee51a3f0fb122d52cfdcfd6eb3102cfe32`](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/tree/ddad8eee51a3f0fb122d52cfdcfd6eb3102cfe32).
+> Present-tense statements and line citations in this archived section refer to
+> that immutable pre-FW-5 revision; relative links may now open remediated files.
+
 The production database seam — [`lib/db.ts`](../../../lib/db.ts#L15), its environment plumbing, and its designated reference [`docs/vendor-docs/postgres.md`](../../../docs/vendor-docs/postgres.md) — leaves three operational policies implicit. The repository does not configure database-side statement/lock/idle-transaction timeouts; the application pool size remains an accepted driver default while the pooled-host requirement is prose-only; and the vendor doc recommends a schema command the repository bans. These are latent configuration/documentation risks, not evidence of a current production incident.
 
 ### 1. The repo sets `TimeZone` and driver `idle_timeout`, but not `statement_timeout`, `lock_timeout`, or `idle_in_transaction_session_timeout`

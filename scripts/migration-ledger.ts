@@ -13,9 +13,12 @@ export type MigrationJournalEntry = {
 
 type MigrationLedgerCreatedAt = number | string | bigint | null | undefined;
 type MigrationLedgerHash = string | null | undefined;
-type MigrationLedgerRow = {
+export type MigrationLedgerRow = {
   createdAt: MigrationLedgerCreatedAt;
   hash: MigrationLedgerHash;
+};
+export type MigrationLedgerQuery = {
+  readAppliedMigrations: () => Promise<MigrationLedgerRow[]>;
 };
 type MigrationJournalHashEntry = MigrationJournalEntry & { hash: string };
 type KnownLegacyMigrationHashDrift = {
@@ -229,11 +232,11 @@ export function computeMigrationContentDrift(
 }
 
 export async function verifyMigrationLedgerBeforeMigration(
-  sql: postgres.Sql,
+  query: MigrationLedgerQuery,
   journalEntries: readonly MigrationJournalEntry[] = MIGRATION_JOURNAL_ENTRIES,
 ): Promise<void> {
   const appliedMigrations = await readAppliedMigrations(
-    sql,
+    query,
     journalEntries,
     true,
   );
@@ -241,11 +244,11 @@ export async function verifyMigrationLedgerBeforeMigration(
 }
 
 export async function verifyMigrationLedger(
-  sql: postgres.Sql,
+  query: MigrationLedgerQuery,
   journalEntries: readonly MigrationJournalEntry[] = MIGRATION_JOURNAL_ENTRIES,
 ): Promise<void> {
   const appliedMigrations = await readAppliedMigrations(
-    sql,
+    query,
     journalEntries,
     false,
   );
@@ -260,15 +263,12 @@ export async function verifyMigrationLedger(
 }
 
 async function readAppliedMigrations(
-  sql: postgres.Sql,
+  query: MigrationLedgerQuery,
   journalEntries: readonly MigrationJournalEntry[],
   allowMissingLedger: boolean,
 ): Promise<MigrationLedgerRow[]> {
   try {
-    return await sql<MigrationLedgerRow[]>`
-      SELECT created_at AS "createdAt", hash
-      FROM drizzle.__drizzle_migrations
-    `;
+    return await query.readAppliedMigrations();
   } catch (error) {
     if (isMissingMigrationLedgerError(error)) {
       if (allowMissingLedger) return [];
@@ -285,6 +285,17 @@ async function readAppliedMigrations(
       { cause: error instanceof Error ? error : undefined },
     );
   }
+}
+
+export function createPostgresMigrationLedgerQuery(
+  sql: postgres.Sql,
+): MigrationLedgerQuery {
+  return {
+    readAppliedMigrations: () => sql<MigrationLedgerRow[]>`
+      SELECT created_at AS "createdAt", hash
+      FROM drizzle.__drizzle_migrations
+    `,
+  };
 }
 
 function verifyAppliedMigrationContent(

@@ -1,6 +1,7 @@
 import postgres from 'postgres';
 import Stripe from 'stripe';
 import {
+  createPostgresMigrationLedgerQuery,
   MigrationLedgerVerificationError,
   verifyMigrationLedger as verifySharedMigrationLedger,
 } from '@/scripts/migration-ledger';
@@ -144,7 +145,7 @@ export async function fetchWithTimeout(
 
 export async function verifyMigrationLedger(sql: postgres.Sql): Promise<void> {
   try {
-    await verifySharedMigrationLedger(sql);
+    await verifySharedMigrationLedger(createPostgresMigrationLedgerQuery(sql));
   } catch (error) {
     if (error instanceof MigrationLedgerVerificationError) {
       throw new CredentialValidationError(

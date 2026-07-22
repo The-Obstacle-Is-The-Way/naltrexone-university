@@ -3,6 +3,7 @@ import postgres from 'postgres';
 import { requireExplicitDatabaseUrl } from './database-target';
 import { authorizeManagedDatabaseTargets } from './internal/database-target-managed';
 import {
+  createPostgresMigrationLedgerQuery,
   MigrationLedgerVerificationError,
   verifyMigrationLedger,
   verifyMigrationLedgerBeforeMigration,
@@ -23,17 +24,18 @@ export async function runMigrationLedgerVerification(
   const databaseUrl = requireExplicitDatabaseUrl(process.env);
   authorizeManagedDatabaseTargets([databaseUrl]);
   const sql = postgres(databaseUrl, { max: 1 });
+  const query = createPostgresMigrationLedgerQuery(sql);
 
   try {
     if (phase === 'pre') {
-      await verifyMigrationLedgerBeforeMigration(sql);
+      await verifyMigrationLedgerBeforeMigration(query);
       console.info(
         '[migration-ledger:pre] Applied migration content matches the checkout; pending journal entries are allowed.',
       );
       return;
     }
 
-    await verifyMigrationLedger(sql);
+    await verifyMigrationLedger(query);
     console.info(
       '[migration-ledger:post] Ledger and migration content exactly match the checkout.',
     );

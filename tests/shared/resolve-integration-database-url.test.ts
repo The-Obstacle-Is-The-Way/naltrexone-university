@@ -23,6 +23,21 @@ describe('resolveIntegrationDatabaseUrl', () => {
     ).toBe(databaseUrl);
   });
 
+  it('refuses a CI database URL outside the allowlisted local service target', () => {
+    expect(() =>
+      resolveIntegrationDatabaseUrl({
+        cwd: '/repo/a',
+        env: {
+          CI: 'true',
+          DATABASE_URL:
+            'postgresql://postgres:postgres@localhost:5433/addiction_boards_test',
+        },
+      }),
+    ).toThrow(
+      'Database session proofs require the allowlisted CI-local test target.',
+    );
+  });
+
   it('accepts the resolver-scoped local database URL', () => {
     const databaseUrl =
       'postgresql://postgres:postgres@127.0.0.1:55439/addiction_boards_test';
