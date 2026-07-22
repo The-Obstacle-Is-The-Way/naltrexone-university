@@ -36,6 +36,14 @@ export class FakeGetBookmarksUseCase extends FakeUseCase<
   U.GetBookmarksInput,
   U.GetBookmarksOutput
 > {}
+export class FakeGetBookmarkQuestionIdsUseCase extends FakeUseCase<
+  U.GetBookmarkQuestionIdsInput,
+  U.GetBookmarkQuestionIdsOutput
+> {}
+export class FakeGetBookmarkStatusUseCase extends FakeUseCase<
+  U.GetBookmarkStatusInput,
+  U.GetBookmarkStatusOutput
+> {}
 export class FakeStartPracticeSessionUseCase extends FakeUseCase<
   U.StartPracticeSessionInput,
   U.StartPracticeSessionOutput

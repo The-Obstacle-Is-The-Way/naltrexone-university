@@ -4,6 +4,8 @@ import { ApplicationError } from '@/src/application/errors';
 import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import {
   FakeAuthGateway,
+  FakeGetBookmarkQuestionIdsUseCase,
+  FakeGetBookmarkStatusUseCase,
   FakeGetBookmarksUseCase,
   FakeIdempotencyKeyRepository,
   FakeLogger,
@@ -17,6 +19,8 @@ import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import {
   type BookmarkControllerDeps,
+  getBookmarkQuestionIds,
+  getBookmarkStatus,
   getBookmarks,
   setBookmark,
 } from './bookmark-controller';
@@ -24,6 +28,8 @@ import {
 type BookmarkControllerTestDeps = BookmarkControllerDeps & {
   setBookmarkUseCase: FakeSetBookmarkUseCase;
   getBookmarksUseCase: FakeGetBookmarksUseCase;
+  getBookmarkQuestionIdsUseCase: FakeGetBookmarkQuestionIdsUseCase;
+  getBookmarkStatusUseCase: FakeGetBookmarkStatusUseCase;
   rateLimiter: FakeRateLimiter;
   _fixtures: {
     userId: string;
@@ -38,6 +44,8 @@ function createDeps(overrides?: {
   setBookmarkThrows?: unknown;
   getBookmarksOutput?: GetBookmarksOutput;
   getBookmarksThrows?: unknown;
+  getBookmarkQuestionIdsOutput?: { questionIds: string[] };
+  getBookmarkStatusOutput?: { bookmarked: boolean };
 }): BookmarkControllerTestDeps {
   const user =
     overrides?.user === undefined
@@ -81,6 +89,12 @@ function createDeps(overrides?: {
     overrides?.getBookmarksOutput ?? { rows: [] },
     overrides?.getBookmarksThrows,
   );
+  const getBookmarkQuestionIdsUseCase = new FakeGetBookmarkQuestionIdsUseCase(
+    overrides?.getBookmarkQuestionIdsOutput ?? { questionIds: [] },
+  );
+  const getBookmarkStatusUseCase = new FakeGetBookmarkStatusUseCase(
+    overrides?.getBookmarkStatusOutput ?? { bookmarked: false },
+  );
 
   return {
     authGateway,
@@ -90,6 +104,8 @@ function createDeps(overrides?: {
     checkEntitlementUseCase,
     setBookmarkUseCase,
     getBookmarksUseCase,
+    getBookmarkQuestionIdsUseCase,
+    getBookmarkStatusUseCase,
     now: () => now,
     _fixtures: {
       userId,
@@ -480,8 +496,9 @@ describe('bookmark-controller', () => {
 
       expect(result).toEqual({
         ok: false,
-        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       });
+      expect(JSON.stringify(result)).not.toContain('boom');
     });
 
     it('returns data when dependencies are loaded from container', async () => {
@@ -496,6 +513,40 @@ describe('bookmark-controller', () => {
       });
 
       expect(result).toEqual({ ok: true, data: { rows: [] } });
+    });
+  });
+
+  describe('getBookmarkQuestionIds', () => {
+    it('returns only bookmark question IDs for the entitled user', async () => {
+      const questionId = crypto.randomUUID();
+      const deps = createDeps({
+        getBookmarkQuestionIdsOutput: { questionIds: [questionId] },
+      });
+
+      await expect(getBookmarkQuestionIds({}, deps)).resolves.toEqual({
+        ok: true,
+        data: { questionIds: [questionId] },
+      });
+      expect(deps.getBookmarkQuestionIdsUseCase.inputs).toEqual([
+        { userId: deps._fixtures.userId },
+      ]);
+    });
+  });
+
+  describe('getBookmarkStatus', () => {
+    it('checks existence for only the requested question and entitled user', async () => {
+      const questionId = crypto.randomUUID();
+      const deps = createDeps({
+        getBookmarkStatusOutput: { bookmarked: true },
+      });
+
+      await expect(getBookmarkStatus({ questionId }, deps)).resolves.toEqual({
+        ok: true,
+        data: { bookmarked: true },
+      });
+      expect(deps.getBookmarkStatusUseCase.inputs).toEqual([
+        { userId: deps._fixtures.userId, questionId },
+      ]);
     });
   });
 });

@@ -25,3 +25,12 @@ export {
   UserConflictMessages,
   UserEmailOwnershipConflictError,
 } from './application-errors';
+export {
+  decodeIdempotencyPublicError,
+  encodeIdempotencyPublicError,
+  type IdempotencyPublicError,
+  MAX_ERROR_FIELD_NAME_LENGTH,
+  MAX_ERROR_FIELDS,
+  MAX_MESSAGES_PER_FIELD,
+  MAX_PUBLIC_ERROR_TEXT_LENGTH,
+} from './idempotency-public-error-codec';

@@ -1,15 +1,8 @@
-import type {
-  ApplicationErrorCode,
-  ApplicationErrorDetails,
-} from '@/src/application/errors';
+import type { IdempotencyPublicError } from '@/src/application/errors';
 
 export const DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS = 60_000;
 
-export type IdempotencyKeyError = {
-  code: ApplicationErrorCode;
-  message: string;
-  details?: ApplicationErrorDetails;
-};
+export type IdempotencyKeyError = IdempotencyPublicError;
 
 export type IdempotencyKeyRecord = {
   resultJson: unknown;

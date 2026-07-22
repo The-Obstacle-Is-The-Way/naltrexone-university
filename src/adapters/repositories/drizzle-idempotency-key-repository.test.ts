@@ -1,3 +1,5 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it, vi } from 'vitest';
 import { idempotencyKeys } from '@/db/schema';
 import {
@@ -270,6 +272,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           resultJson: null,
           errorCode: 'CONFLICT',
           errorMessage: 'Practice session already ended',
+          errorFieldErrors: {
+            sessionId: ['Session is no longer active'],
+          },
           errorDetails: {
             reason: PracticeSessionConflictReasons.AlreadyEnded,
           },
@@ -300,6 +305,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         error: {
           code: 'CONFLICT',
           message: 'Practice session already ended',
+          fieldErrors: {
+            sessionId: ['Session is no longer active'],
+          },
           details: {
             reason: PracticeSessionConflictReasons.AlreadyEnded,
           },
@@ -309,7 +317,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       });
     });
 
-    it('drops invalid cached error details safely', async () => {
+    it('fails loudly with a cause when cached error details are invalid', async () => {
       const expiresAt = new Date('2026-02-08T01:00:00.000Z');
       const completedAt = new Date('2026-02-08T00:00:00.000Z');
       const selectWhere = vi.fn(async () => [
@@ -342,14 +350,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           'question:submitAnswer',
           'idem-1',
         ),
-      ).resolves.toEqual({
-        resultJson: null,
-        error: {
-          code: 'CONFLICT',
-          message: 'Practice session already ended',
-        },
-        expiresAt,
-        completedAt,
+      ).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        cause: expect.any(Error),
       });
     });
 
@@ -521,6 +524,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         error: {
           code: 'INTERNAL_ERROR',
           message: 'unexpected failure',
+          fieldErrors: { sessionId: ['Session is no longer active'] },
           details: {
             reason: PracticeSessionConflictReasons.AlreadyEnded,
           },
@@ -531,7 +535,10 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         expect.objectContaining({
           resultJson: null,
           errorCode: 'INTERNAL_ERROR',
-          errorMessage: 'unexpected failure',
+          errorMessage: 'Internal error',
+          errorFieldErrors: {
+            sessionId: ['Session is no longer active'],
+          },
           errorDetails: {
             reason: PracticeSessionConflictReasons.AlreadyEnded,
           },
@@ -571,12 +578,10 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
   describe('pruneExpiredBefore', () => {
     it('returns 0 when limit is not a positive integer', async () => {
-      const select = vi.fn();
-      const deleteFn = vi.fn();
+      const execute = vi.fn();
 
       const db = {
-        select,
-        delete: deleteFn,
+        execute,
       } as unknown as RepoDb;
 
       const repo = new DrizzleIdempotencyKeyRepository(db);
@@ -591,171 +596,58 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         repo.pruneExpiredBefore(new Date('2026-02-08T00:00:00.000Z'), 1.5),
       ).resolves.toBe(0);
 
-      expect(select).not.toHaveBeenCalled();
-      expect(deleteFn).not.toHaveBeenCalled();
+      expect(execute).not.toHaveBeenCalled();
     });
 
-    it('returns 0 when no expired rows are found', async () => {
-      const selectLimit = vi.fn(async () => []);
-      const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
-      const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
-      const selectFrom = vi.fn(() => ({ where: selectWhere }));
-      const select = vi.fn(() => ({ from: selectFrom }));
-
-      const deleteFn = vi.fn();
-
-      const tx = {
-        select,
-        delete: deleteFn,
-      } as const;
-      const transaction = vi.fn(
-        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
-      );
-      const db = {
-        transaction,
-        select: () => {
-          throw new Error('unexpected root select');
-        },
-        delete: () => {
-          throw new Error('unexpected root delete');
-        },
-      } as unknown as RepoDb;
-
-      const repo = new DrizzleIdempotencyKeyRepository(db);
-
-      await expect(
-        repo.pruneExpiredBefore(new Date('2026-02-08T00:00:00.000Z'), 100),
-      ).resolves.toBe(0);
-
-      expect(deleteFn).not.toHaveBeenCalled();
-      expect(transaction).toHaveBeenCalledTimes(1);
-    });
-
-    it('deletes up to limit expired rows and returns the count', async () => {
-      const selectLimit = vi.fn(async () => [
-        {
-          userId: '11111111-1111-1111-1111-111111111111',
-          action: 'question:submitAnswer',
-          key: 'idem-1',
-          expiresAt: new Date('2026-02-01T00:00:00.000Z'),
-        },
-        {
-          userId: '11111111-1111-1111-1111-111111111111',
-          action: 'question:submitAnswer',
-          key: 'idem-2',
-          expiresAt: new Date('2026-02-01T00:00:01.000Z'),
-        },
-      ]);
-      const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
-      const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
-      const selectFrom = vi.fn(() => ({ where: selectWhere }));
-      const select = vi.fn(() => ({ from: selectFrom }));
-
-      const deleteReturning = vi.fn(async () => [
+    it('emits one bounded candidate-lock delete with deterministic primary-key ordering and cutoff guard', async () => {
+      const execute = vi.fn(async (_statement: SQL) => [
         { key: 'idem-1' },
         { key: 'idem-2' },
       ]);
-      const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
-      const deleteFn = vi.fn(() => ({ where: deleteWhere }));
-
-      const tx = {
-        select,
-        delete: deleteFn,
-      } as const;
-      const transaction = vi.fn(
-        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
-      );
+      const transaction = vi.fn();
       const db = {
+        execute,
         transaction,
-        select: () => {
-          throw new Error('unexpected root select');
-        },
-        delete: () => {
-          throw new Error('unexpected root delete');
-        },
       } as unknown as RepoDb;
-
       const repo = new DrizzleIdempotencyKeyRepository(db);
-
-      await expect(
-        repo.pruneExpiredBefore(new Date('2026-02-08T00:00:00.000Z'), 100),
-      ).resolves.toBe(2);
-
-      expect(deleteFn).toHaveBeenCalledTimes(1);
-      expect(deleteWhere).toHaveBeenCalledTimes(1);
-      expect(transaction).toHaveBeenCalledTimes(1);
-    });
-
-    it('includes expiration filter in delete conditions to prevent race with newly inserted keys', async () => {
       const cutoff = new Date('2026-02-08T00:00:00.000Z');
-      const selectLimit = vi.fn(async () => [
-        {
-          userId: '11111111-1111-1111-1111-111111111111',
-          action: 'question:submitAnswer',
-          key: 'idem-1',
-          expiresAt: new Date('2026-02-01T00:00:00.000Z'),
-        },
-      ]);
-      const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
-      const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
-      const selectFrom = vi.fn(() => ({ where: selectWhere }));
-      const select = vi.fn(() => ({ from: selectFrom }));
 
-      const deleteReturning = vi.fn(async () => [{ key: 'idem-1' }]);
-      const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
-      const deleteFn = vi.fn(() => ({ where: deleteWhere }));
+      await expect(repo.pruneExpiredBefore(cutoff, 2)).resolves.toBe(2);
 
-      const tx = {
-        select,
-        delete: deleteFn,
-      } as const;
-      const transaction = vi.fn(
-        async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+      expect(transaction).not.toHaveBeenCalled();
+      expect(execute).toHaveBeenCalledTimes(1);
+      const statement = execute.mock.calls[0]?.[0] as SQL | undefined;
+      expect(statement).toBeDefined();
+      if (!statement) throw new Error('Expected prune SQL statement');
+      const query = new PgDialect().sqlToQuery(statement);
+      const normalizedSql = query.sql
+        .replaceAll(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+      expect(normalizedSql).toContain('with candidates as ( select');
+      expect(normalizedSql).toContain(
+        'order by "idempotency_keys"."expires_at", "idempotency_keys"."user_id", "idempotency_keys"."action", "idempotency_keys"."key" limit $2 for update skip locked',
       );
-      const db = {
-        transaction,
-        select: () => {
-          throw new Error('unexpected root select');
-        },
-        delete: () => {
-          throw new Error('unexpected root delete');
-        },
-      } as unknown as RepoDb;
-
-      const repo = new DrizzleIdempotencyKeyRepository(db);
-      await repo.pruneExpiredBefore(cutoff, 10);
-      expect(transaction).toHaveBeenCalledTimes(1);
-
-      // The WHERE clause passed to delete must include the expiresAt < cutoff
-      // filter alongside (userId, action, key) to prevent a race condition
-      // where a non-expired key inserted between SELECT and DELETE would be
-      // incorrectly deleted. We verify the condition's SQL representation
-      // includes the expires_at column reference.
-      const firstCall = deleteWhere.mock.calls[0] as unknown[];
-      const whereArg = firstCall?.[0];
-      expect(whereArg).toBeDefined();
-
-      // NOTE: This helper intentionally couples to Drizzle's internal
-      // condition-object shape to verify the atomic prune guard. It walks the
-      // entire AST looking for a column reference named 'expires_at' in the
-      // DELETE WHERE clause. If Drizzle changes its internal representation,
-      // this test will break — that's acceptable because the guard is
-      // safety-critical and must be re-verified after such changes.
-      function containsExpiresAt(obj: unknown, depth = 0): boolean {
-        if (depth > 20 || !obj || typeof obj !== 'object') return false;
-        const record = obj as Record<string, unknown>;
-        if (record.name === 'expires_at') return true;
-        for (const value of Object.values(record)) {
-          if (Array.isArray(value)) {
-            if (value.some((item) => containsExpiresAt(item, depth + 1)))
-              return true;
-          } else if (containsExpiresAt(value, depth + 1)) {
-            return true;
-          }
-        }
-        return false;
-      }
-      expect(containsExpiresAt(whereArg)).toBe(true);
+      expect(normalizedSql).toContain(
+        'delete from "idempotency_keys" using candidates',
+      );
+      expect(normalizedSql).toContain(
+        '"idempotency_keys"."user_id" = candidates.user_id',
+      );
+      expect(normalizedSql).toContain(
+        '"idempotency_keys"."action" = candidates.action',
+      );
+      expect(normalizedSql).toContain(
+        '"idempotency_keys"."key" = candidates.key',
+      );
+      expect(
+        normalizedSql.match(/"idempotency_keys"\."expires_at" < /g),
+      ).toHaveLength(2);
+      expect(query.params).toEqual([
+        cutoff.toISOString(),
+        2,
+        cutoff.toISOString(),
+      ]);
     });
   });
 });

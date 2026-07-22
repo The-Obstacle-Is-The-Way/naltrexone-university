@@ -10,7 +10,7 @@ import {
 import type { QuestionMode } from '@/lib/routes';
 import { withTimeout } from '@/lib/with-timeout';
 import {
-  getBookmarks,
+  getBookmarkStatus,
   setBookmark,
 } from '@/src/adapters/controllers/bookmark-controller';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
@@ -100,7 +100,10 @@ export function useQuestionPageBookmarks(
       return next;
     });
 
-    void withTimeout(getBookmarks({}), BOOKMARK_LOOKUP_TIMEOUT_MS)
+    void withTimeout(
+      getBookmarkStatus({ questionId }),
+      BOOKMARK_LOOKUP_TIMEOUT_MS,
+    )
       .then((result) => {
         if (!isMounted()) return;
         if (latestBookmarkLookupRequestId.current !== requestId) return;
@@ -121,14 +124,10 @@ export function useQuestionPageBookmarks(
           return;
         }
 
-        const isQuestionBookmarked = result.data.rows.some(
-          (row) => row.questionId === questionId,
-        );
-
         setBookmarkedQuestionIds((prev) => {
           const next = new Set(prev);
           next.delete(questionId);
-          if (isQuestionBookmarked) {
+          if (result.data.bookmarked) {
             next.add(questionId);
           }
           return next;

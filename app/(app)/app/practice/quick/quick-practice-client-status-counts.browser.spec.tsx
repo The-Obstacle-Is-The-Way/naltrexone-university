@@ -29,7 +29,9 @@ vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
 const countAvailableQuestions = vi.mocked(
   practiceController.countAvailableQuestions,
 );
-const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const getBookmarkQuestionIds = vi.mocked(
+  bookmarkController.getBookmarkQuestionIds,
+);
 const setBookmark = vi.mocked(bookmarkController.setBookmark);
 const getNextQuestion = vi.mocked(questionController.getNextQuestion);
 const submitAnswer = vi.mocked(questionController.submitAnswer);
@@ -101,7 +103,7 @@ test('refreshes quick-practice status badges after an answer is committed', asyn
     bookmarked: 2,
   }));
   useSearchParamsMock.mockReturnValue(new URLSearchParams(''));
-  getBookmarks.mockResolvedValue(ok({ rows: [] }));
+  getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
   submitAnswer.mockImplementation(async () => {
     unansweredCount = 11;
     return ok({
@@ -138,7 +140,7 @@ test('refreshes quick-practice status badges after a bookmark is toggled', async
     bookmarked: bookmarkedCount,
   }));
   useSearchParamsMock.mockReturnValue(new URLSearchParams(''));
-  getBookmarks.mockResolvedValue(ok({ rows: [] }));
+  getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
   submitAnswer.mockResolvedValue(
     ok({
       attemptId: crypto.randomUUID(),

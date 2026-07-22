@@ -1,9 +1,10 @@
 # DEBT-444: Hot-Path Prune Transactions Can Contend Without SKIP LOCKED and Lack Direct Real-Postgres Coverage (`idempotency_keys` + `rate_limits`)
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-07-09
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
+**Resolved:** 2026-07-22 — FW-4 replaced both select-then-delete transactions with their pinned table-specific, bounded, deterministic `FOR UPDATE SKIP LOCKED` candidate-delete statements. Direct real-PostgreSQL tests cover expired deletion, live preservation, batch limits, and held oldest-candidate locks for both tables; ADR-015 records the retained request-path owner and one-statement shape. Re-verified against `456023e3b9c07edf774d48f10c361e7556e70ec6` before this disposition.
 
 ---
 

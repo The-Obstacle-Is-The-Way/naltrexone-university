@@ -24,7 +24,9 @@ vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
 // biome-ignore format: keep `{ spy: true }` on this line for the DEBT-368 verification grep.
 vi.mock('@/app/(app)/app/practice/hooks/use-quick-practice-status-counts', { spy: true });
 
-const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const getBookmarkQuestionIds = vi.mocked(
+  bookmarkController.getBookmarkQuestionIds,
+);
 const getNextQuestion = vi.mocked(questionController.getNextQuestion);
 const submitAnswer = vi.mocked(questionController.submitAnswer);
 const useQuickPracticeStatusCounts = vi.mocked(
@@ -42,7 +44,7 @@ afterEach(() => {
 test('pushes a new status query param without scrolling', async () => {
   useSearchParamsMock.mockReturnValue(new URLSearchParams(''));
   getNextQuestion.mockResolvedValue(ok(null));
-  getBookmarks.mockResolvedValue(ok({ rows: [] }));
+  getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
   useQuickPracticeStatusCounts.mockReturnValue({
     unanswered: null,
     incorrect: null,
@@ -62,7 +64,7 @@ test('pushes a new status query param without scrolling', async () => {
 test('removes the status query param without scrolling when toggling off', async () => {
   useSearchParamsMock.mockReturnValue(new URLSearchParams('status=incorrect'));
   getNextQuestion.mockResolvedValue(ok(null));
-  getBookmarks.mockResolvedValue(ok({ rows: [] }));
+  getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
   useQuickPracticeStatusCounts.mockReturnValue({
     unanswered: null,
     incorrect: null,
@@ -111,7 +113,7 @@ test('submits a keyboard-selected choice from the visible Submit action', async 
       choiceExplanations: [],
     }),
   );
-  getBookmarks.mockResolvedValue(ok({ rows: [] }));
+  getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
   useQuickPracticeStatusCounts.mockReturnValue({
     unanswered: null,
     incorrect: null,

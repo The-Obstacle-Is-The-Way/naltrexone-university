@@ -41,6 +41,16 @@ export {
   GetAttemptedQuestionsUseCase,
 } from './get-attempted-questions';
 export {
+  type GetBookmarkQuestionIdsInput,
+  type GetBookmarkQuestionIdsOutput,
+  GetBookmarkQuestionIdsUseCase,
+} from './get-bookmark-question-ids';
+export {
+  type GetBookmarkStatusInput,
+  type GetBookmarkStatusOutput,
+  GetBookmarkStatusUseCase,
+} from './get-bookmark-status';
+export {
   type BookmarkRow,
   type GetBookmarksInput,
   type GetBookmarksOutput,

@@ -88,7 +88,7 @@ describe('withIdempotency outcome writes', () => {
     await expect(withIdempotency(input)).rejects.toBe(executeError);
     await expect(withIdempotency(input)).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
-      message: 'execute failed',
+      message: 'Internal error',
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });
@@ -249,8 +249,7 @@ describe('withIdempotency outcome writes', () => {
     });
     await expect(withIdempotency(input)).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
-      message:
-        'Idempotency outcome could not be recorded after committed success',
+      message: 'Internal error',
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });

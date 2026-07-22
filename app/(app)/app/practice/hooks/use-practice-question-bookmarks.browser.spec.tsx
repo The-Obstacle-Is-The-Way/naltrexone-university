@@ -13,7 +13,9 @@ const fixtureQuestion2Id = crypto.randomUUID();
 
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 
-const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const getBookmarkQuestionIds = vi.mocked(
+  bookmarkController.getBookmarkQuestionIds,
+);
 const setBookmark = vi.mocked(bookmarkController.setBookmark);
 
 function PracticeQuestionBookmarksProbe() {
@@ -57,7 +59,7 @@ function PracticeQuestionBookmarksProbe() {
 
 describe('usePracticeQuestionBookmarks (browser)', () => {
   beforeEach(() => {
-    getBookmarks.mockResolvedValue(ok({ rows: [] }));
+    getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
     setBookmark.mockResolvedValue(ok({ bookmarked: true }));
   });
 
@@ -114,19 +116,8 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
   });
 
   it('sends bookmarked=false when removing a hydrated bookmarked practice question', async () => {
-    getBookmarks.mockResolvedValue(
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: fixtureQuestion1Id,
-            slug: 'question-1',
-            stemMd: 'Stem',
-            difficulty: 'easy',
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
+    getBookmarkQuestionIds.mockResolvedValue(
+      ok({ questionIds: [fixtureQuestion1Id] }),
     );
     setBookmark.mockResolvedValue(ok({ bookmarked: false }));
 
@@ -135,6 +126,7 @@ describe('usePracticeQuestionBookmarks (browser)', () => {
     await expect
       .element(screen.getByTestId('is-bookmarked'))
       .toHaveTextContent('true');
+    expect(getBookmarkQuestionIds).toHaveBeenCalledWith({});
 
     await screen.getByRole('button', { name: 'toggle-bookmark' }).click();
 

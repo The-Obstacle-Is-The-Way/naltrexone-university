@@ -6,7 +6,7 @@ import * as practiceController from '@/src/adapters/controllers/practice-control
 import * as questionController from '@/src/adapters/controllers/question-controller';
 import * as questionFeedbackController from '@/src/adapters/controllers/question-feedback-controller';
 import * as questionViewController from '@/src/adapters/controllers/question-view-controller';
-import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
+import type { GetBookmarkStatusOutput } from '@/src/application/ports/bookmarks';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
 import { QUESTION_PAGE_CHOICE_1_ID } from './question-page-model.browser.fixtures';
@@ -42,7 +42,9 @@ export const submitAnswer = vi.mocked(questionController.submitAnswer);
 export const getPracticeSessionReview = vi.mocked(
   practiceController.getPracticeSessionReview,
 );
-export const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+export const getBookmarkStatus = vi.mocked(
+  bookmarkController.getBookmarkStatus,
+);
 export const setBookmark = vi.mocked(bookmarkController.setBookmark);
 export const getQuestionRating = vi.mocked(
   questionFeedbackController.getQuestionRating,
@@ -57,13 +59,13 @@ export const reportClientErrorSpy = vi.mocked(
 
 installReportClientErrorMocks(reportClientError);
 
-const emptyBookmarksResult: { ok: true; data: GetBookmarksOutput } = ok({
-  rows: [],
+const unbookmarkedResult: { ok: true; data: GetBookmarkStatusOutput } = ok({
+  bookmarked: false,
 });
 
 export function setupQuestionPageModelBrowserSpec() {
   beforeEach(() => {
-    getBookmarks.mockResolvedValue(emptyBookmarksResult);
+    getBookmarkStatus.mockResolvedValue(unbookmarkedResult);
     setBookmark.mockResolvedValue(ok({ bookmarked: true }));
     getQuestionRating.mockResolvedValue(ok({ rating: null }));
     rateQuestion.mockResolvedValue(ok({ rating: null }));

@@ -3,6 +3,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { drainPendingStripeCustomerCleanups } from '@/src/adapters/jobs/drain-pending-stripe-customer-cleanups';
+import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
 import { DrizzlePendingStripeCustomerCleanupRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
@@ -68,6 +69,8 @@ describe('Stripe repositories', () => {
         {
           id: staleEventId,
           type: 'user.deleted',
+          processedAt: null,
+          error: 'stale cleanup failure',
           createdAt: new Date('2026-06-12T12:00:00.000Z'),
         },
         {
@@ -97,6 +100,16 @@ describe('Stripe repositories', () => {
         },
         {
           pendingStripeCustomerCleanups: repo,
+          completePendingStripeCustomerCleanup: (eventId) =>
+            db.transaction(async (tx) => {
+              await new DrizzlePendingStripeCustomerCleanupRepository(
+                tx,
+              ).deleteByEventId(eventId);
+              await new DrizzleClerkEventRepository(
+                tx,
+                () => new Date('2026-06-12T12:30:00.000Z'),
+              ).markProcessed(eventId);
+            }),
           deleteStripeCustomer: async (stripeCustomerId) => {
             deletedCustomerIds.push(stripeCustomerId);
           },
@@ -114,6 +127,12 @@ describe('Stripe repositories', () => {
       });
       expect(deletedCustomerIds).toEqual(['cus_stale']);
       await expect(repo.findByEventId(staleEventId)).resolves.toBeNull();
+      await expect(
+        new DrizzleClerkEventRepository(db).peek(staleEventId),
+      ).resolves.toEqual({
+        processedAt: new Date('2026-06-12T12:30:00.000Z'),
+        error: null,
+      });
       await expect(repo.findByEventId(freshEventId)).resolves.toEqual({
         stripeCustomerId: 'cus_fresh',
       });
@@ -121,6 +140,63 @@ describe('Stripe repositories', () => {
       await db
         .delete(schema.clerkEvents)
         .where(inArray(schema.clerkEvents.id, [staleEventId, freshEventId]));
+    }
+  });
+
+  it('rolls back pending cleanup completion writes together', async () => {
+    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    const repo = new DrizzlePendingStripeCustomerCleanupRepository(db);
+    const clerkEvents = new DrizzleClerkEventRepository(db);
+
+    try {
+      await db.insert(schema.clerkEvents).values({
+        id: eventId,
+        type: 'user.deleted',
+        processedAt: null,
+        error: 'stale cleanup failure',
+        createdAt: new Date('2026-06-12T12:00:00.000Z'),
+      });
+      await db.insert(schema.pendingStripeCancellations).values({
+        eventId,
+        stripeCustomerId: 'cus_rollback',
+        createdAt: new Date('2026-06-12T12:00:00.000Z'),
+      });
+
+      const result = await drainPendingStripeCustomerCleanups(
+        {
+          olderThan: new Date('2026-06-12T12:15:00.000Z'),
+          dryRun: false,
+        },
+        {
+          pendingStripeCustomerCleanups: repo,
+          completePendingStripeCustomerCleanup: (candidateEventId) =>
+            db.transaction(async (tx) => {
+              await new DrizzlePendingStripeCustomerCleanupRepository(
+                tx,
+              ).deleteByEventId(candidateEventId);
+              await new DrizzleClerkEventRepository(
+                tx,
+                () => new Date('2026-06-12T12:30:00.000Z'),
+              ).markProcessed(candidateEventId);
+              throw new Error('force completion rollback');
+            }),
+          deleteStripeCustomer: async () => undefined,
+          logger: new FakeLogger(),
+        },
+      );
+
+      expect(result.failed).toBe(1);
+      await expect(repo.findByEventId(eventId)).resolves.toEqual({
+        stripeCustomerId: 'cus_rollback',
+      });
+      await expect(clerkEvents.peek(eventId)).resolves.toEqual({
+        processedAt: null,
+        error: 'stale cleanup failure',
+      });
+    } finally {
+      await db
+        .delete(schema.clerkEvents)
+        .where(eq(schema.clerkEvents.id, eventId));
     }
   });
 

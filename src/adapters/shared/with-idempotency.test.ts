@@ -687,7 +687,7 @@ describe('withIdempotency', () => {
     await expect(withIdempotency(input)).rejects.toThrow('unexpected failure');
     await expect(withIdempotency(input)).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
-      message: 'unexpected failure',
+      message: 'Internal error',
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });

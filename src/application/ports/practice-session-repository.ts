@@ -9,6 +9,22 @@ export type CompletedPracticeSessionPage = {
   total: number;
 };
 
+export type CompletedPracticeSessionHistorySummary = {
+  sessionId: string;
+  mode: PracticeMode;
+  questionCount: number;
+  firstQuestionSlug: string | null;
+  answered: number;
+  correct: number;
+  startedAt: Date;
+  endedAt: Date;
+};
+
+export type CompletedPracticeSessionHistorySummaryPage = {
+  rows: readonly CompletedPracticeSessionHistorySummary[];
+  total: number;
+};
+
 export interface PracticeSessionRepository {
   findByIdAndUserId(
     id: string,
@@ -21,6 +37,12 @@ export interface PracticeSessionRepository {
     offset: number,
     mode?: PracticeMode | null,
   ): Promise<CompletedPracticeSessionPage>;
+  findCompletedHistorySummariesByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+    mode?: PracticeMode | null,
+  ): Promise<CompletedPracticeSessionHistorySummaryPage>;
   create(input: {
     userId: string;
     mode: 'tutor' | 'exam';

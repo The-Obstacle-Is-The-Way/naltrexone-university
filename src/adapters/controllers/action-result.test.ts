@@ -52,6 +52,19 @@ describe('action-result', () => {
     });
   });
 
+  it('handleError normalizes diagnostic ApplicationError INTERNAL_ERROR text', async () => {
+    const { handleError } = await import('./action-result');
+
+    expect(
+      handleError(
+        new ApplicationError('INTERNAL_ERROR', 'database diagnostic detail'),
+      ),
+    ).toEqual({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+    });
+  });
+
   it('handleError maps ApplicationError details into the ActionResult error payload', async () => {
     const { handleError } = await import('./action-result');
     const error = new ApplicationError(

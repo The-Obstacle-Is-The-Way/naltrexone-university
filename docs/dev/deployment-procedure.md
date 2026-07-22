@@ -40,6 +40,22 @@ For seeds, and for any manual deploy-target migration fallback, use an explicit,
 
 ## 2. Standard Deployment Flow
 
+### Keyed-action output compatibility
+
+Any incompatible output-schema change to an idempotent keyed action must ship
+change-local replay parsers and pre-deploy cached fixtures for every writer
+shape that can coexist during the 24-hour idempotency TTL, including every
+shape a rollback target can resume. Multiple incompatible releases or a
+rollback inside that interval add to the supported parser/fixture set; they do
+not replace still-coexistable shapes.
+
+Retain each shape's replay support until its last writer has been absent from
+serving traffic for one full TTL. Unknown or corrupt shapes remain fail-loud,
+with the completed row preserved and no re-execution. Do not delete/reclaim the
+completed row, treat incompatibility as a cache miss, or return unvalidated
+JSON. This is a per-change release obligation, not a permanent versioned
+envelope or upcaster framework.
+
 ```text
 1. CI (GitHub Actions)
    └─ pnpm typecheck
@@ -161,6 +177,7 @@ Before merging to `main` (production deploy):
 - [ ] `pnpm build` passes
 - [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on pushes and same-repo PRs)
 - [ ] CodeRabbit review completed and feedback addressed
+- [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
 - [ ] If schema changed: confirm the Vercel build ran the Build Command migration (`pnpm db:migrate`) before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
 - [ ] If content changed: seed tested on local + preview DB first

@@ -1,10 +1,11 @@
 # DEBT-443: Idempotency Cache Durability and Evolution Gaps — Schema-Drift Replay Poisoning, Asymmetric Error Records, Production-Dead Lifecycle Cache Branch
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-07-09
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
 **FW-2 part 3 resolution:** 2026-07-21 — `FakePracticeSessionRepository.end()` now matches both real bare `CONFLICT` emitters, lifecycle error caching explicitly declines end/discard execution errors, and production-shaped controller/policy plus fake-vs-real tests pin re-execution and absent `details.reason`. Remaining active scope is Parts 1+2 (FW-4).
+**Resolved:** 2026-07-22 — FW-4 completed Part 1 with the release-time compatibility/parser/fixture rule and Part 2 with one bounded public-error codec shared by first response, fake and Drizzle persistence, and replay. The codec preserves validated public fields, normalizes every `INTERNAL_ERROR` to `Internal error`, and fails loudly without re-execution on corrupt cached records. Part 3 remains resolved by FW-2. Re-verified against `456023e3b9c07edf774d48f10c361e7556e70ec6` before this disposition.
 
 ---
 

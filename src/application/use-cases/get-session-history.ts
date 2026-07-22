@@ -1,13 +1,9 @@
 import {
   computeAccuracy,
   computeSessionDurationSeconds,
-  computeSessionStats,
 } from '@/src/domain/services';
 import type { PracticeMode } from '@/src/domain/value-objects';
-import type {
-  PracticeSessionRepository,
-  QuestionRepository,
-} from '../ports/repositories';
+import type { PracticeSessionRepository } from '../ports/repositories';
 
 export type GetSessionHistoryInput = {
   userId: string;
@@ -37,63 +33,36 @@ export type GetSessionHistoryOutput = {
 };
 
 export class GetSessionHistoryUseCase {
-  constructor(
-    private readonly sessions: PracticeSessionRepository,
-    private readonly questions: QuestionRepository,
-  ) {}
+  constructor(private readonly sessions: PracticeSessionRepository) {}
 
   async execute(
     input: GetSessionHistoryInput,
   ): Promise<GetSessionHistoryOutput> {
-    const page = await this.sessions.findCompletedByUserId(
+    const page = await this.sessions.findCompletedHistorySummariesByUserId(
       input.userId,
       input.limit,
       input.offset,
       input.mode ?? null,
     );
 
-    const firstQuestionIds = Array.from(
-      new Set(
-        page.rows
-          .map((session) => session.questionIds[0])
-          .filter((id): id is string => typeof id === 'string'),
-      ),
-    );
-    const firstQuestionSlugById = new Map<string, string>();
-    if (firstQuestionIds.length > 0) {
-      const publishedQuestions =
-        await this.questions.findPublishedByIds(firstQuestionIds);
-      for (const q of publishedQuestions) {
-        firstQuestionSlugById.set(q.id, q.slug);
-      }
-    }
-
     const rows: SessionHistoryRow[] = [];
     for (const session of page.rows) {
-      const endedAt = session.endedAt;
-      if (!endedAt) {
-        continue;
-      }
-
-      const { answered, correct } = computeSessionStats(session.questionStates);
-      const questionCount = session.questionIds.length;
-      const accuracyDenominator = questionCount;
+      const accuracyDenominator = session.questionCount;
 
       rows.push({
-        sessionId: session.id,
+        sessionId: session.sessionId,
         mode: session.mode,
-        questionCount,
-        firstQuestionSlug:
-          firstQuestionSlugById.get(session.questionIds[0] ?? '') ?? null,
-        answered,
-        correct,
-        accuracy: computeAccuracy(accuracyDenominator, correct),
+        questionCount: session.questionCount,
+        firstQuestionSlug: session.firstQuestionSlug,
+        answered: session.answered,
+        correct: session.correct,
+        accuracy: computeAccuracy(accuracyDenominator, session.correct),
         durationSeconds: computeSessionDurationSeconds(
           session.startedAt,
-          endedAt,
+          session.endedAt,
         ),
         startedAt: session.startedAt.toISOString(),
-        endedAt: endedAt.toISOString(),
+        endedAt: session.endedAt.toISOString(),
       });
     }
 

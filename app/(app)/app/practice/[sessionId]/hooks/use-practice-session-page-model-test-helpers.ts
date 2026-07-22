@@ -36,7 +36,7 @@ export let PracticeSessionPageModelViewProbe: typeof import('./practice-session-
 export const {
   getNextQuestionMock,
   submitAnswerMock,
-  getBookmarksMock,
+  getBookmarkQuestionIdsMock,
   setBookmarkMock,
   getPracticeSessionReviewMock,
   getCompletedSessionQuestionsWithFeedbackMock,
@@ -47,7 +47,7 @@ export const {
   setPracticeSessionQuestionMarkMock,
 } = getPracticeSessionPageModelBrowserMocks();
 
-export const EMPTY_BOOKMARKS_RESULT = ok({ rows: [] });
+export const EMPTY_BOOKMARKS_RESULT = ok({ questionIds: [] });
 export const CHOICE_1 = createChoice({ id: BROWSER_CHOICE_1_ID });
 export const CHOICE_2 = createChoice({
   id: BROWSER_CHOICE_2_ID,
@@ -87,7 +87,7 @@ export function errorResult(
 export function mockBookmarksAndReview(
   review: ReturnType<typeof createReviewResponse>,
 ) {
-  getBookmarksMock.mockResolvedValue(EMPTY_BOOKMARKS_RESULT);
+  getBookmarkQuestionIdsMock.mockResolvedValue(EMPTY_BOOKMARKS_RESULT);
   getPracticeSessionReviewMock.mockResolvedValue(ok(review));
 }
 
@@ -232,7 +232,7 @@ export function setupPracticeSessionPageModelBrowserSpec() {
     getPracticeSessionSummaryMock.mockResolvedValue(
       errorResult('CONFLICT', 'Practice session has not ended'),
     );
-    getBookmarksMock.mockResolvedValue(EMPTY_BOOKMARKS_RESULT);
+    getBookmarkQuestionIdsMock.mockResolvedValue(EMPTY_BOOKMARKS_RESULT);
     saveExamDraftAnswerMock.mockImplementation(async (input) =>
       ok({
         questionId:

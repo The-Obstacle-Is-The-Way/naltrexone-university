@@ -16,6 +16,8 @@ import {
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
+  GetBookmarkQuestionIdsUseCase,
+  GetBookmarkStatusUseCase,
   GetBookmarksUseCase,
   GetCompletedSessionQuestionsWithFeedbackUseCase,
   GetIncompletePracticeSessionUseCase,
@@ -224,9 +226,14 @@ export function createUseCaseFactories(input: {
     createGetBookmarksUseCase: () =>
       new GetBookmarksUseCase(
         repositories.createBookmarkRepository(),
-        repositories.createQuestionRepository(),
         primitives.logger,
       ),
+    createGetBookmarkQuestionIdsUseCase: () =>
+      new GetBookmarkQuestionIdsUseCase(
+        repositories.createBookmarkRepository(),
+      ),
+    createGetBookmarkStatusUseCase: () =>
+      new GetBookmarkStatusUseCase(repositories.createBookmarkRepository()),
     createGetQuestionRatingUseCase: () =>
       new GetQuestionRatingUseCase(
         repositories.createQuestionFeedbackRepository(),
@@ -276,7 +283,6 @@ export function createUseCaseFactories(input: {
     createGetSessionHistoryUseCase: () =>
       new GetSessionHistoryUseCase(
         repositories.createPracticeSessionRepository(),
-        repositories.createQuestionRepository(),
       ),
     createGetUserStatsUseCase: () =>
       new GetUserStatsUseCase(

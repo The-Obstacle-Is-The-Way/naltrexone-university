@@ -430,6 +430,34 @@ describe('billing-controller', () => {
       ]);
     });
 
+    it('replays identical field errors when keyed portal output is invalid', async () => {
+      const rateLimiter = new FakeRateLimiter();
+      const deps = createDeps({
+        portalOutput: { url: '' },
+        rateLimiter,
+      });
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      } as const;
+
+      const first = await createPortalSession(input, deps);
+      const second = await createPortalSession(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input',
+          fieldErrors: {
+            url: ['Too small: expected string to have >=1 characters'],
+          },
+        },
+      });
+      expect(second).toEqual(first);
+      expect(deps.createPortalSessionUseCase.inputs).toHaveLength(1);
+      expect(rateLimiter.inputs).toHaveLength(1);
+    });
+
     it('returns the cached portal session when idempotencyKey is reused', async () => {
       const deps = createDeps();
 

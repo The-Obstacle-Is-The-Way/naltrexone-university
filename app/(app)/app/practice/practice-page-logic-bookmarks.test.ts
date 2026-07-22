@@ -42,12 +42,9 @@ describe('practice-page-logic bookmarks', () => {
 
       const cleanup = createBookmarksEffect({
         bookmarkRetryCount: 0,
-        getBookmarksFn: async () =>
+        getBookmarkQuestionIdsFn: async () =>
           ok({
-            rows: [
-              { questionId: fixtureQuestion1Id },
-              { questionId: fixtureQuestion2Id },
-            ],
+            questionIds: [fixtureQuestion1Id, fixtureQuestion2Id],
           }),
         setBookmarkedQuestionIds,
         setBookmarkStatus,
@@ -85,7 +82,7 @@ describe('practice-page-logic bookmarks', () => {
 
         const cleanup = createBookmarksEffect({
           bookmarkRetryCount: 0,
-          getBookmarksFn: async () => err('INTERNAL_ERROR', 'Boom'),
+          getBookmarkQuestionIdsFn: async () => err('INTERNAL_ERROR', 'Boom'),
           setBookmarkedQuestionIds: vi.fn(),
           setBookmarkStatus: vi.fn(),
           setBookmarkRetryCount,
@@ -114,7 +111,7 @@ describe('practice-page-logic bookmarks', () => {
 
       const cleanup = createBookmarksEffect({
         bookmarkRetryCount: 2,
-        getBookmarksFn: async () => err('INTERNAL_ERROR', 'Boom'),
+        getBookmarkQuestionIdsFn: async () => err('INTERNAL_ERROR', 'Boom'),
         setBookmarkedQuestionIds: vi.fn(),
         setBookmarkStatus: vi.fn(),
         setBookmarkRetryCount: vi.fn(),
@@ -141,7 +138,7 @@ describe('practice-page-logic bookmarks', () => {
 
         const cleanup = createBookmarksEffect({
           bookmarkRetryCount: 0,
-          getBookmarksFn: async () => err('INTERNAL_ERROR', 'Boom'),
+          getBookmarkQuestionIdsFn: async () => err('INTERNAL_ERROR', 'Boom'),
           setBookmarkedQuestionIds: vi.fn(),
           setBookmarkStatus: vi.fn(),
           setBookmarkRetryCount: vi.fn(),
@@ -164,22 +161,20 @@ describe('practice-page-logic bookmarks', () => {
       const setBookmarkStatus = vi.fn();
 
       let resolveBookmarks:
-        | ((
-            value: ActionResult<{ rows: Array<{ questionId: string }> }>,
-          ) => void)
+        | ((value: ActionResult<{ questionIds: string[] }>) => void)
         | undefined;
-      const pending = new Promise<
-        ActionResult<{ rows: Array<{ questionId: string }> }>
-      >((res) => {
-        resolveBookmarks = res;
-      });
+      const pending = new Promise<ActionResult<{ questionIds: string[] }>>(
+        (res) => {
+          resolveBookmarks = res;
+        },
+      );
       if (!resolveBookmarks) throw new Error('Expected resolve function');
 
-      const getBookmarksFn = vi.fn(async () => pending);
+      const getBookmarkQuestionIdsFn = vi.fn(async () => pending);
 
       const cleanup = createBookmarksEffect({
         bookmarkRetryCount: 0,
-        getBookmarksFn,
+        getBookmarkQuestionIdsFn,
         setBookmarkedQuestionIds,
         setBookmarkStatus,
         setBookmarkRetryCount: vi.fn(),
@@ -189,7 +184,7 @@ describe('practice-page-logic bookmarks', () => {
       cleanup();
       resolveBookmarks(
         ok({
-          rows: [{ questionId: fixtureQuestion1Id }],
+          questionIds: [fixtureQuestion1Id],
         }),
       );
 
@@ -200,7 +195,7 @@ describe('practice-page-logic bookmarks', () => {
       expect(setBookmarkStatus).toHaveBeenCalledWith('loading');
     });
 
-    it('sets error state when getBookmarksFn throws', async () => {
+    it('sets error state when getBookmarkQuestionIdsFn throws', async () => {
       vi.useFakeTimers();
       try {
         const setBookmarkStatus = vi.fn();
@@ -211,7 +206,7 @@ describe('practice-page-logic bookmarks', () => {
 
         const cleanup = createBookmarksEffect({
           bookmarkRetryCount: 0,
-          getBookmarksFn: async () => {
+          getBookmarkQuestionIdsFn: async () => {
             throw new Error('Boom');
           },
           setBookmarkedQuestionIds: vi.fn(),
@@ -245,7 +240,7 @@ describe('practice-page-logic bookmarks', () => {
 
         createBookmarksEffect({
           bookmarkRetryCount: 0,
-          getBookmarksFn: async () =>
+          getBookmarkQuestionIdsFn: async () =>
             err('UNAUTHENTICATED', 'Authentication required'),
           setBookmarkedQuestionIds: vi.fn(),
           setBookmarkStatus,

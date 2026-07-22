@@ -4,7 +4,6 @@ import * as reportClientError from '@/lib/report-client-error';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
 import type { GetQuestionBySlugOutput } from '@/src/adapters/controllers/question-view-controller';
-import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 import { installReportClientErrorMocks } from '@/tests/test-helpers/report-client-error-mocks';
@@ -17,7 +16,7 @@ import { useQuestionPageBookmarks } from './use-question-page-bookmarks';
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
 vi.mock('@/lib/report-client-error', { spy: true });
 
-const getBookmarks = vi.mocked(bookmarkController.getBookmarks);
+const getBookmarkStatus = vi.mocked(bookmarkController.getBookmarkStatus);
 const setBookmark = vi.mocked(bookmarkController.setBookmark);
 
 installReportClientErrorMocks(reportClientError);
@@ -70,12 +69,8 @@ function Probe({
 }
 
 describe('useQuestionPageBookmarks (browser)', () => {
-  const emptyBookmarksResult: { ok: true; data: GetBookmarksOutput } = ok({
-    rows: [],
-  });
-
   beforeEach(() => {
-    getBookmarks.mockResolvedValue(emptyBookmarksResult);
+    getBookmarkStatus.mockResolvedValue(ok({ bookmarked: false }));
     setBookmark.mockResolvedValue(ok({ bookmarked: true }));
   });
 
@@ -84,20 +79,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
   });
 
   it('loads bookmark state for the current review question', async () => {
-    getBookmarks.mockResolvedValue(
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: QUESTION_PAGE_QUESTION_1_ID,
-            slug: 'q-1',
-            stemMd: 'Stem',
-            difficulty: 'easy',
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    getBookmarkStatus.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<Probe />);
 
@@ -110,6 +92,9 @@ describe('useQuestionPageBookmarks (browser)', () => {
     await expect
       .element(screen.getByTestId('is-bookmarked'))
       .toHaveTextContent('true');
+    expect(getBookmarkStatus).toHaveBeenCalledWith({
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
+    });
   });
 
   it('toggles bookmark state for the current review question', async () => {
@@ -165,20 +150,7 @@ describe('useQuestionPageBookmarks (browser)', () => {
   });
 
   it('sends bookmarked=false when removing a hydrated bookmarked review question', async () => {
-    getBookmarks.mockResolvedValue(
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: QUESTION_PAGE_QUESTION_1_ID,
-            slug: 'q-1',
-            stemMd: 'Stem',
-            difficulty: 'easy',
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    getBookmarkStatus.mockResolvedValue(ok({ bookmarked: true }));
     setBookmark.mockResolvedValue(ok({ bookmarked: false }));
 
     const screen = await render(<Probe />);
