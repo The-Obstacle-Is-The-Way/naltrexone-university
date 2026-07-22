@@ -7,6 +7,7 @@ import {
   HTTP_TOO_MANY_REQUESTS,
 } from '@/src/adapters/shared/http-status';
 import { HEALTH_CHECK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 
@@ -41,7 +42,10 @@ async function handleHealthCheck(deps: HealthHandlerDeps, req: Request) {
       );
     }
   } catch (error) {
-    deps.logger.error({ error }, 'Health check rate limiter failed');
+    deps.logger.error(
+      { error: projectSafeErrorDiagnostics(error) },
+      'Health check rate limiter failed',
+    );
     return NextResponse.json(
       { ok: false, error: 'Rate limiter unavailable' },
       { status: HTTP_SERVICE_UNAVAILABLE },
@@ -56,7 +60,10 @@ async function handleHealthCheck(deps: HealthHandlerDeps, req: Request) {
       db: true,
     });
   } catch (error) {
-    deps.logger.error({ error }, 'Health check failed');
+    deps.logger.error(
+      { error: projectSafeErrorDiagnostics(error) },
+      'Health check failed',
+    );
     return NextResponse.json(
       {
         ok: false,

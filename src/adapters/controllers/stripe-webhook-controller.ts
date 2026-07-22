@@ -82,10 +82,7 @@ async function persistFailure(
     deps.logger.error(
       {
         eventId: event.eventId,
-        error:
-          persistError instanceof Error
-            ? persistError.message
-            : String(persistError),
+        error: projectSafeErrorDiagnostics(persistError),
       },
       'Failed to persist Stripe webhook failure state',
     );
@@ -320,7 +317,7 @@ export async function processStripeWebhook(
     deps.logger.warn(
       {
         eventId: event.eventId,
-        error: error instanceof Error ? error.message : String(error),
+        error: projectSafeErrorDiagnostics(error),
       },
       'Stripe event pruning failed',
     );

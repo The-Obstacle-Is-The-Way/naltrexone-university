@@ -12,6 +12,7 @@ import {
   HTTP_TOO_MANY_REQUESTS,
 } from '@/src/adapters/shared/http-status';
 import { STRIPE_WEBHOOK_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { isApplicationError } from '@/src/application/errors';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 
@@ -65,7 +66,10 @@ export function createWebhookHandler(
         );
       }
     } catch (error) {
-      container.logger.error({ error }, 'Stripe webhook rate limiter failed');
+      container.logger.error(
+        { error: projectSafeErrorDiagnostics(error) },
+        'Stripe webhook rate limiter failed',
+      );
       return NextResponse.json(
         { error: 'Rate limiter unavailable' },
         { status: HTTP_SERVICE_UNAVAILABLE },
@@ -87,14 +91,20 @@ export function createWebhookHandler(
         (error.code === 'INVALID_WEBHOOK_SIGNATURE' ||
           error.code === 'INVALID_WEBHOOK_PAYLOAD')
       ) {
-        container.logger.error({ error }, 'Stripe webhook validation failed');
+        container.logger.error(
+          { error: projectSafeErrorDiagnostics(error) },
+          'Stripe webhook validation failed',
+        );
         return NextResponse.json(
           { error: 'Webhook validation failed' },
           { status: HTTP_BAD_REQUEST },
         );
       }
 
-      container.logger.error({ error }, 'Stripe webhook failed');
+      container.logger.error(
+        { error: projectSafeErrorDiagnostics(error) },
+        'Stripe webhook failed',
+      );
       return NextResponse.json(
         { error: 'Webhook processing failed' },
         { status: HTTP_INTERNAL_SERVER_ERROR },

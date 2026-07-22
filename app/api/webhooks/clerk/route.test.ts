@@ -127,7 +127,7 @@ describe('POST /api/webhooks/clerk', () => {
     expect(logger.errorCalls[0]).toMatchObject({
       context: {
         route: '/api/webhooks/clerk',
-        error: expect.any(Error),
+        error: { name: 'Error' },
       },
       msg: 'Clerk webhook signature verification failed',
     });
@@ -200,10 +200,14 @@ describe('POST /api/webhooks/clerk', () => {
     expect(verifyWebhook).not.toHaveBeenCalled();
     expect(processClerkWebhook).not.toHaveBeenCalled();
     expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]?.context).toEqual({
+      error: { name: 'Error' },
+    });
   });
 
   it('returns 400 when payload validation fails', async () => {
-    const { POST, verifyWebhook, processClerkWebhook } = createTestDeps();
+    const { POST, verifyWebhook, processClerkWebhook, logger } =
+      createTestDeps();
 
     verifyWebhook.mockResolvedValue({
       eventId: 'evt_1',
@@ -224,6 +228,12 @@ describe('POST /api/webhooks/clerk', () => {
     expect(res.status).toBe(400);
     await expect(res.json()).resolves.toEqual({
       error: 'Webhook validation failed',
+    });
+    expect(logger.errorCalls[0]?.context).toEqual({
+      error: {
+        name: 'ApplicationError',
+        code: 'INVALID_WEBHOOK_PAYLOAD',
+      },
     });
   });
 
@@ -250,5 +260,8 @@ describe('POST /api/webhooks/clerk', () => {
       error: 'Webhook processing failed',
     });
     expect(logger.errorCalls).toHaveLength(1);
+    expect(logger.errorCalls[0]?.context).toEqual({
+      error: { name: 'Error' },
+    });
   });
 });

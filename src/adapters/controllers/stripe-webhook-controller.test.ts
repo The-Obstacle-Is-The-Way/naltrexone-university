@@ -541,7 +541,7 @@ describe('processStripeWebhook', () => {
     expect(logger.warnCalls).toContainEqual({
       context: expect.objectContaining({
         eventId: 'evt_prune_fail',
-        error: 'boom',
+        error: { name: 'Error' },
       }),
       msg: 'Stripe event pruning failed',
     });

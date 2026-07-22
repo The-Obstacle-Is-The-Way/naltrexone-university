@@ -206,10 +206,7 @@ async function persistFailure(
     deps.logger.error(
       {
         eventId: event.eventId,
-        error:
-          persistError instanceof Error
-            ? persistError.message
-            : String(persistError),
+        error: projectSafeErrorDiagnostics(persistError),
       },
       'Failed to persist Clerk webhook failure state',
     );
