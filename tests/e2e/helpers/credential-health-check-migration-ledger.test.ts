@@ -7,7 +7,8 @@ import {
   computeMissingMigrations,
   formatSchemaDriftMessage,
   verifyMigrationLedger,
-} from './credential-health-check';
+  verifyMigrationLedgerBeforeMigration,
+} from '@/scripts/migration-ledger';
 
 describe('migration ledger schema-drift preflight', () => {
   const hashA =
@@ -58,6 +59,56 @@ describe('migration ledger schema-drift preflight', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('allows expected pending journal entries before migration', async () => {
+    const sql = vi.fn(async () => [{ createdAt: 1769893923091, hash: hashA }]);
+
+    await expect(
+      verifyMigrationLedgerBeforeMigration(
+        sql as unknown as postgres.Sql,
+        journalEntries,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it('rejects ledger-only rows before migration', async () => {
+    const sql = vi.fn(async () => [
+      { createdAt: 1769893923091, hash: hashA },
+      {
+        createdAt: 1999999999999,
+        hash: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      },
+    ]);
+
+    await expect(
+      verifyMigrationLedgerBeforeMigration(
+        sql as unknown as postgres.Sql,
+        journalEntries,
+      ),
+    ).rejects.toMatchObject({
+      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+      message: expect.stringContaining('Ledger-only migrations detected: 1'),
+    });
+  });
+
+  it('rejects applied-row content drift before migration', async () => {
+    const sql = vi.fn(async () => [
+      {
+        createdAt: 1769893923091,
+        hash: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      },
+    ]);
+
+    await expect(
+      verifyMigrationLedgerBeforeMigration(
+        sql as unknown as postgres.Sql,
+        journalEntries,
+      ),
+    ).rejects.toMatchObject({
+      code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
+      message: expect.stringContaining('Content drift: 0000_jazzy_vermin'),
+    });
+  });
+
   it('throws the content-drift code when a ledger row hash differs from the local migration file hash', async () => {
     const sql = vi.fn(async () => [
       { createdAt: 1769893923091, hash: hashA },
@@ -94,7 +145,7 @@ describe('migration ledger schema-drift preflight', () => {
       verifyMigrationLedger(sql as unknown as postgres.Sql, journalEntries),
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATION_CONTENT',
-      message: expect.stringContaining('Ledger-only migrations: 1999999999999'),
+      message: expect.stringContaining('Ledger-only migrations detected: 1'),
     });
   });
 
@@ -238,10 +289,8 @@ describe('migration ledger schema-drift preflight', () => {
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
       message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
-      fix: expect.stringContaining(
-        'DATABASE_URL="<verified target>" pnpm db:migrate',
-      ),
+        'The migration ledger is behind the repo journal. Missing migrations: 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
+      fix: expect.stringContaining('checked-in migration command'),
     });
   });
 
@@ -259,7 +308,7 @@ describe('migration ledger schema-drift preflight', () => {
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
       message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
+        'The migration ledger is behind the repo journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
     });
   });
 
@@ -277,7 +326,7 @@ describe('migration ledger schema-drift preflight', () => {
     ).rejects.toMatchObject({
       code: 'E2E_PREFLIGHT:SCHEMA_DRIFT_MIGRATIONS',
       message:
-        'The database used by E2E is behind the repo migration journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
+        'The migration ledger is behind the repo journal. Missing migrations: 0000_jazzy_vermin, 0001_attempts_selected_choice_not_null, 0002_curious_firelord.',
     });
   });
 
