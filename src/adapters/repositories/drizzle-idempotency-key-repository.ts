@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, lt, or } from 'drizzle-orm';
+import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { idempotencyKeys } from '@/db/schema';
 import {
   ApplicationError,
@@ -242,36 +242,32 @@ export class DrizzleIdempotencyKeyRepository
       return 0;
     }
 
-    return this.db.transaction(async (tx) => {
-      const rows = await tx
-        .select({
-          userId: idempotencyKeys.userId,
-          action: idempotencyKeys.action,
-          key: idempotencyKeys.key,
-          expiresAt: idempotencyKeys.expiresAt,
-        })
-        .from(idempotencyKeys)
-        .where(lt(idempotencyKeys.expiresAt, cutoff))
-        .orderBy(asc(idempotencyKeys.expiresAt))
-        .limit(limit);
+    const cutoffParam = sql.param(cutoff, idempotencyKeys.expiresAt);
+    const deleted = await this.db.execute<{ deleted: number }>(sql`
+      WITH candidates AS (
+        SELECT
+          ${idempotencyKeys.userId} AS user_id,
+          ${idempotencyKeys.action} AS action,
+          ${idempotencyKeys.key} AS key
+        FROM ${idempotencyKeys}
+        WHERE ${idempotencyKeys.expiresAt} < ${cutoffParam}
+        ORDER BY
+          ${idempotencyKeys.expiresAt},
+          ${idempotencyKeys.userId},
+          ${idempotencyKeys.action},
+          ${idempotencyKeys.key}
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      DELETE FROM ${idempotencyKeys}
+      USING candidates
+      WHERE ${idempotencyKeys.userId} = candidates.user_id
+        AND ${idempotencyKeys.action} = candidates.action
+        AND ${idempotencyKeys.key} = candidates.key
+        AND ${idempotencyKeys.expiresAt} < ${cutoffParam}
+      RETURNING 1 AS deleted
+    `);
 
-      if (rows.length === 0) return 0;
-
-      const conditions = rows.map((row) =>
-        and(
-          eq(idempotencyKeys.userId, row.userId),
-          eq(idempotencyKeys.action, row.action),
-          eq(idempotencyKeys.key, row.key),
-          lt(idempotencyKeys.expiresAt, cutoff),
-        ),
-      );
-
-      const deleted = await tx
-        .delete(idempotencyKeys)
-        .where(or(...conditions))
-        .returning({ key: idempotencyKeys.key });
-
-      return deleted.length;
-    });
+    return deleted.length;
   }
 }
