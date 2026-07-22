@@ -160,4 +160,49 @@ describe('DrizzlePracticeSessionRepository history summaries', () => {
       }),
     ]);
   });
+
+  it.each([
+    {
+      name: 'extra normalized state rows',
+      orderedQuestionIds: [
+        firstQuestionId,
+        secondQuestionId,
+        crypto.randomUUID(),
+      ],
+      orderedPositions: [0, 1, 2],
+      message: `Practice session ${sessionId} has inconsistent normalized question state`,
+    },
+    {
+      name: 'missing normalized state rows',
+      orderedQuestionIds: [firstQuestionId],
+      orderedPositions: [0],
+      message: `Practice session ${sessionId} is missing normalized question state`,
+    },
+  ])('skips and logs $name', async (input) => {
+    const { db } = createDb([
+      createSummaryRow(input.orderedQuestionIds, input.orderedPositions),
+    ]);
+    const logger = new FakeLogger();
+    const repo = new DrizzlePracticeSessionRepository(
+      db,
+      () => new Date(),
+      logger,
+    );
+
+    await expect(
+      repo.findCompletedHistorySummariesByUserId(userId, 10, 0),
+    ).resolves.toEqual({ rows: [], total: 1 });
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({
+          sessionId,
+          error: expect.objectContaining({
+            code: 'INTERNAL_ERROR',
+            message: input.message,
+          }),
+        }),
+        msg: 'Skipping corrupt completed practice session row',
+      }),
+    ]);
+  });
 });
