@@ -22,7 +22,7 @@ function createDbMock(count: number) {
 }
 
 describe('DrizzleRateLimiter', () => {
-  it('prunes expired windows when a new rate-limit window is created', async () => {
+  it('uses the 24-hour target cutoff when a new rate-limit window is created', async () => {
     const now = new Date('2026-02-07T12:00:00.000Z');
     const db = createDbMock(1);
     const rateLimiter = new DrizzleRateLimiter(
@@ -41,7 +41,7 @@ describe('DrizzleRateLimiter', () => {
       remaining: 4,
     });
 
-    const cutoff = new Date(now.getTime() - 90 * 86_400_000);
+    const cutoff = new Date(now.getTime() - 1_440 * 60_000);
     expect(pruneSpy).toHaveBeenCalledWith(cutoff, 100);
   });
 
