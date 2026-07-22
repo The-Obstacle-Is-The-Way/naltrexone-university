@@ -128,8 +128,9 @@ describe('stats-controller', () => {
 
       expect(result).toEqual({
         ok: false,
-        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       });
+      expect(JSON.stringify(result)).not.toContain('boom');
     });
 
     it('returns OK when deps are loaded from the container', async () => {

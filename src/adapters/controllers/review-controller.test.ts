@@ -260,8 +260,9 @@ describe('review-controller', () => {
 
       expect(result).toEqual({
         ok: false,
-        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       });
+      expect(JSON.stringify(result)).not.toContain('boom');
     });
 
     it('loads dependencies from the container when deps are omitted', async () => {
