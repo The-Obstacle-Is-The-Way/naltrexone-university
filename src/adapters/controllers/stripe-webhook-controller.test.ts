@@ -161,6 +161,27 @@ function createRollbackAwareDeps(overrides: {
   };
 }
 
+function createSubscriptionUpdatePaymentGateway(eventId: string) {
+  return new FakePaymentGateway({
+    externalCustomerId: 'cus_test',
+    checkoutUrl: 'https://stripe/checkout',
+    portalUrl: 'https://stripe/portal',
+    webhookResult: {
+      eventId,
+      type: 'customer.subscription.updated',
+      subscriptionUpdate: {
+        userId: crypto.randomUUID(),
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+        cancelAtPeriodEnd: false,
+      },
+    },
+  });
+}
+
 describe('processStripeWebhook', () => {
   it('skips subscription webhooks that are missing metadata.user_id', async () => {
     const paymentGateway = new ThrowingPaymentGateway(
@@ -690,25 +711,9 @@ describe('processStripeWebhook', () => {
   });
 
   it('persists failure state even when the transaction would rollback on throw', async () => {
-    const userId = crypto.randomUUID();
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_test',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_rollback_failure_state',
-        type: 'customer.subscription.updated',
-        subscriptionUpdate: {
-          userId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          status: 'active',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
-      },
-    });
+    const paymentGateway = createSubscriptionUpdatePaymentGateway(
+      'evt_rollback_failure_state',
+    );
 
     const subscriptions = new FailingSubscriptionRepository();
     const { deps, stripeEvents } = createRollbackAwareDeps({
@@ -729,25 +734,9 @@ describe('processStripeWebhook', () => {
   });
 
   it('persists only safe driver diagnostics for a failed Stripe event', async () => {
-    const userId = crypto.randomUUID();
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_test',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_safe_driver_diagnostics',
-        type: 'customer.subscription.updated',
-        subscriptionUpdate: {
-          userId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          status: 'active',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
-      },
-    });
+    const paymentGateway = createSubscriptionUpdatePaymentGateway(
+      'evt_safe_driver_diagnostics',
+    );
     const stripeCustomers = new DriverFailingStripeCustomerRepository();
     const { deps, stripeEvents } = createRollbackAwareDeps({
       paymentGateway,
@@ -771,25 +760,7 @@ describe('processStripeWebhook', () => {
   });
 
   it('marks the event failed when processing throws', async () => {
-    const userId = crypto.randomUUID();
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_test',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_4',
-        type: 'customer.subscription.updated',
-        subscriptionUpdate: {
-          userId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          status: 'active',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
-      },
-    });
+    const paymentGateway = createSubscriptionUpdatePaymentGateway('evt_4');
 
     const subscriptions = new FailingSubscriptionRepository();
     const { deps, stripeEvents } = createDeps({
