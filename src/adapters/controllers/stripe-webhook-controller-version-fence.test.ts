@@ -80,9 +80,12 @@ describe('processStripeWebhook observation-version fence', () => {
     );
     const storedEvent = await stripeEvents.lock(eventId);
     expect(storedEvent.processedAt).toBeNull();
-    expect(JSON.parse(storedEvent.error ?? '{}')).toMatchObject({
+    expect(JSON.parse(storedEvent.error ?? '{}')).toEqual({
+      name: 'SubscriptionObservationAttemptsExhaustedError',
       code: 'CONFLICT',
-      message: `Subscription observation version conflicted after ${SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS} attempts`,
     });
+    expect(storedEvent.error).not.toContain(
+      `Subscription observation version conflicted after ${SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS} attempts`,
+    );
   });
 });

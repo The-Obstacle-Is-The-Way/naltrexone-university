@@ -134,7 +134,7 @@ describe('GET /api/health', () => {
     expect(execute).toHaveBeenCalledTimes(0);
     expect(logger.errorCalls).toHaveLength(1);
     expect(logger.errorCalls[0]).toEqual({
-      context: { error: expect.any(Error) },
+      context: { error: { name: 'Error' } },
       msg: 'Health check rate limiter failed',
     });
   });
@@ -210,7 +210,7 @@ describe('POST /api/health', () => {
     expect(execute).toHaveBeenCalledTimes(1);
     expect(logger.errorCalls).toHaveLength(1);
     expect(logger.errorCalls[0]).toEqual({
-      context: { error: expect.any(Error) },
+      context: { error: { name: 'Error' } },
       msg: 'Health check failed',
     });
   });
@@ -289,7 +289,7 @@ describe('POST /api/health', () => {
     expect(execute).toHaveBeenCalledTimes(0);
     expect(logger.errorCalls).toHaveLength(1);
     expect(logger.errorCalls[0]).toEqual({
-      context: { error: expect.any(Error) },
+      context: { error: { name: 'Error' } },
       msg: 'Health check rate limiter failed',
     });
   });

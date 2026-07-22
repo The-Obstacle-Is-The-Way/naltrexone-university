@@ -104,8 +104,8 @@ describe('action-result', () => {
     });
 
     expect(fakeLogger.errorCalls).toHaveLength(1);
-    expect(fakeLogger.errorCalls[0]?.context).toMatchObject({
-      err: expect.any(Error),
+    expect(fakeLogger.errorCalls[0]?.context).toEqual({
+      err: { name: 'Error' },
     });
     expect(fakeLogger.errorCalls[0]?.msg).toBe('Unhandled error in controller');
   });

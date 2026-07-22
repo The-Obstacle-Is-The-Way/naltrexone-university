@@ -46,7 +46,12 @@ export class DrizzleUserRepository implements UserRepository {
       );
     }
 
-    return new ApplicationError('INTERNAL_ERROR', 'Failed to ensure user row');
+    return new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to ensure user row',
+      undefined,
+      { cause: error },
+    );
   }
 
   private async mapEmailWriteError(

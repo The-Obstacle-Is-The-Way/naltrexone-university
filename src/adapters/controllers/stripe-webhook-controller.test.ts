@@ -28,6 +28,25 @@ class FailingSubscriptionRepository extends FakeSubscriptionRepository {
   }
 }
 
+class DriverFailingStripeCustomerRepository extends FakeStripeCustomerRepository {
+  override async insert(): Promise<never> {
+    const postgresError = Object.assign(
+      new Error('duplicate key exposes raw Stripe customer text'),
+      {
+        code: '23505',
+        constraint: 'stripe_customers_stripe_customer_id_unique',
+        detail: 'Key (stripe_customer_id)=(cus_raw) already exists',
+      },
+    );
+    throw new ApplicationError(
+      'INTERNAL_ERROR',
+      'Failed to upsert Stripe customer mapping',
+      undefined,
+      { cause: postgresError },
+    );
+  }
+}
+
 class ConcurrentlyCompletingStripeEventRepository extends FakeStripeEventRepository {
   override async peek(eventId: string) {
     const snapshot = await super.peek(eventId);
@@ -140,6 +159,27 @@ function createRollbackAwareDeps(overrides: {
       },
     },
   };
+}
+
+function createSubscriptionUpdatePaymentGateway(eventId: string) {
+  return new FakePaymentGateway({
+    externalCustomerId: 'cus_test',
+    checkoutUrl: 'https://stripe/checkout',
+    portalUrl: 'https://stripe/portal',
+    webhookResult: {
+      eventId,
+      type: 'customer.subscription.updated',
+      subscriptionUpdate: {
+        userId: crypto.randomUUID(),
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        status: 'active',
+        currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
+        cancelAtPeriodEnd: false,
+      },
+    },
+  });
 }
 
 describe('processStripeWebhook', () => {
@@ -522,10 +562,11 @@ describe('processStripeWebhook', () => {
     expect(logger.warnCalls).toContainEqual({
       context: expect.objectContaining({
         eventId: 'evt_prune_fail',
-        error: 'boom',
+        error: { name: 'Error' },
       }),
       msg: 'Stripe event pruning failed',
     });
+    expect(JSON.stringify(logger.warnCalls)).not.toContain('boom');
   });
 
   it('still succeeds when pruning processed stripe events fails', async () => {
@@ -671,25 +712,9 @@ describe('processStripeWebhook', () => {
   });
 
   it('persists failure state even when the transaction would rollback on throw', async () => {
-    const userId = crypto.randomUUID();
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_test',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_rollback_failure_state',
-        type: 'customer.subscription.updated',
-        subscriptionUpdate: {
-          userId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          status: 'active',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
-      },
-    });
+    const paymentGateway = createSubscriptionUpdatePaymentGateway(
+      'evt_rollback_failure_state',
+    );
 
     const subscriptions = new FailingSubscriptionRepository();
     const { deps, stripeEvents } = createRollbackAwareDeps({
@@ -709,26 +734,34 @@ describe('processStripeWebhook', () => {
     });
   });
 
-  it('marks the event failed when processing throws', async () => {
-    const userId = crypto.randomUUID();
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_test',
-      checkoutUrl: 'https://stripe/checkout',
-      portalUrl: 'https://stripe/portal',
-      webhookResult: {
-        eventId: 'evt_4',
-        type: 'customer.subscription.updated',
-        subscriptionUpdate: {
-          userId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          status: 'active',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
-      },
+  it('persists only safe driver diagnostics for a failed Stripe event', async () => {
+    const paymentGateway = createSubscriptionUpdatePaymentGateway(
+      'evt_safe_driver_diagnostics',
+    );
+    const stripeCustomers = new DriverFailingStripeCustomerRepository();
+    const { deps, stripeEvents } = createRollbackAwareDeps({
+      paymentGateway,
+      stripeCustomers,
     });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+
+    const stored = await stripeEvents.lock('evt_safe_driver_diagnostics');
+    const diagnostics = JSON.parse(stored.error ?? '{}');
+    expect(diagnostics).toEqual({
+      name: 'ApplicationError',
+      code: 'INTERNAL_ERROR',
+      sqlState: '23505',
+      constraint: 'stripe_customers_stripe_customer_id_unique',
+    });
+    expect(stored.error).not.toContain('raw Stripe customer');
+    expect(stored.error).not.toContain('cus_raw');
+  });
+
+  it('marks the event failed when processing throws', async () => {
+    const paymentGateway = createSubscriptionUpdatePaymentGateway('evt_4');
 
     const subscriptions = new FailingSubscriptionRepository();
     const { deps, stripeEvents } = createDeps({
@@ -751,9 +784,9 @@ describe('processStripeWebhook', () => {
       string,
       unknown
     >;
-    expect(errorData).toMatchObject({
+    expect(errorData).toEqual({
       name: 'Error',
-      message: 'boom',
     });
+    expect(stored.error).not.toContain('boom');
   });
 });

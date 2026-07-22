@@ -56,6 +56,6 @@ Operational noise with correct terminal state everywhere: Stripe-side the subscr
 - [BUG-288 (archived)](./bug-288-checkout-completes-after-account-deletion-orphan-billing.md) — parent fix; its Option 3 is this doc's recommended fix, and its Resolution State's "explicitly deferred residue" clause is fulfilled by this filing.
 - [BUG-294 (archived)](./bug-294-user-deletion-cascade-inverts-subscription-lock-order.md) — its deadlock victims' redeliveries land on this same FK path when the deletion commits first.
 - [DEBT-449](../../debt/debt-449-webhook-event-ledger-lifecycle.md) — owns failed-event ledger retention/lifecycle; this bug is a deterministic producer of failed rows until fixed.
-- [DEBT-452](../../debt/debt-452-db-failure-observability.md) — the generic-`INTERNAL_ERROR` observability seam this classification would improve.
+- [DEBT-452](../debt/debt-452-db-failure-observability.md) — the generic-`INTERNAL_ERROR` observability seam this classification would improve.
 
 Filed at the 2026-07-14 wave-2 close as the deferred BUG-288 residue (per that doc's archival condition), with mechanics re-verified at source in the deployed tree.

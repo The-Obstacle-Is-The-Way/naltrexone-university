@@ -231,15 +231,19 @@ describe('DrizzleUserRepository', () => {
       await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
     });
 
-    it('maps unknown errors to INTERNAL_ERROR', async () => {
+    it('preserves unknown database errors as the INTERNAL_ERROR cause', async () => {
       const db = createDbMock();
-      db._mocks.insertReturning.mockRejectedValue(new Error('boom'));
+      const databaseError = new Error('boom');
+      db._mocks.insertReturning.mockRejectedValue(databaseError);
 
       const repo = new DrizzleUserRepository(db as unknown as RepoDb);
 
       const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
       await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+      await expect(promise).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        cause: databaseError,
+      });
     });
 
     it('returns a typed non-mutating conflict when another Clerk identity owns the email', async () => {

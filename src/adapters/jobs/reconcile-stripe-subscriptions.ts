@@ -9,6 +9,7 @@ import type {
   ReconcileStripeSubscriptionsOutput,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { mapWithConcurrencyLimit } from '@/src/adapters/shared/concurrency';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import { ApplicationError } from '@/src/application/errors';
 import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
 import { compareCanonicalSubscriptionCandidates } from '@/src/application/shared/subscription-canonicalization';
@@ -349,7 +350,7 @@ export async function reconcileStripeSubscriptions(
         deps.logger.error(
           {
             stripeSubscriptionId: row.stripeSubscriptionId,
-            error: message,
+            error: projectSafeErrorDiagnostics(error),
           },
           'Stripe subscription reconciliation failed',
         );
