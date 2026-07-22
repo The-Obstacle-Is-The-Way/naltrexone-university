@@ -1,4 +1,5 @@
 import { delay } from '@/src/adapters/shared/delay';
+import { toIdempotencyPublicError } from '@/src/adapters/shared/to-idempotency-public-error';
 import {
   ApplicationConflictReasons,
   ApplicationError,
@@ -7,7 +8,6 @@ import {
 import type { Logger, LoggerContext } from '@/src/application/ports/logger';
 import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
-  type IdempotencyKeyError,
   type IdempotencyKeyRepository,
 } from '@/src/application/ports/repositories';
 import { DAY_MS } from '@/src/domain/services';
@@ -40,18 +40,6 @@ function toErrorMessage(error: unknown): string {
   return message.length > ERROR_MESSAGE_LIMIT
     ? `${message.slice(0, ERROR_MESSAGE_LIMIT)}…`
     : message;
-}
-
-function toErrorRecord(error: unknown): IdempotencyKeyError {
-  if (isApplicationError(error)) {
-    return {
-      code: error.code,
-      message: error.message,
-      ...(error.details !== undefined ? { details: error.details } : {}),
-    };
-  }
-
-  return { code: 'INTERNAL_ERROR', message: toErrorMessage(error) };
 }
 
 function safeLogError(
@@ -204,7 +192,7 @@ export async function withIdempotency<T>(input: {
             action: input.action,
             key: input.key,
             claimedAt,
-            error: toErrorRecord(error),
+            error: toIdempotencyPublicError(error),
           });
         } catch (storeError) {
           safeLogError(
@@ -259,7 +247,7 @@ export async function withIdempotency<T>(input: {
               action: input.action,
               key: input.key,
               claimedAt,
-              error: toErrorRecord(outcomeError),
+              error: toIdempotencyPublicError(outcomeError),
             });
             safeLogError(
               input.logger,
@@ -318,7 +306,7 @@ export async function withIdempotency<T>(input: {
         throw new ApplicationError(
           existing.error.code,
           existing.error.message,
-          undefined,
+          existing.error.fieldErrors,
           existing.error.details
             ? { details: existing.error.details }
             : undefined,

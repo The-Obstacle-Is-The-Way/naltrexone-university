@@ -1,6 +1,6 @@
-import { ZodError, z } from 'zod';
 import { logger } from '@/lib/logger';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
+import { toIdempotencyPublicError } from '@/src/adapters/shared/to-idempotency-public-error';
 import type {
   ApplicationErrorCode,
   ApplicationErrorDetails,
@@ -49,20 +49,8 @@ export function handleError(
 ): ActionResult<never> {
   const errorLogger = options?.logger ?? logger;
 
-  if (isApplicationError(error)) {
-    return err(error.code, error.message, error.fieldErrors, error.details);
-  }
-
-  if (error instanceof ZodError) {
-    const flat = z.flattenError(error).fieldErrors;
-    const fieldErrors: Record<string, string[]> = {};
-    for (const [key, value] of Object.entries(flat)) {
-      if (Array.isArray(value)) fieldErrors[key] = value;
-    }
-    return err('VALIDATION_ERROR', 'Invalid input', fieldErrors);
-  }
-
   if (
+    !isApplicationError(error) &&
     !(
       typeof error === 'object' &&
       error !== null &&
@@ -75,5 +63,12 @@ export function handleError(
       'Unhandled error in controller',
     );
   }
-  return err('INTERNAL_ERROR', 'Internal error');
+
+  const publicError = toIdempotencyPublicError(error);
+  return err(
+    publicError.code,
+    publicError.message,
+    publicError.fieldErrors,
+    publicError.details,
+  );
 }

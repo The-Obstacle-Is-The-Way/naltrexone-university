@@ -3,6 +3,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { idempotencyKeys } from '@/db/schema';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import { PracticeSessionConflictReasons } from '@/src/application/errors';
+import { PUBLIC_ERROR_CODEC_CORPUS } from '@/tests/shared/idempotency-public-error-codec-corpus';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
   cleanupAfterEach,
@@ -77,7 +78,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
     await expect(repo.find(user.id, 'it', 'k2')).resolves.toMatchObject({
       resultJson: null,
-      error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       completedAt,
       expiresAt,
     });
@@ -107,6 +108,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       error: {
         code: 'CONFLICT',
         message: 'Practice session already ended',
+        fieldErrors: {
+          sessionId: ['Session is no longer active'],
+        },
         details: {
           reason: PracticeSessionConflictReasons.AlreadyEnded,
         },
@@ -118,6 +122,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       error: {
         code: 'CONFLICT',
         message: 'Practice session already ended',
+        fieldErrors: {
+          sessionId: ['Session is no longer active'],
+        },
         details: {
           reason: PracticeSessionConflictReasons.AlreadyEnded,
         },
@@ -125,6 +132,120 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       completedAt,
       expiresAt,
     });
+  });
+
+  it('matches the shared public-error codec corpus for Drizzle round trips', async () => {
+    const user = await createUser(db, cleanup);
+    const completedAt = new Date('2026-02-01T00:00:00.000Z');
+    const now = () => completedAt;
+    const repo = new DrizzleIdempotencyKeyRepository(db, now);
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+
+    for (const [index, corpusCase] of PUBLIC_ERROR_CODEC_CORPUS.entries()) {
+      const key = `codec-${index}`;
+      const claimedAt = await repo.claim({
+        userId: user.id,
+        action: 'it:codec',
+        key,
+        expiresAt,
+      });
+      if (!claimedAt) throw new Error(`Expected claim for ${corpusCase.name}`);
+
+      if (corpusCase.expected !== undefined) {
+        await Reflect.apply(repo.storeError, repo, [
+          {
+            userId: user.id,
+            action: 'it:codec',
+            key,
+            claimedAt,
+            error: corpusCase.input,
+          },
+        ]);
+        await expect(
+          repo.find(user.id, 'it:codec', key),
+        ).resolves.toMatchObject({ error: corpusCase.expected });
+        continue;
+      }
+
+      await expect(
+        Reflect.apply(repo.storeError, repo, [
+          {
+            userId: user.id,
+            action: 'it:codec',
+            key,
+            claimedAt,
+            error: corpusCase.input,
+          },
+        ]),
+      ).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        cause: expect.any(Error),
+      });
+
+      await expect(repo.find(user.id, 'it:codec', key)).resolves.toMatchObject({
+        error: null,
+        completedAt: null,
+      });
+    }
+  });
+
+  it('replays a legacy truncated diagnostic as Internal error', async () => {
+    const user = await createUser(db, cleanup);
+    const completedAt = new Date('2026-02-01T00:00:00.000Z');
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+    const legacyDiagnostic = `${'d'.repeat(999)}…`;
+    await db.insert(idempotencyKeys).values({
+      userId: user.id,
+      action: 'it:legacy-error',
+      key: 'legacy-diagnostic',
+      errorCode: 'INTERNAL_ERROR',
+      errorMessage: legacyDiagnostic,
+      completedAt,
+      expiresAt,
+    });
+    const repo = new DrizzleIdempotencyKeyRepository(db, () => completedAt);
+
+    await expect(
+      repo.find(user.id, 'it:legacy-error', 'legacy-diagnostic'),
+    ).resolves.toMatchObject({
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+    });
+  });
+
+  it('fails loudly on a corrupt cached error and preserves the completed row', async () => {
+    const user = await createUser(db, cleanup);
+    const completedAt = new Date('2026-02-01T00:00:00.000Z');
+    const expiresAt = new Date('2026-02-02T00:00:00.000Z');
+    await db.insert(idempotencyKeys).values({
+      userId: user.id,
+      action: 'it:corrupt-error',
+      key: 'invalid-details',
+      errorCode: 'CONFLICT',
+      errorMessage: 'Conflict',
+      errorDetails: { reason: 'unknown-reason' },
+      completedAt,
+      expiresAt,
+    });
+    const repo = new DrizzleIdempotencyKeyRepository(db, () => completedAt);
+
+    await expect(
+      repo.find(user.id, 'it:corrupt-error', 'invalid-details'),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: expect.any(Error),
+    });
+    await expect(
+      db
+        .select({ key: idempotencyKeys.key })
+        .from(idempotencyKeys)
+        .where(
+          and(
+            eq(idempotencyKeys.userId, user.id),
+            eq(idempotencyKeys.action, 'it:corrupt-error'),
+            eq(idempotencyKeys.key, 'invalid-details'),
+          ),
+        ),
+    ).resolves.toEqual([{ key: 'invalid-details' }]);
   });
 
   it('keeps completed null results distinguishable from pending rows', async () => {
@@ -479,7 +600,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
     await expect(repo.find(user.id, 'it', key)).resolves.toMatchObject({
       resultJson: null,
-      error: { code: 'INTERNAL_ERROR', message: 'first' },
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       completedAt: new Date('2026-02-01T00:00:05.000Z'),
     });
   });
@@ -553,7 +674,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
 
     await expect(repo.find(user.id, 'it', 'k-error')).resolves.toMatchObject({
       resultJson: null,
-      error: { code: 'INTERNAL_ERROR', message: 'boom' },
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       completedAt,
       expiresAt,
     });

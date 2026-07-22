@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PUBLIC_ERROR_CODEC_CORPUS } from '@/tests/shared/idempotency-public-error-codec-corpus';
 import { FakeIdempotencyKeyRepository } from './fake-idempotency-key-repository';
 
 type Clock = { now: Date };
@@ -115,7 +116,7 @@ describe('FakeIdempotencyKeyRepository', () => {
         repo.find(input.userId, input.action, input.key),
       ).resolves.toEqual({
         resultJson: null,
-        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
         completedAt: new Date('2026-03-01T00:00:06.000Z'),
         expiresAt,
       });
@@ -193,7 +194,7 @@ describe('FakeIdempotencyKeyRepository', () => {
         repo.find(input.userId, input.action, input.key),
       ).resolves.toEqual({
         resultJson: null,
-        error: { code: 'INTERNAL_ERROR', message: 'first' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
         completedAt: new Date('2026-03-01T00:00:05.000Z'),
         expiresAt,
       });
@@ -227,6 +228,50 @@ describe('FakeIdempotencyKeyRepository', () => {
         code: 'NOT_FOUND',
       });
     });
+
+    for (const corpusCase of PUBLIC_ERROR_CODEC_CORPUS) {
+      it(`matches the public-error codec corpus: ${corpusCase.name}`, async () => {
+        const clock = { now: new Date('2026-03-01T00:00:00.000Z') };
+        const repo = createRepo(clock);
+        const expiresAt = new Date('2026-03-01T01:00:00.000Z');
+        const input = createClaimInput(expiresAt);
+        const claimedAt = await repo.claim(input);
+        if (!claimedAt) throw new Error('Expected claim');
+
+        if (corpusCase.expected !== undefined) {
+          await Reflect.apply(repo.storeError, repo, [
+            { ...input, claimedAt, error: corpusCase.input },
+          ]);
+
+          await expect(
+            repo.find(input.userId, input.action, input.key),
+          ).resolves.toMatchObject({ error: corpusCase.expected });
+          return;
+        }
+
+        await expect(
+          Reflect.apply(repo.storeError, repo, [
+            { ...input, claimedAt, error: corpusCase.input },
+          ]),
+        ).rejects.toMatchObject({
+          code: 'INTERNAL_ERROR',
+          cause: expect.any(Error),
+        });
+
+        repo.seedRawErrorRecord({
+          ...input,
+          claimedAt,
+          completedAt: clock.now,
+          error: corpusCase.input,
+        });
+        await expect(
+          repo.find(input.userId, input.action, input.key),
+        ).rejects.toMatchObject({
+          code: 'INTERNAL_ERROR',
+          cause: expect.any(Error),
+        });
+      });
+    }
   });
 
   describe('abortClaim', () => {
@@ -436,7 +481,7 @@ describe('FakeIdempotencyKeyRepository', () => {
         repo.find(errorInput.userId, errorInput.action, errorInput.key),
       ).resolves.toMatchObject({
         resultJson: null,
-        error: { code: 'INTERNAL_ERROR', message: 'boom' },
+        error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
       });
     });
   });

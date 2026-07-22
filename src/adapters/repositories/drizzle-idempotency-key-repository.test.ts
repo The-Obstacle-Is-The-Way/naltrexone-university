@@ -272,6 +272,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           resultJson: null,
           errorCode: 'CONFLICT',
           errorMessage: 'Practice session already ended',
+          errorFieldErrors: {
+            sessionId: ['Session is no longer active'],
+          },
           errorDetails: {
             reason: PracticeSessionConflictReasons.AlreadyEnded,
           },
@@ -302,6 +305,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         error: {
           code: 'CONFLICT',
           message: 'Practice session already ended',
+          fieldErrors: {
+            sessionId: ['Session is no longer active'],
+          },
           details: {
             reason: PracticeSessionConflictReasons.AlreadyEnded,
           },
@@ -311,7 +317,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
       });
     });
 
-    it('drops invalid cached error details safely', async () => {
+    it('fails loudly with a cause when cached error details are invalid', async () => {
       const expiresAt = new Date('2026-02-08T01:00:00.000Z');
       const completedAt = new Date('2026-02-08T00:00:00.000Z');
       const selectWhere = vi.fn(async () => [
@@ -344,14 +350,9 @@ describe('DrizzleIdempotencyKeyRepository', () => {
           'question:submitAnswer',
           'idem-1',
         ),
-      ).resolves.toEqual({
-        resultJson: null,
-        error: {
-          code: 'CONFLICT',
-          message: 'Practice session already ended',
-        },
-        expiresAt,
-        completedAt,
+      ).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        cause: expect.any(Error),
       });
     });
 
@@ -523,6 +524,7 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         error: {
           code: 'INTERNAL_ERROR',
           message: 'unexpected failure',
+          fieldErrors: { sessionId: ['Session is no longer active'] },
           details: {
             reason: PracticeSessionConflictReasons.AlreadyEnded,
           },
@@ -533,7 +535,10 @@ describe('DrizzleIdempotencyKeyRepository', () => {
         expect.objectContaining({
           resultJson: null,
           errorCode: 'INTERNAL_ERROR',
-          errorMessage: 'unexpected failure',
+          errorMessage: 'Internal error',
+          errorFieldErrors: {
+            sessionId: ['Session is no longer active'],
+          },
           errorDetails: {
             reason: PracticeSessionConflictReasons.AlreadyEnded,
           },

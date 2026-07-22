@@ -203,7 +203,14 @@ describe('practice-controller', () => {
       ]);
       const deps = createDeps({
         rateLimiter,
-        setMarkThrows: new ApplicationError('NOT_FOUND', 'Question not found'),
+        setMarkThrows: new ApplicationError(
+          'CONFLICT',
+          'Practice session already ended',
+          { sessionId: ['Session is no longer active'] },
+          {
+            details: { reason: 'practice_session_already_ended' },
+          },
+        ),
       });
       const input = {
         sessionId: '11111111-1111-1111-1111-111111111111',
@@ -218,8 +225,10 @@ describe('practice-controller', () => {
       expect(first).toEqual({
         ok: false,
         error: {
-          code: 'NOT_FOUND',
-          message: 'Question not found',
+          code: 'CONFLICT',
+          message: 'Practice session already ended',
+          fieldErrors: { sessionId: ['Session is no longer active'] },
+          details: { reason: 'practice_session_already_ended' },
         },
       });
       expect(second).toEqual(first);

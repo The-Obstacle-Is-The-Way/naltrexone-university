@@ -301,6 +301,7 @@ export const idempotencyKeys = pgTable(
     resultJson: jsonb('result_json').$type<unknown>(),
     errorCode: varchar('error_code', { length: 255 }),
     errorMessage: text('error_message'),
+    errorFieldErrors: jsonb('error_field_errors').$type<unknown>(),
     errorDetails: jsonb('error_details').$type<unknown>(),
     claimedAt: timestamp('claimed_at', { withTimezone: true })
       .notNull()

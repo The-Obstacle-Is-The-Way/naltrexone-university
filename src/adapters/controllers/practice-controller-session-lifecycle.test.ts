@@ -825,5 +825,47 @@ describe('practice-controller', () => {
         },
       });
     });
+
+    it('replays identical field errors when keyed finalize output is invalid', async () => {
+      const invalidFinalizeOutput = {
+        sessionId: '22222222-2222-2222-2222-222222222222',
+        endedAt: '2026-02-01T00:00:00.000Z',
+        mode: 'exam',
+        questionCount: -1,
+        totals: {
+          answered: 2,
+          correct: 1,
+          accuracy: 0.5,
+          durationSeconds: 60,
+        },
+      } satisfies FinalizeExamAnswersOutput;
+      const rateLimiter = new FakeRateLimiter();
+      const deps = createDeps({
+        finalizeOutput: invalidFinalizeOutput,
+        rateLimiter,
+      });
+      const input = {
+        sessionId: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey: '22222222-2222-2222-2222-222222222222',
+      } as const;
+
+      const first = await finalizeExamAnswers(input, deps);
+      const second = await finalizeExamAnswers(input, deps);
+
+      expect(first).toEqual({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input',
+          fieldErrors: {
+            questionCount: ['Too small: expected number to be >=0'],
+            totals: ['answered must be <= questionCount'],
+          },
+        },
+      });
+      expect(second).toEqual(first);
+      expect(deps.finalizeExamAnswersUseCase.inputs).toHaveLength(1);
+      expect(rateLimiter.inputs).toHaveLength(1);
+    });
   });
 });

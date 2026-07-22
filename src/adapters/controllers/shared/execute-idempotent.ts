@@ -1,4 +1,4 @@
-import type { ZodType } from 'zod';
+import { ZodError, type ZodType } from 'zod';
 import {
   type IdempotencyOutcomeStoreFailurePolicy,
   withIdempotency,
@@ -61,7 +61,8 @@ export async function executeIdempotent<TOutput>({
     // JSON fallback. See docs/dev/deployment-procedure.md.
     parseResult: (value) => outputSchema.parse(value),
     ...(beforeExecute ? { beforeExecute } : {}),
-    ...(shouldCacheError ? { shouldCacheError } : {}),
+    shouldCacheError: (error) =>
+      error instanceof ZodError || shouldCacheError?.(error) !== false,
     ...(outcomeStoreFailurePolicy ? { outcomeStoreFailurePolicy } : {}),
     execute,
   });

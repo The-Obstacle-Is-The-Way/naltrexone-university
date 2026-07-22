@@ -1,4 +1,8 @@
-import { ApplicationError } from '@/src/application/errors';
+import {
+  ApplicationError,
+  decodeIdempotencyPublicError,
+  encodeIdempotencyPublicError,
+} from '@/src/application/errors';
 import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
   type IdempotencyKeyError,
@@ -8,7 +12,8 @@ import {
 
 type InMemoryIdempotencyRecord = {
   resultJson: unknown;
-  error: IdempotencyKeyError | null;
+  error: unknown;
+  hasStoredError: boolean;
   claimedAt: Date;
   completedAt: Date | null;
   expiresAt: Date;
@@ -44,7 +49,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
       const isExpired = existing.expiresAt.getTime() < now.getTime();
       const isZombie =
         existing.completedAt === null &&
-        existing.error === null &&
+        !existing.hasStoredError &&
         existing.claimedAt.getTime() < zombieCutoff.getTime();
       if (!isExpired && !isZombie) {
         return null;
@@ -54,6 +59,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     this.records.set(id, {
       resultJson: null,
       error: null,
+      hasStoredError: false,
       claimedAt: now,
       completedAt: null,
       expiresAt: input.expiresAt,
@@ -76,7 +82,9 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
 
     return {
       resultJson: existing.resultJson,
-      error: existing.error,
+      error: existing.hasStoredError
+        ? decodeIdempotencyPublicError(existing.error)
+        : null,
       completedAt: existing.completedAt,
       expiresAt: existing.expiresAt,
     };
@@ -103,6 +111,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
       ...existing,
       resultJson: input.resultJson,
       error: null,
+      hasStoredError: false,
       completedAt: this.now(),
     });
   }
@@ -127,8 +136,29 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
     this.records.set(id, {
       ...existing,
       resultJson: null,
-      error: input.error,
+      error: encodeIdempotencyPublicError(input.error),
+      hasStoredError: true,
       completedAt: this.now(),
+    });
+  }
+
+  /** Test-only corruption seam for exercising durable decoder behavior. */
+  seedRawErrorRecord(input: {
+    userId: string;
+    action: string;
+    key: string;
+    claimedAt: Date;
+    completedAt: Date;
+    expiresAt: Date;
+    error: unknown;
+  }): void {
+    this.records.set(this.toKey(input.userId, input.action, input.key), {
+      resultJson: null,
+      error: input.error,
+      hasStoredError: true,
+      claimedAt: input.claimedAt,
+      completedAt: input.completedAt,
+      expiresAt: input.expiresAt,
     });
   }
 
@@ -140,7 +170,7 @@ export class FakeIdempotencyKeyRepository implements IdempotencyKeyRepository {
   ): Promise<void> {
     const id = this.toKey(userId, action, key);
     const existing = this.records.get(id);
-    if (!existing || existing.completedAt !== null || existing.error !== null) {
+    if (!existing || existing.completedAt !== null || existing.hasStoredError) {
       return;
     }
     if (existing.claimedAt.getTime() !== claimedAt.getTime()) {
