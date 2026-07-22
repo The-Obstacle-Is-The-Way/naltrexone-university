@@ -15,30 +15,61 @@ export type SafeErrorDiagnostics = Readonly<{
   constraint?: string;
 }>;
 
+function safelyInspect<T>(inspect: () => T): T | null {
+  try {
+    return inspect();
+  } catch {
+    // Hostile error objects must not turn diagnostics into a second failure.
+    return null;
+  }
+}
+
 function getErrorClassName(value: object): string | null {
-  if (!(value instanceof Error)) return null;
-  const name = value.constructor.name;
-  return ERROR_CLASS_PATTERN.test(name) ? name : null;
+  return safelyInspect(() => {
+    if (!(value instanceof Error)) return null;
+    const name = value.constructor.name;
+    return ERROR_CLASS_PATTERN.test(name) ? name : null;
+  });
+}
+
+function getApplicationErrorCode(value: object): ApplicationErrorCode | null {
+  return safelyInspect(() => (isApplicationError(value) ? value.code : null));
 }
 
 function getSqlState(value: object): string | null {
-  if (!('code' in value)) return null;
-  const code = (value as { code?: unknown }).code;
-  return typeof code === 'string' && SQLSTATE_PATTERN.test(code) ? code : null;
+  return safelyInspect(() => {
+    if (!('code' in value)) return null;
+    const code = (value as { code?: unknown }).code;
+    return typeof code === 'string' && SQLSTATE_PATTERN.test(code)
+      ? code
+      : null;
+  });
 }
 
 function getConstraint(value: object): string | null {
   const candidate =
-    ('constraint' in value
-      ? (value as { constraint?: unknown }).constraint
-      : undefined) ??
-    ('constraint_name' in value
-      ? (value as { constraint_name?: unknown }).constraint_name
-      : undefined);
+    safelyInspect(() =>
+      'constraint' in value
+        ? (value as { constraint?: unknown }).constraint
+        : undefined,
+    ) ??
+    safelyInspect(() =>
+      'constraint_name' in value
+        ? (value as { constraint_name?: unknown }).constraint_name
+        : undefined,
+    );
   return typeof candidate === 'string' &&
     POSTGRES_IDENTIFIER_PATTERN.test(candidate)
     ? candidate
     : null;
+}
+
+function getCause(value: object): { found: boolean; value?: unknown } | null {
+  return safelyInspect(() =>
+    'cause' in value
+      ? { found: true, value: (value as { cause?: unknown }).cause }
+      : { found: false },
+  );
 }
 
 export function projectSafeErrorDiagnostics(
@@ -54,12 +85,13 @@ export function projectSafeErrorDiagnostics(
     if (!current || typeof current !== 'object') break;
 
     name ??= getErrorClassName(current);
-    if (!code && isApplicationError(current)) code = current.code;
+    code ??= getApplicationErrorCode(current);
     sqlState ??= getSqlState(current);
     constraint ??= getConstraint(current);
 
-    if (!('cause' in current)) break;
-    current = (current as { cause?: unknown }).cause;
+    const cause = getCause(current);
+    if (!cause?.found) break;
+    current = cause.value;
   }
 
   return {

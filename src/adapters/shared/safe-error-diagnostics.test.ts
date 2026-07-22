@@ -89,4 +89,56 @@ describe('projectSafeErrorDiagnostics', () => {
 
     expect(projectSafeErrorDiagnostics(causeChain)).toEqual({});
   });
+
+  it('does not throw when error proxy traps reject diagnostic reads', () => {
+    const hostileError = new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('raw get trap failure');
+        },
+        getPrototypeOf() {
+          throw new Error('raw prototype trap failure');
+        },
+        has() {
+          throw new Error('raw has trap failure');
+        },
+      },
+    );
+
+    expect(() => projectSafeErrorDiagnostics(hostileError)).not.toThrow();
+    expect(projectSafeErrorDiagnostics(hostileError)).toEqual({});
+  });
+
+  it('keeps safe fields available when other error accessors throw', () => {
+    const hostileError = new Error('raw hostile message');
+    Object.defineProperties(hostileError, {
+      cause: {
+        get() {
+          throw new Error('raw cause accessor failure');
+        },
+      },
+      code: {
+        get() {
+          throw new Error('raw code accessor failure');
+        },
+      },
+      constraint: {
+        get() {
+          throw new Error('raw constraint accessor failure');
+        },
+      },
+      constraint_name: { value: 'safe_constraint_name' },
+      constructor: {
+        get() {
+          throw new Error('raw constructor accessor failure');
+        },
+      },
+    });
+
+    expect(() => projectSafeErrorDiagnostics(hostileError)).not.toThrow();
+    expect(projectSafeErrorDiagnostics(hostileError)).toEqual({
+      constraint: 'safe_constraint_name',
+    });
+  });
 });
