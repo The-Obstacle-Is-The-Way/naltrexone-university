@@ -92,19 +92,13 @@ export class DrizzlePracticeSessionRepository
     rows: readonly PracticeSessionQuestionStateRow[],
   ): PracticeSessionQuestionState[] {
     if (rows.length > params.questionIds.length) {
-      throw new CorruptPracticeSessionRowError(
-        new ApplicationError(
-          'INTERNAL_ERROR',
-          `Practice session ${sessionId} has inconsistent normalized question state`,
-        ),
+      this.corruptRow(
+        `Practice session ${sessionId} has inconsistent normalized question state`,
       );
     }
     if (rows.length < params.questionIds.length) {
-      throw new CorruptPracticeSessionRowError(
-        new ApplicationError(
-          'INTERNAL_ERROR',
-          `Practice session ${sessionId} is missing normalized question state`,
-        ),
+      this.corruptRow(
+        `Practice session ${sessionId} is missing normalized question state`,
       );
     }
 
@@ -112,11 +106,8 @@ export class DrizzlePracticeSessionRepository
     return params.questionIds.map((questionId, position) => {
       const row = rowsByQuestionId.get(questionId);
       if (!row || row.position !== position) {
-        throw new CorruptPracticeSessionRowError(
-          new ApplicationError(
-            'INTERNAL_ERROR',
-            `Practice session ${sessionId} is missing normalized question state`,
-          ),
+        this.corruptRow(
+          `Practice session ${sessionId} is missing normalized question state`,
         );
       }
       return toDomainQuestionState(row);
@@ -130,19 +121,13 @@ export class DrizzlePracticeSessionRepository
     actualPositions: readonly number[];
   }): void {
     if (input.actualQuestionIds.length > input.expectedQuestionIds.length) {
-      throw new CorruptPracticeSessionRowError(
-        new ApplicationError(
-          'INTERNAL_ERROR',
-          `Practice session ${input.sessionId} has inconsistent normalized question state`,
-        ),
+      this.corruptRow(
+        `Practice session ${input.sessionId} has inconsistent normalized question state`,
       );
     }
     if (input.actualQuestionIds.length < input.expectedQuestionIds.length) {
-      throw new CorruptPracticeSessionRowError(
-        new ApplicationError(
-          'INTERNAL_ERROR',
-          `Practice session ${input.sessionId} is missing normalized question state`,
-        ),
+      this.corruptRow(
+        `Practice session ${input.sessionId} is missing normalized question state`,
       );
     }
     if (
@@ -152,13 +137,16 @@ export class DrizzlePracticeSessionRepository
           input.actualPositions[position] !== position,
       )
     ) {
-      throw new CorruptPracticeSessionRowError(
-        new ApplicationError(
-          'INTERNAL_ERROR',
-          `Practice session ${input.sessionId} is missing normalized question state`,
-        ),
+      this.corruptRow(
+        `Practice session ${input.sessionId} is missing normalized question state`,
       );
     }
+  }
+
+  private corruptRow(message: string): never {
+    throw new CorruptPracticeSessionRowError(
+      new ApplicationError('INTERNAL_ERROR', message),
+    );
   }
 
   private async loadQuestionStateRowsBySessionIds(
@@ -515,11 +503,8 @@ export class DrizzlePracticeSessionRepository
               actualPositions: row.orderedPositions,
             });
             if (row.endedAt === null) {
-              throw new CorruptPracticeSessionRowError(
-                new ApplicationError(
-                  'INTERNAL_ERROR',
-                  `Completed practice session ${row.id} is missing ended_at`,
-                ),
+              this.corruptRow(
+                `Completed practice session ${row.id} is missing ended_at`,
               );
             }
             summaries.push({
