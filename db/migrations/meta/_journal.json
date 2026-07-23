@@ -218,6 +218,13 @@
       "when": 1783955965428,
       "tag": "0030_nasty_forge",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1784730362410,
+      "tag": "0031_crazy_toad",
+      "breakpoints": true
     }
   ]
 }

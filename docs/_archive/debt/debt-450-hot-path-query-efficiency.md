@@ -1,9 +1,10 @@
 # DEBT-450: Hot-Path Query Efficiency — Finalize Statement Amplification, History/Bookmark Over-Hydration, Lifetime Counts, and Duplicate Window Ranking
 
-**Status:** Open
+**Status:** Deferred / resolved in part
 **Priority:** P3
 **Date:** 2026-07-09
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
+**FW-4 disposition:** 2026-07-22 — Parts 2 and 3a are resolved with the consumer-shaped history summary and relation-free/IDs-only/existence bookmark reads. Parts 1, 3b, 4, and 5 remain **PARKED** behind their named finalize latency/statement, bookmark census/latency, dashboard aggregate, and attempted-question rank/plan triggers; no parked query, pagination, or index work shipped. Re-verified against `456023e3b9c07edf774d48f10c361e7556e70ec6` before this disposition.
 
 ---
 

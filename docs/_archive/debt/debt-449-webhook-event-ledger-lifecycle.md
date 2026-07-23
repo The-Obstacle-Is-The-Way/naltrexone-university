@@ -1,9 +1,10 @@
 # DEBT-449: Webhook Event-Ledger Lifecycle — Partial/Asymmetric Retention and Cron Completion-Bookkeeping Gap
 
-**Status:** Open
+**Status:** Deferred / resolved in part
 **Priority:** P4
 **Date:** 2026-07-09
 **2026-07-18 staleness audit:** Stale but real against `ddad8eee`. The account-deletion obligation is customer cleanup, and the drain is bounded to 25 rows × 3 pages with `hasMore`; the physical `pending_stripe_cancellations` table name remains intentional residue. The event-retention and completion-bookkeeping gaps remain.
+**FW-4 disposition:** 2026-07-22 — Parts 1a and 2 are resolved: the four distinct ledger/cleanup policies are documented beside the shared prune constant and Stripe controller, and successful daily-drain recovery now deletes the pending row and marks its Clerk event processed in one transaction. Part 1b remains **PARKED** behind its exact two-consecutive-month production census/size/provider-impact trigger, and any revived prune must exclude events with pending children. Re-verified against `456023e3b9c07edf774d48f10c361e7556e70ec6` before this disposition.
 
 ---
 

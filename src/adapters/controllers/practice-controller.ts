@@ -3,6 +3,7 @@
 // WHY large-file: this controller is the server-action facade for the practice use-case cluster; splitting it would hide shared auth/rate-limit/action-result conventions.
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import {
+  EXAM_DRAFT_SAVE_RATE_LIMIT,
   PRACTICE_SESSION_MUTATION_RATE_LIMIT,
   START_PRACTICE_SESSION_RATE_LIMIT,
 } from '@/src/adapters/shared/rate-limits';
@@ -180,6 +181,39 @@ function serializeSaveExamDraftAnswerOutput(
   };
 }
 
+async function enforceRateLimit(input: {
+  rateLimiter: RateLimiter;
+  key: string;
+  policy: { readonly limit: number; readonly windowMs: number };
+  message: (retryAfterSeconds: number) => string;
+}): Promise<void> {
+  const rate = await input.rateLimiter.limit({
+    key: input.key,
+    ...input.policy,
+  });
+  if (!rate.success) {
+    throw new ApplicationError(
+      'RATE_LIMITED',
+      input.message(rate.retryAfterSeconds),
+    );
+  }
+}
+
+function mutationBeforeExecute(
+  action: string,
+  userId: string,
+  deps: Pick<PracticeControllerDeps, 'rateLimiter'>,
+): () => Promise<void> {
+  return () =>
+    enforceRateLimit({
+      rateLimiter: deps.rateLimiter,
+      key: `${action}:${userId}`,
+      policy: PRACTICE_SESSION_MUTATION_RATE_LIMIT,
+      message: (retryAfterSeconds) =>
+        `Too many session mutations. Try again in ${retryAfterSeconds}s.`,
+    });
+}
+
 export const startPracticeSession = createAction({
   schema: StartPracticeSessionInputSchema,
   getDeps,
@@ -200,26 +234,20 @@ export const startPracticeSession = createAction({
       });
     }
 
-    async function enforceStartRateLimit(): Promise<void> {
-      const rate = await d.rateLimiter.limit({
-        key: `${IdempotentActionNames.StartPracticeSession}:${userId}`,
-        ...START_PRACTICE_SESSION_RATE_LIMIT,
-      });
-      if (!rate.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many session starts. Try again in ${rate.retryAfterSeconds}s.`,
-        );
-      }
-    }
-
     return executeIdempotent({
       d,
       userId,
       action: IdempotentActionNames.StartPracticeSession,
       idempotencyKey,
       outputSchema: StartPracticeSessionOutputSchema,
-      beforeExecute: enforceStartRateLimit,
+      beforeExecute: () =>
+        enforceRateLimit({
+          rateLimiter: d.rateLimiter,
+          key: `${IdempotentActionNames.StartPracticeSession}:${userId}`,
+          policy: START_PRACTICE_SESSION_RATE_LIMIT,
+          message: (retryAfterSeconds) =>
+            `Too many session starts. Try again in ${retryAfterSeconds}s.`,
+        }),
       // Abort claims for transient failures so the client's preserved key
       // re-executes instead of replaying a poisoned error; cache only the
       // determinate outcomes in the start policy's vetted set.
@@ -285,6 +313,11 @@ export const endPracticeSession = createAction({
       action: 'practice:endPracticeSession',
       idempotencyKey,
       outputSchema: EndPracticeSessionOutputSchema,
+      beforeExecute: mutationBeforeExecute(
+        'practice:endPracticeSession',
+        userId,
+        d,
+      ),
       shouldCacheError: shouldCachePracticeSessionLifecycleError,
       execute: () =>
         d.endPracticeSessionUseCase.execute({
@@ -303,26 +336,17 @@ export const discardPracticeSession = createAction({
 
     const { sessionId, idempotencyKey } = input;
 
-    async function enforceSessionMutationRateLimit(): Promise<void> {
-      const rate = await d.rateLimiter.limit({
-        key: `practice:discardPracticeSession:${userId}`,
-        ...PRACTICE_SESSION_MUTATION_RATE_LIMIT,
-      });
-      if (!rate.success) {
-        throw new ApplicationError(
-          'RATE_LIMITED',
-          `Too many session mutations. Try again in ${rate.retryAfterSeconds}s.`,
-        );
-      }
-    }
-
     return executeIdempotent({
       d,
       userId,
       action: 'practice:discardPracticeSession',
       idempotencyKey,
       outputSchema: DiscardPracticeSessionOutputSchema,
-      beforeExecute: enforceSessionMutationRateLimit,
+      beforeExecute: mutationBeforeExecute(
+        'practice:discardPracticeSession',
+        userId,
+        d,
+      ),
       shouldCacheError: shouldCachePracticeSessionLifecycleError,
       execute: () =>
         d.discardPracticeSessionUseCase.execute({
@@ -357,6 +381,11 @@ export const finalizeExamAnswers = createAction({
       action: 'practice:finalizeExamAnswers',
       idempotencyKey,
       outputSchema: FinalizeExamAnswersOutputSchema,
+      beforeExecute: mutationBeforeExecute(
+        'practice:finalizeExamAnswers',
+        userId,
+        d,
+      ),
       shouldCacheError: shouldCachePracticeSessionStateWriteError,
       execute: finalizeExam,
     });
@@ -380,6 +409,14 @@ export const saveExamDraftAnswer = createAction({
   getDeps,
   execute: async (input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
+
+    await enforceRateLimit({
+      rateLimiter: d.rateLimiter,
+      key: `practice:saveExamDraftAnswer:${userId}`,
+      policy: EXAM_DRAFT_SAVE_RATE_LIMIT,
+      message: (retryAfterSeconds) =>
+        `Too many exam draft saves. Try again in ${retryAfterSeconds}s.`,
+    });
 
     const output = await d.saveExamDraftAnswerUseCase.execute({
       userId,
@@ -430,13 +467,15 @@ export const setPracticeSessionQuestionMark = createAction({
     const userId = await requireEntitledUserId(d, meta);
 
     const { sessionId, questionId, markedForReview, idempotencyKey } = input;
+    const action = IdempotentActionNames.QuestionMark;
 
     return executeIdempotent({
       d,
       userId,
-      action: IdempotentActionNames.QuestionMark,
+      action,
       idempotencyKey,
       outputSchema: SetPracticeSessionQuestionMarkOutputSchema,
+      beforeExecute: mutationBeforeExecute(action, userId, d),
       shouldCacheError: shouldCacheQuestionMarkError,
       execute: () =>
         d.setPracticeSessionQuestionMarkUseCase.execute({

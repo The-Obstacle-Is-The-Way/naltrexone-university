@@ -268,6 +268,15 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
       {
         pendingStripeCustomerCleanups:
           container.createPendingStripeCustomerCleanupRepository(),
+        completePendingStripeCustomerCleanup: (eventId) =>
+          container.db.transaction(async (tx) => {
+            await container
+              .createPendingStripeCustomerCleanupRepository(tx)
+              .deleteByEventId(eventId);
+            await container
+              .createClerkEventRepository(tx)
+              .markProcessed(eventId);
+          }),
         deleteStripeCustomer: (stripeCustomerId) =>
           deleteStripeCustomer(
             container.stripe,

@@ -29,7 +29,7 @@ describe('withIdempotency abortClaim race safety', () => {
     await expect(withIdempotency(input)).rejects.toBe('plain failure');
     await expect(withIdempotency(input)).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
-      message: 'plain failure',
+      message: 'Internal error',
     });
     expect(execute).toHaveBeenCalledTimes(1);
   });

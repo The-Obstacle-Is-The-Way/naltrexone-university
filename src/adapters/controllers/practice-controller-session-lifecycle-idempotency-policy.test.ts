@@ -57,8 +57,9 @@ describe('practice-controller lifecycle idempotency policy', () => {
     const first = await endPracticeSession(input, deps);
     expect(first).toMatchObject({
       ok: false,
-      error: { code: 'INTERNAL_ERROR', message: 'connection reset' },
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
     });
+    expect(JSON.stringify(first)).not.toContain('connection reset');
 
     const second = await endPracticeSession(input, deps);
     expect(second).toEqual({ ok: true, data: endOutput });
@@ -165,8 +166,9 @@ describe('practice-controller lifecycle idempotency policy', () => {
 
     expect(first).toEqual({
       ok: false,
-      error: { code: 'INTERNAL_ERROR', message: 'deadlock victim' },
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
     });
+    expect(JSON.stringify(first)).not.toContain('deadlock victim');
     expect(second).toEqual({ ok: true, data: { discarded: true } });
     expect(discardUseCase.inputs).toHaveLength(2);
     expect((deps.rateLimiter as FakeRateLimiter).inputs).toHaveLength(2);

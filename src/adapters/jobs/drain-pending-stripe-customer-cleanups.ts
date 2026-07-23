@@ -13,6 +13,7 @@ type DrainPendingStripeCustomerCleanupsInput = {
 
 type DrainPendingStripeCustomerCleanupsDeps = {
   pendingStripeCustomerCleanups: PendingStripeCustomerCleanupRepository;
+  completePendingStripeCustomerCleanup: (eventId: string) => Promise<void>;
   deleteStripeCustomer: (stripeCustomerId: string) => Promise<void>;
   logger: Logger;
 };
@@ -104,7 +105,7 @@ export async function drainPendingStripeCustomerCleanups(
     for (const row of pendingRows) {
       try {
         await deps.deleteStripeCustomer(row.stripeCustomerId);
-        await deps.pendingStripeCustomerCleanups.deleteByEventId(row.eventId);
+        await deps.completePendingStripeCustomerCleanup(row.eventId);
         drained += 1;
       } catch (error) {
         const message = toErrorMessage(error);

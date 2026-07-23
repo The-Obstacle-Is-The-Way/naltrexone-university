@@ -56,6 +56,15 @@ Configuration:
 - **Max wait:** 2 seconds — how long a duplicate request polls before timing out.
 - **Poll interval:** 50ms — polling frequency for concurrent request resolution.
 
+The keyed request path remains the cleanup owner: before claiming a key,
+`withIdempotency` invokes `pruneExpiredBefore` as best-effort, warn-visible,
+fail-open work. The repository performs that prune as one bounded statement:
+a `WITH candidates` selection ordered by `expires_at` and the composite primary
+key, `FOR UPDATE SKIP LOCKED`, followed by `DELETE ... USING candidates ...
+RETURNING`. The delete joins on `(user_id, action, key)` and retains the
+`expires_at < cutoff` guard. The prune method does not open an explicit
+select-then-delete transaction.
+
 ### 3. Client-Side Key Generation
 
 Controllers accept an optional `idempotencyKey` (UUID) from the client when replaying the prior successful result is semantically correct for that operation. For duplicate-sensitive actions such as practice session start, answer submission, bookmark toggle, and checkout creation, the UI generates a client UUID for the logical action and reuses it on retry. This ensures:

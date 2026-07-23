@@ -67,6 +67,9 @@ export function createControllerFactories(input: {
       checkEntitlementUseCase: useCases.createCheckEntitlementUseCase(),
       setBookmarkUseCase: useCases.createSetBookmarkUseCase(),
       getBookmarksUseCase: useCases.createGetBookmarksUseCase(),
+      getBookmarkQuestionIdsUseCase:
+        useCases.createGetBookmarkQuestionIdsUseCase(),
+      getBookmarkStatusUseCase: useCases.createGetBookmarkStatusUseCase(),
       now: primitives.now,
     }),
     createQuestionFeedbackControllerDeps: () => ({

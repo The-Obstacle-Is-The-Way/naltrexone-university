@@ -423,7 +423,9 @@ describe('practice-controller', () => {
     });
 
     it('returns the cached summary when idempotencyKey is reused', async () => {
+      const rateLimiter = new FakeRateLimiter();
       const deps = createDeps({
+        rateLimiter,
         endOutput: {
           sessionId: '22222222-2222-2222-2222-222222222222',
           endedAt: '2026-02-01T00:00:00.000Z',
@@ -463,6 +465,7 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.endPracticeSessionUseCase.inputs).toHaveLength(1);
+      expect(rateLimiter.inputs).toHaveLength(1);
     });
   });
 
@@ -688,7 +691,9 @@ describe('practice-controller', () => {
     });
 
     it('returns the cached summary when idempotencyKey is reused', async () => {
+      const rateLimiter = new FakeRateLimiter();
       const deps = createDeps({
+        rateLimiter,
         finalizeOutput: {
           sessionId: '22222222-2222-2222-2222-222222222222',
           endedAt: '2026-02-01T00:00:00.000Z',
@@ -728,6 +733,7 @@ describe('practice-controller', () => {
       });
       expect(second).toEqual(first);
       expect(deps.finalizeExamAnswersUseCase.inputs).toHaveLength(1);
+      expect(rateLimiter.inputs).toHaveLength(1);
     });
 
     it('returns VALIDATION_ERROR when finalize output is invalid without idempotency', async () => {

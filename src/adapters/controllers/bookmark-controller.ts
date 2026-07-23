@@ -6,6 +6,10 @@ import { BOOKMARK_MUTATION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits'
 import { zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
+  GetBookmarkQuestionIdsInput,
+  GetBookmarkQuestionIdsOutput,
+  GetBookmarkStatusInput,
+  GetBookmarkStatusOutput,
   GetBookmarksInput,
   GetBookmarksOutput,
 } from '@/src/application/ports/bookmarks';
@@ -37,6 +41,8 @@ const SetBookmarkInputSchema = z
   .strict();
 
 const GetBookmarksInputSchema = z.object({}).strict();
+const GetBookmarkQuestionIdsInputSchema = z.object({}).strict();
+const GetBookmarkStatusInputSchema = z.object({ questionId: zUuid }).strict();
 
 const SetBookmarkOutputSchema = z
   .object({
@@ -46,6 +52,8 @@ const SetBookmarkOutputSchema = z
 
 export type {
   BookmarkRow,
+  GetBookmarkQuestionIdsOutput,
+  GetBookmarkStatusOutput,
   GetBookmarksOutput,
 } from '@/src/application/ports/bookmarks';
 
@@ -62,6 +70,16 @@ export type BookmarkControllerDeps = {
   };
   getBookmarksUseCase: {
     execute: (input: GetBookmarksInput) => Promise<GetBookmarksOutput>;
+  };
+  getBookmarkQuestionIdsUseCase: {
+    execute: (
+      input: GetBookmarkQuestionIdsInput,
+    ) => Promise<GetBookmarkQuestionIdsOutput>;
+  };
+  getBookmarkStatusUseCase: {
+    execute: (
+      input: GetBookmarkStatusInput,
+    ) => Promise<GetBookmarkStatusOutput>;
   };
   now: () => Date;
 };
@@ -123,5 +141,26 @@ export const getBookmarks = createAction({
   execute: async (_input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
     return d.getBookmarksUseCase.execute({ userId });
+  },
+});
+
+export const getBookmarkQuestionIds = createAction({
+  schema: GetBookmarkQuestionIdsInputSchema,
+  getDeps,
+  execute: async (_input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
+    return d.getBookmarkQuestionIdsUseCase.execute({ userId });
+  },
+});
+
+export const getBookmarkStatus = createAction({
+  schema: GetBookmarkStatusInputSchema,
+  getDeps,
+  execute: async (input, d, meta) => {
+    const userId = await requireEntitledUserId(d, meta);
+    return d.getBookmarkStatusUseCase.execute({
+      userId,
+      questionId: input.questionId,
+    });
   },
 });

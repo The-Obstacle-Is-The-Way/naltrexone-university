@@ -1,13 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApplicationError } from '@/src/application/errors';
-import {
-  createPracticeSession,
-  createQuestion,
-} from '@/src/domain/test-helpers';
-import {
-  FakePracticeSessionRepository,
-  FakeQuestionRepository,
-} from '../test-helpers/fakes';
+import { createPracticeSession } from '@/src/domain/test-helpers';
+import { FakePracticeSessionRepository } from '../test-helpers/fakes';
 import { EndPracticeSessionUseCase } from './end-practice-session';
 import { GetSessionHistoryUseCase } from './get-session-history';
 
@@ -139,20 +133,13 @@ describe('EndPracticeSessionUseCase', () => {
         endedAt: null,
       }),
     ]);
-    const sessionsForHistory = new FakePracticeSessionRepository([
-      completedTutorSession,
-    ]);
-    const questions = new FakeQuestionRepository([
-      createQuestion({ id: 'q1', slug: 'q-1' }),
-      createQuestion({ id: 'q2', slug: 'q-2' }),
-      createQuestion({ id: 'q3', slug: 'q-3' }),
-    ]);
+    const sessionsForHistory = new FakePracticeSessionRepository(
+      [completedTutorSession],
+      { publishedQuestionSlugsById: new Map([['q1', 'q-1']]) },
+    );
 
     const endUseCase = new EndPracticeSessionUseCase(sessionsForEnd);
-    const historyUseCase = new GetSessionHistoryUseCase(
-      sessionsForHistory,
-      questions,
-    );
+    const historyUseCase = new GetSessionHistoryUseCase(sessionsForHistory);
 
     const endResult = await endUseCase.execute({
       userId: 'user-1',

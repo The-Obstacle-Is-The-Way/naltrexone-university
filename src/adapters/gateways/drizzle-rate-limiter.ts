@@ -1,4 +1,4 @@
-import { and, asc, eq, lt, or, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { rateLimits } from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -7,11 +7,12 @@ import type {
   RateLimitResult,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
-import { DAY_MS, MS_PER_SECOND } from '@/src/domain/services';
+import { MS_PER_SECOND } from '@/src/domain/services';
 import type { DrizzleDb } from '../shared/database-types';
 import { PRUNE_BATCH_LIMIT } from '../shared/prune-constants';
+import { ONE_MINUTE_MS } from '../shared/rate-limits';
 
-const PRUNE_RETENTION_DAYS = 90;
+const RATE_LIMIT_WINDOW_RETENTION_TARGET_MS = 1_440 * ONE_MINUTE_MS;
 const NOOP_LOGGER: Logger = {
   debug: () => undefined,
   info: () => undefined,
@@ -74,9 +75,9 @@ export class DrizzleRateLimiter implements RateLimiter {
     const remaining = Math.max(0, input.limit - count);
 
     if (count === 1) {
-      // Best-effort cleanup so stale windows do not accumulate forever.
-      // Pruning failures must not block request handling.
-      const cutoff = new Date(nowMs - PRUNE_RETENTION_DAYS * DAY_MS);
+      // This target is not a hard maximum row age: cleanup is trigger-driven,
+      // batch-limited, and fail-open, so an older backlog can remain.
+      const cutoff = new Date(nowMs - RATE_LIMIT_WINDOW_RETENTION_TARGET_MS);
       try {
         await this.pruneExpiredWindows(cutoff, PRUNE_BATCH_LIMIT);
       } catch (error) {
@@ -103,32 +104,25 @@ export class DrizzleRateLimiter implements RateLimiter {
   async pruneExpiredWindows(before: Date, limit: number): Promise<number> {
     if (!Number.isInteger(limit) || limit <= 0) return 0;
 
-    return this.db.transaction(async (tx) => {
-      const rows = await tx
-        .select({
-          key: rateLimits.key,
-          windowStart: rateLimits.windowStart,
-        })
-        .from(rateLimits)
-        .where(lt(rateLimits.windowStart, before))
-        .orderBy(asc(rateLimits.windowStart))
-        .limit(limit);
+    const cutoffParam = sql.param(before, rateLimits.windowStart);
+    const deleted = await this.db.execute<{ deleted: number }>(sql`
+      WITH candidates AS (
+        SELECT
+          ${rateLimits.windowStart} AS window_start,
+          ${rateLimits.key} AS key
+        FROM ${rateLimits}
+        WHERE ${rateLimits.windowStart} < ${cutoffParam}
+        ORDER BY ${rateLimits.windowStart}, ${rateLimits.key}
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      DELETE FROM ${rateLimits}
+      USING candidates
+      WHERE ${rateLimits.windowStart} = candidates.window_start
+        AND ${rateLimits.key} = candidates.key
+      RETURNING 1 AS deleted
+    `);
 
-      if (rows.length === 0) return 0;
-
-      const conditions = rows.map((row) =>
-        and(
-          eq(rateLimits.key, row.key),
-          eq(rateLimits.windowStart, row.windowStart),
-        ),
-      );
-
-      const deleted = await tx
-        .delete(rateLimits)
-        .where(or(...conditions))
-        .returning({ key: rateLimits.key });
-
-      return deleted.length;
-    });
+    return deleted.length;
   }
 }

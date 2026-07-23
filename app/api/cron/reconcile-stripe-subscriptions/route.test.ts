@@ -76,12 +76,18 @@ type CronContainer = {
   };
   createStripeCustomerRepository: ReturnType<typeof vi.fn>;
   createSubscriptionRepository: ReturnType<typeof vi.fn>;
+  createClerkEventRepository: ReturnType<typeof vi.fn>;
   createPendingStripeCustomerCleanupRepository: ReturnType<typeof vi.fn>;
 };
 
 function createMockContainer(): CronContainer {
   const rateLimiter = new FakeRateLimiter();
-  const pendingStripeCustomerCleanupRepository = {};
+  const pendingStripeCustomerCleanupRepository = {
+    deleteByEventId: vi.fn(async () => undefined),
+  };
+  const clerkEventRepository = {
+    markProcessed: vi.fn(async () => undefined),
+  };
 
   return {
     env: {
@@ -107,6 +113,7 @@ function createMockContainer(): CronContainer {
     },
     createStripeCustomerRepository: vi.fn(),
     createSubscriptionRepository: vi.fn(),
+    createClerkEventRepository: vi.fn(() => clerkEventRepository),
     createPendingStripeCustomerCleanupRepository: vi.fn(
       () => pendingStripeCustomerCleanupRepository,
     ),
@@ -895,5 +902,27 @@ describe('GET /api/cron/reconcile-stripe-subscriptions', () => {
         'cus_123',
       ),
     ).resolves.toBeUndefined();
+
+    await expect(
+      drainPendingStripeCustomerCleanups.mock.calls[0]?.[1].completePendingStripeCustomerCleanup(
+        'evt_123',
+      ),
+    ).resolves.toBeUndefined();
+    const pendingTransaction =
+      container.createPendingStripeCustomerCleanupRepository.mock.calls.at(
+        -1,
+      )?.[0];
+    const clerkTransaction =
+      container.createClerkEventRepository.mock.calls.at(-1)?.[0];
+    expect(pendingTransaction).toBeDefined();
+    expect(clerkTransaction).toBe(pendingTransaction);
+    expect(
+      container.createPendingStripeCustomerCleanupRepository.mock.results.at(-1)
+        ?.value.deleteByEventId,
+    ).toHaveBeenCalledWith('evt_123');
+    expect(
+      container.createClerkEventRepository.mock.results.at(-1)?.value
+        .markProcessed,
+    ).toHaveBeenCalledWith('evt_123');
   });
 });

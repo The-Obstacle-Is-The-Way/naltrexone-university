@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type { GetBookmarksOutput } from '@/src/application/ports/bookmarks';
+import type { GetBookmarkStatusOutput } from '@/src/application/ports/bookmarks';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { ok } from '@/tests/test-helpers/ok';
 
 import {
-  getBookmarks,
+  getBookmarkStatus,
   getPreviousAttempt,
   getQuestionBySlug,
   getQuestionPageQuestionIdForSlug,
@@ -50,20 +50,7 @@ describe('useQuestionPageModel (browser)', () => {
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
     );
-    getBookmarks.mockResolvedValue(
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: QUESTION_PAGE_QUESTION_1_ID,
-            slug: 'q-1',
-            stemMd: 'Stem',
-            difficulty: 'easy',
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    getBookmarkStatus.mockResolvedValue(ok({ bookmarked: true }));
 
     const screen = await render(<Probe mode="review" />);
 
@@ -76,7 +63,9 @@ describe('useQuestionPageModel (browser)', () => {
     await expect
       .element(screen.getByTestId('is-bookmark-hydrated'))
       .toHaveTextContent('true');
-    expect(getBookmarks).toHaveBeenCalledWith({});
+    expect(getBookmarkStatus).toHaveBeenCalledWith({
+      questionId: QUESTION_PAGE_QUESTION_1_ID,
+    });
   });
 
   it('keeps bookmark state unhydrated until the bookmark lookup resolves', async () => {
@@ -106,8 +95,8 @@ describe('useQuestionPageModel (browser)', () => {
         answeredAt: '2026-02-01T00:00:00.000Z',
       }),
     );
-    const deferred = createDeferred<ActionResult<GetBookmarksOutput>>();
-    getBookmarks.mockReturnValue(deferred.promise);
+    const deferred = createDeferred<ActionResult<GetBookmarkStatusOutput>>();
+    getBookmarkStatus.mockReturnValue(deferred.promise);
 
     const screen = await render(<Probe mode="review" />);
 
@@ -118,20 +107,7 @@ describe('useQuestionPageModel (browser)', () => {
       .element(screen.getByTestId('is-bookmark-hydrated'))
       .toHaveTextContent('false');
 
-    deferred.resolve(
-      ok({
-        rows: [
-          {
-            isAvailable: true,
-            questionId: QUESTION_PAGE_QUESTION_1_ID,
-            slug: 'q-1',
-            stemMd: 'Stem',
-            difficulty: 'easy',
-            bookmarkedAt: '2026-02-01T00:00:00.000Z',
-          },
-        ],
-      }),
-    );
+    deferred.resolve(ok({ bookmarked: true }));
     await deferred.promise;
 
     await expect

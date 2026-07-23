@@ -70,10 +70,7 @@ describe('DiscardPracticeSessionUseCase', () => {
       sessions.findCompletedByUserId(userId, 10, 0, 'exam'),
     ).resolves.toEqual({ rows: [], total: 0 });
 
-    const history = new GetSessionHistoryUseCase(
-      sessions,
-      new FakeQuestionRepository([question]),
-    );
+    const history = new GetSessionHistoryUseCase(sessions);
     await expect(
       history.execute({ userId, limit: 10, offset: 0, mode: 'exam' }),
     ).resolves.toMatchObject({ rows: [], total: 0 });

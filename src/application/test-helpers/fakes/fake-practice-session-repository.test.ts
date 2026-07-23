@@ -25,6 +25,68 @@ class ClearingAfterReadPracticeSessionRepository extends FakePracticeSessionRepo
 }
 
 describe('FakePracticeSessionRepository', () => {
+  describe('findCompletedHistorySummariesByUserId', () => {
+    it('returns bounded history summaries with counts and the published first-question slug', async () => {
+      const startedAt = new Date('2026-07-20T10:00:00.000Z');
+      const endedAt = new Date('2026-07-20T10:05:00.000Z');
+      const repo = new FakePracticeSessionRepository(
+        [
+          createPracticeSession({
+            id: 'session-history-summary',
+            userId: 'user-history-summary',
+            mode: 'exam',
+            questionIds: ['question-first', 'question-second'],
+            questionStates: [
+              {
+                questionId: 'question-first',
+                markedForReview: false,
+                latestSelectedChoiceId: 'choice-first',
+                latestIsCorrect: true,
+                latestAnsweredAt: startedAt,
+              },
+              {
+                questionId: 'question-second',
+                markedForReview: false,
+                latestSelectedChoiceId: null,
+                latestIsCorrect: null,
+                latestAnsweredAt: null,
+              },
+            ],
+            startedAt,
+            endedAt,
+          }),
+        ],
+        {
+          publishedQuestionSlugsById: new Map([
+            ['question-first', 'published-first-question'],
+          ]),
+        },
+      );
+
+      await expect(
+        repo.findCompletedHistorySummariesByUserId(
+          'user-history-summary',
+          1,
+          0,
+        ),
+      ).resolves.toEqual({
+        rows: [
+          {
+            sessionId: 'session-history-summary',
+            mode: 'exam',
+            questionCount: 2,
+            firstQuestionSlug: 'published-first-question',
+            answered: 1,
+            correct: 1,
+            startedAt,
+            endedAt,
+          },
+        ],
+        total: 1,
+      });
+    });
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });

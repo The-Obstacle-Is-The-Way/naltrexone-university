@@ -16,9 +16,9 @@ type ClearTimeoutFn = (id: ReturnType<typeof setTimeout>) => void;
 
 export function createBookmarksEffect(input: {
   bookmarkRetryCount: number;
-  getBookmarksFn: (input: unknown) => Promise<
+  getBookmarkQuestionIdsFn: (input: unknown) => Promise<
     ActionResult<{
-      rows: Array<{ questionId: string }>;
+      questionIds: string[];
     }>
   >;
   setBookmarkedQuestionIds: (
@@ -59,10 +59,10 @@ export function createBookmarksEffect(input: {
 
   void (async () => {
     input.setBookmarkStatus('loading');
-    let res: ActionResult<{ rows: Array<{ questionId: string }> }>;
+    let res: ActionResult<{ questionIds: string[] }>;
     try {
       res = await withTimeout(
-        input.getBookmarksFn({}),
+        input.getBookmarkQuestionIdsFn({}),
         BOOKMARKS_LOAD_TIMEOUT_MS,
       );
     } catch (error) {
@@ -77,9 +77,7 @@ export function createBookmarksEffect(input: {
       return;
     }
 
-    input.setBookmarkedQuestionIds(
-      new Set(res.data.rows.map((row) => row.questionId)),
-    );
+    input.setBookmarkedQuestionIds(new Set(res.data.questionIds));
     input.setBookmarkStatus('idle');
   })();
 

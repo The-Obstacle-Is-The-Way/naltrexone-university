@@ -4,12 +4,7 @@ import type {
   GetBookmarksOutput,
 } from '@/src/application/ports/bookmarks';
 import type { Logger } from '@/src/application/ports/logger';
-import type {
-  BookmarkRepository,
-  QuestionRepository,
-} from '@/src/application/ports/repositories';
-import { enrichWithQuestion } from '@/src/application/shared/enrich-with-question';
-import { fetchQuestionsById } from '@/src/application/shared/fetch-questions-by-id';
+import type { BookmarkRepository } from '@/src/application/ports/repositories';
 
 export type {
   AvailableBookmarkRow,
@@ -22,40 +17,23 @@ export type {
 export class GetBookmarksUseCase {
   constructor(
     private readonly bookmarks: BookmarkRepository,
-    private readonly questions: QuestionRepository,
     private readonly logger: Logger,
   ) {}
 
   async execute(input: GetBookmarksInput): Promise<GetBookmarksOutput> {
-    const bookmarks = await this.bookmarks.listByUserId(input.userId);
-
-    if (bookmarks.length === 0) return { rows: [] };
-
-    const questionsById = await fetchQuestionsById(
-      this.questions,
-      bookmarks.map((bookmark) => bookmark.questionId),
-    );
-
-    const rows = enrichWithQuestion({
-      rows: bookmarks,
-      getQuestionId: (bookmark) => bookmark.questionId,
-      questionsById,
-      available: (bookmark, question): BookmarkRow => ({
-        isAvailable: true,
-        questionId: question.id,
-        slug: question.slug,
-        stemMd: question.stemMd,
-        difficulty: question.difficulty,
-        bookmarkedAt: bookmark.createdAt.toISOString(),
-      }),
-      unavailable: (bookmark): BookmarkRow => ({
-        isAvailable: false,
-        questionId: bookmark.questionId,
-        bookmarkedAt: bookmark.createdAt.toISOString(),
-      }),
-      logger: this.logger,
-      missingQuestionMessage: 'Bookmark references missing question',
-    });
+    const summaries = await this.bookmarks.listSummariesByUserId(input.userId);
+    for (const summary of summaries) {
+      if (!summary.isAvailable) {
+        this.logger.warn(
+          { questionId: summary.questionId },
+          'Bookmark references unavailable or unpublished question',
+        );
+      }
+    }
+    const rows: BookmarkRow[] = summaries.map((summary) => ({
+      ...summary,
+      bookmarkedAt: summary.bookmarkedAt.toISOString(),
+    }));
 
     return { rows };
   }

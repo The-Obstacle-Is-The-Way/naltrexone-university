@@ -1,9 +1,19 @@
 // WHY large-file: this repository centralizes practice-session persistence invariants and transaction helpers so session state transitions stay consistent across use cases.
-import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from 'drizzle-orm';
 import {
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
   practiceSessionQuestionStates,
   practiceSessions,
+  questions,
 } from '@/db/schema';
 import {
   ApplicationConflictReasons,
@@ -82,19 +92,13 @@ export class DrizzlePracticeSessionRepository
     rows: readonly PracticeSessionQuestionStateRow[],
   ): PracticeSessionQuestionState[] {
     if (rows.length > params.questionIds.length) {
-      throw new CorruptPracticeSessionRowError(
-        new ApplicationError(
-          'INTERNAL_ERROR',
-          `Practice session ${sessionId} has inconsistent normalized question state`,
-        ),
+      this.corruptRow(
+        `Practice session ${sessionId} has inconsistent normalized question state`,
       );
     }
     if (rows.length < params.questionIds.length) {
-      throw new CorruptPracticeSessionRowError(
-        new ApplicationError(
-          'INTERNAL_ERROR',
-          `Practice session ${sessionId} is missing normalized question state`,
-        ),
+      this.corruptRow(
+        `Practice session ${sessionId} is missing normalized question state`,
       );
     }
 
@@ -102,15 +106,47 @@ export class DrizzlePracticeSessionRepository
     return params.questionIds.map((questionId, position) => {
       const row = rowsByQuestionId.get(questionId);
       if (!row || row.position !== position) {
-        throw new CorruptPracticeSessionRowError(
-          new ApplicationError(
-            'INTERNAL_ERROR',
-            `Practice session ${sessionId} is missing normalized question state`,
-          ),
+        this.corruptRow(
+          `Practice session ${sessionId} is missing normalized question state`,
         );
       }
       return toDomainQuestionState(row);
     });
+  }
+
+  private assertExactOrderedQuestionIds(input: {
+    sessionId: string;
+    expectedQuestionIds: readonly string[];
+    actualQuestionIds: readonly string[];
+    actualPositions: readonly number[];
+  }): void {
+    if (input.actualQuestionIds.length > input.expectedQuestionIds.length) {
+      this.corruptRow(
+        `Practice session ${input.sessionId} has inconsistent normalized question state`,
+      );
+    }
+    if (input.actualQuestionIds.length < input.expectedQuestionIds.length) {
+      this.corruptRow(
+        `Practice session ${input.sessionId} is missing normalized question state`,
+      );
+    }
+    if (
+      input.expectedQuestionIds.some(
+        (questionId, position) =>
+          input.actualQuestionIds[position] !== questionId ||
+          input.actualPositions[position] !== position,
+      )
+    ) {
+      this.corruptRow(
+        `Practice session ${input.sessionId} is missing normalized question state`,
+      );
+    }
+  }
+
+  private corruptRow(message: string): never {
+    throw new CorruptPracticeSessionRowError(
+      new ApplicationError('INTERNAL_ERROR', message),
+    );
   }
 
   private async loadQuestionStateRowsBySessionIds(
@@ -364,6 +400,137 @@ export class DrizzlePracticeSessionRepository
           rows: domainRows,
           total,
         };
+      },
+      { isolationLevel: 'repeatable read' },
+    );
+  }
+
+  async findCompletedHistorySummariesByUserId(
+    userId: string,
+    limit: number,
+    offset: number,
+    mode?: PracticeMode | null,
+  ) {
+    const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 0;
+    const safeOffset = Number.isInteger(offset) ? Math.max(0, offset) : 0;
+
+    return this.db.transaction(
+      async (tx) => {
+        const [countRow] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(practiceSessions)
+          .where(this.completedSessionCondition(userId, mode));
+        const total = countRow?.count ?? 0;
+
+        if (safeLimit === 0 || total === 0) {
+          return { rows: [], total };
+        }
+
+        const rows = await tx
+          .select({
+            id: practiceSessions.id,
+            userId: practiceSessions.userId,
+            mode: practiceSessions.mode,
+            paramsJson: practiceSessions.paramsJson,
+            startedAt: practiceSessions.startedAt,
+            endedAt: practiceSessions.endedAt,
+            orderedQuestionIds: sql<string[]>`
+              coalesce(
+                array_agg(
+                  ${practiceSessionQuestionStates.questionId}
+                  order by ${practiceSessionQuestionStates.position}
+                ) filter (
+                  where ${practiceSessionQuestionStates.questionId} is not null
+                ),
+                array[]::uuid[]
+              )
+            `,
+            orderedPositions: sql<number[]>`
+              coalesce(
+                array_agg(
+                  ${practiceSessionQuestionStates.position}
+                  order by ${practiceSessionQuestionStates.position}
+                ) filter (
+                  where ${practiceSessionQuestionStates.position} is not null
+                ),
+                array[]::integer[]
+              )
+            `,
+            answered: sql<number>`
+              count(${practiceSessionQuestionStates.latestSelectedChoiceId})::int
+            `,
+            correct: sql<number>`
+              count(*) filter (
+                where ${practiceSessionQuestionStates.latestSelectedChoiceId} is not null
+                  and ${practiceSessionQuestionStates.latestIsCorrect} is true
+              )::int
+            `,
+            firstQuestionSlug: sql<string | null>`max(${questions.slug})`,
+          })
+          .from(practiceSessions)
+          .leftJoin(
+            practiceSessionQuestionStates,
+            eq(
+              practiceSessionQuestionStates.practiceSessionId,
+              practiceSessions.id,
+            ),
+          )
+          .leftJoin(
+            questions,
+            and(
+              eq(questions.id, practiceSessionQuestionStates.questionId),
+              eq(practiceSessionQuestionStates.position, 0),
+              eq(questions.status, 'published'),
+            ),
+          )
+          .where(this.completedSessionCondition(userId, mode))
+          .groupBy(practiceSessions.id)
+          .orderBy(
+            desc(practiceSessions.endedAt),
+            desc(practiceSessions.startedAt),
+          )
+          .limit(safeLimit)
+          .offset(safeOffset);
+
+        const summaries = [];
+        for (const row of rows) {
+          try {
+            const params = this.parsePersistedParamsJson(row.paramsJson);
+            this.assertExactOrderedQuestionIds({
+              sessionId: row.id,
+              expectedQuestionIds: params.questionIds,
+              actualQuestionIds: row.orderedQuestionIds,
+              actualPositions: row.orderedPositions,
+            });
+            if (row.endedAt === null) {
+              this.corruptRow(
+                `Completed practice session ${row.id} is missing ended_at`,
+              );
+            }
+            summaries.push({
+              sessionId: row.id,
+              mode: row.mode,
+              questionCount: params.questionIds.length,
+              firstQuestionSlug: row.firstQuestionSlug,
+              answered: row.answered,
+              correct: row.correct,
+              startedAt: row.startedAt,
+              endedAt: row.endedAt,
+            });
+          } catch (error) {
+            if (!this.isCorruptPracticeSessionRowError(error)) {
+              throw error;
+            }
+            this.logSkippedCorruptPracticeSessionRow({
+              row,
+              msg: 'Skipping corrupt completed practice session row',
+              mode: mode ?? null,
+              error,
+            });
+          }
+        }
+
+        return { rows: summaries, total };
       },
       { isolationLevel: 'repeatable read' },
     );

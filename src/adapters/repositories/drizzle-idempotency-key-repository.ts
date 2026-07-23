@@ -1,10 +1,9 @@
-import { and, asc, eq, isNull, lt, or } from 'drizzle-orm';
+import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { idempotencyKeys } from '@/db/schema';
 import {
   ApplicationError,
-  type ApplicationErrorCode,
-  type ApplicationErrorDetails,
-  isApplicationConflictReason,
+  decodeIdempotencyPublicError,
+  encodeIdempotencyPublicError,
 } from '@/src/application/errors';
 import {
   DEFAULT_IDEMPOTENCY_ZOMBIE_THRESHOLD_MS,
@@ -13,20 +12,6 @@ import {
   type IdempotencyKeyRepository,
 } from '@/src/application/ports/repositories';
 import type { DrizzleDb } from '../shared/database-types';
-
-function toApplicationErrorDetails(
-  value: unknown,
-): ApplicationErrorDetails | undefined {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return undefined;
-  }
-
-  const reason = (value as { reason?: unknown }).reason;
-  if (reason === undefined) return undefined;
-  if (!isApplicationConflictReason(reason)) return undefined;
-
-  return { reason };
-}
 
 export class DrizzleIdempotencyKeyRepository
   implements IdempotencyKeyRepository
@@ -61,6 +46,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: null,
         errorMessage: null,
+        errorFieldErrors: null,
         errorDetails: null,
         claimedAt: now,
         completedAt: null,
@@ -83,6 +69,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: null,
         errorCode: null,
         errorMessage: null,
+        errorFieldErrors: null,
         errorDetails: null,
         claimedAt: now,
         completedAt: null,
@@ -118,6 +105,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: idempotencyKeys.resultJson,
         errorCode: idempotencyKeys.errorCode,
         errorMessage: idempotencyKeys.errorMessage,
+        errorFieldErrors: idempotencyKeys.errorFieldErrors,
         errorDetails: idempotencyKeys.errorDetails,
         completedAt: idempotencyKeys.completedAt,
         expiresAt: idempotencyKeys.expiresAt,
@@ -137,17 +125,22 @@ export class DrizzleIdempotencyKeyRepository
       return null;
     }
 
-    const errorDetails = toApplicationErrorDetails(row.errorDetails);
-
     return {
       resultJson: row.resultJson ?? null,
-      error: row.errorCode
-        ? {
-            code: row.errorCode as ApplicationErrorCode,
-            message: row.errorMessage ?? row.errorCode,
-            ...(errorDetails !== undefined ? { details: errorDetails } : {}),
-          }
-        : null,
+      error:
+        row.errorCode !== null && row.errorCode !== undefined
+          ? decodeIdempotencyPublicError({
+              code: row.errorCode,
+              message: row.errorMessage,
+              ...(row.errorFieldErrors !== null &&
+              row.errorFieldErrors !== undefined
+                ? { fieldErrors: row.errorFieldErrors }
+                : {}),
+              ...(row.errorDetails !== null && row.errorDetails !== undefined
+                ? { details: row.errorDetails }
+                : {}),
+            })
+          : null,
       completedAt: row.completedAt,
       expiresAt: row.expiresAt,
     };
@@ -166,6 +159,7 @@ export class DrizzleIdempotencyKeyRepository
         resultJson: input.resultJson,
         errorCode: null,
         errorMessage: null,
+        errorFieldErrors: null,
         errorDetails: null,
         completedAt: this.now(),
       })
@@ -192,13 +186,15 @@ export class DrizzleIdempotencyKeyRepository
     claimedAt: Date;
     error: IdempotencyKeyError;
   }): Promise<void> {
+    const error = encodeIdempotencyPublicError(input.error);
     const [updated] = await this.db
       .update(idempotencyKeys)
       .set({
         resultJson: null,
-        errorCode: input.error.code,
-        errorMessage: input.error.message,
-        errorDetails: input.error.details ?? null,
+        errorCode: error.code,
+        errorMessage: error.message,
+        errorFieldErrors: error.fieldErrors ?? null,
+        errorDetails: error.details ?? null,
         completedAt: this.now(),
       })
       .where(
@@ -242,36 +238,32 @@ export class DrizzleIdempotencyKeyRepository
       return 0;
     }
 
-    return this.db.transaction(async (tx) => {
-      const rows = await tx
-        .select({
-          userId: idempotencyKeys.userId,
-          action: idempotencyKeys.action,
-          key: idempotencyKeys.key,
-          expiresAt: idempotencyKeys.expiresAt,
-        })
-        .from(idempotencyKeys)
-        .where(lt(idempotencyKeys.expiresAt, cutoff))
-        .orderBy(asc(idempotencyKeys.expiresAt))
-        .limit(limit);
+    const cutoffParam = sql.param(cutoff, idempotencyKeys.expiresAt);
+    const deleted = await this.db.execute<{ deleted: number }>(sql`
+      WITH candidates AS (
+        SELECT
+          ${idempotencyKeys.userId} AS user_id,
+          ${idempotencyKeys.action} AS action,
+          ${idempotencyKeys.key} AS key
+        FROM ${idempotencyKeys}
+        WHERE ${idempotencyKeys.expiresAt} < ${cutoffParam}
+        ORDER BY
+          ${idempotencyKeys.expiresAt},
+          ${idempotencyKeys.userId},
+          ${idempotencyKeys.action},
+          ${idempotencyKeys.key}
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )
+      DELETE FROM ${idempotencyKeys}
+      USING candidates
+      WHERE ${idempotencyKeys.userId} = candidates.user_id
+        AND ${idempotencyKeys.action} = candidates.action
+        AND ${idempotencyKeys.key} = candidates.key
+        AND ${idempotencyKeys.expiresAt} < ${cutoffParam}
+      RETURNING 1 AS deleted
+    `);
 
-      if (rows.length === 0) return 0;
-
-      const conditions = rows.map((row) =>
-        and(
-          eq(idempotencyKeys.userId, row.userId),
-          eq(idempotencyKeys.action, row.action),
-          eq(idempotencyKeys.key, row.key),
-          lt(idempotencyKeys.expiresAt, cutoff),
-        ),
-      );
-
-      const deleted = await tx
-        .delete(idempotencyKeys)
-        .where(or(...conditions))
-        .returning({ key: idempotencyKeys.key });
-
-      return deleted.length;
-    });
+    return deleted.length;
   }
 }

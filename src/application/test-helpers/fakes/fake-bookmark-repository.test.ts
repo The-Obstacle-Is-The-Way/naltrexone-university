@@ -76,4 +76,54 @@ describe('FakeBookmarkRepository', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('narrow reads', () => {
+    it('returns IDs and page summaries in descending bookmark order while preserving unavailable rows', async () => {
+      const repo = new FakeBookmarkRepository(
+        [
+          {
+            userId: 'user-1',
+            questionId: 'question-older',
+            createdAt: new Date('2026-07-20T10:01:00.000Z'),
+          },
+          {
+            userId: 'user-1',
+            questionId: 'question-newer',
+            createdAt: new Date('2026-07-20T10:02:00.000Z'),
+          },
+        ],
+        () => new Date(),
+        new Map([
+          [
+            'question-newer',
+            {
+              slug: 'question-newer',
+              stemMd: 'Narrow stem',
+              difficulty: 'hard',
+            },
+          ],
+        ]),
+      );
+
+      await expect(repo.listQuestionIdsByUserId('user-1')).resolves.toEqual([
+        'question-newer',
+        'question-older',
+      ]);
+      await expect(repo.listSummariesByUserId('user-1')).resolves.toEqual([
+        {
+          isAvailable: true,
+          questionId: 'question-newer',
+          slug: 'question-newer',
+          stemMd: 'Narrow stem',
+          difficulty: 'hard',
+          bookmarkedAt: new Date('2026-07-20T10:02:00.000Z'),
+        },
+        {
+          isAvailable: false,
+          questionId: 'question-older',
+          bookmarkedAt: new Date('2026-07-20T10:01:00.000Z'),
+        },
+      ]);
+    });
+  });
 });

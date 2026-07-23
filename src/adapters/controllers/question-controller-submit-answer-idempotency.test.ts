@@ -183,6 +183,45 @@ describe('question-controller submitAnswer idempotency', () => {
     expect(deps.rateLimiter.inputs).toHaveLength(1);
   });
 
+  it('stores and replays raw failures as the normalized public internal error', async () => {
+    const deps = createDeps({
+      submitAnswerThrows: new Error('database diagnostic detail'),
+    });
+    const input = { questionId, choiceId, idempotencyKey } as const;
+
+    const first = await submitAnswer(input, deps);
+    const second = await submitAnswer(input, deps);
+
+    expect(first).toEqual({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+    });
+    expect(second).toEqual(first);
+    expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
+    expect(deps.rateLimiter.inputs).toHaveLength(1);
+  });
+
+  it('stores and replays diagnostic ApplicationErrors as the normalized public internal error', async () => {
+    const deps = createDeps({
+      submitAnswerThrows: new ApplicationError(
+        'INTERNAL_ERROR',
+        'database diagnostic detail',
+      ),
+    });
+    const input = { questionId, choiceId, idempotencyKey } as const;
+
+    const first = await submitAnswer(input, deps);
+    const second = await submitAnswer(input, deps);
+
+    expect(first).toEqual({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Internal error' },
+    });
+    expect(second).toEqual(first);
+    expect(deps.submitAnswerUseCase.inputs).toHaveLength(1);
+    expect(deps.rateLimiter.inputs).toHaveLength(1);
+  });
+
   it('re-executes after a rollback-certain failure under the same key', async () => {
     const deps = createDeps({
       submitAnswerThrows: rollbackCertainPersistenceError({

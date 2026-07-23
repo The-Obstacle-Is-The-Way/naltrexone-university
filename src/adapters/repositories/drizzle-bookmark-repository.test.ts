@@ -27,6 +27,12 @@ function createDbMock() {
   const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
   const deleteFn = vi.fn(() => ({ where: deleteWhere }));
 
+  const selectOrderBy = vi.fn();
+  const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
+  const selectLeftJoin = vi.fn(() => ({ where: selectWhere }));
+  const selectFrom = vi.fn(() => ({ leftJoin: selectLeftJoin }));
+  const select = vi.fn((_selection?: unknown) => ({ from: selectFrom }));
+
   return {
     query: {
       bookmarks: {
@@ -36,6 +42,7 @@ function createDbMock() {
     },
     insert,
     delete: deleteFn,
+    select,
     _mocks: {
       queryFindFirst,
       queryFindMany,
@@ -45,6 +52,11 @@ function createDbMock() {
       deleteReturning,
       deleteWhere,
       deleteFn,
+      select,
+      selectFrom,
+      selectLeftJoin,
+      selectWhere,
+      selectOrderBy,
     },
   } as const;
 }
@@ -165,6 +177,85 @@ describe('DrizzleBookmarkRepository', () => {
 
       const orderBySql = new PgDialect().sqlToQuery(orderBy as SQL).sql;
       expect(orderBySql).toMatch(/"bookmarks"\."created_at"\s+desc/i);
+    });
+  });
+
+  describe('listQuestionIdsByUserId', () => {
+    it('selects only bookmark question IDs in bookmark order', async () => {
+      const db = createDbMock();
+      const createdAt = new Date('2026-02-01T00:00:00Z');
+      db._mocks.queryFindMany.mockResolvedValue([{ questionId, createdAt }]);
+
+      const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
+
+      await expect(repo.listQuestionIdsByUserId(userId)).resolves.toEqual([
+        questionId,
+      ]);
+
+      expect(db._mocks.queryFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          columns: {
+            questionId: true,
+          },
+          orderBy: expect.anything(),
+        }),
+      );
+    });
+  });
+
+  describe('listSummariesByUserId', () => {
+    it('selects only relation-free bookmark page fields and preserves unavailable rows', async () => {
+      const db = createDbMock();
+      const unavailableQuestionId = crypto.randomUUID();
+      const publishedAt = new Date('2026-02-02T00:00:00Z');
+      const unavailableAt = new Date('2026-02-01T00:00:00Z');
+      db._mocks.selectOrderBy.mockResolvedValue([
+        {
+          bookmarkedQuestionId: questionId,
+          bookmarkedAt: publishedAt,
+          publishedQuestionId: questionId,
+          slug: 'published-question',
+          stemMd: 'Published stem',
+          difficulty: 'medium',
+        },
+        {
+          bookmarkedQuestionId: unavailableQuestionId,
+          bookmarkedAt: unavailableAt,
+          publishedQuestionId: null,
+          slug: null,
+          stemMd: null,
+          difficulty: null,
+        },
+      ]);
+
+      const repo = new DrizzleBookmarkRepository(db as unknown as RepoDb);
+
+      await expect(repo.listSummariesByUserId(userId)).resolves.toEqual([
+        {
+          isAvailable: true,
+          questionId,
+          slug: 'published-question',
+          stemMd: 'Published stem',
+          difficulty: 'medium',
+          bookmarkedAt: publishedAt,
+        },
+        {
+          isAvailable: false,
+          questionId: unavailableQuestionId,
+          bookmarkedAt: unavailableAt,
+        },
+      ]);
+
+      const selection = db._mocks.select.mock.calls[0]?.[0];
+      expect(Object.keys(selection ?? {}).sort()).toEqual([
+        'bookmarkedAt',
+        'bookmarkedQuestionId',
+        'difficulty',
+        'publishedQuestionId',
+        'slug',
+        'stemMd',
+      ]);
+      expect(db._mocks.selectLeftJoin).toHaveBeenCalledTimes(1);
     });
   });
 });
