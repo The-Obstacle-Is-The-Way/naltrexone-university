@@ -18,7 +18,7 @@ export async function register() {
 
   Sentry.init({
     dsn,
-    tracesSampleRate: 0,
+    tracesSampleRate: 0.05,
     environment,
   });
 }

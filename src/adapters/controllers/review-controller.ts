@@ -1,12 +1,18 @@
 'use server';
 
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import {
+  projectSafeSpanAttributes,
+  SERVER_SPAN_FAMILIES,
+} from '@/src/adapters/shared/server-tracing';
 import {
   MAX_PAGINATION_LIMIT,
   MAX_PAGINATION_OFFSET,
 } from '@/src/adapters/shared/validation-limits';
 import { zDifficulty } from '@/src/adapters/shared/zod-schemas';
+import { isApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type {
   GetAttemptedQuestionsInput,
@@ -59,15 +65,44 @@ export const getAttemptedQuestions = createAction({
   getDeps,
   execute: async (input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
-    return d.getAttemptedQuestionsUseCase.execute({
-      userId,
-      limit: input.limit,
-      offset: input.offset,
-      result: input.result ?? null,
-      source: input.source ?? null,
-      difficulty: input.difficulty ?? null,
-      tagSlug: input.tagSlug ?? null,
-      sort: input.sort ?? null,
-    });
+    const family = SERVER_SPAN_FAMILIES.getAttemptedQuestions;
+    return Sentry.startSpan(
+      {
+        name: family.name,
+        op: family.op,
+        attributes: projectSafeSpanAttributes({
+          'app.action': family.action,
+        }),
+      },
+      async (span) => {
+        try {
+          const output = await d.getAttemptedQuestionsUseCase.execute({
+            userId,
+            limit: input.limit,
+            offset: input.offset,
+            result: input.result ?? null,
+            source: input.source ?? null,
+            difficulty: input.difficulty ?? null,
+            tagSlug: input.tagSlug ?? null,
+            sort: input.sort ?? null,
+          });
+          span.setAttributes(
+            projectSafeSpanAttributes({
+              'app.count': output.totalCount,
+            }),
+          );
+          return output;
+        } catch (error) {
+          if (isApplicationError(error)) {
+            span.setAttributes(
+              projectSafeSpanAttributes({
+                'app.error_code': error.code,
+              }),
+            );
+          }
+          throw error;
+        }
+      },
+    );
   },
 });
