@@ -51,6 +51,10 @@ interface SourceAnalysis {
   checker: ts.TypeChecker;
 }
 
+interface SourcePathAnalysis extends SourceAnalysis {
+  filePath: string;
+}
+
 const SOURCE_ANALYSIS_OPTIONS: ts.CompilerOptions = {
   module: ts.ModuleKind.ESNext,
   noLib: true,
@@ -144,11 +148,24 @@ function isApprovedStartSpanCall(
   );
 }
 
-function isSpanAttributeWrite(call: ts.CallExpression): boolean {
+function isSpanAttributeWrite(
+  call: ts.CallExpression,
+  checker: ts.TypeChecker,
+  callback: ts.ArrowFunction | ts.FunctionExpression,
+): boolean {
+  const callbackParameter = callback.parameters[0]?.name;
+  const receiver = ts.isPropertyAccessExpression(call.expression)
+    ? call.expression.expression
+    : undefined;
   return (
     ts.isPropertyAccessExpression(call.expression) &&
-    call.expression.expression.getText() === 'span' &&
-    call.expression.name.text === 'setAttributes'
+    call.expression.name.text === 'setAttributes' &&
+    receiver !== undefined &&
+    ts.isIdentifier(receiver) &&
+    callbackParameter !== undefined &&
+    ts.isIdentifier(callbackParameter) &&
+    checker.getSymbolAtLocation(receiver) ===
+      checker.getSymbolAtLocation(callbackParameter)
   );
 }
 
@@ -214,16 +231,22 @@ function analyzeSourceText(source: string): SourceAnalysis {
   return { sourceFile, checker: program.getTypeChecker() };
 }
 
-function analyzeSourcePaths(filePaths: readonly string[]): SourceAnalysis[] {
-  const absolutePaths = filePaths.map((filePath) =>
-    resolve(process.cwd(), filePath),
+function analyzeSourcePaths(
+  filePaths: readonly string[],
+): SourcePathAnalysis[] {
+  const pathEntries = filePaths.map((filePath) => ({
+    filePath,
+    absolutePath: resolve(process.cwd(), filePath),
+  }));
+  const program = ts.createProgram(
+    pathEntries.map(({ absolutePath }) => absolutePath),
+    SOURCE_ANALYSIS_OPTIONS,
   );
-  const program = ts.createProgram(absolutePaths, SOURCE_ANALYSIS_OPTIONS);
   const checker = program.getTypeChecker();
 
-  return absolutePaths.flatMap((absolutePath) => {
+  return pathEntries.flatMap(({ filePath, absolutePath }) => {
     const sourceFile = program.getSourceFile(absolutePath);
-    return sourceFile ? [{ sourceFile, checker }] : [];
+    return sourceFile ? [{ filePath, sourceFile, checker }] : [];
   });
 }
 
@@ -308,6 +331,40 @@ describe('server span family boundary', () => {
     expect(findSafeAttributeProjectionCalls(shadowed)).toHaveLength(0);
   });
 
+  it('recognizes attribute writes only on the approved callback parameter symbol', () => {
+    const analysis = analyzeSourceText(`
+      import * as Telemetry from '@sentry/nextjs';
+
+      Telemetry.startSpan({}, (activeSpan) => {
+        activeSpan.setAttributes({});
+        const unrelatedSpan = { setAttributes: (_input: unknown) => undefined };
+        unrelatedSpan.setAttributes({});
+        {
+          const activeSpan = unrelatedSpan;
+          activeSpan.setAttributes({});
+        }
+      });
+    `);
+    const startSpanCall = findApprovedStartSpanCalls(analysis)[0];
+    expect(startSpanCall).toBeDefined();
+    const callback = startSpanCall?.arguments[1];
+    expect(callback && ts.isArrowFunction(callback)).toBe(true);
+    if (!callback || !ts.isArrowFunction(callback)) return;
+
+    const attributeWrites = collectCallExpressions(
+      callback.body,
+      (call) =>
+        ts.isPropertyAccessExpression(call.expression) &&
+        call.expression.name.text === 'setAttributes',
+    );
+
+    expect(
+      attributeWrites.map((call) =>
+        isSpanAttributeWrite(call, analysis.checker, callback),
+      ),
+    ).toEqual([true, false, false]);
+  });
+
   it('allows only the six pinned startSpan sites within five families', () => {
     expect(Object.keys(SERVER_SPAN_FAMILIES)).toEqual([
       'finalizeExamAnswers',
@@ -331,11 +388,14 @@ describe('server span family boundary', () => {
     const actualSites = analyzeSourcePaths(candidatePaths).flatMap(
       (analysis) => {
         const calls = findApprovedStartSpanCalls(analysis);
-        const filePath = candidatePaths.find((candidate) =>
-          analysis.sourceFile.fileName.endsWith(candidate),
-        );
-        return filePath && calls.length > 0
-          ? [{ filePath, calls, checker: analysis.checker }]
+        return calls.length > 0
+          ? [
+              {
+                filePath: analysis.filePath,
+                calls,
+                checker: analysis.checker,
+              },
+            ]
           : [];
       },
     );
@@ -396,7 +456,7 @@ describe('server span family boundary', () => {
 
       const manualAttributeWrites = collectCallExpressions(
         callback.body,
-        isSpanAttributeWrite,
+        (call) => isSpanAttributeWrite(call, checker, callback),
       );
       for (const write of manualAttributeWrites) {
         expect(write.arguments).toHaveLength(1);
