@@ -1,9 +1,22 @@
 # DEBT-460: Dependency Upgrade Train Residues (TS7 Dual-Compiler Seam, Clerk `createRouteMatcher` Deprecation, Biome Schema Pin Drift)
 
-**Status:** Open
+**Status:** Deferred / Parked (standing rules; not resolved) — 2026-07-23
 **Priority:** P4
 **Date:** 2026-07-20
 **Confirmed:** 2026-07-20 (each part verified against the installed packages and checked-in config on `dev`/`main` at `9f11e674`, promoted via PR #685 merge `b5fd6880`)
+
+## Register final-wave disposition (2026-07-23)
+
+All three residues are durable upgrade rules rather than current executable
+work, so this record is archived for filing and represented by one
+Deferred/Parked register row. This is not a resolution:
+
+1. advance both TypeScript pins together; collapse them only when the two TS6
+   compiler-API consumers and peer tooling can run on the TS7-era API; record
+   the 2026-07-27 Dependabot aliased-specifier outcome here when observed;
+2. migrate `proxy.ts` off `createRouteMatcher` **before** accepting any
+   `@clerk/nextjs` major bump; and
+3. fold the `biome.json` `$schema` bump into every Biome Dependabot PR.
 
 ---
 
@@ -23,7 +36,7 @@ The residues:
 
 1. **Two type-checking sources of truth.** `pnpm typecheck` (TS7 native) and `next build` (TS6 API) can, in principle, diverge on a construct one accepts and the other rejects, producing a confusing split (typecheck green, build red, or the reverse). No divergence exists today — both passed on the same tree — but the seam is now structural.
 2. **Booby-trapped config.** The aliasing looks wrong to a reader who has not seen this doc (a dependency named `typescript` that is not TypeScript 7; a TS7 package hidden under `@typescript/native`). JSON forbids comments, so nothing at the definition site explains it. During the 2026-07-20 pre-merge review this was initially misread as a no-op/dead dependency; only checking out the branch, installing, and probing `node_modules/.bin/tsc` corrected the reading. A well-meaning "simplification" (collapsing the aliases, or repointing `typecheck` at a nonexistent `tsgo` bin) would silently revert type checking to TS6 or break it outright.
-3. **Manual lockstep upgrades.** The two pins must be advanced deliberately and together. Dependabot's handling of `npm:`-aliased specifiers is a watch item: confirm on the next weekly run (Mondays 09:00 ET per `.github/dependabot.yml`) whether it proposes updates for either alias; if it does not, TypeScript upgrades are now a manual chore that no automation will nag about.
+3. **Manual lockstep upgrades.** The two pins must be advanced deliberately and together. Dependabot's handling of `npm:`-aliased specifiers is a watch item: confirm on the 2026-07-27 weekly run (Mondays 09:00 ET per `.github/dependabot.yml`) whether it proposes updates for either alias, and record that outcome here when observed; if it does not, TypeScript upgrades are now a manual chore that no automation will nag about.
 
 ### Part 2 — Clerk `createRouteMatcher` deprecation (surfaced by #678)
 
@@ -31,7 +44,7 @@ PR `#678` moved `@clerk/nextjs` 7.5.13 → 7.5.17 in the lockfile (an in-range b
 
 > `@deprecated This function will be removed in the next major version. Use resource-based auth checks instead.`
 
-Production call site: [`proxy.ts:192-196`](../../proxy.ts#L192-L196) — `createRouteMatcher(PUBLIC_ROUTE_PATTERNS)` inside the dynamically imported `clerkMiddleware` wiring. `proxy.test.ts` injects `createRouteMatcher` as a dependency in twelve test blocks, so the DI seam contract is part of the migration surface, not just the one production line.
+Production call site: [`proxy.ts:192-196`](../../../proxy.ts#L192-L196) — `createRouteMatcher(PUBLIC_ROUTE_PATTERNS)` inside the dynamically imported `clerkMiddleware` wiring. `proxy.test.ts` injects `createRouteMatcher` as a dependency in twelve test blocks, so the DI seam contract is part of the migration surface, not just the one production line.
 
 Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: <https://clerk.com/docs/guides/development/upgrading/upgrade-guides/migrate-from-create-route-matcher>) recommends protecting each server-side resource individually (pages, Route Handlers, Server Functions) with `auth.protect()`-style checks instead of centralized middleware matching.
 
@@ -47,7 +60,7 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 
 ## Resolution
 
-1. **Part 1 (standing rule, no code change now):** treat the two TypeScript aliases as one unit — advance both pins together, keep `typecheck` on bare `tsc`, and never collapse the aliases while the two compiler-API consumers remain on the TS6 surface. Exit criterion: when those consumers (and peer-dep tooling) can run on the TS7-era API, collapse back to a single `typescript` dependency and archive this part. Confirm Dependabot's aliased-specifier behavior on the next weekly run and note the outcome here.
+1. **Part 1 (standing rule, no code change now):** treat the two TypeScript aliases as one unit — advance both pins together, keep `typecheck` on bare `tsc`, and never collapse the aliases while the two compiler-API consumers remain on the TS6 surface. Exit criterion: when those consumers (and peer-dep tooling) can run on the TS7-era API, collapse back to a single `typescript` dependency. Confirm Dependabot's aliased-specifier behavior on the 2026-07-27 weekly run and note the outcome here when observed.
 2. **Part 2 (gated migration):** before accepting any `@clerk/nextjs` major bump, migrate `proxy.ts` off `createRouteMatcher` per Clerk's guide, updating the `proxy.test.ts` DI seam in the same change. This is the binding trigger; no action needed until then.
 3. **Part 3 (fold into next Biome PR):** when reviewing the next Biome group PR, update the `$schema` URL in `biome.json` to the new version in the same PR (or run `biome migrate`). Optionally make that a standing checklist step for the `biome` Dependabot group.
 
@@ -60,5 +73,5 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 ## Related
 
 - PRs: [#677](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/677), [#678](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/678), [#679](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/679), [#680](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/680), [#682](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/682) (train), [#685](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/685) (promotion, merge `b5fd6880`)
-- Precedent for grouped residue docs: [DEBT-457](../_archive/debt/debt-457-wave2-determinacy-and-test-hygiene-residues.md); for Stripe-group isolation rationale: DEBT-393 (see `.github/dependabot.yml` comment)
+- Precedent for grouped residue docs: [DEBT-457](./debt-457-wave2-determinacy-and-test-hygiene-residues.md); for Stripe-group isolation rationale: DEBT-393 (see `.github/dependabot.yml` comment)
 - TS7/TS6 split announcement: <https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/>
