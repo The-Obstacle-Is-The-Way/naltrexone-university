@@ -1,10 +1,144 @@
 # DEBT-445: Build-Time Migration Pipeline Guardrails -- Shared-Preview Ledger Blast Radius, No Deploy-Time Ledger Check, Missing Expand/Contract and Restore-Loss Documentation
 
-**Status:** Open — remaining: Part 1b Neon Preview Branching + Part 4b restore exercise (OWNER-GATED)
+**Status:** Resolved 2026-07-23 — Parts 1a/2/3/4a/4b complete; Part 1b deferred/parked (not resolved)
 **Priority:** P3
 **Date:** 2026-07-09
+**Resolved:** 2026-07-23
 **2026-07-18 staleness audit:** Stale but real against `ddad8eee`. The local journal census advanced from 29 to 31 entries (through `0030_nasty_forge`); the four guardrail gaps remain. Historical live-ledger measurements below remain dated evidence and were not rewritten as current production claims.
 **Resolved in FW-5 (2026-07-21):** Parts 1a, 2, 3, and 4a are complete: CI pins journal timestamp ordering; deploy and E2E share one migration-ledger verifier/early-0027 allowlist; the Vercel build path performs pre-migrate, migrate, exact post-migrate, then build; deployed-code compatibility is durable authoring policy; and the rollback runbook records Neon overwrite/RPO/backup-branch semantics plus post-restore reconciliation. Parts 1b and 4b remain OWNER-GATED manual provider steps and were neither attempted nor scripted.
+
+## Register final-wave disposition (2026-07-23)
+
+Part 4b is complete: the owner-authorized restore drill below executed against a
+disposable project in the personal Neon organization, proved the historical
+read, overwrite, preserved-backup, and reconciliation-source behavior, and
+deleted the project afterward. Parts 1a/2/3/4a remain resolved by FW-5. The
+document is archived because no agent-executable work remains.
+
+Part 1b alone is **Deferred / Parked (not resolved)**. The 2026-07-23 owner
+correction is that `naltrexone-db` is managed through the Vercel-native Neon
+integration. Preview-branch configuration therefore lives in **Vercel Project
+Settings → Storage → Neon integration settings**, not the Neon Console path
+this document originally named. Revive Part 1b only when the owner is ready to
+enable isolated database branches there and prove one schema-bearing Preview
+uses only its generated branch. Until then, shared-preview ledger drift remains
+detectable—but not topologically eliminated—through FW-5's build-path
+migration-ledger verifier and journal-order proof.
+
+## Disposable restore-drill evidence (2026-07-23)
+
+### Target fence and commands
+
+`neonctl 2.23.1` was authenticated and listed both the personal organization
+`org-holy-mountain-12862329` and the Vercel-managed organization
+`org-jolly-mode-85557942`. Every mutating command after project creation
+printed and asserted the literal disposable project ID
+`sparkling-voice-13473638`. No mutating command referenced
+`summer-math-94727887`, `org-jolly-mode-85557942`, or any branch/host in that
+organization. The project-creation response's ephemeral connection credential
+is deliberately omitted.
+
+The relevant commands were:
+
+```bash
+neonctl projects create \
+  --name debt-445-restore-drill-20260723 \
+  --org-id org-holy-mountain-12862329 --output json
+# returned project sparkling-voice-13473638
+
+neonctl branches list \
+  --project-id sparkling-voice-13473638 --output json
+
+neonctl psql main --project-id sparkling-voice-13473638 \
+  --database-name neondb --role-name neondb_owner -- \
+  -v ON_ERROR_STOP=1 -c "<create restore_drill_markers; insert pre-point row>"
+
+neonctl psql main --project-id sparkling-voice-13473638 \
+  --database-name neondb --role-name neondb_owner -- \
+  -v ON_ERROR_STOP=1 -t -A -c "SELECT clock_timestamp();"
+
+neonctl psql main --project-id sparkling-voice-13473638 \
+  --database-name neondb --role-name neondb_owner -- \
+  -v ON_ERROR_STOP=1 -c "<assert at least 60 seconds; insert two post-point rows>"
+
+neonctl psql 'main@2026-07-23T16:08:54Z' \
+  --project-id sparkling-voice-13473638 \
+  --database-name neondb --role-name neondb_owner -- \
+  -v ON_ERROR_STOP=1 -c "<select all drill rows>"
+
+neonctl branches restore main '^self@2026-07-23T16:08:54Z' \
+  --preserve-under-name main_old_20260723T161015Z \
+  --project-id sparkling-voice-13473638 --output json
+
+neonctl branches list \
+  --project-id sparkling-voice-13473638 --output json
+
+neonctl psql main --project-id sparkling-voice-13473638 \
+  --database-name neondb --role-name neondb_owner -- \
+  -v ON_ERROR_STOP=1 -c "<select all drill rows>"
+
+neonctl branches add-compute main_old_20260723T161015Z \
+  --project-id sparkling-voice-13473638 \
+  --type read_only --name restore-drill-backup-proof --output json
+
+neonctl psql main_old_20260723T161015Z \
+  --project-id sparkling-voice-13473638 --endpoint-type read_only \
+  --database-name neondb --role-name neondb_owner -- \
+  -v ON_ERROR_STOP=1 -c "<select all drill rows>"
+
+neonctl projects delete sparkling-voice-13473638 --output json
+neonctl projects list --org-id org-holy-mountain-12862329 --output json
+neonctl projects list --org-id org-jolly-mode-85557942 --output json
+```
+
+### Before, restore point, and after proofs
+
+- Project: `sparkling-voice-13473638`
+  (`debt-445-restore-drill-20260723`), created
+  `2026-07-23T16:08:29Z` in the personal organization. Its initial root/default
+  branch was `main` / `br-royal-sea-awsz2dhr`; the selected database was
+  `neondb`.
+- Pre-point state: row 1,
+  `KEEP_AFTER_RESTORE_DEBT_445`, committed at
+  `2026-07-23 16:08:45.478906+00`.
+- Server-recorded recovery point `T`:
+  `2026-07-23 16:08:54.5888+00`. The installed CLI rejected the fractional
+  branch source `main@2026-07-23T16:08:54.5888Z`; the whole-second
+  `2026-07-23T16:08:54Z` form was used after a point-in-time read proved it
+  still contained exactly row 1.
+- The SQL timing guard rejected two early post-point insert attempts. After
+  81 seconds, rows 2 and 3—`REMOVE_AFTER_RESTORE_ALPHA` and
+  `REMOVE_AFTER_RESTORE_BETA`—committed at
+  `2026-07-23 16:10:15.730345+00` and
+  `2026-07-23 16:10:15.730431+00`. The live head then contained rows 1–3.
+- `/usr/bin/time -p` measured the restore CLI at **1.12 seconds**. It preserved
+  the former head as `main_old_20260723T161015Z` /
+  `br-tiny-block-awzjc3du`. The response briefly reported `main` as
+  `resetting`; the next branch listing reported both branches `ready` and
+  without a parent ID.
+- Restored `main` contained only row 1: both post-point rows were gone. The
+  preserved branch initially had no endpoint, as the provider documents. After
+  adding the disposable read-only compute
+  `ep-rapid-term-awg70agd`, the preserved branch contained rows 1–3. The
+  semantics are therefore overwrite-not-merge, with the explicitly preserved
+  pre-restore head serving as the reconciliation source.
+- Final cleanup deleted `sparkling-voice-13473638`. The allowed final personal
+  organization listing returned `[]`. The allowed Vercel-managed organization
+  listing still included `naltrexone-db`; it also exposed two unrelated,
+  pre-existing projects (`neon-cyan-school` and `neon-west-village`), so the
+  prompt's expectation that the organization contained only `naltrexone-db`
+  was not accurate. No project in that organization was mutated.
+
+### Runbook-versus-reality notes
+
+The overwrite, stable restored target, preserved former head, root-branch
+restriction, and reconciliation-source semantics matched the runbook. Three
+CLI details were added to
+[Database Rollbacks](../../dev/database-rollbacks.md): `^self` restore requires
+an explicit `--preserve-under-name`; `neonctl 2.23.1` rejected the
+fractional-second branch source used in the first read attempt; and the
+preserved branch has no compute by default, so evidence capture required a
+temporary read-only compute.
 
 ---
 
@@ -13,7 +147,7 @@
 | Part | Verdict | Chosen option | Rejected as disproportionate | One-line rationale |
 | --- | --- | --- | --- | --- |
 | 1a. Journal ordering | **FIX (Option 3, minimal form)** | Add one pure CI/unit test requiring `_journal.json` `when` values to be unique and strictly increasing by `idx`. | Option 2's shared-target feature-branch policy engine as the repo fallback. | (a) One invariant test adds no runtime state; (b) out-of-order merge timestamps are mechanically reachable and the current 31-entry journal is ordered only by discipline; (c) Blast radius: an older migration can be silently skipped below the ledger high-water mark. Fix cost: one deterministic JSON test; (d) pins the append-only journal law; (e) complements, rather than duplicates, the target-ledger verifier. |
-| 1b. Preview isolation | **OWNER-GATED (Option 1)** | Owner manually configures Preview Branching for the existing project through **Neon Console → Integrations → Add/Manage Vercel → Link Existing Neon Account**, selects the Vercel project plus Neon project/database/role, verifies the integration will branch only from an approved non-production data parent (hard stop if it would clone Production data), enables **Automatically delete obsolete Neon branches**, then proves a schema-bearing Preview receives the generated branch URL and changes only that branch/ledger. | Option 2's fail-closed shared-target build policy; the new-account Vercel-managed integration path for this existing project; and any repo script that mutates live Neon/Vercel configuration. | (a) Provider-native isolation deletes shared-ledger coupling without repo orchestration; (b) early 0027 proves a Preview can apply pre-merge content, while current integration/parent state is not repo-verifiable; (c) Blast radius: one feature Preview can poison a shared ledger, while a wrong parent can expose Production data to Preview. Fix cost: an owner dashboard change and one safe Preview proof, not a new deploy authority; (d) uses the provider's existing lifecycle; (e) provider isolation does not replace the repo build-path verifier. |
+| 1b. Preview isolation | **OWNER-GATED (Option 1); deferred/parked 2026-07-23** | Owner manually configures Preview Branching for the Vercel-managed project through **Vercel Project Settings → Storage → Neon integration settings**, verifies the integration will branch only from an approved non-production data parent (hard stop if it would clone Production data), enables automatic obsolete-branch cleanup where the integration exposes it, then proves a schema-bearing Preview receives the generated branch URL and changes only that branch/ledger. | Option 2's fail-closed shared-target build policy; the Neon Console path incorrectly named before the 2026-07-23 owner correction; and any repo script that mutates live Neon/Vercel configuration. | (a) Provider-native isolation deletes shared-ledger coupling without repo orchestration; (b) early 0027 proves a Preview can apply pre-merge content, while current integration/parent state is not repo-verifiable; (c) Blast radius: one feature Preview can poison a shared ledger, while a wrong parent can expose Production data to Preview. Fix cost: an owner dashboard change and one safe Preview proof, not a new deploy authority; (d) uses the provider's existing lifecycle; (e) provider isolation does not replace the repo build-path verifier. |
 | 2. Deploy-target ledger/content check | **FIX (Option 1, minimal form)** | Extract the existing DEBT-442 verifier and exact early-0027 allowlist into one thin shared module/CLI; the build path runs a pre-migrate content/ledger-only check, `db:migrate`, the exact post-migrate check, then `build`, while E2E consumes the same module. | Option 2's scheduled persistent-target job; Option 3's manual append-only acceptance; a second verifier or allowlist. | (a) Reuses and relocates proven code instead of adding another detector; (b) early 0027 demonstrated this exact content-blind deploy class; (c) Blast radius: migrate can exit successfully against a checkout-incompatible target and defer failure to runtime. Fix cost: one extraction, two CLI modes, and build-command tests; (d) one verifier/allowlist remains the source of truth; (e) deploy-time drift detection is owned by the repo build path, with E2E as a second consumer rather than a second owner. |
 | 3. N-1 authoring contract | **FIX (Option 1, minimal form)** | Add the deployed-code compatibility question, expand/contract rule, and one-shot-backfill write-window caution to `migration-authoring.md`, with links from deployment and rollback docs. | A migration DSL, new runner, or PR-template attestation as a substitute for the durable checklist. | (a) Corrects the missing source of truth without machinery; (b) the migrate-before-build serving window is certain for schema-bearing deploys; (c) Blast radius: old code can reject or omit writes after the migration commits. Fix cost: a short checklist and cross-links; (d) consolidates the rule now stranded in BUG-241; (e) does not create another deploy gate. |
 | 4a. Restore-loss runbook | **FIX (Options 1 + 2, minimal form)** | Document Neon overwrite/RPO/automatic-backup-branch semantics and one operation-specific post-point reconciliation checklist. | A generic disaster-recovery subsystem or automated provider replay/archive machinery. | (a) Adds decision-critical runbook facts, not state; (b) the provider explicitly overwrites rather than merges and preserves a pre-restore backup branch; (c) Blast radius: PITR can rewind user, billing, webhook, and idempotency state. Fix cost: one warning and bounded checklist; (d) correct documentation is the clean fix; (e) uses existing reconcilers/provider history without inventing a new owner. |
@@ -23,7 +157,7 @@ Deploy-time drift detection belongs to the repository build path: one DEBT-442 v
 
 ## Description
 
-The repository-defined deploy seam is [`vercel.json`](../../vercel.json#L3)'s
+The repository-defined deploy seam is [`vercel.json`](../../../vercel.json#L3)'s
 `buildCommand: "pnpm db:migrate && pnpm build"`. Every Vercel deployment that
 uses this configuration runs the checked-in Drizzle migrator before building
 the application. Four related gaps cluster around that seam: a shared Preview
@@ -37,7 +171,7 @@ externally-fed-state reconciliation.
 and the intended environment contract. It does not encode the current Vercel
 `DATABASE_URL` values, branch-specific Preview overrides, Ignored Build Step,
 Deployment Checks, or Rolling Releases settings. Archived
-[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md#L78)
+[BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md#L78)
 records a redacted 2026-06-16 provider audit in which the default Preview and
 Development values shared one non-production host and no branch override was
 observed. That is the last recorded provider proof, not a live setting re-check
@@ -50,7 +184,7 @@ scoping](https://vercel.com/docs/environment-variables#preview-environment-varia
 
 Under the last measured provider topology, a feature-branch Preview without a
 branch-specific override uses the shared Neon `dev` database documented in
-[deployment-environments.md](../dev/deployment-environments.md#L25). The
+[deployment-environments.md](../../dev/deployment-environments.md#L25). The
 installed Drizzle PostgreSQL migrator — version-scoped to the locked
 `drizzle-orm@0.45.2` (`node_modules/drizzle-orm/pg-core/dialect.cjs:58-72`,
 verified directly against that build) — reads only the ledger row with the
@@ -73,7 +207,7 @@ The recorded early-0027 incident is adjacent evidence, not proof that this exact
 out-of-order scenario has occurred. Development applied an early version of
 `0027_early_wallow.sql` through a Preview deploy; the file was then amended at
 the same journal timestamp, Drizzle did not revisit it, and `0028` repaired the
-schema ([DEBT-442 incident](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L12)).
+schema ([DEBT-442 incident](./debt-442-applied-migration-ledger-content-blind.md#L12)).
 That incident proves that Preview can apply pre-merge migration content and that
 the migrator does not revalidate an applied timestamp. No known incident in the
 register proves that an orphaned later timestamp has yet skipped a distinct
@@ -81,19 +215,19 @@ earlier migration.
 
 No repository-defined deploy check detects either ledger shape directly.
 `verifyMigrationLedger` runs from E2E global setup
-([global.setup.ts](../../tests/e2e/global.setup.ts#L3) to
-[credential-health-check.ts](../../tests/e2e/helpers/credential-health-check.ts#L654));
+([global.setup.ts](../../../tests/e2e/global.setup.ts#L3) to
+[credential-health-check.ts](../../../tests/e2e/helpers/credential-health-check.ts#L654));
 normal local E2E uses freshly migrated Docker, CI E2E uses CI's throwaway
 Postgres, and no workflow sets `E2E_USE_EXISTING_DATABASE`. A target can
 therefore remain drifted until an intentional persistent-target E2E preflight or
 runtime failure exposes it (the failure pattern documented at
-[deployment-environments.md](../dev/deployment-environments.md#L131)).
+[deployment-environments.md](../../dev/deployment-environments.md#L131)).
 
 ### 2. The repository deploy path does not run the DEBT-442 content-hash guard
 
-DEBT-442 extended [`verifyMigrationLedger`](../../tests/e2e/helpers/credential-health-check.ts#L362)
+DEBT-442 extended [`verifyMigrationLedger`](../../../tests/e2e/helpers/credential-health-check.ts#L362)
 to compare ledger hashes with full-file SHA-256 values through
-[`computeMigrationContentDrift`](../../tests/e2e/helpers/credential-health-check.ts#L325),
+[`computeMigrationContentDrift`](../../../tests/e2e/helpers/credential-health-check.ts#L325),
 including one exact allowlist entry for Development's repaired early-0027
 content. That guard is wired only into the E2E credential preflight. The
 repository Build Command runs `db:migrate` and `build`, not the guard; whether a
@@ -107,12 +241,12 @@ different from the checkout while `db:migrate` exits successfully. The build
 may still fail if it exercises the missing schema, but it can also pass and
 defer discovery to runtime or a later dependent migration. DEBT-442 explicitly
 left a deploy-target health check as the high-value unshipped path
-([lines 77-80](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L77)).
+([lines 77-80](./debt-442-applied-migration-ledger-content-blind.md#L77)).
 
 The last recorded read-only proof, on 2026-07-08, found Production matching all
 29 local migration hashes and Development carrying only the known allowlisted
 0027 mismatch, with no missing or ledger-only rows
-([measurement table](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md#L82)).
+([measurement table](./debt-442-applied-migration-ledger-content-blind.md#L82)).
 This audit did not query either live database. The gap is therefore latent
 detection/operability debt, not evidence of current unexplained drift.
 
@@ -128,9 +262,9 @@ traffic is switched by promotion/rollback at the routing layer rather than by
 rebuilding the old deployment ([rollback behavior](https://vercel.com/docs/deployments/rollback-production-deployment#2-roll-back-immediately)).
 
 The expand/contract N-1 compatibility rule exists as constraint 3 in archived
-[BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md#L76),
-but it was not carried into [migration-authoring.md](../dev/migration-authoring.md#L5),
-the durable review checklist. [deployment-procedure.md](../dev/deployment-procedure.md#L16)
+[BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md#L76),
+but it was not carried into [migration-authoring.md](../../dev/migration-authoring.md#L5),
+the durable review checklist. [deployment-procedure.md](../../dev/deployment-procedure.md#L16)
 states that the old deployment remains up when migration/build fails, but does
 not ask authors to prove old-code compatibility after a successful migration
 and before promotion.
@@ -141,15 +275,15 @@ Concrete failure shapes are:
   by old code can reject writes during the window (`23514`, `23502`, and `23503`
   respectively);
 - a one-shot backfill such as [0018's `NOT EXISTS`
-  scan](../../db/migrations/0018_backfill-omitted-exam-attempts.sql#L37) cannot
+  scan](../../../db/migrations/0018_backfill-omitted-exam-attempts.sql#L37) cannot
   see rows old code creates after the migration commits;
 - in the 0021-0025 Track A batch, the relevant exposure was not 0023/0024's
   constraints (old code never wrote the new state table), but old code starting
   or updating sessions only in `params_json` after
-  [0021's backfill](../../db/migrations/0021_flaky_domino.sql#L27), leaving the
+  [0021's backfill](../../../db/migrations/0021_flaky_domino.sql#L27), leaving the
   relational source of truth absent or stale for the new deployment.
 
-[`vercel.test.ts`](../../vercel.test.ts#L10) pins only the command string. The
+[`vercel.test.ts`](../../../vercel.test.ts#L10) pins only the command string. The
 rollback side has a dedicated runbook, but the authoring-side compatibility
 question is absent. Preconditions are narrow -- a contracting migration or
 one-shot backfill plus old-code writes in the serving window -- so this remains
@@ -157,7 +291,7 @@ pattern debt rather than a demonstrated current data defect.
 
 ### 4. The rollback runbook omits restore write-loss and external-state reconciliation
 
-[database-rollbacks.md](../dev/database-rollbacks.md#L10) is the dedicated
+[database-rollbacks.md](../../dev/database-rollbacks.md#L10) is the dedicated
 database rollback runbook. Its last-resort step says to use PITR or snapshot
 restore when old code is incompatible with the migrated schema, but does not
 state the recovery-point loss or reconciliation work that follows. This path is
@@ -183,23 +317,23 @@ For this repository:
   ([Stripe delivery behavior](https://docs.stripe.com/webhooks#event-delivery-behaviors),
   [Clerk retry/replay](https://clerk.com/docs/guides/development/webhooks/overview#how-clerk-handles-delivery-issues)).
 - the daily Stripe reconciliation route
-  ([vercel.json](../../vercel.json#L4)) can reconstruct current customer and
+  ([vercel.json](../../../vercel.json#L4)) can reconstruct current customer and
   subscription mappings for rows it can scan, but it is not a general replay of
   every lost Stripe event;
 - Clerk has no bulk reconciler. Active users are lazily upserted on authenticated
-  requests ([clerk-auth-gateway.ts](../../src/adapters/gateways/clerk-auth-gateway.ts#L48)),
+  requests ([clerk-auth-gateway.ts](../../../src/adapters/gateways/clerk-auth-gateway.ts#L48)),
   but post-restore `user.deleted` and other lost event effects still require an
   explicit provider-to-database audit;
-- rewinding [`idempotency_keys`](../../db/schema.ts#L291),
-  [`stripe_events`](../../db/schema.ts#L208), or
-  [`clerk_events`](../../db/schema.ts#L226) removes local replay evidence.
+- rewinding [`idempotency_keys`](../../../db/schema.ts#L291),
+  [`stripe_events`](../../../db/schema.ts#L208), or
+  [`clerk_events`](../../../db/schema.ts#L226) removes local replay evidence.
   Retried operations can re-enter execution, although deterministic Stripe
   idempotency keys collapse some provider calls; duplicate-effect risk is
   operation- and provider-retention-dependent, not automatic.
 
-Archived [DEBT-060](../_archive/debt/debt-060-no-rollback-migrations.md#L14)
+Archived [DEBT-060](./debt-060-no-rollback-migrations.md#L14)
 settled fix-forward plus PITR as last resort, but its Neon procedure validation
-remains unchecked ([line 23](../_archive/debt/debt-060-no-rollback-migrations.md#L23)).
+remains unchecked ([line 23](./debt-060-no-rollback-migrations.md#L23)).
 
 ## Impact
 
@@ -218,14 +352,15 @@ or incident precondition and no current unexplained live drift is recorded.
 
 **Part 1 -- shared Preview migration authority:**
 
-1. **OWNER-GATED (Option 1):** the owner configures Preview Branching for this
-   existing Neon project through **Neon Console → Integrations → Add/Manage
-   Vercel → Link Existing Neon Account**, then selects the Vercel project and
-   Neon project/database/role. Before connecting, verify the integration will
-   branch from an approved non-production data parent; if the available
+1. **OWNER-GATED (Option 1; deferred/parked 2026-07-23):** the owner configures
+   Preview Branching for this Vercel-managed Neon project through **Vercel
+   Project Settings → Storage → Neon integration settings**. Before enabling
+   it, verify the integration will branch from an approved non-production data
+   parent; if the available
    integration would clone Production/default-branch data, stop and choose a
    safe non-production parent/topology instead of enabling it. Enable
-   **Automatically delete obsolete Neon branches**, then prove with one
+   automatic obsolete-branch cleanup where the integration exposes it, then
+   prove with one
    schema-bearing Preview that the dynamically injected URL changes only the
    generated `preview/<git-branch>` branch and ledger. The repository must not
    script this live provider mutation or assume it is complete.
@@ -314,12 +449,12 @@ or incident precondition and no current unexplained live drift is recorded.
 
 ## Related
 
-- [DEBT-442](../_archive/debt/debt-442-applied-migration-ledger-content-blind.md)
+- [DEBT-442](./debt-442-applied-migration-ledger-content-blind.md)
   (resolved 2026-07-09) -- shipped content-hash/ledger-drift detection and
   recorded the 0027/0028 incident.
-- [BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md)
+- [BUG-241](../bugs/bug-241-deploy-pipeline-has-no-migration-step.md)
   -- created the Build Command migration and the expand/contract constraint.
-- [DEBT-060](../_archive/debt/debt-060-no-rollback-migrations.md) -- settled
+- [DEBT-060](./debt-060-no-rollback-migrations.md) -- settled
   fix-forward plus PITR; provider-procedure validation remains unchecked.
 - Found during the 2026-07-09 DDIA-lens adversarial database-seam sweep (12
   finder lenses, per-candidate adversarial verification, dedup against the full

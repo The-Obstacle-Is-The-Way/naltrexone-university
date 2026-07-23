@@ -38,11 +38,36 @@ Before restoring:
 3. Pause or hold unsafe billing retries and other non-idempotent operator work
    until the post-restore idempotency state is understood.
 
-Neon automatically preserves the target branch's final pre-restore state in a
-separate root backup branch named `{branch_name}_old_{head_timestamp}`. Keep
-that branch available while reconciling post-point writes; it is the source for
-diffing state that the overwrite removed. The restored target keeps its
+Neon preserves the target branch's final pre-restore state in a separate root
+backup branch. Console restores automatically use a
+`{branch_name}_old_{head_timestamp}`-style name; CLI self-history restores
+require an explicit `--preserve-under-name <backup_name>`. Keep that branch
+available while reconciling post-point writes; it is the source for diffing
+state that the overwrite removed. The preserved branch has no compute by
+default, so attach a read-only compute (or use another provider-supported
+read-only inspection path) before querying it. The restored target keeps its
 connection details, but existing connections are interrupted and must recover.
+
+### Disposable restore-drill observations (2026-07-23)
+
+The DEBT-445 owner-run drill validated this runbook against `neonctl 2.23.1` on
+a disposable project:
+
+- Record the database server's exact UTC recovery point, but leave a clear
+  write-free gap around it. The CLI rejected a fractional-second branch source
+  such as `main@2026-07-23T16:08:54.5888Z` as invalid even though the provider
+  documentation describes millisecond restore precision; the whole-second
+  form `main@2026-07-23T16:08:54Z` succeeded. Confirm the normalized point with
+  a read-only point-in-time query before restoring.
+- A self-history CLI restore uses
+  `neonctl branches restore <target> ^self@<timestamp> --preserve-under-name <backup>`.
+  The command returned after 1.12 seconds in the drill, with the restored
+  branch briefly reporting `resetting`; the next branch listing reported both
+  the restored target and preserved backup `ready` as root branches.
+- The restored target contained only the pre-point row, while the explicitly
+  named preserved branch contained the pre-point row plus both post-point
+  rows. This directly validated overwrite-not-merge behavior and the backup's
+  role as the reconciliation source.
 
 After the restore, reconcile by operation rather than assuming provider retry
 queues will reconstruct acknowledged work:
