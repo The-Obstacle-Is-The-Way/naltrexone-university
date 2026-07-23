@@ -64,6 +64,10 @@ Targeted conflict recovery is opt-in by an allowlisted machine-readable `details
 
 ## Explicit non-goals
 
-- This contract implies no runtime abstraction or migration. DEBT-461 Phase B remains direction-gated and requires the pinned two-surface, no-flags, no-weakened-tests, net-deletion prototype ruling before any production extraction.
+- This contract implies no runtime abstraction or migration. The
+  [DEBT-461 Phase B owner ruling](<../../../../../docs/_archive/debt/debt-461-practice-client-idempotency-machinery-consolidation.md>)
+  closed NO-GO on 2026-07-23 because no two live surfaces have identical
+  complete transitions. The documented per-surface design is permanent unless
+  a new owner direction ruling explicitly reopens that decision.
 - Server-side idempotency through `withIdempotency`/`executeIdempotent`, including [DEBT-424's cache-miss-only admission law](<../../../../../docs/_archive/debt/debt-424-rate-limit-idempotent-actions-on-cache-miss-only.md>), is a separate seam; this contract covers client keys, recovery, and continuation ownership.
 - Phase A adds no executable characterization. Evidence gaps above are reported rather than filled here.
