@@ -53,6 +53,19 @@ describe('server tracing', () => {
     expect(serialized).not.toContain('11111111');
     expect(serialized).not.toContain('cus_secret');
     expect(serialized).not.toContain('arbitrary');
+
+    expect(() =>
+      projectSafeSpanAttributes(
+        new Proxy(
+          {},
+          {
+            get() {
+              throw new Error('hostile accessor');
+            },
+          },
+        ),
+      ),
+    ).not.toThrow();
   });
 
   it('drops invalid values even when their keys are allowlisted', () => {

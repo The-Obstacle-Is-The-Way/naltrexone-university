@@ -45,6 +45,12 @@ nonzero rate was committed:
   sessions per 14 days, or about 79.9 per day. This traffic calculation is the
   operational 5% budget; it does not assume that one sampled session consumes
   only one Sentry span unit.
+- The prescribed `statsPeriod=14d&interval=1d` call was issued on
+  2026-07-22 EDT, after UTC had rolled to 2026-07-23. Sentry day-aligns the
+  returned intervals: `2026-07-24T00:00:00Z` is the exclusive boundary for
+  the then-in-progress 2026-07-23 UTC bucket, not evidence collected from a
+  future day. The quantities above are the API response exactly as observed;
+  they were not rewritten into a fabricated alternate window.
 - Owner evidence gathered 2026-07-22 confirmed both DSNs were present in Vercel
   Production (approximately 150 days old), delivery was proven by the 140
   accepted production errors above in `addiction-boards-web` /

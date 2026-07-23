@@ -27,7 +27,17 @@ or user data into the durable evidence.
 Translate the current Drizzle statement into an equivalent parameterized
 `SELECT`; do not simplify joins, predicates, ordering, limits, or window
 functions. Use PostgreSQL parameters for every representative value. In `psql`,
-capture with this template:
+capture with this template. Create the output path securely first, pass it into
+`psql`, and keep the cleanup trap active until the reviewed sanitized artifact
+has been produced:
+
+```bash
+DEBT462_EXPLAIN_RAW="$(mktemp -t debt-462-explain-raw.XXXXXX)"
+chmod 600 "$DEBT462_EXPLAIN_RAW"
+trap 'rm -f -- "$DEBT462_EXPLAIN_RAW"' EXIT
+
+psql --set=debt462_explain_raw="$DEBT462_EXPLAIN_RAW"
+```
 
 ```sql
 \set ECHO none
@@ -49,7 +59,7 @@ PREPARE debt_462_probe(uuid) AS
   WHERE user_id = $1
   /* exact current joins, filters, ranking, ordering, limit, and offset */;
 
-\o /tmp/debt-462-explain-raw.json
+\o :debt462_explain_raw
 EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
 EXECUTE debt_462_probe(:'debt462_user_id');
 \o
@@ -87,3 +97,11 @@ ranking/sort nodes dominate execution time or buffer work; the plan is required
 even if the Sentry/Neon threshold already fired. For Part 4, no index is
 authorized unless this procedure shows that the measured query shape and plan
 justify it.
+
+After the sanitized artifact passes the denylist checks, remove the raw plan
+and clear the trap without leaving the current shell:
+
+```bash
+rm -f -- "$DEBT462_EXPLAIN_RAW"
+trap - EXIT
+```
