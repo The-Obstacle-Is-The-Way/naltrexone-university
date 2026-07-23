@@ -5,7 +5,7 @@
 **Date:** 2026-07-09
 **Resolved:** 2026-07-23
 **2026-07-18 staleness audit:** Stale but real against `ddad8eee`. The local journal census advanced from 29 to 31 entries (through `0030_nasty_forge`); the four guardrail gaps remain. Historical live-ledger measurements below remain dated evidence and were not rewritten as current production claims.
-**Resolved in FW-5 (2026-07-21):** Parts 1a, 2, 3, and 4a are complete: CI pins journal timestamp ordering; deploy and E2E share one migration-ledger verifier/early-0027 allowlist; the Vercel build path performs pre-migrate, migrate, exact post-migrate, then build; deployed-code compatibility is durable authoring policy; and the rollback runbook records Neon overwrite/RPO/backup-branch semantics plus post-restore reconciliation. Parts 1b and 4b remain OWNER-GATED manual provider steps and were neither attempted nor scripted.
+**Resolved in FW-5 (2026-07-21):** Parts 1a, 2, 3, and 4a are complete: CI pins journal timestamp ordering; deploy and E2E share one migration-ledger verifier/early-0027 allowlist; the Vercel build path performs pre-migrate, migrate, exact post-migrate, then build; deployed-code compatibility is durable authoring policy; and the rollback runbook records Neon overwrite/RPO/backup-branch semantics plus post-restore reconciliation. Part 4b was completed by the 2026-07-23 owner-run disposable restore drill below; Part 1b remains OWNER-GATED and deferred/parked.
 
 ## Register final-wave disposition (2026-07-23)
 
