@@ -1,11 +1,17 @@
+import * as Sentry from '@sentry/nextjs';
 import { PRUNE_BATCH_LIMIT } from '@/src/adapters/shared/prune-constants';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
+import {
+  projectSafeSpanAttributes,
+  SERVER_SPAN_FAMILIES,
+} from '@/src/adapters/shared/server-tracing';
 import {
   isE2EOwnerMismatchEvent,
   isMissingStripeSubscriptionUserIdError,
 } from '@/src/adapters/shared/stripe-subscription-errors';
 import {
   ApplicationError,
+  isApplicationError,
   isSubscriptionUserMissingError,
 } from '@/src/application/errors';
 import type { PaymentGateway } from '@/src/application/ports/gateways';
@@ -228,7 +234,7 @@ async function processSubscriptionWebhook(
   }
 }
 
-export async function processStripeWebhook(
+async function processStripeWebhookWithinSpan(
   deps: StripeWebhookDeps,
   input: StripeWebhookInput,
 ): Promise<void> {
@@ -329,4 +335,34 @@ export async function processStripeWebhook(
       'Stripe event pruning failed',
     );
   }
+}
+
+export async function processStripeWebhook(
+  deps: StripeWebhookDeps,
+  input: StripeWebhookInput,
+): Promise<void> {
+  const family = SERVER_SPAN_FAMILIES.stripe.parent;
+  return Sentry.startSpan(
+    {
+      name: family.name,
+      op: family.op,
+      attributes: projectSafeSpanAttributes({
+        'app.route': family.route,
+      }),
+    },
+    async (span) => {
+      try {
+        await processStripeWebhookWithinSpan(deps, input);
+      } catch (error) {
+        if (isApplicationError(error)) {
+          span.setAttributes(
+            projectSafeSpanAttributes({
+              'app.error_code': error.code,
+            }),
+          );
+        }
+        throw error;
+      }
+    },
+  );
 }

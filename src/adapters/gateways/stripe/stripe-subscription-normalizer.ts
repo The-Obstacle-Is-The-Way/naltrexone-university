@@ -1,12 +1,17 @@
+import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
+import {
+  projectSafeSpanAttributes,
+  SERVER_SPAN_FAMILIES,
+} from '@/src/adapters/shared/server-tracing';
 import {
   STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD,
   STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD,
 } from '@/src/adapters/shared/stripe-subscription-errors';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
-import { ApplicationError } from '@/src/application/errors';
+import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
@@ -127,11 +132,34 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
     );
   }
 
-  const subscription = await callStripeWithRetry({
-    operation: 'subscriptions.retrieve',
-    fn: () => stripeSubscriptions.retrieve(stripeSubscriptionId),
-    logger: input.logger,
-  });
+  const family = SERVER_SPAN_FAMILIES.stripe.subscriptionRetrieve;
+  const subscription = await Sentry.startSpan(
+    {
+      name: family.name,
+      op: family.op,
+      attributes: projectSafeSpanAttributes({
+        'app.operation': family.operation,
+      }),
+    },
+    async (span) => {
+      try {
+        return await callStripeWithRetry({
+          operation: 'subscriptions.retrieve',
+          fn: () => stripeSubscriptions.retrieve(stripeSubscriptionId),
+          logger: input.logger,
+        });
+      } catch (error) {
+        if (isApplicationError(error)) {
+          span.setAttributes(
+            projectSafeSpanAttributes({
+              'app.error_code': error.code,
+            }),
+          );
+        }
+        throw error;
+      }
+    },
+  );
 
   const parsedSubscription = stripeSubscriptionSchema.safeParse(subscription);
   if (!parsedSubscription.success) {
