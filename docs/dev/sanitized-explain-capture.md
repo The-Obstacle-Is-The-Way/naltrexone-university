@@ -92,11 +92,12 @@ names, node types, actual/planned row counts, loop counts, execution time,
 shared/local/temp buffer counts, sort method/memory, and the UTC observation
 date plus human-readable environment label.
 
-For DEBT-450 Part 5, explicitly state whether the duplicate window
-ranking/sort nodes dominate execution time or buffer work; the plan is required
-even if the Sentry/Neon threshold already fired. For Part 4, no index is
-authorized unless this procedure shows that the measured query shape and plan
-justify it.
+For DEBT-450 Part 5, capture separate sanitized plans for
+`listAttemptedQuestionsByUserId` and `countAttemptedQuestionsByUserId`, then
+state for each whether the duplicate latest-attempt window ranking/sort nodes
+dominate execution time or buffer work. Both plans are required even if the
+Sentry/Neon threshold already fired. For Part 4, no index is authorized unless
+this procedure shows that the measured query shape and plan justify it.
 
 After the sanitized artifact passes the denylist checks, remove the raw plan
 and clear the trap without leaving the current shell:

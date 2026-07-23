@@ -69,6 +69,11 @@ nonzero rate was committed:
   `action.getAttemptedQuestions`, and Stripe
   (`stripe.webhook.process` parent plus
   `stripe.api.subscriptions.retrieve` children).
+- The binding requirement to place `Sentry.startSpan` at those exact adapter
+  seams is an intentional, bounded exception to the ordinary adapter dependency
+  rule. The production source scan permits only the six calls in these five
+  families, so this does not authorize other adapter modules to import or call
+  infrastructure SDKs directly.
 - [`server-tracing.ts`](../../../src/adapters/shared/server-tracing.ts) permits
   only the pinned action/route/operation values, nonnegative finite durations,
   nonnegative integer counts, and typed application error codes. Its
