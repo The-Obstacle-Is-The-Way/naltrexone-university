@@ -1,8 +1,85 @@
 # DEBT-462: Observability Instrument Gap Prevents Mechanical Evaluation of Five Parked Register Triggers
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-07-21
+**Resolved:** 2026-07-22
+
+## Resolution summary (2026-07-22)
+
+The binding Option 1 minimal form shipped in the repository: server tracing is
+sampled at 5%, client tracing and both replay rates remain zero, exactly five
+server instrumentation families cover the four named actions and the single
+Stripe parent/child family, and every manual span attribute passes through one
+narrow allowlist. The two trigger procedures now live at
+[Monthly Bookmark Cardinality Census](../../dev/bookmark-cardinality-census.md)
+and [Sanitized EXPLAIN Capture](../../dev/sanitized-explain-capture.md).
+
+### Production-readiness precondition
+
+Read-only checks on 2026-07-22 completed the owner-gated prerequisite before the
+nonzero rate was committed:
+
+- `sentry-cli info` authenticated successfully against `https://sentry.io` for
+  organization `novamindnyc` and project `addiction-boards-web`; the
+  organization API returned active organization JSON. The auth token was
+  **REDACTED** and was never printed or stored in the repository.
+- The exact 14-day `stats_v2` request returned the window
+  `2026-07-09T00:00:00Z` through `2026-07-24T00:00:00Z`. Its before-picture was:
+
+  | Category | Outcome | Quantity |
+  | --- | --- | ---: |
+  | error | accepted | 140 |
+  | error | filtered | 879 |
+  | span | client_discard | 8,708 |
+  | span | accepted | 0 (group absent) |
+
+- The authenticated customer endpoint reported plan code `am3_f`, monthly
+  billing, and a current spans allocation of 5,000,000 with usage `0`,
+  on-demand budget `0`, and `usageExceeded=false`; retention fields were
+  `null`. This is live API evidence, not a limit copied from public vendor
+  documentation. The owner-observed plan class on 2026-07-22 was
+  **Developer/free**.
+- Observed application traffic was approximately 22,366 sessions per 14 days.
+  The flat-rate envelope is therefore `22,366 × 0.05 = 1,118.3` sampled
+  sessions per 14 days, or about 79.9 per day. This traffic calculation is the
+  operational 5% budget; it does not assume that one sampled session consumes
+  only one Sentry span unit.
+- Owner evidence gathered 2026-07-22 confirmed both DSNs were present in Vercel
+  Production (approximately 150 days old), delivery was proven by the 140
+  accepted production errors above in `addiction-boards-web` /
+  `novamindnyc`, and release tracking was live because deployment SHAs appeared
+  as Sentry releases.
+
+### Repository evidence
+
+- [`instrumentation.ts`](../../../instrumentation.ts) pins server
+  `tracesSampleRate: 0.05`; [`sentry.client.config.ts`](../../../sentry.client.config.ts)
+  and [`instrumentation-client.ts`](../../../instrumentation-client.ts) retain
+  client tracing and both replay rates at zero.
+- The five registered families and emitted names are:
+  `action.finalizeExamAnswers` (outer transaction),
+  `action.getBookmarks`, `action.getUserStats`,
+  `action.getAttemptedQuestions`, and Stripe
+  (`stripe.webhook.process` parent plus
+  `stripe.api.subscriptions.retrieve` children).
+- [`server-tracing.ts`](../../../src/adapters/shared/server-tracing.ts) permits
+  only the pinned action/route/operation values, nonnegative finite durations,
+  nonnegative integer counts, and typed application error codes. Its
+  hostile-input test proves SQL, PostgreSQL constraint/detail, params, raw
+  messages, stack/cause text, internal identifiers, provider IDs, arbitrary
+  values, and PII do not survive.
+- [`server-span-family-boundary.test.ts`](../../../tests/server-span-family-boundary.test.ts)
+  scans production source and permits exactly six `Sentry.startSpan` call
+  sites grouped under the five top-level families; any additional manual span
+  or family fails the test.
+
+### Post-deploy evidence
+
+Pending the production deployment. The same 14-day `stats_v2` request above
+will be repeated within approximately 30 minutes of the deploy. If accepted
+span quantity has not increased under reasonable traffic, this record will say
+`PENDING-TRAFFIC` rather than treating low-volume 5% sampling as a failure.
 
 ---
 
@@ -25,12 +102,12 @@ Sentry **error-tracking code paths** are wired and thoughtfully filtered, but cu
 
 ### What exists (verified 2026-07-21 against `dev` at `fc3c910c`)
 
-- [`package.json:47`](../../package.json#L47) declares `@sentry/nextjs@^10.53.1`; the lockfile resolves `10.65.0`. Server init lives in [`instrumentation.ts`](../../instrumentation.ts) (DSN-gated, with a `[SENTRY_DISABLED]` production warning when unset), and client init lives in [`sentry.client.config.ts`](../../sentry.client.config.ts) / [`instrumentation-client.ts`](../../instrumentation-client.ts). [`app/global-error.tsx`](../../app/global-error.tsx) renders the root fallback and calls only `console.error`; it contains no explicit Sentry capture.
-- [`lib/report-client-error.ts`](../../lib/report-client-error.ts) exposes `shouldReportClientError` with an `EXPECTED_BUSINESS_ERROR_CODES` allowlist plus the separate `reportClientError` capture helper; relevant client call sites use the predicate before reporting returned action errors. The allowlist contains `VALIDATION_ERROR`, `UNAUTHENTICATED`, `UNSUBSCRIBED`, and `RATE_LIMITED`. The repo-side filtering path is deliberate; current production delivery remains subject to the owner-gated proof above.
+- [`package.json:47`](../../../package.json#L47) declares `@sentry/nextjs@^10.53.1`; the lockfile resolves `10.65.0`. Server init lives in [`instrumentation.ts`](../../../instrumentation.ts) (DSN-gated, with a `[SENTRY_DISABLED]` production warning when unset), and client init lives in [`sentry.client.config.ts`](../../../sentry.client.config.ts) / [`instrumentation-client.ts`](../../../instrumentation-client.ts). [`app/global-error.tsx`](../../../app/global-error.tsx) renders the root fallback and calls only `console.error`; it contains no explicit Sentry capture.
+- [`lib/report-client-error.ts`](../../../lib/report-client-error.ts) exposes `shouldReportClientError` with an `EXPECTED_BUSINESS_ERROR_CODES` allowlist plus the separate `reportClientError` capture helper; relevant client call sites use the predicate before reporting returned action errors. The allowlist contains `VALIDATION_ERROR`, `UNAUTHENTICATED`, `UNSUBSCRIBED`, and `RATE_LIMITED`. The repo-side filtering path is deliberate; current production delivery remains subject to the owner-gated proof above.
 
 ### What is missing
 
-- **Tracing is off on both sides:** [`instrumentation.ts:21`](../../instrumentation.ts#L21) sets `tracesSampleRate: 0`; [`sentry.client.config.ts:11-12`](../../sentry.client.config.ts#L11) sets `tracesSampleRate: 0` and `replaysSessionSampleRate: 0` (`replaysOnErrorSampleRate` is also `0` at line 13). A repo-wide production search finds **zero** `Sentry.startSpan` or Sentry metrics usage, so these configs send no sampled performance events for the named surfaces.
+- **Tracing was off on both sides when filed:** [`instrumentation.ts`](../../../instrumentation.ts) set `tracesSampleRate: 0`; [`sentry.client.config.ts`](../../../sentry.client.config.ts) set `tracesSampleRate: 0` and `replaysSessionSampleRate: 0` (`replaysOnErrorSampleRate` was also `0`). A repo-wide production search found **zero** `Sentry.startSpan` or Sentry metrics usage before this resolution.
 - **No query analytics:** no Neon Query Analytics / slow-query-log consultation procedure, no sanitized-`EXPLAIN` capture workflow, and no cardinality-census procedure exists in the repo's runbooks.
 - **Provider-side current state is owner-gated:** archived DEBT-241 records both DSNs added to all Vercel environments on 2026-02-22, but its production-event verification boxes remained unchecked and git cannot prove current dashboard state. If the server DSN fallback pair is now unset, server error tracking is dark and `instrumentation.register()` warns with `[SENTRY_DISABLED]`; the client independently requires `NEXT_PUBLIC_SENTRY_DSN`. The owner must confirm current DSNs, event delivery, project/environment, and quota before nonzero tracing ships.
 
@@ -73,7 +150,7 @@ No user-facing defect. Two real costs: (1) **register integrity** — the five P
 
 ## Related
 
-- [DEBT-101 (archived)](../_archive/debt/debt-101-add-sentry-error-tracking.md) — added the error-tracking layer this item extends but did not choose a performance-tracing policy; [DEBT-241 (archived)](../_archive/debt/debt-241-sentry-dsn-missing-from-vercel-environments.md) later recorded the DSN dashboard action and the still-zero sample rates.
-- **2026-07-21 FW-3 correction:** [DEBT-450](./debt-450-hot-path-query-efficiency.md) parts 1/3b/4/5 are the four parked verdicts this item unblocks; [DEBT-457](../_archive/debt/debt-457-wave2-determinacy-and-test-hygiene-residues.md) part 2 is a closed ACCEPT with its own revival trigger; [DEBT-349 (deferred)](../_archive/debt/debt-349-cross-request-published-content-caching.md) revives only when production metrics prove a material bottleneck **and** a Next-runtime invalidation seam exists.
-- [DEBT-452](../_archive/debt/debt-452-db-failure-observability.md) — the diagnostic allowlist law extended here to telemetry attributes; archived after FW-3 resolved that boundary.
+- [DEBT-101 (archived)](./debt-101-add-sentry-error-tracking.md) — added the error-tracking layer this item extends but did not choose a performance-tracing policy; [DEBT-241 (archived)](./debt-241-sentry-dsn-missing-from-vercel-environments.md) later recorded the DSN dashboard action and the still-zero sample rates.
+- **2026-07-21 FW-3 correction:** [DEBT-450](./debt-450-hot-path-query-efficiency.md) parts 1/3b/4/5 are the four parked verdicts this item unblocks; [DEBT-457](./debt-457-wave2-determinacy-and-test-hygiene-residues.md) part 2 is a closed ACCEPT with its own revival trigger; [DEBT-349 (deferred)](./debt-349-cross-request-published-content-caching.md) revives only when production metrics prove a material bottleneck **and** a Next-runtime invalidation seam exists.
+- [DEBT-452](./debt-452-db-failure-observability.md) — the diagnostic allowlist law extended here to telemetry attributes; archived after FW-3 resolved that boundary.
 - Filed 2026-07-21 from the post-campaign complexity assessment (owner-requested); facts verified against source at `fc3c910c`.

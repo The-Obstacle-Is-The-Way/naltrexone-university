@@ -148,7 +148,7 @@ describe('Sentry configuration', () => {
       // Assert
       expect(initMock).toHaveBeenCalledWith({
         dsn: 'https://exampleServerDsn',
-        tracesSampleRate: 0,
+        tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
       });
     });
@@ -164,7 +164,7 @@ describe('Sentry configuration', () => {
       // Assert
       expect(initMock).toHaveBeenCalledWith({
         dsn: 'https://examplePublicDsn',
-        tracesSampleRate: 0,
+        tracesSampleRate: 0.05,
         environment: getServerEnvironment(),
       });
     });
@@ -180,7 +180,7 @@ describe('Sentry configuration', () => {
       // Assert
       expect(initMock).toHaveBeenCalledWith({
         dsn: 'https://exampleServerDsn',
-        tracesSampleRate: 0,
+        tracesSampleRate: 0.05,
         environment: 'preview',
       });
     });
