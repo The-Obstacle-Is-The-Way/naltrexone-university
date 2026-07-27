@@ -2,11 +2,12 @@
 
 **Priority:** P2 (a live paid, auto-renewing product with no published Privacy Policy or Terms of Service — a real privacy-law + auto-renewal-disclosure exposure; does **not** block the trial from functioning)
 **Created:** 2026-06-10
-**Status:** **Decided spec — no optionality.** Research-backed (Stripe DPA/SSA + Stripe docs + 2026 legal/regulatory sources). Docs-first; legal copy to be drafted and lawyer-reviewed before publishing.
+**Status:** **Decided spec — no optionality.** Research-backed (Stripe DPA/SSA + Stripe docs + 2026 legal/regulatory sources). **Step 0 (business facts) CLOSED 2026-07-27** — entity decided, contact email live in DNS, mailing-address obligation researched and deferred with a named trigger. Remaining gate: generated + lawyer-reviewed copy, then the ~half-day engineering build now fully specced in **Implementation spec** below.
 **Owner:** Founder / legal (engineering owns the on-site pages + Stripe wiring).
-**Deferred:** 2026-06-10 — **tabled by owner as a known, accepted obligation, not a launch blocker.** The trial functions without it and current real-world exposure is low (pre-revenue, negligible live user base) — **but this must be completed before active user acquisition / marketing.** Gated on owner-supplied business facts (no dedicated legal entity exists yet — sole proprietor with a clinical PLLC; the entity decision comes first) plus generated + lawyer-reviewed copy. Everything needed to resume cold is in the **Owner copy-prep checklist** below.
+**Deferred:** 2026-06-10 — **tabled by owner as a known, accepted obligation, not a launch blocker.** The trial functions without it and current real-world exposure is low (pre-revenue, negligible live user base) — **but this must be completed before active user acquisition / marketing.** Originally gated on owner-supplied business facts; **that gate is now cleared (2026-07-27)** — the only remaining gate is generated + lawyer-reviewed copy. Everything needed to resume cold is in the **Owner copy-prep checklist** below.
 **Related:** [DEBT-410](../_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) (the live free trial this serves), [Debt Index](./index.md). The Stripe Account-settings legal-link gap and descriptor-verification item surfaced during the DEBT-410 trial launch.
 **Re-verified accurate against `ddad8eee` on 2026-07-18.**
+**Updated 2026-07-27 against `b159e058`** — Step 0 closed with decided business facts, mailing-address requirement researched and deferred with a named trigger, template sources added, and a codebase-verified Implementation spec added (including the previously-missing public-route wiring, § 2).
 
 ---
 
@@ -53,12 +54,24 @@ The free trial launched (DEBT-410): the app now takes real signups into a **paid
 
 ## Acceptance criteria
 
-- [ ] Privacy Policy + Terms of Service (+ cookie policy) drafted from a reputable generator, customized for: subscription/free-trial disclosure, medical-education disclaimer, actual subprocessors.
+**Step 0 — business facts (CLOSED 2026-07-27):**
+
+- [x] Legal entity decided: **sole proprietorship, John H. Jung** — clinical PLLC explicitly excluded; LLC deferred to the revenue / pre-acquisition trigger.
+- [x] Contact email for privacy/legal requests **live and DNS-verified**: `support@addictionboards.com`.
+- [x] Mailing-address obligation researched: **not required at this stage**; revive trigger = first commercial/marketing email.
+- [x] Governing law: New York. Public product name: Addiction Boards @ `addictionboards.com`.
+
+**Remaining:**
+
+- [ ] Privacy Policy + Terms of Service (+ cookie policy) drafted from a reputable generator or open-licensed base (see **Template sources**), customized for: subscription/free-trial disclosure, medical-education disclaimer, actual subprocessors.
 - [ ] Lawyer-reviewed before publishing.
 - [ ] Published on-site at stable routes, design-system compliant, linked from footer + the checkout/signup entry (disclosure before billing).
+- [ ] **`/privacy` and `/terms` added to `PUBLIC_ROUTE_PATTERNS`, with a unit guard and an E2E check proving both return 200 while signed out** (see Implementation spec § 2 — without this the pages redirect to sign-in and silently defeat their own purpose).
+- [ ] Mandatory-clause tests in place: medical-education disclaimer, auto-renewal terms, and subprocessor list cannot be dropped without failing CI.
 - [ ] Stripe Account settings: Privacy Policy URL + Terms of Service URL set; existing shortened statement descriptor verified as 2-10 characters and compatible with Stripe's trial-ending descriptor suffix.
 - [ ] Stripe-native trial-ending customer emails manually rechecked in the Dashboard (Dashboard-owned; not API-verifiable).
 - [ ] Trial/auto-renewal material terms (price, frequency, trial end, cancel method) clearly disclosed before billing info is collected.
+- [ ] Annual + event-driven policy review cadence recorded (Step 5), with `effectiveDate` bumped on each review.
 
 ## Dependencies
 
@@ -68,9 +81,32 @@ The free trial launched (DEBT-410): the app now takes real signups into a **paid
 
 *A framework to drive the copy. **Not legal advice**; the Step 3 lawyer review is the gate. This is the cold-start resume point — when you have clear time, work top to bottom.*
 
-**Step 0 — Business facts (owner-supplied):** legal entity name (no dedicated entity exists yet — sole proprietor with a clinical PLLC; **decide the entity first**: use the PLLC, form a new LLC, or operate as sole proprietor), public product name (Addiction Boards @ `addictionboards.com`), contact email for privacy/legal requests, mailing/contact address, governing-law state.
+**Step 0 — Business facts — ✅ CLOSED 2026-07-27.** All values below are decided and ready to paste into the generator / lawyer brief.
 
-**Step 1 — Generate (Termly):** Privacy Policy + Terms of Service + Cookie Policy. Answer: paid SaaS subscription; collects email/account + usage data; payments via a third-party processor; cookies yes (auth/session; Sentry only); does **not** sell data; **paid subscription + auto-renewal + free trial = YES** (this triggers the trial clauses — the critical part); US audience, no under-13. Prefer Termly's **embed** on our own `/privacy` + `/terms` so the pages are on-site **and** auto-update.
+| Fact | Value | Notes |
+|---|---|---|
+| **Legal entity** | **Sole proprietorship — John H. Jung** (displayed as "John H. Jung, MD, MS") | No filing, no fee. Credentials are display-only, not part of the legal identity. |
+| **Clinical PLLC** | **NOT USED — explicitly excluded** | A professional entity is purpose-restricted to the licensed profession, and routing a consumer software product through the entity holding the clinical practice couples two liability surfaces that must stay separate. Off the table permanently for this product. |
+| **LLC** | **Deferred** — trigger: first paying revenue *or* immediately before active user acquisition | NY costs ~$1,000–1,500 all-in (the $200 filing plus the NY newspaper publication requirement), which is why deferral is rational while pre-revenue. Same trigger as publishing these pages. |
+| **Public product name** | Addiction Boards @ `addictionboards.com` | Matches the existing marketing header/footer brand string. |
+| **Contact email** | **`support@addictionboards.com` — LIVE as of 2026-07-27** | ImprovMX free-tier forwarding → owner inbox. DNS written into Vercel DNS (nameservers `ns1/ns2.vercel-dns.com`): `MX 10 mx1.improvmx.com`, `MX 20 mx2.improvmx.com`, `TXT v=spf1 include:spf.improvmx.com ~all`. Verified propagated via `dig @8.8.8.8`. A catch-all alias is active, so `legal@` / `privacy@` also resolve without further setup. No collision with Clerk mail, which lives entirely on subdomains (`clkmail`, `clk._domainkey`, `clk2._domainkey`); there was no pre-existing root SPF or MX. |
+| **Mailing address** | **NOT REQUIRED at the current stage — deferred with a named trigger** | See "Mailing-address finding" below. |
+| **Governing law** | New York | |
+
+**Mailing-address finding (researched 2026-07-27 — this narrows a previously assumed requirement):**
+
+A published physical postal address is **not legally required for this product today**, on two independent grounds:
+
+1. **CCPA lets an online-only business use email alone.** The regulation provides that a business operating *exclusively online* with a direct relationship to the consumer is required to provide **only an email address** for access/deletion/correction requests — the two-method (incl. toll-free number) rule does not attach. `support@addictionboards.com` satisfies this outright. Separately, CCPA's coverage thresholds (gross revenue, 100k+ consumers, or ≥50% of revenue from selling personal information) are not met pre-revenue, so it does not yet apply at all.
+2. **CAN-SPAM's physical-address requirement attaches to *commercial* email only.** Transactional and relationship messages are exempt from that provision. Every message this product currently sends — trial-ending notices, receipts, password resets, Clerk auth mail — is transactional.
+
+**Revive trigger (firm):** the **first commercial/marketing email** (newsletter, launch announcement, win-back/discount campaign) makes a valid physical postal address mandatory in that message's footer. This is the *same* trigger as "before active user acquisition", so it coincides with LLC formation and page publication — one combined step, not three.
+
+When the trigger fires, options (verified pricing, 2026): a **USPS PO Box** (~$25–90 per 6 months) is explicitly named as acceptable by CAN-SPAM and is the cheapest compliant answer, but is not a street address and won't serve later bank/LLC needs; **Anytime Mailbox** or **iPostal1** (both from ~$9.99/mo, real street addresses, largest location networks) or **PostScan Mail** (from ~$10/mo, ~400 locations) provide a street address. All virtual options require a notarized USPS Form 1583, generally completed online. Ship the pages with email-only contact now and add the address in the same pass that adds it to marketing email.
+
+**Step 1 — Generate the baseline text.** Privacy Policy + Terms of Service + Cookie Policy. Answer: paid SaaS subscription; collects email/account + usage data; payments via a third-party processor; cookies yes (auth/session; Sentry only); does **not** sell data; **paid subscription + auto-renewal + free trial = YES** (this triggers the trial clauses — the critical part); US audience, no under-13. Source options in **Template sources** below.
+
+> **Superseded 2026-07-27 — the earlier "prefer Termly's *embed*" preference is withdrawn.** Generate with Termly (or a CC0/CC-BY base), then **commit the resulting text into the repo** rather than embedding a third-party script. Rationale is recorded under *Rendering approach* in the Implementation spec: the app runs a Clerk-managed strict CSP, an embed cannot be design-system-compliant or server-rendered, and in-repo copy is the only form that can be **test-guarded** so a future edit cannot silently drop a mandatory clause. Trade-off accepted: policy updates become a manual review rather than automatic — mitigated by the annual review reminder in Step 5.
 
 **Step 2 — Three mandatory customizations** (generic generator output won't have these):
 
@@ -80,7 +116,131 @@ The free trial launched (DEBT-410): the app now takes real signups into a **paid
 
 **Step 3 — Lawyer review (before publishing):** focus on (1) auto-renewal/trial compliance — ROSCA + state ARL (disclosure adequacy/placement, consent, cancellation); (2) the medical-education disclaimer's liability adequacy; (3) data-practice accuracy + user-rights language (CCPA/CPRA + state laws); (4) governing law, limitation of liability, dispute resolution.
 
-**Step 4 — Hand to engineering (the buildable part, ~half a day):** provide the lawyer-approved text (or Termly embeds) + the Step-0 facts. Engineering then builds `/privacy` + `/terms` under `app/(marketing)/`, adds `ROUTES.PRIVACY`/`ROUTES.TERMS`, links them from the footer + checkout/signup entry (disclosure before billing), and sets the Stripe Account-settings URLs. The shortened Stripe descriptor is already present + compliant.
+**Step 4 — Hand to engineering (the buildable part, ~half a day):** provide the lawyer-approved text + the Step-0 facts (all now filled in above). The build is fully specced against the live codebase in **Implementation spec** below — an agent can execute it end-to-end with no further discovery. The shortened Stripe descriptor is already present + compliant.
+
+**Step 5 — Post-publish review cadence (the cost of choosing static copy over an auto-updating embed):** set a recurring **annual** reminder to re-read both documents against current US state-privacy and negative-option law, plus an **event-driven** review whenever any of these change: the subprocessor list (adding/removing Clerk, Stripe, Vercel, Neon, Sentry), pricing or trial mechanics, or the entity (LLC formation). Record the review date in the `effectiveDate` field of each content module so the published page always shows when it was last reviewed.
+
+## Template sources (baseline wording — researched 2026-07-27)
+
+Two families. Use a **generator** if you want the questionnaire to assemble state-law coverage for you; use an **open-licensed corpus** if you'd rather start from battle-tested prose written by a company with real lawyers and adapt it. Either way the output is a *baseline* — the three mandatory customizations in Step 2 are what make it ours, and Step 3's lawyer review is the gate.
+
+### Generators (questionnaire → assembled policy)
+
+| Tool | Notes |
+|---|---|
+| **Termly** (recommended) | US-focused; covers the CCPA/CPRA + Virginia/Colorado/Connecticut/etc. landscape; bundles Privacy + ToS + Cookie policy; has an explicit **auto-renewal / free-trial** question path — that path is the reason it's the pick. |
+| iubenda | EU-deep alternative; more than we need for a US-only audience. |
+| TermsFeed | Comparable US generator; viable substitute. |
+
+### Open-licensed corpora (copy, adapt, attribute per licence)
+
+**Licence differences are load-bearing — check before adapting:**
+
+| Source | Licence | Consequence |
+|---|---|---|
+| **GitHub `github/site-policy`** | **CC0-1.0** (public domain dedication) | **Cleanest option.** No attribution required, no share-alike obligation, usable even in part. Note CC0 grants **no trademark rights** — strip every GitHub name/mark. Strong, plain-English SaaS ToS + privacy prose. |
+| **Basecamp / 37signals policies** | **CC BY** (attribution) | Attribution required, but **no share-alike** — our adapted policy stays under our own terms. Includes ToS, privacy, cancellation, refund, and use-restriction policies; the cancellation/refund ones map well onto our Stripe self-serve flow. |
+| **Automattic `legalmattic`** | **CC BY-SA 4.0** (attribution + **ShareAlike**) | ⚠️ ShareAlike is viral: a derivative must be released under the same licence. Usable, but it constrains how our own published policy is licensed — prefer CC0/CC-BY sources unless there's a specific reason to start here. |
+
+**Recommended blend:** Termly for the assembled state-law + auto-renewal skeleton, cross-read against GitHub's CC0 ToS for plain-English clarity, then apply the Step-2 customizations. Do **not** ship any of them unmodified — none contains the medical-education disclaimer, our trial mechanics, or our subprocessor list.
+
+---
+
+## Implementation spec (verified against the live tree at `b159e058`, 2026-07-27)
+
+Every path, constant, and seam below was read from the working tree, not assumed. An agent can execute this without further discovery. **TDD is mandatory** — write each test before the code it covers.
+
+### 1. Route constants — `lib/routes.ts`
+
+Add to the public/marketing block of the `ROUTES` object (above the `APP_*` entries):
+
+```ts
+PRIVACY: '/privacy',
+TERMS: '/terms',
+```
+
+### 2. ⚠️ Public-route wiring — `lib/public-routes.ts` (MISSING FROM THE ORIGINAL SPEC — hard blocker)
+
+`PUBLIC_ROUTE_PATTERNS` is consumed by `proxy.ts`, which calls `auth.protect()` on **every** route that does not match. Legal pages must be readable while signed out — that is the entire compliance point, since ROSCA disclosure has to happen *before* signup. Add:
+
+```ts
+'/privacy(.*)',
+'/terms(.*)',
+```
+
+**Failure mode if skipped:** `/privacy` and `/terms` 302 to `/sign-in` in production. The pages would look shipped, pass a naive review, and defeat their own purpose — an unauthenticated visitor could never read the disclosure. Guard it with a test (§ 6) and an E2E check (§ 7); do not rely on manual verification.
+
+### 3. Pages — `app/(marketing)/privacy/page.tsx`, `app/(marketing)/terms/page.tsx`
+
+The `(marketing)` route group exists (currently holding only `checkout/`) and has **no group-level `layout.tsx`** — pages compose the layout themselves, exactly as `app/pricing/page.tsx` does:
+
+```tsx
+import { MarketingLayout } from '@/components/marketing/marketing-layout';
+import { ROUTES } from '@/lib/routes';
+
+export const metadata: Metadata = { title: 'Privacy Policy - Addiction Boards' };
+
+// ...
+<MarketingLayout featuresHref={`${ROUTES.HOME}#features`}>…</MarketingLayout>
+```
+
+`featuresHref={`${ROUTES.HOME}#features`}` is the established value for non-home marketing pages (mirrors `app/pricing/page.tsx`; the home page itself uses the bare `'#features'`).
+
+### 4. Rendering approach — typed content modules + one presentational shell
+
+- `components/legal/legal-document.tsx` — **server** component (no `'use client'`), presentational only, design-system compliant. Renders `title`, a "Last reviewed: {effectiveDate}" line, and the section list with correct heading levels.
+- `app/(marketing)/privacy/privacy-content.ts` and `app/(marketing)/terms/terms-content.ts` — the lawyer-approved text as typed data:
+
+```ts
+export type LegalSection = { heading: string; body: string[] };
+export type LegalDocumentContent = {
+  title: string;
+  effectiveDate: string; // ISO yyyy-mm-dd — bump on every review (Step 5)
+  sections: LegalSection[];
+};
+```
+
+**Rejected alternatives (recorded so they are not re-litigated):**
+
+- **Termly embed / any third-party script.** The app runs a Clerk-managed **strict CSP** (`proxy.ts`, currently `reportOnly: true` — see `docs/_archive/debt/debt-420-csp-enforcing-mode-flip.md`). A third-party embed adds an external script origin, generates CSP report noise into Sentry, cannot inherit the design system, requires JS for legally-required text, and makes the copy untestable. Rejected.
+- **Reusing `components/markdown/markdown.tsx`.** It is `'use client'` and carries question-explanation-specific behavior (the `Clinical Pearl` transform). Wrong seam — it would couple legal rendering to question rendering. Rejected.
+- **Raw HTML string / `dangerouslySetInnerHTML`.** Unnecessary sanitization surface for content we author. Rejected.
+
+### 5. Footer + pre-billing disclosure
+
+- **Footer** — `components/marketing/marketing-layout.tsx`, inside `MarketingFooter`'s link cluster (alongside the existing Features / Pricing / Sign in / Sign up links), reusing `marketingNavLinkClass`. Note the fragment is `'use cache'`; static links are fine inside it.
+- **Pre-billing disclosure (ROSCA)** — the material terms (price, billing frequency, when the trial ends, cancellation method) plus links to `/terms` and `/privacy` must appear on the **pricing/checkout entry** (`app/pricing/pricing-view.tsx`), not only inside the ToS. This is the substantive compliance requirement; footer links alone do **not** satisfy "clear and conspicuous, before billing information is collected."
+
+### 6. Tests (TDD — write first)
+
+| File | Asserts |
+|---|---|
+| `lib/public-routes.test.ts` (extend) | `PUBLIC_ROUTE_PATTERNS` contains `/privacy(.*)` and `/terms(.*)` — regression guard for § 2 |
+| `components/legal/legal-document.test.tsx` | Heading structure, `effectiveDate` rendering, section order |
+| `app/(marketing)/privacy/page.test.tsx` | **Mandatory-clause guards**: subprocessor list names Clerk, Stripe, Vercel, Neon, Sentry; contact email present |
+| `app/(marketing)/terms/page.test.tsx` | **Mandatory-clause guards**: medical-education disclaimer present; auto-renewal terms present (price, frequency, trial length, cancellation method) |
+| `components/marketing/marketing-layout.test.tsx` (extend) | Footer links to both routes, via `findAnchorByHref` from `tests/shared/dom-helpers.ts` |
+| `app/pricing/pricing-view.test.tsx` (extend) | Pre-billing disclosure text + legal links render on the pricing entry |
+
+`*.test.tsx` files use `renderToStaticMarkup` with `// @vitest-environment jsdom` as the first line, and assert through parsed-DOM seams per `.claude/rules/testing.md` — not raw HTML fragments.
+
+The mandatory-clause tests are the point of choosing in-repo copy: they make it **mechanically impossible** to ship a policy that has silently lost the medical disclaimer or the auto-renewal terms.
+
+### 7. E2E
+
+Add to `tests/e2e/`: unauthenticated `GET /privacy` and `GET /terms` return **200, not a redirect to `/sign-in`**. This is the only check that proves § 2 end-to-end through the real middleware.
+
+### 8. Non-code / dashboard steps (owner)
+
+- Stripe **Account settings** → set Privacy Policy URL + Terms of Service URL (`https://addictionboards.com/privacy` / `/terms`) so hosted billing + portal pages surface them.
+- Verify the existing **shortened statement descriptor** is still 2–10 characters and still reads correctly with Stripe's trial-ending descriptor suffix. **It already exists and is compliant — do not treat it as missing.**
+- Recheck Stripe-native **trial-ending customer emails** in the Dashboard (Dashboard-owned, not API-verifiable).
+
+### 9. Out of scope (deliberately)
+
+No `sitemap.ts` / `robots.ts` exists in `app/`, and none is required for this work — nothing currently blocks indexing of the new routes. If SEO work later adds a sitemap, include `/privacy` and `/terms`.
+
+---
 
 ## Sources
 
@@ -90,3 +250,10 @@ The free trial launched (DEBT-410): the app now takes real signups into a **paid
 - [California Business and Professions Code § 17602 (ARL)](https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17602.)
 - [Termly vs iubenda (2026 generator comparison)](https://cybernews.com/privacy-compliance-tools/termly-vs-iubenda/)
 - [Board-prep question-bank educational disclaimer (example)](https://higherlogicdownload.s3.amazonaws.com/NEUROCRITICALCARE/b8b3b384-bfb9-42af-bb55-45973d5054a4/UploadedImages/Educational_Products_Disclaimer_Question_Bank.pdf)
+
+**Added 2026-07-27 (Step 0 closure + template research):**
+
+- [California AG — CCPA](https://oag.ca.gov/privacy/ccpa) · [CPPA FAQs](https://cppa.ca.gov/faq.html) · [CCPA text (Sidley)](https://www.sidley.com/en/sidley-pages/ccpa-text) — the online-only / email-address-only provision
+- [FTC — CAN-SPAM Act Compliance Guide for Business](https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business) · [Physical address in transactional vs commercial email](https://www.suped.com/knowledge/email-deliverability/compliance/does-can-spam-require-a-physical-address-in-transactional-emails) — the commercial-only scope of the postal-address requirement, and that a USPS-registered PO Box or CMRA private mailbox both qualify
+- [github/site-policy](https://github.com/github/site-policy) ([CC0-1.0 licence](https://github.com/github/site-policy/blob/main/LICENSE.md)) · [Automattic/legalmattic](https://github.com/Automattic/legalmattic) (CC BY-SA 4.0) — open-licensed policy corpora and their differing reuse obligations
+- [Virtual mailbox pricing comparison (2026)](https://www.postscanmail.com/blog/top-virtual-mailbox-services.html) · [iPostal1 vs Anytime Mailbox (2026)](https://ecommerceparadise.com/ipostal1-vs-anytime-mailbox-2026/) — deferred-purchase options and current entry pricing
