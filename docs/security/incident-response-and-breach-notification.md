@@ -21,7 +21,7 @@ Immediately:
 3. Contain the incident without destroying evidence: revoke exposed sessions/keys, restrict access, isolate a deployment/device, or disable a vulnerable path as appropriate.
 4. Do not use destructive production/database operations without resolving the exact target and preserving necessary evidence.
 5. Open provider support/security cases through verified channels.
-6. Start the notification-deadline log. Treat the discovery date as day zero until a documented analysis establishes otherwise.
+6. Start the notification-deadline log at the earliest documented time the breach was discovered or a provider notified the operator of it. Later scope, impact, or legal analysis must not move that clock forward. Correct the timestamp only when evidence proves the original entry mistaken, and preserve the original entry, correction, reason, and supporting evidence.
 7. Continue service only where safe; prioritize account/payment protection and reliable communication.
 
 ## 3. Triage record

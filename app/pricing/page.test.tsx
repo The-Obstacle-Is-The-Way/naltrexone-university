@@ -20,6 +20,7 @@ import type {
 } from '@/src/application/use-cases/check-entitlement';
 import {
   findAnchorByHref,
+  findElementByText,
   findHeadingByText,
   parseHtml,
 } from '@/tests/shared/dom-helpers';
@@ -1133,20 +1134,18 @@ describe('app/pricing', () => {
     const { html } = await renderAnonymousPricingPage({
       reason: 'subscription_required',
     });
+    const doc = parseHtml(html);
 
     expect(html).toContain(
       'Start your free trial to access the app — no card required.',
     );
     expect(html).toContain('Start 7-day free trial');
-    expect(html).toContain(
-      'If you add a payment method before the trial ends, Pro Monthly starts at $29 per month',
-    );
-    expect(html).toContain(
-      'If you add a payment method before the trial ends, Pro Annual starts at $199 per year',
-    );
-    expect(html).toContain(
-      'If you do not add a payment method, the trial ends and you are not charged.',
-    );
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
+    ).not.toBeNull();
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.annual.trialDisclosure),
+    ).not.toBeNull();
     expect(html).not.toContain('Subscription required to access the app.');
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
@@ -1208,8 +1207,12 @@ describe('app/pricing', () => {
     );
     expect(annualCard?.getAttribute('aria-current')).toBe('true');
     expect(annualCard?.textContent).toContain('Selected plan');
-    expect(html).not.toContain(PRICING_DATA.monthly.trialDisclosure);
-    expect(html).not.toContain(PRICING_DATA.annual.trialDisclosure);
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
+    ).toBeNull();
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.annual.trialDisclosure),
+    ).toBeNull();
   });
 
   it('renders trial CTAs for signed-in first-time users', async () => {

@@ -51,6 +51,7 @@ At minimum, review:
 - Secrets belong in provider environment stores or local ignored environment files, never source control, issue text, screenshots, or logs.
 - Provider selection requires a recorded review of security capabilities, breach-notice commitments, deletion/retention controls, and contractual safeguards.
 - A security review is required before adding authentication, sensitive inputs, endpoints, payment features, or a new provider.
+- The owner completes and records security-practice training at adoption and annually. Employee training and management are currently not applicable because the business has no employees; before any employee, contractor, or delegated administrator receives access, the owner must document role-specific onboarding, confidentiality/security duties, least-privilege access, supervision, recurring training, and access removal.
 - Security-relevant incidents and near misses are recorded and reviewed for program changes.
 - The owner reviews this program at least annually and after a material incident, provider change, data-practice change, or business-structure change.
 
@@ -62,6 +63,7 @@ At minimum, review:
 - [ ] Record operator-device encryption, screen lock, patching, backup, and remote-wipe status.
 - [ ] Confirm repository/CI secret-scanning and dependency-alert settings.
 - [ ] Confirm whether any production data exists in developer machines, exports, screenshots, or support mail.
+- [ ] Complete and retain the owner's security-practice training record; confirm no employee, contractor, or delegated administrator has unrecorded access, or document the required training and management evidence for each person.
 
 ## 5. Technical safeguards
 
@@ -94,10 +96,17 @@ These controls do not prove provider-account configuration.
 
 ## 6. Physical safeguards
 
+- At adoption and annually, assess physical risks to operator devices, paper, portable media, local exports, backups, and any location where private information is collected, transported, stored, or destroyed. Record whether each medium/location exists and the control or not-applicable basis.
 - Operator devices must use full-disk encryption, automatic screen lock, current supported software, and individual authentication.
 - Paper records containing private information are avoided. If created, they are locked while needed and cross-cut shredded when no longer required.
 - Portable media holding private information is prohibited unless specifically approved, encrypted, inventoried, and erased after use.
+- Detect, prevent, and respond to physical intrusion through controlled device/workspace access, prompt lost-or-stolen-device reporting, session/key revocation, remote lock or wipe where available, and the incident procedure. A dedicated office/server facility is currently not applicable because the product uses provider-hosted infrastructure and a sole-proprietor workspace; any later facility or delegated workspace requires its own access and intrusion controls before use.
+- Protect private information during collection, transportation, and disposal: minimize local copies, encrypt approved electronic transfer/media, keep any permitted paper or device under the owner's control, inventory transfers, and verify destruction.
 - Disposal must make electronic information unreadable and unreconstructable, subject to legal-retention requirements.
+
+**OPEN before adoption:**
+
+- [ ] Complete and retain the physical-risk assessment, including storage/disposal, collection/transportation, and intrusion-response controls; record each genuinely absent medium or facility as not applicable with the reason.
 
 ## 7. Retention and disposal
 

@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 import {
   findAnchorByHref,
+  findButtonByText,
+  findElementByText,
   findMainLandmarkById,
+  isNodeBefore,
   parseHtml,
 } from '@/tests/shared/dom-helpers';
 
@@ -260,25 +264,30 @@ describe('app/(app)/app/layout (shell)', () => {
     const doc = parseHtml(html);
     const shell = doc.body.firstElementChild;
     const banner = shell?.children[0];
-    const actionButton = banner?.querySelector('form button[type="submit"]');
+    const disclosure = banner
+      ? findElementByText(
+          banner,
+          'span',
+          PRICING_DATA.annual.trialPaymentDisclosure,
+        )
+      : null;
+    const actionButton = banner
+      ? findButtonByText(banner, 'Add a card to keep access')
+      : null;
 
     expect(html).toContain('4 days left in trial');
-    expect(html).toContain('Add a card to keep access');
-    expect(html).toContain(
-      'Pro Annual starts at $199 per year when your trial ends and renews automatically every year until canceled.',
-    );
-    expect(html).toContain(
-      'If you do not add a payment method, your trial ends and you are not charged.',
-    );
-    expect(html.indexOf('Pro Annual starts at $199 per year')).toBeLessThan(
-      html.indexOf('Add a card to keep access'),
-    );
+    expect(disclosure).not.toBeNull();
+    expect(actionButton).not.toBeNull();
+    expect(
+      disclosure && actionButton
+        ? isNodeBefore(disclosure, actionButton)
+        : false,
+    ).toBe(true);
     expect(banner?.textContent).toContain('days left in trial');
     expect(shell?.children[1]?.tagName).toBe('HEADER');
     expect(banner?.querySelector('input[name="idempotencyKey"]')).not.toBe(
       null,
     );
-    expect(actionButton?.textContent).toContain('Add a card to keep access');
     expect(html).not.toContain('Your payment failed');
     expect(html).toContain('Child content');
   });
