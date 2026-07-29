@@ -58,7 +58,8 @@ The free trial launched (DEBT-410): the app now takes real signups into a **paid
 
 - [x] Legal entity decided: **sole proprietorship, John H. Jung** — clinical PLLC explicitly excluded; LLC deferred to the revenue / pre-acquisition trigger.
 - [x] Contact email for privacy/legal requests **live and DNS-verified**: `support@addictionboards.com`.
-- [x] Mailing-address obligation researched: **not required at this stage**; revive trigger = first commercial/marketing email.
+- [x] Privacy-request contact channel satisfied by email alone (CCPA online-only provision) — no mailing address needed for that purpose.
+- [ ] **CAN-SPAM postal-address obligation: OPEN, not cleared.** Enumerate every live Clerk and Stripe email template, classify each by primary purpose, and add a valid physical postal address (plus an opt-out for anything commercial) if any template is commercial or mixed-purpose. Templates are provider-dashboard-owned and cannot be verified from this repository.
 - [x] Governing law: New York. Public product name: Addiction Boards @ `addictionboards.com`.
 
 **Remaining:**
@@ -95,18 +96,29 @@ The free trial launched (DEBT-410): the app now takes real signups into a **paid
 
 **Mailing-address finding (researched 2026-07-27 — this narrows a previously assumed requirement):**
 
-A published physical postal address is **not legally required for this product today**, on two independent grounds:
+**Privacy-policy contact channel — settled.** CCPA lets an online-only business use email alone: the regulation provides that a business operating *exclusively online* with a direct relationship to the consumer is required to provide **only an email address** for access/deletion/correction requests — the two-method (incl. toll-free number) rule does not attach. `support@addictionboards.com` satisfies this outright. Separately, CCPA's coverage thresholds (gross revenue, 100k+ consumers, or ≥50% of revenue from selling personal information) are not met pre-revenue, so it does not yet apply at all. **No published mailing address is needed to satisfy the privacy-request channel.**
 
-1. **CCPA lets an online-only business use email alone.** The regulation provides that a business operating *exclusively online* with a direct relationship to the consumer is required to provide **only an email address** for access/deletion/correction requests — the two-method (incl. toll-free number) rule does not attach. `support@addictionboards.com` satisfies this outright. Separately, CCPA's coverage thresholds (gross revenue, 100k+ consumers, or ≥50% of revenue from selling personal information) are not met pre-revenue, so it does not yet apply at all.
-2. **CAN-SPAM's physical-address requirement attaches to *commercial* email only.** Transactional and relationship messages are exempt from that provision. Every message this product currently sends — trial-ending notices, receipts, password resets, Clerk auth mail — is transactional.
+**CAN-SPAM postal-address obligation — CONDITIONAL, not cleared.** CAN-SPAM's valid-physical-postal-address requirement attaches to **commercial** messages; transactional and relationship messages are exempt from it. But the classification is a **per-message "primary purpose" test, not a per-company one**, and a message that mixes transactional content with promotional content is treated as commercial when promotion is its primary purpose. Two consequences:
 
-**Revive trigger (firm):** the **first commercial/marketing email** (newsletter, launch announcement, win-back/discount campaign) makes a valid physical postal address mandatory in that message's footer. This is the *same* trigger as "before active user acquisition", so it coincides with LLC formation and page publication — one combined step, not three.
+- **A blanket "all our mail is transactional" conclusion is not supportable, and is not asserted here.** An earlier revision of this doc claimed it; that claim was withdrawn on 2026-07-27 after review.
+- **The content is not verifiable from this repository.** The app ships **no email-sending library** (`package.json` — no Resend/Nodemailer/SendGrid/Postmark/Mailgun/SES) and makes no send calls; every outbound message is sent by **Clerk** (authentication) or **Stripe** (billing, receipts, trial-ending notices) from **templates configured in their dashboards**. Their current wording cannot be read from source, and Stripe's trial-ending template in particular is a plausible mixed-purpose candidate if it promotes a plan upgrade.
+
+**Required before relying on the exemption (open item):** enumerate every live Clerk and Stripe email template, classify each by primary purpose, and record the result. Add the postal address (and, for anything commercial, an opt-out mechanism) if **any** template is commercial or mixed-purpose.
+
+**Two distinct triggers — do not conflate them:**
+
+1. **Earliest commercial or mixed-purpose message.** This may *already* be satisfied by a live provider template; it is unknown until the classification above is done. When satisfied, a valid physical postal address becomes mandatory in that message.
+2. **Active user acquisition / marketing.** Independently requires the published pages, and is the pre-existing trigger for LLC formation.
+
+Trigger 1 could fire before trigger 2. Treat them separately.
 
 When the trigger fires, options (verified pricing, 2026): a **USPS PO Box** (~$25–90 per 6 months) is explicitly named as acceptable by CAN-SPAM and is the cheapest compliant answer, but is not a street address and won't serve later bank/LLC needs; **Anytime Mailbox** or **iPostal1** (both from ~$9.99/mo, real street addresses, largest location networks) or **PostScan Mail** (from ~$10/mo, ~400 locations) provide a street address. All virtual options require a notarized USPS Form 1583, generally completed online. Ship the pages with email-only contact now and add the address in the same pass that adds it to marketing email.
 
+**Authored drafts (in progress):** [`docs/legal/privacy-policy.md`](../legal/privacy-policy.md) — drafted 2026-07-28 in-house from primary sources, with every factual claim derived from the codebase and a *Provenance* table mapping each claim to the file that proves it. Terms of Service draft to follow. Owner decision on record: draft in-house rather than block on counsel, given a pre-revenue product with no active users; obtain legal review before spending on user acquisition.
+
 **Step 1 — Generate the baseline text.** Privacy Policy + Terms of Service + Cookie Policy. Answer: paid SaaS subscription; collects email/account + usage data; payments via a third-party processor; cookies yes (auth/session; Sentry only); does **not** sell data; **paid subscription + auto-renewal + free trial = YES** (this triggers the trial clauses — the critical part); US audience, no under-13. Source options in **Template sources** below.
 
-> **Superseded 2026-07-27 — the earlier "prefer Termly's *embed*" preference is withdrawn.** Generate with Termly (or a CC0/CC-BY base), then **commit the resulting text into the repo** rather than embedding a third-party script. Rationale is recorded under *Rendering approach* in the Implementation spec: the app runs a Clerk-managed strict CSP, an embed cannot be design-system-compliant or server-rendered, and in-repo copy is the only form that can be **test-guarded** so a future edit cannot silently drop a mandatory clause. Trade-off accepted: policy updates become a manual review rather than automatic — mitigated by the annual review reminder in Step 5.
+> **Superseded 2026-07-27 — the earlier "prefer Termly's *embed*" preference is withdrawn.** Generate with Termly (or a CC0/CC-BY base), then **commit the resulting text into the repo** rather than embedding a third-party script. Rationale is recorded under *Rendering approach* in the Implementation spec: an embed cannot be design-system-compliant or server-rendered, it would add CSP report noise under the app's report-only strict policy (and break outright if enforcement is ever flipped), and in-repo copy is the only form that can be **test-guarded** so a future edit cannot silently drop a mandatory clause. Trade-off accepted: policy updates become a manual review rather than automatic — mitigated by the annual review reminder in Step 5.
 
 **Step 2 — Three mandatory customizations** (generic generator output won't have these):
 
@@ -202,7 +214,7 @@ export type LegalDocumentContent = {
 
 **Rejected alternatives (recorded so they are not re-litigated):**
 
-- **Termly embed / any third-party script.** The app runs a Clerk-managed **strict CSP** (`proxy.ts`, currently `reportOnly: true` — see `docs/_archive/debt/debt-420-csp-enforcing-mode-flip.md`). A third-party embed adds an external script origin, generates CSP report noise into Sentry, cannot inherit the design system, requires JS for legally-required text, and makes the copy untestable. Rejected.
+- **Termly embed / any third-party script.** The app runs a Clerk-managed **strict CSP that is currently in report-only mode** (`proxy.ts`, `reportOnly: true` — see `docs/_archive/debt/debt-420-csp-enforcing-mode-flip.md` for why enforcement is not flipped). So a third-party embed would **not** be blocked today — it would be *reported*, generating CSP report noise into Sentry, and would break if enforcement is ever enabled. The rejection does not rest on the CSP alone: an embed also cannot inherit the design system, requires JS for legally-required text, and makes the copy untestable. Rejected.
 - **Reusing `components/markdown/markdown.tsx`.** It is `'use client'` and carries question-explanation-specific behavior (the `Clinical Pearl` transform). Wrong seam — it would couple legal rendering to question rendering. Rejected.
 - **Raw HTML string / `dangerouslySetInnerHTML`.** Unnecessary sanitization surface for content we author. Rejected.
 
@@ -254,6 +266,6 @@ No `sitemap.ts` / `robots.ts` exists in `app/`, and none is required for this wo
 **Added 2026-07-27 (Step 0 closure + template research):**
 
 - [California AG — CCPA](https://oag.ca.gov/privacy/ccpa) · [CPPA FAQs](https://cppa.ca.gov/faq.html) · [CCPA text (Sidley)](https://www.sidley.com/en/sidley-pages/ccpa-text) — the online-only / email-address-only provision
-- [FTC — CAN-SPAM Act Compliance Guide for Business](https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business) · [Physical address in transactional vs commercial email](https://www.suped.com/knowledge/email-deliverability/compliance/does-can-spam-require-a-physical-address-in-transactional-emails) — the commercial-only scope of the postal-address requirement, and that a USPS-registered PO Box or CMRA private mailbox both qualify
+- [FTC — CAN-SPAM Act Compliance Guide for Business](https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business) — the sole authority relied on for CAN-SPAM here: the commercial-message scope of the postal-address requirement, the per-message "primary purpose" test, the transactional/relationship carve-out, and that a USPS-registered PO Box or a CMRA private mailbox both qualify as a valid physical postal address
 - [github/site-policy](https://github.com/github/site-policy) ([CC0-1.0 licence](https://github.com/github/site-policy/blob/main/LICENSE.md)) · [Automattic/legalmattic](https://github.com/Automattic/legalmattic) (CC BY-SA 4.0) — open-licensed policy corpora and their differing reuse obligations
 - [Virtual mailbox pricing comparison (2026)](https://www.postscanmail.com/blog/top-virtual-mailbox-services.html) · [iPostal1 vs Anytime Mailbox (2026)](https://ecommerceparadise.com/ipostal1-vs-anytime-mailbox-2026/) — deferred-purchase options and current entry pricing
