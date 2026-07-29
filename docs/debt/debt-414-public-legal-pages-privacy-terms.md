@@ -171,7 +171,7 @@ For each plan, immediately above the relevant CTA, render:
 - renewal interval;
 - that it renews automatically until canceled;
 - the deadline (“cancel before the next billing date”; for the trial card flow, “cancel or do not add a payment method before the displayed trial end”);
-- `Account Settings → Billing` cancellation method and `support@addictionboards.com`;
+- the real cancellation method — the app's **Billing** page (nav item `Billing`, `ROUTES.APP_BILLING` → Stripe billing portal) — and `support@addictionboards.com`. **Corrected 2026-07-29: an earlier revision named "Account Settings → Billing", a navigation surface that does not exist in the app; `lib/pricing-data.test.ts` now pins the accurate path in all six disclosure strings;**
 - `/terms` and `/privacy` links; and
 - an unambiguous sentence tying the CTA to renewal authorization.
 
@@ -250,7 +250,7 @@ Provider-owned Stripe/Clerk templates must still be classified under CAN-SPAM. D
 
 Keep the existing Stripe self-serve cancellation path. Before closure:
 
-- signed-in browser/E2E test that Account Settings → Billing reaches the Stripe portal entry;
+- signed-in browser/E2E test that the app's **Billing** page (`ROUTES.APP_BILLING`) reaches the Stripe portal entry;
 - owner screenshot/export that portal cancellation is enabled;
 - signed-out/offline fallback documented at `support@addictionboards.com`;
 - test that pricing/acknowledgment copy names the same cancellation path;
