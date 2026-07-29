@@ -8,11 +8,15 @@ import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { MobileNav } from '@/components/mobile-nav';
 import { Button } from '@/components/ui/button';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
+import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
-import type { SubscriptionStatus } from '@/src/domain/value-objects';
+import type {
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from '@/src/domain/value-objects';
 import { awaitRequestBoundary } from './request-boundary';
 
 // Shared layout executes auth/entitlement checks on every app route request.
@@ -26,6 +30,7 @@ export type AppLayoutDeps = {
 
 export type EntitledAppUser = {
   subscriptionStatus: SubscriptionStatus | null;
+  plan: SubscriptionPlan | null;
   trialEndsAt: Date | null;
 };
 
@@ -46,6 +51,7 @@ export async function enforceEntitledAppUser(
 
   return {
     subscriptionStatus: authState.entitlement.subscriptionStatus ?? null,
+    plan: authState.entitlement.plan ?? null,
     trialEndsAt: authState.entitlement.trialEndsAt ?? null,
   };
 }
@@ -124,9 +130,11 @@ export function AppLayoutShell({
 // Pattern Registry F-10: layout-level informational banner (DEBT-410).
 export function TrialCountdownBanner({
   daysLeft,
+  plan,
   manageBillingActionFn,
 }: {
   daysLeft: number;
+  plan: SubscriptionPlan;
   manageBillingActionFn: (formData: FormData) => Promise<void>;
 }) {
   const countdown =
@@ -136,6 +144,9 @@ export function TrialCountdownBanner({
     <div className="block border-b border-border bg-card px-4 py-3 text-sm text-muted-foreground">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3">
         <span className="font-medium text-foreground">{countdown}</span>
+        <span className="max-w-3xl leading-relaxed text-foreground">
+          {PRICING_DATA[plan].trialPaymentDisclosure}
+        </span>
         <form action={manageBillingActionFn}>
           <IdempotencyKeyField />
           <Button
@@ -185,16 +196,15 @@ export async function renderAppLayout(input: {
     input.manageBillingActionFn ?? manageBillingAction;
   const nowFn = input.nowFn ?? (() => new Date());
 
-  const [{ subscriptionStatus, trialEndsAt }, authNav] = await Promise.all([
-    enforceEntitledAppUserFn(),
-    authNavFn(),
-  ]);
+  const [{ subscriptionStatus, plan, trialEndsAt }, authNav] =
+    await Promise.all([enforceEntitledAppUserFn(), authNavFn()]);
   const banner =
     subscriptionStatus === 'pastDue' ? (
       <PastDueBanner />
-    ) : subscriptionStatus === 'inTrial' && trialEndsAt ? (
+    ) : subscriptionStatus === 'inTrial' && plan && trialEndsAt ? (
       <TrialCountdownBanner
         daysLeft={getTrialDaysLeft(trialEndsAt, nowFn())}
+        plan={plan}
         manageBillingActionFn={manageBillingActionFn}
       />
     ) : undefined;

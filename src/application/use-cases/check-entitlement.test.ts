@@ -13,6 +13,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: false,
       reason: 'subscription_required',
       subscriptionStatus: null,
+      plan: null,
       hasActiveSubscriptionPeriod: false,
       trialEndsAt: null,
     });
@@ -34,6 +35,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: true,
       reason: null,
       subscriptionStatus: 'active',
+      plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
     });
@@ -43,6 +45,7 @@ describe('CheckEntitlementUseCase', () => {
     const sub = createSubscription({
       userId: 'user-1',
       status: 'inTrial',
+      plan: 'annual',
       currentPeriodEnd: new Date('2026-03-01T00:00:00Z'),
     });
     const useCase = new CheckEntitlementUseCase(
@@ -55,6 +58,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: true,
       reason: null,
       subscriptionStatus: 'inTrial',
+      plan: 'annual',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: new Date('2026-03-01T00:00:00Z'),
     });
@@ -93,6 +97,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: false,
       reason: 'subscription_required',
       subscriptionStatus: 'inTrial',
+      plan: 'monthly',
       hasActiveSubscriptionPeriod: false,
       trialEndsAt: trialEnd,
     });
@@ -114,6 +119,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: true,
       reason: null,
       subscriptionStatus: 'pastDue',
+      plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
     });
@@ -135,6 +141,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: false,
       reason: 'subscription_canceled',
       subscriptionStatus: 'canceled',
+      plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
     });
@@ -156,6 +163,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: false,
       reason: 'payment_processing',
       subscriptionStatus: 'paymentProcessing',
+      plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
     });
@@ -177,6 +185,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: false,
       reason: 'subscription_required',
       subscriptionStatus: 'paymentFailed',
+      plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: null,
     });
@@ -198,6 +207,7 @@ describe('CheckEntitlementUseCase', () => {
       isEntitled: false,
       reason: 'subscription_required',
       subscriptionStatus: 'active',
+      plan: 'monthly',
       hasActiveSubscriptionPeriod: false,
       trialEndsAt: null,
     });

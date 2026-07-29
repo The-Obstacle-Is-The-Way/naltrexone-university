@@ -1138,8 +1138,15 @@ describe('app/pricing', () => {
       'Start your free trial to access the app — no card required.',
     );
     expect(html).toContain('Start 7-day free trial');
-    expect(html).toContain('then $29/mo');
-    expect(html).toContain('then $199/yr · no card required');
+    expect(html).toContain(
+      'If you add a payment method before the trial ends, Pro Monthly starts at $29 per month',
+    );
+    expect(html).toContain(
+      'If you add a payment method before the trial ends, Pro Annual starts at $199 per year',
+    );
+    expect(html).toContain(
+      'If you do not add a payment method, the trial ends and you are not charged.',
+    );
     expect(html).not.toContain('Subscription required to access the app.');
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
@@ -1201,8 +1208,8 @@ describe('app/pricing', () => {
     );
     expect(annualCard?.getAttribute('aria-current')).toBe('true');
     expect(annualCard?.textContent).toContain('Selected plan');
-    expect(html).not.toContain(PRICING_DATA.monthly.postTrialNote);
-    expect(html).not.toContain(PRICING_DATA.annual.postTrialNote);
+    expect(html).not.toContain(PRICING_DATA.monthly.trialDisclosure);
+    expect(html).not.toContain(PRICING_DATA.annual.trialDisclosure);
   });
 
   it('renders trial CTAs for signed-in first-time users', async () => {

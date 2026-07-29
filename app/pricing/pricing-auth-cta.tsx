@@ -63,7 +63,7 @@ export function SubscribePlanCta({
   signUpHref,
   formAriaLabel,
   label,
-  postTrialNote,
+  disclosure,
   SubscribeButtonComponent,
 }: {
   isAuthenticated: boolean;
@@ -71,28 +71,26 @@ export function SubscribePlanCta({
   signUpHref: string;
   formAriaLabel: string;
   label: string;
-  postTrialNote: string | null;
+  disclosure: string;
   SubscribeButtonComponent: ComponentType<{ children: ReactNode }>;
 }) {
-  const footer = postTrialNote ? (
-    <p className="mt-3 text-center text-sm text-muted-foreground">
-      {postTrialNote}
-    </p>
-  ) : null;
-
   return (
-    <AuthAwareCta
-      isAuthenticated={isAuthenticated}
-      formAction={formAction}
-      signUpHref={signUpHref}
-      formAriaLabel={formAriaLabel}
-      AuthenticatedButtonComponent={SubscribeButtonComponent}
-      buttonProps={{
-        className: 'mt-8 h-auto w-full rounded-full py-3 text-base',
-      }}
-      footer={footer}
-    >
-      {label}
-    </AuthAwareCta>
+    <div className="mt-6">
+      <p className="rounded-xl border border-border bg-muted/20 p-4 text-sm leading-relaxed text-foreground">
+        {disclosure}
+      </p>
+      <AuthAwareCta
+        isAuthenticated={isAuthenticated}
+        formAction={formAction}
+        signUpHref={signUpHref}
+        formAriaLabel={formAriaLabel}
+        AuthenticatedButtonComponent={SubscribeButtonComponent}
+        buttonProps={{
+          className: 'mt-4 h-auto w-full rounded-full py-3 text-base',
+        }}
+      >
+        {label}
+      </AuthAwareCta>
+    </div>
   );
 }

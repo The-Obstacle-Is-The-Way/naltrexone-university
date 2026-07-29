@@ -101,6 +101,7 @@ describe('app/(app)/app/layout', () => {
         isEntitled: true,
         reason: null,
         subscriptionStatus: 'active' as const,
+        plan: 'monthly' as const,
       })),
     };
 
@@ -113,7 +114,11 @@ describe('app/(app)/app/layout', () => {
       redirectFn as never,
     );
 
-    expect(result).toEqual({ subscriptionStatus: 'active', trialEndsAt: null });
+    expect(result).toEqual({
+      subscriptionStatus: 'active',
+      plan: 'monthly',
+      trialEndsAt: null,
+    });
     expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
       userId: fixtureUser1Id,
     });
@@ -134,6 +139,7 @@ describe('app/(app)/app/layout', () => {
         isEntitled: true,
         reason: null,
         subscriptionStatus: 'inTrial' as const,
+        plan: 'annual' as const,
         trialEndsAt,
       })),
     };
@@ -147,7 +153,11 @@ describe('app/(app)/app/layout', () => {
       redirectFn as never,
     );
 
-    expect(result).toEqual({ subscriptionStatus: 'inTrial', trialEndsAt });
+    expect(result).toEqual({
+      subscriptionStatus: 'inTrial',
+      plan: 'annual',
+      trialEndsAt,
+    });
     expect(redirectFn).not.toHaveBeenCalled();
   });
 
@@ -164,6 +174,7 @@ describe('app/(app)/app/layout', () => {
         isEntitled: true,
         reason: null,
         subscriptionStatus: 'pastDue' as const,
+        plan: 'monthly' as const,
       })),
     };
 
@@ -178,6 +189,7 @@ describe('app/(app)/app/layout', () => {
 
     expect(result).toEqual({
       subscriptionStatus: 'pastDue',
+      plan: 'monthly',
       trialEndsAt: null,
     });
     expect(redirectFn).not.toHaveBeenCalled();

@@ -32,7 +32,7 @@ describe('app/pricing/pricing-view', () => {
     expect(html).not.toContain('Manage Billing');
   });
 
-  it('renders trial CTAs with post-trial notes for trial-eligible visitors', () => {
+  it('renders renewal disclosure before each trial CTA', () => {
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -42,11 +42,22 @@ describe('app/pricing/pricing-view', () => {
         subscribeAnnualAction={async () => undefined}
       />,
     );
-    const trialCtaCount = html.match(/Start 7-day free trial/g)?.length ?? 0;
+    const trialCtaCount =
+      html.match(/>Start 7-day free trial<\//g)?.length ?? 0;
 
     expect(trialCtaCount).toBe(2);
-    expect(html).toContain('then $29/mo');
-    expect(html).toContain('then $199/yr · no card required');
+    expect(html).toContain(
+      'If you add a payment method before the trial ends, Pro Monthly starts at $29 per month',
+    );
+    expect(html).toContain(
+      'If you do not add a payment method, the trial ends and you are not charged.',
+    );
+    expect(html).toContain(
+      'If you add a payment method before the trial ends, Pro Annual starts at $199 per year',
+    );
+    expect(html.indexOf('Pro Monthly starts at $29 per month')).toBeLessThan(
+      html.indexOf('Start 7-day free trial'),
+    );
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
   });
@@ -63,9 +74,19 @@ describe('app/pricing/pricing-view', () => {
 
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
+    expect(html).toContain(
+      '$29 is charged when Pro Monthly starts and it renews automatically every month until canceled.',
+    );
+    expect(html).toContain(
+      '$199 is charged when Pro Annual starts and it renews automatically every year until canceled.',
+    );
+    expect(html.indexOf('$29 is charged when Pro Monthly starts')).toBeLessThan(
+      html.indexOf('Subscribe Monthly'),
+    );
     expect(html).not.toContain('Start 7-day free trial');
-    expect(html).not.toContain('then $29/mo');
-    expect(html).not.toContain('no card required');
+    expect(html).not.toContain(
+      'If you do not add a payment method, the trial ends',
+    );
   });
 
   it('renders idempotency fields for manage billing forms', () => {
