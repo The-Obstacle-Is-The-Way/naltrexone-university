@@ -6,7 +6,8 @@
 
 **Incident lead and decision owner:** John H. Jung, MD, MS
 **Internal contact:** `support@addictionboards.com`
-**Evidence log:** create a private, access-restricted incident record; do not put personal information, live secrets, or exploit details in a public GitHub issue.
+**Out-of-band contact (required before adoption):** record a tested non-email owner contact (e.g., mobile number) for use when the support mailbox, its forwarding chain, or the email provider is itself compromised or unavailable — an email-provider incident must not sever the incident channel.
+**Evidence log:** create a private, access-restricted incident record; do not put personal information, live secrets, or exploit details in a public GitHub issue. Record a **secure backup location** for the evidence log that does not depend on the potentially compromised system. Test both the out-of-band contact and the backup evidence location during the adoption tabletop.
 
 The incident lead may delegate technical containment, forensics, provider coordination, and notification drafting, but retains the decision log and deadline.
 
@@ -56,9 +57,9 @@ For New York residents:
 
 1. Decide whether private information was or is reasonably believed to have been accessed or acquired without valid authorization.
 2. If yes, notice is due in the most expedient time possible without unreasonable delay and no later than 30 days after discovery, subject only to the statutory law-enforcement delay.
-3. Notify the New York Attorney General, Department of State, and Division of State Police as required, without delaying resident notice. Notify the Department of Financial Services only if the operator is a covered entity under the cited rule; current status must be verified.
-4. If more than 5,000 New York residents receive notice, notify consumer reporting agencies as required.
-5. Preserve the notice, recipient/distribution record, regulator submissions, and decision evidence.
+3. Notify the New York Attorney General, Department of State, and Division of State Police as required, without delaying resident notice. The regulator submission must state the **timing, content, and distribution** of the resident notice and the **approximate number of New York residents affected**, and must include **a copy of the template resident notice**. Notify the Department of Financial Services only if the operator is a covered entity under the cited rule; current status must be verified.
+4. If more than 5,000 New York residents are to be notified, notify consumer reporting agencies as to the timing, content, and distribution of the notices and the approximate number affected, as required.
+5. Preserve the notice, the template copy submitted to regulators, recipient/distribution record, regulator submissions, relevant state/federal breach-response contact records, and decision evidence. Test the regulator submission paths (portals/forms) during the adoption tabletop, and record them in the adoption checklist.
 
 If the exposure was an inadvertent disclosure by an authorized person and the owner reasonably determines it is unlikely to cause misuse, financial harm, or—in the online-credential case—emotional harm, document the determination in writing and retain it for at least five years. If more than 500 New York residents are affected by that no-notice determination, provide it to the Attorney General within 10 days.
 
@@ -70,7 +71,7 @@ A New York resident notice must include:
 - the relevant state/federal agency telephone numbers and websites for breach response and identity-theft protection; and
 - the categories and specific elements of personal/private information reasonably believed accessed or acquired.
 
-Use a permitted delivery method and keep the required log. If breached information includes email plus the password/security answer for that email-accessed account, do not send the substitute notice to the compromised address where the statute requires conspicuous in-account notice instead.
+Use a permitted delivery method and keep the required log. **Credential-breach delivery exception (statutory condition):** when the breached information includes **an email address or username in combination with a password or security question/answer that permits access to an online account**, do not deliver notice to the implicated email address — provide clear and conspicuous notice delivered to the consumer online when connected to the account from a customary IP address or location, or by another statutory method. This applies to non-email usernames as well, not only to breaches of the email-accessed account itself.
 
 Other states may impose different definitions, deadlines, regulator notices, content, credit-monitoring, or attorney-general forms. Build a state-by-state affected-resident matrix before sending.
 

@@ -23,7 +23,11 @@ The current inventory is:
 | Sentry | Errors and sampled server performance | Exceptions, stack traces, request/page/browser context, projected trace attributes; no session replay |
 | ImprovMX | Support-mail forwarding | Sender/recipient, message body, attachments |
 | Destination mailbox service — **OPEN: identify provider before adoption** | Receiving and storing forwarded support mail | Sender/recipient, message body, attachments |
+| GitHub (repository + Actions CI) | Source control, CI, and deployment triggers | Source code, workflow definitions, **CI/Actions secrets** (test credentials, tokens), dependency and security alerts. Privileged access path: repository admin and Actions secrets settings. Incident contact: GitHub support/security. |
+| DNS — Vercel DNS (registrar Name.com via Vercel) | Domain control: routes the app, the Clerk auth subdomains, and **all support mail (MX/SPF)** | DNS record set. Privileged access path: the Vercel account's domain settings. A DNS compromise silently redirects the product and its mail — treat as production control plane. Incident contact: Vercel support. |
 | Operator devices and local checkout | Development and administration | Source, environment configuration, redacted logs, possible temporary diagnostic data |
+
+Control-plane systems (GitHub, DNS, and the provider dashboards above) are in scope for every access, secret-rotation, and incident review in this program — they can change production behaviour without touching application code. *(Rows added 2026-08-03 per promo #724 review: §§ 4–5's OPEN checks already referenced GitHub/DNS/CI access, but the inventory omitted them.)*
 
 The detailed field and retention inventory is maintained in `docs/legal/privacy-policy.md`. A provider, new field, analytics/advertising integration, outbound email provider, or new copy of production data cannot be added without updating both documents.
 
@@ -122,7 +126,7 @@ The current technical policies are:
 - user-linked application rows cascade when the local user is deleted;
 - pending Stripe-customer cleanup remains until successful completion.
 
-The owner must review the two indefinite policies at least annually and record why continued retention remains necessary. Provider, support-mail, export, backup, and local-copy retention must be added to the inventory once verified.
+**Every open-ended or non-guaranteed retention policy above requires its own annual review with a recorded justification** — not just a subset. The current set is: (1) rate-limit cleanup with no hard maximum row age; (2) best-effort idempotency pruning; (3) successfully processed Stripe events, whose 90-day deletion is a target rather than a guaranteed maximum; (4) unresolved Stripe events held until replay/resolution; (5) handled Clerk events with no terminal period; (6) Clerk deletion tombstones with no terminal period; (7) pending Stripe-customer cleanup held until success. For each, the annual review records why continued retention remains necessary or converts it to a bounded/enforced policy. *(Corrected 2026-08-03 per promo #724 review and #725 round 2 — earlier revisions said "the two indefinite policies," then omitted the non-guaranteed 90-day target.)* Provider, support-mail, export, backup, and local-copy retention must be added to the inventory once verified.
 
 ## 8. Testing, monitoring, and review record
 
