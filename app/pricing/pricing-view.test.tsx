@@ -2,6 +2,14 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { PricingBanner } from '@/app/pricing/types';
+import { PRICING_DATA } from '@/lib/pricing-data';
+import {
+  findButtonByText,
+  findElementByText,
+  findHeadingByText,
+  isNodeBefore,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 
 let PricingView: typeof import('./pricing-view').PricingView;
 
@@ -32,7 +40,7 @@ describe('app/pricing/pricing-view', () => {
     expect(html).not.toContain('Manage Billing');
   });
 
-  it('renders trial CTAs with post-trial notes for trial-eligible visitors', () => {
+  it('renders renewal disclosure before each trial CTA', () => {
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -42,11 +50,44 @@ describe('app/pricing/pricing-view', () => {
         subscribeAnnualAction={async () => undefined}
       />,
     );
-    const trialCtaCount = html.match(/Start 7-day free trial/g)?.length ?? 0;
+    const doc = parseHtml(html);
+    const monthlyCard = findHeadingByText(doc, PRICING_DATA.monthly.name, {
+      level: 3,
+    })?.closest('[data-slot="card"]');
+    const annualCard = findHeadingByText(doc, PRICING_DATA.annual.name, {
+      level: 3,
+    })?.closest('[data-slot="card"]');
+    const monthlyDisclosure = monthlyCard
+      ? findElementByText(
+          monthlyCard,
+          'p',
+          PRICING_DATA.monthly.trialDisclosure,
+        )
+      : null;
+    const annualDisclosure = annualCard
+      ? findElementByText(annualCard, 'p', PRICING_DATA.annual.trialDisclosure)
+      : null;
+    const monthlyCta = monthlyCard
+      ? findButtonByText(monthlyCard, PRICING_DATA.monthly.trialCta)
+      : null;
+    const annualCta = annualCard
+      ? findButtonByText(annualCard, PRICING_DATA.annual.trialCta)
+      : null;
 
-    expect(trialCtaCount).toBe(2);
-    expect(html).toContain('then $29/mo');
-    expect(html).toContain('then $199/yr · no card required');
+    expect(monthlyDisclosure).not.toBeNull();
+    expect(annualDisclosure).not.toBeNull();
+    expect(monthlyCta).not.toBeNull();
+    expect(annualCta).not.toBeNull();
+    expect(
+      monthlyDisclosure && monthlyCta
+        ? isNodeBefore(monthlyDisclosure, monthlyCta)
+        : false,
+    ).toBe(true);
+    expect(
+      annualDisclosure && annualCta
+        ? isNodeBefore(annualDisclosure, annualCta)
+        : false,
+    ).toBe(true);
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
   });
@@ -60,12 +101,54 @@ describe('app/pricing/pricing-view', () => {
         subscribeAnnualAction={async () => undefined}
       />,
     );
+    const doc = parseHtml(html);
+    const monthlyCard = findHeadingByText(doc, PRICING_DATA.monthly.name, {
+      level: 3,
+    })?.closest('[data-slot="card"]');
+    const annualCard = findHeadingByText(doc, PRICING_DATA.annual.name, {
+      level: 3,
+    })?.closest('[data-slot="card"]');
+    const monthlyDisclosure = monthlyCard
+      ? findElementByText(
+          monthlyCard,
+          'p',
+          PRICING_DATA.monthly.standardDisclosure,
+        )
+      : null;
+    const annualDisclosure = annualCard
+      ? findElementByText(
+          annualCard,
+          'p',
+          PRICING_DATA.annual.standardDisclosure,
+        )
+      : null;
+    const monthlyCta = monthlyCard
+      ? findButtonByText(monthlyCard, 'Subscribe Monthly')
+      : null;
+    const annualCta = annualCard
+      ? findButtonByText(annualCard, 'Subscribe Annual')
+      : null;
 
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).toContain('Subscribe Annual');
-    expect(html).not.toContain('Start 7-day free trial');
-    expect(html).not.toContain('then $29/mo');
-    expect(html).not.toContain('no card required');
+    expect(monthlyDisclosure).not.toBeNull();
+    expect(annualDisclosure).not.toBeNull();
+    expect(
+      monthlyDisclosure && monthlyCta
+        ? isNodeBefore(monthlyDisclosure, monthlyCta)
+        : false,
+    ).toBe(true);
+    expect(
+      annualDisclosure && annualCta
+        ? isNodeBefore(annualDisclosure, annualCta)
+        : false,
+    ).toBe(true);
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
+    ).toBeNull();
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.annual.trialDisclosure),
+    ).toBeNull();
+    expect(findButtonByText(doc, PRICING_DATA.monthly.trialCta)).toBeNull();
+    expect(findButtonByText(doc, PRICING_DATA.annual.trialCta)).toBeNull();
   });
 
   it('renders idempotency fields for manage billing forms', () => {

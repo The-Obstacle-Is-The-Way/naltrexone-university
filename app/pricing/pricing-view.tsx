@@ -189,8 +189,10 @@ export function PricingView({
                       ? PRICING_DATA.monthly.trialCta
                       : 'Subscribe Monthly'
                   }
-                  postTrialNote={
-                    showTrialCtas ? PRICING_DATA.monthly.postTrialNote : null
+                  disclosure={
+                    showTrialCtas
+                      ? PRICING_DATA.monthly.trialDisclosure
+                      : PRICING_DATA.monthly.standardDisclosure
                   }
                   SubscribeButtonComponent={SubscribeButtonComponent}
                 />
@@ -231,8 +233,10 @@ export function PricingView({
                       ? PRICING_DATA.annual.trialCta
                       : 'Subscribe Annual'
                   }
-                  postTrialNote={
-                    showTrialCtas ? PRICING_DATA.annual.postTrialNote : null
+                  disclosure={
+                    showTrialCtas
+                      ? PRICING_DATA.annual.trialDisclosure
+                      : PRICING_DATA.annual.standardDisclosure
                   }
                   SubscribeButtonComponent={SubscribeButtonComponent}
                 />
