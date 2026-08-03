@@ -4,7 +4,7 @@
 
 ## 1. Scope and coordinator
 
-This program covers computerized personal and private information owned, licensed, or maintained by Addiction Boards, including information processed through Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, operator devices, and local development environments.
+This program covers computerized personal and private information owned, licensed, or maintained by Addiction Boards, including information processed through Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, the destination mailbox service identified before adoption, operator devices, and local development environments.
 
 **Security-program coordinator:** John H. Jung, MD, MS, sole proprietor.
 
@@ -21,7 +21,8 @@ The current inventory is:
 | Stripe | Hosted payment and billing | Customer/subscription identifiers; billing and payment-method information; fraud and transaction information |
 | Vercel | Hosting and delivery | Requests, IP/user-agent/route metadata, deployments, runtime logs |
 | Sentry | Errors and sampled server performance | Exceptions, stack traces, request/page/browser context, projected trace attributes; no session replay |
-| ImprovMX and destination inbox | Support-mail forwarding | Sender/recipient, message body, attachments |
+| ImprovMX | Support-mail forwarding | Sender/recipient, message body, attachments |
+| Destination mailbox service — **OPEN: identify provider before adoption** | Receiving and storing forwarded support mail | Sender/recipient, message body, attachments |
 | Operator devices and local checkout | Development and administration | Source, environment configuration, redacted logs, possible temporary diagnostic data |
 
 The detailed field and retention inventory is maintained in `docs/legal/privacy-policy.md`. A provider, new field, analytics/advertising integration, outbound email provider, or new copy of production data cannot be added without updating both documents.
@@ -58,6 +59,7 @@ At minimum, review:
 **OPEN before adoption:**
 
 - [ ] Confirm MFA/passkeys and recovery methods for GitHub, Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, DNS, and the destination inbox.
+- [ ] Identify the destination mailbox provider and reconcile it with the Privacy Policy's provider inventory; if the same provider will send transactional renewal mail, record both roles.
 - [ ] Record every current administrator/member and remove stale access.
 - [ ] Record provider DPA/security-term review dates and breach-notice contacts.
 - [ ] Record operator-device encryption, screen lock, patching, backup, and remote-wipe status.

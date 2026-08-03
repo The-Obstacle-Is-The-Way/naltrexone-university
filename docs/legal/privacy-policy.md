@@ -34,7 +34,7 @@ Contact for any privacy question or request: **support@addictionboards.com**
 | **Technical, security, and diagnostic information** | IP address and rate-limit keys; request and provider-event identifiers; route or page context; browser, device, and request information available to hosting or error-monitoring providers; error messages and stack traces; duplicate-operation records |
 | **Support correspondence** | The address, message, and other information you include when emailing `support@addictionboards.com` |
 
-The application database's `users` table stores an email address and internal and Clerk identifiers, but that table is not the full data inventory. Other application tables store Stripe identifiers, activity, feedback, security records, and provider-event identifiers. Clerk, Stripe, Vercel, Sentry, Neon, and ImprovMX can process additional information in providing their services.
+The application database's `users` table stores an email address and internal and Clerk identifiers, but that table is not the full data inventory. Other application tables store Stripe identifiers, activity, feedback, security records, and provider-event identifiers. Clerk, Stripe, Vercel, Sentry, Neon, ImprovMX, and the destination mailbox service identified before publication can process additional information in providing their services.
 
 **Please do not enter personal or patient information in a question-feedback comment.** The field is free text and stores what you submit. The Service is not designed to receive patient information, protected health information, or clinical records.
 
@@ -57,7 +57,9 @@ We do not use personal information for targeted advertising or to make automated
 
 ### Providers and disclosures
 
-The current direct-provider inventory is:
+The repository establishes the following direct providers. The destination
+mailbox service that receives mail forwarded by ImprovMX must be identified and
+added before publication:
 
 | Provider | Purpose | Information it may process |
 |---|---|---|
@@ -67,10 +69,11 @@ The current direct-provider inventory is:
 | **Vercel** | Application hosting, delivery, and platform request logs | Request, IP, route, user-agent, device, deployment, and diagnostic information |
 | **Sentry** | Error monitoring and sampled server performance diagnostics | Errors, stack traces, page or route context, request context, browser/device information, and the narrow application attributes attached to sampled traces; submitted data can incidentally contain identifiers or content |
 | **ImprovMX** | Forwarding mail sent to `support@addictionboards.com` | Sender and recipient addresses, message contents, and attachments |
+| **Destination mailbox service — [OWNER TO IDENTIFY]** | Receiving and storing mail forwarded by ImprovMX | Sender and recipient addresses, message contents, and attachments |
 
 Sentry session replay is disabled. Server tracing is sampled at 5%; client tracing is disabled. Those settings reduce collection but do not establish that an error event can never contain personal information.
 
-The deployed Vercel project has a Web Analytics feature setting enabled, while the audited application build contains no Vercel Web Analytics component or analytics script. The repository therefore does not establish that Web Analytics events are being transmitted. If that script is activated, this policy and the notice at the collection point must be updated before relying on the feature.
+The audited application build contains no Vercel Web Analytics component or analytics script. The repository does not establish the deployed project's current Web Analytics dashboard setting or that Web Analytics events are being transmitted; that setting remains an owner verification item. If an analytics script is activated, this policy and the notice at the collection point must be updated before relying on the feature.
 
 We may also disclose information when reasonably required by valid legal process, to protect the Service or its users, or as part of a business transfer subject to applicable notice and legal requirements.
 
@@ -111,7 +114,7 @@ Account deletion removes the local user row and user-linked application rows thr
 
 ### Security and breach notice
 
-We use service providers, access controls, transport security, logging, and other safeguards intended to protect personal information. Access is limited to the operator and authorized provider personnel with an operational need. No safeguard eliminates all risk.
+We use service providers, access controls, transport security, logging, and other safeguards intended to protect personal information. Those controls are intended to limit access to the operator and authorized provider personnel with an operational need; the current provider and administrator access lists must be verified before publication. No safeguard eliminates all risk.
 
 If a breach triggers a legal notice duty, we will provide the notices and regulator reports required by applicable law. This public statement does not replace the separate written security and incident-response program required for operations.
 
@@ -149,15 +152,15 @@ This appendix is an internal audit record, not public policy copy. It independen
 | No card data stored | **CONFIRMED narrowly for full card numbers in the application database; UNVERIFIABLE as “we never see payment details.”** | The local payment tables at `db/schema.ts:151-207` contain Stripe identifiers and subscription state, not PAN/CVC fields. Stripe-hosted Checkout is created at `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:669-710`. The repository cannot prove what limited billing or payment-method information is visible in Stripe's Dashboard. |
 | Practice activity contents | **CONFIRMED.** | `db/schema.ts:424-436` stores session mode, parameters, and times; `db/schema.ts:573-599` stores selected choice, correctness, time spent, and answer time; `db/schema.ts:650-671` stores bookmarks. |
 | Free-text feedback is limited to 2,000 characters | **CONFIRMED.** | `db/schema.ts:674-695` defines the feedback fields and `comment`; `db/schema.ts:738-740` enforces `char_length(comment) <= 2000`. |
-| IP addresses are collected by rate limiting | **CONFIRMED, but not the only technical-identifier path.** | `lib/request-ip.ts:1-14` reads Vercel's forwarded IP header; `app/api/health/handler.ts:22-29` stores `health:${ip}`; `app/api/stripe/webhook/handler.ts:47-53` stores `webhook:stripe:${ip}`. Vercel request logging and Sentry request/error capture are additional technical-data paths not disproved by the database schema. |
+| IP addresses are collected by rate limiting | **CONFIRMED, but not the only technical-identifier path.** | `lib/request-ip.ts:1-14` reads Vercel's forwarded IP header; `app/api/health/handler.ts:22-29` stores `health:${ip}`; `app/api/stripe/webhook/handler.ts:47-53` stores `webhook:stripe:${ip}`; and `app/api/webhooks/clerk/handler.ts:56-62` stores `webhook:clerk:${ip}`. Vercel request logging and Sentry request/error capture are additional technical-data paths not disproved by the database schema. |
 | IP retention is 24 hours | **REFUTED as a deletion guarantee.** | `src/adapters/gateways/drizzle-rate-limiter.ts:15` defines a 24-hour target, but `src/adapters/gateways/drizzle-rate-limiter.ts:77-93` expressly says it “is not a hard maximum row age” because cleanup is request-triggered, batch-limited, and fail-open. |
 | Duplicate-prevention retention is 24 hours | **REFUTED as a physical-deletion guarantee; CONFIRMED as the normal expiry period.** | `src/adapters/shared/with-idempotency.ts:12-16` defines the default TTL as one day. `src/adapters/shared/with-idempotency.ts:132-146` describes physical cleanup as best effort and allows prune failure. |
 | Account deletion cascades | **REFUTED as “all data is deleted”; CONFIRMED for user-linked local rows.** | User references cascade at `db/schema.ts:156-159`, `177-180`, `296-299`, `428-430`, `577-579`, `654-656`, and `678-680`. Provider-event ledgers at `db/schema.ts:209-243` have no user foreign key, and the deletion tombstone at `db/schema.ts:245-257` intentionally survives. The controller deletes the local user and then creates the tombstone at `src/adapters/controllers/clerk-webhook-controller.ts:350-390`. |
 | A deletion record is retained | **CONFIRMED.** | `db/schema.ts:245-257` stores `clerkUserId` and `deletedAt`; `src/adapters/controllers/clerk-webhook-controller.ts:380` calls `markDeleted`. No terminal retention constant was found. |
-| No analytics | **UNVERIFIABLE from the cited dependency check.** | The production source and `package.json` contain no product-analytics integration, but absence of a dependency does not prove a deployment setting or provider behaviour. The read-only audit observed Vercel Web Analytics enabled at project level while finding no corresponding script/component in the build; no production analytics event was sent to test this. The public copy therefore states only what each observation supports. |
+| No analytics | **UNVERIFIABLE from the cited dependency check.** | The production source and `package.json` contain no product-analytics integration, but absence of a dependency does not prove a deployment setting or provider behaviour. The current Vercel Web Analytics dashboard setting is not exposed by the audited CLI path and remains an owner check; no production analytics event was sent to test transmission. The public copy therefore states only what the repository and that verification limit support. |
 | No session replay; no personal information in Sentry | **CONFIRMED for replay; REFUTED for the no-personal-information inference.** | `sentry.client.config.ts:9-15` sets both replay rates and client trace sampling to zero. `instrumentation.ts:19-26` enables 5% server tracing and exports `Sentry.captureRequestError`; `lib/report-client-error.ts:50-65` sends the supplied error to `Sentry.captureException`. No scrubber proves an event can never contain personal information. |
 | No first-party cookies; only Clerk sets cookies | **CONFIRMED only for no application cookie-write call; otherwise UNVERIFIABLE.** | An exhaustive source search found no `cookies()`, `document.cookie`, or equivalent write in application code. Provider-hosted behaviour and dashboard settings are not established by that absence. |
-| Direct-provider list is Clerk, Stripe, Neon, Vercel, Sentry, and ImprovMX | **CONFIRMED as the six-provider inventory used by the repository; ImprovMX delivery and dashboard configuration remain partly UNVERIFIABLE.** | Runtime dependencies and imports establish Clerk, Stripe, Neon, Vercel, and Sentry. DEBT-414 records the ImprovMX DNS configuration. The audit found no seventh direct production data provider; preview-only tooling and a provider's own downstream vendors are not direct additions. No external support email was sent, so end-to-end forwarding and the asserted catch-all were not verified. |
+| Direct-provider list is Clerk, Stripe, Neon, Vercel, Sentry, and ImprovMX | **REFUTED as a complete six-provider inventory.** Those six are established, but the security inventory also records a destination inbox that receives forwarded support mail; its provider is not identified in the repository. | Runtime dependencies and imports establish Clerk, Stripe, Neon, Vercel, and Sentry. DEBT-414 and live DNS establish ImprovMX as the MX forwarder. `docs/security/information-security-program.md:24-25` separately identifies ImprovMX and the destination mailbox service, so that mailbox service must be named before publication. No external support email was sent, so end-to-end forwarding and the asserted catch-all were not verified. Preview-only tooling and a direct provider's own downstream vendors are not direct additions, but a separately selected destination mailbox is not established to be ImprovMX's downstream vendor. |
 | Processed Stripe events are retained 90 days; unresolved Stripe and handled Clerk events remain | **CONFIRMED as the implemented policy.** | `src/adapters/controllers/stripe-webhook-controller.ts:60-68` names all three policies and the 90-day constant. |
 | United States-only processing | **UNVERIFIABLE.** | The repository proves the intended market, not every location used by each provider. The public copy no longer promises United States-only processing. |
 | Encryption at rest and operator-only access | **UNVERIFIABLE as previously worded.** | Provider documentation may describe encryption, but repository source cannot prove current account configuration or exclude authorized provider personnel. The public copy now describes safeguards without those absolutes. |
@@ -174,7 +177,7 @@ The audit searched the full production source for IP/header reads and identifier
 - **Vercel:** as the hosting layer, Vercel necessarily receives request routing information and exposes platform request logs. This is separate from the application's three persisted IP-rate-limit keys.
 - **Provider accounts and support:** Clerk account/session/device identifiers, Stripe billing/fraud identifiers, and support-mail sender/message data are provider-held identifier paths whose exact live account configuration and retention cannot be exhaustively derived from this repository.
 
-No fourth application source call to `getClientIp` was found, and no seventh direct production provider was found. That bounded source conclusion does not make provider platform behaviour or dashboard settings verifiable.
+No fourth application source call to `getClientIp` was found, and the source/dependency scan found no production integration beyond the six named providers. That scan cannot identify the separately recorded destination mailbox service or prove provider platform behaviour or dashboard settings, so it does not establish a complete provider count.
 
 ### Legal applicability recorded by this audit
 

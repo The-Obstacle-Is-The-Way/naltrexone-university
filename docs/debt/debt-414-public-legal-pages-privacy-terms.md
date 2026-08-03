@@ -2,7 +2,7 @@
 
 **Priority:** P1 publication and billing-compliance blocker
 **Created:** 2026-06-10
-**Status:** **ACTIVE — adversarial audit completed 2026-07-29; not safe to publish or use for new paid conversion yet.** The Privacy Policy draft has been corrected against the codebase. **2026-08-03: the Terms of Service draft now exists** ([`docs/legal/terms-of-service.md`](../legal/terms-of-service.md)) — authored in house from the codified statutes and codebase facts, with internal *Decisions on record* and *Provenance* appendices; it awaits the owner's pre-acquisition legal review alongside the Privacy Policy. Consent evidence, acknowledgment/reminders, public delivery, and the New York SHIELD Act operational program remain open.
+**Status:** **ACTIVE — adversarial audit completed 2026-07-29; not safe to publish or use for new paid conversion yet.** The Privacy Policy draft has been corrected against the codebase. **2026-08-03: the Terms of Service draft now exists** ([`docs/legal/terms-of-service.md`](../legal/terms-of-service.md)) — authored in house from the codified statutes and codebase facts, with internal *Decisions on record* and *Provenance* appendices; it awaits the owner's pre-acquisition legal review alongside the Privacy Policy. Consent evidence, acknowledgment/reminders, public delivery, destination-mailbox/transactional-sender identification, and the New York SHIELD Act operational program remain open.
 **Owner:** John H. Jung, MD, MS, sole proprietor, New York
 **Product:** Addiction Boards at `addictionboards.com`
 **Contact:** `support@addictionboards.com`
@@ -13,12 +13,13 @@
 
 ## Verdict
 
-**Do not publish the current package or collect billing information from a new consumer through the current flow.** Four concrete blockers remain:
+**Do not publish the current package or collect billing information from a new consumer through the current flow.** Five concrete blockers remain:
 
-1. ~~`docs/legal/terms-of-service.md` is absent.~~ **Drafted 2026-08-03** with statute-grounded subscription terms (§ 4 mirrors the implemented trial/cancel/grace mechanics), the medical-education disclaimer, and recorded decisions (no arbitration clause, cancel-forward refunds with two owner-adverse carve-outs, no indemnification). Remaining for this blocker: owner read-through + the deferred pre-acquisition legal review.
+1. ~~`docs/legal/terms-of-service.md` is absent.~~ **Drafted 2026-08-03** with statute-grounded subscription terms (its trial/cancel/grace mechanics match the implementation; increased-price consent and notices remain implementation work), the medical-education disclaimer, and recorded decisions (no arbitration clause, cancel-forward refunds with two owner-adverse carve-outs, no indemnification). Remaining for this blocker: owner read-through + the deferred pre-acquisition legal review.
 2. The live pricing and trial add-card entry do not yet implement the complete ROSCA, California, and New York pre-billing disclosure and affirmative-consent path.
-3. The repository does not retain a durable consumer-level record of the renewal disclosure and consent, and does not produce the required retainable acknowledgment or annual-plan notices.
+3. The repository does not retain a durable consumer-level record of initial or increased-price consent, and does not produce the required retainable acknowledgment or annual-plan notices.
 4. Draft New York SHIELD Act security and incident-response procedures now exist, but their live-account `OPEN` checks have not been verified and the owner has not adopted them.
+5. The destination mailbox provider is unidentified, and the transactional renewal-message sender is unselected; the final direct-provider inventory and corresponding Privacy disclosure therefore cannot yet be completed.
 
 The corrected Privacy Policy is suitable for focused review once those implementation facts are settled. It must not be copied into a public page before then, because the final policy must describe the final implementation rather than a planned one.
 
@@ -27,12 +28,12 @@ The corrected Privacy Policy is suitable for focused review once those implement
 | Fact | Result |
 |---|---|
 | Legal identity | **CONFIRMED:** John H. Jung, MD, MS, sole proprietor. Credentials are display text, not part of the legal name. The clinical PLLC is excluded. |
-| Governing-law choice for the future Terms | New York. The clause itself is **UNDRAFTED**. |
+| Governing-law choice in the Terms draft | New York. Section 11 is drafted and remains part of the focused pre-acquisition review. |
 | Product name/domain | Addiction Boards / `addictionboards.com`. |
 | Privacy/legal email | DNS MX and SPF records for ImprovMX were independently confirmed on 2026-07-29. **UNVERIFIABLE without sending external mail:** end-to-end forwarding and the asserted catch-all. Do not describe either as tested. |
 | Mailing address | No address is currently published. CCPA's request-channel rule does not require one for an exclusively online business with a direct consumer relationship. CAN-SPAM can require one in each commercial or mixed-primary-purpose email; that question remains open until provider-owned templates are inspected. |
 | Revenue/users | Owner-recorded pre-revenue and no-active-user state. Not derivable from the repository. |
-| Direct provider count | **SIX:** Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX. No seventh direct production provider was found in the source/dependency/deployment review. Preview-only tooling and a direct provider's own vendors are not seventh direct providers. |
+| Direct provider count | **Six named providers are confirmed:** Clerk, Stripe, Neon, Vercel, Sentry, and ImprovMX. **The complete count is UNVERIFIABLE:** the security inventory separately records the destination inbox that receives ImprovMX-forwarded support mail, but the repository does not identify that mailbox provider. Name it before publication. Preview-only tooling and a direct provider's own vendors are not direct additions; a separately selected destination mailbox is not established to be ImprovMX's vendor. |
 | Stripe statement descriptor | The existing shortened descriptor was previously verified as present and compliant. It is a re-verification item, not a missing implementation item. This audit did not access or modify Stripe. |
 
 ## Codebase findings that bind the copy
@@ -44,7 +45,7 @@ The Privacy Policy's detailed [Provenance and adversarial verification](../legal
 - Twenty-four hours is a rate-limit cleanup target and the normal idempotency expiry, not a hard physical-deletion maximum. Both cleanup paths are request-triggered, batch-limited, and allowed to fail.
 - User-linked local rows cascade on account deletion. Provider-event ledgers, the Clerk deletion tombstone, pending external cleanup, support mail, provider copies, and required records can survive.
 - Sentry replay is off, client tracing is off, and server tracing is sampled at 5%. Raw exception/request capture means “Sentry cannot receive personal information” is false.
-- Absence of an analytics dependency is not proof of deployment behaviour. The read-only audit observed Vercel Web Analytics enabled at project level but found no corresponding component/script in the application build. Actual event transmission was not tested.
+- Absence of an analytics dependency is not proof of deployment behaviour. No Vercel Web Analytics component/script exists in the application build, but the current dashboard setting is not exposed by the audited CLI path and remains an owner verification item. Actual event transmission was not tested.
 - No application cookie-write call was found. That does not prove all provider-hosted cookie behaviour.
 - Processed Stripe events target 90-day deletion; unresolved Stripe events remain until resolution; handled Clerk events have no automatic terminal policy.
 
@@ -59,7 +60,7 @@ The quoted operative language below comes from official government sources. Seco
 | **FTC Act § 5, 15 U.S.C. § 45** | **APPLIES** to the operator's interstate commercial practices. | The Act prohibits “unfair or deceptive acts or practices in or affecting commerce.” A published privacy promise that contradicts the implementation is a deception risk. **SATISFIED only after the corrected copy is kept synchronized with practice.** The original absolute retention, deletion, Sentry, analytics, payment, cookie, security, and location claims were publication blockers and have been removed. |
 | **ROSCA, 15 U.S.C. §§ 8401–8405** | **APPLIES** to this online negative-option offer. | 15 U.S.C. § 8403 requires clear and conspicuous material terms before billing information, express informed consent before charging, and a simple cancellation mechanism. **MISSING:** complete disclosure at every billing-information entry, an evidence-bearing consent path, and a durable acknowledgment. Stripe portal cancellation supports the cancellation element but does not cure the first two. |
 | **California ARL, Bus. & Prof. Code § 17602** | **APPLIES ON NAMED TRIGGER:** an offer to a California consumer. The national site permits that trigger. | The statute requires terms “before the subscription or purchasing agreement is fulfilled” and in visual proximity to consent; affirmative and express affirmative consent; a retainable acknowledgment; verification for at least three years or one year after termination, whichever is longer; pre-confirmation billing notice; simple online cancellation; a separate annual reminder; annual-term renewal notice 15–45 days before renewal; retainable notice of a material change before implementation; and, specifically for a fee change, notice no less than 7 days and no more than 30 days before it takes effect. **MISSING** except for the existing online Stripe cancellation path. The seven-day trial is not subject to the statute's separate 3–21-day reminder for trials longer than 31 days, but the annual plan is subject to the separate annual-reminder and 15–45-day notice duties. |
-| **New York GBL § 527-a** | **APPLIES ON NAMED TRIGGER:** an offer to a New York consumer. Operator location/governing law does not replace the consumer-location trigger, but a nationwide offer reaches it. | Current § 527-a requires material terms “before consent to the offer or billing information has been requested” and in visual proximity; affirmative consent; a prompt retainable notice; cancellation as easy and in the same medium; a renewal notice 15–45 days before the cancellation deadline **for offers with an initial paid term of one year or longer that renew for a paid term of six months or longer** (the $199 annual plan qualifies: one-year initial term, one-year renewals; the monthly plan does not); and material-change notice at least 5 business days, but no more than 30 days, before the change — the statute applies that window to **any** material change, “including any price increases.” **MISSING** except for the existing online cancellation path. Its trial reminder (subdivision 1(h)) reaches only “a free gift or trial for a period of more than a month,” so it does not apply to the seven-day trial. **Verified against the codified statute text on 2026-08-03, not a bill draft — see the review-thread rebuttal on PR #720: an earlier review objection relied on the original S3008 amendment, which the enacted Part W superseded.** |
+| **New York GBL § 527-a** | **APPLIES ON NAMED TRIGGER:** an offer to a New York consumer. Operator location/governing law does not replace the consumer-location trigger, but a nationwide offer reaches it. | Current § 527-a requires material terms “before consent to the offer or billing information has been requested” and in visual proximity; affirmative consent; a prompt retainable notice; cancellation as easy and in the same medium; a renewal notice 15–45 days before the cancellation deadline **for offers with an initial paid term of one year or longer that renew for a paid term of six months or longer** (the $199 annual plan qualifies: one-year initial term, one-year renewals; the monthly plan does not); and material-change notice at least 5 business days, but no more than 30 days, before the change — the statute applies that window to **any** material change, “including any price increases.” Subdivision 1(b-1) separately prohibits charging an increased price unless the business either first obtains affirmative consent or allows cancellation for at least 14 days after the charge with a pro-rata refund of the remaining term; this package chooses affirmative consent before any increased charge. **MISSING** except for the existing online cancellation path. Its trial reminder (subdivision 1(h)) reaches only “a free gift or trial for a period of more than a month,” so it does not apply to the seven-day trial. **Verified against the codified statute text on 2026-08-03, not a bill draft — see the review-thread rebuttal on PR #720: an earlier review objection relied on the original S3008 amendment, which the enacted Part W superseded.** |
 | **New York SHIELD Act, GBL §§ 899-aa and 899-bb** | **APPLIES ON NAMED TRIGGER:** owning or licensing a New York resident's private information. Email/username plus an account password or security answer qualifies. If any NY account credential is already held through Clerk, it applies now; current resident/account state is not repository-verifiable. | § 899-bb requires reasonable administrative, technical, and physical safeguards; small-business proportionality is not an exemption. § 899-aa requires breach notice “in the most expedient time possible and without unreasonable delay” and within 30 days, plus regulator notices and prescribed content. **PARTIAL:** draft safeguards and incident procedures now exist under `docs/security/`, but live provider/device evidence, a tabletop, and owner adoption remain missing. The revised public breach sentence does not itself satisfy the program duty. |
 | **CCPA/CPRA and 2026 CPPA regulations** | **DOES NOT CURRENTLY APPLY** on the recorded pre-revenue, no-active-user, no-sale/share facts. Reassess at $26,625,000 adjusted annual revenue; 100,000 consumers/households whose PI is bought, sold, or shared; or at least 50% of annual revenue from sale/sharing. | The prior checklist misstated the 100,000 threshold as general processing. If triggered, the regulations require a complete privacy policy and a separate Notice at Collection at or before collection, in close proximity to a webform or collection surface. The exclusively-online/direct-relationship rule permits email as the sole designated request method. Acknowledgment is generally due in 10 business days and response in 45 calendar days. **MISSING ON TRIGGER:** Notice at Collection on signup, feedback, and billing surfaces; state-specific appeal/agent/opt-out handling; and an evidence-based look-back response. Do not promise records “since January 1, 2022” when they may not exist. |
 | **CPPA ADMT regulations** | **DOES NOT CURRENTLY APPLY** to practice scoring. | The audited scoring does not make a significant decision about employment, education admission, credit, housing, insurance, or healthcare access. The 2026 rules' ADMT compliance date is January 1, 2027. Reassess before any significant-decision use. |
@@ -73,13 +74,15 @@ The quoted operative language below comes from official government sources. Seco
 - [x] Decide legal identity and governing-law preference.
 - [x] Create privacy/legal email DNS records.
 - [ ] Verify end-to-end delivery to `support@addictionboards.com` and separately verify the claimed catch-all. This is an external send and was deliberately not performed by the audit.
+- [ ] Identify the destination mailbox provider, add it to the Privacy and security inventories, and determine whether it will also be the transactional-email sender. Do not certify an exact provider count until this is recorded.
 - [ ] Inventory the exact live Clerk and Stripe email templates; record each primary-purpose classification. Add a valid postal address and opt-out to every commercial template.
-- [ ] Provide or approve the Terms of Service. This audit must not author it.
+- [ ] Read through and approve the existing Terms of Service draft as the owner-supplied publication copy.
+- [ ] Confirm the intended content-source representation against a recorded question/source-rights review before restoring any claim that every item is original/licensed or that no actual examination question is present.
 - [ ] Obtain focused review of these specific Terms questions before paid acquisition:
   - Is the educational/not-medical-advice disclaimer adequate for a professional board-prep product that presents clinical scenarios?
   - Are the limitation-of-liability, warranty disclaimer, New York choice-of-law, arbitration/class-waiver, cancellation/refund, and unilateral-change clauses enforceable for the intended nationwide consumer sale?
   - Is the proposed local consent ledger plus Stripe's Checkout consent field sufficient “verification” under California § 17602(a)(6), including after account deletion?
-- [ ] Select a transactional-email delivery mechanism for retainable acknowledgments, annual reminders, annual renewal notices, and material-change notices. ImprovMX is inbound forwarding, not a sender. Adding a sender changes the six-provider inventory and Privacy Policy.
+- [ ] Select a transactional-email delivery mechanism for retainable acknowledgments, annual reminders, annual renewal notices, and material-change notices. ImprovMX is inbound forwarding, not a sender. Reconcile the sender with the final provider inventory and Privacy Policy; it is another provider unless the selected destination mailbox provider also performs this role.
 - [x] Create draft SHIELD Act security and incident procedures.
 - [ ] Verify every live-account `OPEN` item, run the tabletop, and adopt the SHIELD program.
 - [ ] After deploying both public pages, set Stripe's Privacy Policy and Terms links and re-verify the already-existing shortened descriptor and provider-owned notices. Do not change production Stripe during implementation/audit.
@@ -92,7 +95,7 @@ This is the code-discovery-complete implementation map. It still has explicit **
 
 Do not publish only one legal page, a dead `/terms` link, or a partial renewal flow. The publication unit is:
 
-1. approved Privacy Policy and owner-supplied Terms;
+1. approved Privacy Policy and owner-approved Terms;
 2. public signed-out routes and footer links;
 3. complete disclosure at pricing and every card/billing entry;
 4. consent evidence and retainable acknowledgment;
@@ -135,20 +138,21 @@ Create:
 - `app/(marketing)/terms/terms-content.ts`;
 - `app/(marketing)/terms/page.tsx` and `page.test.tsx`.
 
-Use the existing `MarketingLayout` composition from `app/pricing/page.tsx` and `featuresHref={`${ROUTES.HOME}#features`}`. Keep the provenance appendix internal; only the public-policy portion becomes content. Do not create the Terms files until the owner supplies the text.
+Use the existing `MarketingLayout` composition from `app/pricing/page.tsx` and `featuresHref={`${ROUTES.HOME}#features`}`. Keep the Privacy provenance appendix and the Terms decisions/provenance appendices internal; only the owner-approved public portions of the two existing drafts become content.
 
-Use one typed shape:
+Use one typed shape that preserves the exact committed Markdown structure, including links, emphasis, lists, and tables:
 
 ```ts
-export type LegalSection = { heading: string; paragraphs: readonly string[] };
 export type LegalDocumentContent = {
   title: string;
   effectiveDate: string;
-  sections: readonly LegalSection[];
+  bodyMarkdown: string;
 };
 ```
 
-Tests must guard the six direct provider names, contact email, retention qualifications, Sentry/replay wording, educational disclaimer, renewal price/frequency/trial/cancellation terms, governing entity, and effective date.
+`LegalDocument` must render `bodyMarkdown` as sanitized GitHub-flavoured Markdown with the existing `react-markdown`, `remark-gfm`, and `rehype-sanitize` dependencies and legal-specific semantic component styles. Keep this renderer server-renderable; do not reuse the question-specific `components/markdown/markdown.tsx`, which is a client component with clinical-pearl behavior. Tests must parse the output with `parseHtml` and use `findHeadingByText` / `findAnchorByHref` from `tests/shared/dom-helpers.ts`; they must also prove that representative lists and tables render and that the internal provenance/decision appendices do not.
+
+Tests must guard every confirmed direct-provider name plus the owner-approved destination mailbox and transactional-email provider names, contact email, retention qualifications, Sentry/replay wording, educational disclaimer, renewal price/frequency/trial/cancellation terms, governing entity, and effective date.
 
 ### 3. Footer
 
@@ -189,7 +193,12 @@ For a no-card trial, state accurately: without a payment method, Stripe is confi
 
 ### 5. Stripe consent
 
-After the Terms URL exists in Stripe Business Settings, add `consent_collection: { terms_of_service: 'required' }` to subscription Checkout creation in `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`. Extend `stripe-checkout-sessions.test.ts` and the trial/recovery variants before implementation.
+After the Terms URL exists in Stripe Business Settings, add `consent_collection: { terms_of_service: 'required' }` to subscription Checkout creation in `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`. Extend these exact existing tests before implementation:
+
+- `src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts`;
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-trials.test.ts`;
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-recovery.test.ts`; and
+- `src/adapters/gateways/stripe/stripe-checkout-sessions-trial-recovery.test.ts`.
 
 Replace the trial banner's generic billing-portal entry with a dedicated Stripe Setup-mode Checkout or equivalent Stripe-hosted payment-method flow. It must:
 
@@ -200,6 +209,16 @@ Replace the trial banner's generic billing-portal entry with a dedicated Stripe 
 
 The present `manageBillingAction` can continue to serve ordinary post-subscription management; it is not the correct seam for first billing consent.
 
+Use Stripe-hosted Checkout in `setup` mode for this existing-trial path. Stripe's current API requires `currency` in setup mode when dynamic payment methods are used, attaches the completed PaymentMethod to the supplied Customer, and exposes Terms acceptance on the completed Session. Do not add `payment_method_types`; preserve dynamic payment methods. The provider-independent implementation map is:
+
+- extend `CheckoutSessionCreateParams`, `StripeCheckoutSession`, and `StripeClient` in `src/adapters/shared/stripe-types.ts` for the setup-mode request, `setup_intent`, and `consent.terms_of_service` response;
+- add the setup operation to `PaymentGateway` in `src/application/ports/gateways.ts` and `FakePaymentGateway` in `src/application/test-helpers/fakes/fake-gateways.ts`;
+- implement `CreateTrialPaymentMethodSetupSessionUseCase` in `src/application/use-cases/create-trial-payment-method-setup-session.ts` with its colocated `.test.ts`, and export it from `src/application/use-cases/index.ts`;
+- extend `src/adapters/gateways/stripe/stripe-checkout-sessions.ts` plus the four exact tests above to create `mode: 'setup'` with `currency: 'usd'`, the existing Stripe customer, signed server-owned metadata, Terms consent, and a success URL containing `{CHECKOUT_SESSION_ID}`;
+- expose `createTrialPaymentMethodSetupSession` through `src/adapters/controllers/billing-controller.ts` and its existing `.test.ts`, wire it through `lib/container/types.ts`, `lib/container/use-cases.ts`, `lib/container/controllers.ts`, and `lib/container.test.ts`, and call it from new `app/(app)/app/trial-payment-method-actions.ts` plus `.test.ts`;
+- replace `manageBillingAction` with that new action only in `TrialCountdownBanner` at `app/(app)/app/layout.tsx`; extend `app/(app)/app/layout.test.ts` and `app/(app)/app/layout-shell.test.tsx`; and
+- extend `src/adapters/gateways/stripe/stripe-webhook-schemas.ts`, `stripe-webhook-processor.ts`, their existing tests, `src/application/ports/gateways.ts`, and `src/adapters/controllers/stripe-webhook-controller.ts` plus its test so a verified setup-mode `checkout.session.completed` records the accepted snapshot and sets the completed PaymentMethod as the existing subscription's default only after the session's user/customer/subscription metadata matches local ownership. A setup completion without accepted Terms, a matching pending consent snapshot, or the expected subscription must fail closed and must not attach or select the method.
+
 ### 6. Consent ledger
 
 Generate a migration from `db/schema.ts`; do not hand-write migration SQL. Add `renewal_consent_records` with:
@@ -207,31 +226,33 @@ Generate a migration from `db/schema.ts`; do not hand-write migration SQL. Add `
 - UUID primary key;
 - nullable local `userId` using `onDelete: 'set null'`;
 - a stable pseudonymous consumer reference suitable for later matching;
-- Stripe customer, subscription, and Checkout/Setup Session identifiers;
+- Stripe customer and subscription identifiers, plus nullable Checkout/Setup Session identifiers for consent paths that do not create such a session;
 - plan, amount, currency, frequency, trial end, cancellation deadline/method;
 - exact disclosure snapshot and version;
 - Terms version/hash;
 - consent source and accepted timestamp;
+- consent kind (`initial_offer` or `price_increase`) and, for a price increase, the prior amount, proposed amount, and subscriber-specific effective renewal;
 - subscription termination timestamp and computed `retainUntil`;
 - created/updated timestamps.
 
 This table is an intentional deletion exception. Retain each record until the later of three years after consent or one year after contract termination, then prune. The final Privacy Policy must disclose it.
 
-Implement through Clean Architecture:
+Implement through these exact Clean Architecture files and seams:
 
-- domain entity/value object in `src/domain/`;
-- repository port in `src/application/ports/`;
-- fake in `src/application/test-helpers/fakes/`;
-- record-consent use case in `src/application/use-cases/`;
-- Drizzle repository in `src/adapters/repositories/`;
-- composition-root factory in `lib/container/`;
-- Stripe `checkout.session.completed`/setup completion handling in the existing Stripe webhook processor/controller seams.
+- `src/domain/entities/renewal-consent-record.ts` and `src/domain/value-objects/renewal-consent.ts`, with exports in their existing `index.ts` barrels and behavior tests in `renewal-consent.test.ts`;
+- `src/application/ports/renewal-consent-record-repository.ts`, exported by `src/application/ports/repositories.ts` and `src/application/ports/index.ts`;
+- `src/application/test-helpers/fakes/fake-renewal-consent-record-repository.ts` plus `.test.ts`, exported by `src/application/test-helpers/fakes/index.ts`;
+- `src/application/use-cases/record-renewal-consent.ts` plus `.test.ts` and `src/application/use-cases/prune-renewal-consents.ts` plus `.test.ts`, exported by `src/application/use-cases/index.ts`;
+- `src/adapters/repositories/drizzle-renewal-consent-record-repository.ts` plus `.test.ts`, exported by `src/adapters/repositories/index.ts`;
+- factory types and wiring in `lib/container/types.ts`, `lib/container/repositories.ts`, `lib/container/use-cases.ts`, `lib/container/controllers.ts`, and `lib/container.test.ts`;
+- initial subscription and setup completion through the existing `src/adapters/gateways/stripe/stripe-webhook-processor.ts` and `src/adapters/controllers/stripe-webhook-controller.ts` seams and their existing tests; and
+- real-database contract coverage in new `tests/integration/renewal-consent-records.integration.test.ts`.
 
 Use fakes for owned code. Test account deletion retaining the consent record with `userId = null`, legal-retention pruning, replay/idempotency, cross-user rejection, and exact snapshot persistence.
 
 ### 7. Retainable acknowledgment and notices
 
-**OWNER-GATED:** choose the sending provider before implementation. Then add a transactional-email gateway port and provider adapter rather than calling an SDK from a use case.
+**OWNER-GATED:** choose the sending provider before implementing its adapter. The provider-independent names are fixed: add `src/application/ports/transactional-email-gateway.ts`, export it from `src/application/ports/index.ts`, and add `src/application/test-helpers/fakes/fake-transactional-email-gateway.ts` plus `.test.ts` and its barrel export. Put the selected SDK adapter at `src/adapters/gateways/<provider>-transactional-email-gateway.ts` with a colocated test; replacing `<provider>` is the recorded owner input, not an engineering-discovery step. Wire it through `lib/container/gateways.ts`, `lib/container/types.ts`, and `lib/container.test.ts` rather than calling an SDK from a use case.
 
 Immediately after verified consent, send a retainable acknowledgment containing the accepted renewal terms, amount/frequency, trial end, cancellation deadline/method, business contact, Terms, and Privacy links. Store send status/event ID without treating delivery as consent itself.
 
@@ -243,6 +264,12 @@ Implement a daily idempotent notice job with:
 - California fee-change notice 7–30 days before change;
 - retainable material-change notice and cancellation link;
 - no seven-day-trial reminder claim under the >31-day statutory provisions, while preserving any provider courtesy reminder.
+
+Add a `renewal_notice_deliveries` table in `db/schema.ts` in the same generated migration as the consent table. Its unique notice key must bind notice kind, subscription, applicable renewal/change, disclosure version, and destination so cron retries cannot duplicate a notice. Implement `src/application/use-cases/send-renewal-acknowledgment.ts` plus `.test.ts`, `src/application/use-cases/send-due-renewal-notices.ts` plus `.test.ts`, and `src/adapters/jobs/send-due-renewal-notices.ts` plus `.test.ts`. Expose the job at new `app/api/cron/send-renewal-notices/route.ts` plus `route.test.ts`, copying the existing constant-time `CRON_SECRET`, fail-closed limiter, and structured-error pattern from `app/api/cron/reconcile-stripe-subscriptions/route.ts`. Add the daily route to `vercel.json`. Cover database idempotency/retry in new `tests/integration/renewal-notice-deliveries.integration.test.ts`.
+
+Apply the stricter selected price-increase consent rule nationwide so the implementation does not depend on an unimplemented consumer-state classifier: before changing a Stripe subscription to an increased recurring price, require an explicit affirmative action tied to the proposed amount and effective renewal, persist a `price_increase` consent record, and verify it before the higher charge can occur. If consent is absent, do not renew at the increased price; schedule cancellation at the existing period end instead. Add unit/integration coverage for consent, refusal/absence, replay, and subscriber/price/version mismatch.
+
+Model a pending increase in `subscription_price_change_offers` in `db/schema.ts` and the generated migration. Implement `src/application/use-cases/record-price-increase-consent.ts` plus `.test.ts` and `src/application/use-cases/apply-due-price-changes.ts` plus `.test.ts`; add the repository methods to the renewal-consent repository port/fake/Drizzle adapter above. Present the offer at `app/(app)/app/billing/price-change/[offerId]/page.tsx` plus `page.test.tsx`, and accept/refuse it through `app/(app)/app/billing/price-change/price-change-actions.ts` plus `.test.ts`. Extend `PaymentGateway`, the Stripe adapter/types, and `FakePaymentGateway` with narrowly named subscription-price-update and cancel-at-period-end operations. Invoke `ApplyDuePriceChangesUseCase` from the daily notice route after notice processing. Its transaction must verify subscriber, offer, old price, proposed price, effective renewal, disclosure/Terms versions, and unconsumed consent before the Stripe update; absence/refusal schedules period-end cancellation. Add `tests/integration/subscription-price-change-consent.integration.test.ts`. Until this flow is shipped and tested, changing an existing subscriber's recurring price remains operationally prohibited.
 
 Provider-owned Stripe/Clerk templates must still be classified under CAN-SPAM. Do not assume the new provider's “transactional” label controls the legal primary-purpose test.
 
@@ -294,14 +321,15 @@ Only after the deployed pages return signed-out 200:
 
 ## Acceptance criteria
 
-- [ ] Owner-supplied Terms exists and resolves every named clause question.
+- [ ] Owner has approved the existing Terms draft and resolved every named clause question required before publication.
 - [x] Privacy draft's factual claims match the audited codebase.
-- [ ] Six-provider inventory remains exact or policy is updated in the same change.
-- [ ] CCPA applicability and future-trigger statements use correct thresholds.
+- [ ] Destination mailbox and transactional-email providers are identified and the final provider inventory is exact across Privacy and security documents.
+- [x] CCPA applicability and future-trigger statements use correct thresholds.
 - [x] CAN-SPAM remains conditional/open; no blanket exemption survives.
 - [ ] Renewal disclosures render in visual proximity before every billing-information request.
 - [ ] Express consent and legal-duration evidence are persisted.
 - [ ] Retainable acknowledgment, annual/renewal, and change notices exist.
+- [ ] An increased recurring price cannot be charged without a matching affirmative price-increase consent record.
 - [ ] Cancellation is online, simple, and accurately described.
 - [ ] `/privacy` and `/terms` are derived public patterns and pass signed-out 200 E2E checks.
 - [ ] Footer and pre-billing links exist.
@@ -321,3 +349,4 @@ Only after the deployed pages return signed-out 200:
 - [FTC Act § 5, 15 U.S.C. § 45](https://uscode.house.gov/view.xhtml?req=%28title%3A15+section%3A45+edition%3Aprelim%29)
 - [COPPA, 15 U.S.C. § 6502](https://uscode.house.gov/view.xhtml?edition=prelim&num=0&req=granuleid%3AUSC-prelim-title15-section6502)
 - [Virginia Consumer Data Protection Act](https://law.lis.virginia.gov/vacodefull/title59.1/chapter53/), [Colorado Privacy Act enforcement summary](https://coag.gov/press-releases/attorney-general-phil-weiser-launches-enforcement-of-colorado-privacy-act/), [Connecticut Data Privacy Act](https://portal.ct.gov/ag/sections/privacy/the-connecticut-data-privacy-act/), and [Utah Consumer Privacy Act](https://le.utah.gov/xcode/Title13/Chapter61/13-61.html)
+- [Stripe Checkout setup mode](https://docs.stripe.com/payments/checkout/save-and-reuse) and [Checkout Session consent fields](https://docs.stripe.com/api/checkout/sessions/create)
