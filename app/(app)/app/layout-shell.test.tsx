@@ -275,7 +275,9 @@ describe('app/(app)/app/layout (shell)', () => {
       ? findButtonByText(banner, 'Add a card to keep access')
       : null;
 
-    expect(html).toContain('4 days left in trial');
+    expect(
+      banner ? findElementByText(banner, 'span', '4 days left in trial') : null,
+    ).not.toBeNull();
     expect(disclosure).not.toBeNull();
     expect(actionButton).not.toBeNull();
     expect(

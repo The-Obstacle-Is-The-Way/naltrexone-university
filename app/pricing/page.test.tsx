@@ -1136,10 +1136,17 @@ describe('app/pricing', () => {
     });
     const doc = parseHtml(html);
 
-    expect(html).toContain(
-      'Start your free trial to access the app — no card required.',
-    );
-    expect(html).toContain('Start 7-day free trial');
+    expect(
+      findElementByText(
+        doc,
+        'span',
+        'Start your free trial to access the app — no card required.',
+      ),
+    ).not.toBeNull();
+    // Anonymous CTAs render as sign-up anchors (Button asChild → Link).
+    expect(
+      findElementByText(doc, 'a', 'Start 7-day free trial'),
+    ).not.toBeNull();
     expect(
       findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
     ).not.toBeNull();
