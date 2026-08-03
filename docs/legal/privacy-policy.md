@@ -125,7 +125,7 @@ The Service is intended for adult medical professionals and trainees and is not 
 
 ### Educational product
 
-The Service provides board-exam preparation content. It is not medical or healthcare advice and is not designed for diagnosis, treatment, or patient-care decisions. The complete educational-use, subscription, and other contractual terms must appear in the Terms of Service before the legal package is published.
+The Service provides board-exam preparation content. It is not medical or healthcare advice and is not designed for diagnosis, treatment, or patient-care decisions. The Terms of Service govern subscriptions and use of the Service.
 
 ### Changes
 
