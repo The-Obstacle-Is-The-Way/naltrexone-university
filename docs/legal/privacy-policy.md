@@ -28,7 +28,7 @@ Contact for any privacy question or request: **support@addictionboards.com**
 | Category | Examples |
 |---|---|
 | **Account information** | Email address; internal account identifier; authentication-provider identifier; account creation and update times |
-| **Subscription and payment information** | Subscription status and plan; billing-period end; cancellation status; Stripe customer, subscription, checkout, and event identifiers. Payment-card and billing details are collected and held by Stripe on its own systems; the application itself does not receive or store them |
+| **Subscription and payment information** | Subscription status and plan; billing-period end; cancellation status; Stripe customer, subscription, checkout, payment-method, and event identifiers. Full payment-card numbers are collected and hosted by Stripe on its own systems and are never stored by the application; the application may receive limited Stripe payment metadata (such as payment-method identifiers) needed to administer your subscription |
 | **Practice activity** | Practice mode and filters; questions shown; answers and correctness; marked-for-review state; time per question; bookmarks; and performance statistics derived from that activity |
 | **Feedback you choose to send** | Helpfulness rating; report category; and any free-text comment you write |
 | **Technical, security, and diagnostic information** | IP address and rate-limit keys; request and provider-event identifiers; route or page context; browser, device, and request information available to hosting or error-monitoring providers; error messages and stack traces; duplicate-operation records |
