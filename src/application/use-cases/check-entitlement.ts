@@ -3,7 +3,10 @@ import {
   isEntitled,
   type NonEntitledReason,
 } from '@/src/domain/services';
-import type { SubscriptionStatus } from '@/src/domain/value-objects';
+import type {
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from '@/src/domain/value-objects';
 import type { SubscriptionRepository } from '../ports/repositories';
 
 export type CheckEntitlementInput = { userId: string };
@@ -13,6 +16,7 @@ export type CheckEntitlementOutput = {
   isEntitled: boolean;
   reason?: NonEntitledReason | null;
   subscriptionStatus?: SubscriptionStatus | null;
+  plan?: SubscriptionPlan | null;
   hasActiveSubscriptionPeriod?: boolean;
   /**
    * Trial end timestamp while the subscription is `inTrial`, sourced from the
@@ -35,6 +39,7 @@ export class CheckEntitlementUseCase {
         isEntitled: false,
         reason: 'subscription_required',
         subscriptionStatus: null,
+        plan: null,
         hasActiveSubscriptionPeriod: false,
         trialEndsAt: null,
       };
@@ -54,6 +59,7 @@ export class CheckEntitlementUseCase {
       isEntitled: entitled,
       reason,
       subscriptionStatus: subscription.status,
+      plan: subscription.plan,
       hasActiveSubscriptionPeriod,
       trialEndsAt:
         subscription.status === 'inTrial'

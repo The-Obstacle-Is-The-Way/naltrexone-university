@@ -1,10 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 import {
   findAnchorByHref,
+  findButtonByText,
+  findElementByText,
   findMainLandmarkById,
+  isNodeBefore,
   parseHtml,
 } from '@/tests/shared/dom-helpers';
 
@@ -146,6 +150,7 @@ describe('app/(app)/app/layout (shell)', () => {
   it('renders AppLayout via renderAppLayout with injected deps', async () => {
     const enforceEntitledAppUserFn = vi.fn(async () => ({
       subscriptionStatus: 'active' as const,
+      plan: 'monthly' as const,
       trialEndsAt: null,
     }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
@@ -170,6 +175,7 @@ describe('app/(app)/app/layout (shell)', () => {
   it('starts auth nav before entitlement resolves', async () => {
     type EntitledActiveUser = {
       subscriptionStatus: 'active';
+      plan: 'monthly';
       trialEndsAt: null;
     };
     let resolveEntitledAppUser:
@@ -195,6 +201,7 @@ describe('app/(app)/app/layout (shell)', () => {
 
     resolveEntitledAppUser?.({
       subscriptionStatus: 'active',
+      plan: 'monthly',
       trialEndsAt: null,
     });
 
@@ -208,6 +215,7 @@ describe('app/(app)/app/layout (shell)', () => {
   it('renders payment-failed banner for pastDue subscribers', async () => {
     const enforceEntitledAppUserFn = vi.fn(async () => ({
       subscriptionStatus: 'pastDue' as const,
+      plan: 'monthly' as const,
       trialEndsAt: null,
     }));
     const authNavFn = vi.fn(async () => <div>AuthNav</div>);
@@ -238,6 +246,7 @@ describe('app/(app)/app/layout (shell)', () => {
   it('renders the trial countdown banner for inTrial subscribers', async () => {
     const enforceEntitledAppUserFn = vi.fn(async () => ({
       subscriptionStatus: 'inTrial' as const,
+      plan: 'annual' as const,
       trialEndsAt: new Date('2026-02-08T00:00:00Z'),
     }));
     const manageBillingActionFn = vi.fn(async () => undefined);
@@ -255,16 +264,32 @@ describe('app/(app)/app/layout (shell)', () => {
     const doc = parseHtml(html);
     const shell = doc.body.firstElementChild;
     const banner = shell?.children[0];
-    const actionButton = banner?.querySelector('form button[type="submit"]');
+    const disclosure = banner
+      ? findElementByText(
+          banner,
+          'span',
+          PRICING_DATA.annual.trialPaymentDisclosure,
+        )
+      : null;
+    const actionButton = banner
+      ? findButtonByText(banner, 'Add a card to keep access')
+      : null;
 
-    expect(html).toContain('4 days left in trial');
-    expect(html).toContain('Add a card to keep access');
+    expect(
+      banner ? findElementByText(banner, 'span', '4 days left in trial') : null,
+    ).not.toBeNull();
+    expect(disclosure).not.toBeNull();
+    expect(actionButton).not.toBeNull();
+    expect(
+      disclosure && actionButton
+        ? isNodeBefore(disclosure, actionButton)
+        : false,
+    ).toBe(true);
     expect(banner?.textContent).toContain('days left in trial');
     expect(shell?.children[1]?.tagName).toBe('HEADER');
     expect(banner?.querySelector('input[name="idempotencyKey"]')).not.toBe(
       null,
     );
-    expect(actionButton?.textContent).toContain('Add a card to keep access');
     expect(html).not.toContain('Your payment failed');
     expect(html).toContain('Child content');
   });
@@ -274,6 +299,7 @@ describe('app/(app)/app/layout (shell)', () => {
       children: <div>Child content</div>,
       enforceEntitledAppUserFn: vi.fn(async () => ({
         subscriptionStatus: 'inTrial' as const,
+        plan: 'monthly' as const,
         trialEndsAt: new Date('2026-02-08T00:00:00Z'),
       })),
       authNavFn: vi.fn(async () => <div>AuthNav</div>),
@@ -293,6 +319,7 @@ describe('app/(app)/app/layout (shell)', () => {
       children: <div>Child content</div>,
       enforceEntitledAppUserFn: vi.fn(async () => ({
         subscriptionStatus: 'active' as const,
+        plan: 'monthly' as const,
         trialEndsAt: null,
       })),
       authNavFn: vi.fn(async () => <div>AuthNav</div>),
@@ -313,6 +340,7 @@ describe('app/(app)/app/layout (shell)', () => {
       children: <div>Child content</div>,
       enforceEntitledAppUserFn: vi.fn(async () => ({
         subscriptionStatus: 'inTrial' as const,
+        plan: 'monthly' as const,
         trialEndsAt: null,
       })),
       authNavFn: vi.fn(async () => <div>AuthNav</div>),

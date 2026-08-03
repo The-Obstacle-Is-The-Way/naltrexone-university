@@ -140,7 +140,7 @@ console.log('not json');
     ).toThrowError(/not json/);
   });
 
-  it('preserves the entitlement output, including trialEndsAt, for in-trial users', async () => {
+  it('preserves the entitlement output, including plan and trialEndsAt, for in-trial users', async () => {
     const user = createUser({ id: 'user_1' });
     const trialEnd = new Date('2026-02-08T00:00:00Z');
     const deps = {
@@ -164,6 +164,7 @@ console.log('not json');
       isEntitled: true,
       reason: null,
       subscriptionStatus: 'inTrial',
+      plan: 'monthly',
       hasActiveSubscriptionPeriod: true,
       trialEndsAt: trialEnd,
     });

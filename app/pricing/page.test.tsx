@@ -20,6 +20,7 @@ import type {
 } from '@/src/application/use-cases/check-entitlement';
 import {
   findAnchorByHref,
+  findElementByText,
   findHeadingByText,
   parseHtml,
 } from '@/tests/shared/dom-helpers';
@@ -1133,13 +1134,25 @@ describe('app/pricing', () => {
     const { html } = await renderAnonymousPricingPage({
       reason: 'subscription_required',
     });
+    const doc = parseHtml(html);
 
-    expect(html).toContain(
-      'Start your free trial to access the app — no card required.',
-    );
-    expect(html).toContain('Start 7-day free trial');
-    expect(html).toContain('then $29/mo');
-    expect(html).toContain('then $199/yr · no card required');
+    expect(
+      findElementByText(
+        doc,
+        'span',
+        'Start your free trial to access the app — no card required.',
+      ),
+    ).not.toBeNull();
+    // Anonymous CTAs render as sign-up anchors (Button asChild → Link).
+    expect(
+      findElementByText(doc, 'a', 'Start 7-day free trial'),
+    ).not.toBeNull();
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
+    ).not.toBeNull();
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.annual.trialDisclosure),
+    ).not.toBeNull();
     expect(html).not.toContain('Subscription required to access the app.');
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
@@ -1201,8 +1214,12 @@ describe('app/pricing', () => {
     );
     expect(annualCard?.getAttribute('aria-current')).toBe('true');
     expect(annualCard?.textContent).toContain('Selected plan');
-    expect(html).not.toContain(PRICING_DATA.monthly.postTrialNote);
-    expect(html).not.toContain(PRICING_DATA.annual.postTrialNote);
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
+    ).toBeNull();
+    expect(
+      findElementByText(doc, 'p', PRICING_DATA.annual.trialDisclosure),
+    ).toBeNull();
   });
 
   it('renders trial CTAs for signed-in first-time users', async () => {
