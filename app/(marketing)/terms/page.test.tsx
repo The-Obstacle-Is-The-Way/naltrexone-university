@@ -11,12 +11,16 @@ vi.mock('next/link', () => ({
 }));
 
 let TermsPage: typeof import('./page').default;
-let renderTermsPage: typeof import('./page').renderTermsPage;
+let renderTermsPage: typeof import('./terms-page-renderer').renderTermsPage;
 let termsContent: typeof import('./terms-content').termsContent;
 
 beforeAll(async () => {
-  [{ default: TermsPage, renderTermsPage }, { termsContent }] =
-    await Promise.all([import('./page'), import('./terms-content')]);
+  [{ default: TermsPage }, { renderTermsPage }, { termsContent }] =
+    await Promise.all([
+      import('./page'),
+      import('./terms-page-renderer'),
+      import('./terms-content'),
+    ]);
 });
 
 function publicTermsMarkdown(): string {

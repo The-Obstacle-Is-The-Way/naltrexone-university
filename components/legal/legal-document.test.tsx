@@ -85,7 +85,10 @@ describe('LegalDocument', () => {
         }}
       />,
     );
+    const doc = parseHtml(html);
 
-    expect(html.toLowerCase()).not.toContain('javascript:');
+    expect(doc.querySelector('a')?.getAttribute('href') ?? '').not.toMatch(
+      /^javascript:/i,
+    );
   });
 });

@@ -1,4 +1,5 @@
 import type { LegalDocumentContent } from '@/components/legal/legal-document';
+import { ROUTES } from '@/lib/routes';
 
 export const termsContent = {
   title: 'Terms of Service',
@@ -11,7 +12,7 @@ The rest of this page is the detail behind those sentences, and the detail contr
 
 ### 1. Who we are and what you're agreeing to
 
-Addiction Boards (the "Service", at \`addictionboards.com\`) is operated by **John H. Jung, MD, MS**, a sole proprietor based in New York ("we", "us", "our"). Creating an account alone does not accept these Terms. These Terms govern access to and use of the Service. The pricing page presents links to these Terms and the [Privacy Policy](/privacy) before subscription and free-trial actions. If you do not agree to these Terms, do not start a trial, subscribe, or use protected Service content.
+Addiction Boards (the "Service", at \`addictionboards.com\`) is operated by **John H. Jung, MD, MS**, a sole proprietor based in New York ("we", "us", "our"). Creating an account alone does not accept these Terms. These Terms govern access to and use of the Service. The pricing page presents links to these Terms and the [Privacy Policy](${ROUTES.PRIVACY}) before subscription and free-trial actions. If you do not agree to these Terms, do not start a trial, subscribe, or use protected Service content.
 
 Contact: **support@addictionboards.com**
 
