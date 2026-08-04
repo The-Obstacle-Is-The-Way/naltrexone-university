@@ -94,6 +94,12 @@ async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
             <Link href={ROUTES.PRICING} className={marketingNavLinkClass}>
               Pricing
             </Link>
+            <Link href={ROUTES.PRIVACY} className={marketingNavLinkClass}>
+              Privacy Policy
+            </Link>
+            <Link href={ROUTES.TERMS} className={marketingNavLinkClass}>
+              Terms of Service
+            </Link>
             <Link href={ROUTES.SIGN_IN} className={marketingNavLinkClass}>
               Sign in
             </Link>

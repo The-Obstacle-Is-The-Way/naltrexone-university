@@ -16,4 +16,9 @@ describe('PUBLIC_ROUTE_PATTERNS', () => {
       '/api/cron/reconcile-stripe-subscriptions(.*)',
     );
   });
+
+  it('derives both signed-out legal-page patterns from shared routes', () => {
+    expect(PUBLIC_ROUTE_PATTERNS).toContain(`${ROUTES.PRIVACY}(.*)`);
+    expect(PUBLIC_ROUTE_PATTERNS).toContain(`${ROUTES.TERMS}(.*)`);
+  });
 });

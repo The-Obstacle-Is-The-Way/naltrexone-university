@@ -2,7 +2,7 @@
 
 **Priority:** P1 publication and billing-compliance blocker
 **Created:** 2026-06-10
-**Status:** **ACTIVE — adversarial audit completed 2026-07-29; not safe to publish or use for new paid conversion yet.** The Privacy Policy draft has been corrected against the codebase. **2026-08-03: the Terms of Service draft now exists** ([`docs/legal/terms-of-service.md`](../legal/terms-of-service.md)) — authored in house from the codified statutes and codebase facts, with internal *Decisions on record* and *Provenance* appendices; it awaits the owner's pre-acquisition legal review alongside the Privacy Policy. Consent evidence, acknowledgment/reminders, public delivery, destination-mailbox/transactional-sender identification, and the New York SHIELD Act operational program remain open.
+**Status:** **ACTIVE — two-stage publication wave authorized 2026-08-04.** Stage 1 publishes the corrected Privacy Policy and Terms of Service at signed-out public routes. After production verification, the owner must set both Stripe Business Settings legal URLs before Stage 2 can enable required Terms consent; this ordering prevents Checkout Session creation from failing. Consent evidence, acknowledgment/reminders, Resend activation, and the New York SHIELD Act operational program remain open, and focused legal review remains required before paid acquisition.
 **Owner:** John H. Jung, MD, MS, sole proprietor, New York
 **Product:** Addiction Boards at `addictionboards.com`
 **Contact:** `support@addictionboards.com`
@@ -13,13 +13,13 @@
 
 ## Verdict
 
-**Do not publish the current package or collect billing information from a new consumer through the current flow.** Five concrete blockers remain:
+**Publish both legal pages together in Stage 1, but do not promote the required Stripe Terms-consent change until the production routes return signed-out 200 and the owner confirms both Stripe Business Settings legal URLs.** DEBT-414 remains active for these five workstreams:
 
 1. ~~`docs/legal/terms-of-service.md` is absent.~~ **Drafted 2026-08-03** with statute-grounded subscription terms (its trial/cancel/grace mechanics match the implementation; increased-price consent and notices remain implementation work), the medical-education disclaimer, and recorded decisions (no arbitration clause, cancel-forward refunds with two owner-adverse carve-outs, no indemnification). Remaining for this blocker: owner read-through + the deferred pre-acquisition legal review.
 2. The live pricing and trial add-card entry do not yet implement the complete ROSCA, California, and New York pre-billing disclosure and affirmative-consent path.
 3. The repository does not retain a durable consumer-level record of initial or increased-price consent, and does not produce the required retainable acknowledgment or annual-plan notices.
 4. Draft New York SHIELD Act security and incident-response procedures now exist, but their live-account `OPEN` checks have not been verified and the owner has not adopted them.
-5. The destination mailbox provider is unidentified, and the transactional renewal-message sender is unselected; the final direct-provider inventory and corresponding Privacy disclosure therefore cannot yet be completed. **This blocker also gates the email-cancellation channel the Terms and pricing disclosures advertise (added 2026-08-03, #724 final round):** before publication, verify end-to-end delivery to `support@addictionboards.com` with a real external send, and record the cancellation-processing procedure — identity verified by matching the sender to the account email (as § 4 now states), the cancellation executed in Stripe effective at period end, and owner monitoring coverage. The online Billing-page path independently satisfies the as-easy-as-signup cancellation requirement; email is an additional consumer-protective channel and must be operational, not decorative, once published.
+5. **Provider identification is closed:** Google Workspace (Google LLC) is the destination mailbox and Resend is the transactional renewal-message sender. **The operational tail remains open:** verify end-to-end delivery to `support@addictionboards.com` with a real external send, activate and test Resend after its adapter and key are configured, and record the cancellation-processing procedure — identity verified by matching the sender to the account email (as § 4 states), the cancellation executed in Stripe effective at period end, and owner monitoring coverage. The online Billing-page path independently satisfies the as-easy-as-signup cancellation requirement; email is an additional consumer-protective channel and must be operational, not decorative, once published.
 
 The corrected Privacy Policy is suitable for focused review once those implementation facts are settled. It must not be copied into a public page before then, because the final policy must describe the final implementation rather than a planned one.
 
@@ -33,7 +33,7 @@ The corrected Privacy Policy is suitable for focused review once those implement
 | Privacy/legal email | DNS MX and SPF records for ImprovMX were independently confirmed on 2026-07-29. **UNVERIFIABLE without sending external mail:** end-to-end forwarding and the asserted catch-all. Do not describe either as tested. |
 | Mailing address | No address is currently published. CCPA's request-channel rule does not require one for an exclusively online business with a direct consumer relationship. CAN-SPAM can require one in each commercial or mixed-primary-purpose email; that question remains open until provider-owned templates are inspected. |
 | Revenue/users | Owner-recorded pre-revenue and no-active-user state. Not derivable from the repository. |
-| Direct provider count | **Six named providers are confirmed:** Clerk, Stripe, Neon, Vercel, Sentry, and ImprovMX. **The complete count is UNVERIFIABLE:** the security inventory separately records the destination inbox that receives ImprovMX-forwarded support mail, but the repository does not identify that mailbox provider. Name it before publication. Preview-only tooling and a direct provider's own vendors are not direct additions; a separately selected destination mailbox is not established to be ImprovMX's vendor. |
+| Direct provider count | **Eight named providers:** Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, Google Workspace (Google LLC), and Resend. The owner identified Google Workspace as the destination inbox and selected Resend for transactional notices on 2026-08-04. Resend remains inactive until its adapter and credentials ship. Preview-only tooling and a direct provider's own vendors are not direct additions. |
 | Stripe statement descriptor | The existing shortened descriptor was previously verified as present and compliant. It is a re-verification item, not a missing implementation item. This audit did not access or modify Stripe. |
 
 ## Codebase findings that bind the copy
@@ -74,7 +74,7 @@ The quoted operative language below comes from official government sources. Seco
 - [x] Decide legal identity and governing-law preference.
 - [x] Create privacy/legal email DNS records.
 - [ ] Verify end-to-end delivery to `support@addictionboards.com` and separately verify the claimed catch-all. This is an external send and was deliberately not performed by the audit.
-- [ ] Identify the destination mailbox provider, add it to the Privacy and security inventories, and determine whether it will also be the transactional-email sender. Do not certify an exact provider count until this is recorded.
+- [x] Identify the destination mailbox provider and transactional sender: Google Workspace (Google LLC) receives forwarded support mail; Resend sends transactional notices. Both are recorded in the Privacy and security inventories.
 - [ ] Inventory the exact live Clerk and Stripe email templates; record each primary-purpose classification. Add a valid postal address and opt-out to every commercial template.
 - [ ] Read through and approve the existing Terms of Service draft as the owner-supplied publication copy.
 - [ ] Confirm the intended content-source representation against a recorded question/source-rights review before restoring any claim that every item is original/licensed or that no actual examination question is present.
@@ -82,7 +82,7 @@ The quoted operative language below comes from official government sources. Seco
   - Is the educational/not-medical-advice disclaimer adequate for a professional board-prep product that presents clinical scenarios?
   - Are the limitation-of-liability, warranty disclaimer, New York choice-of-law, arbitration/class-waiver, cancellation/refund, and unilateral-change clauses enforceable for the intended nationwide consumer sale?
   - Is the proposed local consent ledger plus Stripe's Checkout consent field sufficient “verification” under California § 17602(a)(6), including after account deletion?
-- [ ] Select a transactional-email delivery mechanism for retainable acknowledgments, annual reminders, annual renewal notices, and material-change notices. ImprovMX is inbound forwarding, not a sender. Reconcile the sender with the final provider inventory and Privacy Policy; it is another provider unless the selected destination mailbox provider also performs this role.
+- [x] Select Resend as the transactional-email delivery mechanism for retainable acknowledgments, annual reminders, annual renewal notices, and material-change notices. ImprovMX remains inbound forwarding, not a sender.
 - [x] Create draft SHIELD Act security and incident procedures.
 - [ ] Verify every live-account `OPEN` item, run the tabletop, and adopt the SHIELD program.
 - [ ] After deploying both public pages, set Stripe's Privacy Policy and Terms links and re-verify the already-existing shortened descriptor and provider-owned notices. Do not change production Stripe during implementation/audit.
@@ -189,9 +189,11 @@ For a no-card trial, state accurately: without a payment method, Stripe is confi
 - `app/(app)/app/layout-shell.test.tsx`;
 - `app/pricing/pricing-view.test.tsx`.
 
-**Still required before publication:** add the Terms/Privacy links after those routes exist, replace the trial banner's generic portal action with the dedicated consent-bearing setup flow below, and persist the consent/acknowledgment. The new visible copy narrows the current risk but is not represented as complete ARL/ROSCA compliance.
+**Stage-1 page work:** add the Terms/Privacy links after those routes exist. **Still required before billing-consent closure:** replace the trial banner's generic portal action with the dedicated consent-bearing setup flow below and persist the consent/acknowledgment. The new visible copy narrows the current risk but is not represented as complete ARL/ROSCA compliance.
 
 ### 5. Stripe consent
+
+This work requires a two-stage production promotion: publish and verify both legal routes first, set the Stripe Business Settings Privacy and Terms URLs between stages, and only then promote `consent_collection`, because Stripe Checkout Session creation fails when required Terms consent is enabled without the configured Terms URL.
 
 After the Terms URL exists in Stripe Business Settings, add `consent_collection: { terms_of_service: 'required' }` to subscription Checkout creation in `src/adapters/gateways/stripe/stripe-checkout-sessions.ts`. Extend these exact existing tests before implementation:
 
@@ -252,7 +254,7 @@ Use fakes for owned code. Test account deletion retaining the consent record wit
 
 ### 7. Retainable acknowledgment and notices
 
-**OWNER-GATED:** choose the sending provider before implementing its adapter. The provider-independent names are fixed: add `src/application/ports/transactional-email-gateway.ts`, export it from `src/application/ports/index.ts`, and add `src/application/test-helpers/fakes/fake-transactional-email-gateway.ts` plus `.test.ts` and its barrel export. Put the selected SDK adapter at `src/adapters/gateways/<provider>-transactional-email-gateway.ts` with a colocated test; replacing `<provider>` is the recorded owner input, not an engineering-discovery step. Wire it through `lib/container/gateways.ts`, `lib/container/types.ts`, and `lib/container.test.ts` rather than calling an SDK from a use case.
+**OWNER-SELECTED PROVIDER: Resend.** The provider-independent names are fixed: add `src/application/ports/transactional-email-gateway.ts`, export it from `src/application/ports/index.ts`, and add `src/application/test-helpers/fakes/fake-transactional-email-gateway.ts` plus `.test.ts` and its barrel export. Put the SDK adapter at `src/adapters/gateways/resend-transactional-email-gateway.ts` with a colocated test. Wire it through `lib/container/gateways.ts`, `lib/container/types.ts`, and `lib/container.test.ts` rather than calling an SDK from a use case.
 
 Immediately after verified consent, send a retainable acknowledgment containing the accepted renewal terms, amount/frequency, trial end, cancellation deadline/method, business contact, Terms, and Privacy links. **Durability requirement (added 2026-08-03 per promo #724 review):** create the acknowledgment dispatch record in `renewal_notice_deliveries` **in the same transaction that persists the verified consent record** — so a process failure after consent persistence cannot leave valid consent without a queued acknowledgment, and a retry cannot send duplicates. The sender reuses that record for retries, persisting delivery status and provider event ID on it. Delivery is never treated as consent itself. **Key shape:** acknowledgment rows key on (`notice_kind = 'acknowledgment'`, consent-record ID, destination) — an acknowledgment's identity is its consent record, so a later consent by the same subscriber always gets its own acknowledgment and duplicates of the same one are impossible.
 
@@ -323,7 +325,7 @@ Only after the deployed pages return signed-out 200:
 
 - [ ] Owner has approved the existing Terms draft and resolved every named clause question required before publication.
 - [x] Privacy draft's factual claims match the audited codebase.
-- [ ] Destination mailbox and transactional-email providers are identified and the final provider inventory is exact across Privacy and security documents.
+- [x] Destination mailbox and transactional-email providers are identified and the final provider inventory is exact across Privacy and security documents.
 - [x] CCPA applicability and future-trigger statements use correct thresholds.
 - [x] CAN-SPAM remains conditional/open; no blanket exemption survives.
 - [ ] Renewal disclosures render in visual proximity before every billing-information request.

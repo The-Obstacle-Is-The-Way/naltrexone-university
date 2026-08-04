@@ -3,7 +3,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { PricingBanner } from '@/app/pricing/types';
 import { PRICING_DATA } from '@/lib/pricing-data';
+import { ROUTES } from '@/lib/routes';
 import {
+  findAnchorByHref,
   findButtonByText,
   findElementByText,
   findHeadingByText,
@@ -90,6 +92,44 @@ describe('app/pricing/pricing-view', () => {
     ).toBe(true);
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
+  });
+
+  it('renders legal links inside each disclosure block before its CTA', () => {
+    const html = renderToStaticMarkup(
+      <PricingView
+        isEntitled={false}
+        banner={null}
+        showTrialCtas
+        subscribeMonthlyAction={async () => undefined}
+        subscribeAnnualAction={async () => undefined}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    for (const plan of ['monthly', 'annual'] as const) {
+      const card = findHeadingByText(doc, PRICING_DATA[plan].name, {
+        level: 3,
+      })?.closest('[data-slot="card"]');
+      const disclosure = card
+        ? findElementByText(card, 'p', PRICING_DATA[plan].trialDisclosure)
+        : null;
+      const disclosureBlock = disclosure?.parentElement ?? null;
+      const termsLink = disclosureBlock
+        ? findAnchorByHref(disclosureBlock, ROUTES.TERMS)
+        : null;
+      const privacyLink = disclosureBlock
+        ? findAnchorByHref(disclosureBlock, ROUTES.PRIVACY)
+        : null;
+      const cta = card
+        ? findButtonByText(card, PRICING_DATA[plan].trialCta)
+        : null;
+
+      expect(termsLink?.textContent).toBe('Terms of Service');
+      expect(privacyLink?.textContent).toBe('Privacy Policy');
+      expect(
+        disclosureBlock && cta ? isNodeBefore(disclosureBlock, cta) : false,
+      ).toBe(true);
+    }
   });
 
   it('renders standard subscribe CTAs for non-trial-eligible visitors by default', () => {

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ComponentProps, ComponentType, ReactNode } from 'react';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/routes';
 
 export type PricingAction = (formData: FormData) => Promise<void>;
 
@@ -76,9 +77,26 @@ export function SubscribePlanCta({
 }) {
   return (
     <div className="mt-6">
-      <p className="rounded-xl border border-border bg-muted/20 p-4 text-sm leading-relaxed text-foreground">
-        {disclosure}
-      </p>
+      <div className="rounded-xl border border-border bg-muted/20 p-4 text-sm leading-relaxed text-foreground">
+        <p>{disclosure}</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Review the{' '}
+          <Link
+            href={ROUTES.TERMS}
+            className="rounded-sm font-medium text-foreground hover:underline ring-focus"
+          >
+            Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link
+            href={ROUTES.PRIVACY}
+            className="rounded-sm font-medium text-foreground hover:underline ring-focus"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </p>
+      </div>
       <AuthAwareCta
         isAuthenticated={isAuthenticated}
         formAction={formAction}
