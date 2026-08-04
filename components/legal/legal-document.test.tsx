@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   findAnchorByHref,
+  findElementByText,
   findHeadingByText,
   parseHtml,
 } from '@/tests/shared/dom-helpers';
@@ -87,8 +88,7 @@ describe('LegalDocument', () => {
     );
     const doc = parseHtml(html);
 
-    expect(doc.querySelector('a')?.getAttribute('href') ?? '').not.toMatch(
-      /^javascript:/i,
-    );
+    const unsafeLink = findElementByText<HTMLAnchorElement>(doc, 'a', 'Unsafe');
+    expect(unsafeLink?.getAttribute('href') ?? '').not.toMatch(/^javascript:/i);
   });
 });
