@@ -187,7 +187,7 @@ For a no-card trial, state accurately: without a payment method, Stripe is confi
 - `app/(app)/app/layout-shell.test.tsx`;
 - `app/pricing/pricing-view.test.tsx`.
 
-**Stage-1 page work:** add the Terms/Privacy links after those routes exist. **Still required before billing-consent closure:** replace the trial banner's generic portal action with the dedicated consent-bearing setup flow below and persist the consent/acknowledgment. The new visible copy narrows the current risk but is not represented as complete ARL/ROSCA compliance.
+**Stage-1 page work:** the Terms/Privacy links are implemented in the marketing footer and both pricing disclosure blocks, and the routes pass the committed signed-out E2E guard; production verification remains pending until Promo 1 deploys. **Still required before billing-consent closure:** replace the trial banner's generic portal action with the dedicated consent-bearing setup flow below and persist the consent/acknowledgment. The new visible copy narrows the current risk but is not represented as complete ARL/ROSCA compliance.
 
 ### 5. Stripe consent
 
@@ -331,8 +331,9 @@ Only after the deployed pages return signed-out 200:
 - [ ] Retainable acknowledgment, annual/renewal, and change notices exist.
 - [ ] An increased recurring price cannot be charged without a matching affirmative price-increase consent record.
 - [ ] Cancellation is online, simple, and accurately described.
-- [ ] `/privacy` and `/terms` are derived public patterns and pass signed-out 200 E2E checks.
-- [ ] Footer and pre-billing links exist.
+- [x] `/privacy` and `/terms` are derived public patterns and pass signed-out 200 E2E checks.
+- [x] Footer and pre-billing links exist in committed code.
+- [ ] Production signed-out requests return 200 for both legal routes with mandatory copy present, and production pricing renders both legal links.
 - [ ] SHIELD security and incident programs are adopted and evidence-backed.
 - [ ] Stripe legal links are set only after deployment; existing descriptor reverified, not recreated.
 - [ ] Full quality gate passes before push.
