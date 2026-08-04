@@ -67,6 +67,6 @@ describe('TermsPage', () => {
     expect(text).not.toContain('completing the Terms-consent step');
     expect(text).not.toContain('Decisions on record');
     expect(text).not.toContain('Provenance — how each factual claim');
-    expect(TermsPage).toBeTypeOf('function');
+    await expect(TermsPage()).resolves.toBeDefined();
   });
 });

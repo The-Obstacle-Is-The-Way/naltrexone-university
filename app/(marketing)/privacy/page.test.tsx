@@ -71,6 +71,6 @@ describe('PrivacyPage', () => {
     expect(text).toContain('Sentry session replay is disabled');
     expect(text).not.toContain('Provenance and adversarial verification');
     expect(text).not.toContain('OWNER TO IDENTIFY');
-    expect(PrivacyPage).toBeTypeOf('function');
+    await expect(PrivacyPage()).resolves.toBeDefined();
   });
 });
