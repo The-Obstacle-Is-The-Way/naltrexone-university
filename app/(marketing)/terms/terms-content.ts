@@ -11,7 +11,7 @@ The rest of this page is the detail behind those sentences, and the detail contr
 
 ### 1. Who we are and what you're agreeing to
 
-Addiction Boards (the "Service", at \`addictionboards.com\`) is operated by **John H. Jung, MD, MS**, a sole proprietor based in New York ("we", "us", "our"). Creating an account alone does not accept these Terms. By selecting a subscription or free-trial action and completing the Terms-consent step, you agree to these Terms and acknowledge the [Privacy Policy](/privacy). You may not start a trial, subscribe, or use protected Service content until you accept these Terms. If you do not agree, do not use the Service.
+Addiction Boards (the "Service", at \`addictionboards.com\`) is operated by **John H. Jung, MD, MS**, a sole proprietor based in New York ("we", "us", "our"). Creating an account alone does not accept these Terms. These Terms govern access to and use of the Service. The pricing page presents links to these Terms and the [Privacy Policy](/privacy) before subscription and free-trial actions. If you do not agree to these Terms, do not start a trial, subscribe, or use protected Service content.
 
 Contact: **support@addictionboards.com**
 

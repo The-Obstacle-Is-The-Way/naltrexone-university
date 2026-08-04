@@ -48,12 +48,13 @@ describe('PrivacyPage', () => {
       await renderPrivacyPage({ authNavSlot: <div>Auth</div> }),
     );
     const doc = parseHtml(html);
+    const text = doc.body.textContent ?? '';
 
     expect(
       findHeadingByText(doc, 'Privacy Policy', { level: 1 }),
     ).not.toBeNull();
-    expect(html).toContain('We do not sell personal information');
-    expect(html).toContain('support@addictionboards.com');
+    expect(text).toContain('We do not sell personal information');
+    expect(text).toContain('support@addictionboards.com');
     for (const provider of [
       'Clerk',
       'Stripe',
@@ -64,12 +65,12 @@ describe('PrivacyPage', () => {
       'Google Workspace',
       'Resend',
     ]) {
-      expect(html).toContain(provider);
+      expect(text).toContain(provider);
     }
-    expect(html).toContain('Twenty-four hours is not a guaranteed maximum');
-    expect(html).toContain('Sentry session replay is disabled');
-    expect(html).not.toContain('Provenance and adversarial verification');
-    expect(html).not.toContain('OWNER TO IDENTIFY');
+    expect(text).toContain('Twenty-four hours is not a guaranteed maximum');
+    expect(text).toContain('Sentry session replay is disabled');
+    expect(text).not.toContain('Provenance and adversarial verification');
+    expect(text).not.toContain('OWNER TO IDENTIFY');
     expect(PrivacyPage).toBeTypeOf('function');
   });
 });

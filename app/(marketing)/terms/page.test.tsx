@@ -48,20 +48,25 @@ describe('TermsPage', () => {
       await renderTermsPage({ authNavSlot: <div>Auth</div> }),
     );
     const doc = parseHtml(html);
+    const text = doc.body.textContent ?? '';
 
     expect(
       findHeadingByText(doc, 'Terms of Service', { level: 1 }),
     ).not.toBeNull();
-    expect(html).toContain('The Service is not medical advice');
-    expect(html).toContain('$29 per month');
-    expect(html).toContain('$199 per year');
-    expect(html).toContain('7-day free trial with no payment method required');
-    expect(html).toContain('renews automatically');
-    expect(html).toContain('Billing page in the app');
-    expect(html).toContain('support@addictionboards.com');
-    expect(html).toContain('John H. Jung, MD, MS');
-    expect(html).not.toContain('Decisions on record');
-    expect(html).not.toContain('Provenance — how each factual claim');
+    expect(text).toContain('The Service is not medical advice');
+    expect(text).toContain('$29 per month');
+    expect(text).toContain('$199 per year');
+    expect(text).toContain('7-day free trial with no payment method required');
+    expect(text).toContain('renews automatically');
+    expect(text).toContain('Billing page in the app');
+    expect(text).toContain('support@addictionboards.com');
+    expect(text).toContain('John H. Jung, MD, MS');
+    expect(text).toContain(
+      'The pricing page presents links to these Terms and the Privacy Policy before subscription and free-trial actions.',
+    );
+    expect(text).not.toContain('completing the Terms-consent step');
+    expect(text).not.toContain('Decisions on record');
+    expect(text).not.toContain('Provenance — how each factual claim');
     expect(TermsPage).toBeTypeOf('function');
   });
 });

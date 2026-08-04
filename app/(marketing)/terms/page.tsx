@@ -15,7 +15,7 @@ export async function renderTermsPage({
   authNavSlot?: ReactNode;
 } = {}) {
   return MarketingLayout({
-    authNavSlot,
+    ...(authNavSlot === undefined ? {} : { authNavSlot }),
     featuresHref: `${ROUTES.HOME}#features`,
     children: <LegalDocument content={termsContent} />,
   });

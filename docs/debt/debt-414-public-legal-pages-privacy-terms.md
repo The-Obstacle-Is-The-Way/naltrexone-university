@@ -19,9 +19,9 @@
 2. The live pricing and trial add-card entry do not yet implement the complete ROSCA, California, and New York pre-billing disclosure and affirmative-consent path.
 3. The repository does not retain a durable consumer-level record of initial or increased-price consent, and does not produce the required retainable acknowledgment or annual-plan notices.
 4. Draft New York SHIELD Act security and incident-response procedures now exist, but their live-account `OPEN` checks have not been verified and the owner has not adopted them.
-5. **Provider identification is closed:** Google Workspace (Google LLC) is the destination mailbox and Resend is the transactional renewal-message sender. **The operational tail remains open:** verify end-to-end delivery to `support@addictionboards.com` with a real external send, activate and test Resend after its adapter and key are configured, and record the cancellation-processing procedure — identity verified by matching the sender to the account email (as § 4 states), the cancellation executed in Stripe effective at period end, and owner monitoring coverage. The online Billing-page path independently satisfies the as-easy-as-signup cancellation requirement; email is an additional consumer-protective channel and must be operational, not decorative, once published.
+5. **Provider identification is closed:** Google Workspace (Google LLC) is the destination mailbox and Resend is the transactional renewal-message sender. **The operational tail remains open:** verify end-to-end delivery to `support@addictionboards.com` with a real external send, activate and test Resend after its adapter and key are configured, and record the cancellation-processing procedure — identity verified by matching the sender to the account email (as § 4 states), the cancellation executed in Stripe effective at period end, and owner monitoring coverage. The online Billing-page path independently satisfies the as-easy-as-signup cancellation requirement; email is an additional consumer-protective channel and must be verified at the Stage 1 owner checkpoint before Stage 2 promotes required Terms consent.
 
-The corrected Privacy Policy is suitable for focused review once those implementation facts are settled. It must not be copied into a public page before then, because the final policy must describe the final implementation rather than a planned one.
+Stage 1 may publish the corrected Privacy Policy and Terms together before the remaining implementation and owner-tail work is complete only under the two-stage sequence above: verify both public routes in production, then set both Stripe Business Settings legal URLs and verify support-email delivery before promoting required Terms consent in Stage 2. The copy describes current practice and identifies inactive or unverified provider behaviour expressly; the remaining work keeps DEBT-414 active and must be completed before paid acquisition.
 
 ## Business facts and verification limits
 
@@ -76,7 +76,7 @@ The quoted operative language below comes from official government sources. Seco
 - [ ] Verify end-to-end delivery to `support@addictionboards.com` and separately verify the claimed catch-all. This is an external send and was deliberately not performed by the audit.
 - [x] Identify the destination mailbox provider and transactional sender: Google Workspace (Google LLC) receives forwarded support mail; Resend sends transactional notices. Both are recorded in the Privacy and security inventories.
 - [ ] Inventory the exact live Clerk and Stripe email templates; record each primary-purpose classification. Add a valid postal address and opt-out to every commercial template.
-- [ ] Read through and approve the existing Terms of Service draft as the owner-supplied publication copy.
+- [ ] Read through and approve the existing Terms of Service as the owner-supplied copy before paid acquisition.
 - [ ] Confirm the intended content-source representation against a recorded question/source-rights review before restoring any claim that every item is original/licensed or that no actual examination question is present.
 - [ ] Obtain focused review of these specific Terms questions before paid acquisition:
   - Is the educational/not-medical-advice disclaimer adequate for a professional board-prep product that presents clinical scenarios?
@@ -93,15 +93,13 @@ This is the code-discovery-complete implementation map. It still has explicit **
 
 ### 0. Publication transaction
 
-Do not publish only one legal page, a dead `/terms` link, or a partial renewal flow. The publication unit is:
+Do not publish only one legal page or a dead legal link. Delivery is intentionally split to avoid enabling Stripe's required Terms consent before Stripe has a live Terms URL:
 
-1. approved Privacy Policy and owner-approved Terms;
-2. public signed-out routes and footer links;
-3. complete disclosure at pricing and every card/billing entry;
-4. consent evidence and retainable acknowledgment;
-5. cancellation and reminder paths;
-6. adopted SHIELD program; and
-7. Stripe legal URLs set only after the routes return signed-out 200 responses.
+1. **Stage 1:** publish the corrected current-practice Privacy Policy and Terms together at signed-out routes, add the footer and pricing-disclosure links, and verify both production routes return 200 with mandatory copy present;
+2. **Between stages:** the owner sets both Stripe Business Settings legal URLs and verifies external delivery to the Google Workspace support inbox; and
+3. **Stage 2:** only after those confirmations, promote required Stripe Terms consent, durable consent evidence, retainable acknowledgment, and the specified cancellation/reminder delivery code.
+
+Resend activation, SHIELD adoption, provider-template classification, owner read-through, and focused legal review remain explicit owner-tail items before paid acquisition. The Stage 1 public copy must not claim those controls are already active.
 
 ### 1. Stable routes and public-route guard
 
@@ -323,7 +321,7 @@ Only after the deployed pages return signed-out 200:
 
 ## Acceptance criteria
 
-- [ ] Owner has approved the existing Terms draft and resolved every named clause question required before publication.
+- [ ] Owner has read through the existing Terms and resolved every named clause question required before paid acquisition.
 - [x] Privacy draft's factual claims match the audited codebase.
 - [x] Destination mailbox and transactional-email providers are identified and the final provider inventory is exact across Privacy and security documents.
 - [x] CCPA applicability and future-trigger statements use correct thresholds.
