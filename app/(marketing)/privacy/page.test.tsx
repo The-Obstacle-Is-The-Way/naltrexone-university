@@ -11,12 +11,16 @@ vi.mock('next/link', () => ({
 }));
 
 let PrivacyPage: typeof import('./page').default;
-let renderPrivacyPage: typeof import('./page').renderPrivacyPage;
+let renderPrivacyPage: typeof import('./privacy-page-renderer').renderPrivacyPage;
 let privacyContent: typeof import('./privacy-content').privacyContent;
 
 beforeAll(async () => {
-  [{ default: PrivacyPage, renderPrivacyPage }, { privacyContent }] =
-    await Promise.all([import('./page'), import('./privacy-content')]);
+  [{ default: PrivacyPage }, { renderPrivacyPage }, { privacyContent }] =
+    await Promise.all([
+      import('./page'),
+      import('./privacy-page-renderer'),
+      import('./privacy-content'),
+    ]);
 });
 
 function publicPrivacyMarkdown(): string {

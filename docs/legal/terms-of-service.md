@@ -1,7 +1,7 @@
 # Terms of Service — publication copy
 
-> **STATUS: PUBLICATION COPY — first published 2026-08-04.** Working copy for [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md), drafted 2026-08-03 in house from primary sources and the codebase at `5773a148`. Companion to the [Privacy Policy](./privacy-policy.md); the two documents publish together.
-> Owner decision on record: draft in house while pre-revenue with no active users; obtain focused legal review before paid user acquisition. The *Decisions on record* and *Provenance* appendices at the end are internal and do not publish.
+> **STATUS: PUBLICATION COPY — first published 2026-08-04.** Working copy for [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md), drafted 2026-08-03 in-house from primary sources and the codebase at `5773a148`. Companion to the [Privacy Policy](./privacy-policy.md); the two documents publish together.
+> Owner decision on record: draft in-house while pre-revenue with no active users; obtain focused legal review before paid user acquisition. The *Decisions on record* and *Provenance* appendices at the end are internal and do not publish.
 > The public portion is mirrored verbatim in `app/(marketing)/terms/terms-content.ts` per the DEBT-414 implementation spec.
 
 ---

@@ -2,7 +2,7 @@
 
 > **STATUS: PUBLICATION COPY — first published 2026-08-04.** This is the committed source for [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md).
 > It was independently re-audited against the repository on 2026-07-29. The audit corrected unsupported absolute claims about retention, deletion, analytics, Sentry, payment information, cookies, security, and United States-only processing. See *Provenance and adversarial verification* below.
-> Owner decision on record: draft in house while the product is pre-revenue with no active users, and obtain focused legal review before paid user acquisition.
+> Owner decision on record: draft in-house while the product is pre-revenue with no active users, and obtain focused legal review before paid user acquisition.
 > The public-policy portion of this file is mirrored verbatim in `app/(marketing)/privacy/privacy-content.ts` per the DEBT-414 implementation spec. The provenance appendix remains an internal repository record.
 
 ---
