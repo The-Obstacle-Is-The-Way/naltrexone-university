@@ -123,6 +123,11 @@ describe('lib/routes', () => {
     expect(ROUTES.APP_HISTORY).toBe('/app/history');
   });
 
+  it('exports stable public legal route constants', () => {
+    expect(ROUTES.PRIVACY).toBe('/privacy');
+    expect(ROUTES.TERMS).toBe('/terms');
+  });
+
   it('builds pricing routes with shared query parameter names', () => {
     expect(PRICING_QUERY_PARAMS.plan).toBe('plan');
     expect(PRICING_QUERY_PARAMS.reason).toBe('reason');

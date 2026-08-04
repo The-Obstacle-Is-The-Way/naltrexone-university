@@ -3,6 +3,8 @@ export const ROUTES = {
   SIGN_IN: '/sign-in',
   SIGN_UP: '/sign-up',
   PRICING: '/pricing',
+  PRIVACY: '/privacy',
+  TERMS: '/terms',
   CHECKOUT_SUCCESS: '/checkout/success',
 
   APP_DASHBOARD: '/app/dashboard',

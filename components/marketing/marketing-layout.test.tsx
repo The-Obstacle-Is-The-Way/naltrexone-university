@@ -3,6 +3,7 @@ import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
+import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
 
 type NextLinkMockProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
@@ -93,6 +94,19 @@ describe('MarketingLayout', () => {
     expect(signUpLink?.textContent?.trim()).toBe('Sign up');
   });
 
+  it('links both public legal pages from the footer', async () => {
+    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
+    const footer = parseHtml(html).querySelector('footer');
+
+    expect(footer).not.toBeNull();
+    expect(
+      footer ? findAnchorByHref(footer, ROUTES.PRIVACY)?.textContent : null,
+    ).toBe('Privacy Policy');
+    expect(
+      footer ? findAnchorByHref(footer, ROUTES.TERMS)?.textContent : null,
+    ).toBe('Terms of Service');
+  });
+
   it('renders footer links in a single untitled group', async () => {
     const html = await renderLayout({ authNavSlot: <div>Auth</div> });
     const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -108,6 +122,8 @@ describe('MarketingLayout', () => {
       { href: ROUTES.PRICING, label: 'Pricing' },
       { href: ROUTES.SIGN_IN, label: 'Sign in' },
       { href: ROUTES.SIGN_UP, label: 'Sign up' },
+      { href: ROUTES.PRIVACY, label: 'Privacy Policy' },
+      { href: ROUTES.TERMS, label: 'Terms of Service' },
     ].map(({ href, label }) => {
       const link = footer.querySelector<HTMLAnchorElement>(`a[href="${href}"]`);
       expect(link?.textContent?.trim()).toBe(label);
