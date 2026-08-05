@@ -19,13 +19,22 @@ const contentLinkClass =
 function LegalLink({
   href,
   children,
+  node: _node,
   ...props
-}: ComponentPropsWithoutRef<'a'>) {
+}: ComponentPropsWithoutRef<'a'> & { node?: unknown }) {
   if (href?.startsWith('/')) {
     return (
       <Link href={href} className={contentLinkClass}>
         {children}
       </Link>
+    );
+  }
+
+  if (href?.startsWith('mailto:')) {
+    return (
+      <a {...props} href={href} className={contentLinkClass}>
+        {children}
+      </a>
     );
   }
 
@@ -85,11 +94,16 @@ const legalMarkdownComponents: Components = {
   },
   table({ children }) {
     return (
-      <div className="mt-6 overflow-x-auto rounded-xl border border-border">
+      <section
+        aria-label="Scrollable table"
+        /* biome-ignore lint/a11y/noNoninteractiveTabindex: Horizontally scrollable content must be keyboard-reachable (WCAG 2.1.1 / axe scrollable-region-focusable). */
+        tabIndex={0}
+        className="mt-6 overflow-x-auto rounded-xl border border-border focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+      >
         <table className="w-full border-collapse text-left text-sm">
           {children}
         </table>
-      </div>
+      </section>
     );
   },
   thead({ children }) {
@@ -104,7 +118,9 @@ const legalMarkdownComponents: Components = {
   },
   td({ children }) {
     return (
-      <td className="border-b border-border px-4 py-3 align-top leading-6 text-foreground last:border-b-0">
+      // Border suppression targets the last row's cells, not each row's last
+      // cell — `last:` alone would strip the rightmost column's separators.
+      <td className="border-b border-border px-4 py-3 align-top leading-6 text-foreground [tbody_tr:last-child_&]:border-b-0">
         {children}
       </td>
     );

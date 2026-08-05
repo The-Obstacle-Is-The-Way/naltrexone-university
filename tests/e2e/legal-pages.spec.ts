@@ -22,7 +22,6 @@ for (const legalPage of legalPages) {
 
     expect(response.status()).toBe(200);
     expect(new URL(response.url()).pathname).toBe(legalPage.path);
-    expect(new URL(response.url()).pathname).not.toBe('/sign-in');
     expect(body).toContain(legalPage.heading);
     expect(body).toContain(legalPage.mandatoryClause);
   });

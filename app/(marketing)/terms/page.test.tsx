@@ -71,6 +71,11 @@ describe('TermsPage', () => {
     expect(text).not.toContain('completing the Terms-consent step');
     expect(text).not.toContain('Decisions on record');
     expect(text).not.toContain('Provenance — how each factual claim');
-    await expect(TermsPage()).resolves.toBeDefined();
+  });
+
+  it('delegates the route default export to the terms renderer', async () => {
+    // Element-tree equality (not just "resolves defined") so the route cannot
+    // silently swap in a different renderer or content module.
+    expect(await TermsPage()).toEqual(await renderTermsPage());
   });
 });

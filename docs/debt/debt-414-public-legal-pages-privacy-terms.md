@@ -21,7 +21,7 @@
 4. Draft New York SHIELD Act security and incident-response procedures now exist, but their live-account `OPEN` checks have not been verified and the owner has not adopted them.
 5. **Provider identification is closed:** Google Workspace (Google LLC) is the destination mailbox and Resend is the transactional renewal-message sender. **The operational tail remains open:** verify end-to-end delivery to `support@addictionboards.com` with a real external send, activate and test Resend after its adapter and key are configured, and record the cancellation-processing procedure — identity verified by matching the sender to the account email (as § 4 states), the cancellation executed in Stripe effective at period end, and owner monitoring coverage. The online Billing-page path independently satisfies the as-easy-as-signup cancellation requirement; email is an additional consumer-protective channel and must be verified at the Stage 1 owner checkpoint before Stage 2 promotes required Terms consent.
 
-Stage 1 may publish the corrected Privacy Policy and Terms together before the remaining implementation and owner-tail work is complete only under the two-stage sequence above: verify both public routes in production, then set both Stripe Business Settings legal URLs and verify support-email delivery before promoting required Terms consent in Stage 2. The copy describes current practice and identifies inactive or unverified provider behaviour expressly; the remaining work keeps DEBT-414 active and must be completed before paid acquisition.
+Stage 1 may publish the corrected Privacy Policy and Terms together before the remaining implementation and owner-tail work is complete only under the two-stage sequence above: verify both public routes in production, then set both Stripe Business Settings legal URLs and verify support-email delivery before promoting required Terms consent in Stage 2. The copy describes current practice and identifies inactive or unverified provider behaviour expressly *(made true for Resend on 2026-08-05: the published provider table's Resend row previously read as an operating sender while no adapter or credentials existed; the post-Stage-1 adversarial review added the express "not yet active" qualifier to the published row — see "Stage 1 adversarial review record" below)*; the remaining work keeps DEBT-414 active and must be completed before paid acquisition.
 
 ## Business facts and verification limits
 
@@ -338,6 +338,19 @@ Only after the deployed pages return signed-out 200:
 - [ ] Stripe legal links are set only after deployment; existing descriptor reverified, not recreated.
 - [ ] Full quality gate passes before push.
 - [ ] CodeRabbit reviews the exact final pushed head before merge is requested.
+
+## Stage 1 adversarial review record (2026-08-05)
+
+After Stage 1 was production-verified, a five-angle adversarial review (line-by-line diff, security/route exposure, draft-vs-shipped conformance, design-system conventions, test quality) ran against the full shipped diff. Chain, content, and gate claims in the Stage 1 report all verified at source. Confirmed findings and their resolutions, all fixed in the same follow-up change unless marked accepted:
+
+1. **Renderer emitted invalid HTML** — react-markdown's `node` prop was spread onto external/mailto anchors, serializing `node="[object Object]"` into production markup (10 anchors across both pages). Fixed by destructuring `node` out of `LegalLink`.
+2. **Autolinked support emails opened blank tabs** — remark-gfm autolinks every bare `support@addictionboards.com`, and the link renderer's binary internal/external branch forced `target="_blank"` onto `mailto:` — including § 4's email-cancellation contact. Fixed with a dedicated same-tab mailto branch, pinned by test.
+3. **Table row separators broke on the last column** — `last:border-b-0` on `td` targets each row's last cell, not the last row. Fixed with a last-row-scoped variant.
+4. **Scrollable disclosure tables were keyboard-unreachable** — the `overflow-x-auto` wrapper had no `tabIndex`, failing WCAG 2.1.1/axe `scrollable-region-focusable` on the provider/retention tables. Fixed: focusable labelled region with the canonical focus ring, covered by the theme-token regression guard.
+5. **Published Resend row read as an operating sender** — see the Verdict annotation above. Fixed in the published row, the draft (mirror-enforced), and the security-program inventory.
+6. **Vacuous guards** — the route default-export tests only asserted "resolves defined" (now element-tree equality against the renderer); the unsafe-link-protocol test could pass on an empty render (now asserts the anchor exists); one E2E assertion was logically unreachable (removed); the pricing legal-consent links lacked theme-token regression coverage (added).
+7. **ACCEPTED, recorded, no code change:** `PUBLIC_ROUTE_PATTERNS` uses the file's pre-existing `(.*)` prefix convention, so `/privacy*`/`/terms*` namespace routes added in the future would silently be public. No colliding route exists; any future route in either namespace must revisit this (tighten to exact patterns or add a boundary test).
+8. **ACCEPTED, documented:** the legal-document type scale and its `###`→`h2`/`####`→`h3` heading mapping shipped undocumented; now recorded in the Pattern Registry. Test fixture dates were also aligned to August 5.
 
 ## Primary sources
 
