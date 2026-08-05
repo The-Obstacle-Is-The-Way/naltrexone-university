@@ -2,7 +2,7 @@
 
 **Priority:** P1 publication and billing-compliance blocker
 **Created:** 2026-06-10
-**Status:** **ACTIVE — two-stage publication wave authorized 2026-08-04.** Stage 1 publishes the corrected Privacy Policy and Terms of Service at signed-out public routes. After production verification, the owner must set both Stripe Business Settings legal URLs before Stage 2 can enable required Terms consent; this ordering prevents Checkout Session creation from failing. Consent evidence, acknowledgment/reminders, Resend activation, and the New York SHIELD Act operational program remain open, and focused legal review remains required before paid acquisition.
+**Status:** **ACTIVE — Stage 1 production-verified 2026-08-05; Stage 2 owner-gated.** Stage 1 published the corrected Privacy Policy and Terms of Service at signed-out public routes. The owner must now set both Stripe Business Settings legal URLs before Stage 2 can enable required Terms consent; this ordering prevents Checkout Session creation from failing. Consent evidence, acknowledgment/reminders, Resend activation, and the New York SHIELD Act operational program remain open, and focused legal review remains required before paid acquisition.
 **Owner:** John H. Jung, MD, MS, sole proprietor, New York
 **Product:** Addiction Boards at `addictionboards.com`
 **Contact:** `support@addictionboards.com`
@@ -187,7 +187,7 @@ For a no-card trial, state accurately: without a payment method, Stripe is confi
 - `app/(app)/app/layout-shell.test.tsx`;
 - `app/pricing/pricing-view.test.tsx`.
 
-**Stage-1 page work:** the Terms/Privacy links are implemented in the marketing footer and both pricing disclosure blocks, and the routes pass the committed signed-out E2E guard; production verification remains pending until Promo 1 deploys. **Still required before billing-consent closure:** replace the trial banner's generic portal action with the dedicated consent-bearing setup flow below and persist the consent/acknowledgment. The new visible copy narrows the current risk but is not represented as complete ARL/ROSCA compliance.
+**Stage-1 page work:** the Terms/Privacy links are implemented in the marketing footer and both pricing disclosure blocks, and the routes pass the committed signed-out E2E guard. Production verification completed at 2026-08-05T05:54Z after main merge `9ba33bad9bd35dd1675125d309c597c3716c8531`: redirects were disabled, `/privacy` and `/terms` each returned direct 200 responses with their mandatory clause present, `/pricing` returned 200 with both legal links, and the deployed `dev`/`main` trees matched at `db057573adb5ff79d9c6cd16cdecd1f18b4abcbd`. **Still required before billing-consent closure:** replace the trial banner's generic portal action with the dedicated consent-bearing setup flow below and persist the consent/acknowledgment. The new visible copy narrows the current risk but is not represented as complete ARL/ROSCA compliance.
 
 ### 5. Stripe consent
 
@@ -333,7 +333,7 @@ Only after the deployed pages return signed-out 200:
 - [ ] Cancellation is online, simple, and accurately described.
 - [x] `/privacy` and `/terms` are derived public patterns and pass signed-out 200 E2E checks.
 - [x] Footer and pre-billing links exist in committed code.
-- [ ] Production signed-out requests return 200 for both legal routes with mandatory copy present, and production pricing renders both legal links.
+- [x] Production signed-out requests return 200 for both legal routes with mandatory copy present, and production pricing renders both legal links.
 - [ ] SHIELD security and incident programs are adopted and evidence-backed.
 - [ ] Stripe legal links are set only after deployment; existing descriptor reverified, not recreated.
 - [ ] Full quality gate passes before push.

@@ -3,7 +3,7 @@ import { ROUTES } from '@/lib/routes';
 
 export const termsContent = {
   title: 'Terms of Service',
-  effectiveDate: 'August 4, 2026',
+  effectiveDate: 'August 5, 2026',
   bodyMarkdown: `### The short version
 
 Addiction Boards is a study tool for board-exam preparation. It is not medical advice and does not guarantee exam results. Paid plans are $29/month or $199/year, renew automatically until you cancel, and new users get a 7-day free trial with no card required. You can cancel anytime from the Billing page in the app, effective at the end of your current trial or paid billing period. Use the content for your own studying, don't copy or resell it, and don't put patient information anywhere in the Service.
