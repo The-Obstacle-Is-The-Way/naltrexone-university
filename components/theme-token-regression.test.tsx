@@ -16,6 +16,7 @@ import {
   collectRawButtonIssues,
   readProductionUiSources,
 } from '@/components/theme-token-regression-source-scan';
+import { ROUTES } from '@/lib/routes';
 import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
 import {
   restoreProcessEnv,
@@ -46,6 +47,7 @@ let Feedback: typeof import('@/components/question/feedback').Feedback;
 let QuestionRatingFooter: typeof import('@/components/question/question-rating-footer').QuestionRatingFooter;
 let BillingContent: typeof import('@/app/(app)/app/billing/page').BillingContent;
 let LegalDocument: typeof import('@/components/legal/legal-document').LegalDocument;
+let SubscribePlanCta: typeof import('@/app/pricing/pricing-auth-cta').SubscribePlanCta;
 
 function extractBlock(source: string, selector: ':root' | '.dark'): string {
   const selectorEscaped = selector.replace('.', '\\.');
@@ -170,6 +172,7 @@ describe('theme token regression', () => {
     ));
     ({ BillingContent } = await import('@/app/(app)/app/billing/page'));
     ({ LegalDocument } = await import('@/components/legal/legal-document'));
+    ({ SubscribePlanCta } = await import('@/app/pricing/pricing-auth-cta'));
   });
 
   beforeEach(() => {
@@ -215,13 +218,19 @@ describe('theme token regression', () => {
     expect(issues).toEqual([]);
   });
 
-  it('uses the canonical focus ring on legal document links', () => {
+  it('uses the canonical focus ring on legal document links and table regions', () => {
     const html = renderToStaticMarkup(
       <LegalDocument
         content={{
           title: 'Policy title',
-          effectiveDate: 'August 4, 2026',
-          bodyMarkdown: '[Privacy Policy](/privacy)',
+          effectiveDate: 'August 5, 2026',
+          bodyMarkdown: [
+            '[Privacy Policy](/privacy)',
+            '',
+            '| Provider | Purpose |',
+            '|---|---|',
+            '| Example | Testing |',
+          ].join('\n'),
         }}
       />,
     );
@@ -231,6 +240,39 @@ describe('theme token regression', () => {
     expect(link?.classList.contains('focus-visible:outline-none')).toBe(true);
     expect(link?.classList.contains('focus-visible:ring-ring/50')).toBe(true);
     expect(link?.classList.contains('focus-visible:ring-[3px]')).toBe(true);
+
+    const tableRegion = doc.querySelector(
+      'section[aria-label="Scrollable table"]',
+    );
+    expect(tableRegion?.classList.contains('focus-visible:outline-none')).toBe(
+      true,
+    );
+    expect(tableRegion?.classList.contains('focus-visible:ring-ring/50')).toBe(
+      true,
+    );
+    expect(tableRegion?.classList.contains('focus-visible:ring-[3px]')).toBe(
+      true,
+    );
+  });
+
+  it('uses the shared focus ring utility on pricing legal-consent links', () => {
+    const html = renderToStaticMarkup(
+      <SubscribePlanCta
+        isAuthenticated={false}
+        formAction={async () => {}}
+        signUpHref="/sign-up"
+        formAriaLabel="Subscribe"
+        label="Subscribe"
+        disclosure="Renews automatically."
+        SubscribeButtonComponent={({ children }) => <span>{children}</span>}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    for (const href of [ROUTES.TERMS, ROUTES.PRIVACY]) {
+      const link = findAnchorByHref(doc, href);
+      expect(link?.classList.contains('ring-focus')).toBe(true);
+    }
   });
 
   it('reports a synthetic undocumented arbitrary opacity token with file and line context', () => {

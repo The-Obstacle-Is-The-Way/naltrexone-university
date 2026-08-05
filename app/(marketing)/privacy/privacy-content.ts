@@ -60,7 +60,7 @@ The following direct providers support the Service:
 | **Sentry** | Error monitoring and sampled server performance diagnostics | Errors, stack traces, page or route context, request context, browser/device information, and the narrow application attributes attached to sampled traces; submitted data can incidentally contain identifiers or content |
 | **ImprovMX** | Forwarding mail sent to \`support@addictionboards.com\` | Sender and recipient addresses, message contents, and attachments |
 | **Google Workspace (Google LLC)** | Receiving and storing mail forwarded by ImprovMX | Sender and recipient addresses, message contents, and attachments |
-| **Resend** | Sending transactional account, billing, renewal, and subscription notices | Recipient address, message contents, delivery status, and provider event identifiers |
+| **Resend** | Sending transactional account, billing, renewal, and subscription notices (**not yet active** — the Service does not currently send messages through Resend; this row describes the integration's intended use before it begins) | Recipient address, message contents, delivery status, and provider event identifiers |
 
 Sentry session replay is disabled. Server tracing is sampled at 5%; client tracing is disabled. Those settings reduce collection but do not establish that an error event can never contain personal information.
 
