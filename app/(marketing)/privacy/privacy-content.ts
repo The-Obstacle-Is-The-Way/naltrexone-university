@@ -2,7 +2,7 @@ import type { LegalDocumentContent } from '@/components/legal/legal-document';
 
 export const privacyContent = {
   title: 'Privacy Policy',
-  effectiveDate: 'August 4, 2026',
+  effectiveDate: 'August 5, 2026',
   bodyMarkdown: `### The short version
 
 Addiction Boards is a board-exam question bank. We use account, subscription, practice, feedback, and technical information to provide and secure the Service. We do not sell personal information or share it for cross-context behavioural advertising. We do not use advertising trackers or session replay. Full payment-card numbers are entered on Stripe-hosted pages and are not stored in the Addiction Boards application database.

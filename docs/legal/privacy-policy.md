@@ -1,6 +1,6 @@
 # Privacy Policy — publication copy
 
-> **STATUS: PUBLICATION SOURCE — committed 2026-08-04 for Promo 1.** Production publication is established only by the signed-out live verification recorded in [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md); this source header does not assert deployment status.
+> **STATUS: PUBLISHED — production verified 2026-08-05.** This source was committed 2026-08-04 for Promo 1; the signed-out production evidence is recorded in [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md).
 > It was independently re-audited against the repository on 2026-07-29. The audit corrected unsupported absolute claims about retention, deletion, analytics, Sentry, payment information, cookies, security, and United States-only processing. See *Provenance and adversarial verification* below.
 > Owner decision on record: draft in-house while the product is pre-revenue with no active users, and obtain focused legal review before paid user acquisition.
 > The public-policy portion of this file is mirrored verbatim in `app/(marketing)/privacy/privacy-content.ts` per the DEBT-414 implementation spec. The provenance appendix remains an internal repository record.
@@ -9,7 +9,7 @@
 
 ## Privacy Policy
 
-**Last updated: August 4, 2026**
+**Last updated: August 5, 2026**
 
 ### The short version
 

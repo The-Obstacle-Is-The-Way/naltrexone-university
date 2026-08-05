@@ -29,7 +29,7 @@ function publicTermsMarkdown(): string {
     .split('## Terms of Service\n\n')[1]
     ?.split('\n---\n\n## Decisions on record')[0];
   const body = publicSection?.replace(
-    /^\*\*Last updated: August 4, 2026\*\*\n\n/,
+    /^\*\*Last updated: August 5, 2026\*\*\n\n/,
     '',
   );
 
@@ -43,7 +43,7 @@ function publicTermsMarkdown(): string {
 describe('TermsPage', () => {
   it('keeps the typed page content verbatim with the committed public copy', () => {
     expect(termsContent.title).toBe('Terms of Service');
-    expect(termsContent.effectiveDate).toBe('August 4, 2026');
+    expect(termsContent.effectiveDate).toBe('August 5, 2026');
     expect(termsContent.bodyMarkdown).toBe(publicTermsMarkdown());
   });
 

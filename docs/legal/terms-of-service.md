@@ -1,6 +1,6 @@
 # Terms of Service — publication copy
 
-> **STATUS: PUBLICATION SOURCE — committed 2026-08-04 for Promo 1.** Production publication is established only by the signed-out live verification recorded in [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md); this source header does not assert deployment status. Drafted 2026-08-03 in-house from primary sources and the codebase at `5773a148`; companion to the [Privacy Policy](./privacy-policy.md), with both documents committed together for the same publication change.
+> **STATUS: PUBLISHED — production verified 2026-08-05.** This source was committed 2026-08-04 for Promo 1; the signed-out production evidence is recorded in [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md). Drafted 2026-08-03 in-house from primary sources and the codebase at `5773a148`; companion to the [Privacy Policy](./privacy-policy.md), with both documents committed together for the same publication change.
 > Owner decision on record: draft in-house while pre-revenue with no active users; obtain focused legal review before paid user acquisition. The *Decisions on record* and *Provenance* appendices at the end are internal and do not publish.
 > The public portion is mirrored verbatim in `app/(marketing)/terms/terms-content.ts` per the DEBT-414 implementation spec.
 
@@ -8,7 +8,7 @@
 
 ## Terms of Service
 
-**Last updated: August 4, 2026**
+**Last updated: August 5, 2026**
 
 ### The short version
 
