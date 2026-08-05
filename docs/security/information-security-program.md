@@ -65,7 +65,7 @@ At minimum, review:
 **OPEN before adoption:**
 
 - [ ] Confirm MFA/passkeys and recovery methods for GitHub, Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, Google Workspace, Resend, and DNS.
-- [ ] Send an external message to `support@addictionboards.com`, confirm receipt in Google Workspace, and record the inbox-retention and access settings; separately verify the claimed catch-all if it will be represented.
+- [x] Send an external message to `support@addictionboards.com` and confirm receipt in Google Workspace — **done 2026-08-05** (external `@gmail.com` sender; delivered to Inbox, sender DKIM intact). **Still open in this item:** record the destination inbox's retention and access settings, and separately verify the claimed catch-all if it will ever be represented.
 - [ ] Record every current administrator/member and remove stale access.
 - [ ] Record provider DPA/security-term review dates and breach-notice contacts.
 - [ ] Record operator-device encryption, screen lock, patching, backup, and remote-wipe status.
