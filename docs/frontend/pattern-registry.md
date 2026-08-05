@@ -1166,6 +1166,27 @@ Two distinct stat card presentations:
 | Full | `text-3xl font-bold font-display` | `p-6` | `text-sm` | `mt-2` | Dashboard, Session Summary |
 | Compact | `text-2xl font-bold font-display` | `p-4` | `text-xs` | `mt-1` | Exam Review |
 
+### 12.5 Legal Document Surface
+
+Long-form policy pages (`/privacy`, `/terms`) rendered by `components/legal/legal-document.tsx` from markdown content modules. Registered 2026-08-05 (DEBT-414 Stage 1 adversarial review — the surface shipped first and is documented here per the discoverability rule).
+
+| Element | Classes |
+|---|---|
+| Document H1 | `font-heading text-4xl font-bold tracking-tight text-foreground` (the standard Marketing/standalone H1 from § 12.2) |
+| Section heading | `mt-10 font-heading text-2xl font-bold tracking-tight text-foreground` |
+| Subsection heading | `mt-8 font-heading text-xl font-semibold tracking-tight text-foreground` |
+| Body / list text | `mt-4 text-base leading-7 text-foreground` |
+| Last-updated line | `mt-4 text-sm text-muted-foreground` |
+| Inline code | `rounded bg-muted px-1 py-0.5 text-sm text-foreground` |
+
+**Reading-density rationale:** legal text is dense reference prose, so body copy uses `text-foreground` (not the muted subtitle tone) with the relaxed `leading-7` line height; section headings sit one tier below marketing section H2s because a policy has many sections on one page.
+
+**Heading remap (deliberate):** markdown `##` **and** `###` both render as `<h2>` section headings and `####` renders as `<h3>`, keeping a valid `h1 > h2 > h3` outline under the page `<h1>`. Author legal content with `###` as the top section level and `####` for subsections; do not nest `##` inside `###` expecting a deeper level — the renderer flattens it.
+
+**Links:** internal links reuse L-2 Content Link via `next/link`; `mailto:` links render same-tab with no `target`/`rel` (forcing `_blank` on mailto opens a blank tab in browsers without a mail handler); all other external links get `target="_blank" rel="noreferrer noopener"`. All three share the L-2 class string.
+
+**Scrollable table region (accessibility):** each table is wrapped in `section[aria-label="Scrollable table"][tabIndex=0]` (implicit `region` role) with `mt-6 overflow-x-auto rounded-xl border border-border` plus the canonical focus ring, so keyboard users can reach and scroll overflowing disclosure tables (WCAG 2.1.1 / axe `scrollable-region-focusable`). Row separators are suppressed on the last body row only, via `[tbody_tr:last-child_&]:border-b-0` on `td` — plain `last:` targets each row's last cell, not the last row. Covered by `components/theme-token-regression.test.tsx`.
+
 ---
 
 ## Part 13: Spacing Conventions

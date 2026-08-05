@@ -75,6 +75,11 @@ describe('PrivacyPage', () => {
     expect(text).toContain('Sentry session replay is disabled');
     expect(text).not.toContain('Provenance and adversarial verification');
     expect(text).not.toContain('OWNER TO IDENTIFY');
-    await expect(PrivacyPage()).resolves.toBeDefined();
+  });
+
+  it('delegates the route default export to the privacy renderer', async () => {
+    // Element-tree equality (not just "resolves defined") so the route cannot
+    // silently swap in a different renderer or content module.
+    expect(await PrivacyPage()).toEqual(await renderPrivacyPage());
   });
 });

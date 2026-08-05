@@ -26,7 +26,7 @@ describe('LegalDocument', () => {
       <LegalDocument
         content={{
           title: 'Policy title',
-          effectiveDate: 'August 4, 2026',
+          effectiveDate: 'August 5, 2026',
           bodyMarkdown: [
             '## Primary details',
             '',
@@ -46,6 +46,8 @@ describe('LegalDocument', () => {
             '[Privacy Policy](/privacy)',
             '',
             '[External policy](https://example.com/policy)',
+            '',
+            'Email support@addictionboards.com with questions.',
             '',
             '<script>alert("unsafe")</script>',
           ].join('\n'),
@@ -72,8 +74,54 @@ describe('LegalDocument', () => {
     const externalLink = findAnchorByHref(doc, 'https://example.com/policy');
     expect(externalLink?.getAttribute('target')).toBe('_blank');
     expect(externalLink?.getAttribute('rel')).toBe('noreferrer noopener');
-    expect(doc.body.textContent).toContain('Last updated: August 4, 2026');
+    expect(externalLink?.hasAttribute('node')).toBe(false);
+    expect(doc.body.textContent).toContain('Last updated: August 5, 2026');
     expect(doc.querySelector('script')).toBeNull();
+  });
+
+  it('renders autolinked email addresses as same-tab mailto links', () => {
+    const html = renderToStaticMarkup(
+      <LegalDocument
+        content={{
+          title: 'Policy title',
+          effectiveDate: 'August 5, 2026',
+          bodyMarkdown:
+            'Cancel by emailing **support@addictionboards.com** from your account address.',
+        }}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    const mailtoLink = findAnchorByHref(
+      doc,
+      'mailto:support@addictionboards.com',
+    );
+    expect(mailtoLink).not.toBeNull();
+    expect(mailtoLink?.hasAttribute('target')).toBe(false);
+    expect(mailtoLink?.hasAttribute('rel')).toBe(false);
+    expect(mailtoLink?.hasAttribute('node')).toBe(false);
+  });
+
+  it('exposes overflowing tables as keyboard-focusable regions', () => {
+    const html = renderToStaticMarkup(
+      <LegalDocument
+        content={{
+          title: 'Policy title',
+          effectiveDate: 'August 5, 2026',
+          bodyMarkdown: [
+            '| Provider | Purpose |',
+            '|---|---|',
+            '| Example | Testing |',
+          ].join('\n'),
+        }}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    const region = doc.querySelector('section[aria-label="Scrollable table"]');
+    expect(region).not.toBeNull();
+    expect(region?.getAttribute('tabindex')).toBe('0');
+    expect(region?.querySelector('table')).not.toBeNull();
   });
 
   it('removes unsafe link protocols', () => {
@@ -81,7 +129,7 @@ describe('LegalDocument', () => {
       <LegalDocument
         content={{
           title: 'Policy title',
-          effectiveDate: 'August 4, 2026',
+          effectiveDate: 'August 5, 2026',
           bodyMarkdown: '[Unsafe](javascript:alert(1))',
         }}
       />,
@@ -89,6 +137,7 @@ describe('LegalDocument', () => {
     const doc = parseHtml(html);
 
     const unsafeLink = findElementByText<HTMLAnchorElement>(doc, 'a', 'Unsafe');
+    expect(unsafeLink).not.toBeNull();
     expect(unsafeLink?.getAttribute('href') ?? '').not.toMatch(/^javascript:/i);
   });
 });
