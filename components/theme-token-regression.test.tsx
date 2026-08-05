@@ -260,7 +260,7 @@ describe('theme token regression', () => {
       <SubscribePlanCta
         isAuthenticated={false}
         formAction={async () => {}}
-        signUpHref="/sign-up"
+        signUpHref={ROUTES.SIGN_UP}
         formAriaLabel="Subscribe"
         label="Subscribe"
         disclosure="Renews automatically."
