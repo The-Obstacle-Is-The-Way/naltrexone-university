@@ -1,15 +1,15 @@
-# Privacy Policy — authored draft
+# Privacy Policy — publication copy
 
-> **STATUS: DRAFT — NOT PUBLISHED.** This is the working copy for [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md).
+> **STATUS: PUBLICATION SOURCE — committed 2026-08-04 for Promo 1.** Production publication is established only by the signed-out live verification recorded in [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md); this source header does not assert deployment status.
 > It was independently re-audited against the repository on 2026-07-29. The audit corrected unsupported absolute claims about retention, deletion, analytics, Sentry, payment information, cookies, security, and United States-only processing. See *Provenance and adversarial verification* below.
-> Owner decision on record: draft in house while the product is pre-revenue with no active users, and obtain focused legal review before paid user acquisition.
-> When the complete legal package is ready to publish, the public-policy portion of this file moves into `app/(marketing)/privacy/privacy-content.ts` per the DEBT-414 implementation spec. The provenance appendix remains an internal repository record.
+> Owner decision on record: draft in-house while the product is pre-revenue with no active users, and obtain focused legal review before paid user acquisition.
+> The public-policy portion of this file is mirrored verbatim in `app/(marketing)/privacy/privacy-content.ts` per the DEBT-414 implementation spec. The provenance appendix remains an internal repository record.
 
 ---
 
 ## Privacy Policy
 
-**Last updated: [PUBLICATION DATE]**
+**Last updated: August 4, 2026**
 
 ### The short version
 
@@ -34,7 +34,7 @@ Contact for any privacy question or request: **support@addictionboards.com**
 | **Technical, security, and diagnostic information** | IP address and rate-limit keys; request and provider-event identifiers; route or page context; browser, device, and request information available to hosting or error-monitoring providers; error messages and stack traces; duplicate-operation records |
 | **Support correspondence** | The address, message, and other information you include when emailing `support@addictionboards.com` |
 
-The application database's `users` table stores an email address and internal and Clerk identifiers, but that table is not the full data inventory. Other application tables store Stripe identifiers, activity, feedback, security records, and provider-event identifiers. Clerk, Stripe, Vercel, Sentry, Neon, ImprovMX, and the destination mailbox service identified before publication can process additional information in providing their services.
+The application database's `users` table stores an email address and internal and Clerk identifiers, but that table is not the full data inventory. Other application tables store Stripe identifiers, activity, feedback, security records, and provider-event identifiers. Clerk, Stripe, Vercel, Sentry, Neon, ImprovMX, Google Workspace, and Resend can process additional information in providing their services.
 
 **Please do not enter personal or patient information in a question-feedback comment.** The field is free text and stores what you submit. The Service is not designed to receive patient information, protected health information, or clinical records.
 
@@ -57,9 +57,7 @@ We do not use personal information for targeted advertising or to make automated
 
 ### Providers and disclosures
 
-The repository establishes the following direct providers. The destination
-mailbox service that receives mail forwarded by ImprovMX must be identified and
-added before publication:
+The following direct providers support the Service:
 
 | Provider | Purpose | Information it may process |
 |---|---|---|
@@ -69,7 +67,8 @@ added before publication:
 | **Vercel** | Application hosting, delivery, and platform request logs | Request, IP, route, user-agent, device, deployment, and diagnostic information |
 | **Sentry** | Error monitoring and sampled server performance diagnostics | Errors, stack traces, page or route context, request context, browser/device information, and the narrow application attributes attached to sampled traces; submitted data can incidentally contain identifiers or content |
 | **ImprovMX** | Forwarding mail sent to `support@addictionboards.com` | Sender and recipient addresses, message contents, and attachments |
-| **Destination mailbox service — [OWNER TO IDENTIFY]** | Receiving and storing mail forwarded by ImprovMX | Sender and recipient addresses, message contents, and attachments |
+| **Google Workspace (Google LLC)** | Receiving and storing mail forwarded by ImprovMX | Sender and recipient addresses, message contents, and attachments |
+| **Resend** | Sending transactional account, billing, renewal, and subscription notices | Recipient address, message contents, delivery status, and provider event identifiers |
 
 Sentry session replay is disabled. Server tracing is sampled at 5%; client tracing is disabled. Those settings reduce collection but do not establish that an error event can never contain personal information.
 
@@ -114,7 +113,7 @@ Account deletion removes the local user row and user-linked application rows thr
 
 ### Security and breach notice
 
-We use service providers, access controls, transport security, logging, and other safeguards intended to protect personal information. Those controls are intended to limit access to the operator and authorized provider personnel with an operational need; the current provider and administrator access lists must be verified before publication. No safeguard eliminates all risk.
+We use service providers, access controls, transport security, logging, and other safeguards intended to protect personal information. Those controls are intended to limit access to the operator and authorized provider personnel with an operational need; the current provider and administrator access lists remain an owner verification item. No safeguard eliminates all risk.
 
 If a breach triggers a legal notice duty, we will provide the notices and regulator reports required by applicable law. This public statement does not replace the separate written security and incident-response program required for operations.
 
@@ -160,7 +159,7 @@ This appendix is an internal audit record, not public policy copy. It independen
 | No analytics | **UNVERIFIABLE from the cited dependency check.** | The production source and `package.json` contain no product-analytics integration, but absence of a dependency does not prove a deployment setting or provider behaviour. The current Vercel Web Analytics dashboard setting is not exposed by the audited CLI path and remains an owner check; no production analytics event was sent to test transmission. The public copy therefore states only what the repository and that verification limit support. |
 | No session replay; no personal information in Sentry | **CONFIRMED for replay; REFUTED for the no-personal-information inference.** | `sentry.client.config.ts:9-15` sets both replay rates and client trace sampling to zero. `instrumentation.ts:19-26` enables 5% server tracing and exports `Sentry.captureRequestError`; `lib/report-client-error.ts:50-65` sends the supplied error to `Sentry.captureException`. No scrubber proves an event can never contain personal information. |
 | No first-party cookies; only Clerk sets cookies | **CONFIRMED only for no application cookie-write call; otherwise UNVERIFIABLE.** | An exhaustive source search found no `cookies()`, `document.cookie`, or equivalent write in application code. Provider-hosted behaviour and dashboard settings are not established by that absence. |
-| Direct-provider list is Clerk, Stripe, Neon, Vercel, Sentry, and ImprovMX | **REFUTED as a complete six-provider inventory.** Those six are established, but the security inventory also records a destination inbox that receives forwarded support mail; its provider is not identified in the repository. | Runtime dependencies and imports establish Clerk, Stripe, Neon, Vercel, and Sentry. DEBT-414 and live DNS establish ImprovMX as the MX forwarder. `docs/security/information-security-program.md:24-25` separately identifies ImprovMX and the destination mailbox service, so that mailbox service must be named before publication. No external support email was sent, so end-to-end forwarding and the asserted catch-all were not verified. Preview-only tooling and a direct provider's own downstream vendors are not direct additions, but a separately selected destination mailbox is not established to be ImprovMX's downstream vendor. |
+| Direct-provider list is Clerk, Stripe, Neon, Vercel, Sentry, and ImprovMX | **REFUTED as a complete six-provider inventory; corrected to eight named providers.** Google Workspace is the owner-verified destination inbox and Resend is the owner-selected transactional sender. | Runtime dependencies and imports establish Clerk, Stripe, Neon, Vercel, and Sentry. DEBT-414 and live DNS establish ImprovMX as the MX forwarder. The owner's 2026-08-04 provider record identifies Google Workspace (Google LLC) as the destination mailbox and Resend as the selected sender. No external support email was sent, so end-to-end forwarding remains unverified; Resend does not process messages until its adapter and credentials are activated. Preview-only tooling and a direct provider's own downstream vendors are not direct additions. |
 | Processed Stripe events are retained 90 days; unresolved Stripe and handled Clerk events remain | **CONFIRMED as the implemented policy.** | `src/adapters/controllers/stripe-webhook-controller.ts:60-68` names all three policies and the 90-day constant. |
 | United States-only processing | **UNVERIFIABLE.** | The repository proves the intended market, not every location used by each provider. The public copy no longer promises United States-only processing. |
 | Encryption at rest and operator-only access | **UNVERIFIABLE as previously worded.** | Provider documentation may describe encryption, but repository source cannot prove current account configuration or exclude authorized provider personnel. The public copy now describes safeguards without those absolutes. |

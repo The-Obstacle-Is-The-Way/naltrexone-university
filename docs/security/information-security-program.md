@@ -4,7 +4,7 @@
 
 ## 1. Scope and coordinator
 
-This program covers computerized personal and private information owned, licensed, or maintained by Addiction Boards, including information processed through Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, the destination mailbox service identified before adoption, operator devices, and local development environments.
+This program covers computerized personal and private information owned, licensed, or maintained by Addiction Boards, including information processed through Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, Google Workspace, Resend, operator devices, and local development environments.
 
 **Security-program coordinator:** John H. Jung, MD, MS, sole proprietor.
 
@@ -22,7 +22,8 @@ The current inventory is:
 | Vercel | Hosting and delivery | Requests, IP/user-agent/route metadata, deployments, runtime logs |
 | Sentry | Errors and sampled server performance | Exceptions, stack traces, request/page/browser context, projected trace attributes; no session replay |
 | ImprovMX | Support-mail forwarding | Sender/recipient, message body, attachments |
-| Destination mailbox service — **OPEN: identify provider before adoption** | Receiving and storing forwarded support mail | Sender/recipient, message body, attachments |
+| Google Workspace (Google LLC) | Receiving and storing forwarded support mail | Sender/recipient, message body, attachments |
+| Resend | Transactional account, billing, renewal, and subscription notices | Recipient address, message body, delivery status, provider event identifiers |
 | GitHub (repository + Actions CI) | Source control, CI, and deployment triggers | Source code, workflow definitions, **CI/Actions secrets** (test credentials, tokens), dependency and security alerts. Privileged access path: repository admin and Actions secrets settings. Incident contact: GitHub support/security. |
 | DNS hosting — Vercel DNS | Record hosting: routes the app, the Clerk auth subdomains, and **all support mail (MX/SPF)** | DNS record set. Privileged access path: the Vercel account's domain settings. A DNS compromise silently redirects the product and its mail — treat as production control plane. Incident contact: Vercel support. |
 | Domain registration — Name.com, managed entirely through Vercel | Registrar of record for `addictionboards.com` (purchased via Vercel Domains) | Registration, renewal, transfer lock, nameserver delegation, and account recovery are all controlled through the **Vercel** account — the owner holds no direct Name.com credentials or access path. Registrar-level incidents (hijack, transfer, expiry) route through Vercel support; Vercel is the single privileged path for both rows. |
@@ -63,8 +64,8 @@ At minimum, review:
 
 **OPEN before adoption:**
 
-- [ ] Confirm MFA/passkeys and recovery methods for GitHub, Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, DNS, and the destination inbox.
-- [ ] Identify the destination mailbox provider and reconcile it with the Privacy Policy's provider inventory; if the same provider will send transactional renewal mail, record both roles.
+- [ ] Confirm MFA/passkeys and recovery methods for GitHub, Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, Google Workspace, Resend, and DNS.
+- [ ] Send an external message to `support@addictionboards.com`, confirm receipt in Google Workspace, and record the inbox-retention and access settings; separately verify the claimed catch-all if it will be represented.
 - [ ] Record every current administrator/member and remove stale access.
 - [ ] Record provider DPA/security-term review dates and breach-notice contacts.
 - [ ] Record operator-device encryption, screen lock, patching, backup, and remote-wipe status.

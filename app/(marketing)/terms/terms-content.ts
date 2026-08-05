@@ -1,16 +1,10 @@
-# Terms of Service — publication copy
+import type { LegalDocumentContent } from '@/components/legal/legal-document';
+import { ROUTES } from '@/lib/routes';
 
-> **STATUS: PUBLICATION SOURCE — committed 2026-08-04 for Promo 1.** Production publication is established only by the signed-out live verification recorded in [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md); this source header does not assert deployment status. Drafted 2026-08-03 in-house from primary sources and the codebase at `5773a148`; companion to the [Privacy Policy](./privacy-policy.md), with both documents committed together for the same publication change.
-> Owner decision on record: draft in-house while pre-revenue with no active users; obtain focused legal review before paid user acquisition. The *Decisions on record* and *Provenance* appendices at the end are internal and do not publish.
-> The public portion is mirrored verbatim in `app/(marketing)/terms/terms-content.ts` per the DEBT-414 implementation spec.
-
----
-
-## Terms of Service
-
-**Last updated: August 4, 2026**
-
-### The short version
+export const termsContent = {
+  title: 'Terms of Service',
+  effectiveDate: 'August 4, 2026',
+  bodyMarkdown: `### The short version
 
 Addiction Boards is a study tool for board-exam preparation. It is not medical advice and does not guarantee exam results. Paid plans are $29/month or $199/year, renew automatically until you cancel, and new users get a 7-day free trial with no card required. You can cancel anytime from the Billing page in the app, effective at the end of your current trial or paid billing period. Use the content for your own studying, don't copy or resell it, and don't put patient information anywhere in the Service.
 
@@ -18,7 +12,7 @@ The rest of this page is the detail behind those sentences, and the detail contr
 
 ### 1. Who we are and what you're agreeing to
 
-Addiction Boards (the "Service", at `addictionboards.com`) is operated by **John H. Jung, MD, MS**, a sole proprietor based in New York ("we", "us", "our"). Creating an account alone does not accept these Terms. These Terms govern access to and use of the Service. The pricing page presents links to these Terms and the [Privacy Policy](/privacy) before subscription and free-trial actions. If you do not agree to these Terms, do not start a trial, subscribe, or use protected Service content.
+Addiction Boards (the "Service", at \`addictionboards.com\`) is operated by **John H. Jung, MD, MS**, a sole proprietor based in New York ("we", "us", "our"). Creating an account alone does not accept these Terms. These Terms govern access to and use of the Service. The pricing page presents links to these Terms and the [Privacy Policy](${ROUTES.PRIVACY}) before subscription and free-trial actions. If you do not agree to these Terms, do not start a trial, subscribe, or use protected Service content.
 
 Contact: **support@addictionboards.com**
 
@@ -100,34 +94,5 @@ These Terms and the Privacy Policy are the entire agreement between you and us a
 
 **support@addictionboards.com**
 
-John H. Jung, MD, MS — sole proprietor, New York, United States
-
----
-
-## Decisions on record (internal — do not publish)
-
-| Decision | Choice and rationale | Lawyer question (deferred to the pre-acquisition review) |
-|---|---|---|
-| **Arbitration / class waiver** | **Omitted deliberately.** A consumer arbitration clause with a class waiver is enforceable under the FAA but only when drafted and administered correctly (consumer rules, fee allocation, opt-out mechanics); a botched clause is worse than none, and a pre-revenue product with no users gains nothing from one today. Plain NY courts + small-claims carve-out chosen instead. | Whether to add an arbitration clause with class waiver before scale, and under which administrator's consumer rules. |
-| **Refund policy** | Non-refundable, cancel-forward, access to period end — matches the implemented `cancel_at_period_end` behavior exactly. Two carve-outs added in our disfavor (service discontinued; we terminate without cause) because charging for a service we withdrew is indefensible. | Whether any state's law requires pro-rata refunds on consumer cancellation in circumstances beyond these carve-outs. |
-| **Indemnification clause** | **Omitted deliberately.** Consumer-hostile boilerplate with questionable enforceability against consumers; low value for this product's risk profile. | Whether one is warranted at scale. |
-| **DMCA safe harbor** | Notice procedure included, but formal safe-harbor protection requires registering a designated agent with the U.S. Copyright Office (small fee, online). Owner option; not blocking. | Confirm registration is worth doing at publication (it is cheap). |
-| **Content-source representation** | The draft does not claim that every item is original/licensed or that no actual examination question is present because the repository does not contain a completed source-rights inventory that proves either absolute. The owner may restore a narrower representation only after recording the supporting content review. | None; this is an owner evidence question, not a legal-drafting question. |
-| **Governing law** | New York (owner's Step-0 decision). § 11 preserves non-waivable home-state consumer rights, which is what makes a single governing-law clause defensible for a national consumer product. | Confirm the consumer-rights savings clause wording. |
-| **Notice channel: email only, deliberately** | NY § 527-a subd. 1(f) requires renewal notices "in the manner selected by the consumer" among the channels the business **offers**. Email is the only notification channel offered, so committing to email is compliant. Shipping any second notification channel (SMS, push, in-app notification center) triggers consumer channel selection — revisit § 4/§ 13 in the same change. | None while email remains the sole channel. |
-
-## Provenance — how each factual claim was verified
-
-| Claim in the Terms | Verified against |
-|---|---|
-| $29/mo, $199/yr | `lib/pricing-data.ts` — `price: '$29'` / `price: '$199'`, periods `/mo`, `/yr` |
-| 7-day trial, no card required, new users only | `src/application/use-cases/create-checkout-session.ts:22` `FREE_TRIAL_DAYS = 7`; `:130` trial granted only when `subscription === null` — one trial per **live** subscription record; account deletion cascades the record and restores eligibility, so § 4's per-person limit is a contractual rule, not a technical enforcement — and § 4 now names the delete-and-recreate pathway explicitly and forbids it as a § 2 breach (promo #724 review, 2026-08-03), so the published term describes the account-level mechanics honestly while imposing the person-level rule; DEBT-410 no-card checkout (`missing_payment_method: cancel`) |
-| No charge if no payment method added | DEBT-410 trial design: trial ends via Stripe `missing_payment_method: cancel`; no card on file → nothing to charge |
-| Cancellation at period end, online, via Billing page → Stripe portal | `components/app-nav-items.ts` (`Billing` → `ROUTES.APP_BILLING`); `app/(app)/app/billing/page.tsx` ("Manage in Stripe"); `cancel_at_period_end` in `src/adapters/gateways/stripe/stripe-subscription-normalizer.ts:92`; Stripe portal self-serve cancel configured per DEBT-410 |
-| Failed-payment grace then loss of access | `src/domain/value-objects/subscription-status.ts` — `EntitledStatuses = ['active','inTrial','pastDue']` (past-due keeps access) + `src/domain/services/entitlement.ts:19` — entitlement ends when `currentPeriodEnd <= now` |
-| Material-change notice and increased-price consent | The notice window satisfies codified NY GBS § 527-a subd. 1(g) (5-business-day floor, 30-day ceiling, any material change including price increases) and California § 17602(g)(2)'s 7-calendar-day fee-change floor. NY § 527-a subd. 1(b-1) separately prohibits the increased charge unless the business first obtains affirmative consent or instead provides the statute's post-charge cancellation and pro-rata-refund alternative; this draft chooses affirmative consent before any increased charge. **Corrected 2026-08-03 after adversarial review:** the draft's original 5-business-day-only floor could yield 6 calendar days (Sunday notice → Saturday change), violating California's floor while this table certified otherwise; and an untimed blast notice could land outside the 30-day ceiling for a given subscriber, so the window is anchored to each subscriber's own effectiveness renewal. |
-| Renewal reminders "where required by state law" | NY § 527-a subd. 1(f) (≥1-year initial term renewing ≥6 months → 15–45-day notice incl. cancellation instructions; annual plan qualifies); CA § 17602 annual reminder; Stripe-native emails per DEBT-410 (Stripe email toggles are dashboard-owned — verify before paid acquisition) |
-| Feedback field exists and is free text | `db/schema.ts` `question_feedback` (`comment` ≤ 2000 chars) |
-| Account deletion per Privacy Policy | Cascade + tombstone semantics verified in the Privacy Policy provenance table |
-
-**Primary legal sources:** [NY GBS § 527-a (codified)](https://www.nysenate.gov/legislation/laws/GBS/527-A) · [ROSCA, 15 U.S.C. §§ 8401–8405](https://www.ftc.gov/legal-library/browse/statutes/restore-online-shoppers-confidence-act) · [Cal. Bus. & Prof. Code § 17602](https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?lawCode=BPC&sectionNum=17602.) · [FTC Act § 5, 15 U.S.C. § 45](https://uscode.house.gov/view.xhtml?req=%28title%3A15+section%3A45+edition%3Aprelim%29)
+John H. Jung, MD, MS — sole proprietor, New York, United States`,
+} satisfies LegalDocumentContent;
