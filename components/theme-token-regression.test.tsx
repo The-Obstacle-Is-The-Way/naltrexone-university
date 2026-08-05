@@ -16,6 +16,7 @@ import {
   collectRawButtonIssues,
   readProductionUiSources,
 } from '@/components/theme-token-regression-source-scan';
+import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -224,8 +225,8 @@ describe('theme token regression', () => {
         }}
       />,
     );
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const link = doc.querySelector('a[href="/privacy"]');
+    const doc = parseHtml(html);
+    const link = findAnchorByHref(doc, '/privacy');
 
     expect(link?.classList.contains('focus-visible:outline-none')).toBe(true);
     expect(link?.classList.contains('focus-visible:ring-ring/50')).toBe(true);
