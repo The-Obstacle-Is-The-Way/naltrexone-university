@@ -112,6 +112,7 @@ describe('LegalDocument', () => {
             '| Provider | Purpose |',
             '|---|---|',
             '| Example | Testing |',
+            '| Another | Auditing |',
           ].join('\n'),
         }}
       />,
@@ -122,6 +123,19 @@ describe('LegalDocument', () => {
     expect(region).not.toBeNull();
     expect(region?.getAttribute('tabindex')).toBe('0');
     expect(region?.querySelector('table')).not.toBeNull();
+
+    // The border-suppression variant encodes behavior: `last:` would strip the
+    // bottom border from every row's last cell, not just the last row's cells.
+    const bodyRows = region?.querySelectorAll('tbody tr') ?? [];
+    expect(bodyRows).toHaveLength(2);
+    const firstRowLastCell = bodyRows[0]?.querySelector('td:last-child');
+    expect(firstRowLastCell?.classList.contains('last:border-b-0')).toBe(false);
+    expect(
+      firstRowLastCell?.classList.contains(
+        '[tbody_tr:last-child_&]:border-b-0',
+      ),
+    ).toBe(true);
+    expect(firstRowLastCell?.classList.contains('border-b')).toBe(true);
   });
 
   it('removes unsafe link protocols', () => {
