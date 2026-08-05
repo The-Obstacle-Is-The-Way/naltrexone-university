@@ -25,6 +25,8 @@ vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
 }));
 
+vi.mock('server-only', () => ({}));
+
 const GLOBALS_CSS = readFileSync(
   resolve(process.cwd(), 'app/globals.css'),
   'utf-8',
@@ -42,6 +44,7 @@ let ChoiceButton: typeof import('@/components/question/choice-button').ChoiceBut
 let Feedback: typeof import('@/components/question/feedback').Feedback;
 let QuestionRatingFooter: typeof import('@/components/question/question-rating-footer').QuestionRatingFooter;
 let BillingContent: typeof import('@/app/(app)/app/billing/page').BillingContent;
+let LegalDocument: typeof import('@/components/legal/legal-document').LegalDocument;
 
 function extractBlock(source: string, selector: ':root' | '.dark'): string {
   const selectorEscaped = selector.replace('.', '\\.');
@@ -165,6 +168,7 @@ describe('theme token regression', () => {
       '@/components/question/question-rating-footer'
     ));
     ({ BillingContent } = await import('@/app/(app)/app/billing/page'));
+    ({ LegalDocument } = await import('@/components/legal/legal-document'));
   });
 
   beforeEach(() => {
@@ -208,6 +212,24 @@ describe('theme token regression', () => {
     });
 
     expect(issues).toEqual([]);
+  });
+
+  it('uses the canonical focus ring on legal document links', () => {
+    const html = renderToStaticMarkup(
+      <LegalDocument
+        content={{
+          title: 'Policy title',
+          effectiveDate: 'August 4, 2026',
+          bodyMarkdown: '[Privacy Policy](/privacy)',
+        }}
+      />,
+    );
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const link = doc.querySelector('a[href="/privacy"]');
+
+    expect(link?.classList.contains('focus-visible:outline-none')).toBe(true);
+    expect(link?.classList.contains('focus-visible:ring-ring/50')).toBe(true);
+    expect(link?.classList.contains('focus-visible:ring-[3px]')).toBe(true);
   });
 
   it('reports a synthetic undocumented arbitrary opacity token with file and line context', () => {
