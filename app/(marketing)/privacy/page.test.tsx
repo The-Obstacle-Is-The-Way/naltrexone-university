@@ -29,7 +29,7 @@ function publicPrivacyMarkdown(): string {
     .split('## Privacy Policy\n\n')[1]
     ?.split('\n---\n\n## Provenance and adversarial verification')[0];
   const body = publicSection?.replace(
-    /^\*\*Last updated: August 4, 2026\*\*\n\n/,
+    /^\*\*Last updated: August 5, 2026\*\*\n\n/,
     '',
   );
 
@@ -43,7 +43,7 @@ function publicPrivacyMarkdown(): string {
 describe('PrivacyPage', () => {
   it('keeps the typed page content verbatim with the committed public copy', () => {
     expect(privacyContent.title).toBe('Privacy Policy');
-    expect(privacyContent.effectiveDate).toBe('August 4, 2026');
+    expect(privacyContent.effectiveDate).toBe('August 5, 2026');
     expect(privacyContent.bodyMarkdown).toBe(publicPrivacyMarkdown());
   });
 
