@@ -15,12 +15,15 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       '@clerk/nextjs/server',
+      '@noble/hashes/sha256',
+      '@noble/hashes/utils',
       '@sentry/nextjs',
       'drizzle-orm',
       'drizzle-orm/pg-core',
       'drizzle-orm/postgres-js',
       'pino',
       'postgres',
+      'resend',
       'server-only',
       'stripe',
       'zod',
