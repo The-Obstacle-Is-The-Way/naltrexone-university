@@ -20,6 +20,8 @@ import type {
   CreateCheckoutSessionOutput,
   CreatePortalSessionInput,
   CreatePortalSessionOutput,
+  CreateTrialPaymentMethodSetupSessionInput,
+  CreateTrialPaymentMethodSetupSessionOutput,
 } from '@/src/application/use-cases';
 import { createAction } from './create-action';
 import { executeIdempotent } from './shared/execute-idempotent';
@@ -27,6 +29,7 @@ import {
   IdempotentActionNames,
   shouldCacheCheckoutSessionError,
   shouldCachePortalSessionError,
+  shouldCacheTrialPaymentMethodSetupSessionError,
 } from './shared/idempotency-error-policy';
 
 const zSubscriptionPlan = z.enum(['monthly', 'annual']);
@@ -45,6 +48,12 @@ const CreatePortalSessionInputSchema = z
   })
   .strict();
 
+const CreateTrialPaymentMethodSetupSessionInputSchema = z
+  .object({
+    idempotencyKey: zIdempotencyKey.optional(),
+  })
+  .strict();
+
 const CreateCheckoutSessionOutputSchema = z
   .object({
     url: z.string().min(1),
@@ -57,9 +66,16 @@ const CreatePortalSessionOutputSchema = z
   })
   .strict();
 
+const CreateTrialPaymentMethodSetupSessionOutputSchema = z
+  .object({
+    url: z.string().min(1),
+  })
+  .strict();
+
 export type {
   CreateCheckoutSessionOutput,
   CreatePortalSessionOutput,
+  CreateTrialPaymentMethodSetupSessionOutput,
 } from '@/src/application/use-cases';
 
 export type BillingControllerDeps = {
@@ -74,6 +90,11 @@ export type BillingControllerDeps = {
     execute: (
       input: CreatePortalSessionInput,
     ) => Promise<CreatePortalSessionOutput>;
+  };
+  createTrialPaymentMethodSetupSessionUseCase: {
+    execute: (
+      input: CreateTrialPaymentMethodSetupSessionInput,
+    ) => Promise<CreateTrialPaymentMethodSetupSessionOutput>;
   };
   idempotencyKeyRepository: IdempotencyKeyRepository;
   rateLimiter: RateLimiter;
@@ -105,6 +126,61 @@ function toCancelUrl(appUrl: string): string {
 function toBillingReturnUrl(appUrl: string): string {
   return new URL(ROUTES.APP_BILLING, appUrl).toString();
 }
+
+function toTrialPaymentMethodReturnUrl(
+  appUrl: string,
+  outcome: 'success' | 'cancel',
+): string {
+  const url = new URL(ROUTES.APP_BILLING, appUrl);
+  url.searchParams.set('trial_payment_method', outcome);
+  if (outcome === 'success') {
+    return `${url.toString()}&session_id={CHECKOUT_SESSION_ID}`;
+  }
+  return url.toString();
+}
+
+export const createTrialPaymentMethodSetupSession = createAction({
+  schema: CreateTrialPaymentMethodSetupSessionInputSchema,
+  getDeps,
+  execute: async (input, d) => {
+    const user = await d.authGateway.requireUser();
+    const { idempotencyKey } = input;
+
+    async function createNewSession(): Promise<CreateTrialPaymentMethodSetupSessionOutput> {
+      const setupInput = {
+        userId: user.id,
+        successUrl: toTrialPaymentMethodReturnUrl(d.appUrl, 'success'),
+        cancelUrl: toTrialPaymentMethodReturnUrl(d.appUrl, 'cancel'),
+      } as const;
+
+      return d.createTrialPaymentMethodSetupSessionUseCase.execute(setupInput);
+    }
+
+    async function enforceSetupRateLimit(): Promise<void> {
+      const rateLimit = await d.rateLimiter.limit({
+        key: `${IdempotentActionNames.TrialPaymentMethodSetup}:${user.id}`,
+        ...CHECKOUT_SESSION_RATE_LIMIT,
+      });
+      if (!rateLimit.success) {
+        throw new ApplicationError(
+          'RATE_LIMITED',
+          `Too many payment-method setup attempts. Try again in ${rateLimit.retryAfterSeconds}s.`,
+        );
+      }
+    }
+
+    return executeIdempotent({
+      d,
+      userId: user.id,
+      action: IdempotentActionNames.TrialPaymentMethodSetup,
+      idempotencyKey,
+      outputSchema: CreateTrialPaymentMethodSetupSessionOutputSchema,
+      beforeExecute: enforceSetupRateLimit,
+      shouldCacheError: shouldCacheTrialPaymentMethodSetupSessionError,
+      execute: createNewSession,
+    });
+  },
+});
 
 export const createCheckoutSession = createAction({
   schema: CreateCheckoutSessionInputSchema,

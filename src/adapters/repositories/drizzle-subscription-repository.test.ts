@@ -1,3 +1,5 @@
+import type { SQL } from 'drizzle-orm';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
@@ -118,6 +120,34 @@ describe('DrizzleSubscriptionRepository', () => {
       cancelAtPeriodEnd: false,
       createdAt,
       updatedAt,
+    });
+  });
+
+  it('returns only the external subscription id for a user binding', async () => {
+    const findFirst = vi.fn(
+      async (_input: { columns: unknown; where: unknown }) => ({
+        stripeSubscriptionId: 'sub_123',
+      }),
+    );
+    const db = {
+      query: {
+        stripeSubscriptions: { findFirst },
+      },
+    } as const;
+    const repo = createRepo(db, priceIds);
+
+    await expect(repo.findExternalSubscriptionIdByUserId(userId)).resolves.toBe(
+      'sub_123',
+    );
+    expect(findFirst).toHaveBeenCalledWith({
+      columns: { stripeSubscriptionId: true },
+      where: expect.anything(),
+    });
+    const where = findFirst.mock.calls[0]?.[0].where;
+    if (!where) throw new Error('Expected a subscription lookup predicate');
+    expect(new PgDialect().sqlToQuery(where as SQL)).toMatchObject({
+      sql: expect.stringContaining('"stripe_subscriptions"."user_id" = $1'),
+      params: [userId],
     });
   });
 

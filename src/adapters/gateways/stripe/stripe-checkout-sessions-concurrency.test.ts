@@ -62,6 +62,9 @@ function createConcurrentStripeMock() {
       params: CheckoutSessionCreateParams,
       options?: StripeRequestOptions,
     ) => {
+      if (params.mode === 'setup') {
+        throw new Error('Unexpected setup-mode Checkout Session');
+      }
       const key = options?.idempotencyKey;
       if (key) {
         const replayed = sessionsByIdempotencyKey.get(key);

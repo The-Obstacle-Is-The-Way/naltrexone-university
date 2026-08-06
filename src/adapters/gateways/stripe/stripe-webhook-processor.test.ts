@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
@@ -73,7 +74,154 @@ function createStripeClient(input: {
   };
 }
 
+function signSetupMetadata(metadata: Record<string, string>): string {
+  const sorted = Object.fromEntries(
+    Object.entries(metadata).sort(([left], [right]) =>
+      left.localeCompare(right),
+    ),
+  );
+  return createHmac('sha256', 'whsec_test')
+    .update(JSON.stringify(sorted))
+    .digest('hex');
+}
+
+function createCompletedSetupSession(overrides?: {
+  terms?: 'accepted' | 'required';
+  signature?: string;
+}) {
+  const metadata = {
+    consent_user_id: appUserId,
+    consent_customer_id: 'cus_123',
+    consent_subscription_id: 'sub_123',
+    consent_plan: 'monthly',
+    consent_amount_cents: '2900',
+    consent_currency: 'usd',
+    consent_frequency: 'month',
+    consent_trial_ends_at: '2026-08-13T12:00:00.000Z',
+    consent_disclosure_version: '2026-08-05',
+    consent_terms_version: '2026-08-05',
+    consent_terms_hash: 'terms-hash',
+  };
+  return {
+    id: 'cs_setup_123',
+    mode: 'setup',
+    setup_intent: 'seti_123',
+    consent: { terms_of_service: overrides?.terms ?? 'accepted' },
+    metadata: {
+      ...metadata,
+      consent_state_signature:
+        overrides?.signature ?? signSetupMetadata(metadata),
+    },
+  };
+}
+
 describe('processStripeWebhookEvent', () => {
+  it('normalizes an accepted, signed setup completion and resolves its payment method', async () => {
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_setup',
+        type: 'checkout.session.completed',
+        data: { object: createCompletedSetupSession() },
+      }),
+    });
+    stripe.setupIntents = {
+      retrieve: vi.fn(async () => ({
+        id: 'seti_123',
+        payment_method: 'pm_123',
+      })),
+    };
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+      }),
+    ).resolves.toEqual({
+      eventId: 'evt_setup',
+      type: 'checkout.session.completed',
+      trialPaymentMethodSetupCompletion: {
+        sessionId: 'cs_setup_123',
+        userId: appUserId,
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        amountCents: 2900,
+        currency: 'usd',
+        frequency: 'month',
+        trialEndsAt: new Date('2026-08-13T12:00:00.000Z'),
+        disclosureVersion: '2026-08-05',
+        termsVersion: '2026-08-05',
+        termsHash: 'terms-hash',
+        stripePaymentMethodId: 'pm_123',
+      },
+    });
+    expect(stripe.setupIntents.retrieve).toHaveBeenCalledWith('seti_123');
+    expect(stripe.subscriptions?.retrieve).not.toHaveBeenCalled();
+  });
+
+  it('rejects a setup completion without accepted Terms before resolving the payment method', async () => {
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_setup',
+        type: 'checkout.session.completed',
+        data: {
+          object: createCompletedSetupSession({ terms: 'required' }),
+        },
+      }),
+    });
+    stripe.setupIntents = {
+      retrieve: vi.fn(async () => ({
+        id: 'seti_123',
+        payment_method: 'pm_123',
+      })),
+    };
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+    expect(stripe.setupIntents.retrieve).not.toHaveBeenCalled();
+  });
+
+  it('rejects setup metadata with an invalid server signature before resolving the payment method', async () => {
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_setup',
+        type: 'checkout.session.completed',
+        data: {
+          object: createCompletedSetupSession({ signature: 'invalid' }),
+        },
+      }),
+    });
+    stripe.setupIntents = {
+      retrieve: vi.fn(async () => ({
+        id: 'seti_123',
+        payment_method: 'pm_123',
+      })),
+    };
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+    expect(stripe.setupIntents.retrieve).not.toHaveBeenCalled();
+  });
   it('throws INVALID_WEBHOOK_SIGNATURE when Stripe signature verification fails', async () => {
     const logger = new FakeLogger();
     const stripe = {

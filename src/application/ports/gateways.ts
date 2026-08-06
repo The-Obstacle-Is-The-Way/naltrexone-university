@@ -38,6 +38,40 @@ export type CheckoutSessionInput = {
 
 export type CheckoutSessionOutput = { url: string };
 
+export type TrialPaymentMethodSetupSessionInput = {
+  userId: string;
+  externalCustomerId: string;
+  externalSubscriptionId: string;
+  plan: SubscriptionPlan;
+  amountCents: number;
+  currency: 'usd';
+  frequency: 'month' | 'year';
+  trialEndsAt: Date;
+  disclosureVersion: string;
+  termsVersion: string;
+  termsHash: string;
+  disclosureSnapshot: string;
+  successUrl: string;
+  cancelUrl: string;
+};
+
+export type TrialPaymentMethodSetupSessionOutput = {
+  sessionId: string;
+  url: string;
+};
+
+export type AttachTrialPaymentMethodInput = {
+  sessionId: string;
+  externalPaymentMethodId: string;
+  externalCustomerId: string;
+};
+
+export type SetTrialSubscriptionDefaultPaymentMethodInput = {
+  sessionId: string;
+  externalPaymentMethodId: string;
+  externalSubscriptionId: string;
+};
+
 export type PortalSessionInput = {
   externalCustomerId: string; // opaque external id
   returnUrl: string;
@@ -70,6 +104,21 @@ export type WebhookEventResult = {
     currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
   };
+  trialPaymentMethodSetupCompletion?: {
+    sessionId: string;
+    userId: string;
+    externalCustomerId: string;
+    externalSubscriptionId: string;
+    plan: SubscriptionPlan;
+    amountCents: number;
+    currency: 'usd';
+    frequency: 'month' | 'year';
+    trialEndsAt: Date;
+    disclosureVersion: string;
+    termsVersion: string;
+    termsHash: string;
+    stripePaymentMethodId: string;
+  };
 };
 
 export interface PaymentGateway {
@@ -91,6 +140,16 @@ export interface PaymentGateway {
     input: CheckoutSessionInput,
     options?: PaymentGatewayRequestOptions,
   ): Promise<CheckoutSessionOutput>;
+
+  createTrialPaymentMethodSetupSession(
+    input: TrialPaymentMethodSetupSessionInput,
+  ): Promise<TrialPaymentMethodSetupSessionOutput>;
+
+  attachTrialPaymentMethod(input: AttachTrialPaymentMethodInput): Promise<void>;
+
+  setTrialSubscriptionDefaultPaymentMethod(
+    input: SetTrialSubscriptionDefaultPaymentMethodInput,
+  ): Promise<void>;
 
   createPortalSession(
     input: PortalSessionInput,

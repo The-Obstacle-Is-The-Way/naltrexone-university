@@ -123,6 +123,13 @@ export async function restoreE2EUserPaidSubscription(): Promise<void> {
 
 export async function completeNoCardTrialCheckout(page: Page): Promise<void> {
   await expect(page).toHaveURL(/checkout\.stripe\.com/, { timeout: 30_000 });
+  const termsCheckbox = page.getByRole('checkbox', {
+    name: /I agree to .*Terms of Service and Privacy Policy/i,
+  });
+  await expect(termsCheckbox).toBeVisible({ timeout: 30_000 });
+  await termsCheckbox.check();
+  await expect(termsCheckbox).toBeChecked();
+
   const startTrialButton = page
     .getByRole('button', {
       name: /start (free )?trial|subscribe|continue/i,

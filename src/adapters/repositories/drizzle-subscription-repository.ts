@@ -70,6 +70,15 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findExternalSubscriptionIdByUserId(userId: string) {
+    const row = await this.db.query.stripeSubscriptions.findFirst({
+      columns: { stripeSubscriptionId: true },
+      where: eq(stripeSubscriptions.userId, userId),
+    });
+
+    return row?.stripeSubscriptionId ?? null;
+  }
+
   async findObservationVersionByUserId(userId: string) {
     const row = await this.db.query.stripeSubscriptions.findFirst({
       columns: { version: true },

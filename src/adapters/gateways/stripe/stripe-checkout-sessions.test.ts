@@ -170,7 +170,9 @@ describe('createStripeCheckoutSession', () => {
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
     expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.any(Object),
+      expect.objectContaining({
+        consent_collection: { terms_of_service: 'required' },
+      }),
       expect.objectContaining({
         idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),

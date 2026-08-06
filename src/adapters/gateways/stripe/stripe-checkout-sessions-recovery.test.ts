@@ -119,6 +119,12 @@ describe('createStripeCheckoutSession recovery', () => {
     const createOptions = sessionsCreate.mock.calls.map(([, options]) => ({
       idempotencyKey: options?.idempotencyKey,
     }));
+    expect(
+      sessionsCreate.mock.calls.map(([params]) => params.consent_collection),
+    ).toEqual([
+      { terms_of_service: 'required' },
+      { terms_of_service: 'required' },
+    ]);
     expect(createOptions[0]).toEqual({
       idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7`,
     });

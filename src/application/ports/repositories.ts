@@ -11,4 +11,5 @@ export * from './stripe-customer-repository';
 export * from './stripe-event-repository';
 export * from './subscription-repository';
 export * from './tag-repository';
+export * from './trial-payment-method-setup-operation-repository';
 export * from './user-repository';

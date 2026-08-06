@@ -19,6 +19,12 @@ export {
   CreatePortalSessionUseCase,
 } from './create-portal-session';
 export {
+  type CreateTrialPaymentMethodSetupSessionInput,
+  type CreateTrialPaymentMethodSetupSessionOutput,
+  CreateTrialPaymentMethodSetupSessionUseCase,
+  type TrialRenewalTerms,
+} from './create-trial-payment-method-setup-session';
+export {
   type DiscardPracticeSessionInput,
   type DiscardPracticeSessionOutput,
   DiscardPracticeSessionUseCase,

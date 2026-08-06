@@ -4,13 +4,104 @@ import { retrieveAndNormalizeStripeSubscription } from '@/src/adapters/gateways/
 import {
   extractSubscriptionRef,
   stripeEventWithSubscriptionRefSchema,
+  stripeSetupIntentSchema,
   stripeSubscriptionSchema,
+  stripeTrialPaymentMethodSetupSessionSchema,
   subscriptionEventTypes,
 } from '@/src/adapters/gateways/stripe/stripe-webhook-schemas';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import { isValidStripeConsentStateSignature } from './stripe-consent-state';
+
+function isSetupSessionPayload(payload: unknown): boolean {
+  return (
+    typeof payload === 'object' &&
+    payload !== null &&
+    (payload as Record<string, unknown>).mode === 'setup'
+  );
+}
+
+function expandableId(value: string | { id: string }): string {
+  return typeof value === 'string' ? value : value.id;
+}
+
+async function getTrialPaymentMethodSetupCompletion(input: {
+  stripe: StripeClient;
+  event: ReturnType<StripeClient['webhooks']['constructEvent']>;
+  stateSecret: string;
+  logger: Logger;
+}): Promise<
+  NonNullable<WebhookEventResult['trialPaymentMethodSetupCompletion']>
+> {
+  const parsed = stripeTrialPaymentMethodSetupSessionSchema.safeParse(
+    input.event.data.object,
+  );
+  if (!parsed.success) {
+    input.logger.error(
+      {
+        eventId: input.event.id,
+        type: input.event.type,
+        error: z.flattenError(parsed.error),
+      },
+      'Invalid Stripe trial payment-method setup completion',
+    );
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      'Invalid Stripe trial payment-method setup completion',
+    );
+  }
+
+  const { consent_state_signature: signature, ...signedMetadata } =
+    parsed.data.metadata;
+  if (
+    !isValidStripeConsentStateSignature(
+      signedMetadata,
+      signature,
+      input.stateSecret,
+    )
+  ) {
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      'Invalid trial payment-method setup state signature',
+    );
+  }
+
+  const setupIntents = input.stripe.setupIntents;
+  if (!setupIntents) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe SetupIntent retrieval is unavailable',
+    );
+  }
+  const setupIntent = stripeSetupIntentSchema.safeParse(
+    await setupIntents.retrieve(expandableId(parsed.data.setup_intent)),
+  );
+  if (!setupIntent.success) {
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      'Stripe SetupIntent has no completed payment method',
+    );
+  }
+
+  const metadata = parsed.data.metadata;
+  return {
+    sessionId: parsed.data.id,
+    userId: metadata.consent_user_id,
+    externalCustomerId: metadata.consent_customer_id,
+    externalSubscriptionId: metadata.consent_subscription_id,
+    plan: metadata.consent_plan,
+    amountCents: Number(metadata.consent_amount_cents),
+    currency: metadata.consent_currency,
+    frequency: metadata.consent_frequency,
+    trialEndsAt: new Date(metadata.consent_trial_ends_at),
+    disclosureVersion: metadata.consent_disclosure_version,
+    termsVersion: metadata.consent_terms_version,
+    termsHash: metadata.consent_terms_hash,
+    stripePaymentMethodId: expandableId(setupIntent.data.payment_method),
+  };
+}
 
 async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
   stripe: StripeClient;
@@ -91,6 +182,20 @@ export async function processStripeWebhookEvent({
     eventId: event.id,
     type: event.type,
   };
+
+  if (
+    event.type === 'checkout.session.completed' &&
+    isSetupSessionPayload(event.data.object)
+  ) {
+    const trialPaymentMethodSetupCompletion =
+      await getTrialPaymentMethodSetupCompletion({
+        stripe,
+        event,
+        stateSecret: webhookSecret,
+        logger,
+      });
+    return { ...result, trialPaymentMethodSetupCompletion };
+  }
 
   if (
     event.type === 'checkout.session.completed' ||

@@ -6,6 +6,7 @@ import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeLogger,
@@ -80,6 +81,8 @@ describe('Stripe webhook failure boundary', () => {
                 stripeEvents: new DrizzleStripeEventRepository(tx),
                 subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
                 stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+                trialPaymentMethodSetupOperations:
+                  new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
               }),
             ),
         },

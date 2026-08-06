@@ -1,7 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { StripeClient } from '@/src/adapters/shared/stripe-types';
+import type {
+  CheckoutSessionCreateParams,
+  StripeClient,
+  StripeRequestOptions,
+} from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
-import { createStripeCheckoutSession } from './stripe-checkout-sessions';
+import {
+  createStripeCheckoutSession,
+  createStripeTrialPaymentMethodSetupSession,
+} from './stripe-checkout-sessions';
+import { isValidStripeConsentStateSignature } from './stripe-consent-state';
 
 function createStripeMock(overrides?: {
   openSessionsData?: Array<{ id: string; url: string | null }>;
@@ -10,10 +18,15 @@ function createStripeMock(overrides?: {
   retrievedSessionPaymentMethodCollection?: 'always' | 'if_required';
   shouldThrowOnRetrieve?: boolean;
 }) {
-  const sessionsCreate = vi.fn(async () => ({
-    id: 'cs_new',
-    url: 'https://stripe/checkout/new',
-  }));
+  const sessionsCreate = vi.fn(
+    async (
+      _params: CheckoutSessionCreateParams,
+      _options?: StripeRequestOptions,
+    ) => ({
+      id: 'cs_new',
+      url: 'https://stripe/checkout/new',
+    }),
+  );
   const sessionsRetrieve = vi.fn(async () => {
     if (overrides?.shouldThrowOnRetrieve) {
       throw new Error('retrieve failed');
@@ -101,6 +114,7 @@ describe('createStripeCheckoutSession trial params', () => {
         line_items: [{ price: 'price_m', quantity: 1 }],
         allow_promotion_codes: false,
         billing_address_collection: 'auto',
+        consent_collection: { terms_of_service: 'required' },
         success_url: 'https://app/success',
         cancel_url: 'https://app/cancel',
         client_reference_id: appUserId,
@@ -145,6 +159,7 @@ describe('createStripeCheckoutSession trial params', () => {
         line_items: [{ price: 'price_m', quantity: 1 }],
         allow_promotion_codes: false,
         billing_address_collection: 'auto',
+        consent_collection: { terms_of_service: 'required' },
         success_url: 'https://app/success',
         cancel_url: 'https://app/cancel',
         client_reference_id: appUserId,
@@ -301,5 +316,87 @@ describe('createStripeCheckoutSession trial params', () => {
         idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_existing:trial:7`,
       }),
     );
+  });
+});
+
+describe('createStripeTrialPaymentMethodSetupSession', () => {
+  const appUserId = crypto.randomUUID();
+
+  it('creates a customer-less setup Checkout Session with signed server-owned consent state', async () => {
+    const { stripe, sessionsCreate } = createStripeMock();
+
+    await expect(
+      createStripeTrialPaymentMethodSetupSession({
+        stripe,
+        logger: new FakeLogger(),
+        stateSecret: 'whsec_test_state_secret',
+        input: {
+          userId: appUserId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          trialEndsAt: new Date('2026-08-13T12:00:00.000Z'),
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-sha256',
+          disclosureSnapshot: 'Exact renewal disclosure.',
+          successUrl:
+            'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
+          cancelUrl:
+            'https://app.example.com/app/billing?trial_payment_method=cancel',
+        },
+      }),
+    ).resolves.toEqual({
+      sessionId: 'cs_new',
+      url: 'https://stripe/checkout/new',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    const [params, options] = sessionsCreate.mock.calls[0] ?? [];
+    expect(params).toMatchObject({
+      mode: 'setup',
+      currency: 'usd',
+      consent_collection: { terms_of_service: 'required' },
+      success_url:
+        'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
+      cancel_url:
+        'https://app.example.com/app/billing?trial_payment_method=cancel',
+      client_reference_id: appUserId,
+      metadata: {
+        consent_user_id: appUserId,
+        consent_customer_id: 'cus_123',
+        consent_subscription_id: 'sub_123',
+        consent_plan: 'monthly',
+        consent_amount_cents: '2900',
+        consent_currency: 'usd',
+        consent_frequency: 'month',
+        consent_trial_ends_at: '2026-08-13T12:00:00.000Z',
+        consent_disclosure_version: '2026-08-05',
+        consent_terms_version: '2026-08-05',
+        consent_terms_hash: 'terms-sha256',
+        consent_state_signature: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+    });
+    expect(params).not.toHaveProperty('customer');
+    expect(params).not.toHaveProperty('line_items');
+    expect(params).not.toHaveProperty('payment_method_types');
+    if (!params) throw new Error('Expected Checkout Session params');
+    const metadata = params.metadata;
+    if (!metadata) throw new Error('Expected signed consent metadata');
+    const { consent_state_signature: signature, ...signedMetadata } = metadata;
+    expect(signature).toBeTypeOf('string');
+    expect(
+      isValidStripeConsentStateSignature(
+        signedMetadata,
+        signature ?? '',
+        'whsec_test_state_secret',
+      ),
+    ).toBe(true);
+    expect(options).toEqual({
+      idempotencyKey: `trial_setup_session:${appUserId}:sub_123:2026-08-05`,
+    });
   });
 });

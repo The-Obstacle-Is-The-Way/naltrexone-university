@@ -16,6 +16,7 @@ import { DrizzlePendingStripeCustomerCleanupRepository } from '@/src/adapters/re
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { acquireSubscriptionWriteLock } from '@/src/adapters/repositories/subscription-write-lock';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
@@ -369,6 +370,8 @@ async function runWebhookWriter(input: {
             stripeCustomers: input.deletionCounterparty
               ? new RawDeletionCounterpartyStripeCustomerRepository(tx)
               : new DrizzleStripeCustomerRepository(tx),
+            trialPaymentMethodSetupOperations:
+              new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
           });
         }),
     },
@@ -568,6 +571,8 @@ async function runFirstInsertWebhookWriter(input: {
             stripeEvents: new DrizzleStripeEventRepository(tx),
             subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
             stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+            trialPaymentMethodSetupOperations:
+              new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
           });
         }),
     },
