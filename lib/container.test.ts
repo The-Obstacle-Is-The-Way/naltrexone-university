@@ -3,6 +3,7 @@ import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhoo
 import {
   ClerkAuthGateway,
   DrizzleRateLimiter,
+  ResendTransactionalEmailGateway,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
@@ -16,6 +17,7 @@ import {
   DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
   DrizzleRenewalConsentRecordRepository,
+  DrizzleRenewalNoticeDeliveryRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
   DrizzleSubscriptionRepository,
@@ -37,6 +39,7 @@ import {
   CreatePortalSessionUseCase,
   CreateTrialPaymentMethodSetupSessionUseCase,
   DiscardPracticeSessionUseCase,
+  DispatchRenewalNoticeDeliveryUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
@@ -51,6 +54,7 @@ import {
   PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
+  RequeueRenewalNoticeDeliveryUseCase,
   SetBookmarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
@@ -125,6 +129,9 @@ describe('container factories', () => {
     expect(typeof container.createRenewalConsentRecordRepository).toBe(
       'function',
     );
+    expect(typeof container.createRenewalNoticeDeliveryRepository).toBe(
+      'function',
+    );
     expect(typeof container.createTagRepository).toBe('function');
     expect(
       container.createTrialPaymentMethodSetupOperationRepository(),
@@ -137,8 +144,15 @@ describe('container factories', () => {
     expect(typeof container.createAuthGateway).toBe('function');
     expect(typeof container.createPaymentGateway).toBe('function');
     expect(typeof container.createRateLimiter).toBe('function');
+    expect(typeof container.createTransactionalEmailGateway).toBe('function');
 
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
+    expect(typeof container.createDispatchRenewalNoticeDeliveryUseCase).toBe(
+      'function',
+    );
+    expect(typeof container.createRequeueRenewalNoticeDeliveryUseCase).toBe(
+      'function',
+    );
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
     expect(typeof container.createGetPreviousAttemptUseCase).toBe('function');
     expect(typeof container.createGetQuestionRatingUseCase).toBe('function');
@@ -219,6 +233,9 @@ describe('container factories', () => {
     expect(container.createRenewalConsentRecordRepository()).toBeInstanceOf(
       DrizzleRenewalConsentRecordRepository,
     );
+    expect(container.createRenewalNoticeDeliveryRepository()).toBeInstanceOf(
+      DrizzleRenewalNoticeDeliveryRepository,
+    );
     expect(container.createTagRepository()).toBeInstanceOf(
       DrizzleTagRepository,
     );
@@ -240,6 +257,9 @@ describe('container factories', () => {
       StripePaymentGateway,
     );
     expect(container.createRateLimiter()).toBeInstanceOf(DrizzleRateLimiter);
+    const emailGateway = container.createTransactionalEmailGateway();
+    expect(emailGateway).toBeInstanceOf(ResendTransactionalEmailGateway);
+    expect(emailGateway.isConfigured()).toBe(false);
 
     expect(container.createCheckEntitlementUseCase()).toBeInstanceOf(
       CheckEntitlementUseCase,
@@ -304,6 +324,12 @@ describe('container factories', () => {
     expect(container.createPruneRenewalConsentsUseCase()).toBeInstanceOf(
       PruneRenewalConsentsUseCase,
     );
+    expect(
+      container.createDispatchRenewalNoticeDeliveryUseCase(),
+    ).toBeInstanceOf(DispatchRenewalNoticeDeliveryUseCase);
+    expect(
+      container.createRequeueRenewalNoticeDeliveryUseCase(),
+    ).toBeInstanceOf(RequeueRenewalNoticeDeliveryUseCase);
     expect(container.createFinalizeExamAnswersUseCase()).toBeInstanceOf(
       FinalizeExamAnswersUseCase,
     );

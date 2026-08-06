@@ -8,6 +8,7 @@ export * from './practice-session-repository';
 export * from './question-feedback-repository';
 export * from './question-repository';
 export * from './renewal-consent-record-repository';
+export * from './renewal-notice-delivery-repository';
 export * from './stripe-customer-repository';
 export * from './stripe-event-repository';
 export * from './subscription-repository';

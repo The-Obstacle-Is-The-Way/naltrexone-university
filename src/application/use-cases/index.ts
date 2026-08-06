@@ -29,6 +29,7 @@ export {
   type DiscardPracticeSessionOutput,
   DiscardPracticeSessionUseCase,
 } from './discard-practice-session';
+export { DispatchRenewalNoticeDeliveryUseCase } from './dispatch-renewal-notice-delivery';
 export {
   type EndPracticeSessionInput,
   type EndPracticeSessionOutput,
@@ -126,6 +127,10 @@ export {
   type RecordRenewalConsentOutput,
   RecordRenewalConsentUseCase,
 } from './record-renewal-consent';
+export {
+  type RequeueRenewalNoticeDeliveryInput,
+  RequeueRenewalNoticeDeliveryUseCase,
+} from './requeue-renewal-notice-delivery';
 export {
   type SaveExamDraftAnswerInput,
   type SaveExamDraftAnswerOutput,
