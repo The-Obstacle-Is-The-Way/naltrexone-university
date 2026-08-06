@@ -10,12 +10,21 @@ import type {
   PaymentGateway,
   RateLimiter,
 } from '@/src/application/ports/gateways';
-import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  FakeLogger,
+  FakeTrialPaymentMethodSetupOperationRepository,
+} from '@/src/application/test-helpers/fakes';
 
 function createPaymentGatewayStub(): PaymentGateway {
   return {
     createCustomer: async () => ({ externalCustomerId: 'cus_123' }),
     createCheckoutSession: async () => ({ url: 'https://stripe/checkout' }),
+    createTrialPaymentMethodSetupSession: async () => ({
+      sessionId: 'cs_setup',
+      url: 'https://stripe/setup',
+    }),
+    attachTrialPaymentMethod: async () => undefined,
+    setTrialSubscriptionDefaultPaymentMethod: async () => undefined,
     createPortalSession: async () => ({ url: 'https://stripe/portal' }),
     processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),
   };
@@ -45,6 +54,7 @@ function createTestDeps() {
     },
     subscriptions: {
       findByUserId: async () => null,
+      findExternalSubscriptionIdByUserId: async () => null,
       findObservationVersionByUserId: async () => null,
       findByExternalSubscriptionId: async () => null,
       upsert: async () => ({ persisted: true }) as const,
@@ -53,6 +63,8 @@ function createTestDeps() {
       findByUserId: async () => null,
       insert: async () => undefined,
     },
+    trialPaymentMethodSetupOperations:
+      new FakeTrialPaymentMethodSetupOperationRepository(),
   } satisfies StripeWebhookTransaction;
 
   const logger = new FakeLogger();

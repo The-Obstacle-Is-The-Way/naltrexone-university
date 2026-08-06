@@ -65,6 +65,11 @@ export const stripeSubscriptionStatusEnum = pgEnum(
   ],
 );
 
+export const trialPaymentMethodSetupOperationStatusEnum = pgEnum(
+  'trial_payment_method_setup_operation_status',
+  ['pending', 'processing', 'completed'],
+);
+
 export const attemptRetryOriginEnum = pgEnum('attempt_retry_origin', [
   'history',
   'dashboard',
@@ -104,6 +109,8 @@ export type TagKind = (typeof tagKindEnum.enumValues)[number];
 export type PracticeMode = (typeof practiceModeEnum.enumValues)[number];
 export type StripeSubscriptionStatus =
   (typeof stripeSubscriptionStatusEnum.enumValues)[number];
+export type TrialPaymentMethodSetupOperationStatus =
+  (typeof trialPaymentMethodSetupOperationStatusEnum.enumValues)[number];
 export type AttemptRetryOrigin =
   (typeof attemptRetryOriginEnum.enumValues)[number];
 export type QuestionFeedbackKind =
@@ -203,6 +210,63 @@ export const stripeSubscriptions = pgTable(
       t.userId,
       t.status,
     ),
+  }),
+);
+
+// trial_payment_method_setup_operations
+export const trialPaymentMethodSetupOperations = pgTable(
+  'trial_payment_method_setup_operations',
+  {
+    sessionId: varchar('session_id', { length: 255 }).primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    stripeCustomerId: varchar('stripe_customer_id', {
+      length: 255,
+    }).notNull(),
+    stripeSubscriptionId: varchar('stripe_subscription_id', {
+      length: 255,
+    }).notNull(),
+    plan: varchar('plan', { length: 16 }).notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
+    frequency: varchar('frequency', { length: 16 }).notNull(),
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }).notNull(),
+    disclosureSnapshot: text('disclosure_snapshot').notNull(),
+    disclosureVersion: varchar('disclosure_version', {
+      length: 64,
+    }).notNull(),
+    termsVersion: varchar('terms_version', { length: 64 }).notNull(),
+    termsHash: varchar('terms_hash', { length: 128 }).notNull(),
+    status: trialPaymentMethodSetupOperationStatusEnum('status')
+      .notNull()
+      .default('pending'),
+    claimId: varchar('claim_id', { length: 255 }),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    stripePaymentMethodId: varchar('stripe_payment_method_id', {
+      length: 255,
+    }),
+    paymentMethodAttachedAt: timestamp('payment_method_attached_at', {
+      withTimezone: true,
+    }),
+    subscriptionDefaultSetAt: timestamp('subscription_default_set_at', {
+      withTimezone: true,
+    }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    userIdIdx: index('trial_payment_method_setup_operations_user_id_idx').on(
+      t.userId,
+    ),
+    statusClaimedAtIdx: index(
+      'trial_payment_method_setup_operations_status_claimed_at_idx',
+    ).on(t.status, t.claimedAt),
   }),
 );
 

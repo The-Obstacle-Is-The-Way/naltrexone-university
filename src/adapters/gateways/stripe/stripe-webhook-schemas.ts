@@ -33,6 +33,45 @@ export const stripeCheckoutSessionSchema = z
   })
   .passthrough();
 
+const stripeExpandableIdSchema = z.union([
+  z.string().min(1),
+  z.object({ id: z.string().min(1) }).passthrough(),
+]);
+
+export const stripeTrialPaymentMethodSetupSessionSchema = z
+  .object({
+    id: z.string().min(1),
+    mode: z.literal('setup'),
+    setup_intent: stripeExpandableIdSchema,
+    consent: z.object({
+      terms_of_service: z.literal('accepted'),
+    }),
+    metadata: z
+      .object({
+        consent_user_id: z.string().min(1),
+        consent_customer_id: z.string().min(1),
+        consent_subscription_id: z.string().min(1),
+        consent_plan: z.enum(['monthly', 'annual']),
+        consent_amount_cents: z.string().regex(/^[1-9]\d*$/),
+        consent_currency: z.literal('usd'),
+        consent_frequency: z.enum(['month', 'year']),
+        consent_trial_ends_at: z.iso.datetime({ offset: true }),
+        consent_disclosure_version: z.string().min(1),
+        consent_terms_version: z.string().min(1),
+        consent_terms_hash: z.string().min(1),
+        consent_state_signature: z.string().regex(/^[a-f0-9]{64}$/),
+      })
+      .strict(),
+  })
+  .passthrough();
+
+export const stripeSetupIntentSchema = z
+  .object({
+    id: z.string().min(1),
+    payment_method: stripeExpandableIdSchema,
+  })
+  .passthrough();
+
 const stripeInvoiceSubscriptionRefSchema = z
   .object({
     parent: z

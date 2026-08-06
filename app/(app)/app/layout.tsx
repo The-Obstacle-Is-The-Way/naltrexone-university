@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { manageBillingAction } from '@/app/(app)/app/billing/manage-billing-actions';
+import { createTrialPaymentMethodAction } from '@/app/(app)/app/trial-payment-method-actions';
 import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
@@ -131,11 +131,11 @@ export function AppLayoutShell({
 export function TrialCountdownBanner({
   daysLeft,
   plan,
-  manageBillingActionFn,
+  createTrialPaymentMethodActionFn,
 }: {
   daysLeft: number;
   plan: SubscriptionPlan;
-  manageBillingActionFn: (formData: FormData) => Promise<void>;
+  createTrialPaymentMethodActionFn: (formData: FormData) => Promise<void>;
 }) {
   const countdown =
     daysLeft === 1 ? '1 day left in trial' : `${daysLeft} days left in trial`;
@@ -144,10 +144,27 @@ export function TrialCountdownBanner({
     <div className="block border-b border-border bg-card px-4 py-3 text-sm text-muted-foreground">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3">
         <span className="font-medium text-foreground">{countdown}</span>
-        <span className="max-w-3xl leading-relaxed text-foreground">
-          {PRICING_DATA[plan].trialPaymentDisclosure}
-        </span>
-        <form action={manageBillingActionFn}>
+        <div className="max-w-3xl leading-relaxed text-foreground">
+          <span>{PRICING_DATA[plan].trialPaymentDisclosure}</span>{' '}
+          <span className="text-muted-foreground">
+            Review the{' '}
+            <Link
+              href={ROUTES.TERMS}
+              className="rounded-sm font-medium text-foreground hover:underline ring-focus"
+            >
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link
+              href={ROUTES.PRIVACY}
+              className="rounded-sm font-medium text-foreground hover:underline ring-focus"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </div>
+        <form action={createTrialPaymentMethodActionFn}>
           <IdempotencyKeyField />
           <Button
             type="submit"
@@ -184,7 +201,7 @@ export async function renderAppLayout(input: {
   enforceEntitledAppUserFn?: () => Promise<EntitledAppUser>;
   authNavFn?: () => Promise<React.ReactNode>;
   mobileNav?: React.ReactNode;
-  manageBillingActionFn?: (formData: FormData) => Promise<void>;
+  createTrialPaymentMethodActionFn?: (formData: FormData) => Promise<void>;
   nowFn?: () => Date;
 }): Promise<React.ReactElement> {
   const enforceEntitledAppUserFn =
@@ -192,8 +209,8 @@ export async function renderAppLayout(input: {
   const authNavFn =
     input.authNavFn ?? (() => AuthNav({ showPrimaryLink: false }));
   const mobileNav = input.mobileNav ?? <MobileNav />;
-  const manageBillingActionFn =
-    input.manageBillingActionFn ?? manageBillingAction;
+  const createTrialPaymentMethodActionFn =
+    input.createTrialPaymentMethodActionFn ?? createTrialPaymentMethodAction;
   const nowFn = input.nowFn ?? (() => new Date());
 
   const [{ subscriptionStatus, plan, trialEndsAt }, authNav] =
@@ -205,7 +222,7 @@ export async function renderAppLayout(input: {
       <TrialCountdownBanner
         daysLeft={getTrialDaysLeft(trialEndsAt, nowFn())}
         plan={plan}
-        manageBillingActionFn={manageBillingActionFn}
+        createTrialPaymentMethodActionFn={createTrialPaymentMethodActionFn}
       />
     ) : undefined;
 

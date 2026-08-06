@@ -6,6 +6,7 @@ import {
   FakeAuthGateway,
   FakeCreateCheckoutSessionUseCase,
   FakeCreatePortalSessionUseCase,
+  FakeCreateTrialPaymentMethodSetupSessionUseCase,
   FakeIdempotencyKeyRepository,
   FakeLogger,
   FakeRateLimiter,
@@ -20,11 +21,13 @@ import {
   type BillingControllerDeps,
   createCheckoutSession,
   createPortalSession,
+  createTrialPaymentMethodSetupSession,
 } from './billing-controller';
 
 type BillingControllerTestDeps = BillingControllerDeps & {
   createCheckoutSessionUseCase: FakeCreateCheckoutSessionUseCase;
   createPortalSessionUseCase: FakeCreatePortalSessionUseCase;
+  createTrialPaymentMethodSetupSessionUseCase: FakeCreateTrialPaymentMethodSetupSessionUseCase;
   _calls: {
     clerkCalls: Array<undefined>;
   };
@@ -41,6 +44,7 @@ function createDeps(overrides?: {
   checkoutThrows?: unknown;
   portalOutput?: CreatePortalSessionOutput;
   portalThrows?: unknown;
+  setupThrows?: unknown;
   rateLimiter?: RateLimiter;
   now?: () => Date;
 }): BillingControllerTestDeps {
@@ -71,6 +75,13 @@ function createDeps(overrides?: {
     overrides?.portalOutput ?? { url: 'https://stripe/portal' },
     overrides?.portalThrows,
   );
+  const createTrialPaymentMethodSetupSessionUseCase =
+    new FakeCreateTrialPaymentMethodSetupSessionUseCase(
+      {
+        url: 'https://stripe/setup',
+      },
+      overrides?.setupThrows,
+    );
 
   const rateLimiter: RateLimiter =
     overrides?.rateLimiter ?? new FakeRateLimiter();
@@ -82,6 +93,7 @@ function createDeps(overrides?: {
     logger: new FakeLogger(),
     createCheckoutSessionUseCase,
     createPortalSessionUseCase,
+    createTrialPaymentMethodSetupSessionUseCase,
     idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),
     rateLimiter,
     getClerkUserId: async () => {
@@ -100,6 +112,84 @@ function createDeps(overrides?: {
 }
 
 describe('billing-controller', () => {
+  describe('createTrialPaymentMethodSetupSession', () => {
+    it('passes only the authenticated user and server-owned return URLs', async () => {
+      const deps = createDeps({ appUrl: 'https://app.example.com' });
+
+      const result = await createTrialPaymentMethodSetupSession({}, deps);
+
+      expect(result).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/setup' },
+      });
+      expect(deps.createTrialPaymentMethodSetupSessionUseCase.inputs).toEqual([
+        {
+          userId: deps._fixtures.userId,
+          successUrl:
+            'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
+          cancelUrl:
+            'https://app.example.com/app/billing?trial_payment_method=cancel',
+        },
+      ]);
+    });
+
+    it('returns UNAUTHENTICATED without creating a setup session', async () => {
+      const deps = createDeps({ user: null });
+
+      const result = await createTrialPaymentMethodSetupSession({}, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'UNAUTHENTICATED' },
+      });
+      expect(deps.createTrialPaymentMethodSetupSessionUseCase.inputs).toEqual(
+        [],
+      );
+    });
+
+    it('returns RATE_LIMITED without creating a setup session', async () => {
+      const deps = createDeps({
+        rateLimiter: new FakeRateLimiter({
+          success: false,
+          limit: 10,
+          remaining: 0,
+          retryAfterSeconds: 60,
+        }),
+      });
+
+      const result = await createTrialPaymentMethodSetupSession({}, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'RATE_LIMITED' },
+      });
+      expect(deps.createTrialPaymentMethodSetupSessionUseCase.inputs).toEqual(
+        [],
+      );
+    });
+
+    it('replays the cached setup URL for a reused idempotency key', async () => {
+      const deps = createDeps();
+      const input = {
+        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      };
+
+      const [first, second] = await Promise.all([
+        createTrialPaymentMethodSetupSession(input, deps),
+        createTrialPaymentMethodSetupSession(input, deps),
+      ]);
+
+      expect(first).toEqual({
+        ok: true,
+        data: { url: 'https://stripe/setup' },
+      });
+      expect(second).toEqual(first);
+      expect(
+        deps.createTrialPaymentMethodSetupSessionUseCase.inputs,
+      ).toHaveLength(1);
+    });
+  });
+
   describe('createCheckoutSession', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();

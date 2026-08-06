@@ -28,6 +28,7 @@ import type {
   StripeEventRepository,
   SubscriptionRepository,
   TagRepository,
+  TrialPaymentMethodSetupOperationRepository,
   UserRepository,
 } from '@/src/application/ports/repositories';
 import type {
@@ -35,6 +36,7 @@ import type {
   CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
+  CreateTrialPaymentMethodSetupSessionUseCase,
   DiscardPracticeSessionUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
@@ -97,6 +99,9 @@ export type RepositoryFactories = {
   ) => QuestionFeedbackRepository;
   createQuestionRepository: (dbOverride?: DrizzleDb) => QuestionRepository;
   createTagRepository: (dbOverride?: DrizzleDb) => TagRepository;
+  createTrialPaymentMethodSetupOperationRepository: (
+    dbOverride?: DrizzleDb,
+  ) => TrialPaymentMethodSetupOperationRepository;
   createSubscriptionRepository: (
     dbOverride?: DrizzleDb,
   ) => SubscriptionRepository;
@@ -119,6 +124,7 @@ export type UseCaseFactories = {
   createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
   createCheckoutSessionUseCase: () => CreateCheckoutSessionUseCase;
   createPortalSessionUseCase: () => CreatePortalSessionUseCase;
+  createTrialPaymentMethodSetupSessionUseCase: () => CreateTrialPaymentMethodSetupSessionUseCase;
   createCountAvailableQuestionsUseCase: () => CountAvailableQuestionsUseCase;
   createDiscardPracticeSessionUseCase: () => DiscardPracticeSessionUseCase;
   createEndPracticeSessionUseCase: () => EndPracticeSessionUseCase;

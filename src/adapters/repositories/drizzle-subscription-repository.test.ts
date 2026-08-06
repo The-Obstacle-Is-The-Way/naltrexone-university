@@ -121,6 +121,26 @@ describe('DrizzleSubscriptionRepository', () => {
     });
   });
 
+  it('returns only the external subscription id for a user binding', async () => {
+    const findFirst = vi.fn(async () => ({
+      stripeSubscriptionId: 'sub_123',
+    }));
+    const db = {
+      query: {
+        stripeSubscriptions: { findFirst },
+      },
+    } as const;
+    const repo = createRepo(db, priceIds);
+
+    await expect(repo.findExternalSubscriptionIdByUserId(userId)).resolves.toBe(
+      'sub_123',
+    );
+    expect(findFirst).toHaveBeenCalledWith({
+      columns: { stripeSubscriptionId: true },
+      where: expect.anything(),
+    });
+  });
+
   it('throws INTERNAL_ERROR when a stored subscription has an unknown priceId', async () => {
     const db = {
       query: {

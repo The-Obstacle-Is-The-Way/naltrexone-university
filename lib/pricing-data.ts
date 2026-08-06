@@ -9,11 +9,19 @@ export const ANNUAL_PLAN_FEATURES = [
   'Best value',
 ] as const;
 
+export const TERMS_VERSION = '2026-08-05';
+export const TERMS_CONTENT_SHA256 =
+  'e6914e723d963b5342dee652c342fb1f748fa5fcfa8067c8d5cf79248c732eb8';
+
 export const PRICING_DATA = {
   monthly: {
     name: 'Pro Monthly',
     price: '$29',
     period: '/mo',
+    amountCents: 2900,
+    currency: 'usd',
+    frequency: 'month',
+    disclosureVersion: '2026-08-05',
     features: MONTHLY_PLAN_FEATURES,
     trialCta: 'Start 7-day free trial',
     trialDisclosure:
@@ -27,6 +35,10 @@ export const PRICING_DATA = {
     name: 'Pro Annual',
     price: '$199',
     period: '/yr',
+    amountCents: 19900,
+    currency: 'usd',
+    frequency: 'year',
+    disclosureVersion: '2026-08-05',
     savings: 'Save $149 per year',
     features: ANNUAL_PLAN_FEATURES,
     trialCta: 'Start 7-day free trial',

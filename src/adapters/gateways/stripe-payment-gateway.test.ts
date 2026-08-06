@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type {
+  CheckoutSessionCreateParams,
   StripeBillingPortalSession,
   StripeCheckoutSession,
   StripeCheckoutSessionList,
@@ -7,6 +8,7 @@ import type {
   StripeClient,
   StripeCustomer,
   StripeCustomerSearchResult,
+  StripeRequestOptions,
   StripeSubscription,
   StripeSubscriptionListResult,
 } from '@/src/adapters/shared/stripe-types';
@@ -64,7 +66,10 @@ function createStripeMockBase() {
     async () => ({ data: [] }) as StripeCustomerSearchResult,
   );
   const sessionsCreate = vi.fn(
-    async () =>
+    async (
+      _params: CheckoutSessionCreateParams,
+      _options?: StripeRequestOptions,
+    ) =>
       ({
         id: 'cs_new',
         url: 'https://stripe/checkout',
@@ -169,6 +174,40 @@ function createStripeMock({
 }
 
 describe('StripePaymentGateway', () => {
+  it('attaches a trial payment method and selects it with Session-derived idempotency keys', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const attach = vi.fn(async () => ({ id: 'pm_123' }));
+    const update = vi.fn(async () => ({}));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: { attach },
+      subscriptions: { ...base.stripe.subscriptions, update },
+    };
+    const gateway = createGateway(stripe);
+
+    await gateway.attachTrialPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalCustomerId: 'cus_123',
+    });
+    await gateway.setTrialSubscriptionDefaultPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalSubscriptionId: 'sub_123',
+    });
+
+    expect(attach).toHaveBeenCalledWith(
+      'pm_123',
+      { customer: 'cus_123' },
+      { idempotencyKey: 'trial_setup:cs_setup_123:attach_payment_method' },
+    );
+    expect(update).toHaveBeenCalledWith(
+      'sub_123',
+      { default_payment_method: 'pm_123' },
+      { idempotencyKey: 'trial_setup:cs_setup_123:set_subscription_default' },
+    );
+  });
+
   it('creates a Stripe customer with the correct Stripe parameters', async () => {
     const { stripe, customersCreate, customersSearch } = createStripeMock();
     const gateway = createGateway(stripe);
@@ -289,6 +328,43 @@ describe('StripePaymentGateway', () => {
         idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
     );
+  });
+
+  it('creates the trial payment-method setup Session through the customer-less setup seam', async () => {
+    const { stripe, sessionsCreate } = createStripeMock();
+    const gateway = createGateway(stripe);
+
+    await expect(
+      gateway.createTrialPaymentMethodSetupSession({
+        userId: appUserId,
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        amountCents: 2900,
+        currency: 'usd',
+        frequency: 'month',
+        trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+        disclosureVersion: '2026-08-05',
+        termsVersion: '2026-08-05',
+        termsHash: 'terms-hash',
+        disclosureSnapshot: 'Exact disclosure.',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).resolves.toEqual({
+      sessionId: 'cs_new',
+      url: 'https://stripe/checkout',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'setup',
+        currency: 'usd',
+        consent_collection: { terms_of_service: 'required' },
+      }),
+      expect.any(Object),
+    );
+    expect(sessionsCreate.mock.calls[0]?.[0]).not.toHaveProperty('customer');
   });
 
   it.each([

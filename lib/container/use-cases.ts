@@ -1,5 +1,10 @@
 import * as Sentry from '@sentry/nextjs';
 import {
+  PRICING_DATA,
+  TERMS_CONTENT_SHA256,
+  TERMS_VERSION,
+} from '@/lib/pricing-data';
+import {
   getPostgresErrorCode,
   toRollbackCertainPersistenceError,
 } from '@/src/adapters/repositories/postgres-errors';
@@ -18,6 +23,7 @@ import {
   CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
+  CreateTrialPaymentMethodSetupSessionUseCase,
   DiscardPracticeSessionUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
@@ -216,6 +222,28 @@ export function createUseCaseFactories(input: {
       new CreatePortalSessionUseCase(
         repositories.createStripeCustomerRepository(),
         gateways.createPaymentGateway(),
+      ),
+    createTrialPaymentMethodSetupSessionUseCase: () =>
+      new CreateTrialPaymentMethodSetupSessionUseCase(
+        repositories.createSubscriptionRepository(),
+        repositories.createStripeCustomerRepository(),
+        repositories.createTrialPaymentMethodSetupOperationRepository(),
+        gateways.createPaymentGateway(),
+        (plan) => {
+          const pricing = PRICING_DATA[plan];
+          return {
+            plan,
+            amountCents: pricing.amountCents,
+            currency: pricing.currency,
+            frequency: pricing.frequency,
+            disclosureSnapshot: pricing.trialPaymentDisclosure,
+            disclosureVersion: pricing.disclosureVersion,
+            termsVersion: TERMS_VERSION,
+            termsHash: TERMS_CONTENT_SHA256,
+          };
+        },
+        primitives.logger,
+        primitives.now,
       ),
     createCountAvailableQuestionsUseCase: () =>
       new CountAvailableQuestionsUseCase(

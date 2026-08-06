@@ -20,11 +20,13 @@ export { FakeStripeCustomerRepository } from './fake-stripe-customer-repository'
 export { FakeStripeEventRepository } from './fake-stripe-event-repository';
 export { FakeSubscriptionRepository } from './fake-subscription-repository';
 export { FakeTagRepository } from './fake-tag-repository';
+export { FakeTrialPaymentMethodSetupOperationRepository } from './fake-trial-payment-method-setup-operation-repository';
 export {
   FakeCheckEntitlementUseCase,
   FakeCountAvailableQuestionsUseCase,
   FakeCreateCheckoutSessionUseCase,
   FakeCreatePortalSessionUseCase,
+  FakeCreateTrialPaymentMethodSetupSessionUseCase,
   FakeDiscardPracticeSessionUseCase,
   FakeEndPracticeSessionUseCase,
   FakeFinalizeExamAnswersUseCase,

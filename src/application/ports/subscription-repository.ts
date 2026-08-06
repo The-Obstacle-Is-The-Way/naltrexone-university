@@ -26,6 +26,8 @@ export type SubscriptionUpsertResult =
 export interface SubscriptionRepository {
   findByUserId(userId: string): Promise<Subscription | null>;
 
+  findExternalSubscriptionIdByUserId(userId: string): Promise<string | null>;
+
   findObservationVersionByUserId(userId: string): Promise<number | null>;
 
   findByExternalSubscriptionId(

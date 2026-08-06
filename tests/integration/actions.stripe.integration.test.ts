@@ -13,6 +13,7 @@ import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/dri
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import {
   FakeAuthGateway,
+  FakeCreateTrialPaymentMethodSetupSessionUseCase,
   FakeLogger,
   FakePaymentGateway,
   FakeSubscriptionRepository,
@@ -115,6 +116,10 @@ describe('billing controllers (integration)', () => {
         logger: new FakeLogger(),
         createCheckoutSessionUseCase,
         createPortalSessionUseCase,
+        createTrialPaymentMethodSetupSessionUseCase:
+          new FakeCreateTrialPaymentMethodSetupSessionUseCase({
+            url: 'https://stripe.test/setup',
+          }),
         idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({
@@ -190,6 +195,10 @@ describe('billing controllers (integration)', () => {
         logger: new FakeLogger(),
         createCheckoutSessionUseCase,
         createPortalSessionUseCase,
+        createTrialPaymentMethodSetupSessionUseCase:
+          new FakeCreateTrialPaymentMethodSetupSessionUseCase({
+            url: 'https://stripe.test/setup',
+          }),
         idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({
@@ -213,6 +222,10 @@ describe('billing controllers (integration)', () => {
         logger: new FakeLogger(),
         createCheckoutSessionUseCase,
         createPortalSessionUseCase,
+        createTrialPaymentMethodSetupSessionUseCase:
+          new FakeCreateTrialPaymentMethodSetupSessionUseCase({
+            url: 'https://stripe.test/setup',
+          }),
         idempotencyKeyRepository,
         rateLimiter: {
           limit: async () => ({

@@ -1,5 +1,6 @@
 export {
   createStripeCheckoutSession,
+  createStripeTrialPaymentMethodSetupSession,
   SUBSCRIPTION_LIST_LIMIT,
 } from './stripe-checkout-sessions';
 export type {

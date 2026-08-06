@@ -25,6 +25,7 @@ import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-q
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import {
   FakeAuthGateway,
@@ -1040,6 +1041,8 @@ describe('stripe webhook controller (integration)', () => {
               stripeEvents: new DrizzleStripeEventRepository(tx),
               subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
               stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+              trialPaymentMethodSetupOperations:
+                new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
             }),
           ),
       },

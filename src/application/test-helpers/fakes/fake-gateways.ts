@@ -1,5 +1,6 @@
 import { ApplicationError } from '@/src/application/errors';
 import type {
+  AttachTrialPaymentMethodInput,
   AuthGateway,
   CheckoutSessionInput,
   CheckoutSessionOutput,
@@ -12,6 +13,9 @@ import type {
   RateLimiter,
   RateLimitInput,
   RateLimitResult,
+  SetTrialSubscriptionDefaultPaymentMethodInput,
+  TrialPaymentMethodSetupSessionInput,
+  TrialPaymentMethodSetupSessionOutput,
   WebhookEventResult,
 } from '@/src/application/ports/gateways';
 import type { User } from '@/src/domain/entities';
@@ -88,23 +92,33 @@ export class FakePaymentGateway implements PaymentGateway {
   readonly checkoutInputs: CheckoutSessionInput[] = [];
   readonly checkoutOptions: Array<PaymentGatewayRequestOptions | undefined> =
     [];
+  readonly trialSetupInputs: TrialPaymentMethodSetupSessionInput[] = [];
+  readonly trialPaymentMethodAttachInputs: AttachTrialPaymentMethodInput[] = [];
+  readonly trialSubscriptionDefaultInputs: SetTrialSubscriptionDefaultPaymentMethodInput[] =
+    [];
   readonly portalInputs: PortalSessionInput[] = [];
   readonly portalOptions: Array<PaymentGatewayRequestOptions | undefined> = [];
   readonly webhookInputs: Array<{ rawBody: string; signature: string }> = [];
 
   private readonly externalCustomerId: string;
   private readonly checkoutUrl: string;
+  private readonly trialSetupSessionId: string;
+  private readonly trialSetupUrl: string;
   private readonly portalUrl: string;
   private readonly webhookResult: WebhookEventResult;
 
   constructor(input: {
     externalCustomerId: string;
     checkoutUrl: string;
+    trialSetupSessionId?: string;
+    trialSetupUrl?: string;
     portalUrl: string;
     webhookResult: WebhookEventResult;
   }) {
     this.externalCustomerId = input.externalCustomerId;
     this.checkoutUrl = input.checkoutUrl;
+    this.trialSetupSessionId = input.trialSetupSessionId ?? 'cs_setup';
+    this.trialSetupUrl = input.trialSetupUrl ?? input.checkoutUrl;
     this.portalUrl = input.portalUrl;
     this.webhookResult = input.webhookResult;
   }
@@ -125,6 +139,28 @@ export class FakePaymentGateway implements PaymentGateway {
     this.checkoutInputs.push(input);
     this.checkoutOptions.push(options);
     return { url: this.checkoutUrl };
+  }
+
+  async createTrialPaymentMethodSetupSession(
+    input: TrialPaymentMethodSetupSessionInput,
+  ): Promise<TrialPaymentMethodSetupSessionOutput> {
+    this.trialSetupInputs.push(input);
+    return {
+      sessionId: this.trialSetupSessionId,
+      url: this.trialSetupUrl,
+    };
+  }
+
+  async attachTrialPaymentMethod(
+    input: AttachTrialPaymentMethodInput,
+  ): Promise<void> {
+    this.trialPaymentMethodAttachInputs.push(input);
+  }
+
+  async setTrialSubscriptionDefaultPaymentMethod(
+    input: SetTrialSubscriptionDefaultPaymentMethodInput,
+  ): Promise<void> {
+    this.trialSubscriptionDefaultInputs.push(input);
   }
 
   async createPortalSession(

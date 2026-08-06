@@ -12,6 +12,7 @@ import {
   DrizzleStripeEventRepository,
   DrizzleSubscriptionRepository,
   DrizzleTagRepository,
+  DrizzleTrialPaymentMethodSetupOperationRepository,
   DrizzleUserRepository,
 } from '@/src/adapters/repositories';
 import type {
@@ -50,6 +51,13 @@ export function createRepositoryFactories(
       new DrizzleQuestionRepository(dbOverride),
     createTagRepository: (dbOverride = primitives.db) =>
       new DrizzleTagRepository(dbOverride),
+    createTrialPaymentMethodSetupOperationRepository: (
+      dbOverride = primitives.db,
+    ) =>
+      new DrizzleTrialPaymentMethodSetupOperationRepository(
+        dbOverride,
+        primitives.now,
+      ),
     createSubscriptionRepository: (dbOverride = primitives.db) =>
       new DrizzleSubscriptionRepository(
         dbOverride,

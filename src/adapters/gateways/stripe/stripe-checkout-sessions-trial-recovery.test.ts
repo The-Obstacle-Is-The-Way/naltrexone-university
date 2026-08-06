@@ -109,7 +109,9 @@ describe('createStripeCheckoutSession trial replacement idempotency', () => {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
     expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.any(Object),
+      expect.objectContaining({
+        consent_collection: { terms_of_service: 'required' },
+      }),
       expect.objectContaining({
         idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_open:trial:7`,
       }),

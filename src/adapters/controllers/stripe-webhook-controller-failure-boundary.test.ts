@@ -6,6 +6,7 @@ import {
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
+  FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
 import {
   processStripeWebhook,
@@ -75,6 +76,8 @@ function createMissingUserAcknowledgementHarness(input: {
           stripeEvents: new FakeStripeEventRepository(),
           subscriptions: missingSubscriptions,
           stripeCustomers: new FakeStripeCustomerRepository(),
+          trialPaymentMethodSetupOperations:
+            new FakeTrialPaymentMethodSetupOperationRepository(),
         });
       }
 
@@ -86,6 +89,8 @@ function createMissingUserAcknowledgementHarness(input: {
         stripeEvents,
         subscriptions: new FakeSubscriptionRepository(),
         stripeCustomers: new FakeStripeCustomerRepository(),
+        trialPaymentMethodSetupOperations:
+          new FakeTrialPaymentMethodSetupOperationRepository(),
       });
     },
   };
@@ -133,6 +138,8 @@ function createAbortedTransactionDeps(input: {
               stripeCustomers: new ThrowingStripeCustomerRepository(
                 input.processingError,
               ),
+              trialPaymentMethodSetupOperations:
+                new FakeTrialPaymentMethodSetupOperationRepository(),
             });
           } catch {
             // postgres.js can surface the scope's first statement error instead
@@ -150,6 +157,8 @@ function createAbortedTransactionDeps(input: {
           stripeEvents,
           subscriptions: new FakeSubscriptionRepository(),
           stripeCustomers: new FakeStripeCustomerRepository(),
+          trialPaymentMethodSetupOperations:
+            new FakeTrialPaymentMethodSetupOperationRepository(),
         });
       },
     },
@@ -233,6 +242,8 @@ describe('processStripeWebhook failure boundary', () => {
     const stripeEvents = new FakeStripeEventRepository();
     const subscriptions = new FakeSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
+    const trialPaymentMethodSetupOperations =
+      new FakeTrialPaymentMethodSetupOperationRepository();
     const logger = new FakeLogger();
     subscriptions.markUserMissing(userId);
     const insertCustomer = vi.spyOn(stripeCustomers, 'insert');
@@ -242,7 +253,12 @@ describe('processStripeWebhook failure boundary', () => {
       logger,
       now: () => new Date(),
       transaction: async (fn) =>
-        fn({ stripeEvents, subscriptions, stripeCustomers }),
+        fn({
+          stripeEvents,
+          subscriptions,
+          stripeCustomers,
+          trialPaymentMethodSetupOperations,
+        }),
     };
 
     await expect(
@@ -289,6 +305,8 @@ describe('processStripeWebhook failure boundary', () => {
               stripeEvents: new FakeStripeEventRepository(),
               subscriptions: missingSubscriptions,
               stripeCustomers: new FakeStripeCustomerRepository(),
+              trialPaymentMethodSetupOperations:
+                new FakeTrialPaymentMethodSetupOperationRepository(),
             });
           } catch (error) {
             await stripeEvents.claim(eventId, 'customer.subscription.updated');
@@ -301,6 +319,8 @@ describe('processStripeWebhook failure boundary', () => {
           stripeEvents,
           subscriptions: new FakeSubscriptionRepository(),
           stripeCustomers: new FakeStripeCustomerRepository(),
+          trialPaymentMethodSetupOperations:
+            new FakeTrialPaymentMethodSetupOperationRepository(),
         });
       },
     };
@@ -428,6 +448,8 @@ describe('processStripeWebhook failure boundary', () => {
           stripeEvents,
           subscriptions: new FakeSubscriptionRepository(),
           stripeCustomers: new FakeStripeCustomerRepository(),
+          trialPaymentMethodSetupOperations:
+            new FakeTrialPaymentMethodSetupOperationRepository(),
         });
       },
     };

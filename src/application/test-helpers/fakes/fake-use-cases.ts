@@ -76,6 +76,10 @@ export class FakeCreatePortalSessionUseCase extends FakeUseCase<
   U.CreatePortalSessionInput,
   U.CreatePortalSessionOutput
 > {}
+export class FakeCreateTrialPaymentMethodSetupSessionUseCase extends FakeUseCase<
+  U.CreateTrialPaymentMethodSetupSessionInput,
+  U.CreateTrialPaymentMethodSetupSessionOutput
+> {}
 export class FakeGetAttemptedQuestionsUseCase extends FakeUseCase<
   U.GetAttemptedQuestionsInput,
   U.GetAttemptedQuestionsOutput
