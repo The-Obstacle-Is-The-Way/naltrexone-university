@@ -33,6 +33,37 @@ export const stripeCheckoutSessionSchema = z
   })
   .passthrough();
 
+export const stripeSubscriptionCheckoutConsentSessionSchema = z
+  .object({
+    id: z.string().min(1),
+    mode: z.literal('subscription'),
+    customer: stripeSubscriptionRefSchema,
+    client_reference_id: z.string().min(1),
+    subscription: stripeSubscriptionRefSchema,
+    consent: z.object({
+      terms_of_service: z.literal('accepted'),
+    }),
+    metadata: z
+      .object({
+        checkout_variant: z.union([
+          z.literal('standard'),
+          z.string().regex(/^trial:\d+$/),
+        ]),
+        renewal_user_id: z.string().min(1),
+        renewal_plan: z.enum(['monthly', 'annual']),
+        renewal_amount_cents: z.string().regex(/^[1-9]\d*$/),
+        renewal_currency: z.literal('usd'),
+        renewal_frequency: z.enum(['month', 'year']),
+        renewal_disclosure_snapshot: z.string().min(1),
+        renewal_disclosure_version: z.string().min(1),
+        renewal_terms_version: z.string().min(1),
+        renewal_terms_hash: z.string().min(1),
+        renewal_cancellation_method: z.string().min(1),
+      })
+      .strict(),
+  })
+  .passthrough();
+
 const stripeExpandableIdSchema = z.union([
   z.string().min(1),
   z.object({ id: z.string().min(1) }).passthrough(),

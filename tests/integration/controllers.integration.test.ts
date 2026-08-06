@@ -22,6 +22,7 @@ import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/dri
 import { DrizzlePendingStripeCustomerCleanupRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
+import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
@@ -1043,6 +1044,9 @@ describe('stripe webhook controller (integration)', () => {
               stripeCustomers: new DrizzleStripeCustomerRepository(tx),
               trialPaymentMethodSetupOperations:
                 new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+              renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+                tx,
+              ),
             }),
           ),
       },

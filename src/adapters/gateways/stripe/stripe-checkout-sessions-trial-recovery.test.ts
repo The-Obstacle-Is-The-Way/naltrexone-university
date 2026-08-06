@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 
 function createStripeMock(overrides: {
@@ -84,7 +85,7 @@ describe('createStripeCheckoutSession trial replacement idempotency', () => {
   const input = {
     userId: appUserId,
     externalCustomerId: 'cus_123',
-    plan: 'monthly' as const,
+    ...createTestRenewalTerms('monthly', true),
     successUrl: 'https://app/success',
     cancelUrl: 'https://app/cancel',
     trialPeriodDays: 7,

@@ -73,6 +73,8 @@ async function createUseCase(input?: {
       disclosureVersion: '2026-08-05',
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
     }),
     logger,
     () => new Date('2026-08-06T12:00:00Z'),
@@ -109,6 +111,8 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
         disclosureVersion: '2026-08-05',
         termsVersion: '2026-08-05',
         termsHash: 'terms-hash',
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
         successUrl:
           'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
         cancelUrl:
@@ -122,6 +126,8 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
         stripeCustomerId: 'cus_123',
         stripeSubscriptionId: 'sub_123',
         disclosureSnapshot: 'Exact renewal disclosure.',
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
         status: 'pending',
       }),
     );
@@ -155,6 +161,8 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
       disclosureVersion: '2026-08-05',
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
       status: 'pending',
       claimId: null,
       claimedAt: null,

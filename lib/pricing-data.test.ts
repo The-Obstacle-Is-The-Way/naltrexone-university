@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { termsContent } from '@/app/(marketing)/terms/terms-content';
 import {
+  CANCELLATION_METHOD,
   PRICING_DATA,
   TERMS_CONTENT_SHA256,
   TERMS_VERSION,
@@ -42,6 +43,9 @@ describe('PRICING_DATA renewal disclosures', () => {
   });
 
   it('pins machine-readable renewal terms to the rendered disclosure and Terms version', () => {
+    expect(CANCELLATION_METHOD).toBe(
+      'Billing page in the app or support@addictionboards.com',
+    );
     expect(PRICING_DATA.monthly).toMatchObject({
       amountCents: 2900,
       currency: 'usd',

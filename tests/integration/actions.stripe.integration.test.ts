@@ -24,6 +24,18 @@ import {
 } from '@/src/application/use-cases';
 import type { User } from '@/src/domain/entities';
 
+const getRenewalTerms = (plan: 'monthly' | 'annual', hasTrial: boolean) => ({
+  plan,
+  amountCents: plan === 'monthly' ? 2900 : 19900,
+  currency: 'usd' as const,
+  frequency: plan === 'monthly' ? ('month' as const) : ('year' as const),
+  disclosureVersion: '2026-08-05',
+  termsVersion: '2026-08-05',
+  termsHash: 'terms-hash',
+  disclosureSnapshot: hasTrial ? 'Trial terms.' : 'Immediate terms.',
+  cancellationMethod: 'Billing page in the app or support@addictionboards.com',
+});
+
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
   throw new Error(
@@ -103,6 +115,7 @@ describe('billing controllers (integration)', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00.000Z'),
+      getRenewalTerms,
     );
     const createPortalSessionUseCase = new CreatePortalSessionUseCase(
       stripeCustomerRepository,
@@ -182,6 +195,7 @@ describe('billing controllers (integration)', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00.000Z'),
+      getRenewalTerms,
     );
     const createPortalSessionUseCase = new CreatePortalSessionUseCase(
       stripeCustomerRepository,

@@ -19,6 +19,7 @@ export type TrialPaymentMethodSetupOperationInput = {
   disclosureVersion: string;
   termsVersion: string;
   termsHash: string;
+  cancellationMethod: string;
 };
 
 export type TrialPaymentMethodSetupOperation =

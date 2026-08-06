@@ -30,6 +30,8 @@ export function createControllerFactories(input: {
             stripeCustomers: repositories.createStripeCustomerRepository(tx),
             trialPaymentMethodSetupOperations:
               repositories.createTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords:
+              repositories.createRenewalConsentRecordRepository(tx),
           }),
         ),
     }),

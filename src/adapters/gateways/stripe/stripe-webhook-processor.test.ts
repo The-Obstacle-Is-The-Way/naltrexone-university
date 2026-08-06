@@ -31,7 +31,12 @@ function createSubscriptionFixture() {
 }
 
 function createStripeClient(input: {
-  eventFactory: () => { id: string; type: string; data: { object: unknown } };
+  eventFactory: () => {
+    id: string;
+    type: string;
+    created?: number;
+    data: { object: unknown };
+  };
   subscription?: unknown;
   retrieve?: (subscriptionId: string) => Promise<unknown>;
 }): StripeClient {
@@ -121,6 +126,7 @@ describe('processStripeWebhookEvent', () => {
       eventFactory: () => ({
         id: 'evt_setup',
         type: 'checkout.session.completed',
+        created: 1_775_649_600,
         data: { object: createCompletedSetupSession() },
       }),
     });
@@ -157,6 +163,7 @@ describe('processStripeWebhookEvent', () => {
         termsVersion: '2026-08-05',
         termsHash: 'terms-hash',
         stripePaymentMethodId: 'pm_123',
+        acceptedAt: new Date('2026-04-08T12:00:00.000Z'),
       },
     });
     expect(stripe.setupIntents.retrieve).toHaveBeenCalledWith('seti_123');
@@ -347,6 +354,105 @@ describe('processStripeWebhookEvent', () => {
       },
     });
     expect(stripe.subscriptions?.retrieve).toHaveBeenCalledWith('sub_123');
+  });
+
+  it('returns the exact accepted renewal snapshot for a consent-bearing subscription Checkout completion', async () => {
+    const logger = new FakeLogger();
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_checkout_consent',
+        type: 'checkout.session.completed',
+        created: 1_775_649_600,
+        data: {
+          object: {
+            id: 'cs_checkout_123',
+            mode: 'subscription',
+            customer: 'cus_123',
+            client_reference_id: appUserId,
+            subscription: 'sub_123',
+            consent: { terms_of_service: 'accepted' },
+            metadata: {
+              checkout_variant: 'standard',
+              renewal_user_id: appUserId,
+              renewal_plan: 'monthly',
+              renewal_amount_cents: '2900',
+              renewal_currency: 'usd',
+              renewal_frequency: 'month',
+              renewal_disclosure_snapshot: 'Exact immediate disclosure.',
+              renewal_disclosure_version: '2026-08-05',
+              renewal_terms_version: '2026-08-05',
+              renewal_terms_hash: 'terms-hash',
+              renewal_cancellation_method:
+                'Billing page in the app or support@addictionboards.com',
+            },
+          },
+        },
+      }),
+    });
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger,
+      }),
+    ).resolves.toMatchObject({
+      initialSubscriptionConsent: {
+        checkoutSessionId: 'cs_checkout_123',
+        userId: appUserId,
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        amountCents: 2900,
+        currency: 'usd',
+        frequency: 'month',
+        disclosureSnapshot: 'Exact immediate disclosure.',
+        disclosureVersion: '2026-08-05',
+        termsVersion: '2026-08-05',
+        termsHash: 'terms-hash',
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
+        acceptedAt: new Date('2026-04-08T12:00:00.000Z'),
+      },
+    });
+  });
+
+  it('fails closed when accepted subscription consent lacks the complete evidence snapshot', async () => {
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_checkout_incomplete_consent',
+        type: 'checkout.session.completed',
+        created: 1_775_649_600,
+        data: {
+          object: {
+            id: 'cs_checkout_incomplete',
+            mode: 'subscription',
+            customer: 'cus_123',
+            client_reference_id: appUserId,
+            subscription: 'sub_123',
+            consent: { terms_of_service: 'accepted' },
+            metadata: {
+              checkout_variant: 'standard',
+              renewal_user_id: appUserId,
+            },
+          },
+        },
+      }),
+    });
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
   });
 
   it('retrieves and includes subscriptionUpdate for invoice.payment_succeeded events with a nested Clover subscription reference', async () => {

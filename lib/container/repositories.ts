@@ -8,6 +8,7 @@ import {
   DrizzlePracticeSessionRepository,
   DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
+  DrizzleRenewalConsentRecordRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
   DrizzleSubscriptionRepository,
@@ -49,6 +50,8 @@ export function createRepositoryFactories(
       new DrizzleQuestionFeedbackRepository(dbOverride),
     createQuestionRepository: (dbOverride = primitives.db) =>
       new DrizzleQuestionRepository(dbOverride),
+    createRenewalConsentRecordRepository: (dbOverride = primitives.db) =>
+      new DrizzleRenewalConsentRecordRepository(dbOverride, primitives.now),
     createTagRepository: (dbOverride = primitives.db) =>
       new DrizzleTagRepository(dbOverride),
     createTrialPaymentMethodSetupOperationRepository: (

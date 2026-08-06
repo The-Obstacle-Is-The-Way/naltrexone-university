@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
@@ -83,6 +84,8 @@ describe('Stripe webhook failure boundary', () => {
                 stripeCustomers: new DrizzleStripeCustomerRepository(tx),
                 trialPaymentMethodSetupOperations:
                   new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+                renewalConsentRecords:
+                  new DrizzleRenewalConsentRecordRepository(tx),
               }),
             ),
         },

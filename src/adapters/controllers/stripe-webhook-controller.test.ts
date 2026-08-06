@@ -6,11 +6,13 @@ import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import {
   FakeLogger,
   FakePaymentGateway,
+  FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
+import { newRenewalConsentRecord } from '@/src/domain/entities';
 import {
   processStripeWebhook,
   type StripeWebhookDeps,
@@ -89,6 +91,8 @@ function createDeps(overrides: {
   stripeCustomers?: FakeStripeCustomerRepository;
   logger?: FakeLogger;
   setupOperations?: FakeTrialPaymentMethodSetupOperationRepository;
+  renewalConsents?: FakeRenewalConsentRecordRepository;
+  now?: () => Date;
 }): {
   deps: StripeWebhookDeps;
   stripeEvents: FakeStripeEventRepository;
@@ -96,6 +100,7 @@ function createDeps(overrides: {
   stripeCustomers: FakeStripeCustomerRepository;
   logger: FakeLogger;
   setupOperations: FakeTrialPaymentMethodSetupOperationRepository;
+  renewalConsents: FakeRenewalConsentRecordRepository;
 } {
   const stripeEvents =
     overrides.stripeEvents ?? new FakeStripeEventRepository();
@@ -107,19 +112,22 @@ function createDeps(overrides: {
   const setupOperations =
     overrides.setupOperations ??
     new FakeTrialPaymentMethodSetupOperationRepository();
+  const renewalConsents =
+    overrides.renewalConsents ?? new FakeRenewalConsentRecordRepository();
 
   return {
     deps: {
       paymentGateway: overrides.paymentGateway,
       subscriptionVersions: subscriptions,
       logger,
-      now: () => new Date(),
+      now: overrides.now ?? (() => new Date()),
       transaction: async (fn) =>
         fn({
           stripeEvents,
           subscriptions,
           stripeCustomers,
           trialPaymentMethodSetupOperations: setupOperations,
+          renewalConsentRecords: renewalConsents,
         }),
     },
     stripeEvents,
@@ -127,6 +135,7 @@ function createDeps(overrides: {
     stripeCustomers,
     logger,
     setupOperations,
+    renewalConsents,
   };
 }
 
@@ -137,6 +146,8 @@ function createRollbackAwareDeps(overrides: {
   stripeCustomers?: FakeStripeCustomerRepository;
   logger?: FakeLogger;
   setupOperations?: FakeTrialPaymentMethodSetupOperationRepository;
+  renewalConsents?: FakeRenewalConsentRecordRepository;
+  now?: () => Date;
 }): {
   deps: StripeWebhookDeps;
   stripeEvents: FakeStripeEventRepository;
@@ -144,6 +155,7 @@ function createRollbackAwareDeps(overrides: {
   stripeCustomers: FakeStripeCustomerRepository;
   logger: FakeLogger;
   setupOperations: FakeTrialPaymentMethodSetupOperationRepository;
+  renewalConsents: FakeRenewalConsentRecordRepository;
 } {
   const base = createDeps(overrides);
 
@@ -160,28 +172,34 @@ function createRollbackAwareDeps(overrides: {
           .constructor as new () => FakeStripeCustomerRepository;
         const SetupOperationsCtor = base.setupOperations
           .constructor as new () => FakeTrialPaymentMethodSetupOperationRepository;
+        const RenewalConsentsCtor = base.renewalConsents
+          .constructor as new () => FakeRenewalConsentRecordRepository;
 
         const stagingEvents = new StripeEventsCtor();
         const stagingSubscriptions = new SubscriptionsCtor();
         const stagingStripeCustomers = new StripeCustomersCtor();
         const stagingSetupOperations = new SetupOperationsCtor();
+        const stagingRenewalConsents = new RenewalConsentsCtor();
 
         stagingEvents.restore(base.stripeEvents.snapshot());
         stagingSubscriptions.restore(base.subscriptions.snapshot());
         stagingStripeCustomers.restore(base.stripeCustomers.snapshot());
         stagingSetupOperations.restore(base.setupOperations.snapshot());
+        stagingRenewalConsents.restore(base.renewalConsents.snapshot());
 
         const result = await fn({
           stripeEvents: stagingEvents,
           subscriptions: stagingSubscriptions,
           stripeCustomers: stagingStripeCustomers,
           trialPaymentMethodSetupOperations: stagingSetupOperations,
+          renewalConsentRecords: stagingRenewalConsents,
         });
 
         base.stripeEvents.restore(stagingEvents.snapshot());
         base.subscriptions.restore(stagingSubscriptions.snapshot());
         base.stripeCustomers.restore(stagingStripeCustomers.snapshot());
         base.setupOperations.restore(stagingSetupOperations.snapshot());
+        base.renewalConsents.restore(stagingRenewalConsents.snapshot());
 
         return result;
       },
@@ -211,6 +229,128 @@ function createSubscriptionUpdatePaymentGateway(eventId: string) {
 }
 
 describe('processStripeWebhook', () => {
+  it('starts legal retention from a persisted subscription termination', async () => {
+    const userId = crypto.randomUUID();
+    const renewalConsents = new FakeRenewalConsentRecordRepository();
+    await renewalConsents.save(
+      newRenewalConsentRecord({
+        userId,
+        consumerReference: 'a'.repeat(64),
+        stripeCustomerId: 'cus_123',
+        stripeSubscriptionId: 'sub_123',
+        checkoutSessionId: 'cs_checkout_123',
+        setupSessionId: null,
+        plan: 'monthly',
+        amountCents: 2900,
+        currency: 'usd',
+        frequency: 'month',
+        trialEndsAt: null,
+        cancellationDeadline: new Date('2026-09-06T12:00:00Z'),
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
+        disclosureSnapshot: 'Exact disclosure.',
+        disclosureVersion: '2026-08-05',
+        termsVersion: '2026-08-05',
+        termsHash: 'terms-hash',
+        consentSource: 'stripe_checkout',
+        acceptedAt: new Date('2026-08-06T12:00:00Z'),
+        consentKind: 'initial_offer',
+        priorAmountCents: null,
+        proposedAmountCents: null,
+        effectiveRenewalAt: null,
+      }),
+    );
+    const terminatedAt = new Date('2026-10-06T12:00:00Z');
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_subscription_deleted',
+        type: 'customer.subscription.deleted',
+        occurredAt: terminatedAt,
+        subscriptionUpdate: {
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'canceled',
+          currentPeriodEnd: terminatedAt,
+          cancelAtPeriodEnd: false,
+        },
+      },
+    });
+    const { deps } = createDeps({
+      paymentGateway,
+      renewalConsents,
+      now: () => new Date('2026-10-07T12:00:00Z'),
+    });
+
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+    expect(renewalConsents.snapshot()).toEqual([
+      expect.objectContaining({
+        subscriptionTerminatedAt: terminatedAt,
+        retainUntil: new Date('2029-08-06T12:00:00Z'),
+      }),
+    ]);
+  });
+
+  it('persists subscription Checkout consent in the subscription webhook transaction', async () => {
+    const userId = crypto.randomUUID();
+    const acceptedAt = new Date('2026-08-06T12:00:00Z');
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_checkout_consent',
+        type: 'checkout.session.completed',
+        subscriptionUpdate: {
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-09-06T12:00:00Z'),
+          cancelAtPeriodEnd: false,
+        },
+        initialSubscriptionConsent: {
+          checkoutSessionId: 'cs_checkout_123',
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          disclosureSnapshot: 'Exact immediate disclosure.',
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-hash',
+          cancellationMethod:
+            'Billing page in the app or support@addictionboards.com',
+          acceptedAt,
+        },
+      },
+    });
+    const { deps, renewalConsents } = createDeps({ paymentGateway });
+
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+    expect(renewalConsents.snapshot()).toEqual([
+      expect.objectContaining({
+        userId,
+        checkoutSessionId: 'cs_checkout_123',
+        setupSessionId: null,
+        cancellationDeadline: new Date('2026-09-06T12:00:00Z'),
+        trialEndsAt: null,
+        disclosureSnapshot: 'Exact immediate disclosure.',
+        acceptedAt,
+      }),
+    ]);
+  });
+
   it('attaches and selects a verified setup payment method after exact local matching', async () => {
     const userId = crypto.randomUUID();
     const completion = {
@@ -227,6 +367,7 @@ describe('processStripeWebhook', () => {
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
       stripePaymentMethodId: 'pm_123',
+      acceptedAt: new Date('2026-08-06T12:00:00Z'),
     };
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_123',
@@ -238,8 +379,13 @@ describe('processStripeWebhook', () => {
         trialPaymentMethodSetupCompletion: completion,
       },
     });
-    const { deps, subscriptions, stripeCustomers, setupOperations } =
-      createDeps({ paymentGateway });
+    const {
+      deps,
+      subscriptions,
+      stripeCustomers,
+      setupOperations,
+      renewalConsents,
+    } = createDeps({ paymentGateway });
     await subscriptions.upsert({
       userId,
       externalSubscriptionId: 'sub_123',
@@ -264,6 +410,8 @@ describe('processStripeWebhook', () => {
       disclosureVersion: '2026-08-05',
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
     });
 
     await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
@@ -291,6 +439,17 @@ describe('processStripeWebhook', () => {
       subscriptionDefaultSetAt: expect.any(Date),
       completedAt: expect.any(Date),
     });
+    expect(renewalConsents.snapshot()).toEqual([
+      expect.objectContaining({
+        userId,
+        setupSessionId: 'cs_setup_123',
+        checkoutSessionId: null,
+        stripeSubscriptionId: 'sub_123',
+        disclosureSnapshot: 'Exact disclosure.',
+        cancellationDeadline: completion.trialEndsAt,
+        acceptedAt: completion.acceptedAt,
+      }),
+    ]);
   });
 
   it('fails closed when the accepted snapshot differs from the pending operation', async () => {
@@ -316,6 +475,7 @@ describe('processStripeWebhook', () => {
           termsVersion: '2026-08-05',
           termsHash: 'terms-hash',
           stripePaymentMethodId: 'pm_123',
+          acceptedAt: new Date('2026-08-06T12:00:00Z'),
         },
       },
     });
@@ -345,6 +505,8 @@ describe('processStripeWebhook', () => {
       disclosureVersion: '2026-08-05',
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
     });
 
     await expect(
@@ -376,6 +538,7 @@ describe('processStripeWebhook', () => {
           termsVersion: '2026-08-05',
           termsHash: 'terms-hash',
           stripePaymentMethodId: 'pm_123',
+          acceptedAt: new Date('2026-08-06T12:00:00Z'),
         },
       },
     });
@@ -411,6 +574,7 @@ describe('processStripeWebhook', () => {
           termsVersion: '2026-08-05',
           termsHash: 'terms-hash',
           stripePaymentMethodId: 'pm_123',
+          acceptedAt: new Date('2026-08-06T12:00:00Z'),
         },
       },
     });
@@ -448,6 +612,7 @@ describe('processStripeWebhook', () => {
           termsVersion: '2026-08-05',
           termsHash: 'terms-hash',
           stripePaymentMethodId: 'pm_123',
+          acceptedAt: new Date('2026-08-06T12:00:00Z'),
         },
       },
     });
@@ -476,6 +641,8 @@ describe('processStripeWebhook', () => {
       disclosureVersion: '2026-08-05',
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
     });
 
     await expect(
@@ -520,6 +687,7 @@ describe('processStripeWebhook', () => {
             termsVersion: '2026-08-05',
             termsHash: 'terms-hash',
             stripePaymentMethodId: 'pm_123',
+            acceptedAt: new Date('2026-08-06T12:00:00Z'),
           },
         };
       }
@@ -564,6 +732,8 @@ describe('processStripeWebhook', () => {
       disclosureVersion: '2026-08-05',
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
     });
 
     const first = processStripeWebhook(deps, {
@@ -618,6 +788,7 @@ describe('processStripeWebhook', () => {
           termsVersion: '2026-08-05',
           termsHash: 'terms-hash',
           stripePaymentMethodId: 'pm_123',
+          acceptedAt: new Date('2026-08-06T12:00:00Z'),
         },
       },
     });
@@ -648,6 +819,8 @@ describe('processStripeWebhook', () => {
       disclosureVersion: '2026-08-05',
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
     });
 
     await expect(

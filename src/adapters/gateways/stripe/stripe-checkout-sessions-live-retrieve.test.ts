@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 
 function createStripeMock(input: {
@@ -58,7 +59,7 @@ describe('createStripeCheckoutSession live retrieval fallback', () => {
   const input = {
     userId: appUserId,
     externalCustomerId: 'customer-existing-123',
-    plan: 'monthly' as const,
+    ...createTestRenewalTerms('monthly'),
     successUrl: 'https://app/success',
     cancelUrl: 'https://app/cancel',
   };

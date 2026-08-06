@@ -13,6 +13,10 @@ import type {
   StripeSubscriptionListResult,
 } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  createTestCheckoutRenewalMetadata,
+  createTestRenewalTerms,
+} from '@/src/application/test-helpers/renewal-terms';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { SUBSCRIPTION_LIST_LIMIT } from './stripe/stripe-checkout-sessions';
 import { StripePaymentGateway } from './stripe-payment-gateway';
@@ -378,7 +382,7 @@ describe('StripePaymentGateway', () => {
         {
           userId: appUserId,
           externalCustomerId: 'cus_123',
-          plan: 'monthly',
+          ...createTestRenewalTerms('monthly'),
           successUrl: 'https://app/success',
           cancelUrl: 'https://app/cancel',
         },
@@ -424,6 +428,8 @@ describe('StripePaymentGateway', () => {
         termsVersion: '2026-08-05',
         termsHash: 'terms-hash',
         disclosureSnapshot: 'Exact disclosure.',
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -463,7 +469,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -493,7 +499,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -521,6 +527,10 @@ describe('StripePaymentGateway', () => {
     sessionsRetrieve.mockResolvedValue({
       id: 'cs_existing',
       url: 'https://stripe/existing-checkout',
+      metadata: createTestCheckoutRenewalMetadata({
+        userId: appUserId,
+        plan: 'annual',
+      }),
       line_items: { data: [{ price: { id: 'price_a' } }] },
     });
     const gateway = createGateway(stripe);
@@ -529,7 +539,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'annual',
+        ...createTestRenewalTerms('annual'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -573,7 +583,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -617,7 +627,7 @@ describe('StripePaymentGateway', () => {
     const result = await gateway.createCheckoutSession({
       userId: appUserId,
       externalCustomerId: 'cus_123',
-      plan: 'monthly',
+      ...createTestRenewalTerms('monthly'),
       successUrl: 'https://app/success',
       cancelUrl: 'https://app/cancel',
     });
@@ -670,7 +680,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -689,7 +699,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -729,6 +739,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_1',
+      occurredAt: new Date(1_700_000_000 * 1000),
       type: 'customer.subscription.updated',
       subscriptionUpdate: {
         userId: appUserId,
@@ -768,6 +779,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_trial_will_end_1',
+      occurredAt: new Date(1_700_000_000 * 1000),
       type: 'customer.subscription.trial_will_end',
       subscriptionUpdate: {
         userId: appUserId,
@@ -812,6 +824,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_deleted_1',
+      occurredAt: new Date(1_700_000_000 * 1000),
       type: 'customer.subscription.deleted',
       subscriptionUpdate: expect.objectContaining({
         userId: appUserId,
@@ -1093,6 +1106,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_2',
+      occurredAt: new Date(1_700_000_001 * 1000),
       type: 'customer.subscription.paused',
       subscriptionUpdate: {
         userId: appUserId,
@@ -1125,6 +1139,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_3',
+      occurredAt: new Date(1_700_000_002 * 1000),
       type: 'customer.subscription.resumed',
       subscriptionUpdate: {
         userId: appUserId,
@@ -1157,6 +1172,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_4',
+      occurredAt: new Date(1_700_000_003 * 1000),
       type: 'customer.subscription.pending_update_applied',
       subscriptionUpdate: {
         userId: appUserId,
@@ -1189,6 +1205,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_5',
+      occurredAt: new Date(1_700_000_004 * 1000),
       type: 'customer.subscription.pending_update_expired',
       subscriptionUpdate: {
         userId: appUserId,

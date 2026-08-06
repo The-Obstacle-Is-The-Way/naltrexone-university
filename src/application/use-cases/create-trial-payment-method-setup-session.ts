@@ -21,6 +21,7 @@ export type TrialRenewalTerms = Pick<
   | 'disclosureVersion'
   | 'termsVersion'
   | 'termsHash'
+  | 'cancellationMethod'
 >;
 
 export type CreateTrialPaymentMethodSetupSessionInput = {
@@ -91,6 +92,7 @@ export class CreateTrialPaymentMethodSetupSessionUseCase {
       disclosureVersion: terms.disclosureVersion,
       termsVersion: terms.termsVersion,
       termsHash: terms.termsHash,
+      cancellationMethod: terms.cancellationMethod,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
     } satisfies TrialPaymentMethodSetupSessionInput;
@@ -112,6 +114,7 @@ export class CreateTrialPaymentMethodSetupSessionUseCase {
         disclosureVersion: setupInput.disclosureVersion,
         termsVersion: setupInput.termsVersion,
         termsHash: setupInput.termsHash,
+        cancellationMethod: setupInput.cancellationMethod,
       });
     } catch (error) {
       try {

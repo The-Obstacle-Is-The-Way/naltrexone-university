@@ -73,6 +73,16 @@ describe('PrivacyPage', () => {
     }
     expect(text).toContain('Twenty-four hours is not a guaranteed maximum');
     expect(text).toContain('Sentry session replay is disabled');
+    expect(text).toContain('Renewal-consent evidence');
+    expect(text).toContain(
+      'later of three years after consent or one year after subscription termination',
+    );
+    expect(text).toContain(
+      'Cleanup is webhook-triggered, bounded, and best effort, so an eligible record may remain longer',
+    );
+    expect(text).toContain(
+      'local user reference cleared and the pseudonymous consumer reference retained',
+    );
     expect(text).not.toContain('Provenance and adversarial verification');
     expect(text).not.toContain('OWNER TO IDENTIFY');
   });

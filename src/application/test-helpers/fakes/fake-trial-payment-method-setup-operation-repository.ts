@@ -41,6 +41,7 @@ function immutableSnapshot(operation: TrialPaymentMethodSetupOperationInput) {
     disclosureVersion: operation.disclosureVersion,
     termsVersion: operation.termsVersion,
     termsHash: operation.termsHash,
+    cancellationMethod: operation.cancellationMethod,
   });
 }
 

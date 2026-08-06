@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/nextjs';
 import {
+  CANCELLATION_METHOD,
   PRICING_DATA,
   TERMS_CONTENT_SHA256,
   TERMS_VERSION,
@@ -40,7 +41,9 @@ import {
   GetQuestionRatingUseCase,
   GetSessionHistoryUseCase,
   GetUserStatsUseCase,
+  PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
+  RecordRenewalConsentUseCase,
   SaveExamDraftAnswerUseCase,
   SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
@@ -217,6 +220,22 @@ export function createUseCaseFactories(input: {
         gateways.createPaymentGateway(),
         primitives.logger,
         primitives.now,
+        (plan, hasTrial) => {
+          const pricing = PRICING_DATA[plan];
+          return {
+            plan,
+            amountCents: pricing.amountCents,
+            currency: pricing.currency,
+            frequency: pricing.frequency,
+            disclosureSnapshot: hasTrial
+              ? pricing.trialDisclosure
+              : pricing.standardDisclosure,
+            disclosureVersion: pricing.disclosureVersion,
+            termsVersion: TERMS_VERSION,
+            termsHash: TERMS_CONTENT_SHA256,
+            cancellationMethod: CANCELLATION_METHOD,
+          };
+        },
       ),
     createPortalSessionUseCase: () =>
       new CreatePortalSessionUseCase(
@@ -240,9 +259,19 @@ export function createUseCaseFactories(input: {
             disclosureVersion: pricing.disclosureVersion,
             termsVersion: TERMS_VERSION,
             termsHash: TERMS_CONTENT_SHA256,
+            cancellationMethod: CANCELLATION_METHOD,
           };
         },
         primitives.logger,
+        primitives.now,
+      ),
+    createRecordRenewalConsentUseCase: () =>
+      new RecordRenewalConsentUseCase(
+        repositories.createRenewalConsentRecordRepository(),
+      ),
+    createPruneRenewalConsentsUseCase: () =>
+      new PruneRenewalConsentsUseCase(
+        repositories.createRenewalConsentRecordRepository(),
         primitives.now,
       ),
     createCountAvailableQuestionsUseCase: () =>

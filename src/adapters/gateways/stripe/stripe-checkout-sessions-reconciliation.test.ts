@@ -4,6 +4,7 @@ import type {
   StripeClient,
 } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 
 type TestCheckoutSession = StripeCheckoutSession & {
@@ -16,19 +17,34 @@ function createReconciliationStripeMock(input: {
   listedAfterCreate: TestCheckoutSession[];
   expireError?: unknown;
 }) {
+  let createdMetadata: Record<string, string> | undefined;
   let listCallCount = 0;
   const sessionsList = vi.fn(async () => {
     listCallCount += 1;
     return {
-      data: listCallCount === 1 ? [] : input.listedAfterCreate,
+      data:
+        listCallCount === 1
+          ? []
+          : input.listedAfterCreate.map((session) => ({
+              ...session,
+              metadata: session.metadata ?? createdMetadata,
+            })),
     };
   });
-  const sessionsRetrieve = vi.fn(async () => input.createdSession);
+  const sessionsRetrieve = vi.fn(async () => ({
+    ...input.createdSession,
+    metadata: input.createdSession.metadata ?? createdMetadata,
+  }));
   const sessionsExpire = vi.fn(async () => {
     if (input.expireError) throw input.expireError;
     return { ...input.createdSession, status: 'expired' as const, url: null };
   });
-  const sessionsCreate = vi.fn(async () => input.createdSession);
+  const sessionsCreate = vi.fn(
+    async (params: { metadata?: Record<string, string> }) => {
+      createdMetadata = params.metadata;
+      return { ...input.createdSession, metadata: params.metadata };
+    },
+  );
 
   const stripe = {
     customers: { create: vi.fn(async () => ({ id: 'customer-id-1' })) },
@@ -63,7 +79,7 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
   const input = {
     userId: appUserId,
     externalCustomerId: 'customer-existing-123',
-    plan: 'monthly' as const,
+    ...createTestRenewalTerms('monthly'),
     successUrl: 'https://app/success',
     cancelUrl: 'https://app/cancel',
   };
