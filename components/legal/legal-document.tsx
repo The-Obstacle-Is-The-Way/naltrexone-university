@@ -14,7 +14,7 @@ export type LegalDocumentContent = {
 };
 
 const contentLinkClass =
-  'rounded-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+  'rounded-sm font-medium text-foreground hover:underline ring-focus';
 
 function LegalLink({
   href,
@@ -22,19 +22,24 @@ function LegalLink({
   node: _node,
   ...props
 }: ComponentPropsWithoutRef<'a'> & { node?: unknown }) {
-  if (href?.startsWith('/')) {
+  const target = href ?? '';
+
+  // Same-page anchors and mailto: stay in this tab. A single leading slash is
+  // an app route; `//host` is protocol-relative, i.e. external despite the
+  // leading slash, and must never reach next/link.
+  if (target.startsWith('#') || /^mailto:/i.test(target)) {
     return (
-      <Link href={href} className={contentLinkClass}>
+      <a {...props} href={target} className={contentLinkClass}>
         {children}
-      </Link>
+      </a>
     );
   }
 
-  if (href?.startsWith('mailto:')) {
+  if (target.startsWith('/') && !target.startsWith('//')) {
     return (
-      <a {...props} href={href} className={contentLinkClass}>
+      <Link href={target} className={contentLinkClass}>
         {children}
-      </a>
+      </Link>
     );
   }
 
@@ -94,16 +99,19 @@ const legalMarkdownComponents: Components = {
   },
   table({ children }) {
     return (
-      <section
-        aria-label="Scrollable table"
+      // Focusable but deliberately unlabelled and role-less: axe
+      // scrollable-region-focusable only requires keyboard reachability, while
+      // a `region` role would make every table on the page a landmark sharing
+      // one accessible name — trading this violation for axe landmark-unique.
+      <div
         /* biome-ignore lint/a11y/noNoninteractiveTabindex: Horizontally scrollable content must be keyboard-reachable (WCAG 2.1.1 / axe scrollable-region-focusable). */
         tabIndex={0}
-        className="mt-6 overflow-x-auto rounded-xl border border-border focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+        className="mt-6 overflow-x-auto rounded-xl border border-border ring-focus"
       >
         <table className="w-full border-collapse text-left text-sm">
           {children}
         </table>
-      </section>
+      </div>
     );
   },
   thead({ children }) {

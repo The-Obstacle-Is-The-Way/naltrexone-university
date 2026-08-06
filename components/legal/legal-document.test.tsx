@@ -79,6 +79,33 @@ describe('LegalDocument', () => {
     expect(doc.querySelector('script')).toBeNull();
   });
 
+  it('keeps same-page anchors in this tab and treats protocol-relative hrefs as external', () => {
+    const html = renderToStaticMarkup(
+      <LegalDocument
+        content={{
+          title: 'Policy title',
+          effectiveDate: 'August 5, 2026',
+          bodyMarkdown: [
+            '[Retention](#retention)',
+            '',
+            '[Protocol relative](//evil.example.com/steal)',
+          ].join('\n'),
+        }}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    const anchor = findAnchorByHref(doc, '#retention');
+    expect(anchor).not.toBeNull();
+    expect(anchor?.hasAttribute('target')).toBe(false);
+
+    // A leading `//` is protocol-relative — external despite the leading
+    // slash, and must never be handed to next/link as an app route.
+    const protocolRelative = findAnchorByHref(doc, '//evil.example.com/steal');
+    expect(protocolRelative?.getAttribute('target')).toBe('_blank');
+    expect(protocolRelative?.getAttribute('rel')).toBe('noreferrer noopener');
+  });
+
   it('renders autolinked email addresses as same-tab mailto links', () => {
     const html = renderToStaticMarkup(
       <LegalDocument
@@ -119,10 +146,13 @@ describe('LegalDocument', () => {
     );
     const doc = parseHtml(html);
 
-    const region = doc.querySelector('section[aria-label="Scrollable table"]');
+    // The scroll container is the table's wrapper: focusable, but with no role
+    // or accessible name, so repeated tables don't collide as landmarks.
+    const region = doc.querySelector('table')?.parentElement;
     expect(region).not.toBeNull();
     expect(region?.getAttribute('tabindex')).toBe('0');
-    expect(region?.querySelector('table')).not.toBeNull();
+    expect(region?.hasAttribute('role')).toBe(false);
+    expect(region?.hasAttribute('aria-label')).toBe(false);
 
     // The border-suppression variant encodes behavior: `last:` would strip the
     // bottom border from every row's last cell, not just the last row's cells.
