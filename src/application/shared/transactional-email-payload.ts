@@ -1,4 +1,5 @@
-import { createHash } from 'node:crypto';
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationError } from '@/src/application/errors';
 import type { TransactionalEmailPayload } from '@/src/application/ports';
 import type { NewRenewalNoticeDelivery } from '@/src/domain/entities';
@@ -16,7 +17,7 @@ const PAYLOAD_KEYS = [
 ] as const;
 
 function hashPayload(snapshot: string): string {
-  return createHash('sha256').update(snapshot).digest('hex');
+  return bytesToHex(sha256(new TextEncoder().encode(snapshot)));
 }
 
 function isTransactionalEmailPayload(
