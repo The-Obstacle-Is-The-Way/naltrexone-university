@@ -60,6 +60,18 @@ const KNOWN_LEGACY_MIGRATION_HASH_DRIFTS: readonly KnownLegacyMigrationHashDrift
         '15124dc7eab8b5ab3e239d13ee1011ea515b96567771270658b47de84b9faf3c',
       repairMigrationTag: '0028_repair_attempts_selected_choice_index',
     },
+    {
+      // Preview deployment dpl_B7JHk99ojtC7SajwPDFCtUxjeWE4 applied the
+      // first 0033 before review regenerated it with an existing-row backfill.
+      // Generated 0034 removes the temporary default so both paths converge.
+      tag: '0033_small_wrecker',
+      when: 1786051636812,
+      expectedHash:
+        'd465645a2e64ad9dbae398d8256ed02c73ec60bd4439a66480c47210b4478d2c',
+      appliedHash:
+        'd3cefbfc623b5a0c8b9b8a58555daab98ac8dde8007aa7bffb1ff6f4dddc8608',
+      repairMigrationTag: '0034_remove_setup_cancellation_default',
+    },
   ] as const;
 
 const MIGRATION_JOURNAL_ENTRIES: readonly MigrationJournalEntry[] =
