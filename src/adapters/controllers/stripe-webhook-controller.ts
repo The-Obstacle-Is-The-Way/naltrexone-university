@@ -20,6 +20,7 @@ import type {
   StripeCustomerRepository,
   StripeEventRepository,
   SubscriptionRepository,
+  TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/ports/repositories';
 import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
@@ -74,25 +75,22 @@ const PROCESSED_STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
 const TRIAL_PAYMENT_METHOD_SETUP_CLAIM_LEASE_MS = 5 * 60 * 1000;
 
 function setupSnapshotMatches(
-  operation: Awaited<
-    ReturnType<TrialPaymentMethodSetupOperationRepository['findBySessionId']>
-  >,
+  operation: TrialPaymentMethodSetupOperation,
   completion: TrialPaymentMethodSetupCompletion,
 ): boolean {
-  return Boolean(
-    operation &&
-      operation.sessionId === completion.sessionId &&
-      operation.userId === completion.userId &&
-      operation.stripeCustomerId === completion.externalCustomerId &&
-      operation.stripeSubscriptionId === completion.externalSubscriptionId &&
-      operation.plan === completion.plan &&
-      operation.amountCents === completion.amountCents &&
-      operation.currency === completion.currency &&
-      operation.frequency === completion.frequency &&
-      operation.trialEndsAt.getTime() === completion.trialEndsAt.getTime() &&
-      operation.disclosureVersion === completion.disclosureVersion &&
-      operation.termsVersion === completion.termsVersion &&
-      operation.termsHash === completion.termsHash,
+  return (
+    operation.sessionId === completion.sessionId &&
+    operation.userId === completion.userId &&
+    operation.stripeCustomerId === completion.externalCustomerId &&
+    operation.stripeSubscriptionId === completion.externalSubscriptionId &&
+    operation.plan === completion.plan &&
+    operation.amountCents === completion.amountCents &&
+    operation.currency === completion.currency &&
+    operation.frequency === completion.frequency &&
+    operation.trialEndsAt.getTime() === completion.trialEndsAt.getTime() &&
+    operation.disclosureVersion === completion.disclosureVersion &&
+    operation.termsVersion === completion.termsVersion &&
+    operation.termsHash === completion.termsHash
   );
 }
 
@@ -117,16 +115,16 @@ async function processTrialPaymentMethodSetupWebhook(
       const operation = await trialPaymentMethodSetupOperations.findBySessionId(
         completion.sessionId,
       );
-      if (!setupSnapshotMatches(operation, completion)) {
-        throw new ApplicationError(
-          'CONFLICT',
-          'Trial payment-method completion does not match its pending consent snapshot',
-        );
-      }
       if (!operation) {
         throw new ApplicationError(
           'CONFLICT',
           'Trial payment-method setup operation is missing',
+        );
+      }
+      if (!setupSnapshotMatches(operation, completion)) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Trial payment-method completion does not match its pending consent snapshot',
         );
       }
       if (operation.status === 'completed') {
@@ -162,14 +160,14 @@ async function processTrialPaymentMethodSetupWebhook(
         );
       }
 
-      const result = await trialPaymentMethodSetupOperations.claim(
-        completion.sessionId,
+      const result = await trialPaymentMethodSetupOperations.claim({
+        sessionId: completion.sessionId,
         claimId,
         claimedAt,
-        new Date(
+        staleBefore: new Date(
           claimedAt.getTime() - TRIAL_PAYMENT_METHOD_SETUP_CLAIM_LEASE_MS,
         ),
-      );
+      });
       if (!result) {
         throw new ApplicationError(
           'CONFLICT',
@@ -189,12 +187,12 @@ async function processTrialPaymentMethodSetupWebhook(
       externalCustomerId: completion.externalCustomerId,
     });
     await deps.transaction(async ({ trialPaymentMethodSetupOperations }) => {
-      await trialPaymentMethodSetupOperations.markPaymentMethodAttached(
-        completion.sessionId,
+      await trialPaymentMethodSetupOperations.markPaymentMethodAttached({
+        sessionId: completion.sessionId,
         claimId,
-        completion.stripePaymentMethodId,
-        deps.now(),
-      );
+        stripePaymentMethodId: completion.stripePaymentMethodId,
+        attachedAt: deps.now(),
+      });
     });
   } else if (
     claimed.stripePaymentMethodId !== completion.stripePaymentMethodId
@@ -212,21 +210,21 @@ async function processTrialPaymentMethodSetupWebhook(
       externalSubscriptionId: completion.externalSubscriptionId,
     });
     await deps.transaction(async ({ trialPaymentMethodSetupOperations }) => {
-      await trialPaymentMethodSetupOperations.markSubscriptionDefaultSet(
-        completion.sessionId,
+      await trialPaymentMethodSetupOperations.markSubscriptionDefaultSet({
+        sessionId: completion.sessionId,
         claimId,
-        deps.now(),
-      );
+        selectedAt: deps.now(),
+      });
     });
   }
 
   await deps.transaction(
     async ({ stripeEvents, trialPaymentMethodSetupOperations }) => {
-      await trialPaymentMethodSetupOperations.markCompleted(
-        completion.sessionId,
+      await trialPaymentMethodSetupOperations.markCompleted({
+        sessionId: completion.sessionId,
         claimId,
-        deps.now(),
-      );
+        completedAt: deps.now(),
+      });
       await stripeEvents.markProcessed(event.eventId);
     },
   );

@@ -32,31 +32,47 @@ export type TrialPaymentMethodSetupOperation =
     completedAt: Date | null;
   };
 
+export type ClaimTrialPaymentMethodSetupOperationInput = {
+  sessionId: string;
+  claimId: string;
+  claimedAt: Date;
+  staleBefore: Date;
+};
+
+export type MarkTrialPaymentMethodAttachedInput = {
+  sessionId: string;
+  claimId: string;
+  stripePaymentMethodId: string;
+  attachedAt: Date;
+};
+
+export type MarkTrialSubscriptionDefaultSetInput = {
+  sessionId: string;
+  claimId: string;
+  selectedAt: Date;
+};
+
+export type CompleteTrialPaymentMethodSetupOperationInput = {
+  sessionId: string;
+  claimId: string;
+  completedAt: Date;
+};
+
 export interface TrialPaymentMethodSetupOperationRepository {
   createPending(input: TrialPaymentMethodSetupOperationInput): Promise<void>;
   findBySessionId(
     sessionId: string,
   ): Promise<TrialPaymentMethodSetupOperation | null>;
   claim(
-    sessionId: string,
-    claimId: string,
-    claimedAt: Date,
-    staleBefore: Date,
+    input: ClaimTrialPaymentMethodSetupOperationInput,
   ): Promise<TrialPaymentMethodSetupOperation | null>;
   markPaymentMethodAttached(
-    sessionId: string,
-    claimId: string,
-    stripePaymentMethodId: string,
-    attachedAt: Date,
+    input: MarkTrialPaymentMethodAttachedInput,
   ): Promise<void>;
   markSubscriptionDefaultSet(
-    sessionId: string,
-    claimId: string,
-    selectedAt: Date,
+    input: MarkTrialSubscriptionDefaultSetInput,
   ): Promise<void>;
   markCompleted(
-    sessionId: string,
-    claimId: string,
-    completedAt: Date,
+    input: CompleteTrialPaymentMethodSetupOperationInput,
   ): Promise<void>;
 }

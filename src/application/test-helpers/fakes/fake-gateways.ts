@@ -118,7 +118,7 @@ export class FakePaymentGateway implements PaymentGateway {
     this.externalCustomerId = input.externalCustomerId;
     this.checkoutUrl = input.checkoutUrl;
     this.trialSetupSessionId = input.trialSetupSessionId ?? 'cs_setup';
-    this.trialSetupUrl = input.trialSetupUrl ?? input.checkoutUrl;
+    this.trialSetupUrl = input.trialSetupUrl ?? 'https://fake/trial-setup';
     this.portalUrl = input.portalUrl;
     this.webhookResult = input.webhookResult;
   }

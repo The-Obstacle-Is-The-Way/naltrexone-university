@@ -58,6 +58,12 @@ class ConcurrentlyCompletingStripeEventRepository extends FakeStripeEventReposit
   }
 }
 
+class LookupFailingSetupOperationRepository extends FakeTrialPaymentMethodSetupOperationRepository {
+  override async findBySessionId(): Promise<never> {
+    throw new Error('setup operation lookup failed');
+  }
+}
+
 class ThrowingPaymentGateway extends FakePaymentGateway {
   constructor(private readonly error: unknown) {
     super({
@@ -152,12 +158,13 @@ function createRollbackAwareDeps(overrides: {
           .constructor as new () => FakeSubscriptionRepository;
         const StripeCustomersCtor = base.stripeCustomers
           .constructor as new () => FakeStripeCustomerRepository;
+        const SetupOperationsCtor = base.setupOperations
+          .constructor as new () => FakeTrialPaymentMethodSetupOperationRepository;
 
         const stagingEvents = new StripeEventsCtor();
         const stagingSubscriptions = new SubscriptionsCtor();
         const stagingStripeCustomers = new StripeCustomersCtor();
-        const stagingSetupOperations =
-          new FakeTrialPaymentMethodSetupOperationRepository();
+        const stagingSetupOperations = new SetupOperationsCtor();
 
         stagingEvents.restore(base.stripeEvents.snapshot());
         stagingSubscriptions.restore(base.subscriptions.snapshot());
@@ -345,6 +352,76 @@ describe('processStripeWebhook', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
     expect(paymentGateway.trialPaymentMethodAttachInputs).toEqual([]);
     expect(paymentGateway.trialSubscriptionDefaultInputs).toEqual([]);
+  });
+
+  it('reports a missing setup operation before evaluating its snapshot', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_setup_missing',
+        type: 'checkout.session.completed',
+        trialPaymentMethodSetupCompletion: {
+          sessionId: 'cs_setup_missing',
+          userId: crypto.randomUUID(),
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-hash',
+          stripePaymentMethodId: 'pm_123',
+        },
+      },
+    });
+    const { deps } = createDeps({ paymentGateway });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Trial payment-method setup operation is missing',
+    });
+  });
+
+  it('preserves an injected setup-operation repository subclass inside staged transactions', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_setup_lookup_failure',
+        type: 'checkout.session.completed',
+        trialPaymentMethodSetupCompletion: {
+          sessionId: 'cs_setup_lookup_failure',
+          userId: crypto.randomUUID(),
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-hash',
+          stripePaymentMethodId: 'pm_123',
+        },
+      },
+    });
+    const { deps } = createRollbackAwareDeps({
+      paymentGateway,
+      setupOperations: new LookupFailingSetupOperationRepository(),
+    });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toThrow('setup operation lookup failed');
   });
 
   it('fails closed when the signed customer does not match the local user mapping', async () => {

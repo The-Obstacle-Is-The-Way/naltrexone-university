@@ -84,7 +84,24 @@ export class StripePaymentGateway implements PaymentGateway {
         'Stripe PaymentMethod API is unavailable',
       );
     }
-    await callStripeWithRetry({
+    const current = await callStripeWithRetry({
+      operation: 'payment_methods.retrieve_trial_setup',
+      fn: () => paymentMethods.retrieve(input.externalPaymentMethodId),
+      logger: this.deps.logger,
+    });
+    const currentCustomerId =
+      typeof current.customer === 'string'
+        ? current.customer
+        : current.customer?.id;
+    if (currentCustomerId === input.externalCustomerId) return;
+    if (currentCustomerId) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Trial PaymentMethod is attached to a different customer',
+      );
+    }
+
+    const attached = await callStripeWithRetry({
       operation: 'payment_methods.attach_trial_setup',
       fn: () =>
         paymentMethods.attach(
@@ -96,6 +113,16 @@ export class StripePaymentGateway implements PaymentGateway {
         ),
       logger: this.deps.logger,
     });
+    const attachedCustomerId =
+      typeof attached.customer === 'string'
+        ? attached.customer
+        : attached.customer?.id;
+    if (attachedCustomerId !== input.externalCustomerId) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe did not confirm the verified PaymentMethod customer',
+      );
+    }
   }
 
   async setTrialSubscriptionDefaultPaymentMethod(

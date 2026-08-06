@@ -75,6 +75,37 @@ describe('FakePaymentGateway', () => {
       });
       expect(gateway.trialSetupInputs).toEqual([input]);
     });
+
+    it('uses a setup-specific fallback URL when none is configured', async () => {
+      const gateway = new FakePaymentGateway({
+        externalCustomerId: 'cus_test',
+        checkoutUrl: 'https://fake/checkout',
+        portalUrl: 'https://fake/portal',
+        webhookResult: {
+          eventId: 'evt_1',
+          type: 'checkout.session.completed',
+        },
+      });
+
+      await expect(
+        gateway.createTrialPaymentMethodSetupSession({
+          userId: 'user_1',
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-hash',
+          disclosureSnapshot: 'Exact disclosure.',
+          successUrl: 'https://app/success',
+          cancelUrl: 'https://app/cancel',
+        }),
+      ).resolves.toMatchObject({ url: 'https://fake/trial-setup' });
+    });
   });
 
   describe('createPortalSession', () => {

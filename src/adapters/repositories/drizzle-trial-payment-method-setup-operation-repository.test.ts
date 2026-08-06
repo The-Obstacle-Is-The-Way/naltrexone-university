@@ -112,12 +112,12 @@ describe('DrizzleTrialPaymentMethodSetupOperationRepository', () => {
     );
 
     await expect(
-      repository.claim(
-        'cs_setup_123',
-        'claim_1',
+      repository.claim({
+        sessionId: 'cs_setup_123',
+        claimId: 'claim_1',
         claimedAt,
-        new Date('2026-08-06T11:55:00Z'),
-      ),
+        staleBefore: new Date('2026-08-06T11:55:00Z'),
+      }),
     ).resolves.toEqual(claimedRow);
     expect(updateSet).toHaveBeenCalledWith(
       expect.objectContaining({

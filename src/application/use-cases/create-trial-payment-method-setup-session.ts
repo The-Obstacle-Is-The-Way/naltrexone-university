@@ -116,7 +116,10 @@ export class CreateTrialPaymentMethodSetupSessionUseCase {
     } catch (error) {
       try {
         this.logger.error(
-          { sessionId: session.sessionId },
+          {
+            sessionId: session.sessionId,
+            errorCode: error instanceof ApplicationError ? error.code : null,
+          },
           'Failed to persist trial payment-method setup operation',
         );
       } catch {

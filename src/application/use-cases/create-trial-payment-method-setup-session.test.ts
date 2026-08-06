@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
+import type { TrialPaymentMethodSetupOperationInput } from '@/src/application/ports/repositories';
 import {
   FakeLogger,
   FakePaymentGateway,
@@ -11,6 +13,17 @@ import { CreateTrialPaymentMethodSetupSessionUseCase } from './create-trial-paym
 
 const userId = 'user_1';
 const trialEndsAt = new Date('2026-08-13T12:00:00Z');
+
+class FailingSetupOperationRepository extends FakeTrialPaymentMethodSetupOperationRepository {
+  override async createPending(
+    _input: TrialPaymentMethodSetupOperationInput,
+  ): Promise<never> {
+    throw new ApplicationError(
+      'CONFLICT',
+      'raw provider detail user@example.com',
+    );
+  }
+}
 
 function createPaymentGateway() {
   return new FakePaymentGateway({
@@ -26,6 +39,8 @@ function createPaymentGateway() {
 async function createUseCase(input?: {
   status?: 'inTrial' | 'active';
   currentPeriodEnd?: Date;
+  operations?: FakeTrialPaymentMethodSetupOperationRepository;
+  logger?: FakeLogger;
 }) {
   const subscriptions = new FakeSubscriptionRepository([
     {
@@ -40,7 +55,9 @@ async function createUseCase(input?: {
   ]);
   const stripeCustomers = new FakeStripeCustomerRepository();
   await stripeCustomers.insert(userId, 'cus_123');
-  const operations = new FakeTrialPaymentMethodSetupOperationRepository();
+  const operations =
+    input?.operations ?? new FakeTrialPaymentMethodSetupOperationRepository();
+  const logger = input?.logger ?? new FakeLogger();
   const payments = createPaymentGateway();
   const useCase = new CreateTrialPaymentMethodSetupSessionUseCase(
     subscriptions,
@@ -57,11 +74,11 @@ async function createUseCase(input?: {
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
     }),
-    new FakeLogger(),
+    logger,
     () => new Date('2026-08-06T12:00:00Z'),
   );
 
-  return { operations, payments, subscriptions, useCase };
+  return { logger, operations, payments, subscriptions, useCase };
 }
 
 describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
@@ -118,18 +135,43 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
       cancelUrl: 'https://app.example.com/cancel',
     };
 
-    await useCase.execute(input);
-    await useCase.execute(input);
+    const first = await useCase.execute(input);
+    const replay = await useCase.execute(input);
 
-    await expect(operations.findBySessionId('cs_setup_123')).resolves.toEqual(
-      expect.objectContaining({ status: 'pending' }),
-    );
+    expect(first).toEqual({ url: 'https://stripe/setup' });
+    expect(replay).toEqual(first);
+
+    await expect(operations.findBySessionId('cs_setup_123')).resolves.toEqual({
+      sessionId: 'cs_setup_123',
+      userId,
+      stripeCustomerId: 'cus_123',
+      stripeSubscriptionId: 'sub_123',
+      plan: 'monthly',
+      amountCents: 2900,
+      currency: 'usd',
+      frequency: 'month',
+      trialEndsAt,
+      disclosureSnapshot: 'Exact renewal disclosure.',
+      disclosureVersion: '2026-08-05',
+      termsVersion: '2026-08-05',
+      termsHash: 'terms-hash',
+      status: 'pending',
+      claimId: null,
+      claimedAt: null,
+      stripePaymentMethodId: null,
+      paymentMethodAttachedAt: null,
+      subscriptionDefaultSetAt: null,
+      completedAt: null,
+    });
   });
 
   it('fails closed when the local subscription is not an unexpired trial', async () => {
     const active = await createUseCase({ status: 'active' });
     const expired = await createUseCase({
       currentPeriodEnd: new Date('2026-08-06T11:59:59Z'),
+    });
+    const expiresNow = await createUseCase({
+      currentPeriodEnd: new Date('2026-08-06T12:00:00Z'),
     });
     const input = {
       userId,
@@ -143,7 +185,35 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     await expect(expired.useCase.execute(input)).rejects.toMatchObject({
       code: 'CONFLICT',
     });
+    await expect(expiresNow.useCase.execute(input)).rejects.toMatchObject({
+      code: 'CONFLICT',
+    });
     expect(active.payments.trialSetupInputs).toEqual([]);
     expect(expired.payments.trialSetupInputs).toEqual([]);
+    expect(expiresNow.payments.trialSetupInputs).toEqual([]);
+  });
+
+  it('logs only a safe error code when operation persistence fails', async () => {
+    const operations = new FailingSetupOperationRepository();
+    const logger = new FakeLogger();
+    const { useCase } = await createUseCase({ operations, logger });
+
+    await expect(
+      useCase.execute({
+        userId,
+        successUrl: 'https://app.example.com/success',
+        cancelUrl: 'https://app.example.com/cancel',
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    expect(logger.errorCalls).toEqual([
+      {
+        context: { sessionId: 'cs_setup_123', errorCode: 'CONFLICT' },
+        msg: 'Failed to persist trial payment-method setup operation',
+      },
+    ]);
+    expect(JSON.stringify(logger.errorCalls)).not.toContain(
+      'raw provider detail user@example.com',
+    );
   });
 });

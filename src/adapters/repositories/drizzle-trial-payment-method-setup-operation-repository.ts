@@ -3,6 +3,10 @@ import { trialPaymentMethodSetupOperations } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
 import type {
+  ClaimTrialPaymentMethodSetupOperationInput,
+  CompleteTrialPaymentMethodSetupOperationInput,
+  MarkTrialPaymentMethodAttachedInput,
+  MarkTrialSubscriptionDefaultSetInput,
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationInput,
   TrialPaymentMethodSetupOperationRepository,
@@ -114,12 +118,12 @@ export class DrizzleTrialPaymentMethodSetupOperationRepository
     return row ? toOperation(row) : null;
   }
 
-  async claim(
-    sessionId: string,
-    claimId: string,
-    claimedAt: Date,
-    staleBefore: Date,
-  ): Promise<TrialPaymentMethodSetupOperation | null> {
+  async claim({
+    sessionId,
+    claimId,
+    claimedAt,
+    staleBefore,
+  }: ClaimTrialPaymentMethodSetupOperationInput): Promise<TrialPaymentMethodSetupOperation | null> {
     const [row] = await this.db
       .update(trialPaymentMethodSetupOperations)
       .set({
@@ -144,12 +148,12 @@ export class DrizzleTrialPaymentMethodSetupOperationRepository
     return row ? toOperation(row) : null;
   }
 
-  async markPaymentMethodAttached(
-    sessionId: string,
-    claimId: string,
-    stripePaymentMethodId: string,
-    attachedAt: Date,
-  ): Promise<void> {
+  async markPaymentMethodAttached({
+    sessionId,
+    claimId,
+    stripePaymentMethodId,
+    attachedAt,
+  }: MarkTrialPaymentMethodAttachedInput): Promise<void> {
     await this.updateClaimedOperation(sessionId, claimId, {
       stripePaymentMethodId,
       paymentMethodAttachedAt: attachedAt,
@@ -157,22 +161,22 @@ export class DrizzleTrialPaymentMethodSetupOperationRepository
     });
   }
 
-  async markSubscriptionDefaultSet(
-    sessionId: string,
-    claimId: string,
-    selectedAt: Date,
-  ): Promise<void> {
+  async markSubscriptionDefaultSet({
+    sessionId,
+    claimId,
+    selectedAt,
+  }: MarkTrialSubscriptionDefaultSetInput): Promise<void> {
     await this.updateClaimedOperation(sessionId, claimId, {
       subscriptionDefaultSetAt: selectedAt,
       updatedAt: selectedAt,
     });
   }
 
-  async markCompleted(
-    sessionId: string,
-    claimId: string,
-    completedAt: Date,
-  ): Promise<void> {
+  async markCompleted({
+    sessionId,
+    claimId,
+    completedAt,
+  }: CompleteTrialPaymentMethodSetupOperationInput): Promise<void> {
     await this.updateClaimedOperation(sessionId, claimId, {
       status: 'completed',
       completedAt,

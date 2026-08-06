@@ -69,6 +69,11 @@ export type StripeSetupIntent = {
   payment_method?: string | { id: string } | null;
 };
 
+export type StripePaymentMethod = {
+  id: string;
+  customer?: string | { id: string } | null;
+};
+
 export type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
 
 export type StripeCheckoutSessionLineItem = {
@@ -170,11 +175,12 @@ export type StripeClient = {
     retrieve(setupIntentId: string): Promise<StripeSetupIntent>;
   };
   paymentMethods?: {
+    retrieve(paymentMethodId: string): Promise<StripePaymentMethod>;
     attach(
       paymentMethodId: string,
       params: { customer: string },
       options?: StripeRequestOptions,
-    ): Promise<{ id: string }>;
+    ): Promise<StripePaymentMethod>;
   };
   billingPortal: {
     sessions: {

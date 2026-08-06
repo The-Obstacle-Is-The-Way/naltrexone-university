@@ -52,8 +52,18 @@ describe('FakeTrialPaymentMethodSetupOperationRepository', () => {
     const now = new Date('2026-08-06T12:00:00Z');
 
     const [first, second] = await Promise.all([
-      repository.claim('cs_setup_123', 'claim_1', now, new Date(0)),
-      repository.claim('cs_setup_123', 'claim_2', now, new Date(0)),
+      repository.claim({
+        sessionId: 'cs_setup_123',
+        claimId: 'claim_1',
+        claimedAt: now,
+        staleBefore: new Date(0),
+      }),
+      repository.claim({
+        sessionId: 'cs_setup_123',
+        claimId: 'claim_2',
+        claimedAt: now,
+        staleBefore: new Date(0),
+      }),
     ]);
 
     expect([first, second].filter(Boolean)).toHaveLength(1);
@@ -65,25 +75,25 @@ describe('FakeTrialPaymentMethodSetupOperationRepository', () => {
   it('reclaims an expired processing lease without erasing per-write progress', async () => {
     const repository = new FakeTrialPaymentMethodSetupOperationRepository();
     await repository.createPending(pendingInput);
-    await repository.claim(
-      'cs_setup_123',
-      'claim_1',
-      new Date('2026-08-06T10:00:00Z'),
-      new Date(0),
-    );
-    await repository.markPaymentMethodAttached(
-      'cs_setup_123',
-      'claim_1',
-      'pm_123',
-      new Date('2026-08-06T10:00:01Z'),
-    );
+    await repository.claim({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_1',
+      claimedAt: new Date('2026-08-06T10:00:00Z'),
+      staleBefore: new Date(0),
+    });
+    await repository.markPaymentMethodAttached({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_1',
+      stripePaymentMethodId: 'pm_123',
+      attachedAt: new Date('2026-08-06T10:00:01Z'),
+    });
 
-    const reclaimed = await repository.claim(
-      'cs_setup_123',
-      'claim_2',
-      new Date('2026-08-06T11:00:00Z'),
-      new Date('2026-08-06T10:55:00Z'),
-    );
+    const reclaimed = await repository.claim({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_2',
+      claimedAt: new Date('2026-08-06T11:00:00Z'),
+      staleBefore: new Date('2026-08-06T10:55:00Z'),
+    });
 
     expect(reclaimed).toEqual(
       expect.objectContaining({
@@ -99,12 +109,12 @@ describe('FakeTrialPaymentMethodSetupOperationRepository', () => {
     const repository = new FakeTrialPaymentMethodSetupOperationRepository();
     await repository.createPending(pendingInput);
     const snapshot = repository.snapshot();
-    await repository.claim(
-      'cs_setup_123',
-      'claim_1',
-      new Date('2026-08-06T10:00:00Z'),
-      new Date(0),
-    );
+    await repository.claim({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_1',
+      claimedAt: new Date('2026-08-06T10:00:00Z'),
+      staleBefore: new Date(0),
+    });
 
     repository.restore(snapshot);
 

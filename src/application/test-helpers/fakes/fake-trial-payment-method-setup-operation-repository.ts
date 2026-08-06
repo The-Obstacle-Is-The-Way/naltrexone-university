@@ -1,5 +1,9 @@
 import { ApplicationError } from '@/src/application/errors';
 import type {
+  ClaimTrialPaymentMethodSetupOperationInput,
+  CompleteTrialPaymentMethodSetupOperationInput,
+  MarkTrialPaymentMethodAttachedInput,
+  MarkTrialSubscriptionDefaultSetInput,
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationInput,
   TrialPaymentMethodSetupOperationRepository,
@@ -93,12 +97,12 @@ export class FakeTrialPaymentMethodSetupOperationRepository
     return operation ? cloneOperation(operation) : null;
   }
 
-  async claim(
-    sessionId: string,
-    claimId: string,
-    claimedAt: Date,
-    staleBefore: Date,
-  ): Promise<TrialPaymentMethodSetupOperation | null> {
+  async claim({
+    sessionId,
+    claimId,
+    claimedAt,
+    staleBefore,
+  }: ClaimTrialPaymentMethodSetupOperationInput): Promise<TrialPaymentMethodSetupOperation | null> {
     const operation = this.bySessionId.get(sessionId);
     if (!operation || operation.status === 'completed') return null;
     if (
@@ -119,12 +123,12 @@ export class FakeTrialPaymentMethodSetupOperationRepository
     return cloneOperation(claimed);
   }
 
-  async markPaymentMethodAttached(
-    sessionId: string,
-    claimId: string,
-    stripePaymentMethodId: string,
-    attachedAt: Date,
-  ): Promise<void> {
+  async markPaymentMethodAttached({
+    sessionId,
+    claimId,
+    stripePaymentMethodId,
+    attachedAt,
+  }: MarkTrialPaymentMethodAttachedInput): Promise<void> {
     const operation = this.requireClaim(sessionId, claimId);
     this.bySessionId.set(sessionId, {
       ...operation,
@@ -133,11 +137,11 @@ export class FakeTrialPaymentMethodSetupOperationRepository
     });
   }
 
-  async markSubscriptionDefaultSet(
-    sessionId: string,
-    claimId: string,
-    selectedAt: Date,
-  ): Promise<void> {
+  async markSubscriptionDefaultSet({
+    sessionId,
+    claimId,
+    selectedAt,
+  }: MarkTrialSubscriptionDefaultSetInput): Promise<void> {
     const operation = this.requireClaim(sessionId, claimId);
     this.bySessionId.set(sessionId, {
       ...operation,
@@ -145,11 +149,11 @@ export class FakeTrialPaymentMethodSetupOperationRepository
     });
   }
 
-  async markCompleted(
-    sessionId: string,
-    claimId: string,
-    completedAt: Date,
-  ): Promise<void> {
+  async markCompleted({
+    sessionId,
+    claimId,
+    completedAt,
+  }: CompleteTrialPaymentMethodSetupOperationInput): Promise<void> {
     const operation = this.requireClaim(sessionId, claimId);
     this.bySessionId.set(sessionId, {
       ...operation,

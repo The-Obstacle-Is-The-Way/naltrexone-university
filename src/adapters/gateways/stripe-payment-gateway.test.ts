@@ -176,11 +176,15 @@ function createStripeMock({
 describe('StripePaymentGateway', () => {
   it('attaches a trial payment method and selects it with Session-derived idempotency keys', async () => {
     const base = createStripeMock({ withSubscriptions: true });
-    const attach = vi.fn(async () => ({ id: 'pm_123' }));
+    const retrieve = vi.fn(async () => ({ id: 'pm_123', customer: null }));
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_123',
+    }));
     const update = vi.fn(async () => ({}));
     const stripe: StripeClient = {
       ...base.stripe,
-      paymentMethods: { attach },
+      paymentMethods: { retrieve, attach },
       subscriptions: { ...base.stripe.subscriptions, update },
     };
     const gateway = createGateway(stripe);
@@ -201,11 +205,83 @@ describe('StripePaymentGateway', () => {
       { customer: 'cus_123' },
       { idempotencyKey: 'trial_setup:cs_setup_123:attach_payment_method' },
     );
+    expect(retrieve).toHaveBeenCalledWith('pm_123');
     expect(update).toHaveBeenCalledWith(
       'sub_123',
       { default_payment_method: 'pm_123' },
       { idempotencyKey: 'trial_setup:cs_setup_123:set_subscription_default' },
     );
+  });
+
+  it('reconciles an already-attached payment method without issuing a second attach', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const retrieve = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_123',
+    }));
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_123',
+    }));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: { retrieve, attach },
+    };
+
+    await createGateway(stripe).attachTrialPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalCustomerId: 'cus_123',
+    });
+
+    expect(retrieve).toHaveBeenCalledWith('pm_123');
+    expect(attach).not.toHaveBeenCalled();
+  });
+
+  it('rejects an attachment response that is not bound to the verified customer', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: {
+        retrieve: vi.fn(async () => ({ id: 'pm_123', customer: null })),
+        attach: vi.fn(async () => ({ id: 'pm_123', customer: 'cus_other' })),
+      },
+    };
+
+    await expect(
+      createGateway(stripe).attachTrialPaymentMethod({
+        sessionId: 'cs_setup_123',
+        externalPaymentMethodId: 'pm_123',
+        externalCustomerId: 'cus_123',
+      }),
+    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+  });
+
+  it('rejects a payment method already attached to another customer', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_123',
+    }));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: {
+        retrieve: vi.fn(async () => ({
+          id: 'pm_123',
+          customer: 'cus_other',
+        })),
+        attach,
+      },
+    };
+
+    await expect(
+      createGateway(stripe).attachTrialPaymentMethod({
+        sessionId: 'cs_setup_123',
+        externalPaymentMethodId: 'pm_123',
+        externalCustomerId: 'cus_123',
+      }),
+    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+    expect(attach).not.toHaveBeenCalled();
   });
 
   it('creates a Stripe customer with the correct Stripe parameters', async () => {

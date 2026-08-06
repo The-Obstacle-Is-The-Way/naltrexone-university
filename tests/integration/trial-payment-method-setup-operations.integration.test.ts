@@ -44,35 +44,35 @@ describe('trial payment-method setup operation persistence', () => {
 
     const claimedAt = new Date('2026-08-06T12:00:00Z');
     const [first, second] = await Promise.all([
-      firstRepository.claim(
-        'cs_setup_concurrent',
-        'claim_1',
+      firstRepository.claim({
+        sessionId: 'cs_setup_concurrent',
+        claimId: 'claim_1',
         claimedAt,
-        new Date(0),
-      ),
-      secondRepository.claim(
-        'cs_setup_concurrent',
-        'claim_2',
+        staleBefore: new Date(0),
+      }),
+      secondRepository.claim({
+        sessionId: 'cs_setup_concurrent',
+        claimId: 'claim_2',
         claimedAt,
-        new Date(0),
-      ),
+        staleBefore: new Date(0),
+      }),
     ]);
     const winner = first ?? second;
     expect([first, second].filter(Boolean)).toHaveLength(1);
     if (!winner?.claimId) throw new Error('Expected one worker claim');
 
-    await firstRepository.markPaymentMethodAttached(
-      'cs_setup_concurrent',
-      winner.claimId,
-      'pm_123',
-      new Date('2026-08-06T12:00:01Z'),
-    );
-    const recovered = await secondRepository.claim(
-      'cs_setup_concurrent',
-      'claim_recovery',
-      new Date('2026-08-06T13:00:00Z'),
-      new Date('2026-08-06T12:55:00Z'),
-    );
+    await firstRepository.markPaymentMethodAttached({
+      sessionId: 'cs_setup_concurrent',
+      claimId: winner.claimId,
+      stripePaymentMethodId: 'pm_123',
+      attachedAt: new Date('2026-08-06T12:00:01Z'),
+    });
+    const recovered = await secondRepository.claim({
+      sessionId: 'cs_setup_concurrent',
+      claimId: 'claim_recovery',
+      claimedAt: new Date('2026-08-06T13:00:00Z'),
+      staleBefore: new Date('2026-08-06T12:55:00Z'),
+    });
 
     expect(recovered).toEqual(
       expect.objectContaining({
@@ -82,5 +82,34 @@ describe('trial payment-method setup operation persistence', () => {
         subscriptionDefaultSetAt: null,
       }),
     );
+
+    await expect(
+      firstRepository.markSubscriptionDefaultSet({
+        sessionId: 'cs_setup_concurrent',
+        claimId: winner.claimId,
+        selectedAt: new Date('2026-08-06T13:00:01Z'),
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await secondRepository.markSubscriptionDefaultSet({
+      sessionId: 'cs_setup_concurrent',
+      claimId: 'claim_recovery',
+      selectedAt: new Date('2026-08-06T13:00:01Z'),
+    });
+    await expect(
+      firstRepository.markCompleted({
+        sessionId: 'cs_setup_concurrent',
+        claimId: winner.claimId,
+        completedAt: new Date('2026-08-06T13:00:02Z'),
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    await expect(
+      secondRepository.findBySessionId('cs_setup_concurrent'),
+    ).resolves.toMatchObject({
+      status: 'processing',
+      claimId: 'claim_recovery',
+      subscriptionDefaultSetAt: new Date('2026-08-06T13:00:01Z'),
+      completedAt: null,
+    });
   });
 });
