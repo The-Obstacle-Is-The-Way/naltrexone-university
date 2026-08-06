@@ -153,6 +153,47 @@ describe('LegalDocument', () => {
     expect(mailtoLink?.hasAttribute('node')).toBe(false);
   });
 
+  it('normalizes a case-insensitive mailto scheme before sanitization', () => {
+    const html = renderToStaticMarkup(
+      <LegalDocument
+        content={{
+          title: 'Policy title',
+          effectiveDate: 'August 5, 2026',
+          bodyMarkdown: '[Email support](MAILTO:support@addictionboards.com)',
+        }}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    const mailtoLink = findAnchorByHref(
+      doc,
+      'mailto:support@addictionboards.com',
+    );
+    expect(mailtoLink).not.toBeNull();
+    expect(mailtoLink?.hasAttribute('target')).toBe(false);
+    expect(mailtoLink?.hasAttribute('rel')).toBe(false);
+  });
+
+  it('keeps empty and relative same-origin links in this tab', () => {
+    const html = renderToStaticMarkup(
+      <LegalDocument
+        content={{
+          title: 'Policy title',
+          effectiveDate: 'August 5, 2026',
+          bodyMarkdown: ['[Empty]()', '', '[Relative](terms)'].join('\n'),
+        }}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    for (const href of ['', 'terms']) {
+      const link = findAnchorByHref(doc, href);
+      expect(link).not.toBeNull();
+      expect(link?.hasAttribute('target')).toBe(false);
+      expect(link?.hasAttribute('rel')).toBe(false);
+    }
+  });
+
   it('exposes overflowing tables as keyboard-focusable regions', () => {
     const html = renderToStaticMarkup(
       <LegalDocument
@@ -206,6 +247,8 @@ describe('LegalDocument', () => {
 
     const unsafeLink = findElementByText<HTMLAnchorElement>(doc, 'a', 'Unsafe');
     expect(unsafeLink).not.toBeNull();
-    expect(unsafeLink?.getAttribute('href') ?? '').not.toMatch(/^javascript:/i);
+    expect(unsafeLink?.hasAttribute('href')).toBe(false);
+    expect(unsafeLink?.hasAttribute('target')).toBe(false);
+    expect(unsafeLink?.hasAttribute('rel')).toBe(false);
   });
 });

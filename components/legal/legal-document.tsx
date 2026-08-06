@@ -16,18 +16,66 @@ export type LegalDocumentContent = {
 const contentLinkClass =
   'rounded-sm font-medium text-foreground hover:underline ring-focus';
 
+type HastNode = {
+  type: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+};
+
+const SAFE_REMOTE_SCHEME = /^(https?|ircs?|mailto|xmpp)$/i;
+const URI_SCHEME = /^[a-z][a-z\d+.-]*:/i;
+
+function rehypeNormalizeSafeHrefSchemes() {
+  return (tree: HastNode) => {
+    function visit(node: HastNode): void {
+      if (
+        node.type === 'element' &&
+        node.tagName === 'a' &&
+        typeof node.properties?.href === 'string'
+      ) {
+        const href = node.properties.href;
+        const colonIndex = href.indexOf(':');
+        const scheme = colonIndex < 0 ? '' : href.slice(0, colonIndex);
+
+        // hast-util-sanitize compares protocol names case-sensitively even
+        // though URI schemes are case-insensitive. Normalize only schemes its
+        // default schema already allows; unsafe schemes remain untouched and
+        // are removed by rehype-sanitize.
+        if (SAFE_REMOTE_SCHEME.test(scheme)) {
+          node.properties.href = `${scheme.toLowerCase()}${href.slice(colonIndex)}`;
+        }
+      }
+
+      for (const child of node.children ?? []) {
+        visit(child);
+      }
+    }
+
+    visit(tree);
+  };
+}
+
 function LegalLink({
   href,
   children,
   node: _node,
   ...props
 }: ComponentPropsWithoutRef<'a'> & { node?: unknown }) {
-  const target = href ?? '';
+  if (href === undefined) {
+    return (
+      <a {...props} className={contentLinkClass}>
+        {children}
+      </a>
+    );
+  }
 
-  // Same-page anchors and mailto: stay in this tab. A single leading slash is
-  // an app route; `//host` is protocol-relative, i.e. external despite the
-  // leading slash, and must never reach next/link.
-  if (target.startsWith('#') || /^mailto:/i.test(target)) {
+  const target = href;
+
+  // Empty destinations, same-page anchors, and mailto: stay in this tab. A
+  // single leading slash or a relative destination is an app route; `//host`
+  // is protocol-relative, i.e. external despite the leading slash.
+  if (target === '' || target.startsWith('#') || /^mailto:/i.test(target)) {
     return (
       <a {...props} href={target} className={contentLinkClass}>
         {children}
@@ -35,11 +83,14 @@ function LegalLink({
     );
   }
 
-  if (target.startsWith('/') && !target.startsWith('//')) {
+  if (
+    (target.startsWith('/') && !target.startsWith('//')) ||
+    (!target.startsWith('//') && !URI_SCHEME.test(target))
+  ) {
     // A blanket `{...props}` spread is rejected by next/link's LinkProps under
-    // exactOptionalPropertyTypes. `title` is the only attribute rehype-sanitize
-    // lets through on an anchor besides href, so forward it explicitly rather
-    // than silently dropping what the anchor branches preserve.
+    // exactOptionalPropertyTypes. `title` is the only additional anchor
+    // attribute produced by this enabled Markdown pipeline, so forward it
+    // explicitly rather than dropping it on the app-route branch.
     return (
       <Link
         {...(props.title === undefined ? {} : { title: props.title })}
@@ -164,7 +215,7 @@ export function LegalDocument({ content }: { content: LegalDocumentContent }) {
       </header>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize]}
+        rehypePlugins={[rehypeNormalizeSafeHrefSchemes, rehypeSanitize]}
         skipHtml
         components={legalMarkdownComponents}
       >
