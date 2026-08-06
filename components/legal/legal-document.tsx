@@ -36,8 +36,16 @@ function LegalLink({
   }
 
   if (target.startsWith('/') && !target.startsWith('//')) {
+    // A blanket `{...props}` spread is rejected by next/link's LinkProps under
+    // exactOptionalPropertyTypes. `title` is the only attribute rehype-sanitize
+    // lets through on an anchor besides href, so forward it explicitly rather
+    // than silently dropping what the anchor branches preserve.
     return (
-      <Link href={target} className={contentLinkClass}>
+      <Link
+        {...(props.title === undefined ? {} : { title: props.title })}
+        href={target}
+        className={contentLinkClass}
+      >
         {children}
       </Link>
     );

@@ -106,6 +106,30 @@ describe('LegalDocument', () => {
     expect(protocolRelative?.getAttribute('rel')).toBe('noreferrer noopener');
   });
 
+  it('preserves a markdown link title on internal routes as well as external', () => {
+    const html = renderToStaticMarkup(
+      <LegalDocument
+        content={{
+          title: 'Policy title',
+          effectiveDate: 'August 5, 2026',
+          bodyMarkdown: [
+            '[Privacy Policy](/privacy "Our privacy policy")',
+            '',
+            '[External](https://example.com/x "External policy")',
+          ].join('\n'),
+        }}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    expect(findAnchorByHref(doc, '/privacy')?.getAttribute('title')).toBe(
+      'Our privacy policy',
+    );
+    expect(
+      findAnchorByHref(doc, 'https://example.com/x')?.getAttribute('title'),
+    ).toBe('External policy');
+  });
+
   it('renders autolinked email addresses as same-tab mailto links', () => {
     const html = renderToStaticMarkup(
       <LegalDocument
