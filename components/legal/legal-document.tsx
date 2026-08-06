@@ -14,7 +14,47 @@ export type LegalDocumentContent = {
 };
 
 const contentLinkClass =
-  'rounded-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]';
+  'rounded-sm font-medium text-foreground hover:underline ring-focus';
+
+type HastNode = {
+  type: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+};
+
+const SAFE_REMOTE_SCHEME = /^(https?|ircs?|mailto|xmpp)$/i;
+const URI_SCHEME = /^[a-z][a-z\d+.-]*:/i;
+
+function rehypeNormalizeSafeHrefSchemes() {
+  return (tree: HastNode) => {
+    function visit(node: HastNode): void {
+      if (
+        node.type === 'element' &&
+        node.tagName === 'a' &&
+        typeof node.properties?.href === 'string'
+      ) {
+        const href = node.properties.href;
+        const colonIndex = href.indexOf(':');
+        const scheme = colonIndex < 0 ? '' : href.slice(0, colonIndex);
+
+        // hast-util-sanitize compares protocol names case-sensitively even
+        // though URI schemes are case-insensitive. Normalize only schemes its
+        // default schema already allows; unsafe schemes remain untouched and
+        // are removed by rehype-sanitize.
+        if (SAFE_REMOTE_SCHEME.test(scheme)) {
+          node.properties.href = `${scheme.toLowerCase()}${href.slice(colonIndex)}`;
+        }
+      }
+
+      for (const child of node.children ?? []) {
+        visit(child);
+      }
+    }
+
+    visit(tree);
+  };
+}
 
 function LegalLink({
   href,
@@ -22,19 +62,43 @@ function LegalLink({
   node: _node,
   ...props
 }: ComponentPropsWithoutRef<'a'> & { node?: unknown }) {
-  if (href?.startsWith('/')) {
+  if (href === undefined) {
     return (
-      <Link href={href} className={contentLinkClass}>
+      <a {...props} className={contentLinkClass}>
         {children}
-      </Link>
+      </a>
     );
   }
 
-  if (href?.startsWith('mailto:')) {
+  const target = href;
+
+  // Empty destinations, same-page anchors, and mailto: stay in this tab. A
+  // single leading slash or a relative destination is an app route; `//host`
+  // is protocol-relative, i.e. external despite the leading slash.
+  if (target === '' || target.startsWith('#') || /^mailto:/i.test(target)) {
     return (
-      <a {...props} href={href} className={contentLinkClass}>
+      <a {...props} href={target} className={contentLinkClass}>
         {children}
       </a>
+    );
+  }
+
+  if (
+    (target.startsWith('/') && !target.startsWith('//')) ||
+    (!target.startsWith('//') && !URI_SCHEME.test(target))
+  ) {
+    // A blanket `{...props}` spread is rejected by next/link's LinkProps under
+    // exactOptionalPropertyTypes. `title` is the only additional anchor
+    // attribute produced by this enabled Markdown pipeline, so forward it
+    // explicitly rather than dropping it on the app-route branch.
+    return (
+      <Link
+        {...(props.title === undefined ? {} : { title: props.title })}
+        href={target}
+        className={contentLinkClass}
+      >
+        {children}
+      </Link>
     );
   }
 
@@ -94,16 +158,19 @@ const legalMarkdownComponents: Components = {
   },
   table({ children }) {
     return (
-      <section
-        aria-label="Scrollable table"
+      // Focusable but deliberately unlabelled and role-less: axe
+      // scrollable-region-focusable only requires keyboard reachability, while
+      // a `region` role would make every table on the page a landmark sharing
+      // one accessible name — trading this violation for axe landmark-unique.
+      <div
         /* biome-ignore lint/a11y/noNoninteractiveTabindex: Horizontally scrollable content must be keyboard-reachable (WCAG 2.1.1 / axe scrollable-region-focusable). */
         tabIndex={0}
-        className="mt-6 overflow-x-auto rounded-xl border border-border focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+        className="mt-6 overflow-x-auto rounded-xl border border-border ring-focus"
       >
         <table className="w-full border-collapse text-left text-sm">
           {children}
         </table>
-      </section>
+      </div>
     );
   },
   thead({ children }) {
@@ -148,7 +215,7 @@ export function LegalDocument({ content }: { content: LegalDocumentContent }) {
       </header>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeSanitize]}
+        rehypePlugins={[rehypeNormalizeSafeHrefSchemes, rehypeSanitize]}
         skipHtml
         components={legalMarkdownComponents}
       >
