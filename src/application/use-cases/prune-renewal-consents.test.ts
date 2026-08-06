@@ -8,10 +8,11 @@ function createConsent(sessionId: string, subscriptionId: string) {
     userId: 'user_1',
     consumerReference:
       '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-    stripeCustomerId: 'cus_123',
-    stripeSubscriptionId: subscriptionId,
+    externalCustomerId: 'cus_123',
+    externalSubscriptionId: subscriptionId,
     checkoutSessionId: sessionId,
     setupSessionId: null,
+    applicationSourceId: null,
     plan: 'monthly',
     amountCents: 2900,
     currency: 'usd',
@@ -39,7 +40,7 @@ describe('PruneRenewalConsentsUseCase', () => {
     const repository = new FakeRenewalConsentRecordRepository();
     await repository.save(createConsent('cs_due', 'sub_due'));
     await repository.markSubscriptionTerminated({
-      stripeSubscriptionId: 'sub_due',
+      externalSubscriptionId: 'sub_due',
       terminatedAt: new Date('2027-01-01T00:00:00Z'),
     });
     const useCase = new PruneRenewalConsentsUseCase(

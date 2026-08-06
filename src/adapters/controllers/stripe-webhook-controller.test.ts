@@ -13,6 +13,7 @@ import {
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
+import { createSubscription } from '@/src/domain/test-helpers';
 import {
   processStripeWebhook,
   type StripeWebhookDeps,
@@ -30,6 +31,16 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
 class FailingSubscriptionRepository extends FakeSubscriptionRepository {
   override async upsert(): Promise<never> {
     throw new Error('boom');
+  }
+}
+
+class WriteGuardRejectingSubscriptionRepository extends FakeSubscriptionRepository {
+  override async upsert() {
+    return {
+      persisted: false as const,
+      reason: 'write_guard_rejected' as const,
+      current: createSubscription(),
+    };
   }
 }
 
@@ -236,10 +247,11 @@ describe('processStripeWebhook', () => {
       newRenewalConsentRecord({
         userId,
         consumerReference: 'a'.repeat(64),
-        stripeCustomerId: 'cus_123',
-        stripeSubscriptionId: 'sub_123',
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
         checkoutSessionId: 'cs_checkout_123',
         setupSessionId: null,
+        applicationSourceId: null,
         plan: 'monthly',
         amountCents: 2900,
         currency: 'usd',
@@ -351,6 +363,54 @@ describe('processStripeWebhook', () => {
     ]);
   });
 
+  it('does not persist consent when the subscription write guard rejects the update', async () => {
+    const userId = crypto.randomUUID();
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_checkout_consent_rejected',
+        type: 'checkout.session.completed',
+        subscriptionUpdate: {
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-09-06T12:00:00Z'),
+          cancelAtPeriodEnd: false,
+        },
+        initialSubscriptionConsent: {
+          checkoutSessionId: 'cs_checkout_rejected',
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          disclosureSnapshot: 'Exact immediate disclosure.',
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-hash',
+          cancellationMethod:
+            'Billing page in the app or support@addictionboards.com',
+          acceptedAt: new Date('2026-08-06T12:00:00Z'),
+        },
+      },
+    });
+    const subscriptions = new WriteGuardRejectingSubscriptionRepository();
+    const { deps, renewalConsents } = createDeps({
+      paymentGateway,
+      subscriptions,
+    });
+
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+    expect(renewalConsents.snapshot()).toEqual([]);
+  });
+
   it('attaches and selects a verified setup payment method after exact local matching', async () => {
     const userId = crypto.randomUUID();
     const completion = {
@@ -444,7 +504,7 @@ describe('processStripeWebhook', () => {
         userId,
         setupSessionId: 'cs_setup_123',
         checkoutSessionId: null,
-        stripeSubscriptionId: 'sub_123',
+        externalSubscriptionId: 'sub_123',
         disclosureSnapshot: 'Exact disclosure.',
         cancellationDeadline: completion.trialEndsAt,
         acceptedAt: completion.acceptedAt,
@@ -1251,6 +1311,29 @@ describe('processStripeWebhook', () => {
       processedAt: expect.any(Date),
       error: null,
     });
+  });
+
+  it('isolates Stripe-event and renewal-consent pruning in separate transactions', async () => {
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_test',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_prune_transaction_isolation',
+        type: 'checkout.session.completed',
+      },
+    });
+    const { deps } = createDeps({ paymentGateway });
+    const originalTransaction = deps.transaction;
+    let transactionCount = 0;
+    deps.transaction = async (fn) => {
+      transactionCount += 1;
+      return originalTransaction(fn);
+    };
+
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+    expect(transactionCount).toBe(3);
   });
 
   it('returns early when the event was already processed', async () => {

@@ -38,10 +38,11 @@ function consentInput(userId: string, sourceId = `cs_${randomUUID()}`) {
   return newRenewalConsentRecord({
     userId,
     consumerReference: 'a'.repeat(64),
-    stripeCustomerId: 'cus_renewal_123',
-    stripeSubscriptionId: 'sub_renewal_123',
+    externalCustomerId: 'cus_renewal_123',
+    externalSubscriptionId: 'sub_renewal_123',
     checkoutSessionId: sourceId,
     setupSessionId: null,
+    applicationSourceId: null,
     plan: 'monthly',
     amountCents: 2900,
     currency: 'usd',
@@ -98,6 +99,30 @@ describe('renewal consent record persistence', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
+  it('persists and finds application consent by its explicit source identity', async () => {
+    const user = await createUser(db, cleanup);
+    const repository = new DrizzleRenewalConsentRecordRepository(db);
+    const input = {
+      ...consentInput(user.id),
+      checkoutSessionId: null,
+      applicationSourceId: `application-consent:${randomUUID()}`,
+      consentSource: 'application' as const,
+      consentKind: 'price_increase' as const,
+      priorAmountCents: 2900,
+      proposedAmountCents: 3900,
+      effectiveRenewalAt: new Date('2027-01-01T00:00:00Z'),
+    };
+
+    const saved = await repository.save(input);
+    consentIds.push(saved.id);
+
+    await expect(
+      repository.findBySource({
+        applicationSourceId: input.applicationSourceId,
+      }),
+    ).resolves.toEqual(saved);
+  });
+
   it('survives account deletion with its local user reference cleared', async () => {
     const user = await createUser(db, cleanup);
     const repository = new DrizzleRenewalConsentRecordRepository(db);
@@ -124,7 +149,7 @@ describe('renewal consent record persistence', () => {
     const terminated = await repository.save({
       ...activeInput,
       checkoutSessionId: `cs_${randomUUID()}`,
-      stripeSubscriptionId: 'sub_renewal_terminated',
+      externalSubscriptionId: 'sub_renewal_terminated',
     });
     consentIds.push(active.id, terminated.id);
     const [acknowledgment] = await db
@@ -143,7 +168,7 @@ describe('renewal consent record persistence', () => {
       throw new Error('Acknowledgment fixture was not inserted');
     }
     await repository.markSubscriptionTerminated({
-      stripeSubscriptionId: terminated.stripeSubscriptionId,
+      externalSubscriptionId: terminated.externalSubscriptionId,
       terminatedAt: new Date('2021-01-01T00:00:00Z'),
     });
 
@@ -167,12 +192,12 @@ describe('renewal consent record persistence', () => {
     const saved = await repository.save(consentInput(user.id));
     consentIds.push(saved.id);
     await repository.markSubscriptionTerminated({
-      stripeSubscriptionId: saved.stripeSubscriptionId,
+      externalSubscriptionId: saved.externalSubscriptionId,
       terminatedAt: new Date('2030-02-01T00:00:00Z'),
     });
 
     await repository.markSubscriptionTerminated({
-      stripeSubscriptionId: saved.stripeSubscriptionId,
+      externalSubscriptionId: saved.externalSubscriptionId,
       terminatedAt: new Date('2027-01-01T00:00:00Z'),
     });
 

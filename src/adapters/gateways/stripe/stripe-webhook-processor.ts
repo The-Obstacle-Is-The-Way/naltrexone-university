@@ -28,20 +28,23 @@ function expandableId(value: string | { id: string }): string {
   return typeof value === 'string' ? value : value.id;
 }
 
+function eventOccurredAt(event: { created?: number }): Date | undefined {
+  const created = event.created;
+  if (created === undefined || !Number.isInteger(created) || created <= 0) {
+    return undefined;
+  }
+  return new Date(created * 1000);
+}
+
 function eventAcceptedAt(event: { created?: number }): Date {
-  if (!Number.isInteger(event.created) || (event.created ?? 0) <= 0) {
+  const occurredAt = eventOccurredAt(event);
+  if (!occurredAt) {
     throw new ApplicationError(
       'INVALID_WEBHOOK_PAYLOAD',
       'Stripe consent event has no valid creation timestamp',
     );
   }
-  return new Date((event.created ?? 0) * 1000);
-}
-
-function eventOccurredAt(event: { created?: number }): Date | undefined {
-  return Number.isInteger(event.created) && (event.created ?? 0) > 0
-    ? new Date((event.created ?? 0) * 1000)
-    : undefined;
+  return occurredAt;
 }
 
 function hasInitialSubscriptionConsentMarker(payload: unknown): boolean {

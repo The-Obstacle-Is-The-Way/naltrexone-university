@@ -12,10 +12,11 @@ const input = newRenewalConsentRecord({
   userId: crypto.randomUUID(),
   consumerReference:
     '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-  stripeCustomerId: 'cus_123',
-  stripeSubscriptionId: 'sub_123',
+  externalCustomerId: 'cus_123',
+  externalSubscriptionId: 'sub_123',
   checkoutSessionId: 'cs_123',
   setupSessionId: null,
+  applicationSourceId: null,
   plan: 'monthly',
   amountCents: 2900,
   currency: 'usd',
@@ -36,12 +37,25 @@ const input = newRenewalConsentRecord({
 });
 
 function persistedRow(overrides: Record<string, unknown> = {}) {
+  const { externalCustomerId, externalSubscriptionId, ...vendorNeutralInput } =
+    input;
   return {
-    ...input,
+    ...vendorNeutralInput,
+    stripeCustomerId: externalCustomerId,
+    stripeSubscriptionId: externalSubscriptionId,
     id: crypto.randomUUID(),
     createdAt: new Date('2026-08-06T12:00:01Z'),
     updatedAt: new Date('2026-08-06T12:00:01Z'),
     ...overrides,
+  };
+}
+
+function expectedRecord(row: ReturnType<typeof persistedRow>) {
+  const { stripeCustomerId, stripeSubscriptionId, ...vendorNeutralRow } = row;
+  return {
+    ...vendorNeutralRow,
+    externalCustomerId: stripeCustomerId,
+    externalSubscriptionId: stripeSubscriptionId,
   };
 }
 
@@ -54,8 +68,17 @@ describe('DrizzleRenewalConsentRecordRepository', () => {
     const db = { insert: vi.fn(() => ({ values })) } as unknown as RepoDb;
     const repository = new DrizzleRenewalConsentRecordRepository(db);
 
-    await expect(repository.save(input)).resolves.toEqual(row);
-    expect(values).toHaveBeenCalledWith(input);
+    await expect(repository.save(input)).resolves.toEqual(expectedRecord(row));
+    const {
+      externalCustomerId,
+      externalSubscriptionId,
+      ...vendorNeutralInput
+    } = input;
+    expect(values).toHaveBeenCalledWith({
+      ...vendorNeutralInput,
+      stripeCustomerId: externalCustomerId,
+      stripeSubscriptionId: externalSubscriptionId,
+    });
   });
 
   it('replays matching evidence after a source uniqueness conflict', async () => {
@@ -72,7 +95,7 @@ describe('DrizzleRenewalConsentRecordRepository', () => {
     } as unknown as RepoDb;
     const repository = new DrizzleRenewalConsentRecordRepository(db);
 
-    await expect(repository.save(input)).resolves.toEqual(row);
+    await expect(repository.save(input)).resolves.toEqual(expectedRecord(row));
   });
 
   it('rejects cross-user evidence after a source uniqueness conflict', async () => {
@@ -107,7 +130,7 @@ describe('DrizzleRenewalConsentRecordRepository', () => {
 
     await expect(
       repository.markSubscriptionTerminated({
-        stripeSubscriptionId: 'sub_123',
+        externalSubscriptionId: 'sub_123',
         terminatedAt: new Date('2030-02-01T00:00:00Z'),
       }),
     ).resolves.toBe(1);

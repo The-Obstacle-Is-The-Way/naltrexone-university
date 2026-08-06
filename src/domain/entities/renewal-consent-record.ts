@@ -10,10 +10,11 @@ import { computeRenewalConsentRetainUntil } from '../value-objects';
 export type RenewalConsentRecordInput = {
   userId: string | null;
   consumerReference: string;
-  stripeCustomerId: string;
-  stripeSubscriptionId: string;
+  externalCustomerId: string;
+  externalSubscriptionId: string;
   checkoutSessionId: string | null;
   setupSessionId: string | null;
+  applicationSourceId: string | null;
   plan: SubscriptionPlan;
   amountCents: number;
   currency: 'usd';
@@ -68,13 +69,14 @@ export function newRenewalConsentRecord(
 
   const hasCheckoutSession = input.checkoutSessionId !== null;
   const hasSetupSession = input.setupSessionId !== null;
+  const hasApplicationSource = input.applicationSourceId !== null;
   if (
     (input.consentSource === 'stripe_checkout' &&
-      (!hasCheckoutSession || hasSetupSession)) ||
+      (!hasCheckoutSession || hasSetupSession || hasApplicationSource)) ||
     (input.consentSource === 'stripe_setup' &&
-      (!hasSetupSession || hasCheckoutSession)) ||
+      (!hasSetupSession || hasCheckoutSession || hasApplicationSource)) ||
     (input.consentSource === 'application' &&
-      (hasCheckoutSession || hasSetupSession))
+      (hasCheckoutSession || hasSetupSession || !hasApplicationSource))
   ) {
     throw new DomainError(
       'INVALID_RENEWAL_CONSENT',

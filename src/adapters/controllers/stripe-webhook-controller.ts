@@ -237,10 +237,11 @@ async function processTrialPaymentMethodSetupWebhook(
       await new RecordRenewalConsentUseCase(renewalConsentRecords).execute({
         userId: claimed.userId,
         consumerReference: toConsumerReference(claimed.stripeCustomerId),
-        stripeCustomerId: claimed.stripeCustomerId,
-        stripeSubscriptionId: claimed.stripeSubscriptionId,
+        externalCustomerId: claimed.stripeCustomerId,
+        externalSubscriptionId: claimed.stripeSubscriptionId,
         checkoutSessionId: null,
         setupSessionId: claimed.sessionId,
+        applicationSourceId: null,
         plan: claimed.plan,
         amountCents: claimed.amountCents,
         currency: claimed.currency,
@@ -320,7 +321,7 @@ async function persistAcknowledgedOutcome(
 
     if (subscriptionUpdate?.status === 'canceled') {
       await renewalConsentRecords.markSubscriptionTerminated({
-        stripeSubscriptionId: subscriptionUpdate.externalSubscriptionId,
+        externalSubscriptionId: subscriptionUpdate.externalSubscriptionId,
         terminatedAt: event.occurredAt ?? deps.now(),
       });
     }
@@ -350,10 +351,11 @@ async function persistInitialSubscriptionConsent(input: {
   await new RecordRenewalConsentUseCase(input.repository).execute({
     userId: consent.userId,
     consumerReference: toConsumerReference(consent.externalCustomerId),
-    stripeCustomerId: consent.externalCustomerId,
-    stripeSubscriptionId: consent.externalSubscriptionId,
+    externalCustomerId: consent.externalCustomerId,
+    externalSubscriptionId: consent.externalSubscriptionId,
     checkoutSessionId: consent.checkoutSessionId,
     setupSessionId: null,
+    applicationSourceId: null,
     plan: consent.plan,
     amountCents: consent.amountCents,
     currency: consent.currency,
@@ -460,7 +462,7 @@ async function processSubscriptionWebhook(
                 );
               }
 
-              if (initialConsent) {
+              if (write.persisted && initialConsent) {
                 await persistInitialSubscriptionConsent({
                   repository: renewalConsentRecords,
                   consent: initialConsent,
@@ -473,7 +475,7 @@ async function processSubscriptionWebhook(
                 nextSubscriptionUpdate.status === 'canceled'
               ) {
                 await renewalConsentRecords.markSubscriptionTerminated({
-                  stripeSubscriptionId:
+                  externalSubscriptionId:
                     nextSubscriptionUpdate.externalSubscriptionId,
                   terminatedAt: event.occurredAt ?? deps.now(),
                 });
@@ -612,33 +614,8 @@ async function processStripeWebhookWithinSpan(
   );
 
   try {
-    await deps.transaction(async ({ stripeEvents, renewalConsentRecords }) => {
-      try {
-        await stripeEvents.pruneProcessedBefore(cutoff, PRUNE_BATCH_LIMIT);
-      } catch (error) {
-        deps.logger.warn(
-          {
-            eventId: event.eventId,
-            error: projectSafeErrorDiagnostics(error),
-          },
-          'Stripe event pruning failed',
-        );
-      }
-
-      try {
-        await new PruneRenewalConsentsUseCase(
-          renewalConsentRecords,
-          deps.now,
-        ).execute();
-      } catch (error) {
-        deps.logger.warn(
-          {
-            eventId: event.eventId,
-            error: projectSafeErrorDiagnostics(error),
-          },
-          'Renewal consent pruning failed',
-        );
-      }
+    await deps.transaction(async ({ stripeEvents }) => {
+      await stripeEvents.pruneProcessedBefore(cutoff, PRUNE_BATCH_LIMIT);
     });
   } catch (error) {
     deps.logger.warn(
@@ -646,7 +623,24 @@ async function processStripeWebhookWithinSpan(
         eventId: event.eventId,
         error: projectSafeErrorDiagnostics(error),
       },
-      'Webhook retention pruning transaction failed',
+      'Stripe event pruning failed',
+    );
+  }
+
+  try {
+    await deps.transaction(async ({ renewalConsentRecords }) => {
+      await new PruneRenewalConsentsUseCase(
+        renewalConsentRecords,
+        deps.now,
+      ).execute();
+    });
+  } catch (error) {
+    deps.logger.warn(
+      {
+        eventId: event.eventId,
+        error: projectSafeErrorDiagnostics(error),
+      },
+      'Renewal consent pruning failed',
     );
   }
 }

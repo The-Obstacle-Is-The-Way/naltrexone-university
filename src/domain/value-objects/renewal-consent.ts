@@ -21,13 +21,19 @@ function addUtcYears(date: Date, years: number): Date {
   return result;
 }
 
+export const CONSENT_RETENTION_YEARS = 3;
+export const POST_TERMINATION_RETENTION_YEARS = 1;
+
 export function computeRenewalConsentRetainUntil(
   acceptedAt: Date,
   subscriptionTerminatedAt: Date | null,
 ): Date {
-  const consentFloor = addUtcYears(acceptedAt, 3);
+  const consentFloor = addUtcYears(acceptedAt, CONSENT_RETENTION_YEARS);
   if (!subscriptionTerminatedAt) return consentFloor;
 
-  const terminationFloor = addUtcYears(subscriptionTerminatedAt, 1);
+  const terminationFloor = addUtcYears(
+    subscriptionTerminatedAt,
+    POST_TERMINATION_RETENTION_YEARS,
+  );
   return terminationFloor > consentFloor ? terminationFloor : consentFloor;
 }

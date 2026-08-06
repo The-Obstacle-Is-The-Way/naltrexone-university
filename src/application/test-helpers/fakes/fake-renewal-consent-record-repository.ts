@@ -30,10 +30,11 @@ function cloneRecord(record: RenewalConsentRecord): RenewalConsentRecord {
 function immutableSnapshot(record: NewRenewalConsentRecord): string {
   return JSON.stringify({
     consumerReference: record.consumerReference,
-    stripeCustomerId: record.stripeCustomerId,
-    stripeSubscriptionId: record.stripeSubscriptionId,
+    externalCustomerId: record.externalCustomerId,
+    externalSubscriptionId: record.externalSubscriptionId,
     checkoutSessionId: record.checkoutSessionId,
     setupSessionId: record.setupSessionId,
+    applicationSourceId: record.applicationSourceId,
     plan: record.plan,
     amountCents: record.amountCents,
     currency: record.currency,
@@ -66,8 +67,13 @@ export class FakeRenewalConsentRecordRepository
 
   restore(records: readonly RenewalConsentRecord[]): void {
     this.records.clear();
+    this.sequence = 0;
     for (const record of records) {
       this.records.set(record.id, cloneRecord(record));
+      const suffix = /^consent_(\d+)$/.exec(record.id)?.[1];
+      if (suffix) {
+        this.sequence = Math.max(this.sequence, Number(suffix));
+      }
     }
   }
 
@@ -80,9 +86,19 @@ export class FakeRenewalConsentRecordRepository
   }
 
   async save(input: NewRenewalConsentRecord): Promise<RenewalConsentRecord> {
-    const source: RenewalConsentSourceLookup = input.checkoutSessionId
-      ? { checkoutSessionId: input.checkoutSessionId }
-      : { setupSessionId: input.setupSessionId ?? '' };
+    let source: RenewalConsentSourceLookup;
+    if (input.checkoutSessionId) {
+      source = { checkoutSessionId: input.checkoutSessionId };
+    } else if (input.setupSessionId) {
+      source = { setupSessionId: input.setupSessionId };
+    } else if (input.applicationSourceId) {
+      source = { applicationSourceId: input.applicationSourceId };
+    } else {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Renewal consent requires a source identity',
+      );
+    }
     const existing = this.findStoredBySource(source);
     if (existing) {
       if (
@@ -122,12 +138,14 @@ export class FakeRenewalConsentRecordRepository
   }
 
   async markSubscriptionTerminated(input: {
-    stripeSubscriptionId: string;
+    externalSubscriptionId: string;
     terminatedAt: Date;
   }): Promise<number> {
     let count = 0;
     for (const [id, record] of this.records) {
-      if (record.stripeSubscriptionId !== input.stripeSubscriptionId) continue;
+      if (record.externalSubscriptionId !== input.externalSubscriptionId) {
+        continue;
+      }
       this.records.set(id, {
         ...terminateRenewalConsentRecord(record, input.terminatedAt),
         updatedAt: new Date(),
@@ -160,7 +178,9 @@ export class FakeRenewalConsentRecordRepository
         ('checkoutSessionId' in source &&
           record.checkoutSessionId === source.checkoutSessionId) ||
         ('setupSessionId' in source &&
-          record.setupSessionId === source.setupSessionId)
+          record.setupSessionId === source.setupSessionId) ||
+        ('applicationSourceId' in source &&
+          record.applicationSourceId === source.applicationSourceId)
       ) {
         return record;
       }

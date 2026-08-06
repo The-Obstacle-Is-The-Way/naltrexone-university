@@ -329,6 +329,7 @@ export const renewalConsentRecords = pgTable(
     }).notNull(),
     checkoutSessionId: varchar('checkout_session_id', { length: 255 }),
     setupSessionId: varchar('setup_session_id', { length: 255 }),
+    applicationSourceId: varchar('application_source_id', { length: 255 }),
     plan: varchar('plan', { length: 16 }).notNull(),
     amountCents: integer('amount_cents').notNull(),
     currency: varchar('currency', { length: 3 }).notNull(),
@@ -370,6 +371,11 @@ export const renewalConsentRecords = pgTable(
     setupSessionUq: uniqueIndex(RENEWAL_CONSENT_SETUP_SESSION_UQ)
       .on(t.setupSessionId)
       .where(sql`${t.setupSessionId} IS NOT NULL`),
+    applicationSourceUq: uniqueIndex(
+      'renewal_consent_records_application_source_uq',
+    )
+      .on(t.applicationSourceId)
+      .where(sql`${t.applicationSourceId} IS NOT NULL`),
     consumerReferenceIdx: index(
       'renewal_consent_records_consumer_reference_idx',
     ).on(t.consumerReference),
@@ -382,9 +388,9 @@ export const renewalConsentRecords = pgTable(
     ),
     sourceSessionChk: check(
       'renewal_consent_records_source_session_chk',
-      sql`(${t.consentSource} = 'stripe_checkout' AND ${t.checkoutSessionId} IS NOT NULL AND ${t.setupSessionId} IS NULL)
-          OR (${t.consentSource} = 'stripe_setup' AND ${t.setupSessionId} IS NOT NULL AND ${t.checkoutSessionId} IS NULL)
-          OR (${t.consentSource} = 'application' AND ${t.checkoutSessionId} IS NULL AND ${t.setupSessionId} IS NULL)`,
+      sql`(${t.consentSource} = 'stripe_checkout' AND ${t.checkoutSessionId} IS NOT NULL AND ${t.setupSessionId} IS NULL AND ${t.applicationSourceId} IS NULL)
+          OR (${t.consentSource} = 'stripe_setup' AND ${t.setupSessionId} IS NOT NULL AND ${t.checkoutSessionId} IS NULL AND ${t.applicationSourceId} IS NULL)
+          OR (${t.consentSource} = 'application' AND ${t.checkoutSessionId} IS NULL AND ${t.setupSessionId} IS NULL AND ${t.applicationSourceId} IS NOT NULL)`,
     ),
     amountChk: check(
       'renewal_consent_records_amount_chk',

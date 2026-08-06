@@ -93,6 +93,11 @@ describe('createStripeCheckoutSession trial params', () => {
     successUrl: 'https://app/success',
     cancelUrl: 'https://app/cancel',
   };
+  const trialInput = {
+    ...input,
+    ...createTestRenewalTerms('monthly', true),
+    trialPeriodDays: 7,
+  };
   const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
   const logger = new FakeLogger();
 
@@ -102,7 +107,7 @@ describe('createStripeCheckoutSession trial params', () => {
     await expect(
       createStripeCheckoutSession({
         stripe,
-        input: { ...input, trialPeriodDays: 7 },
+        input: trialInput,
         priceIds,
         logger,
       }),
@@ -126,7 +131,7 @@ describe('createStripeCheckoutSession trial params', () => {
           renewal_amount_cents: '2900',
           renewal_currency: 'usd',
           renewal_frequency: 'month',
-          renewal_disclosure_snapshot: 'Test immediate renewal disclosure.',
+          renewal_disclosure_snapshot: 'Test trial renewal disclosure.',
           renewal_disclosure_version: '2026-08-05',
           renewal_terms_version: '2026-08-05',
           renewal_terms_hash: 'test-terms-hash',
@@ -283,7 +288,7 @@ describe('createStripeCheckoutSession trial params', () => {
           renewal_amount_cents: '2900',
           renewal_currency: 'usd',
           renewal_frequency: 'month',
-          renewal_disclosure_snapshot: 'Test immediate renewal disclosure.',
+          renewal_disclosure_snapshot: 'Test trial renewal disclosure.',
           renewal_disclosure_version: '2026-08-05',
           renewal_terms_version: '2026-08-05',
           renewal_terms_hash: 'test-terms-hash',
@@ -295,7 +300,7 @@ describe('createStripeCheckoutSession trial params', () => {
     await expect(
       createStripeCheckoutSession({
         stripe,
-        input: { ...input, trialPeriodDays: 7 },
+        input: trialInput,
         priceIds,
         logger,
         nowMs: () => 1_700_000_000_000,
@@ -320,7 +325,7 @@ describe('createStripeCheckoutSession trial params', () => {
     await expect(
       createStripeCheckoutSession({
         stripe,
-        input: { ...input, trialPeriodDays: 7 },
+        input: trialInput,
         priceIds,
         logger,
         nowMs: () => 1_700_000_000_000,
@@ -359,7 +364,7 @@ describe('createStripeCheckoutSession trial params', () => {
     await expect(
       createStripeCheckoutSession({
         stripe,
-        input: { ...input, trialPeriodDays: 7 },
+        input: trialInput,
         priceIds,
         logger,
       }),

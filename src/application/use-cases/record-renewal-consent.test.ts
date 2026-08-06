@@ -6,10 +6,11 @@ const input = {
   userId: 'user_1',
   consumerReference:
     '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-  stripeCustomerId: 'cus_123',
-  stripeSubscriptionId: 'sub_123',
+  externalCustomerId: 'cus_123',
+  externalSubscriptionId: 'sub_123',
   checkoutSessionId: 'cs_123',
   setupSessionId: null,
+  applicationSourceId: null,
   plan: 'monthly' as const,
   amountCents: 2900,
   currency: 'usd' as const,

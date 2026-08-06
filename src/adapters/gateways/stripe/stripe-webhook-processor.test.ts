@@ -455,6 +455,38 @@ describe('processStripeWebhookEvent', () => {
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
   });
 
+  it('fails closed for a pre-deploy subscription Session that accepted Terms without renewal evidence', async () => {
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_checkout_legacy_consent',
+        type: 'checkout.session.completed',
+        created: 1_775_649_600,
+        data: {
+          object: {
+            id: 'cs_checkout_legacy',
+            mode: 'subscription',
+            customer: 'cus_123',
+            client_reference_id: appUserId,
+            subscription: 'sub_123',
+            consent: { terms_of_service: 'accepted' },
+            metadata: { checkout_variant: 'standard' },
+          },
+        },
+      }),
+    });
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+  });
+
   it('retrieves and includes subscriptionUpdate for invoice.payment_succeeded events with a nested Clover subscription reference', async () => {
     const logger = new FakeLogger();
     const stripe = createStripeClient({

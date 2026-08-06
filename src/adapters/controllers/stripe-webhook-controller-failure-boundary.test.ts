@@ -259,10 +259,11 @@ describe('processStripeWebhook failure boundary', () => {
       newRenewalConsentRecord({
         userId,
         consumerReference: 'a'.repeat(64),
-        stripeCustomerId: 'cus_deleted_user',
-        stripeSubscriptionId: 'sub_deleted_user',
+        externalCustomerId: 'cus_deleted_user',
+        externalSubscriptionId: 'sub_deleted_user',
         checkoutSessionId: 'cs_deleted_user',
         setupSessionId: null,
+        applicationSourceId: null,
         plan: 'monthly',
         amountCents: 2900,
         currency: 'usd',

@@ -1,6 +1,6 @@
 {
-  "id": "77218f30-2ec3-4e32-91b4-b862f206f973",
-  "prevId": "f0245802-ad04-447e-9e7f-f369b01cec76",
+  "id": "6fa3d880-3c48-44ee-87a3-489e7e800c06",
+  "prevId": "77218f30-2ec3-4e32-91b4-b862f206f973",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3033,8 +3033,7 @@
           "name": "cancellation_method",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'Billing page in the app or support@addictionboards.com'"
+          "notNull": true
         },
         "status": {
           "name": "status",

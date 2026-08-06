@@ -10,6 +10,7 @@ CREATE TABLE "renewal_consent_records" (
 	"stripe_subscription_id" varchar(255) NOT NULL,
 	"checkout_session_id" varchar(255),
 	"setup_session_id" varchar(255),
+	"application_source_id" varchar(255),
 	"plan" varchar(16) NOT NULL,
 	"amount_cents" integer NOT NULL,
 	"currency" varchar(3) NOT NULL,
@@ -31,9 +32,9 @@ CREATE TABLE "renewal_consent_records" (
 	"retain_until" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "renewal_consent_records_source_session_chk" CHECK (("renewal_consent_records"."consent_source" = 'stripe_checkout' AND "renewal_consent_records"."checkout_session_id" IS NOT NULL AND "renewal_consent_records"."setup_session_id" IS NULL)
-          OR ("renewal_consent_records"."consent_source" = 'stripe_setup' AND "renewal_consent_records"."setup_session_id" IS NOT NULL AND "renewal_consent_records"."checkout_session_id" IS NULL)
-          OR ("renewal_consent_records"."consent_source" = 'application' AND "renewal_consent_records"."checkout_session_id" IS NULL AND "renewal_consent_records"."setup_session_id" IS NULL)),
+	CONSTRAINT "renewal_consent_records_source_session_chk" CHECK (("renewal_consent_records"."consent_source" = 'stripe_checkout' AND "renewal_consent_records"."checkout_session_id" IS NOT NULL AND "renewal_consent_records"."setup_session_id" IS NULL AND "renewal_consent_records"."application_source_id" IS NULL)
+          OR ("renewal_consent_records"."consent_source" = 'stripe_setup' AND "renewal_consent_records"."setup_session_id" IS NOT NULL AND "renewal_consent_records"."checkout_session_id" IS NULL AND "renewal_consent_records"."application_source_id" IS NULL)
+          OR ("renewal_consent_records"."consent_source" = 'application' AND "renewal_consent_records"."checkout_session_id" IS NULL AND "renewal_consent_records"."setup_session_id" IS NULL AND "renewal_consent_records"."application_source_id" IS NOT NULL)),
 	CONSTRAINT "renewal_consent_records_amount_chk" CHECK ("renewal_consent_records"."amount_cents" > 0
           AND ("renewal_consent_records"."prior_amount_cents" IS NULL OR "renewal_consent_records"."prior_amount_cents" > 0)
           AND ("renewal_consent_records"."proposed_amount_cents" IS NULL OR "renewal_consent_records"."proposed_amount_cents" > 0)),
@@ -72,11 +73,12 @@ CREATE TABLE "renewal_notice_deliveries" (
 	CONSTRAINT "renewal_notice_deliveries_attempt_count_chk" CHECK ("renewal_notice_deliveries"."attempt_count" >= 0)
 );
 --> statement-breakpoint
-ALTER TABLE "trial_payment_method_setup_operations" ADD COLUMN "cancellation_method" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "trial_payment_method_setup_operations" ADD COLUMN "cancellation_method" text DEFAULT 'Billing page in the app or support@addictionboards.com' NOT NULL;--> statement-breakpoint
 ALTER TABLE "renewal_consent_records" ADD CONSTRAINT "renewal_consent_records_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "renewal_notice_deliveries" ADD CONSTRAINT "renewal_notice_deliveries_consent_record_id_renewal_consent_records_id_fk" FOREIGN KEY ("consent_record_id") REFERENCES "public"."renewal_consent_records"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "renewal_consent_records_checkout_session_uq" ON "renewal_consent_records" USING btree ("checkout_session_id") WHERE "renewal_consent_records"."checkout_session_id" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "renewal_consent_records_setup_session_uq" ON "renewal_consent_records" USING btree ("setup_session_id") WHERE "renewal_consent_records"."setup_session_id" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "renewal_consent_records_application_source_uq" ON "renewal_consent_records" USING btree ("application_source_id") WHERE "renewal_consent_records"."application_source_id" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX "renewal_consent_records_consumer_reference_idx" ON "renewal_consent_records" USING btree ("consumer_reference");--> statement-breakpoint
 CREATE INDEX "renewal_consent_records_subscription_accepted_at_idx" ON "renewal_consent_records" USING btree ("stripe_subscription_id","accepted_at");--> statement-breakpoint
 CREATE INDEX "renewal_consent_records_retention_idx" ON "renewal_consent_records" USING btree ("subscription_terminated_at","retain_until");--> statement-breakpoint

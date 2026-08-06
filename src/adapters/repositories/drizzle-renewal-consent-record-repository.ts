@@ -22,8 +22,11 @@ function toRecord(row: ConsentRow): RenewalConsentRecord {
     throw new ApplicationError('INTERNAL_ERROR', 'Invalid renewal consent row');
   }
 
+  const { stripeCustomerId, stripeSubscriptionId, ...vendorNeutralRow } = row;
   return {
-    ...row,
+    ...vendorNeutralRow,
+    externalCustomerId: stripeCustomerId,
+    externalSubscriptionId: stripeSubscriptionId,
     plan: row.plan,
     currency: row.currency,
     frequency: row.frequency,
@@ -42,10 +45,11 @@ function immutableEvidenceMatches(
   return (
     (row.userId === null || row.userId === input.userId) &&
     row.consumerReference === input.consumerReference &&
-    row.stripeCustomerId === input.stripeCustomerId &&
-    row.stripeSubscriptionId === input.stripeSubscriptionId &&
+    row.stripeCustomerId === input.externalCustomerId &&
+    row.stripeSubscriptionId === input.externalSubscriptionId &&
     row.checkoutSessionId === input.checkoutSessionId &&
     row.setupSessionId === input.setupSessionId &&
+    row.applicationSourceId === input.applicationSourceId &&
     row.plan === input.plan &&
     row.amountCents === input.amountCents &&
     row.currency === input.currency &&
@@ -76,18 +80,36 @@ export class DrizzleRenewalConsentRecordRepository
   ) {}
 
   async save(input: NewRenewalConsentRecord): Promise<RenewalConsentRecord> {
+    const {
+      externalCustomerId,
+      externalSubscriptionId,
+      ...vendorNeutralInput
+    } = input;
     const [inserted] = await this.db
       .insert(renewalConsentRecords)
-      .values(input)
+      .values({
+        ...vendorNeutralInput,
+        stripeCustomerId: externalCustomerId,
+        stripeSubscriptionId: externalSubscriptionId,
+      })
       .onConflictDoNothing()
       .returning();
     if (inserted) return toRecord(inserted);
 
-    const existing = await this.findRowBySource(
-      input.checkoutSessionId
-        ? { checkoutSessionId: input.checkoutSessionId }
-        : { setupSessionId: input.setupSessionId ?? '' },
-    );
+    let source: RenewalConsentSourceLookup;
+    if (input.checkoutSessionId) {
+      source = { checkoutSessionId: input.checkoutSessionId };
+    } else if (input.setupSessionId) {
+      source = { setupSessionId: input.setupSessionId };
+    } else if (input.applicationSourceId) {
+      source = { applicationSourceId: input.applicationSourceId };
+    } else {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'Renewal consent requires a source identity',
+      );
+    }
+    const existing = await this.findRowBySource(source);
     if (!existing) {
       throw new ApplicationError(
         'INTERNAL_ERROR',
@@ -118,7 +140,7 @@ export class DrizzleRenewalConsentRecordRepository
   }
 
   async markSubscriptionTerminated(input: {
-    stripeSubscriptionId: string;
+    externalSubscriptionId: string;
     terminatedAt: Date;
   }): Promise<number> {
     const terminatedAtIso = input.terminatedAt.toISOString();
@@ -132,7 +154,7 @@ export class DrizzleRenewalConsentRecordRepository
       .where(
         eq(
           renewalConsentRecords.stripeSubscriptionId,
-          input.stripeSubscriptionId,
+          input.externalSubscriptionId,
         ),
       )
       .returning({ id: renewalConsentRecords.id });
@@ -183,7 +205,12 @@ export class DrizzleRenewalConsentRecordRepository
               renewalConsentRecords.checkoutSessionId,
               source.checkoutSessionId,
             )
-          : eq(renewalConsentRecords.setupSessionId, source.setupSessionId),
+          : 'setupSessionId' in source
+            ? eq(renewalConsentRecords.setupSessionId, source.setupSessionId)
+            : eq(
+                renewalConsentRecords.applicationSourceId,
+                source.applicationSourceId,
+              ),
     });
   }
 }

@@ -236,8 +236,15 @@
     {
       "idx": 33,
       "version": "7",
-      "when": 1786051636812,
-      "tag": "0033_small_wrecker",
+      "when": 1786053340097,
+      "tag": "0033_renewal_consent_ledger_with_setup_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1786053348523,
+      "tag": "0034_remove_setup_cancellation_default",
       "breakpoints": true
     }
   ]
