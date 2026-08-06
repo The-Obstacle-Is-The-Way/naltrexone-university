@@ -378,7 +378,7 @@ describe('processStripeWebhook failure boundary', () => {
       processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
     ).resolves.toBeUndefined();
 
-    expect(transactionCallCount).toBe(3);
+    expect(transactionCallCount).toBe(4);
     expect(markProcessed).toHaveBeenCalledTimes(1);
     await expect(stripeEvents.lock(eventId)).resolves.toMatchObject({
       processedAt: expect.any(Date),
