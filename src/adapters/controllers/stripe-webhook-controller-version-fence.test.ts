@@ -11,6 +11,7 @@ import { SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS } from '@/src/application/shared/
 import {
   FakeLogger,
   FakePaymentGateway,
+  FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
@@ -59,6 +60,7 @@ describe('processStripeWebhook observation-version fence', () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const trialPaymentMethodSetupOperations =
       new FakeTrialPaymentMethodSetupOperationRepository();
+    const renewalConsentRecords = new FakeRenewalConsentRecordRepository();
     const deps = {
       paymentGateway,
       subscriptionVersions: subscriptions,
@@ -70,6 +72,7 @@ describe('processStripeWebhook observation-version fence', () => {
           subscriptions,
           stripeCustomers,
           trialPaymentMethodSetupOperations,
+          renewalConsentRecords,
         }),
     } as StripeWebhookDeps;
 

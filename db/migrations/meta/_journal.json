@@ -232,6 +232,20 @@
       "when": 1786045099420,
       "tag": "0032_bouncy_ben_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1786051636812,
+      "tag": "0033_small_wrecker",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1786053348523,
+      "tag": "0034_remove_setup_cancellation_default",
+      "breakpoints": true
     }
   ]
 }

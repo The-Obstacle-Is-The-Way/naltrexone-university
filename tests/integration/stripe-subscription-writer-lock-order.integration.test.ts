@@ -13,6 +13,7 @@ import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/recon
 import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
 import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
 import { DrizzlePendingStripeCustomerCleanupRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository';
+import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
@@ -372,6 +373,9 @@ async function runWebhookWriter(input: {
               : new DrizzleStripeCustomerRepository(tx),
             trialPaymentMethodSetupOperations:
               new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+              tx,
+            ),
           });
         }),
     },
@@ -573,6 +577,9 @@ async function runFirstInsertWebhookWriter(input: {
             stripeCustomers: new DrizzleStripeCustomerRepository(tx),
             trialPaymentMethodSetupOperations:
               new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+              tx,
+            ),
           });
         }),
     },

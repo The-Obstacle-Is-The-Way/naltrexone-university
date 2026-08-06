@@ -40,6 +40,7 @@ function toOperation(row: OperationRow): TrialPaymentMethodSetupOperation {
     disclosureVersion: row.disclosureVersion,
     termsVersion: row.termsVersion,
     termsHash: row.termsHash,
+    cancellationMethod: row.cancellationMethod,
     status: row.status,
     claimId: row.claimId,
     claimedAt: row.claimedAt,
@@ -67,7 +68,8 @@ function snapshotsMatch(
     row.disclosureSnapshot === input.disclosureSnapshot &&
     row.disclosureVersion === input.disclosureVersion &&
     row.termsVersion === input.termsVersion &&
-    row.termsHash === input.termsHash
+    row.termsHash === input.termsHash &&
+    row.cancellationMethod === input.cancellationMethod
   );
 }
 

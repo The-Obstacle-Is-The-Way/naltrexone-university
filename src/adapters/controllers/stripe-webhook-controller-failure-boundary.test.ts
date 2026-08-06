@@ -3,11 +3,13 @@ import { ApplicationError } from '@/src/application/errors';
 import {
   FakeLogger,
   FakePaymentGateway,
+  FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
+import { newRenewalConsentRecord } from '@/src/domain/entities';
 import {
   processStripeWebhook,
   type StripeWebhookDeps,
@@ -78,6 +80,7 @@ function createMissingUserAcknowledgementHarness(input: {
           stripeCustomers: new FakeStripeCustomerRepository(),
           trialPaymentMethodSetupOperations:
             new FakeTrialPaymentMethodSetupOperationRepository(),
+          renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
         });
       }
 
@@ -91,6 +94,7 @@ function createMissingUserAcknowledgementHarness(input: {
         stripeCustomers: new FakeStripeCustomerRepository(),
         trialPaymentMethodSetupOperations:
           new FakeTrialPaymentMethodSetupOperationRepository(),
+        renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
       });
     },
   };
@@ -140,6 +144,7 @@ function createAbortedTransactionDeps(input: {
               ),
               trialPaymentMethodSetupOperations:
                 new FakeTrialPaymentMethodSetupOperationRepository(),
+              renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
             });
           } catch {
             // postgres.js can surface the scope's first statement error instead
@@ -159,6 +164,7 @@ function createAbortedTransactionDeps(input: {
           stripeCustomers: new FakeStripeCustomerRepository(),
           trialPaymentMethodSetupOperations:
             new FakeTrialPaymentMethodSetupOperationRepository(),
+          renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
         });
       },
     },
@@ -221,6 +227,7 @@ describe('processStripeWebhook failure boundary', () => {
 
   it('acknowledges and records a subscription event when the local user is missing', async () => {
     const userId = crypto.randomUUID();
+    const occurredAt = new Date('2026-08-06T12:00:00.000Z');
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_test',
       checkoutUrl: 'https://stripe/checkout',
@@ -228,6 +235,7 @@ describe('processStripeWebhook failure boundary', () => {
       webhookResult: {
         eventId: 'evt_deleted_user',
         type: 'customer.subscription.deleted',
+        occurredAt,
         subscriptionUpdate: {
           userId,
           externalCustomerId: 'cus_deleted_user',
@@ -244,8 +252,39 @@ describe('processStripeWebhook failure boundary', () => {
     const stripeCustomers = new FakeStripeCustomerRepository();
     const trialPaymentMethodSetupOperations =
       new FakeTrialPaymentMethodSetupOperationRepository();
+    const renewalConsentRecords = new FakeRenewalConsentRecordRepository();
     const logger = new FakeLogger();
     subscriptions.markUserMissing(userId);
+    const consent = await renewalConsentRecords.save(
+      newRenewalConsentRecord({
+        userId,
+        consumerReference: 'a'.repeat(64),
+        externalCustomerId: 'cus_deleted_user',
+        externalSubscriptionId: 'sub_deleted_user',
+        checkoutSessionId: 'cs_deleted_user',
+        setupSessionId: null,
+        applicationSourceId: null,
+        plan: 'monthly',
+        amountCents: 2900,
+        currency: 'usd',
+        frequency: 'month',
+        trialEndsAt: null,
+        cancellationDeadline: new Date('2026-03-01T00:00:00.000Z'),
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
+        disclosureSnapshot: 'Exact disclosure.',
+        disclosureVersion: '2026-08-05',
+        termsVersion: '2026-08-05',
+        termsHash: 'terms-hash',
+        consentSource: 'stripe_checkout',
+        acceptedAt: new Date('2026-01-01T00:00:00.000Z'),
+        consentKind: 'initial_offer',
+        priorAmountCents: null,
+        proposedAmountCents: null,
+        effectiveRenewalAt: null,
+      }),
+    );
+    renewalConsentRecords.clearUserReference(userId);
     const insertCustomer = vi.spyOn(stripeCustomers, 'insert');
     const deps: StripeWebhookDeps = {
       paymentGateway,
@@ -258,6 +297,7 @@ describe('processStripeWebhook failure boundary', () => {
           subscriptions,
           stripeCustomers,
           trialPaymentMethodSetupOperations,
+          renewalConsentRecords,
         }),
     };
 
@@ -270,6 +310,13 @@ describe('processStripeWebhook failure boundary', () => {
       error: null,
     });
     expect(insertCustomer).not.toHaveBeenCalled();
+    await expect(
+      renewalConsentRecords.findById(consent.id),
+    ).resolves.toMatchObject({
+      userId: null,
+      subscriptionTerminatedAt: occurredAt,
+      retainUntil: new Date('2029-01-01T00:00:00.000Z'),
+    });
     expect(logger.warnCalls).toContainEqual({
       context: {
         reason: 'user_missing',
@@ -307,6 +354,7 @@ describe('processStripeWebhook failure boundary', () => {
               stripeCustomers: new FakeStripeCustomerRepository(),
               trialPaymentMethodSetupOperations:
                 new FakeTrialPaymentMethodSetupOperationRepository(),
+              renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
             });
           } catch (error) {
             await stripeEvents.claim(eventId, 'customer.subscription.updated');
@@ -321,6 +369,7 @@ describe('processStripeWebhook failure boundary', () => {
           stripeCustomers: new FakeStripeCustomerRepository(),
           trialPaymentMethodSetupOperations:
             new FakeTrialPaymentMethodSetupOperationRepository(),
+          renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
         });
       },
     };
@@ -329,7 +378,7 @@ describe('processStripeWebhook failure boundary', () => {
       processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
     ).resolves.toBeUndefined();
 
-    expect(transactionCallCount).toBe(3);
+    expect(transactionCallCount).toBe(4);
     expect(markProcessed).toHaveBeenCalledTimes(1);
     await expect(stripeEvents.lock(eventId)).resolves.toMatchObject({
       processedAt: expect.any(Date),
@@ -450,6 +499,7 @@ describe('processStripeWebhook failure boundary', () => {
           stripeCustomers: new FakeStripeCustomerRepository(),
           trialPaymentMethodSetupOperations:
             new FakeTrialPaymentMethodSetupOperationRepository(),
+          renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
         });
       },
     };

@@ -40,6 +40,8 @@ describe('trial payment-method setup operation persistence', () => {
       disclosureVersion: '2026-08-05',
       termsVersion: '2026-08-05',
       termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
     });
 
     const claimedAt = new Date('2026-08-06T12:00:00Z');

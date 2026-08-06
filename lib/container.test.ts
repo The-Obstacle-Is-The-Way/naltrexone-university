@@ -15,6 +15,7 @@ import {
   DrizzlePracticeSessionRepository,
   DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
+  DrizzleRenewalConsentRecordRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
   DrizzleSubscriptionRepository,
@@ -47,7 +48,9 @@ import {
   GetPreviousAttemptUseCase,
   GetQuestionRatingUseCase,
   GetUserStatsUseCase,
+  PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
+  RecordRenewalConsentUseCase,
   SetBookmarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
@@ -119,6 +122,9 @@ describe('container factories', () => {
     expect(typeof container.createPracticeSessionRepository).toBe('function');
     expect(typeof container.createQuestionFeedbackRepository).toBe('function');
     expect(typeof container.createQuestionRepository).toBe('function');
+    expect(typeof container.createRenewalConsentRecordRepository).toBe(
+      'function',
+    );
     expect(typeof container.createTagRepository).toBe('function');
     expect(
       container.createTrialPaymentMethodSetupOperationRepository(),
@@ -210,6 +216,9 @@ describe('container factories', () => {
     expect(container.createQuestionRepository()).toBeInstanceOf(
       DrizzleQuestionRepository,
     );
+    expect(container.createRenewalConsentRecordRepository()).toBeInstanceOf(
+      DrizzleRenewalConsentRecordRepository,
+    );
     expect(container.createTagRepository()).toBeInstanceOf(
       DrizzleTagRepository,
     );
@@ -289,6 +298,12 @@ describe('container factories', () => {
     expect(
       container.createTrialPaymentMethodSetupSessionUseCase(),
     ).toBeInstanceOf(CreateTrialPaymentMethodSetupSessionUseCase);
+    expect(container.createRecordRenewalConsentUseCase()).toBeInstanceOf(
+      RecordRenewalConsentUseCase,
+    );
+    expect(container.createPruneRenewalConsentsUseCase()).toBeInstanceOf(
+      PruneRenewalConsentsUseCase,
+    );
     expect(container.createFinalizeExamAnswersUseCase()).toBeInstanceOf(
       FinalizeExamAnswersUseCase,
     );
@@ -568,6 +583,15 @@ describe('container factories', () => {
       findByUserId: async () => null,
       insert: async () => undefined,
     }));
+    const createRenewalConsentRecordRepository = vi.fn(() => ({
+      save: async () => {
+        throw new Error('not used');
+      },
+      findById: async () => null,
+      findBySource: async () => null,
+      markSubscriptionTerminated: async () => 0,
+      pruneExpired: async () => 0,
+    }));
 
     const paymentGateway = {
       createCustomer: async () => ({ externalCustomerId: 'cus_123' }),
@@ -600,6 +624,7 @@ describe('container factories', () => {
         createStripeEventRepository,
         createSubscriptionRepository,
         createStripeCustomerRepository,
+        createRenewalConsentRecordRepository,
       },
       gateways: {
         createPaymentGateway: () => paymentGateway,
@@ -621,11 +646,15 @@ describe('container factories', () => {
       expect(repoDeps.stripeCustomers).toBe(
         createStripeCustomerRepository.mock.results[0]?.value,
       );
+      expect(repoDeps.renewalConsentRecords).toBe(
+        createRenewalConsentRecordRepository.mock.results[0]?.value,
+      );
     });
 
     expect(transaction).toHaveBeenCalledTimes(1);
     expect(createStripeEventRepository).toHaveBeenCalledWith(tx);
     expect(createSubscriptionRepository.mock.calls).toEqual([[], [tx]]);
     expect(createStripeCustomerRepository).toHaveBeenCalledWith(tx);
+    expect(createRenewalConsentRecordRepository).toHaveBeenCalledWith(tx);
   });
 });

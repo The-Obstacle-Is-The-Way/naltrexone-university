@@ -198,6 +198,7 @@ export type StripeClient = {
     ) => {
       id: string;
       type: string;
+      created?: number;
       data: { object: unknown };
     };
   };

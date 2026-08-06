@@ -1,6 +1,6 @@
 import { isBlockingCheckoutSubscriptionStatus } from '@/src/domain/value-objects';
 import { ApplicationError, isApplicationError } from '../errors';
-import type { PaymentGateway } from '../ports/gateways';
+import type { PaymentGateway, RenewalTermsSnapshot } from '../ports/gateways';
 import type { Logger } from '../ports/logger';
 import type {
   StripeCustomerRepository,
@@ -32,7 +32,11 @@ export class CreateCheckoutSessionUseCase {
     private readonly subscriptions: SubscriptionRepository,
     private readonly payments: PaymentGateway,
     private readonly logger: Logger,
-    private readonly now: () => Date = () => new Date(),
+    private readonly now: () => Date,
+    private readonly getRenewalTerms: (
+      plan: 'monthly' | 'annual',
+      hasTrial: boolean,
+    ) => RenewalTermsSnapshot,
   ) {}
 
   private warnOrphanedStripeCustomer(input: {
@@ -128,13 +132,23 @@ export class CreateCheckoutSessionUseCase {
     });
 
     const trialPeriodDays = subscription === null ? FREE_TRIAL_DAYS : undefined;
+    const renewalTerms = this.getRenewalTerms(
+      input.plan,
+      trialPeriodDays !== undefined,
+    );
+    if (renewalTerms.plan !== input.plan) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Checkout renewal terms do not match the selected plan',
+      );
+    }
 
     const baseCheckoutSessionInput = {
       userId: input.userId,
       externalCustomerId: stripeCustomerId,
-      plan: input.plan,
       successUrl: input.successUrl,
       cancelUrl: input.cancelUrl,
+      ...renewalTerms,
     };
     const checkoutSessionInput =
       trialPeriodDays === undefined

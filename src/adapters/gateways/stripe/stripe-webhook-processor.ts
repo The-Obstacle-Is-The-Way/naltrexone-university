@@ -5,6 +5,7 @@ import {
   extractSubscriptionRef,
   stripeEventWithSubscriptionRefSchema,
   stripeSetupIntentSchema,
+  stripeSubscriptionCheckoutConsentSessionSchema,
   stripeSubscriptionSchema,
   stripeTrialPaymentMethodSetupSessionSchema,
   subscriptionEventTypes,
@@ -25,6 +26,104 @@ function isSetupSessionPayload(payload: unknown): boolean {
 
 function expandableId(value: string | { id: string }): string {
   return typeof value === 'string' ? value : value.id;
+}
+
+function eventOccurredAt(event: { created?: number }): Date | undefined {
+  const created = event.created;
+  if (created === undefined || !Number.isInteger(created) || created <= 0) {
+    return undefined;
+  }
+  return new Date(created * 1000);
+}
+
+function eventAcceptedAt(event: { created?: number }): Date {
+  const occurredAt = eventOccurredAt(event);
+  if (!occurredAt) {
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      'Stripe consent event has no valid creation timestamp',
+    );
+  }
+  return occurredAt;
+}
+
+function hasInitialSubscriptionConsentMarker(payload: unknown): boolean {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const record = payload as Record<string, unknown>;
+  const metadata = record.metadata;
+  const consent = record.consent;
+  return (
+    (typeof metadata === 'object' &&
+      metadata !== null &&
+      Object.keys(metadata).some((key) => key.startsWith('renewal_'))) ||
+    (typeof consent === 'object' &&
+      consent !== null &&
+      (consent as Record<string, unknown>).terms_of_service === 'accepted')
+  );
+}
+
+function getInitialSubscriptionConsent(input: {
+  event: ReturnType<StripeClient['webhooks']['constructEvent']>;
+  subscriptionUpdate: NonNullable<WebhookEventResult['subscriptionUpdate']>;
+  logger: Logger;
+}): NonNullable<WebhookEventResult['initialSubscriptionConsent']> | undefined {
+  if (!hasInitialSubscriptionConsentMarker(input.event.data.object)) {
+    return undefined;
+  }
+
+  const parsed = stripeSubscriptionCheckoutConsentSessionSchema.safeParse(
+    input.event.data.object,
+  );
+  if (!parsed.success) {
+    input.logger.error(
+      {
+        eventId: input.event.id,
+        type: input.event.type,
+        error: z.flattenError(parsed.error),
+      },
+      'Invalid Stripe subscription Checkout consent completion',
+    );
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      'Invalid Stripe subscription Checkout consent completion',
+    );
+  }
+
+  const metadata = parsed.data.metadata;
+  const update = input.subscriptionUpdate;
+  if (
+    metadata.renewal_user_id !== update.userId ||
+    parsed.data.client_reference_id !== update.userId ||
+    expandableId(parsed.data.customer) !== update.externalCustomerId ||
+    expandableId(parsed.data.subscription) !== update.externalSubscriptionId ||
+    metadata.renewal_plan !== update.plan ||
+    (metadata.renewal_plan === 'monthly' &&
+      metadata.renewal_frequency !== 'month') ||
+    (metadata.renewal_plan === 'annual' &&
+      metadata.renewal_frequency !== 'year')
+  ) {
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      'Stripe subscription Checkout consent does not match the subscription',
+    );
+  }
+
+  return {
+    checkoutSessionId: parsed.data.id,
+    userId: update.userId,
+    externalCustomerId: update.externalCustomerId,
+    externalSubscriptionId: update.externalSubscriptionId,
+    plan: metadata.renewal_plan,
+    amountCents: Number(metadata.renewal_amount_cents),
+    currency: metadata.renewal_currency,
+    frequency: metadata.renewal_frequency,
+    disclosureSnapshot: metadata.renewal_disclosure_snapshot,
+    disclosureVersion: metadata.renewal_disclosure_version,
+    termsVersion: metadata.renewal_terms_version,
+    termsHash: metadata.renewal_terms_hash,
+    cancellationMethod: metadata.renewal_cancellation_method,
+    acceptedAt: eventAcceptedAt(input.event),
+  };
 }
 
 async function getTrialPaymentMethodSetupCompletion(input: {
@@ -100,6 +199,7 @@ async function getTrialPaymentMethodSetupCompletion(input: {
     termsVersion: metadata.consent_terms_version,
     termsHash: metadata.consent_terms_hash,
     stripePaymentMethodId: expandableId(setupIntent.data.payment_method),
+    acceptedAt: eventAcceptedAt(input.event),
   };
 }
 
@@ -213,7 +313,40 @@ export async function processStripeWebhookEvent({
         webhookE2EOwner,
       });
 
-    return subscriptionUpdate ? { ...result, subscriptionUpdate } : result;
+    if (!subscriptionUpdate) {
+      if (
+        event.type === 'checkout.session.completed' &&
+        hasInitialSubscriptionConsentMarker(event.data.object)
+      ) {
+        throw new ApplicationError(
+          'INVALID_WEBHOOK_PAYLOAD',
+          'Stripe consent completion has no subscription',
+        );
+      }
+      return result;
+    }
+
+    const initialSubscriptionConsent =
+      event.type === 'checkout.session.completed'
+        ? getInitialSubscriptionConsent({
+            event,
+            subscriptionUpdate,
+            logger,
+          })
+        : undefined;
+    const occurredAt = eventOccurredAt(event);
+    return initialSubscriptionConsent
+      ? {
+          ...result,
+          ...(occurredAt ? { occurredAt } : {}),
+          subscriptionUpdate,
+          initialSubscriptionConsent,
+        }
+      : {
+          ...result,
+          ...(occurredAt ? { occurredAt } : {}),
+          subscriptionUpdate,
+        };
   }
 
   if (!subscriptionEventTypes.has(event.type)) {
@@ -248,5 +381,10 @@ export async function processStripeWebhookEvent({
     webhookE2EOwner,
   });
 
-  return { ...result, subscriptionUpdate };
+  const occurredAt = eventOccurredAt(event);
+  return {
+    ...result,
+    ...(occurredAt ? { occurredAt } : {}),
+    subscriptionUpdate,
+  };
 }

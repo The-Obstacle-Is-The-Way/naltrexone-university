@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createTestRenewalTerms } from '../renewal-terms';
 import { FakePaymentGateway } from './fake-gateways';
 
 function createGateway(): FakePaymentGateway {
@@ -35,7 +36,7 @@ describe('FakePaymentGateway', () => {
       const input = {
         userId: 'user_1',
         externalCustomerId: 'cus_123',
-        plan: 'monthly' as const,
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       };
@@ -63,6 +64,8 @@ describe('FakePaymentGateway', () => {
         termsVersion: '2026-08-05',
         termsHash: 'terms-hash',
         disclosureSnapshot: 'Exact disclosure.',
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       };
@@ -101,6 +104,8 @@ describe('FakePaymentGateway', () => {
           termsVersion: '2026-08-05',
           termsHash: 'terms-hash',
           disclosureSnapshot: 'Exact disclosure.',
+          cancellationMethod:
+            'Billing page in the app or support@addictionboards.com',
           successUrl: 'https://app/success',
           cancelUrl: 'https://app/cancel',
         }),

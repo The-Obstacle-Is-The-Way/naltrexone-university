@@ -27,10 +27,21 @@ export type PaymentGatewayRequestOptions = {
   idempotencyKey?: string;
 };
 
-export type CheckoutSessionInput = {
+export type RenewalTermsSnapshot = {
+  plan: SubscriptionPlan;
+  amountCents: number;
+  currency: 'usd';
+  frequency: 'month' | 'year';
+  disclosureVersion: string;
+  termsVersion: string;
+  termsHash: string;
+  disclosureSnapshot: string;
+  cancellationMethod: string;
+};
+
+export type CheckoutSessionInput = RenewalTermsSnapshot & {
   userId: string; // internal UUID
   externalCustomerId: string; // opaque external id
-  plan: SubscriptionPlan; // domain plan (monthly/annual)
   successUrl: string;
   cancelUrl: string;
   trialPeriodDays?: number;
@@ -38,19 +49,11 @@ export type CheckoutSessionInput = {
 
 export type CheckoutSessionOutput = { url: string };
 
-export type TrialPaymentMethodSetupSessionInput = {
+export type TrialPaymentMethodSetupSessionInput = RenewalTermsSnapshot & {
   userId: string;
   externalCustomerId: string;
   externalSubscriptionId: string;
-  plan: SubscriptionPlan;
-  amountCents: number;
-  currency: 'usd';
-  frequency: 'month' | 'year';
   trialEndsAt: Date;
-  disclosureVersion: string;
-  termsVersion: string;
-  termsHash: string;
-  disclosureSnapshot: string;
   successUrl: string;
   cancelUrl: string;
 };
@@ -89,6 +92,7 @@ export type CreateCustomerOutput = { externalCustomerId: string };
 
 export type WebhookEventResult = {
   eventId: string;
+  occurredAt?: Date;
   type:
     | 'checkout.session.completed'
     | 'customer.subscription.created'
@@ -104,6 +108,13 @@ export type WebhookEventResult = {
     currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
   };
+  initialSubscriptionConsent?: RenewalTermsSnapshot & {
+    checkoutSessionId: string;
+    userId: string;
+    externalCustomerId: string;
+    externalSubscriptionId: string;
+    acceptedAt: Date;
+  };
   trialPaymentMethodSetupCompletion?: {
     sessionId: string;
     userId: string;
@@ -118,6 +129,7 @@ export type WebhookEventResult = {
     termsVersion: string;
     termsHash: string;
     stripePaymentMethodId: string;
+    acceptedAt: Date;
   };
 };
 

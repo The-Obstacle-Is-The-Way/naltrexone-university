@@ -12,6 +12,7 @@ import type {
 } from '@/src/application/ports/gateways';
 import {
   FakeLogger,
+  FakeRenewalConsentRecordRepository,
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
 
@@ -65,6 +66,7 @@ function createTestDeps() {
     },
     trialPaymentMethodSetupOperations:
       new FakeTrialPaymentMethodSetupOperationRepository(),
+    renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
   } satisfies StripeWebhookTransaction;
 
   const logger = new FakeLogger();
