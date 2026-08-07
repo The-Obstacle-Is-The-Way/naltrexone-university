@@ -89,6 +89,9 @@ describe('PrivacyPage', () => {
     expect(text).toContain(
       'Renewal acknowledgment and notice delivery records',
     );
+    expect(text).toContain(
+      'Recipient and message payloads remain immutable across retries; delivery status, provider-event data, and retry metadata are retained and may change',
+    );
     expect(text).not.toContain('change-notice contents');
     expect(text).not.toContain('change identifiers');
     expect(text).toContain(

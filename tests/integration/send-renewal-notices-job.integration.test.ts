@@ -131,7 +131,7 @@ describe('renewal notice job query', () => {
         currentPeriodEnd: uncoveredRenewal,
       },
     ]);
-    const scheduledRows = ['annual_reminder', 'renewal_notice'].map(
+    const scheduledRows = (['annual_reminder', 'renewal_notice'] as const).map(
       (noticeKind) => {
         const id = randomUUID();
         deliveryIds.push(id);
@@ -148,7 +148,7 @@ describe('renewal notice job query', () => {
         );
         return {
           id,
-          noticeKind: noticeKind as 'annual_reminder' | 'renewal_notice',
+          noticeKind,
           consentRecordId: null,
           stripeSubscriptionId: coveredSubscriptionId,
           applicableAt: alreadyCoveredRenewal,

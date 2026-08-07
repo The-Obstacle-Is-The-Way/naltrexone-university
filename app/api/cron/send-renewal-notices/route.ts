@@ -2,7 +2,8 @@ import { createContainer } from '@/lib/container';
 import { CANCELLATION_METHOD, PRICING_DATA } from '@/lib/pricing-data';
 import {
   listAnnualSubscriptionsDue,
-  SEND_RENEWAL_NOTICES_DEFAULT_LIMIT,
+  SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
+  SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
   sendDueRenewalNotices,
 } from '@/src/adapters/jobs/send-due-renewal-notices';
 import { createRenewalNoticeCronHandler } from './route-handler';
@@ -17,9 +18,13 @@ const handleCronRequest = createRenewalNoticeCronHandler(() => {
     rateLimiter: container.createRateLimiter(),
     run: () =>
       sendDueRenewalNotices(
-        { limit: SEND_RENEWAL_NOTICES_DEFAULT_LIMIT },
+        {
+          subscriptionLimit: SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
+          dispatchLimit: SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
+        },
         {
           now: container.now,
+          monotonicNow: () => performance.now(),
           annualPlan: {
             planName: PRICING_DATA.annual.name,
             amountCents: PRICING_DATA.annual.amountCents,

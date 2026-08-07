@@ -37,6 +37,7 @@ export type SendDueRenewalNoticesResult = {
   queued: number;
   selected: number;
   staleUnknown: number;
+  dispatchFailures: number;
 };
 
 function escapeHtml(value: string): string {
@@ -194,6 +195,7 @@ export class SendDueRenewalNoticesUseCase {
 
     const due = await this.repository.findDue({ now: observedAt, limit });
     let nextIndex = 0;
+    let dispatchFailures = 0;
     const workers = Array.from(
       { length: Math.min(DISPATCH_CONCURRENCY, due.length) },
       async () => {
@@ -205,12 +207,18 @@ export class SendDueRenewalNoticesUseCase {
             await this.dispatch.execute({ deliveryId: delivery.id });
           } catch {
             // Isolate a poisoned row so every selected delivery is awaited.
+            dispatchFailures += 1;
           }
         }
       },
     );
     await Promise.all(workers);
 
-    return { queued, selected: due.length, staleUnknown };
+    return {
+      queued,
+      selected: due.length,
+      staleUnknown,
+      dispatchFailures,
+    };
   }
 }

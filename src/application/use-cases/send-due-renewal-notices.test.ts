@@ -75,7 +75,12 @@ describe('SendDueRenewalNoticesUseCase', () => {
       limit: 100,
     });
 
-    expect(result).toEqual({ queued: 1, selected: 1, staleUnknown: 0 });
+    expect(result).toEqual({
+      queued: 1,
+      selected: 1,
+      staleUnknown: 0,
+      dispatchFailures: 0,
+    });
     expect(repository.records).toHaveLength(1);
     expect(repository.records[0]).toMatchObject({
       noticeKind: 'renewal_notice',
@@ -113,7 +118,12 @@ describe('SendDueRenewalNoticesUseCase', () => {
     await useCase.execute({ notices, limit: 100 });
     const replay = await useCase.execute({ notices, limit: 100 });
 
-    expect(replay).toEqual({ queued: 0, selected: 0, staleUnknown: 0 });
+    expect(replay).toEqual({
+      queued: 0,
+      selected: 0,
+      staleUnknown: 0,
+      dispatchFailures: 0,
+    });
     expect(repository.records.map((row) => row.noticeKind).sort()).toEqual([
       'annual_reminder',
       'renewal_notice',
@@ -191,7 +201,12 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     const result = await useCase.execute({ notices: [], limit: 100 });
 
-    expect(result).toEqual({ queued: 0, selected: 0, staleUnknown: 1 });
+    expect(result).toEqual({
+      queued: 0,
+      selected: 0,
+      staleUnknown: 1,
+      dispatchFailures: 0,
+    });
     expect(row).toMatchObject({
       status: 'outcome_unknown',
       failureClass: 'stale_processing_claim',
@@ -243,8 +258,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
     const execution = useCase.execute({ notices, limit: 100 });
     await new Promise<void>((resolve) => setImmediate(resolve));
 
-    expect(maxActive).toBeGreaterThan(0);
-    expect(maxActive).toBeLessThanOrEqual(4);
+    expect(maxActive).toBe(4);
     release.resolve(undefined);
     await execution;
   });
@@ -290,7 +304,12 @@ describe('SendDueRenewalNoticesUseCase', () => {
         ],
         limit: 100,
       }),
-    ).resolves.toEqual({ queued: 2, selected: 2, staleUnknown: 0 });
+    ).resolves.toEqual({
+      queued: 2,
+      selected: 2,
+      staleUnknown: 0,
+      dispatchFailures: 1,
+    });
     expect(gateway.sendInputs).toHaveLength(1);
     expect(repository.records).toEqual([
       expect.objectContaining({ status: 'queued' }),

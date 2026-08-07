@@ -12,7 +12,8 @@ import type {
 } from '@/src/application/use-cases';
 import { DAY_MS } from '@/src/domain/services';
 
-export const SEND_RENEWAL_NOTICES_DEFAULT_LIMIT = 100;
+export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 50;
+export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 100;
 export const SEND_RENEWAL_NOTICES_MAX_LIMIT = 500;
 const ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS = 15;
 const ANNUAL_RENEWAL_NOTICE_LATEST_DAYS = 45;
@@ -103,6 +104,7 @@ export async function listAnnualSubscriptionsDue(
 
 export type SendDueRenewalNoticesJobDeps = {
   now: () => Date;
+  monotonicNow: () => number;
   listAnnualSubscriptionsDue: (input: {
     renewalAtOrAfter: Date;
     renewalAtOrBefore: Date;
@@ -123,19 +125,28 @@ export type SendDueRenewalNoticesJobDeps = {
 
 export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   subscriptions: number;
+  durationMs: number;
 };
 
-function safeLimit(value: number): number {
-  if (!Number.isInteger(value)) return SEND_RENEWAL_NOTICES_DEFAULT_LIMIT;
+function safeLimit(value: number, fallback: number): number {
+  if (!Number.isInteger(value)) return fallback;
   return Math.min(SEND_RENEWAL_NOTICES_MAX_LIMIT, Math.max(1, value));
 }
 
 export async function sendDueRenewalNotices(
-  input: { limit: number },
+  input: { subscriptionLimit: number; dispatchLimit: number },
   deps: SendDueRenewalNoticesJobDeps,
 ): Promise<SendDueRenewalNoticesJobResult> {
+  const startedAt = deps.monotonicNow();
   const observedAt = deps.now();
-  const limit = safeLimit(input.limit);
+  const subscriptionLimit = safeLimit(
+    input.subscriptionLimit,
+    SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
+  );
+  const dispatchLimit = safeLimit(
+    input.dispatchLimit,
+    SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
+  );
   const subscriptions = await deps.listAnnualSubscriptionsDue({
     renewalAtOrAfter: new Date(
       observedAt.getTime() + ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS * DAY_MS,
@@ -144,7 +155,7 @@ export async function sendDueRenewalNotices(
       observedAt.getTime() + ANNUAL_RENEWAL_NOTICE_LATEST_DAYS * DAY_MS,
     ),
     disclosureVersion: deps.annualPlan.disclosureVersion,
-    limit,
+    limit: subscriptionLimit,
   });
   const notices = subscriptions.flatMap(
     (subscription): ScheduledRenewalNotice[] =>
@@ -162,6 +173,13 @@ export async function sendDueRenewalNotices(
         changeDescription: null,
       })),
   );
-  const result = await deps.sendDueRenewalNotices.execute({ notices, limit });
-  return { subscriptions: subscriptions.length, ...result };
+  const result = await deps.sendDueRenewalNotices.execute({
+    notices,
+    limit: dispatchLimit,
+  });
+  return {
+    subscriptions: subscriptions.length,
+    ...result,
+    durationMs: Math.max(0, deps.monotonicNow() - startedAt),
+  };
 }

@@ -14,6 +14,8 @@ const successResult = {
   queued: 2,
   selected: 2,
   staleUnknown: 0,
+  dispatchFailures: 0,
+  durationMs: 250,
 };
 
 function createHarness(input?: {
@@ -78,7 +80,7 @@ describe('renewal notice cron route', () => {
   });
 
   it.each([
-    'wrong-secret',
+    'wrong-secre',
     'x',
   ])('rejects an invalid bearer token with same or different length: %s', async (token) => {
     const harness = createHarness();

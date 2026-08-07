@@ -357,7 +357,7 @@ Only after the deployed pages return signed-out 200:
 - [ ] SHIELD security and incident programs are adopted and evidence-backed.
 - [x] Stripe legal links are set only after deployment. **Owner-reported done 2026-08-05** — both URLs set in live Public details after production signed-out 200s; support email set to the published `support@addictionboards.com`. Current test-mode Session creation succeeds without any separately observed test-mode setup; the shared-settings-versus-skipped-enforcement mechanism is unresolved (see § 5).
 - [x] **Shortened statement descriptor is 2–10 characters and suffix-compatible.** The settled owner record is corroborated, not replaced, by the 2026-08-06 test-mode Account API: full descriptor `ADDICTIONBOARDS.COM`; separate shortened prefix `ADDICTION` (9 characters). The prior reopening confused the full and shortened fields.
-- [x] Full quality gate passes before push (2026-08-06: typecheck; lint with the accepted 24-warning baseline; 3,783 unit; 398 browser; 235 integration passed plus 2 skipped; build; 38 E2E).
+- [x] Full quality gate passes before push (2026-08-06: typecheck; lint with the accepted 24-warning baseline; 3,783 unit; 398 browser; 236 integration passed plus 2 skipped; build; 38 E2E).
 - [ ] CodeRabbit reviews the exact final pushed head before merge is requested.
 
 ## Stage 1 adversarial review record (2026-08-05)

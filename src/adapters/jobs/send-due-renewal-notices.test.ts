@@ -27,13 +27,19 @@ function createDeps(): {
       queued: 2,
       selected: 2,
       staleUnknown: 0,
+      dispatchFailures: 0,
     }),
   );
+  const monotonicNow = vi
+    .fn<() => number>()
+    .mockReturnValueOnce(1_000)
+    .mockReturnValueOnce(1_250);
   return {
     listAnnualSubscriptionsDue,
     execute,
     deps: {
       now: () => now,
+      monotonicNow,
       listAnnualSubscriptionsDue,
       sendDueRenewalNotices: { execute },
       annualPlan: {
@@ -53,20 +59,26 @@ describe('sendDueRenewalNotices job', () => {
   it('selects active annual renewals in the pinned 15-to-45-day window', async () => {
     const { deps, listAnnualSubscriptionsDue } = createDeps();
 
-    await sendDueRenewalNotices({ limit: 100 }, deps);
+    await sendDueRenewalNotices(
+      { subscriptionLimit: 50, dispatchLimit: 100 },
+      deps,
+    );
 
     expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith({
       renewalAtOrAfter: new Date('2026-08-22T12:00:00.000Z'),
       renewalAtOrBefore: new Date('2026-09-21T12:00:00.000Z'),
       disclosureVersion: '2026-08-05',
-      limit: 100,
+      limit: 50,
     });
   });
 
   it('queues one annual reminder and one annual renewal notice per subscription', async () => {
     const { deps, execute } = createDeps();
 
-    const result = await sendDueRenewalNotices({ limit: 100 }, deps);
+    const result = await sendDueRenewalNotices(
+      { subscriptionLimit: 50, dispatchLimit: 100 },
+      deps,
+    );
 
     const call = execute.mock.calls[0]?.[0] as
       | { notices: ScheduledRenewalNotice[]; limit: number }
@@ -94,13 +106,18 @@ describe('sendDueRenewalNotices job', () => {
       queued: 2,
       selected: 2,
       staleUnknown: 0,
+      dispatchFailures: 0,
+      durationMs: 250,
     });
   });
 
   it('clamps unsafe limits before querying or dispatching', async () => {
     const { deps, listAnnualSubscriptionsDue, execute } = createDeps();
 
-    await sendDueRenewalNotices({ limit: 50_000 }, deps);
+    await sendDueRenewalNotices(
+      { subscriptionLimit: 50_000, dispatchLimit: 50_000 },
+      deps,
+    );
 
     expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 500 }),
