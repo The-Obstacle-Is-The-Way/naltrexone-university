@@ -2,6 +2,7 @@ import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
+  RenewalConsentRecordRepository,
   StripeCustomerRepository,
   SubscriptionRepository,
 } from '@/src/application/ports/repositories';
@@ -30,6 +31,7 @@ export type ReconcileStripeSubscriptionsDeps = {
   stripe: StripeClient;
   priceIds: StripePriceIds;
   logger: Logger;
+  now: () => Date;
   webhookE2EOwner?: string | undefined;
   listLocalSubscriptions: (
     input: ReconcileStripeSubscriptionsInput,
@@ -38,6 +40,7 @@ export type ReconcileStripeSubscriptionsDeps = {
     fn: (tx: {
       stripeCustomers: StripeCustomerRepository;
       subscriptions: SubscriptionRepository;
+      renewalConsentRecords: RenewalConsentRecordRepository;
     }) => Promise<T>,
   ) => Promise<T>;
 };

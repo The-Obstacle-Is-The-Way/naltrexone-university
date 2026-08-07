@@ -7,11 +7,13 @@ import type {
 } from '@/src/application/ports/transactional-email-gateway';
 
 const TRANSIENT_RESEND_ERRORS = new Set<ErrorResponse['name']>([
-  'application_error',
   'daily_quota_exceeded',
-  'internal_server_error',
   'monthly_quota_exceeded',
   'rate_limit_exceeded',
+]);
+const AMBIGUOUS_RESEND_ERRORS = new Set<ErrorResponse['name']>([
+  'application_error',
+  'internal_server_error',
 ]);
 const TERMINAL_RESEND_ERRORS = new Set<ErrorResponse['name']>([
   'invalid_idempotency_key',
@@ -104,16 +106,22 @@ export class ResendTransactionalEmailGateway
             failureCode: error.name,
           };
         }
+        if (AMBIGUOUS_RESEND_ERRORS.has(error.name)) {
+          return {
+            status: 'outcome_unknown',
+            failureCode: error.name,
+          };
+        }
         if (TERMINAL_RESEND_ERRORS.has(error.name)) {
           return {
             status: 'terminal_failure',
             failureCode: error.name,
           };
         }
-        // An explicit provider error proves non-acceptance. Unknown future
-        // names are safe to retry; they are not an ambiguous send outcome.
+        // A future provider error may represent a 5xx response after acceptance.
+        // Quarantine it until the operator confirms that no send occurred.
         return {
-          status: 'transient_failure',
+          status: 'outcome_unknown',
           failureCode: error.name,
         };
       }

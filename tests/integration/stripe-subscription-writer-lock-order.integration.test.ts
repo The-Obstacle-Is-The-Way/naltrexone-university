@@ -463,6 +463,7 @@ async function runReconciliationWriter(input: {
       stripe: createReconciliationStripeClient(normalizedSubscription),
       priceIds,
       logger: new FakeLogger(),
+      now: () => new Date('2026-08-07T12:00:00.000Z'),
       listLocalSubscriptions: async () => [
         {
           userId: input.userId,
@@ -483,6 +484,9 @@ async function runReconciliationWriter(input: {
                 ),
               stripeCustomers:
                 new RawDeletionCounterpartyStripeCustomerRepository(tx),
+              renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+                tx,
+              ),
             });
           });
         } catch (error) {
@@ -866,6 +870,7 @@ describe('Stripe subscription writer lock order', () => {
         stripe,
         priceIds,
         logger: new FakeLogger(),
+        now: () => new Date('2026-08-07T12:00:00.000Z'),
         listLocalSubscriptions: async () => [
           {
             userId: user.id,
@@ -886,6 +891,8 @@ describe('Stripe subscription writer lock order', () => {
                     customerLockObserved = true;
                   },
                 ),
+                renewalConsentRecords:
+                  new DrizzleRenewalConsentRecordRepository(tx),
               });
             });
           } catch (error) {

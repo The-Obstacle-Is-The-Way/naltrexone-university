@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { ApplicationError } from '@/src/application/errors';
 import { parseTransactionalEmailPayloadSnapshot } from '@/src/application/shared/transactional-email-payload';
 import {
+  FakeLogger,
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
   FakeTransactionalEmailGateway,
@@ -45,12 +47,14 @@ function createHarness(input?: {
     configured: input?.configured ?? true,
     ...(input?.onSend ? { onSend: input.onSend } : {}),
   });
+  const logger = new FakeLogger();
   let deliverySequence = 0;
   let attemptSequence = 0;
   const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
     repository,
     gateway,
     hasher,
+    new FakeLogger(),
     () => now,
     () => `attempt-${++attemptSequence}`,
   );
@@ -58,12 +62,13 @@ function createHarness(input?: {
     repository,
     hasher,
     dispatch,
+    logger,
     'https://addictionboards.com',
     () => now,
     () =>
       `11111111-1111-4111-8111-${String(++deliverySequence).padStart(12, '0')}`,
   );
-  return { gateway, hasher, repository, useCase };
+  return { gateway, hasher, logger, repository, useCase };
 }
 
 describe('SendDueRenewalNoticesUseCase', () => {
@@ -77,6 +82,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(result).toEqual({
       queued: 1,
+      queueFailures: 0,
       rejectedNotices: 0,
       selected: 1,
       staleUnknown: 0,
@@ -121,6 +127,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(replay).toEqual({
       queued: 0,
+      queueFailures: 0,
       rejectedNotices: 0,
       selected: 0,
       staleUnknown: 0,
@@ -210,6 +217,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(result).toEqual({
       queued: 0,
+      queueFailures: 0,
       rejectedNotices: 0,
       selected: 0,
       staleUnknown: 1,
@@ -285,6 +293,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       repository,
       gateway,
       hasher,
+      new FakeLogger(),
       () => now,
       () => `attempt-${++attemptSequence}`,
     );
@@ -300,6 +309,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
           return dispatch.execute({ deliveryId });
         },
       },
+      new FakeLogger(),
       'https://addictionboards.com',
       () => now,
       () =>
@@ -316,6 +326,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       }),
     ).resolves.toEqual({
       queued: 2,
+      queueFailures: 0,
       rejectedNotices: 0,
       selected: 2,
       staleUnknown: 0,
@@ -344,6 +355,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(result).toEqual({
       queued: 1,
+      queueFailures: 0,
       rejectedNotices: 4,
       selected: 1,
       staleUnknown: 0,
@@ -356,5 +368,91 @@ describe('SendDueRenewalNoticesUseCase', () => {
       }),
     ]);
     expect(gateway.sendInputs).toHaveLength(1);
+  });
+
+  it('isolates a queue conflict so later notices still queue and dispatch', async () => {
+    const hasher = new FakeSha256Hasher();
+    class ThrowingLogger extends FakeLogger {
+      override error(
+        context: Parameters<FakeLogger['error']>[0],
+        msg: string,
+      ): void {
+        super.error(context, msg);
+        throw new Error('logger unavailable');
+      }
+    }
+    const logger = new ThrowingLogger();
+    class ConflictOnceRepository extends FakeRenewalNoticeDeliveryRepository {
+      private conflicted = false;
+
+      override async saveQueued(
+        input: Parameters<FakeRenewalNoticeDeliveryRepository['saveQueued']>[0],
+      ) {
+        if (!this.conflicted) {
+          this.conflicted = true;
+          throw new ApplicationError(
+            'CONFLICT',
+            'Renewal notice delivery identity is bound to another payload',
+          );
+        }
+        return super.saveQueued(input);
+      }
+    }
+    const repository = new ConflictOnceRepository(() => now, hasher);
+    const gateway = new FakeTransactionalEmailGateway({ configured: true });
+    const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
+      repository,
+      gateway,
+      hasher,
+      new FakeLogger(),
+      () => now,
+      () => 'attempt-healthy',
+    );
+    let deliverySequence = 0;
+    const useCase = new SendDueRenewalNoticesUseCase(
+      repository,
+      hasher,
+      dispatch,
+      logger,
+      'https://addictionboards.com',
+      () => now,
+      () =>
+        `11111111-1111-4111-8111-${String(++deliverySequence).padStart(12, '0')}`,
+    );
+
+    await expect(
+      useCase.execute({
+        notices: [
+          scheduledNotice({ externalSubscriptionId: 'sub_conflict' }),
+          scheduledNotice({ externalSubscriptionId: 'sub_healthy' }),
+        ],
+        limit: 100,
+      }),
+    ).resolves.toEqual({
+      queued: 1,
+      queueFailures: 1,
+      rejectedNotices: 0,
+      selected: 1,
+      staleUnknown: 0,
+      dispatchFailures: 0,
+    });
+    expect(repository.records).toEqual([
+      expect.objectContaining({
+        externalSubscriptionId: 'sub_healthy',
+        status: 'delivered',
+      }),
+    ]);
+    expect(gateway.sendInputs).toHaveLength(1);
+    expect(logger.errorCalls).toEqual([
+      {
+        context: {
+          noticeKind: 'renewal_notice',
+          stripeSubscriptionId: 'sub_conflict',
+          errorCode: 'CONFLICT',
+          errorName: 'ApplicationError',
+        },
+        msg: 'Renewal notice queueing failed',
+      },
+    ]);
   });
 });

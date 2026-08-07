@@ -119,8 +119,9 @@ describe('DrizzleRenewalConsentRecordRepository', () => {
   });
 
   it('updates termination and retention for every consent on a subscription', async () => {
+    const returnedConsentId = crypto.randomUUID();
     const updateSet = vi.fn((_values: Record<string, unknown>) => ({
-      where: () => ({ returning: async () => [{ id: 'consent_1' }] }),
+      where: () => ({ returning: async () => [{ id: returnedConsentId }] }),
     }));
     const db = { update: () => ({ set: updateSet }) } as unknown as RepoDb;
     const repository = new DrizzleRenewalConsentRecordRepository(

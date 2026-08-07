@@ -3,9 +3,11 @@ import type { StripeSubscriptionStatus } from '@/src/adapters/shared/stripe-type
 import { ApplicationError } from '@/src/application/errors';
 import {
   FakeLogger,
+  FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
+import { newRenewalConsentRecord } from '@/src/domain/entities';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { reconcileStripeSubscriptions } from './reconcile-stripe-subscriptions';
@@ -53,6 +55,7 @@ type ReconciliationTestScenarioInput = {
   }) => Promise<LocalSubscriptionRow[]>;
   stripeCustomers?: FakeStripeCustomerRepository | undefined;
   subscriptions?: FakeSubscriptionRepository;
+  renewalConsentRecords?: FakeRenewalConsentRecordRepository;
   logger?: FakeLogger;
   transaction?: ReconciliationDeps['transaction'];
   webhookE2EOwner?: string | undefined;
@@ -198,6 +201,8 @@ function createReconciliationTestScenario(
   const stripeCustomers =
     input.stripeCustomers ?? new FakeStripeCustomerRepository();
   const subscriptions = input.subscriptions ?? new FakeSubscriptionRepository();
+  const renewalConsentRecords =
+    input.renewalConsentRecords ?? new FakeRenewalConsentRecordRepository();
   const logger = input.logger ?? new FakeLogger();
   const stripe = (input.stripe ??
     createStripeStub({
@@ -207,8 +212,13 @@ function createReconciliationTestScenario(
   const listLocalSubscriptions =
     input.listLocalSubscriptions ??
     (async () => input.localSubscriptions ?? []);
+  const transactionResources = {
+    stripeCustomers,
+    subscriptions,
+    renewalConsentRecords,
+  };
   const transaction =
-    input.transaction ?? (async (fn) => fn({ stripeCustomers, subscriptions }));
+    input.transaction ?? (async (fn) => fn(transactionResources));
 
   async function run(overrides: Partial<ReconciliationInput> = {}) {
     return reconcileStripeSubscriptions(
@@ -221,6 +231,7 @@ function createReconciliationTestScenario(
         stripe,
         priceIds: { monthly: 'price_m', annual: 'price_a' },
         logger,
+        now: () => new Date('2026-08-07T12:00:00.000Z'),
         webhookE2EOwner: input.webhookE2EOwner,
         listLocalSubscriptions,
         transaction,
@@ -231,6 +242,7 @@ function createReconciliationTestScenario(
   return {
     stripeCustomers,
     subscriptions,
+    renewalConsentRecords,
     logger,
     stripe,
     listLocalSubscriptions,
@@ -661,6 +673,63 @@ describe('reconcileStripeSubscriptions', () => {
       scenario.subscriptions.findByUserId(primaryUserId),
     ).resolves.toMatchObject({
       status: 'canceled',
+    });
+  });
+
+  it('starts consent retention when reconciliation observes a canceled subscription', async () => {
+    const canceled = createUserSubscriptionFixture('sub_canceled_retention', {
+      status: 'canceled',
+    });
+    const stripe = createStripeFromFixtures({
+      fixtures: [{ fixture: canceled }],
+      listedSubscriptions: [],
+    });
+    const renewalConsentRecords = new FakeRenewalConsentRecordRepository();
+    const consent = await renewalConsentRecords.save(
+      newRenewalConsentRecord({
+        userId: primaryUserId,
+        consumerReference: 'a'.repeat(64),
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: canceled.id,
+        checkoutSessionId: 'cs_canceled_retention',
+        setupSessionId: null,
+        applicationSourceId: null,
+        plan: 'monthly',
+        amountCents: 2900,
+        currency: 'usd',
+        frequency: 'month',
+        trialEndsAt: null,
+        cancellationDeadline: new Date('2026-09-06T12:00:00Z'),
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
+        disclosureSnapshot: 'Exact disclosure.',
+        disclosureVersion: '2026-08-05',
+        termsVersion: '2026-08-05',
+        termsHash: 'b'.repeat(64),
+        consentSource: 'stripe_checkout',
+        acceptedAt: new Date('2026-08-06T12:00:00Z'),
+        consentKind: 'initial_offer',
+        priorAmountCents: null,
+        proposedAmountCents: null,
+        effectiveRenewalAt: null,
+      }),
+    );
+    const scenario = createReconciliationTestScenario({
+      stripe,
+      renewalConsentRecords,
+      localSubscriptions: [row(primaryUserId, canceled.id)],
+    });
+
+    await expect(scenario.run({ dryRun: false })).resolves.toMatchObject({
+      updated: 1,
+      failed: 0,
+    });
+
+    await expect(
+      renewalConsentRecords.findById(consent.id),
+    ).resolves.toMatchObject({
+      subscriptionTerminatedAt: expect.any(Date),
+      retainUntil: expect.any(Date),
     });
   });
 

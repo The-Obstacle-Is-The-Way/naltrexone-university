@@ -7,6 +7,7 @@ import type {
 import { SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS } from '@/src/application/shared/persist-subscription-observation';
 import {
   FakeLogger,
+  FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -122,11 +123,13 @@ function createDeps(input: {
   initialVersion: number;
 }): ReconcileStripeSubscriptionsDeps {
   const stripeCustomers = new FakeStripeCustomerRepository();
+  const renewalConsentRecords = new FakeRenewalConsentRecordRepository();
 
   return {
     stripe: input.stripe,
     priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
     logger: new FakeLogger(),
+    now: () => new Date('2026-08-07T12:00:00.000Z'),
     listLocalSubscriptions: async () => [
       {
         userId,
@@ -135,8 +138,12 @@ function createDeps(input: {
       },
     ],
     transaction: async (fn) =>
-      fn({ subscriptions: input.subscriptions, stripeCustomers }),
-  } as ReconcileStripeSubscriptionsDeps;
+      fn({
+        subscriptions: input.subscriptions,
+        stripeCustomers,
+        renewalConsentRecords,
+      }),
+  };
 }
 
 describe('reconcileStripeSubscriptions observation-version fence', () => {
