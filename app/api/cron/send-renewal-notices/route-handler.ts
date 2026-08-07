@@ -24,7 +24,7 @@ type AuthorizationTokenResult =
 export type RenewalNoticeCronHandlerDependencies = {
   cronSecret: string | undefined;
   logger: Pick<Logger, 'warn' | 'error'>;
-  rateLimiter: RateLimiter;
+  createRateLimiter: () => RateLimiter;
   run: () => Promise<SendDueRenewalNoticesJobResult>;
 };
 
@@ -33,7 +33,12 @@ function getAuthorizationToken(req: Request): AuthorizationTokenResult {
   if (!header) {
     return { ok: false, reason: 'missing_authorization_header' };
   }
-  const [scheme, token] = header.split(' ', 2);
+  const separatorIndex = header.indexOf(' ');
+  if (separatorIndex < 0) {
+    return { ok: false, reason: 'malformed_authorization_header' };
+  }
+  const scheme = header.slice(0, separatorIndex);
+  const token = header.slice(separatorIndex + 1);
   if (scheme !== 'Bearer' || !token) {
     return { ok: false, reason: 'malformed_authorization_header' };
   }
@@ -85,7 +90,7 @@ export function createRenewalNoticeCronHandler(
     }
 
     try {
-      const rate = await dependencies.rateLimiter.limit({
+      const rate = await dependencies.createRateLimiter().limit({
         key: 'cron:send-renewal-notices',
         ...CRON_SEND_RENEWAL_NOTICES_RATE_LIMIT,
       });

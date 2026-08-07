@@ -12,6 +12,7 @@ import {
 const successResult = {
   subscriptions: 1,
   queued: 2,
+  rejectedNotices: 0,
   selected: 2,
   staleUnknown: 0,
   dispatchFailures: 0,
@@ -20,16 +21,23 @@ const successResult = {
 
 function createHarness(input?: {
   omitCronSecret?: boolean;
+  cronSecret?: string;
   rateLimiter?: FakeRateLimiter;
   jobError?: Error;
 }) {
   const logger = new FakeLogger();
   const rateLimiter = input?.rateLimiter ?? new FakeRateLimiter();
+  let rateLimiterFactoryCalls = 0;
   let jobCalls = 0;
   const dependencies: RenewalNoticeCronHandlerDependencies = {
-    cronSecret: input?.omitCronSecret ? undefined : 'test-secret',
+    cronSecret: input?.omitCronSecret
+      ? undefined
+      : (input?.cronSecret ?? 'test-secret'),
     logger,
-    rateLimiter,
+    createRateLimiter: () => {
+      rateLimiterFactoryCalls += 1;
+      return rateLimiter;
+    },
     run: async () => {
       jobCalls += 1;
       if (input?.jobError) throw input.jobError;
@@ -41,6 +49,7 @@ function createHarness(input?: {
     jobCalls: () => jobCalls,
     logger,
     rateLimiter,
+    rateLimiterFactoryCalls: () => rateLimiterFactoryCalls,
   };
 }
 
@@ -60,6 +69,7 @@ describe('renewal notice cron route', () => {
 
     expect(response.status).toBe(401);
     expect(harness.jobCalls()).toBe(0);
+    expect(harness.rateLimiterFactoryCalls()).toBe(0);
     expect(harness.logger.warnCalls).toEqual([
       {
         context: expect.objectContaining({
@@ -77,18 +87,61 @@ describe('renewal notice cron route', () => {
 
     expect(response.status).toBe(401);
     expect(harness.jobCalls()).toBe(0);
+    expect(harness.rateLimiterFactoryCalls()).toBe(0);
   });
 
   it.each([
-    'wrong-secre',
-    'x',
-  ])('rejects an invalid bearer token with same or different length: %s', async (token) => {
+    {
+      label: 'same-length wrong token',
+      authorization: 'Bearer wrong-secre',
+      reason: 'invalid_token',
+    },
+    {
+      label: 'different-length wrong token',
+      authorization: 'Bearer x',
+      reason: 'invalid_token',
+    },
+    {
+      label: 'non-Bearer scheme',
+      authorization: 'Basic test-secret',
+      reason: 'malformed_authorization_header',
+    },
+    {
+      label: 'missing token separator',
+      authorization: 'Bearer',
+      reason: 'malformed_authorization_header',
+    },
+  ])('rejects $label', async ({ authorization, reason }) => {
     const harness = createHarness();
-
-    const response = await harness.handle(authorizedRequest(token));
+    const response = await harness.handle(
+      new Request('http://localhost/api/cron/send-renewal-notices', {
+        headers: { authorization },
+      }),
+    );
 
     expect(response.status).toBe(401);
     expect(harness.jobCalls()).toBe(0);
+    expect(harness.rateLimiterFactoryCalls()).toBe(0);
+    expect(harness.logger.warnCalls).toEqual([
+      {
+        context: {
+          route: '/api/cron/send-renewal-notices',
+          reason,
+        },
+        msg: 'Unauthorized cron request',
+      },
+    ]);
+  });
+
+  it('preserves spaces in a configured bearer token', async () => {
+    const harness = createHarness({ cronSecret: 'secret with spaces' });
+
+    const response = await harness.handle(
+      authorizedRequest('secret with spaces'),
+    );
+
+    expect(response.status).toBe(200);
+    expect(harness.jobCalls()).toBe(1);
   });
 
   it('pins the bearer comparison to equal-length hashes and timingSafeEqual', () => {
@@ -146,6 +199,7 @@ describe('renewal notice cron route', () => {
 
     await harness.handle(authorizedRequest());
 
+    expect(harness.rateLimiterFactoryCalls()).toBe(1);
     expect(harness.rateLimiter.inputs).toEqual([
       {
         key: 'cron:send-renewal-notices',

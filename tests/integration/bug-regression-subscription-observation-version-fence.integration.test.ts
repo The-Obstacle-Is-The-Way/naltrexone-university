@@ -142,6 +142,7 @@ async function runWebhook(input: {
     input.writer,
     priceIds,
   );
+  const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
   await processStripeWebhook(
     {
@@ -149,7 +150,7 @@ async function runWebhook(input: {
       subscriptionVersions,
       logger: new FakeLogger(),
       now: () => new Date('2026-07-11T00:00:00.000Z'),
-      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
+      ...acknowledgment.webhook,
       transaction: (fn) =>
         input.writer.transaction((tx) =>
           fn({
@@ -161,7 +162,7 @@ async function runWebhook(input: {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
-            ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
+            ...acknowledgment.transaction,
           }),
         ),
     },

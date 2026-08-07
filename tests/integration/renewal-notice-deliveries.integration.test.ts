@@ -130,9 +130,13 @@ describe('renewal notice delivery persistence', () => {
 
     await expect(repository.saveQueued(wrongKey)).rejects.toMatchObject({
       code: 'CONFLICT',
+      message:
+        'Renewal notice provider idempotency key is not derived from its delivery ID',
     });
     await expect(repository.saveQueued(wrongHash)).rejects.toMatchObject({
       code: 'CONFLICT',
+      message:
+        'Renewal notice payload hash does not match its immutable snapshot',
     });
     await expect(repository.findById(wrongKey.id)).resolves.toBeNull();
     await expect(repository.findById(wrongHash.id)).resolves.toBeNull();
@@ -181,6 +185,7 @@ describe('renewal notice delivery persistence', () => {
     );
     const queued = await repository.saveQueued(createDelivery());
     const dueTransient = await repository.saveQueued(createDelivery());
+    const dueAtEquality = await repository.saveQueued(createDelivery());
     const futureTransient = await repository.saveQueued(createDelivery());
     const terminal = await repository.saveQueued(createDelivery());
     const unknown = await repository.saveQueued(createDelivery());
@@ -200,6 +205,10 @@ describe('renewal notice delivery persistence', () => {
       .where(eq(renewalNoticeDeliveries.id, futureTransient.id));
     await primary.db
       .update(renewalNoticeDeliveries)
+      .set({ status: 'transient_failure', nextAttemptAt: now })
+      .where(eq(renewalNoticeDeliveries.id, dueAtEquality.id));
+    await primary.db
+      .update(renewalNoticeDeliveries)
       .set({ status: 'terminal_failure' })
       .where(eq(renewalNoticeDeliveries.id, terminal.id));
     await primary.db
@@ -210,7 +219,7 @@ describe('renewal notice delivery persistence', () => {
     const due = await repository.findDue({ now, limit: 10 });
 
     expect(new Set(due.map((delivery) => delivery.id))).toEqual(
-      new Set([queued.id, dueTransient.id]),
+      new Set([queued.id, dueTransient.id, dueAtEquality.id]),
     );
   });
 
@@ -368,6 +377,39 @@ describe('renewal notice delivery persistence', () => {
           confirmedNoSend: true,
         }),
       ],
+    });
+  });
+
+  it('refuses to requeue a delivered notice', async () => {
+    const repository = new DrizzleRenewalNoticeDeliveryRepository(
+      primary.db,
+      hasher,
+      () => now,
+    );
+    const saved = await repository.saveQueued(createDelivery());
+    await repository.claim({
+      id: saved.id,
+      attemptId: 'delivered-attempt',
+      startedAt: now,
+    });
+    await repository.markDelivered({
+      id: saved.id,
+      attemptId: 'delivered-attempt',
+      providerEventId: 'email_delivered',
+      completedAt: now,
+    });
+
+    await expect(
+      repository.requeue({
+        id: saved.id,
+        reason: 'Operator requested retry',
+        requeuedBy: 'operator@example.com',
+        requeuedAt: now,
+        confirmedNoSend: true,
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Renewal notice delivery is not eligible for requeue',
     });
   });
 });

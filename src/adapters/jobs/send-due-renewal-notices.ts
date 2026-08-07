@@ -98,7 +98,10 @@ export async function listAnnualSubscriptionsDue(
         ),
       ),
     )
-    .orderBy(asc(stripeSubscriptions.currentPeriodEnd))
+    .orderBy(
+      asc(stripeSubscriptions.currentPeriodEnd),
+      asc(stripeSubscriptions.stripeSubscriptionId),
+    )
     .limit(input.limit);
 }
 

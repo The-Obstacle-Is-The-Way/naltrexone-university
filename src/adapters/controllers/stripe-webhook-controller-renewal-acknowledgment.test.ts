@@ -72,6 +72,17 @@ function checkoutEvent(userId: string) {
 
 function createHarness(input?: {
   configured?: boolean;
+  clearConsentUserReference?: boolean;
+  dispatchError?: Error;
+  findUserById?: StripeWebhookDeps['transaction'] extends (
+    fn: (transaction: infer T) => Promise<unknown>,
+  ) => Promise<unknown>
+    ? T extends { users: infer U }
+      ? U extends { findById: infer F }
+        ? F
+        : never
+      : never
+    : never;
   userId?: string;
   webhookResult?: WebhookEventResult;
   providerResult?:
@@ -105,17 +116,24 @@ function createHarness(input?: {
     portalUrl: 'https://stripe/portal',
     webhookResult: input?.webhookResult ?? checkoutEvent(userId),
   });
-  const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
+  const providerDispatch = new DispatchRenewalNoticeDeliveryUseCase(
     renewalDeliveries,
     emailGateway,
     hasher,
     () => now,
     () => 'attempt-1',
   );
+  const dispatch = {
+    execute: async (dispatchInput: { deliveryId: string }) => {
+      if (input?.dispatchError) throw input.dispatchError;
+      return providerDispatch.execute(dispatchInput);
+    },
+  };
+  const logger = new FakeLogger();
   const deps: StripeWebhookDeps = {
     paymentGateway,
     subscriptionVersions: subscriptions,
-    logger: new FakeLogger(),
+    logger,
     now: () => now,
     appUrl: 'https://addictionboards.com',
     sha256Hasher: hasher,
@@ -128,15 +146,33 @@ function createHarness(input?: {
           subscriptions,
           stripeCustomers,
           trialPaymentMethodSetupOperations: setupOperations,
-          renewalConsentRecords: renewalConsents,
+          renewalConsentRecords: {
+            ...renewalConsents,
+            save: async (...args: Parameters<typeof renewalConsents.save>) => {
+              const saved = await renewalConsents.save(...args);
+              if (!input?.clearConsentUserReference) return saved;
+              const savedUserId = saved.userId;
+              if (savedUserId) renewalConsents.clearUserReference(savedUserId);
+              const userless = await renewalConsents.findById(saved.id);
+              if (!userless) throw new Error('expected saved consent');
+              return userless;
+            },
+            findById: renewalConsents.findById.bind(renewalConsents),
+            findBySource: renewalConsents.findBySource.bind(renewalConsents),
+            markSubscriptionTerminated:
+              renewalConsents.markSubscriptionTerminated.bind(renewalConsents),
+            pruneExpired: renewalConsents.pruneExpired.bind(renewalConsents),
+          },
           renewalNoticeDeliveries: renewalDeliveries,
           users: {
-            findById: async (id: string) => ({
-              id,
-              email: 'subscriber@example.com',
-              createdAt: now,
-              updatedAt: now,
-            }),
+            findById:
+              input?.findUserById ??
+              (async (id: string) => ({
+                id,
+                email: 'subscriber@example.com',
+                createdAt: now,
+                updatedAt: now,
+              })),
           },
         });
       } finally {
@@ -148,6 +184,7 @@ function createHarness(input?: {
   return {
     deps,
     emailGateway,
+    logger,
     paymentGateway,
     providerObservedTransactionActive: () => providerObservedTransactionActive,
     renewalConsents,
@@ -217,6 +254,51 @@ describe('Stripe webhook renewal acknowledgment', () => {
         failureCode: 'rate_limit_exceeded',
       }),
     ]);
+  });
+
+  it('fails closed when a persisted initial consent has no local user reference', async () => {
+    const harness = createHarness({ clearConsentUserReference: true });
+
+    await expect(
+      processStripeWebhook(harness.deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Initial renewal consent is missing its local user',
+    });
+    expect(harness.emailGateway.sendInputs).toEqual([]);
+  });
+
+  it('fails closed when the acknowledgment recipient no longer exists', async () => {
+    const harness = createHarness({ findUserById: async () => null });
+
+    await expect(
+      processStripeWebhook(harness.deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+      message: 'Renewal acknowledgment recipient not found',
+    });
+    expect(harness.emailGateway.sendInputs).toEqual([]);
+  });
+
+  it('keeps committed consent and acknowledgment when post-commit dispatch throws', async () => {
+    const harness = createHarness({
+      dispatchError: new Error('provider unavailable'),
+    });
+
+    await expect(
+      processStripeWebhook(harness.deps, { rawBody: 'raw', signature: 'sig' }),
+    ).resolves.toBeUndefined();
+    expect(harness.renewalConsents.snapshot()).toHaveLength(1);
+    expect(harness.renewalDeliveries.records).toEqual([
+      expect.objectContaining({ status: 'queued' }),
+    ]);
+    expect(harness.logger.errorCalls).toContainEqual({
+      context: {
+        eventId: 'evt_checkout_ack',
+        error: { name: 'Error' },
+      },
+      msg: 'Renewal acknowledgment dispatch failed',
+    });
   });
 
   it('queues the setup-mode acknowledgment only after the verified setup completion', async () => {

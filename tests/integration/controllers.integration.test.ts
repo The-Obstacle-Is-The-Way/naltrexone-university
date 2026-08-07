@@ -1030,6 +1030,7 @@ describe('stripe webhook controller (integration)', () => {
     };
 
     const input: StripeWebhookInput = { rawBody: 'raw', signature: 'sig_1' };
+    const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
     await processStripeWebhook(
       {
@@ -1037,7 +1038,7 @@ describe('stripe webhook controller (integration)', () => {
         subscriptionVersions: new DrizzleSubscriptionRepository(db, priceIds),
         logger: new FakeLogger(),
         now: () => new Date(),
-        ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
+        ...acknowledgment.webhook,
         transaction: async (fn) =>
           db.transaction(async (tx) =>
             fn({
@@ -1049,7 +1050,7 @@ describe('stripe webhook controller (integration)', () => {
               renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
                 tx,
               ),
-              ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
+              ...acknowledgment.transaction,
             }),
           ),
       },

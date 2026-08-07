@@ -1,4 +1,5 @@
 import 'server-only';
+import { NobleSha256Hasher } from '@/src/adapters/gateways';
 import { createControllerFactories } from './container/controllers';
 import { createGatewayFactories } from './container/gateways';
 import { createRepositoryFactories } from './container/repositories';
@@ -40,6 +41,7 @@ export function createContainerPrimitives(
     logger,
     getStripe,
     now: () => new Date(),
+    sha256Hasher: new NobleSha256Hasher(),
     ...overrides,
   } as const;
 
