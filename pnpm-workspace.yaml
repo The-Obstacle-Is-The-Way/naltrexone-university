@@ -3,14 +3,23 @@ minimumReleaseAgeStrict: true # v11-only: fail when no version satisfies the 7-d
 minimumReleaseAgeIgnoreMissingTime: false # v11-only: fail when registry metadata lacks package publish time.
 blockExoticSubdeps: true
 overrides:
-  postcss: 8.5.15
+  # Security: GHSA-r28c-9q8g-f849 + GHSA-fxqj-rqcc-2cmp — crafted
+  # sourceMappingURL paths could disclose arbitrary .map files, including when
+  # PostCSS has no `from` value. Build-only via Next/Tailwind/Vite over trusted
+  # repo CSS, so defense-in-depth. 8.5.23 satisfies Tailwind's ^8.5.16 and
+  # Vite's ^8.5.23; Next pins 8.4.31 exactly, so this existing override remains
+  # intentionally out-of-range but within PostCSS 8. Aged past the 7-day gate
+  # as of 2026-08-07 (published 2026-07-24).
+  postcss: 8.5.23
   uuid: 14.0.0
   esbuild: '>=0.28.1'
-  # Security: 6 advisories (high→low) — SOCKS5 cross-origin routing & TLS-validation
-  # bypass, Set-Cookie header injection / SameSite downgrade, shared-cache disclosure,
-  # keep-alive response-queue poisoning. All dev-scoped via jsdom/vitest. Patched in
-  # undici 7.28.0 (aged past the 7-day release gate ~2026-06-22; no age exception needed).
-  undici: 7.28.0
+  # Security: GHSA-8xcm-r25x-g524, GHSA-4cwx-7wf7-3272,
+  # GHSA-jr45-8vmc-qm54, GHSA-v3r7-h72x-cjcm, and GHSA-m8rv-5g2x-5cg5 —
+  # response-desync, cache disclosure/crash, cookie-attribute injection, and
+  # CRLF-injection flaws. Dev-scoped via jsdom/vitest, so defense-in-depth.
+  # 7.29.0 satisfies jsdom's ^7.25.0. Aged past the 7-day gate as of 2026-08-07
+  # (published 2026-07-24).
+  undici: 7.29.0
   # Security: GHSA-8988-4f7v-96qf — W3CBaggagePropagator.extract() lacked inbound
   # size caps (unbounded allocation). Patched in OTel 2.8.0. Pinned exact to keep the
   # lockstep trio (core/resources/sdk-trace-base pin each other exactly) coherent;
@@ -18,15 +27,32 @@ overrides:
   '@opentelemetry/core': 2.8.0
   '@opentelemetry/resources': 2.8.0
   '@opentelemetry/sdk-trace-base': 2.8.0
-  # Security: GHSA-h67p-54hq-rp68 / CVE-2026-53550 — quadratic-complexity DoS in js-yaml
-  # merge-key handling via repeated aliases (affected < 3.15.0). Patched in the 3.15.0
-  # v3-legacy backport. js-yaml is transitive-only — gray-matter (seed/build scripts over
-  # first-party markdown) and @clerk/ui's react-native test tooling — with no runtime
-  # attacker-controlled YAML path, so this is defense-in-depth. 3.15.0 satisfies both
-  # consumers' ^3.13.1; it's an upgrade (no-downgrade safe). Aged past the 7-day
-  # release gate ~2026-07-03; the temporary minimumReleaseAgeExclude entry was
-  # removed once it aged in (#539).
-  js-yaml: 3.15.0
+  # Security: GHSA-h67p-54hq-rp68 + GHSA-5p4m-2wfm-xmqj — repeated aliases
+  # and !!omap compact mappings could trigger quadratic CPU use. Transitive via
+  # gray-matter and Clerk test tooling over first-party YAML/Markdown only, so
+  # defense-in-depth. Alert #46 retargeted the v3 backport from 3.15.0 to 3.15.1,
+  # which satisfies both consumers' ^3.13.1. Aged past the 7-day gate as of
+  # 2026-08-07 (published 2026-07-31).
+  js-yaml: 3.15.1
+  # Security: GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895 — unbounded brace
+  # expansion could allocate oversized intermediate arrays and exhaust memory.
+  # Build/test globs are repository-controlled. Scoped to minimatch@10's 5.x
+  # line; 5.0.9 satisfies ^5.0.8. Aged past the 7-day gate as of 2026-08-07
+  # (published 2026-07-30).
+  'brace-expansion@5': 5.0.9
+  # Security: GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895 — the same unbounded
+  # expansion flaws affect minimatch@3's independent 1.x dependency line.
+  # Build/test globs are repository-controlled. 1.1.18 satisfies ^1.1.7 and is
+  # deliberately scoped away from the 5.x override. Aged past the 7-day gate as
+  # of 2026-08-07 (published 2026-07-30).
+  'brace-expansion@1': 1.1.18
+  # Security: GHSA-v2hh-gcrm-f6hx + GHSA-7p8r-x3mc-p8w7 — literal backslashes
+  # could confuse host/authority parsing relative to WHATWG URL semantics.
+  # Transitive through ajv under Sentry's webpack path; this Turbopack build does
+  # not execute that path, so defense-in-depth (issue #703). Alert #40 retargeted
+  # 3.1.4 to 3.1.5, which satisfies ajv's ^3.0.1. Aged past the 7-day gate as of
+  # 2026-08-07 (published 2026-07-31).
+  fast-uri: 3.1.5
   # Security: GHSA-f88m-g3jw-g9cj — sharp < 0.35.0 bundles a libvips affected by
   # four inherited CVEs (memory-safety on untrusted image input): CVE-2026-33327
   # (VIPS dimension overflow), CVE-2026-33328 (GIF integer overflow, 32-bit),
