@@ -45,7 +45,11 @@ afterAll(async () => {
   ]);
 });
 
-function consentInput(userId: string, sourceId = `cs_${randomUUID()}`) {
+function consentInput(
+  userId: string,
+  sourceId = `cs_${randomUUID()}`,
+  acceptedAt = new Date('2026-08-06T12:00:00Z'),
+) {
   return newRenewalConsentRecord({
     userId,
     consumerReference: 'a'.repeat(64),
@@ -67,7 +71,7 @@ function consentInput(userId: string, sourceId = `cs_${randomUUID()}`) {
     termsVersion: '2026-08-05',
     termsHash: 'terms-hash',
     consentSource: 'stripe_checkout',
-    acceptedAt: new Date('2026-08-06T12:00:00Z'),
+    acceptedAt,
     consentKind: 'initial_offer',
     priorAmountCents: null,
     proposedAmountCents: null,
@@ -232,12 +236,13 @@ describe('renewal consent record persistence', () => {
     const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
     const repository = new DrizzleRenewalConsentRecordRepository(db);
     const saved = await repository.save({
-      ...consentInput(user.id),
-      checkoutSessionId: `cs_${randomUUID()}`,
+      ...consentInput(
+        user.id,
+        `cs_${randomUUID()}`,
+        new Date('2017-01-01T00:00:00Z'),
+      ),
       externalCustomerId,
       externalSubscriptionId,
-      acceptedAt: new Date('2020-01-01T00:00:00Z'),
-      retainUntil: new Date('2023-01-01T00:00:00Z'),
     });
     consentIds.push(saved.id);
     await db.insert(stripeSubscriptions).values({
@@ -339,11 +344,17 @@ describe('renewal consent record persistence', () => {
     ).resolves.toMatchObject({ updated: 1, failed: 0 });
     await expect(repository.findById(saved.id)).resolves.toMatchObject({
       subscriptionTerminatedAt: new Date('2021-01-01T00:00:00Z'),
-      retainUntil: new Date('2023-01-01T00:00:00Z'),
+      retainUntil: new Date('2022-01-01T00:00:00Z'),
     });
     await expect(
       repository.pruneExpired({
-        before: new Date('2024-01-01T00:00:00Z'),
+        before: new Date('2021-12-31T23:59:59Z'),
+        limit: 1,
+      }),
+    ).resolves.toBe(0);
+    await expect(
+      repository.pruneExpired({
+        before: new Date('2022-01-01T00:00:00Z'),
         limit: 1,
       }),
     ).resolves.toBe(1);

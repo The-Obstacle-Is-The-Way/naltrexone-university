@@ -58,8 +58,8 @@ overrides:
   # (VIPS dimension overflow), CVE-2026-33328 (GIF integer overflow, 32-bit),
   # CVE-2026-35591 (TIFF tile-channel handling), CVE-2026-35590 (EXIF range
   # validation). Patched in sharp 0.35.0 (libvips 8.18.3); pinned to 0.35.3, the
-  # latest patch. Transitive via next@16.2.10, which declares ^0.34.5, so an
-  # override is required until Next widens its range (16.2.11 still pins ^0.34.5).
+  # latest patch. Transitive via next@16.2.12, which still declares ^0.34.5, so
+  # an override is required until Next widens its range.
   # No reachable attacker path here today: no next/image usage, no
   # images.remotePatterns in next.config.ts, no direct sharp import, no image
   # upload — so this is defense-in-depth for the installed binary and any future

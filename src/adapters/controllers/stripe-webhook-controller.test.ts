@@ -664,6 +664,78 @@ describe('processStripeWebhook', () => {
     expect(paymentGateway.trialSubscriptionDefaultInputs).toEqual([]);
   });
 
+  it('warns when an expiration arrives after the setup operation completed', async () => {
+    const userId = crypto.randomUUID();
+    const expiredAt = new Date('2026-08-07T12:00:00Z');
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_setup_expired_after_completion',
+        type: 'checkout.session.expired',
+        trialPaymentMethodSetupExpiration: {
+          sessionId: 'cs_setup_completed',
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-hash',
+          expiredAt,
+        },
+      },
+    });
+    const { deps, logger, setupOperations } = createDeps({ paymentGateway });
+    await setupOperations.createPending({
+      sessionId: 'cs_setup_completed',
+      userId,
+      stripeCustomerId: 'cus_123',
+      stripeSubscriptionId: 'sub_123',
+      plan: 'monthly',
+      amountCents: 2900,
+      currency: 'usd',
+      frequency: 'month',
+      trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+      disclosureSnapshot: 'Exact disclosure.',
+      disclosureVersion: '2026-08-05',
+      termsVersion: '2026-08-05',
+      termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
+    });
+    await setupOperations.claim({
+      sessionId: 'cs_setup_completed',
+      claimId: 'claim_completed',
+      claimedAt: new Date('2026-08-07T11:59:00Z'),
+      staleBefore: new Date(0),
+    });
+    await setupOperations.markCompleted({
+      sessionId: 'cs_setup_completed',
+      claimId: 'claim_completed',
+      completedAt: new Date('2026-08-07T11:59:30Z'),
+    });
+
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+    await expect(
+      setupOperations.findBySessionId('cs_setup_completed'),
+    ).resolves.toMatchObject({ status: 'completed', expiredAt: null });
+    expect(logger.warnCalls).toContainEqual({
+      context: {
+        eventId: 'evt_setup_expired_after_completion',
+        sessionId: 'cs_setup_completed',
+        operationStatus: 'completed',
+      },
+      msg: 'Trial payment-method setup expiration did not transition the operation',
+    });
+  });
+
   it('fails closed when the accepted snapshot differs from the pending operation', async () => {
     const userId = crypto.randomUUID();
     const paymentGateway = new FakePaymentGateway({

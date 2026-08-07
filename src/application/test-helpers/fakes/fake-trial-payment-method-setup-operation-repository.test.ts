@@ -165,14 +165,18 @@ describe('FakeTrialPaymentMethodSetupOperationRepository', () => {
       ...pendingInput,
       sessionId: 'cs_setup_recent',
     });
-    await repository.markExpired({
-      sessionId: 'cs_setup_123',
-      expiredAt: new Date('2026-06-01T00:00:00Z'),
-    });
-    await repository.markExpired({
-      sessionId: 'cs_setup_recent',
-      expiredAt: new Date('2026-08-01T00:00:00Z'),
-    });
+    await expect(
+      repository.markExpired({
+        sessionId: 'cs_setup_123',
+        expiredAt: new Date('2026-06-01T00:00:00Z'),
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      repository.markExpired({
+        sessionId: 'cs_setup_recent',
+        expiredAt: new Date('2026-08-01T00:00:00Z'),
+      }),
+    ).resolves.toBe(true);
 
     await expect(
       repository.pruneExpired({
@@ -190,6 +194,32 @@ describe('FakeTrialPaymentMethodSetupOperationRepository', () => {
         status: 'expired',
         expiredAt: new Date('2026-08-01T00:00:00Z'),
       }),
+    );
+  });
+
+  it('does not expire an operation that already completed', async () => {
+    const repository = new FakeTrialPaymentMethodSetupOperationRepository();
+    await repository.createPending(pendingInput);
+    await repository.claim({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_completed',
+      claimedAt: new Date('2026-08-07T12:00:00Z'),
+      staleBefore: new Date(0),
+    });
+    await repository.markCompleted({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_completed',
+      completedAt: new Date('2026-08-07T12:00:01Z'),
+    });
+
+    await expect(
+      repository.markExpired({
+        sessionId: 'cs_setup_123',
+        expiredAt: new Date('2026-08-07T12:00:02Z'),
+      }),
+    ).resolves.toBe(false);
+    await expect(repository.findBySessionId('cs_setup_123')).resolves.toEqual(
+      expect.objectContaining({ status: 'completed', expiredAt: null }),
     );
   });
 });

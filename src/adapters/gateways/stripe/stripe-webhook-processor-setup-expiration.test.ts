@@ -71,6 +71,40 @@ function signedSetupMetadata() {
 }
 
 describe('expired trial payment-method setup webhook', () => {
+  it('ignores a non-setup expired Checkout Session', async () => {
+    const stripe = createStripeClient({
+      event: {
+        id: 'evt_subscription_expired',
+        type: 'checkout.session.expired',
+        created: 1_775_649_600,
+        data: {
+          object: {
+            id: 'cs_subscription_expired',
+            mode: 'subscription',
+            subscription: null,
+            metadata: {},
+          },
+        },
+      },
+    });
+
+    const result = await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      consentStateSecret,
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger: new FakeLogger(),
+    });
+
+    expect(result).toEqual({
+      eventId: 'evt_subscription_expired',
+      type: 'checkout.session.expired',
+    });
+    expect(result).not.toHaveProperty('trialPaymentMethodSetupExpiration');
+  });
+
   it('normalizes signed state without retrieving a SetupIntent or subscription', async () => {
     const retrieveSetupIntent = vi.fn();
     const retrieveSubscription = vi.fn();

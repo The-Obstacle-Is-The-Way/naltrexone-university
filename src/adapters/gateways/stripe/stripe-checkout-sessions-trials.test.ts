@@ -573,13 +573,13 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
 
     expect(sessionsCreate).toHaveBeenCalledTimes(2);
     expect(sessionsCreate.mock.calls[1]?.[1]?.idempotencyKey).toMatch(
-      /^trial_setup_session_recovery:.*:cs_complete:[a-f0-9]{16}$/,
+      /^trial_setup_session_recovery:.*:cs_complete:attempt:1:[a-f0-9]{16}$/,
     );
   });
 
   it('fails after the bounded recovery chain keeps returning inactive Sessions', async () => {
-    const setupCreateResults = Array.from({ length: 21 }, (_, index) => ({
-      id: `cs_complete_${index}`,
+    const setupCreateResults = Array.from({ length: 21 }, () => ({
+      id: 'cs_replayed',
       url: null,
       status: 'complete' as const,
     }));
@@ -598,5 +598,14 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
     });
 
     expect(sessionsCreate).toHaveBeenCalledTimes(4);
+    const idempotencyKeys = sessionsCreate.mock.calls.map(
+      ([, options]) => options?.idempotencyKey,
+    );
+    expect(new Set(idempotencyKeys).size).toBe(4);
+    expect(idempotencyKeys.slice(1)).toEqual([
+      expect.stringMatching(/:cs_replayed:attempt:1:[a-f0-9]{16}$/),
+      expect.stringMatching(/:cs_replayed:attempt:2:[a-f0-9]{16}$/),
+      expect.stringMatching(/:cs_replayed:attempt:3:[a-f0-9]{16}$/),
+    ]);
   });
 });

@@ -1,6 +1,6 @@
 'use server';
 
-import { executeCreateTrialPaymentMethodAction } from './trial-payment-method-action-handler';
+import { executeCreateTrialPaymentMethodAction } from '@/app/(app)/app/trial-payment-method-action-handler';
 
 export async function createTrialPaymentMethodAction(
   formData: FormData,

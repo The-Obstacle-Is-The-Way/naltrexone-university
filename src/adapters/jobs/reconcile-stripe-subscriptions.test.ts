@@ -728,7 +728,7 @@ describe('reconcileStripeSubscriptions', () => {
     await expect(
       renewalConsentRecords.findById(consent.id),
     ).resolves.toMatchObject({
-      subscriptionTerminatedAt: expect.any(Date),
+      subscriptionTerminatedAt: new Date('2026-08-07T12:00:00.000Z'),
       retainUntil: expect.any(Date),
     });
   });
