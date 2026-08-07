@@ -70,6 +70,30 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
     });
   });
 
+  it('normalizes operator evidence before persisting the audit entry', async () => {
+    const repository = await createRepository('terminal_failure');
+    const useCase = new RequeueRenewalNoticeDeliveryUseCase(
+      repository,
+      () => now,
+    );
+
+    await expect(
+      useCase.execute({
+        deliveryId,
+        reason: '  Retry approved after provider review  ',
+        operator: '  operator@example.com  ',
+        confirmedNoSend: false,
+      }),
+    ).resolves.toMatchObject({
+      requeueAudit: [
+        {
+          reason: 'Retry approved after provider review',
+          requeuedBy: 'operator@example.com',
+        },
+      ],
+    });
+  });
+
   it('rejects an unknown outcome without no-send confirmation', async () => {
     const repository = await createRepository('outcome_unknown');
     const useCase = new RequeueRenewalNoticeDeliveryUseCase(repository);

@@ -123,9 +123,13 @@ export class FakeRenewalNoticeDeliveryRepository
             record.nextAttemptAt !== null &&
             record.nextAttemptAt.getTime() <= input.now.getTime()),
       )
-      .sort(
-        (left, right) => left.createdAt.getTime() - right.createdAt.getTime(),
-      )
+      .sort((left, right) => {
+        const createdAtDifference =
+          left.createdAt.getTime() - right.createdAt.getTime();
+        return createdAtDifference !== 0
+          ? createdAtDifference
+          : left.id.localeCompare(right.id);
+      })
       .slice(0, input.limit)
       .map(cloneDelivery);
   }

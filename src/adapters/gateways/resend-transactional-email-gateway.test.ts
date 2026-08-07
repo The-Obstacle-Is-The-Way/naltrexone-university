@@ -31,6 +31,7 @@ const input = {
 
 describe('ResendTransactionalEmailGateway', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     resendSdk.constructorInputs.length = 0;
     resendSdk.send.mockReset();
   });
@@ -127,6 +128,34 @@ describe('ResendTransactionalEmailGateway', () => {
       status: 'outcome_unknown',
       failureCode: 'ETIMEDOUT',
     });
+  });
+
+  it('uses the fallback failure code for an unstructured thrown value', async () => {
+    resendSdk.send.mockRejectedValue('provider disconnected');
+    const gateway = new ResendTransactionalEmailGateway({ apiKey: 're_test' });
+
+    await expect(gateway.send(input)).resolves.toEqual({
+      status: 'outcome_unknown',
+      failureCode: 'provider_exception',
+    });
+  });
+
+  it('bounds a stalled provider call and clears its timeout', async () => {
+    vi.useFakeTimers();
+    resendSdk.send.mockImplementation(() => new Promise(() => undefined));
+    const gateway = new ResendTransactionalEmailGateway({
+      apiKey: 're_test',
+      timeoutMs: 25,
+    });
+
+    const result = gateway.send(input);
+    await vi.advanceTimersByTimeAsync(25);
+
+    await expect(result).resolves.toEqual({
+      status: 'outcome_unknown',
+      failureCode: 'provider_timeout',
+    });
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('maps a response without data or error to outcome_unknown', async () => {

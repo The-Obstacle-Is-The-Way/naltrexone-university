@@ -13,6 +13,11 @@ const TRANSIENT_RESEND_ERRORS = new Set<ErrorResponse['name']>([
   'monthly_quota_exceeded',
   'rate_limit_exceeded',
 ]);
+export const RESEND_PROVIDER_TIMEOUT_MS = 10_000;
+
+class ResendProviderTimeoutError extends Error {
+  readonly code = 'provider_timeout';
+}
 
 function getThrownFailureCode(error: unknown): string {
   if (
@@ -30,9 +35,11 @@ export class ResendTransactionalEmailGateway
   implements TransactionalEmailGateway
 {
   private readonly client: Resend | null;
+  private readonly timeoutMs: number;
 
-  constructor(input: { apiKey: string | undefined }) {
+  constructor(input: { apiKey: string | undefined; timeoutMs?: number }) {
     this.client = input.apiKey ? new Resend(input.apiKey) : null;
+    this.timeoutMs = input.timeoutMs ?? RESEND_PROVIDER_TIMEOUT_MS;
   }
 
   isConfigured(): boolean {
@@ -50,8 +57,21 @@ export class ResendTransactionalEmailGateway
     }
 
     try {
-      const { data, error } = await this.client.emails.send(input.payload, {
+      const providerCall = this.client.emails.send(input.payload, {
         idempotencyKey: input.idempotencyKey,
+      });
+      let timeout: ReturnType<typeof setTimeout> | undefined;
+      const timeoutResult = new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new ResendProviderTimeoutError()),
+          this.timeoutMs,
+        );
+      });
+      const { data, error } = await Promise.race([
+        providerCall,
+        timeoutResult,
+      ]).finally(() => {
+        if (timeout) clearTimeout(timeout);
       });
 
       if (error) {

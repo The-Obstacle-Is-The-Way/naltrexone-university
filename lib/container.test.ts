@@ -72,6 +72,7 @@ vi.mock('stripe', () => ({
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
+delete process.env.RESEND_API_KEY;
 process.env.DATABASE_URL ??=
   'postgresql://user:pass@localhost:5432/addiction_boards_test';
 process.env.STRIPE_SECRET_KEY ??= 'sk_test_dummy';

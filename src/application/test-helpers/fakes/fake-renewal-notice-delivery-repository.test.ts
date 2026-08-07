@@ -9,14 +9,15 @@ import { FakeRenewalNoticeDeliveryRepository } from './fake-renewal-notice-deliv
 const now = new Date('2026-08-06T18:00:00.000Z');
 const deliveryId = '11111111-1111-4111-8111-111111111111';
 const consentRecordId = '22222222-2222-4222-8222-222222222222';
-const payload = createTransactionalEmailPayloadSnapshot({
+const emailPayload = {
   from: 'Addiction Boards <notices@addictionboards.com>',
   to: 'subscriber@example.com',
   replyTo: 'support@addictionboards.com',
   subject: 'Your renewal terms',
   html: '<p>Renewal terms</p>',
   text: 'Renewal terms',
-});
+};
+const payload = createTransactionalEmailPayloadSnapshot(emailPayload);
 
 function createDelivery(
   overrides: Partial<NewRenewalNoticeDelivery> = {},
@@ -61,21 +62,33 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     const businessKeyReplay = await repository.saveQueued(
       createDelivery({
         id: replacementId,
-        providerIdempotencyKey: `renewal-notice/${replacementId}`,
+        providerIdempotencyKey:
+          getRenewalNoticeProviderIdempotencyKey(replacementId),
       }),
     );
 
     expect(replay).toEqual(first);
     expect(businessKeyReplay).toEqual(first);
     expect(repository.records).toHaveLength(1);
+    const changedPayload = createTransactionalEmailPayloadSnapshot({
+      ...emailPayload,
+      subject: 'Changed renewal terms',
+    });
+    const changedId = '44444444-4444-4444-8444-444444444444';
     await expect(
       repository.saveQueued(
         createDelivery({
-          id: '44444444-4444-4444-8444-444444444444',
-          payloadSnapshot: '{"subject":"Changed"}',
+          id: changedId,
+          providerIdempotencyKey:
+            getRenewalNoticeProviderIdempotencyKey(changedId),
+          payloadSnapshot: changedPayload.snapshot,
+          payloadHash: changedPayload.hash,
         }),
       ),
-    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Renewal notice delivery identity is bound to another payload',
+    });
   });
 
   it('rejects a non-derived provider key and a changed payload hash before persistence', async () => {
@@ -96,12 +109,12 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
   it('selects only queued and due transient failures', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
     const statuses = [
-      { id: deliveryId, status: 'queued' as const, nextAttemptAt: null },
       {
         id: '33333333-3333-4333-8333-333333333333',
         status: 'transient_failure' as const,
         nextAttemptAt: new Date('2026-08-06T17:59:00.000Z'),
       },
+      { id: deliveryId, status: 'queued' as const, nextAttemptAt: null },
       {
         id: '44444444-4444-4444-8444-444444444444',
         status: 'transient_failure' as const,

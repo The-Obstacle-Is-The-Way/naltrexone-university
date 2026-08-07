@@ -11,6 +11,14 @@ import {
 } from '@/src/application/shared/transactional-email-payload';
 import type { RenewalNoticeDelivery } from '@/src/domain/entities';
 
+export type DispatchRenewalNoticeDeliveryResult =
+  | {
+      outcome: 'skipped_unconfigured';
+      delivery: RenewalNoticeDelivery;
+    }
+  | { outcome: 'claim_lost'; delivery: null }
+  | { outcome: 'attempted'; delivery: RenewalNoticeDelivery };
+
 export class DispatchRenewalNoticeDeliveryUseCase {
   constructor(
     private readonly deliveryRepository: RenewalNoticeDeliveryRepository,
@@ -21,7 +29,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
 
   async execute(input: {
     deliveryId: string;
-  }): Promise<RenewalNoticeDelivery | null> {
+  }): Promise<DispatchRenewalNoticeDeliveryResult> {
     const delivery = await this.deliveryRepository.findById(input.deliveryId);
     if (!delivery) {
       throw new ApplicationError(
@@ -45,7 +53,9 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       destination: delivery.destination,
     });
 
-    if (!this.emailGateway.isConfigured()) return delivery;
+    if (!this.emailGateway.isConfigured()) {
+      return { outcome: 'skipped_unconfigured', delivery };
+    }
 
     const startedAt = this.now();
     const attemptId = this.createAttemptId();
@@ -54,7 +64,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       attemptId,
       startedAt,
     });
-    if (!claimed) return null;
+    if (!claimed) return { outcome: 'claim_lost', delivery: null };
 
     let result: TransactionalEmailSendResult;
     try {
@@ -69,7 +79,10 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       };
     }
 
-    return this.persistOutcome(claimed, result, this.now());
+    return {
+      outcome: 'attempted',
+      delivery: await this.persistOutcome(claimed, result, this.now()),
+    };
   }
 
   private persistOutcome(

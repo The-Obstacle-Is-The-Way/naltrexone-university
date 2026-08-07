@@ -87,12 +87,24 @@ describe('renewal notice delivery persistence', () => {
 
     expect(replay).toEqual(first);
     expect(businessKeyReplay).toEqual(first);
+    const changedPayload = createTransactionalEmailPayloadSnapshot({
+      from: 'Addiction Boards <notices@addictionboards.com>',
+      to: input.destination,
+      replyTo: 'support@addictionboards.com',
+      subject: 'Changed annual subscription reminder',
+      html: '<p>Changed annual subscription reminder</p>',
+      text: 'Changed annual subscription reminder',
+    });
     await expect(
       secondRepository.saveQueued({
         ...input,
-        payloadSnapshot: '{"subject":"changed"}',
+        payloadSnapshot: changedPayload.snapshot,
+        payloadHash: changedPayload.hash,
       }),
-    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Renewal notice delivery identity is bound to another payload',
+    });
   });
 
   it('rejects malformed immutable evidence before inserting a row', async () => {

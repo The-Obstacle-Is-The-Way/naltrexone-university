@@ -30,8 +30,8 @@ export class RequeueRenewalNoticeDeliveryUseCase {
 
     return this.repository.requeue({
       id: input.deliveryId,
-      reason: input.reason,
-      requeuedBy: input.operator,
+      reason: input.reason.trim(),
+      requeuedBy: input.operator.trim(),
       requeuedAt: this.now(),
       confirmedNoSend: input.confirmedNoSend,
     });

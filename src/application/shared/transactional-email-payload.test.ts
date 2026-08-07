@@ -17,6 +17,14 @@ const payload = {
   text: 'Renewal terms',
 };
 
+function evidenceFor(snapshot: string) {
+  return {
+    snapshot,
+    hash: createHash('sha256').update(snapshot).digest('hex'),
+    destination: payload.to,
+  };
+}
+
 describe('transactional email payload snapshot', () => {
   it('creates canonical JSON and its SHA-256 hash', () => {
     const result = createTransactionalEmailPayloadSnapshot(payload);
@@ -27,6 +35,18 @@ describe('transactional email payload snapshot', () => {
     expect(result.hash).toBe(
       createHash('sha256').update(result.snapshot).digest('hex'),
     );
+  });
+
+  it.each([
+    { label: 'empty', subject: '' },
+    { label: 'missing', subject: undefined },
+  ])('rejects a $label required field before snapshotting', ({ subject }) => {
+    expect(() =>
+      createTransactionalEmailPayloadSnapshot({
+        ...payload,
+        subject: subject as string,
+      }),
+    ).toThrow('valid non-empty fields');
   });
 
   it('parses only a matching immutable snapshot and destination', () => {
@@ -54,6 +74,28 @@ describe('transactional email payload snapshot', () => {
       }),
     ).toThrow('destination');
   });
+
+  it('rejects non-JSON and exact-shape violations with valid hashes', () => {
+    expect(() =>
+      parseTransactionalEmailPayloadSnapshot(evidenceFor('not-json')),
+    ).toThrow('not valid JSON');
+
+    const missingField = JSON.stringify({
+      from: payload.from,
+      to: payload.to,
+      replyTo: payload.replyTo,
+      subject: payload.subject,
+      html: payload.html,
+    });
+    expect(() =>
+      parseTransactionalEmailPayloadSnapshot(evidenceFor(missingField)),
+    ).toThrow('invalid shape');
+
+    const extraField = JSON.stringify({ ...payload, trackingId: 'unexpected' });
+    expect(() =>
+      parseTransactionalEmailPayloadSnapshot(evidenceFor(extraField)),
+    ).toThrow('invalid shape');
+  });
 });
 
 describe('renewal notice provider invariants', () => {
@@ -76,6 +118,9 @@ describe('renewal notice provider invariants', () => {
     );
     expect(getRenewalNoticeRetryAt(failedAt, 20).getTime()).toBe(
       failedAt.getTime() + RENEWAL_NOTICE_RETRY_MAX_DELAY_MS,
+    );
+    expect(() => getRenewalNoticeRetryAt(failedAt, 0)).toThrow(
+      'requires a completed attempt',
     );
   });
 });

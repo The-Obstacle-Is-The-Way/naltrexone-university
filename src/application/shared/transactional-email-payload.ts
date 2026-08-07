@@ -1,4 +1,4 @@
-import { sha256 } from '@noble/hashes/sha256';
+import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationError } from '@/src/application/errors';
 import type { TransactionalEmailPayload } from '@/src/application/ports';
@@ -36,6 +36,12 @@ function isTransactionalEmailPayload(
 export function createTransactionalEmailPayloadSnapshot(
   payload: TransactionalEmailPayload,
 ): { snapshot: string; hash: string } {
+  if (!isTransactionalEmailPayload(payload)) {
+    throw new ApplicationError(
+      'VALIDATION_ERROR',
+      'Transactional email payload requires valid non-empty fields',
+    );
+  }
   const snapshot = JSON.stringify({
     from: payload.from,
     to: payload.to,

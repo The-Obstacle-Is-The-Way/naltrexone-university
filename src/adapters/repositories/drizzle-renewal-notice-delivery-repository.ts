@@ -1,4 +1,4 @@
-import { and, asc, eq, lte, or, sql } from 'drizzle-orm';
+import { and, asc, eq, lte, or, type SQL, sql } from 'drizzle-orm';
 import { renewalNoticeDeliveries } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -342,32 +342,37 @@ export class DrizzleRenewalNoticeDeliveryRepository
   private findConflictRow(
     input: NewRenewalNoticeDelivery,
   ): Promise<DeliveryRow | undefined> {
-    const identity =
-      input.noticeKind === 'acknowledgment'
-        ? and(
-            eq(renewalNoticeDeliveries.noticeKind, 'acknowledgment'),
-            eq(
-              renewalNoticeDeliveries.consentRecordId,
-              input.consentRecordId as string,
-            ),
-            eq(renewalNoticeDeliveries.destination, input.destination),
-          )
-        : and(
-            eq(renewalNoticeDeliveries.noticeKind, input.noticeKind),
-            eq(
-              renewalNoticeDeliveries.stripeSubscriptionId,
-              input.externalSubscriptionId as string,
-            ),
-            eq(
-              renewalNoticeDeliveries.applicableAt,
-              input.applicableAt as Date,
-            ),
-            eq(
-              renewalNoticeDeliveries.disclosureVersion,
-              input.disclosureVersion,
-            ),
-            eq(renewalNoticeDeliveries.destination, input.destination),
-          );
+    let identity: SQL | undefined;
+    if (input.noticeKind === 'acknowledgment') {
+      if (!input.consentRecordId) {
+        throw new ApplicationError(
+          'VALIDATION_ERROR',
+          'Acknowledgment delivery requires a consent record ID',
+        );
+      }
+      identity = and(
+        eq(renewalNoticeDeliveries.noticeKind, 'acknowledgment'),
+        eq(renewalNoticeDeliveries.consentRecordId, input.consentRecordId),
+        eq(renewalNoticeDeliveries.destination, input.destination),
+      );
+    } else {
+      if (!input.externalSubscriptionId || !input.applicableAt) {
+        throw new ApplicationError(
+          'VALIDATION_ERROR',
+          'Scheduled delivery requires a subscription and applicable date',
+        );
+      }
+      identity = and(
+        eq(renewalNoticeDeliveries.noticeKind, input.noticeKind),
+        eq(
+          renewalNoticeDeliveries.stripeSubscriptionId,
+          input.externalSubscriptionId,
+        ),
+        eq(renewalNoticeDeliveries.applicableAt, input.applicableAt),
+        eq(renewalNoticeDeliveries.disclosureVersion, input.disclosureVersion),
+        eq(renewalNoticeDeliveries.destination, input.destination),
+      );
+    }
     return this.db.query.renewalNoticeDeliveries.findFirst({
       where: or(
         eq(renewalNoticeDeliveries.id, input.id),
