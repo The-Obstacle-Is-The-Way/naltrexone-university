@@ -238,13 +238,14 @@ describe('renewal notice delivery persistence', () => {
     });
   });
 
-  it('persists delivered and terminal outcomes with their last attempt evidence', async () => {
+  it('persists delivered, terminal, and unknown outcomes with their last attempt evidence', async () => {
     const repository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
       () => now,
     );
     const delivered = await repository.saveQueued(createDelivery());
     const terminal = await repository.saveQueued(createDelivery());
+    const unknown = await repository.saveQueued(createDelivery());
     await repository.claim({
       id: delivered.id,
       attemptId: 'delivered-attempt',
@@ -253,6 +254,11 @@ describe('renewal notice delivery persistence', () => {
     await repository.claim({
       id: terminal.id,
       attemptId: 'terminal-attempt',
+      startedAt: now,
+    });
+    await repository.claim({
+      id: unknown.id,
+      attemptId: 'unknown-attempt',
       startedAt: now,
     });
 
@@ -281,6 +287,20 @@ describe('renewal notice delivery persistence', () => {
       status: 'terminal_failure',
       failureCode: 'invalid_idempotent_request',
       attemptId: 'terminal-attempt',
+      attemptStartedAt: now,
+    });
+    await expect(
+      repository.markOutcomeUnknown({
+        id: unknown.id,
+        attemptId: 'unknown-attempt',
+        failureClass: 'provider_outcome_unknown',
+        failureCode: 'provider_timeout',
+        failedAt: now,
+      }),
+    ).resolves.toMatchObject({
+      status: 'outcome_unknown',
+      failureCode: 'provider_timeout',
+      attemptId: 'unknown-attempt',
       attemptStartedAt: now,
     });
   });

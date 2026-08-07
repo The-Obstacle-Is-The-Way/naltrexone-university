@@ -243,6 +243,43 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     });
   });
 
+  it('quarantines the oldest stale processing claim first when limited', async () => {
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    const newerId = '33333333-3333-4333-8333-333333333333';
+    await repository.saveQueued(createDelivery());
+    await repository.saveQueued(
+      createDelivery({
+        id: newerId,
+        consentRecordId: '33333333-3333-4333-8333-333333333333',
+        providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(newerId),
+      }),
+    );
+    await repository.claim({
+      id: newerId,
+      attemptId: 'newer-attempt',
+      startedAt: new Date('2026-08-06T17:30:00.000Z'),
+    });
+    await repository.claim({
+      id: deliveryId,
+      attemptId: 'oldest-attempt',
+      startedAt: new Date('2026-08-06T17:00:00.000Z'),
+    });
+
+    await expect(
+      repository.markStaleProcessingUnknown({
+        staleBefore: new Date('2026-08-06T17:45:00.000Z'),
+        observedAt: now,
+        limit: 1,
+      }),
+    ).resolves.toBe(1);
+    await expect(repository.findById(deliveryId)).resolves.toMatchObject({
+      status: 'outcome_unknown',
+    });
+    await expect(repository.findById(newerId)).resolves.toMatchObject({
+      status: 'processing',
+    });
+  });
+
   it('requires no-send confirmation to requeue unknown outcomes and preserves audit', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
     const saved = await repository.saveQueued(createDelivery());
