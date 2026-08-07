@@ -154,16 +154,21 @@ describe('SendDueRenewalNoticesUseCase', () => {
     });
 
     expect(repository.records).toHaveLength(2);
-    for (const row of repository.records) {
-      const payload = parseTransactionalEmailPayloadSnapshot(
+    const payloads = repository.records.map((row) =>
+      parseTransactionalEmailPayloadSnapshot(
         {
           snapshot: row.payloadSnapshot,
           hash: row.payloadHash,
           destination: row.destination,
         },
         hasher,
-      );
-      expect(payload.text).toContain('Material change effective');
+      ),
+    );
+    expect(payloads[0]?.text).toContain('Material change effective');
+    expect(payloads[0]?.text).not.toContain('Fee change effective');
+    expect(payloads[1]?.text).toContain('Fee change effective');
+    expect(payloads[1]?.text).not.toContain('Material change effective');
+    for (const payload of payloads) {
       expect(payload.text).toContain('Billing page in the app');
       expect(payload.text).toContain('support@addictionboards.com');
     }

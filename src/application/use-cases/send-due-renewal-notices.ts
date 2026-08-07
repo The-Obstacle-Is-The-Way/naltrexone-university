@@ -5,16 +5,19 @@ import type {
   TransactionalEmailPayload,
 } from '@/src/application/ports';
 import {
+  escapeRenewalNoticeHtml,
+  formatRenewalNoticeDate,
+  RENEWAL_NOTICE_BUSINESS_CONTACT,
+  RENEWAL_NOTICE_FROM,
+  RENEWAL_NOTICE_REPLY_TO,
+} from '@/src/application/shared/renewal-notice-email-format';
+import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
 } from '@/src/application/shared/transactional-email-payload';
 import type { RenewalNoticeKind } from '@/src/domain/entities';
 import type { DispatchRenewalNoticeDeliveryUseCase } from './dispatch-renewal-notice-delivery';
 
-const FROM = 'Addiction Boards <notices@addictionboards.com>';
-const REPLY_TO = 'support@addictionboards.com';
-const BUSINESS_CONTACT =
-  'John H. Jung, MD, MS, sole proprietor — support@addictionboards.com';
 const PROCESSING_CLAIM_STALE_AFTER_MS = 15 * 60 * 1000;
 const MAX_BATCH_LIMIT = 500;
 const DISPATCH_CONCURRENCY = 4;
@@ -40,22 +43,6 @@ export type SendDueRenewalNoticesResult = {
   staleUnknown: number;
   dispatchFailures: number;
 };
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-function formatDate(value: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'long',
-    timeZone: 'UTC',
-  }).format(value);
-}
 
 function formatAmount(notice: ScheduledRenewalNotice): string {
   return `$${(notice.amountCents / 100).toFixed(2)} ${notice.currency.toUpperCase()} every ${notice.frequency}`;
@@ -85,28 +72,30 @@ function createPayload(
     notice.noticeKind === 'material_change' ||
     notice.noticeKind === 'fee_change'
       ? [
-          `Material change effective: ${formatDate(notice.applicableAt)}.`,
+          `${notice.noticeKind === 'fee_change' ? 'Fee change' : 'Material change'} effective: ${formatRenewalNoticeDate(notice.applicableAt)}.`,
           `Change: ${notice.changeDescription ?? ''}`,
         ]
       : [
-          `Renewal date: ${formatDate(notice.applicableAt)}.`,
+          `Renewal date: ${formatRenewalNoticeDate(notice.applicableAt)}.`,
           `Renewal amount and frequency: ${formatAmount(notice)}.`,
         ];
   const lines = [
     `${heading} for ${notice.planName}.`,
     ...detail,
     `How to cancel before the applicable date: ${notice.cancellationMethod}`,
-    `Business contact: ${BUSINESS_CONTACT}.`,
+    `Business contact: ${RENEWAL_NOTICE_BUSINESS_CONTACT}.`,
     `Terms: ${termsUrl}`,
     `Privacy: ${privacyUrl}`,
   ];
   const text = lines.join('\n');
-  const html = lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+  const html = lines
+    .map((line) => `<p>${escapeRenewalNoticeHtml(line)}</p>`)
+    .join('');
 
   return {
-    from: FROM,
+    from: RENEWAL_NOTICE_FROM,
     to: notice.destination,
-    replyTo: REPLY_TO,
+    replyTo: RENEWAL_NOTICE_REPLY_TO,
     subject: `Addiction Boards — ${heading}`,
     html,
     text,

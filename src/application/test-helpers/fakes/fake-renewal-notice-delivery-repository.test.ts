@@ -96,6 +96,29 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     });
   });
 
+  it('restores a transaction snapshot without retaining later writes', async () => {
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    await repository.saveQueued(createDelivery());
+    const snapshot = repository.snapshot();
+    const secondId = '33333333-3333-4333-8333-333333333333';
+    await repository.saveQueued(
+      createDelivery({
+        id: secondId,
+        consentRecordId: '44444444-4444-4444-8444-444444444444',
+        providerIdempotencyKey:
+          getRenewalNoticeProviderIdempotencyKey(secondId),
+      }),
+    );
+
+    repository.restore(snapshot);
+
+    expect(repository.records.map((record) => record.id)).toEqual([deliveryId]);
+    const snapshotRecord = snapshot[0];
+    if (!snapshotRecord) throw new Error('expected snapshot record');
+    snapshotRecord.status = 'terminal_failure';
+    expect(repository.records[0]?.status).toBe('queued');
+  });
+
   it('rejects a non-derived provider key and a changed payload hash before persistence', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
 

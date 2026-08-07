@@ -18,6 +18,7 @@ import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzl
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
 import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
+import { getRenewalNoticeProviderIdempotencyKey } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeLogger,
   FakePaymentGateway,
@@ -186,18 +187,27 @@ describe('Stripe renewal acknowledgment transaction', () => {
     expect(consents).toHaveLength(1);
     const consent = consents[0];
     if (!consent) throw new Error('expected consent');
-    await expect(
-      db
-        .select()
-        .from(renewalNoticeDeliveries)
-        .where(eq(renewalNoticeDeliveries.consentRecordId, consent.id)),
-    ).resolves.toEqual([
+    const deliveries = await db
+      .select()
+      .from(renewalNoticeDeliveries)
+      .where(eq(renewalNoticeDeliveries.consentRecordId, consent.id));
+    expect(deliveries).toEqual([
       expect.objectContaining({
         noticeKind: 'acknowledgment',
         destination: user.email,
         status: 'queued',
+        disclosureVersion: consent.disclosureVersion,
       }),
     ]);
+    const delivery = deliveries[0];
+    if (!delivery) throw new Error('expected acknowledgment delivery');
+    expect(delivery.payloadSnapshot).not.toBe('');
+    expect(delivery.payloadHash).toBe(
+      new NobleSha256Hasher().hash(delivery.payloadSnapshot),
+    );
+    expect(delivery.providerIdempotencyKey).toBe(
+      getRenewalNoticeProviderIdempotencyKey(delivery.id),
+    );
   });
 
   it('rolls back consent when the acknowledgment row cannot be persisted', async () => {
