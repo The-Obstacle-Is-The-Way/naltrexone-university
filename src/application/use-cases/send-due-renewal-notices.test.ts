@@ -323,13 +323,14 @@ describe('SendDueRenewalNoticesUseCase', () => {
     ]);
   });
 
-  it('rejects one malformed source notice without blocking healthy queueing or due dispatch', async () => {
+  it('rejects malformed source notices without blocking healthy queueing or due dispatch', async () => {
     const { gateway, repository, useCase } = createHarness();
 
     const result = await useCase.execute({
       notices: [
         scheduledNotice({ destination: '   ' }),
         scheduledNotice({ applicableAt: new Date('invalid') }),
+        scheduledNotice({ amountCents: 19.5 }),
         scheduledNotice({ amountCents: -1 }),
         scheduledNotice({ externalSubscriptionId: 'sub_healthy' }),
       ],
@@ -338,7 +339,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(result).toEqual({
       queued: 1,
-      rejectedNotices: 3,
+      rejectedNotices: 4,
       selected: 1,
       staleUnknown: 0,
       dispatchFailures: 0,

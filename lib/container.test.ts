@@ -29,6 +29,7 @@ import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   FakeLogger,
   FakePaymentGateway,
+  FakeSha256Hasher,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -191,7 +192,8 @@ describe('container factories', () => {
     expect(typeof container.createTagControllerDeps).toBe('function');
   });
 
-  it('wires concrete implementations for all factories', () => {
+  it('wires concrete implementations for all factories', async () => {
+    const sha256Hasher = new FakeSha256Hasher();
     const container = createContainer({
       primitives: {
         db: {} as unknown as DrizzleDb,
@@ -205,6 +207,7 @@ describe('container factories', () => {
         getStripe: () =>
           ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
         now: () => new Date('2026-02-01T00:00:00Z'),
+        sha256Hasher,
       },
     });
 
@@ -244,6 +247,23 @@ describe('container factories', () => {
     expect(container.createSha256Hasher()).toBe(
       container.primitives.sha256Hasher,
     );
+    const noticeRepository = container.createRenewalNoticeDeliveryRepository();
+    await expect(
+      noticeRepository.saveQueued({
+        id: '11111111-1111-4111-8111-111111111111',
+        noticeKind: 'annual_reminder',
+        consentRecordId: null,
+        externalSubscriptionId: 'sub_wiring_test',
+        applicableAt: new Date('2027-02-01T00:00:00Z'),
+        disclosureVersion: '2026-08-05',
+        destination: 'subscriber@example.com',
+        providerIdempotencyKey:
+          'renewal-notice/11111111-1111-4111-8111-111111111111',
+        payloadSnapshot: '{}',
+        payloadHash: 'sha256:{}',
+      }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    expect(sha256Hasher.inputs).toEqual(['{}']);
     expect(container.createTagRepository()).toBeInstanceOf(
       DrizzleTagRepository,
     );
