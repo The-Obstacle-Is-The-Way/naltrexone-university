@@ -14,6 +14,7 @@ import {
   processStripeWebhook,
   type StripeWebhookDeps,
 } from './stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from './test-helpers/stripe-webhook-renewal-acknowledgment';
 
 class ThrowingStripeCustomerRepository extends FakeStripeCustomerRepository {
   constructor(private readonly error: unknown) {
@@ -67,6 +68,7 @@ function createMissingUserAcknowledgementHarness(input: {
     subscriptionVersions: missingSubscriptions,
     logger,
     now: () => new Date(),
+    ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
     transaction: async (fn) => {
       transactionCallCount += 1;
       // Per delivery: 0 = subscription write, 1 = acknowledgement,
@@ -81,6 +83,7 @@ function createMissingUserAcknowledgementHarness(input: {
           trialPaymentMethodSetupOperations:
             new FakeTrialPaymentMethodSetupOperationRepository(),
           renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
+          ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
         });
       }
 
@@ -95,6 +98,7 @@ function createMissingUserAcknowledgementHarness(input: {
         trialPaymentMethodSetupOperations:
           new FakeTrialPaymentMethodSetupOperationRepository(),
         renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
+        ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
       });
     },
   };
@@ -131,6 +135,7 @@ function createAbortedTransactionDeps(input: {
       subscriptionVersions,
       logger,
       now: () => new Date(),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: async (fn) => {
         transactionCallCount += 1;
 
@@ -145,6 +150,7 @@ function createAbortedTransactionDeps(input: {
               trialPaymentMethodSetupOperations:
                 new FakeTrialPaymentMethodSetupOperationRepository(),
               renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
+              ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
             });
           } catch {
             // postgres.js can surface the scope's first statement error instead
@@ -165,6 +171,7 @@ function createAbortedTransactionDeps(input: {
           trialPaymentMethodSetupOperations:
             new FakeTrialPaymentMethodSetupOperationRepository(),
           renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
+          ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
         });
       },
     },
@@ -291,6 +298,7 @@ describe('processStripeWebhook failure boundary', () => {
       subscriptionVersions: subscriptions,
       logger,
       now: () => new Date(),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: async (fn) =>
         fn({
           stripeEvents,
@@ -298,6 +306,7 @@ describe('processStripeWebhook failure boundary', () => {
           stripeCustomers,
           trialPaymentMethodSetupOperations,
           renewalConsentRecords,
+          ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
         }),
     };
 
@@ -344,6 +353,7 @@ describe('processStripeWebhook failure boundary', () => {
       subscriptionVersions: missingSubscriptions,
       logger,
       now: () => new Date(),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: async (fn) => {
         transactionCallCount += 1;
         if (transactionCallCount === 1) {
@@ -355,6 +365,7 @@ describe('processStripeWebhook failure boundary', () => {
               trialPaymentMethodSetupOperations:
                 new FakeTrialPaymentMethodSetupOperationRepository(),
               renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
+              ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
             });
           } catch (error) {
             await stripeEvents.claim(eventId, 'customer.subscription.updated');
@@ -370,6 +381,7 @@ describe('processStripeWebhook failure boundary', () => {
           trialPaymentMethodSetupOperations:
             new FakeTrialPaymentMethodSetupOperationRepository(),
           renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
+          ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
         });
       },
     };
@@ -489,6 +501,7 @@ describe('processStripeWebhook failure boundary', () => {
       subscriptionVersions: new FakeSubscriptionRepository(),
       logger: new FakeLogger(),
       now: () => new Date(),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: async (fn) => {
         transactionCallCount += 1;
         if (transactionCallCount === 1) throw transactionError;
@@ -500,6 +513,7 @@ describe('processStripeWebhook failure boundary', () => {
           trialPaymentMethodSetupOperations:
             new FakeTrialPaymentMethodSetupOperationRepository(),
           renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
+          ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
         });
       },
     };

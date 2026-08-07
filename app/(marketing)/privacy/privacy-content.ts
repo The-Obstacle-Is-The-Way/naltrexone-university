@@ -2,7 +2,7 @@ import type { LegalDocumentContent } from '@/components/legal/legal-document';
 
 export const privacyContent = {
   title: 'Privacy Policy',
-  effectiveDate: 'August 5, 2026',
+  effectiveDate: 'August 6, 2026',
   bodyMarkdown: `### The short version
 
 Addiction Boards is a board-exam question bank. We use account, subscription, practice, feedback, and technical information to provide and secure the Service. We do not sell personal information or share it for cross-context behavioural advertising. We do not use advertising trackers or session replay. Full payment-card numbers are entered on Stripe-hosted pages and are not stored in the Addiction Boards application database.
@@ -22,6 +22,7 @@ Contact for any privacy question or request: **support@addictionboards.com**
 | **Account information** | Email address; internal account identifier; authentication-provider identifier; account creation and update times |
 | **Subscription and payment information** | Subscription status and plan; billing-period end; cancellation status; Stripe customer, subscription, checkout, payment-method, and event identifiers. Full payment-card numbers are collected and hosted by Stripe on its own systems and are never stored by the application; the application may receive limited Stripe payment metadata (such as payment-method identifiers) needed to administer your subscription |
 | **Renewal-consent evidence** | A stable pseudonymous consumer reference; Stripe customer, subscription, and Checkout or Setup Session identifiers; plan, amount, currency, frequency, trial end, cancellation deadline and method; the exact disclosure and Terms versions accepted; acceptance time; and subscription-termination and retention dates |
+| **Renewal communications** | Recipient address; immutable acknowledgment, annual reminder, renewal-notice, or change-notice contents; delivery and retry state; provider event identifier; and applicable subscription, consent, renewal, or change identifiers |
 | **Practice activity** | Practice mode and filters; questions shown; answers and correctness; marked-for-review state; time per question; bookmarks; and performance statistics derived from that activity |
 | **Feedback you choose to send** | Helpfulness rating; report category; and any free-text comment you write |
 | **Technical, security, and diagnostic information** | IP address and rate-limit keys; request and provider-event identifiers; route or page context; browser, device, and request information available to hosting or error-monitoring providers; error messages and stack traces; duplicate-operation records |
@@ -61,7 +62,7 @@ The following direct providers support the Service:
 | **Sentry** | Error monitoring and sampled server performance diagnostics | Errors, stack traces, page or route context, request context, browser/device information, and the narrow application attributes attached to sampled traces; submitted data can incidentally contain identifiers or content |
 | **ImprovMX** | Forwarding mail sent to \`support@addictionboards.com\` | Sender and recipient addresses, message contents, and attachments |
 | **Google Workspace (Google LLC)** | Receiving and storing mail forwarded by ImprovMX | Sender and recipient addresses, message contents, and attachments |
-| **Resend** | Sending transactional account, billing, renewal, and subscription notices (**not yet active** — the Service does not currently send messages through Resend; this row describes the integration's intended use before it begins) | Recipient address, message contents, delivery status, and provider event identifiers |
+| **Resend** | Sending transactional account, billing, renewal, and subscription notices when configured; messages remain queued without contacting Resend while the credential is absent | Recipient address, message contents, delivery status, and provider event identifiers |
 
 Sentry session replay is disabled. Server tracing is sampled at 5%; client tracing is disabled. Those settings reduce collection but do not establish that an error event can never contain personal information.
 
@@ -90,6 +91,7 @@ The audited application code contains no first-party cookie-write call. Clerk us
 | Duplicate-operation records | A record normally expires for reuse after 24 hours. Physical cleanup is best effort, batch-limited, and triggered by later operations, so an expired row may remain longer. |
 | Successfully processed Stripe event records | Targeted for deletion after 90 days by successful-webhook cleanup. Unresolved records remain until successful replay or operator resolution. |
 | Renewal-consent records | Eligible for deletion after the later of three years after consent or one year after subscription termination. Cleanup is webhook-triggered, bounded, and best effort, so an eligible record may remain longer. These records intentionally survive account deletion with the local user reference cleared and the pseudonymous consumer reference retained. |
+| Renewal acknowledgment and notice delivery records | Immutable recipient, message, delivery-state, provider-event, and retry evidence is retained to prevent duplicate delivery and resolve subscription disputes. Acknowledgment rows are deleted when their related consent record is eventually deleted. Scheduled-notice rows currently have no automatic terminal deletion policy. |
 | Clerk event records | Handled event records currently have no automatic terminal deletion policy. |
 | Deleted-account record | A Clerk account identifier and deletion timestamp are retained without a current terminal deletion period to prevent unsafe recreation or reprocessing. |
 | Pending Stripe-customer cleanup record | Retained until the external customer-cleanup obligation succeeds. |
@@ -103,7 +105,7 @@ Email **support@addictionboards.com**. We may ask you to send the request from t
 
 We aim to acknowledge a request within 10 business days and respond within 45 calendar days. A shorter period applies if required by law; when legally permitted and reasonably necessary, we may extend a response period after giving notice. We will not discriminate against a user for making a privacy request.
 
-Account deletion removes the local user row and user-linked application rows through database cascades. It does not remove the renewal-consent record described in the retention table; that record remains with the local user reference cleared and the pseudonymous consumer reference retained under the stated retention practice. It also does not necessarily remove the other limited event, deletion, pending-cleanup, support, payment, security, or legally required records described above, or copies independently held by providers. We will direct or complete provider deletion where required and applicable.
+Account deletion removes the local user row and user-linked application rows through database cascades. It does not remove the renewal-consent, related acknowledgment-delivery, or scheduled-notice delivery records described in the retention table; the consent record remains with the local user reference cleared and the pseudonymous consumer reference retained under the stated retention practice. It also does not necessarily remove the other limited event, deletion, pending-cleanup, support, payment, security, or legally required records described above, or copies independently held by providers. We will direct or complete provider deletion where required and applicable.
 
 ### Security and breach notice
 

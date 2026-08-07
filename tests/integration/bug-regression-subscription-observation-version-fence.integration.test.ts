@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
@@ -148,6 +149,7 @@ async function runWebhook(input: {
       subscriptionVersions,
       logger: new FakeLogger(),
       now: () => new Date('2026-07-11T00:00:00.000Z'),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: (fn) =>
         input.writer.transaction((tx) =>
           fn({
@@ -159,6 +161,7 @@ async function runWebhook(input: {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
+            ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
           }),
         ),
     },

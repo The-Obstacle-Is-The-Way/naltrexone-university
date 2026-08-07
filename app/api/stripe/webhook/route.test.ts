@@ -5,6 +5,7 @@ import type {
   StripeWebhookDeps,
   StripeWebhookTransaction,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   PaymentGateway,
@@ -67,6 +68,7 @@ function createTestDeps() {
     trialPaymentMethodSetupOperations:
       new FakeTrialPaymentMethodSetupOperationRepository(),
     renewalConsentRecords: new FakeRenewalConsentRecordRepository(),
+    ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
   } satisfies StripeWebhookTransaction;
 
   const logger = new FakeLogger();
@@ -75,6 +77,7 @@ function createTestDeps() {
     subscriptionVersions: tx.subscriptions,
     logger,
     now: () => new Date('2026-02-01T00:00:00.000Z'),
+    ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
     transaction: async (fn) => fn(tx),
   };
 
@@ -293,6 +296,7 @@ describe('POST /api/stripe/webhook', () => {
       },
       logger: new FakeLogger(),
       now: () => new Date('2026-02-01T00:00:00.000Z'),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction:
         transactionSpy as unknown as StripeWebhookDeps['transaction'],
     };

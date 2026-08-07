@@ -17,6 +17,13 @@ export class FakeUserRepository implements UserRepository {
     return stored?.user ?? null;
   }
 
+  async findById(id: string): Promise<User | null> {
+    for (const stored of this.byClerkId.values()) {
+      if (stored.user.id === id) return stored.user;
+    }
+    return null;
+  }
+
   async lockByClerkId(clerkId: string): Promise<User | null> {
     return this.findByClerkId(clerkId);
   }

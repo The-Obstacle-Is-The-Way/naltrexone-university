@@ -73,3 +73,8 @@ export const CRON_RECONCILE_STRIPE_SUBSCRIPTIONS_RATE_LIMIT = {
   limit: 5,
   windowMs: ONE_MINUTE_MS,
 } as const;
+
+export const CRON_SEND_RENEWAL_NOTICES_RATE_LIMIT = {
+  limit: 5,
+  windowMs: ONE_MINUTE_MS,
+} as const;

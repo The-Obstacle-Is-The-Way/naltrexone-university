@@ -137,6 +137,12 @@ export {
   SaveExamDraftAnswerUseCase,
 } from './save-exam-draft-answer';
 export {
+  type ScheduledRenewalNotice,
+  type SendDueRenewalNoticesResult,
+  SendDueRenewalNoticesUseCase,
+} from './send-due-renewal-notices';
+export { SendRenewalAcknowledgmentUseCase } from './send-renewal-acknowledgment';
+export {
   type SetBookmarkInput,
   type SetBookmarkOutput,
   SetBookmarkUseCase,

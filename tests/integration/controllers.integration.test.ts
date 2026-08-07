@@ -15,6 +15,7 @@ import { getAttemptedQuestions } from '@/src/adapters/controllers/review-control
 import { getUserStats } from '@/src/adapters/controllers/stats-controller';
 import type { StripeWebhookInput } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
 import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
@@ -1036,6 +1037,7 @@ describe('stripe webhook controller (integration)', () => {
         subscriptionVersions: new DrizzleSubscriptionRepository(db, priceIds),
         logger: new FakeLogger(),
         now: () => new Date(),
+        ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
         transaction: async (fn) =>
           db.transaction(async (tx) =>
             fn({
@@ -1047,6 +1049,7 @@ describe('stripe webhook controller (integration)', () => {
               renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
                 tx,
               ),
+              ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
             }),
           ),
       },

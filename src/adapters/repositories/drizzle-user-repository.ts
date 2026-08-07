@@ -90,6 +90,14 @@ export class DrizzleUserRepository implements UserRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findById(id: string): Promise<User | null> {
+    const row = await this.db.query.users.findFirst({
+      where: eq(users.id, id),
+    });
+
+    return row ? this.toDomain(row) : null;
+  }
+
   async lockByClerkId(clerkId: string): Promise<User | null> {
     // Transaction precondition: FOR UPDATE protects the following identity
     // workflow only when this repository was constructed from its callback tx.

@@ -12,6 +12,11 @@ export type UpsertUserByClerkIdOptions = {
 
 export interface UserRepository {
   /**
+   * Find a user by the application-owned UUID.
+   */
+  findById(id: string): Promise<User | null>;
+
+  /**
    * Find a user by their external Clerk ID.
    */
   findByClerkId(clerkId: string): Promise<User | null>;

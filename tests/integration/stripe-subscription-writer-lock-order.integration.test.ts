@@ -8,6 +8,7 @@ import {
 import * as schema from '@/db/schema';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
@@ -352,6 +353,7 @@ async function runWebhookWriter(input: {
       ),
       logger: new FakeLogger(),
       now: () => new Date(),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: async (fn) =>
         subscriptionWriter.db.transaction(async (tx) => {
           await configureSubscriptionWriter(tx);
@@ -376,6 +378,7 @@ async function runWebhookWriter(input: {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
+            ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
           });
         }),
     },
@@ -567,6 +570,7 @@ async function runFirstInsertWebhookWriter(input: {
       ),
       logger: new FakeLogger(),
       now: () => new Date(),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: async (fn) =>
         subscriptionWriter.db.transaction(async (tx) => {
           await configureFastDeadlockWriter(tx);
@@ -580,6 +584,7 @@ async function runFirstInsertWebhookWriter(input: {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
+            ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
           });
         }),
     },

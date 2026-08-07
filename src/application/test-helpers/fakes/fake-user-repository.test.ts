@@ -20,6 +20,19 @@ describe('FakeUserRepository', () => {
     });
   });
 
+  describe('findById', () => {
+    it('finds the internal user persisted through the Clerk identity seam', async () => {
+      const repo = new FakeUserRepository();
+      const user = await repo.upsertByClerkId(
+        'clerk-123',
+        'subscriber@example.com',
+      );
+
+      await expect(repo.findById(user.id)).resolves.toEqual(user);
+      await expect(repo.findById(crypto.randomUUID())).resolves.toBeNull();
+    });
+  });
+
   describe('upsertByClerkId', () => {
     it.each([
       'upsertByClerkId',

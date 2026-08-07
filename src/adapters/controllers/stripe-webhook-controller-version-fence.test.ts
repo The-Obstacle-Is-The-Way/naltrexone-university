@@ -17,6 +17,7 @@ import {
   FakeSubscriptionRepository,
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from './test-helpers/stripe-webhook-renewal-acknowledgment';
 
 class AlwaysConflictingSubscriptionRepository extends FakeSubscriptionRepository {
   readonly inputs: SubscriptionUpsertInput[] = [];
@@ -66,6 +67,7 @@ describe('processStripeWebhook observation-version fence', () => {
       subscriptionVersions: subscriptions,
       logger: new FakeLogger(),
       now: () => new Date('2026-01-01T00:00:00.000Z'),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: async (fn) =>
         fn({
           stripeEvents,
@@ -73,6 +75,7 @@ describe('processStripeWebhook observation-version fence', () => {
           stripeCustomers,
           trialPaymentMethodSetupOperations,
           renewalConsentRecords,
+          ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
         }),
     } as StripeWebhookDeps;
 
