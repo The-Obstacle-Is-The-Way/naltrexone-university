@@ -8,6 +8,7 @@ export { DrizzlePracticeSessionRepository } from './drizzle-practice-session-rep
 export { DrizzleQuestionFeedbackRepository } from './drizzle-question-feedback-repository';
 export { DrizzleQuestionRepository } from './drizzle-question-repository';
 export { DrizzleRenewalConsentRecordRepository } from './drizzle-renewal-consent-record-repository';
+export { DrizzleRenewalNoticeDeliveryRepository } from './drizzle-renewal-notice-delivery-repository';
 export { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repository';
 export { DrizzleStripeEventRepository } from './drizzle-stripe-event-repository';
 export { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';

@@ -22,4 +22,15 @@ describe('vercel cron configuration', () => {
       schedule: '0 8 * * *',
     });
   });
+
+  it('schedules renewal notices daily after subscription reconciliation', () => {
+    const config = JSON.parse(
+      readFileSync(new URL('./vercel.json', import.meta.url), 'utf8'),
+    );
+
+    expect(config.crons).toContainEqual({
+      path: '/api/cron/send-renewal-notices',
+      schedule: '0 9 * * *',
+    });
+  });
 });

@@ -26,6 +26,7 @@ import {
   CreatePortalSessionUseCase,
   CreateTrialPaymentMethodSetupSessionUseCase,
   DiscardPracticeSessionUseCase,
+  DispatchRenewalNoticeDeliveryUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
@@ -44,7 +45,9 @@ import {
   PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
+  RequeueRenewalNoticeDeliveryUseCase,
   SaveExamDraftAnswerUseCase,
+  SendDueRenewalNoticesUseCase,
   SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
@@ -274,6 +277,34 @@ export function createUseCaseFactories(input: {
         repositories.createRenewalConsentRecordRepository(),
         primitives.now,
       ),
+    createDispatchRenewalNoticeDeliveryUseCase: () =>
+      new DispatchRenewalNoticeDeliveryUseCase(
+        repositories.createRenewalNoticeDeliveryRepository(),
+        gateways.createTransactionalEmailGateway(),
+        gateways.createSha256Hasher(),
+        primitives.now,
+      ),
+    createRequeueRenewalNoticeDeliveryUseCase: () =>
+      new RequeueRenewalNoticeDeliveryUseCase(
+        repositories.createRenewalNoticeDeliveryRepository(),
+        primitives.now,
+      ),
+    createSendDueRenewalNoticesUseCase: () => {
+      const repository = repositories.createRenewalNoticeDeliveryRepository();
+      const hasher = gateways.createSha256Hasher();
+      return new SendDueRenewalNoticesUseCase(
+        repository,
+        hasher,
+        new DispatchRenewalNoticeDeliveryUseCase(
+          repository,
+          gateways.createTransactionalEmailGateway(),
+          hasher,
+          primitives.now,
+        ),
+        primitives.env.NEXT_PUBLIC_APP_URL,
+        primitives.now,
+      );
+    },
     createCountAvailableQuestionsUseCase: () =>
       new CountAvailableQuestionsUseCase(
         repositories.createQuestionRepository(),

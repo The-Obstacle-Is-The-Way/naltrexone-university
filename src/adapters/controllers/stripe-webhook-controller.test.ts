@@ -18,6 +18,7 @@ import {
   processStripeWebhook,
   type StripeWebhookDeps,
 } from './stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from './test-helpers/stripe-webhook-renewal-acknowledgment';
 
 class FailingStripeEventRepository extends FakeStripeEventRepository {
   override async pruneProcessedBefore(
@@ -25,6 +26,12 @@ class FailingStripeEventRepository extends FakeStripeEventRepository {
     _limit: number,
   ): Promise<number> {
     throw new Error('boom');
+  }
+}
+
+class MarkProcessedFailingStripeEventRepository extends FakeStripeEventRepository {
+  override async markProcessed(): Promise<never> {
+    throw new Error('mark processed failed');
   }
 }
 
@@ -112,6 +119,14 @@ function createDeps(overrides: {
   logger: FakeLogger;
   setupOperations: FakeTrialPaymentMethodSetupOperationRepository;
   renewalConsents: FakeRenewalConsentRecordRepository;
+  renewalNoticeDeliveries: ReturnType<
+    ReturnType<
+      typeof createStripeWebhookRenewalAcknowledgmentTestDeps
+    >['createRenewalNoticeDeliveries']
+  >;
+  acknowledgment: ReturnType<
+    typeof createStripeWebhookRenewalAcknowledgmentTestDeps
+  >;
 } {
   const stripeEvents =
     overrides.stripeEvents ?? new FakeStripeEventRepository();
@@ -125,6 +140,7 @@ function createDeps(overrides: {
     new FakeTrialPaymentMethodSetupOperationRepository();
   const renewalConsents =
     overrides.renewalConsents ?? new FakeRenewalConsentRecordRepository();
+  const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
   return {
     deps: {
@@ -132,6 +148,7 @@ function createDeps(overrides: {
       subscriptionVersions: subscriptions,
       logger,
       now: overrides.now ?? (() => new Date()),
+      ...acknowledgment.webhook,
       transaction: async (fn) =>
         fn({
           stripeEvents,
@@ -139,6 +156,7 @@ function createDeps(overrides: {
           stripeCustomers,
           trialPaymentMethodSetupOperations: setupOperations,
           renewalConsentRecords: renewalConsents,
+          ...acknowledgment.transaction,
         }),
     },
     stripeEvents,
@@ -147,6 +165,8 @@ function createDeps(overrides: {
     logger,
     setupOperations,
     renewalConsents,
+    renewalNoticeDeliveries: acknowledgment.renewalNoticeDeliveries,
+    acknowledgment,
   };
 }
 
@@ -167,6 +187,14 @@ function createRollbackAwareDeps(overrides: {
   logger: FakeLogger;
   setupOperations: FakeTrialPaymentMethodSetupOperationRepository;
   renewalConsents: FakeRenewalConsentRecordRepository;
+  renewalNoticeDeliveries: ReturnType<
+    ReturnType<
+      typeof createStripeWebhookRenewalAcknowledgmentTestDeps
+    >['createRenewalNoticeDeliveries']
+  >;
+  acknowledgment: ReturnType<
+    typeof createStripeWebhookRenewalAcknowledgmentTestDeps
+  >;
 } {
   const base = createDeps(overrides);
 
@@ -191,12 +219,17 @@ function createRollbackAwareDeps(overrides: {
         const stagingStripeCustomers = new StripeCustomersCtor();
         const stagingSetupOperations = new SetupOperationsCtor();
         const stagingRenewalConsents = new RenewalConsentsCtor();
+        const stagingRenewalNoticeDeliveries =
+          base.acknowledgment.createRenewalNoticeDeliveries();
 
         stagingEvents.restore(base.stripeEvents.snapshot());
         stagingSubscriptions.restore(base.subscriptions.snapshot());
         stagingStripeCustomers.restore(base.stripeCustomers.snapshot());
         stagingSetupOperations.restore(base.setupOperations.snapshot());
         stagingRenewalConsents.restore(base.renewalConsents.snapshot());
+        stagingRenewalNoticeDeliveries.restore(
+          base.renewalNoticeDeliveries.snapshot(),
+        );
 
         const result = await fn({
           stripeEvents: stagingEvents,
@@ -204,6 +237,8 @@ function createRollbackAwareDeps(overrides: {
           stripeCustomers: stagingStripeCustomers,
           trialPaymentMethodSetupOperations: stagingSetupOperations,
           renewalConsentRecords: stagingRenewalConsents,
+          renewalNoticeDeliveries: stagingRenewalNoticeDeliveries,
+          users: base.acknowledgment.transaction.users,
         });
 
         base.stripeEvents.restore(stagingEvents.snapshot());
@@ -211,6 +246,9 @@ function createRollbackAwareDeps(overrides: {
         base.stripeCustomers.restore(stagingStripeCustomers.snapshot());
         base.setupOperations.restore(stagingSetupOperations.snapshot());
         base.renewalConsents.restore(stagingRenewalConsents.snapshot());
+        base.renewalNoticeDeliveries.restore(
+          stagingRenewalNoticeDeliveries.snapshot(),
+        );
 
         return result;
       },
@@ -346,7 +384,8 @@ describe('processStripeWebhook', () => {
         },
       },
     });
-    const { deps, renewalConsents } = createDeps({ paymentGateway });
+    const { deps, renewalConsents, renewalNoticeDeliveries } =
+      createRollbackAwareDeps({ paymentGateway });
 
     await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
 
@@ -361,6 +400,63 @@ describe('processStripeWebhook', () => {
         acceptedAt,
       }),
     ]);
+    expect(renewalNoticeDeliveries.records).toEqual([
+      expect.objectContaining({
+        noticeKind: 'acknowledgment',
+        consentRecordId: renewalConsents.snapshot()[0]?.id,
+        status: 'queued',
+        createdAt: new Date('2026-08-07T12:00:00.000Z'),
+      }),
+    ]);
+  });
+
+  it('rolls back the acknowledgment row when the webhook transaction fails after queueing', async () => {
+    const userId = crypto.randomUUID();
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_checkout_ack_rollback',
+        type: 'checkout.session.completed',
+        subscriptionUpdate: {
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date('2026-09-06T12:00:00Z'),
+          cancelAtPeriodEnd: false,
+        },
+        initialSubscriptionConsent: {
+          checkoutSessionId: 'cs_checkout_ack_rollback',
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          disclosureSnapshot: 'Exact immediate disclosure.',
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-hash',
+          cancellationMethod:
+            'Billing page in the app or support@addictionboards.com',
+          acceptedAt: new Date('2026-08-06T12:00:00Z'),
+        },
+      },
+    });
+    const stripeEvents = new MarkProcessedFailingStripeEventRepository();
+    const { deps, renewalConsents, renewalNoticeDeliveries } =
+      createRollbackAwareDeps({ paymentGateway, stripeEvents });
+
+    await expect(
+      processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' }),
+    ).rejects.toThrow('mark processed failed');
+
+    expect(renewalConsents.snapshot()).toEqual([]);
+    expect(renewalNoticeDeliveries.records).toEqual([]);
   });
 
   it('does not persist consent when the subscription write guard rejects the update', async () => {

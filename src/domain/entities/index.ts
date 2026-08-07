@@ -29,6 +29,14 @@ export {
   type RenewalConsentRecordInput,
   terminateRenewalConsentRecord,
 } from './renewal-consent-record';
+export type {
+  NewRenewalNoticeDelivery,
+  RenewalNoticeDelivery,
+  RenewalNoticeDeliveryStatus,
+  RenewalNoticeKind,
+  RenewalNoticeRequeueAuditEntry,
+} from './renewal-notice-delivery';
+export { isValidRenewalNoticeDeliveryKeyShape } from './renewal-notice-delivery';
 export type { Subscription } from './subscription';
 export type { Tag } from './tag';
 export type { User } from './user';

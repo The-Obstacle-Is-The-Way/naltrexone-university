@@ -22,6 +22,10 @@ export function createControllerFactories(input: {
       subscriptionVersions: repositories.createSubscriptionRepository(),
       logger: primitives.logger,
       now: primitives.now,
+      appUrl: primitives.env.NEXT_PUBLIC_APP_URL,
+      sha256Hasher: gateways.createSha256Hasher(),
+      dispatchRenewalNoticeDelivery:
+        useCases.createDispatchRenewalNoticeDeliveryUseCase(),
       transaction: async (fn) =>
         primitives.db.transaction(async (tx) =>
           fn({
@@ -32,6 +36,9 @@ export function createControllerFactories(input: {
               repositories.createTrialPaymentMethodSetupOperationRepository(tx),
             renewalConsentRecords:
               repositories.createRenewalConsentRecordRepository(tx),
+            renewalNoticeDeliveries:
+              repositories.createRenewalNoticeDeliveryRepository(tx),
+            users: repositories.createUserRepository(tx),
           }),
         ),
     }),

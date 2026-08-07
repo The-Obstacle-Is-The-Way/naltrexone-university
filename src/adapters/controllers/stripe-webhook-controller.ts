@@ -19,17 +19,23 @@ import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
   RenewalConsentRecordRepository,
+  RenewalNoticeDeliveryRepository,
   StripeCustomerRepository,
   StripeEventRepository,
   SubscriptionRepository,
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationRepository,
+  UserRepository,
 } from '@/src/application/ports/repositories';
+import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
 import {
+  type DispatchRenewalNoticeDeliveryUseCase,
   PruneRenewalConsentsUseCase,
   RecordRenewalConsentUseCase,
+  SendRenewalAcknowledgmentUseCase,
 } from '@/src/application/use-cases';
+import type { RenewalConsentRecord } from '@/src/domain/entities';
 import { DAY_MS } from '@/src/domain/services';
 
 export type StripeWebhookInput = {
@@ -43,6 +49,8 @@ export type StripeWebhookTransaction = {
   stripeCustomers: StripeCustomerRepository;
   trialPaymentMethodSetupOperations: TrialPaymentMethodSetupOperationRepository;
   renewalConsentRecords: RenewalConsentRecordRepository;
+  renewalNoticeDeliveries: RenewalNoticeDeliveryRepository;
+  users: Pick<UserRepository, 'findById'>;
 };
 
 export type StripeWebhookDeps = {
@@ -56,6 +64,12 @@ export type StripeWebhookDeps = {
   ) => Promise<T>;
   logger: Logger;
   now: () => Date;
+  appUrl: string;
+  sha256Hasher: Sha256Hasher;
+  dispatchRenewalNoticeDelivery: Pick<
+    DispatchRenewalNoticeDeliveryUseCase,
+    'execute'
+  >;
 };
 
 type StripeWebhookEvent = Awaited<
@@ -83,6 +97,48 @@ class StripeWebhookAlreadyProcessed extends Error {}
 //   daily drain owns retries and fallback.
 const PROCESSED_STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
 const TRIAL_PAYMENT_METHOD_SETUP_CLAIM_LEASE_MS = 5 * 60 * 1000;
+
+async function queueRenewalAcknowledgment(input: {
+  deps: StripeWebhookDeps;
+  transaction: StripeWebhookTransaction;
+  consent: RenewalConsentRecord;
+}): Promise<string> {
+  const userId = input.consent.userId;
+  if (!userId) {
+    throw new ApplicationError(
+      'CONFLICT',
+      'Initial renewal consent is missing its local user',
+    );
+  }
+  const user = await input.transaction.users.findById(userId);
+  if (!user) {
+    throw new ApplicationError(
+      'NOT_FOUND',
+      'Renewal acknowledgment recipient not found',
+    );
+  }
+  const delivery = await new SendRenewalAcknowledgmentUseCase(
+    input.transaction.renewalNoticeDeliveries,
+    input.deps.sha256Hasher,
+    input.deps.appUrl,
+  ).execute({ consent: input.consent, destination: user.email });
+  return delivery.id;
+}
+
+async function dispatchRenewalAcknowledgment(
+  deps: StripeWebhookDeps,
+  eventId: string,
+  deliveryId: string,
+): Promise<void> {
+  try {
+    await deps.dispatchRenewalNoticeDelivery.execute({ deliveryId });
+  } catch (error) {
+    deps.logger.error(
+      { eventId, error: projectSafeErrorDiagnostics(error) },
+      'Renewal acknowledgment dispatch failed',
+    );
+  }
+}
 
 function setupSnapshotMatches(
   operation: TrialPaymentMethodSetupOperation,
@@ -228,13 +284,16 @@ async function processTrialPaymentMethodSetupWebhook(
     });
   }
 
-  await deps.transaction(
-    async ({
-      stripeEvents,
-      trialPaymentMethodSetupOperations,
-      renewalConsentRecords,
-    }) => {
-      await new RecordRenewalConsentUseCase(renewalConsentRecords).execute({
+  const acknowledgmentDeliveryId = await deps.transaction(
+    async (transaction) => {
+      const {
+        stripeEvents,
+        trialPaymentMethodSetupOperations,
+        renewalConsentRecords,
+      } = transaction;
+      const consent = await new RecordRenewalConsentUseCase(
+        renewalConsentRecords,
+      ).execute({
         userId: claimed.userId,
         consumerReference: toConsumerReference(claimed.stripeCustomerId),
         externalCustomerId: claimed.stripeCustomerId,
@@ -260,13 +319,24 @@ async function processTrialPaymentMethodSetupWebhook(
         proposedAmountCents: null,
         effectiveRenewalAt: null,
       });
+      const deliveryId = await queueRenewalAcknowledgment({
+        deps,
+        transaction,
+        consent,
+      });
       await trialPaymentMethodSetupOperations.markCompleted({
         sessionId: completion.sessionId,
         claimId,
         completedAt: deps.now(),
       });
       await stripeEvents.markProcessed(event.eventId);
+      return deliveryId;
     },
+  );
+  await dispatchRenewalAcknowledgment(
+    deps,
+    event.eventId,
+    acknowledgmentDeliveryId,
   );
 }
 
@@ -333,7 +403,7 @@ async function persistInitialSubscriptionConsent(input: {
   repository: RenewalConsentRecordRepository;
   consent: InitialSubscriptionConsent;
   subscriptionUpdate: StripeSubscriptionUpdate;
-}): Promise<void> {
+}): Promise<RenewalConsentRecord> {
   const { consent, subscriptionUpdate } = input;
   if (
     consent.userId !== subscriptionUpdate.userId ||
@@ -348,7 +418,7 @@ async function persistInitialSubscriptionConsent(input: {
     );
   }
 
-  await new RecordRenewalConsentUseCase(input.repository).execute({
+  return new RecordRenewalConsentUseCase(input.repository).execute({
     userId: consent.userId,
     consumerReference: toConsumerReference(consent.externalCustomerId),
     externalCustomerId: consent.externalCustomerId,
@@ -387,6 +457,7 @@ async function processSubscriptionWebhook(
 ): Promise<void> {
   let processingError: unknown;
   let hasProcessingError = false;
+  let acknowledgmentDeliveryId: string | null = null;
   const discoveredUserId = subscriptionUpdate.userId;
   const initialConsent = event.initialSubscriptionConsent;
   const retrieveSubscriptionUpdate =
@@ -416,83 +487,87 @@ async function processSubscriptionWebhook(
       retrieve: retrieveSubscriptionUpdate,
       getUserId: (nextSubscriptionUpdate) => nextSubscriptionUpdate.userId,
       persist: (nextSubscriptionUpdate, expectedVersion) =>
-        deps.transaction(
-          async ({
+        deps.transaction(async (transaction) => {
+          const {
             stripeEvents,
             subscriptions,
             stripeCustomers,
             renewalConsentRecords,
-          }) => {
-            const claimed = await stripeEvents.claim(event.eventId, event.type);
-            if (!claimed) {
-              const snapshot = await stripeEvents.peek(event.eventId);
-              if (snapshot && isSuccessfullyProcessed(snapshot)) {
-                throw new StripeWebhookAlreadyProcessed();
-              }
-            }
-
-            const current = await stripeEvents.lock(event.eventId);
-            if (isSuccessfullyProcessed(current)) {
+          } = transaction;
+          const claimed = await stripeEvents.claim(event.eventId, event.type);
+          if (!claimed) {
+            const snapshot = await stripeEvents.peek(event.eventId);
+            if (snapshot && isSuccessfullyProcessed(snapshot)) {
               throw new StripeWebhookAlreadyProcessed();
             }
+          }
 
-            try {
-              // Stripe webhook, checkout-success, and reconcile use advisory(user)
-              // -> stripe_subscriptions -> stripe_customers. User deletion is the
-              // fourth writer and takes the same advisory before its inverse cascade.
-              const write = await subscriptions.upsert({
-                userId: nextSubscriptionUpdate.userId,
+          const current = await stripeEvents.lock(event.eventId);
+          if (isSuccessfullyProcessed(current)) {
+            throw new StripeWebhookAlreadyProcessed();
+          }
+
+          try {
+            // Stripe webhook, checkout-success, and reconcile use advisory(user)
+            // -> stripe_subscriptions -> stripe_customers. User deletion is the
+            // fourth writer and takes the same advisory before its inverse cascade.
+            const write = await subscriptions.upsert({
+              userId: nextSubscriptionUpdate.userId,
+              externalSubscriptionId:
+                nextSubscriptionUpdate.externalSubscriptionId,
+              plan: nextSubscriptionUpdate.plan,
+              status: nextSubscriptionUpdate.status,
+              currentPeriodEnd: nextSubscriptionUpdate.currentPeriodEnd,
+              cancelAtPeriodEnd: nextSubscriptionUpdate.cancelAtPeriodEnd,
+              expectedVersion,
+            });
+            if (!write.persisted && write.reason === 'version_conflict') {
+              return write;
+            }
+
+            if (write.persisted) {
+              await stripeCustomers.insert(
+                nextSubscriptionUpdate.userId,
+                nextSubscriptionUpdate.externalCustomerId,
+                { conflictStrategy: 'authoritative' },
+              );
+            }
+
+            if (write.persisted && initialConsent) {
+              const consent = await persistInitialSubscriptionConsent({
+                repository: renewalConsentRecords,
+                consent: initialConsent,
+                subscriptionUpdate: nextSubscriptionUpdate,
+              });
+              acknowledgmentDeliveryId = await queueRenewalAcknowledgment({
+                deps,
+                transaction,
+                consent,
+              });
+            }
+
+            if (
+              write.persisted &&
+              nextSubscriptionUpdate.status === 'canceled'
+            ) {
+              await renewalConsentRecords.markSubscriptionTerminated({
                 externalSubscriptionId:
                   nextSubscriptionUpdate.externalSubscriptionId,
-                plan: nextSubscriptionUpdate.plan,
-                status: nextSubscriptionUpdate.status,
-                currentPeriodEnd: nextSubscriptionUpdate.currentPeriodEnd,
-                cancelAtPeriodEnd: nextSubscriptionUpdate.cancelAtPeriodEnd,
-                expectedVersion,
+                terminatedAt: event.occurredAt ?? deps.now(),
               });
-              if (!write.persisted && write.reason === 'version_conflict') {
-                return write;
-              }
+            }
 
-              if (write.persisted) {
-                await stripeCustomers.insert(
-                  nextSubscriptionUpdate.userId,
-                  nextSubscriptionUpdate.externalCustomerId,
-                  { conflictStrategy: 'authoritative' },
-                );
-              }
-
-              if (write.persisted && initialConsent) {
-                await persistInitialSubscriptionConsent({
-                  repository: renewalConsentRecords,
-                  consent: initialConsent,
-                  subscriptionUpdate: nextSubscriptionUpdate,
-                });
-              }
-
-              if (
-                write.persisted &&
-                nextSubscriptionUpdate.status === 'canceled'
-              ) {
-                await renewalConsentRecords.markSubscriptionTerminated({
-                  externalSubscriptionId:
-                    nextSubscriptionUpdate.externalSubscriptionId,
-                  terminatedAt: event.occurredAt ?? deps.now(),
-                });
-              }
-
-              await stripeEvents.markProcessed(event.eventId);
-              return write;
-            } catch (error) {
-              if (error instanceof StripeWebhookAlreadyProcessed) {
-                throw error;
-              }
-              processingError = error;
-              hasProcessingError = true;
+            await stripeEvents.markProcessed(event.eventId);
+            return write;
+          } catch (error) {
+            if (error instanceof StripeWebhookAlreadyProcessed) {
               throw error;
             }
-          },
-        ),
+            processingError = error;
+            hasProcessingError = true;
+            throw error;
+          }
+        }),
     });
   } catch (transactionError) {
     if (transactionError instanceof StripeWebhookAlreadyProcessed) {
@@ -516,6 +591,14 @@ async function processSubscriptionWebhook(
     }
 
     throw hasProcessingError ? processingError : transactionError;
+  }
+
+  if (acknowledgmentDeliveryId) {
+    await dispatchRenewalAcknowledgment(
+      deps,
+      event.eventId,
+      acknowledgmentDeliveryId,
+    );
   }
 }
 

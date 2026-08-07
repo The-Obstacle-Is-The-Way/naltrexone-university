@@ -3,6 +3,7 @@ import {
   type ClerkUserLike,
   type ClerkUserLookup,
   DrizzleRateLimiter,
+  ResendTransactionalEmailGateway,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import type {
@@ -45,5 +46,10 @@ export function createGatewayFactories(input: {
       }),
     createRateLimiter: () =>
       new DrizzleRateLimiter(primitives.db, primitives.now, primitives.logger),
+    createSha256Hasher: () => primitives.sha256Hasher,
+    createTransactionalEmailGateway: () =>
+      new ResendTransactionalEmailGateway({
+        apiKey: primitives.env.RESEND_API_KEY,
+      }),
   };
 }

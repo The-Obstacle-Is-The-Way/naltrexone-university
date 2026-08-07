@@ -59,6 +59,13 @@ const envSchema = z.object({
     .min(1)
     .regex(/^price_/, 'Must start with "price_"'),
 
+  // Transactional email (optional until the owner provisions Resend)
+  RESEND_API_KEY: z
+    .string()
+    .min(1)
+    .regex(/^re_/, 'Must start with "re_"')
+    .optional(),
+
   // App
   NEXT_PUBLIC_APP_URL: z.string().url(),
 

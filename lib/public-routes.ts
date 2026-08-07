@@ -8,6 +8,7 @@ export const PUBLIC_ROUTE_PATTERNS = [
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/cron/reconcile-stripe-subscriptions(.*)',
+  '/api/cron/send-renewal-notices(.*)',
   '/api/health(.*)',
   '/api/stripe/webhook(.*)',
   '/api/webhooks/clerk(.*)',

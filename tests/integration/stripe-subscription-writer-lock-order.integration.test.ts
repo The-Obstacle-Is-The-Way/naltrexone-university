@@ -8,6 +8,7 @@ import {
 import * as schema from '@/db/schema';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
@@ -342,6 +343,7 @@ async function runWebhookWriter(input: {
       },
     },
   });
+  const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
   await processStripeWebhook(
     {
@@ -352,6 +354,7 @@ async function runWebhookWriter(input: {
       ),
       logger: new FakeLogger(),
       now: () => new Date(),
+      ...acknowledgment.webhook,
       transaction: async (fn) =>
         subscriptionWriter.db.transaction(async (tx) => {
           await configureSubscriptionWriter(tx);
@@ -376,6 +379,7 @@ async function runWebhookWriter(input: {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
+            ...acknowledgment.transaction,
           });
         }),
     },
@@ -554,6 +558,7 @@ async function runFirstInsertWebhookWriter(input: {
       },
     },
   });
+  const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
   // Production repositories, no pause points: the first-insert path must
   // block at the deletion writer's advisory, not inside its own INSERT's
@@ -567,6 +572,7 @@ async function runFirstInsertWebhookWriter(input: {
       ),
       logger: new FakeLogger(),
       now: () => new Date(),
+      ...acknowledgment.webhook,
       transaction: async (fn) =>
         subscriptionWriter.db.transaction(async (tx) => {
           await configureFastDeadlockWriter(tx);
@@ -580,6 +586,7 @@ async function runFirstInsertWebhookWriter(input: {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
+            ...acknowledgment.transaction,
           });
         }),
     },

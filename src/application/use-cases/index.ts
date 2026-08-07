@@ -29,6 +29,7 @@ export {
   type DiscardPracticeSessionOutput,
   DiscardPracticeSessionUseCase,
 } from './discard-practice-session';
+export { DispatchRenewalNoticeDeliveryUseCase } from './dispatch-renewal-notice-delivery';
 export {
   type EndPracticeSessionInput,
   type EndPracticeSessionOutput,
@@ -127,10 +128,20 @@ export {
   RecordRenewalConsentUseCase,
 } from './record-renewal-consent';
 export {
+  type RequeueRenewalNoticeDeliveryInput,
+  RequeueRenewalNoticeDeliveryUseCase,
+} from './requeue-renewal-notice-delivery';
+export {
   type SaveExamDraftAnswerInput,
   type SaveExamDraftAnswerOutput,
   SaveExamDraftAnswerUseCase,
 } from './save-exam-draft-answer';
+export {
+  type ScheduledRenewalNotice,
+  type SendDueRenewalNoticesResult,
+  SendDueRenewalNoticesUseCase,
+} from './send-due-renewal-notices';
+export { SendRenewalAcknowledgmentUseCase } from './send-renewal-acknowledgment';
 export {
   type SetBookmarkInput,
   type SetBookmarkOutput,

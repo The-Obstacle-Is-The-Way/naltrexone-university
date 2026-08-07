@@ -17,6 +17,12 @@ describe('PUBLIC_ROUTE_PATTERNS', () => {
     );
   });
 
+  it('includes the renewal notice cron so its bearer auth is enforced at route level', () => {
+    expect(PUBLIC_ROUTE_PATTERNS).toContain(
+      '/api/cron/send-renewal-notices(.*)',
+    );
+  });
+
   it('derives both signed-out legal-page patterns from shared routes', () => {
     expect(PUBLIC_ROUTE_PATTERNS).toContain(`${ROUTES.PRIVACY}(.*)`);
     expect(PUBLIC_ROUTE_PATTERNS).toContain(`${ROUTES.TERMS}(.*)`);

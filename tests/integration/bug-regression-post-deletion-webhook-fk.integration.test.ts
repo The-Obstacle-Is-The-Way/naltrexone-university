@@ -7,6 +7,7 @@ import {
   processStripeWebhook,
   type StripeWebhookDeps,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
@@ -95,6 +96,7 @@ describe('BUG-296 post-deletion Stripe subscription webhook', () => {
       subscriptionVersions: new DrizzleSubscriptionRepository(db, priceIds),
       logger,
       now: () => new Date(),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: (fn) =>
         db.transaction((tx) =>
           fn({
@@ -106,6 +108,7 @@ describe('BUG-296 post-deletion Stripe subscription webhook', () => {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
+            ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
           }),
         ),
     };
@@ -167,6 +170,7 @@ describe('BUG-296 post-deletion Stripe subscription webhook', () => {
       subscriptionVersions: subscriptions,
       logger,
       now: () => new Date(),
+      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
       transaction: (fn) =>
         db.transaction((tx) =>
           fn({
@@ -180,6 +184,7 @@ describe('BUG-296 post-deletion Stripe subscription webhook', () => {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
+            ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
           }),
         ),
     };

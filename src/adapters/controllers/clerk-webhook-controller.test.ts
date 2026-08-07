@@ -193,6 +193,17 @@ class TransactionalUserStore {
     };
 
     return {
+      findById: async (id: string) => {
+        const clerkIds = new Set([
+          ...this.committedUsers.keys(),
+          ...stagedUsers.keys(),
+        ]);
+        for (const clerkId of clerkIds) {
+          const user = readVisibleUser(clerkId);
+          if (user?.id === id) return user;
+        }
+        return null;
+      },
       findByClerkId: async (clerkId: string) => readVisibleUser(clerkId),
       lockByClerkId: async (clerkId: string) => readVisibleUser(clerkId),
       acquireSubscriptionWriteLock: async () => undefined,

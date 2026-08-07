@@ -47,16 +47,18 @@ describe('Clean Architecture import boundaries', () => {
           import { getQuestion } from '@/src/adapters/controllers/question-controller';
           import React from 'react';
           import type Stripe from 'stripe';
+          import { sha256 } from '@noble/hashes/sha2';
           import 'server-only';
         `,
       ),
     ]);
 
     expect(issues).toEqual([
-      "src/application/use-cases/bad-use-case.ts:2 application code must not import adapters/framework code; found '@/src/adapters/controllers/question-controller'.",
-      "src/application/use-cases/bad-use-case.ts:3 application code must not import adapters/framework code; found 'react'.",
-      "src/application/use-cases/bad-use-case.ts:4 application code must not import adapters/framework code; found 'stripe'.",
-      "src/application/use-cases/bad-use-case.ts:5 application code must not import adapters/framework code; found 'server-only'.",
+      "src/application/use-cases/bad-use-case.ts:2 application code must not import outer-layer or package code; found '@/src/adapters/controllers/question-controller'.",
+      "src/application/use-cases/bad-use-case.ts:3 application code must not import outer-layer or package code; found 'react'.",
+      "src/application/use-cases/bad-use-case.ts:4 application code must not import outer-layer or package code; found 'stripe'.",
+      "src/application/use-cases/bad-use-case.ts:5 application code must not import outer-layer or package code; found '@noble/hashes/sha2'.",
+      "src/application/use-cases/bad-use-case.ts:6 application code must not import outer-layer or package code; found 'server-only'.",
     ]);
   });
 

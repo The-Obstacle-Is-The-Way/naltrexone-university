@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import type { SQL } from 'drizzle-orm';
+import { eq, type SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { users } from '@/db/schema';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { ApplicationError } from '@/src/application/errors';
 
@@ -69,6 +70,40 @@ describe('DrizzleUserRepository', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  describe('findById', () => {
+    it('returns the user needed for a transaction-bound acknowledgment', async () => {
+      const db = createDbMock();
+      const row = {
+        id: userId,
+        clerkUserId: 'clerk_1',
+        email: 'subscriber@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+      db._mocks.queryFindFirst.mockResolvedValue(row);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(repo.findById(userId)).resolves.toEqual({
+        id: userId,
+        email: row.email,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      });
+      expect(db._mocks.queryFindFirst).toHaveBeenCalledWith({
+        where: eq(users.id, userId),
+      });
+    });
+
+    it('returns null when the local user id is absent', async () => {
+      const db = createDbMock();
+      db._mocks.queryFindFirst.mockResolvedValue(undefined);
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(repo.findById(userId)).resolves.toBeNull();
+    });
   });
 
   describe('findByClerkId', () => {

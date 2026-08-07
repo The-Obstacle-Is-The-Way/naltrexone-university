@@ -3,6 +3,7 @@ import type { StripeWebhookDeps } from '@/src/adapters/controllers/stripe-webhoo
 import {
   ClerkAuthGateway,
   DrizzleRateLimiter,
+  ResendTransactionalEmailGateway,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
 import {
@@ -16,6 +17,7 @@ import {
   DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
   DrizzleRenewalConsentRecordRepository,
+  DrizzleRenewalNoticeDeliveryRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
   DrizzleSubscriptionRepository,
@@ -27,6 +29,7 @@ import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
   FakeLogger,
   FakePaymentGateway,
+  FakeSha256Hasher,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
@@ -37,6 +40,7 @@ import {
   CreatePortalSessionUseCase,
   CreateTrialPaymentMethodSetupSessionUseCase,
   DiscardPracticeSessionUseCase,
+  DispatchRenewalNoticeDeliveryUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
@@ -51,6 +55,8 @@ import {
   PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
+  RequeueRenewalNoticeDeliveryUseCase,
+  SendDueRenewalNoticesUseCase,
   SetBookmarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
@@ -68,6 +74,7 @@ vi.mock('stripe', () => ({
 
 const ORIGINAL_ENV = snapshotProcessEnv();
 
+delete process.env.RESEND_API_KEY;
 process.env.DATABASE_URL ??=
   'postgresql://user:pass@localhost:5432/addiction_boards_test';
 process.env.STRIPE_SECRET_KEY ??= 'sk_test_dummy';
@@ -125,6 +132,9 @@ describe('container factories', () => {
     expect(typeof container.createRenewalConsentRecordRepository).toBe(
       'function',
     );
+    expect(typeof container.createRenewalNoticeDeliveryRepository).toBe(
+      'function',
+    );
     expect(typeof container.createTagRepository).toBe('function');
     expect(
       container.createTrialPaymentMethodSetupOperationRepository(),
@@ -137,8 +147,18 @@ describe('container factories', () => {
     expect(typeof container.createAuthGateway).toBe('function');
     expect(typeof container.createPaymentGateway).toBe('function');
     expect(typeof container.createRateLimiter).toBe('function');
+    expect(typeof container.createTransactionalEmailGateway).toBe('function');
 
     expect(typeof container.createCheckEntitlementUseCase).toBe('function');
+    expect(typeof container.createDispatchRenewalNoticeDeliveryUseCase).toBe(
+      'function',
+    );
+    expect(typeof container.createRequeueRenewalNoticeDeliveryUseCase).toBe(
+      'function',
+    );
+    expect(typeof container.createSendDueRenewalNoticesUseCase).toBe(
+      'function',
+    );
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
     expect(typeof container.createGetPreviousAttemptUseCase).toBe('function');
     expect(typeof container.createGetQuestionRatingUseCase).toBe('function');
@@ -172,7 +192,8 @@ describe('container factories', () => {
     expect(typeof container.createTagControllerDeps).toBe('function');
   });
 
-  it('wires concrete implementations for all factories', () => {
+  it('wires concrete implementations for all factories', async () => {
+    const sha256Hasher = new FakeSha256Hasher();
     const container = createContainer({
       primitives: {
         db: {} as unknown as DrizzleDb,
@@ -186,6 +207,7 @@ describe('container factories', () => {
         getStripe: () =>
           ({}) as unknown as ReturnType<typeof import('./stripe').getStripe>,
         now: () => new Date('2026-02-01T00:00:00Z'),
+        sha256Hasher,
       },
     });
 
@@ -219,6 +241,29 @@ describe('container factories', () => {
     expect(container.createRenewalConsentRecordRepository()).toBeInstanceOf(
       DrizzleRenewalConsentRecordRepository,
     );
+    expect(container.createRenewalNoticeDeliveryRepository()).toBeInstanceOf(
+      DrizzleRenewalNoticeDeliveryRepository,
+    );
+    expect(container.createSha256Hasher()).toBe(
+      container.primitives.sha256Hasher,
+    );
+    const noticeRepository = container.createRenewalNoticeDeliveryRepository();
+    await expect(
+      noticeRepository.saveQueued({
+        id: '11111111-1111-4111-8111-111111111111',
+        noticeKind: 'annual_reminder',
+        consentRecordId: null,
+        externalSubscriptionId: 'sub_wiring_test',
+        applicableAt: new Date('2027-02-01T00:00:00Z'),
+        disclosureVersion: '2026-08-05',
+        destination: 'subscriber@example.com',
+        providerIdempotencyKey:
+          'renewal-notice/11111111-1111-4111-8111-111111111111',
+        payloadSnapshot: '{}',
+        payloadHash: 'sha256:{}',
+      }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    expect(sha256Hasher.inputs).toEqual(['{}']);
     expect(container.createTagRepository()).toBeInstanceOf(
       DrizzleTagRepository,
     );
@@ -240,6 +285,9 @@ describe('container factories', () => {
       StripePaymentGateway,
     );
     expect(container.createRateLimiter()).toBeInstanceOf(DrizzleRateLimiter);
+    const emailGateway = container.createTransactionalEmailGateway();
+    expect(emailGateway).toBeInstanceOf(ResendTransactionalEmailGateway);
+    expect(emailGateway.isConfigured()).toBe(false);
 
     expect(container.createCheckEntitlementUseCase()).toBeInstanceOf(
       CheckEntitlementUseCase,
@@ -303,6 +351,15 @@ describe('container factories', () => {
     );
     expect(container.createPruneRenewalConsentsUseCase()).toBeInstanceOf(
       PruneRenewalConsentsUseCase,
+    );
+    expect(
+      container.createDispatchRenewalNoticeDeliveryUseCase(),
+    ).toBeInstanceOf(DispatchRenewalNoticeDeliveryUseCase);
+    expect(
+      container.createRequeueRenewalNoticeDeliveryUseCase(),
+    ).toBeInstanceOf(RequeueRenewalNoticeDeliveryUseCase);
+    expect(container.createSendDueRenewalNoticesUseCase()).toBeInstanceOf(
+      SendDueRenewalNoticesUseCase,
     );
     expect(container.createFinalizeExamAnswersUseCase()).toBeInstanceOf(
       FinalizeExamAnswersUseCase,
