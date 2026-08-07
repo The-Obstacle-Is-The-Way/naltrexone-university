@@ -3,7 +3,10 @@ import type {
   ClaimTrialPaymentMethodSetupOperationInput,
   CompleteTrialPaymentMethodSetupOperationInput,
   MarkTrialPaymentMethodAttachedInput,
+  MarkTrialPaymentMethodSetupExpiredInput,
+  MarkTrialPaymentMethodSetupTerminalInput,
   MarkTrialSubscriptionDefaultSetInput,
+  PruneExpiredTrialPaymentMethodSetupsInput,
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationInput,
   TrialPaymentMethodSetupOperationRepository,
@@ -23,6 +26,8 @@ function cloneOperation(
       ? new Date(operation.subscriptionDefaultSetAt)
       : null,
     completedAt: operation.completedAt ? new Date(operation.completedAt) : null,
+    terminalAt: operation.terminalAt ? new Date(operation.terminalAt) : null,
+    expiredAt: operation.expiredAt ? new Date(operation.expiredAt) : null,
   };
 }
 
@@ -88,6 +93,9 @@ export class FakeTrialPaymentMethodSetupOperationRepository
       paymentMethodAttachedAt: null,
       subscriptionDefaultSetAt: null,
       completedAt: null,
+      terminalAt: null,
+      terminalReason: null,
+      expiredAt: null,
     });
   }
 
@@ -105,7 +113,14 @@ export class FakeTrialPaymentMethodSetupOperationRepository
     staleBefore,
   }: ClaimTrialPaymentMethodSetupOperationInput): Promise<TrialPaymentMethodSetupOperation | null> {
     const operation = this.bySessionId.get(sessionId);
-    if (!operation || operation.status === 'completed') return null;
+    if (
+      !operation ||
+      operation.status === 'completed' ||
+      operation.status === 'terminal' ||
+      operation.status === 'expired'
+    ) {
+      return null;
+    }
     if (
       operation.status === 'processing' &&
       operation.claimedAt &&
@@ -161,6 +176,57 @@ export class FakeTrialPaymentMethodSetupOperationRepository
       status: 'completed',
       completedAt: new Date(completedAt),
     });
+  }
+
+  async markTerminal({
+    sessionId,
+    claimId,
+    reason,
+    terminalAt,
+  }: MarkTrialPaymentMethodSetupTerminalInput): Promise<void> {
+    const operation = this.requireClaim(sessionId, claimId);
+    this.bySessionId.set(sessionId, {
+      ...operation,
+      status: 'terminal',
+      terminalReason: reason,
+      terminalAt: new Date(terminalAt),
+    });
+  }
+
+  async markExpired({
+    sessionId,
+    expiredAt,
+  }: MarkTrialPaymentMethodSetupExpiredInput): Promise<boolean> {
+    const operation = this.bySessionId.get(sessionId);
+    if (operation?.status !== 'pending') return false;
+    this.bySessionId.set(sessionId, {
+      ...operation,
+      status: 'expired',
+      expiredAt: new Date(expiredAt),
+    });
+    return true;
+  }
+
+  async pruneExpired({
+    expiredBefore,
+    limit,
+  }: PruneExpiredTrialPaymentMethodSetupsInput): Promise<number> {
+    const eligible = Array.from(this.bySessionId.values())
+      .filter(
+        (operation) =>
+          operation.status === 'expired' &&
+          operation.expiredAt !== null &&
+          operation.expiredAt < expiredBefore,
+      )
+      .sort(
+        (left, right) =>
+          (left.expiredAt?.getTime() ?? 0) - (right.expiredAt?.getTime() ?? 0),
+      )
+      .slice(0, Math.max(0, limit));
+    for (const operation of eligible) {
+      this.bySessionId.delete(operation.sessionId);
+    }
+    return eligible.length;
   }
 
   private requireClaim(

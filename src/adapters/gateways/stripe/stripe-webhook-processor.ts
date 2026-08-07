@@ -4,6 +4,7 @@ import { retrieveAndNormalizeStripeSubscription } from '@/src/adapters/gateways/
 import {
   extractSubscriptionRef,
   stripeEventWithSubscriptionRefSchema,
+  stripeExpiredTrialPaymentMethodSetupSessionSchema,
   stripeSetupIntentSchema,
   stripeSubscriptionCheckoutConsentSessionSchema,
   stripeSubscriptionSchema,
@@ -62,6 +63,12 @@ function hasInitialSubscriptionConsentMarker(payload: unknown): boolean {
   );
 }
 
+function checkoutSessionId(payload: unknown): string | null {
+  if (typeof payload !== 'object' || payload === null) return null;
+  const id = (payload as Record<string, unknown>).id;
+  return typeof id === 'string' && id.length > 0 ? id : null;
+}
+
 function getInitialSubscriptionConsent(input: {
   event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   subscriptionUpdate: NonNullable<WebhookEventResult['subscriptionUpdate']>;
@@ -75,18 +82,17 @@ function getInitialSubscriptionConsent(input: {
     input.event.data.object,
   );
   if (!parsed.success) {
-    input.logger.error(
+    input.logger.warn(
       {
         eventId: input.event.id,
         type: input.event.type,
-        error: z.flattenError(parsed.error),
+        sessionId: checkoutSessionId(input.event.data.object),
+        reason: 'consent_evidence_invalid',
+        validation: z.flattenError(parsed.error),
       },
-      'Invalid Stripe subscription Checkout consent completion',
+      'Stripe subscription Checkout completed without usable consent evidence',
     );
-    throw new ApplicationError(
-      'INVALID_WEBHOOK_PAYLOAD',
-      'Invalid Stripe subscription Checkout consent completion',
-    );
+    return undefined;
   }
 
   const metadata = parsed.data.metadata;
@@ -102,10 +108,16 @@ function getInitialSubscriptionConsent(input: {
     (metadata.renewal_plan === 'annual' &&
       metadata.renewal_frequency !== 'year')
   ) {
-    throw new ApplicationError(
-      'INVALID_WEBHOOK_PAYLOAD',
+    input.logger.warn(
+      {
+        eventId: input.event.id,
+        type: input.event.type,
+        sessionId: parsed.data.id,
+        reason: 'consent_identity_mismatch',
+      },
       'Stripe subscription Checkout consent does not match the subscription',
     );
+    return undefined;
   }
 
   return {
@@ -203,6 +215,62 @@ async function getTrialPaymentMethodSetupCompletion(input: {
   };
 }
 
+function getTrialPaymentMethodSetupExpiration(input: {
+  event: ReturnType<StripeClient['webhooks']['constructEvent']>;
+  stateSecret: string;
+  logger: Logger;
+}): NonNullable<WebhookEventResult['trialPaymentMethodSetupExpiration']> {
+  const parsed = stripeExpiredTrialPaymentMethodSetupSessionSchema.safeParse(
+    input.event.data.object,
+  );
+  if (!parsed.success) {
+    input.logger.error(
+      {
+        eventId: input.event.id,
+        type: input.event.type,
+        error: z.flattenError(parsed.error),
+      },
+      'Invalid expired Stripe trial payment-method setup Session',
+    );
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      'Invalid expired Stripe trial payment-method setup Session',
+    );
+  }
+
+  const { consent_state_signature: signature, ...signedMetadata } =
+    parsed.data.metadata;
+  if (
+    !isValidStripeConsentStateSignature(
+      signedMetadata,
+      signature,
+      input.stateSecret,
+    )
+  ) {
+    throw new ApplicationError(
+      'INVALID_WEBHOOK_PAYLOAD',
+      'Invalid expired trial payment-method setup state signature',
+    );
+  }
+
+  const metadata = parsed.data.metadata;
+  return {
+    sessionId: parsed.data.id,
+    userId: metadata.consent_user_id,
+    externalCustomerId: metadata.consent_customer_id,
+    externalSubscriptionId: metadata.consent_subscription_id,
+    plan: metadata.consent_plan,
+    amountCents: Number(metadata.consent_amount_cents),
+    currency: metadata.consent_currency,
+    frequency: metadata.consent_frequency,
+    trialEndsAt: new Date(metadata.consent_trial_ends_at),
+    disclosureVersion: metadata.consent_disclosure_version,
+    termsVersion: metadata.consent_terms_version,
+    termsHash: metadata.consent_terms_hash,
+    expiredAt: eventAcceptedAt(input.event),
+  };
+}
+
 async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
   stripe: StripeClient;
   event: ReturnType<StripeClient['webhooks']['constructEvent']>;
@@ -246,6 +314,7 @@ async function getSubscriptionUpdateForSubscriptionRefEvent(input: {
 export async function processStripeWebhookEvent({
   stripe,
   webhookSecret,
+  consentStateSecret,
   rawBody,
   signature,
   priceIds,
@@ -254,6 +323,7 @@ export async function processStripeWebhookEvent({
 }: {
   stripe: StripeClient;
   webhookSecret: string;
+  consentStateSecret?: string | undefined;
   rawBody: string;
   signature: string;
   priceIds: StripePriceIds;
@@ -287,14 +357,40 @@ export async function processStripeWebhookEvent({
     event.type === 'checkout.session.completed' &&
     isSetupSessionPayload(event.data.object)
   ) {
+    if (!consentStateSecret) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Trial consent-state verification is not configured',
+      );
+    }
     const trialPaymentMethodSetupCompletion =
       await getTrialPaymentMethodSetupCompletion({
         stripe,
         event,
-        stateSecret: webhookSecret,
+        stateSecret: consentStateSecret,
         logger,
       });
     return { ...result, trialPaymentMethodSetupCompletion };
+  }
+
+  if (
+    event.type === 'checkout.session.expired' &&
+    isSetupSessionPayload(event.data.object)
+  ) {
+    if (!consentStateSecret) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Trial consent-state verification is not configured',
+      );
+    }
+    return {
+      ...result,
+      trialPaymentMethodSetupExpiration: getTrialPaymentMethodSetupExpiration({
+        event,
+        stateSecret: consentStateSecret,
+        logger,
+      }),
+    };
   }
 
   if (
@@ -334,6 +430,20 @@ export async function processStripeWebhookEvent({
             logger,
           })
         : undefined;
+    if (
+      event.type === 'checkout.session.completed' &&
+      !hasInitialSubscriptionConsentMarker(event.data.object)
+    ) {
+      logger.warn(
+        {
+          eventId: event.id,
+          type: event.type,
+          sessionId: checkoutSessionId(event.data.object),
+          reason: 'consent_marker_missing',
+        },
+        'Stripe subscription Checkout completed without consent evidence',
+      );
+    }
     const occurredAt = eventOccurredAt(event);
     return initialSubscriptionConsent
       ? {

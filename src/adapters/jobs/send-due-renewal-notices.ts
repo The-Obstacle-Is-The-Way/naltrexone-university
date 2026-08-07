@@ -5,6 +5,8 @@ import {
   users,
 } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
+import type { Logger } from '@/src/application/ports';
 import type {
   ScheduledRenewalNotice,
   SendDueRenewalNoticesResult,
@@ -20,6 +22,8 @@ export const SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS = 300;
 export const SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO = 0.7;
 const ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS = 15;
 const ANNUAL_RENEWAL_NOTICE_LATEST_DAYS = 45;
+const EXPIRED_SETUP_OPERATION_RETENTION_DAYS = 30;
+const EXPIRED_SETUP_OPERATION_PRUNE_LIMIT = 100;
 
 export type AnnualSubscriptionDueForNotice = {
   externalSubscriptionId: string;
@@ -118,6 +122,11 @@ export type SendDueRenewalNoticesJobDeps = {
     limit: number;
   }) => Promise<AnnualSubscriptionDueForNotice[]>;
   sendDueRenewalNotices: Pick<SendDueRenewalNoticesUseCase, 'execute'>;
+  pruneExpiredTrialPaymentMethodSetups: (input: {
+    expiredBefore: Date;
+    limit: number;
+  }) => Promise<number>;
+  logger: Pick<Logger, 'warn'>;
   annualPlan: Pick<
     ScheduledRenewalNotice,
     | 'planName'
@@ -131,6 +140,7 @@ export type SendDueRenewalNoticesJobDeps = {
 
 export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   subscriptions: number;
+  expiredSetupOperationsPruned: number;
   durationMs: number;
 };
 
@@ -155,6 +165,22 @@ export async function sendDueRenewalNotices(
     SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
     SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
   );
+  let expiredSetupOperationsPruned = 0;
+  try {
+    expiredSetupOperationsPruned =
+      await deps.pruneExpiredTrialPaymentMethodSetups({
+        expiredBefore: new Date(
+          observedAt.getTime() -
+            EXPIRED_SETUP_OPERATION_RETENTION_DAYS * DAY_MS,
+        ),
+        limit: EXPIRED_SETUP_OPERATION_PRUNE_LIMIT,
+      });
+  } catch (error) {
+    deps.logger.warn(
+      { error: projectSafeErrorDiagnostics(error) },
+      'Expired trial setup-operation pruning failed',
+    );
+  }
   const subscriptions = await deps.listAnnualSubscriptionsDue({
     renewalAtOrAfter: new Date(
       observedAt.getTime() + ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS * DAY_MS,
@@ -187,6 +213,7 @@ export async function sendDueRenewalNotices(
   });
   return {
     subscriptions: subscriptions.length,
+    expiredSetupOperationsPruned,
     ...result,
     durationMs: Math.max(0, deps.monotonicNow() - startedAt),
   };

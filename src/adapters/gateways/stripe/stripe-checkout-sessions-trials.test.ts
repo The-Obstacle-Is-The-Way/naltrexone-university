@@ -18,15 +18,30 @@ function createStripeMock(overrides?: {
   retrievedSessionMetadata?: Record<string, string>;
   retrievedSessionPaymentMethodCollection?: 'always' | 'if_required';
   shouldThrowOnRetrieve?: boolean;
+  setupCreateResults?: Array<
+    | Error
+    | {
+        id: string;
+        url: string | null;
+        status?: 'open' | 'complete' | 'expired';
+      }
+  >;
 }) {
+  const setupCreateResults = [...(overrides?.setupCreateResults ?? [])];
   const sessionsCreate = vi.fn(
     async (
       _params: CheckoutSessionCreateParams,
       _options?: StripeRequestOptions,
-    ) => ({
-      id: 'cs_new',
-      url: 'https://stripe/checkout/new',
-    }),
+    ) => {
+      const next = setupCreateResults.shift();
+      if (next instanceof Error) throw next;
+      return (
+        next ?? {
+          id: 'cs_new',
+          url: 'https://stripe/checkout/new',
+        }
+      );
+    },
   );
   const sessionsRetrieve = vi.fn(async () => {
     if (overrides?.shouldThrowOnRetrieve) {
@@ -389,6 +404,26 @@ describe('createStripeCheckoutSession trial params', () => {
 
 describe('createStripeTrialPaymentMethodSetupSession', () => {
   const appUserId = crypto.randomUUID();
+  const setupInput = {
+    userId: appUserId,
+    externalCustomerId: 'cus_123',
+    externalSubscriptionId: 'sub_123',
+    plan: 'monthly' as const,
+    amountCents: 2900,
+    currency: 'usd' as const,
+    frequency: 'month' as const,
+    trialEndsAt: new Date('2026-08-13T12:00:00.000Z'),
+    disclosureVersion: '2026-08-05',
+    termsVersion: '2026-08-05',
+    termsHash: 'terms-sha256',
+    disclosureSnapshot: 'Exact renewal disclosure.',
+    cancellationMethod:
+      'Billing page in the app or support@addictionboards.com',
+    successUrl:
+      'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
+    cancelUrl:
+      'https://app.example.com/app/billing?trial_payment_method=cancel',
+  };
 
   it('creates a customer-less setup Checkout Session with signed server-owned consent state', async () => {
     const { stripe, sessionsCreate } = createStripeMock();
@@ -398,26 +433,7 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
         stripe,
         logger: new FakeLogger(),
         stateSecret: 'whsec_test_state_secret',
-        input: {
-          userId: appUserId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          amountCents: 2900,
-          currency: 'usd',
-          frequency: 'month',
-          trialEndsAt: new Date('2026-08-13T12:00:00.000Z'),
-          disclosureVersion: '2026-08-05',
-          termsVersion: '2026-08-05',
-          termsHash: 'terms-sha256',
-          disclosureSnapshot: 'Exact renewal disclosure.',
-          cancellationMethod:
-            'Billing page in the app or support@addictionboards.com',
-          successUrl:
-            'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
-          cancelUrl:
-            'https://app.example.com/app/billing?trial_payment_method=cancel',
-        },
+        input: setupInput,
       }),
     ).resolves.toEqual({
       sessionId: 'cs_new',
@@ -468,5 +484,71 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
     expect(options).toEqual({
       idempotencyKey: `trial_setup_session:${appUserId}:sub_123:2026-08-05`,
     });
+  });
+
+  it('recovers a changed setup request from Stripe idempotency mismatch', async () => {
+    const mismatch = Object.assign(
+      new Error(
+        'Keys for idempotent requests can only be used with the same parameters they were first used with.',
+      ),
+      {
+        type: 'StripeIdempotencyError',
+        rawType: 'idempotency_error',
+        statusCode: 400,
+      },
+    );
+    const { stripe, sessionsCreate } = createStripeMock({
+      setupCreateResults: [
+        mismatch,
+        { id: 'cs_recovered', url: 'https://stripe/checkout/recovered' },
+      ],
+    });
+
+    await expect(
+      createStripeTrialPaymentMethodSetupSession({
+        stripe,
+        logger: new FakeLogger(),
+        stateSecret: 'dedicated-consent-state-secret-32-bytes',
+        input: { ...setupInput, termsHash: 'rotated-terms-hash' },
+      }),
+    ).resolves.toEqual({
+      sessionId: 'cs_recovered',
+      url: 'https://stripe/checkout/recovered',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(2);
+    expect(sessionsCreate.mock.calls[1]?.[1]?.idempotencyKey).toMatch(
+      /^trial_setup_session_recovery:.*:request:[a-f0-9]{16}$/,
+    );
+  });
+
+  it('creates a fresh setup Session when the idempotent replay is already complete', async () => {
+    const { stripe, sessionsCreate } = createStripeMock({
+      setupCreateResults: [
+        { id: 'cs_complete', url: null, status: 'complete' },
+        {
+          id: 'cs_fresh',
+          url: 'https://stripe/checkout/fresh',
+          status: 'open',
+        },
+      ],
+    });
+
+    await expect(
+      createStripeTrialPaymentMethodSetupSession({
+        stripe,
+        logger: new FakeLogger(),
+        stateSecret: 'dedicated-consent-state-secret-32-bytes',
+        input: setupInput,
+      }),
+    ).resolves.toEqual({
+      sessionId: 'cs_fresh',
+      url: 'https://stripe/checkout/fresh',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(2);
+    expect(sessionsCreate.mock.calls[1]?.[1]?.idempotencyKey).toMatch(
+      /^trial_setup_session_recovery:.*:cs_complete:[a-f0-9]{16}$/,
+    );
   });
 });

@@ -26,6 +26,7 @@ function createPaymentGatewayStub(): PaymentGateway {
       url: 'https://stripe/setup',
     }),
     attachTrialPaymentMethod: async () => undefined,
+    detachTrialPaymentMethod: async () => undefined,
     setTrialSubscriptionDefaultPaymentMethod: async () => undefined,
     createPortalSession: async () => ({ url: 'https://stripe/portal' }),
     processWebhookEvent: async () => ({ eventId: 'evt_1', type: 'test' }),

@@ -12,6 +12,7 @@ import {
 
 const successResult = {
   subscriptions: 1,
+  expiredSetupOperationsPruned: 3,
   queued: 2,
   queueFailures: 0,
   rejectedNotices: 0,

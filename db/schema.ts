@@ -67,7 +67,7 @@ export const stripeSubscriptionStatusEnum = pgEnum(
 
 export const trialPaymentMethodSetupOperationStatusEnum = pgEnum(
   'trial_payment_method_setup_operation_status',
-  ['pending', 'processing', 'completed'],
+  ['pending', 'processing', 'completed', 'terminal', 'expired'],
 );
 
 export const renewalConsentKindEnum = pgEnum('renewal_consent_kind', [
@@ -293,6 +293,9 @@ export const trialPaymentMethodSetupOperations = pgTable(
       withTimezone: true,
     }),
     completedAt: timestamp('completed_at', { withTimezone: true }),
+    terminalAt: timestamp('terminal_at', { withTimezone: true }),
+    terminalReason: varchar('terminal_reason', { length: 64 }),
+    expiredAt: timestamp('expired_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -307,6 +310,9 @@ export const trialPaymentMethodSetupOperations = pgTable(
     statusClaimedAtIdx: index(
       'trial_payment_method_setup_operations_status_claimed_at_idx',
     ).on(t.status, t.claimedAt),
+    statusExpiredAtIdx: index(
+      'trial_payment_method_setup_operations_status_expired_at_idx',
+    ).on(t.status, t.expiredAt),
   }),
 );
 

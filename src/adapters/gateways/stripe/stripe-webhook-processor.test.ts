@@ -11,6 +11,7 @@ const priceIds: StripePriceIds = {
 };
 
 const appUserId = crypto.randomUUID();
+const consentStateSecret = 'dedicated-consent-state-secret-32-bytes';
 
 function createSubscriptionFixture() {
   return {
@@ -85,7 +86,7 @@ function signSetupMetadata(metadata: Record<string, string>): string {
       left.localeCompare(right),
     ),
   );
-  return createHmac('sha256', 'whsec_test')
+  return createHmac('sha256', consentStateSecret)
     .update(JSON.stringify(sorted))
     .digest('hex');
 }
@@ -141,6 +142,7 @@ describe('processStripeWebhookEvent', () => {
       processStripeWebhookEvent({
         stripe,
         webhookSecret: 'whsec_test',
+        consentStateSecret,
         rawBody: '{}',
         signature: 'sig_test',
         priceIds,
@@ -191,6 +193,7 @@ describe('processStripeWebhookEvent', () => {
       processStripeWebhookEvent({
         stripe,
         webhookSecret: 'whsec_test',
+        consentStateSecret,
         rawBody: '{}',
         signature: 'sig_test',
         priceIds,
@@ -221,6 +224,7 @@ describe('processStripeWebhookEvent', () => {
       processStripeWebhookEvent({
         stripe,
         webhookSecret: 'whsec_test',
+        consentStateSecret,
         rawBody: '{}',
         signature: 'sig_test',
         priceIds,
@@ -229,6 +233,7 @@ describe('processStripeWebhookEvent', () => {
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
     expect(stripe.setupIntents.retrieve).not.toHaveBeenCalled();
   });
+
   it('throws INVALID_WEBHOOK_SIGNATURE when Stripe signature verification fails', async () => {
     const logger = new FakeLogger();
     const stripe = {
@@ -354,6 +359,17 @@ describe('processStripeWebhookEvent', () => {
       },
     });
     expect(stripe.subscriptions?.retrieve).toHaveBeenCalledWith('sub_123');
+    expect(logger.warnCalls).toEqual([
+      {
+        context: {
+          eventId: 'evt_checkout',
+          sessionId: null,
+          reason: 'consent_marker_missing',
+          type: 'checkout.session.completed',
+        },
+        msg: 'Stripe subscription Checkout completed without consent evidence',
+      },
+    ]);
   });
 
   it('returns the exact accepted renewal snapshot for a consent-bearing subscription Checkout completion', async () => {
@@ -420,7 +436,8 @@ describe('processStripeWebhookEvent', () => {
     });
   });
 
-  it('fails closed when accepted subscription consent lacks the complete evidence snapshot', async () => {
+  it('preserves subscription activation and warns when accepted consent lacks the complete evidence snapshot', async () => {
+    const logger = new FakeLogger();
     const stripe = createStripeClient({
       eventFactory: () => ({
         id: 'evt_checkout_incomplete_consent',
@@ -450,12 +467,25 @@ describe('processStripeWebhookEvent', () => {
         rawBody: '{}',
         signature: 'sig_test',
         priceIds,
-        logger: new FakeLogger(),
+        logger,
       }),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+    ).resolves.toMatchObject({
+      eventId: 'evt_checkout_incomplete_consent',
+      subscriptionUpdate: { externalSubscriptionId: 'sub_123' },
+    });
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({
+          eventId: 'evt_checkout_incomplete_consent',
+          sessionId: 'cs_checkout_incomplete',
+          reason: 'consent_evidence_invalid',
+        }),
+      }),
+    ]);
   });
 
-  it('fails closed for a pre-deploy subscription Session that accepted Terms without renewal evidence', async () => {
+  it('preserves subscription activation for a pre-deploy Session and records an operator warning', async () => {
+    const logger = new FakeLogger();
     const stripe = createStripeClient({
       eventFactory: () => ({
         id: 'evt_checkout_legacy_consent',
@@ -482,9 +512,21 @@ describe('processStripeWebhookEvent', () => {
         rawBody: '{}',
         signature: 'sig_test',
         priceIds,
-        logger: new FakeLogger(),
+        logger,
       }),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+    ).resolves.toMatchObject({
+      eventId: 'evt_checkout_legacy_consent',
+      subscriptionUpdate: { externalSubscriptionId: 'sub_123' },
+    });
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({
+          eventId: 'evt_checkout_legacy_consent',
+          sessionId: 'cs_checkout_legacy',
+          reason: 'consent_evidence_invalid',
+        }),
+      }),
+    ]);
   });
 
   it('retrieves and includes subscriptionUpdate for invoice.payment_succeeded events with a nested Clover subscription reference', async () => {

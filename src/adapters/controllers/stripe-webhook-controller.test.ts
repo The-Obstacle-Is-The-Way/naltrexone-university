@@ -507,7 +507,7 @@ describe('processStripeWebhook', () => {
     expect(renewalConsents.snapshot()).toEqual([]);
   });
 
-  it('attaches and selects a verified setup payment method after exact local matching', async () => {
+  it('tolerates subscription time drift and records the live billing period at completion', async () => {
     const userId = crypto.randomUUID();
     const completion = {
       sessionId: 'cs_setup_123',
@@ -546,8 +546,8 @@ describe('processStripeWebhook', () => {
       userId,
       externalSubscriptionId: 'sub_123',
       plan: 'monthly',
-      status: 'inTrial',
-      currentPeriodEnd: completion.trialEndsAt,
+      status: 'active',
+      currentPeriodEnd: new Date('2026-09-13T12:00:00Z'),
       cancelAtPeriodEnd: false,
       expectedVersion: null,
     });
@@ -602,10 +602,66 @@ describe('processStripeWebhook', () => {
         checkoutSessionId: null,
         externalSubscriptionId: 'sub_123',
         disclosureSnapshot: 'Exact disclosure.',
-        cancellationDeadline: completion.trialEndsAt,
+        trialEndsAt: null,
+        cancellationDeadline: new Date('2026-09-13T12:00:00Z'),
         acceptedAt: completion.acceptedAt,
       }),
     ]);
+  });
+
+  it('marks a signed expired setup Session without attaching a payment method', async () => {
+    const userId = crypto.randomUUID();
+    const expiredAt = new Date('2026-08-07T12:00:00Z');
+    const paymentGateway = new FakePaymentGateway({
+      externalCustomerId: 'cus_123',
+      checkoutUrl: 'https://stripe/checkout',
+      portalUrl: 'https://stripe/portal',
+      webhookResult: {
+        eventId: 'evt_setup_expired',
+        type: 'checkout.session.expired',
+        trialPaymentMethodSetupExpiration: {
+          sessionId: 'cs_setup_expired',
+          userId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          amountCents: 2900,
+          currency: 'usd',
+          frequency: 'month',
+          trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+          disclosureVersion: '2026-08-05',
+          termsVersion: '2026-08-05',
+          termsHash: 'terms-hash',
+          expiredAt,
+        },
+      },
+    });
+    const { deps, setupOperations } = createDeps({ paymentGateway });
+    await setupOperations.createPending({
+      sessionId: 'cs_setup_expired',
+      userId,
+      stripeCustomerId: 'cus_123',
+      stripeSubscriptionId: 'sub_123',
+      plan: 'monthly',
+      amountCents: 2900,
+      currency: 'usd',
+      frequency: 'month',
+      trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+      disclosureSnapshot: 'Exact disclosure.',
+      disclosureVersion: '2026-08-05',
+      termsVersion: '2026-08-05',
+      termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
+    });
+
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+    await expect(
+      setupOperations.findBySessionId('cs_setup_expired'),
+    ).resolves.toMatchObject({ status: 'expired', expiredAt });
+    expect(paymentGateway.trialPaymentMethodAttachInputs).toEqual([]);
+    expect(paymentGateway.trialSubscriptionDefaultInputs).toEqual([]);
   });
 
   it('fails closed when the accepted snapshot differs from the pending operation', async () => {
@@ -744,7 +800,7 @@ describe('processStripeWebhook', () => {
     ).rejects.toThrow('setup operation lookup failed');
   });
 
-  it('fails closed when the signed customer does not match the local user mapping', async () => {
+  it('detaches and records a terminal outcome when signed ownership no longer matches', async () => {
     const userId = crypto.randomUUID();
     const trialEndsAt = new Date('2026-08-13T12:00:00Z');
     const paymentGateway = new FakePaymentGateway({
@@ -806,9 +862,22 @@ describe('processStripeWebhook', () => {
         rawBody: 'raw',
         signature: 'sig',
       }),
-    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    ).resolves.toBeUndefined();
     expect(paymentGateway.trialPaymentMethodAttachInputs).toEqual([]);
     expect(paymentGateway.trialSubscriptionDefaultInputs).toEqual([]);
+    expect(paymentGateway.trialPaymentMethodDetachInputs).toEqual([
+      {
+        sessionId: 'cs_setup_wrong_owner',
+        externalPaymentMethodId: 'pm_123',
+      },
+    ]);
+    await expect(
+      harness.setupOperations.findBySessionId('cs_setup_wrong_owner'),
+    ).resolves.toMatchObject({
+      status: 'terminal',
+      terminalReason: 'billing_ownership_mismatch',
+      terminalAt: expect.any(Date),
+    });
   });
 
   it('allows only one of two concurrent deliveries for the same Session to perform provider writes', async () => {
