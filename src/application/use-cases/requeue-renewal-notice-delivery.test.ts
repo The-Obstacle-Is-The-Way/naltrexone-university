@@ -3,23 +3,30 @@ import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
 } from '@/src/application/shared/transactional-email-payload';
-import { FakeRenewalNoticeDeliveryRepository } from '@/src/application/test-helpers/fakes';
+import {
+  FakeRenewalNoticeDeliveryRepository,
+  FakeSha256Hasher,
+} from '@/src/application/test-helpers/fakes';
 import type { RenewalNoticeDeliveryStatus } from '@/src/domain/entities';
 import { RequeueRenewalNoticeDeliveryUseCase } from './requeue-renewal-notice-delivery';
 
 const now = new Date('2026-08-06T18:00:00.000Z');
 const deliveryId = '11111111-1111-4111-8111-111111111111';
+const hasher = new FakeSha256Hasher();
 
 async function createRepository(status: RenewalNoticeDeliveryStatus) {
   const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
-  const payload = createTransactionalEmailPayloadSnapshot({
-    from: 'Addiction Boards <notices@addictionboards.com>',
-    to: 'subscriber@example.com',
-    replyTo: 'support@addictionboards.com',
-    subject: 'Your renewal terms',
-    html: '<p>Renewal terms</p>',
-    text: 'Renewal terms',
-  });
+  const payload = createTransactionalEmailPayloadSnapshot(
+    {
+      from: 'Addiction Boards <notices@addictionboards.com>',
+      to: 'subscriber@example.com',
+      replyTo: 'support@addictionboards.com',
+      subject: 'Your renewal terms',
+      html: '<p>Renewal terms</p>',
+      text: 'Renewal terms',
+    },
+    hasher,
+  );
   const saved = await repository.saveQueued({
     id: deliveryId,
     noticeKind: 'acknowledgment',

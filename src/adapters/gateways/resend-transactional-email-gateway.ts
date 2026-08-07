@@ -88,7 +88,7 @@ export class ResendTransactionalEmailGateway
           failureCode: error.name,
         };
       }
-      if (data) {
+      if (data && typeof data.id === 'string' && data.id.length > 0) {
         return { status: 'delivered', providerEventId: data.id };
       }
       return {

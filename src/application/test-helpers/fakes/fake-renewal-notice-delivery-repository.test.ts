@@ -5,6 +5,7 @@ import {
 } from '@/src/application/shared/transactional-email-payload';
 import type { NewRenewalNoticeDelivery } from '@/src/domain/entities';
 import { FakeRenewalNoticeDeliveryRepository } from './fake-renewal-notice-delivery-repository';
+import { FakeSha256Hasher } from './fake-sha256-hasher';
 
 const now = new Date('2026-08-06T18:00:00.000Z');
 const deliveryId = '11111111-1111-4111-8111-111111111111';
@@ -17,7 +18,8 @@ const emailPayload = {
   html: '<p>Renewal terms</p>',
   text: 'Renewal terms',
 };
-const payload = createTransactionalEmailPayloadSnapshot(emailPayload);
+const hasher = new FakeSha256Hasher();
+const payload = createTransactionalEmailPayloadSnapshot(emailPayload, hasher);
 
 function createDelivery(
   overrides: Partial<NewRenewalNoticeDelivery> = {},
@@ -70,10 +72,13 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     expect(replay).toEqual(first);
     expect(businessKeyReplay).toEqual(first);
     expect(repository.records).toHaveLength(1);
-    const changedPayload = createTransactionalEmailPayloadSnapshot({
-      ...emailPayload,
-      subject: 'Changed renewal terms',
-    });
+    const changedPayload = createTransactionalEmailPayloadSnapshot(
+      {
+        ...emailPayload,
+        subject: 'Changed renewal terms',
+      },
+      hasher,
+    );
     const changedId = '44444444-4444-4444-8444-444444444444';
     await expect(
       repository.saveQueued(

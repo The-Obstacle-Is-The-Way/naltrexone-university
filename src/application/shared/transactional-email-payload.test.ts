@@ -1,5 +1,5 @@
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { FakeSha256Hasher } from '@/src/application/test-helpers/fakes';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
@@ -16,25 +16,25 @@ const payload = {
   html: '<p>Renewal terms</p>',
   text: 'Renewal terms',
 };
+const hasher = new FakeSha256Hasher();
 
 function evidenceFor(snapshot: string) {
   return {
     snapshot,
-    hash: createHash('sha256').update(snapshot).digest('hex'),
+    hash: hasher.hash(snapshot),
     destination: payload.to,
   };
 }
 
 describe('transactional email payload snapshot', () => {
-  it('creates canonical JSON and its SHA-256 hash', () => {
-    const result = createTransactionalEmailPayloadSnapshot(payload);
+  it('creates canonical JSON and delegates its digest to the SHA-256 port', () => {
+    const result = createTransactionalEmailPayloadSnapshot(payload, hasher);
 
     expect(result.snapshot).toBe(
       '{"from":"Addiction Boards <notices@addictionboards.com>","to":"subscriber@example.com","replyTo":"support@addictionboards.com","subject":"Your renewal terms","html":"<p>Renewal terms</p>","text":"Renewal terms"}',
     );
-    expect(result.hash).toBe(
-      createHash('sha256').update(result.snapshot).digest('hex'),
-    );
+    expect(result.hash).toBe(`sha256:${result.snapshot}`);
+    expect(hasher.inputs.at(-1)).toBe(result.snapshot);
   });
 
   it.each([
@@ -42,42 +42,57 @@ describe('transactional email payload snapshot', () => {
     { label: 'missing', subject: undefined },
   ])('rejects a $label required field before snapshotting', ({ subject }) => {
     expect(() =>
-      createTransactionalEmailPayloadSnapshot({
-        ...payload,
-        subject: subject as string,
-      }),
+      createTransactionalEmailPayloadSnapshot(
+        {
+          ...payload,
+          subject: subject as string,
+        },
+        hasher,
+      ),
     ).toThrow('valid non-empty fields');
   });
 
   it('parses only a matching immutable snapshot and destination', () => {
-    const { snapshot, hash } = createTransactionalEmailPayloadSnapshot(payload);
+    const { snapshot, hash } = createTransactionalEmailPayloadSnapshot(
+      payload,
+      hasher,
+    );
 
     expect(
-      parseTransactionalEmailPayloadSnapshot({
-        snapshot,
-        hash,
-        destination: payload.to,
-      }),
+      parseTransactionalEmailPayloadSnapshot(
+        {
+          snapshot,
+          hash,
+          destination: payload.to,
+        },
+        hasher,
+      ),
     ).toEqual(payload);
     expect(() =>
-      parseTransactionalEmailPayloadSnapshot({
-        snapshot: snapshot.replace('renewal terms', 'changed terms'),
-        hash,
-        destination: payload.to,
-      }),
+      parseTransactionalEmailPayloadSnapshot(
+        {
+          snapshot: snapshot.replace('renewal terms', 'changed terms'),
+          hash,
+          destination: payload.to,
+        },
+        hasher,
+      ),
     ).toThrow('payload hash');
     expect(() =>
-      parseTransactionalEmailPayloadSnapshot({
-        snapshot,
-        hash,
-        destination: 'other@example.com',
-      }),
+      parseTransactionalEmailPayloadSnapshot(
+        {
+          snapshot,
+          hash,
+          destination: 'other@example.com',
+        },
+        hasher,
+      ),
     ).toThrow('destination');
   });
 
   it('rejects non-JSON and exact-shape violations with valid hashes', () => {
     expect(() =>
-      parseTransactionalEmailPayloadSnapshot(evidenceFor('not-json')),
+      parseTransactionalEmailPayloadSnapshot(evidenceFor('not-json'), hasher),
     ).toThrow('not valid JSON');
 
     const missingField = JSON.stringify({
@@ -88,12 +103,12 @@ describe('transactional email payload snapshot', () => {
       html: payload.html,
     });
     expect(() =>
-      parseTransactionalEmailPayloadSnapshot(evidenceFor(missingField)),
+      parseTransactionalEmailPayloadSnapshot(evidenceFor(missingField), hasher),
     ).toThrow('invalid shape');
 
     const extraField = JSON.stringify({ ...payload, trackingId: 'unexpected' });
     expect(() =>
-      parseTransactionalEmailPayloadSnapshot(evidenceFor(extraField)),
+      parseTransactionalEmailPayloadSnapshot(evidenceFor(extraField), hasher),
     ).toThrow('invalid shape');
   });
 });

@@ -5,6 +5,7 @@ import {
 } from '@/src/application/shared/transactional-email-payload';
 import {
   FakeRenewalNoticeDeliveryRepository,
+  FakeSha256Hasher,
   FakeTransactionalEmailGateway,
 } from '@/src/application/test-helpers/fakes';
 import type { NewRenewalNoticeDelivery } from '@/src/domain/entities';
@@ -20,11 +21,15 @@ const payload = {
   html: '<p>Renewal terms</p>',
   text: 'Renewal terms',
 };
+const hasher = new FakeSha256Hasher();
 
 function createDelivery(
   overrides: Partial<NewRenewalNoticeDelivery> = {},
 ): NewRenewalNoticeDelivery {
-  const { snapshot, hash } = createTransactionalEmailPayloadSnapshot(payload);
+  const { snapshot, hash } = createTransactionalEmailPayloadSnapshot(
+    payload,
+    hasher,
+  );
   return {
     id: deliveryId,
     noticeKind: 'acknowledgment',
@@ -48,6 +53,7 @@ function createUseCase(input: {
   return new DispatchRenewalNoticeDeliveryUseCase(
     input.repository,
     input.gateway,
+    hasher,
     input.currentTime ?? (() => now),
     () => 'attempt-1',
   );
@@ -223,6 +229,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     const useCase = new DispatchRenewalNoticeDeliveryUseCase(
       repository,
       gateway,
+      hasher,
       () => currentTime,
       () => `attempt-${++attempt}`,
     );

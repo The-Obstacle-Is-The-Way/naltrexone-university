@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { renewalNoticeDeliveries } from '@/db/schema';
+import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import { DrizzleRenewalNoticeDeliveryRepository } from '@/src/adapters/repositories/drizzle-renewal-notice-delivery-repository';
 import {
   createTransactionalEmailPayloadSnapshot,
@@ -14,6 +15,7 @@ const primary = createIntegrationDb();
 const competing = createIntegrationDb();
 const deliveryIds: string[] = [];
 const now = new Date('2026-08-06T18:00:00.000Z');
+const hasher = new NobleSha256Hasher();
 
 afterEach(async () => {
   if (deliveryIds.length > 0) {
@@ -43,7 +45,10 @@ function createDelivery(
     html: '<p>Annual subscription reminder</p>',
     text: 'Annual subscription reminder',
   };
-  const { snapshot, hash } = createTransactionalEmailPayloadSnapshot(payload);
+  const { snapshot, hash } = createTransactionalEmailPayloadSnapshot(
+    payload,
+    hasher,
+  );
   deliveryIds.push(id);
   return {
     id,
@@ -64,10 +69,12 @@ describe('renewal notice delivery persistence', () => {
   it('keeps concurrent exact creation idempotent and rejects changed payload', async () => {
     const firstRepository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
+      hasher,
       () => now,
     );
     const secondRepository = new DrizzleRenewalNoticeDeliveryRepository(
       competing.db,
+      hasher,
       () => now,
     );
     const input = createDelivery();
@@ -87,14 +94,17 @@ describe('renewal notice delivery persistence', () => {
 
     expect(replay).toEqual(first);
     expect(businessKeyReplay).toEqual(first);
-    const changedPayload = createTransactionalEmailPayloadSnapshot({
-      from: 'Addiction Boards <notices@addictionboards.com>',
-      to: input.destination,
-      replyTo: 'support@addictionboards.com',
-      subject: 'Changed annual subscription reminder',
-      html: '<p>Changed annual subscription reminder</p>',
-      text: 'Changed annual subscription reminder',
-    });
+    const changedPayload = createTransactionalEmailPayloadSnapshot(
+      {
+        from: 'Addiction Boards <notices@addictionboards.com>',
+        to: input.destination,
+        replyTo: 'support@addictionboards.com',
+        subject: 'Changed annual subscription reminder',
+        html: '<p>Changed annual subscription reminder</p>',
+        text: 'Changed annual subscription reminder',
+      },
+      hasher,
+    );
     await expect(
       secondRepository.saveQueued({
         ...input,
@@ -110,6 +120,7 @@ describe('renewal notice delivery persistence', () => {
   it('rejects malformed immutable evidence before inserting a row', async () => {
     const repository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
+      hasher,
       () => now,
     );
     const wrongKey = createDelivery({
@@ -130,10 +141,12 @@ describe('renewal notice delivery persistence', () => {
   it('allows only one connection to claim a queued row', async () => {
     const firstRepository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
+      hasher,
       () => now,
     );
     const secondRepository = new DrizzleRenewalNoticeDeliveryRepository(
       competing.db,
+      hasher,
       () => now,
     );
     const saved = await firstRepository.saveQueued(createDelivery());
@@ -163,6 +176,7 @@ describe('renewal notice delivery persistence', () => {
   it('selects queued and due transient rows but excludes terminal and unknown rows', async () => {
     const repository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
+      hasher,
       () => now,
     );
     const queued = await repository.saveQueued(createDelivery());
@@ -203,6 +217,7 @@ describe('renewal notice delivery persistence', () => {
   it('requires claim ownership for outcomes and persists retry scheduling', async () => {
     const repository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
+      hasher,
       () => now,
     );
     const saved = await repository.saveQueued(createDelivery());
@@ -241,6 +256,7 @@ describe('renewal notice delivery persistence', () => {
   it('persists delivered, terminal, and unknown outcomes with their last attempt evidence', async () => {
     const repository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
+      hasher,
       () => now,
     );
     const delivered = await repository.saveQueued(createDelivery());
@@ -308,6 +324,7 @@ describe('renewal notice delivery persistence', () => {
   it('quarantines stale claims and requires audited no-send confirmation to requeue', async () => {
     const repository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
+      hasher,
       () => now,
     );
     const saved = await repository.saveQueued(createDelivery());

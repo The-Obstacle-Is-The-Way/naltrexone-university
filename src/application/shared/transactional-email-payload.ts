@@ -1,7 +1,8 @@
-import { sha256 } from '@noble/hashes/sha2';
-import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationError } from '@/src/application/errors';
-import type { TransactionalEmailPayload } from '@/src/application/ports';
+import type {
+  Sha256Hasher,
+  TransactionalEmailPayload,
+} from '@/src/application/ports';
 import type { NewRenewalNoticeDelivery } from '@/src/domain/entities';
 
 export const RENEWAL_NOTICE_RETRY_BASE_DELAY_MS = 15 * 60 * 1000;
@@ -15,10 +16,6 @@ const PAYLOAD_KEYS = [
   'html',
   'text',
 ] as const;
-
-function hashPayload(snapshot: string): string {
-  return bytesToHex(sha256(new TextEncoder().encode(snapshot)));
-}
 
 function isTransactionalEmailPayload(
   value: unknown,
@@ -35,6 +32,7 @@ function isTransactionalEmailPayload(
 
 export function createTransactionalEmailPayloadSnapshot(
   payload: TransactionalEmailPayload,
+  hasher: Sha256Hasher,
 ): { snapshot: string; hash: string } {
   if (!isTransactionalEmailPayload(payload)) {
     throw new ApplicationError(
@@ -50,15 +48,18 @@ export function createTransactionalEmailPayloadSnapshot(
     html: payload.html,
     text: payload.text,
   });
-  return { snapshot, hash: hashPayload(snapshot) };
+  return { snapshot, hash: hasher.hash(snapshot) };
 }
 
-export function parseTransactionalEmailPayloadSnapshot(input: {
-  snapshot: string;
-  hash: string;
-  destination: string;
-}): TransactionalEmailPayload {
-  if (hashPayload(input.snapshot) !== input.hash) {
+export function parseTransactionalEmailPayloadSnapshot(
+  input: {
+    snapshot: string;
+    hash: string;
+    destination: string;
+  },
+  hasher: Sha256Hasher,
+): TransactionalEmailPayload {
+  if (hasher.hash(input.snapshot) !== input.hash) {
     throw new ApplicationError(
       'CONFLICT',
       'Renewal notice payload hash does not match its immutable snapshot',
@@ -104,6 +105,7 @@ export function assertValidRenewalNoticeDeliveryPayload(
     | 'payloadSnapshot'
     | 'payloadHash'
   >,
+  hasher: Sha256Hasher,
 ): void {
   if (
     input.providerIdempotencyKey !==
@@ -114,11 +116,14 @@ export function assertValidRenewalNoticeDeliveryPayload(
       'Renewal notice provider idempotency key is not derived from its delivery ID',
     );
   }
-  parseTransactionalEmailPayloadSnapshot({
-    snapshot: input.payloadSnapshot,
-    hash: input.payloadHash,
-    destination: input.destination,
-  });
+  parseTransactionalEmailPayloadSnapshot(
+    {
+      snapshot: input.payloadSnapshot,
+      hash: input.payloadHash,
+      destination: input.destination,
+    },
+    hasher,
+  );
 }
 
 export function getRenewalNoticeRetryAt(

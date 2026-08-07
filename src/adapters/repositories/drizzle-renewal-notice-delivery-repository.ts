@@ -7,6 +7,7 @@ import type {
   MarkRenewalNoticeDeliveryFailureInput,
   RenewalNoticeDeliveryRepository,
 } from '@/src/application/ports/repositories';
+import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { assertValidRenewalNoticeDeliveryPayload } from '@/src/application/shared/transactional-email-payload';
 import type {
   NewRenewalNoticeDelivery,
@@ -59,13 +60,14 @@ export class DrizzleRenewalNoticeDeliveryRepository
 {
   constructor(
     private readonly db: DrizzleDb,
+    private readonly hasher: Sha256Hasher,
     private readonly now: () => Date = () => new Date(),
   ) {}
 
   async saveQueued(
     input: NewRenewalNoticeDelivery,
   ): Promise<RenewalNoticeDelivery> {
-    assertValidRenewalNoticeDeliveryPayload(input);
+    assertValidRenewalNoticeDeliveryPayload(input, this.hasher);
     assertValidKeyShape(input);
     const { externalSubscriptionId, ...vendorNeutralInput } = input;
     const [inserted] = await this.db

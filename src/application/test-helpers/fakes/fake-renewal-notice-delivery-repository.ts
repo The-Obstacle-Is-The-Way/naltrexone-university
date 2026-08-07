@@ -10,6 +10,7 @@ import type {
   RenewalNoticeDelivery,
 } from '@/src/domain/entities';
 import { isValidRenewalNoticeDeliveryKeyShape } from '@/src/domain/entities';
+import { FakeSha256Hasher } from './fake-sha256-hasher';
 
 function cloneDelivery(delivery: RenewalNoticeDelivery): RenewalNoticeDelivery {
   return structuredClone(delivery);
@@ -53,12 +54,15 @@ export class FakeRenewalNoticeDeliveryRepository
 {
   readonly records: RenewalNoticeDelivery[] = [];
 
-  constructor(private readonly now: () => Date = () => new Date()) {}
+  constructor(
+    private readonly now: () => Date = () => new Date(),
+    private readonly hasher = new FakeSha256Hasher(),
+  ) {}
 
   async saveQueued(
     input: NewRenewalNoticeDelivery,
   ): Promise<RenewalNoticeDelivery> {
-    assertValidRenewalNoticeDeliveryPayload(input);
+    assertValidRenewalNoticeDeliveryPayload(input, this.hasher);
     if (!isValidRenewalNoticeDeliveryKeyShape(input)) {
       throw new ApplicationError(
         'VALIDATION_ERROR',

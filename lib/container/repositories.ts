@@ -1,3 +1,4 @@
+import { NobleSha256Hasher } from '@/src/adapters/gateways';
 import {
   DrizzleAttemptRepository,
   DrizzleBookmarkRepository,
@@ -54,7 +55,11 @@ export function createRepositoryFactories(
     createRenewalConsentRecordRepository: (dbOverride = primitives.db) =>
       new DrizzleRenewalConsentRecordRepository(dbOverride, primitives.now),
     createRenewalNoticeDeliveryRepository: (dbOverride = primitives.db) =>
-      new DrizzleRenewalNoticeDeliveryRepository(dbOverride, primitives.now),
+      new DrizzleRenewalNoticeDeliveryRepository(
+        dbOverride,
+        new NobleSha256Hasher(),
+        primitives.now,
+      ),
     createTagRepository: (dbOverride = primitives.db) =>
       new DrizzleTagRepository(dbOverride),
     createTrialPaymentMethodSetupOperationRepository: (

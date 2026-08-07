@@ -46,21 +46,6 @@ const APPLICATION_BANNED_LOCAL_PREFIXES = [
 
 const APPLICATION_BANNED_EXACT_LOCAL_IMPORTS = new Set(['db']);
 
-const APPLICATION_BANNED_PACKAGE_PREFIXES = [
-  'next',
-  'next/',
-  'react',
-  'react/',
-  'react-dom',
-  'react-dom/',
-  '@clerk/',
-  'stripe',
-  'stripe/',
-  'drizzle-orm',
-  'drizzle-orm/',
-  'server-only',
-];
-
 const ADAPTER_BANNED_LOCAL_PREFIXES = ['app/', 'components/'];
 const OUTER_BYPASS_LOCAL_ROOTS = [
   'src/application/use-cases',
@@ -156,7 +141,7 @@ export function collectArchitectureBoundaryIssues(
           isBannedApplicationPackageImport(occurrence.specifier)
         ) {
           issues.push(
-            `${sourceFile.filePath}:${occurrence.lineNumber} application code must not import adapters/framework code; found '${occurrence.specifier}'.`,
+            `${sourceFile.filePath}:${occurrence.lineNumber} application code must not import outer-layer or package code; found '${occurrence.specifier}'.`,
           );
         }
         continue;
@@ -381,10 +366,7 @@ function isBannedApplicationLocalImport(localTarget: string | null): boolean {
 }
 
 function isBannedApplicationPackageImport(specifier: string): boolean {
-  return APPLICATION_BANNED_PACKAGE_PREFIXES.some((prefix) => {
-    const exactSpecifier = prefix.endsWith('/') ? prefix.slice(0, -1) : prefix;
-    return specifier === exactSpecifier || specifier.startsWith(prefix);
-  });
+  return !isRelativeImport(specifier) && !specifier.startsWith('@/');
 }
 
 function isOuterLayerPath(filePath: string): boolean {

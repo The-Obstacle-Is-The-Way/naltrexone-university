@@ -280,6 +280,7 @@ export function createUseCaseFactories(input: {
       new DispatchRenewalNoticeDeliveryUseCase(
         repositories.createRenewalNoticeDeliveryRepository(),
         gateways.createTransactionalEmailGateway(),
+        gateways.createSha256Hasher(),
         primitives.now,
       ),
     createRequeueRenewalNoticeDeliveryUseCase: () =>

@@ -1,6 +1,7 @@
 import { ApplicationError } from '@/src/application/errors';
 import type {
   RenewalNoticeDeliveryRepository,
+  Sha256Hasher,
   TransactionalEmailGateway,
   TransactionalEmailSendResult,
 } from '@/src/application/ports';
@@ -23,6 +24,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
   constructor(
     private readonly deliveryRepository: RenewalNoticeDeliveryRepository,
     private readonly emailGateway: TransactionalEmailGateway,
+    private readonly hasher: Sha256Hasher,
     private readonly now: () => Date = () => new Date(),
     private readonly createAttemptId: () => string = () => crypto.randomUUID(),
   ) {}
@@ -47,11 +49,14 @@ export class DispatchRenewalNoticeDeliveryUseCase {
         'Renewal notice provider idempotency key does not match its delivery',
       );
     }
-    const payload = parseTransactionalEmailPayloadSnapshot({
-      snapshot: delivery.payloadSnapshot,
-      hash: delivery.payloadHash,
-      destination: delivery.destination,
-    });
+    const payload = parseTransactionalEmailPayloadSnapshot(
+      {
+        snapshot: delivery.payloadSnapshot,
+        hash: delivery.payloadHash,
+        destination: delivery.destination,
+      },
+      this.hasher,
+    );
 
     if (!this.emailGateway.isConfigured()) {
       return { outcome: 'skipped_unconfigured', delivery };

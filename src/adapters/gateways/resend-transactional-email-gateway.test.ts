@@ -167,4 +167,19 @@ describe('ResendTransactionalEmailGateway', () => {
       failureCode: 'invalid_provider_response',
     });
   });
+
+  it.each([
+    { id: '' },
+    {},
+  ])('maps data without a non-empty provider event ID to outcome_unknown', async (data) => {
+    resendSdk.send.mockResolvedValue({ data, error: null });
+    const gateway = new ResendTransactionalEmailGateway({
+      apiKey: 're_test',
+    });
+
+    await expect(gateway.send(input)).resolves.toEqual({
+      status: 'outcome_unknown',
+      failureCode: 'invalid_provider_response',
+    });
+  });
 });

@@ -18,6 +18,7 @@ export { FakeQuestionFeedbackRepository } from './fake-question-feedback-reposit
 export { FakeQuestionRepository } from './fake-question-repository';
 export { FakeRenewalConsentRecordRepository } from './fake-renewal-consent-record-repository';
 export { FakeRenewalNoticeDeliveryRepository } from './fake-renewal-notice-delivery-repository';
+export { FakeSha256Hasher } from './fake-sha256-hasher';
 export { FakeStripeCustomerRepository } from './fake-stripe-customer-repository';
 export { FakeStripeEventRepository } from './fake-stripe-event-repository';
 export { FakeSubscriptionRepository } from './fake-subscription-repository';
