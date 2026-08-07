@@ -117,6 +117,46 @@ describe('renewal notice delivery persistence', () => {
     });
   });
 
+  it('uses one injected timestamp for newly queued delivery evidence', async () => {
+    const repository = new DrizzleRenewalNoticeDeliveryRepository(
+      primary.db,
+      hasher,
+      () => now,
+    );
+
+    await expect(
+      repository.saveQueued(createDelivery()),
+    ).resolves.toMatchObject({
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  it('rejects an ID collision even when another row matches the business key', async () => {
+    const repository = new DrizzleRenewalNoticeDeliveryRepository(
+      primary.db,
+      hasher,
+      () => now,
+    );
+    const businessKeyRow = createDelivery();
+    const idRow = createDelivery();
+    await repository.saveQueued(businessKeyRow);
+    await repository.saveQueued(idRow);
+
+    await expect(
+      repository.saveQueued({
+        ...businessKeyRow,
+        id: idRow.id,
+        providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(
+          idRow.id,
+        ),
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: 'Renewal notice delivery identity is bound to another payload',
+    });
+  });
+
   it('rejects malformed immutable evidence before inserting a row', async () => {
     const repository = new DrizzleRenewalNoticeDeliveryRepository(
       primary.db,
@@ -342,6 +382,12 @@ describe('renewal notice delivery persistence', () => {
       attemptId: 'attempt-1',
       startedAt: new Date('2026-08-06T17:00:00.000Z'),
     });
+    const fresh = await repository.saveQueued(createDelivery());
+    await repository.claim({
+      id: fresh.id,
+      attemptId: 'fresh-attempt',
+      startedAt: now,
+    });
 
     await expect(
       repository.markStaleProcessingUnknown({
@@ -350,6 +396,10 @@ describe('renewal notice delivery persistence', () => {
         limit: 10,
       }),
     ).resolves.toBe(1);
+    await expect(repository.findById(fresh.id)).resolves.toMatchObject({
+      status: 'processing',
+      attemptId: 'fresh-attempt',
+    });
     await expect(
       repository.requeue({
         id: saved.id,
@@ -375,6 +425,8 @@ describe('renewal notice delivery persistence', () => {
         expect.objectContaining({
           priorStatus: 'outcome_unknown',
           confirmedNoSend: true,
+          reason: 'Confirmed in Resend that no email exists',
+          requeuedBy: 'operator@example.com',
         }),
       ],
     });

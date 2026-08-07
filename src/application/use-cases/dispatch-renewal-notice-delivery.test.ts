@@ -78,24 +78,46 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     });
   });
 
-  it('rejects a changed payload or provider key before claiming or sending', async () => {
+  it.each([
+    {
+      label: 'provider idempotency key',
+      corrupt: (delivery: NewRenewalNoticeDelivery) => ({
+        ...delivery,
+        providerIdempotencyKey: 'wrong-key',
+      }),
+      failureCode: 'provider_idempotency_key_mismatch',
+    },
+    {
+      label: 'payload snapshot hash',
+      corrupt: (delivery: NewRenewalNoticeDelivery) => ({
+        ...delivery,
+        payloadHash: '0'.repeat(64),
+      }),
+      failureCode: 'payload_snapshot_integrity_failure',
+    },
+  ])('quarantines a corrupted $label without calling the provider', async ({
+    corrupt,
+    failureCode,
+  }) => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
     const saved = await repository.saveQueued(createDelivery());
     repository.records[0] = {
       ...saved,
-      providerIdempotencyKey: 'wrong-key',
+      ...corrupt(saved),
     };
     const gateway = new FakeTransactionalEmailGateway({ configured: true });
     const useCase = createUseCase({ repository, gateway });
 
-    await expect(useCase.execute({ deliveryId })).rejects.toMatchObject({
-      code: 'CONFLICT',
+    await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+      outcome: 'attempted',
+      delivery: {
+        status: 'terminal_failure',
+        attemptCount: 1,
+        failureClass: 'payload_integrity_failure',
+        failureCode,
+      },
     });
     expect(gateway.sendInputs).toEqual([]);
-    expect(repository.records[0]).toMatchObject({
-      status: 'queued',
-      attemptCount: 0,
-    });
   });
 
   it('persists the claim before the provider call and records delivery', async () => {

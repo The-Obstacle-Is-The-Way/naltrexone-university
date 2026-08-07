@@ -3,6 +3,7 @@ import type {
   RenewalNoticeDeliveryRepository,
   Sha256Hasher,
   TransactionalEmailGateway,
+  TransactionalEmailPayload,
   TransactionalEmailSendResult,
 } from '@/src/application/ports';
 import {
@@ -44,19 +45,28 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       delivery.id,
     );
     if (delivery.providerIdempotencyKey !== expectedProviderKey) {
-      throw new ApplicationError(
-        'CONFLICT',
-        'Renewal notice provider idempotency key does not match its delivery',
+      return this.quarantineIntegrityFailure(
+        delivery,
+        'provider_idempotency_key_mismatch',
       );
     }
-    const payload = parseTransactionalEmailPayloadSnapshot(
-      {
-        snapshot: delivery.payloadSnapshot,
-        hash: delivery.payloadHash,
-        destination: delivery.destination,
-      },
-      this.hasher,
-    );
+    let payload: TransactionalEmailPayload;
+    try {
+      payload = parseTransactionalEmailPayloadSnapshot(
+        {
+          snapshot: delivery.payloadSnapshot,
+          hash: delivery.payloadHash,
+          destination: delivery.destination,
+        },
+        this.hasher,
+      );
+    } catch (error) {
+      if (!(error instanceof ApplicationError)) throw error;
+      return this.quarantineIntegrityFailure(
+        delivery,
+        'payload_snapshot_integrity_failure',
+      );
+    }
 
     if (!this.emailGateway.isConfigured()) {
       return { outcome: 'skipped_unconfigured', delivery };
@@ -87,6 +97,31 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     return {
       outcome: 'attempted',
       delivery: await this.persistOutcome(claimed, result, this.now()),
+    };
+  }
+
+  private async quarantineIntegrityFailure(
+    delivery: RenewalNoticeDelivery,
+    failureCode: string,
+  ): Promise<DispatchRenewalNoticeDeliveryResult> {
+    const startedAt = this.now();
+    const attemptId = this.createAttemptId();
+    const claimed = await this.deliveryRepository.claim({
+      id: delivery.id,
+      attemptId,
+      startedAt,
+    });
+    if (!claimed) return { outcome: 'claim_lost', delivery: null };
+
+    return {
+      outcome: 'attempted',
+      delivery: await this.deliveryRepository.markTerminalFailure({
+        id: claimed.id,
+        attemptId,
+        failureClass: 'payload_integrity_failure',
+        failureCode,
+        failedAt: this.now(),
+      }),
     };
   }
 

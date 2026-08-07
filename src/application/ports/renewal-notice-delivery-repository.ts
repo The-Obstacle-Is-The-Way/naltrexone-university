@@ -9,10 +9,17 @@ export type ClaimRenewalNoticeDeliveryInput = {
   startedAt: Date;
 };
 
+export type RenewalNoticeFailureClass =
+  | 'payload_integrity_failure'
+  | 'provider_non_acceptance'
+  | 'provider_terminal_failure'
+  | 'provider_outcome_unknown'
+  | 'stale_processing_claim';
+
 export type MarkRenewalNoticeDeliveryFailureInput = {
   id: string;
   attemptId: string;
-  failureClass: string;
+  failureClass: RenewalNoticeFailureClass;
   failureCode: string;
   failedAt: Date;
 };

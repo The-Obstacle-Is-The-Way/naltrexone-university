@@ -100,9 +100,21 @@ describe('ResendTransactionalEmailGateway', () => {
   });
 
   it.each([
-    'invalid_idempotent_request',
-    'validation_error',
+    'invalid_idempotency_key',
+    'missing_api_key',
+    'restricted_api_key',
     'invalid_api_key',
+    'not_found',
+    'method_not_allowed',
+    'invalid_idempotent_request',
+    'invalid_attachment',
+    'invalid_from_address',
+    'invalid_access',
+    'invalid_parameter',
+    'invalid_region',
+    'missing_required_field',
+    'security_error',
+    'validation_error',
   ])('maps known terminal error %s to terminal_failure', async (name) => {
     resendSdk.send.mockResolvedValue({
       data: null,
@@ -115,6 +127,19 @@ describe('ResendTransactionalEmailGateway', () => {
     await expect(gateway.send(input)).resolves.toEqual({
       status: 'terminal_failure',
       failureCode: name,
+    });
+  });
+
+  it('retries an unrecognized provider non-acceptance instead of dropping the notice', async () => {
+    resendSdk.send.mockResolvedValue({
+      data: null,
+      error: { name: 'future_retryable_error', message: 'try later' },
+    });
+    const gateway = new ResendTransactionalEmailGateway({ apiKey: 're_test' });
+
+    await expect(gateway.send(input)).resolves.toEqual({
+      status: 'transient_failure',
+      failureCode: 'future_retryable_error',
     });
   });
 
@@ -171,7 +196,7 @@ describe('ResendTransactionalEmailGateway', () => {
   it.each([
     { id: '' },
     {},
-  ])('maps data without a non-empty provider event ID to outcome_unknown', async (data) => {
+  ])('maps provider data %o without a non-empty event ID to outcome_unknown', async (data) => {
     resendSdk.send.mockResolvedValue({ data, error: null });
     const gateway = new ResendTransactionalEmailGateway({
       apiKey: 're_test',
