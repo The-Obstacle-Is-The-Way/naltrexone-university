@@ -1,4 +1,3 @@
-// biome-ignore lint/style/noExcessiveLinesPerFile: Keep the Stripe webhook transaction, failure-ledger, and setup-operation concurrency cases in one controller contract suite.
 import { describe, expect, it, vi } from 'vitest';
 import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import { ApplicationError } from '@/src/application/errors';

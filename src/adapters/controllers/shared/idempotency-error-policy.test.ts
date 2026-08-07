@@ -88,14 +88,14 @@ describe('start-practice-session idempotency error policy', () => {
     expect(shouldCacheStartPracticeSessionError(error)).toBe(false);
   });
 
-  it.each([
-    'VALIDATION_ERROR',
-    'NOT_FOUND',
-  ] as const)('caches the determinate %s outcome', (code) => {
-    expect(
-      shouldCacheStartPracticeSessionError(new ApplicationError(code, code)),
-    ).toBe(true);
-  });
+  it.each(['VALIDATION_ERROR', 'NOT_FOUND'] as const)(
+    'caches the determinate %s outcome',
+    (code) => {
+      expect(
+        shouldCacheStartPracticeSessionError(new ApplicationError(code, code)),
+      ).toBe(true);
+    },
+  );
 
   it('caches the typed incomplete-session conflict', () => {
     expect(
@@ -122,12 +122,12 @@ describe.each([
   ['question rating', shouldCacheQuestionRatingError],
   ['question report', shouldCacheQuestionReportError],
 ] as const)('%s idempotency error policy', (_name, policy) => {
-  it.each([
-    'VALIDATION_ERROR',
-    'NOT_FOUND',
-  ] as const)('caches the determinate %s outcome', (code) => {
-    expect(policy(new ApplicationError(code, code))).toBe(true);
-  });
+  it.each(['VALIDATION_ERROR', 'NOT_FOUND'] as const)(
+    'caches the determinate %s outcome',
+    (code) => {
+      expect(policy(new ApplicationError(code, code))).toBe(true);
+    },
+  );
 });
 
 describe('submit-answer idempotency error policy', () => {
@@ -154,14 +154,14 @@ describe('submit-answer idempotency error policy', () => {
     expect(shouldCacheSubmitAnswerError(error)).toBe(true);
   });
 
-  it.each([
-    'VALIDATION_ERROR',
-    'NOT_FOUND',
-  ] as const)('caches the determinate %s outcome', (code) => {
-    expect(shouldCacheSubmitAnswerError(new ApplicationError(code, code))).toBe(
-      true,
-    );
-  });
+  it.each(['VALIDATION_ERROR', 'NOT_FOUND'] as const)(
+    'caches the determinate %s outcome',
+    (code) => {
+      expect(
+        shouldCacheSubmitAnswerError(new ApplicationError(code, code)),
+      ).toBe(true);
+    },
+  );
 
   it('caches a typed terminal practice-session conflict', () => {
     expect(
@@ -179,11 +179,12 @@ describe('submit-answer idempotency error policy', () => {
 });
 
 describe('question-mark idempotency error policy', () => {
-  it.each(
-    transientCases,
-  )('aborts the naturally replay-safe desired-state write for %s', (_caseName, error) => {
-    expect(shouldCacheQuestionMarkError(error)).toBe(false);
-  });
+  it.each(transientCases)(
+    'aborts the naturally replay-safe desired-state write for %s',
+    (_caseName, error) => {
+      expect(shouldCacheQuestionMarkError(error)).toBe(false);
+    },
+  );
 
   it('aborts a rollback-certain persistence failure', () => {
     expect(
@@ -201,14 +202,14 @@ describe('question-mark idempotency error policy', () => {
     ).toBe(false);
   });
 
-  it.each([
-    'VALIDATION_ERROR',
-    'NOT_FOUND',
-  ] as const)('caches the determinate %s outcome', (code) => {
-    expect(shouldCacheQuestionMarkError(new ApplicationError(code, code))).toBe(
-      true,
-    );
-  });
+  it.each(['VALIDATION_ERROR', 'NOT_FOUND'] as const)(
+    'caches the determinate %s outcome',
+    (code) => {
+      expect(
+        shouldCacheQuestionMarkError(new ApplicationError(code, code)),
+      ).toBe(true);
+    },
+  );
 
   it('caches a typed terminal practice-session conflict', () => {
     expect(
@@ -363,11 +364,14 @@ describe('client idempotency-key rotation policy', () => {
         },
       }),
     ],
-  ] as const)('rotates %s after a determinate cached error', (action, error) => {
-    expect(shouldRotateIdempotencyKeyAfterActionError(action, error)).toBe(
-      true,
-    );
-  });
+  ] as const)(
+    'rotates %s after a determinate cached error',
+    (action, error) => {
+      expect(shouldRotateIdempotencyKeyAfterActionError(action, error)).toBe(
+        true,
+      );
+    },
+  );
 
   it.each([
     [
@@ -390,9 +394,12 @@ describe('client idempotency-key rotation policy', () => {
         },
       }),
     ],
-  ] as const)('preserves %s after an indeterminate or aborted error', (action, error) => {
-    expect(shouldRotateIdempotencyKeyAfterActionError(action, error)).toBe(
-      false,
-    );
-  });
+  ] as const)(
+    'preserves %s after an indeterminate or aborted error',
+    (action, error) => {
+      expect(shouldRotateIdempotencyKeyAfterActionError(action, error)).toBe(
+        false,
+      );
+    },
+  );
 });

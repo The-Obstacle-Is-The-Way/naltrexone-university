@@ -209,10 +209,11 @@ export function runSubscriptionObservationVersionContract(
   createHarness: () => Promise<SubscriptionObservationVersionContractHarness>,
 ): void {
   describe(`${adapterName} subscription observation-version contract`, () => {
-    it.each(
-      subscriptionObservationVersionContractScenarios,
-    )('$name', async (scenario) => {
-      await scenario.run(await createHarness());
-    });
+    it.each(subscriptionObservationVersionContractScenarios)(
+      '$name',
+      async (scenario) => {
+        await scenario.run(await createHarness());
+      },
+    );
   });
 }

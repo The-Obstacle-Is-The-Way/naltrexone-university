@@ -140,22 +140,22 @@ describe('GetCompletedSessionQuestionsWithFeedbackUseCase', () => {
       attemptIsCorrect: true,
       stateIsCorrect: null,
     },
-  ])('does not warn when $name', async ({
-    attemptIsCorrect,
-    stateIsCorrect,
-  }) => {
-    const fixture = createCorrectnessComparisonFixture({
-      attemptIsCorrect,
-      stateIsCorrect,
-    });
+  ])(
+    'does not warn when $name',
+    async ({ attemptIsCorrect, stateIsCorrect }) => {
+      const fixture = createCorrectnessComparisonFixture({
+        attemptIsCorrect,
+        stateIsCorrect,
+      });
 
-    await fixture.useCase.execute({
-      userId: fixture.userId,
-      sessionId: fixture.sessionId,
-    });
+      await fixture.useCase.execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+      });
 
-    expect(fixture.logger.warnCalls).toEqual([]);
-  });
+      expect(fixture.logger.warnCalls).toEqual([]);
+    },
+  );
 
   it('preserves the attempt-preferred output when divergence logging fails', async () => {
     const fixture = createCorrectnessComparisonFixture({

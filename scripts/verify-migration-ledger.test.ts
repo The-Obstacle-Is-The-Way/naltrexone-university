@@ -9,14 +9,12 @@ describe('migration ledger verification CLI', () => {
     expect(parseMigrationLedgerVerificationPhase(input)).toBe(expected);
   });
 
-  it.each([
-    undefined,
-    '',
-    'managed',
-    '--pre',
-  ])('rejects unsupported phase %s', (input) => {
-    expect(() => parseMigrationLedgerVerificationPhase(input)).toThrow(
-      'Usage: verify-migration-ledger.ts <pre|post>',
-    );
-  });
+  it.each([undefined, '', 'managed', '--pre'])(
+    'rejects unsupported phase %s',
+    (input) => {
+      expect(() => parseMigrationLedgerVerificationPhase(input)).toThrow(
+        'Usage: verify-migration-ledger.ts <pre|post>',
+      );
+    },
+  );
 });

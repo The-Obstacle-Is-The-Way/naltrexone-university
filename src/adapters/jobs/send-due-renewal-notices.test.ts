@@ -164,23 +164,26 @@ describe('sendDueRenewalNotices job', () => {
       expectedSubscriptionLimit: 1,
       expectedDispatchLimit: 1,
     },
-  ])('normalizes $label independently', async ({
-    subscriptionLimit,
-    dispatchLimit,
-    expectedSubscriptionLimit,
-    expectedDispatchLimit,
-  }) => {
-    const { deps, listAnnualSubscriptionsDue, execute } = createDeps();
+  ])(
+    'normalizes $label independently',
+    async ({
+      subscriptionLimit,
+      dispatchLimit,
+      expectedSubscriptionLimit,
+      expectedDispatchLimit,
+    }) => {
+      const { deps, listAnnualSubscriptionsDue, execute } = createDeps();
 
-    await sendDueRenewalNotices({ subscriptionLimit, dispatchLimit }, deps);
+      await sendDueRenewalNotices({ subscriptionLimit, dispatchLimit }, deps);
 
-    expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: expectedSubscriptionLimit }),
-    );
-    expect(execute).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: expectedDispatchLimit }),
-    );
-  });
+      expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: expectedSubscriptionLimit }),
+      );
+      expect(execute).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: expectedDispatchLimit }),
+      );
+    },
+  );
 
   it('bounds worst-case provider wait below the cron runtime budget', () => {
     const providerWaitMs =

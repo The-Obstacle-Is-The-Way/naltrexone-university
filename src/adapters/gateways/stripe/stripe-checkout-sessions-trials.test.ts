@@ -351,40 +351,41 @@ describe('createStripeCheckoutSession trial params', () => {
       name: 'the existing session price cannot be determined',
       overrides: { retrievedSessionPriceId: null },
     },
-  ])('creates trial checkout with a replacement idempotency key when $name', async ({
-    overrides,
-  }) => {
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_existing', url: 'https://stripe/checkout/existing' },
-      ],
-      ...overrides,
-    });
+  ])(
+    'creates trial checkout with a replacement idempotency key when $name',
+    async ({ overrides }) => {
+      const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
+        openSessionsData: [
+          { id: 'cs_existing', url: 'https://stripe/checkout/existing' },
+        ],
+        ...overrides,
+      });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input: trialInput,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_existing',
-    });
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payment_method_collection: 'if_required',
-        subscription_data: expect.objectContaining({
-          trial_period_days: 7,
+      await expect(
+        createStripeCheckoutSession({
+          stripe,
+          input: trialInput,
+          priceIds,
+          logger,
         }),
-      }),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_existing:trial:7`,
-      }),
-    );
-  });
+      ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+
+      expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
+        idempotencyKey: 'expire_checkout_session:cs_existing',
+      });
+      expect(sessionsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payment_method_collection: 'if_required',
+          subscription_data: expect.objectContaining({
+            trial_period_days: 7,
+          }),
+        }),
+        expect.objectContaining({
+          idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_existing:trial:7`,
+        }),
+      );
+    },
+  );
 });
 
 describe('createStripeTrialPaymentMethodSetupSession', () => {

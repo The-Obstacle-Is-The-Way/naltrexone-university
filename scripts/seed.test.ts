@@ -338,11 +338,10 @@ describe('parseSeedQuestionFile', () => {
     expect(placeholders.length).toBeGreaterThan(0);
   });
 
-  it.each(
-    readPlaceholderSeedFiles(),
-  )('parses tracked placeholder seed file $fileName with the Phase 2 schema', ({
-    raw,
-  }) => {
-    expect(() => parseSeedQuestionFile(raw)).not.toThrow();
-  });
+  it.each(readPlaceholderSeedFiles())(
+    'parses tracked placeholder seed file $fileName with the Phase 2 schema',
+    ({ raw }) => {
+      expect(() => parseSeedQuestionFile(raw)).not.toThrow();
+    },
+  );
 });

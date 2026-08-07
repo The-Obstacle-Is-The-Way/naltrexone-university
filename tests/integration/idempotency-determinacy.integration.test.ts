@@ -77,42 +77,26 @@ describe('idempotency determinacy with real Postgres', () => {
       'practice:startPracticeSession',
       shouldCacheStartPracticeSessionError,
     ],
-  ] as const)('aborts and re-executes %s after rollback-certain 57014', async (_name, action, shouldCacheError) => {
-    const user = await createUser(db, cleanup);
-    const repo = new DrizzleIdempotencyKeyRepository(db);
-    const logger = new FakeLogger();
-    const key = randomUUID();
-    const now = () => new Date();
-    let executionCount = 0;
-    let injectCancellation = true;
-    const execute = async () => {
-      executionCount += 1;
-      if (injectCancellation) {
-        injectCancellation = false;
-        return throwRealStatementCancellation();
-      }
-      return { committed: true };
-    };
+  ] as const)(
+    'aborts and re-executes %s after rollback-certain 57014',
+    async (_name, action, shouldCacheError) => {
+      const user = await createUser(db, cleanup);
+      const repo = new DrizzleIdempotencyKeyRepository(db);
+      const logger = new FakeLogger();
+      const key = randomUUID();
+      const now = () => new Date();
+      let executionCount = 0;
+      let injectCancellation = true;
+      const execute = async () => {
+        executionCount += 1;
+        if (injectCancellation) {
+          injectCancellation = false;
+          return throwRealStatementCancellation();
+        }
+        return { committed: true };
+      };
 
-    const first = withIdempotency({
-      repo,
-      logger,
-      userId: user.id,
-      action,
-      key,
-      now,
-      shouldCacheError,
-      execute,
-    });
-
-    await expect(first).rejects.toMatchObject({
-      code: 'INTERNAL_ERROR',
-      determinacy: 'rollback_certain',
-    });
-    await expect(repo.find(user.id, action, key)).resolves.toBeNull();
-
-    await expect(
-      withIdempotency({
+      const first = withIdempotency({
         repo,
         logger,
         userId: user.id,
@@ -121,10 +105,29 @@ describe('idempotency determinacy with real Postgres', () => {
         now,
         shouldCacheError,
         execute,
-      }),
-    ).resolves.toEqual({ committed: true });
-    expect(executionCount).toBe(2);
-  });
+      });
+
+      await expect(first).rejects.toMatchObject({
+        code: 'INTERNAL_ERROR',
+        determinacy: 'rollback_certain',
+      });
+      await expect(repo.find(user.id, action, key)).resolves.toBeNull();
+
+      await expect(
+        withIdempotency({
+          repo,
+          logger,
+          userId: user.id,
+          action,
+          key,
+          now,
+          shouldCacheError,
+          execute,
+        }),
+      ).resolves.toEqual({ committed: true });
+      expect(executionCount).toBe(2);
+    },
+  );
 
   it('aborts and re-executes session start after a transient internal error', async () => {
     const user = await createUser(db, cleanup);

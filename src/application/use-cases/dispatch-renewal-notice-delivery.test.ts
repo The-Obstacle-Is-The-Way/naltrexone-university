@@ -98,30 +98,30 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       }),
       failureCode: 'payload_snapshot_integrity_failure',
     },
-  ])('quarantines a corrupted $label without calling the provider', async ({
-    corrupt,
-    failureCode,
-  }) => {
-    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
-    const saved = await repository.saveQueued(createDelivery());
-    repository.records[0] = {
-      ...saved,
-      ...corrupt(saved),
-    };
-    const gateway = new FakeTransactionalEmailGateway({ configured: true });
-    const useCase = createUseCase({ repository, gateway });
+  ])(
+    'quarantines a corrupted $label without calling the provider',
+    async ({ corrupt, failureCode }) => {
+      const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+      const saved = await repository.saveQueued(createDelivery());
+      repository.records[0] = {
+        ...saved,
+        ...corrupt(saved),
+      };
+      const gateway = new FakeTransactionalEmailGateway({ configured: true });
+      const useCase = createUseCase({ repository, gateway });
 
-    await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
-      outcome: 'attempted',
-      delivery: {
-        status: 'terminal_failure',
-        attemptCount: 1,
-        failureClass: 'payload_integrity_failure',
-        failureCode,
-      },
-    });
-    expect(gateway.sendInputs).toEqual([]);
-  });
+      await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+        outcome: 'attempted',
+        delivery: {
+          status: 'terminal_failure',
+          attemptCount: 1,
+          failureClass: 'payload_integrity_failure',
+          failureCode,
+        },
+      });
+      expect(gateway.sendInputs).toEqual([]);
+    },
+  );
 
   it('persists the claim before the provider call and records delivery', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
@@ -185,32 +185,35 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       expectedStatus: 'outcome_unknown',
       expectedNextAttemptAt: null,
     },
-  ])('persists $expectedStatus and returns successfully', async ({
-    result: gatewayResult,
-    expectedStatus,
-    expectedNextAttemptAt,
-  }) => {
-    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
-    await repository.saveQueued(createDelivery());
-    const gateway = new FakeTransactionalEmailGateway({
-      configured: true,
-      results: [gatewayResult],
-    });
-    const useCase = createUseCase({ repository, gateway });
-
-    const result = await useCase.execute({ deliveryId });
-
-    expect(result).toMatchObject({
-      outcome: 'attempted',
-      delivery: {
-        status: expectedStatus,
-        failureCode: gatewayResult.failureCode,
-      },
-    });
-    expect(result.delivery?.nextAttemptAt?.toISOString() ?? null).toBe(
+  ])(
+    'persists $expectedStatus and returns successfully',
+    async ({
+      result: gatewayResult,
+      expectedStatus,
       expectedNextAttemptAt,
-    );
-  });
+    }) => {
+      const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+      await repository.saveQueued(createDelivery());
+      const gateway = new FakeTransactionalEmailGateway({
+        configured: true,
+        results: [gatewayResult],
+      });
+      const useCase = createUseCase({ repository, gateway });
+
+      const result = await useCase.execute({ deliveryId });
+
+      expect(result).toMatchObject({
+        outcome: 'attempted',
+        delivery: {
+          status: expectedStatus,
+          failureCode: gatewayResult.failureCode,
+        },
+      });
+      expect(result.delivery?.nextAttemptAt?.toISOString() ?? null).toBe(
+        expectedNextAttemptAt,
+      );
+    },
+  );
 
   it('uses one provider call when two workers dispatch the same row', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);

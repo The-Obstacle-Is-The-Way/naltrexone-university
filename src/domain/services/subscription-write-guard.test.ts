@@ -128,41 +128,39 @@ describe('shouldPersistSubscriptionWrite', () => {
     );
   });
 
-  it.each<SubscriptionStatus>([
-    'paymentProcessing',
-    'unpaid',
-    'paused',
-  ])('rejects a different %s write over a current entitled row', (status) => {
-    expect(
-      shouldPersistSubscriptionWrite({
-        stored: candidate({ status: 'active' }),
-        incoming: candidate({
-          subscriptionIdentity: 'sub_recoverable',
-          status,
-          currentPeriodEnd: FUTURE,
+  it.each<SubscriptionStatus>(['paymentProcessing', 'unpaid', 'paused'])(
+    'rejects a different %s write over a current entitled row',
+    (status) => {
+      expect(
+        shouldPersistSubscriptionWrite({
+          stored: candidate({ status: 'active' }),
+          incoming: candidate({
+            subscriptionIdentity: 'sub_recoverable',
+            status,
+            currentPeriodEnd: FUTURE,
+          }),
+          now: NOW,
         }),
-        now: NOW,
-      }),
-    ).toBe(false);
-  });
+      ).toBe(false);
+    },
+  );
 
-  it.each<SubscriptionStatus>([
-    'active',
-    'inTrial',
-    'pastDue',
-  ])('allows a different current-entitled %s canonical winner', (status) => {
-    expect(
-      shouldPersistSubscriptionWrite({
-        stored: candidate({ status: 'active' }),
-        incoming: candidate({
-          subscriptionIdentity: 'sub_canonical',
-          status,
-          currentPeriodEnd: FUTURE,
+  it.each<SubscriptionStatus>(['active', 'inTrial', 'pastDue'])(
+    'allows a different current-entitled %s canonical winner',
+    (status) => {
+      expect(
+        shouldPersistSubscriptionWrite({
+          stored: candidate({ status: 'active' }),
+          incoming: candidate({
+            subscriptionIdentity: 'sub_canonical',
+            status,
+            currentPeriodEnd: FUTURE,
+          }),
+          now: NOW,
         }),
-        now: NOW,
-      }),
-    ).toBe(true);
-  });
+      ).toBe(true);
+    },
+  );
 
   it('rejects a different current-entitled write that loses canonical ordering', () => {
     expect(
@@ -182,26 +180,25 @@ describe('shouldPersistSubscriptionWrite', () => {
     ).toBe(false);
   });
 
-  it.each<SubscriptionStatus>([
-    'paymentProcessing',
-    'unpaid',
-    'paused',
-  ])('allows same-subscription %s lifecycle updates', (status) => {
-    expect(
-      shouldPersistSubscriptionWrite({
-        stored: candidate({
-          subscriptionIdentity: 'sub_current',
-          status: 'active',
+  it.each<SubscriptionStatus>(['paymentProcessing', 'unpaid', 'paused'])(
+    'allows same-subscription %s lifecycle updates',
+    (status) => {
+      expect(
+        shouldPersistSubscriptionWrite({
+          stored: candidate({
+            subscriptionIdentity: 'sub_current',
+            status: 'active',
+          }),
+          incoming: candidate({
+            subscriptionIdentity: 'sub_current',
+            status,
+            currentPeriodEnd: FUTURE,
+          }),
+          now: NOW,
         }),
-        incoming: candidate({
-          subscriptionIdentity: 'sub_current',
-          status,
-          currentPeriodEnd: FUTURE,
-        }),
-        now: NOW,
-      }),
-    ).toBe(true);
-  });
+      ).toBe(true);
+    },
+  );
 
   it('allows a different unpaid write when the stored active period has expired', () => {
     expect(
