@@ -267,6 +267,7 @@ describe('BUG-287 real PostgreSQL interleavings', () => {
         stripe,
         priceIds,
         logger: new FakeLogger(),
+        now: () => new Date('2026-07-11T00:00:00.000Z'),
         listLocalSubscriptions: async () => [
           {
             userId: user.id,
@@ -279,6 +280,9 @@ describe('BUG-287 real PostgreSQL interleavings', () => {
             fn({
               subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
               stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+              renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+                tx,
+              ),
             }),
           ),
       },

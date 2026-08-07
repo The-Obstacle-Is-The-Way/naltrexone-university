@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
+import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
+import { RESEND_PROVIDER_TIMEOUT_MS } from '../gateways/resend-transactional-email-gateway';
 import {
+  SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
+  SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS,
+  SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO,
   type SendDueRenewalNoticesJobDeps,
   sendDueRenewalNotices,
 } from './send-due-renewal-notices';
@@ -32,6 +37,7 @@ function createDeps(): {
   >(
     async (): Promise<SendDueRenewalNoticesResult> => ({
       queued: 2,
+      queueFailures: 0,
       rejectedNotices: 0,
       selected: 2,
       staleUnknown: 0,
@@ -89,7 +95,7 @@ describe('sendDueRenewalNotices job', () => {
     );
 
     const call = execute.mock.calls[0]?.[0];
-    expect(call?.limit).toBe(100);
+    expect(call?.limit).toBe(80);
     expect(call?.notices).toEqual([
       expect.objectContaining({
         noticeKind: 'annual_reminder',
@@ -110,6 +116,7 @@ describe('sendDueRenewalNotices job', () => {
     expect(result).toEqual({
       subscriptions: 1,
       queued: 2,
+      queueFailures: 0,
       rejectedNotices: 0,
       selected: 2,
       staleUnknown: 0,
@@ -130,7 +137,7 @@ describe('sendDueRenewalNotices job', () => {
       expect.objectContaining({ limit: 500 }),
     );
     expect(execute).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 500 }),
+      expect.objectContaining({ limit: 80 }),
     );
   });
 
@@ -140,14 +147,14 @@ describe('sendDueRenewalNotices job', () => {
       subscriptionLimit: Number.NaN,
       dispatchLimit: 100,
       expectedSubscriptionLimit: 50,
-      expectedDispatchLimit: 100,
+      expectedDispatchLimit: 80,
     },
     {
       label: 'fractional dispatch limit',
       subscriptionLimit: 50,
       dispatchLimit: 1.5,
       expectedSubscriptionLimit: 50,
-      expectedDispatchLimit: 100,
+      expectedDispatchLimit: 80,
     },
     {
       label: 'zero limits',
@@ -172,5 +179,19 @@ describe('sendDueRenewalNotices job', () => {
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({ limit: expectedDispatchLimit }),
     );
+  });
+
+  it('bounds worst-case provider wait below the cron runtime budget', () => {
+    const providerWaitMs =
+      Math.ceil(
+        SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT /
+          RENEWAL_NOTICE_DISPATCH_CONCURRENCY,
+      ) * RESEND_PROVIDER_TIMEOUT_MS;
+    const runtimeBudgetMs =
+      SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS *
+      1_000 *
+      SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO;
+
+    expect(providerWaitMs).toBeLessThanOrEqual(runtimeBudgetMs);
   });
 });

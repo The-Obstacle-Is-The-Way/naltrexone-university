@@ -8,7 +8,8 @@ import {
 } from '@/src/adapters/jobs/send-due-renewal-notices';
 import { createRenewalNoticeCronHandler } from './route-handler';
 
-export const maxDuration = 60;
+// Next.js requires route-segment configuration to be a statically analyzable literal.
+export const maxDuration = 300;
 
 const handleCronRequest = createRenewalNoticeCronHandler(() => {
   const container = createContainer();

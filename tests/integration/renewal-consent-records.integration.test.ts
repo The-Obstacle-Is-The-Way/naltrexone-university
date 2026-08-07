@@ -4,9 +4,15 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import {
   renewalConsentRecords,
   renewalNoticeDeliveries,
+  stripeSubscriptions,
   users,
 } from '@/db/schema';
+import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
+import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
+import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
+import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
 import {
   cleanupAfterEach,
@@ -16,7 +22,9 @@ import {
   createUser,
 } from './helpers';
 
-const { db, sql } = createIntegrationDb();
+const primary = createIntegrationDb();
+const competing = createIntegrationDb();
+const { db } = primary;
 const cleanup = createCleanupState();
 const consentIds: string[] = [];
 
@@ -31,7 +39,10 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await closeConnection(sql);
+  await Promise.all([
+    closeConnection(primary.sql),
+    closeConnection(competing.sql),
+  ]);
 });
 
 function consentInput(userId: string, sourceId = `cs_${randomUUID()}`) {
@@ -67,12 +78,15 @@ function consentInput(userId: string, sourceId = `cs_${randomUUID()}`) {
 describe('renewal consent record persistence', () => {
   it('persists one exact snapshot under concurrent same-source deliveries', async () => {
     const user = await createUser(db, cleanup);
-    const repository = new DrizzleRenewalConsentRecordRepository(db);
+    const repository = new DrizzleRenewalConsentRecordRepository(primary.db);
+    const competingRepository = new DrizzleRenewalConsentRecordRepository(
+      competing.db,
+    );
     const input = consentInput(user.id);
 
     const [first, replay] = await Promise.all([
       repository.save(input),
-      repository.save(input),
+      competingRepository.save(input),
     ]);
     consentIds.push(first.id);
 
@@ -201,9 +215,137 @@ describe('renewal consent record persistence', () => {
       terminatedAt: new Date('2027-01-01T00:00:00Z'),
     });
 
+    await repository.markSubscriptionTerminated({
+      externalSubscriptionId: saved.externalSubscriptionId,
+      terminatedAt: new Date('2032-01-01T00:00:00Z'),
+    });
+
     await expect(repository.findById(saved.id)).resolves.toMatchObject({
       subscriptionTerminatedAt: new Date('2030-02-01T00:00:00Z'),
       retainUntil: new Date('2031-02-01T00:00:00Z'),
     });
+  });
+
+  it('starts legal retention when reconciliation heals a missed cancellation webhook', async () => {
+    const user = await createUser(db, cleanup);
+    const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+    const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+    const repository = new DrizzleRenewalConsentRecordRepository(db);
+    const saved = await repository.save({
+      ...consentInput(user.id),
+      checkoutSessionId: `cs_${randomUUID()}`,
+      externalCustomerId,
+      externalSubscriptionId,
+      acceptedAt: new Date('2020-01-01T00:00:00Z'),
+      retainUntil: new Date('2023-01-01T00:00:00Z'),
+    });
+    consentIds.push(saved.id);
+    await db.insert(stripeSubscriptions).values({
+      userId: user.id,
+      stripeSubscriptionId: externalSubscriptionId,
+      status: 'active',
+      priceId: 'price_test_monthly',
+      currentPeriodEnd: new Date('2021-01-01T00:00:00Z'),
+      cancelAtPeriodEnd: false,
+    });
+    const canceledSubscription = {
+      id: externalSubscriptionId,
+      customer: externalCustomerId,
+      status: 'canceled' as const,
+      cancel_at_period_end: false,
+      metadata: { user_id: user.id },
+      items: {
+        data: [
+          {
+            current_period_end: 1_609_459_200,
+            price: { id: 'price_test_monthly' },
+          },
+        ],
+      },
+    };
+    const stripe = {
+      customers: {
+        create: async () => {
+          throw new Error('Unexpected customers.create');
+        },
+      },
+      checkout: {
+        sessions: {
+          create: async () => {
+            throw new Error('Unexpected checkout.sessions.create');
+          },
+          list: async () => {
+            throw new Error('Unexpected checkout.sessions.list');
+          },
+          retrieve: async () => {
+            throw new Error('Unexpected checkout.sessions.retrieve');
+          },
+          expire: async () => {
+            throw new Error('Unexpected checkout.sessions.expire');
+          },
+        },
+      },
+      subscriptions: {
+        retrieve: async () => canceledSubscription,
+        list: async () => ({ data: [] }),
+        cancel: async () => canceledSubscription,
+      },
+      billingPortal: {
+        sessions: {
+          create: async () => {
+            throw new Error('Unexpected billingPortal.sessions.create');
+          },
+        },
+      },
+      webhooks: {
+        constructEvent: () => {
+          throw new Error('Unexpected webhooks.constructEvent');
+        },
+      },
+    } satisfies ReconcileStripeSubscriptionsDeps['stripe'];
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 1, offset: 0, dryRun: false, concurrency: 1 },
+        {
+          stripe,
+          priceIds: {
+            monthly: 'price_test_monthly',
+            annual: 'price_test_annual',
+          },
+          logger: new FakeLogger(),
+          now: () => new Date('2021-01-01T00:00:00Z'),
+          listLocalSubscriptions: async () => [
+            {
+              userId: user.id,
+              stripeSubscriptionId: externalSubscriptionId,
+              version: 0,
+            },
+          ],
+          transaction: (fn) =>
+            db.transaction((tx) =>
+              fn({
+                subscriptions: new DrizzleSubscriptionRepository(tx, {
+                  monthly: 'price_test_monthly',
+                  annual: 'price_test_annual',
+                }),
+                stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+                renewalConsentRecords:
+                  new DrizzleRenewalConsentRecordRepository(tx),
+              }),
+            ),
+        },
+      ),
+    ).resolves.toMatchObject({ updated: 1, failed: 0 });
+    await expect(repository.findById(saved.id)).resolves.toMatchObject({
+      subscriptionTerminatedAt: new Date('2021-01-01T00:00:00Z'),
+      retainUntil: new Date('2023-01-01T00:00:00Z'),
+    });
+    await expect(
+      repository.pruneExpired({
+        before: new Date('2024-01-01T00:00:00Z'),
+        limit: 1,
+      }),
+    ).resolves.toBe(1);
   });
 });

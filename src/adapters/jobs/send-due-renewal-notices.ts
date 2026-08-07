@@ -13,8 +13,11 @@ import type {
 import { DAY_MS } from '@/src/domain/services';
 
 export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 50;
-export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 100;
+export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 80;
 export const SEND_RENEWAL_NOTICES_MAX_LIMIT = 500;
+export const SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT = 80;
+export const SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS = 300;
+export const SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO = 0.7;
 const ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS = 15;
 const ANNUAL_RENEWAL_NOTICE_LATEST_DAYS = 45;
 
@@ -131,9 +134,9 @@ export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   durationMs: number;
 };
 
-function safeLimit(value: number, fallback: number): number {
+function safeLimit(value: number, fallback: number, maximum: number): number {
   if (!Number.isInteger(value)) return fallback;
-  return Math.min(SEND_RENEWAL_NOTICES_MAX_LIMIT, Math.max(1, value));
+  return Math.min(maximum, Math.max(1, value));
 }
 
 export async function sendDueRenewalNotices(
@@ -145,10 +148,12 @@ export async function sendDueRenewalNotices(
   const subscriptionLimit = safeLimit(
     input.subscriptionLimit,
     SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
+    SEND_RENEWAL_NOTICES_MAX_LIMIT,
   );
   const dispatchLimit = safeLimit(
     input.dispatchLimit,
     SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
+    SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
   );
   const subscriptions = await deps.listAnnualSubscriptionsDue({
     renewalAtOrAfter: new Date(

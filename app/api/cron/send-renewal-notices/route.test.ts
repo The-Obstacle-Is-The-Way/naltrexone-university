@@ -12,6 +12,7 @@ import {
 const successResult = {
   subscriptions: 1,
   queued: 2,
+  queueFailures: 0,
   rejectedNotices: 0,
   selected: 2,
   staleUnknown: 0,
@@ -60,6 +61,12 @@ function authorizedRequest(token = 'test-secret'): Request {
 }
 
 describe('renewal notice cron route', () => {
+  it('pins the function duration to the bounded provider-call budget', () => {
+    const source = readFileSync(new URL('./route.ts', import.meta.url), 'utf8');
+
+    expect(source).toContain('export const maxDuration = 300');
+  });
+
   it('rejects a missing authorization header', async () => {
     const harness = createHarness();
 

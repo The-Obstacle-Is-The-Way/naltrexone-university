@@ -301,6 +301,7 @@ export function createUseCaseFactories(input: {
           hasher,
           primitives.now,
         ),
+        primitives.logger,
         primitives.env.NEXT_PUBLIC_APP_URL,
         primitives.now,
       );

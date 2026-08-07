@@ -1,4 +1,13 @@
-import { and, asc, eq, inArray, isNotNull, lte, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  sql,
+} from 'drizzle-orm';
 import { renewalConsentRecords } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -152,9 +161,12 @@ export class DrizzleRenewalConsentRecordRepository
         updatedAt: this.now(),
       })
       .where(
-        eq(
-          renewalConsentRecords.stripeSubscriptionId,
-          input.externalSubscriptionId,
+        and(
+          eq(
+            renewalConsentRecords.stripeSubscriptionId,
+            input.externalSubscriptionId,
+          ),
+          isNull(renewalConsentRecords.subscriptionTerminatedAt),
         ),
       )
       .returning({ id: renewalConsentRecords.id });

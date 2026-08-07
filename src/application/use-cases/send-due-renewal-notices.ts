@@ -1,5 +1,6 @@
 import { ApplicationError } from '@/src/application/errors';
 import type {
+  Logger,
   RenewalNoticeDeliveryRepository,
   Sha256Hasher,
   TransactionalEmailPayload,
@@ -20,7 +21,7 @@ import type { DispatchRenewalNoticeDeliveryUseCase } from './dispatch-renewal-no
 
 const PROCESSING_CLAIM_STALE_AFTER_MS = 15 * 60 * 1000;
 const MAX_BATCH_LIMIT = 500;
-const DISPATCH_CONCURRENCY = 4;
+export const RENEWAL_NOTICE_DISPATCH_CONCURRENCY = 4;
 
 export type ScheduledRenewalNotice = {
   noticeKind: Exclude<RenewalNoticeKind, 'acknowledgment'>;
@@ -38,6 +39,7 @@ export type ScheduledRenewalNotice = {
 
 export type SendDueRenewalNoticesResult = {
   queued: number;
+  queueFailures: number;
   rejectedNotices: number;
   selected: number;
   staleUnknown: number;
@@ -143,6 +145,7 @@ export class SendDueRenewalNoticesUseCase {
       DispatchRenewalNoticeDeliveryUseCase,
       'execute'
     >,
+    private readonly logger: Pick<Logger, 'error'>,
     private readonly appUrl: string,
     private readonly now: () => Date = () => new Date(),
     private readonly createId: () => string = () => crypto.randomUUID(),
@@ -166,6 +169,7 @@ export class SendDueRenewalNoticesUseCase {
     });
 
     let queued = 0;
+    let queueFailures = 0;
     let rejectedNotices = 0;
     for (const sourceNotice of input.notices) {
       try {
@@ -180,36 +184,54 @@ export class SendDueRenewalNoticesUseCase {
         }
         throw error;
       }
-      const notice = {
-        ...sourceNotice,
-        destination: sourceNotice.destination.trim(),
-      };
-      const id = this.createId();
-      const payload = createPayload(notice, this.appUrl);
-      const evidence = createTransactionalEmailPayloadSnapshot(
-        payload,
-        this.hasher,
-      );
-      const saved = await this.repository.saveQueued({
-        id,
-        noticeKind: notice.noticeKind,
-        consentRecordId: null,
-        externalSubscriptionId: notice.externalSubscriptionId,
-        applicableAt: notice.applicableAt,
-        disclosureVersion: notice.disclosureVersion,
-        destination: notice.destination,
-        providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(id),
-        payloadSnapshot: evidence.snapshot,
-        payloadHash: evidence.hash,
-      });
-      if (saved.id === id) queued += 1;
+      try {
+        const notice = {
+          ...sourceNotice,
+          destination: sourceNotice.destination.trim(),
+        };
+        const id = this.createId();
+        const payload = createPayload(notice, this.appUrl);
+        const evidence = createTransactionalEmailPayloadSnapshot(
+          payload,
+          this.hasher,
+        );
+        const saved = await this.repository.saveQueued({
+          id,
+          noticeKind: notice.noticeKind,
+          consentRecordId: null,
+          externalSubscriptionId: notice.externalSubscriptionId,
+          applicableAt: notice.applicableAt,
+          disclosureVersion: notice.disclosureVersion,
+          destination: notice.destination,
+          providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(id),
+          payloadSnapshot: evidence.snapshot,
+          payloadHash: evidence.hash,
+        });
+        if (saved.id === id) queued += 1;
+      } catch (error) {
+        queueFailures += 1;
+        try {
+          this.logger.error(
+            {
+              noticeKind: sourceNotice.noticeKind,
+              stripeSubscriptionId: sourceNotice.externalSubscriptionId,
+              errorCode: error instanceof ApplicationError ? error.code : null,
+            },
+            'Renewal notice queueing failed',
+          );
+        } catch {
+          // Logging failure must not let one poisoned notice starve later rows.
+        }
+      }
     }
 
     const due = await this.repository.findDue({ now: observedAt, limit });
     let nextIndex = 0;
     let dispatchFailures = 0;
     const workers = Array.from(
-      { length: Math.min(DISPATCH_CONCURRENCY, due.length) },
+      {
+        length: Math.min(RENEWAL_NOTICE_DISPATCH_CONCURRENCY, due.length),
+      },
       async () => {
         for (;;) {
           const delivery = due[nextIndex];
@@ -228,6 +250,7 @@ export class SendDueRenewalNoticesUseCase {
 
     return {
       queued,
+      queueFailures,
       rejectedNotices,
       selected: due.length,
       staleUnknown,

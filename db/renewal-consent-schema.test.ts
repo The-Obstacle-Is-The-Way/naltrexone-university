@@ -67,6 +67,19 @@ describe('renewal consent schema', () => {
     expect(scheduled?.config.where).toBeDefined();
     expect(acknowledgment?.config.columns).toHaveLength(3);
     expect(scheduled?.config.columns).toHaveLength(5);
+    const dialect = new PgDialect();
+    const acknowledgmentPredicate = acknowledgment?.config.where
+      ? dialect.sqlToQuery(acknowledgment.config.where).sql
+      : '';
+    const scheduledPredicate = scheduled?.config.where
+      ? dialect.sqlToQuery(scheduled.config.where).sql
+      : '';
+    expect(acknowledgmentPredicate).toContain(
+      `"renewal_notice_deliveries"."notice_kind" = 'acknowledgment'`,
+    );
+    expect(scheduledPredicate).toContain(
+      `"renewal_notice_deliveries"."notice_kind" IN ('annual_reminder', 'renewal_notice', 'material_change', 'fee_change')`,
+    );
 
     const consentForeignKey = tableConfig.foreignKeys.find(
       (foreignKey) =>
@@ -79,7 +92,7 @@ describe('renewal consent schema', () => {
         constraint.name === 'renewal_notice_deliveries_key_shape_chk',
     );
     const checkSql = keyShapeCheck
-      ? new PgDialect()
+      ? dialect
           .sqlToQuery(keyShapeCheck.value)
           .sql.replaceAll('"renewal_notice_deliveries".', '')
       : '';

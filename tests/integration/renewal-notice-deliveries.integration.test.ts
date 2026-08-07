@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { renewalNoticeDeliveries } from '@/db/schema';
+import { renewalConsentRecords, renewalNoticeDeliveries } from '@/db/schema';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import { DrizzleRenewalNoticeDeliveryRepository } from '@/src/adapters/repositories/drizzle-renewal-notice-delivery-repository';
 import {
@@ -14,6 +14,7 @@ import { closeConnection, createIntegrationDb } from './helpers';
 const primary = createIntegrationDb();
 const competing = createIntegrationDb();
 const deliveryIds: string[] = [];
+const consentIds: string[] = [];
 const now = new Date('2026-08-06T18:00:00.000Z');
 const hasher = new NobleSha256Hasher();
 
@@ -23,7 +24,13 @@ afterEach(async () => {
       .delete(renewalNoticeDeliveries)
       .where(inArray(renewalNoticeDeliveries.id, deliveryIds));
   }
+  if (consentIds.length > 0) {
+    await primary.db
+      .delete(renewalConsentRecords)
+      .where(inArray(renewalConsentRecords.id, consentIds));
+  }
   deliveryIds.length = 0;
+  consentIds.length = 0;
 });
 
 afterAll(async () => {
@@ -130,6 +137,90 @@ describe('renewal notice delivery persistence', () => {
       createdAt: now,
       updatedAt: now,
     });
+  });
+
+  it('deduplicates acknowledgment identity across distinct delivery UUIDs', async () => {
+    const consentId = randomUUID();
+    consentIds.push(consentId);
+    await primary.db.insert(renewalConsentRecords).values({
+      id: consentId,
+      userId: null,
+      consumerReference: 'a'.repeat(64),
+      stripeCustomerId: 'cus_ack_identity',
+      stripeSubscriptionId: 'sub_ack_identity',
+      checkoutSessionId: 'cs_ack_identity',
+      setupSessionId: null,
+      applicationSourceId: null,
+      plan: 'monthly',
+      amountCents: 2900,
+      currency: 'usd',
+      frequency: 'month',
+      trialEndsAt: null,
+      cancellationDeadline: new Date('2026-09-06T18:00:00.000Z'),
+      cancellationMethod: 'Billing page in the app',
+      disclosureSnapshot: 'Exact acknowledgment disclosure.',
+      disclosureVersion: '2026-08-05',
+      termsVersion: '2026-08-05',
+      termsHash: 'b'.repeat(64),
+      consentSource: 'stripe_checkout',
+      acceptedAt: now,
+      consentKind: 'initial_offer',
+      priorAmountCents: null,
+      proposedAmountCents: null,
+      effectiveRenewalAt: null,
+      retainUntil: new Date('2029-08-06T18:00:00.000Z'),
+    });
+    const payload = {
+      from: 'Addiction Boards <notices@addictionboards.com>',
+      to: 'ack-subscriber@example.com',
+      replyTo: 'support@addictionboards.com',
+      subject: 'Your renewal terms',
+      html: '<p>Your renewal terms</p>',
+      text: 'Your renewal terms',
+    };
+    const evidence = createTransactionalEmailPayloadSnapshot(payload, hasher);
+    const firstId = randomUUID();
+    const replayId = randomUUID();
+    deliveryIds.push(firstId, replayId);
+    const base = {
+      noticeKind: 'acknowledgment' as const,
+      consentRecordId: consentId,
+      externalSubscriptionId: null,
+      applicableAt: null,
+      disclosureVersion: '2026-08-05',
+      destination: payload.to,
+      payloadSnapshot: evidence.snapshot,
+      payloadHash: evidence.hash,
+    };
+    const firstRepository = new DrizzleRenewalNoticeDeliveryRepository(
+      primary.db,
+      hasher,
+      () => now,
+    );
+    const competingRepository = new DrizzleRenewalNoticeDeliveryRepository(
+      competing.db,
+      hasher,
+      () => now,
+    );
+
+    const first = await firstRepository.saveQueued({
+      ...base,
+      id: firstId,
+      providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(firstId),
+    });
+    const replay = await competingRepository.saveQueued({
+      ...base,
+      id: replayId,
+      providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(replayId),
+    });
+
+    expect(replay.id).toBe(first.id);
+    await expect(
+      primary.db
+        .select({ id: renewalNoticeDeliveries.id })
+        .from(renewalNoticeDeliveries)
+        .where(eq(renewalNoticeDeliveries.consentRecordId, consentId)),
+    ).resolves.toEqual([{ id: firstId }]);
   });
 
   it('rejects an ID collision even when another row matches the business key', async () => {

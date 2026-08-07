@@ -65,11 +65,9 @@ describe('ResendTransactionalEmailGateway', () => {
   });
 
   it.each([
-    'application_error',
     'daily_quota_exceeded',
     'monthly_quota_exceeded',
     'rate_limit_exceeded',
-    'internal_server_error',
   ])('maps known non-acceptance %s to transient_failure', async (name) => {
     resendSdk.send.mockResolvedValue({
       data: null,
@@ -79,6 +77,22 @@ describe('ResendTransactionalEmailGateway', () => {
 
     await expect(gateway.send(input)).resolves.toEqual({
       status: 'transient_failure',
+      failureCode: name,
+    });
+  });
+
+  it.each([
+    'application_error',
+    'internal_server_error',
+  ])('quarantines ambiguous provider 5xx error %s as outcome_unknown', async (name) => {
+    resendSdk.send.mockResolvedValue({
+      data: null,
+      error: { name, message: 'provider infrastructure failure' },
+    });
+    const gateway = new ResendTransactionalEmailGateway({ apiKey: 're_test' });
+
+    await expect(gateway.send(input)).resolves.toEqual({
+      status: 'outcome_unknown',
       failureCode: name,
     });
   });
@@ -130,7 +144,7 @@ describe('ResendTransactionalEmailGateway', () => {
     });
   });
 
-  it('retries an unrecognized provider non-acceptance instead of dropping the notice', async () => {
+  it('quarantines an unrecognized provider error whose acceptance outcome is unknown', async () => {
     resendSdk.send.mockResolvedValue({
       data: null,
       error: { name: 'future_retryable_error', message: 'try later' },
@@ -138,7 +152,7 @@ describe('ResendTransactionalEmailGateway', () => {
     const gateway = new ResendTransactionalEmailGateway({ apiKey: 're_test' });
 
     await expect(gateway.send(input)).resolves.toEqual({
-      status: 'transient_failure',
+      status: 'outcome_unknown',
       failureCode: 'future_retryable_error',
     });
   });
