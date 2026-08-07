@@ -216,6 +216,7 @@ export class SendDueRenewalNoticesUseCase {
               noticeKind: sourceNotice.noticeKind,
               stripeSubscriptionId: sourceNotice.externalSubscriptionId,
               errorCode: error instanceof ApplicationError ? error.code : null,
+              errorName: error instanceof Error ? error.name : 'unknown',
             },
             'Renewal notice queueing failed',
           );

@@ -4,6 +4,7 @@ import {
   getRenewalNoticeProviderIdempotencyKey,
 } from '@/src/application/shared/transactional-email-payload';
 import {
+  FakeLogger,
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
   FakeTransactionalEmailGateway,
@@ -49,11 +50,13 @@ function createUseCase(input: {
   repository: FakeRenewalNoticeDeliveryRepository;
   gateway: FakeTransactionalEmailGateway;
   currentTime?: () => Date;
+  logger?: FakeLogger;
 }) {
   return new DispatchRenewalNoticeDeliveryUseCase(
     input.repository,
     input.gateway,
     hasher,
+    input.logger ?? new FakeLogger(),
     input.currentTime ?? (() => now),
     () => 'attempt-1',
   );
@@ -252,6 +255,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       repository,
       gateway,
       hasher,
+      new FakeLogger(),
       () => currentTime,
       () => `attempt-${++attempt}`,
     );
@@ -297,5 +301,31 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
         failureCode: 'unexpected_gateway_exception',
       },
     });
+  });
+
+  it('signals an outcome-unknown failure code without logging the recipient', async () => {
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    await repository.saveQueued(createDelivery());
+    const gateway = new FakeTransactionalEmailGateway({
+      configured: true,
+      results: [
+        { status: 'outcome_unknown', failureCode: 'future_provider_error' },
+      ],
+    });
+    const logger = new FakeLogger();
+    const useCase = createUseCase({ repository, gateway, logger });
+
+    await useCase.execute({ deliveryId });
+
+    expect(logger.errorCalls).toEqual([
+      {
+        context: {
+          deliveryId,
+          failureCode: 'future_provider_error',
+        },
+        msg: 'Renewal notice delivery outcome is unknown',
+      },
+    ]);
+    expect(JSON.stringify(logger.errorCalls)).not.toContain(payload.to);
   });
 });

@@ -282,6 +282,7 @@ export function createUseCaseFactories(input: {
         repositories.createRenewalNoticeDeliveryRepository(),
         gateways.createTransactionalEmailGateway(),
         gateways.createSha256Hasher(),
+        primitives.logger,
         primitives.now,
       ),
     createRequeueRenewalNoticeDeliveryUseCase: () =>
@@ -299,6 +300,7 @@ export function createUseCaseFactories(input: {
           repository,
           gateways.createTransactionalEmailGateway(),
           hasher,
+          primitives.logger,
           primitives.now,
         ),
         primitives.logger,

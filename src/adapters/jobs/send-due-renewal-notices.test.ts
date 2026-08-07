@@ -5,6 +5,7 @@ import { RESEND_PROVIDER_TIMEOUT_MS } from '../gateways/resend-transactional-ema
 import {
   SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
   SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS,
+  SEND_RENEWAL_NOTICES_MAX_LIMIT,
   SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO,
   type SendDueRenewalNoticesJobDeps,
   sendDueRenewalNotices,
@@ -82,7 +83,7 @@ describe('sendDueRenewalNotices job', () => {
       renewalAtOrAfter: new Date('2026-08-22T12:00:00.000Z'),
       renewalAtOrBefore: new Date('2026-09-21T12:00:00.000Z'),
       disclosureVersion: '2026-08-05',
-      limit: 50,
+      limit: 40,
     });
   });
 
@@ -134,7 +135,7 @@ describe('sendDueRenewalNotices job', () => {
     );
 
     expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 500 }),
+      expect.objectContaining({ limit: 40 }),
     );
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 80 }),
@@ -146,14 +147,14 @@ describe('sendDueRenewalNotices job', () => {
       label: 'NaN subscription limit',
       subscriptionLimit: Number.NaN,
       dispatchLimit: 100,
-      expectedSubscriptionLimit: 50,
+      expectedSubscriptionLimit: 40,
       expectedDispatchLimit: 80,
     },
     {
       label: 'fractional dispatch limit',
       subscriptionLimit: 50,
       dispatchLimit: 1.5,
-      expectedSubscriptionLimit: 50,
+      expectedSubscriptionLimit: 40,
       expectedDispatchLimit: 80,
     },
     {
@@ -193,5 +194,8 @@ describe('sendDueRenewalNotices job', () => {
       SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO;
 
     expect(providerWaitMs).toBeLessThanOrEqual(runtimeBudgetMs);
+    expect(SEND_RENEWAL_NOTICES_MAX_LIMIT * 2).toBeLessThanOrEqual(
+      SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
+    );
   });
 });

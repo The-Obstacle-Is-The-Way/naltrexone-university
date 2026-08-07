@@ -54,6 +54,7 @@ function createHarness(input?: {
     repository,
     gateway,
     hasher,
+    new FakeLogger(),
     () => now,
     () => `attempt-${++attemptSequence}`,
   );
@@ -292,6 +293,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       repository,
       gateway,
       hasher,
+      new FakeLogger(),
       () => now,
       () => `attempt-${++attemptSequence}`,
     );
@@ -402,6 +404,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       repository,
       gateway,
       hasher,
+      new FakeLogger(),
       () => now,
       () => 'attempt-healthy',
     );
@@ -446,6 +449,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
           noticeKind: 'renewal_notice',
           stripeSubscriptionId: 'sub_conflict',
           errorCode: 'CONFLICT',
+          errorName: 'ApplicationError',
         },
         msg: 'Renewal notice queueing failed',
       },
