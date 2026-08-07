@@ -277,6 +277,7 @@ async function processTrialPaymentMethodSetupWebhook(
     await deps.paymentGateway.detachTrialPaymentMethod({
       sessionId: completion.sessionId,
       externalPaymentMethodId: completion.stripePaymentMethodId,
+      externalCustomerId: completion.externalCustomerId,
     });
     await deps.transaction(
       async ({ stripeEvents, trialPaymentMethodSetupOperations }) => {

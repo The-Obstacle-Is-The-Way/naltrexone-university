@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { executeCreateTrialPaymentMethodAction } from '@/app/(app)/app/trial-payment-method-action-handler';
+import * as trialPaymentMethodActions from '@/app/(app)/app/trial-payment-method-actions';
 import { createTrialPaymentMethodAction } from '@/app/(app)/app/trial-payment-method-actions';
 import { ROUTES } from '@/lib/routes';
 import { err, ok } from '@/src/adapters/controllers/action-result';
@@ -13,6 +14,9 @@ function createRedirectFn() {
 describe('trial-payment-method-actions', () => {
   it('exports a one-argument server action boundary', () => {
     expect(createTrialPaymentMethodAction).toHaveLength(1);
+    expect(Object.keys(trialPaymentMethodActions)).toEqual([
+      'createTrialPaymentMethodAction',
+    ]);
   });
 
   it('redirects to the setup session and passes the form idempotency key', async () => {

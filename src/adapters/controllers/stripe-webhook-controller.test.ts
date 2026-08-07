@@ -869,6 +869,7 @@ describe('processStripeWebhook', () => {
       {
         sessionId: 'cs_setup_wrong_owner',
         externalPaymentMethodId: 'pm_123',
+        externalCustomerId: 'cus_signed',
       },
     ]);
     await expect(

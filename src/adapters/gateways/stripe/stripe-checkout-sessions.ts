@@ -21,7 +21,7 @@ import { callStripeWithRetry } from './stripe-retry';
 
 export const SUBSCRIPTION_LIST_LIMIT = 10;
 export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
-export const CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT = 20;
+export const CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT = 3;
 
 const BLOCKING_SUBSCRIPTION_STATUSES = new Set<StripeSubscriptionStatus>([
   'active',

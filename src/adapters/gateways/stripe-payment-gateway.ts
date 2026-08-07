@@ -144,7 +144,11 @@ export class StripePaymentGateway implements PaymentGateway {
       fn: () => paymentMethods.retrieve(input.externalPaymentMethodId),
       logger: this.deps.logger,
     });
-    if (!current.customer) return;
+    const currentCustomerId =
+      typeof current.customer === 'string'
+        ? current.customer
+        : current.customer?.id;
+    if (currentCustomerId !== input.externalCustomerId) return;
 
     await callStripeWithRetry({
       operation: 'payment_methods.detach_trial_setup',

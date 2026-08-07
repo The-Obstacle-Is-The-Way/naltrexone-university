@@ -72,6 +72,7 @@ export type AttachTrialPaymentMethodInput = {
 export type DetachTrialPaymentMethodInput = {
   sessionId: string;
   externalPaymentMethodId: string;
+  externalCustomerId: string;
 };
 
 export type SetTrialSubscriptionDefaultPaymentMethodInput = {

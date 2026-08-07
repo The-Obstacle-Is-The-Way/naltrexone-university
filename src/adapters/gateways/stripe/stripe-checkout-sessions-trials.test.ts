@@ -597,6 +597,6 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
       message: 'Stripe Checkout Session is expired or inactive',
     });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(21);
+    expect(sessionsCreate).toHaveBeenCalledTimes(4);
   });
 });

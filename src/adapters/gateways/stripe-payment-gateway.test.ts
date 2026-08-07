@@ -289,11 +289,37 @@ describe('StripePaymentGateway', () => {
     await createGateway(stripe).detachTrialPaymentMethod({
       sessionId: 'cs_setup_123',
       externalPaymentMethodId: 'pm_123',
+      externalCustomerId: 'cus_unverified',
     });
 
     expect(detach).toHaveBeenCalledWith('pm_123', undefined, {
       idempotencyKey: 'trial_setup:cs_setup_123:detach_payment_method',
     });
+  });
+
+  it('does not detach a setup payment method owned by a different customer', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const retrieve = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_other',
+    }));
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_other',
+    }));
+    const detach = vi.fn(async () => ({ id: 'pm_123', customer: null }));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: { retrieve, attach, detach },
+    };
+
+    await createGateway(stripe).detachTrialPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalCustomerId: 'cus_expected',
+    });
+
+    expect(detach).not.toHaveBeenCalled();
   });
 
   it('rejects an attachment response that is not bound to the verified customer', async () => {
