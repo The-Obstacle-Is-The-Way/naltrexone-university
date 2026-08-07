@@ -58,6 +58,7 @@ describe('sendDueRenewalNotices job', () => {
     expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith({
       renewalAtOrAfter: new Date('2026-08-22T12:00:00.000Z'),
       renewalAtOrBefore: new Date('2026-09-21T12:00:00.000Z'),
+      disclosureVersion: '2026-08-05',
       limit: 100,
     });
   });
