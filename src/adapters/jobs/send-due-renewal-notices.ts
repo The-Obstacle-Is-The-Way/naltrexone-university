@@ -1,3 +1,6 @@
+import { and, asc, eq, gte, lte } from 'drizzle-orm';
+import { stripeSubscriptions, users } from '@/db/schema';
+import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import type {
   ScheduledRenewalNotice,
   SendDueRenewalNoticesResult,
@@ -15,6 +18,35 @@ export type AnnualSubscriptionDueForNotice = {
   renewalAt: Date;
   destination: string;
 };
+
+export async function listAnnualSubscriptionsDue(
+  input: {
+    renewalAtOrAfter: Date;
+    renewalAtOrBefore: Date;
+    limit: number;
+  },
+  deps: { db: DrizzleDb; annualPriceId: string },
+): Promise<AnnualSubscriptionDueForNotice[]> {
+  return deps.db
+    .select({
+      externalSubscriptionId: stripeSubscriptions.stripeSubscriptionId,
+      renewalAt: stripeSubscriptions.currentPeriodEnd,
+      destination: users.email,
+    })
+    .from(stripeSubscriptions)
+    .innerJoin(users, eq(users.id, stripeSubscriptions.userId))
+    .where(
+      and(
+        eq(stripeSubscriptions.status, 'active'),
+        eq(stripeSubscriptions.priceId, deps.annualPriceId),
+        eq(stripeSubscriptions.cancelAtPeriodEnd, false),
+        gte(stripeSubscriptions.currentPeriodEnd, input.renewalAtOrAfter),
+        lte(stripeSubscriptions.currentPeriodEnd, input.renewalAtOrBefore),
+      ),
+    )
+    .orderBy(asc(stripeSubscriptions.currentPeriodEnd))
+    .limit(input.limit);
+}
 
 export type SendDueRenewalNoticesJobDeps = {
   now: () => Date;

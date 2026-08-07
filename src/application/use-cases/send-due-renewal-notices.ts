@@ -17,6 +17,7 @@ const BUSINESS_CONTACT =
   'John H. Jung, MD, MS, sole proprietor — support@addictionboards.com';
 const PROCESSING_CLAIM_STALE_AFTER_MS = 15 * 60 * 1000;
 const MAX_BATCH_LIMIT = 500;
+const DISPATCH_CONCURRENCY = 4;
 
 export type ScheduledRenewalNotice = {
   noticeKind: Exclude<RenewalNoticeKind, 'acknowledgment'>;
@@ -192,9 +193,23 @@ export class SendDueRenewalNoticesUseCase {
     }
 
     const due = await this.repository.findDue({ now: observedAt, limit });
-    await Promise.all(
-      due.map((delivery) => this.dispatch.execute({ deliveryId: delivery.id })),
+    let nextIndex = 0;
+    const workers = Array.from(
+      { length: Math.min(DISPATCH_CONCURRENCY, due.length) },
+      async () => {
+        for (;;) {
+          const delivery = due[nextIndex];
+          nextIndex += 1;
+          if (!delivery) return;
+          try {
+            await this.dispatch.execute({ deliveryId: delivery.id });
+          } catch {
+            // Isolate a poisoned row so every selected delivery is awaited.
+          }
+        }
+      },
     );
+    await Promise.all(workers);
 
     return { queued, selected: due.length, staleUnknown };
   }

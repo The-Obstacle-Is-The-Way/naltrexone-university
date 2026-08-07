@@ -221,4 +221,80 @@ describe('SendDueRenewalNoticesUseCase', () => {
     expect(repository.records).toHaveLength(1);
     expect(repository.records[0]?.status).toBe('delivered');
   });
+
+  it('bounds provider dispatch concurrency', async () => {
+    const release = createDeferred<void>();
+    let active = 0;
+    let maxActive = 0;
+    const { useCase } = createHarness({
+      onSend: async () => {
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await release.promise;
+        active -= 1;
+      },
+    });
+    const notices = Array.from({ length: 12 }, (_, index) =>
+      scheduledNotice({
+        externalSubscriptionId: `sub_annual_${index}`,
+      }),
+    );
+
+    const execution = useCase.execute({ notices, limit: 100 });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(maxActive).toBeGreaterThan(0);
+    expect(maxActive).toBeLessThanOrEqual(4);
+    release.resolve(undefined);
+    await execution;
+  });
+
+  it('awaits the full batch without rejecting when one selected row is poisoned', async () => {
+    const hasher = new FakeSha256Hasher();
+    const repository = new FakeRenewalNoticeDeliveryRepository(
+      () => now,
+      hasher,
+    );
+    const gateway = new FakeTransactionalEmailGateway({ configured: true });
+    let attemptSequence = 0;
+    const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
+      repository,
+      gateway,
+      hasher,
+      () => now,
+      () => `attempt-${++attemptSequence}`,
+    );
+    let deliverySequence = 0;
+    const useCase = new SendDueRenewalNoticesUseCase(
+      repository,
+      hasher,
+      {
+        execute: async ({ deliveryId }) => {
+          if (deliveryId.endsWith('000000000001')) {
+            throw new Error('poisoned delivery');
+          }
+          return dispatch.execute({ deliveryId });
+        },
+      },
+      'https://addictionboards.com',
+      () => now,
+      () =>
+        `11111111-1111-4111-8111-${String(++deliverySequence).padStart(12, '0')}`,
+    );
+
+    await expect(
+      useCase.execute({
+        notices: [
+          scheduledNotice({ externalSubscriptionId: 'sub_poisoned' }),
+          scheduledNotice({ externalSubscriptionId: 'sub_healthy' }),
+        ],
+        limit: 100,
+      }),
+    ).resolves.toEqual({ queued: 2, selected: 2, staleUnknown: 0 });
+    expect(gateway.sendInputs).toHaveLength(1);
+    expect(repository.records).toEqual([
+      expect.objectContaining({ status: 'queued' }),
+      expect.objectContaining({ status: 'delivered' }),
+    ]);
+  });
 });

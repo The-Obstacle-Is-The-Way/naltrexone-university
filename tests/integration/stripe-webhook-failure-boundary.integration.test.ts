@@ -68,6 +68,7 @@ describe('Stripe webhook failure boundary', () => {
       monthly: 'price_test_monthly',
       annual: 'price_test_annual',
     } as const;
+    const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
     let surfacedError: unknown;
     try {
@@ -77,7 +78,7 @@ describe('Stripe webhook failure boundary', () => {
           subscriptionVersions: new DrizzleSubscriptionRepository(db, priceIds),
           logger: new FakeLogger(),
           now: () => new Date(),
-          ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
+          ...acknowledgment.webhook,
           transaction: async (fn) =>
             db.transaction(async (tx) =>
               fn({
@@ -88,8 +89,7 @@ describe('Stripe webhook failure boundary', () => {
                   new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
                 renewalConsentRecords:
                   new DrizzleRenewalConsentRecordRepository(tx),
-                ...createStripeWebhookRenewalAcknowledgmentTestDeps()
-                  .transaction,
+                ...acknowledgment.transaction,
               }),
             ),
         },
