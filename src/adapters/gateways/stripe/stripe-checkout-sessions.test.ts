@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
+  createTestCheckoutRenewalMetadata,
+  createTestRenewalTerms,
+} from '@/src/application/test-helpers/renewal-terms';
+import {
   createStripeCheckoutSession,
   SUBSCRIPTION_LIST_LIMIT,
 } from './stripe-checkout-sessions';
@@ -12,6 +16,7 @@ function createStripeMock(overrides?: {
   retrievedSessionPriceId?: string | null;
   retrievedSessionStatus?: 'open' | 'complete' | 'expired';
   retrievedSessionExpiresAtUnix?: number;
+  retrievedSessionMetadata?: Record<string, string>;
   retrievedSessionResponses?: Array<{
     id?: string;
     url?: string | null;
@@ -53,6 +58,7 @@ function createStripeMock(overrides?: {
       status: response?.status ?? overrides?.retrievedSessionStatus,
       expires_at:
         response?.expiresAtUnix ?? overrides?.retrievedSessionExpiresAtUnix,
+      metadata: overrides?.retrievedSessionMetadata,
       line_items:
         overrides?.retrievedSessionPriceId === null
           ? { data: [] }
@@ -141,7 +147,7 @@ describe('createStripeCheckoutSession', () => {
   const input = {
     userId: appUserId,
     externalCustomerId: 'cus_123',
-    plan: 'monthly' as const,
+    ...createTestRenewalTerms('monthly'),
     successUrl: 'https://app/success',
     cancelUrl: 'https://app/cancel',
   };
@@ -170,7 +176,9 @@ describe('createStripeCheckoutSession', () => {
     ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
 
     expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.any(Object),
+      expect.objectContaining({
+        consent_collection: { terms_of_service: 'required' },
+      }),
       expect.objectContaining({
         idempotencyKey: `checkout_session:${appUserId}:monthly`,
       }),
@@ -322,6 +330,9 @@ describe('createStripeCheckoutSession', () => {
       retrievedSessionPriceId: 'price_m',
       retrievedSessionStatus: 'open',
       retrievedSessionExpiresAtUnix: fixedNowUnix + 1,
+      retrievedSessionMetadata: createTestCheckoutRenewalMetadata({
+        userId: appUserId,
+      }),
     });
 
     await expect(

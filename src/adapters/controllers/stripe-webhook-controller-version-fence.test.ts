@@ -11,9 +11,11 @@ import { SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS } from '@/src/application/shared/
 import {
   FakeLogger,
   FakePaymentGateway,
+  FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeStripeEventRepository,
   FakeSubscriptionRepository,
+  FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
 
 class AlwaysConflictingSubscriptionRepository extends FakeSubscriptionRepository {
@@ -56,13 +58,22 @@ describe('processStripeWebhook observation-version fence', () => {
     const stripeEvents = new FakeStripeEventRepository();
     const subscriptions = new AlwaysConflictingSubscriptionRepository();
     const stripeCustomers = new FakeStripeCustomerRepository();
+    const trialPaymentMethodSetupOperations =
+      new FakeTrialPaymentMethodSetupOperationRepository();
+    const renewalConsentRecords = new FakeRenewalConsentRecordRepository();
     const deps = {
       paymentGateway,
       subscriptionVersions: subscriptions,
       logger: new FakeLogger(),
       now: () => new Date('2026-01-01T00:00:00.000Z'),
       transaction: async (fn) =>
-        fn({ stripeEvents, subscriptions, stripeCustomers }),
+        fn({
+          stripeEvents,
+          subscriptions,
+          stripeCustomers,
+          trialPaymentMethodSetupOperations,
+          renewalConsentRecords,
+        }),
     } as StripeWebhookDeps;
 
     await expect(

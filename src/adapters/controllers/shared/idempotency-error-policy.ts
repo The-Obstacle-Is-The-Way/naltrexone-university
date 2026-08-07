@@ -9,6 +9,7 @@ import {
 export const IdempotentActionNames = {
   Checkout: 'billing:createCheckoutSession',
   Portal: 'billing:createPortalSession',
+  TrialPaymentMethodSetup: 'billing:createTrialPaymentMethodSetupSession',
   Bookmark: 'bookmark:setBookmark',
   QuestionRating: 'question-feedback:rateQuestion',
   QuestionReport: 'question-feedback:submitQuestionReport',
@@ -50,6 +51,7 @@ const determinateCodesByAction: Record<
   // a later checkout can create. Nothing user-mutable is cacheable here.
   [IdempotentActionNames.Checkout]: new Set([]),
   [IdempotentActionNames.Portal]: new Set([]),
+  [IdempotentActionNames.TrialPaymentMethodSetup]: new Set([]),
   [IdempotentActionNames.Bookmark]: new Set(['NOT_FOUND']),
   [IdempotentActionNames.QuestionRating]: new Set([
     'VALIDATION_ERROR',
@@ -186,6 +188,10 @@ export const shouldCacheCheckoutSessionError = (error: unknown): boolean =>
 
 export const shouldCachePortalSessionError = (error: unknown): boolean =>
   shouldCache(IdempotentActionNames.Portal, error);
+
+export const shouldCacheTrialPaymentMethodSetupSessionError = (
+  error: unknown,
+): boolean => shouldCache(IdempotentActionNames.TrialPaymentMethodSetup, error);
 
 export const shouldCacheBookmarkError = (error: unknown): boolean =>
   shouldCache(IdempotentActionNames.Bookmark, error);

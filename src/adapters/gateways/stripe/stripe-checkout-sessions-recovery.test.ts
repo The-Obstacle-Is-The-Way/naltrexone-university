@@ -6,6 +6,7 @@ import type {
   StripeRequestOptions,
 } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import {
   CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT,
   createStripeCheckoutSession,
@@ -76,7 +77,7 @@ describe('createStripeCheckoutSession recovery', () => {
   const input = {
     userId: appUserId,
     externalCustomerId: 'cus_123',
-    plan: 'monthly' as const,
+    ...createTestRenewalTerms('monthly'),
     successUrl: 'https://app/success',
     cancelUrl: 'https://app/cancel',
   };
@@ -119,6 +120,24 @@ describe('createStripeCheckoutSession recovery', () => {
     const createOptions = sessionsCreate.mock.calls.map(([, options]) => ({
       idempotencyKey: options?.idempotencyKey,
     }));
+    expect(
+      sessionsCreate.mock.calls.map(([params]) => params.consent_collection),
+    ).toEqual([
+      { terms_of_service: 'required' },
+      { terms_of_service: 'required' },
+    ]);
+    expect(
+      sessionsCreate.mock.calls.map(([params]) => params.metadata),
+    ).toEqual([
+      expect.objectContaining({
+        renewal_disclosure_version: '2026-08-05',
+        renewal_terms_hash: 'test-terms-hash',
+      }),
+      expect.objectContaining({
+        renewal_disclosure_version: '2026-08-05',
+        renewal_terms_hash: 'test-terms-hash',
+      }),
+    ]);
     expect(createOptions[0]).toEqual({
       idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7`,
     });

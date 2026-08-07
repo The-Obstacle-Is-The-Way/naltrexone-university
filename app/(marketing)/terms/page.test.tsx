@@ -75,7 +75,10 @@ describe('TermsPage', () => {
 
   it('delegates the route default export to the terms renderer', async () => {
     // Element-tree equality (not just "resolves defined") so the route cannot
-    // silently swap in a different renderer or content module.
+    // silently swap in a different renderer. It does NOT cover a content-module
+    // swap — both operands call the same renderer, which is where the content
+    // module is imported; the verbatim-mirror and mandatory-clause tests above
+    // are what pin the content.
     expect(await TermsPage()).toEqual(await renderTermsPage());
   });
 });

@@ -249,14 +249,14 @@ describe('app/(app)/app/layout (shell)', () => {
       plan: 'annual' as const,
       trialEndsAt: new Date('2026-02-08T00:00:00Z'),
     }));
-    const manageBillingActionFn = vi.fn(async () => undefined);
+    const createTrialPaymentMethodActionFn = vi.fn(async () => undefined);
 
     const element = await renderAppLayout({
       children: <div>Child content</div>,
       enforceEntitledAppUserFn,
       authNavFn: vi.fn(async () => <div>AuthNav</div>),
       mobileNav: <div>MobileNav</div>,
-      manageBillingActionFn,
+      createTrialPaymentMethodActionFn,
       nowFn: () => new Date('2026-02-04T12:00:00Z'),
     });
 
@@ -274,15 +274,29 @@ describe('app/(app)/app/layout (shell)', () => {
     const actionButton = banner
       ? findButtonByText(banner, 'Add a card to keep access')
       : null;
+    const termsLink = banner ? findAnchorByHref(banner, ROUTES.TERMS) : null;
+    const privacyLink = banner
+      ? findAnchorByHref(banner, ROUTES.PRIVACY)
+      : null;
 
     expect(
       banner ? findElementByText(banner, 'span', '4 days left in trial') : null,
     ).not.toBeNull();
     expect(disclosure).not.toBeNull();
     expect(actionButton).not.toBeNull();
+    expect(termsLink).not.toBeNull();
+    expect(privacyLink).not.toBeNull();
     expect(
       disclosure && actionButton
         ? isNodeBefore(disclosure, actionButton)
+        : false,
+    ).toBe(true);
+    expect(
+      termsLink && actionButton ? isNodeBefore(termsLink, actionButton) : false,
+    ).toBe(true);
+    expect(
+      privacyLink && actionButton
+        ? isNodeBefore(privacyLink, actionButton)
         : false,
     ).toBe(true);
     expect(banner?.textContent).toContain('days left in trial');
@@ -304,7 +318,7 @@ describe('app/(app)/app/layout (shell)', () => {
       })),
       authNavFn: vi.fn(async () => <div>AuthNav</div>),
       mobileNav: <div>MobileNav</div>,
-      manageBillingActionFn: vi.fn(async () => undefined),
+      createTrialPaymentMethodActionFn: vi.fn(async () => undefined),
       nowFn: () => new Date('2026-02-07T21:00:00Z'),
     });
 

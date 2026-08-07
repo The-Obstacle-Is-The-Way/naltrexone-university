@@ -77,6 +77,12 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
     return this.byUserId.get(userId) ?? null;
   }
 
+  async findExternalSubscriptionIdByUserId(
+    userId: string,
+  ): Promise<string | null> {
+    return this.externalSubscriptionIdByUserId.get(userId) ?? null;
+  }
+
   async findObservationVersionByUserId(userId: string): Promise<number | null> {
     return this.observationVersionByUserId.get(userId) ?? null;
   }

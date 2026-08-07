@@ -7,8 +7,10 @@ export { DrizzlePendingStripeCustomerCleanupRepository } from './drizzle-pending
 export { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 export { DrizzleQuestionFeedbackRepository } from './drizzle-question-feedback-repository';
 export { DrizzleQuestionRepository } from './drizzle-question-repository';
+export { DrizzleRenewalConsentRecordRepository } from './drizzle-renewal-consent-record-repository';
 export { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repository';
 export { DrizzleStripeEventRepository } from './drizzle-stripe-event-repository';
 export { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
 export { DrizzleTagRepository } from './drizzle-tag-repository';
+export { DrizzleTrialPaymentMethodSetupOperationRepository } from './drizzle-trial-payment-method-setup-operation-repository';
 export { DrizzleUserRepository } from './drizzle-user-repository';

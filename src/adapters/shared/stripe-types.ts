@@ -16,27 +16,38 @@ export type CustomerSearchParams = {
 
 export type StripeCustomerSearchResult = { data: StripeCustomer[] };
 
-export type CheckoutSessionCreateParams = {
-  mode: 'subscription' | 'payment' | 'setup';
-  customer: string;
-  line_items: Array<{ price: string; quantity: number }>;
-  allow_promotion_codes?: boolean;
-  billing_address_collection?: 'auto' | 'required';
+type CheckoutSessionCreateParamsBase = {
   success_url: string;
   cancel_url: string;
   client_reference_id?: string;
   metadata?: Record<string, string>;
-  payment_method_collection?: 'always' | 'if_required';
-  subscription_data?: {
-    metadata?: Record<string, string>;
-    trial_period_days?: number;
-    trial_settings?: {
-      end_behavior: {
-        missing_payment_method: 'cancel' | 'pause' | 'create_invoice';
-      };
-    };
+  consent_collection?: {
+    terms_of_service: 'required';
   };
 };
+
+export type CheckoutSessionCreateParams =
+  | (CheckoutSessionCreateParamsBase & {
+      mode: 'subscription' | 'payment';
+      customer: string;
+      line_items: Array<{ price: string; quantity: number }>;
+      allow_promotion_codes?: boolean;
+      billing_address_collection?: 'auto' | 'required';
+      payment_method_collection?: 'always' | 'if_required';
+      subscription_data?: {
+        metadata?: Record<string, string>;
+        trial_period_days?: number;
+        trial_settings?: {
+          end_behavior: {
+            missing_payment_method: 'cancel' | 'pause' | 'create_invoice';
+          };
+        };
+      };
+    })
+  | (CheckoutSessionCreateParamsBase & {
+      mode: 'setup';
+      currency: string;
+    });
 
 export type StripeCheckoutSessionStatus = 'open' | 'complete' | 'expired';
 
@@ -48,6 +59,19 @@ export type StripeCheckoutSession = {
   expires_at?: number | undefined;
   metadata?: Record<string, string> | null;
   payment_method_collection?: 'always' | 'if_required' | null;
+  mode?: 'subscription' | 'payment' | 'setup';
+  setup_intent?: string | { id: string } | null;
+  consent?: { terms_of_service?: 'accepted' | 'required' | null } | null;
+};
+
+export type StripeSetupIntent = {
+  id: string;
+  payment_method?: string | { id: string } | null;
+};
+
+export type StripePaymentMethod = {
+  id: string;
+  customer?: string | { id: string } | null;
 };
 
 export type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
@@ -141,6 +165,22 @@ export type StripeClient = {
       params?: undefined,
       options?: StripeRequestOptions,
     ): Promise<StripeSubscription>;
+    update?(
+      subscriptionId: string,
+      params: { default_payment_method: string },
+      options?: StripeRequestOptions,
+    ): Promise<StripeSubscription>;
+  };
+  setupIntents?: {
+    retrieve(setupIntentId: string): Promise<StripeSetupIntent>;
+  };
+  paymentMethods?: {
+    retrieve(paymentMethodId: string): Promise<StripePaymentMethod>;
+    attach(
+      paymentMethodId: string,
+      params: { customer: string },
+      options?: StripeRequestOptions,
+    ): Promise<StripePaymentMethod>;
   };
   billingPortal: {
     sessions: {
@@ -158,6 +198,7 @@ export type StripeClient = {
     ) => {
       id: string;
       type: string;
+      created?: number;
       data: { object: unknown };
     };
   };

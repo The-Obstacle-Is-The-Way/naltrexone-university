@@ -3,9 +3,11 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
+import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import {
   FakeLogger,
@@ -152,6 +154,11 @@ async function runWebhook(input: {
             stripeEvents: new DrizzleStripeEventRepository(tx),
             subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
             stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+            trialPaymentMethodSetupOperations:
+              new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+              tx,
+            ),
           }),
         ),
     },

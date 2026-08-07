@@ -65,6 +65,42 @@ export const stripeSubscriptionStatusEnum = pgEnum(
   ],
 );
 
+export const trialPaymentMethodSetupOperationStatusEnum = pgEnum(
+  'trial_payment_method_setup_operation_status',
+  ['pending', 'processing', 'completed'],
+);
+
+export const renewalConsentKindEnum = pgEnum('renewal_consent_kind', [
+  'initial_offer',
+  'price_increase',
+]);
+
+export const renewalConsentSourceEnum = pgEnum('renewal_consent_source', [
+  'stripe_checkout',
+  'stripe_setup',
+  'application',
+]);
+
+export const renewalNoticeKindEnum = pgEnum('renewal_notice_kind', [
+  'acknowledgment',
+  'annual_reminder',
+  'renewal_notice',
+  'material_change',
+  'fee_change',
+]);
+
+export const renewalNoticeDeliveryStatusEnum = pgEnum(
+  'renewal_notice_delivery_status',
+  [
+    'queued',
+    'processing',
+    'delivered',
+    'transient_failure',
+    'terminal_failure',
+    'outcome_unknown',
+  ],
+);
+
 export const attemptRetryOriginEnum = pgEnum('attempt_retry_origin', [
   'history',
   'dashboard',
@@ -104,6 +140,16 @@ export type TagKind = (typeof tagKindEnum.enumValues)[number];
 export type PracticeMode = (typeof practiceModeEnum.enumValues)[number];
 export type StripeSubscriptionStatus =
   (typeof stripeSubscriptionStatusEnum.enumValues)[number];
+export type TrialPaymentMethodSetupOperationStatus =
+  (typeof trialPaymentMethodSetupOperationStatusEnum.enumValues)[number];
+export type RenewalConsentKind =
+  (typeof renewalConsentKindEnum.enumValues)[number];
+export type RenewalConsentSource =
+  (typeof renewalConsentSourceEnum.enumValues)[number];
+export type RenewalNoticeKind =
+  (typeof renewalNoticeKindEnum.enumValues)[number];
+export type RenewalNoticeDeliveryStatus =
+  (typeof renewalNoticeDeliveryStatusEnum.enumValues)[number];
 export type AttemptRetryOrigin =
   (typeof attemptRetryOriginEnum.enumValues)[number];
 export type QuestionFeedbackKind =
@@ -202,6 +248,251 @@ export const stripeSubscriptions = pgTable(
     userStatusIdx: index('stripe_subscriptions_user_status_idx').on(
       t.userId,
       t.status,
+    ),
+  }),
+);
+
+// trial_payment_method_setup_operations
+export const trialPaymentMethodSetupOperations = pgTable(
+  'trial_payment_method_setup_operations',
+  {
+    sessionId: varchar('session_id', { length: 255 }).primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    stripeCustomerId: varchar('stripe_customer_id', {
+      length: 255,
+    }).notNull(),
+    stripeSubscriptionId: varchar('stripe_subscription_id', {
+      length: 255,
+    }).notNull(),
+    plan: varchar('plan', { length: 16 }).notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
+    frequency: varchar('frequency', { length: 16 }).notNull(),
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }).notNull(),
+    disclosureSnapshot: text('disclosure_snapshot').notNull(),
+    disclosureVersion: varchar('disclosure_version', {
+      length: 64,
+    }).notNull(),
+    termsVersion: varchar('terms_version', { length: 64 }).notNull(),
+    termsHash: varchar('terms_hash', { length: 128 }).notNull(),
+    cancellationMethod: text('cancellation_method').notNull(),
+    status: trialPaymentMethodSetupOperationStatusEnum('status')
+      .notNull()
+      .default('pending'),
+    claimId: varchar('claim_id', { length: 255 }),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    stripePaymentMethodId: varchar('stripe_payment_method_id', {
+      length: 255,
+    }),
+    paymentMethodAttachedAt: timestamp('payment_method_attached_at', {
+      withTimezone: true,
+    }),
+    subscriptionDefaultSetAt: timestamp('subscription_default_set_at', {
+      withTimezone: true,
+    }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    userIdIdx: index('trial_payment_method_setup_operations_user_id_idx').on(
+      t.userId,
+    ),
+    statusClaimedAtIdx: index(
+      'trial_payment_method_setup_operations_status_claimed_at_idx',
+    ).on(t.status, t.claimedAt),
+  }),
+);
+
+export const RENEWAL_CONSENT_CHECKOUT_SESSION_UQ =
+  'renewal_consent_records_checkout_session_uq';
+export const RENEWAL_CONSENT_SETUP_SESSION_UQ =
+  'renewal_consent_records_setup_session_uq';
+
+export const renewalConsentRecords = pgTable(
+  'renewal_consent_records',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    consumerReference: varchar('consumer_reference', { length: 64 }).notNull(),
+    stripeCustomerId: varchar('stripe_customer_id', { length: 255 }).notNull(),
+    stripeSubscriptionId: varchar('stripe_subscription_id', {
+      length: 255,
+    }).notNull(),
+    checkoutSessionId: varchar('checkout_session_id', { length: 255 }),
+    setupSessionId: varchar('setup_session_id', { length: 255 }),
+    applicationSourceId: varchar('application_source_id', { length: 255 }),
+    plan: varchar('plan', { length: 16 }).notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    currency: varchar('currency', { length: 3 }).notNull(),
+    frequency: varchar('frequency', { length: 16 }).notNull(),
+    trialEndsAt: timestamp('trial_ends_at', { withTimezone: true }),
+    cancellationDeadline: timestamp('cancellation_deadline', {
+      withTimezone: true,
+    }).notNull(),
+    cancellationMethod: text('cancellation_method').notNull(),
+    disclosureSnapshot: text('disclosure_snapshot').notNull(),
+    disclosureVersion: varchar('disclosure_version', {
+      length: 64,
+    }).notNull(),
+    termsVersion: varchar('terms_version', { length: 64 }).notNull(),
+    termsHash: varchar('terms_hash', { length: 128 }).notNull(),
+    consentSource: renewalConsentSourceEnum('consent_source').notNull(),
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull(),
+    consentKind: renewalConsentKindEnum('consent_kind').notNull(),
+    priorAmountCents: integer('prior_amount_cents'),
+    proposedAmountCents: integer('proposed_amount_cents'),
+    effectiveRenewalAt: timestamp('effective_renewal_at', {
+      withTimezone: true,
+    }),
+    subscriptionTerminatedAt: timestamp('subscription_terminated_at', {
+      withTimezone: true,
+    }),
+    retainUntil: timestamp('retain_until', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    checkoutSessionUq: uniqueIndex(RENEWAL_CONSENT_CHECKOUT_SESSION_UQ)
+      .on(t.checkoutSessionId)
+      .where(sql`${t.checkoutSessionId} IS NOT NULL`),
+    setupSessionUq: uniqueIndex(RENEWAL_CONSENT_SETUP_SESSION_UQ)
+      .on(t.setupSessionId)
+      .where(sql`${t.setupSessionId} IS NOT NULL`),
+    applicationSourceUq: uniqueIndex(
+      'renewal_consent_records_application_source_uq',
+    )
+      .on(t.applicationSourceId)
+      .where(sql`${t.applicationSourceId} IS NOT NULL`),
+    consumerReferenceIdx: index(
+      'renewal_consent_records_consumer_reference_idx',
+    ).on(t.consumerReference),
+    subscriptionAcceptedAtIdx: index(
+      'renewal_consent_records_subscription_accepted_at_idx',
+    ).on(t.stripeSubscriptionId, t.acceptedAt),
+    retentionIdx: index('renewal_consent_records_retention_idx').on(
+      t.subscriptionTerminatedAt,
+      t.retainUntil,
+    ),
+    sourceSessionChk: check(
+      'renewal_consent_records_source_session_chk',
+      sql`(${t.consentSource} = 'stripe_checkout' AND ${t.checkoutSessionId} IS NOT NULL AND ${t.setupSessionId} IS NULL AND ${t.applicationSourceId} IS NULL)
+          OR (${t.consentSource} = 'stripe_setup' AND ${t.setupSessionId} IS NOT NULL AND ${t.checkoutSessionId} IS NULL AND ${t.applicationSourceId} IS NULL)
+          OR (${t.consentSource} = 'application' AND ${t.checkoutSessionId} IS NULL AND ${t.setupSessionId} IS NULL AND ${t.applicationSourceId} IS NOT NULL)`,
+    ),
+    amountChk: check(
+      'renewal_consent_records_amount_chk',
+      sql`${t.amountCents} > 0
+          AND (${t.priorAmountCents} IS NULL OR ${t.priorAmountCents} > 0)
+          AND (${t.proposedAmountCents} IS NULL OR ${t.proposedAmountCents} > 0)`,
+    ),
+    kindTermsChk: check(
+      'renewal_consent_records_kind_terms_chk',
+      sql`(${t.consentKind} = 'initial_offer' AND ${t.priorAmountCents} IS NULL AND ${t.proposedAmountCents} IS NULL AND ${t.effectiveRenewalAt} IS NULL)
+          OR (${t.consentKind} = 'price_increase' AND ${t.priorAmountCents} IS NOT NULL AND ${t.proposedAmountCents} IS NOT NULL AND ${t.effectiveRenewalAt} IS NOT NULL)`,
+    ),
+  }),
+);
+
+export const RENEWAL_NOTICE_ACKNOWLEDGMENT_UQ =
+  'renewal_notice_deliveries_acknowledgment_uq';
+export const RENEWAL_NOTICE_SCHEDULED_UQ =
+  'renewal_notice_deliveries_scheduled_uq';
+
+export const renewalNoticeDeliveries = pgTable(
+  'renewal_notice_deliveries',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    noticeKind: renewalNoticeKindEnum('notice_kind').notNull(),
+    consentRecordId: uuid('consent_record_id').references(
+      () => renewalConsentRecords.id,
+      { onDelete: 'cascade' },
+    ),
+    stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }),
+    applicableAt: timestamp('applicable_at', { withTimezone: true }),
+    disclosureVersion: varchar('disclosure_version', {
+      length: 64,
+    }).notNull(),
+    destination: varchar('destination', { length: 320 }).notNull(),
+    providerIdempotencyKey: varchar('provider_idempotency_key', {
+      length: 255,
+    }).notNull(),
+    payloadSnapshot: text('payload_snapshot').notNull(),
+    payloadHash: varchar('payload_hash', { length: 64 }).notNull(),
+    status: renewalNoticeDeliveryStatusEnum('status')
+      .notNull()
+      .default('queued'),
+    providerEventId: varchar('provider_event_id', { length: 255 }),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    attemptId: varchar('attempt_id', { length: 255 }),
+    attemptStartedAt: timestamp('attempt_started_at', { withTimezone: true }),
+    lastAttemptAt: timestamp('last_attempt_at', { withTimezone: true }),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }),
+    failureClass: varchar('failure_class', { length: 64 }),
+    failureCode: varchar('failure_code', { length: 128 }),
+    requeueReason: text('requeue_reason'),
+    requeuedAt: timestamp('requeued_at', { withTimezone: true }),
+    requeuedBy: varchar('requeued_by', { length: 255 }),
+    requeueAudit: jsonb('requeue_audit')
+      .$type<
+        Array<{
+          reason: string;
+          requeuedAt: string;
+          requeuedBy: string;
+          confirmedNoSend: boolean;
+          priorStatus: 'terminal_failure' | 'outcome_unknown';
+        }>
+      >()
+      .notNull()
+      .default([]),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    providerIdempotencyKeyUq: uniqueIndex(
+      'renewal_notice_deliveries_provider_idempotency_key_uq',
+    ).on(t.providerIdempotencyKey),
+    acknowledgmentUq: uniqueIndex(RENEWAL_NOTICE_ACKNOWLEDGMENT_UQ)
+      .on(t.noticeKind, t.consentRecordId, t.destination)
+      .where(sql`${t.noticeKind} = 'acknowledgment'`),
+    scheduledUq: uniqueIndex(RENEWAL_NOTICE_SCHEDULED_UQ)
+      .on(
+        t.noticeKind,
+        t.stripeSubscriptionId,
+        t.applicableAt,
+        t.disclosureVersion,
+        t.destination,
+      )
+      .where(
+        sql`${t.noticeKind} IN ('annual_reminder', 'renewal_notice', 'material_change', 'fee_change')`,
+      ),
+    statusNextAttemptIdx: index(
+      'renewal_notice_deliveries_status_next_attempt_idx',
+    ).on(t.status, t.nextAttemptAt),
+    keyShapeChk: check(
+      'renewal_notice_deliveries_key_shape_chk',
+      sql`(${t.noticeKind} = 'acknowledgment' AND ${t.consentRecordId} IS NOT NULL AND ${t.stripeSubscriptionId} IS NULL AND ${t.applicableAt} IS NULL)
+          OR (${t.noticeKind} IN ('annual_reminder', 'renewal_notice', 'material_change', 'fee_change') AND ${t.consentRecordId} IS NULL AND ${t.stripeSubscriptionId} IS NOT NULL AND ${t.applicableAt} IS NOT NULL)`,
+    ),
+    attemptCountChk: check(
+      'renewal_notice_deliveries_attempt_count_chk',
+      sql`${t.attemptCount} >= 0`,
     ),
   }),
 );

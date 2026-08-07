@@ -97,6 +97,20 @@ const defaultCheckoutInput = {
   cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
 };
 
+const getRenewalTerms = (plan: 'monthly' | 'annual', hasTrial: boolean) => ({
+  plan,
+  amountCents: plan === 'monthly' ? 2900 : 19900,
+  currency: 'usd' as const,
+  frequency: plan === 'monthly' ? ('month' as const) : ('year' as const),
+  disclosureVersion: '2026-08-05',
+  termsVersion: '2026-08-05',
+  termsHash: 'terms-hash',
+  disclosureSnapshot: hasTrial
+    ? 'Exact trial renewal disclosure.'
+    : 'Exact immediate renewal disclosure.',
+  cancellationMethod: 'Billing page in the app or support@addictionboards.com',
+});
+
 function createPaymentGateway() {
   return new FakePaymentGateway({
     externalCustomerId: 'cus_new',
@@ -133,6 +147,7 @@ async function createUseCaseWithExistingCustomer(input: {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     ),
   };
 }
@@ -154,7 +169,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       {
         userId: 'user-1',
         externalCustomerId: 'cus_existing',
-        plan: 'monthly',
+        ...getRenewalTerms('monthly', false),
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
@@ -238,15 +253,18 @@ describe('CreateCheckoutSessionUseCase', () => {
     });
 
     expect(paymentGateway.checkoutInputs).toEqual([
-      {
+      expect.objectContaining({
         userId: 'user-1',
         externalCustomerId: 'cus_existing',
-        plan: 'monthly',
+        ...getRenewalTerms('monthly', true),
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
         trialPeriodDays: 7,
-      },
+        disclosureSnapshot: 'Exact trial renewal disclosure.',
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
+      }),
     ]);
   });
 
@@ -261,6 +279,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
@@ -271,7 +290,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       {
         userId: 'user-1',
         externalCustomerId: 'cus_existing',
-        plan: 'monthly',
+        ...getRenewalTerms('monthly', true),
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
@@ -298,6 +317,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     await expect(useCase.execute(defaultCheckoutInput)).resolves.toEqual({
@@ -350,6 +370,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     await expect(
@@ -384,6 +405,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     await expect(useCase.execute(defaultCheckoutInput)).rejects.toMatchObject({
@@ -411,6 +433,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     await expect(
@@ -430,7 +453,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       {
         userId: 'user-1',
         externalCustomerId: 'cus_existing',
-        plan: 'annual',
+        ...getRenewalTerms('annual', true),
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
@@ -455,6 +478,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     await expect(
@@ -487,7 +511,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       {
         userId: 'user-1',
         externalCustomerId: 'cus_new',
-        plan: 'monthly',
+        ...getRenewalTerms('monthly', true),
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
@@ -509,6 +533,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     const input = {
@@ -541,7 +566,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       {
         userId: 'user-1',
         externalCustomerId: 'cus_winner',
-        plan: 'monthly',
+        ...getRenewalTerms('monthly', true),
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
@@ -550,7 +575,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       {
         userId: 'user-1',
         externalCustomerId: 'cus_winner',
-        plan: 'monthly',
+        ...getRenewalTerms('monthly', true),
         successUrl:
           'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
@@ -573,6 +598,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       logger,
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     const input = {
@@ -614,6 +640,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     await expect(
@@ -650,6 +677,7 @@ describe('CreateCheckoutSessionUseCase', () => {
       paymentGateway,
       new FakeLogger(),
       () => new Date('2026-02-01T00:00:00Z'),
+      getRenewalTerms,
     );
 
     const promise = useCase.execute({

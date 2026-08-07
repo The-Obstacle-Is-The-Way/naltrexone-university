@@ -7,9 +7,11 @@ import {
   processStripeWebhook,
   type StripeWebhookDeps,
 } from '@/src/adapters/controllers/stripe-webhook-controller';
+import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import {
   FakeLogger,
   FakePaymentGateway,
@@ -99,6 +101,11 @@ describe('BUG-296 post-deletion Stripe subscription webhook', () => {
             stripeEvents: new DrizzleStripeEventRepository(tx),
             subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
             stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+            trialPaymentMethodSetupOperations:
+              new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+              tx,
+            ),
           }),
         ),
     };
@@ -168,6 +175,11 @@ describe('BUG-296 post-deletion Stripe subscription webhook', () => {
             // This real adapter hits stripe_customers_user_id_users_id_fk,
             // not the narrowly acknowledged subscription constraint.
             stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+            trialPaymentMethodSetupOperations:
+              new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+              tx,
+            ),
           }),
         ),
     };

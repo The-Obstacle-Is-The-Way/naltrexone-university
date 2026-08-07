@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type {
+  CheckoutSessionCreateParams,
   StripeBillingPortalSession,
   StripeCheckoutSession,
   StripeCheckoutSessionList,
@@ -7,10 +8,15 @@ import type {
   StripeClient,
   StripeCustomer,
   StripeCustomerSearchResult,
+  StripeRequestOptions,
   StripeSubscription,
   StripeSubscriptionListResult,
 } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import {
+  createTestCheckoutRenewalMetadata,
+  createTestRenewalTerms,
+} from '@/src/application/test-helpers/renewal-terms';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { SUBSCRIPTION_LIST_LIMIT } from './stripe/stripe-checkout-sessions';
 import { StripePaymentGateway } from './stripe-payment-gateway';
@@ -64,7 +70,10 @@ function createStripeMockBase() {
     async () => ({ data: [] }) as StripeCustomerSearchResult,
   );
   const sessionsCreate = vi.fn(
-    async () =>
+    async (
+      _params: CheckoutSessionCreateParams,
+      _options?: StripeRequestOptions,
+    ) =>
       ({
         id: 'cs_new',
         url: 'https://stripe/checkout',
@@ -169,6 +178,116 @@ function createStripeMock({
 }
 
 describe('StripePaymentGateway', () => {
+  it('attaches a trial payment method and selects it with Session-derived idempotency keys', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const retrieve = vi.fn(async () => ({ id: 'pm_123', customer: null }));
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_123',
+    }));
+    const update = vi.fn(async () => ({}));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: { retrieve, attach },
+      subscriptions: { ...base.stripe.subscriptions, update },
+    };
+    const gateway = createGateway(stripe);
+
+    await gateway.attachTrialPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalCustomerId: 'cus_123',
+    });
+    await gateway.setTrialSubscriptionDefaultPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalSubscriptionId: 'sub_123',
+    });
+
+    expect(attach).toHaveBeenCalledWith(
+      'pm_123',
+      { customer: 'cus_123' },
+      { idempotencyKey: 'trial_setup:cs_setup_123:attach_payment_method' },
+    );
+    expect(retrieve).toHaveBeenCalledWith('pm_123');
+    expect(update).toHaveBeenCalledWith(
+      'sub_123',
+      { default_payment_method: 'pm_123' },
+      { idempotencyKey: 'trial_setup:cs_setup_123:set_subscription_default' },
+    );
+  });
+
+  it('reconciles an already-attached payment method without issuing a second attach', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const retrieve = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_123',
+    }));
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_123',
+    }));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: { retrieve, attach },
+    };
+
+    await createGateway(stripe).attachTrialPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalCustomerId: 'cus_123',
+    });
+
+    expect(retrieve).toHaveBeenCalledWith('pm_123');
+    expect(attach).not.toHaveBeenCalled();
+  });
+
+  it('rejects an attachment response that is not bound to the verified customer', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: {
+        retrieve: vi.fn(async () => ({ id: 'pm_123', customer: null })),
+        attach: vi.fn(async () => ({ id: 'pm_123', customer: 'cus_other' })),
+      },
+    };
+
+    await expect(
+      createGateway(stripe).attachTrialPaymentMethod({
+        sessionId: 'cs_setup_123',
+        externalPaymentMethodId: 'pm_123',
+        externalCustomerId: 'cus_123',
+      }),
+    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+  });
+
+  it('rejects a payment method already attached to another customer', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_123',
+    }));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: {
+        retrieve: vi.fn(async () => ({
+          id: 'pm_123',
+          customer: 'cus_other',
+        })),
+        attach,
+      },
+    };
+
+    await expect(
+      createGateway(stripe).attachTrialPaymentMethod({
+        sessionId: 'cs_setup_123',
+        externalPaymentMethodId: 'pm_123',
+        externalCustomerId: 'cus_123',
+      }),
+    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+    expect(attach).not.toHaveBeenCalled();
+  });
+
   it('creates a Stripe customer with the correct Stripe parameters', async () => {
     const { stripe, customersCreate, customersSearch } = createStripeMock();
     const gateway = createGateway(stripe);
@@ -263,7 +382,7 @@ describe('StripePaymentGateway', () => {
         {
           userId: appUserId,
           externalCustomerId: 'cus_123',
-          plan: 'monthly',
+          ...createTestRenewalTerms('monthly'),
           successUrl: 'https://app/success',
           cancelUrl: 'https://app/cancel',
         },
@@ -291,6 +410,45 @@ describe('StripePaymentGateway', () => {
     );
   });
 
+  it('creates the trial payment-method setup Session through the customer-less setup seam', async () => {
+    const { stripe, sessionsCreate } = createStripeMock();
+    const gateway = createGateway(stripe);
+
+    await expect(
+      gateway.createTrialPaymentMethodSetupSession({
+        userId: appUserId,
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        plan: 'monthly',
+        amountCents: 2900,
+        currency: 'usd',
+        frequency: 'month',
+        trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+        disclosureVersion: '2026-08-05',
+        termsVersion: '2026-08-05',
+        termsHash: 'terms-hash',
+        disclosureSnapshot: 'Exact disclosure.',
+        cancellationMethod:
+          'Billing page in the app or support@addictionboards.com',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).resolves.toEqual({
+      sessionId: 'cs_new',
+      url: 'https://stripe/checkout',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'setup',
+        currency: 'usd',
+        consent_collection: { terms_of_service: 'required' },
+      }),
+      expect.any(Object),
+    );
+    expect(sessionsCreate.mock.calls[0]?.[0]).not.toHaveProperty('customer');
+  });
+
   it.each([
     'active',
     'trialing',
@@ -311,7 +469,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -341,7 +499,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -369,6 +527,10 @@ describe('StripePaymentGateway', () => {
     sessionsRetrieve.mockResolvedValue({
       id: 'cs_existing',
       url: 'https://stripe/existing-checkout',
+      metadata: createTestCheckoutRenewalMetadata({
+        userId: appUserId,
+        plan: 'annual',
+      }),
       line_items: { data: [{ price: { id: 'price_a' } }] },
     });
     const gateway = createGateway(stripe);
@@ -377,7 +539,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'annual',
+        ...createTestRenewalTerms('annual'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -421,7 +583,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -465,7 +627,7 @@ describe('StripePaymentGateway', () => {
     const result = await gateway.createCheckoutSession({
       userId: appUserId,
       externalCustomerId: 'cus_123',
-      plan: 'monthly',
+      ...createTestRenewalTerms('monthly'),
       successUrl: 'https://app/success',
       cancelUrl: 'https://app/cancel',
     });
@@ -518,7 +680,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -537,7 +699,7 @@ describe('StripePaymentGateway', () => {
       gateway.createCheckoutSession({
         userId: appUserId,
         externalCustomerId: 'cus_123',
-        plan: 'monthly',
+        ...createTestRenewalTerms('monthly'),
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
@@ -577,6 +739,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_1',
+      occurredAt: new Date(1_700_000_000 * 1000),
       type: 'customer.subscription.updated',
       subscriptionUpdate: {
         userId: appUserId,
@@ -616,6 +779,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_trial_will_end_1',
+      occurredAt: new Date(1_700_000_000 * 1000),
       type: 'customer.subscription.trial_will_end',
       subscriptionUpdate: {
         userId: appUserId,
@@ -660,6 +824,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_deleted_1',
+      occurredAt: new Date(1_700_000_000 * 1000),
       type: 'customer.subscription.deleted',
       subscriptionUpdate: expect.objectContaining({
         userId: appUserId,
@@ -941,6 +1106,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_2',
+      occurredAt: new Date(1_700_000_001 * 1000),
       type: 'customer.subscription.paused',
       subscriptionUpdate: {
         userId: appUserId,
@@ -973,6 +1139,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_3',
+      occurredAt: new Date(1_700_000_002 * 1000),
       type: 'customer.subscription.resumed',
       subscriptionUpdate: {
         userId: appUserId,
@@ -1005,6 +1172,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_4',
+      occurredAt: new Date(1_700_000_003 * 1000),
       type: 'customer.subscription.pending_update_applied',
       subscriptionUpdate: {
         userId: appUserId,
@@ -1037,6 +1205,7 @@ describe('StripePaymentGateway', () => {
       gateway.processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_5',
+      occurredAt: new Date(1_700_000_004 * 1000),
       type: 'customer.subscription.pending_update_expired',
       subscriptionUpdate: {
         userId: appUserId,

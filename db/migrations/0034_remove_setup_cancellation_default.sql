@@ -1,0 +1,1 @@
+ALTER TABLE "trial_payment_method_setup_operations" ALTER COLUMN "cancellation_method" DROP DEFAULT;

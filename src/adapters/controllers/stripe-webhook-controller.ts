@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
+import { toConsumerReference } from '@/src/adapters/shared/consumer-reference';
 import { PRUNE_BATCH_LIMIT } from '@/src/adapters/shared/prune-constants';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import {
@@ -17,11 +18,18 @@ import {
 import type { PaymentGateway } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
+  RenewalConsentRecordRepository,
   StripeCustomerRepository,
   StripeEventRepository,
   SubscriptionRepository,
+  TrialPaymentMethodSetupOperation,
+  TrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/ports/repositories';
 import { persistSubscriptionObservation } from '@/src/application/shared/persist-subscription-observation';
+import {
+  PruneRenewalConsentsUseCase,
+  RecordRenewalConsentUseCase,
+} from '@/src/application/use-cases';
 import { DAY_MS } from '@/src/domain/services';
 
 export type StripeWebhookInput = {
@@ -33,6 +41,8 @@ export type StripeWebhookTransaction = {
   stripeEvents: StripeEventRepository;
   subscriptions: SubscriptionRepository;
   stripeCustomers: StripeCustomerRepository;
+  trialPaymentMethodSetupOperations: TrialPaymentMethodSetupOperationRepository;
+  renewalConsentRecords: RenewalConsentRecordRepository;
 };
 
 export type StripeWebhookDeps = {
@@ -54,6 +64,12 @@ type StripeWebhookEvent = Awaited<
 type StripeSubscriptionUpdate = NonNullable<
   StripeWebhookEvent['subscriptionUpdate']
 >;
+type InitialSubscriptionConsent = NonNullable<
+  StripeWebhookEvent['initialSubscriptionConsent']
+>;
+type TrialPaymentMethodSetupCompletion = NonNullable<
+  StripeWebhookEvent['trialPaymentMethodSetupCompletion']
+>;
 
 class StripeWebhookAlreadyProcessed extends Error {}
 
@@ -66,6 +82,193 @@ class StripeWebhookAlreadyProcessed extends Error {}
 // - The inline user.deleted path owns immediate customer cleanup, while the
 //   daily drain owns retries and fallback.
 const PROCESSED_STRIPE_EVENTS_RETENTION_MS = 90 * DAY_MS;
+const TRIAL_PAYMENT_METHOD_SETUP_CLAIM_LEASE_MS = 5 * 60 * 1000;
+
+function setupSnapshotMatches(
+  operation: TrialPaymentMethodSetupOperation,
+  completion: TrialPaymentMethodSetupCompletion,
+): boolean {
+  return (
+    operation.sessionId === completion.sessionId &&
+    operation.userId === completion.userId &&
+    operation.stripeCustomerId === completion.externalCustomerId &&
+    operation.stripeSubscriptionId === completion.externalSubscriptionId &&
+    operation.plan === completion.plan &&
+    operation.amountCents === completion.amountCents &&
+    operation.currency === completion.currency &&
+    operation.frequency === completion.frequency &&
+    operation.trialEndsAt.getTime() === completion.trialEndsAt.getTime() &&
+    operation.disclosureVersion === completion.disclosureVersion &&
+    operation.termsVersion === completion.termsVersion &&
+    operation.termsHash === completion.termsHash
+  );
+}
+
+async function processTrialPaymentMethodSetupWebhook(
+  deps: StripeWebhookDeps,
+  event: StripeWebhookEvent,
+  completion: TrialPaymentMethodSetupCompletion,
+): Promise<void> {
+  const claimedAt = deps.now();
+  const claimId = crypto.randomUUID();
+  const claimed = await deps.transaction(
+    async ({
+      stripeEvents,
+      subscriptions,
+      stripeCustomers,
+      trialPaymentMethodSetupOperations,
+    }) => {
+      await stripeEvents.claim(event.eventId, event.type);
+      const eventState = await stripeEvents.lock(event.eventId);
+      if (isSuccessfullyProcessed(eventState)) return null;
+
+      const operation = await trialPaymentMethodSetupOperations.findBySessionId(
+        completion.sessionId,
+      );
+      if (!operation) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Trial payment-method setup operation is missing',
+        );
+      }
+      if (!setupSnapshotMatches(operation, completion)) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Trial payment-method completion does not match its pending consent snapshot',
+        );
+      }
+      if (operation.status === 'completed') {
+        if (
+          operation.stripePaymentMethodId !== completion.stripePaymentMethodId
+        ) {
+          throw new ApplicationError(
+            'CONFLICT',
+            'Completed trial payment-method setup changed payment method',
+          );
+        }
+        await stripeEvents.markProcessed(event.eventId);
+        return null;
+      }
+
+      const [subscription, externalSubscriptionId, customer] =
+        await Promise.all([
+          subscriptions.findByUserId(completion.userId),
+          subscriptions.findExternalSubscriptionIdByUserId(completion.userId),
+          stripeCustomers.findByUserId(completion.userId),
+        ]);
+      if (
+        subscription?.status !== 'inTrial' ||
+        subscription.plan !== completion.plan ||
+        subscription.currentPeriodEnd.getTime() !==
+          completion.trialEndsAt.getTime() ||
+        externalSubscriptionId !== completion.externalSubscriptionId ||
+        customer?.stripeCustomerId !== completion.externalCustomerId
+      ) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Trial payment-method completion does not match current local billing ownership',
+        );
+      }
+
+      const result = await trialPaymentMethodSetupOperations.claim({
+        sessionId: completion.sessionId,
+        claimId,
+        claimedAt,
+        staleBefore: new Date(
+          claimedAt.getTime() - TRIAL_PAYMENT_METHOD_SETUP_CLAIM_LEASE_MS,
+        ),
+      });
+      if (!result) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Trial payment-method setup is already being processed',
+        );
+      }
+      return result;
+    },
+  );
+
+  if (!claimed) return;
+
+  if (!claimed.paymentMethodAttachedAt) {
+    await deps.paymentGateway.attachTrialPaymentMethod({
+      sessionId: completion.sessionId,
+      externalPaymentMethodId: completion.stripePaymentMethodId,
+      externalCustomerId: completion.externalCustomerId,
+    });
+    await deps.transaction(async ({ trialPaymentMethodSetupOperations }) => {
+      await trialPaymentMethodSetupOperations.markPaymentMethodAttached({
+        sessionId: completion.sessionId,
+        claimId,
+        stripePaymentMethodId: completion.stripePaymentMethodId,
+        attachedAt: deps.now(),
+      });
+    });
+  } else if (
+    claimed.stripePaymentMethodId !== completion.stripePaymentMethodId
+  ) {
+    throw new ApplicationError(
+      'CONFLICT',
+      'Recovered trial payment-method setup changed payment method',
+    );
+  }
+
+  if (!claimed.subscriptionDefaultSetAt) {
+    await deps.paymentGateway.setTrialSubscriptionDefaultPaymentMethod({
+      sessionId: completion.sessionId,
+      externalPaymentMethodId: completion.stripePaymentMethodId,
+      externalSubscriptionId: completion.externalSubscriptionId,
+    });
+    await deps.transaction(async ({ trialPaymentMethodSetupOperations }) => {
+      await trialPaymentMethodSetupOperations.markSubscriptionDefaultSet({
+        sessionId: completion.sessionId,
+        claimId,
+        selectedAt: deps.now(),
+      });
+    });
+  }
+
+  await deps.transaction(
+    async ({
+      stripeEvents,
+      trialPaymentMethodSetupOperations,
+      renewalConsentRecords,
+    }) => {
+      await new RecordRenewalConsentUseCase(renewalConsentRecords).execute({
+        userId: claimed.userId,
+        consumerReference: toConsumerReference(claimed.stripeCustomerId),
+        externalCustomerId: claimed.stripeCustomerId,
+        externalSubscriptionId: claimed.stripeSubscriptionId,
+        checkoutSessionId: null,
+        setupSessionId: claimed.sessionId,
+        applicationSourceId: null,
+        plan: claimed.plan,
+        amountCents: claimed.amountCents,
+        currency: claimed.currency,
+        frequency: claimed.frequency,
+        trialEndsAt: claimed.trialEndsAt,
+        cancellationDeadline: claimed.trialEndsAt,
+        cancellationMethod: claimed.cancellationMethod,
+        disclosureSnapshot: claimed.disclosureSnapshot,
+        disclosureVersion: claimed.disclosureVersion,
+        termsVersion: claimed.termsVersion,
+        termsHash: claimed.termsHash,
+        consentSource: 'stripe_setup',
+        acceptedAt: completion.acceptedAt,
+        consentKind: 'initial_offer',
+        priorAmountCents: null,
+        proposedAmountCents: null,
+        effectiveRenewalAt: null,
+      });
+      await trialPaymentMethodSetupOperations.markCompleted({
+        sessionId: completion.sessionId,
+        claimId,
+        completedAt: deps.now(),
+      });
+      await stripeEvents.markProcessed(event.eventId);
+    },
+  );
+}
 
 function isSuccessfullyProcessed(event: {
   processedAt: Date | null;
@@ -106,8 +309,9 @@ async function persistFailure(
 async function persistAcknowledgedOutcome(
   deps: StripeWebhookDeps,
   event: StripeWebhookEvent,
+  subscriptionUpdate?: StripeSubscriptionUpdate,
 ): Promise<void> {
-  await deps.transaction(async ({ stripeEvents }) => {
+  await deps.transaction(async ({ stripeEvents, renewalConsentRecords }) => {
     await stripeEvents.claim(event.eventId, event.type);
     const current = await stripeEvents.lock(event.eventId);
 
@@ -115,7 +319,63 @@ async function persistAcknowledgedOutcome(
       return;
     }
 
+    if (subscriptionUpdate?.status === 'canceled') {
+      await renewalConsentRecords.markSubscriptionTerminated({
+        externalSubscriptionId: subscriptionUpdate.externalSubscriptionId,
+        terminatedAt: event.occurredAt ?? deps.now(),
+      });
+    }
     await stripeEvents.markProcessed(event.eventId);
+  });
+}
+
+async function persistInitialSubscriptionConsent(input: {
+  repository: RenewalConsentRecordRepository;
+  consent: InitialSubscriptionConsent;
+  subscriptionUpdate: StripeSubscriptionUpdate;
+}): Promise<void> {
+  const { consent, subscriptionUpdate } = input;
+  if (
+    consent.userId !== subscriptionUpdate.userId ||
+    consent.externalCustomerId !== subscriptionUpdate.externalCustomerId ||
+    consent.externalSubscriptionId !==
+      subscriptionUpdate.externalSubscriptionId ||
+    consent.plan !== subscriptionUpdate.plan
+  ) {
+    throw new ApplicationError(
+      'CONFLICT',
+      'Subscription Checkout consent changed during persistence',
+    );
+  }
+
+  await new RecordRenewalConsentUseCase(input.repository).execute({
+    userId: consent.userId,
+    consumerReference: toConsumerReference(consent.externalCustomerId),
+    externalCustomerId: consent.externalCustomerId,
+    externalSubscriptionId: consent.externalSubscriptionId,
+    checkoutSessionId: consent.checkoutSessionId,
+    setupSessionId: null,
+    applicationSourceId: null,
+    plan: consent.plan,
+    amountCents: consent.amountCents,
+    currency: consent.currency,
+    frequency: consent.frequency,
+    trialEndsAt:
+      subscriptionUpdate.status === 'inTrial'
+        ? subscriptionUpdate.currentPeriodEnd
+        : null,
+    cancellationDeadline: subscriptionUpdate.currentPeriodEnd,
+    cancellationMethod: consent.cancellationMethod,
+    disclosureSnapshot: consent.disclosureSnapshot,
+    disclosureVersion: consent.disclosureVersion,
+    termsVersion: consent.termsVersion,
+    termsHash: consent.termsHash,
+    consentSource: 'stripe_checkout',
+    acceptedAt: consent.acceptedAt,
+    consentKind: 'initial_offer',
+    priorAmountCents: null,
+    proposedAmountCents: null,
+    effectiveRenewalAt: null,
   });
 }
 
@@ -128,6 +388,7 @@ async function processSubscriptionWebhook(
   let processingError: unknown;
   let hasProcessingError = false;
   const discoveredUserId = subscriptionUpdate.userId;
+  const initialConsent = event.initialSubscriptionConsent;
   const retrieveSubscriptionUpdate =
     async (): Promise<StripeSubscriptionUpdate> => {
       const refreshedEvent = await deps.paymentGateway.processWebhookEvent(
@@ -156,7 +417,12 @@ async function processSubscriptionWebhook(
       getUserId: (nextSubscriptionUpdate) => nextSubscriptionUpdate.userId,
       persist: (nextSubscriptionUpdate, expectedVersion) =>
         deps.transaction(
-          async ({ stripeEvents, subscriptions, stripeCustomers }) => {
+          async ({
+            stripeEvents,
+            subscriptions,
+            stripeCustomers,
+            renewalConsentRecords,
+          }) => {
             const claimed = await stripeEvents.claim(event.eventId, event.type);
             if (!claimed) {
               const snapshot = await stripeEvents.peek(event.eventId);
@@ -196,6 +462,25 @@ async function processSubscriptionWebhook(
                 );
               }
 
+              if (write.persisted && initialConsent) {
+                await persistInitialSubscriptionConsent({
+                  repository: renewalConsentRecords,
+                  consent: initialConsent,
+                  subscriptionUpdate: nextSubscriptionUpdate,
+                });
+              }
+
+              if (
+                write.persisted &&
+                nextSubscriptionUpdate.status === 'canceled'
+              ) {
+                await renewalConsentRecords.markSubscriptionTerminated({
+                  externalSubscriptionId:
+                    nextSubscriptionUpdate.externalSubscriptionId,
+                  terminatedAt: event.occurredAt ?? deps.now(),
+                });
+              }
+
               await stripeEvents.markProcessed(event.eventId);
               return write;
             } catch (error) {
@@ -216,7 +501,7 @@ async function processSubscriptionWebhook(
     }
 
     if (isSubscriptionUserMissingError(transactionError)) {
-      await persistAcknowledgedOutcome(deps, event);
+      await persistAcknowledgedOutcome(deps, event, subscriptionUpdate);
       deps.logger.warn(
         {
           reason: 'user_missing',
@@ -276,7 +561,13 @@ async function processStripeWebhookWithinSpan(
   let hasProcessingError = false;
 
   try {
-    if (event.subscriptionUpdate) {
+    if (event.trialPaymentMethodSetupCompletion) {
+      await processTrialPaymentMethodSetupWebhook(
+        deps,
+        event,
+        event.trialPaymentMethodSetupCompletion,
+      );
+    } else if (event.subscriptionUpdate) {
       await processSubscriptionWebhook(
         deps,
         input,
@@ -333,6 +624,23 @@ async function processStripeWebhookWithinSpan(
         error: projectSafeErrorDiagnostics(error),
       },
       'Stripe event pruning failed',
+    );
+  }
+
+  try {
+    await deps.transaction(async ({ renewalConsentRecords }) => {
+      await new PruneRenewalConsentsUseCase(
+        renewalConsentRecords,
+        deps.now,
+      ).execute();
+    });
+  } catch (error) {
+    deps.logger.warn(
+      {
+        eventId: event.eventId,
+        error: projectSafeErrorDiagnostics(error),
+      },
+      'Renewal consent pruning failed',
     );
   }
 }

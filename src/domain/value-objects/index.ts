@@ -50,6 +50,14 @@ export {
   type QuestionStatus,
 } from './question-status';
 export {
+  AllRenewalConsentKinds,
+  AllRenewalConsentSources,
+  computeRenewalConsentRetainUntil,
+  type RenewalConsentFrequency,
+  type RenewalConsentKind,
+  type RenewalConsentSource,
+} from './renewal-consent';
+export {
   AllSubscriptionPlans,
   isValidSubscriptionPlan,
   type SubscriptionPlan,

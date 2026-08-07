@@ -6,6 +6,7 @@ import type {
   StripeRequestOptions,
 } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 
 type RecordedCheckoutSession = StripeCheckoutSession & {
@@ -62,6 +63,9 @@ function createConcurrentStripeMock() {
       params: CheckoutSessionCreateParams,
       options?: StripeRequestOptions,
     ) => {
+      if (params.mode === 'setup') {
+        throw new Error('Unexpected setup-mode Checkout Session');
+      }
       const key = options?.idempotencyKey;
       if (key) {
         const replayed = sessionsByIdempotencyKey.get(key);
@@ -74,6 +78,7 @@ function createConcurrentStripeMock() {
         url: `https://stripe/checkout/cs_${createCount}`,
         status: 'open' as const,
         created: createCount,
+        metadata: params.metadata ?? {},
         line_items: {
           data: [
             {
@@ -128,7 +133,7 @@ describe('createStripeCheckoutSession concurrency', () => {
   const input = {
     userId: appUserId,
     externalCustomerId: 'cus_123',
-    plan: 'monthly' as const,
+    ...createTestRenewalTerms('monthly'),
     successUrl: 'https://app/success',
     cancelUrl: 'https://app/cancel',
   };
@@ -174,13 +179,21 @@ describe('createStripeCheckoutSession concurrency', () => {
     await Promise.all([
       createStripeCheckoutSession({
         stripe,
-        input: { ...input, plan: 'monthly', trialPeriodDays: 7 },
+        input: {
+          ...input,
+          ...createTestRenewalTerms('monthly', true),
+          trialPeriodDays: 7,
+        },
         priceIds,
         logger,
       }),
       createStripeCheckoutSession({
         stripe,
-        input: { ...input, plan: 'annual', trialPeriodDays: 7 },
+        input: {
+          ...input,
+          ...createTestRenewalTerms('annual', true),
+          trialPeriodDays: 7,
+        },
         priceIds,
         logger,
       }),

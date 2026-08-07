@@ -235,24 +235,14 @@ describe('theme token regression', () => {
       />,
     );
     const doc = parseHtml(html);
+
+    // One spelling of the canonical ring across the design system: the shared
+    // `ring-focus` utility from globals.css, never a hand-copied literal.
     const link = findAnchorByHref(doc, '/privacy');
+    expect(link?.classList.contains('ring-focus')).toBe(true);
 
-    expect(link?.classList.contains('focus-visible:outline-none')).toBe(true);
-    expect(link?.classList.contains('focus-visible:ring-ring/50')).toBe(true);
-    expect(link?.classList.contains('focus-visible:ring-[3px]')).toBe(true);
-
-    const tableRegion = doc.querySelector(
-      'section[aria-label="Scrollable table"]',
-    );
-    expect(tableRegion?.classList.contains('focus-visible:outline-none')).toBe(
-      true,
-    );
-    expect(tableRegion?.classList.contains('focus-visible:ring-ring/50')).toBe(
-      true,
-    );
-    expect(tableRegion?.classList.contains('focus-visible:ring-[3px]')).toBe(
-      true,
-    );
+    const tableRegion = doc.querySelector('table')?.parentElement;
+    expect(tableRegion?.classList.contains('ring-focus')).toBe(true);
   });
 
   it('uses the shared focus ring utility on pricing legal-consent links', () => {

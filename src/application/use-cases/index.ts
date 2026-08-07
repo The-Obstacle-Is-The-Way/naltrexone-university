@@ -19,6 +19,12 @@ export {
   CreatePortalSessionUseCase,
 } from './create-portal-session';
 export {
+  type CreateTrialPaymentMethodSetupSessionInput,
+  type CreateTrialPaymentMethodSetupSessionOutput,
+  CreateTrialPaymentMethodSetupSessionUseCase,
+  type TrialRenewalTerms,
+} from './create-trial-payment-method-setup-session';
+export {
   type DiscardPracticeSessionInput,
   type DiscardPracticeSessionOutput,
   DiscardPracticeSessionUseCase,
@@ -107,10 +113,19 @@ export {
   type UserStatsOutput,
 } from './get-user-stats';
 export {
+  PruneRenewalConsentsUseCase,
+  RENEWAL_CONSENT_PRUNE_BATCH_LIMIT,
+} from './prune-renewal-consents';
+export {
   type RateQuestionInput,
   type RateQuestionOutput,
   RateQuestionUseCase,
 } from './rate-question';
+export {
+  type RecordRenewalConsentInput,
+  type RecordRenewalConsentOutput,
+  RecordRenewalConsentUseCase,
+} from './record-renewal-consent';
 export {
   type SaveExamDraftAnswerInput,
   type SaveExamDraftAnswerOutput,

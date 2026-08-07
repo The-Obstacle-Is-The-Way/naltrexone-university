@@ -28,6 +28,10 @@ export function createControllerFactories(input: {
             stripeEvents: repositories.createStripeEventRepository(tx),
             subscriptions: repositories.createSubscriptionRepository(tx),
             stripeCustomers: repositories.createStripeCustomerRepository(tx),
+            trialPaymentMethodSetupOperations:
+              repositories.createTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords:
+              repositories.createRenewalConsentRecordRepository(tx),
           }),
         ),
     }),
@@ -53,6 +57,8 @@ export function createControllerFactories(input: {
       logger: primitives.logger,
       createCheckoutSessionUseCase: useCases.createCheckoutSessionUseCase(),
       createPortalSessionUseCase: useCases.createPortalSessionUseCase(),
+      createTrialPaymentMethodSetupSessionUseCase:
+        useCases.createTrialPaymentMethodSetupSessionUseCase(),
       idempotencyKeyRepository: repositories.createIdempotencyKeyRepository(),
       rateLimiter: gateways.createRateLimiter(),
       getClerkUserId: async () => (await getClerkUser())?.id ?? null,

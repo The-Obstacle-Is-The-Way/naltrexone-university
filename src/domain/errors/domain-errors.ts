@@ -2,6 +2,7 @@ export const DomainErrorCodes = [
   'INVALID_QUESTION',
   'INVALID_CHOICE',
   'INVALID_ATTEMPT',
+  'INVALID_RENEWAL_CONSENT',
 ] as const;
 
 export type DomainErrorCode = (typeof DomainErrorCodes)[number];

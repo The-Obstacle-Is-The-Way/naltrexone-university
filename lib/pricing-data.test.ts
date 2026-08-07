@@ -1,5 +1,12 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { PRICING_DATA } from '@/lib/pricing-data';
+import { termsContent } from '@/app/(marketing)/terms/terms-content';
+import {
+  CANCELLATION_METHOD,
+  PRICING_DATA,
+  TERMS_CONTENT_SHA256,
+  TERMS_VERSION,
+} from '@/lib/pricing-data';
 
 // ROSCA / NY GBL § 527-a: the renewal disclosure must accurately describe the
 // simple cancellation mechanism. The app's actual path is the "Billing" nav
@@ -33,5 +40,27 @@ describe('PRICING_DATA renewal disclosures', () => {
     disclosures,
   )('%s names the support contact as a cancellation fallback', (_name, disclosure) => {
     expect(disclosure).toContain('support@addictionboards.com');
+  });
+
+  it('pins machine-readable renewal terms to the rendered disclosure and Terms version', () => {
+    expect(CANCELLATION_METHOD).toBe(
+      'Billing page in the app or support@addictionboards.com',
+    );
+    expect(PRICING_DATA.monthly).toMatchObject({
+      amountCents: 2900,
+      currency: 'usd',
+      frequency: 'month',
+      disclosureVersion: '2026-08-05',
+    });
+    expect(PRICING_DATA.annual).toMatchObject({
+      amountCents: 19900,
+      currency: 'usd',
+      frequency: 'year',
+      disclosureVersion: '2026-08-05',
+    });
+    expect(TERMS_VERSION).toBe('2026-08-05');
+    expect(TERMS_CONTENT_SHA256).toBe(
+      createHash('sha256').update(termsContent.bodyMarkdown).digest('hex'),
+    );
   });
 });

@@ -8,10 +8,12 @@ import {
   DrizzlePracticeSessionRepository,
   DrizzleQuestionFeedbackRepository,
   DrizzleQuestionRepository,
+  DrizzleRenewalConsentRecordRepository,
   DrizzleStripeCustomerRepository,
   DrizzleStripeEventRepository,
   DrizzleSubscriptionRepository,
   DrizzleTagRepository,
+  DrizzleTrialPaymentMethodSetupOperationRepository,
   DrizzleUserRepository,
 } from '@/src/adapters/repositories';
 import type {
@@ -48,8 +50,17 @@ export function createRepositoryFactories(
       new DrizzleQuestionFeedbackRepository(dbOverride),
     createQuestionRepository: (dbOverride = primitives.db) =>
       new DrizzleQuestionRepository(dbOverride),
+    createRenewalConsentRecordRepository: (dbOverride = primitives.db) =>
+      new DrizzleRenewalConsentRecordRepository(dbOverride, primitives.now),
     createTagRepository: (dbOverride = primitives.db) =>
       new DrizzleTagRepository(dbOverride),
+    createTrialPaymentMethodSetupOperationRepository: (
+      dbOverride = primitives.db,
+    ) =>
+      new DrizzleTrialPaymentMethodSetupOperationRepository(
+        dbOverride,
+        primitives.now,
+      ),
     createSubscriptionRepository: (dbOverride = primitives.db) =>
       new DrizzleSubscriptionRepository(
         dbOverride,

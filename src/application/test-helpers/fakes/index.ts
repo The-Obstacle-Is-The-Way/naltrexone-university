@@ -16,15 +16,18 @@ export {
 } from './fake-practice-session-repository';
 export { FakeQuestionFeedbackRepository } from './fake-question-feedback-repository';
 export { FakeQuestionRepository } from './fake-question-repository';
+export { FakeRenewalConsentRecordRepository } from './fake-renewal-consent-record-repository';
 export { FakeStripeCustomerRepository } from './fake-stripe-customer-repository';
 export { FakeStripeEventRepository } from './fake-stripe-event-repository';
 export { FakeSubscriptionRepository } from './fake-subscription-repository';
 export { FakeTagRepository } from './fake-tag-repository';
+export { FakeTrialPaymentMethodSetupOperationRepository } from './fake-trial-payment-method-setup-operation-repository';
 export {
   FakeCheckEntitlementUseCase,
   FakeCountAvailableQuestionsUseCase,
   FakeCreateCheckoutSessionUseCase,
   FakeCreatePortalSessionUseCase,
+  FakeCreateTrialPaymentMethodSetupSessionUseCase,
   FakeDiscardPracticeSessionUseCase,
   FakeEndPracticeSessionUseCase,
   FakeFinalizeExamAnswersUseCase,

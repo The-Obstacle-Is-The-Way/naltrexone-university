@@ -13,9 +13,11 @@ import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/recon
 import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
 import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
 import { DrizzlePendingStripeCustomerCleanupRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository';
+import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
+import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { acquireSubscriptionWriteLock } from '@/src/adapters/repositories/subscription-write-lock';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
@@ -369,6 +371,11 @@ async function runWebhookWriter(input: {
             stripeCustomers: input.deletionCounterparty
               ? new RawDeletionCounterpartyStripeCustomerRepository(tx)
               : new DrizzleStripeCustomerRepository(tx),
+            trialPaymentMethodSetupOperations:
+              new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+              tx,
+            ),
           });
         }),
     },
@@ -568,6 +575,11 @@ async function runFirstInsertWebhookWriter(input: {
             stripeEvents: new DrizzleStripeEventRepository(tx),
             subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
             stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+            trialPaymentMethodSetupOperations:
+              new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
+            renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
+              tx,
+            ),
           });
         }),
     },

@@ -10,9 +10,13 @@ import type {
   StripeSubscriptionStatus,
 } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
-import type { CheckoutSessionInput } from '@/src/application/ports/gateways';
+import type {
+  CheckoutSessionInput,
+  TrialPaymentMethodSetupSessionInput,
+} from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
+import { createStripeConsentStateSignature } from './stripe-consent-state';
 import { callStripeWithRetry } from './stripe-retry';
 
 export const SUBSCRIPTION_LIST_LIMIT = 10;
@@ -46,6 +50,111 @@ const STRIPE_IDEMPOTENCY_PARAMETER_MISMATCH_MESSAGE_PATTERNS = [
 ] as const;
 const CHECKOUT_SESSION_VARIANT_METADATA_KEY = 'checkout_variant';
 const STANDARD_CHECKOUT_SESSION_VARIANT = 'standard';
+
+function checkoutRenewalMetadata(
+  input: CheckoutSessionInput,
+): Record<string, string> {
+  return {
+    [CHECKOUT_SESSION_VARIANT_METADATA_KEY]:
+      getRequestedCheckoutSessionVariant(input),
+    renewal_user_id: input.userId,
+    renewal_plan: input.plan,
+    renewal_amount_cents: String(input.amountCents),
+    renewal_currency: input.currency,
+    renewal_frequency: input.frequency,
+    renewal_disclosure_snapshot: input.disclosureSnapshot,
+    renewal_disclosure_version: input.disclosureVersion,
+    renewal_terms_version: input.termsVersion,
+    renewal_terms_hash: input.termsHash,
+    renewal_cancellation_method: input.cancellationMethod,
+  };
+}
+
+function checkoutRenewalMetadataMatches(
+  session: StripeCheckoutSession,
+  input: CheckoutSessionInput,
+): boolean {
+  const expected = checkoutRenewalMetadata(input);
+  return Object.entries(expected).every(
+    ([key, value]) => session.metadata?.[key] === value,
+  );
+}
+
+function hasCheckoutRenewalMetadata(session: StripeCheckoutSession): boolean {
+  const metadata = session.metadata;
+  if (!metadata) return false;
+  return [
+    CHECKOUT_SESSION_VARIANT_METADATA_KEY,
+    'renewal_user_id',
+    'renewal_plan',
+    'renewal_amount_cents',
+    'renewal_currency',
+    'renewal_frequency',
+    'renewal_disclosure_snapshot',
+    'renewal_disclosure_version',
+    'renewal_terms_version',
+    'renewal_terms_hash',
+    'renewal_cancellation_method',
+  ].every((key) => Boolean(metadata[key]));
+}
+
+export async function createStripeTrialPaymentMethodSetupSession({
+  stripe,
+  input,
+  logger,
+  stateSecret,
+}: {
+  stripe: StripeClient;
+  input: TrialPaymentMethodSetupSessionInput;
+  logger: Logger;
+  stateSecret: string;
+}): Promise<{ sessionId: string; url: string }> {
+  const metadata = {
+    consent_user_id: input.userId,
+    consent_customer_id: input.externalCustomerId,
+    consent_subscription_id: input.externalSubscriptionId,
+    consent_plan: input.plan,
+    consent_amount_cents: String(input.amountCents),
+    consent_currency: input.currency,
+    consent_frequency: input.frequency,
+    consent_trial_ends_at: input.trialEndsAt.toISOString(),
+    consent_disclosure_version: input.disclosureVersion,
+    consent_terms_version: input.termsVersion,
+    consent_terms_hash: input.termsHash,
+  };
+  const params = {
+    mode: 'setup',
+    currency: input.currency,
+    consent_collection: { terms_of_service: 'required' },
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+    client_reference_id: input.userId,
+    metadata: {
+      ...metadata,
+      consent_state_signature: createStripeConsentStateSignature(
+        metadata,
+        stateSecret,
+      ),
+    },
+  } satisfies CheckoutSessionCreateParams;
+  const session = await callStripeWithRetry({
+    operation: 'checkout.sessions.create_trial_payment_method_setup',
+    fn: () =>
+      stripe.checkout.sessions.create(params, {
+        idempotencyKey: `trial_setup_session:${input.userId}:${input.externalSubscriptionId}:${input.disclosureVersion}`,
+      }),
+    logger,
+  });
+
+  if (!session.url) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe Checkout Session URL is missing',
+    );
+  }
+
+  return { sessionId: session.id, url: session.url };
+}
 
 function getBlockingSubscriptionStatus(
   subscription: StripeListedSubscription | undefined,
@@ -317,6 +426,15 @@ async function reconcileOpenCheckoutSessionsAfterCreate({
   const listedActiveCandidates = listed.data.filter(
     (session) =>
       !ignoredSessionIds.has(session.id) &&
+      session.id !== createdSession.id &&
+      hasCheckoutRenewalMetadata(session) &&
+      !isInactiveAtReconciliation(session),
+  );
+  const incompatibleListedActiveCandidates = listed.data.filter(
+    (session) =>
+      !ignoredSessionIds.has(session.id) &&
+      session.id !== createdSession.id &&
+      !hasCheckoutRenewalMetadata(session) &&
       !isInactiveAtReconciliation(session),
   );
   const candidates = withoutDuplicateCheckoutSessions(
@@ -327,9 +445,10 @@ async function reconcileOpenCheckoutSessionsAfterCreate({
   const canonicalSession = getCanonicalOpenCheckoutSession(candidates);
   if (!canonicalSession) return createdSession;
 
-  const supersededSessions = candidates.filter(
-    (session) => session.id !== canonicalSession.id,
-  );
+  const supersededSessions = withoutDuplicateCheckoutSessions([
+    ...candidates.filter((session) => session.id !== canonicalSession.id),
+    ...incompatibleListedActiveCandidates,
+  ]);
 
   await Promise.all(
     supersededSessions.map((session) =>
@@ -519,9 +638,13 @@ export async function createStripeCheckoutSession({
     if (existingPriceId === priceId) {
       const checkoutVariantMatches =
         existingCheckoutVariant === requestedCheckoutVariant;
+      const consentEvidenceMatches =
+        retrievedSession !== null &&
+        checkoutRenewalMetadataMatches(retrievedSession, input);
 
       if (
         checkoutVariantMatches &&
+        consentEvidenceMatches &&
         (!retrievedSession || !isSessionInactive(retrievedSession, nowMs))
       ) {
         return { url: existingUrl };
@@ -543,6 +666,7 @@ export async function createStripeCheckoutSession({
             requestedPriceId: priceId,
             existingCheckoutVariant,
             requestedCheckoutVariant,
+            consentEvidenceMatches,
             trialRequested,
           },
           'Expiring existing checkout session to enforce requested checkout terms',
@@ -672,9 +796,11 @@ export async function createStripeCheckoutSession({
     line_items: [{ price: priceId, quantity: 1 }],
     allow_promotion_codes: false,
     billing_address_collection: 'auto',
+    consent_collection: { terms_of_service: 'required' },
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
     client_reference_id: input.userId,
+    metadata: checkoutRenewalMetadata(input),
     subscription_data: {
       metadata: {
         user_id: input.userId,
@@ -686,9 +812,6 @@ export async function createStripeCheckoutSession({
       ? baseParams
       : ({
           ...baseParams,
-          metadata: {
-            [CHECKOUT_SESSION_VARIANT_METADATA_KEY]: requestedCheckoutVariant,
-          },
           payment_method_collection: 'if_required',
           subscription_data: {
             ...baseParams.subscription_data,

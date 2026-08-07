@@ -24,10 +24,12 @@ import type {
   PracticeSessionRepository,
   QuestionFeedbackRepository,
   QuestionRepository,
+  RenewalConsentRecordRepository,
   StripeCustomerRepository,
   StripeEventRepository,
   SubscriptionRepository,
   TagRepository,
+  TrialPaymentMethodSetupOperationRepository,
   UserRepository,
 } from '@/src/application/ports/repositories';
 import type {
@@ -35,6 +37,7 @@ import type {
   CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
+  CreateTrialPaymentMethodSetupSessionUseCase,
   DiscardPracticeSessionUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
@@ -51,7 +54,9 @@ import type {
   GetQuestionRatingUseCase,
   GetSessionHistoryUseCase,
   GetUserStatsUseCase,
+  PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
+  RecordRenewalConsentUseCase,
   SaveExamDraftAnswerUseCase,
   SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
@@ -96,7 +101,13 @@ export type RepositoryFactories = {
     dbOverride?: DrizzleDb,
   ) => QuestionFeedbackRepository;
   createQuestionRepository: (dbOverride?: DrizzleDb) => QuestionRepository;
+  createRenewalConsentRecordRepository: (
+    dbOverride?: DrizzleDb,
+  ) => RenewalConsentRecordRepository;
   createTagRepository: (dbOverride?: DrizzleDb) => TagRepository;
+  createTrialPaymentMethodSetupOperationRepository: (
+    dbOverride?: DrizzleDb,
+  ) => TrialPaymentMethodSetupOperationRepository;
   createSubscriptionRepository: (
     dbOverride?: DrizzleDb,
   ) => SubscriptionRepository;
@@ -119,6 +130,9 @@ export type UseCaseFactories = {
   createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
   createCheckoutSessionUseCase: () => CreateCheckoutSessionUseCase;
   createPortalSessionUseCase: () => CreatePortalSessionUseCase;
+  createTrialPaymentMethodSetupSessionUseCase: () => CreateTrialPaymentMethodSetupSessionUseCase;
+  createRecordRenewalConsentUseCase: () => RecordRenewalConsentUseCase;
+  createPruneRenewalConsentsUseCase: () => PruneRenewalConsentsUseCase;
   createCountAvailableQuestionsUseCase: () => CountAvailableQuestionsUseCase;
   createDiscardPracticeSessionUseCase: () => DiscardPracticeSessionUseCase;
   createEndPracticeSessionUseCase: () => EndPracticeSessionUseCase;

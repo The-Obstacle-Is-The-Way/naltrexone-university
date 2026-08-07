@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
 
 function createStripeMock(overrides: {
@@ -84,7 +85,7 @@ describe('createStripeCheckoutSession trial replacement idempotency', () => {
   const input = {
     userId: appUserId,
     externalCustomerId: 'cus_123',
-    plan: 'monthly' as const,
+    ...createTestRenewalTerms('monthly', true),
     successUrl: 'https://app/success',
     cancelUrl: 'https://app/cancel',
     trialPeriodDays: 7,
@@ -109,7 +110,9 @@ describe('createStripeCheckoutSession trial replacement idempotency', () => {
       idempotencyKey: 'expire_checkout_session:cs_open',
     });
     expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.any(Object),
+      expect.objectContaining({
+        consent_collection: { terms_of_service: 'required' },
+      }),
       expect.objectContaining({
         idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_open:trial:7`,
       }),

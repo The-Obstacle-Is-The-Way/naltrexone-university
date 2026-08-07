@@ -173,6 +173,30 @@ describe('migration ledger schema-drift preflight', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('allows the measured Preview 0033 hash repaired by generated 0034', async () => {
+    const appliedUnsafe0033Hash =
+      'd3cefbfc623b5a0c8b9b8a58555daab98ac8dde8007aa7bffb1ff6f4dddc8608';
+    const currentBackfilled0033Hash =
+      'd465645a2e64ad9dbae398d8256ed02c73ec60bd4439a66480c47210b4478d2c';
+    const sql = createMigrationLedgerSql(async () => [
+      {
+        createdAt: 1786051636812,
+        hash: appliedUnsafe0033Hash,
+      },
+    ]);
+
+    await expect(
+      verifyMigrationLedgerBeforeMigration(sql, [
+        {
+          idx: 33,
+          tag: '0033_small_wrecker',
+          when: 1786051636812,
+          hash: currentBackfilled0033Hash,
+        },
+      ]),
+    ).resolves.toBeUndefined();
+  });
+
   it('reads local migration file hashes when journal entries do not inject fixture hashes', async () => {
     const migrationTag = '0000_jazzy_vermin';
     const migrationHash = createHash('sha256')

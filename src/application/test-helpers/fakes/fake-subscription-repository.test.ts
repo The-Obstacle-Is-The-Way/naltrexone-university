@@ -43,6 +43,19 @@ describe('FakeSubscriptionRepository', () => {
       });
     });
 
+    it('returns the external subscription id for a locally owned subscription', async () => {
+      const repo = new FakeSubscriptionRepository();
+
+      await repo.upsert(makeUpsertInput());
+
+      await expect(
+        repo.findExternalSubscriptionIdByUserId('user_1'),
+      ).resolves.toBe('sub_123');
+      await expect(
+        repo.findExternalSubscriptionIdByUserId('user_missing'),
+      ).resolves.toBeNull();
+    });
+
     it('throws typed user_missing without writing when the local user is missing', async () => {
       const repo = new FakeSubscriptionRepository();
       repo.markUserMissing('user_1');

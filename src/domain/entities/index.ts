@@ -22,6 +22,13 @@ export {
   type QuestionRatingFeedback,
   type QuestionReportFeedback,
 } from './question-feedback';
+export {
+  type NewRenewalConsentRecord,
+  newRenewalConsentRecord,
+  type RenewalConsentRecord,
+  type RenewalConsentRecordInput,
+  terminateRenewalConsentRecord,
+} from './renewal-consent-record';
 export type { Subscription } from './subscription';
 export type { Tag } from './tag';
 export type { User } from './user';
