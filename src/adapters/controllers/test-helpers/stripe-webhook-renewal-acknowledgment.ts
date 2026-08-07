@@ -11,6 +11,8 @@ export function createStripeWebhookRenewalAcknowledgmentTestDeps(input?: {
   findUserById?: StripeWebhookTransaction['users']['findById'];
   dispatchRenewalNoticeDelivery?: StripeWebhookDeps['dispatchRenewalNoticeDelivery'];
 }): {
+  createRenewalNoticeDeliveries: () => FakeRenewalNoticeDeliveryRepository;
+  renewalNoticeDeliveries: FakeRenewalNoticeDeliveryRepository;
   webhook: Pick<
     StripeWebhookDeps,
     'appUrl' | 'sha256Hasher' | 'dispatchRenewalNoticeDelivery'
@@ -21,7 +23,15 @@ export function createStripeWebhookRenewalAcknowledgmentTestDeps(input?: {
   >;
 } {
   const sha256Hasher = new FakeSha256Hasher();
+  const createRenewalNoticeDeliveries = () =>
+    new FakeRenewalNoticeDeliveryRepository(
+      () => new Date('2026-08-07T12:00:00.000Z'),
+      sha256Hasher,
+    );
+  const renewalNoticeDeliveries = createRenewalNoticeDeliveries();
   return {
+    createRenewalNoticeDeliveries,
+    renewalNoticeDeliveries,
     webhook: {
       appUrl: 'https://addictionboards.com',
       sha256Hasher,
@@ -30,10 +40,7 @@ export function createStripeWebhookRenewalAcknowledgmentTestDeps(input?: {
       },
     },
     transaction: {
-      renewalNoticeDeliveries: new FakeRenewalNoticeDeliveryRepository(
-        () => new Date('2026-08-07T12:00:00.000Z'),
-        sha256Hasher,
-      ),
+      renewalNoticeDeliveries,
       users: {
         findById:
           input?.findUserById ??

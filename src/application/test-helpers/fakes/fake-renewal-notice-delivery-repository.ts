@@ -59,6 +59,14 @@ export class FakeRenewalNoticeDeliveryRepository
     private readonly hasher = new FakeSha256Hasher(),
   ) {}
 
+  snapshot(): RenewalNoticeDelivery[] {
+    return this.records.map(cloneDelivery);
+  }
+
+  restore(snapshot: readonly RenewalNoticeDelivery[]): void {
+    this.records.splice(0, this.records.length, ...snapshot.map(cloneDelivery));
+  }
+
   async saveQueued(
     input: NewRenewalNoticeDelivery,
   ): Promise<RenewalNoticeDelivery> {

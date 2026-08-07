@@ -5,6 +5,13 @@ import type {
   TransactionalEmailPayload,
 } from '@/src/application/ports';
 import {
+  escapeRenewalNoticeHtml,
+  formatRenewalNoticeDate,
+  RENEWAL_NOTICE_BUSINESS_CONTACT,
+  RENEWAL_NOTICE_FROM,
+  RENEWAL_NOTICE_REPLY_TO,
+} from '@/src/application/shared/renewal-notice-email-format';
+import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
 } from '@/src/application/shared/transactional-email-payload';
@@ -13,31 +20,10 @@ import type {
   RenewalNoticeDelivery,
 } from '@/src/domain/entities';
 
-const FROM = 'Addiction Boards <notices@addictionboards.com>';
-const REPLY_TO = 'support@addictionboards.com';
-const BUSINESS_CONTACT =
-  'John H. Jung, MD, MS, sole proprietor — support@addictionboards.com';
-
-function formatDate(value: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'long',
-    timeZone: 'UTC',
-  }).format(value);
-}
-
 function formatAmount(consent: RenewalConsentRecord): string {
   const amount = `$${(consent.amountCents / 100).toFixed(2)}`;
   const interval = consent.frequency === 'month' ? 'month' : 'year';
   return `${amount} ${consent.currency.toUpperCase()} every ${interval}`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }
 
 function createPayload(input: {
@@ -49,7 +35,7 @@ function createPayload(input: {
   const termsUrl = new URL('/terms', input.appUrl).toString();
   const privacyUrl = new URL('/privacy', input.appUrl).toString();
   const trial = consent.trialEndsAt
-    ? `Trial ends: ${formatDate(consent.trialEndsAt)}.`
+    ? `Trial ends: ${formatRenewalNoticeDate(consent.trialEndsAt)}.`
     : 'No introductory trial was recorded.';
   const lines = [
     'Thank you for confirming your Addiction Boards subscription terms.',
@@ -57,23 +43,25 @@ function createPayload(input: {
     `Accepted renewal terms: ${consent.disclosureSnapshot}`,
     `Price and frequency: ${formatAmount(consent)}.`,
     trial,
-    `Cancellation deadline: ${formatDate(consent.cancellationDeadline)}.`,
+    `Cancellation deadline: ${formatRenewalNoticeDate(consent.cancellationDeadline)}.`,
     `How to cancel: ${consent.cancellationMethod}`,
     `Accepted: ${consent.acceptedAt.toISOString()}.`,
     `Terms version: ${consent.termsVersion}.`,
-    `Business contact: ${BUSINESS_CONTACT}.`,
+    `Business contact: ${RENEWAL_NOTICE_BUSINESS_CONTACT}.`,
     `Terms: ${termsUrl}`,
     `Privacy: ${privacyUrl}`,
   ];
   const text = lines.join('\n');
   const html = lines
-    .map((line) => (line.length === 0 ? '<br>' : `<p>${escapeHtml(line)}</p>`))
+    .map((line) =>
+      line.length === 0 ? '<br>' : `<p>${escapeRenewalNoticeHtml(line)}</p>`,
+    )
     .join('');
 
   return {
-    from: FROM,
+    from: RENEWAL_NOTICE_FROM,
     to: input.destination,
-    replyTo: REPLY_TO,
+    replyTo: RENEWAL_NOTICE_REPLY_TO,
     subject: 'Your Addiction Boards subscription terms',
     html,
     text,
