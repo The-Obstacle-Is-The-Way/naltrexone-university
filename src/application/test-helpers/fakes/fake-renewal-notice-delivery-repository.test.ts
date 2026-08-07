@@ -223,6 +223,29 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     });
   });
 
+  it('persists a delivered outcome for the owning claim', async () => {
+    const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
+    await repository.saveQueued(createDelivery());
+    await repository.claim({
+      id: deliveryId,
+      attemptId: 'attempt-1',
+      startedAt: now,
+    });
+
+    await expect(
+      repository.markDelivered({
+        id: deliveryId,
+        attemptId: 'attempt-1',
+        providerEventId: 'email_123',
+        completedAt: now,
+      }),
+    ).resolves.toMatchObject({
+      status: 'delivered',
+      providerEventId: 'email_123',
+      nextAttemptAt: null,
+    });
+  });
+
   it('quarantines stale processing claims as outcome_unknown', async () => {
     const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
     await repository.saveQueued(createDelivery());

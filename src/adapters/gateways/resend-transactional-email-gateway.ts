@@ -13,6 +13,23 @@ const TRANSIENT_RESEND_ERRORS = new Set<ErrorResponse['name']>([
   'monthly_quota_exceeded',
   'rate_limit_exceeded',
 ]);
+const TERMINAL_RESEND_ERRORS = new Set<ErrorResponse['name']>([
+  'invalid_idempotency_key',
+  'validation_error',
+  'missing_api_key',
+  'restricted_api_key',
+  'invalid_api_key',
+  'not_found',
+  'method_not_allowed',
+  'invalid_idempotent_request',
+  'invalid_attachment',
+  'invalid_from_address',
+  'invalid_access',
+  'invalid_parameter',
+  'invalid_region',
+  'missing_required_field',
+  'security_error',
+]);
 export const RESEND_PROVIDER_TIMEOUT_MS = 10_000;
 
 class ResendProviderTimeoutError extends Error {
@@ -81,10 +98,22 @@ export class ResendTransactionalEmailGateway
             failureCode: error.name,
           };
         }
+        if (TRANSIENT_RESEND_ERRORS.has(error.name)) {
+          return {
+            status: 'transient_failure',
+            failureCode: error.name,
+          };
+        }
+        if (TERMINAL_RESEND_ERRORS.has(error.name)) {
+          return {
+            status: 'terminal_failure',
+            failureCode: error.name,
+          };
+        }
+        // An explicit provider error proves non-acceptance. Unknown future
+        // names are safe to retry; they are not an ambiguous send outcome.
         return {
-          status: TRANSIENT_RESEND_ERRORS.has(error.name)
-            ? 'transient_failure'
-            : 'terminal_failure',
+          status: 'transient_failure',
           failureCode: error.name,
         };
       }

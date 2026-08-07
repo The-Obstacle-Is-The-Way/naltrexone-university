@@ -70,13 +70,15 @@ export class DrizzleRenewalNoticeDeliveryRepository
     assertValidRenewalNoticeDeliveryPayload(input, this.hasher);
     assertValidKeyShape(input);
     const { externalSubscriptionId, ...vendorNeutralInput } = input;
+    const queuedAt = this.now();
     const [inserted] = await this.db
       .insert(renewalNoticeDeliveries)
       .values({
         ...vendorNeutralInput,
         stripeSubscriptionId: externalSubscriptionId,
         status: 'queued',
-        updatedAt: this.now(),
+        createdAt: queuedAt,
+        updatedAt: queuedAt,
       })
       .onConflictDoNothing()
       .returning();
@@ -341,7 +343,7 @@ export class DrizzleRenewalNoticeDeliveryRepository
     return toDelivery(row);
   }
 
-  private findConflictRow(
+  private async findConflictRow(
     input: NewRenewalNoticeDelivery,
   ): Promise<DeliveryRow | undefined> {
     let identity: SQL | undefined;
@@ -375,15 +377,23 @@ export class DrizzleRenewalNoticeDeliveryRepository
         eq(renewalNoticeDeliveries.destination, input.destination),
       );
     }
+    const exactId = await this.db.query.renewalNoticeDeliveries.findFirst({
+      where: eq(renewalNoticeDeliveries.id, input.id),
+    });
+    if (exactId) return exactId;
+
     return this.db.query.renewalNoticeDeliveries.findFirst({
       where: or(
-        eq(renewalNoticeDeliveries.id, input.id),
         eq(
           renewalNoticeDeliveries.providerIdempotencyKey,
           input.providerIdempotencyKey,
         ),
         identity,
       ),
+      orderBy: [
+        asc(renewalNoticeDeliveries.createdAt),
+        asc(renewalNoticeDeliveries.id),
+      ],
     });
   }
 }

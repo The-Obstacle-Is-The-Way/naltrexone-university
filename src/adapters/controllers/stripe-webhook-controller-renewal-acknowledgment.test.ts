@@ -17,6 +17,7 @@ import type { NewRenewalNoticeDelivery } from '@/src/domain/entities';
 import {
   processStripeWebhook,
   type StripeWebhookDeps,
+  type StripeWebhookTransaction,
 } from './stripe-webhook-controller';
 
 const now = new Date('2026-08-07T12:00:00.000Z');
@@ -74,15 +75,7 @@ function createHarness(input?: {
   configured?: boolean;
   clearConsentUserReference?: boolean;
   dispatchError?: Error;
-  findUserById?: StripeWebhookDeps['transaction'] extends (
-    fn: (transaction: infer T) => Promise<unknown>,
-  ) => Promise<unknown>
-    ? T extends { users: infer U }
-      ? U extends { findById: infer F }
-        ? F
-        : never
-      : never
-    : never;
+  findUserById?: StripeWebhookTransaction['users']['findById'];
   userId?: string;
   webhookResult?: WebhookEventResult;
   providerResult?:
