@@ -69,6 +69,12 @@ export type AttachTrialPaymentMethodInput = {
   externalCustomerId: string;
 };
 
+export type DetachTrialPaymentMethodInput = {
+  sessionId: string;
+  externalPaymentMethodId: string;
+  externalCustomerId: string;
+};
+
 export type SetTrialSubscriptionDefaultPaymentMethodInput = {
   sessionId: string;
   externalPaymentMethodId: string;
@@ -131,6 +137,21 @@ export type WebhookEventResult = {
     stripePaymentMethodId: string;
     acceptedAt: Date;
   };
+  trialPaymentMethodSetupExpiration?: {
+    sessionId: string;
+    userId: string;
+    externalCustomerId: string;
+    externalSubscriptionId: string;
+    plan: SubscriptionPlan;
+    amountCents: number;
+    currency: 'usd';
+    frequency: 'month' | 'year';
+    trialEndsAt: Date;
+    disclosureVersion: string;
+    termsVersion: string;
+    termsHash: string;
+    expiredAt: Date;
+  };
 };
 
 export interface PaymentGateway {
@@ -158,6 +179,8 @@ export interface PaymentGateway {
   ): Promise<TrialPaymentMethodSetupSessionOutput>;
 
   attachTrialPaymentMethod(input: AttachTrialPaymentMethodInput): Promise<void>;
+
+  detachTrialPaymentMethod(input: DetachTrialPaymentMethodInput): Promise<void>;
 
   setTrialSubscriptionDefaultPaymentMethod(
     input: SetTrialSubscriptionDefaultPaymentMethodInput,

@@ -72,6 +72,26 @@ describe('env', () => {
     );
   });
 
+  it('rejects a configured consent-state secret that is too short', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    process.env.DATABASE_URL =
+      'postgresql://postgres:postgres@localhost:5432/db';
+    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+    process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = 'pk_test_dummy';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_dummy';
+    process.env.CONSENT_STATE_SECRET = 'too-short';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY = 'price_dummy_monthly';
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL = 'price_dummy_annual';
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
+
+    vi.resetModules();
+
+    await expect(import('@/lib/env')).rejects.toThrow(
+      'Invalid environment variables',
+    );
+  });
+
   it('allows NEXT_PUBLIC_SKIP_CLERK=true when VERCEL_ENV is not production', async () => {
     delete process.env.VERCEL_ENV;
 

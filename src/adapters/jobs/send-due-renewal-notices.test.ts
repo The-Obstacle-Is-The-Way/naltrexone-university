@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
 import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
 import { RESEND_PROVIDER_TIMEOUT_MS } from '../gateways/resend-transactional-email-gateway';
@@ -23,6 +24,12 @@ function createDeps(): {
       SendDueRenewalNoticesJobDeps['sendDueRenewalNotices']['execute']
     >
   >;
+  pruneExpiredTrialPaymentMethodSetups: ReturnType<
+    typeof vi.fn<
+      SendDueRenewalNoticesJobDeps['pruneExpiredTrialPaymentMethodSetups']
+    >
+  >;
+  logger: FakeLogger;
 } {
   const listAnnualSubscriptionsDue = vi.fn<
     SendDueRenewalNoticesJobDeps['listAnnualSubscriptionsDue']
@@ -49,14 +56,20 @@ function createDeps(): {
     .fn<() => number>()
     .mockReturnValueOnce(1_000)
     .mockReturnValueOnce(1_250);
+  const pruneExpiredTrialPaymentMethodSetups = vi.fn(async () => 3);
+  const logger = new FakeLogger();
   return {
     listAnnualSubscriptionsDue,
     execute,
+    pruneExpiredTrialPaymentMethodSetups,
+    logger,
     deps: {
       now: () => now,
       monotonicNow,
       listAnnualSubscriptionsDue,
       sendDueRenewalNotices: { execute },
+      pruneExpiredTrialPaymentMethodSetups,
+      logger,
       annualPlan: {
         planName: 'Pro Annual',
         amountCents: 19900,
@@ -122,8 +135,41 @@ describe('sendDueRenewalNotices job', () => {
       selected: 2,
       staleUnknown: 0,
       dispatchFailures: 0,
+      expiredSetupOperationsPruned: 3,
       durationMs: 250,
     });
+  });
+
+  it('prunes setup Sessions that expired more than 30 days ago', async () => {
+    const { deps, pruneExpiredTrialPaymentMethodSetups } = createDeps();
+
+    await sendDueRenewalNotices(
+      { subscriptionLimit: 40, dispatchLimit: 80 },
+      deps,
+    );
+
+    expect(pruneExpiredTrialPaymentMethodSetups).toHaveBeenCalledWith({
+      expiredBefore: new Date('2026-07-08T12:00:00.000Z'),
+      limit: 100,
+    });
+  });
+
+  it('does not starve legal notices when abandoned-setup cleanup fails', async () => {
+    const { deps, execute, logger, pruneExpiredTrialPaymentMethodSetups } =
+      createDeps();
+    pruneExpiredTrialPaymentMethodSetups.mockRejectedValueOnce(
+      new Error('cleanup unavailable'),
+    );
+
+    await expect(
+      sendDueRenewalNotices({ subscriptionLimit: 40, dispatchLimit: 80 }, deps),
+    ).resolves.toMatchObject({ expiredSetupOperationsPruned: 0 });
+    expect(execute).toHaveBeenCalledOnce();
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({ error: expect.any(Object) }),
+      }),
+    ]);
   });
 
   it('clamps unsafe limits before querying or dispatching', async () => {

@@ -123,4 +123,73 @@ describe('FakeTrialPaymentMethodSetupOperationRepository', () => {
       expect.objectContaining({ status: 'pending', claimId: null }),
     );
   });
+
+  it('records a claimed ownership mismatch as a terminal outcome', async () => {
+    const repository = new FakeTrialPaymentMethodSetupOperationRepository();
+    await repository.createPending(pendingInput);
+    await repository.claim({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_terminal',
+      claimedAt: new Date('2026-08-07T12:00:00Z'),
+      staleBefore: new Date(0),
+    });
+
+    await repository.markTerminal({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_terminal',
+      reason: 'billing_ownership_mismatch',
+      terminalAt: new Date('2026-08-07T12:00:01Z'),
+    });
+
+    await expect(repository.findBySessionId('cs_setup_123')).resolves.toEqual(
+      expect.objectContaining({
+        status: 'terminal',
+        terminalReason: 'billing_ownership_mismatch',
+        terminalAt: new Date('2026-08-07T12:00:01Z'),
+      }),
+    );
+    await expect(
+      repository.claim({
+        sessionId: 'cs_setup_123',
+        claimId: 'claim_replay',
+        claimedAt: new Date('2026-08-07T13:00:00Z'),
+        staleBefore: new Date('2026-08-07T12:55:00Z'),
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it('expires pending operations and prunes only expirations older than the cutoff', async () => {
+    const repository = new FakeTrialPaymentMethodSetupOperationRepository();
+    await repository.createPending(pendingInput);
+    await repository.createPending({
+      ...pendingInput,
+      sessionId: 'cs_setup_recent',
+    });
+    await repository.markExpired({
+      sessionId: 'cs_setup_123',
+      expiredAt: new Date('2026-06-01T00:00:00Z'),
+    });
+    await repository.markExpired({
+      sessionId: 'cs_setup_recent',
+      expiredAt: new Date('2026-08-01T00:00:00Z'),
+    });
+
+    await expect(
+      repository.pruneExpired({
+        expiredBefore: new Date('2026-07-08T00:00:00Z'),
+        limit: 100,
+      }),
+    ).resolves.toBe(1);
+    await expect(
+      repository.findBySessionId('cs_setup_123'),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findBySessionId('cs_setup_recent'),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        status: 'expired',
+        expiredAt: new Date('2026-08-01T00:00:00Z'),
+      }),
+    );
+  });
 });

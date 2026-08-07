@@ -26,6 +26,7 @@ const handleCronRequest = createRenewalNoticeCronHandler(() => {
         {
           now: container.now,
           monotonicNow: () => performance.now(),
+          logger: container.logger,
           annualPlan: {
             planName: PRICING_DATA.annual.name,
             amountCents: PRICING_DATA.annual.amountCents,
@@ -35,6 +36,10 @@ const handleCronRequest = createRenewalNoticeCronHandler(() => {
             cancellationMethod: CANCELLATION_METHOD,
           },
           sendDueRenewalNotices: container.createSendDueRenewalNoticesUseCase(),
+          pruneExpiredTrialPaymentMethodSetups: (input) =>
+            container
+              .createTrialPaymentMethodSetupOperationRepository()
+              .pruneExpired(input),
           listAnnualSubscriptionsDue: (input) =>
             listAnnualSubscriptionsDue(input, {
               db: container.db,

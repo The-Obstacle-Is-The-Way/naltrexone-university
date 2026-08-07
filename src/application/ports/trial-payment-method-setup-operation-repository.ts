@@ -3,7 +3,12 @@ import type { SubscriptionPlan } from '@/src/domain/value-objects';
 export type TrialPaymentMethodSetupOperationStatus =
   | 'pending'
   | 'processing'
-  | 'completed';
+  | 'completed'
+  | 'terminal'
+  | 'expired';
+
+export type TrialPaymentMethodSetupTerminalReason =
+  'billing_ownership_mismatch';
 
 export type TrialPaymentMethodSetupOperationInput = {
   sessionId: string;
@@ -31,6 +36,9 @@ export type TrialPaymentMethodSetupOperation =
     paymentMethodAttachedAt: Date | null;
     subscriptionDefaultSetAt: Date | null;
     completedAt: Date | null;
+    terminalAt: Date | null;
+    terminalReason: TrialPaymentMethodSetupTerminalReason | null;
+    expiredAt: Date | null;
   };
 
 export type ClaimTrialPaymentMethodSetupOperationInput = {
@@ -59,6 +67,23 @@ export type CompleteTrialPaymentMethodSetupOperationInput = {
   completedAt: Date;
 };
 
+export type MarkTrialPaymentMethodSetupTerminalInput = {
+  sessionId: string;
+  claimId: string;
+  reason: TrialPaymentMethodSetupTerminalReason;
+  terminalAt: Date;
+};
+
+export type MarkTrialPaymentMethodSetupExpiredInput = {
+  sessionId: string;
+  expiredAt: Date;
+};
+
+export type PruneExpiredTrialPaymentMethodSetupsInput = {
+  expiredBefore: Date;
+  limit: number;
+};
+
 export interface TrialPaymentMethodSetupOperationRepository {
   createPending(input: TrialPaymentMethodSetupOperationInput): Promise<void>;
   findBySessionId(
@@ -76,4 +101,9 @@ export interface TrialPaymentMethodSetupOperationRepository {
   markCompleted(
     input: CompleteTrialPaymentMethodSetupOperationInput,
   ): Promise<void>;
+  markTerminal(input: MarkTrialPaymentMethodSetupTerminalInput): Promise<void>;
+  markExpired(input: MarkTrialPaymentMethodSetupExpiredInput): Promise<boolean>;
+  pruneExpired(
+    input: PruneExpiredTrialPaymentMethodSetupsInput,
+  ): Promise<number>;
 }

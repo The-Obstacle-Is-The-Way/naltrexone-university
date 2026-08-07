@@ -26,6 +26,8 @@ function createDbMock(input?: {
   insertRows?: unknown[];
   updateRows?: unknown[];
   existingRow?: unknown;
+  selectRows?: unknown[];
+  deleteRows?: unknown[];
 }) {
   const insertReturning = vi.fn(async () => input?.insertRows ?? [{}]);
   const onConflictDoNothing = vi.fn(() => ({ returning: insertReturning }));
@@ -37,10 +39,22 @@ function createDbMock(input?: {
   const updateSet = vi.fn(() => ({ where: updateWhere }));
   const update = vi.fn(() => ({ set: updateSet }));
 
+  const selectLimit = vi.fn(async () => input?.selectRows ?? []);
+  const selectOrderBy = vi.fn(() => ({ limit: selectLimit }));
+  const selectWhere = vi.fn(() => ({ orderBy: selectOrderBy }));
+  const selectFrom = vi.fn(() => ({ where: selectWhere }));
+  const select = vi.fn(() => ({ from: selectFrom }));
+
+  const deleteReturning = vi.fn(async () => input?.deleteRows ?? []);
+  const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
+  const deleteFrom = vi.fn(() => ({ where: deleteWhere }));
+
   const findFirst = vi.fn(async () => input?.existingRow ?? null);
   const db = {
     insert,
     update,
+    select,
+    delete: deleteFrom,
     query: {
       trialPaymentMethodSetupOperations: { findFirst },
     },
@@ -50,6 +64,7 @@ function createDbMock(input?: {
     db: db as unknown as RepoDb,
     insertValues,
     updateSet,
+    deleteReturning,
     findFirst,
   };
 }
@@ -84,6 +99,9 @@ describe('DrizzleTrialPaymentMethodSetupOperationRepository', () => {
         paymentMethodAttachedAt: null,
         subscriptionDefaultSetAt: null,
         completedAt: null,
+        terminalAt: null,
+        terminalReason: null,
+        expiredAt: null,
       },
     });
     const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
@@ -106,6 +124,9 @@ describe('DrizzleTrialPaymentMethodSetupOperationRepository', () => {
       paymentMethodAttachedAt: null,
       subscriptionDefaultSetAt: null,
       completedAt: null,
+      terminalAt: null,
+      terminalReason: null,
+      expiredAt: null,
     };
     const { db, updateSet } = createDbMock({ updateRows: [claimedRow] });
     const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
@@ -127,5 +148,71 @@ describe('DrizzleTrialPaymentMethodSetupOperationRepository', () => {
         claimedAt,
       }),
     );
+  });
+
+  it('persists terminal and expired lifecycle outcomes', async () => {
+    const lifecycleRow = {
+      ...pendingInput,
+      status: 'terminal',
+      claimId: 'claim_1',
+      claimedAt: new Date('2026-08-07T12:00:00Z'),
+      stripePaymentMethodId: null,
+      paymentMethodAttachedAt: null,
+      subscriptionDefaultSetAt: null,
+      completedAt: null,
+      terminalAt: new Date('2026-08-07T12:00:01Z'),
+      terminalReason: 'billing_ownership_mismatch',
+      expiredAt: null,
+    };
+    const { db, updateSet } = createDbMock({ updateRows: [lifecycleRow] });
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+
+    await repository.markTerminal({
+      sessionId: 'cs_setup_123',
+      claimId: 'claim_1',
+      reason: 'billing_ownership_mismatch',
+      terminalAt: new Date('2026-08-07T12:00:01Z'),
+    });
+    await expect(
+      repository.markExpired({
+        sessionId: 'cs_setup_123',
+        expiredAt: new Date('2026-08-08T12:00:00Z'),
+      }),
+    ).resolves.toBe(true);
+
+    expect(updateSet).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        status: 'terminal',
+        terminalReason: 'billing_ownership_mismatch',
+      }),
+    );
+    expect(updateSet).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        status: 'expired',
+        expiredAt: new Date('2026-08-08T12:00:00Z'),
+      }),
+    );
+  });
+
+  it('deletes only the selected expired operation ids', async () => {
+    const { db, deleteReturning } = createDbMock({
+      selectRows: [{ sessionId: 'cs_expired_1' }],
+      deleteRows: [{ sessionId: 'cs_expired_1' }],
+    });
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+
+    await expect(
+      repository.pruneExpired({
+        expiredBefore: new Date('2026-07-08T00:00:00Z'),
+        limit: 100,
+      }),
+    ).resolves.toBe(1);
+    expect(deleteReturning).toHaveBeenCalledOnce();
   });
 });
