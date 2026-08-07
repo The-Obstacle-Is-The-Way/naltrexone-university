@@ -84,4 +84,111 @@ describe('expired trial payment-method setup webhook', () => {
     expect(retrieveSetupIntent).not.toHaveBeenCalled();
     expect(retrieveSubscription).not.toHaveBeenCalled();
   });
+
+  it('fails closed when the dedicated consent-state secret is unavailable', async () => {
+    const stripe = {
+      webhooks: {
+        constructEvent: vi.fn(() => ({
+          id: 'evt_setup_expired',
+          type: 'checkout.session.expired',
+          created: 1_775_649_600,
+          data: {
+            object: {
+              id: 'cs_setup_123',
+              mode: 'setup',
+              metadata: signedSetupMetadata(),
+            },
+          },
+        })),
+      },
+    } as unknown as StripeClient;
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Trial consent-state verification is not configured',
+    });
+  });
+
+  it('rejects an expired setup Session with incomplete signed state', async () => {
+    const logger = new FakeLogger();
+    const stripe = {
+      webhooks: {
+        constructEvent: vi.fn(() => ({
+          id: 'evt_setup_expired',
+          type: 'checkout.session.expired',
+          created: 1_775_649_600,
+          data: {
+            object: {
+              id: 'cs_setup_123',
+              mode: 'setup',
+              metadata: {},
+            },
+          },
+        })),
+      },
+    } as unknown as StripeClient;
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        consentStateSecret,
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
+    expect(logger.errorCalls).toEqual([
+      expect.objectContaining({
+        msg: 'Invalid expired Stripe trial payment-method setup Session',
+      }),
+    ]);
+  });
+
+  it('rejects an expired setup Session with a forged state signature', async () => {
+    const stripe = {
+      webhooks: {
+        constructEvent: vi.fn(() => ({
+          id: 'evt_setup_expired',
+          type: 'checkout.session.expired',
+          created: 1_775_649_600,
+          data: {
+            object: {
+              id: 'cs_setup_123',
+              mode: 'setup',
+              metadata: {
+                ...signedSetupMetadata(),
+                consent_state_signature: '0'.repeat(64),
+              },
+            },
+          },
+        })),
+      },
+    } as unknown as StripeClient;
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        consentStateSecret,
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({
+      code: 'INVALID_WEBHOOK_PAYLOAD',
+      message: 'Invalid expired trial payment-method setup state signature',
+    });
+  });
 });

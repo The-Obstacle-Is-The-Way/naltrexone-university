@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep subscription consent evidence and webhook normalization cases in one adapter contract suite.
 import { createHmac } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
@@ -170,6 +171,30 @@ describe('processStripeWebhookEvent', () => {
     });
     expect(stripe.setupIntents.retrieve).toHaveBeenCalledWith('seti_123');
     expect(stripe.subscriptions?.retrieve).not.toHaveBeenCalled();
+  });
+
+  it('fails a setup completion closed when the dedicated consent-state secret is unavailable', async () => {
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_setup',
+        type: 'checkout.session.completed',
+        data: { object: createCompletedSetupSession() },
+      }),
+    });
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger: new FakeLogger(),
+      }),
+    ).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Trial consent-state verification is not configured',
+    });
   });
 
   it('rejects a setup completion without accepted Terms before resolving the payment method', async () => {
@@ -479,6 +504,64 @@ describe('processStripeWebhookEvent', () => {
           eventId: 'evt_checkout_incomplete_consent',
           sessionId: 'cs_checkout_incomplete',
           reason: 'consent_evidence_invalid',
+        }),
+      }),
+    ]);
+  });
+
+  it('preserves subscription activation and warns when consent identity differs from the live subscription', async () => {
+    const logger = new FakeLogger();
+    const stripe = createStripeClient({
+      eventFactory: () => ({
+        id: 'evt_checkout_mismatched_consent',
+        type: 'checkout.session.completed',
+        created: 1_775_649_600,
+        data: {
+          object: {
+            id: 'cs_checkout_mismatched',
+            mode: 'subscription',
+            customer: 'cus_123',
+            client_reference_id: appUserId,
+            subscription: 'sub_123',
+            consent: { terms_of_service: 'accepted' },
+            metadata: {
+              checkout_variant: 'standard',
+              renewal_user_id: crypto.randomUUID(),
+              renewal_plan: 'monthly',
+              renewal_amount_cents: '2900',
+              renewal_currency: 'usd',
+              renewal_frequency: 'month',
+              renewal_disclosure_snapshot: 'Exact immediate disclosure.',
+              renewal_disclosure_version: '2026-08-05',
+              renewal_terms_version: '2026-08-05',
+              renewal_terms_hash: 'terms-hash',
+              renewal_cancellation_method:
+                'Billing page in the app or support@addictionboards.com',
+            },
+          },
+        },
+      }),
+    });
+
+    await expect(
+      processStripeWebhookEvent({
+        stripe,
+        webhookSecret: 'whsec_test',
+        rawBody: '{}',
+        signature: 'sig_test',
+        priceIds,
+        logger,
+      }),
+    ).resolves.toMatchObject({
+      eventId: 'evt_checkout_mismatched_consent',
+      subscriptionUpdate: { externalSubscriptionId: 'sub_123' },
+    });
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({
+          eventId: 'evt_checkout_mismatched_consent',
+          sessionId: 'cs_checkout_mismatched',
+          reason: 'consent_identity_mismatch',
         }),
       }),
     ]);

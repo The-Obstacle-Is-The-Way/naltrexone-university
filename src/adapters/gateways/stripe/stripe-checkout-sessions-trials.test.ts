@@ -522,6 +522,31 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
     );
   });
 
+  it('surfaces a second idempotency mismatch from the request-specific recovery key', async () => {
+    const mismatch = Object.assign(new Error('same parameters required'), {
+      type: 'StripeIdempotencyError',
+      rawType: 'idempotency_error',
+      statusCode: 400,
+    });
+    const { stripe, sessionsCreate } = createStripeMock({
+      setupCreateResults: [mismatch, mismatch],
+    });
+
+    await expect(
+      createStripeTrialPaymentMethodSetupSession({
+        stripe,
+        logger: new FakeLogger(),
+        stateSecret: 'dedicated-consent-state-secret-32-bytes',
+        input: setupInput,
+      }),
+    ).rejects.toBe(mismatch);
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(2);
+    expect(sessionsCreate.mock.calls[1]?.[1]?.idempotencyKey).toMatch(
+      /^trial_setup_session_recovery:.*:request:[a-f0-9]{16}$/,
+    );
+  });
+
   it('creates a fresh setup Session when the idempotent replay is already complete', async () => {
     const { stripe, sessionsCreate } = createStripeMock({
       setupCreateResults: [
@@ -550,5 +575,28 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
     expect(sessionsCreate.mock.calls[1]?.[1]?.idempotencyKey).toMatch(
       /^trial_setup_session_recovery:.*:cs_complete:[a-f0-9]{16}$/,
     );
+  });
+
+  it('fails after the bounded recovery chain keeps returning inactive Sessions', async () => {
+    const setupCreateResults = Array.from({ length: 21 }, (_, index) => ({
+      id: `cs_complete_${index}`,
+      url: null,
+      status: 'complete' as const,
+    }));
+    const { stripe, sessionsCreate } = createStripeMock({ setupCreateResults });
+
+    await expect(
+      createStripeTrialPaymentMethodSetupSession({
+        stripe,
+        logger: new FakeLogger(),
+        stateSecret: 'dedicated-consent-state-secret-32-bytes',
+        input: setupInput,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe Checkout Session is expired or inactive',
+    });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(21);
   });
 });
