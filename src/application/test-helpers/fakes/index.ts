@@ -17,10 +17,13 @@ export {
 export { FakeQuestionFeedbackRepository } from './fake-question-feedback-repository';
 export { FakeQuestionRepository } from './fake-question-repository';
 export { FakeRenewalConsentRecordRepository } from './fake-renewal-consent-record-repository';
+export { FakeRenewalNoticeDeliveryRepository } from './fake-renewal-notice-delivery-repository';
+export { FakeSha256Hasher } from './fake-sha256-hasher';
 export { FakeStripeCustomerRepository } from './fake-stripe-customer-repository';
 export { FakeStripeEventRepository } from './fake-stripe-event-repository';
 export { FakeSubscriptionRepository } from './fake-subscription-repository';
 export { FakeTagRepository } from './fake-tag-repository';
+export { FakeTransactionalEmailGateway } from './fake-transactional-email-gateway';
 export { FakeTrialPaymentMethodSetupOperationRepository } from './fake-trial-payment-method-setup-operation-repository';
 export {
   FakeCheckEntitlementUseCase,

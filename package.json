@@ -45,6 +45,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.4.1",
     "@clerk/ui": "^1.13.1",
+    "@noble/hashes": "1.8.0",
     "@sentry/nextjs": "^10.53.1",
     "@tailwindcss/postcss": "4.3.2",
     "@typescript/native": "npm:typescript@^7.0.2",
@@ -66,6 +67,7 @@
     "react-markdown": "^10.1.0",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
+    "resend": "6.18.0",
     "server-only": "^0.0.1",
     "stripe": "^22.3.0",
     "tailwind-merge": "^3.4.0",

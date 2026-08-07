@@ -25,6 +25,7 @@ import type {
   QuestionFeedbackRepository,
   QuestionRepository,
   RenewalConsentRecordRepository,
+  RenewalNoticeDeliveryRepository,
   StripeCustomerRepository,
   StripeEventRepository,
   SubscriptionRepository,
@@ -32,6 +33,8 @@ import type {
   TrialPaymentMethodSetupOperationRepository,
   UserRepository,
 } from '@/src/application/ports/repositories';
+import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
+import type { TransactionalEmailGateway } from '@/src/application/ports/transactional-email-gateway';
 import type {
   CheckEntitlementUseCase,
   CountAvailableQuestionsUseCase,
@@ -39,6 +42,7 @@ import type {
   CreatePortalSessionUseCase,
   CreateTrialPaymentMethodSetupSessionUseCase,
   DiscardPracticeSessionUseCase,
+  DispatchRenewalNoticeDeliveryUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
@@ -57,6 +61,7 @@ import type {
   PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
+  RequeueRenewalNoticeDeliveryUseCase,
   SaveExamDraftAnswerUseCase,
   SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
@@ -104,6 +109,9 @@ export type RepositoryFactories = {
   createRenewalConsentRecordRepository: (
     dbOverride?: DrizzleDb,
   ) => RenewalConsentRecordRepository;
+  createRenewalNoticeDeliveryRepository: (
+    dbOverride?: DrizzleDb,
+  ) => RenewalNoticeDeliveryRepository;
   createTagRepository: (dbOverride?: DrizzleDb) => TagRepository;
   createTrialPaymentMethodSetupOperationRepository: (
     dbOverride?: DrizzleDb,
@@ -124,6 +132,8 @@ export type GatewayFactories = {
   createAuthGateway: () => AuthGateway;
   createPaymentGateway: () => PaymentGateway;
   createRateLimiter: () => RateLimiter;
+  createSha256Hasher: () => Sha256Hasher;
+  createTransactionalEmailGateway: () => TransactionalEmailGateway;
 };
 
 export type UseCaseFactories = {
@@ -131,6 +141,8 @@ export type UseCaseFactories = {
   createCheckoutSessionUseCase: () => CreateCheckoutSessionUseCase;
   createPortalSessionUseCase: () => CreatePortalSessionUseCase;
   createTrialPaymentMethodSetupSessionUseCase: () => CreateTrialPaymentMethodSetupSessionUseCase;
+  createDispatchRenewalNoticeDeliveryUseCase: () => DispatchRenewalNoticeDeliveryUseCase;
+  createRequeueRenewalNoticeDeliveryUseCase: () => RequeueRenewalNoticeDeliveryUseCase;
   createRecordRenewalConsentUseCase: () => RecordRenewalConsentUseCase;
   createPruneRenewalConsentsUseCase: () => PruneRenewalConsentsUseCase;
   createCountAvailableQuestionsUseCase: () => CountAvailableQuestionsUseCase;

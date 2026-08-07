@@ -26,6 +26,7 @@ import {
   CreatePortalSessionUseCase,
   CreateTrialPaymentMethodSetupSessionUseCase,
   DiscardPracticeSessionUseCase,
+  DispatchRenewalNoticeDeliveryUseCase,
   EndPracticeSessionUseCase,
   FinalizeExamAnswersUseCase,
   GetAttemptedQuestionsUseCase,
@@ -44,6 +45,7 @@ import {
   PruneRenewalConsentsUseCase,
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
+  RequeueRenewalNoticeDeliveryUseCase,
   SaveExamDraftAnswerUseCase,
   SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
@@ -272,6 +274,18 @@ export function createUseCaseFactories(input: {
     createPruneRenewalConsentsUseCase: () =>
       new PruneRenewalConsentsUseCase(
         repositories.createRenewalConsentRecordRepository(),
+        primitives.now,
+      ),
+    createDispatchRenewalNoticeDeliveryUseCase: () =>
+      new DispatchRenewalNoticeDeliveryUseCase(
+        repositories.createRenewalNoticeDeliveryRepository(),
+        gateways.createTransactionalEmailGateway(),
+        gateways.createSha256Hasher(),
+        primitives.now,
+      ),
+    createRequeueRenewalNoticeDeliveryUseCase: () =>
+      new RequeueRenewalNoticeDeliveryUseCase(
+        repositories.createRenewalNoticeDeliveryRepository(),
         primitives.now,
       ),
     createCountAvailableQuestionsUseCase: () =>
