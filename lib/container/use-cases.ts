@@ -47,6 +47,7 @@ import {
   RecordRenewalConsentUseCase,
   RequeueRenewalNoticeDeliveryUseCase,
   SaveExamDraftAnswerUseCase,
+  SendDueRenewalNoticesUseCase,
   SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
@@ -288,6 +289,22 @@ export function createUseCaseFactories(input: {
         repositories.createRenewalNoticeDeliveryRepository(),
         primitives.now,
       ),
+    createSendDueRenewalNoticesUseCase: () => {
+      const repository = repositories.createRenewalNoticeDeliveryRepository();
+      const hasher = gateways.createSha256Hasher();
+      return new SendDueRenewalNoticesUseCase(
+        repository,
+        hasher,
+        new DispatchRenewalNoticeDeliveryUseCase(
+          repository,
+          gateways.createTransactionalEmailGateway(),
+          hasher,
+          primitives.now,
+        ),
+        primitives.env.NEXT_PUBLIC_APP_URL,
+        primitives.now,
+      );
+    },
     createCountAvailableQuestionsUseCase: () =>
       new CountAvailableQuestionsUseCase(
         repositories.createQuestionRepository(),

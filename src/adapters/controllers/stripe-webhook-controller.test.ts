@@ -18,6 +18,7 @@ import {
   processStripeWebhook,
   type StripeWebhookDeps,
 } from './stripe-webhook-controller';
+import { createStripeWebhookRenewalAcknowledgmentTestDeps } from './test-helpers/stripe-webhook-renewal-acknowledgment';
 
 class FailingStripeEventRepository extends FakeStripeEventRepository {
   override async pruneProcessedBefore(
@@ -125,6 +126,7 @@ function createDeps(overrides: {
     new FakeTrialPaymentMethodSetupOperationRepository();
   const renewalConsents =
     overrides.renewalConsents ?? new FakeRenewalConsentRecordRepository();
+  const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
   return {
     deps: {
@@ -132,6 +134,7 @@ function createDeps(overrides: {
       subscriptionVersions: subscriptions,
       logger,
       now: overrides.now ?? (() => new Date()),
+      ...acknowledgment.webhook,
       transaction: async (fn) =>
         fn({
           stripeEvents,
@@ -139,6 +142,7 @@ function createDeps(overrides: {
           stripeCustomers,
           trialPaymentMethodSetupOperations: setupOperations,
           renewalConsentRecords: renewalConsents,
+          ...acknowledgment.transaction,
         }),
     },
     stripeEvents,
@@ -204,6 +208,7 @@ function createRollbackAwareDeps(overrides: {
           stripeCustomers: stagingStripeCustomers,
           trialPaymentMethodSetupOperations: stagingSetupOperations,
           renewalConsentRecords: stagingRenewalConsents,
+          ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
         });
 
         base.stripeEvents.restore(stagingEvents.snapshot());

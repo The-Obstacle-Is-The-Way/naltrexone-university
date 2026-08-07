@@ -55,6 +55,7 @@ import {
   RateQuestionUseCase,
   RecordRenewalConsentUseCase,
   RequeueRenewalNoticeDeliveryUseCase,
+  SendDueRenewalNoticesUseCase,
   SetBookmarkUseCase,
   StartPracticeSessionUseCase,
   SubmitAnswerUseCase,
@@ -152,6 +153,9 @@ describe('container factories', () => {
       'function',
     );
     expect(typeof container.createRequeueRenewalNoticeDeliveryUseCase).toBe(
+      'function',
+    );
+    expect(typeof container.createSendDueRenewalNoticesUseCase).toBe(
       'function',
     );
     expect(typeof container.createGetNextQuestionUseCase).toBe('function');
@@ -331,6 +335,9 @@ describe('container factories', () => {
     expect(
       container.createRequeueRenewalNoticeDeliveryUseCase(),
     ).toBeInstanceOf(RequeueRenewalNoticeDeliveryUseCase);
+    expect(container.createSendDueRenewalNoticesUseCase()).toBeInstanceOf(
+      SendDueRenewalNoticesUseCase,
+    );
     expect(container.createFinalizeExamAnswersUseCase()).toBeInstanceOf(
       FinalizeExamAnswersUseCase,
     );

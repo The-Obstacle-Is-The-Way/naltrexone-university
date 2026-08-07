@@ -29,7 +29,7 @@ function publicPrivacyMarkdown(): string {
     .split('## Privacy Policy\n\n')[1]
     ?.split('\n---\n\n## Provenance and adversarial verification')[0];
   const body = publicSection?.replace(
-    /^\*\*Last updated: August 5, 2026\*\*\n\n/,
+    /^\*\*Last updated: August 6, 2026\*\*\n\n/,
     '',
   );
 
@@ -43,7 +43,7 @@ function publicPrivacyMarkdown(): string {
 describe('PrivacyPage', () => {
   it('keeps the typed page content verbatim with the committed public copy', () => {
     expect(privacyContent.title).toBe('Privacy Policy');
-    expect(privacyContent.effectiveDate).toBe('August 5, 2026');
+    expect(privacyContent.effectiveDate).toBe('August 6, 2026');
     expect(privacyContent.bodyMarkdown).toBe(publicPrivacyMarkdown());
   });
 
@@ -82,6 +82,23 @@ describe('PrivacyPage', () => {
     );
     expect(text).toContain(
       'local user reference cleared and the pseudonymous consumer reference retained',
+    );
+    expect(text).toContain(
+      'messages remain queued without contacting Resend while the credential is absent',
+    );
+    expect(text).toContain(
+      'Renewal acknowledgment and notice delivery records',
+    );
+    expect(text).toContain(
+      'Recipient and message payloads remain immutable across retries; delivery status, provider-event data, and retry metadata are retained and may change',
+    );
+    expect(text).not.toContain('change-notice contents');
+    expect(text).not.toContain('change identifiers');
+    expect(text).toContain(
+      'Scheduled-notice rows currently have no automatic terminal deletion policy',
+    );
+    expect(text).toContain(
+      'renewal-consent, related acknowledgment-delivery, or scheduled-notice delivery records',
     );
     expect(text).not.toContain('Provenance and adversarial verification');
     expect(text).not.toContain('OWNER TO IDENTIFY');

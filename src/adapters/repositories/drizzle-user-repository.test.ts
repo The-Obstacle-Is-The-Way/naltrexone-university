@@ -71,6 +71,29 @@ describe('DrizzleUserRepository', () => {
     vi.restoreAllMocks();
   });
 
+  describe('findById', () => {
+    it('returns the user needed for a transaction-bound acknowledgment', async () => {
+      const db = createDbMock();
+      const row = {
+        id: userId,
+        clerkUserId: 'clerk_1',
+        email: 'subscriber@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      };
+      db._mocks.queryFindFirst.mockResolvedValue(row);
+
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(repo.findById(userId)).resolves.toEqual({
+        id: userId,
+        email: row.email,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      });
+    });
+  });
+
   describe('findByClerkId', () => {
     it('returns null when user does not exist', async () => {
       const db = createDbMock();

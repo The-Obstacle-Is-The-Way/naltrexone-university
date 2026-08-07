@@ -63,6 +63,7 @@ import type {
   RecordRenewalConsentUseCase,
   RequeueRenewalNoticeDeliveryUseCase,
   SaveExamDraftAnswerUseCase,
+  SendDueRenewalNoticesUseCase,
   SetBookmarkUseCase,
   SetPracticeSessionQuestionMarkUseCase,
   StartPracticeSessionUseCase,
@@ -143,6 +144,7 @@ export type UseCaseFactories = {
   createTrialPaymentMethodSetupSessionUseCase: () => CreateTrialPaymentMethodSetupSessionUseCase;
   createDispatchRenewalNoticeDeliveryUseCase: () => DispatchRenewalNoticeDeliveryUseCase;
   createRequeueRenewalNoticeDeliveryUseCase: () => RequeueRenewalNoticeDeliveryUseCase;
+  createSendDueRenewalNoticesUseCase: () => SendDueRenewalNoticesUseCase;
   createRecordRenewalConsentUseCase: () => RecordRenewalConsentUseCase;
   createPruneRenewalConsentsUseCase: () => PruneRenewalConsentsUseCase;
   createCountAvailableQuestionsUseCase: () => CountAvailableQuestionsUseCase;
