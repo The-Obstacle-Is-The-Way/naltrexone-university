@@ -70,6 +70,7 @@ export function parseTransactionalEmailPayloadSnapshot(
   try {
     parsed = JSON.parse(input.snapshot);
   } catch {
+    // Convert corrupt persisted JSON into the explicit integrity error below.
     throw new ApplicationError(
       'INTERNAL_ERROR',
       'Renewal notice payload snapshot is not valid JSON',

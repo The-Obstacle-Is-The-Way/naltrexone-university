@@ -7,7 +7,10 @@ import type {
   StripeWebhookTransaction,
 } from '../stripe-webhook-controller';
 
-export function createStripeWebhookRenewalAcknowledgmentTestDeps(): {
+export function createStripeWebhookRenewalAcknowledgmentTestDeps(input?: {
+  findUserById?: StripeWebhookTransaction['users']['findById'];
+  dispatchRenewalNoticeDelivery?: StripeWebhookDeps['dispatchRenewalNoticeDelivery'];
+}): {
   webhook: Pick<
     StripeWebhookDeps,
     'appUrl' | 'sha256Hasher' | 'dispatchRenewalNoticeDelivery'
@@ -22,7 +25,7 @@ export function createStripeWebhookRenewalAcknowledgmentTestDeps(): {
     webhook: {
       appUrl: 'https://addictionboards.com',
       sha256Hasher,
-      dispatchRenewalNoticeDelivery: {
+      dispatchRenewalNoticeDelivery: input?.dispatchRenewalNoticeDelivery ?? {
         execute: async () => ({ outcome: 'claim_lost', delivery: null }),
       },
     },
@@ -32,12 +35,14 @@ export function createStripeWebhookRenewalAcknowledgmentTestDeps(): {
         sha256Hasher,
       ),
       users: {
-        findById: async (id) => ({
-          id,
-          email: 'subscriber@example.com',
-          createdAt: new Date('2026-08-07T12:00:00.000Z'),
-          updatedAt: new Date('2026-08-07T12:00:00.000Z'),
-        }),
+        findById:
+          input?.findUserById ??
+          (async (id) => ({
+            id,
+            email: 'subscriber@example.com',
+            createdAt: new Date('2026-08-07T12:00:00.000Z'),
+            updatedAt: new Date('2026-08-07T12:00:00.000Z'),
+          })),
       },
     },
   };

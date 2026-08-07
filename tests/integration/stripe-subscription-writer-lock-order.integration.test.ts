@@ -343,6 +343,7 @@ async function runWebhookWriter(input: {
       },
     },
   });
+  const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
   await processStripeWebhook(
     {
@@ -353,7 +354,7 @@ async function runWebhookWriter(input: {
       ),
       logger: new FakeLogger(),
       now: () => new Date(),
-      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
+      ...acknowledgment.webhook,
       transaction: async (fn) =>
         subscriptionWriter.db.transaction(async (tx) => {
           await configureSubscriptionWriter(tx);
@@ -378,7 +379,7 @@ async function runWebhookWriter(input: {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
-            ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
+            ...acknowledgment.transaction,
           });
         }),
     },
@@ -557,6 +558,7 @@ async function runFirstInsertWebhookWriter(input: {
       },
     },
   });
+  const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
 
   // Production repositories, no pause points: the first-insert path must
   // block at the deletion writer's advisory, not inside its own INSERT's
@@ -570,7 +572,7 @@ async function runFirstInsertWebhookWriter(input: {
       ),
       logger: new FakeLogger(),
       now: () => new Date(),
-      ...createStripeWebhookRenewalAcknowledgmentTestDeps().webhook,
+      ...acknowledgment.webhook,
       transaction: async (fn) =>
         subscriptionWriter.db.transaction(async (tx) => {
           await configureFastDeadlockWriter(tx);
@@ -584,7 +586,7 @@ async function runFirstInsertWebhookWriter(input: {
             renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
               tx,
             ),
-            ...createStripeWebhookRenewalAcknowledgmentTestDeps().transaction,
+            ...acknowledgment.transaction,
           });
         }),
     },

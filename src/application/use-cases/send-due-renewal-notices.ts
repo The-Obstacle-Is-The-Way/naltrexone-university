@@ -35,6 +35,7 @@ export type ScheduledRenewalNotice = {
 
 export type SendDueRenewalNoticesResult = {
   queued: number;
+  rejectedNotices: number;
   selected: number;
   staleUnknown: number;
   dispatchFailures: number;
@@ -124,6 +125,16 @@ function validateNotice(notice: ScheduledRenewalNotice): void {
     );
   }
   if (
+    Number.isNaN(notice.applicableAt.getTime()) ||
+    !Number.isInteger(notice.amountCents) ||
+    notice.amountCents < 0
+  ) {
+    throw new ApplicationError(
+      'VALIDATION_ERROR',
+      'Scheduled renewal notice terms are invalid',
+    );
+  }
+  if (
     (notice.noticeKind === 'material_change' ||
       notice.noticeKind === 'fee_change') &&
     !notice.changeDescription?.trim()
@@ -166,8 +177,20 @@ export class SendDueRenewalNoticesUseCase {
     });
 
     let queued = 0;
+    let rejectedNotices = 0;
     for (const sourceNotice of input.notices) {
-      validateNotice(sourceNotice);
+      try {
+        validateNotice(sourceNotice);
+      } catch (error) {
+        if (
+          error instanceof ApplicationError &&
+          error.code === 'VALIDATION_ERROR'
+        ) {
+          rejectedNotices += 1;
+          continue;
+        }
+        throw error;
+      }
       const notice = {
         ...sourceNotice,
         destination: sourceNotice.destination.trim(),
@@ -216,6 +239,7 @@ export class SendDueRenewalNoticesUseCase {
 
     return {
       queued,
+      rejectedNotices,
       selected: due.length,
       staleUnknown,
       dispatchFailures,

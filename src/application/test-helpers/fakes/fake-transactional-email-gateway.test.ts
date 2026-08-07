@@ -34,6 +34,7 @@ describe('FakeTransactionalEmailGateway', () => {
       providerEventId: 'email_123',
     });
     expect(gateway.sendInputs).toEqual([input]);
+    expect(gateway.sendInputs[0]).not.toBe(input);
   });
 
   it('fails loudly when unconfigured code attempts a provider call', async () => {

@@ -140,9 +140,10 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
       const saved = await repository.saveQueued(
         createDelivery({
           id: state.id,
-          consentRecordId:
-            `${index + 1}`.padStart(8, '0') + '-0000-4000-8000-000000000000',
-          providerIdempotencyKey: `renewal-notice/${state.id}`,
+          consentRecordId: `${String(index + 1).padStart(8, '0')}-0000-4000-8000-000000000000`,
+          providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(
+            state.id,
+          ),
         }),
       );
       repository.records[index] = {

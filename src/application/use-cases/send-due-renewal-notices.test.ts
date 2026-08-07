@@ -77,6 +77,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(result).toEqual({
       queued: 1,
+      rejectedNotices: 0,
       selected: 1,
       staleUnknown: 0,
       dispatchFailures: 0,
@@ -120,6 +121,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(replay).toEqual({
       queued: 0,
+      rejectedNotices: 0,
       selected: 0,
       staleUnknown: 0,
       dispatchFailures: 0,
@@ -203,6 +205,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(result).toEqual({
       queued: 0,
+      rejectedNotices: 0,
       selected: 0,
       staleUnknown: 1,
       dispatchFailures: 0,
@@ -239,12 +242,14 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
   it('bounds provider dispatch concurrency', async () => {
     const release = createDeferred<void>();
+    const allWorkersStarted = createDeferred<void>();
     let active = 0;
     let maxActive = 0;
     const { useCase } = createHarness({
       onSend: async () => {
         active += 1;
         maxActive = Math.max(maxActive, active);
+        if (maxActive === 4) allWorkersStarted.resolve(undefined);
         await release.promise;
         active -= 1;
       },
@@ -256,7 +261,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
     );
 
     const execution = useCase.execute({ notices, limit: 100 });
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    await allWorkersStarted.promise;
 
     expect(maxActive).toBe(4);
     release.resolve(undefined);
@@ -306,6 +311,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       }),
     ).resolves.toEqual({
       queued: 2,
+      rejectedNotices: 0,
       selected: 2,
       staleUnknown: 0,
       dispatchFailures: 1,
@@ -315,5 +321,34 @@ describe('SendDueRenewalNoticesUseCase', () => {
       expect.objectContaining({ status: 'queued' }),
       expect.objectContaining({ status: 'delivered' }),
     ]);
+  });
+
+  it('rejects one malformed source notice without blocking healthy queueing or due dispatch', async () => {
+    const { gateway, repository, useCase } = createHarness();
+
+    const result = await useCase.execute({
+      notices: [
+        scheduledNotice({ destination: '   ' }),
+        scheduledNotice({ applicableAt: new Date('invalid') }),
+        scheduledNotice({ amountCents: -1 }),
+        scheduledNotice({ externalSubscriptionId: 'sub_healthy' }),
+      ],
+      limit: 100,
+    });
+
+    expect(result).toEqual({
+      queued: 1,
+      rejectedNotices: 3,
+      selected: 1,
+      staleUnknown: 0,
+      dispatchFailures: 0,
+    });
+    expect(repository.records).toEqual([
+      expect.objectContaining({
+        externalSubscriptionId: 'sub_healthy',
+        status: 'delivered',
+      }),
+    ]);
+    expect(gateway.sendInputs).toHaveLength(1);
   });
 });

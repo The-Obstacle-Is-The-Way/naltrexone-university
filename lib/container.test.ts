@@ -241,6 +241,9 @@ describe('container factories', () => {
     expect(container.createRenewalNoticeDeliveryRepository()).toBeInstanceOf(
       DrizzleRenewalNoticeDeliveryRepository,
     );
+    expect(container.createSha256Hasher()).toBe(
+      container.primitives.sha256Hasher,
+    );
     expect(container.createTagRepository()).toBeInstanceOf(
       DrizzleTagRepository,
     );

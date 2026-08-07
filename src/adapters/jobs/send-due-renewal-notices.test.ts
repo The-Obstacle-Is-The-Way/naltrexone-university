@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type {
-  ScheduledRenewalNotice,
-  SendDueRenewalNoticesResult,
-} from '@/src/application/use-cases';
+import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
 import {
   type SendDueRenewalNoticesJobDeps,
   sendDueRenewalNotices,
@@ -12,19 +9,30 @@ const now = new Date('2026-08-07T12:00:00.000Z');
 
 function createDeps(): {
   deps: SendDueRenewalNoticesJobDeps;
-  listAnnualSubscriptionsDue: ReturnType<typeof vi.fn>;
-  execute: ReturnType<typeof vi.fn>;
+  listAnnualSubscriptionsDue: ReturnType<
+    typeof vi.fn<SendDueRenewalNoticesJobDeps['listAnnualSubscriptionsDue']>
+  >;
+  execute: ReturnType<
+    typeof vi.fn<
+      SendDueRenewalNoticesJobDeps['sendDueRenewalNotices']['execute']
+    >
+  >;
 } {
-  const listAnnualSubscriptionsDue = vi.fn(async () => [
+  const listAnnualSubscriptionsDue = vi.fn<
+    SendDueRenewalNoticesJobDeps['listAnnualSubscriptionsDue']
+  >(async () => [
     {
       externalSubscriptionId: 'sub_annual_123',
       renewalAt: new Date('2026-09-06T12:00:00.000Z'),
       destination: 'subscriber@example.com',
     },
   ]);
-  const execute = vi.fn(
+  const execute = vi.fn<
+    SendDueRenewalNoticesJobDeps['sendDueRenewalNotices']['execute']
+  >(
     async (): Promise<SendDueRenewalNoticesResult> => ({
       queued: 2,
+      rejectedNotices: 0,
       selected: 2,
       staleUnknown: 0,
       dispatchFailures: 0,
@@ -80,9 +88,7 @@ describe('sendDueRenewalNotices job', () => {
       deps,
     );
 
-    const call = execute.mock.calls[0]?.[0] as
-      | { notices: ScheduledRenewalNotice[]; limit: number }
-      | undefined;
+    const call = execute.mock.calls[0]?.[0];
     expect(call?.limit).toBe(100);
     expect(call?.notices).toEqual([
       expect.objectContaining({
@@ -104,6 +110,7 @@ describe('sendDueRenewalNotices job', () => {
     expect(result).toEqual({
       subscriptions: 1,
       queued: 2,
+      rejectedNotices: 0,
       selected: 2,
       staleUnknown: 0,
       dispatchFailures: 0,
@@ -124,6 +131,46 @@ describe('sendDueRenewalNotices job', () => {
     );
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 500 }),
+    );
+  });
+
+  it.each([
+    {
+      label: 'NaN subscription limit',
+      subscriptionLimit: Number.NaN,
+      dispatchLimit: 100,
+      expectedSubscriptionLimit: 50,
+      expectedDispatchLimit: 100,
+    },
+    {
+      label: 'fractional dispatch limit',
+      subscriptionLimit: 50,
+      dispatchLimit: 1.5,
+      expectedSubscriptionLimit: 50,
+      expectedDispatchLimit: 100,
+    },
+    {
+      label: 'zero limits',
+      subscriptionLimit: 0,
+      dispatchLimit: 0,
+      expectedSubscriptionLimit: 1,
+      expectedDispatchLimit: 1,
+    },
+  ])('normalizes $label independently', async ({
+    subscriptionLimit,
+    dispatchLimit,
+    expectedSubscriptionLimit,
+    expectedDispatchLimit,
+  }) => {
+    const { deps, listAnnualSubscriptionsDue, execute } = createDeps();
+
+    await sendDueRenewalNotices({ subscriptionLimit, dispatchLimit }, deps);
+
+    expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: expectedSubscriptionLimit }),
+    );
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: expectedDispatchLimit }),
     );
   });
 });

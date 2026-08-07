@@ -15,7 +15,7 @@ const handleCronRequest = createRenewalNoticeCronHandler(() => {
   return {
     cronSecret: container.env.CRON_SECRET,
     logger: container.logger,
-    rateLimiter: container.createRateLimiter(),
+    createRateLimiter: container.createRateLimiter,
     run: () =>
       sendDueRenewalNotices(
         {

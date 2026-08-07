@@ -80,6 +80,7 @@ export type ContainerPrimitives = {
   logger: typeof logger;
   getStripe: typeof getStripe;
   now: () => Date;
+  sha256Hasher: Sha256Hasher;
 };
 
 export type StripePriceIds = {

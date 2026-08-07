@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
-import type { SQL } from 'drizzle-orm';
+import { eq, type SQL } from 'drizzle-orm';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { users } from '@/db/schema';
 import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import { ApplicationError } from '@/src/application/errors';
 
@@ -91,6 +92,17 @@ describe('DrizzleUserRepository', () => {
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       });
+      expect(db._mocks.queryFindFirst).toHaveBeenCalledWith({
+        where: eq(users.id, userId),
+      });
+    });
+
+    it('returns null when the local user id is absent', async () => {
+      const db = createDbMock();
+      db._mocks.queryFindFirst.mockResolvedValue(undefined);
+      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+
+      await expect(repo.findById(userId)).resolves.toBeNull();
     });
   });
 

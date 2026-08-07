@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { renewalNoticeDeliveries, stripeSubscriptions } from '@/db/schema';
+import {
+  renewalNoticeDeliveries,
+  stripeSubscriptions,
+  users,
+} from '@/db/schema';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import { listAnnualSubscriptionsDue } from '@/src/adapters/jobs/send-due-renewal-notices';
 import {
@@ -196,6 +200,126 @@ describe('renewal notice job query', () => {
         externalSubscriptionId: coveredSubscriptionId,
         renewalAt: alreadyCoveredRenewal,
         destination: coveredUser.email,
+      },
+    ]);
+  });
+
+  it('treats disclosure version and destination as scheduled-notice identity fields', async () => {
+    const annualPriceId = 'price_test_annual';
+    const disclosureVersion = '2026-08-05';
+    const renewalAt = new Date('2026-09-01T12:00:00.000Z');
+    const user = await createUser(db, cleanup);
+    const subscriptionId = `sub_identity_${randomUUID().replaceAll('-', '')}`;
+    await db.insert(stripeSubscriptions).values({
+      userId: user.id,
+      stripeSubscriptionId: subscriptionId,
+      status: 'active',
+      priceId: annualPriceId,
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: renewalAt,
+    });
+    for (const noticeKind of ['annual_reminder', 'renewal_notice'] as const) {
+      const id = randomUUID();
+      deliveryIds.push(id);
+      const payload = createTransactionalEmailPayloadSnapshot(
+        {
+          from: 'Addiction Boards <notices@addictionboards.com>',
+          to: user.email,
+          replyTo: 'support@addictionboards.com',
+          subject: `Scheduled notice: ${noticeKind}`,
+          html: `<p>Scheduled notice: ${noticeKind}</p>`,
+          text: `Scheduled notice: ${noticeKind}`,
+        },
+        hasher,
+      );
+      await db.insert(renewalNoticeDeliveries).values({
+        id,
+        noticeKind,
+        consentRecordId: null,
+        stripeSubscriptionId: subscriptionId,
+        applicableAt: renewalAt,
+        disclosureVersion,
+        destination: user.email,
+        providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(id),
+        payloadSnapshot: payload.snapshot,
+        payloadHash: payload.hash,
+      });
+    }
+    const query = {
+      renewalAtOrAfter: new Date('2026-08-22T12:00:00.000Z'),
+      renewalAtOrBefore: new Date('2026-09-21T12:00:00.000Z'),
+      disclosureVersion,
+      limit: 1,
+    };
+
+    await expect(
+      listAnnualSubscriptionsDue(
+        { ...query, disclosureVersion: '2026-08-06' },
+        { db, annualPriceId },
+      ),
+    ).resolves.toEqual([
+      {
+        externalSubscriptionId: subscriptionId,
+        renewalAt,
+        destination: user.email,
+      },
+    ]);
+
+    const changedDestination = `changed-${user.email}`;
+    await db
+      .update(users)
+      .set({ email: changedDestination })
+      .where(eq(users.id, user.id));
+    await expect(
+      listAnnualSubscriptionsDue(query, { db, annualPriceId }),
+    ).resolves.toEqual([
+      {
+        externalSubscriptionId: subscriptionId,
+        renewalAt,
+        destination: changedDestination,
+      },
+    ]);
+  });
+
+  it('uses subscription id as a deterministic tie-breaker before applying the limit', async () => {
+    const annualPriceId = 'price_test_annual';
+    const renewalAt = new Date('2026-09-01T12:00:00.000Z');
+    const laterUser = await createUser(db, cleanup);
+    const earlierUser = await createUser(db, cleanup);
+    await db.insert(stripeSubscriptions).values([
+      {
+        userId: laterUser.id,
+        stripeSubscriptionId: 'sub_tie_z',
+        status: 'active',
+        priceId: annualPriceId,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: renewalAt,
+      },
+      {
+        userId: earlierUser.id,
+        stripeSubscriptionId: 'sub_tie_a',
+        status: 'active',
+        priceId: annualPriceId,
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: renewalAt,
+      },
+    ]);
+
+    await expect(
+      listAnnualSubscriptionsDue(
+        {
+          renewalAtOrAfter: new Date('2026-08-22T12:00:00.000Z'),
+          renewalAtOrBefore: new Date('2026-09-21T12:00:00.000Z'),
+          disclosureVersion: '2026-08-05',
+          limit: 1,
+        },
+        { db, annualPriceId },
+      ),
+    ).resolves.toEqual([
+      {
+        externalSubscriptionId: 'sub_tie_a',
+        renewalAt,
+        destination: earlierUser.email,
       },
     ]);
   });
