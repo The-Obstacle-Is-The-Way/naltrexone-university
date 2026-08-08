@@ -6,6 +6,7 @@ import type {
   CheckoutSessionOutput,
   CreateCustomerInput,
   CreateCustomerOutput,
+  DetachTrialPaymentMethodInput,
   PaymentGateway,
   PaymentGatewayRequestOptions,
   PortalSessionInput,
@@ -94,6 +95,7 @@ export class FakePaymentGateway implements PaymentGateway {
     [];
   readonly trialSetupInputs: TrialPaymentMethodSetupSessionInput[] = [];
   readonly trialPaymentMethodAttachInputs: AttachTrialPaymentMethodInput[] = [];
+  readonly trialPaymentMethodDetachInputs: DetachTrialPaymentMethodInput[] = [];
   readonly trialSubscriptionDefaultInputs: SetTrialSubscriptionDefaultPaymentMethodInput[] =
     [];
   readonly portalInputs: PortalSessionInput[] = [];
@@ -155,6 +157,12 @@ export class FakePaymentGateway implements PaymentGateway {
     input: AttachTrialPaymentMethodInput,
   ): Promise<void> {
     this.trialPaymentMethodAttachInputs.push(input);
+  }
+
+  async detachTrialPaymentMethod(
+    input: DetachTrialPaymentMethodInput,
+  ): Promise<void> {
+    this.trialPaymentMethodDetachInputs.push(input);
   }
 
   async setTrialSubscriptionDefaultPaymentMethod(

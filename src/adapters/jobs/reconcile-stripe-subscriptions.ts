@@ -252,31 +252,43 @@ export async function reconcileStripeSubscriptions(
           retrieve: retrieveObservation,
           getUserId: ({ canonical }) => canonical.userId,
           persist: ({ canonical }, expectedVersion) =>
-            deps.transaction(async ({ stripeCustomers, subscriptions }) => {
-              // Phase 4: persist canonical subscription and customer mapping atomically.
-              // Stripe webhook, checkout-success, and reconcile use advisory(user)
-              // -> stripe_subscriptions -> stripe_customers. User deletion is the
-              // fourth writer and takes the same advisory before its inverse cascade.
-              const write = await subscriptions.upsert({
-                userId: canonical.userId,
-                externalSubscriptionId: canonical.externalSubscriptionId,
-                plan: canonical.plan,
-                status: canonical.status,
-                currentPeriodEnd: canonical.currentPeriodEnd,
-                cancelAtPeriodEnd: canonical.cancelAtPeriodEnd,
-                expectedVersion,
-              });
-              if (!write.persisted && write.reason === 'version_conflict') {
-                return write;
-              }
+            deps.transaction(
+              async ({
+                stripeCustomers,
+                subscriptions,
+                renewalConsentRecords,
+              }) => {
+                // Phase 4: persist canonical subscription and customer mapping atomically.
+                // Stripe webhook, checkout-success, and reconcile use advisory(user)
+                // -> stripe_subscriptions -> stripe_customers. User deletion is the
+                // fourth writer and takes the same advisory before its inverse cascade.
+                const write = await subscriptions.upsert({
+                  userId: canonical.userId,
+                  externalSubscriptionId: canonical.externalSubscriptionId,
+                  plan: canonical.plan,
+                  status: canonical.status,
+                  currentPeriodEnd: canonical.currentPeriodEnd,
+                  cancelAtPeriodEnd: canonical.cancelAtPeriodEnd,
+                  expectedVersion,
+                });
+                if (!write.persisted && write.reason === 'version_conflict') {
+                  return write;
+                }
 
-              await stripeCustomers.insert(
-                canonical.userId,
-                canonical.externalCustomerId,
-                { conflictStrategy: 'authoritative' },
-              );
-              return write;
-            }),
+                await stripeCustomers.insert(
+                  canonical.userId,
+                  canonical.externalCustomerId,
+                  { conflictStrategy: 'authoritative' },
+                );
+                if (write.persisted && canonical.status === 'canceled') {
+                  await renewalConsentRecords.markSubscriptionTerminated({
+                    externalSubscriptionId: canonical.externalSubscriptionId,
+                    terminatedAt: deps.now(),
+                  });
+                }
+                return write;
+              },
+            ),
         });
         const {
           canonical,

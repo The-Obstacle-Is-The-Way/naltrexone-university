@@ -113,6 +113,7 @@ function createHarness(input?: {
     renewalDeliveries,
     emailGateway,
     hasher,
+    new FakeLogger(),
     () => now,
     () => 'attempt-1',
   );

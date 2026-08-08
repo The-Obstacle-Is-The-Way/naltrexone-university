@@ -170,6 +170,9 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
       paymentMethodAttachedAt: null,
       subscriptionDefaultSetAt: null,
       completedAt: null,
+      terminalAt: null,
+      terminalReason: null,
+      expiredAt: null,
     });
   });
 

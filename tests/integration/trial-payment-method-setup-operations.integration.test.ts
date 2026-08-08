@@ -8,7 +8,9 @@ import {
   createUser,
 } from './helpers';
 
-const { db, sql } = createIntegrationDb();
+const primary = createIntegrationDb();
+const competing = createIntegrationDb();
+const { db } = primary;
 const cleanup = createCleanupState();
 
 afterEach(async () => {
@@ -16,7 +18,10 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await closeConnection(sql);
+  await Promise.all([
+    closeConnection(primary.sql),
+    closeConnection(competing.sql),
+  ]);
 });
 
 describe('trial payment-method setup operation persistence', () => {
@@ -25,7 +30,7 @@ describe('trial payment-method setup operation persistence', () => {
     const firstRepository =
       new DrizzleTrialPaymentMethodSetupOperationRepository(db);
     const secondRepository =
-      new DrizzleTrialPaymentMethodSetupOperationRepository(db);
+      new DrizzleTrialPaymentMethodSetupOperationRepository(competing.db);
     await firstRepository.createPending({
       sessionId: 'cs_setup_concurrent',
       userId: user.id,
@@ -113,5 +118,66 @@ describe('trial payment-method setup operation persistence', () => {
       subscriptionDefaultSetAt: new Date('2026-08-06T13:00:01Z'),
       completedAt: null,
     });
+  });
+
+  it('expires and prunes abandoned setup operations without deleting completed operations', async () => {
+    const user = await createUser(db, cleanup);
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const base = {
+      userId: user.id,
+      stripeCustomerId: 'cus_123',
+      stripeSubscriptionId: 'sub_123',
+      plan: 'monthly' as const,
+      amountCents: 2900,
+      currency: 'usd' as const,
+      frequency: 'month' as const,
+      trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+      disclosureSnapshot: 'Exact disclosure.',
+      disclosureVersion: '2026-08-05',
+      termsVersion: '2026-08-05',
+      termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
+    };
+    await repository.createPending({ ...base, sessionId: 'cs_expired_old' });
+    await repository.createPending({ ...base, sessionId: 'cs_expired_recent' });
+    await repository.createPending({ ...base, sessionId: 'cs_completed' });
+    await repository.markExpired({
+      sessionId: 'cs_expired_old',
+      expiredAt: new Date('2026-06-01T00:00:00Z'),
+    });
+    await repository.markExpired({
+      sessionId: 'cs_expired_recent',
+      expiredAt: new Date('2026-08-01T00:00:00Z'),
+    });
+    await repository.claim({
+      sessionId: 'cs_completed',
+      claimId: 'claim_completed',
+      claimedAt: new Date('2026-06-01T00:00:00Z'),
+      staleBefore: new Date(0),
+    });
+    await repository.markCompleted({
+      sessionId: 'cs_completed',
+      claimId: 'claim_completed',
+      completedAt: new Date('2026-06-01T00:00:01Z'),
+    });
+
+    await expect(
+      repository.pruneExpired({
+        expiredBefore: new Date('2026-07-08T00:00:00Z'),
+        limit: 100,
+      }),
+    ).resolves.toBe(1);
+    await expect(
+      repository.findBySessionId('cs_expired_old'),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findBySessionId('cs_expired_recent'),
+    ).resolves.toMatchObject({ status: 'expired' });
+    await expect(
+      repository.findBySessionId('cs_completed'),
+    ).resolves.toMatchObject({ status: 'completed' });
   });
 });

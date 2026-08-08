@@ -92,6 +92,9 @@ out. There are no current package-wide bootstrap exceptions.
 
 ### Worked example: js-yaml CVE-2026-53550 (2026-06-29)
 
+> Historical snapshot: alert #46 later retargeted the patched v3 floor to
+> `3.15.1`; the live override now uses `3.15.1`, not the `3.15.0` shown below.
+
 Dependabot alert #13 flagged `js-yaml` (medium): CVE-2026-53550 /
 GHSA-h67p-54hq-rp68, a quadratic-complexity denial-of-service in merge-key
 handling via repeated aliases, affecting `< 3.15.0`.

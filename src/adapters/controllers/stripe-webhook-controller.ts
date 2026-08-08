@@ -84,6 +84,9 @@ type InitialSubscriptionConsent = NonNullable<
 type TrialPaymentMethodSetupCompletion = NonNullable<
   StripeWebhookEvent['trialPaymentMethodSetupCompletion']
 >;
+type TrialPaymentMethodSetupExpiration = NonNullable<
+  StripeWebhookEvent['trialPaymentMethodSetupExpiration']
+>;
 
 class StripeWebhookAlreadyProcessed extends Error {}
 
@@ -142,7 +145,9 @@ async function dispatchRenewalAcknowledgment(
 
 function setupSnapshotMatches(
   operation: TrialPaymentMethodSetupOperation,
-  completion: TrialPaymentMethodSetupCompletion,
+  completion:
+    | TrialPaymentMethodSetupCompletion
+    | TrialPaymentMethodSetupExpiration,
 ): boolean {
   return (
     operation.sessionId === completion.sessionId &&
@@ -160,6 +165,47 @@ function setupSnapshotMatches(
   );
 }
 
+async function processTrialPaymentMethodSetupExpiration(
+  deps: StripeWebhookDeps,
+  event: StripeWebhookEvent,
+  expiration: TrialPaymentMethodSetupExpiration,
+): Promise<void> {
+  await deps.transaction(
+    async ({ stripeEvents, trialPaymentMethodSetupOperations }) => {
+      await stripeEvents.claim(event.eventId, event.type);
+      const eventState = await stripeEvents.lock(event.eventId);
+      if (isSuccessfullyProcessed(eventState)) return;
+
+      const operation = await trialPaymentMethodSetupOperations.findBySessionId(
+        expiration.sessionId,
+      );
+      if (!operation || !setupSnapshotMatches(operation, expiration)) {
+        throw new ApplicationError(
+          'CONFLICT',
+          'Expired trial payment-method setup does not match its pending operation',
+        );
+      }
+      const markedExpired = await trialPaymentMethodSetupOperations.markExpired(
+        {
+          sessionId: expiration.sessionId,
+          expiredAt: expiration.expiredAt,
+        },
+      );
+      if (!markedExpired) {
+        deps.logger.warn(
+          {
+            eventId: event.eventId,
+            sessionId: expiration.sessionId,
+            operationStatus: operation.status,
+          },
+          'Trial payment-method setup expiration did not transition the operation',
+        );
+      }
+      await stripeEvents.markProcessed(event.eventId);
+    },
+  );
+}
+
 async function processTrialPaymentMethodSetupWebhook(
   deps: StripeWebhookDeps,
   event: StripeWebhookEvent,
@@ -167,7 +213,7 @@ async function processTrialPaymentMethodSetupWebhook(
 ): Promise<void> {
   const claimedAt = deps.now();
   const claimId = crypto.randomUUID();
-  const claimed = await deps.transaction(
+  const claimResult = await deps.transaction(
     async ({
       stripeEvents,
       subscriptions,
@@ -212,19 +258,11 @@ async function processTrialPaymentMethodSetupWebhook(
           subscriptions.findExternalSubscriptionIdByUserId(completion.userId),
           stripeCustomers.findByUserId(completion.userId),
         ]);
-      if (
-        subscription?.status !== 'inTrial' ||
-        subscription.plan !== completion.plan ||
-        subscription.currentPeriodEnd.getTime() !==
-          completion.trialEndsAt.getTime() ||
-        externalSubscriptionId !== completion.externalSubscriptionId ||
-        customer?.stripeCustomerId !== completion.externalCustomerId
-      ) {
-        throw new ApplicationError(
-          'CONFLICT',
-          'Trial payment-method completion does not match current local billing ownership',
-        );
-      }
+      const ownershipMatches =
+        subscription !== null &&
+        subscription.plan === completion.plan &&
+        externalSubscriptionId === completion.externalSubscriptionId &&
+        customer?.stripeCustomerId === completion.externalCustomerId;
 
       const result = await trialPaymentMethodSetupOperations.claim({
         sessionId: completion.sessionId,
@@ -240,11 +278,32 @@ async function processTrialPaymentMethodSetupWebhook(
           'Trial payment-method setup is already being processed',
         );
       }
-      return result;
+      return { claimed: result, subscription, ownershipMatches };
     },
   );
 
-  if (!claimed) return;
+  if (!claimResult) return;
+  const { claimed, subscription, ownershipMatches } = claimResult;
+
+  if (!ownershipMatches || !subscription) {
+    await deps.paymentGateway.detachTrialPaymentMethod({
+      sessionId: completion.sessionId,
+      externalPaymentMethodId: completion.stripePaymentMethodId,
+      externalCustomerId: completion.externalCustomerId,
+    });
+    await deps.transaction(
+      async ({ stripeEvents, trialPaymentMethodSetupOperations }) => {
+        await trialPaymentMethodSetupOperations.markTerminal({
+          sessionId: completion.sessionId,
+          claimId,
+          reason: 'billing_ownership_mismatch',
+          terminalAt: deps.now(),
+        });
+        await stripeEvents.markProcessed(event.eventId);
+      },
+    );
+    return;
+  }
 
   if (!claimed.paymentMethodAttachedAt) {
     await deps.paymentGateway.attachTrialPaymentMethod({
@@ -305,8 +364,11 @@ async function processTrialPaymentMethodSetupWebhook(
         amountCents: claimed.amountCents,
         currency: claimed.currency,
         frequency: claimed.frequency,
-        trialEndsAt: claimed.trialEndsAt,
-        cancellationDeadline: claimed.trialEndsAt,
+        trialEndsAt:
+          subscription.status === 'inTrial'
+            ? subscription.currentPeriodEnd
+            : null,
+        cancellationDeadline: subscription.currentPeriodEnd,
         cancellationMethod: claimed.cancellationMethod,
         disclosureSnapshot: claimed.disclosureSnapshot,
         disclosureVersion: claimed.disclosureVersion,
@@ -649,6 +711,12 @@ async function processStripeWebhookWithinSpan(
         deps,
         event,
         event.trialPaymentMethodSetupCompletion,
+      );
+    } else if (event.trialPaymentMethodSetupExpiration) {
+      await processTrialPaymentMethodSetupExpiration(
+        deps,
+        event,
+        event.trialPaymentMethodSetupExpiration,
       );
     } else if (event.subscriptionUpdate) {
       await processSubscriptionWebhook(

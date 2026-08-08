@@ -64,6 +64,7 @@ type CronContainer = {
     warn: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
   };
+  now: () => Date;
   createRateLimiter: () => RateLimiter;
   stripe: object;
   db: {
@@ -76,6 +77,7 @@ type CronContainer = {
   };
   createStripeCustomerRepository: ReturnType<typeof vi.fn>;
   createSubscriptionRepository: ReturnType<typeof vi.fn>;
+  createRenewalConsentRecordRepository: ReturnType<typeof vi.fn>;
   createClerkEventRepository: ReturnType<typeof vi.fn>;
   createPendingStripeCustomerCleanupRepository: ReturnType<typeof vi.fn>;
 };
@@ -99,6 +101,7 @@ function createMockContainer(): CronContainer {
       warn: vi.fn(),
       error: vi.fn(),
     },
+    now: () => new Date('2026-08-07T12:00:00.000Z'),
     createRateLimiter: () => rateLimiter,
     stripe: {},
     db: {
@@ -113,6 +116,7 @@ function createMockContainer(): CronContainer {
     },
     createStripeCustomerRepository: vi.fn(),
     createSubscriptionRepository: vi.fn(),
+    createRenewalConsentRecordRepository: vi.fn(),
     createClerkEventRepository: vi.fn(() => clerkEventRepository),
     createPendingStripeCustomerCleanupRepository: vi.fn(
       () => pendingStripeCustomerCleanupRepository,
@@ -267,13 +271,22 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     ).toEqual([['asc', 'userIdColumn']]);
     const stripeCustomers = {};
     const subscriptions = {};
+    const renewalConsentRecords = {};
     container.createStripeCustomerRepository.mockReturnValueOnce(
       stripeCustomers,
     );
     container.createSubscriptionRepository.mockReturnValueOnce(subscriptions);
+    container.createRenewalConsentRecordRepository.mockReturnValueOnce(
+      renewalConsentRecords,
+    );
     await expect(
       pageDeps.transaction(async (tx: unknown) => tx),
-    ).resolves.toEqual({ stripeCustomers, subscriptions });
+    ).resolves.toEqual({
+      stripeCustomers,
+      subscriptions,
+      renewalConsentRecords,
+    });
+    expect(pageDeps.now()).toEqual(new Date('2026-08-07T12:00:00.000Z'));
   });
 
   it('uses all-pages mode when scope=all even if offset is present', async () => {

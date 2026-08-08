@@ -5,6 +5,8 @@ import {
   users,
 } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
+import type { Logger } from '@/src/application/ports';
 import type {
   ScheduledRenewalNotice,
   SendDueRenewalNoticesResult,
@@ -12,11 +14,16 @@ import type {
 } from '@/src/application/use-cases';
 import { DAY_MS } from '@/src/domain/services';
 
-export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 50;
-export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 100;
-export const SEND_RENEWAL_NOTICES_MAX_LIMIT = 500;
+export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 40;
+export const SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT = 80;
+export const SEND_RENEWAL_NOTICES_MAX_LIMIT = 40;
+export const SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT = 80;
+export const SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS = 300;
+export const SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO = 0.7;
 const ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS = 15;
 const ANNUAL_RENEWAL_NOTICE_LATEST_DAYS = 45;
+const EXPIRED_SETUP_OPERATION_RETENTION_DAYS = 30;
+const EXPIRED_SETUP_OPERATION_PRUNE_LIMIT = 100;
 
 export type AnnualSubscriptionDueForNotice = {
   externalSubscriptionId: string;
@@ -115,6 +122,11 @@ export type SendDueRenewalNoticesJobDeps = {
     limit: number;
   }) => Promise<AnnualSubscriptionDueForNotice[]>;
   sendDueRenewalNotices: Pick<SendDueRenewalNoticesUseCase, 'execute'>;
+  pruneExpiredTrialPaymentMethodSetups: (input: {
+    expiredBefore: Date;
+    limit: number;
+  }) => Promise<number>;
+  logger: Pick<Logger, 'warn'>;
   annualPlan: Pick<
     ScheduledRenewalNotice,
     | 'planName'
@@ -128,12 +140,13 @@ export type SendDueRenewalNoticesJobDeps = {
 
 export type SendDueRenewalNoticesJobResult = SendDueRenewalNoticesResult & {
   subscriptions: number;
+  expiredSetupOperationsPruned: number;
   durationMs: number;
 };
 
-function safeLimit(value: number, fallback: number): number {
+function safeLimit(value: number, fallback: number, maximum: number): number {
   if (!Number.isInteger(value)) return fallback;
-  return Math.min(SEND_RENEWAL_NOTICES_MAX_LIMIT, Math.max(1, value));
+  return Math.min(maximum, Math.max(1, value));
 }
 
 export async function sendDueRenewalNotices(
@@ -145,11 +158,29 @@ export async function sendDueRenewalNotices(
   const subscriptionLimit = safeLimit(
     input.subscriptionLimit,
     SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
+    SEND_RENEWAL_NOTICES_MAX_LIMIT,
   );
   const dispatchLimit = safeLimit(
     input.dispatchLimit,
     SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
+    SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
   );
+  let expiredSetupOperationsPruned = 0;
+  try {
+    expiredSetupOperationsPruned =
+      await deps.pruneExpiredTrialPaymentMethodSetups({
+        expiredBefore: new Date(
+          observedAt.getTime() -
+            EXPIRED_SETUP_OPERATION_RETENTION_DAYS * DAY_MS,
+        ),
+        limit: EXPIRED_SETUP_OPERATION_PRUNE_LIMIT,
+      });
+  } catch (error) {
+    deps.logger.warn(
+      { error: projectSafeErrorDiagnostics(error) },
+      'Expired trial setup-operation pruning failed',
+    );
+  }
   const subscriptions = await deps.listAnnualSubscriptionsDue({
     renewalAtOrAfter: new Date(
       observedAt.getTime() + ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS * DAY_MS,
@@ -182,6 +213,7 @@ export async function sendDueRenewalNotices(
   });
   return {
     subscriptions: subscriptions.length,
+    expiredSetupOperationsPruned,
     ...result,
     durationMs: Math.max(0, deps.monotonicNow() - startedAt),
   };

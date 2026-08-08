@@ -42,6 +42,7 @@ export const logger = pino({
       'env.CLERK_WEBHOOK_SIGNING_SECRET',
       'env.STRIPE_SECRET_KEY',
       'env.STRIPE_WEBHOOK_SECRET',
+      'env.CONSENT_STATE_SECRET',
     ],
     remove: true,
   },

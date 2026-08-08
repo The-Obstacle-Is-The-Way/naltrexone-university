@@ -19,6 +19,7 @@ import {
 } from '@/src/application/test-helpers/renewal-terms';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { SUBSCRIPTION_LIST_LIMIT } from './stripe/stripe-checkout-sessions';
+import { isValidStripeConsentStateSignature } from './stripe/stripe-consent-state';
 import { StripePaymentGateway } from './stripe-payment-gateway';
 
 const TEST_WEBHOOK_SECRET = 'whsec_1';
@@ -52,11 +53,13 @@ function withSubscriptionUserId<T extends StripeSubscriptionFixtureObject>(
 
 function createGateway(
   stripe: StripeClient,
-  options?: { logger?: FakeLogger },
+  options?: { logger?: FakeLogger; consentStateSecret?: string },
 ) {
   return new StripePaymentGateway({
     stripe,
     webhookSecret: TEST_WEBHOOK_SECRET,
+    consentStateSecret:
+      options?.consentStateSecret ?? 'consent-state-secret-at-least-32-bytes',
     priceIds: TEST_PRICE_IDS,
     logger: options?.logger ?? new FakeLogger(),
   });
@@ -178,6 +181,31 @@ function createStripeMock({
 }
 
 describe('StripePaymentGateway', () => {
+  it('keeps trial consent Session creation fail-closed until the dedicated secret is configured', async () => {
+    const { stripe, sessionsCreate } = createStripeMock({
+      withSubscriptions: true,
+    });
+    const gateway = new StripePaymentGateway({
+      stripe,
+      webhookSecret: TEST_WEBHOOK_SECRET,
+      priceIds: TEST_PRICE_IDS,
+      logger: new FakeLogger(),
+    });
+
+    await expect(
+      gateway.createTrialPaymentMethodSetupSession({
+        userId: appUserId,
+        externalCustomerId: 'cus_123',
+        externalSubscriptionId: 'sub_123',
+        ...createTestRenewalTerms('monthly', true),
+        trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+        successUrl: 'https://app.example.com/success',
+        cancelUrl: 'https://app.example.com/cancel',
+      }),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
+
   it('attaches a trial payment method and selects it with Session-derived idempotency keys', async () => {
     const base = createStripeMock({ withSubscriptions: true });
     const retrieve = vi.fn(async () => ({ id: 'pm_123', customer: null }));
@@ -240,6 +268,58 @@ describe('StripePaymentGateway', () => {
 
     expect(retrieve).toHaveBeenCalledWith('pm_123');
     expect(attach).not.toHaveBeenCalled();
+  });
+
+  it('detaches a setup payment method with a Session-derived idempotency key', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const retrieve = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_unverified',
+    }));
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_unverified',
+    }));
+    const detach = vi.fn(async () => ({ id: 'pm_123', customer: null }));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: { retrieve, attach, detach },
+    };
+
+    await createGateway(stripe).detachTrialPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalCustomerId: 'cus_unverified',
+    });
+
+    expect(detach).toHaveBeenCalledWith('pm_123', undefined, {
+      idempotencyKey: 'trial_setup:cs_setup_123:detach_payment_method',
+    });
+  });
+
+  it('does not detach a setup payment method owned by a different customer', async () => {
+    const base = createStripeMock({ withSubscriptions: true });
+    const retrieve = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_other',
+    }));
+    const attach = vi.fn(async () => ({
+      id: 'pm_123',
+      customer: 'cus_other',
+    }));
+    const detach = vi.fn(async () => ({ id: 'pm_123', customer: null }));
+    const stripe: StripeClient = {
+      ...base.stripe,
+      paymentMethods: { retrieve, attach, detach },
+    };
+
+    await createGateway(stripe).detachTrialPaymentMethod({
+      sessionId: 'cs_setup_123',
+      externalPaymentMethodId: 'pm_123',
+      externalCustomerId: 'cus_expected',
+    });
+
+    expect(detach).not.toHaveBeenCalled();
   });
 
   it('rejects an attachment response that is not bound to the verified customer', async () => {
@@ -412,7 +492,8 @@ describe('StripePaymentGateway', () => {
 
   it('creates the trial payment-method setup Session through the customer-less setup seam', async () => {
     const { stripe, sessionsCreate } = createStripeMock();
-    const gateway = createGateway(stripe);
+    const consentStateSecret = 'dedicated-consent-state-secret-32-bytes';
+    const gateway = createGateway(stripe, { consentStateSecret });
 
     await expect(
       gateway.createTrialPaymentMethodSetupSession({
@@ -447,6 +528,23 @@ describe('StripePaymentGateway', () => {
       expect.any(Object),
     );
     expect(sessionsCreate.mock.calls[0]?.[0]).not.toHaveProperty('customer');
+    const metadata = sessionsCreate.mock.calls[0]?.[0].metadata;
+    if (!metadata) throw new Error('Expected signed setup metadata');
+    const { consent_state_signature: signature, ...signedMetadata } = metadata;
+    expect(
+      isValidStripeConsentStateSignature(
+        signedMetadata,
+        signature ?? '',
+        consentStateSecret,
+      ),
+    ).toBe(true);
+    expect(
+      isValidStripeConsentStateSignature(
+        signedMetadata,
+        signature ?? '',
+        TEST_WEBHOOK_SECRET,
+      ),
+    ).toBe(false);
   });
 
   it.each([

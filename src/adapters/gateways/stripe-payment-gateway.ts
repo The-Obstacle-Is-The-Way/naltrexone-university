@@ -14,6 +14,7 @@ import type {
   CheckoutSessionOutput,
   CreateCustomerInput,
   CreateCustomerOutput,
+  DetachTrialPaymentMethodInput,
   PaymentGateway,
   PaymentGatewayRequestOptions,
   PortalSessionInput,
@@ -29,6 +30,7 @@ import { callStripeWithRetry } from './stripe/stripe-retry';
 export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
   webhookSecret: string;
+  consentStateSecret?: string | undefined;
   priceIds: StripePriceIds;
   logger: Logger;
   webhookE2EOwner?: string | undefined;
@@ -66,11 +68,12 @@ export class StripePaymentGateway implements PaymentGateway {
   async createTrialPaymentMethodSetupSession(
     input: TrialPaymentMethodSetupSessionInput,
   ): Promise<TrialPaymentMethodSetupSessionOutput> {
+    const stateSecret = this.requireConsentStateSecret();
     return createStripeTrialPaymentMethodSetupSession({
       stripe: this.deps.stripe,
       input,
       logger: this.deps.logger,
-      stateSecret: this.deps.webhookSecret,
+      stateSecret,
     });
   }
 
@@ -125,6 +128,38 @@ export class StripePaymentGateway implements PaymentGateway {
     }
   }
 
+  async detachTrialPaymentMethod(
+    input: DetachTrialPaymentMethodInput,
+  ): Promise<void> {
+    const paymentMethods = this.deps.stripe.paymentMethods;
+    const detach = paymentMethods?.detach?.bind(paymentMethods);
+    if (!paymentMethods || !detach) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe PaymentMethod API is unavailable',
+      );
+    }
+    const current = await callStripeWithRetry({
+      operation: 'payment_methods.retrieve_trial_setup_for_detach',
+      fn: () => paymentMethods.retrieve(input.externalPaymentMethodId),
+      logger: this.deps.logger,
+    });
+    const currentCustomerId =
+      typeof current.customer === 'string'
+        ? current.customer
+        : current.customer?.id;
+    if (currentCustomerId !== input.externalCustomerId) return;
+
+    await callStripeWithRetry({
+      operation: 'payment_methods.detach_trial_setup',
+      fn: () =>
+        detach(input.externalPaymentMethodId, undefined, {
+          idempotencyKey: `trial_setup:${input.sessionId}:detach_payment_method`,
+        }),
+      logger: this.deps.logger,
+    });
+  }
+
   async setTrialSubscriptionDefaultPaymentMethod(
     input: SetTrialSubscriptionDefaultPaymentMethodInput,
   ): Promise<void> {
@@ -169,11 +204,23 @@ export class StripePaymentGateway implements PaymentGateway {
     return processStripeWebhookEvent({
       stripe: this.deps.stripe,
       webhookSecret: this.deps.webhookSecret,
+      consentStateSecret: this.deps.consentStateSecret,
       rawBody,
       signature,
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
       webhookE2EOwner: this.deps.webhookE2EOwner,
     });
+  }
+
+  private requireConsentStateSecret(): string {
+    const secret = this.deps.consentStateSecret;
+    if (!secret) {
+      throw new ApplicationError(
+        'INTERNAL_ERROR',
+        'Trial consent-state signing is not configured',
+      );
+    }
+    return secret;
   }
 }

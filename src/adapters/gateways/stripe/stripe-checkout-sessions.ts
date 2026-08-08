@@ -21,7 +21,7 @@ import { callStripeWithRetry } from './stripe-retry';
 
 export const SUBSCRIPTION_LIST_LIMIT = 10;
 export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
-export const CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT = 20;
+export const CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT = 3;
 
 const BLOCKING_SUBSCRIPTION_STATUSES = new Set<StripeSubscriptionStatus>([
   'active',
@@ -137,20 +137,66 @@ export async function createStripeTrialPaymentMethodSetupSession({
       ),
     },
   } satisfies CheckoutSessionCreateParams;
-  const session = await callStripeWithRetry({
-    operation: 'checkout.sessions.create_trial_payment_method_setup',
-    fn: () =>
-      stripe.checkout.sessions.create(params, {
-        idempotencyKey: `trial_setup_session:${input.userId}:${input.externalSubscriptionId}:${input.disclosureVersion}`,
-      }),
-    logger,
-  });
+  const requestFingerprint = checkoutSessionRequestFingerprint(params);
+  const primaryIdempotencyKey = `trial_setup_session:${input.userId}:${input.externalSubscriptionId}:${input.disclosureVersion}`;
+  const requestRecoveryIdempotencyKey = `trial_setup_session_recovery:${input.userId}:${input.externalSubscriptionId}:request:${requestFingerprint}`;
 
-  if (!session.url) {
-    throw new ApplicationError(
-      'STRIPE_ERROR',
-      'Stripe Checkout Session URL is missing',
+  async function createSession(idempotencyKey: string) {
+    return callStripeWithRetry({
+      operation: 'checkout.sessions.create_trial_payment_method_setup',
+      fn: () =>
+        stripe.checkout.sessions.create(params, {
+          idempotencyKey,
+        }),
+      logger,
+    });
+  }
+
+  async function createWithParameterRecovery(idempotencyKey: string) {
+    try {
+      return await createSession(idempotencyKey);
+    } catch (error) {
+      if (
+        idempotencyKey === requestRecoveryIdempotencyKey ||
+        !isIdempotencyParameterMismatchError(error)
+      ) {
+        throw error;
+      }
+      logger.warn(
+        {
+          userId: input.userId,
+          externalSubscriptionId: input.externalSubscriptionId,
+          recoveryIdempotencyKey: requestRecoveryIdempotencyKey,
+        },
+        'Retrying trial setup Session after Stripe idempotency parameter mismatch',
+      );
+      return createSession(requestRecoveryIdempotencyKey);
+    }
+  }
+
+  let session = await createWithParameterRecovery(primaryIdempotencyKey);
+  for (
+    let attempt = 1;
+    !session.url || isSessionInactive(session, Date.now);
+    attempt += 1
+  ) {
+    if (attempt > CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT) {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe Checkout Session is expired or inactive',
+      );
+    }
+    const recoveryIdempotencyKey = `trial_setup_session_recovery:${input.userId}:${input.externalSubscriptionId}:${session.id}:attempt:${attempt}:${requestFingerprint}`;
+    logger.warn(
+      {
+        userId: input.userId,
+        externalSubscriptionId: input.externalSubscriptionId,
+        sessionId: session.id,
+        recoveryAttempt: attempt,
+      },
+      'Replacing an inactive trial setup Checkout Session',
     );
+    session = await createSession(recoveryIdempotencyKey);
   }
 
   return { sessionId: session.id, url: session.url };

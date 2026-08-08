@@ -8,7 +8,8 @@ import {
 } from '@/src/adapters/jobs/send-due-renewal-notices';
 import { createRenewalNoticeCronHandler } from './route-handler';
 
-export const maxDuration = 60;
+// Next.js requires route-segment configuration to be a statically analyzable literal.
+export const maxDuration = 300;
 
 const handleCronRequest = createRenewalNoticeCronHandler(() => {
   const container = createContainer();
@@ -25,6 +26,7 @@ const handleCronRequest = createRenewalNoticeCronHandler(() => {
         {
           now: container.now,
           monotonicNow: () => performance.now(),
+          logger: container.logger,
           annualPlan: {
             planName: PRICING_DATA.annual.name,
             amountCents: PRICING_DATA.annual.amountCents,
@@ -34,6 +36,10 @@ const handleCronRequest = createRenewalNoticeCronHandler(() => {
             cancellationMethod: CANCELLATION_METHOD,
           },
           sendDueRenewalNotices: container.createSendDueRenewalNoticesUseCase(),
+          pruneExpiredTrialPaymentMethodSetups: (input) =>
+            container
+              .createTrialPaymentMethodSetupOperationRepository()
+              .pruneExpired(input),
           listAnnualSubscriptionsDue: (input) =>
             listAnnualSubscriptionsDue(input, {
               db: container.db,

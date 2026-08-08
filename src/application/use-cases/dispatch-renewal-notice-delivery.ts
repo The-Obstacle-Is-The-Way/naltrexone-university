@@ -6,6 +6,7 @@ import type {
   TransactionalEmailPayload,
   TransactionalEmailSendResult,
 } from '@/src/application/ports';
+import type { Logger } from '@/src/application/ports/logger';
 import {
   getRenewalNoticeProviderIdempotencyKey,
   getRenewalNoticeRetryAt,
@@ -26,6 +27,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     private readonly deliveryRepository: RenewalNoticeDeliveryRepository,
     private readonly emailGateway: TransactionalEmailGateway,
     private readonly hasher: Sha256Hasher,
+    private readonly logger: Pick<Logger, 'error'>,
     private readonly now: () => Date = () => new Date(),
     private readonly createAttemptId: () => string = () => crypto.randomUUID(),
   ) {}
@@ -125,7 +127,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     };
   }
 
-  private persistOutcome(
+  private async persistOutcome(
     claimed: RenewalNoticeDelivery,
     result: TransactionalEmailSendResult,
     completedAt: Date,
@@ -169,9 +171,18 @@ export class DispatchRenewalNoticeDeliveryUseCase {
         failureClass: 'provider_terminal_failure',
       });
     }
-    return this.deliveryRepository.markOutcomeUnknown({
+    const delivery = await this.deliveryRepository.markOutcomeUnknown({
       ...failure,
       failureClass: 'provider_outcome_unknown',
     });
+    try {
+      this.logger.error(
+        { deliveryId: claimed.id, failureCode: result.failureCode },
+        'Renewal notice delivery outcome is unknown',
+      );
+    } catch {
+      // Alerting failure must not undo the durable at-most-once quarantine.
+    }
+    return delivery;
   }
 }

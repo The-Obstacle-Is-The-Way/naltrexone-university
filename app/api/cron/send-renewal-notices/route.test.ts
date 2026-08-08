@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS } from '@/src/adapters/jobs/send-due-renewal-notices';
 import {
   FakeLogger,
   FakeRateLimiter,
@@ -11,7 +12,9 @@ import {
 
 const successResult = {
   subscriptions: 1,
+  expiredSetupOperationsPruned: 3,
   queued: 2,
+  queueFailures: 0,
   rejectedNotices: 0,
   selected: 2,
   staleUnknown: 0,
@@ -60,6 +63,14 @@ function authorizedRequest(token = 'test-secret'): Request {
 }
 
 describe('renewal notice cron route', () => {
+  it('pins the function duration to the bounded provider-call budget', () => {
+    const source = readFileSync(new URL('./route.ts', import.meta.url), 'utf8');
+
+    expect(source).toContain(
+      `export const maxDuration = ${SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS}`,
+    );
+  });
+
   it('rejects a missing authorization header', async () => {
     const harness = createHarness();
 

@@ -138,6 +138,7 @@ function createDeps(input: {
       deliveryRepository,
       new FakeTransactionalEmailGateway({ configured: false }),
       hasher,
+      new FakeLogger(),
       () => now,
     ),
     transaction: (fn) =>

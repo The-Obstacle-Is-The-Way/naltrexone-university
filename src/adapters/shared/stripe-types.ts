@@ -181,6 +181,11 @@ export type StripeClient = {
       params: { customer: string },
       options?: StripeRequestOptions,
     ): Promise<StripePaymentMethod>;
+    detach?(
+      paymentMethodId: string,
+      params?: undefined,
+      options?: StripeRequestOptions,
+    ): Promise<StripePaymentMethod>;
   };
   billingPortal: {
     sessions: {

@@ -193,6 +193,7 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
         annual: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
       },
       logger: container.logger,
+      now: container.now,
       webhookE2EOwner: container.env.STRIPE_WEBHOOK_E2E_OWNER,
       listLocalSubscriptions: async ({ limit, offset }) => {
         const rows = await container.db.query.stripeSubscriptions.findMany({
@@ -217,6 +218,8 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
           fn({
             stripeCustomers: container.createStripeCustomerRepository(tx),
             subscriptions: container.createSubscriptionRepository(tx),
+            renewalConsentRecords:
+              container.createRenewalConsentRecordRepository(tx),
           }),
         ),
     };

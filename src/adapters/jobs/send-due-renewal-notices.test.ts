@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import type { SendDueRenewalNoticesResult } from '@/src/application/use-cases';
+import { RENEWAL_NOTICE_DISPATCH_CONCURRENCY } from '@/src/application/use-cases/send-due-renewal-notices';
+import { RESEND_PROVIDER_TIMEOUT_MS } from '../gateways/resend-transactional-email-gateway';
 import {
+  SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
+  SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS,
+  SEND_RENEWAL_NOTICES_MAX_LIMIT,
+  SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO,
   type SendDueRenewalNoticesJobDeps,
   sendDueRenewalNotices,
 } from './send-due-renewal-notices';
@@ -17,6 +24,12 @@ function createDeps(): {
       SendDueRenewalNoticesJobDeps['sendDueRenewalNotices']['execute']
     >
   >;
+  pruneExpiredTrialPaymentMethodSetups: ReturnType<
+    typeof vi.fn<
+      SendDueRenewalNoticesJobDeps['pruneExpiredTrialPaymentMethodSetups']
+    >
+  >;
+  logger: FakeLogger;
 } {
   const listAnnualSubscriptionsDue = vi.fn<
     SendDueRenewalNoticesJobDeps['listAnnualSubscriptionsDue']
@@ -32,6 +45,7 @@ function createDeps(): {
   >(
     async (): Promise<SendDueRenewalNoticesResult> => ({
       queued: 2,
+      queueFailures: 0,
       rejectedNotices: 0,
       selected: 2,
       staleUnknown: 0,
@@ -42,14 +56,20 @@ function createDeps(): {
     .fn<() => number>()
     .mockReturnValueOnce(1_000)
     .mockReturnValueOnce(1_250);
+  const pruneExpiredTrialPaymentMethodSetups = vi.fn(async () => 3);
+  const logger = new FakeLogger();
   return {
     listAnnualSubscriptionsDue,
     execute,
+    pruneExpiredTrialPaymentMethodSetups,
+    logger,
     deps: {
       now: () => now,
       monotonicNow,
       listAnnualSubscriptionsDue,
       sendDueRenewalNotices: { execute },
+      pruneExpiredTrialPaymentMethodSetups,
+      logger,
       annualPlan: {
         planName: 'Pro Annual',
         amountCents: 19900,
@@ -76,7 +96,7 @@ describe('sendDueRenewalNotices job', () => {
       renewalAtOrAfter: new Date('2026-08-22T12:00:00.000Z'),
       renewalAtOrBefore: new Date('2026-09-21T12:00:00.000Z'),
       disclosureVersion: '2026-08-05',
-      limit: 50,
+      limit: 40,
     });
   });
 
@@ -89,7 +109,7 @@ describe('sendDueRenewalNotices job', () => {
     );
 
     const call = execute.mock.calls[0]?.[0];
-    expect(call?.limit).toBe(100);
+    expect(call?.limit).toBe(80);
     expect(call?.notices).toEqual([
       expect.objectContaining({
         noticeKind: 'annual_reminder',
@@ -110,12 +130,46 @@ describe('sendDueRenewalNotices job', () => {
     expect(result).toEqual({
       subscriptions: 1,
       queued: 2,
+      queueFailures: 0,
       rejectedNotices: 0,
       selected: 2,
       staleUnknown: 0,
       dispatchFailures: 0,
+      expiredSetupOperationsPruned: 3,
       durationMs: 250,
     });
+  });
+
+  it('prunes setup Sessions that expired more than 30 days ago', async () => {
+    const { deps, pruneExpiredTrialPaymentMethodSetups } = createDeps();
+
+    await sendDueRenewalNotices(
+      { subscriptionLimit: 40, dispatchLimit: 80 },
+      deps,
+    );
+
+    expect(pruneExpiredTrialPaymentMethodSetups).toHaveBeenCalledWith({
+      expiredBefore: new Date('2026-07-08T12:00:00.000Z'),
+      limit: 100,
+    });
+  });
+
+  it('does not starve legal notices when abandoned-setup cleanup fails', async () => {
+    const { deps, execute, logger, pruneExpiredTrialPaymentMethodSetups } =
+      createDeps();
+    pruneExpiredTrialPaymentMethodSetups.mockRejectedValueOnce(
+      new Error('cleanup unavailable'),
+    );
+
+    await expect(
+      sendDueRenewalNotices({ subscriptionLimit: 40, dispatchLimit: 80 }, deps),
+    ).resolves.toMatchObject({ expiredSetupOperationsPruned: 0 });
+    expect(execute).toHaveBeenCalledOnce();
+    expect(logger.warnCalls).toEqual([
+      expect.objectContaining({
+        context: expect.objectContaining({ error: expect.any(Object) }),
+      }),
+    ]);
   });
 
   it('clamps unsafe limits before querying or dispatching', async () => {
@@ -127,10 +181,10 @@ describe('sendDueRenewalNotices job', () => {
     );
 
     expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 500 }),
+      expect.objectContaining({ limit: 40 }),
     );
     expect(execute).toHaveBeenCalledWith(
-      expect.objectContaining({ limit: 500 }),
+      expect.objectContaining({ limit: 80 }),
     );
   });
 
@@ -139,15 +193,15 @@ describe('sendDueRenewalNotices job', () => {
       label: 'NaN subscription limit',
       subscriptionLimit: Number.NaN,
       dispatchLimit: 100,
-      expectedSubscriptionLimit: 50,
-      expectedDispatchLimit: 100,
+      expectedSubscriptionLimit: 40,
+      expectedDispatchLimit: 80,
     },
     {
       label: 'fractional dispatch limit',
       subscriptionLimit: 50,
       dispatchLimit: 1.5,
-      expectedSubscriptionLimit: 50,
-      expectedDispatchLimit: 100,
+      expectedSubscriptionLimit: 40,
+      expectedDispatchLimit: 80,
     },
     {
       label: 'zero limits',
@@ -171,6 +225,23 @@ describe('sendDueRenewalNotices job', () => {
     );
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({ limit: expectedDispatchLimit }),
+    );
+  });
+
+  it('bounds worst-case provider wait below the cron runtime budget', () => {
+    const providerWaitMs =
+      Math.ceil(
+        SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT /
+          RENEWAL_NOTICE_DISPATCH_CONCURRENCY,
+      ) * RESEND_PROVIDER_TIMEOUT_MS;
+    const runtimeBudgetMs =
+      SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS *
+      1_000 *
+      SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO;
+
+    expect(providerWaitMs).toBeLessThanOrEqual(runtimeBudgetMs);
+    expect(SEND_RENEWAL_NOTICES_MAX_LIMIT * 2).toBeLessThanOrEqual(
+      SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT,
     );
   });
 });

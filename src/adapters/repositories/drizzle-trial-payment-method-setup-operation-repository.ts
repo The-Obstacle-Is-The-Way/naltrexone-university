@@ -1,4 +1,4 @@
-import { and, eq, lt, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, lt, or } from 'drizzle-orm';
 import { trialPaymentMethodSetupOperations } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -6,7 +6,10 @@ import type {
   ClaimTrialPaymentMethodSetupOperationInput,
   CompleteTrialPaymentMethodSetupOperationInput,
   MarkTrialPaymentMethodAttachedInput,
+  MarkTrialPaymentMethodSetupExpiredInput,
+  MarkTrialPaymentMethodSetupTerminalInput,
   MarkTrialSubscriptionDefaultSetInput,
+  PruneExpiredTrialPaymentMethodSetupsInput,
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationInput,
   TrialPaymentMethodSetupOperationRepository,
@@ -18,7 +21,9 @@ function toOperation(row: OperationRow): TrialPaymentMethodSetupOperation {
   if (
     (row.plan !== 'monthly' && row.plan !== 'annual') ||
     row.currency !== 'usd' ||
-    (row.frequency !== 'month' && row.frequency !== 'year')
+    (row.frequency !== 'month' && row.frequency !== 'year') ||
+    (row.terminalReason !== null &&
+      row.terminalReason !== 'billing_ownership_mismatch')
   ) {
     throw new ApplicationError(
       'INTERNAL_ERROR',
@@ -48,6 +53,9 @@ function toOperation(row: OperationRow): TrialPaymentMethodSetupOperation {
     paymentMethodAttachedAt: row.paymentMethodAttachedAt,
     subscriptionDefaultSetAt: row.subscriptionDefaultSetAt,
     completedAt: row.completedAt,
+    terminalAt: row.terminalAt,
+    terminalReason: row.terminalReason,
+    expiredAt: row.expiredAt,
   };
 }
 
@@ -184,6 +192,70 @@ export class DrizzleTrialPaymentMethodSetupOperationRepository
       completedAt,
       updatedAt: completedAt,
     });
+  }
+
+  async markTerminal({
+    sessionId,
+    claimId,
+    reason,
+    terminalAt,
+  }: MarkTrialPaymentMethodSetupTerminalInput): Promise<void> {
+    await this.updateClaimedOperation(sessionId, claimId, {
+      status: 'terminal',
+      terminalReason: reason,
+      terminalAt,
+      updatedAt: terminalAt,
+    });
+  }
+
+  async markExpired({
+    sessionId,
+    expiredAt,
+  }: MarkTrialPaymentMethodSetupExpiredInput): Promise<boolean> {
+    const [updated] = await this.db
+      .update(trialPaymentMethodSetupOperations)
+      .set({ status: 'expired', expiredAt, updatedAt: expiredAt })
+      .where(
+        and(
+          eq(trialPaymentMethodSetupOperations.sessionId, sessionId),
+          eq(trialPaymentMethodSetupOperations.status, 'pending'),
+        ),
+      )
+      .returning({ sessionId: trialPaymentMethodSetupOperations.sessionId });
+    return Boolean(updated);
+  }
+
+  async pruneExpired({
+    expiredBefore,
+    limit,
+  }: PruneExpiredTrialPaymentMethodSetupsInput): Promise<number> {
+    const eligible = await this.db
+      .select({ sessionId: trialPaymentMethodSetupOperations.sessionId })
+      .from(trialPaymentMethodSetupOperations)
+      .where(
+        and(
+          eq(trialPaymentMethodSetupOperations.status, 'expired'),
+          lt(trialPaymentMethodSetupOperations.expiredAt, expiredBefore),
+        ),
+      )
+      .orderBy(asc(trialPaymentMethodSetupOperations.expiredAt))
+      .limit(Math.max(0, limit));
+    if (eligible.length === 0) return 0;
+
+    const deleted = await this.db
+      .delete(trialPaymentMethodSetupOperations)
+      .where(
+        and(
+          eq(trialPaymentMethodSetupOperations.status, 'expired'),
+          lt(trialPaymentMethodSetupOperations.expiredAt, expiredBefore),
+          inArray(
+            trialPaymentMethodSetupOperations.sessionId,
+            eligible.map((row) => row.sessionId),
+          ),
+        ),
+      )
+      .returning({ sessionId: trialPaymentMethodSetupOperations.sessionId });
+    return deleted.length;
   }
 
   private async updateClaimedOperation(
