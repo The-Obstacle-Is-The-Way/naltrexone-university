@@ -1,6 +1,6 @@
 # Frontend Standards
 
-**Last Updated:** 2026-07-07
+**Last Updated:** 2026-08-08
 
 Canonical reference for all frontend patterns, component usage, accessibility, and styling conventions. Every UI change MUST be consistent with this document. If a pattern isn't documented here, don't invent one — add it here first.
 
@@ -272,7 +272,7 @@ Every interactive element MUST have a visible focus indicator. Text links, icon 
 
 ## 4. Typography
 
-**Canonical policy:** [Typography Policy](./typography-policy.md) — Two-pipeline model (hardcoded UI text vs content), content tier system, Markdown component rules.
+**Canonical policy:** [Typography Policy](./typography-policy.md) — Three-pipeline model (hardcoded UI text, question content, and public legal documents), content tier system, and Markdown renderer rules.
 
 This section covers **hardcoded UI text** sizing. For content text (question stems, choices, explanations, references), see the Typography Policy.
 
