@@ -485,19 +485,20 @@ describe('processStripeWebhookEvent', () => {
       }),
     });
 
-    await expect(
-      processStripeWebhookEvent({
-        stripe,
-        webhookSecret: 'whsec_test',
-        rawBody: '{}',
-        signature: 'sig_test',
-        priceIds,
-        logger,
-      }),
-    ).resolves.toMatchObject({
+    const result = await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger,
+    });
+
+    expect(result).toMatchObject({
       eventId: 'evt_checkout_incomplete_consent',
       subscriptionUpdate: { externalSubscriptionId: 'sub_123' },
     });
+    expect(result).not.toHaveProperty('initialSubscriptionConsent');
     expect(logger.warnCalls).toEqual([
       expect.objectContaining({
         context: expect.objectContaining({
@@ -543,19 +544,20 @@ describe('processStripeWebhookEvent', () => {
       }),
     });
 
-    await expect(
-      processStripeWebhookEvent({
-        stripe,
-        webhookSecret: 'whsec_test',
-        rawBody: '{}',
-        signature: 'sig_test',
-        priceIds,
-        logger,
-      }),
-    ).resolves.toMatchObject({
+    const result = await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger,
+    });
+
+    expect(result).toMatchObject({
       eventId: 'evt_checkout_mismatched_consent',
       subscriptionUpdate: { externalSubscriptionId: 'sub_123' },
     });
+    expect(result).not.toHaveProperty('initialSubscriptionConsent');
     expect(logger.warnCalls).toEqual([
       expect.objectContaining({
         context: expect.objectContaining({
@@ -588,19 +590,20 @@ describe('processStripeWebhookEvent', () => {
       }),
     });
 
-    await expect(
-      processStripeWebhookEvent({
-        stripe,
-        webhookSecret: 'whsec_test',
-        rawBody: '{}',
-        signature: 'sig_test',
-        priceIds,
-        logger,
-      }),
-    ).resolves.toMatchObject({
+    const result = await processStripeWebhookEvent({
+      stripe,
+      webhookSecret: 'whsec_test',
+      rawBody: '{}',
+      signature: 'sig_test',
+      priceIds,
+      logger,
+    });
+
+    expect(result).toMatchObject({
       eventId: 'evt_checkout_legacy_consent',
       subscriptionUpdate: { externalSubscriptionId: 'sub_123' },
     });
+    expect(result).not.toHaveProperty('initialSubscriptionConsent');
     expect(logger.warnCalls).toEqual([
       expect.objectContaining({
         context: expect.objectContaining({

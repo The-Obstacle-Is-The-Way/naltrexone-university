@@ -185,10 +185,22 @@ async function processTrialPaymentMethodSetupExpiration(
           'Expired trial payment-method setup does not match its pending operation',
         );
       }
-      await trialPaymentMethodSetupOperations.markExpired({
-        sessionId: expiration.sessionId,
-        expiredAt: expiration.expiredAt,
-      });
+      const markedExpired = await trialPaymentMethodSetupOperations.markExpired(
+        {
+          sessionId: expiration.sessionId,
+          expiredAt: expiration.expiredAt,
+        },
+      );
+      if (!markedExpired) {
+        deps.logger.warn(
+          {
+            eventId: event.eventId,
+            sessionId: expiration.sessionId,
+            operationStatus: operation.status,
+          },
+          'Trial payment-method setup expiration did not transition the operation',
+        );
+      }
       await stripeEvents.markProcessed(event.eventId);
     },
   );

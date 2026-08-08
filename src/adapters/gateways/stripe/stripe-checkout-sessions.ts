@@ -186,7 +186,7 @@ export async function createStripeTrialPaymentMethodSetupSession({
         'Stripe Checkout Session is expired or inactive',
       );
     }
-    const recoveryIdempotencyKey = `trial_setup_session_recovery:${input.userId}:${input.externalSubscriptionId}:${session.id}:${requestFingerprint}`;
+    const recoveryIdempotencyKey = `trial_setup_session_recovery:${input.userId}:${input.externalSubscriptionId}:${session.id}:attempt:${attempt}:${requestFingerprint}`;
     logger.warn(
       {
         userId: input.userId,
