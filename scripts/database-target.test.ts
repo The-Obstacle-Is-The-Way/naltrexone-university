@@ -77,33 +77,32 @@ describe('database target authorization', () => {
     ).toMatchObject({ acknowledgement });
   });
 
-  it.each([
-    undefined,
-    '',
-    '["wrong.example/app"]',
-  ])('rejects missing or wrong remote acknowledgement %s without leaking credentials', (acknowledgement) => {
-    const databaseUrl =
-      'postgresql://operator:super-secret@db.example/app?sslmode=require';
+  it.each([undefined, '', '["wrong.example/app"]'])(
+    'rejects missing or wrong remote acknowledgement %s without leaking credentials',
+    (acknowledgement) => {
+      const databaseUrl =
+        'postgresql://operator:super-secret@db.example/app?sslmode=require';
 
-    expect(() =>
-      authorizeHumanDatabaseTargets({
-        databaseUrls: [databaseUrl],
-        acknowledgement,
-      }),
-    ).toThrow('DB_TARGET_ACK must exactly equal ["db.example/app"]');
+      expect(() =>
+        authorizeHumanDatabaseTargets({
+          databaseUrls: [databaseUrl],
+          acknowledgement,
+        }),
+      ).toThrow('DB_TARGET_ACK must exactly equal ["db.example/app"]');
 
-    try {
-      authorizeHumanDatabaseTargets({
-        databaseUrls: [databaseUrl],
-        acknowledgement,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      expect(message).not.toContain('operator');
-      expect(message).not.toContain('super-secret');
-      expect(message).not.toContain('sslmode');
-    }
-  });
+      try {
+        authorizeHumanDatabaseTargets({
+          databaseUrls: [databaseUrl],
+          acknowledgement,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        expect(message).not.toContain('operator');
+        expect(message).not.toContain('super-secret');
+        expect(message).not.toContain('sslmode');
+      }
+    },
+  );
 
   it('does not accept CI, Vercel, env, or CLI-shaped values as a managed bypass', () => {
     const databaseUrl = 'postgresql://user:password@db.example/app';

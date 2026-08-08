@@ -77,7 +77,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.1",
+    "@biomejs/biome": "^2.5.6",
     "@clerk/testing": "^2.0.33",
     "@playwright/test": "^1.61.1",
     "@types/node": "^24.12.4",

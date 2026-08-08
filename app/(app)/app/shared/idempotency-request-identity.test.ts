@@ -235,50 +235,53 @@ describe.each([
   ['Quick Practice submit', submitQuickPracticeSurface],
   ['practice-session submit', createPracticeSessionSurface(sessionAId)],
   ['standalone question-page submit', createStandaloneSurface()],
-] as const)('%s request identity across the real idempotency wrapper', (_, surface) => {
-  it('replays a same-choice lost response and retires the consumed key', async () => {
-    const server = createSubmitServer();
-    const tokenCell: TokenCell = { current: null };
+] as const)(
+  '%s request identity across the real idempotency wrapper',
+  (_, surface) => {
+    it('replays a same-choice lost response and retires the consumed key', async () => {
+      const server = createSubmitServer();
+      const tokenCell: TokenCell = { current: null };
 
-    await loseSubmitResponse(surface, server, tokenCell, choiceAId);
-    const preservedKey = tokenCell.current?.key;
-    const result = await receiveSubmitResponse(
-      surface,
-      server,
-      tokenCell,
-      choiceAId,
-    );
+      await loseSubmitResponse(surface, server, tokenCell, choiceAId);
+      const preservedKey = tokenCell.current?.key;
+      const result = await receiveSubmitResponse(
+        surface,
+        server,
+        tokenCell,
+        choiceAId,
+      );
 
-    expect(preservedKey).toBeTypeOf('string');
-    expect(server.executions).toHaveLength(1);
-    expect(result?.isCorrect).toBe(true);
-    expect(tokenCell.current).toBeNull();
-  });
+      expect(preservedKey).toBeTypeOf('string');
+      expect(server.executions).toHaveLength(1);
+      expect(result?.isCorrect).toBe(true);
+      expect(tokenCell.current).toBeNull();
+    });
 
-  it('executes a changed choice under a fresh key instead of replaying the old grade', async () => {
-    const server = createSubmitServer();
-    const tokenCell: TokenCell = { current: null };
+    it('executes a changed choice under a fresh key instead of replaying the old grade', async () => {
+      const server = createSubmitServer();
+      const tokenCell: TokenCell = { current: null };
 
-    await loseSubmitResponse(surface, server, tokenCell, choiceAId);
-    const oldKey = tokenCell.current?.key;
-    const result = await receiveSubmitResponse(
-      surface,
-      server,
-      tokenCell,
-      choiceBId,
-    );
+      await loseSubmitResponse(surface, server, tokenCell, choiceAId);
+      const oldKey = tokenCell.current?.key;
+      const result = await receiveSubmitResponse(
+        surface,
+        server,
+        tokenCell,
+        choiceBId,
+      );
 
-    expect(server.executions).toHaveLength(2);
-    expect(server.executions.map((request) => request.choiceId)).toEqual([
-      choiceAId,
-      choiceBId,
-    ]);
-    expect(server.executions[1]?.idempotencyKey).not.toBe(oldKey);
-    expect(result?.isCorrect).toBe(false);
-    expect(result?.explanationMd).toBe(`Graded ${choiceBId}`);
-    expect(tokenCell.current).toBeNull();
-  });
-});
+      expect(server.executions).toHaveLength(2);
+      expect(server.executions.map((request) => request.choiceId)).toEqual([
+        choiceAId,
+        choiceBId,
+      ]);
+      expect(server.executions[1]?.idempotencyKey).not.toBe(oldKey);
+      expect(result?.isCorrect).toBe(false);
+      expect(result?.explanationMd).toBe(`Graded ${choiceBId}`);
+      expect(tokenCell.current).toBeNull();
+    });
+  },
+);
 
 describe('submit identity context', () => {
   it('binds an active-session submit key to the session id', async () => {

@@ -34,60 +34,60 @@ describe('FakeUserRepository', () => {
   });
 
   describe('upsertByClerkId', () => {
-    it.each([
-      'upsertByClerkId',
-      'updateEmailByClerkId',
-    ] as const)('ignores a stale existing-identity write to a foreign-owned email through %s', async (operation) => {
-      const repo = new FakeUserRepository();
-      const staleObservedAt = new Date('2026-02-01T00:00:00.000Z');
-      const currentObservedAt = new Date('2026-02-02T00:00:00.000Z');
-      await repo.upsertByClerkId('clerk-owner', 'owned@example.com', {
-        observedAt: currentObservedAt,
-      });
-      const incoming = await repo.upsertByClerkId(
-        'clerk-incoming',
-        'incoming@example.com',
-        { observedAt: currentObservedAt },
-      );
+    it.each(['upsertByClerkId', 'updateEmailByClerkId'] as const)(
+      'ignores a stale existing-identity write to a foreign-owned email through %s',
+      async (operation) => {
+        const repo = new FakeUserRepository();
+        const staleObservedAt = new Date('2026-02-01T00:00:00.000Z');
+        const currentObservedAt = new Date('2026-02-02T00:00:00.000Z');
+        await repo.upsertByClerkId('clerk-owner', 'owned@example.com', {
+          observedAt: currentObservedAt,
+        });
+        const incoming = await repo.upsertByClerkId(
+          'clerk-incoming',
+          'incoming@example.com',
+          { observedAt: currentObservedAt },
+        );
 
-      await expect(
-        repo[operation]('clerk-incoming', 'owned@example.com', {
-          observedAt: staleObservedAt,
-        }),
-      ).resolves.toEqual(incoming);
-      await expect(repo.findByClerkId('clerk-incoming')).resolves.toEqual(
-        incoming,
-      );
-    });
+        await expect(
+          repo[operation]('clerk-incoming', 'owned@example.com', {
+            observedAt: staleObservedAt,
+          }),
+        ).resolves.toEqual(incoming);
+        await expect(repo.findByClerkId('clerk-incoming')).resolves.toEqual(
+          incoming,
+        );
+      },
+    );
 
-    it.each([
-      'upsertByClerkId',
-      'updateEmailByClerkId',
-    ] as const)('stores the newer observation timestamp for a same-email write through %s', async (operation) => {
-      const repo = new FakeUserRepository();
-      const initialObservedAt = new Date('2026-02-01T00:00:00.000Z');
-      const newerObservedAt = new Date('2026-02-02T00:00:00.000Z');
-      const existing = await repo.upsertByClerkId(
-        'clerk-1',
-        'user@example.com',
-        { observedAt: initialObservedAt },
-      );
+    it.each(['upsertByClerkId', 'updateEmailByClerkId'] as const)(
+      'stores the newer observation timestamp for a same-email write through %s',
+      async (operation) => {
+        const repo = new FakeUserRepository();
+        const initialObservedAt = new Date('2026-02-01T00:00:00.000Z');
+        const newerObservedAt = new Date('2026-02-02T00:00:00.000Z');
+        const existing = await repo.upsertByClerkId(
+          'clerk-1',
+          'user@example.com',
+          { observedAt: initialObservedAt },
+        );
 
-      await expect(
-        repo[operation]('clerk-1', 'user@example.com', {
-          observedAt: newerObservedAt,
-        }),
-      ).resolves.toMatchObject({
-        id: existing.id,
-        email: 'user@example.com',
-        updatedAt: newerObservedAt,
-      });
-      await expect(repo.findByClerkId('clerk-1')).resolves.toMatchObject({
-        id: existing.id,
-        email: 'user@example.com',
-        updatedAt: newerObservedAt,
-      });
-    });
+        await expect(
+          repo[operation]('clerk-1', 'user@example.com', {
+            observedAt: newerObservedAt,
+          }),
+        ).resolves.toMatchObject({
+          id: existing.id,
+          email: 'user@example.com',
+          updatedAt: newerObservedAt,
+        });
+        await expect(repo.findByClerkId('clerk-1')).resolves.toMatchObject({
+          id: existing.id,
+          email: 'user@example.com',
+          updatedAt: newerObservedAt,
+        });
+      },
+    );
 
     it('creates new user when not exists', async () => {
       const repo = new FakeUserRepository();

@@ -554,32 +554,35 @@ describe('StripePaymentGateway', () => {
     'unpaid',
     'incomplete',
     'paused',
-  ] as const)('throws ALREADY_SUBSCRIBED when Stripe has a %s subscription for the customer', async (status) => {
-    const { stripe, sessionsCreate, subscriptionsList } = createStripeMock({
-      withSubscriptions: true,
-    });
-    subscriptionsList.mockResolvedValue({
-      data: [{ id: 'sub_blocking_1', status }],
-    });
-    const gateway = createGateway(stripe);
+  ] as const)(
+    'throws ALREADY_SUBSCRIBED when Stripe has a %s subscription for the customer',
+    async (status) => {
+      const { stripe, sessionsCreate, subscriptionsList } = createStripeMock({
+        withSubscriptions: true,
+      });
+      subscriptionsList.mockResolvedValue({
+        data: [{ id: 'sub_blocking_1', status }],
+      });
+      const gateway = createGateway(stripe);
 
-    await expect(
-      gateway.createCheckoutSession({
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        ...createTestRenewalTerms('monthly'),
-        successUrl: 'https://app/success',
-        cancelUrl: 'https://app/cancel',
-      }),
-    ).rejects.toMatchObject({ code: 'ALREADY_SUBSCRIBED' });
+      await expect(
+        gateway.createCheckoutSession({
+          userId: appUserId,
+          externalCustomerId: 'cus_123',
+          ...createTestRenewalTerms('monthly'),
+          successUrl: 'https://app/success',
+          cancelUrl: 'https://app/cancel',
+        }),
+      ).rejects.toMatchObject({ code: 'ALREADY_SUBSCRIBED' });
 
-    expect(subscriptionsList).toHaveBeenCalledWith({
-      customer: 'cus_123',
-      status: 'all',
-      limit: SUBSCRIPTION_LIST_LIMIT,
-    });
-    expect(sessionsCreate).not.toHaveBeenCalled();
-  });
+      expect(subscriptionsList).toHaveBeenCalledWith({
+        customer: 'cus_123',
+        status: 'all',
+        limit: SUBSCRIPTION_LIST_LIMIT,
+      });
+      expect(sessionsCreate).not.toHaveBeenCalled();
+    },
+  );
 
   it('creates a checkout session when Stripe subscriptions are only ended or canceled', async () => {
     const { stripe, sessionsCreate, subscriptionsList } = createStripeMock({
@@ -943,46 +946,52 @@ describe('StripePaymentGateway', () => {
     ['invoice.payment_failed', 'evt_invoice_1'],
     ['invoice.payment_succeeded', 'evt_invoice_success_1'],
     ['invoice.payment_action_required', 'evt_invoice_action_required_1'],
-  ] as const)('normalizes %s events by retrieving the subscription', async (type, eventId) => {
-    const subscriptionEvent = loadJsonFixture<{
-      data: { object: { id: string } };
-    }>('stripe/customer.subscription.updated.json');
-    const subscription = withSubscriptionUserId(subscriptionEvent.data.object);
+  ] as const)(
+    'normalizes %s events by retrieving the subscription',
+    async (type, eventId) => {
+      const subscriptionEvent = loadJsonFixture<{
+        data: { object: { id: string } };
+      }>('stripe/customer.subscription.updated.json');
+      const subscription = withSubscriptionUserId(
+        subscriptionEvent.data.object,
+      );
 
-    const constructedEvent = {
-      id: eventId,
-      type,
-      data: {
-        object: {
-          subscription: subscription.id,
+      const constructedEvent = {
+        id: eventId,
+        type,
+        data: {
+          object: {
+            subscription: subscription.id,
+          },
         },
-      },
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const gateway = createGateway(stripe);
+      };
+      const { stripe, constructEvent, subscriptionsRetrieve } =
+        createStripeMock({
+          withSubscriptions: true,
+        });
+      constructEvent.mockReturnValue(constructedEvent);
+      subscriptionsRetrieve.mockResolvedValue(subscription);
+      const gateway = createGateway(stripe);
 
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId,
-      type,
-      subscriptionUpdate: {
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
+      await expect(
+        gateway.processWebhookEvent('raw_body', 'sig_1'),
+      ).resolves.toEqual({
+        eventId,
+        type,
+        subscriptionUpdate: {
+          userId: appUserId,
+          externalCustomerId: 'cus_123',
+          externalSubscriptionId: 'sub_123',
+          plan: 'monthly',
+          status: 'active',
+          currentPeriodEnd: new Date(1_700_000_000 * 1000),
+          cancelAtPeriodEnd: false,
+        },
+      });
 
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
-  });
+      expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
+    },
+  );
 
   it('normalizes invoice.payment_succeeded events with a nested Clover subscription reference', async () => {
     const subscriptionEvent = loadJsonFixture<{

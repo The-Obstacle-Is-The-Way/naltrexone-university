@@ -27,22 +27,24 @@ function createDependencies(): SeedEnvironmentDependencies & {
 }
 
 describe('db:seed:prod', () => {
-  it.each([
-    undefined,
-    '["wrong-host/proddb"]',
-  ])('requires the exact Production target token %s before writes', async (acknowledgement) => {
-    const dependencies = createDependencies();
+  it.each([undefined, '["wrong-host/proddb"]'])(
+    'requires the exact Production target token %s before writes',
+    async (acknowledgement) => {
+      const dependencies = createDependencies();
 
-    await expect(
-      runProductionSeed({
-        acknowledgement,
-        dependencies,
-        env: {},
-      }),
-    ).rejects.toThrow('DB_TARGET_ACK must exactly equal ["prod-host/proddb"]');
-    expect(dependencies.prepareCorpus).not.toHaveBeenCalled();
-    expect(dependencies.seedDatabase).not.toHaveBeenCalled();
-  });
+      await expect(
+        runProductionSeed({
+          acknowledgement,
+          dependencies,
+          env: {},
+        }),
+      ).rejects.toThrow(
+        'DB_TARGET_ACK must exactly equal ["prod-host/proddb"]',
+      );
+      expect(dependencies.prepareCorpus).not.toHaveBeenCalled();
+      expect(dependencies.seedDatabase).not.toHaveBeenCalled();
+    },
+  );
 
   it('resolves and seeds only the named Production identity after exact consent', async () => {
     const dependencies = createDependencies();

@@ -77,85 +77,92 @@ const harnesses = [
   ['real Postgres', createRealHarness],
 ] as const;
 
-describe.each(
-  harnesses,
-)('PendingStripeCustomerCleanupRepository contract (%s)', (_label, createHarness) => {
-  const t0 = new Date('2026-06-12T12:00:00.000Z');
-  const t1 = new Date('2026-06-12T12:01:00.000Z');
-  const t2 = new Date('2026-06-12T12:02:00.000Z');
-  const cutoffAfterAll = new Date('2026-06-12T12:15:00.000Z');
+describe.each(harnesses)(
+  'PendingStripeCustomerCleanupRepository contract (%s)',
+  (_label, createHarness) => {
+    const t0 = new Date('2026-06-12T12:00:00.000Z');
+    const t1 = new Date('2026-06-12T12:01:00.000Z');
+    const t2 = new Date('2026-06-12T12:02:00.000Z');
+    const cutoffAfterAll = new Date('2026-06-12T12:15:00.000Z');
 
-  it('schedule() inserts a new obligation that is findable and listable', async () => {
-    const harness = createHarness();
-    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    await harness.seedEvent(eventId);
+    it('schedule() inserts a new obligation that is findable and listable', async () => {
+      const harness = createHarness();
+      const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+      await harness.seedEvent(eventId);
 
-    await harness.repo.schedule(eventId, 'cus_inserted');
+      await harness.repo.schedule(eventId, 'cus_inserted');
 
-    await expect(harness.repo.findByEventId(eventId)).resolves.toEqual({
-      stripeCustomerId: 'cus_inserted',
-    });
-    const farFutureCutoff = new Date(Date.now() + 60 * 60 * 1000);
-    const rows = await harness.repo.listStale(farFutureCutoff, 100);
-    expect(rows.map((row) => row.eventId)).toContain(eventId);
-  });
-
-  it('finds a scheduled obligation by event id and deletes idempotently', async () => {
-    const harness = createHarness();
-    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    await harness.seed(eventId, 'cus_contract', t0);
-
-    await expect(harness.repo.findByEventId(eventId)).resolves.toEqual({
-      stripeCustomerId: 'cus_contract',
+      await expect(harness.repo.findByEventId(eventId)).resolves.toEqual({
+        stripeCustomerId: 'cus_inserted',
+      });
+      const farFutureCutoff = new Date(Date.now() + 60 * 60 * 1000);
+      const rows = await harness.repo.listStale(farFutureCutoff, 100);
+      expect(rows.map((row) => row.eventId)).toContain(eventId);
     });
 
-    await harness.repo.deleteByEventId(eventId);
-    await expect(harness.repo.findByEventId(eventId)).resolves.toBeNull();
-    await expect(
-      harness.repo.deleteByEventId(eventId),
-    ).resolves.toBeUndefined();
-  });
+    it('finds a scheduled obligation by event id and deletes idempotently', async () => {
+      const harness = createHarness();
+      const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+      await harness.seed(eventId, 'cus_contract', t0);
 
-  it('re-scheduling updates the customer id but preserves the staleness clock', async () => {
-    const harness = createHarness();
-    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    await harness.seed(eventId, 'cus_first', t0);
+      await expect(harness.repo.findByEventId(eventId)).resolves.toEqual({
+        stripeCustomerId: 'cus_contract',
+      });
 
-    await harness.repo.schedule(eventId, 'cus_second');
-
-    await expect(harness.repo.findByEventId(eventId)).resolves.toEqual({
-      stripeCustomerId: 'cus_second',
+      await harness.repo.deleteByEventId(eventId);
+      await expect(harness.repo.findByEventId(eventId)).resolves.toBeNull();
+      await expect(
+        harness.repo.deleteByEventId(eventId),
+      ).resolves.toBeUndefined();
     });
-    const [row] = await harness.repo.listStale(cutoffAfterAll, 10);
-    expect(row).toEqual({
-      eventId,
-      stripeCustomerId: 'cus_second',
-      createdAt: t0,
+
+    it('re-scheduling updates the customer id but preserves the staleness clock', async () => {
+      const harness = createHarness();
+      const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+      await harness.seed(eventId, 'cus_first', t0);
+
+      await harness.repo.schedule(eventId, 'cus_second');
+
+      await expect(harness.repo.findByEventId(eventId)).resolves.toEqual({
+        stripeCustomerId: 'cus_second',
+      });
+      const [row] = await harness.repo.listStale(cutoffAfterAll, 10);
+      expect(row).toEqual({
+        eventId,
+        stripeCustomerId: 'cus_second',
+        createdAt: t0,
+      });
     });
-  });
 
-  it('lists stale rows oldest-first with cutoff, limit, and exclusions', async () => {
-    const harness = createHarness();
-    const eventA = `evt_${randomUUID().replaceAll('-', '')}`;
-    const eventB = `evt_${randomUUID().replaceAll('-', '')}`;
-    const eventC = `evt_${randomUUID().replaceAll('-', '')}`;
-    await harness.seed(eventB, 'cus_b', t1);
-    await harness.seed(eventA, 'cus_a', t0);
-    await harness.seed(eventC, 'cus_c', t2);
+    it('lists stale rows oldest-first with cutoff, limit, and exclusions', async () => {
+      const harness = createHarness();
+      const eventA = `evt_${randomUUID().replaceAll('-', '')}`;
+      const eventB = `evt_${randomUUID().replaceAll('-', '')}`;
+      const eventC = `evt_${randomUUID().replaceAll('-', '')}`;
+      await harness.seed(eventB, 'cus_b', t1);
+      await harness.seed(eventA, 'cus_a', t0);
+      await harness.seed(eventC, 'cus_c', t2);
 
-    const ordered = await harness.repo.listStale(cutoffAfterAll, 10);
-    expect(ordered.map((row) => row.eventId)).toEqual([eventA, eventB, eventC]);
+      const ordered = await harness.repo.listStale(cutoffAfterAll, 10);
+      expect(ordered.map((row) => row.eventId)).toEqual([
+        eventA,
+        eventB,
+        eventC,
+      ]);
 
-    const limited = await harness.repo.listStale(cutoffAfterAll, 2);
-    expect(limited.map((row) => row.eventId)).toEqual([eventA, eventB]);
+      const limited = await harness.repo.listStale(cutoffAfterAll, 2);
+      expect(limited.map((row) => row.eventId)).toEqual([eventA, eventB]);
 
-    const excluded = await harness.repo.listStale(cutoffAfterAll, 2, [eventA]);
-    expect(excluded.map((row) => row.eventId)).toEqual([eventB, eventC]);
+      const excluded = await harness.repo.listStale(cutoffAfterAll, 2, [
+        eventA,
+      ]);
+      expect(excluded.map((row) => row.eventId)).toEqual([eventB, eventC]);
 
-    const cutoffBetween = await harness.repo.listStale(
-      new Date(t1.getTime() + 1),
-      10,
-    );
-    expect(cutoffBetween.map((row) => row.eventId)).toEqual([eventA, eventB]);
-  });
-});
+      const cutoffBetween = await harness.repo.listStale(
+        new Date(t1.getTime() + 1),
+        10,
+      );
+      expect(cutoffBetween.map((row) => row.eventId)).toEqual([eventA, eventB]);
+    });
+  },
+);

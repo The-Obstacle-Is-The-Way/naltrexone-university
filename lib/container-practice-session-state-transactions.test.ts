@@ -175,56 +175,56 @@ class ThrowingRetryWarnLogger extends FakeLogger {
 }
 
 describe('container factories — practice session state write transactions', () => {
-  it.each([
-    '40001',
-    '40P01',
-  ] as const)('retries the complete discard transaction on %s with a fresh transaction handle', async (code) => {
-    vi.useFakeTimers();
-    vi.spyOn(Math, 'random').mockReturnValue(0);
-    const fixture = createPracticeSessionStateWriteFixture('exam');
-    const transactionHandles: DrizzleDb[] = [];
-    const repositoryHandles: Array<DrizzleDb | undefined> = [];
-    const postgresFailure = { code };
-    const drizzleFailure = new Error('Failed query', {
-      cause: postgresFailure,
-    });
-    const transaction = vi.fn<TestTransaction>(async (fn) => {
-      const tx = createUnexpectedNestedTransactionDb();
-      transactionHandles.push(tx);
-      const result = await fn(tx);
-      if (transactionHandles.length === 1) {
-        throw drizzleFailure;
-      }
-      return result;
-    });
+  it.each(['40001', '40P01'] as const)(
+    'retries the complete discard transaction on %s with a fresh transaction handle',
+    async (code) => {
+      vi.useFakeTimers();
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const fixture = createPracticeSessionStateWriteFixture('exam');
+      const transactionHandles: DrizzleDb[] = [];
+      const repositoryHandles: Array<DrizzleDb | undefined> = [];
+      const postgresFailure = { code };
+      const drizzleFailure = new Error('Failed query', {
+        cause: postgresFailure,
+      });
+      const transaction = vi.fn<TestTransaction>(async (fn) => {
+        const tx = createUnexpectedNestedTransactionDb();
+        transactionHandles.push(tx);
+        const result = await fn(tx);
+        if (transactionHandles.length === 1) {
+          throw drizzleFailure;
+        }
+        return result;
+      });
 
-    const container = createContainer({
-      primitives: {
-        db: createTransactionOnlyDb(transaction),
-      },
-      repositories: {
-        createPracticeSessionRepository: (dbOverride) => {
-          repositoryHandles.push(dbOverride);
-          return fixture.sessions;
+      const container = createContainer({
+        primitives: {
+          db: createTransactionOnlyDb(transaction),
         },
-      },
-    } satisfies ContainerOverrides);
-    const result = container.createDiscardPracticeSessionUseCase().execute({
-      userId: fixture.userId,
-      sessionId: fixture.sessionId,
-    });
+        repositories: {
+          createPracticeSessionRepository: (dbOverride) => {
+            repositoryHandles.push(dbOverride);
+            return fixture.sessions;
+          },
+        },
+      } satisfies ContainerOverrides);
+      const result = container.createDiscardPracticeSessionUseCase().execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+      });
 
-    await vi.runAllTimersAsync();
+      await vi.runAllTimersAsync();
 
-    await expect(result).resolves.toEqual({ discarded: true });
-    expect(transaction).toHaveBeenCalledTimes(2);
-    expect(transactionHandles).toHaveLength(2);
-    expect(transactionHandles[0]).not.toBe(transactionHandles[1]);
-    expect(repositoryHandles).toEqual(transactionHandles);
-    expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
-      isolationLevel: 'repeatable read',
-    });
-  });
+      await expect(result).resolves.toEqual({ discarded: true });
+      expect(transaction).toHaveBeenCalledTimes(2);
+      expect(transactionHandles).toHaveLength(2);
+      expect(transactionHandles[0]).not.toBe(transactionHandles[1]);
+      expect(repositoryHandles).toEqual(transactionHandles);
+      expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
+        isolationLevel: 'repeatable read',
+      });
+    },
+  );
 
   it('maps exhausted discard serialization failures to a typed state-changed CONFLICT', async () => {
     vi.useFakeTimers();
@@ -399,46 +399,46 @@ describe('container factories — practice session state write transactions', ()
     expect(transaction).toHaveBeenCalledTimes(3);
   });
 
-  it.each([
-    '40001',
-    '40P01',
-  ] as const)('logs one safe retry observation for %s', async (code) => {
-    vi.useFakeTimers();
-    vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    const fixture = createPracticeSessionStateWriteFixture('exam');
-    const logger = new FakeLogger();
-    const tx = createUnexpectedNestedTransactionDb();
-    const transaction = vi.fn<TestTransaction>(async (fn) => {
-      if (transaction.mock.calls.length === 1) {
-        throw { code };
-      }
-      return fn(tx);
-    });
-    const container = createPracticeSessionStateWriteContainer({
-      transaction,
-      fixture,
-      logger,
-    });
+  it.each(['40001', '40P01'] as const)(
+    'logs one safe retry observation for %s',
+    async (code) => {
+      vi.useFakeTimers();
+      vi.spyOn(Math, 'random').mockReturnValue(0.5);
+      const fixture = createPracticeSessionStateWriteFixture('exam');
+      const logger = new FakeLogger();
+      const tx = createUnexpectedNestedTransactionDb();
+      const transaction = vi.fn<TestTransaction>(async (fn) => {
+        if (transaction.mock.calls.length === 1) {
+          throw { code };
+        }
+        return fn(tx);
+      });
+      const container = createPracticeSessionStateWriteContainer({
+        transaction,
+        fixture,
+        logger,
+      });
 
-    const result = container.createFinalizeExamAnswersUseCase().execute({
-      userId: fixture.userId,
-      sessionId: fixture.sessionId,
-    });
-    await vi.runAllTimersAsync();
-    await result;
+      const result = container.createFinalizeExamAnswersUseCase().execute({
+        userId: fixture.userId,
+        sessionId: fixture.sessionId,
+      });
+      await vi.runAllTimersAsync();
+      await result;
 
-    expect(logger.warnCalls).toEqual([
-      {
-        context: {
-          attempt: 1,
-          max: 3,
-          code,
-          delay: 37,
+      expect(logger.warnCalls).toEqual([
+        {
+          context: {
+            attempt: 1,
+            max: 3,
+            code,
+            delay: 37,
+          },
+          msg: 'Retrying practice session state write transaction',
         },
-        msg: 'Retrying practice session state write transaction',
-      },
-    ]);
-  });
+      ]);
+    },
+  );
 
   it('continues retrying when retry observation logging fails', async () => {
     vi.useFakeTimers();

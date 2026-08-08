@@ -29,18 +29,20 @@ describe('PRICING_DATA renewal disclosures', () => {
     ],
   ] as const;
 
-  it.each(
-    disclosures,
-  )('%s names the real cancellation path (Billing page), not a nonexistent surface', (_name, disclosure) => {
-    expect(disclosure).toContain('Billing page');
-    expect(disclosure).not.toContain('Account Settings');
-  });
+  it.each(disclosures)(
+    '%s names the real cancellation path (Billing page), not a nonexistent surface',
+    (_name, disclosure) => {
+      expect(disclosure).toContain('Billing page');
+      expect(disclosure).not.toContain('Account Settings');
+    },
+  );
 
-  it.each(
-    disclosures,
-  )('%s names the support contact as a cancellation fallback', (_name, disclosure) => {
-    expect(disclosure).toContain('support@addictionboards.com');
-  });
+  it.each(disclosures)(
+    '%s names the support contact as a cancellation fallback',
+    (_name, disclosure) => {
+      expect(disclosure).toContain('support@addictionboards.com');
+    },
+  );
 
   it('pins machine-readable renewal terms to the rendered disclosure and Terms version', () => {
     expect(CANCELLATION_METHOD).toBe(

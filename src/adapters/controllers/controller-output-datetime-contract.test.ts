@@ -1,4 +1,3 @@
-// biome-ignore lint/style/noExcessiveLinesPerFile: Keep the DEBT-397 AST scanner and assertions colocated so the controller-output datetime contract is auditable in one guardrail.
 import { readdirSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import ts from 'typescript';

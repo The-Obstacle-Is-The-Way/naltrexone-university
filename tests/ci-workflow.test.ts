@@ -27,14 +27,14 @@ function findStepBlock(workflow: string, stepName: string): string {
 }
 
 describe('CI workflow', () => {
-  it.each([
-    'Validate E2E credential inputs',
-    'E2E smoke',
-  ])('does not run %s on Dependabot pull requests because secrets are unavailable', (stepName) => {
-    const stepBlock = findStepBlock(readCiWorkflow(), stepName);
+  it.each(['Validate E2E credential inputs', 'E2E smoke'])(
+    'does not run %s on Dependabot pull requests because secrets are unavailable',
+    (stepName) => {
+      const stepBlock = findStepBlock(readCiWorkflow(), stepName);
 
-    expect(stepBlock).toContain("github.event_name == 'push'");
-    expect(stepBlock).toContain(HUMAN_SAME_REPO_PR_CONDITION);
-    expect(stepBlock).toContain(DEPENDABOT_ACTOR_GUARD);
-  });
+      expect(stepBlock).toContain("github.event_name == 'push'");
+      expect(stepBlock).toContain(HUMAN_SAME_REPO_PR_CONDITION);
+      expect(stepBlock).toContain(DEPENDABOT_ACTOR_GUARD);
+    },
+  );
 });
