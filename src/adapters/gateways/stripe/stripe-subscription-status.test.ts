@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { isValidStripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
 import {
-  isValidStripeSubscriptionStatus,
   stripeSubscriptionStatusToSubscriptionStatus,
   subscriptionStatusToStripeSubscriptionStatus,
 } from './stripe-subscription-status';
