@@ -50,6 +50,16 @@ export type CheckoutSessionCreateParams =
     });
 
 export type StripeCheckoutSessionStatus = 'open' | 'complete' | 'expired';
+type StripeOtherString = string & Record<never, never>;
+export type StripeCheckoutSessionPaymentMethodCollection =
+  | 'always'
+  | 'if_required'
+  | StripeOtherString;
+export type StripeCheckoutSessionMode =
+  | 'subscription'
+  | 'payment'
+  | 'setup'
+  | StripeOtherString;
 
 export type StripeCheckoutSession = {
   id: string;
@@ -58,8 +68,8 @@ export type StripeCheckoutSession = {
   status?: StripeCheckoutSessionStatus | null | undefined;
   expires_at?: number | undefined;
   metadata?: Record<string, string> | null;
-  payment_method_collection?: 'always' | 'if_required' | null;
-  mode?: 'subscription' | 'payment' | 'setup';
+  payment_method_collection?: StripeCheckoutSessionPaymentMethodCollection | null;
+  mode?: StripeCheckoutSessionMode;
   setup_intent?: string | { id: string } | null;
   consent?: { terms_of_service?: 'accepted' | 'required' | null } | null;
 };
@@ -104,9 +114,19 @@ export const STRIPE_SUBSCRIPTION_STATUSES = [
 ] as const;
 export type StripeSubscriptionStatus =
   (typeof STRIPE_SUBSCRIPTION_STATUSES)[number];
+export type StripeSubscriptionResponseStatus =
+  | StripeSubscriptionStatus
+  | StripeOtherString;
+
+export function isValidStripeSubscriptionStatus(
+  value: string,
+): value is StripeSubscriptionStatus {
+  return (STRIPE_SUBSCRIPTION_STATUSES as readonly string[]).includes(value);
+}
+
 export type StripeListedSubscription = {
   id?: string;
-  status?: StripeSubscriptionStatus;
+  status?: StripeSubscriptionResponseStatus;
 };
 export type StripeSubscriptionListParams = {
   customer: string;

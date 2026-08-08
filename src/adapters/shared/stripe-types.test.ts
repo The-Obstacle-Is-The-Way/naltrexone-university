@@ -1,6 +1,9 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   STRIPE_SUBSCRIPTION_STATUSES,
+  type StripeCheckoutSessionMode,
+  type StripeCheckoutSessionPaymentMethodCollection,
+  type StripeSubscriptionResponseStatus,
   type StripeSubscriptionStatus,
 } from './stripe-types';
 
@@ -31,5 +34,24 @@ describe('StripeSubscriptionStatus', () => {
       'trialing',
       'unpaid',
     ]);
+  });
+});
+
+describe('Stripe response enums', () => {
+  type OtherString = string & Record<never, never>;
+
+  it('preserves known checkout values while allowing future values', () => {
+    expectTypeOf<StripeCheckoutSessionMode>().toEqualTypeOf<
+      'payment' | 'setup' | 'subscription' | OtherString
+    >();
+    expectTypeOf<StripeCheckoutSessionPaymentMethodCollection>().toEqualTypeOf<
+      'always' | 'if_required' | OtherString
+    >();
+  });
+
+  it('preserves known subscription statuses while allowing future values', () => {
+    expectTypeOf<StripeSubscriptionResponseStatus>().toEqualTypeOf<
+      StripeSubscriptionStatus | OtherString
+    >();
   });
 });
