@@ -1,7 +1,9 @@
 # Technical Debt Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-08-07
+**Last Updated:** 2026-08-08
+
+**2026-08-08 update:** **DEBT-463 redesigns the public legal reading surface without reopening DEBT-414's legal rulings.** Production measurements refuted the claim that the former 832px legal column was twice every other reading surface, but confirmed its sustained-prose measure was 89.1–95.8 average CPL and unregistered. The chosen registered surface uses a 72ch article, an explicit legal Markdown typography pipeline, real `h2`/`h3` hierarchy, section separators, and an AA-safe foreground ramp. Public Terms and Privacy copy is concise and renders with zero em dashes or code chips while preserving the committed obligations and disclosures; Terms version/date/hash move coherently to 2026-08-08. DEBT-463 is Active pending review and production verification. Next Debt ID is DEBT-464.
 
 **2026-08-07 update:** **DEBT-414 Stage 2 shipped through promo #747** (CodeRabbit approval review `4882980598`; merge `19f8a31efb466aebe86ff40257824f5fd2854304`). Required Stripe Terms consent, the customer-less trial add-card flow, legal-duration consent evidence, same-transaction acknowledgment outbox, six-state Resend delivery boundary, and annual reminder/renewal job are live in code. A same-day adversarial hardening review classified H1, H3–H8, H10, H12, and H13 REAL; H2 and H9 OVERSTATED with narrower surviving defects; and H11 NOT REAL. The debt record pins the minimal fixes and activation gates: do not configure `RESEND_API_KEY` until H1–H8 are present on the deployed head, and do not activate trial add-card setup without the dedicated `CONSENT_STATE_SECRET`. DEBT-414 remains Active for its owner tail and deferred price-change machinery; Next Debt ID remains DEBT-463.
 
@@ -77,8 +79,9 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 |----|-------|----------|--------------|
 | [DEBT-337](./debt-337-future-feedback-enhancements.md) | Future feedback & practice enhancements (F2/F3/F5/F6/F7) — clinical pearl field, reference styling, running score, card collapse, difficulty tags; parked | P4 | — |
 | [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) | **ACTIVE owner-tail legal and operational work; Stage 2 shipped through promo #747 on 2026-08-07.** Stage 1 published and production-verified the Privacy Policy and Terms of Service. Stage 2 ships visual-proximity billing disclosures, required Stripe Terms consent, the customer-less trial add-card flow, legal-duration initial-consent evidence, same-transaction acknowledgment outbox, the six-state Resend adapter/queue, and daily annual-reminder/15–45-day annual-renewal notices. The 2026-08-07 hardening record verifies the queue, consent-state secret, temporal-drift/terminal cleanup, reconciliation retention, ambiguous-email outcome, cron budget, operator-signal, abandoned-setup retention, Server Action boundary, idempotency recovery, and test-integrity findings; the alleged prune/termination deadlock was refuted. Eight direct providers are named: Clerk, Stripe, Neon, Vercel, Sentry, ImprovMX, Google Workspace (Google LLC), and Resend. Missing `RESEND_API_KEY` is fail-closed and leaves messages queued; Resend account/domain/key activation and a real delivery remain owner steps. Trial add-card setup additionally stays fail-closed until the owner supplies dedicated `CONSENT_STATE_SECRET`. Support-mail delivery was independently corroborated 2026-08-06 (strict-DMARC sender domains untested). The owner deferred price-change offer/consent/apply and production material/fee-change sourcing on 2026-08-06; existing subscriber recurring prices must remain unchanged until that flow ships. Remaining closure items are simple-cancellation evidence, SHIELD adoption, provider-template CAN-SPAM classification, owner read-through, and focused legal review. CCPA does not currently apply, but its triggers and Notice-at-Collection duty remain recorded. | P1 | — |
+| [DEBT-463](./debt-463-legal-page-redesign.md) | Public legal-page readability and copy pass: measured reading width, explicit legal typography pipeline, section hierarchy and separation, concise zero-em-dash public copy, exact source mirrors, and consent-version coherence. | P3 | — |
 
-**Next Debt ID:** DEBT-463
+**Next Debt ID:** DEBT-464
 
 ---
 

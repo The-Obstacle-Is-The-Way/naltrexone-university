@@ -118,40 +118,40 @@ function LegalLink({
 const legalMarkdownComponents: Components = {
   h2({ children }) {
     return (
-      <h2 className="mt-10 font-heading text-2xl font-bold tracking-tight text-foreground">
+      <h2 className="mt-12 border-t border-border pt-8 font-heading text-2xl font-bold tracking-tight text-foreground text-pretty">
         {children}
       </h2>
     );
   },
   h3({ children }) {
     return (
-      <h2 className="mt-10 font-heading text-2xl font-bold tracking-tight text-foreground">
-        {children}
-      </h2>
-    );
-  },
-  h4({ children }) {
-    return (
-      <h3 className="mt-8 font-heading text-xl font-semibold tracking-tight text-foreground">
+      <h3 className="mt-8 font-heading text-xl font-semibold tracking-tight text-foreground text-pretty">
         {children}
       </h3>
     );
   },
+  h4({ children }) {
+    return (
+      <h4 className="mt-6 font-heading text-lg font-semibold tracking-tight text-foreground text-pretty">
+        {children}
+      </h4>
+    );
+  },
   p({ children }) {
     return (
-      <p className="mt-4 text-base leading-7 text-foreground">{children}</p>
+      <p className="mt-4 text-base leading-7 text-foreground/80">{children}</p>
     );
   },
   ul({ children }) {
     return (
-      <ul className="mt-4 list-disc space-y-2 pl-6 text-base leading-7 text-foreground">
+      <ul className="mt-4 list-disc space-y-2 pl-6 text-base leading-7 text-foreground/80">
         {children}
       </ul>
     );
   },
   ol({ children }) {
     return (
-      <ol className="mt-4 list-decimal space-y-2 pl-6 text-base leading-7 text-foreground">
+      <ol className="mt-4 list-decimal space-y-2 pl-6 text-base leading-7 text-foreground/80">
         {children}
       </ol>
     );
@@ -187,9 +187,14 @@ const legalMarkdownComponents: Components = {
     return (
       // Border suppression targets the last row's cells, not each row's last
       // cell — `last:` alone would strip the rightmost column's separators.
-      <td className="border-b border-border px-4 py-3 align-top leading-6 text-foreground [tbody_tr:last-child_&]:border-b-0">
+      <td className="border-b border-border px-4 py-3 align-top leading-6 text-foreground/80 [tbody_tr:last-child_&]:border-b-0">
         {children}
       </td>
+    );
+  },
+  strong({ children }) {
+    return (
+      <strong className="font-semibold text-foreground">{children}</strong>
     );
   },
   a: LegalLink,
@@ -204,9 +209,9 @@ const legalMarkdownComponents: Components = {
 
 export function LegalDocument({ content }: { content: LegalDocumentContent }) {
   return (
-    <article className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
+    <article className="mx-auto max-w-[72ch] px-4 py-16 sm:px-6 lg:px-8">
       <header>
-        <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground">
+        <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground text-pretty">
           {content.title}
         </h1>
         <p className="mt-4 text-sm text-muted-foreground">

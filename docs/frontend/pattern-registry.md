@@ -1,6 +1,6 @@
 # Pattern Registry
 
-**Last Updated:** 2026-07-07
+**Last Updated:** 2026-08-08
 **Status:** Canonical — all UI changes MUST conform to this registry
 
 Single source of truth for every visual pattern in the app. If a pattern isn't here, don't invent one — add it here first, get approval, then implement.
@@ -1168,20 +1168,28 @@ Two distinct stat card presentations:
 
 ### 12.5 Legal Document Surface
 
-Long-form policy pages (`/privacy`, `/terms`) rendered by `components/legal/legal-document.tsx` from markdown content modules. Registered 2026-08-05 (DEBT-414 Stage 1 adversarial review — the surface shipped first and is documented here per the discoverability rule).
+Long-form policy pages (`/privacy`, `/terms`) rendered by `components/legal/legal-document.tsx` from mirrored markdown content modules. Registered 2026-08-05 and redesigned 2026-08-08 under [DEBT-463](../debt/debt-463-legal-page-redesign.md).
 
 | Element | Classes |
 |---|---|
-| Document H1 | `font-heading text-4xl font-bold tracking-tight text-foreground` (the standard Marketing/standalone H1 from § 12.2) |
-| Section heading | `mt-10 font-heading text-2xl font-bold tracking-tight text-foreground` |
-| Subsection heading | `mt-8 font-heading text-xl font-semibold tracking-tight text-foreground` |
-| Body / list text | `mt-4 text-base leading-7 text-foreground` |
+| Document container | `mx-auto max-w-[72ch] px-4 py-16 sm:px-6 lg:px-8` |
+| Document H1 | `font-heading text-4xl font-bold tracking-tight text-foreground text-pretty` (the standard Marketing/standalone H1 plus legal-surface wrapping) |
+| Section heading | `mt-12 border-t border-border pt-8 font-heading text-2xl font-bold tracking-tight text-foreground text-pretty` |
+| Subsection heading | `mt-8 font-heading text-xl font-semibold tracking-tight text-foreground text-pretty` |
+| Nested heading | `mt-6 font-heading text-lg font-semibold tracking-tight text-foreground text-pretty` |
+| Body / list text | `mt-4 text-base leading-7 text-foreground/80` |
+| Table body cell | `border-b border-border px-4 py-3 align-top leading-6 text-foreground/80 [tbody_tr:last-child_&]:border-b-0` |
+| Strong emphasis | `font-semibold text-foreground` |
 | Last-updated line | `mt-4 text-sm text-muted-foreground` |
 | Inline code | `rounded bg-muted px-1 py-0.5 text-sm text-foreground` |
 
-**Reading-density rationale:** legal text is dense reference prose, so body copy uses `text-foreground` (not the muted subtitle tone) with the relaxed `leading-7` line height; section headings sit one tier below marketing section H2s because a policy has many sections on one page.
+**Reading-measure rationale:** the legal container uses `max-w-[72ch]`, including its responsive padding. At the audited 1600px viewport this replaces the former 832px content column, which measured 95.8 average / 106 median CPL in Terms and 89.1 average / 106 median CPL in Privacy. The target is approximately 65–75 CPL for sustained prose. This is a legal-reading measure, not a replacement for `max-w-4xl` marketing hero content.
 
-**Heading remap (deliberate):** markdown `##` **and** `###` both render as `<h2>` section headings and `####` renders as `<h3>`, keeping a valid `h1 > h2 > h3` outline under the page `<h1>`. Author legal content with `###` as the top section level and `####` for subsections; do not nest `##` inside `###` expecting a deeper level — the renderer flattens it.
+**Tone and rhythm rationale:** body, list, and table-cell copy use the documented semantic foreground ramp at `text-foreground/80`; strong emphasis, headings, and links remain full `text-foreground`. Against the current page tokens, the body ramp computes to approximately 10.87:1 in dark mode and 11.48:1 in light mode, above the WCAG AA 4.5:1 target. Keep `leading-7`: the measured 16px/28px ratio is 1.75 and is intentionally more open than marketing `leading-relaxed`, not an inheritance drift.
+
+**Section rhythm:** each top-level section begins with a decorative `border-border` separator, `mt-12`, and `pt-8`. Spacing and the heading remain sufficient to identify the section without the separator, so the line is decorative under the Contrast Policy and is not a required SC 1.4.11 boundary.
+
+**Heading mapping:** markdown `##`, `###`, and `####` render as `<h2>`, `<h3>`, and `<h4>` respectively. Public legal content must use `##` for sections and `###` for subsections, preserving the page outline `h1 > h2 > h3`. Do not flatten heading levels for visual convenience.
 
 **Links:** before sanitization, URI schemes already allowed by `rehype-sanitize` are normalized to lowercase because URI schemes are case-insensitive while `hast-util-sanitize`'s protocol comparison is not; unsafe schemes remain untouched and are removed. A missing post-sanitize `href` renders as an inert anchor. Empty destinations, same-page `#anchor`, and `mailto:` render in the same tab; a **single** leading `/` or a relative same-origin destination such as `terms` is an app route via `next/link`; protocol-relative `//host` and absolute remote URLs are external and get `target="_blank" rel="noreferrer noopener"`. The `//` case matters: it starts with a slash but is cross-origin and must never reach `next/link`. All branches share the L-2 Content Link class string, expressed as the shared **`ring-focus`** utility.
 
@@ -1248,6 +1256,7 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 |-------|---------|---------|
 | `max-w-7xl` (1280px) | Full-page layouts | App layout, marketing layout |
 | `max-w-4xl` | Hero content | Marketing hero section |
+| `max-w-[72ch]` | Sustained legal reading measure, including responsive page padding | Privacy Policy, Terms of Service |
 | `max-w-3xl` | Featured sections | Marketing pricing grid, CTA section |
 | `max-w-2xl` | Centered content | Pricing cards, subtitles, feature headings |
 | `max-w-lg` | Dialogs | Alert dialog |

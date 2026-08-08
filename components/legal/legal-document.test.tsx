@@ -60,9 +60,9 @@ describe('LegalDocument', () => {
     expect(
       findHeadingByText(doc, 'Primary details', { level: 2 }),
     ).not.toBeNull();
-    expect(findHeadingByText(doc, 'Details', { level: 2 })).not.toBeNull();
+    expect(findHeadingByText(doc, 'Details', { level: 3 })).not.toBeNull();
     expect(
-      findHeadingByText(doc, 'Ordered details', { level: 3 }),
+      findHeadingByText(doc, 'Ordered details', { level: 4 }),
     ).not.toBeNull();
     expect(doc.querySelectorAll('ul li')).toHaveLength(2);
     expect(doc.querySelectorAll('ol li')).toHaveLength(1);

@@ -60,7 +60,7 @@ describe('PRICING_DATA renewal disclosures', () => {
       frequency: 'year',
       disclosureVersion: '2026-08-05',
     });
-    expect(TERMS_VERSION).toBe('2026-08-05');
+    expect(TERMS_VERSION).toBe('2026-08-08');
     expect(TERMS_CONTENT_SHA256).toBe(
       createHash('sha256').update(termsContent.bodyMarkdown).digest('hex'),
     );

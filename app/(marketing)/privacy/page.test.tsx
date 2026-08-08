@@ -29,7 +29,7 @@ function publicPrivacyMarkdown(): string {
     .split('## Privacy Policy\n\n')[1]
     ?.split('\n---\n\n## Provenance and adversarial verification')[0];
   const body = publicSection?.replace(
-    /^\*\*Last updated: August 6, 2026\*\*\n\n/,
+    /^\*\*Last updated: August 8, 2026\*\*\n\n/,
     '',
   );
 
@@ -41,9 +41,20 @@ function publicPrivacyMarkdown(): string {
 }
 
 describe('PrivacyPage', () => {
+  it('marks the current publication-copy revision pending production verification', () => {
+    const source = readFileSync('docs/legal/privacy-policy.md', 'utf8');
+
+    expect(source).toContain(
+      '**STATUS: PUBLICATION COPY; 2026-08-08 revision pending production verification.**',
+    );
+    expect(source).toContain(
+      'The previous public revision was production verified 2026-08-05 after Promo 1.',
+    );
+  });
+
   it('keeps the typed page content verbatim with the committed public copy', () => {
     expect(privacyContent.title).toBe('Privacy Policy');
-    expect(privacyContent.effectiveDate).toBe('August 6, 2026');
+    expect(privacyContent.effectiveDate).toBe('August 8, 2026');
     expect(privacyContent.bodyMarkdown).toBe(publicPrivacyMarkdown());
   });
 
@@ -58,6 +69,9 @@ describe('PrivacyPage', () => {
       findHeadingByText(doc, 'Privacy Policy', { level: 1 }),
     ).not.toBeNull();
     expect(text).toContain('We do not sell personal information');
+    expect(text).toContain(
+      'We do not sell personal information, share it for cross-context behavioural advertising, use advertising trackers, or use session replay.',
+    );
     expect(text).toContain('support@addictionboards.com');
     for (const provider of [
       'Clerk',
@@ -102,6 +116,7 @@ describe('PrivacyPage', () => {
     );
     expect(text).not.toContain('Provenance and adversarial verification');
     expect(text).not.toContain('OWNER TO IDENTIFY');
+    expect(doc.querySelectorAll('code')).toHaveLength(0);
   });
 
   it('delegates the route default export to the privacy renderer', async () => {
