@@ -41,6 +41,17 @@ function publicTermsMarkdown(): string {
 }
 
 describe('TermsPage', () => {
+  it('marks the current publication-copy revision pending production verification', () => {
+    const source = readFileSync('docs/legal/terms-of-service.md', 'utf8');
+
+    expect(source).toContain(
+      '**STATUS: PUBLICATION COPY; 2026-08-08 revision pending production verification.**',
+    );
+    expect(source).toContain(
+      'The previous public revision was production verified 2026-08-05 after Promo 1.',
+    );
+  });
+
   it('keeps the typed page content verbatim with the committed public copy', () => {
     expect(termsContent.title).toBe('Terms of Service');
     expect(termsContent.effectiveDate).toBe('August 8, 2026');
