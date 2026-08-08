@@ -1,8 +1,8 @@
 # Typography Policy
 
-**Last Updated:** 2026-03-15
+**Last Updated:** 2026-08-08
 
-Canonical reference for how text sizing is controlled across the application. This document establishes the two-pipeline model, the subfamilies inside hardcoded UI text, and the content tier system that all typography decisions must follow.
+Canonical reference for how text sizing is controlled across the application. This document establishes the three-pipeline model, the subfamilies inside hardcoded UI text, and the content tier system that all typography decisions must follow.
 
 **See also:**
 - [Frontend Standards](./standards.md) — Component patterns, spacing, accessibility
@@ -11,9 +11,9 @@ Canonical reference for how text sizing is controlled across the application. Th
 
 ---
 
-## Two-Pipeline Model
+## Three-Pipeline Model
 
-Text in this application flows through two fundamentally different pipelines. They have separate sizing strategies and must not be conflated.
+Text in this application flows through three distinct pipelines. They have separate rendering, safety, and sizing strategies and must not be conflated.
 
 ### Pipeline 1: Hardcoded UI Text
 
@@ -54,6 +54,16 @@ Text in this application flows through two fundamentally different pipelines. Th
 
 **Source of content:** MDX files in `content/questions/` are seeded into the database. At render time, the text flows through: `DB → use case → server action → React component → <Markdown>`.
 
+### Pipeline 3: Public legal documents (Markdown)
+
+**What:** The public Privacy Policy and Terms of Service, authored in `docs/legal/` and mirrored byte-for-byte into typed content modules under `app/(marketing)/privacy/` and `app/(marketing)/terms/`.
+
+**How it is sized:** `components/legal/legal-document.tsx` owns one fixed long-form reading tier: `text-base leading-7 text-foreground/80`, full-foreground emphasis and links, a `max-w-[72ch]` document measure, and the legal heading hierarchy registered in Pattern Registry § 12.5.
+
+**Why it stays separate from Pipeline 2:** the question-content `Markdown` component supports clinical-pearl transformations and caller-selected learning tiers. The legal renderer instead requires byte-identity source mirrors, strict HTML skipping and sanitization, legal-specific internal/external link routing, keyboard-focusable overflow tables, and a fixed policy outline. Blindly unifying the components would either weaken those controls or import legal-only behavior into question content.
+
+**Governed by:** [Pattern Registry § 12.5](./pattern-registry.md#125-legal-document-surface) and the legal copy's mirror and mandatory-clause tests.
+
 ---
 
 ## Content Tier System
@@ -92,7 +102,7 @@ This was a deliberate decision made in BUG-157 (commit `48b5c9a4`, 2026-02-26). 
 
 ### Future: User-Selectable Content Size
 
-A planned feature will allow users to choose their preferred content reading size during practice. This toggle will ONLY affect Pipeline 2 (content rendered through Markdown), NOT Pipeline 1 (hardcoded UI text).
+A planned feature will allow users to choose their preferred content reading size during practice. This toggle will ONLY affect Pipeline 2 (question content rendered through Markdown), NOT Pipeline 1 (hardcoded UI text) or Pipeline 3 (public legal documents).
 
 | Setting | Primary Tier | Secondary Tier | Tertiary Tier | Hardcoded UI Text |
 |---------|-------------|---------------|--------------|-------------------|
@@ -191,6 +201,12 @@ All `<Markdown>` call sites now carry tier-appropriate classNames. The 4 violati
 
 **Current open Pipeline 2 drift:** none.
 
+### Pipeline 3 (Public legal documents): Compliant
+
+`LegalDocument` owns the fixed legal-reading tier, link and sanitization behavior, table accessibility tradeoff, and valid `h1 > h2 > h3` outline. The Privacy Policy and Terms content modules remain byte-identical to their committed public source sections.
+
+**Current open Pipeline 3 drift:** none.
+
 ---
 
 ## Rules
@@ -209,4 +225,6 @@ All `<Markdown>` call sites now carry tier-appropriate classNames. The 4 violati
 
 7. **The Markdown component does not set a default size.** This is intentional — it serves all three content tiers. Callers are responsible for specifying the tier.
 
-8. **Font size preferences (future) affect content only.** When the user-selectable size feature is built, it must only change Pipeline 2 sizes. Pipeline 1 remains fixed.
+8. **Keep public legal Markdown separate.** Pipeline 3 must retain its source mirrors, sanitization, link routing, table behavior, fixed reading measure, and legal heading outline. Do not replace it with the question-content `Markdown` component without proving every invariant.
+
+9. **Font size preferences (future) affect question content only.** When the user-selectable size feature is built, it must only change Pipeline 2 sizes. Pipelines 1 and 3 remain fixed.

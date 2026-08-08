@@ -495,62 +495,64 @@ describe('DrizzlePracticeSessionRepository session writes', () => {
       currentEndedAt: new Date('2026-02-01T01:03:00.000Z'),
       expectedCode: 'CONFLICT',
     },
-  ] as const)('keeps the guarded-update fallback as $expectedCode', async ({
-    currentEndedAt,
-    expectedCode,
-  }) => {
-    const row = {
-      id: sessionId,
-      userId,
-      mode: 'tutor',
-      paramsJson: {
-        count: 1,
-        tagSlugs: [],
-        difficulties: [],
-        questionIds: [firstQuestionId],
-      },
-      startedAt: new Date('2026-02-01T00:00:00.000Z'),
-      endedAt: null,
-    } as const;
-    const findFirst = vi
-      .fn()
-      .mockResolvedValueOnce(row)
-      .mockResolvedValueOnce(
-        currentEndedAt === null ? null : { ...row, endedAt: currentEndedAt },
-      );
-    const stateRows = [
-      createStateRow({
-        practiceSessionId: sessionId,
-        questionId: firstQuestionId,
-        position: 0,
-      }),
-    ];
-    const tx = {
-      query: { practiceSessions: { findFirst } },
-      select: createStateSelect(stateRows),
-    };
-    const db = {
-      transaction: vi.fn(async (fn: (client: typeof tx) => Promise<unknown>) =>
-        fn(tx),
-      ),
-      query: tx.query,
-      select: tx.select,
-      update: vi.fn(() => ({
-        set: () => ({
-          where: () => ({ returning: async () => [] }),
+  ] as const)(
+    'keeps the guarded-update fallback as $expectedCode',
+    async ({ currentEndedAt, expectedCode }) => {
+      const row = {
+        id: sessionId,
+        userId,
+        mode: 'tutor',
+        paramsJson: {
+          count: 1,
+          tagSlugs: [],
+          difficulties: [],
+          questionIds: [firstQuestionId],
+        },
+        startedAt: new Date('2026-02-01T00:00:00.000Z'),
+        endedAt: null,
+      } as const;
+      const findFirst = vi
+        .fn()
+        .mockResolvedValueOnce(row)
+        .mockResolvedValueOnce(
+          currentEndedAt === null ? null : { ...row, endedAt: currentEndedAt },
+        );
+      const stateRows = [
+        createStateRow({
+          practiceSessionId: sessionId,
+          questionId: firstQuestionId,
+          position: 0,
         }),
-      })),
-    } as const;
-    type RepoDb = ConstructorParameters<
-      typeof DrizzlePracticeSessionRepository
-    >[0];
-    const repo = new DrizzlePracticeSessionRepository(db as unknown as RepoDb);
+      ];
+      const tx = {
+        query: { practiceSessions: { findFirst } },
+        select: createStateSelect(stateRows),
+      };
+      const db = {
+        transaction: vi.fn(
+          async (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+        ),
+        query: tx.query,
+        select: tx.select,
+        update: vi.fn(() => ({
+          set: () => ({
+            where: () => ({ returning: async () => [] }),
+          }),
+        })),
+      } as const;
+      type RepoDb = ConstructorParameters<
+        typeof DrizzlePracticeSessionRepository
+      >[0];
+      const repo = new DrizzlePracticeSessionRepository(
+        db as unknown as RepoDb,
+      );
 
-    await expect(repo.end(sessionId, userId)).rejects.toMatchObject({
-      code: expectedCode,
-    });
-    expect(db.update).toHaveBeenCalledTimes(1);
-  });
+      await expect(repo.end(sessionId, userId)).rejects.toMatchObject({
+        code: expectedCode,
+      });
+      expect(db.update).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('ends an active practice session', async () => {
     const now = new Date('2026-02-01T01:02:03.000Z');

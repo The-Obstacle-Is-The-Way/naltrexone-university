@@ -1,4 +1,3 @@
-// biome-ignore lint/style/noExcessiveLinesPerFile: Keep all FinalizeExamAnswersUseCase behavior (drafted grading, BUG-238 cumulative bounds, BUG-252 nullable drafts, BUG-254 expiry flush) in one file so the use-case contract stays auditable next to its shared fakes/helpers.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ApplicationError,

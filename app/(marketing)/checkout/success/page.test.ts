@@ -811,97 +811,96 @@ describe('syncCheckoutSuccess', () => {
         },
       },
     },
-  ])('logs %s before redirecting to pricing error', async ({
-    reason,
-    input,
-    session,
-    subscription,
-  }) => {
-    const logger = new FakeLogger();
-    const authGateway = new FakeAuthGateway({
-      id: fixtureUser1Id,
-      email: 'user@example.com',
-      createdAt: new Date('2026-02-01T00:00:00Z'),
-      updatedAt: new Date('2026-02-01T00:00:00Z'),
-    });
+  ])(
+    'logs %s before redirecting to pricing error',
+    async ({ reason, input, session, subscription }) => {
+      const logger = new FakeLogger();
+      const authGateway = new FakeAuthGateway({
+        id: fixtureUser1Id,
+        email: 'user@example.com',
+        createdAt: new Date('2026-02-01T00:00:00Z'),
+        updatedAt: new Date('2026-02-01T00:00:00Z'),
+      });
 
-    const deps = {
-      authGateway,
-      subscriptionVersions: {
-        findObservationVersionByUserId: async () => null,
-      },
-      getClerkAuth: async () => ({
-        userId: 'clerk_user_1',
-        redirectToSignIn: () => {
-          throw new Error('should not redirect to sign-in');
+      const deps = {
+        authGateway,
+        subscriptionVersions: {
+          findObservationVersionByUserId: async () => null,
         },
-      }),
-      logger,
-      stripe: {
-        checkout: {
-          sessions: {
+        getClerkAuth: async () => ({
+          userId: 'clerk_user_1',
+          redirectToSignIn: () => {
+            throw new Error('should not redirect to sign-in');
+          },
+        }),
+        logger,
+        stripe: {
+          checkout: {
+            sessions: {
+              retrieve: async () => {
+                if (!session)
+                  throw new Error('should not fetch Stripe session');
+                return session;
+              },
+            },
+          },
+          subscriptions: {
             retrieve: async () => {
-              if (!session) throw new Error('should not fetch Stripe session');
-              return session;
+              if (!subscription)
+                throw new Error('should not fetch Stripe subscription');
+              return {
+                id: 'sub_123',
+                customer: 'cus_123',
+                status: 'active',
+                cancel_at_period_end: false,
+                metadata: { user_id: fixtureUser1Id },
+                items: {
+                  data: [
+                    {
+                      current_period_end: 2_000_000_000,
+                      price: { id: 'price_monthly' },
+                    },
+                  ],
+                },
+                ...subscription,
+              };
             },
           },
         },
-        subscriptions: {
-          retrieve: async () => {
-            if (!subscription)
-              throw new Error('should not fetch Stripe subscription');
-            return {
-              id: 'sub_123',
-              customer: 'cus_123',
-              status: 'active',
-              cancel_at_period_end: false,
-              metadata: { user_id: fixtureUser1Id },
-              items: {
-                data: [
-                  {
-                    current_period_end: 2_000_000_000,
-                    price: { id: 'price_monthly' },
-                  },
-                ],
-              },
-              ...subscription,
-            };
-          },
+        priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
+        appUrl: 'https://example.com',
+        transaction: async () => {
+          throw new Error('should not start a transaction');
         },
-      },
-      priceIds: { monthly: 'price_monthly', annual: 'price_annual' },
-      appUrl: 'https://example.com',
-      transaction: async () => {
-        throw new Error('should not start a transaction');
-      },
-    };
+      };
 
-    const redirectFn = (url: string): never => {
-      throw new RedirectError(url);
-    };
+      const redirectFn = (url: string): never => {
+        throw new RedirectError(url);
+      };
 
-    await expect(
-      syncCheckoutSuccess(input, deps as never, redirectFn),
-    ).rejects.toMatchObject({
-      url: CHECKOUT_ERROR_ROUTE,
-    });
+      await expect(
+        syncCheckoutSuccess(input, deps as never, redirectFn),
+      ).rejects.toMatchObject({
+        url: CHECKOUT_ERROR_ROUTE,
+      });
 
-    expect(logger.errorCalls).toHaveLength(1);
-    expect(logger.errorCalls[0]).toMatchObject({
-      msg: 'Checkout success validation failed',
-      context: expect.objectContaining({ reason }),
-    });
-    expect(logger.infoCalls).toHaveLength(1);
-    expect(logger.infoCalls[0]).toMatchObject({
-      msg: 'Checkout success redirected to checkout error',
-      context: expect.objectContaining({
-        reason,
-        route: ROUTES.CHECKOUT_SUCCESS,
-      }),
-    });
+      expect(logger.errorCalls).toHaveLength(1);
+      expect(logger.errorCalls[0]).toMatchObject({
+        msg: 'Checkout success validation failed',
+        context: expect.objectContaining({ reason }),
+      });
+      expect(logger.infoCalls).toHaveLength(1);
+      expect(logger.infoCalls[0]).toMatchObject({
+        msg: 'Checkout success redirected to checkout error',
+        context: expect.objectContaining({
+          reason,
+          route: ROUTES.CHECKOUT_SUCCESS,
+        }),
+      });
 
-    expect(logger.warnCalls).toHaveLength(0);
-  });
+      expect(logger.warnCalls).toHaveLength(0);
+    },
+  );
 
   it('returns redirect to pricing with reason=payment_processing when subscription is not entitled', async () => {
     const stripeCustomers = new FakeStripeCustomerRepository();

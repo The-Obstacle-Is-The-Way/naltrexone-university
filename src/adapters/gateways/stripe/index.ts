@@ -1,3 +1,4 @@
+export { isValidStripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
 export {
   createStripeCheckoutSession,
   createStripeTrialPaymentMethodSetupSession,
@@ -26,7 +27,6 @@ export {
   retrieveAndNormalizeStripeSubscription,
 } from './stripe-subscription-normalizer';
 export {
-  isValidStripeSubscriptionStatus,
   stripeSubscriptionStatusToSubscriptionStatus,
   subscriptionStatusToStripeSubscriptionStatus,
 } from './stripe-subscription-status';

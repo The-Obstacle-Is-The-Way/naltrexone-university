@@ -81,21 +81,23 @@ describe('ResendTransactionalEmailGateway', () => {
     });
   });
 
-  it.each([
-    'application_error',
-    'internal_server_error',
-  ])('quarantines ambiguous provider 5xx error %s as outcome_unknown', async (name) => {
-    resendSdk.send.mockResolvedValue({
-      data: null,
-      error: { name, message: 'provider infrastructure failure' },
-    });
-    const gateway = new ResendTransactionalEmailGateway({ apiKey: 're_test' });
+  it.each(['application_error', 'internal_server_error'])(
+    'quarantines ambiguous provider 5xx error %s as outcome_unknown',
+    async (name) => {
+      resendSdk.send.mockResolvedValue({
+        data: null,
+        error: { name, message: 'provider infrastructure failure' },
+      });
+      const gateway = new ResendTransactionalEmailGateway({
+        apiKey: 're_test',
+      });
 
-    await expect(gateway.send(input)).resolves.toEqual({
-      status: 'outcome_unknown',
-      failureCode: name,
-    });
-  });
+      await expect(gateway.send(input)).resolves.toEqual({
+        status: 'outcome_unknown',
+        failureCode: name,
+      });
+    },
+  );
 
   it('quarantines concurrent idempotent requests because provider acceptance is unresolved', async () => {
     resendSdk.send.mockResolvedValue({
@@ -207,18 +209,18 @@ describe('ResendTransactionalEmailGateway', () => {
     });
   });
 
-  it.each([
-    { id: '' },
-    {},
-  ])('maps provider data %o without a non-empty event ID to outcome_unknown', async (data) => {
-    resendSdk.send.mockResolvedValue({ data, error: null });
-    const gateway = new ResendTransactionalEmailGateway({
-      apiKey: 're_test',
-    });
+  it.each([{ id: '' }, {}])(
+    'maps provider data %o without a non-empty event ID to outcome_unknown',
+    async (data) => {
+      resendSdk.send.mockResolvedValue({ data, error: null });
+      const gateway = new ResendTransactionalEmailGateway({
+        apiKey: 're_test',
+      });
 
-    await expect(gateway.send(input)).resolves.toEqual({
-      status: 'outcome_unknown',
-      failureCode: 'invalid_provider_response',
-    });
-  });
+      await expect(gateway.send(input)).resolves.toEqual({
+        status: 'outcome_unknown',
+        failureCode: 'invalid_provider_response',
+      });
+    },
+  );
 });

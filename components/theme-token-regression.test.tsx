@@ -17,7 +17,11 @@ import {
   readProductionUiSources,
 } from '@/components/theme-token-regression-source-scan';
 import { ROUTES } from '@/lib/routes';
-import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
+import {
+  findAnchorByHref,
+  findHeadingByText,
+  parseHtml,
+} from '@/tests/shared/dom-helpers';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -243,6 +247,47 @@ describe('theme token regression', () => {
 
     const tableRegion = doc.querySelector('table')?.parentElement;
     expect(tableRegion?.classList.contains('ring-focus')).toBe(true);
+  });
+
+  it('uses the registered legal reading measure, hierarchy, and semantic tone', () => {
+    const html = renderToStaticMarkup(
+      <LegalDocument
+        content={{
+          title: 'Policy title',
+          effectiveDate: 'August 8, 2026',
+          bodyMarkdown: [
+            '## Main section',
+            '',
+            'Long-form policy body.',
+            '',
+            '### Subsection',
+            '',
+            '**Important term.** Supporting detail.',
+          ].join('\n'),
+        }}
+      />,
+    );
+    const doc = parseHtml(html);
+
+    const article = doc.querySelector('article');
+    expect(article?.classList.contains('max-w-[72ch]')).toBe(true);
+
+    const section = findHeadingByText(doc, 'Main section', { level: 2 });
+    expect(section?.classList.contains('border-t')).toBe(true);
+    expect(section?.classList.contains('border-border')).toBe(true);
+    expect(section?.classList.contains('mt-12')).toBe(true);
+    expect(section?.classList.contains('pt-8')).toBe(true);
+
+    const subsection = findHeadingByText(doc, 'Subsection', { level: 3 });
+    expect(subsection).not.toBeNull();
+
+    const body = Array.from(doc.querySelectorAll('article > p')).find(
+      (paragraph) => paragraph.textContent === 'Long-form policy body.',
+    );
+    expect(body?.classList.contains('text-foreground/80')).toBe(true);
+
+    const emphasis = doc.querySelector('strong');
+    expect(emphasis?.classList.contains('text-foreground')).toBe(true);
   });
 
   it('uses the shared focus ring utility on pricing legal-consent links', () => {

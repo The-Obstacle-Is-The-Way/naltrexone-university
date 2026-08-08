@@ -10,16 +10,16 @@ import {
   STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD,
   STRIPE_SUBSCRIPTION_METADATA_USER_ID_FIELD,
 } from '@/src/adapters/shared/stripe-subscription-errors';
-import type { StripeClient } from '@/src/adapters/shared/stripe-types';
+import {
+  isValidStripeSubscriptionStatus,
+  type StripeClient,
+} from '@/src/adapters/shared/stripe-types';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
 import { callStripeWithRetry } from './stripe-retry';
-import {
-  isValidStripeSubscriptionStatus,
-  stripeSubscriptionStatusToSubscriptionStatus,
-} from './stripe-subscription-status';
+import { stripeSubscriptionStatusToSubscriptionStatus } from './stripe-subscription-status';
 import {
   type StripeSubscriptionRef,
   stripeSubscriptionSchema,

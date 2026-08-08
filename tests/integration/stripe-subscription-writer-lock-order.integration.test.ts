@@ -626,111 +626,111 @@ afterAll(async () => {
 });
 
 describe('Stripe subscription writer lock order', () => {
-  it.each([
-    'webhook',
-    'reconcile',
-  ] as const)('serializes the deletion writer and %s writer without a 40P01 deadlock', async (writerKind) => {
-    const user = await createUser(control.db, cleanup);
-    const storedUser = await control.db.query.users.findFirst({
-      columns: { clerkUserId: true },
-      where: eq(schema.users.id, user.id),
-    });
-    if (!storedUser) throw new Error('Failed to reload integration user');
-
-    const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
-    const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
-    const stripeEventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    const clerkEventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    if (writerKind === 'webhook') {
-      cleanup.stripeEventIds.push(stripeEventId);
-    }
-    clerkEventIds.push(clerkEventId);
-    deletedClerkUserIds.push(storedUser.clerkUserId);
-
-    await new DrizzleStripeCustomerRepository(control.db).insert(
-      user.id,
-      externalCustomerId,
-    );
-    await new DrizzleSubscriptionRepository(control.db, priceIds).upsert({
-      userId: user.id,
-      externalSubscriptionId,
-      plan: 'monthly',
-      status: 'active',
-      expectedVersion: null,
-      currentPeriodEnd: new Date('2029-01-01T00:00:00.000Z'),
-      cancelAtPeriodEnd: false,
-    });
-
-    const counterpartyLockHeld = createDeferred<void>();
-    const releaseCounterparty = createDeferred<void>();
-    let reconciliationTransactionError: unknown;
-    const counterpartyPromise =
-      writerKind === 'webhook'
-        ? runWebhookWriter({
-            userId: user.id,
-            externalCustomerId,
-            externalSubscriptionId,
-            eventId: stripeEventId,
-            lockHeld: () => counterpartyLockHeld.resolve(),
-            release: releaseCounterparty.promise,
-            deletionCounterparty: true,
-          })
-        : runReconciliationWriter({
-            userId: user.id,
-            externalCustomerId,
-            externalSubscriptionId,
-            lockHeld: () => counterpartyLockHeld.resolve(),
-            release: releaseCounterparty.promise,
-            onTransactionError: (error) => {
-              reconciliationTransactionError = error;
-            },
-          });
-    await counterpartyLockHeld.promise;
-
-    // The deletion writer now takes the advisory before any users-row lock,
-    // so it must queue at the advisory while the counterparty holds it; the
-    // customer-read pause is pre-released because it happens under the lock.
-    const releaseDeletion = createDeferred<void>();
-    releaseDeletion.resolve();
-    const deletionPid = createDeferred<number>();
-    const deletionPromise = runDeletionWriter({
-      clerkUserId: storedUser.clerkUserId,
-      eventId: clerkEventId,
-      backendPid: (pid) => deletionPid.resolve(pid),
-      customerRead: () => undefined,
-      release: releaseDeletion.promise,
-    });
-
-    const deletionState = await waitForDeletionLockState(
-      await deletionPid.promise,
-    );
-    releaseCounterparty.resolve();
-
-    const [counterpartyResult, deletionResult] = await Promise.allSettled([
-      counterpartyPromise,
-      deletionPromise,
-    ]);
-    const postgresErrorCodes = [
-      reconciliationTransactionError,
-      counterpartyResult.status === 'rejected'
-        ? counterpartyResult.reason
-        : null,
-      deletionResult.status === 'rejected' ? deletionResult.reason : null,
-    ]
-      .map(findPostgresErrorCode)
-      .filter((code): code is string => code !== null);
-
-    expect(postgresErrorCodes).not.toContain('40P01');
-    expect(deletionState).toBe('waiting-on-advisory');
-    expect(counterpartyResult.status).toBe('fulfilled');
-    expect(deletionResult.status).toBe('fulfilled');
-    if (writerKind === 'reconcile') {
-      expect(counterpartyResult).toMatchObject({
-        status: 'fulfilled',
-        value: { updated: 1, failed: 0 },
+  it.each(['webhook', 'reconcile'] as const)(
+    'serializes the deletion writer and %s writer without a 40P01 deadlock',
+    async (writerKind) => {
+      const user = await createUser(control.db, cleanup);
+      const storedUser = await control.db.query.users.findFirst({
+        columns: { clerkUserId: true },
+        where: eq(schema.users.id, user.id),
       });
-    }
-  });
+      if (!storedUser) throw new Error('Failed to reload integration user');
+
+      const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+      const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+      const stripeEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+      const clerkEventId = `evt_${randomUUID().replaceAll('-', '')}`;
+      if (writerKind === 'webhook') {
+        cleanup.stripeEventIds.push(stripeEventId);
+      }
+      clerkEventIds.push(clerkEventId);
+      deletedClerkUserIds.push(storedUser.clerkUserId);
+
+      await new DrizzleStripeCustomerRepository(control.db).insert(
+        user.id,
+        externalCustomerId,
+      );
+      await new DrizzleSubscriptionRepository(control.db, priceIds).upsert({
+        userId: user.id,
+        externalSubscriptionId,
+        plan: 'monthly',
+        status: 'active',
+        expectedVersion: null,
+        currentPeriodEnd: new Date('2029-01-01T00:00:00.000Z'),
+        cancelAtPeriodEnd: false,
+      });
+
+      const counterpartyLockHeld = createDeferred<void>();
+      const releaseCounterparty = createDeferred<void>();
+      let reconciliationTransactionError: unknown;
+      const counterpartyPromise =
+        writerKind === 'webhook'
+          ? runWebhookWriter({
+              userId: user.id,
+              externalCustomerId,
+              externalSubscriptionId,
+              eventId: stripeEventId,
+              lockHeld: () => counterpartyLockHeld.resolve(),
+              release: releaseCounterparty.promise,
+              deletionCounterparty: true,
+            })
+          : runReconciliationWriter({
+              userId: user.id,
+              externalCustomerId,
+              externalSubscriptionId,
+              lockHeld: () => counterpartyLockHeld.resolve(),
+              release: releaseCounterparty.promise,
+              onTransactionError: (error) => {
+                reconciliationTransactionError = error;
+              },
+            });
+      await counterpartyLockHeld.promise;
+
+      // The deletion writer now takes the advisory before any users-row lock,
+      // so it must queue at the advisory while the counterparty holds it; the
+      // customer-read pause is pre-released because it happens under the lock.
+      const releaseDeletion = createDeferred<void>();
+      releaseDeletion.resolve();
+      const deletionPid = createDeferred<number>();
+      const deletionPromise = runDeletionWriter({
+        clerkUserId: storedUser.clerkUserId,
+        eventId: clerkEventId,
+        backendPid: (pid) => deletionPid.resolve(pid),
+        customerRead: () => undefined,
+        release: releaseDeletion.promise,
+      });
+
+      const deletionState = await waitForDeletionLockState(
+        await deletionPid.promise,
+      );
+      releaseCounterparty.resolve();
+
+      const [counterpartyResult, deletionResult] = await Promise.allSettled([
+        counterpartyPromise,
+        deletionPromise,
+      ]);
+      const postgresErrorCodes = [
+        reconciliationTransactionError,
+        counterpartyResult.status === 'rejected'
+          ? counterpartyResult.reason
+          : null,
+        deletionResult.status === 'rejected' ? deletionResult.reason : null,
+      ]
+        .map(findPostgresErrorCode)
+        .filter((code): code is string => code !== null);
+
+      expect(postgresErrorCodes).not.toContain('40P01');
+      expect(deletionState).toBe('waiting-on-advisory');
+      expect(counterpartyResult.status).toBe('fulfilled');
+      expect(deletionResult.status).toBe('fulfilled');
+      if (writerKind === 'reconcile') {
+        expect(counterpartyResult).toMatchObject({
+          status: 'fulfilled',
+          value: { updated: 1, failed: 0 },
+        });
+      }
+    },
+  );
 
   it('serializes the deletion writer and a first-insert webhook writer at the advisory lock', async () => {
     const user = await createUser(control.db, cleanup);
@@ -815,122 +815,125 @@ describe('Stripe subscription writer lock order', () => {
     });
   });
 
-  it.each([
-    'webhook',
-    'checkout-success',
-  ] as const)('serializes the %s and reconcile writers without a 40P01 deadlock', async (writerKind) => {
-    const user = await createUser(control.db, cleanup);
-    const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
-    const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
-    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    if (writerKind === 'webhook') cleanup.stripeEventIds.push(eventId);
+  it.each(['webhook', 'checkout-success'] as const)(
+    'serializes the %s and reconcile writers without a 40P01 deadlock',
+    async (writerKind) => {
+      const user = await createUser(control.db, cleanup);
+      const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+      const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+      const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+      if (writerKind === 'webhook') cleanup.stripeEventIds.push(eventId);
 
-    await new DrizzleStripeCustomerRepository(control.db).insert(
-      user.id,
-      externalCustomerId,
-    );
+      await new DrizzleStripeCustomerRepository(control.db).insert(
+        user.id,
+        externalCustomerId,
+      );
 
-    const writerLockHeld = createDeferred<void>();
-    const releaseWriter = createDeferred<void>();
-    const reconciliationPid = createDeferred<number>();
-    let customerLockObserved = false;
-    let reconciliationTransactionError: unknown;
+      const writerLockHeld = createDeferred<void>();
+      const releaseWriter = createDeferred<void>();
+      const reconciliationPid = createDeferred<number>();
+      let customerLockObserved = false;
+      let reconciliationTransactionError: unknown;
 
-    const writerPromise =
-      writerKind === 'webhook'
-        ? runWebhookWriter({
-            userId: user.id,
-            externalCustomerId,
-            externalSubscriptionId,
-            eventId,
-            lockHeld: () => writerLockHeld.resolve(),
-            release: releaseWriter.promise,
-          })
-        : runCheckoutSuccessWriter({
-            userId: user.id,
-            email: user.email,
-            externalCustomerId,
-            externalSubscriptionId,
-            lockHeld: () => writerLockHeld.resolve(),
-            release: releaseWriter.promise,
-          });
-
-    await writerLockHeld.promise;
-
-    const normalizedSubscription = stripeSubscription({
-      userId: user.id,
-      externalCustomerId,
-      externalSubscriptionId,
-    });
-    const stripe = createReconciliationStripeClient(normalizedSubscription);
-
-    const reconciliationPromise = reconcileStripeSubscriptions(
-      { limit: 1, offset: 0, dryRun: true, concurrency: 1 },
-      {
-        stripe,
-        priceIds,
-        logger: new FakeLogger(),
-        now: () => new Date('2026-08-07T12:00:00.000Z'),
-        listLocalSubscriptions: async () => [
-          {
-            userId: user.id,
-            stripeSubscriptionId: externalSubscriptionId,
-            version: null,
-          },
-        ],
-        transaction: async (fn) => {
-          try {
-            return await reconciliationWriter.db.transaction(async (tx) => {
-              await configureFastDeadlockWriter(tx);
-              reconciliationPid.resolve(await getBackendPid(tx));
-              return fn({
-                subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
-                stripeCustomers: new ObservedStripeCustomerRepository(
-                  tx,
-                  () => {
-                    customerLockObserved = true;
-                  },
-                ),
-                renewalConsentRecords:
-                  new DrizzleRenewalConsentRecordRepository(tx),
-              });
+      const writerPromise =
+        writerKind === 'webhook'
+          ? runWebhookWriter({
+              userId: user.id,
+              externalCustomerId,
+              externalSubscriptionId,
+              eventId,
+              lockHeld: () => writerLockHeld.resolve(),
+              release: releaseWriter.promise,
+            })
+          : runCheckoutSuccessWriter({
+              userId: user.id,
+              email: user.email,
+              externalCustomerId,
+              externalSubscriptionId,
+              lockHeld: () => writerLockHeld.resolve(),
+              release: releaseWriter.promise,
             });
-          } catch (error) {
-            reconciliationTransactionError = error;
-            throw error;
-          }
-        },
-      },
-    );
 
-    const pid = await reconciliationPid.promise;
-    let state: Awaited<ReturnType<typeof waitForReconciliationState>>;
-    try {
-      state = await waitForReconciliationState({
-        pid,
-        customerLockObserved: () => customerLockObserved,
+      await writerLockHeld.promise;
+
+      const normalizedSubscription = stripeSubscription({
+        userId: user.id,
+        externalCustomerId,
+        externalSubscriptionId,
       });
-    } finally {
-      releaseWriter.resolve();
-    }
+      const stripe = createReconciliationStripeClient(normalizedSubscription);
 
-    const [writerResult, reconciliationResult] = await Promise.allSettled([
-      writerPromise,
-      reconciliationPromise,
-    ]);
-    const postgresErrorCodes = [
-      reconciliationTransactionError,
-      writerResult.status === 'rejected' ? writerResult.reason : null,
-    ]
-      .map(findPostgresErrorCode)
-      .filter((code): code is string => code !== null);
+      const reconciliationPromise = reconcileStripeSubscriptions(
+        { limit: 1, offset: 0, dryRun: true, concurrency: 1 },
+        {
+          stripe,
+          priceIds,
+          logger: new FakeLogger(),
+          now: () => new Date('2026-08-07T12:00:00.000Z'),
+          listLocalSubscriptions: async () => [
+            {
+              userId: user.id,
+              stripeSubscriptionId: externalSubscriptionId,
+              version: null,
+            },
+          ],
+          transaction: async (fn) => {
+            try {
+              return await reconciliationWriter.db.transaction(async (tx) => {
+                await configureFastDeadlockWriter(tx);
+                reconciliationPid.resolve(await getBackendPid(tx));
+                return fn({
+                  subscriptions: new DrizzleSubscriptionRepository(
+                    tx,
+                    priceIds,
+                  ),
+                  stripeCustomers: new ObservedStripeCustomerRepository(
+                    tx,
+                    () => {
+                      customerLockObserved = true;
+                    },
+                  ),
+                  renewalConsentRecords:
+                    new DrizzleRenewalConsentRecordRepository(tx),
+                });
+              });
+            } catch (error) {
+              reconciliationTransactionError = error;
+              throw error;
+            }
+          },
+        },
+      );
 
-    expect(postgresErrorCodes).toEqual([]);
-    expect(state).toBe('waiting-on-advisory');
-    expect(writerResult.status).toBe('fulfilled');
-    expect(reconciliationResult).toMatchObject({
-      status: 'fulfilled',
-      value: { updated: 1, failed: 0 },
-    });
-  });
+      const pid = await reconciliationPid.promise;
+      let state: Awaited<ReturnType<typeof waitForReconciliationState>>;
+      try {
+        state = await waitForReconciliationState({
+          pid,
+          customerLockObserved: () => customerLockObserved,
+        });
+      } finally {
+        releaseWriter.resolve();
+      }
+
+      const [writerResult, reconciliationResult] = await Promise.allSettled([
+        writerPromise,
+        reconciliationPromise,
+      ]);
+      const postgresErrorCodes = [
+        reconciliationTransactionError,
+        writerResult.status === 'rejected' ? writerResult.reason : null,
+      ]
+        .map(findPostgresErrorCode)
+        .filter((code): code is string => code !== null);
+
+      expect(postgresErrorCodes).toEqual([]);
+      expect(state).toBe('waiting-on-advisory');
+      expect(writerResult.status).toBe('fulfilled');
+      expect(reconciliationResult).toMatchObject({
+        status: 'fulfilled',
+        value: { updated: 1, failed: 0 },
+      });
+    },
+  );
 });

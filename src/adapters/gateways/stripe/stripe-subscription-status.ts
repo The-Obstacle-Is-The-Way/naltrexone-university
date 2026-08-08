@@ -1,7 +1,4 @@
-import {
-  STRIPE_SUBSCRIPTION_STATUSES,
-  type StripeSubscriptionStatus,
-} from '@/src/adapters/shared/stripe-types';
+import type { StripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 const stripeToDomain: Record<StripeSubscriptionStatus, SubscriptionStatus> = {
@@ -25,12 +22,6 @@ const domainToStripe: Record<SubscriptionStatus, StripeSubscriptionStatus> = {
   unpaid: 'unpaid',
   paused: 'paused',
 };
-
-export function isValidStripeSubscriptionStatus(
-  value: string,
-): value is StripeSubscriptionStatus {
-  return (STRIPE_SUBSCRIPTION_STATUSES as readonly string[]).includes(value);
-}
 
 export function stripeSubscriptionStatusToSubscriptionStatus(
   status: StripeSubscriptionStatus,

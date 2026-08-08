@@ -2,12 +2,13 @@
 import { createHash } from 'node:crypto';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getStripePriceId } from '@/src/adapters/config/stripe-prices';
-import type {
-  CheckoutSessionCreateParams,
-  StripeCheckoutSession,
-  StripeClient,
-  StripeListedSubscription,
-  StripeSubscriptionStatus,
+import {
+  type CheckoutSessionCreateParams,
+  isValidStripeSubscriptionStatus,
+  type StripeCheckoutSession,
+  type StripeClient,
+  type StripeListedSubscription,
+  type StripeSubscriptionStatus,
 } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type {
@@ -207,6 +208,12 @@ function getBlockingSubscriptionStatus(
 ): StripeSubscriptionStatus | null {
   if (!subscription) return null;
   if (!subscription.status) return null;
+  if (!isValidStripeSubscriptionStatus(subscription.status)) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe subscription status is invalid',
+    );
+  }
   if (!BLOCKING_SUBSCRIPTION_STATUSES.has(subscription.status)) return null;
   return subscription.status;
 }

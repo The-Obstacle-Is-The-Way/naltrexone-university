@@ -614,35 +614,35 @@ describe('runE2EUserStateReset default service diagnostics', () => {
           queryFailure: sourceError,
         }),
     },
-  ])('surfaces, sanitizes, and preserves cause for $label failures', async ({
-    expectedCode,
-    client,
-  }) => {
-    await importResetWithPostgresMock();
-    const sourceError = createSensitiveError();
-    postgresMock.mockReturnValue(client(sourceError));
-    const fetchSpy = mockClerkUserFetch();
+  ])(
+    'surfaces, sanitizes, and preserves cause for $label failures',
+    async ({ expectedCode, client }) => {
+      await importResetWithPostgresMock();
+      const sourceError = createSensitiveError();
+      postgresMock.mockReturnValue(client(sourceError));
+      const fetchSpy = mockClerkUserFetch();
 
-    try {
-      const error = await captureRejectedError(() =>
-        dynamicRunE2EUserStateReset({ env: createEnv() }),
-      );
-      const resetError = error.cause as Error & {
-        code?: string;
-        cause?: unknown;
-      };
+      try {
+        const error = await captureRejectedError(() =>
+          dynamicRunE2EUserStateReset({ env: createEnv() }),
+        );
+        const resetError = error.cause as Error & {
+          code?: string;
+          cause?: unknown;
+        };
 
-      expect(error.message).toContain(`[${expectedCode}]`);
-      expect(error.message).toContain(NON_SECRET_DB_ERROR);
-      expect(resetError.code).toBe(expectedCode);
-      expect(resetError.message).toContain(NON_SECRET_DB_ERROR);
-      expect(resetError.cause).toBe(sourceError);
-      expectNoSensitiveParts(error.message);
-      expectNoSensitiveParts(resetError.message);
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
+        expect(error.message).toContain(`[${expectedCode}]`);
+        expect(error.message).toContain(NON_SECRET_DB_ERROR);
+        expect(resetError.code).toBe(expectedCode);
+        expect(resetError.message).toContain(NON_SECRET_DB_ERROR);
+        expect(resetError.cause).toBe(sourceError);
+        expectNoSensitiveParts(error.message);
+        expectNoSensitiveParts(resetError.message);
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    },
+  );
 
   it('fails stale deterministic baseline owners before seeding mutations', async () => {
     await importResetWithPostgresMock();
@@ -753,25 +753,30 @@ describe('runE2EUserStateReset default service diagnostics', () => {
         bookmarkCount: 2,
       }),
     },
-  ])('surfaces invalid baseline verification for $label without wrapping the explicit reset error', async ({
-    baselineRow,
-  }) => {
-    await importResetWithPostgresMock();
-    const sqlClient = createRoutingSqlClient({ baselineRows: [baselineRow] });
-    postgresMock.mockReturnValue(sqlClient);
-    const fetchSpy = mockClerkUserFetch();
+  ])(
+    'surfaces invalid baseline verification for $label without wrapping the explicit reset error',
+    async ({ baselineRow }) => {
+      await importResetWithPostgresMock();
+      const sqlClient = createRoutingSqlClient({ baselineRows: [baselineRow] });
+      postgresMock.mockReturnValue(sqlClient);
+      const fetchSpy = mockClerkUserFetch();
 
-    try {
-      const error = await captureRejectedError(() =>
-        dynamicRunE2EUserStateReset({ env: createEnv() }),
-      );
+      try {
+        const error = await captureRejectedError(() =>
+          dynamicRunE2EUserStateReset({ env: createEnv() }),
+        );
 
-      expect(error.message).toContain('[E2E_RESET:BASELINE_STATE_INCOMPLETE]');
-      expect(error.message).not.toContain('[E2E_RESET:DATABASE_QUERY_FAILED]');
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
+        expect(error.message).toContain(
+          '[E2E_RESET:BASELINE_STATE_INCOMPLETE]',
+        );
+        expect(error.message).not.toContain(
+          '[E2E_RESET:DATABASE_QUERY_FAILED]',
+        );
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    },
+  );
 
   it('uses one SQL client lifecycle for the reset path including app-user lookup', async () => {
     await importResetWithPostgresMock();

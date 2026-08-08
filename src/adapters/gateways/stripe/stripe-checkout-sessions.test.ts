@@ -322,6 +322,29 @@ describe('createStripeCheckoutSession', () => {
     });
   });
 
+  it('fails closed when Stripe returns an unrecognized subscription status', async () => {
+    const { stripe, sessionsList, sessionsCreate } = createStripeMock({
+      subscriptionsListData: [
+        { id: 'sub_future_status', status: 'future_status' },
+      ],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+      }),
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      message: 'Stripe subscription status is invalid',
+    });
+
+    expect(sessionsList).not.toHaveBeenCalled();
+    expect(sessionsCreate).not.toHaveBeenCalled();
+  });
+
   it('reuses an existing open checkout session when plan price matches and expires after the injected nowMs boundary', async () => {
     const { stripe, sessionsCreate, sessionsRetrieve } = createStripeMock({
       openSessionsData: [

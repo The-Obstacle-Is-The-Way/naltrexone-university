@@ -29,7 +29,7 @@ function publicTermsMarkdown(): string {
     .split('## Terms of Service\n\n')[1]
     ?.split('\n---\n\n## Decisions on record')[0];
   const body = publicSection?.replace(
-    /^\*\*Last updated: August 5, 2026\*\*\n\n/,
+    /^\*\*Last updated: August 8, 2026\*\*\n\n/,
     '',
   );
 
@@ -41,9 +41,20 @@ function publicTermsMarkdown(): string {
 }
 
 describe('TermsPage', () => {
+  it('marks the current publication-copy revision pending production verification', () => {
+    const source = readFileSync('docs/legal/terms-of-service.md', 'utf8');
+
+    expect(source).toContain(
+      '**STATUS: PUBLICATION COPY; 2026-08-08 revision pending production verification.**',
+    );
+    expect(source).toContain(
+      'The previous public revision was production verified 2026-08-05 after Promo 1.',
+    );
+  });
+
   it('keeps the typed page content verbatim with the committed public copy', () => {
     expect(termsContent.title).toBe('Terms of Service');
-    expect(termsContent.effectiveDate).toBe('August 5, 2026');
+    expect(termsContent.effectiveDate).toBe('August 8, 2026');
     expect(termsContent.bodyMarkdown).toBe(publicTermsMarkdown());
   });
 
@@ -58,19 +69,31 @@ describe('TermsPage', () => {
       findHeadingByText(doc, 'Terms of Service', { level: 1 }),
     ).not.toBeNull();
     expect(text).toContain('The Service is not medical advice');
+    expect(text).toContain(
+      'It is not medical advice and does not guarantee exam results.',
+    );
     expect(text).toContain('$29 per month');
     expect(text).toContain('$199 per year');
-    expect(text).toContain('7-day free trial with no payment method required');
+    expect(text).toContain(
+      'New accounts receive a 7-day free trial. Each person may receive only one. No payment method is required to start it.',
+    );
+    expect(text).toContain(
+      'If you do not add a payment method before the trial ends, the trial ends and you are not charged. Nothing further happens.',
+    );
     expect(text).toContain('renews automatically');
     expect(text).toContain('Billing page in the app');
     expect(text).toContain('support@addictionboards.com');
     expect(text).toContain('John H. Jung, MD, MS');
+    expect(text).toContain(
+      'Paid plans cost $29 per month or $199 per year and renew automatically until you cancel.',
+    );
     expect(text).toContain(
       'The pricing page presents links to these Terms and the Privacy Policy before subscription and free-trial actions.',
     );
     expect(text).not.toContain('completing the Terms-consent step');
     expect(text).not.toContain('Decisions on record');
     expect(text).not.toContain('Provenance — how each factual claim');
+    expect(doc.querySelectorAll('code')).toHaveLength(0);
   });
 
   it('delegates the route default export to the terms renderer', async () => {

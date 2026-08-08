@@ -1380,12 +1380,15 @@ describe('app/pricing', () => {
       expectedMessage: string,
       expectedAction: string,
     ]
-  >)('preserves banner rendering for pricing query params %#', async (searchParams, expectedMessage, expectedAction) => {
-    const { html } = await renderAnonymousPricingPage(searchParams);
+  >)(
+    'preserves banner rendering for pricing query params %#',
+    async (searchParams, expectedMessage, expectedAction) => {
+      const { html } = await renderAnonymousPricingPage(searchParams);
 
-    expect(html).toContain(expectedMessage);
-    expect(html).toContain(expectedAction);
-  });
+      expect(html).toContain(expectedMessage);
+      expect(html).toContain(expectedAction);
+    },
+  );
 
   it('renders the manage billing action when reason is a repeated query param', async () => {
     const checkEntitlementUseCase = new FakeUseCase<
