@@ -18,6 +18,7 @@ import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
 import { createStripeConsentStateSignature } from './stripe-consent-state';
 import { callStripeWithRetry } from './stripe-retry';
+import { isValidStripeSubscriptionStatus } from './stripe-subscription-status';
 
 export const SUBSCRIPTION_LIST_LIMIT = 10;
 export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
@@ -207,6 +208,7 @@ function getBlockingSubscriptionStatus(
 ): StripeSubscriptionStatus | null {
   if (!subscription) return null;
   if (!subscription.status) return null;
+  if (!isValidStripeSubscriptionStatus(subscription.status)) return null;
   if (!BLOCKING_SUBSCRIPTION_STATUSES.has(subscription.status)) return null;
   return subscription.status;
 }

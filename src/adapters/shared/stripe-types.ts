@@ -58,8 +58,9 @@ export type StripeCheckoutSession = {
   status?: StripeCheckoutSessionStatus | null | undefined;
   expires_at?: number | undefined;
   metadata?: Record<string, string> | null;
-  payment_method_collection?: 'always' | 'if_required' | null;
-  mode?: 'subscription' | 'payment' | 'setup';
+  // Stripe response enums are open; request params remain narrowed above.
+  payment_method_collection?: string | null;
+  mode?: string;
   setup_intent?: string | { id: string } | null;
   consent?: { terms_of_service?: 'accepted' | 'required' | null } | null;
 };
@@ -106,7 +107,7 @@ export type StripeSubscriptionStatus =
   (typeof STRIPE_SUBSCRIPTION_STATUSES)[number];
 export type StripeListedSubscription = {
   id?: string;
-  status?: StripeSubscriptionStatus;
+  status?: string;
 };
 export type StripeSubscriptionListParams = {
   customer: string;
