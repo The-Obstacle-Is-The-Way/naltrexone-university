@@ -9,9 +9,9 @@ export const ANNUAL_PLAN_FEATURES = [
   'Best value',
 ] as const;
 
-export const TERMS_VERSION = '2026-08-08';
+export const TERMS_VERSION = '2026-08-09';
 export const TERMS_CONTENT_SHA256 =
-  '58242b58d7e680e8e3211043bc3174b97327d8a091bd61c02a6366b1cb6121da';
+  'b3359b6ae63ba92bd24c7a099deaa366ba6f2a0fa5562611a30672cdb87e450f';
 export const CANCELLATION_METHOD =
   'Billing page in the app or support@addictionboards.com';
 

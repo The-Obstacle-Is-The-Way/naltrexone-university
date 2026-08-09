@@ -29,7 +29,7 @@ function publicTermsMarkdown(): string {
     .split('## Terms of Service\n\n')[1]
     ?.split('\n---\n\n## Decisions on record')[0];
   const body = publicSection?.replace(
-    /^\*\*Last updated: August 8, 2026\*\*\n\n/,
+    /^\*\*Last updated: August 9, 2026\*\*\n\n/,
     '',
   );
 
@@ -41,20 +41,26 @@ function publicTermsMarkdown(): string {
 }
 
 describe('TermsPage', () => {
-  it('marks the current publication-copy revision pending production verification', () => {
+  it('records durable publication evidence without a stale deployment-state claim', () => {
     const source = readFileSync('docs/legal/terms-of-service.md', 'utf8');
 
     expect(source).toContain(
-      '**STATUS: PUBLICATION COPY; 2026-08-08 revision pending production verification.**',
+      '**STATUS: PUBLICATION COPY; revision dated 2026-08-09.**',
     );
     expect(source).toContain(
-      'The previous public revision was production verified 2026-08-05 after Promo 1.',
+      'The previous public revision was production verified 2026-08-08 after promotion PR #760.',
+    );
+    expect(source).toContain(
+      'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/760#issuecomment-5227563312',
+    );
+    expect(source).toContain(
+      'Deployment evidence for this revision is recorded on its promotion PR.',
     );
   });
 
   it('keeps the typed page content verbatim with the committed public copy', () => {
     expect(termsContent.title).toBe('Terms of Service');
-    expect(termsContent.effectiveDate).toBe('August 8, 2026');
+    expect(termsContent.effectiveDate).toBe('August 9, 2026');
     expect(termsContent.bodyMarkdown).toBe(publicTermsMarkdown());
   });
 
@@ -89,6 +95,12 @@ describe('TermsPage', () => {
     );
     expect(text).toContain(
       'The pricing page presents links to these Terms and the Privacy Policy before subscription and free-trial actions.',
+    );
+    expect(text).toContain(
+      'both parties consent to their jurisdiction. Despite the preceding sentence, either party may bring an individual claim in small-claims court where it qualifies.',
+    );
+    expect(text).not.toContain(
+      'both parties consent to their jurisdiction. Either party may bring an individual claim in small-claims court where it qualifies.',
     );
     expect(text).not.toContain('completing the Terms-consent step');
     expect(text).not.toContain('Decisions on record');

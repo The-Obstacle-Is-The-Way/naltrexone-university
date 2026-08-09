@@ -41,14 +41,14 @@ function publicPrivacyMarkdown(): string {
 }
 
 describe('PrivacyPage', () => {
-  it('marks the current publication-copy revision pending production verification', () => {
+  it('records production verification for the current publication copy', () => {
     const source = readFileSync('docs/legal/privacy-policy.md', 'utf8');
 
     expect(source).toContain(
-      '**STATUS: PUBLICATION COPY; 2026-08-08 revision pending production verification.**',
+      '**STATUS: PUBLICATION COPY; production verified 2026-08-08.**',
     );
     expect(source).toContain(
-      'The previous public revision was production verified 2026-08-05 after Promo 1.',
+      'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/760#issuecomment-5227563312',
     );
   });
 
