@@ -1,10 +1,10 @@
 # DEBT-463: Public legal-page readability and copy
 
-**Status:** Resolved
+**Status:** Active
 **Priority:** P3
 **Filed:** 2026-08-08
-**Resolved:** 2026-08-09
 **Baseline:** `origin/dev` at `662c60b0cd9d688442699ebb69e00372f6c0cdcd`
+**Closure gate:** Verify in production that signed-out `/terms` returns 200 and renders both “Last updated: August 9, 2026” and the explicit “Despite the preceding sentence” small-claims carve-out; then cite the promotion evidence here and in the debt register.
 
 ## Scope and invariant
 
