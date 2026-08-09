@@ -1,6 +1,6 @@
 # Terms of Service — publication copy
 
-> **STATUS: PUBLICATION COPY; 2026-08-08 revision pending production verification.** The previous public revision was production verified 2026-08-05 after Promo 1. Its signed-out production evidence is recorded in [DEBT-414](../debt/debt-414-public-legal-pages-privacy-terms.md). Drafted 2026-08-03 in-house from primary sources and the codebase at `5773a148`; companion to the [Privacy Policy](./privacy-policy.md), with both documents committed together for the same publication change.
+> **STATUS: PUBLICATION COPY; revision dated 2026-08-09.** The previous public revision was production verified 2026-08-08 after promotion PR #760. Its signed-out production evidence is recorded in [PR #760](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/760#issuecomment-5227563312). Deployment evidence for this revision is recorded on its promotion PR. Drafted 2026-08-03 in-house from primary sources and the codebase at `5773a148`; companion to the [Privacy Policy](./privacy-policy.md).
 > Owner decision on record: draft in-house while pre-revenue with no active users; obtain focused legal review before paid user acquisition. The *Decisions on record* and *Provenance* appendices at the end are internal and do not publish.
 > The public portion is mirrored verbatim in `app/(marketing)/terms/terms-content.ts` per the DEBT-414 implementation spec.
 
@@ -8,7 +8,7 @@
 
 ## Terms of Service
 
-**Last updated: August 8, 2026**
+**Last updated: August 9, 2026**
 
 ## The short version
 
@@ -94,7 +94,7 @@ To the fullest extent permitted by law: we are not liable for indirect, incident
 
 ## 11. Governing law and disputes
 
-These Terms are governed by the laws of the **State of New York**, without regard to conflict-of-law rules. Before filing any claim, contact us at support@addictionboards.com and allow 30 days for informal resolution. Most issues can be resolved that way. Any dispute that cannot be resolved informally will be brought in the state or federal courts located in New York, New York, and both parties consent to their jurisdiction. Either party may bring an individual claim in small-claims court where it qualifies. Nothing in these Terms waives a right that your home state's consumer-protection law does not allow to be waived.
+These Terms are governed by the laws of the **State of New York**, without regard to conflict-of-law rules. Before filing any claim, contact us at support@addictionboards.com and allow 30 days for informal resolution. Most issues can be resolved that way. Any dispute that cannot be resolved informally will be brought in the state or federal courts located in New York, New York, and both parties consent to their jurisdiction. Despite the preceding sentence, either party may bring an individual claim in small-claims court where it qualifies. Nothing in these Terms waives a right that your home state's consumer-protection law does not allow to be waived.
 
 ## 12. Copyright complaints
 
