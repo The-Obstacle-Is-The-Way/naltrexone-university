@@ -1,10 +1,11 @@
 # DEBT-463: Public legal-page readability and copy
 
-**Status:** Active
+**Status:** Resolved
 **Priority:** P3
 **Filed:** 2026-08-08
+**Resolved:** 2026-08-09
 **Baseline:** `origin/dev` at `662c60b0cd9d688442699ebb69e00372f6c0cdcd`
-**Closure gate:** Verify in production that signed-out `/terms` returns 200 and renders both “Last updated: August 9, 2026” and the explicit “Despite the preceding sentence” small-claims carve-out; then cite the promotion evidence here and in the debt register.
+**Closure evidence:** Promotion PR [#764](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/764) merged to `main` as `c0ebbe4ca45ca70534f00a23dd985cd33bd49f48`. Main CI run [31339588715](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/31339588715) completed both `test` and `deploy` successfully. The [production live-fire record](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/764#issuecomment-5234219860) confirms signed-out 200 responses for `/terms`, `/privacy`, and `/pricing`; Terms rendered the August 9 date and explicit “Despite the preceding sentence” carve-out, Privacy rendered the August 8 date, and pricing rendered both legal links. `dev` and `main` trees matched at `f97408bb3876fab6f49fcc1600988d1b105396d1`.
 
 ## Scope and invariant
 
@@ -127,5 +128,5 @@ Body typography remains Manrope 16px/28px with normal tracking. The actual dark 
 | Design system | **Violation hypothesis REFUTED.** | Every production class is existing/canonical or registered in Pattern Registry § 12.5 in this change. The new measure, tone, hierarchy, and separator all compile in Tailwind v4. Semantic tokens, the documented `/80` ramp, and canonical `ring-focus` are used; no raw color, undocumented opacity, or dark override was added. |
 | Test integrity | **Vacuity hypothesis REFUTED.** | Parsed-DOM tests prove the semantic outline and complete source mirrors. Mandatory legal assertions were not deleted or weakened: the old combined free-trial assertion was replaced with an exact three-sentence assertion that independently pins new-account eligibility, the one-person limit, and no-payment start. Mutation-first runs proved all five hostile-review guards fail without their clauses. |
 | Accessibility | **Regression hypothesis REFUTED.** | The outline is now `h1 > h2 > h3`; the section border is decorative; the role-less focusable overflow wrappers and LegalLink behavior are unchanged. Axe reports zero violations in all eight legal-page viewport/scheme combinations. The foreground ramp remains well above AA in both token schemes. |
-| Versioning | **Coherence CONFIRMED.** | Privacy remains dated August 8. The Terms public date, `TERMS_VERSION`, and `TERMS_CONTENT_SHA256` identify the August 9 content, and the hash is recomputed by test. Internal source headers record the durable August 8 production evidence without making a stale deployment-state claim. Pricing `disclosureVersion` correctly remains August 5 because that copy is unchanged. New consent records receive the new Terms identity through the existing composition root. |
+| Versioning | **Coherence CONFIRMED.** | Privacy remains dated August 8. The Terms public date, `TERMS_VERSION`, and `TERMS_CONTENT_SHA256` identify the August 9 content, and the hash is recomputed by test. Internal source headers record the production evidence for each published revision. Pricing `disclosureVersion` correctly remains August 5 because that copy is unchanged. New consent records receive the new Terms identity through the existing composition root. |
 | Regression | **Collateral-change hypothesis REFUTED.** | `/` and `/pricing` source is absent from the production diff and their before/after captures were visually unchanged. Pricing legal links and their tests remain. Sign-up/checkout visible copy is unchanged; only the Terms identity recorded by consent machinery advances. The public source delimiters and internal provenance/decision appendices remain intact. |
