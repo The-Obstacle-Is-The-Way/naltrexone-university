@@ -54,10 +54,7 @@ describe('TermsPage', () => {
       'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/760#issuecomment-5227563312',
     );
     expect(source).toContain(
-      "This revision's signed-out production evidence is recorded in [promotion PR #764]",
-    );
-    expect(source).toContain(
-      'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/764#issuecomment-5234219860',
+      "This revision's signed-out production evidence is recorded in [promotion PR #764](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/764#issuecomment-5234219860).",
     );
   });
 
