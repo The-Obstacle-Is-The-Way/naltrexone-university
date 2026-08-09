@@ -3,7 +3,7 @@ import { ROUTES } from '@/lib/routes';
 
 export const termsContent = {
   title: 'Terms of Service',
-  effectiveDate: 'August 8, 2026',
+  effectiveDate: 'August 9, 2026',
   bodyMarkdown: `## The short version
 
 Addiction Boards is a study tool for board-exam preparation. It is not medical advice and does not guarantee exam results. Paid plans cost $29 per month or $199 per year and renew automatically until you cancel. New users get one 7-day free trial with no card required. You may cancel anytime on the Billing page in the app; cancellation takes effect at the end of your current trial or paid billing period. Use the content only for your own study. Do not copy or resell it, and do not enter patient information anywhere in the Service.
@@ -88,7 +88,7 @@ To the fullest extent permitted by law: we are not liable for indirect, incident
 
 ## 11. Governing law and disputes
 
-These Terms are governed by the laws of the **State of New York**, without regard to conflict-of-law rules. Before filing any claim, contact us at support@addictionboards.com and allow 30 days for informal resolution. Most issues can be resolved that way. Any dispute that cannot be resolved informally will be brought in the state or federal courts located in New York, New York, and both parties consent to their jurisdiction. Either party may bring an individual claim in small-claims court where it qualifies. Nothing in these Terms waives a right that your home state's consumer-protection law does not allow to be waived.
+These Terms are governed by the laws of the **State of New York**, without regard to conflict-of-law rules. Before filing any claim, contact us at support@addictionboards.com and allow 30 days for informal resolution. Most issues can be resolved that way. Any dispute that cannot be resolved informally will be brought in the state or federal courts located in New York, New York, and both parties consent to their jurisdiction. Despite the preceding sentence, either party may bring an individual claim in small-claims court where it qualifies. Nothing in these Terms waives a right that your home state's consumer-protection law does not allow to be waived.
 
 ## 12. Copyright complaints
 

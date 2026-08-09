@@ -1,8 +1,9 @@
 # DEBT-463: Public legal-page readability and copy
 
-**Status:** Active
+**Status:** Resolved
 **Priority:** P3
 **Filed:** 2026-08-08
+**Resolved:** 2026-08-09
 **Baseline:** `origin/dev` at `662c60b0cd9d688442699ebb69e00372f6c0cdcd`
 
 ## Scope and invariant
@@ -75,18 +76,26 @@ The following table is the owner-verification map. Structural Markdown changes f
 | Privacy deletion paragraph with two long exception sentences | Split the consent-record sentence and recast “It also does not necessarily remove...” as “Other limited ... may also remain, as may copies independently held by providers.” | Cascaded rows, all three consent/notice exceptions, pseudonymous survivor fields, every other named record category, provider copies, and required provider deletion remain. |
 | Privacy contact signature separated by an em dash | “John H. Jung, MD, MS, sole proprietor, New York, United States” | Entity, capacity, and location are unchanged. |
 
-## OWNER-REVIEW
+## OWNER-REVIEW (resolved 2026-08-09)
 
-- Meaning-adjacent edit for focused review: the Terms medical disclaimer changes “must not be used” to the direct instruction “Do not use it” while retaining the identical prohibited patient uses.
-- Meaning-adjacent edit for focused review: the Terms forum paragraph is split into shorter sentences; confirm the small-claims and non-waivable-rights exceptions remain scoped as intended.
-- Meaning-adjacent edit for focused review: the privacy deletion paragraph is split; confirm no retention survivor category was lost.
+- The owner accepted the Terms medical disclaimer's direct “Do not use it” instruction after confirming that every prohibited patient use remains.
+- The owner accepted the Terms forum split and directed one final clarification. “Despite the preceding sentence” now expressly makes the small-claims sentence an exception to the New York forum requirement; the non-waivable-rights savings clause remains a separate sentence applying across the Terms.
+- The owner accepted the privacy deletion split after confirming that all seven survivor categories and independently provider-held copies remain.
+
+The August 9 clarification changes only the connective before the existing small-claims permission:
+
+| Old sentence | Final sentence | Meaning preserved because |
+|---|---|---|
+| “Either party may bring an individual claim in small-claims court where it qualifies.” | “Despite the preceding sentence, either party may bring an individual claim in small-claims court where it qualifies.” | The parties, individual-claim limit, small-claims forum, and qualification condition are unchanged. The added connective removes the need to infer that the permission overrides the immediately preceding mandatory New York forum sentence. |
+
+Visual evidence: [production before](./assets/debt-463/terms-forum-before-2026-08-09.png) and [local after](./assets/debt-463/terms-forum-after-2026-08-09.png). The typography, measure, hierarchy, and spacing are unchanged.
 
 ## TDD and verification
 
 - **Red:** the initial renderer, page, theme-token, mirror/date, and Terms-version guards failed in 7 places across the 5 focused files before implementation. Hostile copy review then made each recovered clause fail independently before restoration: the exact no-guarantee sentence, “Nothing further happens,” the new-account trigger and one-person limit, the no-payment-method sentence, and the actor-specific “until you cancel” renewal condition. CodeRabbit's publication-evidence finding was also reproduced by two failing metadata guards before either internal header changed.
-- **Green:** the focused final run passes 5 files / 49 tests. Mirror tests compare the complete public Markdown strings, mandatory-clause tests retain exact substantive sentences, the Terms SHA test recomputes the digest from the rendered content module, and both internal source headers mark the August 8 revision pending production verification while preserving August 5 historical evidence.
+- **Green:** the redesign's focused final run passed 5 files / 49 tests. The August 9 closeout adds exact guards for the small-claims connective, publication dates/evidence, and consent identity. Mirror tests compare the complete public Markdown strings, mandatory-clause tests retain exact substantive sentences, and the Terms SHA test recomputes the digest from the rendered content module.
 - Existing sanitization, LegalLink branch behavior, overflow-table accessibility, last-row border, and theme-token guards remain present and green. No `resolves.toBeDefined()`, nullable fallback, or raw-markup substitute was introduced.
-- The final Terms identity is date/version `2026-08-08` with SHA-256 `58242b58d7e680e8e3211043bc3174b97327d8a091bd61c02a6366b1cb6121da`. The separate pricing-disclosure version remains `2026-08-05` because the pre-billing disclosure strings did not change. `lib/container/use-cases.ts` passes both identities and the hash into the Checkout/setup consent records.
+- The final Terms identity is date/version `2026-08-09` with SHA-256 `b3359b6ae63ba92bd24c7a099deaa366ba6f2a0fa5562611a30672cdb87e450f`. The separate pricing-disclosure version remains `2026-08-05` because the pre-billing disclosure strings did not change. `lib/container/use-cases.ts` passes both identities and the hash into the Checkout/setup consent records.
 
 ## Phase 4 measured verification
 
@@ -114,9 +123,9 @@ Body typography remains Manrope 16px/28px with normal tracking. The actual dark 
 
 | Lens | Verdict | Evidence and disposition |
 |---|---|---|
-| Legal meaning | **CONFIRMED findings, fixed; final additional-loss hypothesis REFUTED.** | The hostile pass caught five defects in our own rewrite: an initially weakened no-guarantee sentence, omission of “Nothing further happens,” the ambiguous phrase “required to start per person,” passive “until canceled” wording that no longer named the user's cancellation as the condition, and a subsequent free-trial split that omitted the new-account trigger while weakening definite “receive” to “may receive.” Each received an exact red test before the original substance was restored or split unambiguously. A second walk through every row in the change table found no further missing obligation, disclaimer, price, trial term, renewal/cancellation mechanic, provider disclosure, retention period, or privacy right. The three meaning-adjacent edits listed under OWNER-REVIEW remain flagged rather than self-certified. |
+| Legal meaning | **CONFIRMED findings, fixed; final additional-loss hypothesis REFUTED.** | The hostile pass caught five defects in our own rewrite: an initially weakened no-guarantee sentence, omission of “Nothing further happens,” the ambiguous phrase “required to start per person,” passive “until canceled” wording that no longer named the user's cancellation as the condition, and a subsequent free-trial split that omitted the new-account trigger while weakening definite “receive” to “may receive.” Each received an exact red test before the original substance was restored or split unambiguously. A second walk through every row in the change table found no further missing obligation, disclaimer, price, trial term, renewal/cancellation mechanic, provider disclosure, retention period, or privacy right. The owner reviewed and resolved all three meaning-adjacent edits on 2026-08-09; the sole requested tightening is included above. |
 | Design system | **Violation hypothesis REFUTED.** | Every production class is existing/canonical or registered in Pattern Registry § 12.5 in this change. The new measure, tone, hierarchy, and separator all compile in Tailwind v4. Semantic tokens, the documented `/80` ramp, and canonical `ring-focus` are used; no raw color, undocumented opacity, or dark override was added. |
 | Test integrity | **Vacuity hypothesis REFUTED.** | Parsed-DOM tests prove the semantic outline and complete source mirrors. Mandatory legal assertions were not deleted or weakened: the old combined free-trial assertion was replaced with an exact three-sentence assertion that independently pins new-account eligibility, the one-person limit, and no-payment start. Mutation-first runs proved all five hostile-review guards fail without their clauses. |
 | Accessibility | **Regression hypothesis REFUTED.** | The outline is now `h1 > h2 > h3`; the section border is decorative; the role-less focusable overflow wrappers and LegalLink behavior are unchanged. Axe reports zero violations in all eight legal-page viewport/scheme combinations. The foreground ramp remains well above AA in both token schemes. |
-| Versioning | **Coherence CONFIRMED.** | Both public dates, `TERMS_VERSION`, and `TERMS_CONTENT_SHA256` identify the August 8 content. The hash is recomputed by test. Both internal source headers label that revision pending production verification instead of misapplying the August 5 evidence. Pricing `disclosureVersion` correctly remains August 5 because that copy is unchanged. New consent records receive the new Terms identity through the existing composition root. |
+| Versioning | **Coherence CONFIRMED.** | Privacy remains dated August 8. The Terms public date, `TERMS_VERSION`, and `TERMS_CONTENT_SHA256` identify the August 9 content, and the hash is recomputed by test. Internal source headers record the durable August 8 production evidence without making a stale deployment-state claim. Pricing `disclosureVersion` correctly remains August 5 because that copy is unchanged. New consent records receive the new Terms identity through the existing composition root. |
 | Regression | **Collateral-change hypothesis REFUTED.** | `/` and `/pricing` source is absent from the production diff and their before/after captures were visually unchanged. Pricing legal links and their tests remain. Sign-up/checkout visible copy is unchanged; only the Terms identity recorded by consent machinery advances. The public source delimiters and internal provenance/decision appendices remain intact. |
