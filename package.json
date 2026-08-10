@@ -45,7 +45,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.4.1",
     "@clerk/ui": "^1.13.1",
-    "@noble/hashes": "1.8.0",
+    "@noble/hashes": "2.2.0",
     "@sentry/nextjs": "^10.53.1",
     "@tailwindcss/postcss": "4.3.3",
     "@typescript/native": "npm:typescript@^7.0.2",
