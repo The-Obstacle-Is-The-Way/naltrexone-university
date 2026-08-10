@@ -35,7 +35,7 @@ Use these official Vercel sources again at execution time and record any change 
 
 ## Scope and invariants
 
-The analytics component, public-route filter, collection-point notice, Privacy Policy amendments, internal provenance correction, and tests ship in one implementation PR and one deployment. Collection must not precede the matching copy.
+The analytics component, public-route filter, collection-point notice, Privacy Policy amendments, pending internal provenance row, and tests ship in one implementation PR and one deployment. Collection must not precede the matching copy. Production browser-network and Vercel Dashboard evidence cannot exist before deployment: the implementation PR marks that evidence pending, and the docs-only closeout records it after deployment.
 
 Invariants that MUST hold after execution:
 
@@ -45,7 +45,7 @@ Invariants that MUST hold after execution:
 4. **Collection is public-route-only and fail-closed.** The only collected paths are exactly `/`, `/pricing`, `/terms`, and `/privacy`. Every query string and fragment is removed before transmission. Auth, checkout, `/app`, `/api`, dynamic, malformed, and future unknown routes return `null` from `beforeSend`.
 5. **No custom events.** Do not import or call `track()`.
 6. **These policy claims stay true and present:** no sale of personal information, no cross-context behavioural advertising, no advertising networks or pixels, no session replay, no application cookie-write call, and no tag manager.
-7. **Byte-identity mirrors hold.** The public section of `docs/legal/privacy-policy.md` stays byte-identical to `privacyContent.bodyMarkdown` through the existing mirror test.
+7. **Byte-identity mirrors hold after removing document framing.** The mirror test removes the exact `Last updated` header and the structural newline before the provenance delimiter, then compares the remaining public body directly with `privacyContent.bodyMarkdown`. It must not call `.trim()` or otherwise normalize body whitespace.
 8. **Zero em dashes** in all new public-policy and notice text.
 9. **No assertion deletion.** Existing mandatory-clause assertions remain. Updated assertions pin complete replacement sentences, not weaker fragments.
 
@@ -65,7 +65,7 @@ Invariants that MUST hold after execution:
 2. Add `components/analytics/web-analytics.tsx` as a Client Component. Import `Analytics` and `BeforeSendEvent` from `@vercel/analytics/next`. Export a pure `filterWebAnalyticsEvent` used by `<Analytics beforeSend={filterWebAnalyticsEvent} />`.
 3. In that filter, parse `event.url` with `URL`. Return `null` on parse failure or unless `url.pathname` exactly equals one of `ROUTES.HOME`, `ROUTES.PRICING`, `ROUTES.TERMS`, or `ROUTES.PRIVACY`. For an allowed route, clear `url.search` and `url.hash`, then return a copied event with the sanitized URL. This allowlist is intentionally exact; do not use prefix matching.
 4. Import and render the wrapper once at the end of `<body>` in `app/layout.tsx`. The root layout remains a Server Component; it does not gain `'use client'`.
-5. In `components/marketing/marketing-layout.tsx`, add this sentence in the existing footer, using its existing text/link classes: `We use cookieless analytics on public pages. See our Privacy Policy.` Link the exact words `Privacy Policy` to `ROUTES.PRIVACY`. All four collected routes use this shared footer, so the notice is present in the rendered document before the root analytics wrapper.
+5. In `components/marketing/marketing-layout.tsx`, add this sentence in the existing footer, using its existing text/link classes: `We use cookieless analytics on four public pages. See our Privacy Policy.` Link the exact words `Privacy Policy` to `ROUTES.PRIVACY`. All four collected routes use this shared footer, so the notice is present in the rendered document before the root analytics wrapper.
 6. The production CSP is report-only and permits same-origin script and connection routes. Do not widen CSP directives for this integration. Vercel version 2 may use a generated resilient-intake path, so do not hard-code only `/_vercel/insights` as the runtime success condition.
 
 ### Step 2: confirm the vendor description before publishing copy
@@ -132,7 +132,7 @@ If Step 0 finds a changed official Pro reporting window, update this exact sente
 
 **(i) Internal provenance row, currently `docs/legal/privacy-policy.md:168`.**
 
-Replace the entire `No analytics` row. The new verdict must say that the old no-integration claim was deliberately superseded by DEBT-464, that collection is restricted to four exact public paths with query strings and fragments removed, and that all historical pre-activation transmission remains UNVERIFIABLE. Its evidence cell must cite `components/analytics/web-analytics.tsx`, its tests, the root layout, the project-toggle REST measurement, and the post-deploy evidence. Do not claim that zero events were ever collected.
+Replace the entire `No analytics` row. The new verdict must say that the old no-integration claim was deliberately superseded by DEBT-464, that collection is restricted to four exact public paths with query strings and fragments removed, and that all historical pre-activation transmission remains UNVERIFIABLE. In the implementation PR, its evidence cell cites `components/analytics/web-analytics.tsx`, its tests, the root layout, and the project-toggle REST measurement, then marks production browser-network and Dashboard evidence **PENDING**. The docs-only closeout replaces that pending marker with the exact promotion, browser-network, and Dashboard evidence. Do not claim that zero events were ever collected.
 
 **Deliberately unchanged policy sections:**
 
@@ -146,7 +146,7 @@ Replace the entire `No analytics` row. The new verdict must say that the old no-
 2. Mock only the external `@vercel/analytics/next` package to prove the wrapper supplies the tested filter. Extend `app/layout.test.tsx` to prove exactly one wrapper renders after the page shell.
 3. Extend `components/marketing/marketing-layout.test.tsx` with a parsed-DOM assertion for the complete collection-point sentence and an exact `ROUTES.PRIVACY` link.
 4. Add complete-sentence mandatory-copy assertions for the replacement analytics paragraph, sale-section bullet, retention row, and collection-point notice. Keep every existing assertion.
-5. Keep the public-copy mirror-test mechanism unchanged. It must continue to compare the entire public Markdown body byte for byte.
+5. Strengthen `publicPrivacyMarkdown()` in `app/(marketing)/privacy/page.test.tsx`: remove the actual dated `Last updated` header, consume the exact two-newline boundary before the provenance delimiter so no structural newline remains, and return the extracted body without `.trim()`. Compare that string directly with `privacyContent.bodyMarkdown`, preserving every body byte.
 
 ### Step 5: batched DEBT-414 record updates
 
