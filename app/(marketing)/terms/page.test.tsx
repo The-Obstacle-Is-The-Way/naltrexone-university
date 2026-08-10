@@ -45,7 +45,7 @@ describe('TermsPage', () => {
     const source = readFileSync('docs/legal/terms-of-service.md', 'utf8');
 
     expect(source).toContain(
-      '**STATUS: PUBLICATION COPY; revision dated 2026-08-09.**',
+      '**STATUS: PUBLICATION COPY; revision dated 2026-08-09; production verified 2026-08-09.**',
     );
     expect(source).toContain(
       'The previous public revision was production verified 2026-08-08 after promotion PR #760.',
@@ -54,7 +54,7 @@ describe('TermsPage', () => {
       'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/760#issuecomment-5227563312',
     );
     expect(source).toContain(
-      'Deployment evidence for this revision is recorded on its promotion PR.',
+      "This revision's signed-out production evidence is recorded in [promotion PR #764](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/764#issuecomment-5234219860).",
     );
   });
 
