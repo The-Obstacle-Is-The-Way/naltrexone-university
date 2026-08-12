@@ -1,11 +1,12 @@
 # DEBT-464: Vercel Web Analytics activation with privacy-policy coherence
 
-**Status:** Open
+**Status:** Open (parked 2026-08-11: execution gated on the owner Pro upgrade at first real users)
 **Priority:** P3
 **Filed:** 2026-08-10
 **Filed baseline:** `origin/dev` at `d7af4f009ec9f3be49a350c730f5df3cc5a90a69`
 **Adversarial-audit baseline:** `origin/dev` at `3587f0e4b646399b965e911a01940ed1ca09f6f1`
 **Owner decision (2026-08-10):** enable Vercel Web Analytics properly, with the Privacy Policy and a visible collection-point notice amended in the same deployment.
+**Owner ruling (2026-08-11):** Execution is parked. The Service is pre-user with zero revenue, so the owner defers the Pro upgrade and accepts the recorded Hobby fair-use residual risk until the first real users arrive. The Step 0 account gate is unchanged: nothing in this plan may execute on Hobby. Step 5 items (a), (b), and (c) were applied to the DEBT-414 record ahead of execution so the CAN-SPAM ruling and the corrected analytics measurements are not stranded behind this parked plan.
 
 ## Problem
 
@@ -155,6 +156,8 @@ Replace the entire `No analytics` row. The new verdict must say that the old no-
 
 ### Step 5: batched DEBT-414 record updates
 
+**Applied early (2026-08-11):** items (a), (b), and (c) below were applied to the DEBT-414 record by the parking-ruling PR, with item (a) adapted to state that execution is parked. At execution time, verify these records are present and update item (a)'s final sentence to reflect the completed integration; do not re-apply the inserts.
+
 **(a) Analytics verification bullet, currently line 49.**
 
 Old:
@@ -204,4 +207,4 @@ Remove the root wrapper and `@vercel/analytics` dependency, remove the footer an
 
 - Custom events, Speed Insights, session replay, advertising analytics, or any additional analytics provider.
 - Terms of Service changes, pricing-disclosure version changes, email/template implementation, or marketing instrumentation.
-- The remaining DEBT-414 owner tail: SHIELD adoption, strict-DMARC testing, provider-owned CAN-SPAM inventory, cancellation-procedure evidence, owner read-through, focused legal review, and Resend activation.
+- The remaining DEBT-414 owner tail: SHIELD adoption, provider-owned CAN-SPAM inventory, cancellation-procedure evidence, owner read-through, focused legal review, and Resend activation.
