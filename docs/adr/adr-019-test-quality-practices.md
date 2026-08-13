@@ -11,10 +11,10 @@
 
 The suite ADR-003 defined is mature: 556 test files (~151k lines) across four lanes (unit, browser, integration, E2E), a hard TDD mandate, fakes-over-mocks with a complete fakes barrel, and design-system regression scans. What it does **not** yet have are the practices that audit and specify that suite from the outside — the gaps become visible precisely because most code and tests here are agent-written:
 
-1. **Nothing measures whether the tests actually constrain behavior.** Coverage says lines ran; it cannot say a mutated `<=` would be caught. The audit found consequential thin spots (e.g. `grading.ts` — the product's core correctness function — carries 5 tests; `subscription-write-guard.ts`, which decides whether a paying customer's subscription can be overwritten, carries 3).
+1. **Nothing measures whether the tests actually constrain behavior.** Coverage says lines ran; it cannot say a mutated `<=` would be caught. The audit found both consequential thin spots (`grading.ts` — the product's core correctness function — carries 5 tests) and consequence concentrations whose bite nothing audits (`subscription-write-guard.ts`, which decides whether a paying customer's subscription can be overwritten, carries 21 table-driven cases that have never been adversarially checked).
 2. **Nothing ranks under-tested complexity.** Triage of "where do tests or refactors pay off next" is currently manual sweeps.
 3. **Business rules have no UI-independent executable specification.** Rules live in use cases and their unit tests; nothing states them in business language, so nothing structurally prevents a rule from migrating into a component during agent iteration.
-4. **UI verification is tribal.** Manual flow scripts exist inside `docs/dev/stabilization-checklist.md`, the operator checklist demands smoke tests that are written nowhere, and an audit found 18 surfaces with zero UI-level automation (rendered auth forms, error boundaries, billing portal round-trip, entitlement redirect gate, any mobile viewport…).
+4. **UI verification is tribal.** Manual flow scripts exist inside `docs/dev/stabilization-checklist.md`, the operator checklist demands smoke tests that are written nowhere, and an audit found a long list of surfaces with zero UI-level automation — enumerated in `docs/dev/qa-procedures.md` (rendered auth forms, error boundaries, billing portal round-trip, entitlement redirect gate, any mobile viewport…).
 
 Standing constraint honored throughout: **coverage numbers are observational in this repo** (`docs/dev/react-vitest-testing.md`) — TDD discipline and behavior assertions are the enforcement mechanism, not numeric gates.
 
@@ -42,7 +42,7 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 
 ### Negative
 
-- Three new devDependencies (`@stryker-mutator/core` + `vitest-runner`, `@amiceli/vitest-cucumber`, `istanbul-lib-coverage`).
+- Four new devDependencies (`@stryker-mutator/core`, `@stryker-mutator/vitest-runner`, `@amiceli/vitest-cucumber`, `istanbul-lib-coverage`).
 - Mutation runs cost minutes; acceptance features cost authoring discipline; QA procedures cost execution time per release.
 - Metric visibility invites metric-chasing (suppression spam, equivalent-mutant hunting to 100%).
 
