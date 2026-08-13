@@ -54,7 +54,7 @@ This procedure absorbs Flows A–C of the Core Flow Verification section in `doc
 - [ ] Choice buttons use the recessed-surface rest/hover/selected states — `docs/frontend/pattern-registry.md` I-3 / `docs/frontend/pages/quick-practice.md`
 - [ ] Action bar stays reachable on long questions (sticky bottom bar; whole-page scroll) — `docs/frontend/design-principles.md`
 - [ ] Focus rings on all interactive controls are the canonical ring — `docs/frontend/standards.md` §3
-- [ ] Question stem/choices/explanation render at the Medium content tier (16px/24px) — `docs/frontend/typography-policy.md`
+- [ ] Question stem and choices render at the Primary content tier (`text-base`, 16px); the post-submit explanation is promoted to Primary per the Feedback Context Override — `docs/frontend/typography-policy.md` § Content Tier System
 - [ ] Bookmark presence matches the per-surface registry on every surface touched — `docs/frontend/bookmark-surface-policy.md`
 - [ ] At 390×844: starter, question card, and summary have no horizontal overflow; action bar usable
 
