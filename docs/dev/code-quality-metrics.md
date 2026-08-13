@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-08-13
 
-CRAP — **C**hange **R**isk **A**nti-**P**atterns (Alberto Savoia & Bob Evans, crap4j) — scores every function by combining the two numbers that are individually misleading but jointly decisive:
+CRAP — **C**hange **R**isk **A**nti-**P**atterns (Alberto Savoia & Bob Evans, crap4j; originally expanded "Change Risk Analysis and Predictions" before the authors re-glossed it) — scores every function by combining the two numbers that are individually misleading but jointly decisive:
 
 ```
 CRAP(f) = comp(f)² × (1 − cov(f))³ + comp(f)
@@ -33,7 +33,7 @@ No off-the-shelf TS tool computes CRAP worth adopting; the repo builds a small r
 
 1. Load and merge the coverage maps.
 2. For each covered source file (filtered to `src/**`, `app/**`, `components/**`, `lib/**`; excluded: `**/test-helpers/**`, `*.test.*`, `*.browser.spec.*`, `db/migrations`), parse with `ts.createSourceFile` and walk function-like declarations (function/method/arrow/accessor).
-3. Cyclomatic complexity per function = 1 + decision points: `if`, `for`/`for-of`/`for-in`, `while`, `do`, `case` clause, `catch`, ternary, `&&`, `||`, `??`.
+3. Cyclomatic complexity per function = 1 + decision points: `if`, `for`/`for-of`/`for-in`, `while`, `do`, `case` clause, `catch`, ternary, `&&`, `||`, `??`, and the logical-assignment forms `&&=`/`||=`/`??=` (`??=` is live in production adapters).
 4. Per-function coverage = executed ÷ total statements whose position falls inside the function's span (from `statementMap`/`s`); functions absent from coverage entirely count as `cov = 0`.
 5. Emit a table sorted by CRAP descending — `path:line · function · comp · cov% · CRAP` — with `--top N` (default 25), `--json` for tooling, `--min <score>` to filter. **Exit code is always 0**: the report is observational by policy.
 
@@ -49,6 +49,7 @@ const DECISION_KINDS = new Set([
 ]);
 const DECISION_OPERATORS = new Set([
   ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken,
+  ts.SyntaxKind.AmpersandAmpersandEqualsToken, ts.SyntaxKind.BarBarEqualsToken, ts.SyntaxKind.QuestionQuestionEqualsToken,
 ]);
 
 function cyclomatic(fn: ts.Node): number {
@@ -87,13 +88,13 @@ Ranked candidates from the manual sweep (branch density × size ÷ colocated tes
 | Candidate | Signal |
 |---|---|
 | `src/adapters/repositories/drizzle-renewal-notice-delivery-repository.ts` | 399 loc, claim/dispatch/requeue state machine for legally-required notices, **zero unit-lane tests** (integration only) — worst absolute gap in `src/` |
-| `src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository.ts` | 7-state operation machine, 5 tests |
-| `src/adapters/gateways/clerk-user-provisioner.ts` | 11 distinct resolution outcomes (8 `blocked_*` paths), 8 tests; failure mode is account-takeover-adjacent |
-| `app/(marketing)/checkout/success/checkout-success-sync.tsx` | Post-payment reconciliation, 3 colocated tests — "paid but locked out" is the worst support ticket |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.ts` | Densest branching in the practice hooks (exam results after refresh/reconnect) |
-| `app/(app)/app/questions/[slug]/hooks/use-question-page-bookmarks.ts` | Thinnest browser-lane coverage of any non-trivial hook |
+| `src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository.ts` | 5-status operation machine (pending/processing/completed/terminal/expired), 5 tests |
+| `src/adapters/gateways/clerk-user-provisioner.ts` | 11 distinct resolution outcomes (9 `blocked_*` paths), 8 tests; failure mode is account-takeover-adjacent |
+| `app/(marketing)/checkout/success/checkout-success-sync.tsx` | Post-payment reconciliation — "paid but locked out" is the worst support ticket; the 344-loc component has no component-level test: only the extracted version fence (3 colocated tests) and the page shell are pinned directly |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.ts` | Among the densest-branching practice hooks (exam results after refresh/reconnect) — state that only goes wrong in the field |
+| `app/(app)/app/questions/[slug]/hooks/use-question-page-bookmarks.ts` | Lowest direct spec-to-hook ratio of the question-page hooks (174-line spec on a 227-line hook; peers run ~1.0–2.2×) |
 | `app/(app)/app/questions/[slug]/question-page-client.tsx` | 2nd-highest branch density in the repo; stateful fan-out over review/origin/navigation/bookmark/feedback |
-| `app/(app)/app/history/components/history-questions-tab.tsx` | Largest React component with the thinnest relative coverage |
+| `app/(app)/app/history/components/history-questions-tab.tsx` | Second-largest React component (574 loc, behind `practice-view.tsx` at 584) carrying 2 colocated test files to practice-view's 10 |
 | `src/adapters/gateways/stripe/stripe-checkout-sessions.ts` | Highest branch count in the repo (986 loc); well-tested absolutely but a complexity concentration — a *refactor-lever* candidate, not a test-lever one |
 | `src/application/use-cases/get-user-stats.ts` | The dashboard's entire numeric surface on 4 tests |
 | `src/application/use-cases/get-completed-session-questions-with-feedback.ts`, `get-practice-session-review.ts` | Read-model projections with fallback branches, ~9 tests each |
