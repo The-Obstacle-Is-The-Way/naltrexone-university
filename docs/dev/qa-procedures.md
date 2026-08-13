@@ -21,7 +21,7 @@ The Playwright suite (`tests/e2e/`, 17 specs) is deterministic regression covera
 - **Deployed-target verification.** Playwright boots its own local server (`reuseExistingServer: false`); it does not point at Vercel previews or production. QA procedures do.
 - **Pre-automation staging.** A flow becomes a procedure first; once its steps are stable and mechanizable, it is *promoted* to a Playwright spec and the procedure records the handoff (see Lifecycle).
 
-The register absorbs the manual "Core Flow Verification" scripts previously embedded in `docs/dev/stabilization-checklist.md` and gives the unwritten smoke-test demanded by `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment") a concrete, executable form.
+The register absorbs the manual "Core Flow Verification" scripts previously embedded in `docs/dev/stabilization-checklist.md` and gives the unwritten smoke-test demanded by `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form.
 
 ---
 
