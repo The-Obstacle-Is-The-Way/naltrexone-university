@@ -412,6 +412,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
 - **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
+- **Planned test-quality practices (ADR-019, tracked as DEBT-465):** Gherkin acceptance tests (`tests/acceptance/` — `docs/dev/acceptance-testing.md`), mutation testing (`docs/dev/mutation-testing.md`), CRAP report (`docs/dev/code-quality-metrics.md`), UI QA procedures (`docs/qa/` — `docs/dev/qa-procedures.md`). All metrics observational — no numeric gates without a new ADR.
 
 ### Playwright E2E Conventions
 
@@ -690,9 +691,10 @@ gh pr view <PR_NUMBER> --comments
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Full spec register (SPEC-001 through SPEC-038 archived; SPEC-016 and SPEC-017 active)
-- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018)
+- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018 accepted; ADR-019 proposed)
 - `docs/debt/index.md` — Technical debt register (active + resolved)
 - `docs/bugs/index.md` — Bug report register
+- `docs/qa/index.md` — UI QA procedure register (QA-NNN scripted UI verification; method in `docs/dev/qa-procedures.md`)
 - `docs/brainstorming/index.md` — UX audits and design explorations
 - `docs/frontend/standards.md` — Canonical frontend standards (components, tokens, accessibility, dark mode)
 - `docs/frontend/contrast-policy.md` — WCAG AA contrast targets and rules
