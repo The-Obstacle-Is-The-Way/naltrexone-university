@@ -14,7 +14,7 @@ Coverage says a line was *executed*; mutation says its behavior is *pinned*. In 
 pnpm add -D @stryker-mutator/core @stryker-mutator/vitest-runner
 ```
 
-- StrykerJS 9.6.x; the Vitest runner peer-accepts `vitest >= 2.0.0` and has Vitest-4-specific fixes — we run Vitest 4.1.x. Keep Stryker current; the runner tracks Vitest majors closely.
+- StrykerJS 9.6.x; the Vitest runner peer-accepts `vitest >= 2.0.0`, gained Vitest 4 support in 9.4.0, and fixed per-mutant hit counts/coverage for Vitest 4.1 in 9.6.1 — we run Vitest 4.1.x. Keep Stryker current; the runner tracks Vitest majors closely.
 - The runner **enforces per-test coverage analysis internally** (`coverageAnalysis` is ignored) and by default runs only tests *related* to each mutated file (`vitest.related: true`) — our colocated `foo.ts` → `foo.test.ts` convention is the ideal shape for this.
 - **Skip `@stryker-mutator/typescript-checker` for now.** It peer-resolves `typescript`, which in this repo is an npm alias to `@typescript/typescript6` (the TS6 preview build — see DEBT-460's dual-compiler seam). Compile-error mutants are rare in strictly-typed code; revisit the checker only after the TS6/TS7 seam collapses.
 - Constraint from the runner: **Vitest Browser Mode is not supported**, and our integration lane is serial against a real shared Postgres. Both lanes are structurally out of scope — see §2.
@@ -66,7 +66,7 @@ Chosen 2026-08-13 for consequence-per-minute: pure, fast, unit-tested, and expen
 
 | Target | Why it's first | Mutants most likely to teach us something |
 |---|---|---|
-| `src/domain/services/subscription-write-guard.ts` (56 loc, 3 tests) | Five sequential boolean early-returns deciding whether a different Stripe identity may overwrite a stored entitled subscription. Highest consequence-to-coverage ratio in the domain: a survivor here means a paying customer can be silently downgraded | Boolean/conditional flips per early-return |
+| `src/domain/services/subscription-write-guard.ts` (56 loc, 21 table-driven tests) | Five sequential boolean early-returns deciding whether a different Stripe identity may overwrite a stored entitled subscription — the highest-consequence pure function in the domain: a survivor here means a paying customer can be silently downgraded. The pilot audits whether the table's cases actually pin each early-return | Boolean/conditional flips per early-return |
 | `src/domain/services/entitlement.ts` | The paid-product gate; `currentPeriodEnd <= now` boundary + 4-way reason ladder | Equality-boundary (`<=` → `<`) — does any test pin the expiry *instant*? |
 | `src/domain/services/grading.ts` (5 tests) | The most consequential function in a medical-exam product, thinly tested | `!== 1` correct-choice invariant, id-equality flips |
 | `src/domain/services/exam-timer.ts` | Expiry boundary (`>=`) and `max(0, floor(...))` — the BUG-254 class of bug | Equality/arithmetic at the deadline |
@@ -75,7 +75,7 @@ Chosen 2026-08-13 for consequence-per-minute: pure, fast, unit-tested, and expen
 | `src/application/shared/persist-subscription-observation.ts` | Retry-loop bounds + version-conflict discriminator; wrong = infinite webhook retries or lost writes | `<=`/`===` on attempt counters |
 | `src/application/use-cases/validate-feedback-context.ts` (15 tests) | Security boundary (BUG-260, cross-user data attachment) with a compound negated clause — the single most mutation-worthy expression in the app layer | Negation/`&&`-`\|\|` mutants in the ownership ladder |
 
-Second wave once the pilot is triaged: `session-stats.ts`, `subscription-status.ts`, `start-practice-session.ts`, `idempotency-error-policy.ts`, then `src/domain/**` wholesale, then `src/application/{use-cases,shared}/**`.
+Second wave once the pilot is triaged: `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts`, `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy), then `src/domain/**` wholesale, then `src/application/{use-cases,shared}/**`.
 
 ## 5. Triage — what each survivor means
 
@@ -118,8 +118,8 @@ Mutation runs are minutes-per-module, not seconds — they do **not** enter the 
           with: { name: mutation-report, path: reports/mutation }
   ```
 
-  SHA-pin the actions like `ci.yml` does. The run **reports; it does not gate** (`break: null`). Once runtimes and baselines are known, a per-PR incremental variant scoped to changed files (`--mutate` from the diff) can be evaluated — via ADR, like any gate.
+  Pin actions following `ci.yml`'s conventions (`actions/checkout` and `pnpm/action-setup` are SHA-pinned there; `setup-node`/`upload-artifact` ride major tags). The run **reports; it does not gate** (`break: null`). Once runtimes and baselines are known, a per-PR incremental variant scoped to changed files (`--mutate` from the diff) can be evaluated — via ADR, like any gate.
 
 ## 7. Score policy
 
-Baseline scores are recorded in DEBT-465 Part 2's Verification checklist when the pilot first runs; thereafter this doc carries a small per-module baseline table (add it after the first real run — no invented numbers before then). Interpretation guide: domain services should sit ≥ 90 quickly given their test density; `subscription-write-guard.ts` and `grading.ts` scoring low on the first run is the *expected, valuable outcome* — their thin suites are why they're in the pilot.
+Baseline scores are recorded in DEBT-465 Part 2's Verification checklist when the pilot first runs; thereafter this doc carries a small per-module baseline table (add it after the first real run — no invented numbers before then). Interpretation guide: domain services should sit ≥ 90 quickly given their test density; `grading.ts` scoring low on the first run is the *expected, valuable outcome* — its thin suite is why it's in the pilot. `subscription-write-guard.ts` is the opposite bet: 21 table-driven cases whose real bite the mutants will audit.
