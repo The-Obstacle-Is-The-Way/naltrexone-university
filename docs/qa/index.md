@@ -33,8 +33,8 @@ Derived from the 2026-08-13 UI-coverage audit; file by creating the doc and bump
 | Candidate | Why | Suggested mode |
 |---|---|---|
 | Sign-up & first-run | `/sign-up` UI is never exercised (E2E asserts the CTA href only); new-user first session is uncovered | Human (Clerk form) |
-| Error/404/loading states | 8 per-route `error.tsx` + `not-found.tsx` + skeletons have zero coverage | Agent |
-| History filters & pagination | Tab bar, `mode`/`difficulty`/`tag`/`result`/`sort` chips, Previous/Next never clicked by automation | PW-assisted (chips are toggles) |
+| Error/404/loading states | 11 `error.tsx` boundaries (root + per-route) + `not-found.tsx` + skeletons have zero coverage | Agent |
+| History filters & pagination | Tab bar, `result`/`difficulty`/`tag`/`source`/`sort` chips, Previous/Next never clicked by automation | PW-assisted (chips are toggles) |
 | Mobile/responsive sweep | No mobile-viewport automation exists at all; 390×844 across the app shell + practice | Agent screenshots + human review |
 | Accessibility & focus-ring sweep | Canonical focus ring, keyboard nav, contrast per `docs/frontend/contrast-policy.md` | Human/agent hybrid |
 | Feedback & report dialog | Thumbs + report dialog covered only by browser-mode component specs | Agent (dialog buttons work) |
