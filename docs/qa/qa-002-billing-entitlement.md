@@ -54,7 +54,7 @@ Known environment quirk (not a bug): in Clerk development mode, the redirect bac
 ## Visual checks
 
 - [ ] Reason and checkout banners use semantic status tokens (no raw palette) — `docs/frontend/pattern-registry.md` feedback patterns
-- [ ] Cancellation banner uses semantic warning tokens — enforced by `theme-token-regression.test.tsx`, eyeball it anyway
+- [ ] Cancellation banner uses semantic warning tokens — a judgment check: the machine layer (`theme-token-regression`) polices raw buttons, undocumented opacity, and focus rings, not banner tone
 - [ ] Pricing legal-consent links carry the canonical focus ring — `docs/frontend/standards.md` §3
 - [ ] `/pricing` at 390×844: plan cards stack without overflow; CTAs full-width tappable
 
