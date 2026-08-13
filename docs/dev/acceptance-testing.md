@@ -139,7 +139,7 @@ describeFeature(feature, ({ Scenario }) => {
 });
 ```
 
-The driver's `startSession` wires `StartPracticeSessionUseCase` with `FakePracticeSessionRepository`, `FakeQuestionRepository`, and domain factories (`createQuestion`, `createPracticeSession`) exactly as `start-practice-session.test.ts` already does, and stores the thrown/returned result for the `expect*` verbs. (Path note: `loadFeature` is documented as caller-relative-friendly; verify resolution on install and standardize root-relative if needed.)
+The driver's `startSession` wires `StartPracticeSessionUseCase` with `FakePracticeSessionRepository`, `FakeQuestionRepository`, and domain factories (`createQuestion`, `createPracticeSession`) exactly as `start-practice-session.test.ts` already does, and stores the thrown/returned result for the `expect*` verbs. (Path note: the vitest-cucumber docs do not pin down how `loadFeature` resolves relative paths; verify on install and standardize — repo-root-relative, or resolved against `import.meta.url` — in the driver PR.)
 
 ## 6. Feature backlog — the rules worth specifying first
 
@@ -148,9 +148,9 @@ Each rule below was read from the implementation (receipts cited); every one is 
 | # | Rule (as the scenario will state it) | Implementation receipts | Folder |
 |---|---|---|---|
 | 1 | An unfinished session blocks starting a new one until resumed or abandoned | `src/application/use-cases/start-practice-session.ts` (`IncompleteSessionExists`) | practice-sessions |
-| 2 | Without an entitled subscription, practice/bookmarks/stats are denied with a reason | `require-entitled-user-id.ts`, `src/domain/services/entitlement.ts` | entitlement |
+| 2 | Without an entitled subscription, practice/bookmarks/stats are denied with a reason | `src/adapters/controllers/require-entitled-user-id.ts` (the per-controller gate), `src/application/use-cases/check-entitlement.ts`, `src/domain/services/entitlement.ts` | entitlement |
 | 3 | Access ends the instant `currentPeriodEnd` passes, whatever the status string says | `entitlement.ts` (`currentPeriodEnd <= now`) | entitlement |
-| 4 | Tutor mode explains immediately; exam mode reveals nothing until the exam ends | `practice-mode.ts` (`shouldShowExplanationForMode`), `submit-answer.ts`, `get-next-question.ts` | practice-sessions |
+| 4 | Tutor mode explains immediately; exam mode reveals nothing until the exam ends | `src/domain/value-objects/practice-mode.ts` (`shouldShowExplanationForMode`), `submit-answer.ts`, `get-next-question.ts` | practice-sessions |
 | 5 | Active exams take draft answers only; per-question submit is refused | `submit-answer.ts` ("not available in exam mode"), `save-exam-draft-answer.ts` | practice-sessions |
 | 6 | Finalizing an exam records unanswered questions as omitted-incorrect; accuracy divides by total question count | `finalize-exam-answers.ts`, `practice-session-summary.ts` | scoring |
 | 7 | A last-second draft still grades within the grace window; later ones are dropped | `finalize-exam-answers.ts` (`FINALIZE_FLUSH_DEADLINE_GRACE_MS`) | scoring |
