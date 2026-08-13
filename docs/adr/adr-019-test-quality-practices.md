@@ -66,5 +66,5 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 - StrykerJS documentation — Vitest runner, incremental mode, disable directives
 - `@amiceli/vitest-cucumber` — Gherkin for Vitest 4
 - Dave Farley — four-layer acceptance-test model (spec → DSL → driver → SUT)
-- Robert C. Martin — swarm-forge discipline (Gherkin acceptance specs, TDD, CRAP/DRY review, mutation hardening, QA procedures at the UI)
+- Robert C. Martin — TDD, Clean Code, and Clean Architecture
 - ADR-003 (Testing Strategy); `docs/dev/react-vitest-testing.md` (coverage-as-observational policy)
