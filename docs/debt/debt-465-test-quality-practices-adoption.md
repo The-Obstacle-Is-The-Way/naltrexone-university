@@ -4,7 +4,7 @@
 **Priority:** P2
 **Date:** 2026-08-13
 **Source:** [ADR-019](../adr/adr-019-test-quality-practices.md) (Proposed) + the 2026-08-13 audit of the test estate
-**Scope:** Execution of the four practices ADR-019 adopts. The runbooks are written and canonical; this item tracks the *work* — script, pilot, harness, and register activation. Owner-initiated waves; nothing here is a shortcut in shipped code.
+**Scope:** Execution of the four practices ADR-019 proposes to adopt. The runbooks are written and canonical; this item tracks the *work* — script, pilot, harness, and register activation. Owner-initiated waves; nothing here is a shortcut in shipped code.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-08-13
 
-Executable specifications of user-visible business rules, written in Gherkin (`Given / When / Then`), bound to the **application layer** through the existing fakes — never through the UI. Adopted by `docs/adr/adr-019-test-quality-practices.md`; tracked as DEBT-465 Part 3.
+Executable specifications of user-visible business rules, written in Gherkin (`Given / When / Then`), bound to the **application layer** through the existing fakes — never through the UI. Proposed by `docs/adr/adr-019-test-quality-practices.md`; tracked as DEBT-465 Part 3.
 
 **Why this layer exists.** Unit tests protect logic. UI QA protects the rendered surface. Acceptance tests protect the *seam between them*: they state each business rule in business language and prove it holds at the use-case boundary, which (a) keeps business rules out of components — an agent cannot quietly reimplement a rule in a React hook when the rule's specification runs against the use case and fails, and (b) gives every rule a UI-independent, human-readable contract that survives refactors of either side. This is the outer loop of TDD: the acceptance scenario goes red first, unit-level TDD makes it green from the inside out.
 

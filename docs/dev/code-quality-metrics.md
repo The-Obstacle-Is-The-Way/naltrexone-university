@@ -14,7 +14,7 @@ where `comp` is the function's cyclomatic complexity and `cov` its test coverage
 - **Uncovered** → CRAP = comp² + comp. A complexity-5 function with full tests scores **5**; a complexity-30 function with none scores **930**.
 - Convention: **CRAP > 30 = change-risky** ("crappy"); the fix is always one of two levers — *add tests* (raise cov) or *refactor* (lower comp). Which lever: consequential business logic gets tests first; incidental complexity (long parameter juggling, nested formatting) gets refactored first.
 
-**Why this repo wants it:** coverage here is deliberately observational — no numeric gates (`docs/dev/react-vitest-testing.md`). CRAP fits that culture exactly: it is a **ranked triage list**, not a threshold. It also completes the loop with mutation testing (`docs/dev/mutation-testing.md`): CRAP scans the whole tree cheaply to find *under-tested complexity*; mutation testing then verifies deeply, on the modules you choose, that the tests you add actually bite. CRAP ranks → you test or refactor → Stryker audits the result. Adopted by `docs/adr/adr-019-test-quality-practices.md`; tracked as DEBT-465 Part 1.
+**Why this repo wants it:** coverage here is deliberately observational — no numeric gates (`docs/dev/react-vitest-testing.md`). CRAP fits that culture exactly: it is a **ranked triage list**, not a threshold. It also completes the loop with mutation testing (`docs/dev/mutation-testing.md`): CRAP scans the whole tree cheaply to find *under-tested complexity*; mutation testing then verifies deeply, on the modules you choose, that the tests you add actually bite. CRAP ranks → you test or refactor → Stryker audits the result. Proposed by `docs/adr/adr-019-test-quality-practices.md`; tracked as DEBT-465 Part 1.
 
 ---
 
