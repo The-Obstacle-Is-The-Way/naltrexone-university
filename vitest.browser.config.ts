@@ -15,8 +15,8 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       '@clerk/nextjs/server',
-      '@noble/hashes/sha2',
-      '@noble/hashes/utils',
+      '@noble/hashes/sha2.js',
+      '@noble/hashes/utils.js',
       '@sentry/nextjs',
       'drizzle-orm',
       'drizzle-orm/pg-core',
