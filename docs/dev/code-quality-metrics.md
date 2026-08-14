@@ -32,7 +32,7 @@ The proposal builds a small repo-owned reporter, in the repo's established custo
 ### Mechanics
 
 1. Load and merge the coverage maps.
-2. Discover every `*.ts`/`*.tsx` source file under `src/**`, `app/**`, `components/**`, and `lib/**` (excluded: `**/test-helpers/**`, `**/*-test-helpers.*`, `*.test.*`, `*.browser.spec.*`, `*.fixtures.*`, `*.browser.probes.*`, `db/migrations`), parse with `ts.createSourceFile`, and walk executable function-like declarations with bodies (functions, methods, constructors, arrows, and accessors).
+2. Discover every `*.ts`/`*.tsx` source file under `src/**`, `app/**`, `components/**`, and `lib/**` (excluded: `**/test-helpers/**`, `**/*-test-helpers.*`, `*.test.*`, `*.browser.spec.*`, `*.fixtures.*`, `*.browser.probes.*`, `*.browser.setup.*`, `db/migrations`), parse with `ts.createSourceFile`, and walk executable function-like declarations with bodies (functions, methods, constructors, arrows, and accessors).
 3. Cyclomatic complexity per function = 1 + decision points: `if`, `for`/`for-of`/`for-in`, `while`, `do`, `case` clause, `catch`, ternary, `&&`, `||`, `??`, and the logical-assignment forms `&&=`/`||=`/`??=` (`??=` is live in production adapters).
 4. Assign each coverage statement by its start position to the innermost executable function span, so a nested function's statements are not also charged to its parent. Per-function coverage = executed ÷ total assigned statements (from `statementMap`/`s`); functions absent from coverage entirely count as `cov = 0`.
 5. Emit a table sorted by CRAP descending — `path:line · function · comp · cov% · CRAP` — with `--top N` (default 25), `--json` for tooling, `--min <score>` to filter. **Exit code is always 0**: the report is observational by policy.
