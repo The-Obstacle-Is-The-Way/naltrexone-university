@@ -58,7 +58,7 @@ overrides:
   # patched floor to 3.3.18. Transitive via postcss@8.5.23 (build-time CSS
   # tooling under Tailwind/Next); no direct usage, so defense-in-depth. Scoped
   # to the 3.x line; 3.3.18 satisfies postcss's ^3.3.16. Aged past the 7-day
-  # gate 2026-08-14 (published 2026-08-07T16:41:05Z).
+  # gate 2026-08-14T16:41:05Z (published 2026-08-07T16:41:05Z).
   'nanoid@3': 3.3.18
   # Security: GHSA-f88m-g3jw-g9cj — sharp < 0.35.0 bundles a libvips affected by
   # four inherited CVEs (memory-safety on untrusted image input): CVE-2026-33327
