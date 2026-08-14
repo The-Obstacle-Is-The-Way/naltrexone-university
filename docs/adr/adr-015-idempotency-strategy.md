@@ -85,7 +85,7 @@ When a controller elects to use an idempotency key, adapters forward it to Strip
 - trial variants remain scoped by `:trial:{days}`; and
 - changed create parameters recover through a request-fingerprint key rather than silently reusing mismatched parameters.
 
-The exception does **not** extend to the trial-payment-method setup path as currently implemented. A 2026-08-14 test-mode probe created an `open` setup Session, expired it, and then observed same-key create replay return the saved `open` body and URL while live retrieve returned `expired`. Because that path does not retrieve after create, its deterministic key can replay a stale URL; this separate defect must be resolved on its own merits rather than treating BUG-245 as general permission for deterministic short-lived redirect keys.
+The exception does **not** extend to the trial-payment-method setup path as currently implemented. A 2026-08-14 test-mode probe created an `open` setup Session, expired it, and then observed same-key create replay return the saved `open` body and URL while live retrieve returned `expired`. Because that path does not retrieve after create, its deterministic key can replay a stale URL; this separate defect must be resolved on its own merits rather than treating BUG-245 as general permission for deterministic short-lived redirect keys. It is tracked as [DEBT-467](../debt/debt-467-trial-setup-checkout-stale-session-url-replay.md), whose fix design brings the setup path up to these same license conditions before a follow-up amendment extends the exception.
 
 ---
 
