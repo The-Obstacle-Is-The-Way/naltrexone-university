@@ -12,7 +12,7 @@ Executable specifications of user-visible business rules, written in Gherkin (`G
 
 ```gherkin
 Feature: Starting a practice session
-  As a subscribed user I start filtered practice sessions in tutor or exam mode.
+  As a user I start filtered practice sessions in tutor or exam mode.
 
   Scenario: An unfinished session blocks a new one
     Given a user with an unfinished tutor session
@@ -31,17 +31,17 @@ Feature: Starting a practice session
 **House style — declarative, UI-free, domain-voiced:**
 
 1. No UI vocabulary in feature files. Never "clicks the Submit button" — write "submits an answer". The same feature must remain true if the UI is rebuilt (that is the point).
-2. Use this codebase's ubiquitous language, exactly as the domain layer spells it: *practice session, tutor mode, exam mode, draft answer, finalize, omitted question, attempt, entitled, trial, past due, cancel at period end, bookmark, mark for review*. If a feature file needs a word the domain doesn't have, that is a naming finding, not a synonym opportunity.
+2. Use this codebase's ubiquitous language as the domain and application layers express it: *practice session, tutor mode, exam mode, draft answer, finalize, omitted question, attempt, entitled, trial, past due, cancel at period end, bookmark, mark for review*. If a feature file needs a word the codebase doesn't have, that is a naming finding, not a synonym opportunity.
 3. One behavior per scenario; no incidental data (only the details that drive the outcome).
-4. Scenarios assert **outcomes** ("the answer is graded", "access is denied with reason `subscription_required`"), never mechanism ("the repository upserts…").
+4. Scenarios assert **outcomes** ("the answer is graded", "access is denied with `UNSUBSCRIBED`"), never mechanism ("the repository upserts…").
 
 ## 2. Tooling: `@amiceli/vitest-cucumber`
 
 **Chosen:** [`@amiceli/vitest-cucumber`](https://github.com/amiceli/vitest-cucumber) v7 — Gherkin for Vitest with real `.feature` files.
 
 - Peer-depends on `vitest ^4.0.4`; we run Vitest 4.1.x. **No second test runner enters the repo** — acceptance tests are ordinary Vitest files.
-- **Spec synchronization:** it errors when the `.feature` file and the step bindings drift (missing/renamed steps fail loudly). For agent-driven development this is the enforcement teeth: the spec cannot silently rot.
-- **Codegen:** `npx @amiceli/vitest-cucumber --feature <path> --spec <path>` scaffolds the binding skeleton from a feature file.
+- **Spec synchronization:** it errors when the `.feature` file and the step bindings drift (missing/renamed steps fail loudly). For agent-driven development this is the enforcement teeth: bindings cannot silently drift from the feature text.
+- **Codegen:** v7.0.0's published `npx @amiceli/vitest-cucumber --feature <path> --spec <path>` entry point is broken: its bin targets missing `dist/cli-generate.js` while the package ships `dist/cli-generate.mjs`. Write the binding skeleton manually until the package fixes its bin.
 
 Rejected alternatives, for the record: `@cucumber/cucumber` (canonical, but a second runner with its own TS/ESM loader story — cost without benefit given the above); `playwright-bdd` (binds features to browser E2E — exactly the coupling this layer exists to avoid; revisit only if we later want the *same* feature files executed through a UI driver as well).
 
@@ -55,19 +55,19 @@ pnpm add -D @amiceli/vitest-cucumber
 .feature file          the specification (business-readable, versioned)
   └─ step bindings     *.acceptance.test.ts — thin glue, no logic
        └─ driver       tests/acceptance/support/application-driver.ts — the DSL
-            └─ SUT     real use cases + real domain, wired with fakes
+            └─ SUT     real use cases + domain; adapter controllers for adapter-owned rules
 ```
 
-The **driver** is the only layer that knows how the system is wired. It composes real use cases with the standard fakes (`src/application/test-helpers/fakes/` — 17 repository fakes, gateway fakes, `FakeLogger`, `FakeRateLimiter`) and exposes intention-level verbs: `givenSubscribedUser()`, `startSession({ mode, count })`, `submitAnswer(choice)`, `finalizeExam()`, `expectRejectedWithConflict(reason)`.
+The **driver** is the only layer that knows how the system is wired. It composes real use cases with the standard fakes (`src/application/test-helpers/fakes/` — 17 repository fakes, gateway fakes, `FakeLogger`, `FakeRateLimiter`) and exposes intention-level verbs: `givenUser()`, `startSession({ mode, count })`, `submitAnswer(choice)`, `finalizeExam()`, `expectRejectedWithConflict(reason)`.
 
 Rules that keep the layers honest:
 
 - Step bindings call **only** the driver. They never import fakes, use cases, or factories directly.
 - The driver constructs use cases **the same way their colocated unit tests do** — when writing a new driver method, open the use case's own `*.test.ts` and mirror its wiring; that file is the wiring reference and already demonstrates the correct fakes.
 - The driver holds scenario state (current user, session, last result) so steps stay declarative.
-- No DB, no network, no browser: the whole suite runs at unit speed and stays deterministic (inject fixed clocks where use cases take one).
+- No DB, no network, no browser: keep the suite in the unit lane and inject fixed clocks where use cases take one.
 
-Because the SUT boundary is the application layer, these tests also double as pressure on the ports: anything a scenario cannot express through a use case is by definition UI-only behavior — which belongs in component tests or QA procedures, not here.
+Because the primary SUT boundary is the application layer, these tests also double as pressure on the ports. Adapter-owned coordination such as webhook and idempotency behavior is driven at the controller boundary; purely UI behavior belongs in component tests or QA procedures, not here.
 
 ## 4. File organization and runner wiring
 
@@ -87,9 +87,9 @@ tests/acceptance/
     └── bookmarks/
 ```
 
-- Binding files are named **`*.acceptance.test.ts`**, colocated beside their `.feature` file. This matches the existing unit config include (`**/*.test.ts`) — **zero config changes**: acceptance tests run inside `pnpm test`, the full gate, CI, coverage, and (deliberately) inside the mutation-testing lane, where they add kills for business-rule mutants (`docs/dev/mutation-testing.md`).
+- Binding files are named **`*.acceptance.test.ts`**, colocated beside their `.feature` file. This matches the existing Vitest unit-config include (`**/*.test.ts`), so no Vitest config or runner change is needed: acceptance tests run inside `pnpm test`, the full gate, CI, coverage, and (deliberately) inside the mutation-testing lane, where they can kill business-rule mutants (`docs/dev/mutation-testing.md`). The first adoption PR must also add `.acceptance.test` to `STANDARD_TEST_SUFFIXES` in `tests/architecture-boundary-source-scan.ts`; otherwise the repository filename-policy test rejects the binding name.
 - Run just this suite with `pnpm test tests/acceptance`. If the suite ever needs its own lane (reporting, timing), split a dedicated config then — not before.
-- When the first feature lands, add the `tests/acceptance/` row to the Test Locations table in `AGENTS.md` (and the `.claude/rules/testing.md` table) in the same PR.
+- When the first feature lands, add the `tests/acceptance/` row to the Test Locations table in `AGENTS.md` (and the `.claude/rules/testing.md` table), plus the filename-policy suffix above, in the same PR.
 
 ## 5. Worked example
 
@@ -97,15 +97,15 @@ tests/acceptance/
 
 ```gherkin
 Feature: Starting a practice session
-  Subscribed users start filtered practice sessions; unfinished work is protected.
+  Users start filtered practice sessions; unfinished work is protected.
 
   Scenario: An unfinished session blocks a new one
-    Given a subscribed user with an unfinished tutor session
+    Given a user with an unfinished tutor session
     When the user starts a new 10-question tutor session
     Then the request is rejected because an incomplete session exists
 
   Scenario: The pool is smaller than the requested count
-    Given a subscribed user and 3 published questions matching their filters
+    Given a user and 3 published questions matching their filters
     When the user starts a new 10-question tutor session
     Then a session begins with 3 questions
     And the user is told the actual count
@@ -118,14 +118,14 @@ import { describeFeature, loadFeature } from '@amiceli/vitest-cucumber';
 import { ApplicationDriver } from '../../support/application-driver';
 
 const feature = await loadFeature(
-  'tests/acceptance/features/practice-sessions/starting-a-session.feature',
+  './starting-a-session.feature',
 );
 
 describeFeature(feature, ({ Scenario }) => {
   Scenario('An unfinished session blocks a new one', ({ Given, When, Then }) => {
     const app = new ApplicationDriver();
-    Given('a subscribed user with an unfinished tutor session', async () => {
-      await app.givenSubscribedUser();
+    Given('a user with an unfinished tutor session', async () => {
+      await app.givenUser();
       await app.givenUnfinishedSession({ mode: 'tutor' });
     });
     When('the user starts a new 10-question tutor session', async () => {
@@ -135,11 +135,32 @@ describeFeature(feature, ({ Scenario }) => {
       app.expectConflict('IncompleteSessionExists');
     });
   });
-  // second Scenario binds the same way via app.expectSessionStarted({ actualCount: 3 })
+  Scenario(
+    'The pool is smaller than the requested count',
+    ({ Given, When, Then, And }) => {
+      const app = new ApplicationDriver();
+      Given(
+        'a user and 3 published questions matching their filters',
+        async () => {
+          await app.givenUser();
+          await app.givenPublishedQuestions(3);
+        },
+      );
+      When('the user starts a new 10-question tutor session', async () => {
+        await app.startSession({ mode: 'tutor', count: 10 });
+      });
+      Then('a session begins with 3 questions', async () => {
+        await app.expectSessionStarted({ actualCount: 3 });
+      });
+      And('the user is told the actual count', () => {
+        app.expectActualCountReported(3);
+      });
+    },
+  );
 });
 ```
 
-The driver's `startSession` wires `StartPracticeSessionUseCase` with `FakePracticeSessionRepository`, `FakeQuestionRepository`, and domain factories (`createQuestion`, `createPracticeSession`) exactly as `start-practice-session.test.ts` already does, and stores the thrown/returned result for the `expect*` verbs. (Path note: the vitest-cucumber docs do not pin down how `loadFeature` resolves relative paths; verify on install and standardize — repo-root-relative, or resolved against `import.meta.url` — in the driver PR.)
+The driver's `startSession` wires `StartPracticeSessionUseCase` with `FakePracticeSessionRepository`, `FakeQuestionRepository`, and domain factories (`createQuestion`, `createPracticeSession`) exactly as `start-practice-session.test.ts` already does, and stores the thrown/returned result for the `expect*` verbs. In v7.0.0, `loadFeature('./filename.feature')` resolves that simple path relative to the calling test file; other relative paths resolve against the process working directory. Keep each pair colocated and use the simple `./filename.feature` form shown above.
 
 ## 6. Feature backlog — the rules worth specifying first
 
@@ -148,22 +169,22 @@ Each rule below was read from the implementation (receipts cited); every one is 
 | # | Rule (as the scenario will state it) | Implementation receipts | Folder |
 |---|---|---|---|
 | 1 | An unfinished session blocks starting a new one until resumed or abandoned | `src/application/use-cases/start-practice-session.ts` (`IncompleteSessionExists`) | practice-sessions |
-| 2 | Without an entitled subscription, practice/bookmarks/stats are denied with a reason | `src/adapters/controllers/require-entitled-user-id.ts` (the per-controller gate), `src/application/use-cases/check-entitlement.ts`, `src/domain/services/entitlement.ts` | entitlement |
+| 2 | Without an entitled subscription, practice/bookmarks/stats are denied with `UNSUBSCRIBED` | `src/adapters/controllers/require-entitled-user-id.ts` (the per-controller gate), `src/application/use-cases/check-entitlement.ts`, `src/domain/services/entitlement.ts` | entitlement |
 | 3 | Access ends the instant `currentPeriodEnd` passes, whatever the status string says | `entitlement.ts` (`currentPeriodEnd <= now`) | entitlement |
-| 4 | Tutor mode explains immediately; exam mode reveals nothing until the exam ends | `src/domain/value-objects/practice-mode.ts` (`shouldShowExplanationForMode`), `submit-answer.ts`, `get-next-question.ts` | practice-sessions |
+| 4 | Tutor mode explains immediately; exam mode reveals nothing until the exam ends | `src/domain/value-objects/practice-mode.ts` (`shouldShowExplanationForMode`), `submit-answer.ts`, `get-practice-session-review.ts`, `get-completed-session-questions-with-feedback.ts` | practice-sessions |
 | 5 | Active exams take draft answers only; per-question submit is refused | `submit-answer.ts` ("not available in exam mode"), `save-exam-draft-answer.ts` | practice-sessions |
 | 6 | Finalizing an exam records unanswered questions as omitted-incorrect; accuracy divides by total question count | `finalize-exam-answers.ts`, `practice-session-summary.ts` | scoring |
-| 7 | A last-second draft still grades within the grace window; later ones are dropped | `finalize-exam-answers.ts` (`FINALIZE_FLUSH_DEADLINE_GRACE_MS`) | scoring |
+| 7 | A last-second final draft flush still grades within the grace window; later ones are dropped | `finalize-exam-answers.ts` (`FINALIZE_FLUSH_DEADLINE_GRACE_MS`) | scoring |
 | 8 | Exams can be discarded; tutor sessions can only be ended (attempts never deleted); discarding a missing session is a silent success | `discard-practice-session.ts` (BUG-251), `end-practice-session.ts` | practice-sessions |
 | 9 | Mark-for-review exists only inside an active exam | `set-practice-session-question-mark.ts` | practice-sessions |
-| 10 | First-ever checkout carries a 7-day trial; any prior subscription forfeits it; blocking statuses refuse a second checkout | `create-checkout-session.ts` (`FREE_TRIAL_DAYS`, `ALREADY_SUBSCRIBED`) | billing-lifecycle |
-| 11 | Scheduled cancellation keeps access until period end and stops renewal notices | webhook controller + `send-due-renewal-notices.ts` (`cancelAtPeriodEnd`) | billing-lifecycle |
+| 10 | Checkout with no existing subscription row carries a 7-day trial; any existing row removes it; a still-current blocking subscription refuses a second checkout | `create-checkout-session.ts` (`FREE_TRIAL_DAYS`, `ALREADY_SUBSCRIBED`) | billing-lifecycle |
+| 11 | Scheduled cancellation keeps access until period end and stops renewal notices | `src/adapters/controllers/stripe-webhook-controller.ts`, `src/adapters/jobs/send-due-renewal-notices.ts` (`cancelAtPeriodEnd`) | billing-lifecycle |
 | 12 | A duplicate or out-of-order billing event never double-applies or regresses subscription state | `stripe-webhook-controller.ts` claim/lock, `persist-subscription-observation.ts`, `subscription-write-guard.ts` | billing-lifecycle |
-| 13 | Deleting the account removes local data, deletes the Stripe customer, and later billing events are acknowledged, not resurrected | `clerk-webhook-controller.ts` tombstone + cascade | account-lifecycle |
+| 13 | Deleting the account removes local data, deletes the Stripe customer, and later billing events are acknowledged, not resurrected | `clerk-webhook-controller.ts` tombstone + cascade, `stripe-webhook-controller.ts` (`user_missing` acknowledgment) | account-lifecycle |
 | 14 | Feedback attaches only to your own attempt/session, and only when it actually contains the question | `validate-feedback-context.ts` (BUG-260) | feedback |
 | 15 | Only published questions can be newly bookmarked; unbookmark is idempotent; existing bookmarks survive unpublishing (listed as unavailable) | `set-bookmark.ts`, `get-bookmarks.ts` | bookmarks |
-| 16 | A user always sees the same choice order for a question; another user sees a different one | `shuffled-choice-views.ts`, `shuffle.ts` | practice-sessions |
-| 17 | Double-clicking "start session" yields exactly one session | `with-idempotency.ts`, `practice-controller.ts` | practice-sessions |
+| 16 | A user sees a deterministic choice order for a question; both the user and question IDs seed that order | `shuffled-choice-views.ts`, `shuffle.ts` | practice-sessions |
+| 17 | Reusing one start-session idempotency key yields exactly one session | `with-idempotency.ts`, `practice-controller.ts` | practice-sessions |
 
 Known edge worth a scenario while writing #1: the client clamps session count to 1–100 (`SESSION_COUNT_MAX`) while the server accepts 1–200 (`MAX_PRACTICE_SESSION_QUESTIONS`) — specify the intended contract and pin it.
 
@@ -176,9 +197,9 @@ Known edge worth a scenario while writing #1: the client clamps session count to
 
 ## 8. Adoption sequence (DEBT-465 Part 3)
 
-1. `pnpm add -D @amiceli/vitest-cucumber`; commit the lockfile bump alone.
+1. `pnpm add -D @amiceli/vitest-cucumber`; commit the `package.json` and lockfile bump as an isolated dependency commit.
 2. Build `tests/acceptance/support/application-driver.ts` with the verbs needed by feature #1 only (drivers grow verb-by-verb, never speculatively).
-3. Land features #1 and #4 (session start conflict + tutor/exam feedback split) using codegen for the skeletons; confirm spec-sync errors fire by renaming a step locally.
+3. Land features #1 and #4 (session start conflict + tutor/exam feedback split) with manually written skeletons; confirm spec-sync errors fire by renaming a step locally.
 4. Land #2/#3 (entitlement) and #10 (trial) — the revenue rules.
-5. Update the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) in the PR that lands #1.
+5. Update the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) and filename-policy suffix in the PR that lands #1.
 6. From then on: **every new business rule ships its feature file first** — the acceptance scenario is the outer red before unit-level TDD begins.
