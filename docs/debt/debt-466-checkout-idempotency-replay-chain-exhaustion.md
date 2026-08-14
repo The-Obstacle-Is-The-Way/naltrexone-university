@@ -54,7 +54,7 @@ Observed server-log signature (2026-08-13): repeated `"Retrying checkout session
 - **Test-only env salt read by production key-builders** — adds a test-only branch to production billing code without correcting production behavior.
 - **Drop the DB volume per E2E run** — rotates the app-user UUID and therefore masks this key-chain defect, even though `seed-test-user.ts` re-finds the owner-matched Stripe customer. It is destructive, discards the stable-state test property, and substitutes test cleanup for a production-path fix.
 - **Silently raise 3 → 10 without renaming** — leaves the bound's semantics and latency budget unexplained.
-- **Depend on an `Idempotent-Replayed` response header** — the checked official Stripe docs do not establish that header as a supported contract. The installed SDK exposes arbitrary `lastResponse.headers`, but the repo's deliberately narrow `StripeClient` type does not. Do not make the fix depend on an undocumented marker.
+- **Depend on an `Idempotent-Replayed` response header** — Stripe does document the header ([advanced error handling](https://docs.stripe.com/error-low-level): "To identify a previously executed response that's being replayed from the server, look for the header `Idempotent-Replayed: true`"), and the installed SDK exposes `lastResponse.headers`, but the repo's deliberately narrow `StripeClient` type does not — and the subscription ladder's live retrieve already observes the terminal state, so the header adds nothing this fix needs. Optional future assertion only; not a fix dependency.
 
 ## Verification
 
