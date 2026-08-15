@@ -9,6 +9,7 @@ import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-t
 import {
   createStripeCheckoutSession,
   createStripeTrialPaymentMethodSetupSession,
+  TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT,
 } from './stripe-checkout-sessions';
 import { isValidStripeConsentStateSignature } from './stripe-consent-state';
 
@@ -579,11 +580,16 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
   });
 
   it('fails after the bounded recovery chain keeps returning inactive Sessions', async () => {
-    const setupCreateResults = Array.from({ length: 21 }, () => ({
-      id: 'cs_replayed',
-      url: null,
-      status: 'complete' as const,
-    }));
+    const setupCreateResults = Array.from(
+      {
+        length: TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT + 1,
+      },
+      () => ({
+        id: 'cs_replayed',
+        url: null,
+        status: 'complete' as const,
+      }),
+    );
     const { stripe, sessionsCreate } = createStripeMock({ setupCreateResults });
 
     await expect(
@@ -598,15 +604,23 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
       message: 'Stripe Checkout Session is expired or inactive',
     });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(4);
+    expect(sessionsCreate).toHaveBeenCalledTimes(
+      TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT + 1,
+    );
     const idempotencyKeys = sessionsCreate.mock.calls.map(
       ([, options]) => options?.idempotencyKey,
     );
-    expect(new Set(idempotencyKeys).size).toBe(4);
-    expect(idempotencyKeys.slice(1)).toEqual([
-      expect.stringMatching(/:cs_replayed:attempt:1:[a-f0-9]{16}$/),
-      expect.stringMatching(/:cs_replayed:attempt:2:[a-f0-9]{16}$/),
-      expect.stringMatching(/:cs_replayed:attempt:3:[a-f0-9]{16}$/),
-    ]);
+    expect(new Set(idempotencyKeys).size).toBe(
+      TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT + 1,
+    );
+    expect(idempotencyKeys.slice(1)).toEqual(
+      Array.from(
+        { length: TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT },
+        (_, index) =>
+          expect.stringMatching(
+            new RegExp(`:cs_replayed:attempt:${index + 1}:[a-f0-9]{16}$`),
+          ),
+      ),
+    );
   });
 });

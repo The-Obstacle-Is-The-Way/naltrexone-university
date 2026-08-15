@@ -122,6 +122,8 @@ NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=price_...
 
 Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, so concurrent clones do not share the app server port. CI still supplies its own Docker-service `DATABASE_URL` through `.github/workflows/ci.yml`.
 
+Normal local `pnpm test:e2e` runs reuse that per-clone Docker database; they do not tear it down or reset its volume. Only `pnpm db:test:reset` invokes `docker compose down -v`. The stable app-user UUID means completed `trial-start.spec.ts` Checkout Sessions remain deterministic recovery-chain rungs while Stripe retains their idempotency keys for at least 24 hours. This retained-state interaction is intentional regression coverage for [DEBT-466](../debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md); do not rotate the user or drop the database volume to mask a traversal failure.
+
 Individual spec files still use `test.skip(!hasClerkCredentials, ...)`, but that guard does **not** replace suite setup: `global.setup.ts` runs a preflight and seed/reset pass before the Chromium project starts. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it.
 
 To intentionally validate a real deploy-target database instead of the local Docker database, opt out explicitly and prefix the target URL. This is not the default local flow:
