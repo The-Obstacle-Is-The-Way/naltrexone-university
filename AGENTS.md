@@ -138,6 +138,8 @@ The pre-push git hook only runs `pnpm typecheck && pnpm test --run`. That is NOT
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
+If `pnpm test:browser` exits at bootstrap in about one second with `no tests / 1 error`, capture the failing output and retry that lane once. A second failure blocks the push. This narrow, observed startup exception is tracked as DEBT-469 W5; it does not excuse ordinary browser-test failures.
+
 **If the local authenticated billing E2E environment is available, also run before every `git push`:**
 
 That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`. `DATABASE_URL` is still required in `.env.local` for normal local app development (`pnpm dev`, migrations, and seed commands), but not for the hermetic local E2E workflow unless you intentionally target an existing external database with `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`.
