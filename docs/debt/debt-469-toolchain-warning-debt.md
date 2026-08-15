@@ -4,12 +4,13 @@
 **Priority:** P3
 **Date:** 2026-08-14
 **Source:** Owner-directed estate investigation (2026-08-14): every quality-gate lane was executed on this branch with output captured and every warning line classified — all root-caused except W5, which remains an observed-but-unroot-caused startup flake carrying an observation duty — `pnpm typecheck`, `pnpm lint`, `pnpm test:coverage` (436 files / 3,853 tests), `pnpm test:browser:coverage` (64 / 398), `pnpm db:test:up && pnpm test:integration:coverage` (38+1 skipped / 244+2 skipped), `pnpm build` (exit 0), plus the 2026-08-14 full-gate E2E log. A config experiment (restore-then-revert on `biome.json`) verified the headline fix before filing.
+**Execution audit:** Re-run on current `dev` (`83873d6b`, 2026-08-15) before implementation; command-level receipts are recorded below. DEBT-466 Part A has landed since filing, so W6 is now a resolved historical failure signature rather than a gate exception.
 
 ---
 
 ## Description
 
-The repository's standing practice has been to note warnings as "pre-existing" in gate summaries and move on. This item replaces that practice with a complete inventory, a root cause for each warning, and a fix-or-justify verdict — then installs the ratchets that keep the count of **actionable** warnings at zero. Scope, so the goal and the checklist can both be true: W1, W2, and W7 are eliminated at the root; W3/W4 are non-actionable runner notices that still appear in lane output but gate nothing; W5 and W6 remain narrowly documented exceptions with their own owners. The estate is genuinely close: `pnpm typecheck` and `pnpm build` emit **zero** warnings, and the entire suppression surface is 9 `biome-ignore` directives (7 files) plus 14 `@ts-expect-error` uses — all but one of them reasoned and behavior-verifying.
+The repository's standing practice has been to note warnings as "pre-existing" in gate summaries and move on. This item replaces that practice with a complete inventory, a root cause for each warning, and a fix-or-justify verdict — then installs the ratchets that keep the count of **actionable** warnings at zero. Scope, so the goal and the checklist can both be true: W1, W2, and W7 are eliminated at the root; W3/W4 are non-actionable runner notices that still appear in lane output but gate nothing; W5 remains a narrowly documented exception with its own observation duty; W6 is historical because DEBT-466 Part A has fixed it on current `dev`. The estate is genuinely close: `pnpm typecheck` and `pnpm build` emit **zero** warnings, and the current-dev suppression sweep still finds 9 `biome-ignore` directives (7 files) plus 14 `@ts-expect-error` uses — all but one of them reasoned and behavior-verifying.
 
 ### Complete warning inventory (every lane, verbatim)
 
@@ -20,12 +21,12 @@ The repository's standing practice has been to note warnings as "pre-existing" i
 | W3 | browser (occasional) | `[vite] (client) Re-optimizing dependencies because vite config has changed` | Informational: the dep-optimizer cache keys on config hash, so alternating `test:browser` / `test:browser:coverage` re-optimizes once | **No action** — expected cache behavior, not a defect. Recorded so future gate readers don't re-investigate |
 | W4 | E2E (failure paths only) | `[Clerk Testing] FAPI request failed after 4 attempts: … (Error: route.fetch: Test ended.)` | `@clerk/testing` route interception keeps retrying after Playwright tears the page down mid-failure; appears only in already-failing runs (observed in the 2026-08-14 trial-start failure log) | **No action** — upstream, cosmetic, failure-path-only. Never observed on a green run |
 | W5 | gate practice | Browser lane occasionally fails its first bootstrap by ~1s (documented in `AGENTS.md` as retry-once) | Unroot-caused; plausibly the same dep-optimizer first-run race as W3 | **Keep the documented exception, add observation duty**: on the next occurrence, capture the failing log before retrying and attach it here. If it reproduces with W2 fixed and caches warm, file it as its own item |
-| W6 | E2E | `trial-start` failing with `pricing?checkout=error&plan=monthly` after >3 same-day completed checkouts | DEBT-466 (settled design, awaiting implementation) | **Already filed** — [DEBT-466](./debt-466-checkout-idempotency-replay-chain-exhaustion.md) owns it; the gate exception remains scoped to exactly that signature |
-| W7 | local E2E when the caller exports `NO_COLOR` | `Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.` | This agent environment exports `NO_COLOR=1`; Playwright 1.62.1 unconditionally injects `FORCE_COLOR=1` into its web-server and worker children, producing 19 copies in the audited full gate | **Fix in the local E2E orchestrator** (Resolution 6): omit inherited `NO_COLOR` only from the Playwright command's child environment; Playwright overrides it anyway, and a focused smoke proved omission removes the warning |
+| W6 | historical E2E (resolved on current `dev`) | `trial-start` failing with `pricing?checkout=error&plan=monthly` after >3 same-day completed checkouts | The pre-Part-A DEBT-466 subscription traversal bound stopped after three recovery creates | **Resolved before this implementation** — [DEBT-466](./debt-466-checkout-idempotency-replay-chain-exhaustion.md) Part A raised and split the bound, and five consecutive retained-chain `trial-start` runs passed. This signature is now a real defect signal, not an acceptable gate exception |
+| W7 | local E2E when the caller exports `NO_COLOR` | `Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.` | When the caller exports `NO_COLOR=1`, Playwright 1.62.1 unconditionally injects `FORCE_COLOR=1` into its web-server and worker children, producing 19 copies in the filing's audited full gate and 17 in the current-dev focused smoke | **Fix in the local E2E orchestrator** (Resolution 6): omit inherited `NO_COLOR` only from the Playwright command's child environment; Playwright overrides it anyway, and a focused smoke proved omission removes the warning |
 
 Institutional (not printed warnings, but the reason warnings persist):
 
-- `lint` / `lint:ci` (`biome check .` / `biome ci .`) exit 0 on warning-level diagnostics, so W1 has never blocked anything. Biome supports `--error-on-warnings` (verified in `biome ci --help`).
+- `lint` / `lint:ci` (`biome check .` / `biome ci .`) exit 0 on warning-level diagnostics, so W1 has never blocked anything. Installed Biome 2.5.6 supports `--error-on-warnings` on both commands (verified in both `biome check --help` and `biome ci --help`).
 - Coverage is collected in CI on all three vitest lanes and uploaded to Codecov, but there is no `codecov.yml` and no `coverage.thresholds` in any vitest config — measurement without enforcement. The threshold ratchet is designed in [DEBT-468](./debt-468-test-estate-coverage-and-fixture-debt.md) Part 4, not here.
 
 ### W1 history — a policy lost in an upgrade, not a decision
@@ -36,7 +37,7 @@ Institutional (not printed warnings, but the reason warnings persist):
 
 The policy's motivation has since been vindicated: this documentation campaign's own audits repeatedly flagged 1,500+-line test files as hard to review, and the estate now has **29 test files over 800 lines** (`wc -l` census; largest `src/adapters/jobs/reconcile-stripe-subscriptions.test.ts` at 1,798, then `stripe-webhook-controller.test.ts` 1,774 and `clerk-webhook-controller.test.ts` 1,668).
 
-### Experiment receipts (2026-08-14, restore-then-revert, worktree restored)
+### Filing experiment receipts (2026-08-14, restore-then-revert, worktree restored)
 
 Restoring `style.noExcessiveLinesPerFile` to `{ "level": "warn", "options": { "maxLines": 800 } }` in the existing test override and re-running Biome:
 
@@ -46,13 +47,22 @@ Restoring `style.noExcessiveLinesPerFile` to `{ "level": "warn", "options": { "m
 4. Replacing only those three `__dirname` references with `import.meta.dirname` made the same focused runs clean: unit 1 file / 17 tests, browser 1 / 2, integration 1 / 1, with no native-loader warning.
 5. The full E2E gate with inherited `NO_COLOR=1` emitted W7 19 times. `env -u NO_COLOR pnpm test:e2e tests/e2e/smoke.spec.ts` then passed setup + smoke (2/2) with zero warning lines, proving the scoped environment fix.
 
+### Current-dev execution-audit receipts (2026-08-15, all spikes reverted)
+
+1. The complete test-glob census — `rg --files -g '*.test.ts' -g '*.test.tsx' -g '*.browser.spec.tsx' -0 | xargs -0 wc -l | sort -nr` filtered to `>800` — still returns **29 files**. The same three files remain largest at 1,798 / 1,774 / 1,668 lines. No `stripe-checkout-sessions*` file is over the limit, so the DEBT-467 deferral guard has no current census entry. The smallest raw-census entry, `tests/integration/idempotency-key-repository.integration.test.ts` at 803 physical lines, does not violate Biome's rule accounting.
+2. Restoring `{ "level": "warn", "options": { "maxLines": 800 } }` in the test override and running `pnpm exec biome check . --max-diagnostics=100` still emits exactly **27 warnings**; the other Biome-effective oversized file is the already-suppressed `stripe-webhook-processor.test.ts`, for a post-implementation ledger of 28 load-bearing size suppressions. A focused check of that file is clean, proving its line-1 suppression still has effect. `biome.json` was restored to `"off"` and `git diff --exit-code -- biome.json` passed before this audit commit.
+3. Copying all three current configs verbatim to `.mts` and running one spec per lane still produces the `__dirname` diagnostic: unit 1 file / 17 tests, browser 1 / 2 (the diagnostic appears twice because the browser config loads twice), integration 1 / 1. Replacing only the copied configs' three references with `import.meta.dirname` makes the same runs pass without the native-loader warning. The three copies were then deleted.
+4. `pnpm exec biome check --help` and `pnpm exec biome ci --help` both list `--error-on-warnings`; `pnpm exec biome --version` reports 2.5.6.
+5. `NO_COLOR=1 pnpm test:e2e tests/e2e/smoke.spec.ts` passes setup + smoke (2/2) but emits the exact NO_COLOR/FORCE_COLOR warning **17 times** on current `dev`. The caller environment enters at `runLocalE2E`'s `runPlan(plan, { env })`; the mutation seam is `runCommandPlan` in `scripts/e2e-local-orchestrator.ts`, where caller and per-step environments are merged immediately before the `spawn` invocation. That is the seam Resolution 6 changes; plan creation, database, migration, and seed environments stay untouched.
+6. `AGENTS.md`'s full-gate section exactly preserves W5's narrow contract: capture the ~1-second `no tests / 1 error` browser-bootstrap log, retry that lane once, and treat a second failure as blocking. DEBT-468 Part 3 still coordinates fixture extraction with this item's split ledger, while Part 4 still owns the separately ADR-gated coverage-threshold ratchet. DEBT-466 Part A is implemented, so its former `checkout=error` allowance has been removed from this item's active exceptions.
+
 ## Impact
 
 - A warning that has survived every gate summary since the Biome upgrade trains readers to skim past the warning section — which is how new warnings get absorbed silently.
 - The lost policy is doing no work while the condition it guarded against grows: the three largest offenders are exactly the files DEBT-468's fixture analysis identifies as duplication-heavy, and reviewers (human and agent) demonstrably struggle with them.
 - Warning-level diagnostics cannot block CI today, so the only enforcement is humans reading logs.
 
-## Resolution (design only — implement after external audit; coordinates with DEBT-468)
+## Resolution (current-dev execution audit complete; coordinates with DEBT-468)
 
 1. **Restore the test-file-size policy** in `biome.json`'s existing test-glob override: `style.noExcessiveLinesPerFile` at `level: warn`, `options.maxLines: 800` — the original c6d94e80 parameters, in the rule's post-nursery group.
 2. **Annotate the current over-limit files in the same change.** Each of the ~27 newly-warned files gets a line-1 `// biome-ignore lint/style/noExcessiveLinesPerFile: <named reason> — split tracked by DEBT-469.` suppression, mirroring the one legitimate suppression that already exists. This makes the debt visible at the head of every oversized file instead of invisible in a disabled rule, and it makes the warning count zero *now* so step 4's gate can land immediately.
@@ -81,6 +91,6 @@ Restoring `style.noExcessiveLinesPerFile` to `{ "level": "warn", "options": { "m
 ## Related
 
 - [DEBT-468](./debt-468-test-estate-coverage-and-fixture-debt.md) — fixture extraction shrinks the same oversized files this item splits; coverage-threshold ratchet lives there
-- [DEBT-466](./debt-466-checkout-idempotency-replay-chain-exhaustion.md) — owns the only sanctioned E2E gate exception (W6)
+- [DEBT-466](./debt-466-checkout-idempotency-replay-chain-exhaustion.md) — Part A resolved historical W6; `pricing?checkout=error&plan=monthly` is again a real defect signal
 - [DEBT-465](./debt-465-test-quality-practices-adoption.md) — the practices campaign this investigation extends
 - `c6d94e80`, `d3d3e558`, `a4464f2f` — the W1 timeline receipts
