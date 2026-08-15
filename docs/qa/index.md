@@ -33,7 +33,7 @@ Derived from the 2026-08-13 UI-coverage audit; file by creating the doc and bump
 | Candidate | Why | Suggested mode |
 |---|---|---|
 | Sign-up & first-run | E2E proves the pricing CTA handoff to `/sign-up`, but the live Clerk form and a new user's first practice session are uncovered | Human (Clerk form) |
-| Error/404/loading states | Error boundaries, `not-found.tsx`, and loading files have unit-render coverage except the quick-practice error and loading files; forced route-level boundary states are uncovered | Agent |
+| Error/404/loading states | Error boundaries, `not-found.tsx`, and loading files have unit-render coverage except the quick-practice loading file (`app/(app)/app/practice/quick/error.test.tsx` covers that route's boundary); forced route-level boundary states are uncovered | Agent |
 | History filters & pagination | Browser-component coverage clicks the Source filter and session disclosure; route-level tab, `result`/`difficulty`/`tag`/`sort`, and Previous/Next interactions remain uncovered | PW-assisted (chips are toggles) |
 | Mobile/responsive sweep | One 375×667 practice E2E and one browser-component case exist; a 390×844 app-shell + practice sweep remains uncovered | Agent screenshots + human review |
 | Accessibility & focus-ring sweep | Canonical focus ring, keyboard nav, contrast per `docs/frontend/contrast-policy.md` | Human/agent hybrid |
