@@ -9,7 +9,7 @@ import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-t
 import {
   createStripeCheckoutSession,
   createStripeTrialPaymentMethodSetupSession,
-  TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT,
+  TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT,
 } from './stripe-checkout-sessions';
 import { isValidStripeConsentStateSignature } from './stripe-consent-state';
 
@@ -29,25 +29,41 @@ function createStripeMock(overrides?: {
   >;
 }) {
   const setupCreateResults = [...(overrides?.setupCreateResults ?? [])];
+  const liveSetupSessions = new Map<
+    string,
+    {
+      id: string;
+      url: string | null;
+      status: 'open' | 'complete' | 'expired';
+    }
+  >();
   const sessionsCreate = vi.fn(
     async (
-      _params: CheckoutSessionCreateParams,
+      params: CheckoutSessionCreateParams,
       _options?: StripeRequestOptions,
     ) => {
       const next = setupCreateResults.shift();
       if (next instanceof Error) throw next;
-      return (
-        next ?? {
-          id: 'cs_new',
-          url: 'https://stripe/checkout/new',
-        }
-      );
+      const result = next ?? {
+        id: 'cs_new',
+        url: 'https://stripe/checkout/new',
+      };
+      if (params.mode === 'setup') {
+        liveSetupSessions.set(result.id, {
+          ...result,
+          status: result.status ?? 'open',
+        });
+      }
+      return result;
     },
   );
-  const sessionsRetrieve = vi.fn(async () => {
+  const sessionsRetrieve = vi.fn(async (sessionId: string) => {
     if (overrides?.shouldThrowOnRetrieve) {
       throw new Error('retrieve failed');
     }
+
+    const liveSetupSession = liveSetupSessions.get(sessionId);
+    if (liveSetupSession) return liveSetupSession;
 
     const lineItemsData =
       overrides?.retrievedSessionPriceId === null
@@ -582,7 +598,7 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
   it('fails after the bounded recovery chain keeps returning inactive Sessions', async () => {
     const setupCreateResults = Array.from(
       {
-        length: TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT + 1,
+        length: TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT + 1,
       },
       () => ({
         id: 'cs_replayed',
@@ -605,17 +621,17 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
     });
 
     expect(sessionsCreate).toHaveBeenCalledTimes(
-      TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT + 1,
+      TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT + 1,
     );
     const idempotencyKeys = sessionsCreate.mock.calls.map(
       ([, options]) => options?.idempotencyKey,
     );
     expect(new Set(idempotencyKeys).size).toBe(
-      TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT + 1,
+      TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT + 1,
     );
     expect(idempotencyKeys.slice(1)).toEqual(
       Array.from(
-        { length: TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT },
+        { length: TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT },
         (_, index) =>
           expect.stringMatching(
             new RegExp(`:cs_replayed:attempt:${index + 1}:[a-f0-9]{16}$`),
