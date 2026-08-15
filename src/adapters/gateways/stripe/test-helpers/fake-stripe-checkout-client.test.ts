@@ -41,6 +41,16 @@ describe('FakeStripeCheckoutClient', () => {
     },
   );
 
+  it('omits payment_method_collection when subscription params do not set it', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+
+    const session = await stripe.checkout.sessions.create(subscriptionParams, {
+      idempotencyKey: 'key_subscription',
+    });
+
+    expect(session).not.toHaveProperty('payment_method_collection');
+  });
+
   it.each(modeParams)(
     'replays the frozen first %s response while retrieve exposes completed live state',
     async (mode, params) => {

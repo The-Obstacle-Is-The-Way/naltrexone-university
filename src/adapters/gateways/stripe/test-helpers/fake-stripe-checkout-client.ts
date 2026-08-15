@@ -163,7 +163,11 @@ export class FakeStripeCheckoutClient implements StripeClient {
         ? {}
         : {
             customer: params.customer,
-            payment_method_collection: params.payment_method_collection,
+            ...(params.payment_method_collection === undefined
+              ? {}
+              : {
+                  payment_method_collection: params.payment_method_collection,
+                }),
             line_items: {
               data: params.line_items.map((item) => ({
                 price: { id: item.price },
