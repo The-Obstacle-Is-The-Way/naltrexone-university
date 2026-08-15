@@ -8,8 +8,8 @@ import type {
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import {
-  CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT,
   createStripeCheckoutSession,
+  SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT,
 } from './stripe-checkout-sessions';
 
 type SessionResponse = StripeCheckoutSession & {
@@ -69,6 +69,26 @@ function createReplayStripeMock(input: {
     stripe,
     sessionsCreate,
     sessionsRetrieve,
+  };
+}
+
+function createCompletedReplaySnapshots(count: number): {
+  createdSessions: SessionResponse[];
+  retrievedSessions: SessionResponse[];
+} {
+  const createdSessions = Array.from({ length: count }, (_, index) => ({
+    id: `cs_completed_replay_${index}`,
+    url: `https://stripe/checkout/completed-${index}`,
+    status: 'open' as const,
+    expires_at: 1_700_000_000 + 3600,
+  }));
+
+  return {
+    createdSessions,
+    retrievedSessions: createdSessions.map((session) => ({
+      ...session,
+      status: 'complete' as const,
+    })),
   };
 }
 
@@ -237,19 +257,82 @@ describe('createStripeCheckoutSession recovery', () => {
     ]);
   });
 
-  it('throws STRIPE_ERROR when the recovery chain keeps replaying inactive sessions', async () => {
-    const inactiveSessionResponses = Array.from(
-      { length: CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT + 1 },
-      (_, index) => ({
-        id: `cs_inactive_${index}`,
-        url: `https://stripe/checkout/inactive-${index}`,
-        status: 'expired' as const,
-        expires_at: fixedNowUnix + 3600,
+  it('walks six retained completed replays before returning a fresh open Session', async () => {
+    const completedReplays = createCompletedReplaySnapshots(6);
+    const freshSession = {
+      id: 'cs_fresh_after_six',
+      url: 'https://stripe/checkout/fresh-after-six',
+      status: 'open' as const,
+      expires_at: fixedNowUnix + 3600,
+    };
+    const { stripe, sessionsCreate, sessionsRetrieve } = createReplayStripeMock(
+      {
+        createdSessions: [...completedReplays.createdSessions, freshSession],
+        retrievedSessions: [
+          ...completedReplays.retrievedSessions,
+          freshSession,
+        ],
+      },
+    );
+    const logger = new FakeLogger();
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger,
+        nowMs: () => fixedNowMs,
       }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh-after-six' });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(7);
+    expect(sessionsRetrieve).toHaveBeenCalledTimes(7);
+    expect(
+      logger.warnCalls.map(({ context }) => context.recoveryAttempt),
+    ).toEqual([1, 2, 3, 4]);
+    expect(
+      logger.errorCalls.map(({ context }) => context.recoveryAttempt),
+    ).toEqual([5, 6]);
+  });
+
+  it('succeeds when the primary plus L - 1 recoveries are terminal and recovery create L is open', async () => {
+    const completedReplays = createCompletedReplaySnapshots(
+      SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT,
+    );
+    const freshSession = {
+      id: 'cs_fresh_at_limit',
+      url: 'https://stripe/checkout/fresh-at-limit',
+      status: 'open' as const,
+      expires_at: fixedNowUnix + 3600,
+    };
+    const { stripe, sessionsCreate } = createReplayStripeMock({
+      createdSessions: [...completedReplays.createdSessions, freshSession],
+      retrievedSessions: [...completedReplays.retrievedSessions, freshSession],
+    });
+
+    await expect(
+      createStripeCheckoutSession({
+        stripe,
+        input,
+        priceIds,
+        logger: new FakeLogger(),
+        nowMs: () => fixedNowMs,
+      }),
+    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh-at-limit' });
+
+    expect(sessionsCreate).toHaveBeenCalledTimes(
+      SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT + 1,
+    );
+  });
+
+  it('throws after the primary plus L recoveries are terminal without issuing recovery create L + 1', async () => {
+    const completedReplays = createCompletedReplaySnapshots(
+      SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT + 1,
     );
     const { stripe, sessionsCreate } = createReplayStripeMock({
-      createdSessions: inactiveSessionResponses,
-      retrievedSessions: inactiveSessionResponses,
+      createdSessions: completedReplays.createdSessions,
+      retrievedSessions: completedReplays.retrievedSessions,
     });
 
     await expect(
@@ -266,7 +349,7 @@ describe('createStripeCheckoutSession recovery', () => {
     });
 
     expect(sessionsCreate).toHaveBeenCalledTimes(
-      CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT + 1,
+      SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT + 1,
     );
   });
 });

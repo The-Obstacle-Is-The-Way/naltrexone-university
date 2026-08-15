@@ -1,6 +1,6 @@
 # Stripe Vendor Documentation
 
-**Package:** `stripe` ^22.2.0
+**Package:** `stripe` ^22.4.0
 **API Version:** `2026-05-27.dahlia`
 **Dashboard:** https://dashboard.stripe.com
 **Docs:** https://docs.stripe.com
@@ -47,6 +47,12 @@ stripe config --list  # Shows API version in use
 | `url` | `session.url` | Subscribe action | Redirect URL |
 | `subscription` | `session.subscription` | Checkout success | Expanded subscription |
 | `line_items` | `session.line_items` | Session reuse check | Needs `expand` |
+
+## Idempotent Requests
+
+Stripe saves the status code and response body from the first request made with an idempotency key, and later requests with the same key return that saved result. Stripe permits pruning only after a key is at least 24 hours old; it does not promise deletion at exactly 24 hours. Replayed create responses for short-lived resources therefore are not proof of current live state. The subscription Checkout adapter keeps deterministic provider keys for concurrency collapse, retrieves each created or replayed Session before deciding from its status, and traverses retained terminal Sessions under the bounded recovery design in [DEBT-466](../debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md).
+
+**Docs:** https://docs.stripe.com/api/idempotent_requests
 
 ---
 
