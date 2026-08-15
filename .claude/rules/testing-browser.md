@@ -36,7 +36,7 @@ test('hook updates state correctly', async () => {
 - Runs in **real Chromium** via Playwright (not jsdom)
 - `expect.element()` has **built-in retry-ability** (no manual polling)
 - No `// @vitest-environment jsdom` directive needed
-- Config: `vitest.browser.config.ts`
+- Config: `vitest.browser.config.mts`
 
 ## Controller mocking in Browser Mode
 

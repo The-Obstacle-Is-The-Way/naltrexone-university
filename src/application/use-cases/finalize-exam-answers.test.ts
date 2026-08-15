@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep exam finalization, idempotency, and conflict cases together — split tracked by DEBT-469.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ApplicationError,

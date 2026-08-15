@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep attempt writes, visibility reads, and conflict mapping contracts together — split tracked by DEBT-469.
 import { eq } from 'drizzle-orm';
 import { describe, expect, it, vi } from 'vitest';
 import {

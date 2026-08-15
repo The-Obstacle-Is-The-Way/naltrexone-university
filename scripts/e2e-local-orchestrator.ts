@@ -12,6 +12,7 @@ export type E2ECommandStep = {
   command: string;
   args: string[];
   env?: Record<string, string>;
+  omitInheritedEnv?: string[];
 };
 
 export type E2ECommandInvocation = {
@@ -58,6 +59,7 @@ export function createE2ECommandPlan({
         label: 'Run Playwright E2E',
         command: 'pnpm',
         args: ['exec', 'playwright', 'test', ...playwrightArgs],
+        omitInheritedEnv: ['NO_COLOR'],
       },
     ];
   }
@@ -91,6 +93,7 @@ export function createE2ECommandPlan({
       command: 'pnpm',
       args: ['exec', 'playwright', 'test', ...playwrightArgs],
       env: targetEnv,
+      omitInheritedEnv: ['NO_COLOR'],
     },
   ];
 }
@@ -100,14 +103,19 @@ export async function runCommandPlan(
   { env = process.env, runCommand = spawnCommand }: RunCommandPlanInput = {},
 ): Promise<void> {
   for (const step of plan) {
+    const childEnv: Record<string, string | undefined> = {
+      ...env,
+      ...step.env,
+    };
+    for (const key of step.omitInheritedEnv ?? []) {
+      delete childEnv[key];
+    }
+
     await runCommand({
       label: step.label,
       command: step.command,
       args: step.args,
-      env: {
-        ...env,
-        ...step.env,
-      },
+      env: childEnv,
     });
   }
 }

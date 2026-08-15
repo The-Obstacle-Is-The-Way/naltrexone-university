@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep Stripe pagination, reconciliation, and failure-isolation job contracts together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
 import type { StripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';

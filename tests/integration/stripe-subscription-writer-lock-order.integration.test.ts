@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep subscription writer lock-order concurrency scenarios together — split tracked by DEBT-469.
 import { randomUUID } from 'node:crypto';
 import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
