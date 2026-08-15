@@ -51,7 +51,7 @@ pnpm add -D @amiceli/vitest-cucumber
 
 ## 3. Architecture: four layers, one driver
 
-```
+```text
 .feature file          the specification (business-readable, versioned)
   └─ step bindings     *.acceptance.test.ts — thin glue, no logic
        └─ driver       tests/acceptance/support/application-driver.ts — the DSL
@@ -71,7 +71,7 @@ Because the primary SUT boundary is the application layer, these tests also doub
 
 ## 4. File organization and runner wiring
 
-```
+```text
 tests/acceptance/
 ├── support/
 │   └── application-driver.ts
@@ -132,7 +132,7 @@ describeFeature(feature, ({ Scenario }) => {
       await app.startSession({ mode: 'tutor', count: 10 });
     });
     Then('the request is rejected because an incomplete session exists', () => {
-      app.expectConflict('IncompleteSessionExists');
+      app.expectRejectedWithConflict('IncompleteSessionExists');
     });
   });
   Scenario(

@@ -85,9 +85,11 @@ Work the HTML report per file; classify every survivor and `NoCoverage` mutant:
 
 1. **Missing assertion / boundary test** → write the unit test that kills it. This is TDD debt made visible; the fix is a red test, not config.
 2. **Equivalent mutant** (provably identical behavior) → suppress narrowly with a justification:
+
    ```ts
    // Stryker disable next-line EqualityOperator: `<` and `<=` equivalent here — set is deduplicated above
    ```
+
    Suppressions without a stated reason are review-rejectable.
 3. **Dead code** → delete the code, not the mutant.
 4. **Wrong-lane pin** (behavior is actually pinned by a browser/integration test) → remove the file from `mutate`, or move/duplicate the pinning test into the unit lane if it belongs there.

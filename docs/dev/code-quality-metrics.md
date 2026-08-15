@@ -4,7 +4,7 @@
 
 CRAP — **C**hange **R**isk **A**nti-**P**atterns (Alberto Savoia & Bob Evans, crap4j; originally expanded "Change Risk Analysis and Predictions" before the authors re-glossed it) — scores every function by combining the two numbers that are individually misleading but jointly decisive:
 
-```
+```text
 CRAP(f) = comp(f)² × (1 − cov(f))³ + comp(f)
 ```
 
@@ -35,7 +35,7 @@ The proposal builds a small repo-owned reporter, in the repo's established custo
 2. Discover every `*.ts`/`*.tsx` source file under `src/**`, `app/**`, `components/**`, and `lib/**` (excluded: `**/test-helpers/**`, `**/*-test-helpers.*`, `*.test.*`, `*.browser.spec.*`, `*.fixtures.*`, `*.browser.probes.*`, `*.browser.setup.*`, `db/migrations`), parse with `ts.createSourceFile`, and walk executable function-like declarations with bodies (functions, methods, constructors, arrows, and accessors).
 3. Cyclomatic complexity per function = 1 + decision points: `if`, `for`/`for-of`/`for-in`, `while`, `do`, `case` clause, `catch`, ternary, `&&`, `||`, `??`, and the logical-assignment forms `&&=`/`||=`/`??=` (`??=` is live in production adapters).
 4. Assign each coverage statement by its start position to the innermost executable function span, so a nested function's statements are not also charged to its parent. Per-function coverage = executed ÷ total assigned statements (from `statementMap`/`s`); functions absent from coverage entirely count as `cov = 0`.
-5. Emit a table sorted by CRAP descending — `path:line · function · comp · cov% · CRAP` — with `--top N` (default 25), `--json` for tooling, `--min <score>` to filter. **Exit code is always 0**: the report is observational by policy.
+5. Emit a table sorted by CRAP descending — `path:line · function · comp · cov% · CRAP` — with `--top N` (default 25), `--json` for tooling, `--min <score>` to filter. **Exit code is 0 for every threshold outcome** — the report is observational by policy — but infrastructure failures (unreadable or malformed coverage input, parser or I/O errors) still exit nonzero so an invalid report can never be recorded as a successful baseline.
 
 Reference core of the complexity walker (the implementing PR builds the real script TDD-first, with a colocated `crap-report.test.ts` over a fixture source file + fixture coverage JSON, like the 17 existing script tests):
 

@@ -138,7 +138,7 @@ The pre-push git hook only runs `pnpm typecheck && pnpm test --run`. That is NOT
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
-If `pnpm test:browser` exits at bootstrap in about one second with `no tests / 1 error`, capture the failing output and retry that lane once. A second failure blocks the push. This narrow, observed startup exception is tracked as DEBT-469 W5; it does not excuse ordinary browser-test failures.
+If `pnpm test:browser` exits at bootstrap in about one second with `no tests / 1 error`, capture the failing output and retry that lane once. A second failure blocks the push. This narrow, observed startup exception is tracked as DEBT-469 W5; it does not excuse ordinary browser-test failures. Because the `&&` chain stops at the failed lane, a passing retry has **not** run the later lanes — after the retry, still run `pnpm test:integration && pnpm build` (or rerun the full chain) before pushing.
 
 **If the local authenticated billing E2E environment is available, also run before every `git push`:**
 

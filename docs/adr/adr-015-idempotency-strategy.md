@@ -80,7 +80,7 @@ When a controller elects to use an idempotency key, adapters forward it to Strip
 
 **Amendment (2026-08-14 — [DEBT-466](../debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md)):** the default rule above and the Billing Portal example remain binding. BUG-245's subscription Checkout path is one deliberate, bounded exception: its caller UUID remains application-level idempotency while the Stripe adapter derives a deterministic provider key to collapse concurrent same-plan creates. That exception is licensed only while all of these conditions remain true:
 
-- every created or replayed subscription Checkout Session is retrieved after create so the adapter decides from live status rather than the saved create body;
+- every created or replayed subscription Checkout Session is retrieved after create so the adapter decides from live status rather than the saved create body — with one bounded, logged, test-pinned fallback: when live retrieval exhausts its retries or returns a mismatched id, the adapter proceeds on the created snapshot ([DEBT-467](../debt/debt-467-trial-setup-checkout-stale-session-url-replay.md) keeps that fallback subscription-only and requires the setup path to fail closed instead);
 - terminal live Sessions traverse a named, bounded recovery ladder;
 - trial variants remain scoped by `:trial:{days}`; and
 - changed create parameters recover through a request-fingerprint key rather than silently reusing mismatched parameters.
