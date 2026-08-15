@@ -138,6 +138,8 @@ The pre-push git hook only runs `pnpm typecheck && pnpm test --run`. That is NOT
 pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
 ```
 
+If `pnpm test:browser` exits at bootstrap in about one second with `no tests / 1 error`, capture the failing output and retry that lane once. A second failure blocks the push. This narrow, observed startup exception is tracked as DEBT-469 W5; it does not excuse ordinary browser-test failures. Because the `&&` chain stops at the failed lane, a passing retry has **not** run the later lanes — after the retry, still run `pnpm test:integration && pnpm build` (or rerun the full chain) before pushing.
+
 **If the local authenticated billing E2E environment is available, also run before every `git push`:**
 
 That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`. `DATABASE_URL` is still required in `.env.local` for normal local app development (`pnpm dev`, migrations, and seed commands), but not for the hermetic local E2E workflow unless you intentionally target an existing external database with `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`.
@@ -412,6 +414,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
 - **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
+- **Planned test-quality practices (ADR-019, tracked as DEBT-465):** Gherkin acceptance tests (`tests/acceptance/` — `docs/dev/acceptance-testing.md`), mutation testing (`docs/dev/mutation-testing.md`), CRAP report (`docs/dev/code-quality-metrics.md`), UI QA procedures (`docs/qa/` — `docs/dev/qa-procedures.md`). All metrics observational — no numeric gates without a new ADR.
 
 ### Playwright E2E Conventions
 
@@ -690,9 +693,10 @@ gh pr view <PR_NUMBER> --comments
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Full spec register (SPEC-001 through SPEC-038 archived; SPEC-016 and SPEC-017 active)
-- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018)
+- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018 accepted; ADR-019 proposed)
 - `docs/debt/index.md` — Technical debt register (active + resolved)
 - `docs/bugs/index.md` — Bug report register
+- `docs/qa/index.md` — UI QA procedure register (QA-NNN scripted UI verification; method in `docs/dev/qa-procedures.md`)
 - `docs/brainstorming/index.md` — UX audits and design explorations
 - `docs/frontend/standards.md` — Canonical frontend standards (components, tokens, accessibility, dark mode)
 - `docs/frontend/contrast-policy.md` — WCAG AA contrast targets and rules
