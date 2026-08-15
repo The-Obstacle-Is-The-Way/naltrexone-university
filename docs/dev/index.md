@@ -1,6 +1,6 @@
 # Developer Docs Index
 
-**Last Updated:** 2026-07-04
+**Last Updated:** 2026-08-13
 
 Use this index to route to the right developer runbook. Universal agent rules and required push gates remain canonical in [`AGENTS.md`](../../AGENTS.md).
 
@@ -9,6 +9,10 @@ Use this index to route to the right developer runbook. Universal agent rules an
 - [React 19 + Vitest Testing](./react-vitest-testing.md) — component/unit harness choices, jsdom directive, Browser Mode split, and coverage-as-observational policy.
 - [Testing Infrastructure](./testing-infrastructure.md) — Playwright, local E2E, authenticated E2E credentials, Docker-backed local database flow.
 - [Integration Tests](./integration-tests.md) — local Postgres setup and integration-suite expectations.
+- [Acceptance Testing (Gherkin)](./acceptance-testing.md) — `.feature` specs bound to the application layer through the fakes; vitest-cucumber harness, driver architecture, and the receipt-backed feature backlog. (ADR-019 / DEBT-465 Part 3)
+- [Mutation Testing (StrykerJS)](./mutation-testing.md) — Stryker vitest-runner setup, unit-lane scope policy, pilot targets, survivor triage, weekly CI cadence. (ADR-019 / DEBT-465 Part 2)
+- [Code Quality Metrics (CRAP)](./code-quality-metrics.md) — the `crap-report` script over merged coverage, observational interpretation policy, a-priori hotspots. (ADR-019 / DEBT-465 Part 1)
+- [UI QA Procedures](./qa-procedures.md) — method for the [`docs/qa/`](../qa/index.md) register: execution modes and agent constraints, environments, evidence, promotion to Playwright. (ADR-019 / DEBT-465 Part 4)
 
 ## Deployment And Operations
 
