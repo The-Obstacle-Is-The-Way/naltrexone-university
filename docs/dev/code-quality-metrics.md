@@ -8,7 +8,7 @@ CRAP — **C**hange **R**isk **A**nti-**P**atterns (Alberto Savoia & Bob Evans, 
 CRAP(f) = comp(f)² × (1 − cov(f))³ + comp(f)
 ```
 
-where `comp` is the function's cyclomatic complexity and `cov` its test coverage as a fraction (statement coverage within the function's span, the practical proxy for basis-path coverage). The shape of the formula is the insight:
+where `comp` is the function's cyclomatic complexity and `cov` its test coverage as a fraction (statement coverage within the function's span; the original CRAP definition uses basis-path coverage — this report substitutes statement coverage as its measurable stand-in). The shape of the formula is the insight:
 
 - **Fully covered** → the cubic term vanishes; CRAP = comp. Complexity remains the floor, so a sufficiently complex function can still cross the triage band.
 - **Uncovered** → CRAP = comp² + comp. A complexity-5 function with full tests scores **5**; a complexity-30 function with none scores **930**.
@@ -77,7 +77,7 @@ Add `"quality:crap": "tsx scripts/crap-report.ts"` to `package.json` in the impl
 ## 2. Interpretation policy
 
 - **Observational, always.** Bands for triage: CRAP ≥ 30 → look; > 100 → hotspot; > 300 → the next refactor/test wave starts here. No CI gate, no threshold in config — a gate would require an ADR amending ADR-019, per the standing coverage policy.
-- Read merged-lane by default. A repository that scores high on `--lane unit` but low merged is *lane-appropriate* (pinned by integration), not neglected — that distinction is the point of the merge flag.
+- Read merged-lane by default. A function whose **CRAP score** is high under `--lane unit` but low under the merged lane is *lane-appropriate* — its coverage lives in the browser/integration lanes — not neglected; that distinction is the point of the merge flag. (High score = high risk: score falls as coverage rises.)
 - Pure DI wiring (`lib/container/*.ts`) scores low on comp even if it is uncovered, so CRAP will not prioritize it; this repo separately pins those modules and transaction boundaries with unit and integration tests.
 - Cadence: run before any refactor wave and roughly monthly; snapshot the top-25 into DEBT-465's verification log so movement is visible. Not a per-PR step.
 

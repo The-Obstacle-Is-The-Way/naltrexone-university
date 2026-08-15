@@ -11,8 +11,10 @@ Coverage says a line was *executed*; mutation tests whether selected behavior ch
 ## 1. Tooling and compatibility
 
 ```bash
-pnpm add -D @stryker-mutator/core @stryker-mutator/vitest-runner
+pnpm add -D @stryker-mutator/core@9.6.1 @stryker-mutator/vitest-runner@9.6.1
 ```
+
+(9.6.1 is the version every compatibility receipt below was measured on; Stryker 10.0.0 has since shipped — re-verify those receipts before adopting a newer major.)
 
 - A fresh 2026-08-13 install resolved StrykerJS core and Vitest runner 9.6.1. The runner peer-accepts `vitest >= 2.0.0`; the pilot ran against the repo's installed Vitest 4.1.x.
 - The runner **enforces per-test coverage analysis internally** (`coverageAnalysis` is ignored) and by default asks Vitest for tests *related* to each mutated file (`vitest.related: true`). Related selection follows the import graph and can include far more than the colocated `foo.test.ts`. The explicit `plugins` entry below is required in this pnpm layout; wildcard auto-discovery did not load the runner.
@@ -48,7 +50,7 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
   "incremental": true,
-  "incrementalFile": ".stryker-tmp/incremental.json",
+  "incrementalFile": ".stryker-incremental.json",
   "reporters": ["clear-text", "progress", "html", "json"],
   "htmlReporter": { "fileName": "reports/mutation/index.html" },
   "thresholds": { "high": 90, "low": 75, "break": null },
@@ -58,7 +60,7 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
 
 - **`"break": null` is policy, not an oversight.** Coverage-adjacent metrics are observational in this repo (`docs/dev/react-vitest-testing.md`); `high`/`low` only color the report. Introducing a breaking gate requires an ADR amending ADR-019 with measured baselines.
 - `incremental: true` reuses unchanged mutant results, but the initial related-test coverage run still executes on every re-run.
-- Add `.stryker-tmp/` and `reports/` to `.gitignore` in the adoption PR.
+- Add `.stryker-tmp/`, `.stryker-incremental.json`, and `reports/` to `.gitignore` in the adoption PR. The incremental file lives at the repo root deliberately: Stryker cleans `tempDirName` between runs, so state stored inside `.stryker-tmp/` would be destroyed.
 - Add a script: `"test:mutation": "stryker run"`. Focused loop while fixing one module: `pnpm exec stryker run --mutate src/domain/services/grading.ts`.
 - The sandbox copy requires the `ignorePatterns` above because the committed agent-skill symlink trees fail copying on macOS. Do not use `--inPlace`; it mutates the working tree during the run.
 
@@ -117,7 +119,7 @@ Mutation runs range from tens of seconds to minutes per module — they do **not
         - run: pnpm install --frozen-lockfile
         - uses: actions/cache@<pinned-sha>
           with:
-            path: .stryker-tmp/incremental.json
+            path: .stryker-incremental.json
             key: stryker-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}
             restore-keys: stryker-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
         - run: pnpm exec stryker run

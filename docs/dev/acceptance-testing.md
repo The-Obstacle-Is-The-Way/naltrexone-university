@@ -46,8 +46,10 @@ Feature: Starting a practice session
 Rejected alternatives, for the record: `@cucumber/cucumber` (canonical, but a second runner with its own TS/ESM loader story — cost without benefit given the above); `playwright-bdd` (binds features to browser E2E — exactly the coupling this layer exists to avoid; revisit only if we later want the *same* feature files executed through a UI driver as well).
 
 ```bash
-pnpm add -D @amiceli/vitest-cucumber
+pnpm add -D @amiceli/vitest-cucumber@7.0.0
 ```
+
+(7.0.0 is current at filing; re-verify the latest release and this runbook's compatibility notes before the adoption PR.)
 
 ## 3. Architecture: four layers, one driver
 

@@ -39,7 +39,7 @@ This procedure is written to absorb Flows A–C of the Core Flow Verification se
 | 15 | Open the unanswered question from the pre-submit review, then return with **Review & Submit** | The jump opens the selected question; returning preserves its unanswered state and the answered/unanswered/marked counts |
 | 16 | Press **Submit exam**, then **Confirm submit** in the dialog | Post-exam review renders with a score banner; verdicts + inline explanations are now visible for every question |
 | 17 | Press **View Summary** | The unanswered question is recorded as **omitted and incorrect**; accuracy is computed **out of the total question count**, not out of answered — verify the math against your run |
-| 18 | ⚠ Start another exam, answer nothing, navigate back to `/app/practice`, press **Abandon session**, then **Abandon anyway** | Exam session is discarded; starter no longer shows a continue card (there is no in-session abandon control or repeat-abandon UI once the card is gone) |
+| 18 | ⚠ Set the mode toggle to **Exam**, start another session, answer nothing, navigate back to `/app/practice`, press **Abandon session**, then **Abandon anyway** | Exam session is discarded; starter no longer shows a continue card (there is no in-session abandon control or repeat-abandon UI once the card is gone) |
 
 ## Steps — Quick practice
 

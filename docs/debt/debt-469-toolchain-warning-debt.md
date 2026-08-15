@@ -3,13 +3,13 @@
 **Status:** Open
 **Priority:** P3
 **Date:** 2026-08-14
-**Source:** Owner-directed estate investigation (2026-08-14): every quality-gate lane was executed on this branch with output captured and every warning line root-caused — `pnpm typecheck`, `pnpm lint`, `pnpm test:coverage` (436 files / 3,853 tests), `pnpm test:browser:coverage` (64 / 398), `pnpm db:test:up && pnpm test:integration:coverage` (38+1 skipped / 244+2 skipped), `pnpm build` (exit 0), plus the 2026-08-14 full-gate E2E log. A config experiment (restore-then-revert on `biome.json`) verified the headline fix before filing.
+**Source:** Owner-directed estate investigation (2026-08-14): every quality-gate lane was executed on this branch with output captured and every warning line classified — all root-caused except W5, which remains an observed-but-unroot-caused startup flake carrying an observation duty — `pnpm typecheck`, `pnpm lint`, `pnpm test:coverage` (436 files / 3,853 tests), `pnpm test:browser:coverage` (64 / 398), `pnpm db:test:up && pnpm test:integration:coverage` (38+1 skipped / 244+2 skipped), `pnpm build` (exit 0), plus the 2026-08-14 full-gate E2E log. A config experiment (restore-then-revert on `biome.json`) verified the headline fix before filing.
 
 ---
 
 ## Description
 
-The repository's standing practice has been to note warnings as "pre-existing" in gate summaries and move on. This item replaces that practice with a complete inventory, a root cause for each warning, and a fix-or-justify verdict — then installs the ratchets that keep the count of **actionable** warnings at zero. Scope, so the goal and the checklist can both be true: W1–W2 are eliminated, W3/W4 are recorded non-actionable runner notices outside any gate, and W5/W6 remain narrowly documented exceptions with their own owners. The estate is genuinely close: `pnpm typecheck` and `pnpm build` emit **zero** warnings, and the entire suppression surface is 9 `biome-ignore` directives (7 files) plus 14 `@ts-expect-error` uses — all but one of them reasoned and behavior-verifying.
+The repository's standing practice has been to note warnings as "pre-existing" in gate summaries and move on. This item replaces that practice with a complete inventory, a root cause for each warning, and a fix-or-justify verdict — then installs the ratchets that keep the count of **actionable** warnings at zero. Scope, so the goal and the checklist can both be true: W1, W2, and W7 are eliminated at the root; W3/W4 are non-actionable runner notices that still appear in lane output but gate nothing; W5 and W6 remain narrowly documented exceptions with their own owners. The estate is genuinely close: `pnpm typecheck` and `pnpm build` emit **zero** warnings, and the entire suppression surface is 9 `biome-ignore` directives (7 files) plus 14 `@ts-expect-error` uses — all but one of them reasoned and behavior-verifying.
 
 ### Complete warning inventory (every lane, verbatim)
 

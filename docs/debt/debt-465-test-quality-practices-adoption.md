@@ -39,7 +39,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 ### Part 4 — UI QA register activation
 
-`docs/dev/qa-procedures.md` + `docs/qa/index.md`. Execute QA-001 and QA-002 twice each (any qualified mode), promote them Draft → Active with evidence in `docs/qa/assets/`, then file the backlog procedures (sign-up/first-run, error/404/loading, mobile sweep, a11y sweep, account-deletion-with-disposable-account, …) as they're needed by real PRs. Wire the per-PR "touched-surface procedure + screenshots" habit into review expectations.
+`docs/dev/qa-procedures.md` + `docs/qa/index.md`. Execute QA-001 and QA-002 twice each — complete end-to-end runs, in modes able to perform every step including the `⚠ human/PW` ones, per `docs/dev/qa-procedures.md`'s two-evidenced-runs gate — promote them Draft → Active with evidence in `docs/qa/assets/`, then file the backlog procedures (sign-up/first-run, error/404/loading, mobile sweep, a11y sweep, account-deletion-with-disposable-account, …) as they're needed by real PRs. Wire the per-PR "touched-surface procedure + screenshots" habit into review expectations.
 
 ## Verification
 

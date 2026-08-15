@@ -49,7 +49,7 @@ Known environment quirk (not a bug): in Clerk development mode, the redirect bac
 | 15 | Press **Manage in Stripe** | Stripe Billing Portal (test mode) opens |
 | 16 | ⚠ In the portal, schedule **cancel at period end**, then return | Back on `/app/billing` (portal `return_url`); after the `customer.subscription.updated` webhook is delivered, refresh and see the cancellation banner; **app access still works** until the recorded period end |
 | 17 | ⚠ Re-enter the portal and undo the cancellation | After the update webhook is delivered, the banner clears on return/refresh |
-| 18 | ⚠ Optional deep variant | Drive a subscription to `past_due` with a Stripe test clock + failing card: while its recorded period end is still in the future, the app shell shows the `PastDueBanner` ("Your payment failed…") and access continues; at or after period end, the same status is not entitled |
+| 18 | ⚠ Optional deep variant | Drive a subscription to `past_due` with a Stripe test clock + failing card (recipe: attach the customer to a test clock **before** creating the subscription; subscribe with test card `4000 0000 0000 0341` — it attaches but its charges fail; advance the clock past the period end and wait for it to leave the advancing state; poll the subscription until `status = past_due`; allow webhook delivery to sync the app before checking): while its recorded period end is still in the future, the app shell shows the `PastDueBanner` ("Your payment failed…") and access continues; at or after period end, the same status is not entitled |
 
 ## Visual checks
 
