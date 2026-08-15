@@ -39,7 +39,7 @@ Also flow-adjacent, smaller: `createTrialPaymentMethodSetupSession` is never dri
 **UI (net genuine gaps after false-alarm elimination):**
 
 - Error-boundary **behavior**: all 12 boundaries are render-asserted, but no boundary test mounts a throwing child, clicks that boundary's "Try again" control to assert `reset`, or asserts the digest-logging effects in `components/error-boundary-page.tsx` — the recovery affordance is unexercised.
-- `app/(app)/app/questions/[slug]/question-page-client.tsx` (557) — largest interactive component; its hooks are browser-tested but the DOM-event→hook wiring (6 `onClick`, dialog `onOpenChange`; no `onSubmit` prop exists) is static-only.
+- `app/(app)/app/questions/[slug]/question-page-client.tsx` (557) — largest interactive component; its hooks are browser-tested but the DOM-event→hook wiring (6 `onClick`, dialog `onOpenChange`; the `onSubmit` callback prop is fired through `onClick` at line 423 — no form-level `onSubmit` handler exists) is static-only.
 - `app/(app)/app/bookmarks/bookmarks-errors.ts` — page tests assert the error-code→copy mapping, but one fallback branch remains uncovered (88.9% branches).
 - `app/(app)/app/practice/hooks/use-practice-available-questions-count.ts` (53) — browser coverage reaches every statement and function, but only one side of its binary fallback branch.
 - Small: `app/(app)/app/practice/quick/loading.tsx` (absent from the `loading-pages` aggregator — one-line fix), `sign-up-page-client.tsx`'s client-state branches (57.1% statements / 50% branches), and `billing-client.tsx`'s `useFormStatus` pending branch.
