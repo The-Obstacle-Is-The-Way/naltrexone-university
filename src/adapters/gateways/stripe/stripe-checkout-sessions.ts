@@ -22,7 +22,19 @@ import { callStripeWithRetry } from './stripe-retry';
 
 export const SUBSCRIPTION_LIST_LIMIT = 10;
 export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
-export const CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT = 3;
+// WHY 10: each retained-key rung is cached create + live retrieve. The 2026-08-14
+// test-mode probe measured 120.5 ms and 99.2 ms medians (5 samples each).
+// At the repository retry envelope, a third-attempt success for both calls is
+// 3×120.5 + 300 + 3×99.2 + 300 = 1,259.1 ms/rung. Primary + 10 recoveries
+// budgets 13.850 s, below half the pricing route's 30 s maxDuration; 11 would
+// budget 15.109 s. This is a healthy-service planning cap, not a request timeout.
+export const SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT = 10;
+// This bounds replacement of missing-URL or otherwise defective setup create
+// responses; it is not replay-chain capacity. Keep the existing fail-closed
+// ceiling of 3 until DEBT-467 re-decides it after live retrieval changes its meaning.
+export const TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT = 3;
+
+const SUBSCRIPTION_CHECKOUT_REPLAY_ERROR_LOG_DEPTH = 5;
 
 const BLOCKING_SUBSCRIPTION_STATUSES = new Set<StripeSubscriptionStatus>([
   'active',
@@ -181,7 +193,7 @@ export async function createStripeTrialPaymentMethodSetupSession({
     !session.url || isSessionInactive(session, Date.now);
     attempt += 1
   ) {
-    if (attempt > CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT) {
+    if (attempt > TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT) {
       throw new ApplicationError(
         'STRIPE_ERROR',
         'Stripe Checkout Session is expired or inactive',
@@ -930,7 +942,7 @@ export async function createStripeCheckoutSession({
   });
 
   for (let attempt = 1; isSessionInactive(session, nowMs); attempt += 1) {
-    if (attempt > CHECKOUT_SESSION_RECOVERY_ATTEMPT_LIMIT) {
+    if (attempt > SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT) {
       throw new ApplicationError(
         'STRIPE_ERROR',
         'Stripe Checkout Session is expired or inactive',
@@ -941,20 +953,24 @@ export async function createStripeCheckoutSession({
       input,
       session.id,
     );
-    logger.warn(
-      {
-        userId: input.userId,
-        externalCustomerId: input.externalCustomerId,
-        plan: input.plan,
-        primaryIdempotencyKey,
-        recoveryIdempotencyKey,
-        recoveryAttempt: attempt,
-        sessionId: session.id,
-        status: session.status ?? null,
-        expiresAt: session.expires_at ?? null,
-      },
-      'Retrying checkout session creation with recovery idempotency key',
-    );
+    const recoveryLogContext = {
+      userId: input.userId,
+      externalCustomerId: input.externalCustomerId,
+      plan: input.plan,
+      primaryIdempotencyKey,
+      recoveryIdempotencyKey,
+      recoveryAttempt: attempt,
+      sessionId: session.id,
+      status: session.status ?? null,
+      expiresAt: session.expires_at ?? null,
+    };
+    const recoveryLogMessage =
+      'Retrying checkout session creation with recovery idempotency key';
+    if (attempt >= SUBSCRIPTION_CHECKOUT_REPLAY_ERROR_LOG_DEPTH) {
+      logger.error(recoveryLogContext, recoveryLogMessage);
+    } else {
+      logger.warn(recoveryLogContext, recoveryLogMessage);
+    }
 
     session = await retrieveLiveCheckoutSessionAfterCreate({
       stripe,
