@@ -15,7 +15,7 @@ The suite ADR-003 built is broad (556 test files, ~151k lines, four lanes) but n
 - `src/domain/services/grading.ts` — the product's core correctness function — has 5 tests; `subscription-write-guard.ts`, which decides whether a paying customer's stored subscription may be overwritten, has 21 table-driven cases nothing has ever audited for bite. No tool measures whether any of those tests would catch a flipped boundary.
 - `src/adapters/repositories/drizzle-renewal-notice-delivery-repository.ts` (legally-required notice delivery state machine, 399 loc) has zero direct repository unit tests; its behavior is covered in integration, but no ranked report surfaces such spots.
 - Business rules exist only as code + unit tests; there is no UI-independent executable specification, so nothing structurally stops a rule from migrating into a component during agent iteration.
-- A long list of UI surfaces has zero UI-level automation — enumerated in `docs/dev/qa-procedures.md` (rendered auth forms, error boundaries, billing-portal round-trip, the `/app/*` entitlement redirect gate, any mobile viewport) — and the operator checklist's "smoke-tested" item has no written procedure behind it.
+- A long list of UI surfaces has route-level automation gaps — enumerated in `docs/dev/qa-procedures.md` (rendered Clerk auth forms, forced route-boundary states, billing-portal round-trip, the `/app/*` entitlement redirect gate, an app-wide mobile sweep) — and the operator checklist's "smoke-tested" item has no Active procedure linked behind it.
 
 ## Impact
 

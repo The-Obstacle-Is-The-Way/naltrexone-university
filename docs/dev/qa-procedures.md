@@ -1,6 +1,6 @@
 # UI QA Procedures
 
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-08-14
 
 Scripted, repeatable test procedures that exercise the system **at the UI** — the third leg of the test triad this repo is adopting (see `docs/adr/adr-019-test-quality-practices.md`):
 
@@ -17,11 +17,11 @@ A QA procedure is a numbered, versioned markdown script (`docs/qa/qa-NNN-slug.md
 The Playwright suite (`tests/e2e/`, 17 specs) is deterministic regression coverage for critical journeys. QA procedures cover what it structurally leaves out:
 
 - **Judgment-bearing checks** — "does this layout look broken?", copy tone, visual hierarchy, dark-mode token drift. Assertions can't encode taste; the design docs in `docs/frontend/` + a pair of eyes (or a vision-capable agent pass over screenshots) can.
-- **Surfaces with zero UI-level automation.** The 2026-08-13 audit found these uncovered: rendered `/sign-in` and `/sign-up` forms (E2E signs in programmatically via `@clerk/testing`, bypassing the form), rendered `/privacy`–`/terms` pages (only HTTP substring checks exist), every `error.tsx`/`not-found.tsx`/`loading.tsx` boundary, billing-portal round-trip, paid (card) checkout + `?checkout=cancel|error|rate_limited` banners, the entitlement redirect gate (`/app/*` → `/pricing?reason=…`), `PastDueBanner`, account deletion via the Clerk `<UserButton>`, practice-starter filter chips, quick-practice status filter, history tab/filter/pagination controls, feedback rating + report dialog end-to-end, exam-timer expiry at the UI, and **any mobile viewport at all** (Playwright runs Desktop Chrome only).
+- **Surfaces without route-level UI automation.** The 2026-08-14 audit found these gaps: rendered Clerk `/sign-in` and `/sign-up` forms (E2E proves the pricing-to-sign-up handoff but signs in programmatically via `@clerk/testing`); real-browser `/privacy`–`/terms` routes (rich unit-render tests and E2E HTTP checks exist); forced route-level `error.tsx`/`not-found.tsx`/`loading.tsx` states (the components have unit-render coverage, except the quick-practice error and loading files lack direct render tests); billing-portal round-trip; paid (card) checkout + real-browser `?checkout=cancel|error|rate_limited` banners; the route-level entitlement redirect gate (`/app/*` → `/pricing?reason=…`, unit-covered); a real-browser `PastDueBanner` state (unit-covered); account deletion via the rendered Clerk `<UserButton>`; nondefault practice-starter filters at the route level (browser-component-covered); the quick-practice status switch at the route level (browser-component-covered); history tab, non-Source filters, and pagination at the route level (the Source filter and session disclosure are browser-component-covered); feedback rating + report dialog end-to-end; exam-timer expiry at the route level (browser hook/page-model and integration coverage exist); and an **app-wide mobile sweep** (one 375×667 practice E2E and one 375×667 browser-component case exist, while the Playwright project remains Desktop Chrome).
 - **Deployed-target verification.** Playwright boots its own local server (`reuseExistingServer: false`); it does not point at Vercel previews or production. QA procedures do.
 - **Pre-automation staging.** A flow becomes a procedure first; once its steps are stable and mechanizable, it is *promoted* to a Playwright spec and the procedure records the handoff (see Lifecycle).
 
-The register absorbs the manual "Core Flow Verification" scripts previously embedded in `docs/dev/stabilization-checklist.md` and gives the unwritten smoke-test demanded by `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form.
+Once QA-001 is Active, it absorbs Flows A–C of the manual "Core Flow Verification" scripts in `docs/dev/stabilization-checklist.md`; Flow D remains there. QA-002 supplies the draft procedure that can give `docs/dev/deployment-environments.md` → "Operator Verification Checklist" item 8 ("Auth and payment flows have been smoke-tested on the target environment after changes") a concrete, executable form once DEBT-465 Part 4 activates it and links the checklist to the register.
 
 ---
 
@@ -36,11 +36,11 @@ The register absorbs the manual "Core Flow Verification" scripts previously embe
 Every procedure uses this skeleton (copy from `docs/qa/index.md` → Template):
 
 - **Header block:** ID/title, `Status`, `Surfaces` (routes), `Preconditions` (environment, auth, seed data), `Execution modes` (which of the four modes below can run it fully vs. partially), `Estimated time`, `Promotion gate` (runs pre-promotion when `yes`), `Promoted to` (E2E spec path once promoted, else `—`).
-- **Steps table:** `| # | Action | Expected |` — one observable action per row, one verifiable expectation per row. Write expectations against stable markers: visible text, `data-testid`, URL/query params, `aria-*` — the same seams the test-quality rules mandate.
+- **Steps table:** `| # | Action | Expected |` — one operator checkpoint per row, with explicit actions and verifiable expectations. Write expectations against stable markers: visible text, `data-testid`, URL/query params, `aria-*` — the same seams the test-quality rules mandate.
 - **Visual checks:** an explicit list of judgment checks with the governing policy doc cited per line (`docs/frontend/standards.md`, `pattern-registry.md`, `contrast-policy.md`, `typography-policy.md`, `bookmark-surface-policy.md`). The app is forced dark (DEBT-421) — flag any light-mode leakage immediately.
 - **Viewports:** default to the established audit pair — **1600×1000 desktop** and **390×844 mobile** — unless the procedure states otherwise.
 - **Evidence:** which steps require screenshots, and where they land.
-- **On failure:** file a `BUG-NNN` in `docs/bugs/index.md` (behavioral defect) or flag against the design docs (visual drift). Never patch-and-forget: the register row links the finding.
+- **On failure:** file a `BUG-NNN` in `docs/bugs/index.md` (behavioral defect) or flag against the design docs (visual drift). Never patch-and-forget: the procedure links the finding.
 
 ## Execution modes
 
@@ -75,7 +75,7 @@ Rules of engagement (restating the standing mandates):
 
 ## Lifecycle and promotion
 
-`Draft` → `Active` → `Superseded` (promoted or retired). A procedure is promotable when every step is mechanizable (no judgment-only expectations) and it has survived at least two Active runs without step edits. Promotion = write the Playwright spec in `tests/e2e/`, set the procedure's `Promoted to:` field, and keep any judgment-only visual checks behind as a slimmed procedure. The register row records both.
+`Draft` → `Active` → `Superseded` (promoted or retired). A Draft becomes Active after two evidenced end-to-end runs without step edits. Its behavior flow is promotable when those behavior steps are mechanizable and it has then survived at least two Active runs without step edits; judgment-only visual checks remain manual. Promotion = write the Playwright spec in `tests/e2e/`, set the procedure's `Promoted to:` field, and keep the judgment-only visual checks behind as a slimmed procedure. The register row records both.
 
 ## Writing rules
 
