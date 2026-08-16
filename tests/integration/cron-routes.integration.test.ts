@@ -1,12 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
-import type Stripe from 'stripe';
+import Stripe from 'stripe';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { createReconcileStripeSubscriptionsCronHandler } from '@/app/api/cron/reconcile-stripe-subscriptions/route';
 import { createSendRenewalNoticesCronHandler } from '@/app/api/cron/send-renewal-notices/route';
 import * as schema from '@/db/schema';
 import { createContainer } from '@/lib/container';
 import { env } from '@/lib/env';
+import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
 import { FakeTransactionalEmailGateway } from '@/src/application/test-helpers/fakes';
 import { DAY_MS } from '@/src/domain/services';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
@@ -53,6 +54,73 @@ type ReconciliationRow = {
   updatedAt: Date;
   stripeCustomerId: string | null;
 };
+
+class ReconciliationStripeResponse extends Stripe.HttpClientResponse {
+  private readonly rawResponse: Record<string, unknown> = {};
+
+  constructor(private readonly body: object) {
+    super(200, { 'request-id': 'req_debt468_integration' });
+  }
+
+  override getRawResponse(): Record<string, unknown> {
+    return this.rawResponse;
+  }
+
+  override toStream(): never {
+    throw new Error('Unexpected streaming Stripe response');
+  }
+
+  override async toJSON(): Promise<object> {
+    return this.body;
+  }
+}
+
+class ReconciliationStripeHttpClient extends Stripe.HttpClient {
+  constructor(
+    private readonly subscriptions: ReadonlyMap<
+      string,
+      StripeSubscriptionFixture
+    >,
+  ) {
+    super();
+  }
+
+  override getClientName(): string {
+    return 'debt468-integration';
+  }
+
+  override async makeRequest(
+    _host: string,
+    _port: string,
+    path: string,
+    method: string,
+  ): Promise<Stripe.HttpClientResponse> {
+    if (method !== 'GET') {
+      throw new Error(`Unexpected Stripe request: ${method} ${path}`);
+    }
+
+    const retrieveMatch = /^\/v1\/subscriptions\/([^?]+)$/.exec(path);
+    if (retrieveMatch?.[1]) {
+      const subscriptionId = decodeURIComponent(retrieveMatch[1]);
+      const subscription = this.subscriptions.get(subscriptionId);
+      if (!subscription) {
+        throw new Error(`Unexpected subscription retrieval: ${subscriptionId}`);
+      }
+      return new ReconciliationStripeResponse(subscription);
+    }
+
+    if (path.startsWith('/v1/subscriptions?')) {
+      return new ReconciliationStripeResponse({
+        object: 'list',
+        data: [],
+        has_more: false,
+        url: '/v1/subscriptions',
+      });
+    }
+
+    throw new Error(`Unexpected Stripe request: ${method} ${path}`);
+  }
+}
 
 function createTestEnv() {
   return {
@@ -111,21 +179,11 @@ function createReconciliationStripe(input: {
     }),
   );
 
-  return {
-    subscriptions: {
-      retrieve: async (subscriptionId: string) => {
-        const subscription = externalSubscriptions.get(subscriptionId);
-        if (!subscription) {
-          throw new Error(
-            `Unexpected subscription retrieval: ${subscriptionId}`,
-          );
-        }
-        return subscription;
-      },
-      list: async () => ({ data: [] }),
-      cancel: async (subscriptionId: string) => ({ id: subscriptionId }),
-    },
-  } as unknown as Stripe;
+  return new Stripe('sk_test_debt468_cron_integration', {
+    apiVersion: STRIPE_API_VERSION,
+    maxNetworkRetries: 0,
+    httpClient: new ReconciliationStripeHttpClient(externalSubscriptions),
+  });
 }
 
 function authorizedRequest(url: string): Request {
@@ -229,7 +287,9 @@ describe('reconcile Stripe subscriptions cron route', () => {
       scanned: number;
       updated: number;
       failed: number;
+      failures: Array<{ stripeSubscriptionId: string; error: string }>;
     };
+    expect(result.failures).toEqual([]);
     expect(result.failed).toBe(0);
     expect(result.scanned).toBeGreaterThanOrEqual(1);
     expect(result.updated).toBe(result.scanned);

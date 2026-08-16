@@ -134,6 +134,14 @@ export async function restoreE2EUserPaidSubscription(): Promise<void> {
   await seedTestSubscription();
 }
 
+async function closeE2ESql(sql: ReturnType<typeof postgres>): Promise<void> {
+  try {
+    await sql.end({ timeout: 5 });
+  } catch {
+    // Ignore cleanup errors so they cannot mask the primary E2E outcome.
+  }
+}
+
 export async function removeE2EUserEntitlement(): Promise<E2EEntitlementSnapshot> {
   const sql = postgres(requireE2EEnv('DATABASE_URL'), { max: 1 });
   const email = requireE2EEnv('E2E_CLERK_USER_USERNAME');
@@ -164,7 +172,7 @@ export async function removeE2EUserEntitlement(): Promise<E2EEntitlementSnapshot
     }
     return snapshot;
   } finally {
-    await sql.end({ timeout: 5 });
+    await closeE2ESql(sql);
   }
 }
 
@@ -209,7 +217,7 @@ export async function restoreE2EUserEntitlement(
         updated_at = EXCLUDED.updated_at
     `;
   } finally {
-    await sql.end({ timeout: 5 });
+    await closeE2ESql(sql);
   }
 }
 

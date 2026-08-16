@@ -15,6 +15,7 @@ import {
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 const clerkEventIds: string[] = [];
+const clerkUserIds: string[] = [];
 const stripe = new Stripe(requireTestSecret('STRIPE_SECRET_KEY'));
 
 function requireTestSecret(name: string): string {
@@ -145,7 +146,13 @@ afterEach(async () => {
       .delete(schema.clerkEvents)
       .where(inArray(schema.clerkEvents.id, clerkEventIds));
   }
+  if (clerkUserIds.length > 0) {
+    await db
+      .delete(schema.users)
+      .where(inArray(schema.users.clerkUserId, clerkUserIds));
+  }
   clerkEventIds.length = 0;
+  clerkUserIds.length = 0;
   await cleanupAfterEach(db, cleanup);
 });
 
@@ -189,6 +196,7 @@ describe('Stripe webhook signature ingress', () => {
     'rejects a %s without persisting the event',
     async (_label, kind) => {
       const eventId = createProviderId('evt');
+      cleanup.stripeEventIds.push(eventId);
       const originalPayload = createStripePayload(eventId);
       const payload =
         kind === 'tampered'
@@ -228,6 +236,7 @@ describe('Clerk webhook signature ingress', () => {
     const email = `${randomUUID()}@example.com`;
     const payload = createClerkPayload({ clerkUserId, email });
     clerkEventIds.push(eventId);
+    clerkUserIds.push(clerkUserId);
 
     const response = await postClerkWebhook(
       createClerkRequest({
@@ -244,7 +253,6 @@ describe('Clerk webhook signature ingress', () => {
     });
     expect(user).toMatchObject({ clerkUserId, email });
     if (!user) throw new Error('Expected signed Clerk event to create user');
-    cleanup.userIds.push(user.id);
     await expect(
       db.query.clerkEvents.findFirst({
         where: eq(schema.clerkEvents.id, eventId),
@@ -266,6 +274,8 @@ describe('Clerk webhook signature ingress', () => {
     async (_label, kind) => {
       const eventId = createProviderId('msg');
       const clerkUserId = createProviderId('user');
+      clerkEventIds.push(eventId);
+      clerkUserIds.push(clerkUserId);
       const originalPayload = createClerkPayload({
         clerkUserId,
         email: `${randomUUID()}@example.com`,

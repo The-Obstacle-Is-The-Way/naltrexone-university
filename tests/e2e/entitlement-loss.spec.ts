@@ -27,6 +27,7 @@ async function enableStartSession(page: Page): Promise<void> {
 }
 
 test.describe('entitlement loss', () => {
+  // Clerk sign-in, an in-flight Server Action, and the redirect assertion span multiple pages.
   test.setTimeout(120_000);
   test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
