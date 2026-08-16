@@ -23,6 +23,7 @@ const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 const renewalSubscriptionIds: string[] = [];
 const subscriptionsToRestore: ReconciliationRow[] = [];
+const stripeCustomerUserIdsToDelete: string[] = [];
 const CRON_SECRET = 'debt468-cron-integration-only';
 const MONTHLY_PRICE_ID = 'price_debt468_monthly';
 const ANNUAL_PRICE_ID = 'price_debt468_annual';
@@ -143,14 +144,6 @@ function createReconciliationStripe(input: {
   if (!baseItem) throw new Error('Stripe fixture is missing its item');
   const externalSubscriptions = new Map(
     input.rows.map((row) => {
-      if (
-        row.stripeSubscriptionId !== input.targetSubscriptionId &&
-        !row.stripeCustomerId
-      ) {
-        throw new Error(
-          'Pre-existing integration subscription is missing its Stripe customer mapping',
-        );
-      }
       const isTarget = row.stripeSubscriptionId === input.targetSubscriptionId;
       const fixture: StripeSubscriptionFixture = {
         ...base,
@@ -207,6 +200,14 @@ afterEach(async () => {
       .where(eq(schema.stripeSubscriptions.id, subscription.id));
   }
   subscriptionsToRestore.length = 0;
+  if (stripeCustomerUserIdsToDelete.length > 0) {
+    await db
+      .delete(schema.stripeCustomers)
+      .where(
+        inArray(schema.stripeCustomers.userId, stripeCustomerUserIdsToDelete),
+      );
+  }
+  stripeCustomerUserIdsToDelete.length = 0;
   if (renewalSubscriptionIds.length > 0) {
     await db
       .delete(schema.renewalNoticeDeliveries)
@@ -259,6 +260,11 @@ describe('reconcile Stripe subscriptions cron route', () => {
       ...reconciliationRows.filter(
         (row) => row.stripeSubscriptionId !== externalSubscriptionId,
       ),
+    );
+    stripeCustomerUserIdsToDelete.push(
+      ...reconciliationRows
+        .filter((row) => row.stripeCustomerId === null)
+        .map((row) => row.userId),
     );
     const stripe = createReconciliationStripe({
       rows: reconciliationRows,
