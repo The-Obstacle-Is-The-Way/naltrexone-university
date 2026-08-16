@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import packageJson from '../package.json';
 import {
   createE2ECommandPlan,
+  type E2ECommandInvocation,
   resolveLocalE2EDatabaseUrl,
   runCommandPlan,
   shouldUseHermeticLocalE2E,
@@ -109,6 +110,7 @@ describe('createE2ECommandPlan', () => {
         '--project=chromium',
       ],
       env: targetEnv,
+      omitInheritedEnv: ['NO_COLOR'],
     });
     expect(JSON.stringify(plan)).not.toContain('kill -9');
     expect(JSON.stringify(plan)).not.toContain('lsof -ti:3000');
@@ -129,6 +131,7 @@ describe('createE2ECommandPlan', () => {
         label: 'Run Playwright E2E',
         command: 'pnpm',
         args: ['exec', 'playwright', 'test', 'tests/e2e/practice.spec.ts'],
+        omitInheritedEnv: ['NO_COLOR'],
       },
     ]);
   });
@@ -147,12 +150,45 @@ describe('createE2ECommandPlan', () => {
         label: 'Run Playwright E2E',
         command: 'pnpm',
         args: ['exec', 'playwright', 'test'],
+        omitInheritedEnv: ['NO_COLOR'],
       },
     ]);
   });
 });
 
 describe('runCommandPlan', () => {
+  it('omits inherited NO_COLOR only from the Playwright child environment', async () => {
+    const invocations: E2ECommandInvocation[] = [];
+    const runCommand = vi.fn(async (invocation: E2ECommandInvocation) => {
+      invocations.push(invocation);
+    });
+    const baseEnv = {
+      NO_COLOR: '1',
+      CLERK_SECRET_KEY: 'sk_test_clerk',
+    };
+    const plan = createE2ECommandPlan({
+      cwd: '/repo/a',
+      env: {
+        LOCAL_TEST_INSTANCE: 'bug245',
+        DB_TEST_PORT: '5544',
+        LOCAL_TEST_APP_PORT: '3301',
+      },
+      playwrightArgs: ['tests/e2e/smoke.spec.ts'],
+    });
+
+    await runCommandPlan(plan, {
+      env: baseEnv,
+      runCommand,
+    });
+
+    expect(invocations).toHaveLength(4);
+    for (const invocation of invocations.slice(0, 3)) {
+      expect(invocation?.env).toMatchObject({ NO_COLOR: '1' });
+    }
+    expect(invocations[3]?.args).toContain('playwright');
+    expect(invocations[3]?.env).not.toHaveProperty('NO_COLOR');
+  });
+
   it('executes steps in order and merges per-step environment overrides', async () => {
     const runCommand = vi.fn(async () => {});
     const baseEnv = {
@@ -264,6 +300,22 @@ describe('runLocalE2E', () => {
 });
 
 describe('package scripts', () => {
+  it('loads browser tests through the native-ESM config', () => {
+    expect(packageJson.scripts['test:browser']).toBe(
+      'vitest run --config vitest.browser.config.mts',
+    );
+    expect(packageJson.scripts['test:browser:coverage']).toBe(
+      'vitest run --config vitest.browser.config.mts --coverage',
+    );
+  });
+
+  it('fails both lint entry points when Biome reports a warning', () => {
+    expect(packageJson.scripts.lint).toBe('biome check . --error-on-warnings');
+    expect(packageJson.scripts['lint:ci']).toBe(
+      'biome ci . --error-on-warnings',
+    );
+  });
+
   it('routes pnpm test:e2e through the local hermetic orchestrator', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
       'tsx scripts/run-local-e2e.ts',

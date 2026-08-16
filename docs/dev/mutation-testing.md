@@ -23,7 +23,7 @@ pnpm add -D @stryker-mutator/core@9.6.1 @stryker-mutator/vitest-runner@9.6.1
 
 ## 2. Scope policy — mutate only what the unit lane pins
 
-Stryker runs the **unit config** (`vitest.config.ts`). Therefore only files whose behavior is pinned by unit-lane tests (including the planned acceptance suite from `docs/dev/acceptance-testing.md`, which will run in the same lane and add business-rule kills) produce meaningful scores. A file covered only by browser or integration tests will report surviving or `NoCoverage` mutants that mean "tested in the wrong lane for this pilot," not "badly tested" — keep such files out of `mutate` until that changes.
+Stryker runs the **unit config** (`vitest.config.mts`). Therefore only files whose behavior is pinned by unit-lane tests (including the planned acceptance suite from `docs/dev/acceptance-testing.md`, which will run in the same lane and add business-rule kills) produce meaningful scores. A file covered only by browser or integration tests will report surviving or `NoCoverage` mutants that mean "tested in the wrong lane for this pilot," not "badly tested" — keep such files out of `mutate` until that changes.
 
 Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/application/ports/**` (port contracts), barrels.
 
@@ -36,7 +36,7 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "plugins": ["@stryker-mutator/vitest-runner"],
   "testRunner": "vitest",
-  "vitest": { "configFile": "vitest.config.ts" },
+  "vitest": { "configFile": "vitest.config.mts" },
   "mutate": [
     "src/domain/services/subscription-write-guard.ts",
     "src/domain/services/entitlement.ts",

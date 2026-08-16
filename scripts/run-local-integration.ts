@@ -42,7 +42,7 @@ export function createLocalIntegrationCommandPlan({
       'vitest',
       'run',
       '--config',
-      'vitest.integration.config.ts',
+      'vitest.integration.config.mts',
       ...vitestArgs,
     ],
   };

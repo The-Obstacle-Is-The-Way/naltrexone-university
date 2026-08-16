@@ -396,7 +396,7 @@ As a user, I can load the site, sign up/sign in, and access the deployed app so 
 * `src/adapters/gateways/clerk-auth-gateway.ts` — AuthGateway implementation
 * `biome.json` (Biome linting + formatting config)
 * `.github/workflows/ci.yml`
-* `playwright.config.ts`, `vitest.config.ts`
+* `playwright.config.ts`, `vitest.config.mts`
 
 **Database Migrations needed:**
 

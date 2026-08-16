@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep subscription, Checkout, portal, and retry adapter contracts together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
 import type {
   CheckoutSessionCreateParams,

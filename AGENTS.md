@@ -43,7 +43,7 @@ describe('MyComponent', () => {
 - Keep dynamic imports, but load them in `beforeAll` (or `beforeEach` only when mock/module-reset order requires it)
 - Do **not** import heavy modules inside individual `it()` blocks
 - Do **not** add per-test timeout overrides (`it(..., 10_000)` or `{ timeout: 15_000 }`)
-- Global Vitest policy is configured in `vitest.config.ts`, `vitest.browser.config.ts`, and `vitest.integration.config.ts`
+- Global Vitest policy is configured in `vitest.config.mts`, `vitest.browser.config.mts`, and `vitest.integration.config.mts`
 
 ### DO NOT USE for jsdom component tests:
 

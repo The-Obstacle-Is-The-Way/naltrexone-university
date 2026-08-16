@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep previous-attempt visibility and corruption cases together — split tracked by DEBT-469.
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import {

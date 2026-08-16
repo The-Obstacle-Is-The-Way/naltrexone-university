@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep fake-repository parity across attempt read and write behavior together — split tracked by DEBT-469.
 import { describe, expect, it } from 'vitest';
 import { createQuestion, createTag } from '@/src/domain/test-helpers';
 import {

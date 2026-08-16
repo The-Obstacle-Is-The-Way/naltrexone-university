@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep E2E reset ordering, ownership guards, and diagnostics contracts together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
 import {
   E2EUserStateResetError,

@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep timing, draft-save, and navigation action contracts together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
 import {
   buildTimeSpentSeconds,

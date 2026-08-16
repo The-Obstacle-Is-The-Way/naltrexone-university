@@ -23,7 +23,7 @@ Standing constraint honored throughout: **coverage numbers are observational in 
 Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one part each):
 
 1. **CRAP analysis** — a repo-built `scripts/crap-report.ts` ranks every function by `comp² × (1 − cov)³ + comp` using existing coverage output and the TypeScript compiler API. Ranked triage only. Runbook: `docs/dev/code-quality-metrics.md`.
-2. **Mutation testing** — StrykerJS with the Vitest runner, scoped to the unit lane (`vitest.config.ts`) and to pure domain/application modules, incremental mode, weekly scheduled CI + on-demand local runs. Runbook: `docs/dev/mutation-testing.md`.
+2. **Mutation testing** — StrykerJS with the Vitest runner, scoped to the unit lane (`vitest.config.mts`) and to pure domain/application modules, incremental mode, weekly scheduled CI + on-demand local runs. Runbook: `docs/dev/mutation-testing.md`.
 3. **Gherkin acceptance tests** — real `.feature` files bound via `@amiceli/vitest-cucumber` to an application-layer driver built on the existing fakes; bindings named `*.acceptance.test.ts` under `tests/acceptance/` so they run inside the existing unit lane with zero runner changes. New business rules ship their feature file first (the outer TDD loop). Runbook: `docs/dev/acceptance-testing.md`.
 4. **UI QA procedures** — a `docs/qa/` register (QA-NNN, same mechanics as the debt/bug registers) of scripted, evidence-producing procedures executable by humans, agents (within the DEBT-323 constraint table), or Playwright-assisted runs; stable procedures get promoted into `tests/e2e/`. Runbook: `docs/dev/qa-procedures.md`.
 
