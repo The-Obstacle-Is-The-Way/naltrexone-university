@@ -1,4 +1,4 @@
-// biome-ignore lint/style/noExcessiveLinesPerFile: Keep subscription consent evidence and webhook normalization cases in one adapter contract suite.
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep subscription consent evidence and webhook normalization contracts together — split tracked by DEBT-469.
 import { createHmac } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';

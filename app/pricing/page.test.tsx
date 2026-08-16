@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep entitlement, checkout, and trial-start page contracts together — split tracked by DEBT-469.
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
   afterAll,

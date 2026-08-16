@@ -24,7 +24,7 @@ describe('createLocalIntegrationCommandPlan', () => {
           'vitest',
           'run',
           '--config',
-          'vitest.integration.config.ts',
+          'vitest.integration.config.mts',
         ],
         env: {
           COMPOSE_PROJECT_NAME: 'naltrexone-test-integration',
@@ -60,7 +60,7 @@ describe('createLocalIntegrationCommandPlan', () => {
           'vitest',
           'run',
           '--config',
-          'vitest.integration.config.ts',
+          'vitest.integration.config.mts',
           '--coverage',
         ],
       },
@@ -84,7 +84,7 @@ describe('createLocalIntegrationCommandPlan', () => {
           'vitest',
           'run',
           '--config',
-          'vitest.integration.config.ts',
+          'vitest.integration.config.mts',
         ],
       },
     ]);

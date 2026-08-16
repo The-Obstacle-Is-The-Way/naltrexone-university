@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep BUG-235, BUG-236, and BUG-239 visibility regressions together — split tracked by DEBT-469.
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';

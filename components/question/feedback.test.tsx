@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep correctness, explanation, bookmark, and rating render contracts together — split tracked by DEBT-469.
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 

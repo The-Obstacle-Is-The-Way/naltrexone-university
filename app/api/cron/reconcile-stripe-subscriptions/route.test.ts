@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep POST authorization, idempotency, and GET compatibility contracts together — split tracked by DEBT-469.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RateLimiter } from '@/src/application/ports/gateways';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';

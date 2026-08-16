@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep feedback-rating and report state-machine cases together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type {

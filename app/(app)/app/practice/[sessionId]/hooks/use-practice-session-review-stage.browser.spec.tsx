@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep review loading, navigation, and finalization transitions together — split tracked by DEBT-469.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import type { ExamDraftSaveResult } from '@/app/(app)/app/practice/shared/question-flow-actions';

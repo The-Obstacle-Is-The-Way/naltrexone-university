@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep selection, draft-save, and navigation transition cases together — split tracked by DEBT-469.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';

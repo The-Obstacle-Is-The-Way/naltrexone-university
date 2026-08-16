@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep subscription, Checkout, portal, and retry adapter contracts together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
 import type {
   CheckoutSessionCreateParams,
@@ -491,7 +492,12 @@ describe('StripePaymentGateway', () => {
   });
 
   it('creates the trial payment-method setup Session through the customer-less setup seam', async () => {
-    const { stripe, sessionsCreate } = createStripeMock();
+    const { stripe, sessionsCreate, sessionsRetrieve } = createStripeMock();
+    sessionsRetrieve.mockResolvedValue({
+      id: 'cs_new',
+      url: 'https://stripe/checkout',
+      status: 'open',
+    });
     const consentStateSecret = 'dedicated-consent-state-secret-32-bytes';
     const gateway = createGateway(stripe, { consentStateSecret });
 
@@ -527,6 +533,7 @@ describe('StripePaymentGateway', () => {
       }),
       expect.any(Object),
     );
+    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_new');
     expect(sessionsCreate.mock.calls[0]?.[0]).not.toHaveProperty('customer');
     const metadata = sessionsCreate.mock.calls[0]?.[0].metadata;
     if (!metadata) throw new Error('Expected signed setup metadata');

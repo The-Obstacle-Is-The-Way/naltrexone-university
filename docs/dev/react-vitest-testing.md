@@ -167,7 +167,7 @@ describe('Component', () => {
 
 ### 5. Browser Mode (for `pnpm test:browser`)
 
-Config: `vitest.browser.config.ts` — already configured with Playwright + Chromium.
+Config: `vitest.browser.config.mts` — already configured with Playwright + Chromium.
 
 ```bash
 pnpm test:browser   # Runs *.browser.spec.tsx files in real Chromium

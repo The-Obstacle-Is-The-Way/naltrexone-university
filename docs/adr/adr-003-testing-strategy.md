@@ -366,7 +366,7 @@ To avoid documentation drift, the exact CI and tooling configuration lives in th
 
 - CI workflow: `.github/workflows/ci.yml`
 - Package scripts: `package.json`
-- Vitest config: `vitest.config.ts` + `vitest.integration.config.ts`
+- Vitest config: `vitest.config.mts` + `vitest.integration.config.mts`
 - Playwright config: `playwright.config.ts`
 
 This ADR defines the **strategy and boundaries**; the files above define the **exact commands and versions**.

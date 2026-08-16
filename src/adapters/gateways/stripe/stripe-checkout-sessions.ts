@@ -29,12 +29,19 @@ export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
 // budgets 13.850 s, below half the pricing route's 30 s maxDuration; 11 would
 // budget 15.109 s. This is a healthy-service planning cap, not a request timeout.
 export const SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT = 10;
-// This bounds replacement of missing-URL or otherwise defective setup create
-// responses; it is not replay-chain capacity. Keep the existing fail-closed
-// ceiling of 3 until DEBT-467 re-decides it after live retrieval changes its meaning.
-export const TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT = 3;
+// WHY 10: strict retrieval makes each retained setup replay rung cached create +
+// live retrieve. The 2026-08-14 setup-mode probe measured 120.5 ms create and
+// 99.2 ms retrieve medians (5 samples each). At third-attempt success, one rung
+// budgets 3×120.5 + 300 + 3×99.2 + 300 = 1,259.1 ms; primary + 10 recoveries
+// budgets 13.850 s, below half the app layout's 30 s maxDuration. This is a
+// healthy-service planning cap, not a request timeout.
+export const TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT = 10;
 
 const SUBSCRIPTION_CHECKOUT_REPLAY_ERROR_LOG_DEPTH = 5;
+
+type CheckoutSessionLiveRetrievalPolicy =
+  | 'fallback-to-created'
+  | 'require-verified-status';
 
 const BLOCKING_SUBSCRIPTION_STATUSES = new Set<StripeSubscriptionStatus>([
   'active',
@@ -187,13 +194,18 @@ export async function createStripeTrialPaymentMethodSetupSession({
     }
   }
 
-  let session = await createWithParameterRecovery(primaryIdempotencyKey);
+  let session = await retrieveLiveCheckoutSessionAfterCreate({
+    stripe,
+    session: await createWithParameterRecovery(primaryIdempotencyKey),
+    logger,
+    policy: 'require-verified-status',
+  });
   for (
     let attempt = 1;
     !session.url || isSessionInactive(session, Date.now);
     attempt += 1
   ) {
-    if (attempt > TRIAL_SETUP_SESSION_RESPONSE_RECOVERY_ATTEMPT_LIMIT) {
+    if (attempt > TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT) {
       throw new ApplicationError(
         'STRIPE_ERROR',
         'Stripe Checkout Session is expired or inactive',
@@ -209,7 +221,12 @@ export async function createStripeTrialPaymentMethodSetupSession({
       },
       'Replacing an inactive trial setup Checkout Session',
     );
-    session = await createSession(recoveryIdempotencyKey);
+    session = await retrieveLiveCheckoutSessionAfterCreate({
+      stripe,
+      session: await createSession(recoveryIdempotencyKey),
+      logger,
+      policy: 'require-verified-status',
+    });
   }
 
   return { sessionId: session.id, url: session.url };
@@ -550,10 +567,12 @@ async function retrieveLiveCheckoutSessionAfterCreate({
   stripe,
   session,
   logger,
+  policy,
 }: {
   stripe: StripeClient;
   session: StripeCheckoutSession;
   logger: Logger;
+  policy: CheckoutSessionLiveRetrievalPolicy;
 }): Promise<StripeCheckoutSession> {
   let retrievedSession: StripeCheckoutSession;
   try {
@@ -563,6 +582,9 @@ async function retrieveLiveCheckoutSessionAfterCreate({
       logger,
     });
   } catch (error) {
+    if (policy === 'require-verified-status') {
+      throw error;
+    }
     logger.warn(
       {
         sessionId: session.id,
@@ -574,6 +596,12 @@ async function retrieveLiveCheckoutSessionAfterCreate({
   }
 
   if (retrievedSession.id !== session.id) {
+    if (policy === 'require-verified-status') {
+      throw new ApplicationError(
+        'STRIPE_ERROR',
+        'Stripe Checkout Session live retrieval returned a mismatched id',
+      );
+    }
     logger.warn(
       {
         createdSessionId: session.id,
@@ -582,6 +610,16 @@ async function retrieveLiveCheckoutSessionAfterCreate({
       'Ignoring checkout session retrieval result with mismatched id',
     );
     return session;
+  }
+
+  if (
+    policy === 'require-verified-status' &&
+    (retrievedSession.status === undefined || retrievedSession.status === null)
+  ) {
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Stripe Checkout Session live status is missing',
+    );
   }
 
   return mergeCheckoutSessionSnapshot({
@@ -939,6 +977,7 @@ export async function createStripeCheckoutSession({
       primaryIdempotencyKey,
     ),
     logger,
+    policy: 'fallback-to-created',
   });
 
   for (let attempt = 1; isSessionInactive(session, nowMs); attempt += 1) {
@@ -978,6 +1017,7 @@ export async function createStripeCheckoutSession({
         recoveryIdempotencyKey,
       ),
       logger,
+      policy: 'fallback-to-created',
     });
   }
 

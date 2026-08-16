@@ -1,3 +1,4 @@
+// biome-ignore lint/style/noExcessiveLinesPerFile: Keep public-route, protected-route, and Clerk middleware contracts together — split tracked by DEBT-469.
 import type { NextFetchEvent, NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
