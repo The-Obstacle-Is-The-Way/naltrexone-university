@@ -207,6 +207,7 @@ export async function restoreE2EUserEntitlement(
         ${snapshot.updatedAt}
       )
       ON CONFLICT (user_id) DO UPDATE SET
+        id = EXCLUDED.id,
         stripe_subscription_id = EXCLUDED.stripe_subscription_id,
         status = EXCLUDED.status,
         price_id = EXCLUDED.price_id,
