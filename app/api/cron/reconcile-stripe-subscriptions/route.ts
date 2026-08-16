@@ -76,8 +76,13 @@ function getReconciliationScope(url: URL): 'all' | 'page' {
   return 'all';
 }
 
-async function handleCronRequest(req: Request): Promise<NextResponse> {
-  const container = createContainer();
+type CronContainerResolver = () => ReturnType<typeof createContainer>;
+
+async function handleCronRequest(
+  req: Request,
+  resolveContainer: CronContainerResolver = createContainer,
+): Promise<NextResponse> {
+  const container = resolveContainer();
 
   const tokenResult = getAuthorizationToken(req);
   if (!tokenResult.ok) {
@@ -315,6 +320,12 @@ async function handleCronRequest(req: Request): Promise<NextResponse> {
     { ...result, pendingStripeCustomerCleanups },
     { status: HTTP_OK },
   );
+}
+
+export function createReconcileStripeSubscriptionsCronHandler(
+  resolveContainer: CronContainerResolver,
+): (req: Request) => Promise<NextResponse> {
+  return (req) => handleCronRequest(req, resolveContainer);
 }
 
 export async function GET(req: Request) {
