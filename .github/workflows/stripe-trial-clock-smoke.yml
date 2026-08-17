@@ -16,10 +16,6 @@ jobs:
   smoke:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    env:
-      RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true'
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY }}
 
     steps:
       - name: Checkout
@@ -43,4 +39,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run fail-closed Stripe trial clock smoke
+        env:
+          RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true'
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY }}
         run: pnpm exec tsx scripts/run-trial-clock-smoke.ts

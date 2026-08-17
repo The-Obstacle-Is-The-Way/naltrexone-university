@@ -193,8 +193,14 @@ function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
   };
 }
 
+// Two 10-second cases plus two 15-second cleanup-hook budgets normally finish
+// in under a minute. Five minutes bounds a stuck provider child while leaving
+// equal headroom inside the workflow's 10-minute job budget.
+const TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
+
 export async function spawnVitest(
   invocation: TrialClockSmokeInvocation,
+  timeoutMs: number = TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child: ChildProcess = spawn(invocation.command, invocation.args, {
@@ -202,22 +208,75 @@ export async function spawnVitest(
       stdio: 'inherit',
     });
 
-    child.on('error', reject);
-    child.on('exit', (code: number | null, signal: NodeJS.Signals | null) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-
-      const reason =
-        signal === null ? `exit code ${code ?? 'unknown'}` : `signal ${signal}`;
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill('SIGKILL');
       reject(
         new Error(
-          `TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with ${reason}`,
+          `TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded ${timeoutMs}ms`,
         ),
       );
+    }, timeoutMs);
+    timer.unref();
+
+    const settle = (action: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      action();
+    };
+
+    child.once('error', (error) => {
+      settle(() => {
+        reject(
+          new Error(
+            'TRIAL_CLOCK_SMOKE_PROCESS_START_FAILED: unable to start Vitest',
+            { cause: error },
+          ),
+        );
+      });
+    });
+    child.once('exit', (code: number | null, signal: NodeJS.Signals | null) => {
+      settle(() => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+
+        const reason =
+          signal === null
+            ? `exit code ${code ?? 'unknown'}`
+            : `signal ${signal}`;
+        reject(
+          new Error(
+            `TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with ${reason}`,
+          ),
+        );
+      });
     });
   });
+}
+
+async function readJsonReport(outputFile: string): Promise<unknown> {
+  let rawReport: string;
+  try {
+    rawReport = await readFile(outputFile, 'utf8');
+  } catch (error) {
+    throw new Error(
+      'PROOF_REPORT_MISSING: Vitest produced no readable JSON report file',
+      { cause: error },
+    );
+  }
+
+  try {
+    return JSON.parse(rawReport) as unknown;
+  } catch {
+    throw new Error(
+      'PROOF_REPORT_INVALID: Vitest output file is not valid JSON',
+    );
+  }
 }
 
 export async function runVitestWithJsonReporter(
@@ -234,14 +293,7 @@ export async function runVitestWithJsonReporter(
   try {
     const invocation = createTrialClockSmokeInvocation(outputFile, env);
     await runInvocation(invocation);
-    const rawReport = await readFile(outputFile, 'utf8');
-    try {
-      return JSON.parse(rawReport) as unknown;
-    } catch {
-      throw new Error(
-        'PROOF_REPORT_INVALID: Vitest output file is not valid JSON',
-      );
-    }
+    return await readJsonReport(outputFile);
   } finally {
     await rm(scratchDirectory, { recursive: true, force: true });
   }

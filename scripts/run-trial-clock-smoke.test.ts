@@ -361,6 +361,27 @@ describe('runVitestWithJsonReporter', () => {
     expect(scratchDirectory).toBeTypeOf('string');
     await expect(access(scratchDirectory ?? '')).rejects.toThrow();
   });
+
+  it('classifies a missing reporter file and still removes scratch', async () => {
+    let scratchDirectory: string | undefined;
+
+    await expect(
+      runVitestWithJsonReporter(validEnvironment(), async (invocation) => {
+        const outputArgument = invocation.args.find((argument) =>
+          argument.startsWith('--outputFile='),
+        );
+        if (!outputArgument) throw new Error('output file argument missing');
+        scratchDirectory = path.dirname(
+          outputArgument.slice('--outputFile='.length),
+        );
+      }),
+    ).rejects.toThrow(
+      'PROOF_REPORT_MISSING: Vitest produced no readable JSON report file',
+    );
+
+    expect(scratchDirectory).toBeTypeOf('string');
+    await expect(access(scratchDirectory ?? '')).rejects.toThrow();
+  });
 });
 
 describe('spawnVitest', () => {
@@ -397,6 +418,33 @@ describe('spawnVitest', () => {
       }),
     ).rejects.toThrow(
       'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal SIGTERM',
+    );
+  });
+
+  it('classifies a child process that cannot start', async () => {
+    await expect(
+      spawnVitest({
+        command: path.join(process.cwd(), 'no-such-binary-debt468'),
+        args: [],
+        env: childEnvironment,
+      }),
+    ).rejects.toThrow(
+      'TRIAL_CLOCK_SMOKE_PROCESS_START_FAILED: unable to start Vitest',
+    );
+  });
+
+  it('kills and classifies a child that exceeds its process budget', async () => {
+    await expect(
+      spawnVitest(
+        {
+          command: process.execPath,
+          args: ['-e', 'setTimeout(() => {}, 250)'],
+          env: childEnvironment,
+        },
+        10,
+      ),
+    ).rejects.toThrow(
+      'TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded 10ms',
     );
   });
 });
