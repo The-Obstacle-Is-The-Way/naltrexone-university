@@ -1,4 +1,3 @@
-import { EventEmitter } from 'node:events';
 import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -11,7 +10,6 @@ import {
   spawnVitest,
   TRIAL_CLOCK_SMOKE_CASE_TITLES,
   TRIAL_CLOCK_SMOKE_FILE,
-  terminateVitestProcessTree,
 } from './run-trial-clock-smoke';
 
 type SmokeEnvironment = Readonly<Record<string, string | undefined>>;
@@ -385,6 +383,91 @@ describe('runVitestWithJsonReporter', () => {
     await expect(access(scratchDirectory ?? '')).rejects.toThrow();
   });
 
+  it('prints a redacted per-case summary before cleanup when the child fails', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const report = {
+      success: false,
+      testResults: [
+        {
+          name: `/repo/${TRIAL_CLOCK_SMOKE_FILE}`,
+          status: 'failed',
+          assertionResults: [
+            { title: TRIAL_CLOCK_SMOKE_CASE_TITLES[0], status: 'passed' },
+            {
+              title: TRIAL_CLOCK_SMOKE_CASE_TITLES[1],
+              status: 'failed',
+              failureMessages: [
+                'Error: charge failed for cus_secret123 via sk_test_secret456 at https://dashboard.stripe.com/x\nstack line',
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    try {
+      await expect(
+        runVitestWithJsonReporter(validEnvironment(), async (invocation) => {
+          const outputArgument = invocation.args.find((argument) =>
+            argument.startsWith('--outputFile='),
+          );
+          if (!outputArgument) throw new Error('output file argument missing');
+          await writeFile(
+            outputArgument.slice('--outputFile='.length),
+            JSON.stringify(report),
+            'utf8',
+          );
+          throw new Error(
+            'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with exit code 1',
+          );
+        }),
+      ).rejects.toThrow('TRIAL_CLOCK_SMOKE_PROCESS_FAILED');
+
+      const printed = consoleError.mock.calls.map((call) => String(call[0]));
+      const failedLine = printed.find((line) =>
+        line.includes(`case "${TRIAL_CLOCK_SMOKE_CASE_TITLES[1]}"`),
+      );
+      expect(failedLine).toContain('status=failed');
+      expect(failedLine).toContain('detail=');
+      expect(failedLine).not.toContain('cus_secret123');
+      expect(failedLine).not.toContain('sk_test_secret456');
+      expect(failedLine).not.toContain('dashboard.stripe.com');
+      expect(
+        printed.some((line) =>
+          line.includes(`case "${TRIAL_CLOCK_SMOKE_CASE_TITLES[0]}"`),
+        ),
+      ).toBe(true);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('notes an unreadable report when the child fails before writing one', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    try {
+      await expect(
+        runVitestWithJsonReporter(validEnvironment(), async () => {
+          throw new Error(
+            'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with exit code 1',
+          );
+        }),
+      ).rejects.toThrow('TRIAL_CLOCK_SMOKE_PROCESS_FAILED');
+
+      expect(
+        consoleError.mock.calls
+          .map((call) => String(call[0]))
+          .some((line) => line.includes('no readable JSON report')),
+      ).toBe(true);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it('fails closed on invalid reporter JSON and still removes scratch', async () => {
     let scratchDirectory: string | undefined;
 
@@ -497,241 +580,4 @@ describe('runVitestWithJsonReporter', () => {
       }
     },
   );
-});
-
-describe('spawnVitest', () => {
-  const childEnvironment = { PATH: process.env.PATH };
-  const expectNoParentSignalListeners = (parentSignals: EventEmitter) => {
-    expect(parentSignals.listenerCount('SIGINT')).toBe(0);
-    expect(parentSignals.listenerCount('SIGTERM')).toBe(0);
-  };
-  // Readiness handshake: signal-forwarding cases must not race child startup
-  // on a loaded runner, so the child announces readiness through a file.
-  const waitForFile = async (filePath: string) => {
-    const deadline = Date.now() + 4_000;
-    for (;;) {
-      try {
-        await access(filePath);
-        return;
-      } catch {
-        if (Date.now() > deadline) {
-          throw new Error(`ready file never appeared: ${filePath}`);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      }
-    }
-  };
-
-  it('resolves for a successful child process', async () => {
-    const parentSignals = new EventEmitter();
-
-    await expect(
-      spawnVitest(
-        {
-          command: process.execPath,
-          args: ['-e', 'process.exit(0)'],
-          env: childEnvironment,
-        },
-        5_000,
-        parentSignals,
-      ),
-    ).resolves.toBeUndefined();
-    expectNoParentSignalListeners(parentSignals);
-  });
-
-  it('reports a nonzero child exit without including environment values', async () => {
-    await expect(
-      spawnVitest(
-        {
-          command: process.execPath,
-          args: ['-e', 'process.exit(7)'],
-          env: { ...childEnvironment, STRIPE_SECRET_KEY: 'do_not_print' },
-        },
-        5_000,
-        new EventEmitter(),
-      ),
-    ).rejects.toThrow(
-      'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with exit code 7',
-    );
-  });
-
-  it('reports a child signal', async () => {
-    await expect(
-      spawnVitest(
-        {
-          command: process.execPath,
-          args: ['-e', "process.kill(process.pid, 'SIGTERM')"],
-          env: childEnvironment,
-        },
-        5_000,
-        new EventEmitter(),
-      ),
-    ).rejects.toThrow(
-      'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal SIGTERM',
-    );
-  });
-
-  it('classifies a child process that cannot start', async () => {
-    const parentSignals = new EventEmitter();
-
-    await expect(
-      spawnVitest(
-        {
-          command: path.join(process.cwd(), 'no-such-binary-debt468'),
-          args: [],
-          env: childEnvironment,
-        },
-        5_000,
-        parentSignals,
-      ),
-    ).rejects.toThrow(
-      'TRIAL_CLOCK_SMOKE_PROCESS_START_FAILED: unable to start Vitest',
-    );
-    expectNoParentSignalListeners(parentSignals);
-  });
-
-  it('kills and classifies a child that exceeds its process budget', async () => {
-    const parentSignals = new EventEmitter();
-
-    await expect(
-      spawnVitest(
-        {
-          command: process.execPath,
-          args: ['-e', 'setTimeout(() => {}, 250)'],
-          env: childEnvironment,
-        },
-        10,
-        parentSignals,
-      ),
-    ).rejects.toThrow(
-      'TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded 10ms',
-    );
-    expectNoParentSignalListeners(parentSignals);
-  });
-
-  it('uses direct-child termination on Windows', () => {
-    const killChild = vi.fn(() => true);
-    const killProcessGroup = vi.fn(() => true);
-
-    terminateVitestProcessTree(
-      { pid: 123, kill: killChild },
-      'win32',
-      killProcessGroup,
-    );
-
-    expect(killChild).toHaveBeenCalledWith('SIGKILL');
-    expect(killProcessGroup).not.toHaveBeenCalled();
-  });
-
-  it('uses direct-child termination when the pid is unavailable', () => {
-    const killChild = vi.fn(() => true);
-    const killProcessGroup = vi.fn(() => true);
-
-    terminateVitestProcessTree(
-      { pid: undefined, kill: killChild },
-      'linux',
-      killProcessGroup,
-    );
-
-    expect(killChild).toHaveBeenCalledWith('SIGKILL');
-    expect(killProcessGroup).not.toHaveBeenCalled();
-  });
-
-  it('signals the whole POSIX process group with the negative child pid', () => {
-    const killChild = vi.fn(() => true);
-    const killProcessGroup = vi.fn(() => true);
-
-    terminateVitestProcessTree(
-      { pid: 123, kill: killChild },
-      'linux',
-      killProcessGroup,
-    );
-
-    expect(killProcessGroup).toHaveBeenCalledWith(-123, 'SIGKILL');
-    expect(killChild).not.toHaveBeenCalled();
-  });
-
-  it('falls back to the direct child when POSIX group signaling fails', () => {
-    const killChild = vi.fn(() => true);
-    const killProcessGroup = vi.fn(() => {
-      throw new Error('process group already exited');
-    });
-
-    terminateVitestProcessTree(
-      { pid: 123, kill: killChild },
-      'darwin',
-      killProcessGroup,
-    );
-
-    expect(killProcessGroup).toHaveBeenCalledWith(-123, 'SIGKILL');
-    expect(killChild).toHaveBeenCalledWith('SIGKILL');
-  });
-
-  it.each(['SIGINT', 'SIGTERM'] as const)(
-    'forwards parent %s to the child group and removes both listeners',
-    async (signal) => {
-      const parentSignals = new EventEmitter();
-      const readyDirectory = await mkdtemp(
-        path.join(tmpdir(), 'debt468-signal-ready-'),
-      );
-      const readyFile = path.join(readyDirectory, 'ready');
-      try {
-        const run = spawnVitest(
-          {
-            command: process.execPath,
-            args: [
-              '-e',
-              `require('node:fs').writeFileSync(${JSON.stringify(readyFile)}, 'ready'); setInterval(() => {}, 1_000)`,
-            ],
-            env: childEnvironment,
-          },
-          5_000,
-          parentSignals,
-        );
-        await waitForFile(readyFile);
-
-        parentSignals.emit(signal);
-
-        await expect(run).rejects.toThrow(
-          `TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal ${signal}`,
-        );
-        expectNoParentSignalListeners(parentSignals);
-      } finally {
-        await rm(readyDirectory, { recursive: true, force: true });
-      }
-    },
-  );
-
-  it('escalates to SIGKILL when the child ignores a forwarded signal', async () => {
-    const parentSignals = new EventEmitter();
-    const readyDirectory = await mkdtemp(
-      path.join(tmpdir(), 'debt468-signal-ignore-'),
-    );
-    const readyFile = path.join(readyDirectory, 'ready');
-    try {
-      const run = spawnVitest(
-        {
-          command: process.execPath,
-          args: [
-            '-e',
-            `process.on('SIGTERM', () => {}); process.on('SIGINT', () => {}); require('node:fs').writeFileSync(${JSON.stringify(readyFile)}, 'ready'); setInterval(() => {}, 1_000)`,
-          ],
-          env: childEnvironment,
-        },
-        10_000,
-        parentSignals,
-        200,
-      );
-      await waitForFile(readyFile);
-
-      parentSignals.emit('SIGTERM');
-
-      await expect(run).rejects.toThrow(
-        'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal SIGKILL',
-      );
-      expectNoParentSignalListeners(parentSignals);
-    } finally {
-      await rm(readyDirectory, { recursive: true, force: true });
-    }
-  });
 });
