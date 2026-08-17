@@ -1,4 +1,5 @@
-import { access, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -8,6 +9,7 @@ import {
   spawnVitest,
   TRIAL_CLOCK_SMOKE_CASE_TITLES,
   TRIAL_CLOCK_SMOKE_FILE,
+  terminateVitestProcessTree,
 } from './run-trial-clock-smoke';
 
 type SmokeEnvironment = Readonly<Record<string, string | undefined>>;
@@ -382,6 +384,56 @@ describe('runVitestWithJsonReporter', () => {
     expect(scratchDirectory).toBeTypeOf('string');
     await expect(access(scratchDirectory ?? '')).rejects.toThrow();
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'terminates descendant work before returning from scratch cleanup',
+    async () => {
+      const markerDirectory = await mkdtemp(
+        path.join(tmpdir(), 'debt468-descendant-marker-'),
+      );
+      const markerFile = path.join(markerDirectory, 'descendant-survived');
+      const descendantScript = `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(markerFile)}, 'survived'), 500)`;
+      const intermediaryScript = `
+        const { spawn } = require('node:child_process');
+        const descendant = spawn(process.execPath, ['-e', ${JSON.stringify(descendantScript)}], { stdio: 'ignore' });
+        descendant.unref();
+        setInterval(() => {}, 1_000);
+      `;
+      let scratchDirectory: string | undefined;
+
+      try {
+        await expect(
+          runVitestWithJsonReporter(validEnvironment(), async (invocation) => {
+            const outputArgument = invocation.args.find((argument) =>
+              argument.startsWith('--outputFile='),
+            );
+            if (!outputArgument) {
+              throw new Error('output file argument missing');
+            }
+            scratchDirectory = path.dirname(
+              outputArgument.slice('--outputFile='.length),
+            );
+
+            await spawnVitest(
+              {
+                command: process.execPath,
+                args: ['-e', intermediaryScript],
+                env: { PATH: process.env.PATH },
+              },
+              200,
+            );
+          }),
+        ).rejects.toThrow('TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT');
+
+        expect(scratchDirectory).toBeTypeOf('string');
+        await expect(access(scratchDirectory ?? '')).rejects.toThrow();
+        await new Promise((resolve) => setTimeout(resolve, 650));
+        await expect(access(markerFile)).rejects.toThrow();
+      } finally {
+        await rm(markerDirectory, { recursive: true, force: true });
+      }
+    },
+  );
 });
 
 describe('spawnVitest', () => {
@@ -446,5 +498,49 @@ describe('spawnVitest', () => {
     ).rejects.toThrow(
       'TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded 10ms',
     );
+  });
+
+  it('uses direct-child termination on Windows', () => {
+    const killChild = vi.fn(() => true);
+    const killProcessGroup = vi.fn(() => true);
+
+    terminateVitestProcessTree(
+      { pid: 123, kill: killChild },
+      'win32',
+      killProcessGroup,
+    );
+
+    expect(killChild).toHaveBeenCalledWith('SIGKILL');
+    expect(killProcessGroup).not.toHaveBeenCalled();
+  });
+
+  it('signals the whole POSIX process group with the negative child pid', () => {
+    const killChild = vi.fn(() => true);
+    const killProcessGroup = vi.fn(() => true);
+
+    terminateVitestProcessTree(
+      { pid: 123, kill: killChild },
+      'linux',
+      killProcessGroup,
+    );
+
+    expect(killProcessGroup).toHaveBeenCalledWith(-123, 'SIGKILL');
+    expect(killChild).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the direct child when POSIX group signaling fails', () => {
+    const killChild = vi.fn(() => true);
+    const killProcessGroup = vi.fn(() => {
+      throw new Error('process group already exited');
+    });
+
+    terminateVitestProcessTree(
+      { pid: 123, kill: killChild },
+      'darwin',
+      killProcessGroup,
+    );
+
+    expect(killProcessGroup).toHaveBeenCalledWith(-123, 'SIGKILL');
+    expect(killChild).toHaveBeenCalledWith('SIGKILL');
   });
 });

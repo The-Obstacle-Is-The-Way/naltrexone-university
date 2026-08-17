@@ -198,12 +198,34 @@ function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
 // equal headroom inside the workflow's 10-minute job budget.
 const TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
 
+type KillableChildProcess = Pick<ChildProcess, 'kill' | 'pid'>;
+type KillProcessGroup = (pid: number, signal: NodeJS.Signals) => unknown;
+
+export function terminateVitestProcessTree(
+  child: KillableChildProcess,
+  platform: NodeJS.Platform = process.platform,
+  killProcessGroup: KillProcessGroup = process.kill,
+): void {
+  if (platform === 'win32' || child.pid === undefined) {
+    child.kill('SIGKILL');
+    return;
+  }
+
+  try {
+    killProcessGroup(-child.pid, 'SIGKILL');
+  } catch {
+    // The group may already have exited between the timeout and the signal.
+    child.kill('SIGKILL');
+  }
+}
+
 export async function spawnVitest(
   invocation: TrialClockSmokeInvocation,
   timeoutMs: number = TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child: ChildProcess = spawn(invocation.command, invocation.args, {
+      detached: process.platform !== 'win32',
       env: { ...invocation.env } as NodeJS.ProcessEnv,
       stdio: 'inherit',
     });
@@ -212,7 +234,7 @@ export async function spawnVitest(
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
-      child.kill('SIGKILL');
+      terminateVitestProcessTree(child);
       reject(
         new Error(
           `TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded ${timeoutMs}ms`,
