@@ -14,6 +14,19 @@ type E2EStripeSubscriptionRow = {
   currentPeriodEnd: Date;
 };
 
+export type E2EEntitlementSnapshot = {
+  id: string;
+  userId: string;
+  stripeSubscriptionId: string;
+  status: string;
+  priceId: string;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 const TERMINAL_STRIPE_SUBSCRIPTION_STATUSES = new Set([
   'canceled',
   'incomplete_expired',
@@ -119,6 +132,94 @@ export async function resetE2EUserToFirstTimer(): Promise<void> {
 
 export async function restoreE2EUserPaidSubscription(): Promise<void> {
   await seedTestSubscription();
+}
+
+async function closeE2ESql(sql: ReturnType<typeof postgres>): Promise<void> {
+  try {
+    await sql.end({ timeout: 5 });
+  } catch {
+    // Ignore cleanup errors so they cannot mask the primary E2E outcome.
+  }
+}
+
+export async function removeE2EUserEntitlement(): Promise<E2EEntitlementSnapshot> {
+  const sql = postgres(requireE2EEnv('DATABASE_URL'), { max: 1 });
+  const email = requireE2EEnv('E2E_CLERK_USER_USERNAME');
+
+  try {
+    const rows = await sql<E2EEntitlementSnapshot[]>`
+      DELETE FROM stripe_subscriptions subscription
+      USING users app_user
+      WHERE app_user.id = subscription.user_id
+        AND app_user.email = ${email}
+      RETURNING
+        subscription.id,
+        subscription.user_id AS "userId",
+        subscription.stripe_subscription_id AS "stripeSubscriptionId",
+        subscription.status,
+        subscription.price_id AS "priceId",
+        subscription.current_period_end AS "currentPeriodEnd",
+        subscription.cancel_at_period_end AS "cancelAtPeriodEnd",
+        subscription.version,
+        subscription.created_at AS "createdAt",
+        subscription.updated_at AS "updatedAt"
+    `;
+    const snapshot = rows[0];
+    if (!snapshot || rows.length !== 1) {
+      throw new Error(
+        `Expected exactly one E2E subscription row before de-entitlement; found ${rows.length}.`,
+      );
+    }
+    return snapshot;
+  } finally {
+    await closeE2ESql(sql);
+  }
+}
+
+export async function restoreE2EUserEntitlement(
+  snapshot: E2EEntitlementSnapshot,
+): Promise<void> {
+  const sql = postgres(requireE2EEnv('DATABASE_URL'), { max: 1 });
+
+  try {
+    await sql`
+      INSERT INTO stripe_subscriptions (
+        id,
+        user_id,
+        stripe_subscription_id,
+        status,
+        price_id,
+        current_period_end,
+        cancel_at_period_end,
+        version,
+        created_at,
+        updated_at
+      ) VALUES (
+        ${snapshot.id},
+        ${snapshot.userId},
+        ${snapshot.stripeSubscriptionId},
+        ${snapshot.status},
+        ${snapshot.priceId},
+        ${snapshot.currentPeriodEnd},
+        ${snapshot.cancelAtPeriodEnd},
+        ${snapshot.version},
+        ${snapshot.createdAt},
+        ${snapshot.updatedAt}
+      )
+      ON CONFLICT (user_id) DO UPDATE SET
+        id = EXCLUDED.id,
+        stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+        status = EXCLUDED.status,
+        price_id = EXCLUDED.price_id,
+        current_period_end = EXCLUDED.current_period_end,
+        cancel_at_period_end = EXCLUDED.cancel_at_period_end,
+        version = EXCLUDED.version,
+        created_at = EXCLUDED.created_at,
+        updated_at = EXCLUDED.updated_at
+    `;
+  } finally {
+    await closeE2ESql(sql);
+  }
 }
 
 export async function completeNoCardTrialCheckout(page: Page): Promise<void> {
