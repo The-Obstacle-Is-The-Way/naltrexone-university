@@ -151,7 +151,7 @@ function readReporterAssertions(report: unknown): ReporterAssertion[] {
   });
 }
 
-function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
+export function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
   const assertions = readReporterAssertions(report);
   const skipped = assertions.filter((assertion) =>
     ['skipped', 'pending', 'todo', 'disabled'].includes(assertion.status),
@@ -197,6 +197,7 @@ function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
 // in under a minute. Five minutes bounds a stuck provider process tree while
 // leaving equal headroom inside the workflow's 10-minute job budget.
 const TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
+const TRIAL_CLOCK_SMOKE_SIGNAL_GRACE_MS = 10 * 1000;
 
 type KillableChildProcess = Pick<ChildProcess, 'kill' | 'pid'>;
 type KillProcessGroup = (pid: number, signal: NodeJS.Signals) => unknown;
@@ -208,7 +209,8 @@ type ParentSignalSource = {
 export function terminateVitestProcessTree(
   child: KillableChildProcess,
   platform: NodeJS.Platform = process.platform,
-  killProcessGroup: KillProcessGroup = process.kill,
+  killProcessGroup: KillProcessGroup = (pid, signal) =>
+    process.kill(pid, signal),
   signal: NodeJS.Signals = 'SIGKILL',
 ): void {
   if (platform === 'win32' || child.pid === undefined) {
@@ -228,6 +230,7 @@ export async function spawnVitest(
   invocation: TrialClockSmokeInvocation,
   timeoutMs: number = TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS,
   parentSignals: ParentSignalSource = process,
+  signalGraceMs: number = TRIAL_CLOCK_SMOKE_SIGNAL_GRACE_MS,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child: ChildProcess = spawn(invocation.command, invocation.args, {
@@ -238,21 +241,28 @@ export async function spawnVitest(
 
     let settled = false;
     let timer: ReturnType<typeof setTimeout>;
+    let signalGraceTimer: ReturnType<typeof setTimeout> | undefined;
+    // A forwarded signal must not leave the runner waiting forever on a child
+    // that ignores it: escalate the whole tree to SIGKILL after the grace.
+    const escalateAfterGrace = () => {
+      if (signalGraceTimer !== undefined) clearTimeout(signalGraceTimer);
+      signalGraceTimer = setTimeout(() => {
+        terminateVitestProcessTree(
+          child,
+          process.platform,
+          undefined,
+          'SIGKILL',
+        );
+      }, signalGraceMs);
+      signalGraceTimer.unref();
+    };
     const forwardSigint = () => {
-      terminateVitestProcessTree(
-        child,
-        process.platform,
-        process.kill,
-        'SIGINT',
-      );
+      terminateVitestProcessTree(child, process.platform, undefined, 'SIGINT');
+      escalateAfterGrace();
     };
     const forwardSigterm = () => {
-      terminateVitestProcessTree(
-        child,
-        process.platform,
-        process.kill,
-        'SIGTERM',
-      );
+      terminateVitestProcessTree(child, process.platform, undefined, 'SIGTERM');
+      escalateAfterGrace();
     };
     const removeParentSignalHandlers = () => {
       parentSignals.off('SIGINT', forwardSigint);
@@ -263,6 +273,7 @@ export async function spawnVitest(
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (signalGraceTimer !== undefined) clearTimeout(signalGraceTimer);
       removeParentSignalHandlers();
       action();
     };
