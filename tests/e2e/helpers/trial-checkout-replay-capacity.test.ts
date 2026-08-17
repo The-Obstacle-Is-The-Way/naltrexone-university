@@ -101,9 +101,17 @@ describe('assertLocalTrialCheckoutReplayCapacity', () => {
     const exactlyTwentyFourHoursOld = Math.floor(
       (NOW_MS - 24 * 60 * 60 * 1000) / 1000,
     );
-    const sessions = [
-      createSession(),
+    // Exactly the cap's worth of countable sessions, so counting even one of
+    // the ignored sessions below would cross the boundary and reject.
+    const countableAtCap = [
+      ...Array.from(
+        { length: SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT - 1 },
+        () => createSession(),
+      ),
       createSession({ status: 'expired' }),
+    ];
+    const sessions = [
+      ...countableAtCap,
       createSession({ status: 'open' }),
       createSession({ mode: 'setup' }),
       createSession({ created: exactlyTwentyFourHoursOld }),
