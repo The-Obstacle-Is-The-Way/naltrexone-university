@@ -154,6 +154,8 @@ rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME
 pnpm test:e2e
 ```
 
+Local `trial-start.spec.ts` has one narrowly documented environmental exception: a push may proceed when it is the **only** E2E failure and its output includes `[E2E_CHECKOUT_CHAIN_SATURATED]` with a read-only census count greater than `SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT`. A generic `/pricing?checkout=error` redirect is not sufficient; rerun the focused spec with the census helper present and require the count receipt. Stripe can prune keys only after they are at least 24 hours old, so 24 hours is prune eligibility, not an exact recovery deadline. Any other E2E failure blocks the push. See DEBT-466/470 and `docs/dev/testing-infrastructure.md`.
+
 Never run E2E migrations by relying on implicit `.env.local` resolution alone. Normal local E2E does not need remote migrations. For an intentional deploy-target E2E check, verify the host and use `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`; migrate a remote target only when you deliberately mean to mutate it.
 
 This is not optional. This is not "before opening a PR." This is **before every push**, including follow-up fix commits. Every single time.
