@@ -1,4 +1,5 @@
-import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { EventEmitter } from 'node:events';
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -392,10 +393,18 @@ describe('runVitestWithJsonReporter', () => {
         path.join(tmpdir(), 'debt468-descendant-marker-'),
       );
       const markerFile = path.join(markerDirectory, 'descendant-survived');
+      const intermediaryPidFile = path.join(
+        markerDirectory,
+        'intermediary.pid',
+      );
+      const descendantPidFile = path.join(markerDirectory, 'descendant.pid');
       const descendantScript = `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(markerFile)}, 'survived'), 500)`;
       const intermediaryScript = `
         const { spawn } = require('node:child_process');
+        const { writeFileSync } = require('node:fs');
+        writeFileSync(${JSON.stringify(intermediaryPidFile)}, String(process.pid));
         const descendant = spawn(process.execPath, ['-e', ${JSON.stringify(descendantScript)}], { stdio: 'ignore' });
+        writeFileSync(${JSON.stringify(descendantPidFile)}, String(descendant.pid));
         descendant.unref();
         setInterval(() => {}, 1_000);
       `;
@@ -430,6 +439,19 @@ describe('runVitestWithJsonReporter', () => {
         await new Promise((resolve) => setTimeout(resolve, 650));
         await expect(access(markerFile)).rejects.toThrow();
       } finally {
+        for (const pidFile of [intermediaryPidFile, descendantPidFile]) {
+          try {
+            const recordedPid = Number.parseInt(
+              await readFile(pidFile, 'utf8'),
+              10,
+            );
+            if (Number.isSafeInteger(recordedPid) && recordedPid > 0) {
+              process.kill(recordedPid, 'SIGKILL');
+            }
+          } catch {
+            // Best-effort test cleanup; a correctly terminated process is absent.
+          }
+        }
         await rm(markerDirectory, { recursive: true, force: true });
       }
     },
@@ -438,15 +460,26 @@ describe('runVitestWithJsonReporter', () => {
 
 describe('spawnVitest', () => {
   const childEnvironment = { PATH: process.env.PATH };
+  const expectNoParentSignalListeners = (parentSignals: EventEmitter) => {
+    expect(parentSignals.listenerCount('SIGINT')).toBe(0);
+    expect(parentSignals.listenerCount('SIGTERM')).toBe(0);
+  };
 
   it('resolves for a successful child process', async () => {
+    const parentSignals = new EventEmitter();
+
     await expect(
-      spawnVitest({
-        command: process.execPath,
-        args: ['-e', 'process.exit(0)'],
-        env: childEnvironment,
-      }),
+      spawnVitest(
+        {
+          command: process.execPath,
+          args: ['-e', 'process.exit(0)'],
+          env: childEnvironment,
+        },
+        5_000,
+        parentSignals,
+      ),
     ).resolves.toBeUndefined();
+    expectNoParentSignalListeners(parentSignals);
   });
 
   it('reports a nonzero child exit without including environment values', async () => {
@@ -474,18 +507,27 @@ describe('spawnVitest', () => {
   });
 
   it('classifies a child process that cannot start', async () => {
+    const parentSignals = new EventEmitter();
+
     await expect(
-      spawnVitest({
-        command: path.join(process.cwd(), 'no-such-binary-debt468'),
-        args: [],
-        env: childEnvironment,
-      }),
+      spawnVitest(
+        {
+          command: path.join(process.cwd(), 'no-such-binary-debt468'),
+          args: [],
+          env: childEnvironment,
+        },
+        5_000,
+        parentSignals,
+      ),
     ).rejects.toThrow(
       'TRIAL_CLOCK_SMOKE_PROCESS_START_FAILED: unable to start Vitest',
     );
+    expectNoParentSignalListeners(parentSignals);
   });
 
   it('kills and classifies a child that exceeds its process budget', async () => {
+    const parentSignals = new EventEmitter();
+
     await expect(
       spawnVitest(
         {
@@ -494,10 +536,12 @@ describe('spawnVitest', () => {
           env: childEnvironment,
         },
         10,
+        parentSignals,
       ),
     ).rejects.toThrow(
       'TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded 10ms',
     );
+    expectNoParentSignalListeners(parentSignals);
   });
 
   it('uses direct-child termination on Windows', () => {
@@ -507,6 +551,20 @@ describe('spawnVitest', () => {
     terminateVitestProcessTree(
       { pid: 123, kill: killChild },
       'win32',
+      killProcessGroup,
+    );
+
+    expect(killChild).toHaveBeenCalledWith('SIGKILL');
+    expect(killProcessGroup).not.toHaveBeenCalled();
+  });
+
+  it('uses direct-child termination when the pid is unavailable', () => {
+    const killChild = vi.fn(() => true);
+    const killProcessGroup = vi.fn(() => true);
+
+    terminateVitestProcessTree(
+      { pid: undefined, kill: killChild },
+      'linux',
       killProcessGroup,
     );
 
@@ -543,4 +601,28 @@ describe('spawnVitest', () => {
     expect(killProcessGroup).toHaveBeenCalledWith(-123, 'SIGKILL');
     expect(killChild).toHaveBeenCalledWith('SIGKILL');
   });
+
+  it.each(['SIGINT', 'SIGTERM'] as const)(
+    'forwards parent %s to the child group and removes both listeners',
+    async (signal) => {
+      const parentSignals = new EventEmitter();
+      const run = spawnVitest(
+        {
+          command: process.execPath,
+          args: ['-e', 'setInterval(() => {}, 1_000)'],
+          env: childEnvironment,
+        },
+        500,
+        parentSignals,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      parentSignals.emit(signal);
+
+      await expect(run).rejects.toThrow(
+        `TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal ${signal}`,
+      );
+      expectNoParentSignalListeners(parentSignals);
+    },
+  );
 });

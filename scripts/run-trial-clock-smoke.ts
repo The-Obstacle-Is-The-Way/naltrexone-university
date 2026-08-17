@@ -194,34 +194,40 @@ function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
 }
 
 // Two 10-second cases plus two 15-second cleanup-hook budgets normally finish
-// in under a minute. Five minutes bounds a stuck provider child while leaving
-// equal headroom inside the workflow's 10-minute job budget.
+// in under a minute. Five minutes bounds a stuck provider process tree while
+// leaving equal headroom inside the workflow's 10-minute job budget.
 const TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
 
 type KillableChildProcess = Pick<ChildProcess, 'kill' | 'pid'>;
 type KillProcessGroup = (pid: number, signal: NodeJS.Signals) => unknown;
+type ParentSignalSource = {
+  once(event: 'SIGINT' | 'SIGTERM', listener: () => void): unknown;
+  off(event: 'SIGINT' | 'SIGTERM', listener: () => void): unknown;
+};
 
 export function terminateVitestProcessTree(
   child: KillableChildProcess,
   platform: NodeJS.Platform = process.platform,
   killProcessGroup: KillProcessGroup = process.kill,
+  signal: NodeJS.Signals = 'SIGKILL',
 ): void {
   if (platform === 'win32' || child.pid === undefined) {
-    child.kill('SIGKILL');
+    child.kill(signal);
     return;
   }
 
   try {
-    killProcessGroup(-child.pid, 'SIGKILL');
+    killProcessGroup(-child.pid, signal);
   } catch {
     // The group may already have exited between the timeout and the signal.
-    child.kill('SIGKILL');
+    child.kill(signal);
   }
 }
 
 export async function spawnVitest(
   invocation: TrialClockSmokeInvocation,
   timeoutMs: number = TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS,
+  parentSignals: ParentSignalSource = process,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child: ChildProcess = spawn(invocation.command, invocation.args, {
@@ -231,24 +237,49 @@ export async function spawnVitest(
     });
 
     let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      terminateVitestProcessTree(child);
-      reject(
-        new Error(
-          `TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded ${timeoutMs}ms`,
-        ),
+    let timer: ReturnType<typeof setTimeout>;
+    const forwardSigint = () => {
+      terminateVitestProcessTree(
+        child,
+        process.platform,
+        process.kill,
+        'SIGINT',
       );
-    }, timeoutMs);
-    timer.unref();
+    };
+    const forwardSigterm = () => {
+      terminateVitestProcessTree(
+        child,
+        process.platform,
+        process.kill,
+        'SIGTERM',
+      );
+    };
+    const removeParentSignalHandlers = () => {
+      parentSignals.off('SIGINT', forwardSigint);
+      parentSignals.off('SIGTERM', forwardSigterm);
+    };
 
     const settle = (action: () => void) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      removeParentSignalHandlers();
       action();
     };
+
+    parentSignals.once('SIGINT', forwardSigint);
+    parentSignals.once('SIGTERM', forwardSigterm);
+    timer = setTimeout(() => {
+      settle(() => {
+        terminateVitestProcessTree(child);
+        reject(
+          new Error(
+            `TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded ${timeoutMs}ms`,
+          ),
+        );
+      });
+    }, timeoutMs);
+    timer.unref();
 
     child.once('error', (error) => {
       settle(() => {
