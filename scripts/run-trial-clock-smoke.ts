@@ -14,7 +14,7 @@ export const TRIAL_CLOCK_SMOKE_CASE_TITLES = [
 
 type SmokeEnvironment = Readonly<Record<string, string | undefined>>;
 
-type TrialClockSmokeInvocation = {
+export type TrialClockSmokeInvocation = {
   command: string;
   args: string[];
   env: SmokeEnvironment;
@@ -193,7 +193,7 @@ function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
   };
 }
 
-async function spawnVitest(
+export async function spawnVitest(
   invocation: TrialClockSmokeInvocation,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
@@ -220,8 +220,11 @@ async function spawnVitest(
   });
 }
 
-async function runVitestWithJsonReporter(
+export async function runVitestWithJsonReporter(
   env: SmokeEnvironment,
+  runInvocation: (
+    invocation: TrialClockSmokeInvocation,
+  ) => Promise<void> = spawnVitest,
 ): Promise<unknown> {
   const scratchDirectory = await mkdtemp(
     path.join(tmpdir(), 'debt468-trial-clock-smoke-'),
@@ -230,7 +233,7 @@ async function runVitestWithJsonReporter(
 
   try {
     const invocation = createTrialClockSmokeInvocation(outputFile, env);
-    await spawnVitest(invocation);
+    await runInvocation(invocation);
     const rawReport = await readFile(outputFile, 'utf8');
     try {
       return JSON.parse(rawReport) as unknown;

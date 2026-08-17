@@ -1,7 +1,11 @@
+import { access, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createTrialClockSmokeInvocation,
   runTrialClockSmoke,
+  runVitestWithJsonReporter,
+  spawnVitest,
   TRIAL_CLOCK_SMOKE_CASE_TITLES,
   TRIAL_CLOCK_SMOKE_FILE,
 } from './run-trial-clock-smoke';
@@ -194,5 +198,205 @@ describe('runTrialClockSmoke execution proof', () => {
       runTrialClockSmoke({ env: validEnvironment(), runVitest }),
     ).resolves.toEqual({ executed: 2, passed: 2, skipped: 0 });
     expect(runVitest).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [
+      'an unsuccessful report',
+      { success: false, testResults: [] },
+      'PROOF_REPORT_INVALID: Vitest did not produce a successful JSON report',
+    ],
+    [
+      'a missing testResults array',
+      { success: true },
+      'PROOF_REPORT_INVALID: Vitest JSON report has no testResults array',
+    ],
+    [
+      'a missing smoke file',
+      {
+        success: true,
+        testResults: [
+          {
+            name: '/repo/tests/integration/other.test.ts',
+            assertionResults: [],
+          },
+        ],
+      },
+      `PROOF_FILE_COUNT_INVALID: expected one report for ${TRIAL_CLOCK_SMOKE_FILE}, received 0`,
+    ],
+    [
+      'duplicate smoke-file results',
+      {
+        success: true,
+        testResults: [
+          { name: `/repo/${TRIAL_CLOCK_SMOKE_FILE}`, assertionResults: [] },
+          { name: TRIAL_CLOCK_SMOKE_FILE, assertionResults: [] },
+        ],
+      },
+      `PROOF_FILE_COUNT_INVALID: expected one report for ${TRIAL_CLOCK_SMOKE_FILE}, received 2`,
+    ],
+    [
+      'a missing assertionResults array',
+      {
+        success: true,
+        testResults: [{ name: `/repo/${TRIAL_CLOCK_SMOKE_FILE}` }],
+      },
+      'PROOF_REPORT_INVALID: smoke report has no assertionResults array',
+    ],
+    [
+      'a malformed assertion',
+      {
+        success: true,
+        testResults: [
+          {
+            name: `/repo/${TRIAL_CLOCK_SMOKE_FILE}`,
+            assertionResults: [{ status: 'passed' }],
+          },
+        ],
+      },
+      'PROOF_REPORT_INVALID: smoke report contains a malformed assertion',
+    ],
+  ])('fails closed for %s', async (_label, report, expectedMessage) => {
+    await expect(
+      runTrialClockSmoke({
+        env: validEnvironment(),
+        runVitest: async () => report,
+      }),
+    ).rejects.toThrow(expectedMessage);
+  });
+
+  it('rejects duplicate named cases', async () => {
+    const [firstTitle, secondTitle] = TRIAL_CLOCK_SMOKE_CASE_TITLES;
+
+    await expect(
+      runTrialClockSmoke({
+        env: validEnvironment(),
+        runVitest: async () =>
+          reporterOutput([
+            { title: firstTitle, status: 'passed' },
+            { title: firstTitle, status: 'passed' },
+            { title: secondTitle, status: 'passed' },
+          ]),
+      }),
+    ).rejects.toThrow(`PROOF_DUPLICATE_CASE: ${firstTitle}`);
+  });
+
+  it('rejects a named case that did not pass', async () => {
+    const [firstTitle, secondTitle] = TRIAL_CLOCK_SMOKE_CASE_TITLES;
+
+    await expect(
+      runTrialClockSmoke({
+        env: validEnvironment(),
+        runVitest: async () =>
+          reporterOutput([
+            { title: firstTitle, status: 'failed' },
+            { title: secondTitle, status: 'passed' },
+          ]),
+      }),
+    ).rejects.toThrow(`PROOF_CASE_NOT_PASSED: ${firstTitle}`);
+  });
+
+  it('rejects an unexpected non-passing case in the smoke file', async () => {
+    await expect(
+      runTrialClockSmoke({
+        env: validEnvironment(),
+        runVitest: async () =>
+          reporterOutput([
+            ...TRIAL_CLOCK_SMOKE_CASE_TITLES.map((title) => ({
+              title,
+              status: 'passed',
+            })),
+            { title: 'unexpected case', status: 'failed' },
+          ]),
+      }),
+    ).rejects.toThrow(
+      'PROOF_NONPASSING_CASE: smoke report contains 1 non-passing cases',
+    );
+  });
+});
+
+describe('runVitestWithJsonReporter', () => {
+  it('parses the machine report and removes its scratch directory', async () => {
+    const report = reporterOutput(
+      TRIAL_CLOCK_SMOKE_CASE_TITLES.map((title) => ({
+        title,
+        status: 'passed',
+      })),
+    );
+    let scratchDirectory: string | undefined;
+
+    await expect(
+      runVitestWithJsonReporter(validEnvironment(), async (invocation) => {
+        const outputArgument = invocation.args.find((argument) =>
+          argument.startsWith('--outputFile='),
+        );
+        if (!outputArgument) throw new Error('output file argument missing');
+        const outputFile = outputArgument.slice('--outputFile='.length);
+        scratchDirectory = path.dirname(outputFile);
+        await writeFile(outputFile, JSON.stringify(report), 'utf8');
+      }),
+    ).resolves.toEqual(report);
+
+    expect(scratchDirectory).toBeTypeOf('string');
+    await expect(access(scratchDirectory ?? '')).rejects.toThrow();
+  });
+
+  it('fails closed on invalid reporter JSON and still removes scratch', async () => {
+    let scratchDirectory: string | undefined;
+
+    await expect(
+      runVitestWithJsonReporter(validEnvironment(), async (invocation) => {
+        const outputArgument = invocation.args.find((argument) =>
+          argument.startsWith('--outputFile='),
+        );
+        if (!outputArgument) throw new Error('output file argument missing');
+        const outputFile = outputArgument.slice('--outputFile='.length);
+        scratchDirectory = path.dirname(outputFile);
+        await writeFile(outputFile, 'not-json', 'utf8');
+      }),
+    ).rejects.toThrow(
+      'PROOF_REPORT_INVALID: Vitest output file is not valid JSON',
+    );
+
+    expect(scratchDirectory).toBeTypeOf('string');
+    await expect(access(scratchDirectory ?? '')).rejects.toThrow();
+  });
+});
+
+describe('spawnVitest', () => {
+  const childEnvironment = { PATH: process.env.PATH };
+
+  it('resolves for a successful child process', async () => {
+    await expect(
+      spawnVitest({
+        command: process.execPath,
+        args: ['-e', 'process.exit(0)'],
+        env: childEnvironment,
+      }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('reports a nonzero child exit without including environment values', async () => {
+    await expect(
+      spawnVitest({
+        command: process.execPath,
+        args: ['-e', 'process.exit(7)'],
+        env: { ...childEnvironment, STRIPE_SECRET_KEY: 'do_not_print' },
+      }),
+    ).rejects.toThrow(
+      'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with exit code 7',
+    );
+  });
+
+  it('reports a child signal', async () => {
+    await expect(
+      spawnVitest({
+        command: process.execPath,
+        args: ['-e', "process.kill(process.pid, 'SIGTERM')"],
+        env: childEnvironment,
+      }),
+    ).rejects.toThrow(
+      'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal SIGTERM',
+    );
   });
 });
