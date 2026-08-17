@@ -356,10 +356,61 @@ export async function runVitestWithJsonReporter(
 
   try {
     const invocation = createTrialClockSmokeInvocation(outputFile, env);
-    await runInvocation(invocation);
+    try {
+      await runInvocation(invocation);
+    } catch (processError) {
+      // The JSON reporter swallows per-case output, and the scratch report is
+      // deleted below — so a hosted failure would otherwise never say WHICH
+      // case failed. Surface a redacted per-case summary before cleanup.
+      await printRedactedCaseSummary(outputFile);
+      throw processError;
+    }
     return await readJsonReport(outputFile);
   } finally {
     await rm(scratchDirectory, { recursive: true, force: true });
+  }
+}
+
+const SENSITIVE_TOKEN_PATTERN =
+  /(?:(?:cus|sub|clock|acct|req|seti|si|pm|in|price|cs)_[A-Za-z0-9]+|sk_(?:test|live)_[A-Za-z0-9]+|https?:\/\/\S+|\/(?:Users|home)\/\S+)/g;
+
+export function redactDiagnosticText(text: string): string {
+  return text.replaceAll(SENSITIVE_TOKEN_PATTERN, '[redacted]');
+}
+
+async function printRedactedCaseSummary(outputFile: string): Promise<void> {
+  let report: unknown;
+  try {
+    report = JSON.parse(await readFile(outputFile, 'utf8')) as unknown;
+  } catch {
+    // Intentional diagnostic fallback: this summary is best-effort context for
+    // an already-failing run, so read/parse errors must not mask the primary
+    // process failure that the caller is about to rethrow.
+    console.error(
+      '[trial-clock-smoke] no readable JSON report to summarize the failure',
+    );
+    return;
+  }
+  if (!isRecord(report) || !Array.isArray(report.testResults)) return;
+  for (const result of report.testResults) {
+    if (!isRecord(result) || !Array.isArray(result.assertionResults)) continue;
+    for (const assertion of result.assertionResults) {
+      if (!isRecord(assertion)) continue;
+      const title =
+        typeof assertion.title === 'string' ? assertion.title : 'unknown case';
+      const status =
+        typeof assertion.status === 'string' ? assertion.status : 'unknown';
+      const firstFailureLine =
+        Array.isArray(assertion.failureMessages) &&
+        typeof assertion.failureMessages[0] === 'string'
+          ? redactDiagnosticText(
+              assertion.failureMessages[0].split('\n')[0] ?? '',
+            ).slice(0, 200)
+          : '';
+      console.error(
+        `[trial-clock-smoke] case "${title}" status=${status}${firstFailureLine ? ` detail=${firstFailureLine}` : ''}`,
+      );
+    }
   }
 }
 
