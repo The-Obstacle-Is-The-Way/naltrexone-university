@@ -10,7 +10,8 @@ const nextConfig: NextConfig = {
     // `tsc6` precisely so it does not claim `tsc`. CLI mode therefore reports
     // `typescript` as missing and fails the build. API mode resolves
     // `typescript/lib/typescript.js`, which the shim does ship.
-    // Do not remove without first collapsing the alias seam (see DEBT-460).
+    // Do not remove until a released Next version supports this alias topology
+    // or the seam is collapsed (see DEBT-460).
     useTypeScriptCli: false,
   },
   // Playwright uses 127.0.0.1 by default while Next dev server initializes on

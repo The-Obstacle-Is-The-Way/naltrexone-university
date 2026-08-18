@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
+import packageJson from './package.json';
 
 describe('next.config', () => {
+  it('keeps Next build on the TypeScript API while the DEBT-460 compiler alias is present', async () => {
+    const nextConfig = (await import('./next.config')).default;
+
+    expect(packageJson.dependencies['@typescript/native']).toMatch(
+      /^npm:typescript@/,
+    );
+    expect(packageJson.dependencies.typescript).toMatch(
+      /^npm:@typescript\/typescript6@/,
+    );
+    expect(nextConfig.experimental?.useTypeScriptCli).toBe(false);
+    expect(nextConfig.typescript?.ignoreBuildErrors).not.toBe(true);
+  });
+
   it('keeps static security headers in next.config without taking CSP ownership from proxy middleware', async () => {
     const nextConfig = (await import('./next.config')).default;
 
