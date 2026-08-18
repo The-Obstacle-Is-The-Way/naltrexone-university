@@ -6,6 +6,7 @@ import {
   type CheckoutSessionCreateParams,
   isValidStripeSubscriptionStatus,
   type StripeCheckoutSession,
+  type StripeCheckoutSessionList,
   type StripeClient,
   type StripeListedSubscription,
   type StripeSubscriptionStatus,
@@ -22,12 +23,19 @@ import { callStripeWithRetry } from './stripe-retry';
 
 export const SUBSCRIPTION_LIST_LIMIT = 10;
 export const OPEN_CHECKOUT_SESSION_RECONCILE_LIMIT = 10;
-// WHY 10: each retained-key rung is cached create + live retrieve. The 2026-08-14
-// test-mode probe measured 120.5 ms and 99.2 ms medians (5 samples each).
-// At the repository retry envelope, a third-attempt success for both calls is
-// 3×120.5 + 300 + 3×99.2 + 300 = 1,259.1 ms/rung. Primary + 10 recoveries
-// budgets 13.850 s, below half the pricing route's 30 s maxDuration; 11 would
-// budget 15.109 s. This is a healthy-service planning cap, not a request timeout.
+// WHY 25×4: a 2026-08-17 read-only test-mode probe measured 436.6 ms median
+// for 25 rows. Under the repository third-attempt-success envelope, four pages
+// plus the existing primary-and-ten-rung fallback budget 20.289 s of the
+// pricing route's 30 s maxDuration. This is a planning bound, not a timeout.
+export const CHECKOUT_SESSION_TAIL_SCAN_PAGE_SIZE = 25;
+export const CHECKOUT_SESSION_TAIL_SCAN_PAGE_LIMIT = 4;
+// WHY 10: after the bounded tail scan, this caps fallback/race recovery creates;
+// each rung is cached create + live retrieve. The 2026-08-14 test-mode probe
+// measured 120.5 ms and 99.2 ms medians (5 samples each). At the repository
+// retry envelope, a third-attempt success for both calls is 3×120.5 + 300 +
+// 3×99.2 + 300 = 1,259.1 ms/rung. Primary + 10 recoveries budgets 13.850 s;
+// 11 would budget 15.109 s. This is a healthy-service planning cap, not a
+// request timeout or the retained-chain capacity of the exact-match path.
 export const SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT = 10;
 // WHY 10: strict retrieval makes each retained setup replay rung cached create +
 // live retrieve. The 2026-08-14 setup-mode probe measured 120.5 ms create and
@@ -116,6 +124,125 @@ function hasCheckoutRenewalMetadata(session: StripeCheckoutSession): boolean {
     'renewal_terms_hash',
     'renewal_cancellation_method',
   ].every((key) => Boolean(metadata[key]));
+}
+
+function hasRecognizedCheckoutSessionStatus(
+  session: StripeCheckoutSession,
+): boolean {
+  return (
+    session.status === 'open' ||
+    session.status === 'complete' ||
+    session.status === 'expired'
+  );
+}
+
+async function findUniqueNewestMatchingCheckoutSession({
+  stripe,
+  input,
+  logger,
+}: {
+  stripe: StripeClient;
+  input: CheckoutSessionInput;
+  logger: Logger;
+}): Promise<StripeCheckoutSession | null> {
+  function logFallback(reason: string, errorName?: string): null {
+    logger.warn(
+      {
+        userId: input.userId,
+        externalCustomerId: input.externalCustomerId,
+        reason,
+        ...(errorName ? { errorName } : {}),
+      },
+      'Falling back to bounded checkout replay traversal after tail scan was inconclusive',
+    );
+    return null;
+  }
+
+  function selectUnique(
+    matchesAtNewestSecond: StripeCheckoutSession[],
+  ): StripeCheckoutSession | null {
+    if (matchesAtNewestSecond.length === 1) {
+      return matchesAtNewestSecond[0] ?? null;
+    }
+    return logFallback('newest-matching-second-is-ambiguous');
+  }
+
+  let startingAfter: string | undefined;
+  let previousCreated: number | null = null;
+  let newestMatchingCreated: number | null = null;
+  const matchesAtNewestSecond: StripeCheckoutSession[] = [];
+
+  for (
+    let pageNumber = 1;
+    pageNumber <= CHECKOUT_SESSION_TAIL_SCAN_PAGE_LIMIT;
+    pageNumber += 1
+  ) {
+    let page: StripeCheckoutSessionList;
+    try {
+      page = await callStripeWithRetry({
+        operation: 'checkout.sessions.list_replay_tail',
+        fn: () =>
+          stripe.checkout.sessions.list({
+            customer: input.externalCustomerId,
+            limit: CHECKOUT_SESSION_TAIL_SCAN_PAGE_SIZE,
+            ...(startingAfter ? { starting_after: startingAfter } : {}),
+          }),
+        logger,
+      });
+    } catch (error) {
+      return logFallback(
+        'provider-list-failed',
+        error instanceof Error ? error.name : 'UnknownError',
+      );
+    }
+    if (typeof page.has_more !== 'boolean') {
+      return logFallback('provider-list-has-more-is-missing');
+    }
+
+    for (const session of page.data) {
+      if (typeof session.created !== 'number') {
+        return logFallback('listed-session-created-is-missing');
+      }
+      if (previousCreated !== null && session.created > previousCreated) {
+        return logFallback('provider-list-order-is-invalid');
+      }
+      previousCreated = session.created;
+
+      if (
+        newestMatchingCreated !== null &&
+        session.created < newestMatchingCreated
+      ) {
+        return selectUnique(matchesAtNewestSecond);
+      }
+
+      const metadataMatches =
+        session.mode === 'subscription' &&
+        checkoutRenewalMetadataMatches(session, input);
+      if (!metadataMatches) continue;
+      if (!hasRecognizedCheckoutSessionStatus(session)) {
+        return logFallback('newest-matching-session-status-is-missing');
+      }
+
+      if (newestMatchingCreated === null) {
+        newestMatchingCreated = session.created;
+      }
+      if (session.created === newestMatchingCreated) {
+        matchesAtNewestSecond.push(session);
+      }
+    }
+
+    if (page.has_more !== true) {
+      return newestMatchingCreated === null
+        ? null
+        : selectUnique(matchesAtNewestSecond);
+    }
+
+    const cursor = page.data.at(-1)?.id;
+    if (!cursor) return logFallback('provider-list-cursor-is-missing');
+    startingAfter = cursor;
+  }
+
+  return logFallback('tail-scan-page-limit-reached');
 }
 
 export async function createStripeTrialPaymentMethodSetupSession({
@@ -980,7 +1107,26 @@ export async function createStripeCheckoutSession({
     policy: 'fallback-to-created',
   });
 
-  for (let attempt = 1; isSessionInactive(session, nowMs); attempt += 1) {
+  let sessionIsInactive = isSessionInactive(session, nowMs);
+  if (sessionIsInactive) {
+    const newestMatchingSession = await findUniqueNewestMatchingCheckoutSession(
+      { stripe, input, logger },
+    );
+    if (newestMatchingSession) {
+      session =
+        newestMatchingSession.status === 'open'
+          ? await retrieveLiveCheckoutSessionAfterCreate({
+              stripe,
+              session: newestMatchingSession,
+              logger,
+              policy: 'fallback-to-created',
+            })
+          : newestMatchingSession;
+      sessionIsInactive = isSessionInactive(session, nowMs);
+    }
+  }
+
+  for (let attempt = 1; sessionIsInactive; attempt += 1) {
     if (attempt > SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT) {
       throw new ApplicationError(
         'STRIPE_ERROR',
@@ -1019,6 +1165,7 @@ export async function createStripeCheckoutSession({
       logger,
       policy: 'fallback-to-created',
     });
+    sessionIsInactive = isSessionInactive(session, nowMs);
   }
 
   const canonicalRecoveredSession =

@@ -84,7 +84,17 @@ export type StripePaymentMethod = {
   customer?: string | { id: string } | null;
 };
 
-export type StripeCheckoutSessionList = { data: StripeCheckoutSession[] };
+export type StripeCheckoutSessionListParams = {
+  customer: string;
+  status?: StripeCheckoutSessionStatus;
+  limit: number;
+  starting_after?: string;
+};
+
+export type StripeCheckoutSessionList = {
+  data: StripeCheckoutSession[];
+  has_more?: boolean;
+};
 
 export type StripeCheckoutSessionLineItem = {
   price?: { id?: string } | null;
@@ -154,11 +164,9 @@ export type StripeClient = {
         params: CheckoutSessionCreateParams,
         options?: StripeRequestOptions,
       ): Promise<StripeCheckoutSession>;
-      list(params: {
-        customer: string;
-        status: 'open';
-        limit: number;
-      }): Promise<StripeCheckoutSessionList>;
+      list(
+        params: StripeCheckoutSessionListParams,
+      ): Promise<StripeCheckoutSessionList>;
       retrieve(
         sessionId: string,
         params?: { expand?: string[] },
