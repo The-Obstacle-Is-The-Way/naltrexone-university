@@ -20,6 +20,73 @@ Deferred/Parked register row. This is not a resolution:
 
 ---
 
+## Observed outcome (2026-08-17, PRs #799 + #800 bundle)
+
+Two of the three standing rules were exercised for the first time by the
+Dependabot bundle promoted as the #799/#800 merge. Both outcomes are recorded
+here as Part 1 residue 3 and Part 3 require.
+
+### Part 1 residue 3 — Dependabot aliased-specifier behaviour: CONFIRMED SILENT
+
+Dependabot does **not** propose updates for either `npm:`-aliased TypeScript
+entry. The `npm-minor-and-patch` group matches pattern `*`, yet PR #799 left
+both `"@typescript/native": "npm:typescript@^7.0.2"` and
+`"typescript": "npm:@typescript/typescript6@^6.0.2"` untouched, while bumping
+eight other dependencies. TypeScript upgrades are therefore a **manual chore
+that no automation will nag about** — as the residue anticipated. Advance both
+pins together by hand and re-run the four probes in Verification.
+
+### Part 1 residue 1 — the seam bit, in a form the residue did not predict
+
+The residue anticipated divergence *between the two compilers* (a construct one
+accepts and the other rejects). The actual first failure was a **resolution**
+failure, not a type-judgement one, and it broke `next build` outright:
+
+Next **16.3.0** flipped the default of `experimental.useTypeScriptCli` from
+`false` to `true` (`dist/server/config-shared.js`; the value is the only
+relevant change — `verify-typescript-setup.js`, `has-necessary-dependencies.js`
+and `build/type-check.js` are byte-identical between 16.2.12 and 16.3.0). In
+CLI mode Next requires the file `typescript/bin/tsc`; in API mode it requires
+`typescript/lib/typescript.js`. The `@typescript/typescript6` shim ships
+`lib/typescript.js` but renames its bin to **`tsc6` precisely so it does not
+claim `tsc`** — the very property that makes the seam work. So CLI mode
+reported the `typescript` package as missing and failed the build with the
+misleading "It looks like you're trying to use TypeScript but do not have the
+required package(s) installed."
+
+Next's own escape hatch does not fire here: it probes for
+`@typescript/native-preview`, whereas this repo aliases `@typescript/native`.
+That escape hatch is also gated on `!useTypeScriptCli`, so it is unreachable in
+CLI mode regardless of the package name.
+
+**Resolution applied:** `next.config.ts` now pins
+`experimental.useTypeScriptCli: false`, restoring API mode with an explanatory
+comment at the definition site. This is the *anti*-booby-trap: it makes the
+dependency explicit where JSON could not. Verified that type checking still
+genuinely runs — a deliberately injected `const x: number = "string"` fails the
+build with `Type error: Type 'string' is not assignable to type 'number'`, so
+this is a mode pin and **not** an `ignoreBuildErrors`-style bypass.
+
+**New standing rule:** the seam now has a third failure mode — a bundler or
+tool that resolves the `typescript` **bin** rather than its **API** will break.
+When collapsing the aliases (the Part 1 exit criterion), remove this
+`next.config.ts` pin in the same change.
+
+### Part 3 — Biome `$schema` pin: folded in as required
+
+`biome.json` `$schema` advanced 2.5.6 → 2.5.7 in the same PR as the
+`@biomejs/biome` 2.5.6 → 2.5.7 bump, per the standing rule. `biome --version`
+and the pinned schema version match exactly; Biome emits no schema-mismatch
+informational.
+
+### Part 2 — not triggered
+
+`@clerk/nextjs` moved 7.6.4 → 7.7.1, a **minor** bump, so the
+`createRouteMatcher` migration trigger (any *major*) has not fired. `proxy.ts`
+is unchanged and the deprecation remains latent.
+
+---
+
 ## Description
 
 The 2026-07-20 dependency upgrade train (PRs #677, #679, #678, #680, #682; promoted to production via #685) landed green end-to-end, but left three residues. None changes current behavior; each is a future-facing hazard that should be tracked rather than rediscovered.
