@@ -3,7 +3,8 @@
 **Status:** Deferred / Parked (standing rules; not resolved) — 2026-07-23
 **Priority:** P4
 **Date:** 2026-07-20
-**Confirmed:** 2026-07-20 (each part verified against the installed packages and checked-in config on `dev`/`main` at `9f11e674`, promoted via PR #685 merge `b5fd6880`)
+**Baseline confirmed:** 2026-07-20 (each part verified against the installed packages and checked-in config on `dev`/`main` at `9f11e674`, promoted via PR #685 merge `b5fd6880`)
+**Latest update confirmed:** 2026-08-17/18 (PR #805 bundle — Part 1 residue 1 failure mode, Part 1 residue 3 evidence correction, and Part 3 fold-in; see "Observed outcome" below)
 
 ## Register final-wave disposition (2026-07-23)
 
