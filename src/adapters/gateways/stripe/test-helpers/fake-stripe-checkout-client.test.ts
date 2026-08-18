@@ -132,17 +132,11 @@ describe('FakeStripeCheckoutClient', () => {
     const third = await stripe.checkout.sessions.create(subscriptionParams, {
       idempotencyKey: 'key_third',
     });
-    const list = stripe.checkout.sessions.list as unknown as (params: {
-      customer: string;
-      limit: number;
-      starting_after?: string;
-    }) => Promise<{
-      data: Array<{ id: string; status?: string | null }>;
-      has_more: boolean;
-    }>;
-
-    const firstPage = await list({ customer: 'cus_test', limit: 2 });
-    const secondPage = await list({
+    const firstPage = await stripe.checkout.sessions.list({
+      customer: 'cus_test',
+      limit: 2,
+    });
+    const secondPage = await stripe.checkout.sessions.list({
       customer: 'cus_test',
       limit: 2,
       starting_after: second.id,
