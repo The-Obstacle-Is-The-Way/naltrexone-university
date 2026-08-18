@@ -1,8 +1,9 @@
 # DEBT-470: Checkout Replay Traversal Needs a Constant-Depth Tail Jump
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** P3
 **Date:** 2026-08-17
+**Resolved:** 2026-08-17
 **Source:** DEBT-466 residual-cap execution audit: a local campaign burst retained 11 completed `(user, monthly, trial:7)` Checkout Sessions and exhausted `SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT = 10`.
 
 ---
@@ -11,7 +12,7 @@
 
 `createStripeCheckoutSession()` uses deterministic provider keys to preserve BUG-245 concurrency collapse. After the primary create, it retrieves live Session state. For every terminal result it derives the next key from that Session ID — `checkout_session_recovery:{userId}:{plan}:{staleSessionId}[:trial:{days}]` — then creates and retrieves again. The loop permits 10 recovery creates. Its exact boundary test proves that primary plus all 10 recoveries terminal throws before recovery create 11.
 
-Part A correctly raised the old limit from 3 to a measured 10 without weakening determinism, but it did not remove the structural property: reaching the newest retained Session requires one create/retrieve rung per older retained Session. The 2026-08-17 reproduction traversed completed recovery attempts 1→10 and threw; a read-only current-tuple census found 11 completed Sessions created less than 24 hours earlier. The current test-infrastructure preflight now identifies this condition without a generic redirect, but diagnosis is not a production fix.
+Part A correctly raised the old limit from 3 to a measured 10 without weakening determinism, but it did not remove the structural property: reaching the newest retained Session required one create/retrieve rung per older retained Session. The 2026-08-17 reproduction traversed completed recovery attempts 1→10 and threw; a read-only current-tuple census found 11 completed Sessions created less than 24 hours earlier. A temporary test-infrastructure preflight identified that condition without a generic redirect until this production fix landed.
 
 ## Impact
 
@@ -21,7 +22,7 @@ Part A correctly raised the old limit from 3 to a measured 10 without weakening 
 
 ## Resolution
 
-The 2026-08-17 adversarial audit settles a **constant healthy-path recovery-create-depth tail jump**, not another cap increase. Stripe's pagination contract says list objects are reverse chronological (newest first), `has_more` marks omitted objects, and `starting_after` advances the cursor; the Checkout Sessions endpoint accepts at most 100 rows per page but cannot filter by metadata. The installed `stripe@22.4.0` SDK exposes those fields and cursor parameters. A read-only TEST-mode probe then observed the documented order and cursor behavior: the first 100 customer Sessions were non-increasing by `created`, `has_more` was true, the next five-row cursor page loaded, and 30 rows in that first page matched the current monthly `trial:7` tuple. The newest match was terminal and was the only match at its creation second. No key or identifier was printed.
+The 2026-08-17 adversarial audit settles a **constant healthy-path recovery-create-depth tail jump**, not another cap increase. [Stripe's pagination contract](https://docs.stripe.com/api/pagination) says list objects are reverse chronological (newest first), `has_more` marks omitted objects, and `starting_after` advances the cursor; the [Checkout Sessions list endpoint](https://docs.stripe.com/api/checkout/sessions/list) accepts at most 100 rows per page but cannot filter by metadata. The installed `stripe@22.4.0` SDK exposes those fields and cursor parameters. A read-only TEST-mode probe then observed the documented order and cursor behavior: the first 100 customer Sessions were non-increasing by `created`, `has_more` was true, the next five-row cursor page loaded, and 30 rows in that first page matched the current monthly `trial:7` tuple. The newest match was terminal and was the only match at its creation second. No key or identifier was printed.
 
 1. Keep the existing open-Session preflight and deterministic primary create/live-retrieve. Only when that result is terminal, scan Checkout Sessions for this customer in reverse-chronological pages of 25, stopping after four pages (100 Sessions). “Match” means `mode === 'subscription'` plus equality with **all eleven** fields produced by `checkoutRenewalMetadata()` — variant, user, plan, amount, currency, frequency, disclosure snapshot/version, terms version/hash, and cancellation method — not merely `(user, plan, variant)`. Missing legacy metadata is not a match.
 2. The first matching creation second is the newest matching second by Stripe's ordering guarantee. Continue only far enough to cross that second, including a cursor page when the second straddles a boundary. Use the candidate only when exactly one matching Session exists at that second and it has a recognized live status. If no match appears within four pages, list fails, pagination cannot advance, a required field is absent, or multiple matching Sessions share that newest second, log the reason and retain the primary result; the existing deterministic bounded walk remains the safe fallback. This avoids inventing a causal order from Stripe IDs, whose tie ordering is not documented.
@@ -33,16 +34,20 @@ The 2026-08-17 adversarial audit settles a **constant healthy-path recovery-crea
 
 The scan bound is execution-derived. Five read-only 25-row list samples measured 436.6 ms median / 624.6 ms maximum; 10, 50, and 100 rows measured 334.9, 946.4, and 2,014.0 ms medians respectively. Under the repository's third-attempt-success envelope, one 25-row page budgets `3×436.6 + 300 = 1,609.8 ms`; one page plus the recorded create/retrieve rung budgets `1,609.8 + 1,259.1 = 2,868.9 ms`. The pathological four-page scan plus the existing primary-and-ten-rung fallback budgets `4×1,609.8 + 13,850 = 20,289.2 ms`, leaving 9.711 seconds of the pricing route's 30-second `maxDuration` for subscription/open-Session checks, reconciliation, application work, and variance. As before, this is a healthy-service planning budget, not a hard timeout: the SDK's 80-second transport timeout remains independently larger.
 
-On the common saturated-chain path, the whole Checkout-session sequence has three list calls (existing-open preflight, one tail page, post-create reconciliation), two creates (primary replay plus `f(tail)`), and two live retrieves; the tail-jump slice itself is one list + one create + one retrieve. The local capacity preflight and its `[E2E_CHECKOUT_CHAIN_SATURATED]` gate exception retire only when this implementation lands and the retained-chain E2E passes; until then they remain the pre-change diagnostic.
+On the common saturated-chain path, the whole Checkout-session sequence has three list calls (existing-open preflight, one tail page, post-create reconciliation), two creates (primary replay plus `f(tail)`), and two live retrieves; the tail-jump slice itself is one list + one create + one retrieve.
+
+**Implemented 2026-08-17.** The fake contract first failed in two places: terminal Sessions were absent from list results, and a same-key/different-params create replayed instead of rejecting. After that fake went green, the adapter's more-than-10 retained-terminal test failed at the exact old `STRIPE_ERROR` guard. The implementation adds the bounded unique-tail selector to subscription Checkout only, preserves both retrieval policies and every existing key builder, and reuses the selected terminal Session as the first input to the existing recovery loop. A hostile reread added one more red proof: missing `has_more` was incorrectly accepted as a complete page until the selector made it an explicit safe-fallback reason. Ten tail-jump cases pin the call counts, second-page selection, equal-second ambiguity, all renewal-metadata fields, legacy metadata, the four-page bound, missing pagination state, list failure, open-tail retrieval/fallback, and concurrency. The provider fake has ten green contract cases, and the full focused Checkout slice passed 10 files / 80 tests.
+
+The temporary `assertLocalTrialCheckoutReplayCapacity()` helper and its `[E2E_CHECKOUT_CHAIN_SATURATED]` push exception are removed. At final live verification the retained window had aged to seven exact current-tuple completed Sessions, below the old cap, so this run could not honestly prove a live above-cap jump. The focused `pnpm test:e2e tests/e2e/trial-start.spec.ts` nevertheless passed setup plus trial start 2/2 in 45.3 seconds against that retained state; the provider-faithful 13-terminal red/green case supplies the above-cap execution proof without manufacturing more Stripe Sessions.
 
 ## Verification
 
 - [x] Execution audit proves documented list ordering/pagination and observes tail selection against Stripe TEST mode without exposing keys or identifiers
-- [ ] Provider-faithful red test with more than 10 retained terminal Sessions succeeds after the implementation with constant recovery-create depth
-- [ ] Mixed-tuple, concurrency, legacy-metadata, pagination, ambiguity, and provider-failure tests pin safe behavior
-- [ ] Existing DEBT-466/BUG-245 contracts remain byte-for-byte key-compatible and green
-- [ ] Measured worst-case planning budget remains inside the 30-second pricing route budget with documented headroom
-- [ ] Local `trial-start` passes against a previously cap-saturating retained chain; the diagnostic preflight remains as an environment receipt, not a skip
+- [x] Provider-faithful red test with more than 10 retained terminal Sessions succeeds after the implementation with constant recovery-create depth (one tail list, one recovery create, one recovery retrieve; three/two/two for the whole Checkout-session sequence)
+- [x] Mixed-tuple, concurrency, legacy-metadata, pagination, ambiguity, and provider-failure tests pin safe behavior
+- [x] Existing DEBT-466/BUG-245 contracts remain byte-for-byte key-compatible and green (10 focused files / 80 tests)
+- [x] Measured worst-case planning budget remains inside the 30-second pricing route budget with documented headroom
+- [x] Local `trial-start` passes against seven retained current-tuple terminal Sessions; the old above-cap preflight and gate exception are deleted, and any future `checkout=error` is blocking
 
 ## Related
 

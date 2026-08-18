@@ -10,7 +10,6 @@ import {
   resetE2EUserToFirstTimer,
   restoreE2EUserPaidSubscription,
 } from './helpers/subscription';
-import { assertLocalTrialCheckoutReplayCapacity } from './helpers/trial-checkout-replay-capacity';
 
 test.describe('trial start', () => {
   // Hosted Stripe Checkout plus Clerk sign-in can take longer than app-only flows.
@@ -19,7 +18,6 @@ test.describe('trial start', () => {
 
   test.beforeEach(async () => {
     await runE2EUserStateReset();
-    await assertLocalTrialCheckoutReplayCapacity();
     await resetE2EUserToFirstTimer();
   });
 

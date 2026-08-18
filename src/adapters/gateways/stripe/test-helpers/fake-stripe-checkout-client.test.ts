@@ -115,4 +115,68 @@ describe('FakeStripeCheckoutClient', () => {
       stripe.checkout.sessions.create(setupParams, options),
     ).resolves.toEqual(first);
   });
+
+  it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
+    let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
+    const stripe = new FakeStripeCheckoutClient(() => nowMs);
+    const first = await stripe.checkout.sessions.create(subscriptionParams, {
+      idempotencyKey: 'key_first',
+    });
+    stripe.markComplete(first.id);
+    nowMs += 1_000;
+    const second = await stripe.checkout.sessions.create(subscriptionParams, {
+      idempotencyKey: 'key_second',
+    });
+    stripe.markExpired(second.id);
+    nowMs += 1_000;
+    const third = await stripe.checkout.sessions.create(subscriptionParams, {
+      idempotencyKey: 'key_third',
+    });
+    const list = stripe.checkout.sessions.list as unknown as (params: {
+      customer: string;
+      limit: number;
+      starting_after?: string;
+    }) => Promise<{
+      data: Array<{ id: string; status?: string | null }>;
+      has_more: boolean;
+    }>;
+
+    const firstPage = await list({ customer: 'cus_test', limit: 2 });
+    const secondPage = await list({
+      customer: 'cus_test',
+      limit: 2,
+      starting_after: second.id,
+    });
+
+    expect(firstPage).toMatchObject({
+      data: [
+        { id: third.id, status: 'open' },
+        { id: second.id, status: 'expired' },
+      ],
+      has_more: true,
+    });
+    expect(secondPage).toMatchObject({
+      data: [{ id: first.id, status: 'complete' }],
+      has_more: false,
+    });
+  });
+
+  it('rejects reuse of an idempotency key with different create parameters', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const options = { idempotencyKey: 'key_subscription' };
+    await stripe.checkout.sessions.create(subscriptionParams, options);
+
+    const action = stripe.checkout.sessions.create(
+      {
+        ...subscriptionParams,
+        success_url: 'https://app.example.com/a-different-success',
+      },
+      options,
+    );
+
+    await expect(action).rejects.toMatchObject({
+      rawType: 'idempotency_error',
+      statusCode: 400,
+    });
+  });
 });
