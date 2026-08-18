@@ -26,7 +26,11 @@ function createDbRow() {
 function installDefaultServicesHarness(
   input: {
     dbRows?: ReturnType<typeof createDbRow>[];
+    invoicePaymentIntent?: unknown;
+    paymentIntentLatestCharge?: unknown;
+    subscriptionCustomer?: unknown;
     subscriptionError?: Error;
+    subscriptionLatestInvoice?: unknown;
   } = {},
 ): DefaultServicesHarness {
   const sqlEnd = vi.fn(async () => {});
@@ -55,10 +59,16 @@ function installDefaultServicesHarness(
           ],
         },
         trial_end: null,
-        customer: 'cus_fixture',
+        customer:
+          input.subscriptionCustomer === undefined
+            ? 'cus_fixture'
+            : input.subscriptionCustomer,
         metadata: { user_id: fixtureUserId },
         livemode: false,
-        latest_invoice: 'in_fixture',
+        latest_invoice:
+          input.subscriptionLatestInvoice === undefined
+            ? 'in_fixture'
+            : input.subscriptionLatestInvoice,
       }));
   const invoicesRetrieve = vi.fn(async () => ({
     status: 'paid',
@@ -67,12 +77,24 @@ function installDefaultServicesHarness(
     livemode: false,
   }));
   const invoicePaymentsList = vi.fn(async () => ({
-    data: [{ payment: { payment_intent: 'pi_fixture' } }],
+    data: [
+      {
+        payment: {
+          payment_intent:
+            input.invoicePaymentIntent === undefined
+              ? 'pi_fixture'
+              : input.invoicePaymentIntent,
+        },
+      },
+    ],
   }));
   const paymentIntentsRetrieve = vi.fn(async () => ({
     status: 'succeeded',
     livemode: false,
-    latest_charge: 'ch_fixture',
+    latest_charge:
+      input.paymentIntentLatestCharge === undefined
+        ? 'ch_fixture'
+        : input.paymentIntentLatestCharge,
   }));
   const stripeClient = {
     subscriptions: { retrieve: subscriptionsRetrieve },
@@ -172,5 +194,81 @@ describe('paid Checkout default evidence services', () => {
     expect(caughtError?.message).not.toContain('sub_sensitive');
     expect(caughtError?.message).not.toContain('price_sensitive');
     expect(harness.sqlEnd).toHaveBeenCalledWith({ timeout: 5 });
+  });
+
+  it('fails closed before opening Postgres when a required environment value is absent', async () => {
+    vi.stubEnv('DATABASE_URL', '');
+    const harness = installDefaultServicesHarness();
+    const { expectE2EUserHasPaidAnnualSubscription } =
+      await harness.loadModule();
+
+    await expect(expectE2EUserHasPaidAnnualSubscription()).rejects.toThrow(
+      '[E2E_PAID_CHECKOUT:ENV_MISSING] DATABASE_URL is required.',
+    );
+
+    expect(harness.sqlEnd).not.toHaveBeenCalled();
+    expect(harness.subscriptionsRetrieve).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before provider reads when the Stripe key is not test mode', async () => {
+    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_live_fixture');
+    const harness = installDefaultServicesHarness();
+    const { expectE2EUserHasPaidAnnualSubscription } =
+      await harness.loadModule();
+
+    await expect(expectE2EUserHasPaidAnnualSubscription()).rejects.toThrow(
+      '[E2E_PAID_CHECKOUT:STRIPE_MODE]',
+    );
+
+    expect(harness.subscriptionsRetrieve).not.toHaveBeenCalled();
+    expect(harness.sqlEnd).toHaveBeenCalledWith({ timeout: 5 });
+  });
+
+  it('accepts expanded Stripe object identifiers at every observed boundary', async () => {
+    const harness = installDefaultServicesHarness({
+      subscriptionCustomer: { id: 'cus_fixture' },
+      subscriptionLatestInvoice: { id: 'in_fixture' },
+      invoicePaymentIntent: { id: 'pi_fixture' },
+      paymentIntentLatestCharge: { id: 'ch_fixture' },
+    });
+    const { expectE2EUserHasPaidAnnualSubscription } =
+      await harness.loadModule();
+
+    await expect(
+      expectE2EUserHasPaidAnnualSubscription(),
+    ).resolves.toMatchObject({
+      providerUsesMappedCustomer: true,
+      invoiceStatus: 'paid',
+      paymentStatus: 'succeeded',
+      hasCharge: true,
+    });
+  });
+
+  it('fails closed when the subscription has no initial invoice link', async () => {
+    const harness = installDefaultServicesHarness({
+      subscriptionLatestInvoice: null,
+    });
+    const { expectE2EUserHasPaidAnnualSubscription } =
+      await harness.loadModule();
+
+    await expect(expectE2EUserHasPaidAnnualSubscription()).rejects.toThrow(
+      '[E2E_PAID_CHECKOUT:INVOICE_STATUS]',
+    );
+
+    expect(harness.paymentIntentsRetrieve).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the paid invoice has no PaymentIntent link', async () => {
+    const harness = installDefaultServicesHarness({
+      invoicePaymentIntent: null,
+    });
+    const { expectE2EUserHasPaidAnnualSubscription } =
+      await harness.loadModule();
+
+    await expect(expectE2EUserHasPaidAnnualSubscription()).rejects.toThrow(
+      '[E2E_PAID_CHECKOUT:PAYMENT_STATUS]',
+    );
+
+    expect(harness.paymentIntentsRetrieve).not.toHaveBeenCalled();
   });
 });
