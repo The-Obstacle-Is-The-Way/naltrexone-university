@@ -47,7 +47,7 @@ function createReplayStripeMock(input: {
     customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
     checkout: {
       sessions: {
-        list: vi.fn(async () => ({ data: [] })),
+        list: vi.fn(async () => ({ data: [], has_more: false })),
         retrieve: sessionsRetrieve,
         expire: vi.fn(async () => ({ id: 'cs_expired', url: null })),
         create: sessionsCreate,

@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from 'node:util';
 import type {
   CheckoutSessionCreateParams,
   StripeCheckoutSession,
@@ -16,6 +17,8 @@ type CreateCall = {
   params: CheckoutSessionCreateParams;
   options?: StripeRequestOptions | undefined;
 };
+
+type ListCall = Parameters<StripeClient['checkout']['sessions']['list']>[0];
 
 type RetrieveOverride = (
   session: StripeCheckoutSessionRetrieved,
@@ -46,11 +49,16 @@ function cloneSession(session: TrackedCheckoutSession): TrackedCheckoutSession {
 
 export class FakeStripeCheckoutClient implements StripeClient {
   readonly createCalls: CreateCall[] = [];
+  readonly listCalls: ListCall[] = [];
   readonly retrieveCalls: string[] = [];
 
   private readonly savedResponsesByIdempotencyKey = new Map<
     string,
     TrackedCheckoutSession
+  >();
+  private readonly savedParamsByIdempotencyKey = new Map<
+    string,
+    CheckoutSessionCreateParams
   >();
   private readonly liveSessionsById = new Map<string, TrackedCheckoutSession>();
   private retrieveOverride: RetrieveOverride | null = null;
@@ -73,7 +81,23 @@ export class FakeStripeCheckoutClient implements StripeClient {
         const idempotencyKey = options?.idempotencyKey;
         if (idempotencyKey) {
           const saved = this.savedResponsesByIdempotencyKey.get(idempotencyKey);
-          if (saved) return cloneSession(saved);
+          if (saved) {
+            const savedParams =
+              this.savedParamsByIdempotencyKey.get(idempotencyKey);
+            if (!savedParams || !isDeepStrictEqual(savedParams, params)) {
+              throw Object.assign(
+                new Error(
+                  'Keys for idempotent requests can only be used with the same parameters they were first used with.',
+                ),
+                {
+                  type: 'StripeIdempotencyError',
+                  rawType: 'idempotency_error',
+                  statusCode: 400,
+                },
+              );
+            }
+            return cloneSession(saved);
+          }
         }
 
         const session = this.createOpenSession(params);
@@ -83,19 +107,41 @@ export class FakeStripeCheckoutClient implements StripeClient {
             idempotencyKey,
             cloneSession(session),
           );
+          this.savedParamsByIdempotencyKey.set(
+            idempotencyKey,
+            structuredClone(params),
+          );
         }
         return cloneSession(session);
       },
-      list: async ({ customer, limit }) => ({
-        data: Array.from(this.liveSessionsById.values())
+      list: async (params) => {
+        this.listCalls.push({ ...params });
+        const sorted = Array.from(this.liveSessionsById.values())
           .filter(
             (session) =>
-              session.status === 'open' && session.customer === customer,
+              session.customer === params.customer &&
+              (params.status === undefined || session.status === params.status),
           )
-          .sort((left, right) => (right.created ?? 0) - (left.created ?? 0))
-          .slice(0, limit)
-          .map(cloneSession),
-      }),
+          .sort((left, right) => {
+            const createdDifference =
+              (right.created ?? 0) - (left.created ?? 0);
+            return createdDifference || right.id.localeCompare(left.id);
+          });
+        const cursorIndex = params.starting_after
+          ? sorted.findIndex((session) => session.id === params.starting_after)
+          : -1;
+        if (params.starting_after && cursorIndex < 0) {
+          throw new Error('Missing fake Checkout Session pagination cursor');
+        }
+        const startIndex = cursorIndex + 1;
+        const data = sorted
+          .slice(startIndex, startIndex + params.limit)
+          .map(cloneSession);
+        return {
+          data,
+          has_more: startIndex + data.length < sorted.length,
+        };
+      },
       retrieve: async (sessionId) => {
         this.retrieveCalls.push(sessionId);
         const session = this.liveSessionsById.get(sessionId);
