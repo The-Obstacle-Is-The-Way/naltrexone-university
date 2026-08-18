@@ -118,6 +118,7 @@ E2E_CLERK_USER_PASSWORD=your-password
 E2E_STRIPE_OWNER=local-dev
 STRIPE_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=price_...
+NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL=price_...
 ```
 
 Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, so concurrent clones do not share the app server port. CI still supplies its own Docker-service `DATABASE_URL` through `.github/workflows/ci.yml`.
@@ -151,7 +152,7 @@ The setup project currently runs three steps, in this order:
    - `idempotency_keys.completed_at` schema presence
    - Clerk user existence + password validity
    - Stripe secret-key validity
-   - Stripe monthly price-ID validity
+   - Stripe monthly and annual price-ID validity
 2. `seedTestSubscription()` idempotently ensures:
    - the E2E user exists in `users`
    - a Stripe customer exists for the current `E2E_STRIPE_OWNER` and is mirrored in `stripe_customers`
@@ -165,6 +166,8 @@ The setup project currently runs three steps, in this order:
 3. An active owner-scoped subscription exists (using `pm_card_visa` test payment method) and is mirrored in `stripe_subscriptions`
 
 `global.setup.ts` also seeds a deterministic baseline for the shared authenticated E2E user once per suite run. That suite-level reset is not enough for mutating specs on its own: any spec that writes sessions, attempts, or bookmarks should call `runE2EUserStateReset()` in `beforeEach` so every test starts from the same baseline rather than inheriting artifacts from earlier files or retries.
+
+`paid-checkout.spec.ts` deliberately reuses the provider lifecycle established by `trial-start.spec.ts`: it preserves the shared app-user UUID and Stripe customer, cancels the customer's non-terminal test subscriptions, clears cards, and restores the captured local subscription as `canceled` so the returning-user Checkout has no provider blocker and receives no trial. Its `afterEach` repeats the reset to cancel the purchased annual subscription, then reseeds one active paid baseline subscription. Individual test-mode subscription objects are disposable fixture state; the shared user and customer identities are not.
 
 ### Writing New E2E Tests
 
@@ -366,6 +369,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 | `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
 | `DATABASE_URL` | CI Postgres connection string for direct DB writes during seeding; local `pnpm test:e2e` supplies the Docker URL automatically |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Stripe monthly price ID (used during subscription seeding) |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Stripe annual price ID (validated for the paid annual Checkout E2E) |
 
 ---
 

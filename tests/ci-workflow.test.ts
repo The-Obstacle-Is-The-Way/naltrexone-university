@@ -37,4 +37,18 @@ describe('CI workflow', () => {
       expect(stepBlock).toContain(DEPENDABOT_ACTOR_GUARD);
     },
   );
+
+  it('fails closed when the paid annual E2E price is missing or dummy', () => {
+    const stepBlock = findStepBlock(
+      readCiWorkflow(),
+      'Validate E2E credential inputs',
+    );
+
+    expect(stepBlock).toContain(
+      'require_non_empty NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL',
+    );
+    expect(stepBlock).toContain(
+      'require_not_dummy NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL price_dummy_annual',
+    );
+  });
 });

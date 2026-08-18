@@ -177,6 +177,7 @@ jobs:
           require_non_empty NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
           require_non_empty STRIPE_SECRET_KEY
           require_non_empty NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY
+          require_non_empty NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL
           require_non_empty E2E_CLERK_USER_USERNAME
           require_non_empty E2E_CLERK_USER_PASSWORD
           require_non_empty E2E_STRIPE_OWNER
@@ -185,6 +186,7 @@ jobs:
           require_not_dummy NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY pk_test_dummy
           require_not_dummy STRIPE_SECRET_KEY sk_test_dummy
           require_not_dummy NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY price_dummy_monthly
+          require_not_dummy NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL price_dummy_annual
 
           if [ "${NEXT_PUBLIC_SKIP_CLERK:-false}" = "true" ]; then
             failures+=("NEXT_PUBLIC_SKIP_CLERK=true disables Clerk. E2E requires real Clerk credentials.")
