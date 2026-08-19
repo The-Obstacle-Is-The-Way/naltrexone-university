@@ -498,11 +498,14 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 
 ## Verification
 
-- Part 1: `node_modules/.bin/tsc --version` → 7.x;
-  `node_modules/.bin/tsc6 --version` → 6.x; run the all-three-package import
-  census from "Blocker 2" and verify its expected topology. For Cleanup B, the
-  complete manifest/lockfile one-dependency assertion block **and** the
-  canonical package identity/version assertion from "Blocker 2" must pass
+- Part 1: on every topology, `node_modules/.bin/tsc --version` must report 7.x
+  or newer; run the all-three-package import census from "Blocker 2" and verify
+  its route-specific expected topology. The current aliases, the released-Next
+  route that retains them, and Cleanup A intentionally keep the TS6 shim, so
+  only those routes also require `node_modules/.bin/tsc6 --version` → 6.x.
+  Cleanup B removes that shim: require `test ! -e node_modules/.bin/tsc6`, then
+  require the complete manifest/lockfile one-dependency assertion block **and**
+  the canonical package identity/version assertion from "Blocker 2" to pass
   *before* the exact 18-test three-path command. That means one non-aliased root
   `typescript` declaration, one TypeScript 7+ compiler package in the lockfile,
   and no `@typescript/native` or `@typescript/typescript6` residue; do not count
