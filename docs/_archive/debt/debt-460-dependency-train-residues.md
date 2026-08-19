@@ -269,13 +269,74 @@ The expected topology distinguishes the two cleanups:
   `unstable/` import remains. Each consumer targets a published stable entry
   point in the canonical `typescript` package.
 
-For Cleanup B, make package identity part of the gate before running the actual
-three-path behavior suite. This assertion intentionally fails on today's alias
-topology; after consolidation it must print a canonical TypeScript 7-or-newer
-manifest path and version. The source-scan helper is exercised by
-`architecture-boundaries.test.ts` and is not itself a test file:
+For Cleanup B, make both dependency topology and package identity part of the
+gate before running the actual three-path behavior suite. The root manifest
+must declare exactly one compiler package under the canonical `typescript`
+name, without an `npm:` alias. The lockfile `packages` section must likewise
+contain exactly one `typescript@...` compiler package at major 7 or newer, and
+neither file may retain the two old alias names. The platform-specific
+`@typescript/typescript-*` packages shipped by native TypeScript are expected
+artifacts and are not extra compiler dependencies. These assertions
+intentionally fail on today's alias topology: the manifest has two aliased
+declarations and the lockfile has both `typescript@6.0.3` (behind the TS6 shim)
+and `typescript@7.0.2`. After consolidation, the final identity probe must print
+a canonical TypeScript 7-or-newer manifest path and version. The source-scan
+helper is exercised by `architecture-boundaries.test.ts` and is not itself a
+test file:
 
 ```bash
+set -eu
+
+node - <<'NODE'
+const packageJson = require('./package.json');
+const dependencySections = [
+  'dependencies',
+  'devDependencies',
+  'optionalDependencies',
+  'peerDependencies',
+];
+const declarations = dependencySections.flatMap((section) =>
+  Object.entries(packageJson[section] ?? {})
+    .filter(([name]) =>
+      ['typescript', '@typescript/native', '@typescript/typescript6'].includes(name),
+    )
+    .map(([name, specifier]) => ({ section, name, specifier })),
+);
+if (
+  declarations.length !== 1 ||
+  declarations[0]?.name !== 'typescript' ||
+  String(declarations[0]?.specifier).startsWith('npm:')
+) {
+  throw new Error(
+    `Expected one canonical TypeScript declaration, got ${JSON.stringify(declarations)}`,
+  );
+}
+console.log(declarations[0]);
+NODE
+
+lock_compilers="$(
+  awk '
+    /^packages:$/ { in_packages = 1; next }
+    /^snapshots:$/ { exit }
+    in_packages && /^  typescript@[0-9]/ {
+      package_key = $0
+      sub(/^  /, "", package_key)
+      sub(/:$/, "", package_key)
+      print package_key
+    }
+  ' pnpm-lock.yaml
+)"
+lock_count="$(printf '%s\n' "$lock_compilers" | sed '/^$/d' | wc -l | tr -d ' ')"
+lock_major="$(printf '%s\n' "$lock_compilers" | sed -nE 's/^typescript@([0-9]+).*/\1/p')"
+if [ "$lock_count" -ne 1 ] || [ "$lock_major" -lt 7 ]; then
+  printf 'Expected one TypeScript 7+ lock package; got:\n%s\n' "$lock_compilers" >&2
+  exit 1
+fi
+if rg -n '@typescript/(native|typescript6)' package.json pnpm-lock.yaml; then
+  echo 'Cleanup B still contains an old TypeScript alias' >&2
+  exit 1
+fi
+
 node - <<'NODE' &&
 const manifest = 'typescript/package.json';
 const resolved = require.resolve(manifest);
@@ -304,13 +365,25 @@ in a released version (re-verified open and still draft on 2026-08-19), **or**
 the aliases stop being aliases. For the Next-release route, install that
 released version and temporarily set `useTypeScriptCli: true` while retaining
 the current alias topology; every supported production build mode must pass
-before the config pin is removed. For the de-alias route, run the same gate with
-the real package names and no pin. The current checked-in production path is
-`pnpm build` (Turbopack by default). If Webpack is a supported build/deployment
-path at implementation time, also require `pnpm exec next build --webpack`
-because #97015 is Webpack-specific. In either route, revise rather than delete
-the config test: remove the obsolete alias/pin assertions while retaining the
-`ignoreBuildErrors !== true` guard and the unrelated security-header test.
+before the false workaround is removed. For the de-alias route, run the same
+gate with the real package names and no false pin. The current checked-in
+production path is `pnpm build` (Turbopack by default). If Webpack is a supported
+build/deployment path at implementation time, also require
+`pnpm exec next build --webpack` because #97015 is Webpack-specific. Revise
+rather than delete the config test, with route-specific topology assertions:
+
+- **de-alias route:** replace both alias assertions with the real-name TS7 plus
+  explicit TS6 topology, assert that `useTypeScriptCli` is not pinned `false`,
+  and retain the `ignoreBuildErrors !== true` guard and unrelated
+  security-header test; or
+- **released-Next route:** retain both current alias assertions, use an explicit
+  `true` only for the diagnostic that proves the released CLI path, then remove
+  the false workaround and change its test assertion to require that
+  `useTypeScriptCli` is not explicitly `false`; retain the same build-bypass and
+  security-header assertions. If that released version still defaults to CLI,
+  remove the property and assert its absence rather than replacing one
+  experimental-option pin with another. If it no longer defaults to CLI, retain
+  explicit `true` and test that value so the verified path remains selected.
 
 Release status was tested rather than inferred from the PR alone. Next 16.3.1
 was npm-latest on 2026-08-19 but still inside this repo's seven-day
@@ -428,10 +501,15 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 - Part 1: `node_modules/.bin/tsc --version` → 7.x;
   `node_modules/.bin/tsc6 --version` → 6.x; run the all-three-package import
   census from "Blocker 2" and verify its expected topology. For Cleanup B, the
-  canonical package identity/version assertion must pass *before* the exact
-  18-test three-path command. Also run the package-root/exports probes, the
-  section-aware peer census, `pnpm typecheck`, and every supported production
-  build mode on the same tree (`pnpm build` today; add
+  complete manifest/lockfile one-dependency assertion block **and** the
+  canonical package identity/version assertion from "Blocker 2" must pass
+  *before* the exact 18-test three-path command. That means one non-aliased root
+  `typescript` declaration, one TypeScript 7+ compiler package in the lockfile,
+  and no `@typescript/native` or `@typescript/typescript6` residue; do not count
+  the native platform artifacts as extra compilers. Also run the
+  package-root/exports probes, the section-aware peer census, `pnpm typecheck`,
+  and every supported production build mode on the same tree (`pnpm build`
+  today; add
   `pnpm exec next build --webpack` only if Webpack is intentionally supported).
   After any future TS bump, re-run every probe group rather than inferring
   readiness from a package version.
