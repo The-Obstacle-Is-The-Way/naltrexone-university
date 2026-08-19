@@ -151,8 +151,8 @@ The setup project currently runs three steps, in this order:
    - database connectivity
    - `idempotency_keys.completed_at` schema presence
    - Clerk user existence + password validity
-   - Stripe secret-key validity
-   - Stripe monthly and annual price-ID validity
+   - Stripe secret-key validity (TEST-mode `sk_test_` shape enforced fail-closed before any Stripe call — global setup mutates provider state, so live-mode keys are rejected at env resolution)
+   - Stripe monthly and annual price-ID validity, including plan shape: active, recurring, and billed every 1 month / 1 year (`interval_count` enforced)
 2. `seedTestSubscription()` idempotently ensures:
    - the E2E user exists in `users`
    - a Stripe customer exists for the current `E2E_STRIPE_OWNER` and is mirrored in `stripe_customers`

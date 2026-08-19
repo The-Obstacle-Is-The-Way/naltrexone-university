@@ -298,6 +298,31 @@ describe('runE2ECredentialHealthCheck', () => {
     expect(services.verifyStripePriceId).not.toHaveBeenCalled();
   });
 
+  it('rejects a live-mode Stripe key before any Stripe call, without printing it', async () => {
+    const services = createServices();
+    const env = createEnv({
+      STRIPE_SECRET_KEY: 'sk_live_51ForbiddenLiveKey',
+    });
+
+    let caughtError: Error | null = null;
+    try {
+      await runE2ECredentialHealthCheck({
+        env,
+        services,
+      });
+    } catch (error) {
+      caughtError = error as Error;
+    }
+
+    const message = caughtError?.message ?? '';
+    expect(message).toContain(
+      '[E2E_PREFLIGHT:STRIPE_SECRET_KEY_NOT_TEST_MODE]',
+    );
+    expect(message).not.toContain('sk_live_51ForbiddenLiveKey');
+    expect(services.verifyStripeSecretKey).not.toHaveBeenCalled();
+    expect(services.verifyStripePriceId).not.toHaveBeenCalled();
+  });
+
   it('aggregates multiple validation failures into one setup error', async () => {
     const env = createEnv();
     const services = createServices({
