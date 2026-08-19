@@ -248,15 +248,45 @@ node -e "const a=require('@typescript/native/unstable/ast'); console.log({create
 # { createSourceFile: 'undefined', forEachChild: 'undefined' }
 ```
 
-**Trigger:** all three run on a supported TS7-era API. Use a broad import census
-and the actual three-path behavior suite; the source-scan helper is exercised by
-`architecture-boundaries.test.ts` and is not itself a test file:
+**Trigger:** all three run on a supported TS7-era API. A green behavior suite is
+not sufficient by itself: today it runs against the TS6 shim. First census all
+three TypeScript package names, including subpaths, and inspect every hit:
 
 ```bash
 rg -n \
-  -e "['\"]typescript['\"]" \
-  -e '`typescript`' \
+  -e "['\"](?:typescript|@typescript/typescript6|@typescript/native)(?:/[^'\"]*)?['\"]" \
+  -e '`(?:typescript|@typescript/typescript6|@typescript/native)(?:/[^`]*)?`' \
   src tests
+```
+
+The expected topology distinguishes the two cleanups:
+
+- current aliases: exactly three bare `typescript` imports, resolving to
+  `@typescript/typescript6@6.0.2`; Blocker 2 remains;
+- Cleanup A: exactly three `@typescript/typescript6` imports; Blocker 2 still
+  remains; and
+- Cleanup B: no `@typescript/typescript6`, `@typescript/native`, or
+  `unstable/` import remains. Each consumer targets a published stable entry
+  point in the canonical `typescript` package.
+
+For Cleanup B, make package identity part of the gate before running the actual
+three-path behavior suite. This assertion intentionally fails on today's alias
+topology; after consolidation it must print a canonical TypeScript 7-or-newer
+manifest path and version. The source-scan helper is exercised by
+`architecture-boundaries.test.ts` and is not itself a test file:
+
+```bash
+node - <<'NODE' &&
+const manifest = 'typescript/package.json';
+const resolved = require.resolve(manifest);
+const { name, version } = require(manifest);
+if (name !== 'typescript' || Number.parseInt(version, 10) < 7) {
+  throw new Error(
+    `Expected canonical TypeScript 7+ API, got ${name}@${version} at ${resolved}`,
+  );
+}
+console.log({ resolved, name, version });
+NODE
 pnpm test --run tests/architecture-boundaries.test.ts \
   src/adapters/controllers/controller-output-datetime-contract.test.ts \
   tests/server-span-family-boundary.test.ts                         # 18 tests
@@ -273,10 +303,13 @@ and does not have to wait for Blockers 1 and 2.
 in a released version (re-verified open and still draft on 2026-08-19), **or**
 the aliases stop being aliases. For the Next-release route, install that
 released version and temporarily set `useTypeScriptCli: true` while retaining
-the current alias topology; the production build must pass before the config
-pin is removed. For the de-alias route, run the same build with the real package
-names and no pin. In either route, revise rather than delete the config test:
-remove the obsolete alias/pin assertions while retaining the
+the current alias topology; every supported production build mode must pass
+before the config pin is removed. For the de-alias route, run the same gate with
+the real package names and no pin. The current checked-in production path is
+`pnpm build` (Turbopack by default). If Webpack is a supported build/deployment
+path at implementation time, also require `pnpm exec next build --webpack`
+because #97015 is Webpack-specific. In either route, revise rather than delete
+the config test: remove the obsolete alias/pin assertions while retaining the
 `ignoreBuildErrors !== true` guard and the unrelated security-header test.
 
 Release status was tested rather than inferred from the PR alone. Next 16.3.1
@@ -285,6 +318,14 @@ was npm-latest on 2026-08-19 but still inside this repo's seven-day
 lifted only that maturity policy, retained the aliases, and enabled CLI mode
 reproduced the same false missing-`typescript` failure under 16.3.1. No released
 fix was available on the audit date.
+
+The 2026-08-19 audit also tried the full app with
+`pnpm exec next build --webpack`. With the current pin, Webpack compiled the
+bundles and entered type checking, then failed for an unrelated existing Page
+contract: `app/(app)/app/billing/page.tsx` exports `loadBillingData`. No
+checked-in build or CI command selects Webpack. An unconditional Webpack gate
+would therefore conflate an unsupported-mode defect with this alias decision;
+keep it conditional on Webpack becoming an intentional project mode.
 
 ### The two cleanups are not the same change
 
@@ -299,8 +340,10 @@ fix was available on the audit date.
 
   The 2026-08-19 audit reproduced this topology against current
   `origin/dev@4e05cca4`: `pnpm install`, native `pnpm typecheck`, `pnpm lint`
-  (1,148 files, zero warnings), all 18 targeted API-consumer tests, and the Next
-  16.3.0 production build in default CLI mode passed. `pnpm peers check` showed
+  (1,148 files, zero warnings), all 18 targeted API-consumer tests against the
+  explicit TS6 package, and the Next 16.3.0 production build in default CLI
+  mode passed. That receipt covers the checked-in Turbopack path, not Webpack.
+  `pnpm peers check` showed
   only the same pre-existing `ws@7.5.13` / `utf-8-validate@6.0.6` mismatch as
   the aliased tree, with no TypeScript peer failure. The mechanical footprint
   was seven files total, including 702 changed lockfile lines.
@@ -382,7 +425,16 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 
 ## Verification
 
-- Part 1: `node_modules/.bin/tsc --version` → 7.x; `node_modules/.bin/tsc6 --version` → 6.x; run the exact 18-test three-path command from "Blocker 2"; run the package-root/exports probes, the section-aware peer census, `pnpm typecheck`, and `pnpm build` on the same tree. After any future TS bump, re-run every probe group rather than inferring readiness from a package version.
+- Part 1: `node_modules/.bin/tsc --version` → 7.x;
+  `node_modules/.bin/tsc6 --version` → 6.x; run the all-three-package import
+  census from "Blocker 2" and verify its expected topology. For Cleanup B, the
+  canonical package identity/version assertion must pass *before* the exact
+  18-test three-path command. Also run the package-root/exports probes, the
+  section-aware peer census, `pnpm typecheck`, and every supported production
+  build mode on the same tree (`pnpm build` today; add
+  `pnpm exec next build --webpack` only if Webpack is intentionally supported).
+  After any future TS bump, re-run every probe group rather than inferring
+  readiness from a package version.
 - Part 2: `git grep createRouteMatcher` returns no production hits (only historical docs); Clerk major bump builds green.
 - Part 3: `biome.json` `$schema` version equals `biome --version`; Biome emits no schema-mismatch informational.
 
