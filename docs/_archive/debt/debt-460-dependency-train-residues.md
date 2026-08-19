@@ -12,9 +12,9 @@ All three residues are durable upgrade rules rather than current executable
 work, so this record is archived for filing and represented by one
 Deferred/Parked register row. This is not a resolution:
 
-1. advance both TypeScript pins together; collapse them only when the three TS6
-   compiler-API consumers and peer tooling can run on the TS7-era API; treat
-   both aliases as a manual update surface because updater jobs skip aliases;
+1. advance both TypeScript pins together; collapse them only when the enumerated
+   triggers in "Collapse checklist" clear (third-party peers are not among them);
+   treat both aliases as a manual update surface because updater jobs skip aliases;
 2. migrate `proxy.ts` off `createRouteMatcher` **before** accepting any
    `@clerk/nextjs` major bump; and
 3. fold the `biome.json` `$schema` bump into every Biome Dependabot PR.
@@ -118,6 +118,106 @@ is unchanged and the deprecation remains latent.
 
 ---
 
+## Collapse checklist (2026-08-19) — what actually gates removing the seam
+
+Part 1's exit criterion ("when those consumers and peer-dep tooling can run on
+the TS7-era API") is not evaluable as written: nobody reading it can tell
+whether the day has arrived. It is enumerated here, measured against the
+installed `typescript@7.0.2` (aliased `@typescript/native`) and
+`@typescript/typescript6@6.0.2`. Re-measure with the probes given; do not
+re-derive from memory.
+
+### Not a blocker: third-party peer dependencies
+
+The lockfile carries **45 `typescript` peer declarations across 42 distinct
+package names** (a few packages appear at two versions). Every one of the 42 is
+an `@solana/*` package reaching the tree transitively through `@clerk/ui`
+(crypto-wallet auth support) — there are no non-Solana `typescript` peers at
+all. 42 of the 45 declarations mark it **optional**
+(`peerDependenciesMeta.typescript.optional: true`); the three that require it —
+`@solana/codecs-core@2.3.0`, `@solana/codecs-numbers@2.3.0`, and
+`@solana/errors@2.3.0` — ask for `>=5.3.3`. **`typescript@7.0.2` satisfies every
+one of the 45.**
+
+**No third-party package blocks TypeScript 7.** The intuition "we are waiting
+for our dependencies to upgrade" was checked on 2026-08-19 and is false; do not
+re-derive it. Probe:
+
+```bash
+grep -c "^      typescript: '>=" pnpm-lock.yaml            # total peer declarations
+grep -A3 "^      typescript: '>=" pnpm-lock.yaml | grep -c "optional: true"
+```
+
+### Blocker 1 (upstream, not ours): TS7 ships no stable compiler API
+
+`typescript@7.0.2`'s main export is `"." : "./lib/version.cjs"` — a version
+string, not a compiler. The API exists only under subpaths Microsoft
+deliberately named `unstable`:
+
+- `./unstable/ast` — `SyntaxKind`, `ScriptTarget`, `createScanner`,
+  `forEachChild*`, `NodeFlags`, `cloneSourceFileData`
+- `./unstable/sync` and `./unstable/async` — `API`, `Program`, `Checker`,
+  `Symbol`, `Project`, `Emitter`
+
+Porting onto those means betting on a surface upstream has explicitly not
+settled, and the shape differs from the classic namespace import.
+
+**Trigger:** TypeScript 7 publishes a stable, non-`unstable/` compiler-API entry
+point. Probe — note it must target `@typescript/native`, **not** `typescript`,
+because while the aliases stand the name `typescript` resolves to the TS6 shim
+(which has no `exports` field at all, so probing it returns `undefined` and
+tells you nothing):
+
+```bash
+node -e "console.log(JSON.stringify(require('@typescript/native/package.json').exports,null,1))"
+```
+
+After Cleanup A this probe targets `typescript` instead.
+
+### Blocker 2 (ours): three files use the classic compiler API
+
+| File | Surface used | Port difficulty |
+| --- | --- | --- |
+| `tests/architecture-boundary-source-scan.ts` | parser/AST only — `createSourceFile`, `forEachChild`, `is*` guards, `SyntaxKind`, `ScriptTarget`, `ScriptKind` | easier — maps onto `unstable/ast` |
+| `src/adapters/controllers/controller-output-datetime-contract.test.ts` | parser/AST only — same family plus type-node guards | easier — maps onto `unstable/ast` |
+| `tests/server-span-family-boundary.test.ts` | **full program/type layer** — `createProgram`, `createCompilerHost`, `TypeChecker`, `CompilerOptions`, `ModuleKind` | hard — needs `unstable/sync`'s `API`/`Program`/`Checker` |
+
+**Trigger:** all three run on the TS7-era API. Probe: `grep -rn "from 'typescript'" src tests`.
+
+### Blocker 3 (independent of TS6-vs-TS7): the Next config pin
+
+`next.config.ts`'s `experimental.useTypeScriptCli: false` is gated on the
+**name** `typescript` resolving to a package whose bin is not `tsc` — not on
+which TypeScript major is in use. It therefore clears by *either* route below,
+and does not have to wait for Blockers 1 and 2.
+
+**Trigger:** Next ships [PR #97334](https://github.com/vercel/next.js/pull/97334)
+in a released version (re-verified OPEN and still draft on 2026-08-19), **or** the aliases
+stop being aliases. Re-enable CLI mode and delete the `next.config.test.ts`
+contract in that same verified change.
+
+### The two cleanups are not the same change
+
+- **Cleanup A — de-alias (available today; deliberately not done).** Install
+  both packages under their real published names: `typescript` → real
+  `typescript@7`, `@typescript/typescript6` → real `@typescript/typescript6`.
+  Rewrite the three imports above to `from '@typescript/typescript6'`, and drop
+  the Next pin plus its contract test. This clears Blocker 3 and removes the
+  booby-trap entirely, while still shipping two TypeScript packages. The
+  2026-08-18 adversarial review built and tested exactly this topology in a
+  detached worktree and it passed. It was **not** adopted in PR #805 because
+  Microsoft's published TS7 migration guidance uses the current alias shape so
+  legacy peers keep resolving `typescript`, and because the change touches
+  peer resolution, three source imports, and the lockfile surface — too wide
+  for a dependency-bundle PR.
+- **Cleanup B — one TypeScript dependency (blocked).** Requires Blocker 1 *and*
+  Blocker 2 to clear. This is the Part 1 exit criterion proper.
+
+Choosing Cleanup A is a standalone decision that does not require waiting for
+anything upstream.
+
+---
+
 ## Description
 
 The 2026-07-20 dependency upgrade train (PRs #677, #679, #678, #680, #682; promoted to production via #685) landed green end-to-end, but left three residues. None changes current behavior; each is a future-facing hazard that should be tracked rather than rediscovered.
@@ -158,7 +258,7 @@ Behavior is unchanged today. Clerk's migration guide (verified live 2026-07-20: 
 
 ## Resolution
 
-1. **Part 1 (standing rule, no code change now):** treat the two TypeScript aliases as one unit — advance both pins together, keep `typecheck` on bare `tsc`, and never collapse the aliases while the three compiler-API consumers remain on the TS6 surface. Exit criterion: when those consumers (and peer-dep tooling) can run on the TS7-era API, collapse back to a single `typescript` dependency. Dependabot's updater behavior is confirmed from its implementation record above; do not use an unchanged PR as evidence unless a newer eligible alias target existed during that run.
+1. **Part 1 (standing rule, no code change now):** treat the two TypeScript aliases as one unit — advance both pins together, keep `typecheck` on bare `tsc`, and never collapse the aliases while the three compiler-API consumers remain on the TS6 surface. Exit criterion: the enumerated triggers in "Collapse checklist" above — do not restate it as the unevaluable "when consumers can run on the TS7-era API". Third-party peers are **not** part of that criterion; they were measured on 2026-08-19 and every `typescript` peer declaration in the tree is already satisfied by TypeScript 7. Dependabot's updater behavior is confirmed from its implementation record above; do not use an unchanged PR as evidence unless a newer eligible alias target existed during that run.
 2. **Part 2 (gated migration):** before accepting any `@clerk/nextjs` major bump, migrate `proxy.ts` off `createRouteMatcher` per Clerk's guide, updating the `proxy.test.ts` DI seam in the same change. This is the binding trigger; no action needed until then.
 3. **Part 3 (fold into next Biome PR):** when reviewing the next Biome group PR, update the `$schema` URL in `biome.json` to the new version in the same PR (or run `biome migrate`). Optionally make that a standing checklist step for the `biome` Dependabot group.
 
