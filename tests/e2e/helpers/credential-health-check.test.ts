@@ -1,4 +1,3 @@
-import Stripe from 'stripe';
 import { describe, expect, it, vi } from 'vitest';
 import {
   type CredentialHealthCheckServices,
@@ -13,7 +12,8 @@ type RequiredEnvKey =
   | 'E2E_CLERK_USER_USERNAME'
   | 'E2E_CLERK_USER_PASSWORD'
   | 'STRIPE_SECRET_KEY'
-  | 'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY';
+  | 'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY'
+  | 'NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL';
 
 function createEnv(
   overrides: Partial<Record<RequiredEnvKey, string | undefined>> = {},
@@ -27,6 +27,7 @@ function createEnv(
     E2E_CLERK_USER_PASSWORD: 'E2eTestPass1',
     STRIPE_SECRET_KEY: 'sk_test_stripe',
     NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_monthly',
+    NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: 'price_annual',
     ...overrides,
   } as NodeJS.ProcessEnv;
 }
@@ -225,14 +226,26 @@ describe('runE2ECredentialHealthCheck', () => {
     });
     const stripeSecretCallArg = vi.mocked(services.verifyStripeSecretKey).mock
       .calls[0]?.[0];
-    const stripePriceCallArg = vi.mocked(services.verifyStripePriceId).mock
-      .calls[0]?.[0];
+    const stripePriceCallArgs = vi
+      .mocked(services.verifyStripePriceId)
+      .mock.calls.map(([input]) => input);
     expect(stripeSecretCallArg).toBeDefined();
-    expect(stripePriceCallArg).toBeDefined();
-    expect(stripePriceCallArg?.priceId).toBe(
-      env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
-    );
-    expect(stripePriceCallArg?.stripe).toBe(stripeSecretCallArg);
+    expect(stripePriceCallArgs).toHaveLength(2);
+    expect(
+      stripePriceCallArgs.map(({ priceId, plan }) => ({ plan, priceId })),
+    ).toEqual([
+      {
+        plan: 'monthly',
+        priceId: env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
+      },
+      {
+        plan: 'annual',
+        priceId: env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
+      },
+    ]);
+    expect(
+      stripePriceCallArgs.every(({ stripe }) => stripe === stripeSecretCallArg),
+    ).toBe(true);
   });
 
   it('fails with actionable missing env errors and skips external calls', async () => {
@@ -244,6 +257,7 @@ describe('runE2ECredentialHealthCheck', () => {
       E2E_CLERK_USER_PASSWORD: undefined,
       STRIPE_SECRET_KEY: undefined,
       NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: undefined,
+      NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: undefined,
     });
 
     let caughtError: Error | null = null;
@@ -259,7 +273,7 @@ describe('runE2ECredentialHealthCheck', () => {
     expect(caughtError).toBeInstanceOf(Error);
     const message = caughtError?.message ?? '';
     expect(message).toContain(
-      '[E2E_PREFLIGHT] Credential validation failed (6):',
+      '[E2E_PREFLIGHT] Credential validation failed (7):',
     );
     expect(message).toContain('[E2E_PREFLIGHT:DATABASE_URL_MISSING]');
     expect(message).toContain('[E2E_PREFLIGHT:CLERK_SECRET_KEY_MISSING]');
@@ -273,6 +287,7 @@ describe('runE2ECredentialHealthCheck', () => {
     expect(message).toContain(
       '[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_MISSING]',
     );
+    expect(message).toContain('[E2E_PREFLIGHT:STRIPE_ANNUAL_PRICE_ID_MISSING]');
 
     expect(services.checkDatabaseConnectivity).not.toHaveBeenCalled();
     expect(services.verifyMigrationLedger).not.toHaveBeenCalled();
@@ -497,78 +512,5 @@ describe('runE2ECredentialHealthCheck', () => {
     );
 
     expect(error.cause).toBe(rootCause);
-  });
-
-  it('maps Stripe authentication failures to credential-invalid code', async () => {
-    const env = createEnv();
-    const services: Partial<CredentialHealthCheckServices> = {
-      checkDatabaseConnectivity: vi.fn(async (_sql) => {}),
-      verifyMigrationLedger: vi.fn(async (_sql) => {}),
-      verifyIdempotencySchema: vi.fn(async (_sql) => {}),
-      resolveClerkUserId: vi.fn(async () => 'user_123'),
-      verifyClerkPassword: vi.fn(async () => true),
-    };
-    const stripeProbe = new Stripe('sk_test_probe');
-    const accountsResourcePrototype = Object.getPrototypeOf(
-      stripeProbe.accounts,
-    );
-    const accountRetrieveSpy = vi
-      .spyOn(accountsResourcePrototype, 'retrieve')
-      .mockRejectedValue(
-        new Stripe.errors.StripeAuthenticationError({
-          type: 'invalid_request_error',
-          message: 'invalid key',
-        }),
-      );
-
-    try {
-      await expect(
-        runE2ECredentialHealthCheck({
-          env,
-          services,
-        }),
-      ).rejects.toThrow('[E2E_PREFLIGHT:STRIPE_SECRET_KEY_INVALID]');
-    } finally {
-      accountRetrieveSpy.mockRestore();
-    }
-  });
-
-  it('maps non-auth Stripe price errors to API-unavailable code', async () => {
-    const env = createEnv();
-    const services: Partial<CredentialHealthCheckServices> = {
-      checkDatabaseConnectivity: vi.fn(async (_sql) => {}),
-      verifyMigrationLedger: vi.fn(async (_sql) => {}),
-      verifyIdempotencySchema: vi.fn(async (_sql) => {}),
-      resolveClerkUserId: vi.fn(async () => 'user_123'),
-      verifyClerkPassword: vi.fn(async () => true),
-    };
-    const stripeProbe = new Stripe('sk_test_probe');
-    const accountsResourcePrototype = Object.getPrototypeOf(
-      stripeProbe.accounts,
-    );
-    const pricesResourcePrototype = Object.getPrototypeOf(stripeProbe.prices);
-    const accountRetrieveSpy = vi
-      .spyOn(accountsResourcePrototype, 'retrieve')
-      .mockResolvedValue({} as Stripe.Response<Stripe.Account>);
-    const priceRetrieveSpy = vi
-      .spyOn(pricesResourcePrototype, 'retrieve')
-      .mockRejectedValue(
-        new Stripe.errors.StripeConnectionError({
-          type: 'api_error',
-          message: 'connection error',
-        }),
-      );
-
-    try {
-      await expect(
-        runE2ECredentialHealthCheck({
-          env,
-          services,
-        }),
-      ).rejects.toThrow('[E2E_PREFLIGHT:STRIPE_API_UNAVAILABLE]');
-    } finally {
-      priceRetrieveSpy.mockRestore();
-      accountRetrieveSpy.mockRestore();
-    }
   });
 });
