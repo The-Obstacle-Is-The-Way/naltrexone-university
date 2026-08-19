@@ -368,12 +368,13 @@ const defaultServices: CredentialHealthCheckServices = {
     if (
       !price.active ||
       price.type !== 'recurring' ||
-      price.recurring?.interval !== expectedInterval
+      price.recurring?.interval !== expectedInterval ||
+      price.recurring.interval_count !== 1
     ) {
       throw new CredentialValidationError(
         `E2E_PREFLIGHT:STRIPE_${planLabel}_PRICE_MISCONFIGURED`,
-        `The configured Stripe ${plan} price is not an active recurring price billed per ${expectedInterval}.`,
-        `Point NEXT_PUBLIC_STRIPE_PRICE_ID_${planLabel} at an active recurring test-mode price billed per ${expectedInterval}.`,
+        `The configured Stripe ${plan} price is not an active recurring price billed every single ${expectedInterval}.`,
+        `Point NEXT_PUBLIC_STRIPE_PRICE_ID_${planLabel} at an active recurring test-mode price billed every 1 ${expectedInterval}.`,
       );
     }
   },
@@ -405,8 +406,21 @@ function resolveRequiredEnv(
       resolved.clerkEmail = trimmed;
     if (required.key === 'E2E_CLERK_USER_PASSWORD')
       resolved.clerkPassword = trimmed;
-    if (required.key === 'STRIPE_SECRET_KEY')
+    if (required.key === 'STRIPE_SECRET_KEY') {
+      if (!trimmed.startsWith('sk_test_')) {
+        // Fail closed before any Stripe validator is built: global setup seeds and
+        // resets provider state, so a live-mode key must never reach a Stripe call.
+        failures.push(
+          new CredentialValidationError(
+            'E2E_PREFLIGHT:STRIPE_SECRET_KEY_NOT_TEST_MODE',
+            'STRIPE_SECRET_KEY is not a Stripe TEST-mode secret key.',
+            'Use a Stripe TEST-mode secret key (sk_test_...); E2E must never run against live mode.',
+          ),
+        );
+        continue;
+      }
       resolved.stripeSecretKey = trimmed;
+    }
     if (required.key === 'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY') {
       resolved.stripeMonthlyPriceId = trimmed;
     }
