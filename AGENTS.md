@@ -145,8 +145,8 @@ If `pnpm test:browser` exits at bootstrap in about one second with `no tests / 1
 That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`. `DATABASE_URL` is still required in `.env.local` for normal local app development (`pnpm dev`, migrations, and seed commands), but not for the hermetic local E2E workflow unless you intentionally target an existing external database with `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`.
 
 ```bash
-# Quick file check when you rely on .env.local:
-rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY|NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL)=' .env.local
+# Quick file check when you rely on .env.local (prints key names only, never values):
+rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY|NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL)=' .env.local | cut -d= -f1
 
 # Local E2E is hermetic by default: it starts an isolated per-clone Docker
 # Postgres, migrates, seeds placeholder content, and runs Playwright against

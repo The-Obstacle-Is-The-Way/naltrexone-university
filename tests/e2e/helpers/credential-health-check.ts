@@ -333,8 +333,11 @@ const defaultServices: CredentialHealthCheckServices = {
   },
 
   verifyStripePriceId: async ({ stripe, priceId, plan }) => {
+    const planLabel = plan === 'annual' ? 'ANNUAL' : 'MONTHLY';
+    const expectedInterval = plan === 'annual' ? 'year' : 'month';
+    let price: Stripe.Price;
     try {
-      await stripe.prices.retrieve(priceId);
+      price = await stripe.prices.retrieve(priceId);
     } catch (error) {
       if (error instanceof Stripe.errors.StripeAuthenticationError) {
         throw new CredentialValidationError(
@@ -346,7 +349,6 @@ const defaultServices: CredentialHealthCheckServices = {
       }
 
       if (error instanceof Stripe.errors.StripeInvalidRequestError) {
-        const planLabel = plan === 'annual' ? 'ANNUAL' : 'MONTHLY';
         throw new CredentialValidationError(
           `E2E_PREFLIGHT:STRIPE_${planLabel}_PRICE_ID_INVALID`,
           `The configured Stripe ${plan} price was not found.`,
@@ -357,9 +359,21 @@ const defaultServices: CredentialHealthCheckServices = {
 
       throw new CredentialValidationError(
         'E2E_PREFLIGHT:STRIPE_API_UNAVAILABLE',
-        `Stripe API request failed while validating price "${priceId}".`,
+        `Stripe API request failed while validating the ${plan} price.`,
         'Retry after Stripe/API network recovery; do not change secrets until availability is restored.',
         { cause: error instanceof Error ? error : undefined },
+      );
+    }
+
+    if (
+      !price.active ||
+      price.type !== 'recurring' ||
+      price.recurring?.interval !== expectedInterval
+    ) {
+      throw new CredentialValidationError(
+        `E2E_PREFLIGHT:STRIPE_${planLabel}_PRICE_MISCONFIGURED`,
+        `The configured Stripe ${plan} price is not an active recurring price billed per ${expectedInterval}.`,
+        `Point NEXT_PUBLIC_STRIPE_PRICE_ID_${planLabel} at an active recurring test-mode price billed per ${expectedInterval}.`,
       );
     }
   },
