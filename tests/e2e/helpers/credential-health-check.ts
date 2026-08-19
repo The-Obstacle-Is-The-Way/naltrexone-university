@@ -21,7 +21,8 @@ type RequiredEnvVar = {
     | 'E2E_CLERK_USER_USERNAME'
     | 'E2E_CLERK_USER_PASSWORD'
     | 'STRIPE_SECRET_KEY'
-    | 'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY';
+    | 'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY'
+    | 'NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL';
   code: string;
   message: string;
   fix: string;
@@ -56,6 +57,7 @@ export type CredentialHealthCheckServices = {
   verifyStripePriceId: (input: {
     stripe: Stripe;
     priceId: string;
+    plan: 'monthly' | 'annual';
   }) => Promise<void>;
 };
 
@@ -71,6 +73,7 @@ type ResolvedEnv = {
   clerkPassword?: string;
   stripeSecretKey?: string;
   stripeMonthlyPriceId?: string;
+  stripeAnnualPriceId?: string;
 };
 
 const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
@@ -109,6 +112,12 @@ const REQUIRED_ENV_VARS: readonly RequiredEnvVar[] = [
     code: 'E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_MISSING',
     message: 'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY is missing.',
     fix: 'Set NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY to a valid Stripe test price ID.',
+  },
+  {
+    key: 'NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL',
+    code: 'E2E_PREFLIGHT:STRIPE_ANNUAL_PRICE_ID_MISSING',
+    message: 'NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL is missing.',
+    fix: 'Set NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL to a valid Stripe test price ID.',
   },
 ] as const;
 
@@ -323,7 +332,7 @@ const defaultServices: CredentialHealthCheckServices = {
     }
   },
 
-  verifyStripePriceId: async ({ stripe, priceId }) => {
+  verifyStripePriceId: async ({ stripe, priceId, plan }) => {
     try {
       await stripe.prices.retrieve(priceId);
     } catch (error) {
@@ -337,10 +346,11 @@ const defaultServices: CredentialHealthCheckServices = {
       }
 
       if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+        const planLabel = plan === 'annual' ? 'ANNUAL' : 'MONTHLY';
         throw new CredentialValidationError(
-          'E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_ID_INVALID',
-          `Stripe price "${priceId}" was not found.`,
-          'Update NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY to an existing test-mode price ID.',
+          `E2E_PREFLIGHT:STRIPE_${planLabel}_PRICE_ID_INVALID`,
+          `The configured Stripe ${plan} price was not found.`,
+          `Update NEXT_PUBLIC_STRIPE_PRICE_ID_${planLabel} to an existing test-mode price ID.`,
           { cause: error },
         );
       }
@@ -385,6 +395,9 @@ function resolveRequiredEnv(
       resolved.stripeSecretKey = trimmed;
     if (required.key === 'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY') {
       resolved.stripeMonthlyPriceId = trimmed;
+    }
+    if (required.key === 'NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL') {
+      resolved.stripeAnnualPriceId = trimmed;
     }
   }
 
@@ -455,9 +468,14 @@ function buildValidators(
     });
   }
 
-  if (env.stripeSecretKey && env.stripeMonthlyPriceId) {
+  if (
+    env.stripeSecretKey &&
+    env.stripeMonthlyPriceId &&
+    env.stripeAnnualPriceId
+  ) {
     const stripeSecretKey = env.stripeSecretKey;
     const stripeMonthlyPriceId = env.stripeMonthlyPriceId;
+    const stripeAnnualPriceId = env.stripeAnnualPriceId;
     validators.push({
       id: 'stripe',
       run: async () => {
@@ -466,6 +484,12 @@ function buildValidators(
         await services.verifyStripePriceId({
           stripe,
           priceId: stripeMonthlyPriceId,
+          plan: 'monthly',
+        });
+        await services.verifyStripePriceId({
+          stripe,
+          priceId: stripeAnnualPriceId,
+          plan: 'annual',
         });
       },
     });
