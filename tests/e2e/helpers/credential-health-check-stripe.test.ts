@@ -39,7 +39,7 @@ function createRecurringPrice(
   return {
     active: true,
     type: 'recurring',
-    recurring: { interval } as Stripe.Price.Recurring,
+    recurring: { interval, interval_count: 1 } as Stripe.Price.Recurring,
     ...overrides,
   } as Stripe.Response<Stripe.Price>;
 }
@@ -183,6 +183,52 @@ describe('runE2ECredentialHealthCheck default Stripe services', () => {
         '[E2E_PREFLIGHT:STRIPE_ANNUAL_PRICE_MISCONFIGURED]',
       );
       expect(caughtError?.message).not.toContain(ANNUAL_PRICE_ID);
+    } finally {
+      harness.restore();
+    }
+  });
+
+  it('rejects an annual price billed every two years', async () => {
+    const harness = spyOnStripeDefaults();
+    harness.priceRetrieve
+      .mockResolvedValueOnce(createRecurringPrice('month'))
+      .mockResolvedValueOnce(
+        createRecurringPrice('year', {
+          recurring: {
+            interval: 'year',
+            interval_count: 2,
+          } as Stripe.Price.Recurring,
+        }),
+      );
+
+    try {
+      const caughtError = await captureHealthCheckError();
+      expect(caughtError?.message).toContain(
+        '[E2E_PREFLIGHT:STRIPE_ANNUAL_PRICE_MISCONFIGURED]',
+      );
+      expect(caughtError?.message).not.toContain(ANNUAL_PRICE_ID);
+    } finally {
+      harness.restore();
+    }
+  });
+
+  it('rejects a monthly price billed every two months', async () => {
+    const harness = spyOnStripeDefaults();
+    harness.priceRetrieve.mockResolvedValueOnce(
+      createRecurringPrice('month', {
+        recurring: {
+          interval: 'month',
+          interval_count: 2,
+        } as Stripe.Price.Recurring,
+      }),
+    );
+
+    try {
+      const caughtError = await captureHealthCheckError();
+      expect(caughtError?.message).toContain(
+        '[E2E_PREFLIGHT:STRIPE_MONTHLY_PRICE_MISCONFIGURED]',
+      );
+      expect(caughtError?.message).not.toContain(MONTHLY_PRICE_ID);
     } finally {
       harness.restore();
     }
