@@ -5,7 +5,7 @@ name: Stripe hosted Checkout compatibility
 # push check and must not be configured as a required merge status.
 on:
   schedule:
-    - cron: '23 9 * * 3'
+    - cron: '23 9 * * *'
   workflow_dispatch:
 
 permissions:

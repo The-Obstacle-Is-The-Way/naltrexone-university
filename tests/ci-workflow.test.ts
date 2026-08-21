@@ -102,6 +102,16 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     expect(triggerBlock).not.toContain('push:');
   });
 
+  it('runs the observational hosted-Checkout drift detector daily', () => {
+    const workflow = readStripeHostedWorkflow();
+    const triggerBlock = workflow.slice(
+      workflow.indexOf('on:'),
+      workflow.indexOf('\npermissions:'),
+    );
+
+    expect(triggerBlock).toContain("- cron: '23 9 * * *'");
+  });
+
   it('runs only the observational hosted-Checkout project under a separate owner namespace', () => {
     const workflow = readStripeHostedWorkflow();
 

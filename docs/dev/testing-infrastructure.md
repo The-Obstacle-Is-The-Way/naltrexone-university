@@ -387,7 +387,7 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-CI runs the browser and required E2E layers only on pushes and same-repo PRs, because those jobs require secrets and Playwright browser installation. Fork PRs still run the non-browser gates. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its weekly schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
+CI runs the browser and required E2E layers only on pushes and same-repo PRs, because those jobs require secrets and Playwright browser installation. Fork PRs still run the non-browser gates. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
 
 E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 
