@@ -10,6 +10,9 @@ import {
 } from './helpers/paid-checkout';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 
+// Observational compatibility coverage for Stripe-owned, unsupported DOM.
+// This file belongs only to the scheduled/manual stripe-hosted project.
+
 test.describe
   .serial('paid annual checkout', () => {
     // Clerk sign-in, hosted card entry, eager sync, and app entitlement span three origins.
@@ -51,16 +54,30 @@ test.describe
         name: 'Card',
         exact: true,
       });
-      // Stripe's accordion cover intentionally intercepts the styled radio's pointer area.
-      await cardPaymentMethod.check({ force: true });
-      await expect(cardPaymentMethod).toBeChecked();
+      const cardNumber = page.getByLabel(/card number/i);
+      await expect
+        .poll(
+          async () =>
+            (await cardPaymentMethod.isVisible()) ||
+            (await cardNumber.isVisible()),
+          { timeout: 30_000 },
+        )
+        .toBe(true);
+      if (await cardPaymentMethod.isVisible()) {
+        // Older Checkout markup requires expanding Card; its cover intercepts clicks.
+        await cardPaymentMethod.check({ force: true });
+        await expect(cardPaymentMethod).toBeChecked();
+      }
       const saveInformation = page.getByRole('checkbox', {
         name: 'Save my information for faster checkout',
       });
-      if (await saveInformation.isChecked()) {
+      if (
+        (await saveInformation.isVisible()) &&
+        (await saveInformation.isChecked())
+      ) {
         await saveInformation.uncheck();
       }
-      await page.getByLabel(/card number/i).fill('4242424242424242');
+      await cardNumber.fill('4242424242424242');
       await page.getByLabel(/expiration/i).fill('12/30');
       await page.getByRole('textbox', { name: 'CVC', exact: true }).fill('123');
 

@@ -4,10 +4,10 @@
 **Created:** 2026-08-13
 **Surfaces:** `/pricing`, `/checkout/success`, `/app/billing`, the `/app/*` entitlement gate, sign-up CTA handoff
 **Preconditions:** **Vercel preview or local dev with Stripe TEST keys and Clerk dev instance** — never run mutating billing steps against production (live Stripe). Prepare separate TEST-mode accounts before the run: A needs a signed-out browser; B needs a signed-in **non-entitled** user; C steps 8–10 need a first-time non-entitled user (trial is granted only on a user's first checkout), while steps 11–12 need a prior-subscriber who is non-entitled now; D can use the active subscriber produced by step 12 or another active subscriber. Before this Draft becomes Active, record the named accounts and their reset/provisioning instructions here: the repo exposes only one E2E Clerk credential pair, and `tests/e2e/helpers/subscription.ts` is test-runner code, not an operator reset command. Step 18 additionally requires a separately provisioned app user whose TEST-mode Stripe customer was attached to a test clock before subscription creation.
-**Execution modes:** Human in full. Agent modes can execute A–B and app-side reads; hosted billing state changes are marked `⚠ human/PW`, and card entry is human-only. The existing Playwright trial spec covers steps 8–10. Production post-deploy smoke runs **Section A only**.
+**Execution modes:** Human in full. Agent modes can execute A–B and app-side reads; hosted billing state changes are marked `⚠ human/PW`, and card entry is human-only. Required Playwright covers both pricing CTAs through the Stripe-origin redirect boundary. The two full hosted journeys run only as scheduled/manual observational compatibility probes because Stripe owns the markup and documents UI automation as unsupported; they are not merge gates or substitutes for this human procedure. Production post-deploy smoke runs **Section A only**.
 **Estimated time:** 15 min (A+B+D ≈ 8 min; C adds hosted-checkout time)
 **Promotion gate:** yes
-**Promoted to:** — (overlaps `pricing-unauthenticated.spec.ts`, `subscribe.spec.ts`, `trial-start.spec.ts`; this procedure adds the gate-redirect, cancel-banner, and portal round-trip edges)
+**Promoted to:** — (overlaps `pricing-unauthenticated.spec.ts`, `subscribe.spec.ts`, required `checkout-redirect.spec.ts`, and observational `stripe-hosted-*.spec.ts`; this procedure adds the gate-redirect, cancel-banner, portal round-trip, and supported human hosted-Checkout proof)
 
 Known environment quirk (not a bug): in Clerk development mode, the redirect back from Stripe Checkout can land on a sign-in screen on dev/preview — `docs/dev/deployment-environments.md`.
 
@@ -64,4 +64,4 @@ Screenshots: step 5 (reason banner), step 10 (trial banner), step 16 (cancellati
 
 ## On failure
 
-Entitlement-gate failures (steps 4–6) are **security findings** — file as `BUG-NNN` at elevated priority. Stripe-flow failures: capture the Stripe test-dashboard event log alongside the UI evidence before filing.
+Entitlement-gate failures (steps 4–6) are **security findings** — file as `BUG-NNN` at elevated priority. Stripe-flow failures: capture the Stripe test-dashboard event log alongside the UI evidence before filing. A scheduled hosted-smoke failure is compatibility evidence to investigate, not permission to waive a genuinely required red check and not a veto on an unrelated pull request.

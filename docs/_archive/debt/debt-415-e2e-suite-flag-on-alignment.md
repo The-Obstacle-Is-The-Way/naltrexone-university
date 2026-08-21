@@ -6,6 +6,8 @@
 **Owner:** Engineering.
 **Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (the trial these tests cover; this was its remaining PR-4 code tail), [DEBT-413](./debt-413-remove-free-trial-enabled-flag.md) (flag removal — will make trial-on unconditional, so the suite must assert trial-on anyway), [Debt Index](../../debt/index.md).
 
+> **Current-coverage supersession (2026-08-20):** [DEBT-471](../../debt/debt-471-e2e-ci-external-fragility.md) removed Stripe-owned DOM from required PR automation after the unchanged test failed on a provider markup change and later passed without a code change. Required `checkout-redirect.spec.ts` now proves the trial CTA through the real Stripe-origin boundary; the former full `trial-start.spec.ts` journey is retained as `stripe-hosted-trial-start.spec.ts` only in a scheduled/manual observational project. The blocking repository-owned Session-shape, eager-sync, persistence, no-card-state, and entitlement contracts remain. This note updates current coverage; it does not rewrite what PR #417 shipped in June.
+
 ---
 
 ## Problem

@@ -316,9 +316,12 @@ describe('package scripts', () => {
     );
   });
 
-  it('routes pnpm test:e2e through the local hermetic orchestrator', () => {
+  it('routes both E2E lanes through the local hermetic orchestrator', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
-      'tsx scripts/run-local-e2e.ts',
+      'tsx scripts/run-local-e2e.ts --project=chromium',
+    );
+    expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
+      'tsx scripts/run-local-e2e.ts --project=stripe-hosted',
     );
   });
 

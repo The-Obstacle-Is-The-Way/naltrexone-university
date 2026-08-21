@@ -5,6 +5,8 @@
 **Date:** 2026-08-20
 **Source:** PR #811 — a **documentation-only** PR (1 file, markdown prose) was blocked for hours by two consecutive red CI runs, neither caused by its diff. Confirmed against `dev` at `4e05cca4` and PR #811 head `35dcca24`.
 
+**Implementation progress (2026-08-20):** F1 is implemented with mutually exclusive Playwright projects: required `chromium` stops after both real pricing flows cross the `checkout.stripe.com` origin, while the two full hosted-DOM journeys run only from a scheduled/manual `stripe-hosted` workflow under a separate owner namespace. F3 is implemented by installing Chromium only. F8 is implemented with `open: 'never'`. F2 now has a 12-minute step bound, but its independent retry/failover proof remains open; F5–F7 also remain open, so this debt stays Active.
+
 ## Description
 
 CI has no insulation between "this change is wrong" and "something outside this repository moved". Two different external systems reddened a markdown-only PR on 2026-08-19, and the signal was indistinguishable from a real regression.

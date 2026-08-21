@@ -154,6 +154,8 @@ rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME
 pnpm test:e2e
 ```
 
+`pnpm test:e2e` selects only the required `chromium` project. Stripe-owned Checkout DOM journeys use the `stripe-hosted-*.spec.ts` prefix and run only through the scheduled/manual `pnpm test:e2e:stripe-hosted` compatibility lane; they are observational and are not part of the pre-push or merge gate. Required E2E may assert the redirect reached the `checkout.stripe.com` origin but must not act on or assert against Stripe-owned markup.
+
 Never run E2E migrations by relying on implicit `.env.local` resolution alone. Normal local E2E does not need remote migrations. For an intentional deploy-target E2E check, verify the host and use `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`; migrate a remote target only when you deliberately mean to mutate it.
 
 This is not optional. This is not "before opening a PR." This is **before every push**, including follow-up fix commits. Every single time.
@@ -413,6 +415,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **Unit tests:** `*.test.ts` colocated next to source files (e.g., `grading.ts` → `grading.test.ts`)
 - **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
+- **Hosted-provider compatibility tests:** `tests/e2e/stripe-hosted-*.spec.ts` (scheduled/manual only; never required PR CI)
 - **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
 - **Planned test-quality practices (ADR-019, tracked as DEBT-465):** Gherkin acceptance tests (`tests/acceptance/` — `docs/dev/acceptance-testing.md`), mutation testing (`docs/dev/mutation-testing.md`), CRAP report (`docs/dev/code-quality-metrics.md`), UI QA procedures (`docs/qa/` — `docs/dev/qa-procedures.md`). All metrics observational — no numeric gates without a new ADR.
 
