@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const CI_WORKFLOW_PATH = '.github/workflows/ci.yml';
+const CODECOV_CONFIG_PATH = 'codecov.yml';
 const STRIPE_HOSTED_WORKFLOW_PATH =
   '.github/workflows/stripe-hosted-checkout-smoke.yml';
 const HUMAN_SAME_REPO_PR_CONDITION =
@@ -16,6 +17,10 @@ const PINNED_POSTGRES_16 =
 
 function readCiWorkflow(): string {
   return readFileSync(CI_WORKFLOW_PATH, 'utf8');
+}
+
+function readCodecovConfig(): string {
+  return readFileSync(CODECOV_CONFIG_PATH, 'utf8');
 }
 
 function readStripeHostedWorkflow(): string {
@@ -74,6 +79,12 @@ describe('CI workflow', () => {
     expect(stepBlock).toContain(
       'bash scripts/ci/install-playwright-chromium.sh',
     );
+  });
+});
+
+describe('Codecov configuration', () => {
+  it('excludes Playwright test infrastructure from product coverage', () => {
+    expect(readCodecovConfig()).toMatch(/ignore:\n\s+- ['"]tests\/e2e['"]/);
   });
 });
 
