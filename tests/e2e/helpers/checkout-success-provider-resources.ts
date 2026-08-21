@@ -27,6 +27,20 @@ export type ContractResources = {
   marker: string | null;
 };
 
+export type StripeCheckoutSessionLookup = {
+  checkout: {
+    sessions: {
+      list(
+        params: Stripe.Checkout.SessionListParams,
+      ): PromiseLike<{ data: Stripe.Checkout.Session[] }>;
+      retrieve(
+        id: string,
+        params: Stripe.Checkout.SessionRetrieveParams,
+      ): PromiseLike<Stripe.Checkout.Session>;
+    };
+  };
+};
+
 class CheckoutRedirect extends Error {
   constructor(readonly url: string) {
     super(`Checkout redirected to ${url}`);
@@ -160,7 +174,7 @@ export async function findCreatedApplicationSession(
 }
 
 export async function findTriggeredSession(
-  stripe: Stripe,
+  stripe: StripeCheckoutSessionLookup,
   marker: string,
   triggerStartedAt: number,
 ): Promise<Stripe.Checkout.Session> {

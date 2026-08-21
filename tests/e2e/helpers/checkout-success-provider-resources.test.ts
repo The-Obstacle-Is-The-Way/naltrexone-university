@@ -4,6 +4,7 @@ import {
   finalizeProviderContract,
   findTriggeredSession,
   getPersistedSubscriptionPlan,
+  type StripeCheckoutSessionLookup,
 } from './checkout-success-provider-resources';
 
 describe('provider-contract lifecycle', () => {
@@ -75,7 +76,7 @@ describe('findTriggeredSession', () => {
           retrieve: async () => session,
         },
       },
-    } as unknown as Stripe;
+    } satisfies StripeCheckoutSessionLookup;
 
     await expect(
       findTriggeredSession(stripe, 'debt471-marker', 1_787_177_600),

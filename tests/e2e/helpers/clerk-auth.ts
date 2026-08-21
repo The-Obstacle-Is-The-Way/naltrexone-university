@@ -5,6 +5,17 @@ export const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
 export const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;
 export const hasClerkCredentials = Boolean(clerkUsername && clerkPassword);
 
+export async function waitForActiveClerkSession(
+  page: Pick<Page, 'waitForFunction'>,
+): Promise<void> {
+  await page.waitForFunction(() => {
+    const clerkWindow = window as typeof window & {
+      Clerk?: { session?: unknown };
+    };
+    return Boolean(clerkWindow.Clerk?.session);
+  });
+}
+
 export async function signInWithClerkPassword(page: Page): Promise<void> {
   if (!clerkUsername || !clerkPassword) {
     throw new Error('Missing Clerk E2E credentials');
@@ -19,10 +30,5 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
       password: clerkPassword,
     },
   });
-  await page.waitForFunction(() => {
-    const clerkWindow = window as typeof window & {
-      Clerk?: { session?: unknown };
-    };
-    return Boolean(clerkWindow.Clerk?.session);
-  });
+  await waitForActiveClerkSession(page);
 }
