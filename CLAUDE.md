@@ -94,7 +94,7 @@ TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database
 - **Always prefix with the resolved `DATABASE_URL=...`** — without it, drizzle-kit reads `.env.local` (remote Neon DB)
 - **Seeding is required** — `tag-taxonomy-census` tests fail without it
 - **CI seeds with `SEED_INCLUDE_PLACEHOLDERS=true`** — plain `pnpm db:seed` is enough locally, but the flag gives exact CI seed parity
-- Only needed for `pnpm test:integration` (it self-resolves the target when `DATABASE_URL` is unset, but migrate/seed prep is manual). `pnpm test:e2e` is hermetic — it starts, migrates, and seeds the same per-clone DB itself. Unit/browser/build tests don't touch the DB.
+- Only needed for `pnpm test:integration` (it self-resolves the target when `DATABASE_URL` is unset, but migrate/seed prep is manual). `pnpm test:e2e` is database-isolated — it starts, migrates, and seeds the same per-clone DB itself, while still calling Clerk and Stripe test mode. Unit/browser/build tests don't touch the DB.
 
 ### ⚠️ Full Quality Gate (BEFORE EVERY PUSH — not just PRs)
 

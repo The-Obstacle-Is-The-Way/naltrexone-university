@@ -1,5 +1,6 @@
 import postgres from 'postgres';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
+import { createStripeTestClient } from './stripe-test-client';
 
 const DEFAULT_LOCAL_E2E_STRIPE_OWNER = 'local-dev';
 const STRIPE_PAGE_SIZE = 100;
@@ -41,7 +42,7 @@ export async function seedTestSubscription(): Promise<void> {
   }
 
   const sql = postgres(databaseUrl, { max: 1 });
-  const stripe = new Stripe(stripeSecretKey);
+  const stripe = createStripeTestClient(stripeSecretKey);
 
   try {
     // ── 1. Resolve Clerk user ID ──────────────────────────────────────

@@ -5,6 +5,7 @@ import {
   MigrationLedgerVerificationError,
   verifyMigrationLedger as verifySharedMigrationLedger,
 } from '@/scripts/migration-ledger';
+import { createStripeTestClient } from './stripe-test-client';
 
 export const CLERK_API_BASE = 'https://api.clerk.com/v1';
 export const CLERK_API_TIMEOUT_MS = 15_000;
@@ -507,7 +508,7 @@ function buildValidators(
     validators.push({
       id: 'stripe',
       run: async () => {
-        const stripe = new Stripe(stripeSecretKey);
+        const stripe = createStripeTestClient(stripeSecretKey);
         await services.verifyStripeSecretKey(stripe);
         await services.verifyStripePriceId({
           stripe,

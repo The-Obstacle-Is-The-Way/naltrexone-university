@@ -180,7 +180,7 @@ Keep line 303, the provider-template acceptance item, and the overall `CONDITION
 
 ### Step 6: verification, release, and closure
 
-1. Before every push, run the full AGENTS.md gate: `pnpm typecheck`; `pnpm lint`; `pnpm test --run`; `pnpm test:browser`; the documented local-database setup followed by `pnpm test:integration`; `pnpm build`; and hermetic `pnpm test:e2e` when the listed local credentials are present. Tear down the test database only after every suite finishes.
+1. Before every push, run the full AGENTS.md gate: `pnpm typecheck`; `pnpm lint`; `pnpm test --run`; `pnpm test:browser`; the documented local-database setup followed by `pnpm test:integration`; `pnpm build`; and database-isolated (but Clerk/Stripe-networked) `pnpm test:e2e` when the listed local credentials are present. Tear down the test database only after every suite finishes.
 2. Confirm the diff contains the dependency/lockfile, the two analytics component/test files, root-layout test and implementation, marketing-footer notice/test, `next.config.ts` and its header test, the Playwright referrer regression, mirrored Privacy Policy copy and tests, DEBT-414 updates, and this debt/register's in-progress Results only. Terms content and `lib/pricing-data.ts` must be byte-identical to the baseline.
 3. Require a formal CodeRabbit APPROVED review object on the exact final feature head. A literal rate-limit or review-limit response is a hard stop until its stated cooldown passes and a fresh review is requested.
 4. Squash the feature PR to `dev`. Re-fetch immediately before the merge. Adopt any existing `dev` to `main` promotion PR; otherwise open one. Promote with a merge commit and require the same exact-head CodeRabbit approval.

@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-08-17
+**Last Updated:** 2026-08-20
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
@@ -27,7 +27,20 @@ testDir: './tests/e2e',
 fullyParallel: false,
 retries: process.env.CI ? 2 : 1,
 workers: 1,
-projects: [{ name: 'setup' }, { name: 'chromium', dependencies: ['setup'] }],
+reporter: [['html', { open: 'never' }], ['list']],
+projects: [
+  { name: 'setup' },
+  {
+    name: 'chromium',
+    dependencies: ['setup'],
+    testIgnore: /stripe-hosted-.*\.spec\.ts/,
+  },
+  {
+    name: 'stripe-hosted',
+    dependencies: ['setup'],
+    testMatch: /stripe-hosted-.*\.spec\.ts/,
+  },
+],
 webServer: {
   command: process.env.CI ? 'pnpm start' : 'pnpm build && pnpm start',
   url: `${baseURL}/api/health`,
@@ -38,6 +51,9 @@ webServer: {
 
 - Uses `NEXT_PUBLIC_APP_URL` or defaults to `http://127.0.0.1:3000`
 - Runs Chromium only (for now)
+- `pnpm test:e2e` selects the required `chromium` project and excludes every `stripe-hosted-*.spec.ts` file
+- The `stripe-hosted` project is an observational compatibility probe for Stripe-owned Checkout markup; it is scheduled/manual and never a pull-request or push check
+- The HTML report is retained as an artifact but is configured with `open: 'never'`, so a locally recovered flaky run cannot hold the process open
 - Starts a production server for E2E runs (`pnpm build && pnpm start` locally, `pnpm start` in CI)
 - Waits on `/api/health`, not just the root URL, so Playwright startup includes a DB-aware readiness check
 - Runs with **1 worker** because authenticated E2E flows share one Clerk user; mutating specs still reset that user to a deterministic baseline in `beforeEach`
@@ -75,6 +91,10 @@ Current repo posture:
 | `tests/e2e/dark-mode.spec.ts` | Dark mode toggle and OS preference |
 | `tests/e2e/marketing-contrast.spec.ts` | Marketing contrast regression checks |
 | `tests/e2e/subscribe.spec.ts` | Subscription verification (API-seeded) |
+| `tests/e2e/checkout-redirect.spec.ts` | Required monthly-trial and paid-annual CTA → Stripe-origin boundary checks; no Stripe DOM interaction |
+| `tests/e2e/checkout-success-provider.spec.ts` | Required real-Stripe contract for application-created Session parameters/open rejection plus CLI-triggered completion → real success sync → Postgres persistence → entitlement |
+| `tests/e2e/stripe-hosted-trial-start.spec.ts` | Scheduled/manual observational no-card hosted Checkout journey |
+| `tests/e2e/stripe-hosted-paid-checkout.spec.ts` | Scheduled/manual observational paid annual hosted Checkout journey |
 | `tests/e2e/subscribe-and-practice.spec.ts` | Subscribe + answer a question |
 | `tests/e2e/practice.spec.ts` | Practice session answering flow |
 | `tests/e2e/session-continuation.spec.ts` | Resume incomplete session |
@@ -88,13 +108,18 @@ Current repo posture:
 ### Running E2E Tests
 
 ```bash
-# Run all E2E tests against local Docker Postgres.
+# Run the required E2E project against local Docker Postgres.
 # This starts the isolated per-clone Docker test DB, migrates, seeds
 # placeholder content, and then runs Playwright against the resolved
 # local app/database target.
 pnpm test:e2e
 
-# Run a specific test file through the same hermetic local flow
+# Run the unsupported Stripe-hosted compatibility probes explicitly.
+# This is observational and is not part of the pre-push or merge gate.
+pnpm test:e2e:stripe-hosted
+
+# Run a specific test file through the same database-isolated local flow.
+# Clerk and Stripe test-mode calls remain networked external dependencies.
 pnpm test:e2e -- tests/e2e/smoke.spec.ts
 
 # Run with UI (interactive)
@@ -108,7 +133,7 @@ These commands still execute the setup project by default. If your goal is to ru
 
 ### Environment Variables for E2E
 
-The full Playwright suite currently assumes authenticated E2E infrastructure because `tests/e2e/global.setup.ts` always runs first. For a normal `pnpm test:e2e` run, these must be present:
+Both Playwright projects assume authenticated E2E infrastructure because `tests/e2e/global.setup.ts` always runs first. For a normal `pnpm test:e2e` run or an explicit `pnpm test:e2e:stripe-hosted` run, these must be present:
 
 ```bash
 CLERK_SECRET_KEY=sk_test_...
@@ -123,9 +148,9 @@ NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL=price_...
 
 Locally, these can be provided via `.env.local` (loaded by `playwright.config.ts`). The local `DATABASE_URL` is supplied by `scripts/run-local-e2e.ts`, not `.env.local`: it resolves the current clone's local test target through `scripts/resolve-local-test-target.ts`, starts that target's Docker Compose project, migrates, and seeds with `SEED_INCLUDE_PLACEHOLDERS=true` before Playwright starts. The same target also supplies `PORT` and `NEXT_PUBLIC_APP_URL`, so concurrent clones do not share the app server port. CI still supplies its own Docker-service `DATABASE_URL` through `.github/workflows/ci.yml`.
 
-Normal local `pnpm test:e2e` runs reuse that per-clone Docker database; they do not tear it down or reset its volume. Only `pnpm db:test:reset` invokes `docker compose down -v`. The stable app-user UUID means completed `trial-start.spec.ts` Checkout Sessions remain deterministic recovery-chain rungs while Stripe retains their idempotency keys for at least 24 hours. This retained-state interaction is intentional regression coverage for [DEBT-466](../debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md) and [DEBT-470](../debt/debt-470-checkout-replay-tail-jump.md); do not rotate the user or drop the database volume to mask a traversal failure.
+Normal local `pnpm test:e2e` runs reuse that per-clone Docker database; they do not tear it down or reset its volume. Only `pnpm db:test:reset` invokes `docker compose down -v`. Checkout Sessions created by the required redirect-boundary tests and by explicit hosted-smoke runs can remain deterministic recovery-chain rungs while Stripe retains their idempotency keys. [DEBT-466](../debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md) and [DEBT-470](../debt/debt-470-checkout-replay-tail-jump.md) retain provider-faithful blocking contract coverage for that traversal; do not rotate the user or drop the database volume to mask a traversal failure.
 
-The temporary local `assertLocalTrialCheckoutReplayCapacity()` guard and `[E2E_CHECKOUT_CHAIN_SATURATED]` push exception were removed when DEBT-470 landed the subscription tail jump. The 2026-08-17 characterization had found 11 current-tuple completed Sessions inside 24 hours against the old fallback cap 10. The structural fix now selects a unique exact-metadata tail through a bounded provider list and keeps the old rung walk only as a safe fallback; retained-chain length no longer defines the healthy exact-match path's recovery-create depth. Any `trial-start` failure, including a generic `checkout=error`, is therefore blocking. Stripe's 24-hour statement remains only the earliest pruning eligibility, not an exact deletion deadline.
+The temporary local `assertLocalTrialCheckoutReplayCapacity()` guard and `[E2E_CHECKOUT_CHAIN_SATURATED]` push exception were removed when DEBT-470 landed the subscription tail jump. The 2026-08-17 characterization had found 11 current-tuple completed Sessions inside 24 hours against the old fallback cap 10. The structural fix now selects a unique exact-metadata tail through a bounded provider list and keeps the old rung walk only as a safe fallback; retained-chain length no longer defines the healthy exact-match path's recovery-create depth. Any failure before the Stripe-origin boundary remains blocking. Failures inside `stripe-hosted-*.spec.ts` are observational provider-compatibility failures, not evidence that a candidate commit is wrong. Stripe's 24-hour statement remains only the earliest pruning eligibility, not an exact deletion deadline.
 
 Individual spec files still use `test.skip(!hasClerkCredentials, ...)`, but that guard does **not** replace suite setup: `global.setup.ts` runs a preflight and seed/reset pass before the Chromium project starts. Missing or invalid credentials therefore fail the suite fast instead of silently skipping it.
 
@@ -143,7 +168,7 @@ The E2E credential preflight includes DEBT-391's migration-ledger check: it comp
 
 ### Test Data Seeding
 
-Subscription data is seeded via the Stripe API and direct DB writes in `global.setup.ts` — **no Stripe UI automation**.
+Required subscription setup is seeded via the Stripe API and direct DB writes in `global.setup.ts` — **no Stripe UI automation participates in merge eligibility**. The separately selected `stripe-hosted` project still drives Checkout markup as an unsupported observational probe.
 
 The setup project currently runs three steps, in this order:
 
@@ -167,7 +192,25 @@ The setup project currently runs three steps, in this order:
 
 `global.setup.ts` also seeds a deterministic baseline for the shared authenticated E2E user once per suite run. That suite-level reset is not enough for mutating specs on its own: any spec that writes sessions, attempts, or bookmarks should call `runE2EUserStateReset()` in `beforeEach` so every test starts from the same baseline rather than inheriting artifacts from earlier files or retries.
 
-`paid-checkout.spec.ts` deliberately reuses the provider lifecycle established by `trial-start.spec.ts`: it preserves the shared app-user UUID and Stripe customer, cancels the customer's non-terminal test subscriptions, clears cards, and restores the captured local subscription as `canceled` so the returning-user Checkout has no provider blocker and receives no trial. Its `afterEach` repeats the reset to cancel the purchased annual subscription, then reseeds one active paid baseline subscription. Individual test-mode subscription objects are disposable fixture state; the shared user and customer identities are not.
+`checkout-redirect.spec.ts` uses the same reset/reseed lifecycle to prove both required application-owned transitions: an eligible first-timer's monthly trial CTA and a returning user's paid annual CTA each resolve a real Checkout Session and cross onto the `checkout.stripe.com` origin. Required CI performs no selector action or assertion after that boundary. The two `stripe-hosted-*.spec.ts` files reuse the lifecycle only in the scheduled/manual compatibility project. Individual test-mode subscription objects are disposable fixture state; the shared user and customer identities are not.
+
+`checkout-success-provider.spec.ts` restores a blocking post-boundary contract without scraping Checkout. Stripe's public [Checkout Sessions API](https://docs.stripe.com/api/checkout/sessions) has no operation that completes an arbitrary existing Session. Stripe's supported [`stripe trigger checkout.session.completed`](https://docs.stripe.com/cli/trigger) command does create the necessary real test-mode API objects and side-effect events. The required contract therefore proves two adjacent seams: it retrieves the Session created by the production use case and asserts its parameters plus rejection while `open`, then creates a separate completed Session through the supported trigger and passes that Session through the production `/checkout/success` synchronization, real Drizzle repositories, and entitlement use case. It covers a paid annual subscription and a cardless monthly trial. Do not replace the supported trigger with the CLI fixture's private payment-page endpoint or claim that the CLI can complete the application-created Session.
+
+### Stripe network ownership and failure bounds
+
+The local Docker database makes database state isolated, not the E2E suite hermetic. Every row below deliberately depends on Stripe test mode and can fail independently of the candidate diff. Direct helper clients use a 15-second request timeout and one SDK network retry; Playwright's setup/default or explicit test timeout is the outer bound.
+
+| Networked surface | Required lane | Scheduled/manual lane | Failure bound |
+| ---- | ---- | ---- | ---- |
+| `credential-health-check.ts` — Account and configured Price retrieval | setup dependency | setup dependency | 15 seconds/request + one retry; 30-second setup-test outer bound |
+| `seed-test-user.ts` — Customer, PaymentMethod, and Subscription list/retrieve/create/update/cancel/attach | setup dependency | setup dependency | 15 seconds/request + one retry; 30-second setup-test outer bound |
+| `subscription.ts` — Customer, PaymentMethod, and Subscription reset/restore/evidence calls | redirect and provider-contract lifecycle | both hosted journeys | 15 seconds/request + one retry; 120-second spec outer bound |
+| `paid-checkout.ts` — lifecycle plus Subscription/Invoice/Invoice Payment/PaymentIntent evidence | lifecycle calls; equivalent paid evidence is independently asserted by the provider contract | full evidence in the paid hosted journey | 15 seconds/request + one retry; 120-second spec outer bound |
+| `stripe-hosted-checkout.ts` — browser navigation and form submission to `checkout.stripe.com` | none | both hosted journeys | 30-second hosted locator/navigation assertions inside a 120-second spec |
+| Production Checkout Session list/retrieve/create/expire and Subscription list | redirect and provider-contract specs | both hosted journeys | production retry policy inside a 120-second spec |
+| Stripe CLI completed-Session trigger and success-sync Session/Subscription retrieval | annual + cardless-trial provider-contract specs | none | 30-second CLI subprocess; 15 seconds/request + one retry; 120-second spec outer bound |
+
+`workers: 1` remains deliberate. Parallel workers require proof of independent database users, Clerk sessions, Stripe owner/customer namespaces, rate-limit keys, and cleanup; per-worker usernames alone do not establish that contract.
 
 ### Writing New E2E Tests
 
@@ -344,7 +387,7 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-CI runs the browser and E2E layers only on pushes and same-repo PRs, because those jobs require secrets and Playwright browser installation. Fork PRs still run the non-browser gates.
+CI runs the browser and required E2E layers only on pushes and same-repo PRs, because those jobs require secrets and Playwright browser installation. Fork PRs still run the non-browser gates. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
 
 E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 
@@ -369,7 +412,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 | `STRIPE_SECRET_KEY` | Stripe API key (used to create test subscriptions during seeding) |
 | `DATABASE_URL` | CI Postgres connection string for direct DB writes during seeding; local `pnpm test:e2e` supplies the Docker URL automatically |
 | `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY` | Stripe monthly price ID (used during subscription seeding) |
-| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Stripe annual price ID (validated for the paid annual Checkout E2E) |
+| `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL` | Stripe annual price ID (validated for the required redirect and provider-backed success contract plus the observational hosted journey) |
 
 ---
 

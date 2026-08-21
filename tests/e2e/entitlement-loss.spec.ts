@@ -56,16 +56,18 @@ test.describe('entitlement loss', () => {
 
     entitlementSnapshot = await removeE2EUserEntitlement();
 
-    const actionResponsePromise = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'POST' &&
-        response.request().headers()['next-action'] !== undefined &&
-        response.request().postData()?.includes('"idempotencyKey"') === true &&
-        response.request().postData()?.includes('"mode":"tutor"') === true,
-    );
+    const actionBodyPromise = page
+      .waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.request().headers()['next-action'] !== undefined &&
+          response.request().postData()?.includes('"idempotencyKey"') ===
+            true &&
+          response.request().postData()?.includes('"mode":"tutor"') === true,
+      )
+      .then((response) => response.text());
     await page.getByRole('button', { name: 'Start session' }).click();
-    const actionResponse = await actionResponsePromise;
-    const actionBody = await actionResponse.text();
+    const actionBody = await actionBodyPromise;
 
     expect(actionBody).toContain('UNSUBSCRIBED');
     await expect(

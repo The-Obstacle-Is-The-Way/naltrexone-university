@@ -1,7 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import postgres from 'postgres';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { seedTestSubscription } from './seed-test-user';
+import { createStripeTestClient } from './stripe-test-client';
 
 type E2EBillingState = {
   userId: string;
@@ -71,7 +72,7 @@ async function resolveE2EBillingState(
 }
 
 function createStripeClient(): Stripe {
-  return new Stripe(requireE2EEnv('STRIPE_SECRET_KEY'));
+  return createStripeTestClient(requireE2EEnv('STRIPE_SECRET_KEY'));
 }
 
 async function cancelCustomerSubscriptions(
@@ -220,24 +221,6 @@ export async function restoreE2EUserEntitlement(
   } finally {
     await closeE2ESql(sql);
   }
-}
-
-export async function completeNoCardTrialCheckout(page: Page): Promise<void> {
-  await expect(page).toHaveURL(/checkout\.stripe\.com/, { timeout: 30_000 });
-  const termsCheckbox = page.getByRole('checkbox', {
-    name: /I agree to .*Terms of Service and Privacy Policy/i,
-  });
-  await expect(termsCheckbox).toBeVisible({ timeout: 30_000 });
-  await termsCheckbox.check();
-  await expect(termsCheckbox).toBeChecked();
-
-  const startTrialButton = page
-    .getByRole('button', {
-      name: /start (free )?trial|subscribe|continue/i,
-    })
-    .first();
-  await expect(startTrialButton).toBeVisible({ timeout: 30_000 });
-  await startTrialButton.click();
 }
 
 export async function expectE2EUserHasTrialWithoutPaymentMethod(): Promise<void> {

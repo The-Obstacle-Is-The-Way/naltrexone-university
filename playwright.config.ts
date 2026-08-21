@@ -18,7 +18,7 @@ export default defineConfig({
   // All authenticated E2E tests share a single test user, so concurrent workers
   // cause session and bookmark state conflicts. Use 1 worker to run sequentially.
   workers: 1,
-  reporter: 'html',
+  reporter: [['html', { open: 'never' }], ['list']],
   use: {
     baseURL,
     trace: 'on-first-retry',
@@ -33,7 +33,13 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
       testMatch: /.*\.spec\.ts/,
-      testIgnore: /global\.setup\.ts/,
+      testIgnore: [/global\.setup\.ts/, /stripe-hosted-.*\.spec\.ts/],
+    },
+    {
+      name: 'stripe-hosted',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+      testMatch: /stripe-hosted-.*\.spec\.ts/,
     },
   ],
   webServer: {

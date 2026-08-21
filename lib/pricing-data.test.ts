@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { termsContent } from '@/app/(marketing)/terms/terms-content';
 import {
   CANCELLATION_METHOD,
+  createCheckoutRenewalTerms,
   PRICING_DATA,
   TERMS_CONTENT_SHA256,
   TERMS_VERSION,
@@ -67,5 +68,22 @@ describe('PRICING_DATA renewal disclosures', () => {
     expect(TERMS_CONTENT_SHA256).toBe(
       createHash('sha256').update(termsContent.bodyMarkdown).digest('hex'),
     );
+  });
+
+  it('builds the production annual and trial renewal snapshots from the pricing source of truth', () => {
+    expect(createCheckoutRenewalTerms('annual', false)).toMatchObject({
+      plan: 'annual',
+      amountCents: 19_900,
+      frequency: 'year',
+      disclosureSnapshot: PRICING_DATA.annual.standardDisclosure,
+      termsVersion: TERMS_VERSION,
+    });
+    expect(createCheckoutRenewalTerms('monthly', true)).toMatchObject({
+      plan: 'monthly',
+      amountCents: 2_900,
+      frequency: 'month',
+      disclosureSnapshot: PRICING_DATA.monthly.trialDisclosure,
+      termsVersion: TERMS_VERSION,
+    });
   });
 });
