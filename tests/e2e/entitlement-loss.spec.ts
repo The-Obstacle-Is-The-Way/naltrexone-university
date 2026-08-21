@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, type Route, test } from '@playwright/test';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
@@ -56,23 +56,49 @@ test.describe('entitlement loss', () => {
 
     entitlementSnapshot = await removeE2EUserEntitlement();
 
-    const actionBodyPromise = page
-      .waitForResponse(
-        (response) =>
-          response.request().method() === 'POST' &&
-          response.request().headers()['next-action'] !== undefined &&
-          response.request().postData()?.includes('"idempotencyKey"') ===
-            true &&
-          response.request().postData()?.includes('"mode":"tutor"') === true,
-      )
-      .then((response) => response.text());
-    await page.getByRole('button', { name: 'Start session' }).click();
-    const actionBody = await actionBodyPromise;
+    const actionPageUrl = new URL(page.url());
+    const matchesActionPage = (url: URL) =>
+      url.origin === actionPageUrl.origin &&
+      url.pathname === actionPageUrl.pathname;
+    const actionBody = Promise.withResolvers<string>();
+    let capturedAction = false;
+    const captureActionBody = async (route: Route): Promise<void> => {
+      const request = route.request();
+      const matchesStartSession =
+        request.method() === 'POST' &&
+        request.headers()['next-action'] !== undefined &&
+        request.postData()?.includes('"idempotencyKey"') === true &&
+        request.postData()?.includes('"mode":"tutor"') === true;
 
-    expect(actionBody).toContain('UNSUBSCRIBED');
-    await expect(
-      page.getByRole('alert').filter({ hasText: 'Subscription required' }),
-    ).toHaveText('Subscription required');
+      if (!matchesStartSession || capturedAction) {
+        await route.fallback();
+        return;
+      }
+
+      capturedAction = true;
+      try {
+        // microsoft/playwright#41512: buffer the real response before the
+        // page can release Chromium's resource, then deliver it unchanged.
+        const response = await route.fetch();
+        const body = await response.text();
+        await route.fulfill({ response, body });
+        actionBody.resolve(body);
+      } catch (error) {
+        actionBody.reject(error);
+        await route.abort();
+      }
+    };
+
+    await page.route(matchesActionPage, captureActionBody);
+    try {
+      await page.getByRole('button', { name: 'Start session' }).click();
+      expect(await actionBody.promise).toContain('UNSUBSCRIBED');
+      await expect(
+        page.getByRole('alert').filter({ hasText: 'Subscription required' }),
+      ).toHaveText('Subscription required');
+    } finally {
+      await page.unroute(matchesActionPage, captureActionBody);
+    }
 
     await page.goto('/app/dashboard');
     await expect(page).toHaveURL(/\/pricing\?reason=subscription_required$/);
