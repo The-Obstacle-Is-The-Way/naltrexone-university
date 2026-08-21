@@ -1,4 +1,5 @@
 import { expect, type Page, type Route, test } from '@playwright/test';
+import { withTimeout } from '@/lib/with-timeout';
 import {
   hasClerkCredentials,
   signInWithClerkPassword,
@@ -10,6 +11,8 @@ import {
   removeE2EUserEntitlement,
   restoreE2EUserEntitlement,
 } from './helpers/subscription';
+
+const ACTION_BODY_TIMEOUT_MS = 30_000;
 
 async function enableStartSession(page: Page): Promise<void> {
   const startSessionButton = page.getByRole('button', {
@@ -92,7 +95,9 @@ test.describe('entitlement loss', () => {
     await page.route(matchesActionPage, captureActionBody);
     try {
       await page.getByRole('button', { name: 'Start session' }).click();
-      expect(await actionBody.promise).toContain('UNSUBSCRIBED');
+      expect(
+        await withTimeout(actionBody.promise, ACTION_BODY_TIMEOUT_MS),
+      ).toContain('UNSUBSCRIBED');
       await expect(
         page.getByRole('alert').filter({ hasText: 'Subscription required' }),
       ).toHaveText('Subscription required');
