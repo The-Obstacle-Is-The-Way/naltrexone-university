@@ -4,6 +4,10 @@ import type Stripe from 'stripe';
 import { syncCheckoutSuccess } from '@/app/(marketing)/checkout/success/checkout-success-sync';
 import * as schema from '@/db/schema';
 import { createCheckoutRenewalTerms } from '@/lib/pricing-data';
+import {
+  getSubscriptionPlanFromPriceId,
+  type StripePriceIds,
+} from '@/src/adapters/config/stripe-prices';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
@@ -16,11 +20,11 @@ import type { User } from '@/src/domain/entities';
 export type ContractShape = 'annual' | 'monthly-trial';
 
 export type ContractResources = {
-  userId: string;
+  userId: string | null;
   appSessionId: string | null;
   appCustomerId: string | null;
   completedCustomerId: string | null;
-  marker: string;
+  marker: string | null;
 };
 
 class CheckoutRedirect extends Error {
@@ -47,6 +51,52 @@ export function redactStripeIdentifiers(value: unknown): string {
     /(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|sk_test)_[A-Za-z0-9]+/g,
     '$1_[REDACTED]',
   );
+}
+
+export function getPersistedSubscriptionPlan(
+  priceId: string | null | undefined,
+  priceIds: StripePriceIds,
+) {
+  return priceId ? getSubscriptionPlanFromPriceId(priceId, priceIds) : null;
+}
+
+export async function finalizeProviderContract(input: {
+  primaryError?: unknown;
+  cleanup: () => Promise<void>;
+  close: () => Promise<void>;
+}): Promise<void> {
+  let cleanupError: unknown;
+  try {
+    await input.cleanup();
+  } catch (error) {
+    cleanupError = error;
+  }
+
+  let closeError: unknown;
+  try {
+    await input.close();
+  } catch (error) {
+    closeError = error;
+  }
+
+  if (input.primaryError) {
+    const secondaryFailures = [cleanupError, closeError]
+      .filter((error) => error !== undefined)
+      .map(redactStripeIdentifiers);
+    const secondarySuffix =
+      secondaryFailures.length > 0
+        ? ` | secondary: ${secondaryFailures.join(' | ')}`
+        : '';
+    throw new Error(
+      `[E2E_PROVIDER_CONTRACT:FAILED] ${redactStripeIdentifiers(input.primaryError)}${secondarySuffix}`,
+    );
+  }
+  if (cleanupError) throw cleanupError;
+  if (closeError) {
+    throw new Error(
+      `[E2E_PROVIDER_CONTRACT:CLOSE_FAILED] ${redactStripeIdentifiers(closeError)}`,
+    );
+  }
 }
 
 export function sessionHasExpectedRenewalTerms(
@@ -112,8 +162,12 @@ export async function findCreatedApplicationSession(
 export async function findTriggeredSession(
   stripe: Stripe,
   marker: string,
+  triggerStartedAt: number,
 ): Promise<Stripe.Checkout.Session> {
-  const sessions = await stripe.checkout.sessions.list({ limit: 100 });
+  const sessions = await stripe.checkout.sessions.list({
+    created: { gte: triggerStartedAt },
+    limit: 100,
+  });
   const session = sessions.data.find(
     (candidate) =>
       candidate.client_reference_id === marker &&
@@ -169,15 +223,21 @@ export async function cleanupContractResources(
       failures.push(error);
     }
   }
-  try {
-    await cleanStripeProducts(stripe, resources.marker);
-  } catch (error) {
-    failures.push(error);
+  if (resources.marker) {
+    try {
+      await cleanStripeProducts(stripe, resources.marker);
+    } catch (error) {
+      failures.push(error);
+    }
   }
-  try {
-    await db.delete(schema.users).where(eq(schema.users.id, resources.userId));
-  } catch (error) {
-    failures.push(error);
+  if (resources.userId) {
+    try {
+      await db
+        .delete(schema.users)
+        .where(eq(schema.users.id, resources.userId));
+    } catch (error) {
+      failures.push(error);
+    }
   }
   if (failures.length > 0) {
     throw new Error(

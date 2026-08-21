@@ -7,6 +7,12 @@ const STRIPE_HOSTED_WORKFLOW_PATH =
 const HUMAN_SAME_REPO_PR_CONDITION =
   "github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository";
 const DEPENDABOT_ACTOR_GUARD = "github.actor != 'dependabot[bot]'";
+const PINNED_SETUP_NODE =
+  'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020';
+const PINNED_UPLOAD_ARTIFACT =
+  'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a';
+const PINNED_POSTGRES_16 =
+  'postgres@sha256:e17e86066e5ef83e0952a9347f5c792b7ece00972e2aa787a6986f471b3dd3d5';
 
 function readCiWorkflow(): string {
   return readFileSync(CI_WORKFLOW_PATH, 'utf8');
@@ -103,5 +109,15 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     expect(stepBlock).toContain(
       'bash scripts/ci/install-playwright-chromium.sh',
     );
+  });
+
+  it('pins dependencies that execute in the secret-bearing hosted workflow', () => {
+    const workflow = readStripeHostedWorkflow();
+
+    expect(workflow).toContain(`image: ${PINNED_POSTGRES_16}`);
+    expect(workflow).toContain(`uses: ${PINNED_SETUP_NODE}`);
+    expect(workflow).toContain(`uses: ${PINNED_UPLOAD_ARTIFACT}`);
+    expect(workflow).not.toContain('actions/setup-node@v7');
+    expect(workflow).not.toContain('actions/upload-artifact@v7');
   });
 });

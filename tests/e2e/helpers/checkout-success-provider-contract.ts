@@ -21,10 +21,11 @@ import {
   type ContractShape,
   cleanupContractResources,
   createApplicationUser,
+  finalizeProviderContract,
   findCreatedApplicationSession,
   findTriggeredSession,
+  getPersistedSubscriptionPlan,
   getStripeId,
-  redactStripeIdentifiers,
   redirectForProviderContract,
   requireProviderEnv,
   sessionHasExpectedRenewalTerms,
@@ -97,22 +98,25 @@ export async function runCheckoutSuccessProviderContract(
   };
   const priceId = shape === 'annual' ? priceIds.annual : priceIds.monthly;
   const appUrl = requireProviderEnv('NEXT_PUBLIC_APP_URL');
+  const stripe = createStripeTestClient(stripeSecretKey);
   const sql = postgres(databaseUrl, { max: 1 });
   const db = drizzle(sql, { schema });
-  const stripe = createStripeTestClient(stripeSecretKey);
-  const user = await createApplicationUser(db, shape);
-  const marker = `debt471-${shape}-${user.id}`;
   const resources: ContractResources = {
-    userId: user.id,
+    userId: null,
     appSessionId: null,
     appCustomerId: null,
     completedCustomerId: null,
-    marker,
+    marker: null,
   };
 
   let evidence: ProviderContractEvidence | null = null;
   let primaryError: unknown;
   try {
+    const user = await createApplicationUser(db, shape);
+    const marker = `debt471-${shape}-${user.id}`;
+    resources.userId = user.id;
+    resources.marker = marker;
+
     if (shape === 'annual') {
       await db.insert(schema.stripeSubscriptions).values({
         userId: user.id,
@@ -176,6 +180,7 @@ export async function runCheckoutSuccessProviderContract(
       .from(schema.stripeSubscriptions)
       .where(eq(schema.stripeSubscriptions.userId, user.id));
 
+    const triggerStartedAt = Math.floor(Date.now() / 1000) - 5;
     await triggerStripeCompletedCheckout({
       plan: shape,
       userId: user.id,
@@ -189,7 +194,11 @@ export async function runCheckoutSuccessProviderContract(
           : PRICING_DATA.monthly.amountCents,
       stripeSecretKey,
     });
-    const completedSession = await findTriggeredSession(stripe, marker);
+    const completedSession = await findTriggeredSession(
+      stripe,
+      marker,
+      triggerStartedAt,
+    );
     const completedSubscriptionId = getStripeId(completedSession.subscription);
     const completedCustomerId = getStripeId(completedSession.customer);
     if (!completedSubscriptionId || !completedCustomerId) {
@@ -315,7 +324,7 @@ export async function runCheckoutSuccessProviderContract(
       persisted: {
         rowCount: persistedRows.length,
         status: persisted?.status ?? null,
-        plan: entitlement.plan ?? null,
+        plan: getPersistedSubscriptionPlan(persisted?.priceId, priceIds),
         usesCompletedSubscription:
           persisted?.stripeSubscriptionId === completedSubscriptionId,
       },
@@ -329,20 +338,11 @@ export async function runCheckoutSuccessProviderContract(
     primaryError = error;
   }
 
-  let cleanupError: unknown;
-  try {
-    await cleanupContractResources(db, stripe, resources);
-  } catch (error) {
-    cleanupError = error;
-  }
-  await sql.end({ timeout: 5 });
-
-  if (primaryError) {
-    throw new Error(
-      `[E2E_PROVIDER_CONTRACT:FAILED] ${redactStripeIdentifiers(primaryError)}`,
-    );
-  }
-  if (cleanupError) throw cleanupError;
+  await finalizeProviderContract({
+    primaryError,
+    cleanup: () => cleanupContractResources(db, stripe, resources),
+    close: () => sql.end({ timeout: 5 }),
+  });
   if (!evidence) throw new Error('[E2E_PROVIDER_CONTRACT:NO_EVIDENCE]');
   return evidence;
 }
