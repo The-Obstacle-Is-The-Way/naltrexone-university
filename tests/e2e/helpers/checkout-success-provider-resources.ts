@@ -45,6 +45,29 @@ export type StripeCheckoutSessionLookup = {
   };
 };
 
+type StripeCleanupProduct = Pick<Stripe.Product, 'id' | 'active' | 'metadata'>;
+type StripeCleanupPrice = Pick<Stripe.Price, 'id' | 'active'>;
+
+type StripeAutoPagingResult<T> = {
+  autoPagingToArray(options: { limit: number }): Promise<T[]>;
+};
+
+export type StripeProductCleanupClient = {
+  products: {
+    list(params: {
+      limit: number;
+    }): StripeAutoPagingResult<StripeCleanupProduct>;
+    update(id: string, params: { active: false }): PromiseLike<unknown>;
+  };
+  prices: {
+    list(params: {
+      product: string;
+      limit: number;
+    }): StripeAutoPagingResult<StripeCleanupPrice>;
+    update(id: string, params: { active: false }): PromiseLike<unknown>;
+  };
+};
+
 class CheckoutRedirect extends Error {
   constructor(readonly url: string) {
     super(`Checkout redirected to ${url}`);
@@ -223,7 +246,7 @@ export async function findTriggeredSession(
 }
 
 export async function cleanStripeProducts(
-  stripe: Stripe,
+  stripe: StripeProductCleanupClient,
   marker: string,
 ): Promise<void> {
   const products = await stripe.products

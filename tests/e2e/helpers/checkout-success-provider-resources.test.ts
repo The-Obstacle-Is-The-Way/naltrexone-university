@@ -9,6 +9,7 @@ import {
   redactStripeIdentifiers,
   redirectForProviderContract,
   type StripeCheckoutSessionLookup,
+  type StripeProductCleanupClient,
 } from './checkout-success-provider-resources';
 
 function captureRedirect(url: string): unknown {
@@ -242,11 +243,11 @@ describe('cleanStripeProducts', () => {
       id: 'prod_marked',
       active: true,
       metadata: { e2e_marker: 'debt471-marker' },
-    } as unknown as Stripe.Product;
+    };
     const markedPrice = {
       id: 'price_marked',
       active: true,
-    } as Stripe.Price;
+    };
     const productList = autoPagingList([], [markedProduct]);
     const priceList = autoPagingList([], [markedPrice]);
     const stripe = {
@@ -258,7 +259,7 @@ describe('cleanStripeProducts', () => {
         list: vi.fn(() => priceList),
         update: vi.fn().mockResolvedValue(markedPrice),
       },
-    } as unknown as Stripe;
+    } satisfies StripeProductCleanupClient;
 
     await cleanStripeProducts(stripe, 'debt471-marker');
 
