@@ -80,6 +80,24 @@ describe('buildStripeCompletedCheckoutTriggerArgs', () => {
 });
 
 describe('triggerStripeCompletedCheckout', () => {
+  it('rejects a dummy key before invoking the Stripe CLI', async () => {
+    const run = vi.fn().mockResolvedValue(undefined);
+
+    await expect(
+      triggerStripeCompletedCheckout(
+        {
+          ...baseInput,
+          plan: 'annual',
+          priceId: 'price_test_annual',
+          amountCents: 19_900,
+          stripeSecretKey: 'sk_test_dummy',
+        },
+        run,
+      ),
+    ).rejects.toThrow('[E2E_STRIPE_CLI:TEST_MODE_REQUIRED]');
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it('runs the supported trigger with a bounded subprocess and no secret argument', async () => {
     const run = vi.fn().mockResolvedValue(undefined);
 
