@@ -19,4 +19,10 @@ export async function signInWithClerkPassword(page: Page): Promise<void> {
       password: clerkPassword,
     },
   });
+  await page.waitForFunction(() => {
+    const clerkWindow = window as typeof window & {
+      Clerk?: { session?: unknown };
+    };
+    return Boolean(clerkWindow.Clerk?.session);
+  });
 }
