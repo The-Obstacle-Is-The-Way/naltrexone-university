@@ -142,17 +142,19 @@ If `pnpm test:browser` exits at bootstrap in about one second with `no tests / 1
 
 **If the local authenticated billing E2E environment is available, also run before every `git push`:**
 
-That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`. `DATABASE_URL` is still required in `.env.local` for normal local app development (`pnpm dev`, migrations, and seed commands), but not for the hermetic local E2E workflow unless you intentionally target an existing external database with `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`.
+That means the full Playwright prereqs documented in `docs/dev/testing-infrastructure.md#environment-variables-for-e2e` are present (typically via `.env.local`): `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `E2E_CLERK_USER_USERNAME`, `E2E_CLERK_USER_PASSWORD`, `E2E_STRIPE_OWNER`, `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`, and `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`. `DATABASE_URL` is still required in `.env.local` for normal local app development (`pnpm dev`, migrations, and seed commands), but not for the database-isolated local E2E workflow unless you intentionally target an existing external database with `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`. The local database is isolated; the lane is not hermetic because it deliberately calls Clerk and Stripe test mode.
 
 ```bash
 # Quick file check when you rely on .env.local (prints key names only, never values):
 rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME|E2E_CLERK_USER_PASSWORD|E2E_STRIPE_OWNER|STRIPE_SECRET_KEY|NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY|NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL)=' .env.local | cut -d= -f1
 
-# Local E2E is hermetic by default: it starts an isolated per-clone Docker
+# Local E2E is database-isolated by default: it starts a per-clone Docker
 # Postgres, migrates, seeds placeholder content, and runs Playwright against
-# the resolved local app and database target.
+# the resolved local app/database target while still calling Clerk and Stripe.
 pnpm test:e2e
 ```
+
+`pnpm test:e2e` selects only the required `chromium` project. Stripe-owned Checkout DOM journeys use the `stripe-hosted-*.spec.ts` prefix and run only through the scheduled/manual `pnpm test:e2e:stripe-hosted` compatibility lane; they are observational and are not part of the pre-push or merge gate. Required E2E may assert the redirect reached the `checkout.stripe.com` origin but must not act on or assert against Stripe-owned markup.
 
 Never run E2E migrations by relying on implicit `.env.local` resolution alone. Normal local E2E does not need remote migrations. For an intentional deploy-target E2E check, verify the host and use `E2E_USE_EXISTING_DATABASE=true DATABASE_URL="<target>" pnpm test:e2e`; migrate a remote target only when you deliberately mean to mutate it.
 
@@ -413,6 +415,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **Unit tests:** `*.test.ts` colocated next to source files (e.g., `grading.ts` → `grading.test.ts`)
 - **Integration tests:** `tests/integration/*.integration.test.ts` (requires local Postgres)
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
+- **Hosted-provider compatibility tests:** `tests/e2e/stripe-hosted-*.spec.ts` (scheduled/manual only; never required PR CI)
 - **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
 - **Planned test-quality practices (ADR-019, tracked as DEBT-465):** Gherkin acceptance tests (`tests/acceptance/` — `docs/dev/acceptance-testing.md`), mutation testing (`docs/dev/mutation-testing.md`), CRAP report (`docs/dev/code-quality-metrics.md`), UI QA procedures (`docs/qa/` — `docs/dev/qa-procedures.md`). All metrics observational — no numeric gates without a new ADR.
 

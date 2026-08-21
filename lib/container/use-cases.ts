@@ -1,9 +1,7 @@
 import * as Sentry from '@sentry/nextjs';
 import {
-  CANCELLATION_METHOD,
-  PRICING_DATA,
-  TERMS_CONTENT_SHA256,
-  TERMS_VERSION,
+  createCheckoutRenewalTerms,
+  createTrialPaymentRenewalTerms,
 } from '@/lib/pricing-data';
 import {
   getPostgresErrorCode,
@@ -223,22 +221,7 @@ export function createUseCaseFactories(input: {
         gateways.createPaymentGateway(),
         primitives.logger,
         primitives.now,
-        (plan, hasTrial) => {
-          const pricing = PRICING_DATA[plan];
-          return {
-            plan,
-            amountCents: pricing.amountCents,
-            currency: pricing.currency,
-            frequency: pricing.frequency,
-            disclosureSnapshot: hasTrial
-              ? pricing.trialDisclosure
-              : pricing.standardDisclosure,
-            disclosureVersion: pricing.disclosureVersion,
-            termsVersion: TERMS_VERSION,
-            termsHash: TERMS_CONTENT_SHA256,
-            cancellationMethod: CANCELLATION_METHOD,
-          };
-        },
+        createCheckoutRenewalTerms,
       ),
     createPortalSessionUseCase: () =>
       new CreatePortalSessionUseCase(
@@ -251,20 +234,7 @@ export function createUseCaseFactories(input: {
         repositories.createStripeCustomerRepository(),
         repositories.createTrialPaymentMethodSetupOperationRepository(),
         gateways.createPaymentGateway(),
-        (plan) => {
-          const pricing = PRICING_DATA[plan];
-          return {
-            plan,
-            amountCents: pricing.amountCents,
-            currency: pricing.currency,
-            frequency: pricing.frequency,
-            disclosureSnapshot: pricing.trialPaymentDisclosure,
-            disclosureVersion: pricing.disclosureVersion,
-            termsVersion: TERMS_VERSION,
-            termsHash: TERMS_CONTENT_SHA256,
-            cancellationMethod: CANCELLATION_METHOD,
-          };
-        },
+        createTrialPaymentRenewalTerms,
         primitives.logger,
         primitives.now,
       ),

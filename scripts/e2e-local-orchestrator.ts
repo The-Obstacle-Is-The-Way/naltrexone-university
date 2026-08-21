@@ -33,7 +33,7 @@ type RunCommandPlanInput = {
   runCommand?: (invocation: E2ECommandInvocation) => Promise<void>;
 };
 
-export function shouldUseHermeticLocalE2E(
+export function shouldUseIsolatedLocalE2E(
   env: E2ECommandEnv = process.env,
 ): boolean {
   return (
@@ -53,7 +53,7 @@ export function createE2ECommandPlan({
   cwd = process.cwd(),
   playwrightArgs = [],
 }: CreateE2ECommandPlanInput = {}): E2ECommandStep[] {
-  if (!shouldUseHermeticLocalE2E(env)) {
+  if (!shouldUseIsolatedLocalE2E(env)) {
     return [
       {
         label: 'Run Playwright E2E',

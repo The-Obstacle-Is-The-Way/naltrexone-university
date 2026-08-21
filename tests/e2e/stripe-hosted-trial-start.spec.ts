@@ -4,12 +4,15 @@ import {
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
+import { completeNoCardTrialCheckout } from './helpers/stripe-hosted-checkout';
 import {
-  completeNoCardTrialCheckout,
   expectE2EUserHasTrialWithoutPaymentMethod,
   resetE2EUserToFirstTimer,
   restoreE2EUserPaidSubscription,
 } from './helpers/subscription';
+
+// Observational compatibility coverage for Stripe-owned, unsupported DOM.
+// This file belongs only to the scheduled/manual stripe-hosted project.
 
 test.describe('trial start', () => {
   // Hosted Stripe Checkout plus Clerk sign-in can take longer than app-only flows.

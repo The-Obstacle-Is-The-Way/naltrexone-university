@@ -14,7 +14,7 @@ Fixed in [PR #651](https://github.com/The-Obstacle-Is-The-Way/naltrexone-univers
 
 TDD coverage was added before implementation at the helper boundary (typed exhaustion shape plus a same-code/same-message wrong-shape control) and checkout-success boundary (all attempts lose to concurrent writes but the current active row renders the paid-success state; both recovery branches emit structured logs; the user-changed conflict still throws). Existing webhook CAS tests remain regression coverage for the unchanged path.
 
-Final wave proof: promo #653 placed wave-3 head `76de5ba3` on main; main and dev were byte-identical at tree `c4fc04e0`. Main CI run [29383288782](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/29383288782) passed typecheck, lint, unit/coverage, integration, browser/coverage, build, hermetic E2E, and deploy. A fresh close-time request to `https://addictionboards.com/` returned HTTP/2 200.
+Final wave proof: promo #653 placed wave-3 head `76de5ba3` on main; main and dev were byte-identical at tree `c4fc04e0`. Main CI run [29383288782](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/29383288782) passed typecheck, lint, unit/coverage, integration, browser/coverage, build, database-isolated E2E, and deploy. A fresh close-time request to `https://addictionboards.com/` returned HTTP/2 200.
 
 ## Summary
 
