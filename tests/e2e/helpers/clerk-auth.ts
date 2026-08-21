@@ -5,8 +5,12 @@ export const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
 export const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;
 export const hasClerkCredentials = Boolean(clerkUsername && clerkPassword);
 
+type ClerkSessionWaitPage = {
+  waitForFunction(predicate: () => boolean): Promise<unknown>;
+};
+
 export async function waitForActiveClerkSession(
-  page: Pick<Page, 'waitForFunction'>,
+  page: ClerkSessionWaitPage,
 ): Promise<void> {
   await page.waitForFunction(() => {
     const clerkWindow = window as typeof window & {
