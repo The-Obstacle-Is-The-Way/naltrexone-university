@@ -5,7 +5,7 @@ import { createStripeTestClient } from './stripe-test-client';
 
 const execFileAsync = promisify(execFile);
 const STRIPE_IDENTIFIER_PATTERN =
-  /\b(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|sk_test)_[A-Za-z0-9]+\b/g;
+  /\b(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|whsec|sk_test|sk_live|rk_test|rk_live)_[A-Za-z0-9]+\b/g;
 
 export const STRIPE_CLI_TRIGGER_TIMEOUT_MS = 30_000;
 

@@ -125,7 +125,11 @@ describe('triggerStripeCompletedCheckout', () => {
   it('redacts provider identifiers from trigger failures', async () => {
     const run = vi
       .fn()
-      .mockRejectedValue(new Error('request req_sensitive for cs_sensitive'));
+      .mockRejectedValue(
+        new Error(
+          'request req_sensitive for cs_sensitive using rk_test_sensitive',
+        ),
+      );
 
     await expect(
       triggerStripeCompletedCheckout(
@@ -138,6 +142,8 @@ describe('triggerStripeCompletedCheckout', () => {
         },
         run,
       ),
-    ).rejects.toThrow('request req_[REDACTED] for cs_[REDACTED]');
+    ).rejects.toThrow(
+      'request req_[REDACTED] for cs_[REDACTED] using rk_test_[REDACTED]',
+    );
   });
 });

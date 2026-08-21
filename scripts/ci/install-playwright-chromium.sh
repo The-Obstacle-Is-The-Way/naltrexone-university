@@ -17,6 +17,13 @@ run_bounded() {
     "$@"
 }
 
+find_apt_source_files() {
+  find "$apt_root" \
+    -type f \
+    \( -name '*.list' -o -name '*.sources' \) \
+    -print0 2>/dev/null
+}
+
 remove_microsoft_sources() {
   while IFS= read -r -d '' source_file; do
     if grep -qE 'packages\.microsoft\.com' "$source_file"; then
@@ -26,7 +33,7 @@ remove_microsoft_sources() {
       fi
       sudo rm -f "$source_file"
     fi
-  done < <(find "$apt_root" -type f -print0 2>/dev/null)
+  done < <(find_apt_source_files)
 }
 
 fail_over_azure_archive_sources() {
@@ -44,7 +51,7 @@ fail_over_azure_archive_sources() {
     sudo cp "$replacement_file" "$source_file"
     rm -f "$replacement_file"
     rewrote_source=true
-  done < <(find "$apt_root" -type f -print0 2>/dev/null)
+  done < <(find_apt_source_files)
 
   if [[ "$rewrote_source" == true ]]; then
     echo '[playwright-install] Retrying apt dependencies through archive.ubuntu.com.'

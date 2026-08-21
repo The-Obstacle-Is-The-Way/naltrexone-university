@@ -30,9 +30,13 @@ export type ContractResources = {
 export type StripeCheckoutSessionLookup = {
   checkout: {
     sessions: {
-      list(
-        params: Stripe.Checkout.SessionListParams,
-      ): PromiseLike<{ data: Stripe.Checkout.Session[] }>;
+      list(params: Stripe.Checkout.SessionListParams): PromiseLike<{
+        data: Stripe.Checkout.Session[];
+      }> & {
+        autoPagingToArray(options: {
+          limit: number;
+        }): Promise<Stripe.Checkout.Session[]>;
+      };
       retrieve(
         id: string,
         params: Stripe.Checkout.SessionRetrieveParams,
@@ -62,7 +66,7 @@ export function getStripeId(value: unknown): string | null {
 
 export function redactStripeIdentifiers(value: unknown): string {
   return String(value).replace(
-    /(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|sk_test)_[A-Za-z0-9]+/g,
+    /\b(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|whsec|sk_test|sk_live|rk_test|rk_live)_[A-Za-z0-9]+\b/g,
     '$1_[REDACTED]',
   );
 }
@@ -177,34 +181,63 @@ export async function findTriggeredSession(
   stripe: StripeCheckoutSessionLookup,
   marker: string,
   triggerStartedAt: number,
+  options: {
+    timeoutMs?: number;
+    intervalMs?: number;
+    now?: () => number;
+    sleep?: (ms: number) => Promise<void>;
+  } = {},
 ): Promise<Stripe.Checkout.Session> {
-  const sessions = await stripe.checkout.sessions.list({
-    created: { gte: triggerStartedAt },
-    limit: 100,
-  });
-  const session = sessions.data.find(
-    (candidate) =>
-      candidate.client_reference_id === marker &&
-      candidate.status === 'complete',
-  );
-  if (!session) throw new Error('Triggered Checkout Session was not found.');
-  return stripe.checkout.sessions.retrieve(session.id, {
-    expand: ['line_items'],
-  });
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  const intervalMs = options.intervalMs ?? 1_000;
+  const now = options.now ?? Date.now;
+  const sleep =
+    options.sleep ??
+    ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const deadline = now() + timeoutMs;
+
+  while (true) {
+    const sessions = await stripe.checkout.sessions
+      .list({
+        created: { gte: triggerStartedAt },
+        limit: 100,
+      })
+      .autoPagingToArray({ limit: 500 });
+    const session = sessions.find(
+      (candidate) =>
+        candidate.client_reference_id === marker &&
+        candidate.status === 'complete',
+    );
+    if (session) {
+      return stripe.checkout.sessions.retrieve(session.id, {
+        expand: ['line_items'],
+      });
+    }
+
+    const remainingMs = deadline - now();
+    if (remainingMs <= 0) break;
+    await sleep(Math.min(intervalMs, remainingMs));
+  }
+
+  throw new Error('Triggered Checkout Session was not found.');
 }
 
-async function cleanStripeProducts(
+export async function cleanStripeProducts(
   stripe: Stripe,
   marker: string,
 ): Promise<void> {
-  const products = await stripe.products.list({ limit: 100 });
-  for (const product of products.data) {
+  const products = await stripe.products
+    .list({ limit: 100 })
+    .autoPagingToArray({ limit: 500 });
+  for (const product of products) {
     if (product.metadata.e2e_marker !== marker) continue;
-    const prices = await stripe.prices.list({
-      product: product.id,
-      limit: 100,
-    });
-    for (const price of prices.data) {
+    const prices = await stripe.prices
+      .list({
+        product: product.id,
+        limit: 100,
+      })
+      .autoPagingToArray({ limit: 500 });
+    for (const price of prices) {
       if (price.active) await stripe.prices.update(price.id, { active: false });
     }
     if (product.active) {
@@ -302,12 +335,17 @@ export async function assertOpenSessionRejected(input: {
       },
     );
   } catch (error) {
-    return (
-      error instanceof CheckoutRedirect &&
-      error.url.endsWith('/pricing?checkout=error')
-    );
+    return classifyOpenSessionRejection(error);
   }
   return false;
+}
+
+export function classifyOpenSessionRejection(error: unknown): true {
+  if (!(error instanceof CheckoutRedirect)) throw error;
+  if (error.url.endsWith('/pricing?checkout=error')) return true;
+  throw new Error(
+    `[E2E_PROVIDER_CONTRACT:UNEXPECTED_REDIRECT] ${redactStripeIdentifiers(error.url)}`,
+  );
 }
 
 export function redirectForProviderContract(url: string): never {

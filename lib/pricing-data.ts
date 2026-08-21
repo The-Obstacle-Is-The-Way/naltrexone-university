@@ -53,9 +53,11 @@ export const PRICING_DATA = {
   },
 } as const;
 
-export function createCheckoutRenewalTerms(
-  plan: 'monthly' | 'annual',
-  hasTrial: boolean,
+type SubscriptionPlan = 'monthly' | 'annual';
+
+function createRenewalTerms(
+  plan: SubscriptionPlan,
+  disclosureSnapshot: string,
 ) {
   const pricing = PRICING_DATA[plan];
   return {
@@ -63,12 +65,25 @@ export function createCheckoutRenewalTerms(
     amountCents: pricing.amountCents,
     currency: pricing.currency,
     frequency: pricing.frequency,
-    disclosureSnapshot: hasTrial
-      ? pricing.trialDisclosure
-      : pricing.standardDisclosure,
+    disclosureSnapshot,
     disclosureVersion: pricing.disclosureVersion,
     termsVersion: TERMS_VERSION,
     termsHash: TERMS_CONTENT_SHA256,
     cancellationMethod: CANCELLATION_METHOD,
   };
+}
+
+export function createCheckoutRenewalTerms(
+  plan: SubscriptionPlan,
+  hasTrial: boolean,
+) {
+  const pricing = PRICING_DATA[plan];
+  return createRenewalTerms(
+    plan,
+    hasTrial ? pricing.trialDisclosure : pricing.standardDisclosure,
+  );
+}
+
+export function createTrialPaymentRenewalTerms(plan: SubscriptionPlan) {
+  return createRenewalTerms(plan, PRICING_DATA[plan].trialPaymentDisclosure);
 }

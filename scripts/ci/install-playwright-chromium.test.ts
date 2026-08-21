@@ -24,7 +24,10 @@ async function createHarness(firstDependencyInstallHangs: boolean) {
   const counterPath = join(root, 'counter');
   const ubuntuSource = join(sourcesDir, 'ubuntu.sources');
   const microsoftSource = join(sourcesDir, 'microsoft-prod.list');
+  const aptConfigDir = join(aptRoot, 'apt.conf.d');
+  const unrelatedAptConfig = join(aptConfigDir, '99microsoft-proxy');
   await mkdir(sourcesDir, { recursive: true });
+  await mkdir(aptConfigDir, { recursive: true });
   await mkdir(binDir, { recursive: true });
   await writeFile(
     ubuntuSource,
@@ -34,6 +37,10 @@ async function createHarness(firstDependencyInstallHangs: boolean) {
     microsoftSource,
     'deb https://packages.microsoft.com/ubuntu/24.04/prod noble main\n',
   );
+  await writeFile(
+    unrelatedAptConfig,
+    'Acquire::https::Proxy::packages.microsoft.com "DIRECT";\n',
+  );
   const pnpmScript = `#!/bin/sh
 printf '%s\\n' "$*" >> "$PLAYWRIGHT_TEST_LOG"
 if [ "$3" = "install-deps" ]; then
@@ -42,6 +49,7 @@ if [ "$3" = "install-deps" ]; then
   count=$((count + 1))
   printf '%s' "$count" > "$PLAYWRIGHT_TEST_COUNTER"
   if [ "$PLAYWRIGHT_TEST_HANG_FIRST" = "true" ] && [ "$count" -eq 1 ]; then sleep 20; fi
+  if [ "$PLAYWRIGHT_TEST_FAIL_DEPS" = "true" ]; then exit 23; fi
 fi
 exit 0
 `;
@@ -55,6 +63,7 @@ exit 0
     root,
     ubuntuSource,
     microsoftSource,
+    unrelatedAptConfig,
     logPath,
     env: {
       ...process.env,
@@ -67,6 +76,7 @@ exit 0
       PLAYWRIGHT_TEST_LOG: logPath,
       PLAYWRIGHT_TEST_COUNTER: counterPath,
       PLAYWRIGHT_TEST_HANG_FIRST: String(firstDependencyInstallHangs),
+      PLAYWRIGHT_TEST_FAIL_DEPS: 'false',
     },
   };
 }
@@ -74,6 +84,8 @@ exit 0
 describe('install-playwright-chromium.sh', () => {
   it('kills a hung apt phase, preserves Ubuntu sources, and retries through the archive failover', async () => {
     const harness = await createHarness(true);
+    await chmod(harness.ubuntuSource, 0o640);
+    const sourceBefore = await stat(harness.ubuntuSource);
     const startedAt = Date.now();
 
     await execFileAsync('bash', [INSTALL_SCRIPT], { env: harness.env });
@@ -87,7 +99,11 @@ describe('install-playwright-chromium.sh', () => {
     expect(await readFile(harness.ubuntuSource, 'utf8')).toContain(
       'http://archive.ubuntu.com/ubuntu',
     );
+    const sourceAfter = await stat(harness.ubuntuSource);
+    expect(sourceAfter.ino).toBe(sourceBefore.ino);
+    expect(sourceAfter.mode & 0o777).toBe(0o640);
     await expect(stat(harness.microsoftSource)).rejects.toThrow();
+    await expect(stat(harness.unrelatedAptConfig)).resolves.toBeDefined();
   });
 
   it('does not rewrite a healthy Ubuntu archive path', async () => {
@@ -114,8 +130,21 @@ describe('install-playwright-chromium.sh', () => {
 
     await execFileAsync('bash', [INSTALL_SCRIPT], { env: harness.env });
 
-    expect(await readFile(harness.ubuntuSource, 'utf8')).toContain(
-      'azure.archive.ubuntu.com',
+    const preserved = await readFile(harness.ubuntuSource, 'utf8');
+    expect(preserved).toContain('azure.archive.ubuntu.com');
+    expect(preserved).toContain('packages.microsoft.com');
+  });
+
+  it('fails after the bounded dependency retries and never installs Chromium', async () => {
+    const harness = await createHarness(false);
+    harness.env.PLAYWRIGHT_TEST_FAIL_DEPS = 'true';
+
+    await expect(
+      execFileAsync('bash', [INSTALL_SCRIPT], { env: harness.env }),
+    ).rejects.toMatchObject({ code: 23 });
+    expect(await readFile(harness.logPath, 'utf8')).toBe(
+      'exec playwright install-deps chromium\n' +
+        'exec playwright install-deps chromium\n',
     );
   });
 });
