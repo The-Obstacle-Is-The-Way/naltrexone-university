@@ -66,10 +66,7 @@ describe('CI workflow', () => {
 
     expect(stepBlock).toMatch(/timeout-minutes:\s*\d+/);
     expect(stepBlock).toContain(
-      'pnpm exec playwright install --with-deps chromium',
-    );
-    expect(stepBlock).not.toMatch(
-      /pnpm exec playwright install --with-deps\s*(?:\n|$)/,
+      'bash scripts/ci/install-playwright-chromium.sh',
     );
   });
 });
@@ -94,5 +91,17 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     expect(workflow).toContain('pnpm test:e2e:stripe-hosted');
     expect(workflow).toContain('E2E_STRIPE_OWNER: github-stripe-hosted-smoke');
     expect(workflow).not.toContain('pnpm test:e2e\n');
+  });
+
+  it('uses the same bounded Chromium installer as required CI', () => {
+    const stepBlock = findStepBlock(
+      readStripeHostedWorkflow(),
+      'Install Chromium',
+    );
+
+    expect(stepBlock).toContain('timeout-minutes: 12');
+    expect(stepBlock).toContain(
+      'bash scripts/ci/install-playwright-chromium.sh',
+    );
   });
 });

@@ -5,7 +5,7 @@
 **Last Updated:** 2026-06-13
 **Source:** Discovered live while running the full gate for BUG-245 with a second clone (`naltrexone-university-3`) concurrently running its own E2E suite for BUG-244/246.
 **Related:**
-- [DEBT-411 Local E2E flakiness + masked reset errors](./debt-411-local-e2e-flakiness-and-error-masking.md) — made local `pnpm test:e2e` hermetic, but single-clone; this debt is the multi-clone follow-on it did not cover.
+- [DEBT-411 Local E2E flakiness + masked reset errors](./debt-411-local-e2e-flakiness-and-error-masking.md) — made the local `pnpm test:e2e` database isolated, but single-clone; this debt is the multi-clone follow-on it did not cover.
 - [DEBT-391 Local E2E schema-drift preflight](./debt-391-local-e2e-schema-drift-preflight.md)
 - **Distinct from** the git "shared remote" concern (a second clone pushes to `main`/`dev` out-of-band). That is a *source-control* coordination problem; this is a *local test-resource isolation* problem. Different axis, same two-clone setup.
 **Status:** RESOLVED + archived. Shipped in PR #421 (squash `be50dda7`, `main` fast-forwarded) per owner instruction to combine the DevX fix with the checkout-race PR; owner-graded, full gate green + CodeRabbit approved on the exact head.
@@ -31,7 +31,7 @@ clones actively corrupt each other's runs.
 
 ### Vector A — Blanket `:3000` SIGKILL (the symptom we observed)
 
-The pre-fix hermetic E2E plan opened with an unconditional
+The pre-fix database-isolated E2E plan opened with an unconditional
 `lsof -ti:3000 | xargs kill -9` of **whatever** held port 3000. It did not check
 *whose* server that was. Playwright then starts its own server via
 `webServer.command: 'pnpm build && pnpm start'` and waits on
@@ -92,7 +92,7 @@ Current implementation evidence:
 
 ## Reproduction
 
-1. In clone A: `pnpm test:e2e` (hermetic path: `!CI && !E2E_USE_EXISTING_DATABASE`).
+1. In clone A: `pnpm test:e2e` (database-isolated path: `!CI && !E2E_USE_EXISTING_DATABASE`).
 2. While clone A is mid-suite, in clone B: `pnpm test:e2e`.
 3. Clone B's `Stop stale local Next.js server on :3000` step `kill -9`s clone A's server.
 4. Clone A's Playwright begins failing with `ERR_CONNECTION_REFUSED`.
@@ -171,7 +171,7 @@ practice:
 
 Spin up a uniquely-named disposable Postgres on a random free port per run, torn down on
 exit (this is exactly the manual workaround used to unblock the BUG-245 integration gate:
-`docker run --name naltrexone-test-db-bug245 ... -p 55434:5432`). Maximally hermetic, but
+`docker run --name naltrexone-test-db-bug245 ... -p 55434:5432`). Maximally database-isolated, but
 adds container start/health latency to every run and discards the warm-DB reuse DEBT-411
 deliberately kept. **Prefer Tier 1** (named, reused, namespaced-per-clone); keep Tier 2
 in reserve for CI-style full isolation.
@@ -182,7 +182,7 @@ in reserve for CI-style full isolation.
 isolation is now the default: `scripts/resolve-local-test-target.ts` derives one
 local-test target, Docker Compose project namespacing isolates the database
 container/network, and `PORT`/`NEXT_PUBLIC_APP_URL`/`DATABASE_URL` are threaded from the
-same object. Tier 2 remains the documented fallback if true per-run hermeticity is ever
+same object. Tier 2 remains the documented fallback if true per-run database isolation is ever
 needed.
 
 Rejected shortcuts:

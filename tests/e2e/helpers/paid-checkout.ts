@@ -1,6 +1,6 @@
 import postgres from 'postgres';
-import Stripe from 'stripe';
 import { PRICING_DATA } from '@/lib/pricing-data';
+import { createStripeTestClient } from './stripe-test-client';
 import {
   type E2EEntitlementSnapshot,
   removeE2EUserEntitlement,
@@ -130,7 +130,7 @@ async function loadPaidAnnualCheckoutEvidence(): Promise<PaidAnnualCheckoutEvide
     const row = rows[0];
     if (!row || rows.length !== 1) return emptyEvidence(rows.length);
 
-    const stripe = new Stripe(requireStripeTestKey());
+    const stripe = createStripeTestClient(requireStripeTestKey());
     const subscription = await stripe.subscriptions.retrieve(
       row.stripeSubscriptionId,
     );

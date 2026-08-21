@@ -52,3 +52,23 @@ export const PRICING_DATA = {
       'Pro Annual starts at $199 per year when your trial ends and renews automatically every year until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Add a card to keep access and completing Stripe, you authorize recurring annual charges after the trial.',
   },
 } as const;
+
+export function createCheckoutRenewalTerms(
+  plan: 'monthly' | 'annual',
+  hasTrial: boolean,
+) {
+  const pricing = PRICING_DATA[plan];
+  return {
+    plan,
+    amountCents: pricing.amountCents,
+    currency: pricing.currency,
+    frequency: pricing.frequency,
+    disclosureSnapshot: hasTrial
+      ? pricing.trialDisclosure
+      : pricing.standardDisclosure,
+    disclosureVersion: pricing.disclosureVersion,
+    termsVersion: TERMS_VERSION,
+    termsHash: TERMS_CONTENT_SHA256,
+    cancellationMethod: CANCELLATION_METHOD,
+  };
+}

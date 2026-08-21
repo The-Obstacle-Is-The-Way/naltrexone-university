@@ -85,9 +85,7 @@ jobs:
 
       - name: Install Chromium
         timeout-minutes: 12
-        run: |
-          sudo find /etc/apt/sources.list.d -type f -exec grep -lE 'packages\.microsoft\.com' {} + 2>/dev/null | sudo xargs -r rm -f || true
-          pnpm exec playwright install --with-deps chromium
+        run: bash scripts/ci/install-playwright-chromium.sh
 
       - name: Run observational Stripe-hosted Checkout journeys
         run: pnpm test:e2e:stripe-hosted

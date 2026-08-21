@@ -6,7 +6,7 @@
 **Owner:** Engineering.
 **Related:** [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) (the trial these tests cover; this was its remaining PR-4 code tail), [DEBT-413](./debt-413-remove-free-trial-enabled-flag.md) (flag removal — will make trial-on unconditional, so the suite must assert trial-on anyway), [Debt Index](../../debt/index.md).
 
-> **Current-coverage supersession (2026-08-20):** [DEBT-471](../../debt/debt-471-e2e-ci-external-fragility.md) removed Stripe-owned DOM from required PR automation after the unchanged test failed on a provider markup change and later passed without a code change. Required `checkout-redirect.spec.ts` now proves the trial CTA through the real Stripe-origin boundary; the former full `trial-start.spec.ts` journey is retained as `stripe-hosted-trial-start.spec.ts` only in a scheduled/manual observational project. The blocking repository-owned Session-shape, eager-sync, persistence, no-card-state, and entitlement contracts remain. This note updates current coverage; it does not rewrite what PR #417 shipped in June.
+> **Current-coverage supersession (2026-08-20):** [DEBT-471](../../debt/debt-471-e2e-ci-external-fragility.md) removed Stripe-owned DOM from required PR automation after the unchanged test failed on a provider markup change and later passed without a code change. Required `checkout-redirect.spec.ts` now proves the trial CTA through the real Stripe-origin boundary. Required `checkout-success-provider.spec.ts` separately proves the application-created trial Session parameters/open rejection and a Stripe-CLI-triggered genuine cardless trial through real success sync, persistence, and entitlement. The former uninterrupted `trial-start.spec.ts` hosted journey—and its `expectE2EUserHasTrialWithoutPaymentMethod` assertion—is retained as `stripe-hosted-trial-start.spec.ts` only in a weekly/manual observational project. No required test completes the exact application-created Session through Stripe's hosted page. This note updates current coverage; it does not rewrite what PR #417 shipped in June.
 
 ---
 
@@ -21,14 +21,14 @@ The free trial is live in production (`FREE_TRIAL_ENABLED=true`), but the E2E su
 
 **Make the E2E suite test the flag-ON reality that ships in production**, and add the missing trial-start coverage:
 
-1. **Run E2E with the flag on (mirror prod).** Set `FREE_TRIAL_ENABLED=true` in the E2E environment — the CI workflow **and** the local hermetic runner (`scripts/run-local-e2e.ts`, which already threads an `env` object) — so the suite exercises what production actually serves. This also pre-aligns the suite with DEBT-413, after which trial-on is unconditional.
+1. **Run E2E with the flag on (mirror prod).** Set `FREE_TRIAL_ENABLED=true` in the E2E environment — the CI workflow **and** the local database-isolated runner (`scripts/run-local-e2e.ts`, which already threads an `env` object) — so the suite exercises what production actually serves. This also pre-aligns the suite with DEBT-413, after which trial-on is unconditional.
 2. **Fix the stale assertion.** Update `tests/e2e/pricing-unauthenticated.spec.ts` to assert the **trial-forward CTA** ("Start 7-day free trial") for the flag-on / eligible visitor, instead of "Subscribe Monthly."
 3. **Add the trial-start E2E** at `tests/e2e/trial-start.spec.ts`: a first-time, no-card user goes pricing → trial CTA → hosted Checkout (Stripe **test mode**) → returns to the checkout-success interstitial ("Your 7-day free trial has started — no charge today", per `app/(marketing)/checkout/success/page.tsx:56`) → reaches `/app/*` with the app-shell countdown ("N days left") + the "Add a card to keep access" affordance. Assert entitlement is granted **without** a card on file.
 4. **Decide the flag-off regression's fate.** With the suite flag-on by default, the flag-off "Subscribe Monthly" path is exercised by the colocated unit/component tests (`app/pricing/pricing-view.test.tsx`, `app/pricing/page.test.tsx`), which already cover both branches. Do **not** duplicate that at the E2E layer; the E2E suite mirrors prod (flag-on). When DEBT-413 lands, delete the flag-off unit branches too.
 
 ## Constraints
 
-- TDD where it applies; use the hermetic local E2E runner (DEBT-411) + existing seed/auth fixtures.
+- TDD where it applies; use the database-isolated local E2E runner (DEBT-411) + existing seed/auth fixtures.
 - Stripe **test mode** only; no live charges; clean up any test-clock / subscription artifacts.
 - Full local gate + E2E green before push; fresh CodeRabbit; **owner grade before merge**.
 - Do not change product code (this is test coverage) beyond what's strictly needed to make the trial flow E2E-observable (e.g. a `data-testid` if a selector is genuinely missing).

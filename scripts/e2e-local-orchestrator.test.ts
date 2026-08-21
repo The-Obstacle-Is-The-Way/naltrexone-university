@@ -5,7 +5,7 @@ import {
   type E2ECommandInvocation,
   resolveLocalE2EDatabaseUrl,
   runCommandPlan,
-  shouldUseHermeticLocalE2E,
+  shouldUseIsolatedLocalE2E,
 } from './e2e-local-orchestrator';
 import { runLocalE2E } from './run-local-e2e';
 
@@ -38,18 +38,18 @@ describe('resolveLocalE2EDatabaseUrl', () => {
   });
 });
 
-describe('shouldUseHermeticLocalE2E', () => {
-  it('uses the hermetic Docker flow for local runs', () => {
-    expect(shouldUseHermeticLocalE2E({})).toBe(true);
+describe('shouldUseIsolatedLocalE2E', () => {
+  it('uses the database-isolated Docker flow for local runs', () => {
+    expect(shouldUseIsolatedLocalE2E({})).toBe(true);
   });
 
   it('keeps CI on the existing Playwright path', () => {
-    expect(shouldUseHermeticLocalE2E({ CI: 'true' })).toBe(false);
+    expect(shouldUseIsolatedLocalE2E({ CI: 'true' })).toBe(false);
   });
 
   it('allows an explicit local deploy-target database run', () => {
     expect(
-      shouldUseHermeticLocalE2E({ E2E_USE_EXISTING_DATABASE: 'true' }),
+      shouldUseIsolatedLocalE2E({ E2E_USE_EXISTING_DATABASE: 'true' }),
     ).toBe(false);
   });
 });
@@ -316,7 +316,7 @@ describe('package scripts', () => {
     );
   });
 
-  it('routes both E2E lanes through the local hermetic orchestrator', () => {
+  it('routes both E2E lanes through the database-isolated local orchestrator', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
       'tsx scripts/run-local-e2e.ts --project=chromium',
     );

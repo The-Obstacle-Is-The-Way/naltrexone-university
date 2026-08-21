@@ -1,7 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import postgres from 'postgres';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { seedTestSubscription } from './seed-test-user';
+import { createStripeTestClient } from './stripe-test-client';
 
 type E2EBillingState = {
   userId: string;
@@ -71,7 +72,7 @@ async function resolveE2EBillingState(
 }
 
 function createStripeClient(): Stripe {
-  return new Stripe(requireE2EEnv('STRIPE_SECRET_KEY'));
+  return createStripeTestClient(requireE2EEnv('STRIPE_SECRET_KEY'));
 }
 
 async function cancelCustomerSubscriptions(

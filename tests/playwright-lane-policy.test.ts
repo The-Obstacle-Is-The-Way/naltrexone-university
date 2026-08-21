@@ -29,6 +29,13 @@ const STRIPE_HOSTED_SELECTOR_MARKERS = [
   '/start (free )?trial|subscribe|continue/i',
 ] as const;
 
+const NETWORKED_STRIPE_HELPERS = [
+  'tests/e2e/helpers/credential-health-check.ts',
+  'tests/e2e/helpers/paid-checkout.ts',
+  'tests/e2e/helpers/seed-test-user.ts',
+  'tests/e2e/helpers/subscription.ts',
+] as const;
+
 function listTypeScriptFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -59,12 +66,16 @@ function getProject(name: string): PlaywrightProjectPolicy {
 
 describe('Playwright E2E lane policy', () => {
   const requiredSpec = 'tests/e2e/checkout-redirect.spec.ts';
+  const providerContractSpec = 'tests/e2e/checkout-success-provider.spec.ts';
   const hostedSpec = 'tests/e2e/stripe-hosted-trial-start.spec.ts';
 
   it('keeps Stripe-hosted specs out of the required Chromium project', () => {
     const project = getProject('chromium');
 
     expect(matchesRegexPattern(project.testMatch, requiredSpec)).toBe(true);
+    expect(matchesRegexPattern(project.testMatch, providerContractSpec)).toBe(
+      true,
+    );
     expect(matchesRegexPattern(project.testIgnore, hostedSpec)).toBe(true);
   });
 
@@ -73,6 +84,9 @@ describe('Playwright E2E lane policy', () => {
 
     expect(matchesRegexPattern(project.testMatch, hostedSpec)).toBe(true);
     expect(matchesRegexPattern(project.testMatch, requiredSpec)).toBe(false);
+    expect(matchesRegexPattern(project.testMatch, providerContractSpec)).toBe(
+      false,
+    );
   });
 
   it('routes required and hosted commands to mutually exclusive projects', () => {
@@ -82,6 +96,10 @@ describe('Playwright E2E lane policy', () => {
     expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
       'tsx scripts/run-local-e2e.ts --project=stripe-hosted',
     );
+  });
+
+  it('pins the official Stripe CLI used by the required completion trigger', () => {
+    expect(packageJson.devDependencies['@stripe/cli']).toBe('1.50.0');
   });
 
   it('never opens the HTML report server after a local run', () => {
@@ -105,5 +123,14 @@ describe('Playwright E2E lane policy', () => {
     expect(filesWithHostedSelectors).toEqual(
       [...STRIPE_HOSTED_SELECTOR_ALLOWLIST].sort(),
     );
+  });
+
+  it('bounds direct E2E Stripe SDK calls through the shared test client', () => {
+    for (const path of NETWORKED_STRIPE_HELPERS) {
+      const source = readFileSync(path, 'utf8');
+
+      expect(source).toContain("from './stripe-test-client'");
+      expect(source).not.toMatch(/new Stripe\s*\(/);
+    }
   });
 });

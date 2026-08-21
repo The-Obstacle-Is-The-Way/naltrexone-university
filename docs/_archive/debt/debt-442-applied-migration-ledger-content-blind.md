@@ -69,7 +69,7 @@ Pre-implementation preflight seam and run-mode proof:
 - Before this resolution, `verifyMigrationLedger` queried only `created_at`,
   compared it with `_journal.json` `entries[].when`, and therefore detected
   missing migrations but not content drift.
-- Normal local `pnpm test:e2e` is hermetic: `scripts/run-local-e2e.ts` delegates
+- Normal local `pnpm test:e2e` is database-isolated: `scripts/run-local-e2e.ts` delegates
   to `scripts/e2e-local-orchestrator.ts`, which starts the resolver-scoped
   Docker Postgres, runs `pnpm db:migrate`, seeds, then runs Playwright.
   Content drift should therefore be trivial there because the same checkout
