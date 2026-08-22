@@ -74,6 +74,11 @@ type SourceFileWithParseDiagnostics = ts.SourceFile & {
   parseDiagnostics?: readonly ts.Diagnostic[];
 };
 
+type CoveragePosition = {
+  line: number;
+  column: number;
+};
+
 const DEFAULT_OPTIONS: CrapReportOptions = {
   json: false,
   lane: 'merged',
@@ -541,6 +546,7 @@ function loadMergedCoverageMap(
     }
 
     try {
+      validateCoverageStatements(parsed);
       const laneMap = createCoverageMap(parsed as CoverageMapData);
       for (const file of laneMap.files()) {
         laneMap.fileCoverageFor(file);
@@ -557,6 +563,71 @@ function loadMergedCoverageMap(
   }
 
   return merged;
+}
+
+function validateCoverageStatements(
+  coverageMap: Record<string, unknown>,
+): void {
+  for (const [filePath, fileCoverage] of Object.entries(coverageMap)) {
+    if (
+      !isRecord(fileCoverage) ||
+      !isRecord(fileCoverage.statementMap) ||
+      !isRecord(fileCoverage.s)
+    ) {
+      throw new Error(`Invalid coverage statement data for ${filePath}.`);
+    }
+
+    const statementMap = fileCoverage.statementMap;
+    const statementHits = fileCoverage.s;
+    for (const [statementId, range] of Object.entries(statementMap)) {
+      const hits = statementHits[statementId];
+      if (!Number.isInteger(hits) || (hits as number) < 0) {
+        throw new Error(
+          `Invalid coverage statement counter for ${filePath}#${statementId}.`,
+        );
+      }
+      if (!isValidCoverageRange(range)) {
+        throw new Error(
+          `Invalid coverage statement range for ${filePath}#${statementId}.`,
+        );
+      }
+    }
+
+    for (const statementId of Object.keys(statementHits)) {
+      if (!Object.hasOwn(statementMap, statementId)) {
+        throw new Error(
+          `Invalid coverage statement counter for ${filePath}#${statementId}.`,
+        );
+      }
+    }
+  }
+}
+
+function isValidCoverageRange(value: unknown): boolean {
+  if (
+    !isRecord(value) ||
+    !isCoveragePosition(value.start) ||
+    !isCoveragePosition(value.end)
+  ) {
+    return false;
+  }
+
+  const start = value.start;
+  const end = value.end;
+  return (
+    end.line > start.line ||
+    (end.line === start.line && end.column >= start.column)
+  );
+}
+
+function isCoveragePosition(value: unknown): value is CoveragePosition {
+  return (
+    isRecord(value) &&
+    Number.isInteger(value.line) &&
+    (value.line as number) >= 1 &&
+    Number.isInteger(value.column) &&
+    (value.column as number) >= 0
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

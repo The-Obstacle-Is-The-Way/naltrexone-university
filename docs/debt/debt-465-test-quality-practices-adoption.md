@@ -53,7 +53,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 | Measure | Date | Result |
 |---|---|---|
-| CRAP top-25 snapshot | 2026-08-22 | Required merged unit + browser + integration baseline: 445 files / 2,177 functions; 6 scores ≥30, none >100; highest `QuestionView` at 84.00. Full measured snapshot below. |
+| CRAP top-25 snapshot | 2026-08-22 | Required three-lane merged baseline (unit + browser + integration): 445 files / 2,177 functions; 6 scores ≥30, none >100; highest `QuestionView` at 84.00. Full measured snapshot below. |
 | Mutation pilot scores | — | — |
 
 ### Part 1 CRAP top-25 baseline — 2026-08-22

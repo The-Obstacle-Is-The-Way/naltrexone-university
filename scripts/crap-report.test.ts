@@ -1,7 +1,13 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   analyzeSourceText,
   calculateCrapScore,
@@ -31,6 +37,7 @@ afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
   }
+  vi.restoreAllMocks();
 });
 
 function createTemporaryRepository(): string {
@@ -89,12 +96,23 @@ function writeCoverageMap(
   lane: 'unit' | 'browser' | 'integration',
   entries: ReadonlyArray<CoverageFixture>,
 ): void {
+  writeRawCoverageMap(
+    root,
+    lane,
+    Object.fromEntries(entries.map((entry) => [entry.path, entry])),
+  );
+}
+
+function writeRawCoverageMap(
+  root: string,
+  lane: 'unit' | 'browser' | 'integration',
+  entries: Record<string, unknown>,
+): void {
   const relativePath =
     lane === 'unit'
       ? 'coverage/coverage-final.json'
       : `coverage/${lane}/coverage-final.json`;
-  const map = Object.fromEntries(entries.map((entry) => [entry.path, entry]));
-  writeText(resolve(root, relativePath), JSON.stringify(map));
+  writeText(resolve(root, relativePath), JSON.stringify(entries));
 }
 
 function writeEmptyCoverageMaps(root: string): void {
@@ -152,6 +170,15 @@ describe('calculateCrapScore', () => {
 
   it('applies the cubic coverage term for partial coverage', () => {
     expect(calculateCrapScore(2, 0.5)).toBe(2.5);
+  });
+
+  it('rejects values outside the CRAP formula domain', () => {
+    expect(() => calculateCrapScore(0, 1)).toThrow(
+      'Complexity must be a positive integer',
+    );
+    expect(() => calculateCrapScore(1, Number.NaN)).toThrow(
+      'Coverage must be a finite fraction',
+    );
   });
 });
 
@@ -224,6 +251,26 @@ describe('analyzeSourceText complexity', () => {
       results.find((result) => result.functionName === 'inner'),
     ).toMatchObject({ complexity: 3 });
   });
+
+  it('discovers constructors, accessors, and anonymous declarations', () => {
+    const source = [
+      'class Example {',
+      '  constructor() {}',
+      '  get value() { return true; }',
+      '  set value(next: boolean) { void next; }',
+      '}',
+      'export default function () { return true; }',
+    ].join('\n');
+
+    const results = analyzeSourceText('/repo/src/example.ts', source);
+
+    expect(results.map((result) => result.functionName)).toEqual([
+      'constructor',
+      'value',
+      'value',
+      '<anonymous>',
+    ]);
+  });
 });
 
 describe('analyzeSourceText coverage ownership', () => {
@@ -265,6 +312,26 @@ describe('analyzeSourceText coverage ownership', () => {
       crap: 2,
     });
   });
+
+  it.each([
+    ['line', { start: { line: 0, column: 0 }, end: { line: 1, column: 1 } }],
+    ['column', { start: { line: 1, column: -1 }, end: { line: 1, column: 1 } }],
+    [
+      'location',
+      { start: { line: 99, column: 0 }, end: { line: 99, column: 1 } },
+    ],
+  ])('rejects an invalid coverage statement %s', (kind, range) => {
+    const filePath = '/repo/src/example.ts';
+    const source = 'export function covered() { return true; }';
+    const coverage = createCoverageFixture(filePath, source, [
+      { marker: 'return true', hits: 1 },
+    ]);
+    coverage.statementMap['0'] = range;
+
+    expect(() => analyzeSourceText(filePath, source, coverage)).toThrow(
+      `Invalid coverage statement ${kind}`,
+    );
+  });
 });
 
 describe('parseCrapReportArgs', () => {
@@ -301,6 +368,18 @@ describe('parseCrapReportArgs', () => {
     );
     expect(() => parseCrapReportArgs(['--lane', 'e2e'])).toThrow(
       '--lane must be one of',
+    );
+    expect(() => parseCrapReportArgs(['--min', '-1'])).toThrow(
+      '--min must be a finite non-negative number',
+    );
+    expect(() => parseCrapReportArgs(['--top'])).toThrow(
+      '--top requires a value',
+    );
+    expect(() => parseCrapReportArgs(['--top='])).toThrow(
+      '--top requires a value',
+    );
+    expect(() => parseCrapReportArgs(['--unknown'])).toThrow(
+      'Unknown option: --unknown',
     );
   });
 });
@@ -348,6 +427,102 @@ describe('createCrapReport', () => {
     expect(() =>
       createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
     ).toThrow('Could not parse browser coverage input');
+  });
+
+  it('rejects a raw coverage map with an invalid statement counter', () => {
+    const { root, sourcePath, source } = createMergedLaneFixture();
+    const coverage = createCoverageFixture(sourcePath, source, [
+      { marker: 'if (flag)', hits: 1 },
+      { marker: "return 'no'", hits: 0 },
+    ]);
+    writeRawCoverageMap(root, 'unit', {
+      [sourcePath]: { ...coverage, s: { ...coverage.s, '0': -1 } },
+    });
+
+    expect(() =>
+      createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
+    ).toThrow('Could not parse unit coverage input');
+  });
+
+  it('rejects a raw coverage map with an invalid statement range', () => {
+    const { root, sourcePath, source } = createMergedLaneFixture();
+    const coverage = createCoverageFixture(sourcePath, source, [
+      { marker: 'if (flag)', hits: 1 },
+      { marker: "return 'no'", hits: 0 },
+    ]);
+    writeRawCoverageMap(root, 'unit', {
+      [sourcePath]: {
+        ...coverage,
+        statementMap: {
+          ...coverage.statementMap,
+          '0': {
+            start: { line: 2, column: 10 },
+            end: { line: 2, column: 2 },
+          },
+        },
+      },
+    });
+
+    expect(() =>
+      createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
+    ).toThrow('Could not parse unit coverage input');
+  });
+
+  it('rejects incomplete raw statement records', () => {
+    const { root, sourcePath, source } = createMergedLaneFixture();
+    const coverage = createCoverageFixture(sourcePath, source, [
+      { marker: 'if (flag)', hits: 1 },
+      { marker: "return 'no'", hits: 0 },
+    ]);
+    const invalidFileCoverages: unknown[] = [
+      {},
+      { ...coverage, s: { ...coverage.s, extra: 0 } },
+      {
+        ...coverage,
+        statementMap: {
+          ...coverage.statementMap,
+          '0': { start: null, end: { line: 2, column: 2 } },
+        },
+      },
+    ];
+
+    for (const invalidFileCoverage of invalidFileCoverages) {
+      writeRawCoverageMap(root, 'unit', {
+        [sourcePath]: invalidFileCoverage,
+      });
+      expect(() =>
+        createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
+      ).toThrow('Could not parse unit coverage input');
+    }
+  });
+
+  it('rejects a non-object coverage map', () => {
+    const { root } = createMergedLaneFixture();
+    writeText(resolve(root, 'coverage/coverage-final.json'), '[]');
+
+    expect(() =>
+      createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
+    ).toThrow('Could not parse unit coverage input');
+  });
+
+  it('reports an unreadable coverage input', () => {
+    const { root } = createMergedLaneFixture();
+    const unitCoveragePath = resolve(root, 'coverage/coverage-final.json');
+    rmSync(unitCoveragePath);
+    mkdirSync(unitCoveragePath);
+
+    expect(() =>
+      createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
+    ).toThrow('Could not read unit coverage input');
+  });
+
+  it('reports an unreadable source file', () => {
+    const { root, sourcePath } = createMergedLaneFixture();
+    chmodSync(sourcePath, 0);
+
+    expect(() =>
+      createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
+    ).toThrow('Could not read source src/risky.ts');
   });
 
   it('rejects source parse diagnostics', () => {
@@ -432,6 +607,94 @@ describe('runCrapReportCli', () => {
 
     expect(exitCode).toBe(1);
     expect(stderr.join('\n')).toContain('--top must be a positive integer');
+  });
+
+  it('exits nonzero for a raw coverage map with an invalid counter', () => {
+    const { root, sourcePath, source } = createMergedLaneFixture();
+    const coverage = createCoverageFixture(sourcePath, source, [
+      { marker: 'if (flag)', hits: 1 },
+      { marker: "return 'no'", hits: 0 },
+    ]);
+    writeRawCoverageMap(root, 'unit', {
+      [sourcePath]: { ...coverage, s: { ...coverage.s, '0': 0.5 } },
+    });
+    const stderr: string[] = [];
+
+    const exitCode = runCrapReportCli({
+      argv: [],
+      cwd: root,
+      stdout: () => undefined,
+      stderr: (line) => stderr.push(line),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('Could not parse unit coverage input');
+  });
+
+  it('exits nonzero for a raw coverage map with an invalid range', () => {
+    const { root, sourcePath, source } = createMergedLaneFixture();
+    const coverage = createCoverageFixture(sourcePath, source, [
+      { marker: 'if (flag)', hits: 1 },
+      { marker: "return 'no'", hits: 0 },
+    ]);
+    writeRawCoverageMap(root, 'unit', {
+      [sourcePath]: {
+        ...coverage,
+        statementMap: {
+          ...coverage.statementMap,
+          '0': {
+            start: { line: 2, column: 10 },
+            end: { line: 1, column: 0 },
+          },
+        },
+      },
+    });
+    const stderr: string[] = [];
+
+    const exitCode = runCrapReportCli({
+      argv: [],
+      cwd: root,
+      stdout: () => undefined,
+      stderr: (line) => stderr.push(line),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stderr.join('\n')).toContain('Could not parse unit coverage input');
+  });
+
+  it('emits a ranked table by default', () => {
+    const { root } = createMergedLaneFixture();
+    const stdout: string[] = [];
+
+    const exitCode = runCrapReportCli({
+      argv: ['--top', '1'],
+      cwd: root,
+      stdout: (line) => stdout.push(line),
+      stderr: () => undefined,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stdout.join('\n')).toContain(
+      '| src/risky.ts:1 | risky | 2 | 100.00% | 2.00 |',
+    );
+  });
+
+  it('uses console reporters when no output adapters are supplied', () => {
+    const { root } = createMergedLaneFixture();
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const error = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    expect(runCrapReportCli({ argv: ['--top', '1'], cwd: root })).toBe(0);
+    expect(runCrapReportCli({ argv: ['--top', '0'], cwd: root })).toBe(1);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('CRAP report'));
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('--top must be a positive integer'),
+    );
+
+    log.mockRestore();
+    error.mockRestore();
   });
 
   it('emits machine-readable JSON', () => {
