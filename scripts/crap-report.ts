@@ -44,6 +44,7 @@ type ConcreteCoverageLane = Exclude<CoverageLane, 'merged'>;
 type CreateCrapReportInput = {
   cwd?: string;
   options?: CrapReportOptions;
+  readSourceFile?: (filePath: string) => string;
 };
 
 type RunCrapReportCliInput = {
@@ -261,6 +262,7 @@ export function parseCrapReportArgs(
 export function createCrapReport({
   cwd = process.cwd(),
   options = DEFAULT_OPTIONS,
+  readSourceFile = (filePath) => readFileSync(filePath, 'utf8'),
 }: CreateCrapReportInput = {}): CrapReport {
   const repositoryRoot = resolve(cwd);
   const coverageLanes = resolveCoverageLanes(options.lane);
@@ -288,7 +290,7 @@ export function createCrapReport({
     const displayPath = toDisplayPath(repositoryRoot, absolutePath);
     let sourceText: string;
     try {
-      sourceText = readFileSync(absolutePath, 'utf8');
+      sourceText = readSourceFile(absolutePath);
     } catch (error) {
       throw new Error(`Could not read source ${displayPath}.`, {
         cause: error,

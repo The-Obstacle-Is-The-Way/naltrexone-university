@@ -1,10 +1,4 @@
-import {
-  chmodSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -518,10 +512,19 @@ describe('createCrapReport', () => {
 
   it('reports an unreadable source file', () => {
     const { root, sourcePath } = createMergedLaneFixture();
-    chmodSync(sourcePath, 0);
+    const readError = Object.assign(new Error('permission denied'), {
+      code: 'EACCES',
+    });
 
     expect(() =>
-      createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
+      createCrapReport({
+        cwd: root,
+        options: parseCrapReportArgs([]),
+        readSourceFile: (filePath) => {
+          expect(filePath).toBe(sourcePath);
+          throw readError;
+        },
+      }),
     ).toThrow('Could not read source src/risky.ts');
   });
 
