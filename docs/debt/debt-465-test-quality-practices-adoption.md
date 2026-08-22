@@ -27,7 +27,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 ### Part 1 — CRAP report script
 
-`docs/dev/code-quality-metrics.md` §5. TDD `scripts/crap-report.ts` (TS compiler API + merged istanbul coverage), add `quality:crap` + `istanbul-lib-coverage` devDep, produce the merged-lane baseline, reconcile the a-priori hotspot table against measured ranking.
+`docs/dev/code-quality-metrics.md` §5. TDD `scripts/crap-report.ts` (the TS6 compiler API behind the DEBT-460 alias + all three required Istanbul coverage maps), add `quality:crap` plus direct `istanbul-lib-coverage` and `@types/istanbul-lib-coverage` devDependencies, produce the merged-lane baseline, and reconcile the a-priori hotspot table against measured ranking. Metric outcomes always exit 0; only missing/malformed inputs, parse/I/O failures, or invalid CLI configuration exit nonzero.
 
 ### Part 2 — Mutation-testing pilot
 
