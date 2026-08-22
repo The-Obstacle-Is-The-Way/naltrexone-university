@@ -1,0 +1,139 @@
+# DEBT-472: The Fakes-Over-Mocks Rule Sanctions Unverified Doubles at Every External Seam
+
+**Status:** Active
+**Priority:** P2
+**Date:** 2026-08-22
+**Source:** Owner question after DEBT-471 — "we obsess over fakes over mocks in the docs, so how did we end up with ~1,100 LOC of hand-rolled Stripe mocks?" A read-only six-pass census of the test estate at `dev` `070cd567` (578 tracked test files; 4,061 unit / 398 browser / 258 integration cases) answered it. The cause is the rule text itself, not agent drift; the estate is otherwise clean.
+
+## Description
+
+"Fakes over mocks" is the right principle. The repository adopted half of it.
+
+The canon (Meszaros via Fowler; *Software Engineering at Google* ch. 13) has two clauses. First: prefer a **fake** — "objects [that] actually have working implementations, but usually take some shortcut which makes them not suitable for production" — over a **stub** that "provide[s] canned answers" or a **spy** that is a stub that "also record[s] some information" ([Fowler, *Mocks Aren't Stubs*](https://martinfowler.com/articles/mocksArentStubs.html)). Second, and load-bearing: "A fake must have its own tests to ensure that it conforms to the API of its corresponding real implementation," achieved by "writing tests against the API's public interface and running those tests against both the real implementation and the fake" — contract tests ([*Software Engineering at Google*, ch. 13 "Test Doubles" → "Fakes Should Be Tested"](https://abseil.io/resources/swe-book/html/ch13.html)). Without the second clause a fake is an elaborate mock: it can diverge from reality and nothing detects it.
+
+The live rules encode only the first clause, and encode it with an exception that swallows every external seam. The consequences are measurable and are listed as findings F1–F8 below.
+
+### F1 — The live rule prescribes inline `vi.fn()` doubles for exactly the collaborators whose behavior matters
+
+`.claude/rules/testing.md:25-28` carries the decision tree verbatim:
+
+```text
+- Fake exists? Use it.
+- External dependency (Drizzle, Clerk, Stripe SDK)? Use `vi.fn()` inline or `vi.mock()`.
+- No fake exists for our code? Create one in `fakes/`, then use it.
+```
+
+`AGENTS.md:535-541` carries the same tree in long form ("Is it an external dependency (Drizzle db, Clerk, Stripe SDK)? YES → Use vi.fn() inline object OR vi.mock()"). This branch entered in `792beed7` (2026-02-02), the guidance rewrite whose message says the prior ambiguity "created DEBT-051" — archived [DEBT-051](../_archive/debt/debt-051-controller-tests-use-mocks-not-fakes.md) (inline `vi.fn()` for *internal* dependencies) was resolved separately in `64b86385` the same day. Its sanctioned example is captioned `// ✅ OK - Mocking external Drizzle db object (no fake exists)` (`AGENTS.md:565`). The parenthetical was a condition, never re-evaluated once fakes for those seams appeared.
+
+The split the rule draws is *ownership* (our code vs. external). The split that matters is *what the code under test depends on*: a collaborator's **shape** (a narrow typed stub is fine) versus its **stateful behavior** — idempotency-key replay, status transitions, cursor pagination, constraint errors (a stub cannot express these, and a test built on one proves nothing about them). Drizzle and Stripe are both the second kind. Every incident this month — DEBT-466, DEBT-467, DEBT-470 — was production code depending on Stripe behavior that no inline stub modeled.
+
+`.claude/rules/architecture.md:45` already records the cost in a different voice: "Unit tests with `vi.fn()` mocks will NOT catch this — they have no `this` dependency. See BUG-069, BUG-070." Two live rule files; one prescribes the double the other says caused two production bugs; no cross-reference.
+
+### F2 — The same construct is the canonical BAD mock in ADR-003 and the ✅ OK example in AGENTS.md
+
+[ADR-003](../adr/adr-003-testing-strategy.md) lines 161-165:
+
+```ts
+// BAD: Mock (couples test to implementation)
+const mockRepo = { findById: vi.fn().mockResolvedValue(question) };
+```
+
+`AGENTS.md` lines 565-569:
+
+```ts
+// ✅ OK - Mocking external Drizzle db object (no fake exists)
+const fakeDb = { query: { users: { findFirst: vi.fn().mockResolvedValue(null) } } };
+const repo = new DrizzleUserRepository(fakeDb);
+```
+
+Same construct; the variable was renamed from `mockRepo` to `fakeDb`. That rename is the whole confusion, and `.coderabbit.yaml:67` ("`vi.fn()` inside fake objects for spying is CORRECT") encodes the permissive reading, so the only PR-time reviewer enforces the wrong side.
+
+Three incompatible definitions of "fake" exist. ADR-003:146-165 — a class implementing the port with real behavior. `AGENTS.md:588-591` — reusable, "real behavior (filtering, sorting, validation)". Archived [DEBT-035](../_archive/debt/debt-035-inconsistent-repo-test-mocking.md):20-29 — "This **is** a fake passed through dependency injection" (line 25), with the table cell "Plain object with spy methods, passed via constructor" (line 29), quoting `db as unknown as RepoDb` (line 20) as its example. Only DEBT-035 classifies a call-chain object as a fake; archived [DEBT-444](../_archive/debt/debt-444-hot-path-prune-contention-and-coverage.md):17,39 names the identical construct "Drizzle call-chain doubles" — the anti-pattern. Both are archived and therefore invisible to agents. ADR-003:167-179 assigns adapters to integration-only testing ("real database… `tests/integration/`") and has no category for unit-level adapter tests; the 23 repository files and 9 Stripe gateway files that hand-roll doubles sit in that uncategorized layer, among roughly 112 adapter unit-test files in total. ADR-003:396 ("NO excessive mocking — if you need >2 mocks, refactor") is restated in no live file.
+
+### F3 — Contract tests exist for 2 of 24 fakes; the revenue-boundary fake cannot diverge detectably
+
+Exactly two fake↔real contract tests exist. `tests/shared/subscription-observation-version-contract.ts` runs the same scenarios from `src/application/test-helpers/fakes/fake-subscription-repository-contract.test.ts` (11 lines; never imports Drizzle) and `tests/integration/bug-regression-subscription-observation-version-fence.integration.test.ts:48` (real Postgres), covering 3 of the port's 5 methods. `tests/integration/pending-stripe-customer-cleanup-contract.integration.test.ts:76-80` is the exemplar — `describe.each([['fake', …], ['real Postgres', …]])` over one scenario table — and states the doctrine at line 27: "the same scenario table runs against the fake and the real Postgres adapter and must observe identical outcomes, so a fake-backed unit test can never certify anti-production semantics."
+
+The other 22 fakes have colocated isolation tests only. `FakePaymentGateway` (`src/application/test-helpers/fakes/fake-gateways.ts:89-190`) is, by Fowler's taxonomy, a spy: it records inputs and returns constructor-supplied constants. It has no behavior, so it is structurally incapable of diverging from `StripePaymentGateway` in any way a test could observe. `FakeStripeCheckoutClient` has no contract test against real Stripe; its replay and pagination semantics rest on prose probe receipts in DEBT-466/467/470 (genuine TEST-mode probes, including a recorded red→green where the probe falsified the fake), but its same-key/different-params `idempotency_error` text is reverse-engineered to match the adapter's own matcher (`src/adapters/gateways/stripe/stripe-checkout-sessions.ts:70-78`) — self-consistency, not provider verification. Archived [DEBT-455](../_archive/debt/debt-455-fake-user-repository-fidelity-divergences.md) rejected "a generalized fake contract harness" as disproportionate. No fake carries a known-divergences note; divergences have been recorded only after someone tripped over one (DEBT-007, DEBT-170, DEBT-367, DEBT-455, BUG-003).
+
+The repository's own vocabulary compounds this: [DEBT-468](./debt-468-test-estate-coverage-and-fixture-debt.md):12 says the fakes "have colocated contract coverage except `FakeSha256Hasher`," where "contract" means an isolation test of the fake. Read as fake↔real verification, that overstates coverage by roughly 22 fakes.
+
+### F4 — 187 hand-rolled Drizzle query-builder chains, including five tautological tests and one real coverage hole
+
+`as unknown as RepoDb` appears at 187 sites across 23 repository test files. `RepoDb` is not a shared type; it is a file-local `ConstructorParameters<typeof X>[0]` re-declared in each file, in `drizzle-stripe-customer-repository.test.ts` eight times inside its own `it()` blocks. No shared chain builder exists; `drizzle-idempotency-key-repository.test.ts` re-declares the same four-line `update→set→where→returning` ladder nine times.
+
+Five tests are tautological. `src/adapters/repositories/drizzle-attempt-repository.test.ts:932-1055` — "supports result filter (correct)", "(incorrect)", "source (adhoc)", "(tutor)", "(exam)" — script `finalQueryExecute` to return the one matching row, then assert that row comes back. The filter argument never reaches any predicate the double evaluates; removing the filter from production leaves all five green. Most of the remainder has real-Postgres behavioral twins in `tests/integration/` (the attempt, user, idempotency-key, and question repositories are near-fully duplicated there). The unit-only value worth preserving is error translation that is hard to force on real Postgres: `23505 → CONFLICT`, the `40P01` deadlock cause, corrupt cached JSON.
+
+One gap is real: `DrizzleStripeEventRepository.pruneProcessedBefore` (`src/adapters/repositories/drizzle-stripe-event-repository.ts:85`) has zero integration coverage — the unit call-chain test is its only coverage anywhere. This is the DEBT-444 class ("a SQL-emission or predicate regression… can remain green while expired rows accumulate"), closed for idempotency keys and still open here.
+
+### F5 — The Stripe doubles return shapes Stripe cannot produce, and that steers production into unexercised branches
+
+Fourteen `as unknown as Stripe*` casts across ten files, plus `stripe-customers.test.ts` (seven casts to the port's `Parameters<…>['stripe']` shape) and one typed-literal double (`stripe-webhook-processor-setup-expiration.test.ts:15`). Verified consequences:
+
+- `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:198` returns `logFallback('provider-list-has-more-is-missing')` unless `page.has_more` is a boolean. Only `stripe-checkout-sessions-recovery.test.ts` and the fake's own contract test supply `has_more`. The DEBT-470 tail-scan success path is therefore exercised only through `FakeStripeCheckoutClient` in `stripe-checkout-sessions-tail-jump.test.ts`; every other hand-rolled double silently routes production into the fallback branch and the test passes anyway.
+- `stripe-checkout-sessions-trials.test.ts:79-80` returns `id: 'cs_existing'` from `retrieve` for any id the double has not itself seeded as a setup-mode session. Stripe cannot return an id other than the one requested; production's id-mismatch guards (`stripe-checkout-sessions.ts:729,737`) are never exercised by that file.
+- `stripe-checkout-sessions-trials.test.ts:456-459` asserts `{ sessionId: 'cs_new', url: … }` — the double's own defaults, passed through `stripe-checkout-sessions.ts:359` unchanged. The assertion cannot fail.
+- `subscriptions.retrieve: vi.fn(async () => ({}))` appears in seven of the nine files (eight sites) and in the fake itself (`fake-stripe-checkout-client.ts:165`). Stripe never returns `{}`.
+- `stripe-webhook-processor.test.ts:77-79` — `constructEvent` ignores body, signature, and secret, so signature verification is not modeled at unit level (the real-signature integration matrix from DEBT-468 item 2 is the only proof).
+
+`FakeStripeCheckoutClient` currently has two consumers. The extensions that would unblock the rest, in dependency order: a `subscriptions` seeder (`list` data + `retrieve` payload); create/expire/list fault injection; seeding sessions with caller-chosen ids; `webhooks.constructEvent`, `setupIntents`, `customers.search`; an await barrier in `list` (only `stripe-checkout-sessions-concurrency.test.ts` needs it). `stripe-checkout-sessions-live-retrieve.test.ts` needs none of these and can migrate today. `stripe-portal.test.ts` and `stripe-customers.test.ts` cast to the same `StripeClient` port the fake implements.
+
+### F6 — Seventeen own-code `vi.mock()` calls survive in `app/` and `components/`; zero in `src/`
+
+The rule "NEVER `vi.mock()` for our own code" (`AGENTS.md:76,544`; `.claude/rules/testing.md:21`) is violated by 17 factory-form calls in 12 files, all under `app/` or `components/`, none under `src/` or `lib/`. No estate-wide sweep of this rule has ever run: DEBT-050 added fakes, and DEBT-368's grep targeted `*.browser.spec.tsx` only, so jsdom `*.test.tsx` and route tests were never checked. Five mock `@/lib/report-client-error` while bypassing the sanctioned `tests/test-helpers/report-client-error-mocks.ts`. Four in `app/api/cron/reconcile-stripe-subscriptions/route.test.ts` carry a written justification, two of them preserving real exports via `importOriginal`. Eight stub the unit-under-test's own collaborators: `app/(app)/app/practice/practice-page-client.test.tsx:9,18` mocks both `./components` and `./hooks/use-practice-session-controls`, so it can only assert wiring against its own fixtures; also `history-sessions-tab.test.tsx:57`, `quick-practice-client.test.tsx:26`, `app/layout.test.tsx:25,39`, `layout-shell.test.tsx:19`, `components/marketing/marketing-layout.test.tsx:21`. `docs/dev/react-vitest-testing.md:254` still presents factory-form `vi.mock` as "the current repo pattern," the form DEBT-368 drove from 26 to 0.
+
+### F7 — No executable enforcement exists for any test-double rule
+
+Source-scan tests exist for architecture boundaries, design tokens, fixture UUID shape, Playwright lane policy, and CI workflow shape, and a CI step enforces the E2E skip policy (`.github/workflows/ci.yml:91`). None exists for fakes-over-mocks, own-code `vi.mock`, `as unknown as` in tests, or the ">2 mocks" rule. The only mechanism that mentions doubles is `.coderabbit.yaml` prose — advisory, and encoding the permissive DEBT-035 definition (F2). DEBT-368's gate is a recorded one-time, line-oriented grep; `app/(app)/app/practice/quick/quick-practice-client.browser.spec.tsx:24` carries `// biome-ignore format: keep { spy: true } on this line for the DEBT-368 verification grep` — code shaped to satisfy the checker — while two other specs format the option across lines and would false-positive.
+
+Resolutions without guards do not hold. Archived [DEBT-271](../_archive/debt/debt-271-structural-ast-test-brittleness.md) (2026-03-03) deleted `collectColumnNamesForTable` and its structural assertions in `576b81c4`, `2d575748`, and `fcd866e3`, and verified them gone. `b420f147` ("Fix BUG-195 through BUG-198", 14:04 the same day) re-introduced the helper deliberately — its message records fixing BUG-195 "with a structural unit test" — but without reference to DEBT-271; `de29bf32` (BUG-257, 2026-06-23) added four more call sites, and `22a24ad2` ([DEBT-429](../_archive/debt/debt-429-duplicated-question-state-mapper-and-test-helpers.md), 2026-07-04) consolidated rather than removed it. It now lives at `src/adapters/repositories/repository-test-helpers.ts:51` with seven call sites and in-file `// Structural assertion:` comments at `drizzle-question-repository.test.ts:415,467`. Each step was locally reasonable; the resolution simply had nothing holding it.
+
+### F8 — The remaining `as unknown as` census, and one prototype-dropping spread
+
+325 `as unknown as` sites exist across 60 test files (no multiline form), including 28 in the root-level `proxy.test.ts` and 3 in `db/schema.test.ts` (both outside the census's classified set and still to be dispositioned). Beyond F4, F5, and those two files: 19 are `typeof import(...)` type annotations for `beforeAll` dynamic imports (benign); 29 are narrow shapes (container placeholders, `NodeJS.ProcessEnv`, `setTimeout` handles, `HTMLElement`, tracked thenables); 11 are intentional-invalid inputs for negative tests; 4 are type plumbing. Thirty warrant fixing:
+
+- 25 hand-rolled doubles outside F4/F5: `src/adapters/gateways/drizzle-rate-limiter.test.ts` (12 sites; redundant — `tests/integration/rate-limiter.integration.test.ts` proves the same behavior on real Postgres), `stripe-portal.test.ts` (2), `stripe-customers.test.ts` (7, re-implementing the SDK's `_makeRequest` pagination plumbing), `scripts/export-question-feedback.test.ts:412`, `lib/container.test.ts:669`.
+- 5 type lies. `tests/integration/controllers.integration.test.ts:619` spreads a `DrizzlePracticeSessionRepository` instance to override `recordQuestionAnswer`; object spread copies own enumerable fields only, so the result has no prototype methods at all. It passes solely because `src/application/use-cases/submit-answer.ts:224` is the only `tx.sessions.*` call inside that transaction. `lib/container.test.ts:528,531,560` reach private fields through invented public shapes. `fake-practice-session-repository.test.ts:22` defeats `private` to reset state.
+
+### What the census did not find
+
+The estate is otherwise clean, and this matters for the diagnosis: zero `expect(true)`-style or same-variable tautologies, zero snapshots, zero `as any`, zero `@ts-ignore` or `eslint-disable`, zero `.only`, zero swallowed errors in test bodies, zero always-true skip guards. Thirteen of the 14 `@ts-expect-error` directives are negative type tests (the other, `app/api/webhooks/clerk/route.test.ts:99`, is a documented third-party type-compatibility suppression); all skips are env-driven. The doubles are rule-compliant work, not gate evasion.
+
+## Impact
+
+- **Silent coverage loss at the money seam.** F5's `has_more` omission means the DEBT-470 tail jump — the structural fix for a production-visible saturation defect — has one test file that exercises its success path. The other eight Stripe suites pass while running the fallback.
+- **Unfalsifiable tests.** F4's five filter tests and F5's pass-through assertions cannot fail. They add to the count and the coverage percentage while proving nothing, which is the same defect class CodeRabbit caught in `persisted.plan` on PR #816.
+- **Undetectable drift at the revenue boundary.** `FakePaymentGateway` is a spy. When `StripePaymentGateway` changes, nothing in the suite can notice.
+- **Rule-driven recurrence.** Any agent following `testing.md:27` as written will produce more of F4/F5. DEBT-051, DEBT-109, and DEBT-357 each re-litigated the same question by hand because the rule cannot be checked.
+- **False confidence in the register.** "Colocated contract coverage" reads as fake↔real verification; it is not.
+
+## Resolution
+
+Ordered so the rule is fixed before any migration, and so each deletion gets a guard.
+
+1. **Correct the rule text** — `AGENTS.md:525-592`, `.claude/rules/testing.md:19-32`, `.coderabbit.yaml:59-67`, `docs/dev/react-vitest-testing.md:252-258,297-313`. Replace the own/external branch with the shape-vs-behavior test: if the code under test depends on a collaborator's state or sequencing, use a fake with a contract test regardless of who owns the collaborator; if only on its shape, use a narrowly typed stub without `as unknown as`. Retire F2's `fakeDb` example. Name `FakeStripeCheckoutClient` and the adapter-owned fake location. Restate ADR-003's ">2 mocks → refactor" and "adapters → real infrastructure" in the live rules, and cross-reference `architecture.md:45`. Define "fake," "stub," "spy," and "contract test" once, by the Fowler/Meszaros taxonomy, in the live rules. Record in ADR-003 the unit-adapter category it lacks (error-translation tests only) and the provider-contract E2E lane (F2, cf. `docs/dev/testing-infrastructure.md:95`).
+2. **Add the enforcement scan before any migration** (cf. F7), in the `tests/architecture-boundary-source-scan.ts` style: factory-form `vi.mock` of an own-code path outside `*.browser.spec.tsx` `{ spy: true }`, parsed multiline-safe so the DEBT-368 grep and the format-bending comment can both be retired; `as unknown as` in test files outside an explicit allowlist; and a check that a test does not hand-roll a shape for which a barrel fake or `FakeStripeCheckoutClient` exists. Fail CI on growth; allow the current census as a ratchet floor.
+3. **Contract-test mandate.** Every fake gains a fake↔real scenario table on the `pending-stripe-customer-cleanup-contract` pattern, sequenced by blast radius: `FakePaymentGateway` first (replace the spy with a behavioral fake or record, in writing, why the port has no behavior worth faking); then `FakeStripeCheckoutClient`, converting the DEBT-466/467/470 prose probes into an opt-in, credential-gated executable contract against Stripe TEST mode on the `stripe-trial-clock-smoke` pattern; then the 17 repository fakes against their Drizzle adapters, widening the existing subscription contract from 3 to 5 methods. Each fake gains a "known divergences" section; DEBT-007's unlisted Zod omissions become an enumerated list. Re-adjudicate DEBT-455's rejection in light of the count.
+4. **Census dispositions.** Delete F4's five tautological tests. Add the `pruneProcessedBefore` integration case (and `peek` for the Stripe event repository). Migrate the 25 F8 doubles and the F6 `vi.mock` sites; fix the five type lies (`controllers.integration.test.ts:619` becomes a subclass overriding `recordQuestionAnswer`). For the 23 `RepoDb` files, keep only error-translation cases that integration cannot force; delete chain-shape assertions that have a real-Postgres twin; move the rest to integration.
+5. **Re-scope DEBT-468 Parts 2–4** onto F5's fake-extension order, migrating `stripe-checkout-sessions-live-retrieve.test.ts` first as the zero-cost proof, then `-recovery`, `-trials`, `-trial-recovery`, `-reconciliation`, `stripe-checkout-sessions.test.ts`, `-concurrency`, and `stripe-webhook-processor.test.ts` last.
+6. **Record the process finding.** Add to `docs/debt/index.md`'s conventions: a resolution that deletes a pattern must land with the scan that keeps it deleted. Re-adjudicate DEBT-035 versus DEBT-444 in a live document so the Drizzle call-chain question has one answer agents can see.
+
+**Not in scope.** Coverage thresholds or any metric gate (ADR-019 requires a new ADR). Rewriting the domain or application test layers, which the census found exemplary. The Clerk boundary, which DEBT-468 correctly records as already fake-based.
+
+## Verification
+
+- F1/F2: the live rules contain no own-vs-external branch; one definition of fake/stub/spy/contract test appears in `.claude/rules/testing.md` and is referenced, not duplicated, by `AGENTS.md` and `.coderabbit.yaml`; ADR-003 names the unit-adapter and provider-contract categories.
+- F3: every fake in the barrel and in `src/adapters/**/test-helpers/` is listed in a contract-test census with a fake↔real scenario file or a dated written waiver; `FakePaymentGateway` is no longer a pure spy or has a recorded waiver; the Stripe executable contract exists and is credential-gated.
+- F4: the five named tests at `drizzle-attempt-repository.test.ts:932-1055` are gone; `pruneProcessedBefore` and `peek` have integration cases; the `RepoDb` count is below the ratchet floor and falling.
+- F5: `has_more` and `created` are supplied by every remaining Stripe double or the double is gone; the tail-scan success path is exercised by more than one file; `subscriptions.retrieve` never returns `{}` in any double or fake.
+- F6/F7: the scan exists, runs in `pnpm test --run`, and fails on a synthetic own-code `vi.mock` and on an `as unknown as` outside the allowlist; the DEBT-368 format comment is deleted; the scan parses the multiline `{ spy: true }` form.
+- F8: `controllers.integration.test.ts:619` uses a subclass; `container.test.ts` asserts behavior rather than private fields.
+- Whole-debt: the number of `as unknown as` sites in test files is recorded as a ratchet and cannot grow in CI.
+
+## Related
+
+- Rule origin: `792beed7` (2026-02-02); live rule files `AGENTS.md`, `.claude/rules/testing.md`, `.claude/rules/architecture.md`, `.coderabbit.yaml`
+- Prior adjudications, all archived: [DEBT-035](../_archive/debt/debt-035-inconsistent-repo-test-mocking.md) (ruled the `RepoDb` pattern a fake), [DEBT-051](../_archive/debt/debt-051-controller-tests-use-mocks-not-fakes.md), [DEBT-109](../_archive/debt/debt-109-inline-vi-fn-logger-mocks.md), [DEBT-271](../_archive/debt/debt-271-structural-ast-test-brittleness.md) (reversed same day), [DEBT-357](../_archive/debt/debt-357-test-double-discipline-drift.md), [DEBT-368](../_archive/debt/debt-368-browser-spec-vi-mock-missing-spy-true.md), [DEBT-444](../_archive/debt/debt-444-hot-path-prune-contention-and-coverage.md) (named the anti-pattern), [DEBT-455](../_archive/debt/debt-455-fake-user-repository-fidelity-divergences.md) (rejected a general harness), [DEBT-007](../_archive/debt/debt-007-fake-repos-no-validation.md) (licensed permissive fakes)
+- Open work this re-scopes: [DEBT-468](./debt-468-test-estate-coverage-and-fixture-debt.md) Parts 2–4; coordinates with [DEBT-469](./debt-469-toolchain-warning-debt.md) splits and [DEBT-465](./debt-465-test-quality-practices-adoption.md) Part 2 (mutation testing will expose the unfalsifiable tests in F4/F5 directly)
+- Exemplars to copy: `tests/integration/pending-stripe-customer-cleanup-contract.integration.test.ts`, `tests/shared/subscription-observation-version-contract.ts`, `tests/architecture-boundary-source-scan.ts`
+- Canon: [Fowler, *Mocks Aren't Stubs*](https://martinfowler.com/articles/mocksArentStubs.html) (Meszaros taxonomy; classical vs. mockist coupling); [*Software Engineering at Google*, ch. 13 "Test Doubles"](https://abseil.io/resources/swe-book/html/ch13.html) ("Fakes Should Be Tested"; fidelity); [Google Testing Blog, *Don't Mock Types You Don't Own*](https://testing.googleblog.com/2020/07/testing-on-toilet-dont-mock-types-you.html) (2020-07-16: wrap the third-party type, double the wrapper — the `StripeClient` port is that wrapper, and these doubles stub it instead of faking it)
