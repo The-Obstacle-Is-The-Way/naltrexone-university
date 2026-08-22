@@ -17,7 +17,7 @@ The live rules encode only the first clause, and encode it with an exception tha
 
 `.claude/rules/testing.md:25-28` carries the decision tree verbatim:
 
-```
+```text
 - Fake exists? Use it.
 - External dependency (Drizzle, Clerk, Stripe SDK)? Use `vi.fn()` inline or `vi.mock()`.
 - No fake exists for our code? Create one in `fakes/`, then use it.
