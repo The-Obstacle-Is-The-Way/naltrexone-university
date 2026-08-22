@@ -1,11 +1,11 @@
 # DEBT-471: E2E and CI Fail on Third-Party and Runner Changes Unrelated to the Diff
 
-**Status:** Active
+**Status:** Resolved
 **Priority:** P2
 **Date:** 2026-08-20
 **Source:** PR #811 — a **documentation-only** PR (1 file, markdown prose) was blocked for hours by two consecutive red CI runs, neither caused by its diff. Confirmed against `dev` at `4e05cca4` and PR #811 head `35dcca24`.
 
-**Implementation progress (2026-08-20):** All eight findings now have an implemented or explicit no-action disposition on `feat/debt-471-external-fragility`; this debt remains Active until that branch merges. F1 uses mutually exclusive Playwright projects and adds a required provider-backed annual/trial success-sync contract. F2 has a measured 12-minute step bound plus a simulated-hang-tested Ubuntu archive failover. F3 installs Chromium only. F5 deliberately retains one worker. F6 assigns and bounds every Stripe-networked E2E surface. F7 deliberately defers path filtering. F8 pins `open: 'never'`.
+**Implementation complete (2026-08-21):** All eight findings have an implemented or explicit no-action disposition. PR #816 merged the implementation to `dev` as `e3e51d8b`; PR #817 promoted it to `main` as `05a08fb6`, and both branch trees resolved to `abe177b4`. F1 uses mutually exclusive Playwright projects and adds a required provider-backed annual/trial success-sync contract. F2 has a measured 12-minute step bound plus a simulated-hang-tested Ubuntu archive failover. F3 installs Chromium only. F5 deliberately retains one worker. F6 assigns and bounds every Stripe-networked E2E surface. F7 remains a deliberate path-filtering deferral because required-check classification is a merge-blocking footgun, not open implementation work. F8 pins `open: 'never'`.
 
 ## Description
 
