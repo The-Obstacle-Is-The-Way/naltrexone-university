@@ -1,12 +1,14 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import ts from 'typescript';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   analyzeSourceText,
   calculateCrapScore,
   createCrapReport,
   parseCrapReportArgs,
+  readParseDiagnostics,
   runCrapReportCli,
 } from './crap-report';
 
@@ -153,30 +155,21 @@ function createMergedLaneFixture(): {
   return { root, sourcePath, source };
 }
 
-describe('calculateCrapScore', () => {
-  it('uses complexity as the floor when coverage is complete', () => {
-    expect(calculateCrapScore(5, 1)).toBe(5);
-  });
-
-  it('squares uncovered complexity', () => {
-    expect(calculateCrapScore(30, 0)).toBe(930);
-  });
-
-  it('applies the cubic coverage term for partial coverage', () => {
-    expect(calculateCrapScore(2, 0.5)).toBe(2.5);
-  });
-
-  it('rejects values outside the CRAP formula domain', () => {
-    expect(() => calculateCrapScore(0, 1)).toThrow(
-      'Complexity must be a positive integer',
-    );
-    expect(() => calculateCrapScore(1, Number.NaN)).toThrow(
-      'Coverage must be a finite fraction',
-    );
-  });
-});
-
 describe('analyzeSourceText complexity', () => {
+  it('fails closed when compiler parse diagnostics are unavailable', () => {
+    const sourceFile = ts.createSourceFile(
+      '/repo/src/example.ts',
+      'export function example() {}',
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    expect(Reflect.deleteProperty(sourceFile, 'parseDiagnostics')).toBe(true);
+
+    expect(() => readParseDiagnostics(sourceFile)).toThrow(
+      'TypeScript compiler API did not expose parse diagnostics for /repo/src/example.ts',
+    );
+  });
+
   it.each([
     ['&&', 'const result = left && right;'],
     ['||', 'const result = left || right;'],
@@ -414,6 +407,24 @@ describe('createCrapReport', () => {
     ).toThrow('Missing required integration coverage input');
   });
 
+  it('requires only the selected coverage input for a diagnostic lane', () => {
+    const { root } = createMergedLaneFixture();
+    rmSync(resolve(root, 'coverage/browser/coverage-final.json'));
+    rmSync(resolve(root, 'coverage/integration/coverage-final.json'));
+
+    const report = createCrapReport({
+      cwd: root,
+      options: parseCrapReportArgs(['--lane', 'unit']),
+    });
+
+    expect(report.coverageInputs).toEqual(['coverage/coverage-final.json']);
+    expect(report.entries[0]).toMatchObject({
+      functionName: 'risky',
+      coverage: 0.5,
+      crap: 2.5,
+    });
+  });
+
   it('rejects malformed coverage JSON', () => {
     const { root } = createMergedLaneFixture();
     writeText(resolve(root, 'coverage/browser/coverage-final.json'), '{broken');
@@ -460,6 +471,39 @@ describe('createCrapReport', () => {
     expect(() =>
       createCrapReport({ cwd: root, options: parseCrapReportArgs([]) }),
     ).toThrow('Could not parse unit coverage input');
+  });
+
+  it('accepts Istanbul serialized open-ended column sentinels', () => {
+    const { root, sourcePath, source } = createMergedLaneFixture();
+    const coverage = createCoverageFixture(sourcePath, source, [
+      { marker: 'if (flag)', hits: 1 },
+      { marker: "return 'no'", hits: 0 },
+    ]);
+    const firstRange = coverage.statementMap['0'];
+    if (!firstRange) throw new Error('Missing fixture statement range.');
+    writeRawCoverageMap(root, 'unit', {
+      [sourcePath]: {
+        ...coverage,
+        statementMap: {
+          ...coverage.statementMap,
+          '0': {
+            start: firstRange.start,
+            end: { line: firstRange.start.line, column: null },
+          },
+        },
+      },
+    });
+
+    const report = createCrapReport({
+      cwd: root,
+      options: parseCrapReportArgs(['--lane', 'unit']),
+    });
+
+    expect(report.entries[0]).toMatchObject({
+      functionName: 'risky',
+      totalStatements: 2,
+      coverage: 0.5,
+    });
   });
 
   it('rejects incomplete raw statement records', () => {
@@ -515,17 +559,19 @@ describe('createCrapReport', () => {
     const readError = Object.assign(new Error('permission denied'), {
       code: 'EACCES',
     });
+    const requestedPaths: string[] = [];
 
     expect(() =>
       createCrapReport({
         cwd: root,
         options: parseCrapReportArgs([]),
         readSourceFile: (filePath) => {
-          expect(filePath).toBe(sourcePath);
+          requestedPaths.push(filePath);
           throw readError;
         },
       }),
     ).toThrow('Could not read source src/risky.ts');
+    expect(requestedPaths).toEqual([sourcePath]);
   });
 
   it('rejects source parse diagnostics', () => {
@@ -701,22 +747,40 @@ describe('runCrapReportCli', () => {
   });
 
   it('emits machine-readable JSON', () => {
-    const { root } = createMergedLaneFixture();
+    const { root, source, sourcePath } = createMergedLaneFixture();
+    writeCoverageMap(root, 'unit', [
+      createCoverageFixture(sourcePath, source, [
+        { marker: 'if (flag)', hits: 1 },
+        { marker: "return 'no'", hits: 0 },
+        { marker: "return 'no'", hits: 0 },
+      ]),
+    ]);
     const stdout: string[] = [];
 
     const exitCode = runCrapReportCli({
-      argv: ['--json'],
+      argv: ['--json', '--lane', 'unit'],
       cwd: root,
       stdout: (line) => stdout.push(line),
       stderr: () => undefined,
     });
     const output = JSON.parse(stdout.join('\n')) as {
       lane: string;
-      entries: Array<{ functionName: string }>;
+      entries: Array<{
+        functionName: string;
+        coverage: number;
+        coveragePercent: number;
+        crap: number;
+        crapRounded: number;
+      }>;
     };
+    const entry = output.entries[0];
 
     expect(exitCode).toBe(0);
-    expect(output.lane).toBe('merged');
-    expect(output.entries[0]?.functionName).toBe('risky');
+    expect(output.lane).toBe('unit');
+    expect(entry?.functionName).toBe('risky');
+    expect(entry?.coverage).toBeCloseTo(1 / 3, 12);
+    expect(entry?.coveragePercent).toBe(33.33);
+    expect(entry?.crap).toBeCloseTo(calculateCrapScore(2, 1 / 3), 12);
+    expect(entry?.crapRounded).toBe(3.19);
   });
 });

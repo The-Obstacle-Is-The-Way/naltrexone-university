@@ -80,6 +80,11 @@ type CoveragePosition = {
   column: number;
 };
 
+type CoverageEndPosition = {
+  line: number;
+  column: number | null;
+};
+
 const DEFAULT_OPTIONS: CrapReportOptions = {
   json: false,
   lane: 'merged',
@@ -171,7 +176,7 @@ export function analyzeSourceText(
     true,
     scriptKindForPath(filePath),
   ) as SourceFileWithParseDiagnostics;
-  const parseDiagnostics = sourceFile.parseDiagnostics ?? [];
+  const parseDiagnostics = readParseDiagnostics(sourceFile);
   if (parseDiagnostics.length > 0) {
     const details = parseDiagnostics
       .map((diagnostic) =>
@@ -203,6 +208,19 @@ export function analyzeSourceText(
       crap: calculateCrapScore(complexity, coverageFraction),
     };
   });
+}
+
+export function readParseDiagnostics(
+  sourceFile: ts.SourceFile,
+): readonly ts.Diagnostic[] {
+  const parseDiagnostics = (sourceFile as SourceFileWithParseDiagnostics)
+    .parseDiagnostics;
+  if (!Array.isArray(parseDiagnostics)) {
+    throw new Error(
+      `TypeScript compiler API did not expose parse diagnostics for ${sourceFile.fileName}.`,
+    );
+  }
+  return parseDiagnostics;
 }
 
 export function parseCrapReportArgs(
@@ -609,7 +627,7 @@ function isValidCoverageRange(value: unknown): boolean {
   if (
     !isRecord(value) ||
     !isCoveragePosition(value.start) ||
-    !isCoveragePosition(value.end)
+    !isCoverageEndPosition(value.end)
   ) {
     return false;
   }
@@ -618,7 +636,8 @@ function isValidCoverageRange(value: unknown): boolean {
   const end = value.end;
   return (
     end.line > start.line ||
-    (end.line === start.line && end.column >= start.column)
+    (end.line === start.line &&
+      (end.column === null || end.column >= start.column))
   );
 }
 
@@ -629,6 +648,16 @@ function isCoveragePosition(value: unknown): value is CoveragePosition {
     (value.line as number) >= 1 &&
     Number.isInteger(value.column) &&
     (value.column as number) >= 0
+  );
+}
+
+function isCoverageEndPosition(value: unknown): value is CoverageEndPosition {
+  return (
+    isRecord(value) &&
+    Number.isInteger(value.line) &&
+    (value.line as number) >= 1 &&
+    (value.column === null ||
+      (Number.isInteger(value.column) && (value.column as number) >= 0))
   );
 }
 
@@ -683,7 +712,7 @@ function formatJsonReport(report: CrapReport): string {
       entries: report.entries.map((entry) => ({
         ...entry,
         coveragePercent: Number((entry.coverage * 100).toFixed(2)),
-        crap: Number(entry.crap.toFixed(2)),
+        crapRounded: Number(entry.crap.toFixed(2)),
       })),
     },
     null,
