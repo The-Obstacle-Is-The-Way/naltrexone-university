@@ -89,7 +89,7 @@ The three coverage commands must come from the same working tree before recordin
 
 ## 3. A-priori hotspots (2026-08-13 audit; facts revalidated 2026-08-22)
 
-Candidates from the manual sweep of decision density, size, direct tests, and consequence, before the script exists. These are **not** a measured ranking. The current factual receipts below were corrected before implementation; rank reconciliation waits for the first real merged report. The pre-commit size check's exemption list in `scripts/check-file-size.sh` still contains 14 legacy files over 350 lines; three candidates below appear on it.
+Candidates from the manual sweep of decision density, size, direct tests, and consequence, written before the script existed. These were **not** a measured ranking. The factual receipts below were corrected before implementation; the measured reconciliation follows the table. The pre-commit size check's exemption list in `scripts/check-file-size.sh` still contains 14 legacy files over 350 lines; three candidates below appear on it.
 
 | Candidate | Signal |
 |---|---|
@@ -105,6 +105,27 @@ Candidates from the manual sweep of decision density, size, direct tests, and co
 | `src/application/use-cases/get-user-stats.ts` | The dashboard's five top-level progress metrics on 4 tests |
 | `src/application/use-cases/get-completed-session-questions-with-feedback.ts`, `get-practice-session-review.ts` | Read-model projections with fallback branches, 8 and 9 direct tests respectively |
 | `src/adapters/repositories/drizzle-question-repository.ts` | Owns the progress-status filter SQL deciding which questions a session may contain; 16 direct unit cases plus integration coverage |
+
+### Measured reconciliation (2026-08-22)
+
+The first required three-lane run analyzed 445 files and 2,177 functions. Six functions scored at least 30; none exceeded 100. The table uses each candidate file's highest-ranked function, not a file aggregate:
+
+| Prior candidate | Highest merged result | What the guess got wrong or right |
+|---|---|---|
+| Renewal-notice delivery repository | #141, `immutableFieldsMatch`: comp 8, cov 100%, CRAP 8.00 | **Wrong as an under-tested hotspot.** Zero direct repository unit tests hid complete integration-lane statement coverage—the exact error the mandatory merge prevents. Consequence can still justify mutation testing, but CRAP does not prioritize it. |
+| Trial setup-operation repository | #42, `snapshotsMatch`: comp 14, cov 100%, CRAP 14.00 | **Overestimated.** The five direct cases plus integration lane cover the complex function completely; it is below the 30 triage band. |
+| Clerk user provisioner | #111, `resolveClerkUserEmailOwnershipConflict`: comp 9, cov 100%, CRAP 9.00 | **Overestimated.** Outcome count did not translate into high per-function uncovered complexity. |
+| Checkout success sync | #132, `syncCheckoutSuccess`: comp 8, cov 100%, CRAP 8.00 | **Overestimated.** High consequence and module size are real, but the function is completely covered and modestly complex. |
+| Exam-results continuity hook | #62, anonymous callback at line 104: comp 11, cov 81.48%, CRAP 11.77 | **Overestimated.** It has a visible partial-coverage gap, but not enough combined complexity to approach 30. |
+| Question-page bookmarks hook | #21, anonymous error callback at line 141: comp 4, cov 0%, CRAP 20.00 | **Directionally right.** The merge found a genuinely dark branch, but its complexity keeps it below the triage band. |
+| Question page client | #1, `QuestionView`: comp 84, cov 100%, CRAP 84.00 | **Right file, wrong lever if framed as missing tests.** It is the highest-risk function because complexity is the floor even at complete coverage; this is a refactor candidate. |
+| History questions tab | #7, `HistoryQuestionsTab`: comp 27, cov 100%, CRAP 27.00 | **Directionally right but below band.** It ranks highly on fully covered complexity, not on a test deficit. |
+| Stripe Checkout sessions | #3, `createStripeCheckoutSession`: comp 43, cov 100%, CRAP 43.00 | **Right file and refactor lever.** The old file size/test-file counts were stale, but the measured function remains above 30 with complete coverage. |
+| User stats | #1,043 file maximum, default `now` callback: comp 1, cov 0%, CRAP 2.00; `execute`: comp 1, cov 100%, CRAP 1.00 | **Wrong candidate.** Five output metrics do not imply decision complexity; the use case delegates the business calculations. |
+| Completed-session feedback / practice-session review | #53, `execute`: comp 12, cov 96.43%, CRAP 12.01 / #82, `execute`: comp 10, cov 90.48%, CRAP 10.09 | **Overestimated.** Fallback branches are substantially covered and both scores are well below 30. |
+| Question repository | #88, `buildPublishedCandidateWhere`: comp 10, cov 100%, CRAP 10.00 | **Overestimated.** Consequential SQL ownership is not the same thing as high function-level change risk. |
+
+The manual sweep also **missed four of the six** functions at or above 30: `PracticeView` (48.00), `SubmitAnswerUseCase.execute` (39.00), `PracticeSessionPageView` (32.00), and `withIdempotency` (30.00). All six triage-band functions are 100% statement-covered, so the first baseline points to refactoring rather than blanket test addition. The clearest test-lever findings are lower in the list: `resolveRetryOrigin` (#15, comp 6, cov 22.22%, CRAP 22.94) and the bookmark error callback (#21, comp 4, cov 0%, CRAP 20.00).
 
 ## 4. Relationship to the complexity linter
 
