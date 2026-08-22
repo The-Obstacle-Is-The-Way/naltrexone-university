@@ -1,6 +1,6 @@
 # Code Quality Metrics (CRAP Analysis)
 
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-08-22
 
 CRAP — **C**hange **R**isk **A**nti-**P**atterns (Alberto Savoia & Bob Evans, crap4j; originally expanded "Change Risk Analysis and Predictions" before the authors re-glossed it) — scores every function by combining the two numbers that are individually misleading but jointly decisive:
 
@@ -20,24 +20,28 @@ where `comp` is the function's cyclomatic complexity and `cov` its test coverage
 
 ## 1. Implementation: `scripts/crap-report.ts`
 
-The proposal builds a small repo-owned reporter, in the repo's established custom-script style, so its lane merge, source filters, and observational CLI contract stay explicit:
+The implementation builds a small repo-owned reporter, in the repo's established custom-script style, so its lane merge, source filters, and observational CLI contract stay explicit. The inputs and dependency topology below were execution-audited on 2026-08-22 against `dev` at `51114a76`:
 
-- **Coverage input** — the istanbul-format `coverage-final.json` files the existing lanes already emit (`@vitest/coverage-v8` remaps V8 output to istanbul format: per-file `statementMap`/`s` and `fnMap`/`f`):
+- **Coverage input** — the istanbul-format `coverage-final.json` files the existing Vitest lanes emit (`@vitest/coverage-v8` remaps V8 output to istanbul format: per-file `statementMap`/`s` and `fnMap`/`f`):
   - unit → `coverage/coverage-final.json` (`pnpm test:coverage`)
   - browser → `coverage/browser/coverage-final.json` (`pnpm test:browser:coverage`)
   - integration → `coverage/integration/coverage-final.json` (`pnpm test:integration:coverage`)
-- **Complexity** — the TypeScript compiler API, which is already a direct dependency through the `@typescript/typescript6` preview alias (the DEBT-460 dual-compiler seam) and already used for source analysis in `tests/server-span-family-boundary.test.ts`; discover source files with the direct `fast-glob` dependency, not the coverage keys, because files absent from every coverage map still need `cov = 0` scores.
-- **Merging** — the three lanes cover different code (UI components are pinned in the browser lane, Drizzle repositories in integration). The default report **merges whichever `coverage-final.json` files exist**, so "covered" means *any automated test exercises this*; `--lane unit` narrows when you want lane-specific truth. Merge with `istanbul-lib-coverage`'s `createCoverageMap().merge()` — add it as an explicit devDependency in the implementing PR. Version 3.2.2 already ships transitively with the coverage provider and currently resolves from the repo root, but a direct import should have direct manifest ownership.
+- **No Playwright input** — `.github/workflows/ci.yml` uploads coverage before `pnpm test:e2e`, and Playwright has no coverage provider or `coverage-final.json` output. E2E may prove behavior but cannot contribute to this Istanbul merge.
+- **Complexity** — import the classic TypeScript compiler API from `typescript`. Under the DEBT-460 seam, that package name resolves to the direct `@typescript/typescript6@6.0.2` alias (compiler API version 6.0.3), where `createSourceFile` and `forEachChild` are available. `@typescript/native` is the separate TypeScript 7.0.2 `tsc` implementation and exposes no supported classic compiler API. Discover sources with the direct `fast-glob@3.3.3` dependency, not coverage keys, because a production file absent from every map still needs `cov = 0` scores.
+- **Merging** — the three lanes cover different code (UI hooks/components are browser-owned; Drizzle repositories gain integration coverage). The default report requires and merges **all three** maps before scoring. A missing map is an infrastructure failure, not permission to publish a partial baseline. `--lane unit`, `--lane browser`, and `--lane integration` intentionally produce diagnostic single-lane truth and require only the selected map. Merge with `istanbul-lib-coverage`'s `createCoverageMap().merge()`. Version 3.2.2 is transitive in the lockfile but is not importable from the project root under pnpm's dependency isolation, so the implementation must add it and `@types/istanbul-lib-coverage` as explicit devDependencies.
+
+`codecov.yml` now ignores `tests/e2e` because Playwright cannot add coverage for those helpers after Codecov's upload; treating E2E-only infrastructure as patch-coverage product code would be a false signal. CRAP answers a different question: it ranks production-function change risk. Its discovery roots exclude **all** tests and test support, not only `tests/e2e`; coverage-map entries for test code are therefore ignored even when a Vitest lane imported them. The policies agree that tests are not product candidates without making Codecov's narrow ignore list the CRAP source filter.
 
 ### Mechanics
 
-1. Load and merge the coverage maps.
-2. Discover every `*.ts`/`*.tsx` source file under `src/**`, `app/**`, `components/**`, and `lib/**` (excluded: `**/test-helpers/**`, `**/*-test-helpers.*`, `*.test.*`, `*.browser.spec.*`, `*.fixtures.*`, `*.browser.probes.*`, `*.browser.setup.*`, `db/migrations`), parse with `ts.createSourceFile`, and walk executable function-like declarations with bodies (functions, methods, constructors, arrows, and accessors).
+1. Resolve the selected lane set, require every selected map, validate its shape, and merge it. Coverage keys are absolute on the audited outputs; normalize discovered source paths to absolute paths before lookup and ignore non-file sentinels such as the browser map's empty repository-root entry.
+2. Discover `*.ts`/`*.tsx` production sources under `src/**`, `app/**`, `components/**`, and `lib/**`, plus the runtime/build entry points `db/schema.ts`, `instrumentation-client.ts`, `instrumentation.ts`, `next.config.ts`, `proxy.ts`, and `sentry.client.config.ts`. Exclude `**/*.d.ts`, `**/test-helpers/**`, `**/*-test-helpers.*`, `**/*.test.*`, `**/*.browser.spec.*`, `**/*.fixtures.*`, `**/*.browser.probes.*`, and `**/*.browser.setup.*`. Parse with `ts.createSourceFile`, reject any `parseDiagnostics`, and walk every executable function-like node with a body: declarations, expressions, methods, constructors, arrows, and accessors.
 3. Cyclomatic complexity per function = 1 + decision points: `if`, `for`/`for-of`/`for-in`, `while`, `do`, `case` clause, `catch`, ternary, `&&`, `||`, `??`, and the logical-assignment forms `&&=`/`||=`/`??=` (`??=` is live in production adapters).
-4. Assign each coverage statement by its start position to the innermost executable function span, so a nested function's statements are not also charged to its parent. Per-function coverage = executed ÷ total assigned statements (from `statementMap`/`s`); functions absent from coverage entirely count as `cov = 0`.
-5. Emit a table sorted by CRAP descending — `path:line · function · comp · cov% · CRAP` — with `--top N` (default 25), `--json` for tooling, `--min <score>` to filter. **Exit code is 0 for every threshold outcome** — the report is observational by policy — but infrastructure failures (unreadable or malformed coverage input, parser or I/O errors) still exit nonzero so an invalid report can never be recorded as a successful baseline.
+4. Assign each coverage statement by its start position to the innermost executable function span, so a nested function's statements are not also charged to its parent. Per-function coverage = executed ÷ total assigned statements (from `statementMap`/`s`); a function with no assigned statements, including one in a file absent from the coverage map, has `cov = 0`.
+5. Emit a table sorted deterministically by CRAP descending, then path, line, and function name — `path:line · function · comp · cov% · CRAP` — with `--top N` (default 25), `--json` for tooling, `--min <score>` to filter, and `--lane <merged|unit|browser|integration>` (default `merged`).
+6. **Exit 0 for every score, band, and empty filtered result.** Nonzero is reserved for a genuine infrastructure failure: a required coverage input is missing/unreadable/malformed, source parsing reports diagnostics, I/O fails, or CLI configuration is invalid. This distinguishes “the metric is high” from “no trustworthy report was produced” and is the ADR-019 contract.
 
-Reference core of the complexity walker (the implementing PR builds the real script TDD-first, with a colocated `crap-report.test.ts` over a fixture source file + fixture coverage JSON, like the 17 existing script tests):
+Reference core of the complexity walker (the implementation is TDD-first, with a colocated `crap-report.test.ts` over fixture source and coverage, matching the repository's 20 existing script-test suites). The decision tests must separately pin `&&`, `||`, `??`, `&&=`, `||=`, and `??=` so assignment operators cannot silently fall through the binary-expression walker:
 
 ```ts
 import ts from 'typescript';
@@ -68,11 +72,13 @@ function cyclomatic(fn: ts.Node): number {
 ### Running
 
 ```bash
-pnpm test:coverage                        # at minimum; browser/integration lanes optional
-pnpm exec tsx scripts/crap-report.ts --top 25
+pnpm test:coverage
+pnpm test:integration:coverage
+pnpm test:browser:coverage
+pnpm quality:crap --top 25
 ```
 
-Add `"quality:crap": "tsx scripts/crap-report.ts"` to `package.json` in the implementing PR.
+The three coverage commands must come from the same working tree before recording a baseline. Use an explicit diagnostic such as `pnpm quality:crap --lane unit --top 25` only when investigating lane ownership; never record it as the merged baseline. Add `"quality:crap": "tsx scripts/crap-report.ts"` to `package.json` in the implementing PR.
 
 ## 2. Interpretation policy
 
@@ -81,33 +87,54 @@ Add `"quality:crap": "tsx scripts/crap-report.ts"` to `package.json` in the impl
 - Pure DI wiring (`lib/container/*.ts`) scores low on comp even if it is uncovered, so CRAP will not prioritize it; this repo separately pins those modules and transaction boundaries with unit and integration tests.
 - Cadence: run before any refactor wave and roughly monthly; snapshot the top-25 into DEBT-465's verification log so movement is visible. Not a per-PR step.
 
-## 3. A-priori hotspots (2026-08-13 audit — verify with the first real report)
+## 3. A-priori hotspots (2026-08-13 audit; facts revalidated 2026-08-22)
 
-Candidates from the manual sweep of decision density, size, direct tests, and consequence, before the script exists. The pre-commit size check's exemption list in `scripts/check-file-size.sh` contains 14 legacy files over 350 lines; three candidates below appear on it.
+Candidates from the manual sweep of decision density, size, direct tests, and consequence, written before the script existed. These were **not** a measured ranking. The factual receipts below were corrected before implementation; the measured reconciliation follows the table. The pre-commit size check's exemption list in `scripts/check-file-size.sh` still contains 14 legacy files over 350 lines; three candidates below appear on it.
 
 | Candidate | Signal |
 |---|---|
 | `src/adapters/repositories/drizzle-renewal-notice-delivery-repository.ts` | 399 loc, claim/dispatch/requeue state machine for legally-required notices, **zero direct repository unit tests**; its behavior is covered in integration — a large direct-unit-test gap in `src/` |
 | `src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository.ts` | 5-status operation machine (pending/processing/completed/terminal/expired), 5 tests |
 | `src/adapters/gateways/clerk-user-provisioner.ts` | 11 distinct resolution outcomes (9 `blocked_*` paths), 8 tests; it fails closed around cross-account email ownership conflicts |
-| `app/(marketing)/checkout/success/checkout-success-sync.tsx` | Post-payment reconciliation; failures can leave a paid user without access. The 344-loc sync module is exercised directly by 26 page/module tests plus 3 version-fence tests |
-| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.ts` | 34 decision points, the third-highest count among practice hooks; preserves exam results after refresh/reconnect |
-| `app/(app)/app/questions/[slug]/hooks/use-question-page-bookmarks.ts` | Lowest direct spec-to-hook ratio of the question-page hooks (174-line spec on a 227-line hook; peers run ~1.0–2.2×) |
-| `app/(app)/app/questions/[slug]/question-page-client.tsx` | Highest decision count in the production-source scan (110); stateful fan-out over review/origin/navigation/bookmark/feedback |
+| `app/(marketing)/checkout/success/checkout-success-sync.tsx` | Post-payment reconciliation; failures can leave a paid user without access. The 344-loc sync module is exercised directly by 28 page/assertion tests plus 3 version-fence tests |
+| `app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.ts` | 253-line refresh/reconnect continuity hook with 5 unit and 4 browser cases; the report must establish whether its branching actually ranks |
+| `app/(app)/app/questions/[slug]/hooks/use-question-page-bookmarks.ts` | 227-line hook with a 174-line direct browser spec (4 cases); measurement must replace the old cross-hook ratio guess |
+| `app/(app)/app/questions/[slug]/question-page-client.tsx` | 557-line stateful fan-out over review/origin/navigation/bookmark/feedback with 47 direct render-output cases; the old manual decision rank is not retained as fact |
 | `app/(app)/app/history/components/history-questions-tab.tsx` | Second-largest React component (574 loc, behind `practice-view.tsx` at 584) carrying 2 colocated test files to practice-view's 10 |
-| `src/adapters/gateways/stripe/stripe-checkout-sessions.ts` | Second-highest decision count in the production-source scan (103 across 986 loc); 8 test files make it a *refactor-lever* candidate, not a test-lever one |
+| `src/adapters/gateways/stripe/stripe-checkout-sessions.ts` | 1,189-line Checkout orchestration module with 10 direct adapter test files; likely a *refactor-lever* candidate, but the report must establish its measured function ranks |
 | `src/application/use-cases/get-user-stats.ts` | The dashboard's five top-level progress metrics on 4 tests |
-| `src/application/use-cases/get-completed-session-questions-with-feedback.ts`, `get-practice-session-review.ts` | Read-model projections with fallback branches, 10 and 9 tests respectively |
-| `src/adapters/repositories/drizzle-question-repository.ts` | Owns the progress-status filter SQL deciding which questions a session may contain |
+| `src/application/use-cases/get-completed-session-questions-with-feedback.ts`, `get-practice-session-review.ts` | Read-model projections with fallback branches, 8 and 9 direct tests respectively |
+| `src/adapters/repositories/drizzle-question-repository.ts` | Owns the progress-status filter SQL deciding which questions a session may contain; 16 direct unit cases plus integration coverage |
+
+### Measured reconciliation (2026-08-22)
+
+The first required three-lane run analyzed 445 files and 2,177 functions. Six functions scored at least 30; none exceeded 100. The table uses each candidate file's highest-ranked function, not a file aggregate:
+
+| Prior candidate | Highest merged result | What the guess got wrong or right |
+|---|---|---|
+| Renewal-notice delivery repository | #141, `immutableFieldsMatch`: comp 8, cov 100%, CRAP 8.00 | **Wrong as an under-tested hotspot.** Zero direct repository unit tests hid complete integration-lane statement coverage—the exact error the mandatory merge prevents. Consequence can still justify mutation testing, but CRAP does not prioritize it. |
+| Trial setup-operation repository | #42, `snapshotsMatch`: comp 14, cov 100%, CRAP 14.00 | **Overestimated.** The five direct cases plus integration lane cover the complex function completely; it is below the 30 triage band. |
+| Clerk user provisioner | #111, `resolveClerkUserEmailOwnershipConflict`: comp 9, cov 100%, CRAP 9.00 | **Overestimated.** Outcome count did not translate into high per-function uncovered complexity. |
+| Checkout success sync | #132, `syncCheckoutSuccess`: comp 8, cov 100%, CRAP 8.00 | **Overestimated.** High consequence and module size are real, but the function is completely covered and modestly complex. |
+| Exam-results continuity hook | #62, anonymous callback at line 104: comp 11, cov 81.48%, CRAP 11.77 | **Overestimated.** It has a visible partial-coverage gap, but not enough combined complexity to approach 30. |
+| Question-page bookmarks hook | #21, anonymous error callback at line 141: comp 4, cov 0%, CRAP 20.00 | **Directionally right.** The merge found a genuinely dark branch, but its complexity keeps it below the triage band. |
+| Question page client | #1, `QuestionView`: comp 84, cov 100%, CRAP 84.00 | **Right file, wrong lever if framed as missing tests.** It is the highest-risk function because complexity is the floor even at complete coverage; this is a refactor candidate. |
+| History questions tab | #7, `HistoryQuestionsTab`: comp 27, cov 100%, CRAP 27.00 | **Directionally right but below band.** It ranks highly on fully covered complexity, not on a test deficit. |
+| Stripe Checkout sessions | #3, `createStripeCheckoutSession`: comp 43, cov 100%, CRAP 43.00 | **Right file and refactor lever.** The old file size/test-file counts were stale, but the measured function remains above 30 with complete coverage. |
+| User stats | #1,043 file maximum, default `now` callback: comp 1, cov 0%, CRAP 2.00; `execute`: comp 1, cov 100%, CRAP 1.00 | **Wrong candidate.** Five output metrics do not imply decision complexity; the use case delegates the business calculations. |
+| Completed-session feedback / practice-session review | #53, `execute`: comp 12, cov 96.43%, CRAP 12.01 / #82, `execute`: comp 10, cov 90.48%, CRAP 10.09 | **Overestimated.** Fallback branches are substantially covered and both scores are well below 30. |
+| Question repository | #88, `buildPublishedCandidateWhere`: comp 10, cov 100%, CRAP 10.00 | **Overestimated.** Consequential SQL ownership is not the same thing as high function-level change risk. |
+
+The manual sweep also **missed four of the six** functions at or above 30: `PracticeView` (48.00), `SubmitAnswerUseCase.execute` (39.00), `PracticeSessionPageView` (32.00), and `withIdempotency` (30.00). All six triage-band functions are 100% statement-covered, so the first baseline points to refactoring rather than blanket test addition. The clearest test-lever findings are lower in the list: `resolveRetryOrigin` (#15, comp 6, cov 22.22%, CRAP 22.94) and the bookmark error callback (#21, comp 4, cov 0%, CRAP 20.00).
 
 ## 4. Relationship to the complexity linter
 
-The installed Biome 2.5.6 ships `noExcessiveCognitiveComplexity` (not enabled in `biome.json`). Cognitive complexity is a different metric — it penalizes *nesting and reading effort*, not path count — so it complements rather than replaces CRAP's `comp`. Option for the implementation wave: enable it at `"warn"` with a generous threshold as an authoring-time nudge. Keep it advisory; the ranked CRAP report, not a lint error, is where test-or-refactor decisions get made.
+The installed Biome 2.5.7 ships `noExcessiveCognitiveComplexity` (not enabled in `biome.json`). Cognitive complexity is a different metric — it penalizes *nesting and reading effort*, not path count — so it complements rather than replaces CRAP's `comp`. Both lint scripts now use `--error-on-warnings`, so enabling this rule even at `"warn"` would create a numeric gate. It is out of scope for DEBT-465 Part 1 and requires the new ADR that ADR-019 mandates; the ranked CRAP report remains the observational test-or-refactor input.
 
 ## 5. Adoption sequence (DEBT-465 Part 1)
 
-1. TDD `scripts/crap-report.ts` (fixture source + fixture coverage JSON → known scores; the formula's boundary cases — cov 0, cov 1, nested functions — are the unit tests).
-2. Add the `quality:crap` script + `istanbul-lib-coverage` devDep; `.gitignore` already covers `coverage/`.
+1. TDD `scripts/crap-report.ts` (fixture source + fixture coverage JSON → known scores; formula boundaries, nested functions, all six logical decision operators, lane merge, and infrastructure exits are unit contracts).
+2. Add the `quality:crap` script plus direct `istanbul-lib-coverage` and `@types/istanbul-lib-coverage` devDependencies; `.gitignore` already covers `coverage/`.
 3. Produce the baseline: run all three coverage lanes, then the merged report; record the top-25 in DEBT-465.
 4. Compare against the table above; correct this doc where the measured ranking disagrees with the manual sweep.
 5. Feed results forward: top *test-lever* items become mutation-pilot wave 2 candidates after their tests land; top *refactor-lever* items become owner-scheduled refactor filings.

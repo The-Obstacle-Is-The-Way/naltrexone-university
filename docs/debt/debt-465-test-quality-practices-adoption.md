@@ -27,7 +27,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 ### Part 1 — CRAP report script
 
-`docs/dev/code-quality-metrics.md` §5. TDD `scripts/crap-report.ts` (TS compiler API + merged istanbul coverage), add `quality:crap` + `istanbul-lib-coverage` devDep, produce the merged-lane baseline, reconcile the a-priori hotspot table against measured ranking.
+`docs/dev/code-quality-metrics.md` §5. TDD `scripts/crap-report.ts` (the TS6 compiler API behind the DEBT-460 alias + all three required Istanbul coverage maps), add `quality:crap` plus direct `istanbul-lib-coverage` and `@types/istanbul-lib-coverage` devDependencies, produce the merged-lane baseline, and reconcile the a-priori hotspot table against measured ranking. Metric outcomes always exit 0; only missing/malformed inputs, parse/I/O failures, or invalid CLI configuration exit nonzero.
 
 ### Part 2 — Mutation-testing pilot
 
@@ -43,7 +43,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 ## Verification
 
-- [ ] Part 1: `scripts/crap-report.ts` + colocated test landed; baseline top-25 recorded below; hotspot table reconciled
+- [x] Part 1: `scripts/crap-report.ts` + colocated test landed; baseline top-25 recorded below; hotspot table reconciled
 - [ ] Part 2: pilot baseline scores recorded below; zero un-triaged survivors in pilot modules; weekly workflow live
 - [ ] Part 3: driver + features #1/#4 landed with spec-sync verified (rename-a-step fails); revenue features #2/#3/#10 landed; location tables updated
 - [ ] Part 4: QA-001 and QA-002 Active with evidence; operator-checklist item 8 references the register
@@ -53,8 +53,40 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 | Measure | Date | Result |
 |---|---|---|
-| CRAP top-25 snapshot | — | — |
+| CRAP top-25 snapshot | 2026-08-22 | Required three-lane merged baseline (unit + browser + integration): 445 files / 2,177 functions; 6 scores ≥30, none >100; highest `QuestionView` at 84.00. Full measured snapshot below. |
 | Mutation pilot scores | — | — |
+
+### Part 1 CRAP top-25 baseline — 2026-08-22
+
+Input receipts from the same working tree: unit coverage passed 450 files / 4,018 tests; integration coverage passed 40 files and skipped 1 / passed 256 tests and skipped 2; browser coverage passed 64 files / 398 tests. The reporter then required and merged `coverage/coverage-final.json`, `coverage/browser/coverage-final.json`, and `coverage/integration/coverage-final.json` before ranking. Playwright supplies no Istanbul input.
+
+| Rank | Location | Function | Comp | Cov | CRAP |
+|---:|---|---|---:|---:|---:|
+| 1 | `app/(app)/app/questions/[slug]/question-page-client.tsx:188` | `QuestionView` | 84 | 100.00% | 84.00 |
+| 2 | `app/(app)/app/practice/components/practice-view.tsx:312` | `PracticeView` | 48 | 100.00% | 48.00 |
+| 3 | `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:758` | `createStripeCheckoutSession` | 43 | 100.00% | 43.00 |
+| 4 | `src/application/use-cases/submit-answer.ts:89` | `execute` | 39 | 100.00% | 39.00 |
+| 5 | `app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:85` | `PracticeSessionPageView` | 32 | 100.00% | 32.00 |
+| 6 | `src/adapters/shared/with-idempotency.ts:109` | `withIdempotency` | 30 | 100.00% | 30.00 |
+| 7 | `app/(app)/app/history/components/history-questions-tab.tsx:121` | `HistoryQuestionsTab` | 27 | 100.00% | 27.00 |
+| 8 | `app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:37` | `renderPracticeSessionExamResults` | 26 | 94.74% | 26.10 |
+| 9 | `src/adapters/gateways/stripe/stripe-webhook-processor.ts:314` | `processStripeWebhookEvent` | 26 | 97.14% | 26.02 |
+| 10 | `src/application/use-cases/get-previous-attempt.ts:81` | `execute` | 25 | 93.75% | 25.15 |
+| 11 | `src/adapters/repositories/drizzle-renewal-consent-record-repository.ts:50` | `immutableEvidenceMatches` | 25 | 100.00% | 25.00 |
+| 12 | `app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:31` | `PostExamReviewView` | 24 | 100.00% | 24.00 |
+| 13 | `lib/env.ts:100` | `validateEnv` | 24 | 100.00% | 24.00 |
+| 14 | `src/domain/entities/renewal-consent-record.ts:54` | `newRenewalConsentRecord` | 23 | 100.00% | 23.00 |
+| 15 | `app/(app)/app/questions/[slug]/hooks/use-question-page-model.ts:43` | `resolveRetryOrigin` | 6 | 22.22% | 22.94 |
+| 16 | `app/(app)/app/shared/question-feedback-actions.ts:82` | `rateQuestionForQuestion` | 21 | 94.87% | 21.06 |
+| 17 | `src/adapters/controllers/clerk-webhook-controller.ts:228` | anonymous callback | 21 | 98.33% | 21.00 |
+| 18 | `app/(app)/app/practice/components/practice-view.tsx:129` | `TutorActionBar` | 21 | 100.00% | 21.00 |
+| 19 | `components/question/feedback.tsx:149` | `Feedback` | 21 | 100.00% | 21.00 |
+| 20 | `app/(app)/app/shared/question-feedback-actions.ts:187` | `submitReportForQuestion` | 20 | 93.10% | 20.13 |
+| 21 | `app/(app)/app/questions/[slug]/hooks/use-question-page-bookmarks.ts:141` | anonymous error callback | 4 | 0.00% | 20.00 |
+| 22 | `src/adapters/gateways/stripe/stripe-checkout-sessions.ts:139` | `findUniqueNewestMatchingCheckoutSession` | 19 | 88.24% | 19.59 |
+| 23 | `components/question/choice-button.tsx:26` | `ChoiceButton` | 19 | 100.00% | 19.00 |
+| 24 | `app/(app)/app/questions/[slug]/question-page-logic.ts:211` | `submitSelectedAnswer` | 18 | 94.12% | 18.07 |
+| 25 | `app/(app)/app/questions/[slug]/question-page-logic.ts:378` | `loadPreviousAttempt` | 18 | 100.00% | 18.00 |
 
 ## Related
 

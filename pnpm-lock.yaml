@@ -132,6 +132,9 @@ importers:
       '@stripe/cli':
         specifier: 1.50.0
         version: 1.50.0
+      '@types/istanbul-lib-coverage':
+        specifier: 2.0.6
+        version: 2.0.6
       '@types/node':
         specifier: ^24.12.4
         version: 24.13.3
@@ -153,6 +156,9 @@ importers:
       husky:
         specifier: ^9.1.7
         version: 9.1.7
+      istanbul-lib-coverage:
+        specifier: 3.2.2
+        version: 3.2.2
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1(@noble/hashes@2.3.0)

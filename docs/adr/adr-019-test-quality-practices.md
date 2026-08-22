@@ -27,7 +27,7 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 3. **Gherkin acceptance tests** — real `.feature` files bound via `@amiceli/vitest-cucumber` to an application-layer driver built on the existing fakes; bindings named `*.acceptance.test.ts` under `tests/acceptance/` so they run inside the existing unit lane with zero runner changes. New business rules ship their feature file first (the outer TDD loop). Runbook: `docs/dev/acceptance-testing.md`.
 4. **UI QA procedures** — a `docs/qa/` register (QA-NNN, same mechanics as the debt/bug registers) of scripted, evidence-producing procedures executable by humans, agents (within the DEBT-323 constraint table), or Playwright-assisted runs; stable procedures get promoted into `tests/e2e/`. Runbook: `docs/dev/qa-procedures.md`.
 
-**Metric posture (binding):** mutation scores and CRAP scores enter as *observational ratchets* — reports never fail a build (`break: null`; exit 0). Converting any of them into a gate requires a new ADR that amends this one with measured baselines. This deliberately extends the existing coverage-observational policy rather than overriding it.
+**Metric posture (binding):** mutation scores and CRAP scores enter as *observational ratchets* — metric outcomes never fail a build (`break: null`; CRAP exits 0 for every score, band, or empty filtered result). A CRAP run exits nonzero only when infrastructure prevents a trustworthy report: missing/unreadable/malformed required coverage, source parse diagnostics, I/O failure, or invalid CLI configuration. That is report-integrity enforcement, not a metric threshold. Converting any measured outcome into a gate requires a new ADR that amends this one with measured baselines. This deliberately extends the existing coverage-observational policy rather than overriding it.
 
 **Sequencing rationale:** Part 1 (CRAP) first — cheapest, produces the map; Part 2 (mutation pilot) second — audits the existing suites where consequence is highest; Part 3 (acceptance) third — the largest ongoing discipline change; Part 4 (QA register) is bootstrapped already (QA-001/QA-002 drafts) and grows per-surface.
 
@@ -42,7 +42,7 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 
 ### Negative
 
-- Four new devDependencies (`@stryker-mutator/core`, `@stryker-mutator/vitest-runner`, `@amiceli/vitest-cucumber`, `istanbul-lib-coverage`).
+- Five new devDependencies (`@stryker-mutator/core`, `@stryker-mutator/vitest-runner`, `@amiceli/vitest-cucumber`, `istanbul-lib-coverage`, and its `@types/istanbul-lib-coverage` declarations).
 - Mutation runs cost minutes; acceptance features cost authoring discipline; QA procedures cost execution time per release.
 - Metric visibility invites metric-chasing (suppression spam, equivalent-mutant hunting to 100%).
 
@@ -57,7 +57,7 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 
 - DEBT-465 carries per-part Verification checklists (baselines recorded there: first CRAP top-25, first mutation scores, first two features landed, QA-001/002 first Active runs).
 - The four runbooks are canonical; `docs/dev/index.md` routes to them; the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) gain the `tests/acceptance/` row in the PR that lands the first feature.
-- No numeric quality gate may be added to CI or configs without a new ADR referencing this section.
+- No numeric quality gate may be added to CI or configs without a new ADR referencing this section. Nonzero report-infrastructure exits remain required so missing evidence cannot be recorded as a successful baseline.
 - Standard PR review (CodeRabbit mandatory) applies to every adoption PR.
 
 ## References
