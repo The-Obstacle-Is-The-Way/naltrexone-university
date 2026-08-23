@@ -73,10 +73,14 @@ export async function startSession(
       name: statusLabel,
       exact: true,
     });
-    await statusButton.click();
-    await expect(statusButton).toHaveAttribute('aria-pressed', 'true', {
-      timeout: 10_000,
-    });
+    const statusIsAlreadySelected =
+      (await statusButton.getAttribute('aria-pressed')) === 'true';
+    if (!statusIsAlreadySelected) {
+      await statusButton.click();
+      await expect(statusButton).toHaveAttribute('aria-pressed', 'true', {
+        timeout: 10_000,
+      });
+    }
 
     // Count: label is "Questions" (not "Count")
     await page.getByLabel('Questions').fill(String(count));

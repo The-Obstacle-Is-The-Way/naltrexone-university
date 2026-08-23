@@ -138,6 +138,7 @@ function createPracticePage(input: {
   defaultQuestionCount?: number;
   forcedActualCount?: number;
   incompleteSession?: boolean;
+  selectedStatusReselectionStalesStartHandler?: boolean;
 }): PracticePageLike {
   const state = {
     abandonDialogOpen: false,
@@ -146,6 +147,7 @@ function createPracticePage(input: {
     requestedQuestionCount: input.defaultQuestionCount ?? 1,
     selectedMode: 'tutor' as 'tutor' | 'exam',
     selectedStatus: 'Unanswered' as 'Unanswered' | 'Incorrect' | 'Bookmarked',
+    startHandlerIsStale: false,
     startedQuestionCount: null as number | null,
     sessionStarted: false,
   };
@@ -159,6 +161,10 @@ function createPracticePage(input: {
     isVisible: () =>
       state.currentUrl === '/app/practice' && !state.hasIncompleteSession,
     onClick: () => {
+      if (state.startHandlerIsStale) {
+        return;
+      }
+
       if (state.selectedStatus !== availableStatus) {
         throw new Error('Fake page only supports one enabled status.');
       }
@@ -279,6 +285,12 @@ function createPracticePage(input: {
               state.currentUrl === '/app/practice' &&
               !state.hasIncompleteSession,
             onClick: () => {
+              if (
+                input.selectedStatusReselectionStalesStartHandler &&
+                state.selectedStatus === name
+              ) {
+                state.startHandlerIsStale = true;
+              }
               state.selectedStatus = name;
             },
           });
@@ -334,6 +346,18 @@ describe('startSession helper', () => {
     await expect(page.getByText('Question 1 of 2').isVisible()).resolves.toBe(
       true,
     );
+  });
+
+  it('starts through the current handler when the first supported status is already selected', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      selectedStatusReselectionStalesStartHandler: true,
+    });
+
+    await startSession(page as never, 'tutor', 2);
+
+    expect(page.url()).toBe('/app/practice/session-1');
   });
 
   it('fails explicitly when the created session is smaller than requested', async () => {
