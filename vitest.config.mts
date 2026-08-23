@@ -14,6 +14,7 @@ export default defineConfig({
     },
     include: ['**/*.test.ts', '**/*.test.tsx'],
     exclude: ['node_modules', '.next', 'db/migrations', 'tests/integration/**'],
+    globalSetup: ['./tests/test-double-fidelity-global-setup.ts'],
     setupFiles: ['./vitest.setup.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],

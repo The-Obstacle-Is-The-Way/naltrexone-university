@@ -1,18 +1,11 @@
-import { beforeAll, describe, expect, it } from 'vitest';
-import {
-  HAND_ROLLED_PORT_DOUBLE_FLOORS,
-  OWN_CODE_MODULE_MOCK_FLOORS,
-  UNKNOWN_DOUBLE_CAST_FLOORS,
-} from './test-double-fidelity-ratchet-floors';
+import { describe, expect, inject, it } from 'vitest';
 import {
   collectHandRolledPortDoubleOccurrences,
   collectMaintainedFakePortNames,
   collectOwnCodeModuleMockOccurrences,
   collectRatchetGrowthIssues,
   collectUnknownDoubleCastOccurrences,
-  readMaintainedFakePortNames,
   readRepositoryCompilerOptions,
-  readTestSources,
   type TestDoubleOccurrence,
   type TestSourceFile,
 } from './test-double-fidelity-source-scan';
@@ -348,48 +341,15 @@ describe('test-double fidelity source scan', () => {
 });
 
 describe('live test-double fidelity ratchets', () => {
-  let ownCodeModuleMocks: TestDoubleOccurrence[];
-  let unknownDoubleCasts: TestDoubleOccurrence[];
-  let handRolledPortDoubles: TestDoubleOccurrence[];
-
-  beforeAll(() => {
-    const sources = readTestSources();
-    ownCodeModuleMocks = collectOwnCodeModuleMockOccurrences(sources);
-    unknownDoubleCasts = collectUnknownDoubleCastOccurrences(sources);
-    handRolledPortDoubles = collectHandRolledPortDoubleOccurrences(
-      sources,
-      readMaintainedFakePortNames(),
-      readRepositoryCompilerOptions(),
-    );
-  });
-
   it('blocks growth in own-code module mocks', () => {
-    expect(
-      collectRatchetGrowthIssues(
-        'own-code module mock',
-        ownCodeModuleMocks,
-        OWN_CODE_MODULE_MOCK_FLOORS,
-      ),
-    ).toEqual([]);
+    expect(inject('testDoubleRatchetIssues').ownCodeModuleMocks).toEqual([]);
   });
 
   it('blocks growth in unknown double casts outside the allowlist', () => {
-    expect(
-      collectRatchetGrowthIssues(
-        'unknown double cast',
-        unknownDoubleCasts,
-        UNKNOWN_DOUBLE_CAST_FLOORS,
-      ),
-    ).toEqual([]);
+    expect(inject('testDoubleRatchetIssues').unknownDoubleCasts).toEqual([]);
   });
 
   it('blocks growth in object-literal doubles for maintained fake ports', () => {
-    expect(
-      collectRatchetGrowthIssues(
-        'hand-rolled maintained-port double',
-        handRolledPortDoubles,
-        HAND_ROLLED_PORT_DOUBLE_FLOORS,
-      ),
-    ).toEqual([]);
+    expect(inject('testDoubleRatchetIssues').handRolledPortDoubles).toEqual([]);
   });
 });
