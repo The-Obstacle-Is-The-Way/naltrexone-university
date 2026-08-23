@@ -631,33 +631,60 @@ function findLatestBindingValue(
       ? declaration.initializer
       : null;
   let latestPosition = latestValue?.getStart() ?? -1;
-  const executionScope = findExecutionScope(reference);
+  const executionScopes = findEnclosingExecutionScopes(reference, declaration);
 
-  const visit = (node: ts.Node): void => {
-    if (node !== executionScope && ts.isFunctionLike(node)) {
-      return;
-    }
-    if (node.getStart() >= referencePosition) {
-      return;
-    }
+  const visitIn = (executionScope: ts.Node): void => {
+    const visit = (node: ts.Node): void => {
+      if (node !== executionScope && ts.isFunctionLike(node)) {
+        return;
+      }
+      if (node.getStart() >= referencePosition) {
+        return;
+      }
 
-    if (
-      ts.isBinaryExpression(node) &&
-      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      ts.isIdentifier(node.left) &&
-      node.left.text === reference.text &&
-      findLocalBindingDeclaration(node.left) === declaration &&
-      node.getStart() > latestPosition
-    ) {
-      latestValue = node.right;
-      latestPosition = node.getStart();
-    }
+      if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isIdentifier(node.left) &&
+        node.left.text === reference.text &&
+        findLocalBindingDeclaration(node.left) === declaration &&
+        node.getStart() > latestPosition
+      ) {
+        latestValue = node.right;
+        latestPosition = node.getStart();
+      }
 
-    ts.forEachChild(node, visit);
+      ts.forEachChild(node, visit);
+    };
+
+    visit(executionScope);
   };
 
-  visit(executionScope);
+  for (const executionScope of executionScopes) {
+    visitIn(executionScope);
+  }
   return latestValue;
+}
+
+function findEnclosingExecutionScopes(
+  reference: ts.Identifier,
+  declaration: ts.VariableDeclaration,
+): ts.Node[] {
+  const declarationScope = findExecutionScope(declaration);
+  const scopes: ts.Node[] = [];
+  let current: ts.Node | undefined = reference.parent;
+
+  while (current) {
+    if (ts.isFunctionLike(current) || ts.isSourceFile(current)) {
+      scopes.push(current);
+      if (current === declarationScope) {
+        return scopes.reverse();
+      }
+    }
+    current = current.parent;
+  }
+
+  throw new Error('Could not trace factory reference to its declaration scope');
 }
 
 function findExecutionScope(node: ts.Node): ts.Node {
@@ -668,7 +695,7 @@ function findExecutionScope(node: ts.Node): ts.Node {
     }
     current = current.parent;
   }
-  return current ?? node.getSourceFile();
+  return node.getSourceFile();
 }
 
 function asUnknownCast(expression: ts.Expression): ts.AsExpression | null {

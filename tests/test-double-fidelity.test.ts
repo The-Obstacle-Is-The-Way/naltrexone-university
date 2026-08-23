@@ -220,6 +220,30 @@ describe('test-double fidelity source scan', () => {
     expect(occurrences).toEqual([]);
   });
 
+  it('detects a module-scope factory assignment used inside beforeEach', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          let moduleFactory: unknown;
+          moduleFactory = () => ({ example: true });
+          beforeEach(() => {
+            vi.doMock('@/lib/example', moduleFactory);
+          });
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 4,
+        detail:
+          "own-code module '@/lib/example' must not use a factory-form vi.doMock",
+      },
+    ]);
+  });
+
   it('detects a mutable factory assignment in the mock call execution scope', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
