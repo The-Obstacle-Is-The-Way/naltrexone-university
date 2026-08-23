@@ -330,7 +330,7 @@ Use `.claude/rules/testing.md` → “Test-Double Fidelity: Shape vs. Behavior�
 - [ ] Use `await expect.element(locator)` for assertions (built-in retry)
 - [ ] Run with `pnpm test:browser`
 - [ ] Use fakes for DI where the code under test supports injection
-- [ ] For Node-only controller modules in Browser Mode, use top-level `vi.mock()` factories (or `{ spy: true }` when you need wrapped real exports)
+- [ ] For Node-only controller modules in Browser Mode, use top-level `vi.mock(modulePath, { spy: true })`, then configure the wrapped export with `vi.mocked(...)` in the test
 
 ---
 

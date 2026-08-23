@@ -4,8 +4,9 @@
 // them or add a new file. The raw unknown-double-cast census is 325 sites in
 // 60 files. Six documented allowlist categories exclude 36 shape-only or
 // intentional-invalid sites, leaving 289 enforced sites in 50 files. The
-// other baselines are 17 own-code module mocks in 12 files and 45 hand-rolled
-// maintained-port doubles in 18 files.
+// other baselines are 22 own-code module factories in 13 files (17 vi.mock
+// sites plus 5 vi.doMock sites) and 45 hand-rolled maintained-port doubles in
+// 18 files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -22,6 +23,7 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/questions/[slug]/question-page-logic.test.ts', 1],
   ['app/api/cron/reconcile-stripe-subscriptions/route.test.ts', 4],
   ['app/layout.test.tsx', 2],
+  ['components/auth-nav.test.tsx', 5],
   ['components/marketing/marketing-layout.test.tsx', 1],
 ]);
 

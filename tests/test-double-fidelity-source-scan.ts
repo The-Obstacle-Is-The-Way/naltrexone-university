@@ -200,10 +200,10 @@ export function collectMaintainedFakePortNames({
   additionalFakeClassNames = [],
 }: MaintainedFakePortSources): Set<string> {
   const barrelExports = collectFakeBarrelExports(barrelSource);
-  const sourcesByPath = new Map(
+  const parsedSourcesByPath = new Map(
     fakeSources.map((source) => [
       path.posix.normalize(source.filePath),
-      source,
+      { source, parsed: parseSource(source) },
     ]),
   );
   const ports = new Set<string>();
@@ -212,31 +212,38 @@ export function collectMaintainedFakePortNames({
     const modulePath = resolveTypeScriptModulePath(
       barrelSource.filePath,
       moduleSpecifier,
-      sourcesByPath,
+      parsedSourcesByPath,
     );
-    const fakeSource = sourcesByPath.get(modulePath);
+    const fakeSource = parsedSourcesByPath.get(modulePath);
     if (!fakeSource) {
       throw new Error(
         `Could not resolve ${moduleSpecifier} for ${fakeClassName} from ${barrelSource.filePath}`,
       );
     }
-    addImplementedPortNames(fakeSource, fakeClassName, ports);
+    addImplementedPortNames(
+      fakeSource.source,
+      fakeSource.parsed,
+      fakeClassName,
+      ports,
+    );
   }
 
   for (const fakeClassName of additionalFakeClassNames) {
-    const containingSources = fakeSources.filter((source) =>
-      source.contents.includes(`class ${fakeClassName}`),
+    const containingSources = [...parsedSourcesByPath.values()].filter(
+      ({ parsed }) => findClassDeclaration(parsed, fakeClassName) !== null,
     );
-    if (containingSources.length !== 1) {
+    const fakeSource = containingSources[0];
+    if (containingSources.length !== 1 || !fakeSource) {
       throw new Error(
         `Expected exactly one source for ${fakeClassName}, found ${containingSources.length}`,
       );
     }
-    const fakeSource = containingSources[0];
-    if (!fakeSource) {
-      throw new Error(`Missing source for ${fakeClassName}`);
-    }
-    addImplementedPortNames(fakeSource, fakeClassName, ports);
+    addImplementedPortNames(
+      fakeSource.source,
+      fakeSource.parsed,
+      fakeClassName,
+      ports,
+    );
   }
 
   return ports;
@@ -273,18 +280,19 @@ export function collectOwnCodeModuleMockOccurrences(
     const parsed = parseSource(source);
 
     function visit(node: ts.Node): void {
-      if (isViMockCall(node)) {
+      const moduleMockApi = getVitestModuleMockApi(node);
+      if (moduleMockApi && ts.isCallExpression(node)) {
         const [moduleArgument, implementationArgument] = node.arguments;
         if (
           moduleArgument &&
           ts.isStringLiteralLike(moduleArgument) &&
           isOwnCodePath(moduleArgument.text) &&
-          !isAllowedBrowserSpy(source.filePath, implementationArgument)
+          isInlineModuleFactory(implementationArgument)
         ) {
           occurrences.push({
             filePath: source.filePath,
             lineNumber: lineNumberFor(parsed, node),
-            detail: `own-code module '${moduleArgument.text}' must not use a factory-form vi.mock`,
+            detail: `own-code module '${moduleArgument.text}' must not use a factory-form vi.${moduleMockApi}`,
           });
         }
       }
@@ -408,8 +416,8 @@ function formatTypeScriptDiagnostics(
   diagnostics: readonly ts.Diagnostic[],
 ): string {
   return ts.formatDiagnostics(diagnostics, {
-    getCanonicalFileName: (fileName) => fileName,
-    getCurrentDirectory: () => process.cwd(),
+    getCanonicalFileName: String,
+    getCurrentDirectory: process.cwd,
     getNewLine: () => '\n',
   });
 }
@@ -444,7 +452,7 @@ function collectFakeBarrelExports(
 function resolveTypeScriptModulePath(
   importerPath: string,
   moduleSpecifier: string,
-  sourcesByPath: ReadonlyMap<string, TestSourceFile>,
+  sourcesByPath: ReadonlyMap<string, unknown>,
 ): string {
   const basePath = path.posix.normalize(
     path.posix.join(path.posix.dirname(importerPath), moduleSpecifier),
@@ -456,49 +464,66 @@ function resolveTypeScriptModulePath(
 
 function addImplementedPortNames(
   source: TestSourceFile,
+  parsed: ts.SourceFile,
   fakeClassName: string,
   ports: Set<string>,
 ): void {
-  const parsed = parseSource(source);
-  let foundClass = false;
+  const fakeClass = findClassDeclaration(parsed, fakeClassName);
+  if (!fakeClass) {
+    throw new Error(`Could not find ${fakeClassName} in ${source.filePath}`);
+  }
+
+  for (const heritageClause of fakeClass.heritageClauses ?? []) {
+    if (heritageClause.token !== ts.SyntaxKind.ImplementsKeyword) {
+      continue;
+    }
+    for (const implementedType of heritageClause.types) {
+      const qualifiedName = implementedType.expression.getText(parsed);
+      const portName = qualifiedName.split('.').at(-1);
+      if (portName) {
+        ports.add(portName);
+      }
+    }
+  }
+}
+
+function findClassDeclaration(
+  parsed: ts.SourceFile,
+  className: string,
+): ts.ClassDeclaration | null {
+  let declaration: ts.ClassDeclaration | null = null;
 
   function visit(node: ts.Node): void {
-    if (ts.isClassDeclaration(node) && node.name?.text === fakeClassName) {
-      foundClass = true;
-      for (const heritageClause of node.heritageClauses ?? []) {
-        if (heritageClause.token !== ts.SyntaxKind.ImplementsKeyword) {
-          continue;
-        }
-        for (const implementedType of heritageClause.types) {
-          const qualifiedName = implementedType.expression.getText(parsed);
-          const portName = qualifiedName.split('.').at(-1);
-          if (portName) {
-            ports.add(portName);
-          }
-        }
-      }
+    if (declaration) {
+      return;
+    }
+    if (ts.isClassDeclaration(node) && node.name?.text === className) {
+      declaration = node;
+      return;
     }
     ts.forEachChild(node, visit);
   }
 
   visit(parsed);
-  if (!foundClass) {
-    throw new Error(`Could not find ${fakeClassName} in ${source.filePath}`);
-  }
+  return declaration;
 }
 
 function lineNumberFor(parsed: ts.SourceFile, node: ts.Node): number {
   return parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line + 1;
 }
 
-function isViMockCall(node: ts.Node): node is ts.CallExpression {
-  return (
-    ts.isCallExpression(node) &&
-    ts.isPropertyAccessExpression(node.expression) &&
-    ts.isIdentifier(node.expression.expression) &&
-    node.expression.expression.text === 'vi' &&
-    node.expression.name.text === 'mock'
-  );
+function getVitestModuleMockApi(node: ts.Node): 'doMock' | 'mock' | null {
+  if (
+    !ts.isCallExpression(node) ||
+    !ts.isPropertyAccessExpression(node.expression) ||
+    !ts.isIdentifier(node.expression.expression) ||
+    node.expression.expression.text !== 'vi'
+  ) {
+    return null;
+  }
+
+  const apiName = node.expression.name.text;
+  return apiName === 'mock' || apiName === 'doMock' ? apiName : null;
 }
 
 function isOwnCodePath(modulePath: string): boolean {
@@ -509,23 +534,13 @@ function isOwnCodePath(modulePath: string): boolean {
   );
 }
 
-function isAllowedBrowserSpy(
-  filePath: string,
+function isInlineModuleFactory(
   implementationArgument: ts.Expression | undefined,
 ): boolean {
-  if (
-    !filePath.endsWith('.browser.spec.tsx') ||
-    !implementationArgument ||
-    !ts.isObjectLiteralExpression(implementationArgument)
-  ) {
-    return false;
-  }
-
-  return implementationArgument.properties.some(
-    (property) =>
-      ts.isPropertyAssignment(property) &&
-      property.name.getText() === 'spy' &&
-      property.initializer.kind === ts.SyntaxKind.TrueKeyword,
+  return Boolean(
+    implementationArgument &&
+      (ts.isArrowFunction(implementationArgument) ||
+        ts.isFunctionExpression(implementationArgument)),
   );
 }
 

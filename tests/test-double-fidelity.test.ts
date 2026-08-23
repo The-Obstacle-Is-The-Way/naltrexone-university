@@ -95,6 +95,41 @@ describe('test-double fidelity source scan', () => {
     ]);
   });
 
+  it('ignores an own-code automock call without a factory argument', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source('app/example.test.ts', `vi.mock('@/lib/example');`),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('ignores an own-code spy configuration because it is not a factory', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source('app/example.test.ts', `vi.mock('@/lib/example', { spy: true });`),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('detects an own-code factory-form vi.doMock call', () => {
+    const factoryCall = [
+      'vi',
+      ".doMock('@/lib/example', () => ({ example: vi.fn() }));",
+    ].join('');
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source('app/example.test.ts', factoryCall),
+    ]);
+
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 1,
+        detail:
+          "own-code module '@/lib/example' must not use a factory-form vi.doMock",
+      },
+    ]);
+  });
+
   it('ignores external package factories', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
@@ -305,6 +340,32 @@ describe('test-double fidelity source scan', () => {
       'QuestionRepository',
       'StripeClient',
     ]);
+  });
+
+  it('locates an adapter-owned additional fake by its exact class declaration', () => {
+    const portNames = collectMaintainedFakePortNames({
+      barrelSource: source(
+        'src/application/test-helpers/fakes/index.ts',
+        "export { FakePaymentGateway } from './fake-gateways';",
+      ),
+      fakeSources: [
+        source(
+          'src/application/test-helpers/fakes/fake-gateways.ts',
+          'export class FakePaymentGateway implements PaymentGateway {}',
+        ),
+        source(
+          'src/adapters/gateways/stripe/test-helpers/legacy-client.ts',
+          'export class FakeStripeCheckoutClientLegacy implements LegacyClient {}',
+        ),
+        source(
+          'src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts',
+          'export class FakeStripeCheckoutClient implements StripeClient {}',
+        ),
+      ],
+      additionalFakeClassNames: ['FakeStripeCheckoutClient'],
+    });
+
+    expect(portNames).toEqual(new Set(['PaymentGateway', 'StripeClient']));
   });
 
   it('loads the repository compiler options needed to resolve aliased port types', () => {

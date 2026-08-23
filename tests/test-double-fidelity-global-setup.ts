@@ -1,9 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
-import type { TestProject } from 'vitest/node';
 import type { LiveTestDoubleRatchetIssues } from './test-double-fidelity-live-scan';
 
-const LIVE_SCAN_PROCESS_TIMEOUT_MS = 14_000;
+// Exact-head CI 32659858531 measured the scan beyond the former 14-second
+// bound; 30 seconds is over twice that observed healthy workload while still
+// failing closed on a wedged subprocess.
+export const LIVE_SCAN_PROCESS_TIMEOUT_MS = 30_000;
 
 declare module 'vitest' {
   export interface ProvidedContext {
@@ -11,8 +13,23 @@ declare module 'vitest' {
   }
 }
 
-function readLiveTestDoubleRatchetIssues(): LiveTestDoubleRatchetIssues {
-  const output = execFileSync(
+type LiveScanProcessRunner = (
+  executable: string,
+  args: string[],
+  options: { cwd: string; encoding: 'utf8'; timeout: number },
+) => string;
+
+type LiveScanProject = {
+  provide(
+    key: 'testDoubleRatchetIssues',
+    value: LiveTestDoubleRatchetIssues,
+  ): void;
+};
+
+export function readLiveTestDoubleRatchetIssues(
+  runProcess: LiveScanProcessRunner = execFileSync,
+): LiveTestDoubleRatchetIssues {
+  const output = runProcess(
     process.execPath,
     [
       '--import=tsx',
@@ -28,6 +45,9 @@ function readLiveTestDoubleRatchetIssues(): LiveTestDoubleRatchetIssues {
   return JSON.parse(output) as LiveTestDoubleRatchetIssues;
 }
 
-export default function setup(project: TestProject): void {
-  project.provide('testDoubleRatchetIssues', readLiveTestDoubleRatchetIssues());
+export default function setup(
+  project: LiveScanProject,
+  readIssues: () => LiveTestDoubleRatchetIssues = readLiveTestDoubleRatchetIssues,
+): void {
+  project.provide('testDoubleRatchetIssues', readIssues());
 }

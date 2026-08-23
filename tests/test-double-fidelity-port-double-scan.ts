@@ -343,8 +343,8 @@ function formatTypeScriptDiagnostics(
   diagnostics: readonly ts.Diagnostic[],
 ): string {
   return ts.formatDiagnostics(diagnostics, {
-    getCanonicalFileName: (fileName) => fileName,
-    getCurrentDirectory: () => process.cwd(),
+    getCanonicalFileName: String,
+    getCurrentDirectory: process.cwd,
     getNewLine: () => '\n',
   });
 }
