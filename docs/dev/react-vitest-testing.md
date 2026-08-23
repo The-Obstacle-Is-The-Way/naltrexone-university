@@ -251,11 +251,11 @@ The `renderHook` helper (not `renderLiveHook`) stays. It uses `renderToStaticMar
 
 ### Browser Mode Mocking Note (Controller Boundaries)
 
-In Browser Mode hook specs, controller modules are often Node-only and cannot execute in Chromium runtime. The current repo pattern is top-level `vi.mock(modulePath, () => ({ ... }))` factories that provide explicit function stubs for controller boundaries such as `practice-controller`, `question-controller`, and `bookmark-controller`.
+In Browser Mode hook specs, controller modules are often Node-only and cannot execute in Chromium runtime. The repository pattern is top-level `vi.mock(modulePath, { spy: true })` for controller boundaries such as `practice-controller`, `question-controller`, and `bookmark-controller`, followed by `vi.mocked(...)` configuration in the test.
 
-If you need wrapped real exports instead of a full replacement, `vi.mock(modulePath, { spy: true })` is the approved escape hatch for sealed ESM namespaces.
+`{ spy: true }` preserves unstubbed real exports while making sealed ESM exports configurable. Factory-form `vi.mock(modulePath, () => ({ ... }))` for own-code paths is not the current pattern; existing sites are a DEBT-472 ratchet floor and cannot grow.
 
-This is a targeted exception for non-injectable module boundaries in browser tests. Prefer fakes via DI everywhere else.
+This is the targeted sealed-ESM exception defined by `.claude/rules/testing.md` → “Test-Double Fidelity: Shape vs. Behavior.” That section is the single source for test-double vocabulary, the shape-vs-behavior decision, and external-module exceptions.
 
 Also keep hook inputs/callback refs stable in tests (avoid recreating object/function dependencies on every render), or React effects can re-trigger indefinitely.
 
@@ -296,21 +296,7 @@ Avoid `@testing-library/react` in this repo. Our maintained path is:
 
 ## Fakes Over Mocks
 
-**NEVER use `vi.mock()` for our own code unless you are in the Browser Mode controller-boundary exception described above.**
-
-| Pattern | When to Use |
-|---------|-------------|
-| Fake via DI | Our own repos, gateways, services |
-| vi.mock() | External SDKs, plus Browser Mode controller-boundary exceptions |
-
-```typescript
-// CORRECT
-const fakeRepo = new FakeUserRepository();
-const useCase = new CreateUserUseCase(fakeRepo);
-
-// WRONG
-vi.mock('./user-repository');
-```
+Use `.claude/rules/testing.md` → “Test-Double Fidelity: Shape vs. Behavior” as the canonical rule. It defines fake, stub, spy, mock, and contract test once; it also owns the decision between a narrowly typed shape-only stub and a behavioral fake with a fake↔real contract. This guide adds only the Browser Mode sealed-ESM mechanics above.
 
 ---
 
