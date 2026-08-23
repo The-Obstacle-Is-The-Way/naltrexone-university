@@ -1,14 +1,79 @@
-import { expect, type Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { parseQuestionProgressCount } from './question-progress';
 
 export type PracticeMode = 'tutor' | 'exam';
 
+export type StartSessionLocator = {
+  click(): Promise<void>;
+  count(): Promise<number>;
+  fill(value: string): Promise<void>;
+  getAttribute(name: string): Promise<string | null>;
+  isEnabled(): Promise<boolean>;
+  isVisible(): Promise<boolean>;
+  textContent(): Promise<string | null>;
+  waitFor(options: { state: 'visible'; timeout?: number }): Promise<void>;
+};
+
+export type StartSessionPage = {
+  goto(url: string): Promise<unknown>;
+  getByLabel(label: string): StartSessionLocator;
+  getByRole(
+    role: 'button' | 'group' | 'heading',
+    options?: { exact?: boolean; name?: string },
+  ): StartSessionLocator;
+  getByText(text: RegExp | string): StartSessionLocator;
+  url(): string;
+};
+
+const DEFAULT_START_SESSION_STATE_TIMEOUT_MS = 30_000;
+
+async function waitForEitherVisible(
+  first: StartSessionLocator,
+  second: StartSessionLocator,
+  timeout = DEFAULT_START_SESSION_STATE_TIMEOUT_MS,
+): Promise<void> {
+  await expect
+    .poll(
+      async () =>
+        (await first.isVisible().catch(() => false)) ||
+        (await second.isVisible().catch(() => false)),
+      { timeout },
+    )
+    .toBe(true);
+}
+
+async function waitForAttribute(
+  locator: StartSessionLocator,
+  name: string,
+  value: string,
+  timeout: number,
+): Promise<void> {
+  await expect
+    .poll(async () => (await locator.getAttribute(name)) === value, { timeout })
+    .toBe(true);
+}
+
+async function waitForEnabled(
+  locator: StartSessionLocator,
+  timeout: number,
+): Promise<void> {
+  await expect.poll(() => locator.isEnabled(), { timeout }).toBe(true);
+}
+
+async function waitForUrl(
+  page: StartSessionPage,
+  expected: RegExp,
+  timeout: number,
+): Promise<void> {
+  await expect.poll(() => expected.test(page.url()), { timeout }).toBe(true);
+}
+
 async function verifyRequestedSessionCount(
-  page: Page,
+  page: StartSessionPage,
   requestedCount: number,
 ): Promise<void> {
   const progressIndicator = page.getByText(/^Question 1 of \d+\b/);
-  await expect(progressIndicator).toBeVisible({ timeout: 15_000 });
+  await progressIndicator.waitFor({ state: 'visible', timeout: 15_000 });
 
   const progressText = (await progressIndicator.textContent())?.trim() ?? '';
   const actualCount = parseQuestionProgressCount(progressText);
@@ -20,12 +85,14 @@ async function verifyRequestedSessionCount(
 }
 
 export async function startSession(
-  page: Page,
+  page: StartSessionPage,
   mode: PracticeMode = 'tutor',
   count = 1,
 ): Promise<void> {
   await page.goto('/app/practice');
-  await expect(page.getByRole('heading', { name: 'Practice' })).toBeVisible();
+  await page
+    .getByRole('heading', { name: 'Practice' })
+    .waitFor({ state: 'visible' });
 
   const startSessionButton = page.getByRole('button', {
     name: 'Start session',
@@ -35,7 +102,7 @@ export async function startSession(
   // Practice page async-loads incomplete session state. Wait until either:
   // - the session starter is available ("Start session" button), or
   // - the continue-session card is available ("Abandon session" button).
-  await startSessionButton.or(abandonButton).waitFor({ state: 'visible' });
+  await waitForEitherVisible(startSessionButton, abandonButton);
 
   // If an incomplete session exists, abandon it first
   const abandonCount = await abandonButton.count();
@@ -44,14 +111,14 @@ export async function startSession(
     // Confirm the abandon dialog
     await page.getByRole('button', { name: 'Abandon anyway' }).click();
     // Wait for the page to reload after abandoning
-    await expect(startSessionButton).toBeVisible({ timeout: 10_000 });
+    await startSessionButton.waitFor({ state: 'visible', timeout: 10_000 });
   }
 
   // Mode: SegmentedControl with buttons (not a <select>).
   // Use { exact: true } to avoid matching "View breakdown for Tutor session..." buttons.
-  await expect(
-    page.getByRole('button', { name: 'Tutor', exact: true }),
-  ).toBeVisible({ timeout: 10_000 });
+  await page
+    .getByRole('button', { name: 'Tutor', exact: true })
+    .waitFor({ state: 'visible', timeout: 10_000 });
   const selectedModeButton = page.getByRole('button', {
     name: mode === 'tutor' ? 'Tutor' : 'Exam',
     exact: true,
@@ -60,9 +127,7 @@ export async function startSession(
     (await selectedModeButton.getAttribute('aria-pressed')) === 'true';
   if (!modeIsAlreadySelected) {
     await selectedModeButton.click();
-    await expect(selectedModeButton).toHaveAttribute('aria-pressed', 'true', {
-      timeout: 10_000,
-    });
+    await waitForAttribute(selectedModeButton, 'aria-pressed', 'true', 10_000);
   }
 
   // Status options do not include "All". To avoid brittle failures when the shared
@@ -81,16 +146,14 @@ export async function startSession(
       (await statusButton.getAttribute('aria-pressed')) === 'true';
     if (!statusIsAlreadySelected) {
       await statusButton.click();
-      await expect(statusButton).toHaveAttribute('aria-pressed', 'true', {
-        timeout: 10_000,
-      });
+      await waitForAttribute(statusButton, 'aria-pressed', 'true', 10_000);
     }
 
     // Count: label is "Questions" (not "Count")
     await page.getByLabel('Questions').fill(String(count));
 
     try {
-      await expect(startSessionButton).toBeEnabled({ timeout: 3_000 });
+      await waitForEnabled(startSessionButton, 3_000);
       selectedStatus = statusLabel;
       break;
     } catch (error) {
@@ -110,7 +173,7 @@ export async function startSession(
 
   await startSessionButton.click();
 
-  await expect(page).toHaveURL(/\/app\/practice\/[^/]+$/, { timeout: 15_000 });
+  await waitForUrl(page, /\/app\/practice\/[^/]+$/, 15_000);
   const expectedHeadingName =
     mode === 'tutor' ? 'Tutor Session' : 'Exam Session';
   await page
@@ -127,10 +190,7 @@ export async function startSession(
   const maxLoadAttempts = 3;
 
   for (let attempt = 1; attempt <= maxLoadAttempts; attempt++) {
-    await answerChoices.or(tryAgainButton).waitFor({
-      state: 'visible',
-      timeout: 60_000,
-    });
+    await waitForEitherVisible(answerChoices, tryAgainButton, 60_000);
 
     if (await answerChoices.isVisible().catch(() => false)) {
       await verifyRequestedSessionCount(page, count);
@@ -147,5 +207,5 @@ export async function startSession(
   }
 
   // Final check — if still no answer choices after retries, fail explicitly
-  await expect(answerChoices).toBeVisible({ timeout: 60_000 });
+  await answerChoices.waitFor({ state: 'visible', timeout: 60_000 });
 }

@@ -563,8 +563,13 @@ function isModuleFactoryExpression(
   if (ts.isFunctionDeclaration(declaration)) {
     return true;
   }
-  return ts.isVariableDeclaration(declaration) && declaration.initializer
-    ? isModuleFactoryExpression(declaration.initializer, seenDeclarations)
+  if (!ts.isVariableDeclaration(declaration)) {
+    return false;
+  }
+
+  const assignedValue = findLatestBindingValue(declaration, unwrapped);
+  return assignedValue
+    ? isModuleFactoryExpression(assignedValue, seenDeclarations)
     : false;
 }
 
@@ -613,6 +618,57 @@ function findLocalBindingDeclaration(
   }
 
   return null;
+}
+
+function findLatestBindingValue(
+  declaration: ts.VariableDeclaration,
+  reference: ts.Identifier,
+): ts.Expression | null {
+  const referencePosition = reference.getStart();
+  let latestValue =
+    declaration.initializer &&
+    declaration.initializer.getStart() < referencePosition
+      ? declaration.initializer
+      : null;
+  let latestPosition = latestValue?.getStart() ?? -1;
+  const executionScope = findExecutionScope(reference);
+
+  const visit = (node: ts.Node): void => {
+    if (node !== executionScope && ts.isFunctionLike(node)) {
+      return;
+    }
+    if (node.getStart() >= referencePosition) {
+      return;
+    }
+
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isIdentifier(node.left) &&
+      node.left.text === reference.text &&
+      findLocalBindingDeclaration(node.left) === declaration &&
+      node.getStart() > latestPosition
+    ) {
+      latestValue = node.right;
+      latestPosition = node.getStart();
+    }
+
+    ts.forEachChild(node, visit);
+  };
+
+  visit(executionScope);
+  return latestValue;
+}
+
+function findExecutionScope(node: ts.Node): ts.Node {
+  let current: ts.Node | undefined = node.parent;
+  while (current && !ts.isSourceFile(current)) {
+    if (ts.isFunctionLike(current)) {
+      return current;
+    }
+    current = current.parent;
+  }
+  return current ?? node.getSourceFile();
 }
 
 function asUnknownCast(expression: ts.Expression): ts.AsExpression | null {

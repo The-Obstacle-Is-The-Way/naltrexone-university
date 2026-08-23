@@ -1,80 +1,28 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-type WaitForOptions = {
-  state: 'visible';
-  timeout?: number;
-};
-
 type ExpectOptions = {
   timeout?: number;
 };
 
-type LocatorLike = {
-  click: () => Promise<void>;
-  count: () => Promise<number>;
-  fill: (value: string) => Promise<void>;
-  getAttribute: (name: string) => Promise<string | null>;
-  isEnabled: () => Promise<boolean>;
-  isVisible: () => Promise<boolean>;
-  or: (other: LocatorLike) => LocatorLike;
-  textContent: () => Promise<string | null>;
-  waitFor: (options: WaitForOptions) => Promise<void>;
-};
-
-type FakeLocator = LocatorLike & {
-  isVisibleNow: () => boolean;
-  textNow: () => string | null;
-};
-
-type PracticePageLike = {
-  goto: (url: string) => Promise<void>;
-  getByLabel: (label: string) => LocatorLike;
-  getByRole: (
-    role: string,
-    options?: { exact?: boolean; name?: string },
-  ) => LocatorLike;
-  getByText: (text: RegExp | string) => LocatorLike;
-  url: () => string;
-};
+type LocatorLike = import('./session').StartSessionLocator;
+type PracticePageLike = import('./session').StartSessionPage;
+type WaitForOptions = Parameters<LocatorLike['waitFor']>[0];
 
 vi.mock('@playwright/test', () => ({
-  expect: (target: unknown) => ({
-    async toBeEnabled(_options?: ExpectOptions) {
-      const locator = target as FakeLocator;
-      if (!(await locator.isEnabled())) {
-        throw new Error('Expected locator to be enabled.');
-      }
+  expect: {
+    poll(read: () => Promise<unknown> | unknown, _options?: ExpectOptions) {
+      return {
+        async toBe(expected: unknown) {
+          const actual = await read();
+          if (actual !== expected) {
+            throw new Error(
+              `Expected ${String(expected)}, received ${String(actual)}.`,
+            );
+          }
+        },
+      };
     },
-    async toBeVisible(options?: ExpectOptions) {
-      const locator = target as FakeLocator;
-      await locator.waitFor({
-        state: 'visible',
-        ...(options?.timeout !== undefined ? { timeout: options.timeout } : {}),
-      });
-    },
-    async toHaveAttribute(
-      name: string,
-      expected: string,
-      _options?: ExpectOptions,
-    ) {
-      const locator = target as FakeLocator;
-      const actual = await locator.getAttribute(name);
-      if (actual !== expected) {
-        throw new Error(
-          `Expected ${name}=${expected}, received ${String(actual)}.`,
-        );
-      }
-    },
-    async toHaveURL(expected: RegExp, _options?: ExpectOptions) {
-      const page = target as PracticePageLike;
-      const actual = page.url();
-      if (!expected.test(actual)) {
-        throw new Error(
-          `Expected URL ${String(expected)}, received ${actual}.`,
-        );
-      }
-    },
-  }),
+  },
 }));
 
 let startSession: typeof import('./session').startSession;
@@ -90,10 +38,8 @@ function createLocator(input: {
   onClick?: () => void;
   onFill?: (value: string) => void;
   textContent?: () => string | null;
-}): FakeLocator {
-  const locator: FakeLocator = {
-    isVisibleNow: input.isVisible,
-    textNow: () => input.textContent?.() ?? null,
+}): LocatorLike {
+  const locator: LocatorLike = {
     click: vi.fn(async () => {
       if (!input.isVisible()) {
         throw new Error('Cannot click a hidden locator.');
@@ -110,13 +56,6 @@ function createLocator(input: {
     ),
     isEnabled: vi.fn(async () => input.isEnabled?.() ?? input.isVisible()),
     isVisible: vi.fn(async () => input.isVisible()),
-    or(other: LocatorLike): LocatorLike {
-      const otherLocator = other as FakeLocator;
-      return createLocator({
-        isVisible: () => locator.isVisibleNow() || otherLocator.isVisibleNow(),
-        textContent: () => locator.textNow() ?? otherLocator.textNow(),
-      });
-    },
     textContent: vi.fn(async () => input.textContent?.() ?? null),
     waitFor: vi.fn(async ({ state }: WaitForOptions) => {
       if (state !== 'visible') {
@@ -347,7 +286,7 @@ describe('startSession helper', () => {
       defaultQuestionCount: 1,
     });
 
-    await startSession(page as never, 'tutor', 2);
+    await startSession(page, 'tutor', 2);
 
     expect(page.url()).toBe('/app/practice/session-1');
     await expect(page.getByText('Question 1 of 2').isVisible()).resolves.toBe(
@@ -362,7 +301,7 @@ describe('startSession helper', () => {
       selectedStatusReselectionStalesStartHandler: true,
     });
 
-    await startSession(page as never, 'tutor', 2);
+    await startSession(page, 'tutor', 2);
 
     expect(page.url()).toBe('/app/practice/session-1');
   });
@@ -374,7 +313,7 @@ describe('startSession helper', () => {
       selectedModeReselectionStalesStartHandler: true,
     });
 
-    await startSession(page as never, 'tutor', 2);
+    await startSession(page, 'tutor', 2);
 
     expect(page.url()).toBe('/app/practice/session-1');
   });
@@ -385,7 +324,7 @@ describe('startSession helper', () => {
       defaultQuestionCount: 1,
     });
 
-    await expect(startSession(page as never, 'tutor', 2)).rejects.toThrow(
+    await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
       'startSession created 1-question session but 2 were requested',
     );
   });
@@ -397,7 +336,7 @@ describe('startSession helper', () => {
       forcedActualCount: 3,
     });
 
-    await expect(startSession(page as never, 'tutor', 2)).rejects.toThrow(
+    await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
       'startSession created 3-question session but 2 were requested',
     );
   });

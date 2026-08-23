@@ -151,6 +151,92 @@ describe('test-double fidelity source scan', () => {
     ]);
   });
 
+  it('detects an own-code vi.doMock factory assigned to a mutable local binding', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          let moduleFactory: (() => object) | undefined;
+          moduleFactory = () => ({ example: true });
+          vi.doMock('@/lib/example', moduleFactory);
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 3,
+        detail:
+          "own-code module '@/lib/example' must not use a factory-form vi.doMock",
+      },
+    ]);
+  });
+
+  it('uses the latest assignment before an own-code module mock call', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          let moduleFactory: unknown = () => ({ example: true });
+          moduleFactory = { spy: true };
+          vi.mock('@/lib/example', moduleFactory);
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('ignores assignments after an own-code module mock call', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          let moduleFactory: unknown;
+          vi.doMock('@/lib/example', moduleFactory);
+          moduleFactory = () => ({ example: true });
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('ignores assignments in a nested execution scope', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          let moduleFactory: unknown;
+          function configureFactory() {
+            moduleFactory = () => ({ example: true });
+          }
+          vi.mock('@/lib/example', moduleFactory);
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('detects a mutable factory assignment in the mock call execution scope', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          function configureMock() {
+            let moduleFactory: unknown;
+            moduleFactory = () => ({ example: true });
+            vi.doMock('@/lib/example', moduleFactory);
+          }
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toHaveLength(1);
+  });
+
   it('detects an own-code vi.doMock factory referenced through a function declaration', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
