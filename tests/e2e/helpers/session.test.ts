@@ -138,6 +138,7 @@ function createPracticePage(input: {
   defaultQuestionCount?: number;
   forcedActualCount?: number;
   incompleteSession?: boolean;
+  selectedModeReselectionStalesStartHandler?: boolean;
   selectedStatusReselectionStalesStartHandler?: boolean;
 }): PracticePageLike {
   const state = {
@@ -265,6 +266,12 @@ function createPracticePage(input: {
               state.currentUrl === '/app/practice' &&
               !state.hasIncompleteSession,
             onClick: () => {
+              if (
+                input.selectedModeReselectionStalesStartHandler &&
+                state.selectedMode === name.toLowerCase()
+              ) {
+                state.startHandlerIsStale = true;
+              }
               state.selectedMode = name.toLowerCase() as 'tutor' | 'exam';
             },
           });
@@ -353,6 +360,18 @@ describe('startSession helper', () => {
       availableQuestionCount: 5,
       defaultQuestionCount: 1,
       selectedStatusReselectionStalesStartHandler: true,
+    });
+
+    await startSession(page as never, 'tutor', 2);
+
+    expect(page.url()).toBe('/app/practice/session-1');
+  });
+
+  it('starts through the current handler when the requested mode is already selected', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      selectedModeReselectionStalesStartHandler: true,
     });
 
     await startSession(page as never, 'tutor', 2);

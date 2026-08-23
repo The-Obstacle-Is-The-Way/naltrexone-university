@@ -56,10 +56,14 @@ export async function startSession(
     name: mode === 'tutor' ? 'Tutor' : 'Exam',
     exact: true,
   });
-  await selectedModeButton.click();
-  await expect(selectedModeButton).toHaveAttribute('aria-pressed', 'true', {
-    timeout: 10_000,
-  });
+  const modeIsAlreadySelected =
+    (await selectedModeButton.getAttribute('aria-pressed')) === 'true';
+  if (!modeIsAlreadySelected) {
+    await selectedModeButton.click();
+    await expect(selectedModeButton).toHaveAttribute('aria-pressed', 'true', {
+      timeout: 10_000,
+    });
+  }
 
   // Status options do not include "All". To avoid brittle failures when the shared
   // E2E user has exhausted "Unanswered", probe the supported statuses and pick the
