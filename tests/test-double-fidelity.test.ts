@@ -130,6 +130,119 @@ describe('test-double fidelity source scan', () => {
     ]);
   });
 
+  it('detects an own-code vi.mock factory referenced through a local variable', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          const moduleFactory = () => ({ example: true });
+          vi.mock('@/lib/example', moduleFactory);
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 2,
+        detail:
+          "own-code module '@/lib/example' must not use a factory-form vi.mock",
+      },
+    ]);
+  });
+
+  it('detects an own-code vi.doMock factory referenced through a function declaration', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          function moduleFactory() { return { example: true }; }
+          vi.doMock('@/lib/example', moduleFactory);
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 2,
+        detail:
+          "own-code module '@/lib/example' must not use a factory-form vi.doMock",
+      },
+    ]);
+  });
+
+  it('detects a referenced module factory through a local alias', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          const baseFactory = () => ({ example: true });
+          const moduleFactory = baseFactory;
+          vi.mock('@/lib/example', moduleFactory);
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toHaveLength(1);
+  });
+
+  it('ignores a referenced spy-options object because it is not a factory', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          const spyOptions = { spy: true };
+          vi.mock('@/lib/example', spyOptions);
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('does not resolve past a parameter that shadows a factory declaration', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          function moduleFactory() { return { example: true }; }
+          function configure(moduleFactory: { spy: boolean }) {
+            vi.mock('@/lib/example', moduleFactory);
+          }
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('ignores an unresolved factory identifier', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `vi.mock('@/lib/example', importedModuleFactory);`,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('stops resolving a cycle of local aliases', () => {
+    const occurrences = collectOwnCodeModuleMockOccurrences([
+      source(
+        'app/example.test.ts',
+        `
+          const firstFactory = secondFactory;
+          const secondFactory = firstFactory;
+          vi.mock('@/lib/example', firstFactory);
+        `,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
   it('ignores external package factories', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(

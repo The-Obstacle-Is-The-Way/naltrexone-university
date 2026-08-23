@@ -287,7 +287,7 @@ export function collectOwnCodeModuleMockOccurrences(
           moduleArgument &&
           ts.isStringLiteralLike(moduleArgument) &&
           isOwnCodePath(moduleArgument.text) &&
-          isInlineModuleFactory(implementationArgument)
+          isModuleFactory(implementationArgument)
         ) {
           occurrences.push({
             filePath: source.filePath,
@@ -534,14 +534,85 @@ function isOwnCodePath(modulePath: string): boolean {
   );
 }
 
-function isInlineModuleFactory(
+function isModuleFactory(
   implementationArgument: ts.Expression | undefined,
 ): boolean {
-  return Boolean(
-    implementationArgument &&
-      (ts.isArrowFunction(implementationArgument) ||
-        ts.isFunctionExpression(implementationArgument)),
-  );
+  return implementationArgument
+    ? isModuleFactoryExpression(implementationArgument, new Set())
+    : false;
+}
+
+function isModuleFactoryExpression(
+  expression: ts.Expression,
+  seenDeclarations: Set<ts.Declaration>,
+): boolean {
+  const unwrapped = unwrapParentheses(expression);
+  if (ts.isArrowFunction(unwrapped) || ts.isFunctionExpression(unwrapped)) {
+    return true;
+  }
+  if (!ts.isIdentifier(unwrapped)) {
+    return false;
+  }
+
+  const declaration = findLocalBindingDeclaration(unwrapped);
+  if (!declaration || seenDeclarations.has(declaration)) {
+    return false;
+  }
+  seenDeclarations.add(declaration);
+
+  if (ts.isFunctionDeclaration(declaration)) {
+    return true;
+  }
+  return ts.isVariableDeclaration(declaration) && declaration.initializer
+    ? isModuleFactoryExpression(declaration.initializer, seenDeclarations)
+    : false;
+}
+
+type LocalFactoryBinding =
+  | ts.FunctionDeclaration
+  | ts.ParameterDeclaration
+  | ts.VariableDeclaration;
+
+function findLocalBindingDeclaration(
+  identifier: ts.Identifier,
+): LocalFactoryBinding | null {
+  let current: ts.Node | undefined = identifier.parent;
+
+  while (current) {
+    if (ts.isBlock(current) || ts.isSourceFile(current)) {
+      for (const statement of current.statements) {
+        if (
+          ts.isFunctionDeclaration(statement) &&
+          statement.name?.text === identifier.text
+        ) {
+          return statement;
+        }
+        if (ts.isVariableStatement(statement)) {
+          const declaration = statement.declarationList.declarations.find(
+            (candidate) =>
+              ts.isIdentifier(candidate.name) &&
+              candidate.name.text === identifier.text,
+          );
+          if (declaration) {
+            return declaration;
+          }
+        }
+      }
+    }
+    if (ts.isFunctionLike(current)) {
+      const parameter = current.parameters.find(
+        (candidate) =>
+          ts.isIdentifier(candidate.name) &&
+          candidate.name.text === identifier.text,
+      );
+      if (parameter) {
+        return parameter;
+      }
+    }
+    current = current.parent;
+  }
+
+  return null;
 }
 
 function asUnknownCast(expression: ts.Expression): ts.AsExpression | null {
