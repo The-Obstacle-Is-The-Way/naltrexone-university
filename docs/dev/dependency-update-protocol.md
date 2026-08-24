@@ -14,7 +14,7 @@ This is the on-call playbook for incoming Dependabot PRs and ad-hoc dependency w
   pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
   ```
 
-- If the authenticated E2E environment is present in `.env.local`, also run `pnpm test:e2e`.
+- Run `pnpm test:e2e` as well. It is mandatory for repo-owned dependency PRs, not conditional: CI does not run the E2E lane on Dependabot PRs (below), so the local run is the only E2E evidence those changes get until [DEBT-473](../debt/debt-473-green-without-evidence.md) step 6 / [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) resolve how they receive credentials. If your `.env.local` lacks the authenticated E2E environment, say so in the PR body instead of skipping silently.
 
 ## Group PRs: Minor and Patch Updates
 
@@ -89,15 +89,15 @@ An empty state flip or a stale prior review does not satisfy the repo rule.
 
 ## Dependabot PRs and Secrets
 
-GitHub does not provide normal repository secrets to Dependabot PR workflows. The CI workflow therefore keeps non-secret checks running while skipping the E2E secret path for `dependabot[bot]` pull requests.
+GitHub does not provide repository Actions secrets to Dependabot PR workflows; it provides *Dependabot secrets*, a separate store that this repository has deliberately left empty because CI's secrets are job-scoped ([DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md)). The CI workflow therefore keeps non-secret checks running while skipping the E2E path for `dependabot[bot]` pull requests.
 
 Current anchors:
 
 - `.github/workflows/ci.yml:42-44` sets `NEXT_PUBLIC_SKIP_CLERK` from whether Clerk secrets are available.
-- `.github/workflows/ci.yml:137-140` skips E2E credential validation on Dependabot PRs.
-- `.github/workflows/ci.yml:189-193` skips the E2E smoke run on Dependabot PRs.
+- `.github/workflows/ci.yml:143-146` skips E2E credential validation on Dependabot PRs.
+- `.github/workflows/ci.yml:197-201` skips the E2E smoke run on Dependabot PRs.
 
-This is not a weaker merge bar. It is an honest one ([DEBT-473](../debt/debt-473-green-without-evidence.md) F5 disputes both halves: the E2E lane is absent and the aggregate check does not say so; step 5 records the Dependabot-secrets option and the decision): Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. E2E still runs on pushes to `main` and human same-repo PRs where secrets exist.
+Until DEBT-473 steps 3 and 6 and DEBT-474 are resolved, Dependabot PRs have a weaker evidence bar: the E2E lane is absent and the aggregate `test` check does not identify that gap. Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. E2E still runs on pushes to `main` and human same-repo PRs where secrets exist; for Dependabot PRs the local `pnpm test:e2e` above is the compensating control.
 
 ## Dependabot Config Policy
 
