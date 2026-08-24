@@ -14,7 +14,7 @@ This is the on-call playbook for incoming Dependabot PRs and ad-hoc dependency w
   pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
   ```
 
-- Run `pnpm test:e2e` as well. It is mandatory for repo-owned dependency PRs, not conditional: CI does not run the E2E lane on Dependabot PRs (below), so the local run is the only E2E evidence those changes get until [DEBT-473](../debt/debt-473-green-without-evidence.md) step 6 / [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) resolve how they receive credentials. If your `.env.local` lacks the authenticated E2E environment, say so in the PR body instead of skipping silently.
+- Run `pnpm test:e2e` as well. It is mandatory for repo-owned dependency PRs, not conditional. For Dependabot-authored PRs the local run is the only E2E evidence, because CI skips the hosted E2E lane for `dependabot[bot]` (below); human same-repo dependency PRs still receive hosted E2E when the secrets are present. This stays mandatory until [DEBT-473](../debt/debt-473-green-without-evidence.md) step 6 / [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) resolve how they receive credentials. If your `.env.local` lacks the authenticated E2E environment, say so in the PR body instead of skipping silently.
 
 ## Group PRs: Minor and Patch Updates
 
