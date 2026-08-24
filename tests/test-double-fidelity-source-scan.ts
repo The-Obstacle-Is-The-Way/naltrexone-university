@@ -136,6 +136,30 @@ const INTENTIONAL_INVALID_CAST_PATTERNS: readonly IntentionalInvalidCastPattern[
     },
   ];
 
+// A never cast is legitimate only when it forces an impossible *value* through
+// an exhaustive runtime guard. Object literals and identifiers are collaborators,
+// not impossible values, and must stay on the ratchet.
+function isImpossibleLiteralExpression(expression: ts.Expression): boolean {
+  let inner = expression;
+  while (
+    ts.isParenthesizedExpression(inner) ||
+    ts.isAsExpression(inner) ||
+    ts.isTypeAssertionExpression(inner)
+  ) {
+    inner = inner.expression;
+  }
+
+  return (
+    ts.isStringLiteralLike(inner) ||
+    ts.isNumericLiteral(inner) ||
+    ts.isBigIntLiteral(inner) ||
+    inner.kind === ts.SyntaxKind.TrueKeyword ||
+    inner.kind === ts.SyntaxKind.FalseKeyword ||
+    inner.kind === ts.SyntaxKind.NullKeyword ||
+    (ts.isPrefixUnaryExpression(inner) && ts.isNumericLiteral(inner.operand))
+  );
+}
+
 // These are shape-only test seams, not behavioral collaborators. Each rule is
 // narrow on purpose so a new target starts at a zero ratchet floor.
 export const UNKNOWN_CAST_ALLOWLIST: readonly UnknownCastAllowlistRule[] = [
@@ -166,8 +190,10 @@ export const UNKNOWN_CAST_ALLOWLIST: readonly UnknownCastAllowlistRule[] = [
   {
     name: 'exhaustiveness-negative-case',
     rationale:
-      'A never cast deliberately reaches an exhaustive runtime guard with an impossible value.',
-    matches: ({ cast }) => cast.type.kind === ts.SyntaxKind.NeverKeyword,
+      'A never cast deliberately reaches an exhaustive runtime guard with an impossible literal. Scoped to literal expressions: never accepts every parameter type, so an unscoped rule would let any hand-rolled double bypass this ratchet.',
+    matches: ({ cast }) =>
+      cast.type.kind === ts.SyntaxKind.NeverKeyword &&
+      isImpossibleLiteralExpression(cast.expression),
   },
   {
     name: 'intentional-invalid-fixture',
@@ -429,8 +455,25 @@ function collectFakeBarrelExports(
   const exports = new Map<string, string>();
 
   for (const statement of parsed.statements) {
+    if (!ts.isExportDeclaration(statement)) {
+      continue;
+    }
+
+    // Fail closed like the rest of this module: a re-export whose names this
+    // parser cannot enumerate would silently drop a maintained fake from port
+    // coverage. A local `export {};` exports nothing and stays harmless.
     if (
-      !ts.isExportDeclaration(statement) ||
+      statement.moduleSpecifier &&
+      (!ts.isStringLiteralLike(statement.moduleSpecifier) ||
+        !statement.exportClause ||
+        !ts.isNamedExports(statement.exportClause))
+    ) {
+      throw new Error(
+        `${barrelSource.filePath} uses an unsupported export form; the fake barrel must name every re-export as 'export { FakeX } from "./fake-x";' so every maintained fake stays covered.`,
+      );
+    }
+
+    if (
       !statement.moduleSpecifier ||
       !ts.isStringLiteralLike(statement.moduleSpecifier) ||
       !statement.exportClause ||

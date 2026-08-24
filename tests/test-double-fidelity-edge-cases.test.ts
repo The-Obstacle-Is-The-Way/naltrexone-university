@@ -42,6 +42,45 @@ describe('test-double fidelity scan edge cases', () => {
     ).toThrow(/Could not resolve .*fake-missing.*FakeMissing/);
   });
 
+  it('counts a never cast whose expression is not an impossible literal', () => {
+    const occurrences = collectUnknownDoubleCastOccurrences([
+      source(
+        'src/adapters/repositories/probe.test.ts',
+        `
+const db = {
+  query: { users: { findFirst: async () => null } },
+} as unknown as never;
+`,
+      ),
+    ]);
+
+    expect(occurrences).toHaveLength(1);
+    expect(occurrences[0]?.detail).toMatch(/outside the documented/);
+  });
+
+  it('still allowlists an impossible literal reaching an exhaustive guard', () => {
+    const occurrences = collectUnknownDoubleCastOccurrences([
+      source(
+        'app/probe.test.ts',
+        "const mode = 'unknown' as unknown as never;\n",
+      ),
+    ]);
+
+    expect(occurrences).toHaveLength(0);
+  });
+
+  it('fails closed on a barrel export form the parser does not understand', () => {
+    expect(() =>
+      collectMaintainedFakePortNames({
+        barrelSource: source(
+          'src/application/test-helpers/fakes/index.ts',
+          "export * from './fake-clock';",
+        ),
+        fakeSources: [],
+      }),
+    ).toThrow(/unsupported export/i);
+  });
+
   it('requires exactly one exact declaration for an additional fake', () => {
     expect(() =>
       collectMaintainedFakePortNames({
