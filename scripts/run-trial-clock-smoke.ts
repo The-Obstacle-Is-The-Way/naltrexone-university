@@ -3,14 +3,32 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from '@/tests/shared/stripe-checkout-client-contract-cases';
 
 export const TRIAL_CLOCK_SMOKE_FILE =
   'tests/integration/stripe-trial-clock-smoke.integration.test.ts';
+export const STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE =
+  'tests/integration/stripe-checkout-client-contract.integration.test.ts';
 
 export const TRIAL_CLOCK_SMOKE_CASE_TITLES = [
   'cancels a trialing subscription at trial end when no card is present',
   'activates a trialing subscription at trial end when a card is present',
 ] as const;
+
+const STRIPE_PROVIDER_CONTRACT_FILES = [
+  TRIAL_CLOCK_SMOKE_FILE,
+  STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE,
+] as const;
+
+const STRIPE_PROVIDER_CONTRACT_CASE_TITLES = [
+  ...TRIAL_CLOCK_SMOKE_CASE_TITLES,
+  ...STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES,
+] as const;
+
+// The live trial-clock proof has healthy cases just over the ordinary
+// integration lane's 10-second budget. Keep this scheduled-only allowance
+// below the five-minute process-tree bound and out of the hermetic lane.
+const STRIPE_PROVIDER_CONTRACT_TEST_TIMEOUT_MS = 20_000;
 
 type SmokeEnvironment = Readonly<Record<string, string | undefined>>;
 
@@ -76,6 +94,8 @@ export function createTrialClockSmokeInvocation(
   outputFile: string,
   env: SmokeEnvironment,
 ): TrialClockSmokeInvocation {
+  const contractPriceId =
+    env.STRIPE_TRIAL_CLOCK_PRICE_ID ?? env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
   return {
     command: 'pnpm',
     args: [
@@ -84,7 +104,8 @@ export function createTrialClockSmokeInvocation(
       'run',
       '--config',
       'vitest.integration.config.mts',
-      TRIAL_CLOCK_SMOKE_FILE,
+      ...STRIPE_PROVIDER_CONTRACT_FILES,
+      `--testTimeout=${STRIPE_PROVIDER_CONTRACT_TEST_TIMEOUT_MS}`,
       '--reporter=json',
       `--outputFile=${outputFile}`,
     ],
@@ -93,7 +114,9 @@ export function createTrialClockSmokeInvocation(
       // The smoke imports no database code. An explicit empty value prevents
       // .env.test from making the shared integration setup probe Postgres.
       DATABASE_URL: '',
+      RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT: 'true',
       RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true',
+      STRIPE_CHECKOUT_CONTRACT_PRICE_ID: contractPriceId,
     },
   };
 }
@@ -111,44 +134,49 @@ function readReporterAssertions(report: unknown): ReporterAssertion[] {
     );
   }
 
-  const normalizedSmokeSuffix = `/${TRIAL_CLOCK_SMOKE_FILE}`;
-  const matchingResults = report.testResults.filter((result) => {
-    if (!isRecord(result) || typeof result.name !== 'string') return false;
-    const normalizedName = result.name.replaceAll('\\', '/');
-    return (
-      normalizedName === TRIAL_CLOCK_SMOKE_FILE ||
-      normalizedName.endsWith(normalizedSmokeSuffix)
-    );
-  });
+  const assertions: ReporterAssertion[] = [];
+  for (const expectedFile of STRIPE_PROVIDER_CONTRACT_FILES) {
+    const normalizedSuffix = `/${expectedFile}`;
+    const matchingResults = report.testResults.filter((result) => {
+      if (!isRecord(result) || typeof result.name !== 'string') return false;
+      const normalizedName = result.name.replaceAll('\\', '/');
+      return (
+        normalizedName === expectedFile ||
+        normalizedName.endsWith(normalizedSuffix)
+      );
+    });
 
-  if (matchingResults.length !== 1) {
-    throw new Error(
-      `PROOF_FILE_COUNT_INVALID: expected one report for ${TRIAL_CLOCK_SMOKE_FILE}, received ${matchingResults.length}`,
-    );
-  }
-
-  const matchingResult = matchingResults[0];
-  if (
-    !isRecord(matchingResult) ||
-    !Array.isArray(matchingResult.assertionResults)
-  ) {
-    throw new Error(
-      'PROOF_REPORT_INVALID: smoke report has no assertionResults array',
-    );
-  }
-
-  return matchingResult.assertionResults.map((assertion) => {
-    if (
-      !isRecord(assertion) ||
-      typeof assertion.title !== 'string' ||
-      typeof assertion.status !== 'string'
-    ) {
+    if (matchingResults.length !== 1) {
       throw new Error(
-        'PROOF_REPORT_INVALID: smoke report contains a malformed assertion',
+        `PROOF_FILE_COUNT_INVALID: expected one report for ${expectedFile}, received ${matchingResults.length}`,
       );
     }
-    return { title: assertion.title, status: assertion.status };
-  });
+
+    const matchingResult = matchingResults[0];
+    if (
+      !isRecord(matchingResult) ||
+      !Array.isArray(matchingResult.assertionResults)
+    ) {
+      throw new Error(
+        'PROOF_REPORT_INVALID: smoke report has no assertionResults array',
+      );
+    }
+
+    for (const assertion of matchingResult.assertionResults) {
+      if (
+        !isRecord(assertion) ||
+        typeof assertion.title !== 'string' ||
+        typeof assertion.status !== 'string'
+      ) {
+        throw new Error(
+          'PROOF_REPORT_INVALID: smoke report contains a malformed assertion',
+        );
+      }
+      assertions.push({ title: assertion.title, status: assertion.status });
+    }
+  }
+
+  return assertions;
 }
 
 export function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
@@ -162,7 +190,7 @@ export function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
     );
   }
 
-  for (const expectedTitle of TRIAL_CLOCK_SMOKE_CASE_TITLES) {
+  for (const expectedTitle of STRIPE_PROVIDER_CONTRACT_CASE_TITLES) {
     const matches = assertions.filter(
       (assertion) => assertion.title === expectedTitle,
     );
@@ -193,9 +221,9 @@ export function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
   };
 }
 
-// Two 10-second cases plus two 15-second cleanup-hook budgets normally finish
-// in under a minute. Five minutes bounds a stuck provider process tree while
-// leaving equal headroom inside the workflow's 10-minute job budget.
+// The two trial-clock cases and four Checkout client contract cases normally
+// finish in under two minutes. Five minutes bounds a stuck provider process
+// tree while leaving equal headroom inside the workflow's 10-minute job budget.
 const TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
 const TRIAL_CLOCK_SMOKE_SIGNAL_GRACE_MS = 10 * 1000;
 

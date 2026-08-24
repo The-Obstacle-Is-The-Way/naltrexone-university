@@ -81,7 +81,22 @@ const db = {
     ).toThrow(/unsupported export/i);
   });
 
-  it('requires exactly one exact declaration for an additional fake', () => {
+  it('fails when an additional fake declaration is absent', () => {
+    expect(() =>
+      collectMaintainedFakePortNames({
+        barrelSource: source(
+          'src/application/test-helpers/fakes/index.ts',
+          'export {};',
+        ),
+        fakeSources: [],
+        additionalFakeClassNames: ['FakeStripeCheckoutClient'],
+      }),
+    ).toThrow(
+      /Expected exactly one source for FakeStripeCheckoutClient, found 0/,
+    );
+  });
+
+  it('does not accept a longer class-name prefix as an additional fake', () => {
     expect(() =>
       collectMaintainedFakePortNames({
         barrelSource: source(
@@ -184,7 +199,7 @@ const db = {
     ]);
   });
 
-  it('traces a concise-arrow helper back to its object literal', () => {
+  it('traces a concise-arrow helper result into a typed variable', () => {
     const occurrences = collectHandRolledPortDoubleOccurrences(
       [
         source(
@@ -192,6 +207,45 @@ const db = {
           `
             interface PaymentGateway { charge(): Promise<void> }
             const createGateway = () => ({ charge: async () => undefined });
+            const gateway: PaymentGateway = createGateway();
+          `,
+        ),
+      ],
+      new Set(['PaymentGateway']),
+    );
+
+    expect(occurrences).toHaveLength(1);
+  });
+
+  it('traces a concise-arrow helper passed to a typed parameter', () => {
+    const occurrences = collectHandRolledPortDoubleOccurrences(
+      [
+        source(
+          'src/application/example.test.ts',
+          `
+            interface PaymentGateway { charge(): Promise<void> }
+            const createGateway = () => ({ charge: async () => undefined });
+            function exercise(_gateway: PaymentGateway) {}
+            exercise(createGateway());
+          `,
+        ),
+      ],
+      new Set(['PaymentGateway']),
+    );
+
+    expect(occurrences).toHaveLength(1);
+  });
+
+  it('traces an object returned by a block-bodied helper', () => {
+    const occurrences = collectHandRolledPortDoubleOccurrences(
+      [
+        source(
+          'src/application/example.test.ts',
+          `
+            interface PaymentGateway { charge(): Promise<void> }
+            function createGateway() {
+              return { charge: async () => undefined };
+            }
             function exercise(_gateway: PaymentGateway) {}
             exercise(createGateway());
           `,
@@ -211,9 +265,9 @@ const db = {
           `
             interface PaymentGateway { charge(): Promise<void> }
             function createGateway() {
-              function nested() { return { ignored: true }; }
+              function nested() { return { charge: async () => undefined }; }
               nested();
-              return { charge: async () => undefined };
+              return undefined;
             }
             function exercise(_gateway: PaymentGateway) {}
             exercise(createGateway());
@@ -223,8 +277,7 @@ const db = {
       new Set(['PaymentGateway']),
     );
 
-    expect(occurrences).toHaveLength(1);
-    expect(occurrences[0]?.lineNumber).toBe(5);
+    expect(occurrences).toEqual([]);
   });
 
   it('terminates cyclic origins and ignores unsupported property origins', () => {
