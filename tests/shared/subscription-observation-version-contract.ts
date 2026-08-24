@@ -1,15 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import type {
+  SubscriptionRepository,
   SubscriptionUpsertInput,
-  SubscriptionUpsertResult,
 } from '@/src/application/ports/repositories';
-import type { Subscription } from '@/src/domain/entities';
 
-export type SubscriptionObservationVersionContractRepository = {
-  findByUserId(userId: string): Promise<Subscription | null>;
-  findObservationVersionByUserId(userId: string): Promise<number | null>;
-  upsert(input: SubscriptionUpsertInput): Promise<SubscriptionUpsertResult>;
-};
+export const SUBSCRIPTION_REPOSITORY_CONTRACT_METHODS = [
+  'findByUserId',
+  'findExternalSubscriptionIdByUserId',
+  'findObservationVersionByUserId',
+  'findByExternalSubscriptionId',
+  'upsert',
+] as const satisfies readonly (keyof SubscriptionRepository)[];
+
+type MissingSubscriptionRepositoryContractMethod = Exclude<
+  keyof SubscriptionRepository,
+  (typeof SUBSCRIPTION_REPOSITORY_CONTRACT_METHODS)[number]
+>;
+
+const allSubscriptionRepositoryMethodsAreNamed: MissingSubscriptionRepositoryContractMethod extends never
+  ? true
+  : false = true;
+void allSubscriptionRepositoryMethodsAreNamed;
+
+export type SubscriptionObservationVersionContractRepository =
+  SubscriptionRepository;
 
 export type SubscriptionObservationVersionContractHarness = {
   repository: SubscriptionObservationVersionContractRepository;
@@ -58,6 +72,40 @@ export const subscriptionObservationVersionContractScenarios: readonly ContractS
         await expect(
           harness.repository.findObservationVersionByUserId(harness.userId),
         ).resolves.toBe(1);
+      },
+    },
+    {
+      name: 'finds the external subscription id mapped to a user',
+      async run(harness) {
+        const externalSubscriptionId =
+          harness.externalSubscriptionId('lookup_by_user');
+        await harness.repository.upsert(
+          createUpsertInput(harness, externalSubscriptionId, null),
+        );
+
+        await expect(
+          harness.repository.findExternalSubscriptionIdByUserId(harness.userId),
+        ).resolves.toBe(externalSubscriptionId);
+      },
+    },
+    {
+      name: 'finds a subscription by its external subscription id',
+      async run(harness) {
+        const externalSubscriptionId =
+          harness.externalSubscriptionId('lookup_by_external');
+        await harness.repository.upsert(
+          createUpsertInput(harness, externalSubscriptionId, null),
+        );
+
+        await expect(
+          harness.repository.findByExternalSubscriptionId(
+            externalSubscriptionId,
+          ),
+        ).resolves.toMatchObject({
+          userId: harness.userId,
+          plan: 'monthly',
+          status: 'active',
+        });
       },
     },
     {

@@ -38,7 +38,7 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Run fail-closed Stripe trial clock smoke
+      - name: Run fail-closed Stripe provider contracts
         env:
           RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true'
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}

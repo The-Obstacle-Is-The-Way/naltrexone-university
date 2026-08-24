@@ -59,6 +59,8 @@ Do not trust an inline SDK stub to model runtime binding. `.claude/rules/archite
 
 The executable DEBT-472 ratchet in `tests/test-double-fidelity.test.ts` blocks growth in own-code module mocks, unknown double casts, and hand-rolled doubles for ports with maintained fakes.
 
+The live fake↔real evidence, dated waivers, and explicit known divergences are in `docs/dev/test-double-contract-register.md`. Update that register whenever a maintained fake or its corresponding adapter changes; a missing note is not equivalent to “no known divergence.”
+
 ## Test Environment Isolation
 
 Tests that mutate `process.env` (module-scope defaults, `vi.stubEnv()`, or direct assignment) MUST snapshot/restore via `tests/shared/process-env.ts`. See **`.claude/rules/test-isolation.md`** for the full rule, cleanup ordering, and examples.
