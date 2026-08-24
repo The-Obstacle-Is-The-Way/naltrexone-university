@@ -99,7 +99,7 @@ describe('Playwright E2E lane policy', () => {
   });
 
   it('pins the official Stripe CLI used by the required completion trigger', () => {
-    expect(packageJson.devDependencies['@stripe/cli']).toBe('1.50.0');
+    expect(packageJson.devDependencies['@stripe/cli']).toBe('1.50.1');
   });
 
   it('never opens the HTML report server after a local run', () => {
