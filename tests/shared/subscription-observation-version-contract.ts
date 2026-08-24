@@ -79,6 +79,10 @@ export const subscriptionObservationVersionContractScenarios: readonly ContractS
       async run(harness) {
         const externalSubscriptionId =
           harness.externalSubscriptionId('lookup_by_user');
+
+        await expect(
+          harness.repository.findExternalSubscriptionIdByUserId(harness.userId),
+        ).resolves.toBeNull();
         await harness.repository.upsert(
           createUpsertInput(harness, externalSubscriptionId, null),
         );
@@ -93,6 +97,12 @@ export const subscriptionObservationVersionContractScenarios: readonly ContractS
       async run(harness) {
         const externalSubscriptionId =
           harness.externalSubscriptionId('lookup_by_external');
+
+        await expect(
+          harness.repository.findByExternalSubscriptionId(
+            externalSubscriptionId,
+          ),
+        ).resolves.toBeNull();
         await harness.repository.upsert(
           createUpsertInput(harness, externalSubscriptionId, null),
         );

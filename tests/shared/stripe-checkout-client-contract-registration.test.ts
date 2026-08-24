@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { runStripeCheckoutClientContract } from './stripe-checkout-client-contract';
-import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from './stripe-checkout-client-contract-cases';
 
 describe('Stripe Checkout client contract registration', () => {
   it('registers reporter-stable literal case names', () => {
@@ -18,7 +17,10 @@ describe('Stripe Checkout client contract registration', () => {
     );
 
     expect(registeredNames).toEqual([
-      ...STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES,
+      'replays a frozen create response while retrieve exposes terminal live state',
+      'lists Sessions in reverse chronology with starting_after and has_more',
+      'keeps terminal Sessions visible in unfiltered listings',
+      'rejects an idempotency key reused with different parameters',
     ]);
   });
 });

@@ -59,6 +59,21 @@ describe('fake contract and divergence register', () => {
     );
   });
 
+  it('fails closed when a register marker pair is duplicated', () => {
+    expect(() =>
+      parseFakeContractRegister(`
+<!-- fake-contract-register:start -->
+| Double | Verification | Known divergences |
+| --- | --- | --- |
+<!-- fake-contract-register:end -->
+<!-- fake-contract-register:start -->
+| Double | Verification | Known divergences |
+| --- | --- | --- |
+<!-- fake-contract-register:end -->
+      `),
+    ).toThrow(/exactly once/);
+  });
+
   it('fails closed when a register row has the wrong number of cells', () => {
     expect(() =>
       parseFakeContractRegister(`

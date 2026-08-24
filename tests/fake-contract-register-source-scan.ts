@@ -52,9 +52,17 @@ export function collectMaintainedBehaviorDoubleNames(
 export function parseFakeContractRegister(
   markdown: string,
 ): FakeContractRegisterEntry[] {
+  const startCount = markdown.split(REGISTER_START).length - 1;
+  const endCount = markdown.split(REGISTER_END).length - 1;
+  if (startCount !== 1 || endCount !== 1) {
+    throw new Error(
+      'Fake contract register must contain each marker exactly once in one ordered start/end marker pair.',
+    );
+  }
+
   const start = markdown.indexOf(REGISTER_START);
   const end = markdown.indexOf(REGISTER_END);
-  if (start < 0 || end < 0 || end <= start) {
+  if (end <= start) {
     throw new Error(
       'Fake contract register must contain one ordered start/end marker pair.',
     );
