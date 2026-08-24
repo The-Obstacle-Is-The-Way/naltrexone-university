@@ -127,6 +127,23 @@ describe('fake contract and divergence register', () => {
     ]);
   });
 
+  it.each(['2026-99-99', '2026-02-31', '2026-00-10', '2026-13-01'])(
+    'flags a waiver whose date %s is not a real calendar date',
+    (value) => {
+      const entries = [
+        {
+          name: 'FakeOne',
+          verification: `Dated shared-contract waiver (${value}): isolation suite only.`,
+          knownDivergences: 'Common repository exclusions.',
+        },
+      ];
+
+      expect(collectFakeContractRegisterIssues(['FakeOne'], entries)).toEqual([
+        'FakeOne declares a waiver without an ISO date.',
+      ]);
+    },
+  );
+
   it('accepts a waiver carrying an ISO date', () => {
     const entries = [
       {

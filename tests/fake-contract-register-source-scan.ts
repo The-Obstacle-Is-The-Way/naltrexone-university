@@ -98,7 +98,26 @@ export function parseFakeContractRegister(
 }
 
 const WAIVER_PATTERN = /\bwaiver\b/i;
-const ISO_DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/;
+const ISO_DATE_PATTERN = /\b(\d{4})-(\d{2})-(\d{2})\b/;
+
+// A date-shaped string is not a date: `2026-99-99` would satisfy the pattern
+// while carrying no point in time to measure a waiver's staleness against.
+function hasCalendarDate(verification: string): boolean {
+  const match = ISO_DATE_PATTERN.exec(verification);
+  if (!match) return false;
+
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() === month - 1 &&
+    candidate.getUTCDate() === day
+  );
+}
 
 export function collectFakeContractRegisterIssues(
   maintainedNames: readonly string[],
@@ -125,7 +144,7 @@ export function collectFakeContractRegisterIssues(
       issues.push(`${name} has no verification or dated waiver.`);
     } else if (
       WAIVER_PATTERN.test(entry.verification) &&
-      !ISO_DATE_PATTERN.test(entry.verification)
+      !hasCalendarDate(entry.verification)
     ) {
       // A waiver is only meaningful while its date stands: any later behavior
       // change invalidates it. An undated waiver can never go stale, so it
