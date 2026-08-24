@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-01-31
+**Amended:** 2026-08-23 (DEBT-472 Part A — adapter-unit and provider-contract categories)
 **Decision Makers:** Architecture Team
 **Depends On:** ADR-001 (Clean Architecture Layers)
 
@@ -164,6 +165,12 @@ const mockRepo = {
 };
 ```
 
+#### Unit Tests (Adapters — Error Translation Only)
+
+**Amendment (2026-08-23, DEBT-472 Part A):** Adapter unit tests are a narrow category omitted from the original decision. They may isolate error translation that real infrastructure cannot safely or deterministically force. The adapter must accept a client-owned narrow seam, and the test may supply a narrowly typed shape-only stub without `as unknown as`.
+
+Adapter unit tests must not claim database or provider behavior such as constraints, state transitions, replay, pagination, ordering, or concurrency. Those claims require real infrastructure or a behavioral fake paired with a fake↔real contract test. The canonical live taxonomy and decision rule are in `.claude/rules/testing.md`.
+
 #### Integration Tests (Adapters)
 
 **Scope:** `src/adapters/` testing against real infrastructure
@@ -171,10 +178,11 @@ const mockRepo = {
 **Philosophy:**
 - Test that adapters correctly translate between layers
 - Use **real database** (Postgres via local service, Docker, or CI service)
-- Mock external providers at the boundary (Stripe/Clerk) to keep integration tests fast and non-flaky
+- Use a boundary stub only for application-owned error translation or wiring that does not claim provider behavior
+- Test supported provider behavior in the required real-provider contract lane below
 - Verify data persistence and retrieval
 
-**Coverage Target:** All repository methods, all gateway methods
+**Coverage Target:** All repository methods against real Postgres; gateway error translation plus supported provider behavior through the real-provider contract lane
 
 **Location:** `tests/integration/`
 
@@ -226,6 +234,12 @@ describe('DrizzleQuestionRepository', () => {
   });
 });
 ```
+
+#### Provider-Contract E2E Tests (Supported Provider Surface)
+
+**Amendment (2026-08-23, DEBT-472 Part A):** Supported provider behavior is a distinct required category, not a hermetic integration stub and not a hosted-HTML journey. It uses genuine provider test-mode objects and the application's real synchronization path. A provider stub cannot satisfy this category.
+
+The current required F2 lane is `tests/e2e/checkout-success-provider.spec.ts`: it proves application-created Checkout Session parameters, rejection of an open Session, CLI-triggered completion, real success-return synchronization, Postgres subscription persistence, and entitlement. Stripe-hosted DOM compatibility journeys remain scheduled observational tests because Stripe owns that HTML. See `docs/dev/testing-infrastructure.md` for lane ownership and bounded failure contracts.
 
 #### E2E Tests (Full System)
 

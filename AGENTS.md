@@ -73,7 +73,7 @@ This codebase follows strict conventions (Clean Architecture, SOLID, TDD). Code 
    cat src/adapters/gateways/clerk-auth-gateway.test.ts
    cat src/adapters/repositories/drizzle-user-repository.test.ts
    ```
-   - We use **fakes**, NEVER `vi.mock()` for our own code
+   - Follow the canonical test-double taxonomy and decision rule in `.claude/rules/testing.md`; do not invent local exceptions
    - Arrange-Act-Assert pattern
    - Descriptive test names: `it('returns X when Y')`
 
@@ -522,74 +522,11 @@ Run with: `pnpm test:browser` (real Chromium via Playwright — not jsdom).
 
 See `docs/dev/react-vitest-testing.md` for full details.
 
-### FAKES OVER MOCKS — MANDATORY
+### TEST-DOUBLE FIDELITY — MANDATORY
 
-**The Golden Rule: USE EXISTING FAKES FROM `src/application/test-helpers/fakes/`**
+The single canonical taxonomy, shape-vs-behavior decision rule, adapter unit-test pattern, contract-test requirement, and `vi.mock()` exceptions live in **`.claude/rules/testing.md` → “Test-Double Fidelity: Shape vs. Behavior.”** Follow that section before creating any double; do not restate or weaken it locally.
 
-If a fake class exists (e.g., `FakeAttemptRepository`), you MUST use it. Do NOT create inline objects with `vi.fn()`.
-
-**Available fakes source of truth:** `src/application/test-helpers/fakes/index.ts`.
-
-Common examples include `FakeQuestionRepository`, `FakeAttemptRepository`, `FakePracticeSessionRepository`, `FakeQuestionFeedbackRepository`, `FakeSubscriptionRepository`, `FakeUserRepository`, `FakeBookmarkRepository`, `FakeTagRepository`, `FakeStripeCustomerRepository`, `FakeStripeEventRepository`, `FakeIdempotencyKeyRepository`, `FakeClerkEventRepository`, `FakeDeletedClerkUserRepository`, `FakePendingStripeCustomerCleanupRepository`, `FakeLogger`, `FakeAuthGateway`, `FakePaymentGateway`, and `FakeRateLimiter`. Use-case fakes also exist (e.g. `FakeSubmitAnswerUseCase`, `FakeGetNextQuestionUseCase`). Check the barrel export before adding or listing a fake.
-
-**The Decision Tree:**
-```
-Does a Fake* class exist in `src/application/test-helpers/fakes/` for this dependency?
-  YES → Use it: new FakeAttemptRepository()
-  NO  → Is it an external dependency (Drizzle db, Clerk, Stripe SDK)?
-    YES → Use vi.fn() inline object OR vi.mock()
-    NO  → Add a new Fake* class in `src/application/test-helpers/fakes/`, then use it
-```
-
-**NEVER use `vi.mock()` for our own code.** Only for external packages you can't inject.
-
-```typescript
-// ✅ CORRECT - Use existing fake classes
-const attemptRepo = new FakeAttemptRepository();
-const questionRepo = new FakeQuestionRepository([question1, question2]);
-const authGateway = new FakeAuthGateway(user);
-const useCase = new SubmitAnswerUseCase(attemptRepo, questionRepo);
-
-// ❌ WRONG - Inline vi.fn() when a fake exists (creates DEBT-051!)
-const attemptRepo = {
-  insert: vi.fn().mockResolvedValue(attempt),
-  findByUserId: vi.fn().mockResolvedValue([]),
-};  // DON'T DO THIS - use FakeAttemptRepository instead
-
-// ❌ WRONG - Hijacking module imports
-vi.mock('./attempt-repository');  // NEVER DO THIS
-```
-
-**When vi.fn() inline objects ARE acceptable:**
-```typescript
-// ✅ OK - Mocking external Drizzle db object (no fake exists)
-const fakeDb = {
-  query: { users: { findFirst: vi.fn().mockResolvedValue(null) } }
-};
-const repo = new DrizzleUserRepository(fakeDb);
-
-// ✅ OK - External SDK surface you can't inject
-vi.mock('@clerk/nextjs', () => ({
-  UserButton: () => <div data-testid="user-button" />,
-}));
-
-// ✅ OK - Next.js internals
-vi.mock('next/link', () => ({ default: (props) => <a {...props} /> }));
-vi.mock('server-only', () => ({}));
-
-// ✅ OK - Browser Mode: sealed ESM namespaces (vi.spyOn won't work)
-// Server-action controllers can't be dependency-injected into React hooks.
-// Use { spy: true } to wrap exports as spies without replacing them.
-// { spy: true } preserves unstubbed real exports; factory mocks replace all exports.
-vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
-vi.mocked(practiceController.getSessionHistory).mockResolvedValue(ok({...}));
-```
-
-**Why Fakes > Inline vi.fn():**
-- Fakes are reusable across all tests
-- Fakes have real behavior (filtering, sorting, validation)
-- Inline vi.fn() duplicates logic and drifts from real implementations
-- Fakes only break when actual behavior changes
+The maintained application-fake barrel remains `src/application/test-helpers/fakes/index.ts`. Stripe Checkout client behavior uses adapter-owned `FakeStripeCheckoutClient` at `src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts`. The executable growth ratchets live in `tests/test-double-fidelity.test.ts` with per-file floors in `tests/test-double-fidelity-ratchet-floors.ts`.
 
 ### Test Quality Rules
 
