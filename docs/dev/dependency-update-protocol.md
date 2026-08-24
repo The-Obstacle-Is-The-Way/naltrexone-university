@@ -97,7 +97,7 @@ Current anchors:
 - `.github/workflows/ci.yml:137-140` skips E2E credential validation on Dependabot PRs.
 - `.github/workflows/ci.yml:189-193` skips the E2E smoke run on Dependabot PRs.
 
-This is not a weaker merge bar. It is an honest one: Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. E2E still runs on pushes to `main` and human same-repo PRs where secrets exist.
+This is not a weaker merge bar. It is an honest one ([DEBT-473](../debt/debt-473-green-without-evidence.md) F5 disputes both halves: the E2E lane is absent and the aggregate check does not say so; step 5 records the Dependabot-secrets option and the decision): Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. E2E still runs on pushes to `main` and human same-repo PRs where secrets exist.
 
 ## Dependabot Config Policy
 
