@@ -56,21 +56,23 @@ reviews:
         Controllers handle validation, error mapping, and orchestration.
         Repositories wrap database operations.
         Gateways wrap external services (Clerk, Stripe).
-        Tests MUST use fake DB objects via DI, NOT vi.mock() on our own code.
+        Tests MUST follow the canonical test-double rule in .claude/rules/testing.md.
+        A Drizzle/SDK call-chain object is not a fake; verify shape-only stubs,
+        behavioral fakes, contracts, and real-infrastructure coverage by that rule.
 
     # Test files - Vitest conventions
     - path: "**/*.test.ts"
       instructions: |
         TESTING CONVENTIONS (Vitest, NOT Jest):
-        1. Use fakes via dependency injection, NOT vi.mock() for our own code
-        2. vi.mock() is ONLY acceptable for external packages (Clerk, Next.js, server-only)
-        3. vi.fn() inside fake objects for spying is CORRECT
-        4. One concept per test, use Arrange-Act-Assert pattern
-        5. Test behavior, not implementation details
-        6. Use factories: createQuestion(), createChoice() from test-helpers/
-        7. Do NOT require dynamic import()/beforeAll loading in pure TypeScript *.test.ts suites.
+        1. Apply the single taxonomy, shape-vs-behavior decision rule, and exceptions
+           in .claude/rules/testing.md; do not infer a double's kind from its variable name.
+        2. Do not allow growth past tests/test-double-fidelity-ratchet-floors.ts.
+        3. One concept per test, use Arrange-Act-Assert pattern
+        4. Test behavior, not implementation details
+        5. Use factories: createQuestion(), createChoice() from test-helpers/
+        6. Do NOT require dynamic import()/beforeAll loading in pure TypeScript *.test.ts suites.
            That React 19 compatibility rule is scoped to **/*.test.tsx component tests.
-        8. FIXTURE IDs (see .claude/rules/fixture-integrity.md): in fakes-only
+        7. FIXTURE IDs (see .claude/rules/fixture-integrity.md): in fakes-only
            application/domain/use-case tests, readable string IDs such as 'q1',
            'user-1', or 'attempt-1' are INTENTIONAL and correct — do NOT suggest
            replacing them with UUIDs or crypto.randomUUID(). UUID-shaped fixtures are
