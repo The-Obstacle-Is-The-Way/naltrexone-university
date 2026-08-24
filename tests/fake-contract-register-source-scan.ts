@@ -97,6 +97,9 @@ export function parseFakeContractRegister(
   return entries;
 }
 
+const WAIVER_PATTERN = /\bwaiver\b/i;
+const ISO_DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/;
+
 export function collectFakeContractRegisterIssues(
   maintainedNames: readonly string[],
   entries: readonly FakeContractRegisterEntry[],
@@ -120,6 +123,14 @@ export function collectFakeContractRegisterIssues(
     const entry = matches[0];
     if (!entry?.verification.trim()) {
       issues.push(`${name} has no verification or dated waiver.`);
+    } else if (
+      WAIVER_PATTERN.test(entry.verification) &&
+      !ISO_DATE_PATTERN.test(entry.verification)
+    ) {
+      // A waiver is only meaningful while its date stands: any later behavior
+      // change invalidates it. An undated waiver can never go stale, so it
+      // would silently become permanent.
+      issues.push(`${name} declares a waiver without an ISO date.`);
     }
     if (!entry?.knownDivergences.trim()) {
       issues.push(`${name} has no known-divergences note.`);

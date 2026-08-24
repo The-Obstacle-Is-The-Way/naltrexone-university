@@ -2,6 +2,10 @@ import Stripe from 'stripe';
 import { describe } from 'vitest';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
+import {
+  STRIPE_TEST_MAX_NETWORK_RETRIES,
+  STRIPE_TEST_REQUEST_TIMEOUT_MS,
+} from '@/tests/e2e/helpers/stripe-test-client';
 import { runStripeCheckoutClientContract } from '@/tests/shared/stripe-checkout-client-contract';
 
 const RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT =
@@ -35,7 +39,14 @@ function getStripe(): Stripe {
     throw new Error(`Stripe Checkout client contract skipped: ${skipReason}`);
   }
 
-  return new Stripe(stripeSecretKey, { apiVersion: STRIPE_API_VERSION });
+  // Bound the provider call so one hung request cannot outrun the per-case
+  // budget this contract advertises; stripe-node otherwise defaults to an
+  // 80-second timeout with automatic retries.
+  return new Stripe(stripeSecretKey, {
+    apiVersion: STRIPE_API_VERSION,
+    maxNetworkRetries: STRIPE_TEST_MAX_NETWORK_RETRIES,
+    timeout: STRIPE_TEST_REQUEST_TIMEOUT_MS,
+  });
 }
 
 function sleep(ms: number): Promise<void> {

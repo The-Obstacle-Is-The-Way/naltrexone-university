@@ -113,6 +113,33 @@ describe('fake contract and divergence register', () => {
     ).toEqual(['FakeOne has no verification or dated waiver.']);
   });
 
+  it('flags a waiver that declares itself dated but carries no date', () => {
+    const entries = [
+      {
+        name: 'FakeOne',
+        verification: 'Dated shared-contract waiver: isolation suite only.',
+        knownDivergences: 'Common repository exclusions.',
+      },
+    ];
+
+    expect(collectFakeContractRegisterIssues(['FakeOne'], entries)).toEqual([
+      'FakeOne declares a waiver without an ISO date.',
+    ]);
+  });
+
+  it('accepts a waiver carrying an ISO date', () => {
+    const entries = [
+      {
+        name: 'FakeOne',
+        verification:
+          'Dated shared-contract waiver (2026-08-23): isolation suite only.',
+        knownDivergences: 'Common repository exclusions.',
+      },
+    ];
+
+    expect(collectFakeContractRegisterIssues(['FakeOne'], entries)).toEqual([]);
+  });
+
   it('reports a row for an unmaintained fake', () => {
     expect(
       collectFakeContractRegisterIssues(
