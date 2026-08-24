@@ -3,8 +3,8 @@
   "numPassedTestSuites": 2,
   "numFailedTestSuites": 0,
   "numPendingTestSuites": 0,
-  "numTotalTests": 2,
-  "numPassedTests": 2,
+  "numTotalTests": 6,
+  "numPassedTests": 6,
   "numFailedTests": 0,
   "numPendingTests": 0,
   "numTodoTests": 0,
@@ -57,6 +57,28 @@
       "status": "passed",
       "message": "",
       "name": "/repo/tests/integration/stripe-trial-clock-smoke.integration.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "status": "passed",
+          "title": "replays a frozen create response while retrieve exposes terminal live state"
+        },
+        {
+          "status": "passed",
+          "title": "lists Sessions in reverse chronology with starting_after and has_more"
+        },
+        {
+          "status": "passed",
+          "title": "keeps terminal Sessions visible in unfiltered listings"
+        },
+        {
+          "status": "passed",
+          "title": "rejects an idempotency key reused with different parameters"
+        }
+      ],
+      "status": "passed",
+      "name": "/repo/tests/integration/stripe-checkout-client-contract.integration.test.ts"
     }
   ]
 }

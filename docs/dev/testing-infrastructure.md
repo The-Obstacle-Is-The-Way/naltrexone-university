@@ -209,8 +209,11 @@ The local Docker database makes database state isolated, not the E2E suite herme
 | `stripe-hosted-checkout.ts` — browser navigation and form submission to `checkout.stripe.com` | none | both hosted journeys | 30-second hosted locator/navigation assertions inside a 120-second spec |
 | Production Checkout Session list/retrieve/create/expire and Subscription list | redirect and provider-contract specs | both hosted journeys | production retry policy inside a 120-second spec |
 | Stripe CLI completed-Session trigger and success-sync Session/Subscription retrieval | annual + cardless-trial provider-contract specs | none | 30-second CLI subprocess; 15 seconds/request + one retry; 120-second spec outer bound |
+| `FakeStripeCheckoutClient` fake↔provider contract — Customer and Checkout Session create/retrieve/expire/list | none; normal integration runs skip without the explicit opt-in | weekly/manual `stripe-trial-clock-smoke.yml` provider-contract job | 20-second scheduled test bound plus a five-minute fail-closed process-tree bound inside a ten-minute job |
 
 `workers: 1` remains deliberate. Parallel workers require proof of independent database users, Clerk sessions, Stripe owner/customer namespaces, rate-limit keys, and cleanup; per-worker usernames alone do not establish that contract.
+
+The scheduled Stripe runner now requires six named cases: the two trial-clock outcomes plus four `FakeStripeCheckoutClient` scenarios for frozen idempotent replay versus live retrieval, reverse-chronological cursor pagination with `has_more`, terminal-Session visibility, and same-key/different-parameter rejection. `RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT=true` is injected only into that bounded child process; the ordinary integration lane stays credential-free and reports those four cases as skipped. The child receives a 20-second scheduled-only test budget because a healthy live trial-clock case was measured at 10.28 seconds, just beyond the ordinary integration lane's global 10-second budget; the existing five-minute process-tree limit remains the outer failure bound. The runner rejects a zero-exit skip, a missing/duplicate file or case, any non-passing case, and malformed reporter output.
 
 ### Writing New E2E Tests
 

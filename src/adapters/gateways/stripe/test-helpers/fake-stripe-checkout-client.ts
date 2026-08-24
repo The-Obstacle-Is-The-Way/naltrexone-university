@@ -85,6 +85,8 @@ export class FakeStripeCheckoutClient implements StripeClient {
             const savedParams =
               this.savedParamsByIdempotencyKey.get(idempotencyKey);
             if (!savedParams || !isDeepStrictEqual(savedParams, params)) {
+              // The fields and adapter-matched "same parameters" phrase are
+              // verified against Stripe TEST mode by the DEBT-472 contract.
               throw Object.assign(
                 new Error(
                   'Keys for idempotent requests can only be used with the same parameters they were first used with.',

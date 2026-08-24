@@ -2,11 +2,13 @@ import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from '@/tests/shared/stripe-checkout-client-contract-cases';
 import {
   assertSmokeExecuted,
   createTrialClockSmokeInvocation,
   runTrialClockSmoke,
   runVitestWithJsonReporter,
+  STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE,
   spawnVitest,
   TRIAL_CLOCK_SMOKE_CASE_TITLES,
   TRIAL_CLOCK_SMOKE_FILE,
@@ -25,6 +27,13 @@ function validEnvironment(overrides: SmokeEnvironment = {}): SmokeEnvironment {
 
 function reporterOutput(
   assertions: Array<{ title: string; status: string }>,
+  checkoutAssertions: Array<{
+    title: string;
+    status: string;
+  }> = STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES.map((title) => ({
+    title,
+    status: 'passed',
+  })),
 ): unknown {
   return {
     success: true,
@@ -33,6 +42,11 @@ function reporterOutput(
         name: `/repo/${TRIAL_CLOCK_SMOKE_FILE}`,
         status: 'passed',
         assertionResults: assertions,
+      },
+      {
+        name: `/repo/${STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE}`,
+        status: 'passed',
+        assertionResults: checkoutAssertions,
       },
     ],
   };
@@ -126,7 +140,20 @@ describe('runTrialClockSmoke preflight', () => {
 });
 
 describe('createTrialClockSmokeInvocation', () => {
-  it('targets only the smoke through the integration config and disables the unused database setup', () => {
+  it('includes the credential-gated Checkout client contract in the scheduled proof', () => {
+    const invocation = createTrialClockSmokeInvocation(
+      '/tmp/trial-clock-smoke.json',
+      validEnvironment(),
+    );
+
+    expect(invocation.args).toContain(STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE);
+    expect(invocation.env.STRIPE_CHECKOUT_CONTRACT_PRICE_ID).toBe(
+      'price_contract_only',
+    );
+    expect(STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES).toHaveLength(4);
+  });
+
+  it('targets only the provider contracts through the integration config and disables the unused database setup', () => {
     const invocation = createTrialClockSmokeInvocation(
       '/tmp/trial-clock-smoke.json',
       validEnvironment({ DATABASE_URL: 'postgresql://remote.example/app' }),
@@ -141,6 +168,8 @@ describe('createTrialClockSmokeInvocation', () => {
         '--config',
         'vitest.integration.config.mts',
         TRIAL_CLOCK_SMOKE_FILE,
+        STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE,
+        '--testTimeout=20000',
         '--reporter=json',
         '--outputFile=/tmp/trial-clock-smoke.json',
       ],
@@ -149,7 +178,9 @@ describe('createTrialClockSmokeInvocation', () => {
           DATABASE_URL: 'postgresql://remote.example/app',
         }),
         DATABASE_URL: '',
+        RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT: 'true',
         RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true',
+        STRIPE_CHECKOUT_CONTRACT_PRICE_ID: 'price_contract_only',
       },
     });
   });
@@ -157,9 +188,8 @@ describe('createTrialClockSmokeInvocation', () => {
 
 describe('captured Vitest reporter payload fixtures', () => {
   // Real payloads captured from Vitest 4.1.10's JSON reporter running the
-  // actual smoke file (paths sanitized, provider error text redacted). The
-  // passed fixture is the captured skip envelope with statuses normalized to
-  // passed, because a fully passing capture requires a live Stripe run.
+  // actual smoke file (paths sanitized, provider error text redacted), extended
+  // with the Checkout contract reporter envelope required by this runner.
   const loadFixture = async (name: string): Promise<unknown> =>
     JSON.parse(
       await readFile(
@@ -168,12 +198,12 @@ describe('captured Vitest reporter payload fixtures', () => {
       ),
     );
 
-  it('accepts the real reporter envelope when both cases passed', async () => {
+  it('accepts the reporter envelope when all provider cases passed', async () => {
     const report = await loadFixture('trial-clock-smoke-report-passed.json');
 
     expect(assertSmokeExecuted(report)).toEqual({
-      executed: 2,
-      passed: 2,
+      executed: 6,
+      passed: 6,
       skipped: 0,
     });
   });
@@ -227,7 +257,7 @@ describe('runTrialClockSmoke execution proof', () => {
     );
   });
 
-  it('passes only when both named cases executed and passed with zero skips', async () => {
+  it('passes only when every named provider case executed and passed with zero skips', async () => {
     const report = reporterOutput(
       TRIAL_CLOCK_SMOKE_CASE_TITLES.map((title) => ({
         title,
@@ -238,7 +268,7 @@ describe('runTrialClockSmoke execution proof', () => {
 
     await expect(
       runTrialClockSmoke({ env: validEnvironment(), runVitest }),
-    ).resolves.toEqual({ executed: 2, passed: 2, skipped: 0 });
+    ).resolves.toEqual({ executed: 6, passed: 6, skipped: 0 });
     expect(runVitest).toHaveBeenCalledOnce();
   });
 
