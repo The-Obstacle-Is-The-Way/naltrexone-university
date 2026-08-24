@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type {
   SubscriptionRepository,
@@ -87,6 +88,15 @@ export const subscriptionObservationVersionContractScenarios: readonly ContractS
           createUpsertInput(harness, externalSubscriptionId, null),
         );
 
+        let unmatchedUserId = randomUUID();
+        while (unmatchedUserId === harness.userId) {
+          unmatchedUserId = randomUUID();
+        }
+        await expect(
+          harness.repository.findExternalSubscriptionIdByUserId(
+            unmatchedUserId,
+          ),
+        ).resolves.toBeNull();
         await expect(
           harness.repository.findExternalSubscriptionIdByUserId(harness.userId),
         ).resolves.toBe(externalSubscriptionId);
@@ -107,6 +117,19 @@ export const subscriptionObservationVersionContractScenarios: readonly ContractS
           createUpsertInput(harness, externalSubscriptionId, null),
         );
 
+        const unmatchedExternalSubscriptionId = harness.externalSubscriptionId(
+          'lookup_by_external_unmatched',
+        );
+        if (unmatchedExternalSubscriptionId === externalSubscriptionId) {
+          throw new Error(
+            'Contract harness must produce distinct external subscription IDs',
+          );
+        }
+        await expect(
+          harness.repository.findByExternalSubscriptionId(
+            unmatchedExternalSubscriptionId,
+          ),
+        ).resolves.toBeNull();
         await expect(
           harness.repository.findByExternalSubscriptionId(
             externalSubscriptionId,
