@@ -11,10 +11,10 @@ This is the on-call playbook for incoming Dependabot PRs and ad-hoc dependency w
 - Run the full local gate before pushing any repo-owned dependency or protocol PR:
 
   ```sh
-  pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
+  pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm db:test:up && pnpm test:integration && pnpm build
   ```
 
-- If the authenticated E2E environment is present in `.env.local`, also run `pnpm test:e2e`.
+- Run `pnpm test:e2e` as well. It is mandatory for repo-owned dependency PRs, not conditional; if your `.env.local` lacks the authenticated E2E environment, the PR is not mergeable until someone with it runs `pnpm test:e2e` on the PR head and records the receipt in the PR body — say so there rather than skipping silently. **Do not run a Dependabot-authored head locally with shared `.env.local` credentials:** a dependency bump is executable code, and `pnpm test:e2e` loads `.env.local` into its environment ([DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) F1). For Dependabot PRs the E2E evidence arrives after merge, not at PR time: version updates target `dev` and later receive promotion-PR plus post-merge `main` E2E, while security updates target the default branch and receive only post-merge `main` E2E. Until [DEBT-473](../debt/debt-473-green-without-evidence.md) step 6 / DEBT-474 step 4 provide isolated credentials, disclose the missing PR-time evidence and its route-specific compensating run in the merge note.
 
 ## Group PRs: Minor and Patch Updates
 
@@ -22,7 +22,7 @@ For grouped minor/patch Dependabot PRs:
 
 1. Read the PR body and upstream changelog links for every package in the group.
 2. Confirm the group does not include a known special-case tool. `@biomejs/biome` is intentionally split from the catch-all group because lint-rule shifts can block otherwise-good package updates.
-3. Run the full local gate on the PR head when the change is repo-owned. For Dependabot-owned branches, rely on the hosted gate plus any separate fix PRs required to make the base truthful.
+3. Run the full local gate on the PR head when the change is repo-owned. For Dependabot-owned branches, the hosted gate omits E2E (see below) and the head must not be run locally with shared credentials; review the diff and changelogs and merge with the E2E gap disclosed. Treat the later promotion-PR E2E as evidence only for `dev`-targeted version updates; default-branch security updates have no promotion PR and receive only the post-merge `main` run, plus any separate fix PRs required to make the base truthful.
 4. Merge only when GitHub Actions, Vercel, Codecov, and CodeRabbit are clean on the latest head.
 
 If one package in a group causes an unrelated failure, split or defer that package. Do not let a style-tool or test-runner change hold unrelated patch updates hostage.
@@ -89,15 +89,15 @@ An empty state flip or a stale prior review does not satisfy the repo rule.
 
 ## Dependabot PRs and Secrets
 
-GitHub does not provide normal repository secrets to Dependabot PR workflows. The CI workflow therefore keeps non-secret checks running while skipping the E2E secret path for `dependabot[bot]` pull requests.
+GitHub does not provide repository Actions secrets to Dependabot PR workflows; it provides *Dependabot secrets*, a separate store that this repository has deliberately left empty because CI's secrets are job-scoped ([DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md)). The CI workflow therefore keeps non-secret checks running while skipping the E2E path for `dependabot[bot]` pull requests.
 
 Current anchors:
 
 - `.github/workflows/ci.yml:42-44` sets `NEXT_PUBLIC_SKIP_CLERK` from whether Clerk secrets are available.
-- `.github/workflows/ci.yml:137-140` skips E2E credential validation on Dependabot PRs.
-- `.github/workflows/ci.yml:189-193` skips the E2E smoke run on Dependabot PRs.
+- `.github/workflows/ci.yml:143-146` skips E2E credential validation on Dependabot PRs.
+- `.github/workflows/ci.yml:197-201` skips the E2E smoke run on Dependabot PRs.
 
-This is not a weaker merge bar. It is an honest one: Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. E2E still runs on pushes to `main` and human same-repo PRs where secrets exist.
+Until DEBT-473 steps 3 and 6 and DEBT-474 are resolved, Dependabot PRs have a weaker evidence bar: the E2E lane is absent and the aggregate `test` check does not identify that gap. Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. Do not execute an untrusted Dependabot head locally with shared credentials. A `dev`-targeted version update later receives promotion-PR and post-merge `main` E2E; a default-branch security update receives only the post-merge `main` run. Disclose that route-specific, post-merge evidence rather than calling it PR-time proof.
 
 ## Dependabot Config Policy
 

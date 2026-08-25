@@ -292,7 +292,7 @@ agent-browser close
 
 By default, `agent-browser` does **not** load `.env.local`. For authenticated exploration, the recommended approach is loading a Playwright `storageState` file (see below). For local-only workflows, you can also export env vars in your current shell session (e.g., `set -a && source .env.local && set +a`) and then run your `agent-browser …` commands in that same shell.
 
-See [agent-browser.md](./agent-browser.md) for a focused quick reference and multiple auth options.
+See [agent-browser.md](../tooling/agent-browser.md) for a focused quick reference and multiple auth options.
 
 1) Create a temporary script that signs in via Clerk and saves `storageState`:
 
@@ -390,7 +390,7 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-CI runs the browser and required E2E layers only on pushes and same-repo PRs, because those jobs require secrets and Playwright browser installation. Fork PRs still run the non-browser gates. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
+CI runs the required E2E layer only on pushes and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it, and the single required `test` check is green either way (the omission is visible only in the job's step list — [DEBT-473](../debt/debt-473-green-without-evidence.md) F5, step 3). The browser lane is currently also restricted to pushes and same-repo PRs, but it needs no secrets (measured 2026-08-24: 64 files / 398 tests pass with every credential unset, at 22–28 s of Chromium install plus 43–51 s of tests); DEBT-473 step 3(a) removes that condition (3(b) is the separate evidence-summary action). Fork PRs run typecheck, lint, unit, integration, and build. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
 
 E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 
@@ -525,5 +525,5 @@ See [DEBT-293](../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.m
 - [Stripe vendor docs](../vendor-docs/stripe.md) — E2E test seeding pattern, test payment methods
 - [Clerk vendor docs](../vendor-docs/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)
-- [agent-browser.md](./agent-browser.md) — Agent-browser quick reference, auth patterns, common pitfalls
+- [agent-browser.md](../tooling/agent-browser.md) — Agent-browser quick reference, auth patterns, common pitfalls
 - `.agents/skills/agent-browser/SKILL.md` — Agent-browser CLI full command reference
