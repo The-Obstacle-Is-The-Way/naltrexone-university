@@ -128,6 +128,8 @@ async function waitForSessionStartOutcome(input: {
       )
       .toBe(true);
   } catch (error) {
+    if (expectedUrl.test(input.page.url())) return;
+
     const currentAlerts = await readNonemptyAlertTexts(alerts).catch(() => []);
     const renderedAlerts =
       currentAlerts.length === 0

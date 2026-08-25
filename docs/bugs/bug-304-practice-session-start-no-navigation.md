@@ -3,7 +3,7 @@
 **Status:** Open
 **Severity:** P3
 **Date:** 2026-08-25
-**Confirmed:** 2026-08-25 (required-E2E failure on this clone; source-level stale-handler path remains under traced characterization)
+**Confirmed:** 2026-08-25 (original required-E2E failure on this clone; promotion CI then reproduced a separate navigation-observation race in the diagnostic helper)
 **Component:** Practice / session starter / required E2E diagnostics
 
 ---
@@ -110,6 +110,38 @@ whether `startPracticeSession` was sent, whether a response arrived, or which
 client transition occurred in the original incident. The original intermittent
 cause therefore remains unproven and BUG-304 stays Open.
 
+## Promotion Regression and Root Cause
+
+PR #834 merged the first diagnostic fix to `dev` as `a083c3d5`.
+Promotion PR #835 then exposed a branch-local regression on exact head
+`a083c3d5` in CI run
+`32903291145`: the practice summary case timed out at 120 seconds and the
+review-mode audit timed out at 180 seconds. Both passed on retry, so Playwright
+reported `2 flaky` / `40 passed` after an 8.9-minute run. The green aggregate
+was rejected as evidence.
+
+Both failure contexts show that navigation and session creation had succeeded:
+the page was already on a session URL with the Tutor Session heading, question
+navigator, progress marker, and answer choices. The thrown diagnostic instead
+claimed that start produced neither navigation nor an alert. Its preserved
+cause identifies the race:
+
+1. `waitForSessionStartOutcome()` checked the pre-navigation URL.
+2. It began `role="alert"` text collection while the successful navigation
+   committed.
+3. Playwright rejected that locator read because navigation destroyed its
+   execution context.
+4. The helper's catch block did not re-check the authoritative URL and converted
+   the successful navigation into a test failure.
+
+The CI artifact is `playwright-report` from run `32903291145`; its two preserved
+failure snapshots are under the corresponding practice and review-mode
+`test-results/**/error-context.md` paths. Because tracing was configured
+`on-first-retry`, the attached traces describe the passing retries rather than
+the two failed first attempts. This evidence proves the promotion regression's
+root cause; it does not retroactively prove what caused the original 03:15Z
+no-navigation incident.
+
 ## Diagnostic and Synchronization Fix
 
 The implementation closed the diagnosis blind spot without retrying the click:
@@ -132,6 +164,15 @@ diagnostics, and provider-identifier redaction. All 11 passed after the helper
 change. `pnpm typecheck` passed, and a post-change retry-free traced practice
 run passed 10/10 in 87.72 seconds.
 
+The promotion regression added a twelfth focused case. Before the follow-up
+fix, it completed navigation during alert collection, threw the same execution-
+context error as CI, and failed with the contradictory session-URL diagnostic
+(1 failed / 11 passed). The minimum fix re-checks the session URL after a poll
+exception; the helper then continues to require the Tutor/Exam heading, answer
+choices, and requested question count. The focused suite passed 12/12 after the
+change, so a URL transition cannot become a false success while a successful
+navigation can no longer become a false failure.
+
 The render barrier removes the concrete stale-count-handler window from the E2E
 helper, but the five passing characterization runs cannot establish that this
 window caused the 03:15Z incident. A future recurrence now has a longer bound,
@@ -147,11 +188,12 @@ session corruption was observed, so P3 is proportionate.
 
 ## Resolution
 
-Open. The red-first diagnostic/synchronization fix is implemented on
-`fix/bug-304-practice-session-start-no-navigation`, but the original intermittent
-cause did not reproduce in five required-flow characterization runs. Close only
-after the fix is reviewed, merged, promoted, and production-verified, with the
-unproven-cause limitation preserved.
+Open. The first diagnostic/synchronization fix merged to `dev` through PR #834,
+but promotion PR #835 is intentionally blocked by its two retry-recovered E2E
+failures. The red-first navigation-observation fix is on
+`fix/bug-304-navigation-observation-race`. Close only after the follow-up is
+reviewed, merged, promoted, and production-verified, with the original
+no-navigation cause still labeled unproven.
 
 ## Related
 
