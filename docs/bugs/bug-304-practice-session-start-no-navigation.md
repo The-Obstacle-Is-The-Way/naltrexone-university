@@ -112,8 +112,9 @@ cause therefore remains unproven and BUG-304 stays Open.
 
 ## Promotion Regression and Root Cause
 
-PR #834 merged the first diagnostic fix to `dev` as `a083c3d5`. Promotion PR
-#835 then exposed a branch-local regression on exact head `a083c3d5` in CI run
+PR #834 merged the first diagnostic fix to `dev` as `a083c3d5`.
+Promotion PR #835 then exposed a branch-local regression on exact head
+`a083c3d5` in CI run
 `32903291145`: the practice summary case timed out at 120 seconds and the
 review-mode audit timed out at 180 seconds. Both passed on retry, so Playwright
 reported `2 flaky` / `40 passed` after an 8.9-minute run. The green aggregate
