@@ -1,12 +1,18 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
+import {
+  START_SESSION_NAVIGATION_TIMEOUT_MS,
+  type StartSessionLocator,
+  type StartSessionPage,
+  startSession,
+} from './session';
 
 type ExpectOptions = {
   timeout?: number;
 };
 
-type LocatorLike = import('./session').StartSessionLocator;
-type PracticePageLike = import('./session').StartSessionPage;
+type LocatorLike = StartSessionLocator;
+type PracticePageLike = StartSessionPage;
 type WaitForOptions = Parameters<LocatorLike['waitFor']>[0];
 
 vi.mock('@playwright/test', () => ({
@@ -28,16 +34,6 @@ vi.mock('@playwright/test', () => ({
     },
   },
 }));
-
-let startSession: typeof import('./session').startSession;
-let startSessionNavigationTimeoutMs: number;
-
-beforeAll(async () => {
-  const sessionModule = await import('./session');
-  ({ startSession } = sessionModule);
-  startSessionNavigationTimeoutMs =
-    sessionModule.START_SESSION_NAVIGATION_TIMEOUT_MS;
-});
 
 function createLocator(input: {
   allTextContents?: () => string[];
@@ -339,7 +335,7 @@ function createPracticePage(input: {
 
 describe('startSession helper', () => {
   it('keeps the navigation bound above the client mutation timeout', () => {
-    expect(startSessionNavigationTimeoutMs).toBe(
+    expect(START_SESSION_NAVIGATION_TIMEOUT_MS).toBe(
       STANDARD_MUTATION_TIMEOUT_MS + 5_000,
     );
   });
