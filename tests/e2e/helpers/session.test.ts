@@ -1,11 +1,18 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
+import {
+  START_SESSION_NAVIGATION_TIMEOUT_MS,
+  type StartSessionLocator,
+  type StartSessionPage,
+  startSession,
+} from './session';
 
 type ExpectOptions = {
   timeout?: number;
 };
 
-type LocatorLike = import('./session').StartSessionLocator;
-type PracticePageLike = import('./session').StartSessionPage;
+type LocatorLike = StartSessionLocator;
+type PracticePageLike = StartSessionPage;
 type WaitForOptions = Parameters<LocatorLike['waitFor']>[0];
 
 vi.mock('@playwright/test', () => ({
@@ -13,33 +20,37 @@ vi.mock('@playwright/test', () => ({
     poll(read: () => Promise<unknown> | unknown, _options?: ExpectOptions) {
       return {
         async toBe(expected: unknown) {
-          const actual = await read();
-          if (actual !== expected) {
-            throw new Error(
-              `Expected ${String(expected)}, received ${String(actual)}.`,
-            );
+          let actual: unknown;
+          for (let attempt = 0; attempt < 5; attempt++) {
+            actual = await read();
+            if (actual === expected) return;
           }
+
+          throw new Error(
+            `Expected ${String(expected)}, received ${String(actual)}.`,
+          );
         },
       };
     },
   },
 }));
 
-let startSession: typeof import('./session').startSession;
-
-beforeAll(async () => {
-  ({ startSession } = await import('./session'));
-});
-
 function createLocator(input: {
+  allTextContents?: () => string[];
+  inputValue?: () => string;
   getAttribute?: (name: string) => string | null;
   isEnabled?: () => boolean;
   isVisible: () => boolean;
+  onBlur?: () => void;
   onClick?: () => void;
   onFill?: (value: string) => void;
   textContent?: () => string | null;
 }): LocatorLike {
   const locator: LocatorLike = {
+    allTextContents: vi.fn(async () => input.allTextContents?.() ?? []),
+    blur: vi.fn(async () => {
+      input.onBlur?.();
+    }),
     click: vi.fn(async () => {
       if (!input.isVisible()) {
         throw new Error('Cannot click a hidden locator.');
@@ -54,6 +65,7 @@ function createLocator(input: {
     getAttribute: vi.fn(
       async (name: string) => input.getAttribute?.(name) ?? null,
     ),
+    inputValue: vi.fn(async () => input.inputValue?.() ?? ''),
     isEnabled: vi.fn(async () => input.isEnabled?.() ?? input.isVisible()),
     isVisible: vi.fn(async () => input.isVisible()),
     textContent: vi.fn(async () => input.textContent?.() ?? null),
@@ -77,6 +89,11 @@ function createPracticePage(input: {
   defaultQuestionCount?: number;
   forcedActualCount?: number;
   incompleteSession?: boolean;
+  countBlurKeepsStartHandlerStale?: boolean;
+  countChangeStalesStartHandler?: boolean;
+  preexistingAlerts?: string[];
+  sessionStartAlert?: string;
+  sessionStartAlertPollDelay?: number;
   selectedModeReselectionStalesStartHandler?: boolean;
   selectedStatusReselectionStalesStartHandler?: boolean;
 }): PracticePageLike {
@@ -87,11 +104,14 @@ function createPracticePage(input: {
     requestedQuestionCount: input.defaultQuestionCount ?? 1,
     selectedMode: 'tutor' as 'tutor' | 'exam',
     selectedStatus: 'Unanswered' as 'Unanswered' | 'Incorrect' | 'Bookmarked',
+    startClickObserved: false,
     startHandlerIsStale: false,
+    startAlertPollCount: 0,
     startedQuestionCount: null as number | null,
     sessionStarted: false,
   };
   const availableStatus = input.availableStatus ?? 'Unanswered';
+  const preexistingAlerts = input.preexistingAlerts ?? [];
 
   const startSessionButton = createLocator({
     isEnabled: () =>
@@ -107,6 +127,12 @@ function createPracticePage(input: {
 
       if (state.selectedStatus !== availableStatus) {
         throw new Error('Fake page only supports one enabled status.');
+      }
+
+      state.startClickObserved = true;
+      state.startAlertPollCount = 0;
+      if (input.sessionStartAlert) {
+        return;
       }
 
       state.startedQuestionCount =
@@ -155,10 +181,19 @@ function createPracticePage(input: {
       return createLocator({
         isVisible: () =>
           state.currentUrl === '/app/practice' && !state.hasIncompleteSession,
+        inputValue: () => String(state.requestedQuestionCount),
+        onBlur: () => {
+          if (!input.countBlurKeepsStartHandlerStale) {
+            state.startHandlerIsStale = false;
+          }
+        },
         onFill: (value) => {
           const parsed = Number(value);
           if (Number.isFinite(parsed)) {
             state.requestedQuestionCount = Math.trunc(parsed);
+            if (input.countChangeStalesStartHandler) {
+              state.startHandlerIsStale = true;
+            }
           }
         },
       });
@@ -246,6 +281,25 @@ function createPracticePage(input: {
           return answerChoices;
         }
 
+        if (role === 'alert') {
+          return createLocator({
+            allTextContents: () => {
+              const alerts = [...preexistingAlerts];
+              if (state.startClickObserved && input.sessionStartAlert) {
+                state.startAlertPollCount += 1;
+                if (
+                  state.startAlertPollCount >
+                  (input.sessionStartAlertPollDelay ?? 0)
+                ) {
+                  alerts.push(input.sessionStartAlert);
+                }
+              }
+              return alerts;
+            },
+            isVisible: () => preexistingAlerts.length > 0,
+          });
+        }
+
         if (role === 'button' && name === 'Try again') {
           return tryAgainButton;
         }
@@ -280,6 +334,12 @@ function createPracticePage(input: {
 }
 
 describe('startSession helper', () => {
+  it('keeps the navigation bound above the client mutation timeout', () => {
+    expect(START_SESSION_NAVIGATION_TIMEOUT_MS).toBe(
+      STANDARD_MUTATION_TIMEOUT_MS + 5_000,
+    );
+  });
+
   it('returns only after the requested session progress indicator is visible', async () => {
     const page = createPracticePage({
       availableQuestionCount: 5,
@@ -316,6 +376,70 @@ describe('startSession helper', () => {
     await startSession(page, 'tutor', 2);
 
     expect(page.url()).toBe('/app/practice/session-1');
+  });
+
+  it('publishes the count-change render before clicking Start session', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      countChangeStalesStartHandler: true,
+      defaultQuestionCount: 1,
+    });
+
+    await startSession(page, 'tutor', 2);
+
+    expect(page.url()).toBe('/app/practice/session-1');
+  });
+
+  it('fails with a rendered session-start alert instead of a URL timeout', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      sessionStartAlert: 'Request timed out. Please try again.',
+      sessionStartAlertPollDelay: 2,
+    });
+
+    await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
+      'startSession failed before navigation: Request timed out. Please try again.',
+    );
+  });
+
+  it('reports a silent start outcome with page and control diagnostics', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      countBlurKeepsStartHandlerStale: true,
+      countChangeStalesStartHandler: true,
+      defaultQuestionCount: 1,
+    });
+
+    await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
+      'startSession produced neither navigation nor a new rendered alert; current URL=/app/practice; Start session enabled=true',
+    );
+  });
+
+  it('does not mistake an unchanged pre-existing alert for a start failure', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      preexistingAlerts: ['Tags unavailable.'],
+    });
+
+    await startSession(page, 'tutor', 2);
+
+    expect(page.url()).toBe('/app/practice/session-1');
+  });
+
+  it('redacts provider identifiers from rendered alert diagnostics', async () => {
+    const providerIdentifier = ['cus', 'sensitive123'].join('_');
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      sessionStartAlert: `Could not load customer ${providerIdentifier}.`,
+    });
+
+    const result = startSession(page, 'tutor', 2);
+
+    await expect(result).rejects.toThrow('cus_[REDACTED]');
+    await expect(result).rejects.not.toThrow(providerIdentifier);
   });
 
   it('fails explicitly when the created session is smaller than requested', async () => {

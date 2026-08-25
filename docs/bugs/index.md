@@ -1,7 +1,11 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-07-18 — **Fix-wave-5 terminal close: BUG-302 and BUG-303 are resolved, production-verified, and archived.** The combined review of `bbc32fab...fd2e6fc8` accounted for all 11 expected commits and found no unrelated lineage. Six independent lenses produced 18 raw candidates → 9 deduplicated candidates → 0 confirmed after source tracing, focused behavioral proof, and three-verifier panels. No BUG-304 filing was warranted. Fresh close proof found main/dev byte-identical at tree `3964a0e8`, main CI run 29652695750 successful including deploy, and `addictionboards.com` HTTP 200. **Next Bug ID remains BUG-304.** Prior detailed wave records remain below.
+**Last Updated:** 2026-08-25
+
+**Latest 2026-08-25 update:** **BUG-304 filed after a required practice E2E click produced neither navigation nor a rendered error.** At 03:15Z the viewport-reset case timed out in `startSession()` after **Start session** was clicked; the failure snapshot retained the enabled starter form, showed no loading state, and contained an empty alert. The retry and a later clean run passed. The helper's 15-second navigation bound equaled the client action's 15-second mutation timeout, so it could discard the rendered error before it existed. Source tracing also found a concrete silent path: count changes rotate the idempotency owner synchronously, a prior render's handler deliberately no-ops after that rotation, and the helper had no render barrier between filling the count and clicking Start. Five retry-free traced runs passed 10/10 each (84.39-87.98 s), so no failing trace proved the incident cause and BUG-304 stays Open. A red-first helper fix now uses a 20-second outcome bound, a count-render barrier, rendered-alert capture, silent-outcome diagnostics, and provider-ID redaction without retrying the click; the focused suite passed 11/11 and a post-change traced practice run passed 10/10. BUG-304 remains P3 pending merge, promotion, and production proof. **Next Bug ID is BUG-305.**
+
+**Prior 2026-07-18 update:** **Fix-wave-5 terminal close: BUG-302 and BUG-303 are resolved, production-verified, and archived.** The combined review of `bbc32fab...fd2e6fc8` accounted for all 11 expected commits and found no unrelated lineage. Six independent lenses produced 18 raw candidates → 9 deduplicated candidates → 0 confirmed after source tracing, focused behavioral proof, and three-verifier panels. No BUG-304 filing was warranted. Fresh close proof found main/dev byte-identical at tree `3964a0e8`, main CI run 29652695750 successful including deploy, and `addictionboards.com` HTTP 200. **Next Bug ID remains BUG-304.** Prior detailed wave records remain below. (Superseded by the BUG-304 filing above.)
 
 **Terminal-close disposition rule:** confirmed P3-or-higher findings enter Active as must-fix; confirmed P4 findings enter Parked (accepted-risk) and do not extend a mandatory fix wave.
 
@@ -26,7 +30,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - Bugs discovered only on an unmerged implementation branch may be marked resolved and archived in the same PR once the fix is implemented, red-first regression coverage or equivalent focused proof is green, and the PR still goes through the normal CI and review gate before merge. These docs must state that the defect was branch-local or fixed before the branch shipped, so future readers do not mistake the archive for post-deploy proof.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-304
+**Next Bug ID:** BUG-305
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -454,7 +458,11 @@ Every one of these was confirmed against the other branch's actual live registry
 
 ## Active Bugs
 
-There are no active must-fix bugs at the 2026-07-18 stable baseline.
+| ID | Title | Severity | Status | Summary |
+|----|-------|----------|--------|---------|
+| [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | Required E2E observed an enabled Start click with no loading, navigation, or alert; five traced runs did not reproduce it, and a red-first synchronization/diagnostic fix awaits review and production proof. |
+
+**Prior stable baseline (2026-07-18):** there were no active must-fix bugs.
 
 **2026-07-01 — PR #537 Track A pre-merge blockers resolved:** the 2026-06-30 adversarial review filed BUG-265..267 against the unmerged practice-session normalization branch. BUG-265 was self-resolved before action and archived. BUG-266 and BUG-267 were independently confirmed, fixed with red-first tests, and archived as branch-local pre-merge defects under the convention above: the seed syncer now guards normalized practice-session state choice references, and the composition-root practice-session-state write transactions now open at `repeatable read`.
 
