@@ -14,7 +14,7 @@ This is the on-call playbook for incoming Dependabot PRs and ad-hoc dependency w
   pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm test:integration && pnpm build
   ```
 
-- Run `pnpm test:e2e` as well. It is mandatory for repo-owned dependency PRs, not conditional. For Dependabot-authored PRs the local run is the only E2E evidence, because CI skips the hosted E2E lane for `dependabot[bot]` (below); human same-repo dependency PRs still receive hosted E2E when the secrets are present. This stays mandatory until [DEBT-473](../debt/debt-473-green-without-evidence.md) step 6 / [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) resolve how they receive credentials. If your `.env.local` lacks the authenticated E2E environment, say so in the PR body instead of skipping silently.
+- Run `pnpm test:e2e` as well. It is mandatory for repo-owned dependency PRs, not conditional. For Dependabot-authored PRs the local run is the only E2E evidence, because CI skips the hosted E2E lane for `dependabot[bot]` (below); human same-repo dependency PRs still receive hosted E2E when the secrets are present. This stays mandatory until [DEBT-473](../debt/debt-473-green-without-evidence.md) step 6 / [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) resolve how they receive credentials. If your `.env.local` lacks the authenticated E2E environment, the PR is not mergeable until someone with it runs `pnpm test:e2e` on the PR head and records the receipt in the PR body; say so there rather than skipping silently.
 
 ## Group PRs: Minor and Patch Updates
 
@@ -22,7 +22,7 @@ For grouped minor/patch Dependabot PRs:
 
 1. Read the PR body and upstream changelog links for every package in the group.
 2. Confirm the group does not include a known special-case tool. `@biomejs/biome` is intentionally split from the catch-all group because lint-rule shifts can block otherwise-good package updates.
-3. Run the full local gate on the PR head when the change is repo-owned. For Dependabot-owned branches, rely on the hosted gate plus any separate fix PRs required to make the base truthful.
+3. Run the full local gate on the PR head when the change is repo-owned. For Dependabot-owned branches, the hosted gate omits E2E (see below): run `pnpm test:e2e` locally on the PR head and record the receipt, plus any separate fix PRs required to make the base truthful.
 4. Merge only when GitHub Actions, Vercel, Codecov, and CodeRabbit are clean on the latest head.
 
 If one package in a group causes an unrelated failure, split or defer that package. Do not let a style-tool or test-runner change hold unrelated patch updates hostage.
