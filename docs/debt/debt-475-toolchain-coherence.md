@@ -7,6 +7,8 @@
 
 **Corrections (2026-08-24, PR #831 rounds 2–3).** Round 2 withdrew the proposed deletion of the actual-schema drift probe and cross-clone URL guard, restored the exact-semver Stripe CLI policy and hard `security.txt` expiry assertion, corrected the DEBT-472 LOC arithmetic, and moved the AUDIT-012 supersession note to live ADR-001. Round 3 confirmed that DEBT-244 §1 records the schema probe as implemented under DEBT-243, but found three residual defects: the Biome step retained only hook placement despite F1 naming four scanner-only semantics; DEBT-472 step 4 did not yet own the three `.setup.ts` mocks; and DEBT-473's wrapper deletion set still removed live process contracts. The resolution now preserves the full semantic scanner remainder, adds the DEBT-472 pointer, classifies the provider wrapper as 35 keep / 9 preflight cases relocated / 0 deleted, and removes literal test-database host/port values from this planning record. The residue pass corrected the semantic scanner's source anchors, removed the remaining impact claim that Biome replaces all ~1,400 scanner lines, removed the false claim that deletions carry no design risk, and made replacement-contract proofs—not a zero-importer grep—the prerequisite for removing the bookmark and Docker helpers. The first exact-head review repaired the template-literal code span and replaced the shell-redirection placeholder with a concrete, archive-excluding `rg` command; the second widened that command from a hand-picked extension list to every tracked file outside the archive.
 
+**Correction (2026-08-25, PR #831 final-head gate).** An interrupted required-E2E run exposed one more toolchain gap: the local orchestrator does not clean up its spawned process tree on `SIGINT` or `SIGTERM`. F9 records the observed orphan and adds process-tree cleanup to this debt rather than treating the occupied-port symptom as operator error.
+
 **The answer, in one line:** ~70% earned, ~30% scaffolding — and the scaffolding has three traceable causes, none of which is "agents invent nonsense."
 
 ## Description
@@ -95,6 +97,10 @@ Filed by the same author; recorded without softening.
 - `ci.yml:138-141` validates the GitHub Actions copy of `CRON_SECRET` for header safety; no cron reads that copy. [BUG-244](../_archive/bugs/bug-244-reconciliation-cron-never-scheduled.md)'s incident lived in Vercel scopes; `lib/env.ts:79` — where the value is consumed — has no refine. Owned by DEBT-474 step 3.
 - Four "is the database up" checks on the local E2E path (Compose `--wait`, the F2 inspect poll, `setup.ts` `SELECT 1`, the health check's connectivity probe); the ledger is verified at Vercel build and again at every E2E start (intentional — different databases).
 
+### F9 — An interrupted local E2E run orphans the app server
+
+At 2026-08-25 03:13Z, interrupting the required-E2E gate left Playwright's `next-server` listening on this clone's resolver-selected app port. `spawnCommand()` starts every child with inherited stdio but no detached process-group ownership, parent-signal handlers, or descendant cleanup (`scripts/e2e-local-orchestrator.ts:132-153`). Playwright correctly sets `reuseExistingServer: false` (`playwright.config.ts:45-49`), so the following run refused to start while the orphan held the port instead of silently testing an unknown server. The occupied port is therefore evidence of an orchestrator lifecycle defect, not a reason to weaken Playwright's isolation check.
+
 ### What the census did not find
 
 - No mechanism on the earned list has a simpler primitive that covers its incident.
@@ -109,6 +115,7 @@ Filed by the same author; recorded without softening.
 3. **A fence with holes** (F4): the DEBT-446 target guard is bypassed by two entry points, one of which exports PII; five resolvers disagree on what "local" means.
 4. **Lint rules written by hand** (F1): ~1,400 LOC overlap Biome, but only the specifier, filename, raw-JSX-element, and file-size portions are replaceable; the resolved-target, type-only, hook-placement, page-model, opacity, and typed span contracts remain executable code.
 5. **Guards that red the lane for the wrong reason** (F6): a duplicated version literal, and an expiry with no advance warning.
+6. **Interrupted-run contamination** (F9): an aborted local E2E run can leave this clone's app port occupied, blocking the next honest run and forcing a manual ownership check.
 
 ## Resolution
 
@@ -120,7 +127,8 @@ Ordered so that replacement contracts land before the deletions they license, wi
 4. **[ ] One database-target resolver.** Consolidate F4's five sources behind `scripts/database-target.ts`: `export:feedback` and `db:generate` route through `runHumanDatabaseCommand`; `drizzle.config.ts` loses its dotenv fallback (`:9-11` already throws on a missing URL); one loopback definition; `helpers.ts:15-27` imports `setup.ts`'s. Pin `vercel` as a devDependency or replace `npx vercel env pull` with a documented owner step. DEBT-473 step 5 owns the `CI`-inference fixes; do them in the same PR.
 5. **[ ] Share the source walker.** `tests/shared/source-walk.ts` with one production-source glob and one test-source glob; the remaining scanners (fidelity, opacity, hook-placement, span-family if it survives step 2) consume it. Red-first: a fixture tree with a file in each formerly-blind location.
 6. **[ ] Retire the guards that fight the tools.** `@stripe/cli` guard → assert exact semver (no `^`/`~`) read from `package.json` instead of a duplicated literal, and keep the provider contract as the proof of every bump; `security.txt` → keep the hard future-`Expires` assertion and add a ninety-day-ahead `::warning::` so renewal is not a surprise; decide the 800-line suppression policy once (raise `maxLines` to the measured p95 and delete 28 comments, or keep 800 and schedule the splits under DEBT-469 — not both).
-7. **[ ] Record the standard.** Add to `docs/debt/index.md`'s conventions: before writing a scanner, name the Biome/TypeScript/Vitest/Playwright/Actions primitive that does not cover the case; before writing a wrapper, name the platform bound it replaces; a new mechanism lists its dependents in its own doc.
+7. **[ ] Make local E2E cancellation clean up its process tree.** Red-first in `scripts/e2e-local-orchestrator.test.ts`: prove `SIGINT` and `SIGTERM` terminate the active command and its descendants, using the POSIX detached-process-group termination pattern retained by DEBT-473 step 4, with a bounded escalation for children that ignore the forwarded signal. Document the resolver-selected-port ownership check in `docs/dev/integration-tests.md`: inspect the listener with `lsof`, confirm the PID's `cwd` is this clone, and stop only that process. Keep Playwright's `reuseExistingServer: false` invariant.
+8. **[ ] Record the standard.** Add to `docs/debt/index.md`'s conventions: before writing a scanner, name the Biome/TypeScript/Vitest/Playwright/Actions primitive that does not cover the case; before writing a wrapper, name the platform bound it replaces; a new mechanism lists its dependents in its own doc.
 
 ## Verification
 
@@ -133,6 +141,7 @@ Ordered so that replacement contracts land before the deletions they license, wi
 - `git grep -n "createSourceFile\|createProgram" tests components scripts` returns only `tests/shared/source-walk.ts` and `scripts/crap-report.ts`.
 - `pnpm export:feedback` with `DATABASE_URL` unset and `.env.local` present refuses with the DEBT-446 target message.
 - Red test kept from the withdrawn deletions: a complete, correctly hashed ledger with `idempotency_keys.completed_at` absent still fails E2E preflight; a foreign-clone `DATABASE_URL` still fails `db-connection-session.integration.test.ts`'s byte-equality check.
+- Interrupt a fixture child that owns a descendant listener with both `SIGINT` and `SIGTERM`; the orchestrator exits within its bound and neither process remains alive. The documented `lsof` procedure identifies by resolver-selected port and clone `cwd`, never by a global fixed port.
 
 ## Related
 
