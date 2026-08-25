@@ -292,7 +292,7 @@ agent-browser close
 
 By default, `agent-browser` does **not** load `.env.local`. For authenticated exploration, the recommended approach is loading a Playwright `storageState` file (see below). For local-only workflows, you can also export env vars in your current shell session (e.g., `set -a && source .env.local && set +a`) and then run your `agent-browser …` commands in that same shell.
 
-See [agent-browser.md](./agent-browser.md) for a focused quick reference and multiple auth options.
+See [agent-browser.md](../tooling/agent-browser.md) for a focused quick reference and multiple auth options.
 
 1) Create a temporary script that signs in via Clerk and saves `storageState`:
 
@@ -525,5 +525,5 @@ See [DEBT-293](../_archive/debt/debt-293-e2e-shared-state-structural-flakiness.m
 - [Stripe vendor docs](../vendor-docs/stripe.md) — E2E test seeding pattern, test payment methods
 - [Clerk vendor docs](../vendor-docs/clerk.md) — REST API for user lookup in E2E seeding
 - [Playwright Docs](https://playwright.dev/docs/intro)
-- [agent-browser.md](./agent-browser.md) — Agent-browser quick reference, auth patterns, common pitfalls
+- [agent-browser.md](../tooling/agent-browser.md) — Agent-browser quick reference, auth patterns, common pitfalls
 - `.agents/skills/agent-browser/SKILL.md` — Agent-browser CLI full command reference
