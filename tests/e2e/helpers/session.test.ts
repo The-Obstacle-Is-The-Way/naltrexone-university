@@ -91,6 +91,7 @@ function createPracticePage(input: {
   incompleteSession?: boolean;
   countBlurKeepsStartHandlerStale?: boolean;
   countChangeStalesStartHandler?: boolean;
+  navigationCompletesDuringAlertRead?: boolean;
   preexistingAlerts?: string[];
   sessionStartAlert?: string;
   sessionStartAlertPollDelay?: number;
@@ -109,9 +110,18 @@ function createPracticePage(input: {
     startAlertPollCount: 0,
     startedQuestionCount: null as number | null,
     sessionStarted: false,
+    sessionStartNavigationPending: false,
   };
   const availableStatus = input.availableStatus ?? 'Unanswered';
   const preexistingAlerts = input.preexistingAlerts ?? [];
+
+  const completeSessionStart = () => {
+    state.startedQuestionCount =
+      input.forcedActualCount ??
+      Math.min(state.requestedQuestionCount, input.availableQuestionCount);
+    state.currentUrl = '/app/practice/session-1';
+    state.sessionStarted = true;
+  };
 
   const startSessionButton = createLocator({
     isEnabled: () =>
@@ -135,11 +145,12 @@ function createPracticePage(input: {
         return;
       }
 
-      state.startedQuestionCount =
-        input.forcedActualCount ??
-        Math.min(state.requestedQuestionCount, input.availableQuestionCount);
-      state.currentUrl = '/app/practice/session-1';
-      state.sessionStarted = true;
+      if (input.navigationCompletesDuringAlertRead) {
+        state.sessionStartNavigationPending = true;
+        return;
+      }
+
+      completeSessionStart();
     },
   });
 
@@ -284,6 +295,14 @@ function createPracticePage(input: {
         if (role === 'alert') {
           return createLocator({
             allTextContents: () => {
+              if (state.sessionStartNavigationPending) {
+                state.sessionStartNavigationPending = false;
+                completeSessionStart();
+                throw new Error(
+                  'Execution context was destroyed, most likely because of a navigation',
+                );
+              }
+
               const alerts = [...preexistingAlerts];
               if (state.startClickObserved && input.sessionStartAlert) {
                 state.startAlertPollCount += 1;
@@ -352,6 +371,18 @@ describe('startSession helper', () => {
     await expect(page.getByText('Question 1 of 2').isVisible()).resolves.toBe(
       true,
     );
+  });
+
+  it('accepts navigation that destroys the alert context between outcome checks', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      navigationCompletesDuringAlertRead: true,
+    });
+
+    await startSession(page, 'tutor', 2);
+
+    expect(page.url()).toBe('/app/practice/session-1');
   });
 
   it('starts through the current handler when the first supported status is already selected', async () => {
