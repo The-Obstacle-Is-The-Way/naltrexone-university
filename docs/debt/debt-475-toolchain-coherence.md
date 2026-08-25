@@ -9,6 +9,8 @@
 
 **Correction (2026-08-25, PR #831 final-head gate).** An interrupted required-E2E run exposed one more toolchain gap: the local orchestrator does not clean up its spawned process tree on `SIGINT` or `SIGTERM`. F9 records the observed orphan and adds process-tree cleanup to this debt rather than treating the occupied-port symptom as operator error.
 
+**Correction (2026-08-25, promotion review).** The copyable deleted-file proof now invokes `ls-files` through `git --no-pager`, matching the repository-wide non-interactive Git-read rule without changing the proof's tracked-file or archive-exclusion scope.
+
 **The answer, in one line:** ~70% earned, ~30% scaffolding — and the scaffolding has three traceable causes, none of which is "agents invent nonsense."
 
 ## Description
@@ -134,7 +136,7 @@ Ordered so that replacement contracts land before the deletions they license, wi
 
 - `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm db:test:up && pnpm test:integration && pnpm build && pnpm test:e2e` green on the implementation head with test counts unchanged except for deleted self-tests (recorded before/after: 4,144 unit / 398 browser / 258 integration / 42 E2E at filing).
 - `pnpm test --run` wall time on the same machine before and after step 3, with the `globalSetup` subprocess gone from `vitest.config.mts`.
-- For every deleted file, substitute its concrete basename in this copyable example: `DELETED_BASENAME='reset-bookmarks-for-e2e-user' && git ls-files -z -- . ':(exclude)docs/_archive/**' | xargs -0 rg -n --fixed-strings -- "$DELETED_BASENAME"` prints no matches across any tracked file type.
+- For every deleted file, substitute its concrete basename in this copyable example: `DELETED_BASENAME='reset-bookmarks-for-e2e-user' && git --no-pager ls-files -z -- . ':(exclude)docs/_archive/**' | xargs -0 rg -n --fixed-strings -- "$DELETED_BASENAME"` prints no matches across any tracked file type.
 - Before the bookmark and Docker helpers are removed, focused tests fail without (a) the general reset's exact-one-`placeholder01Id` bookmark assertion and (b) the orchestrator's resolver-scoped `run-local-test-db.ts up` delegation, fail-fast ordering, bounded Compose wait, and value-free nonzero error contract.
 - Each migrated Biome rule fails on the scratch bypass its scanner missed (F1 table) and passes on the tree.
 - The reduced architecture scan still fails independently on a relative path that resolves outside its allowed layer, an outer-layer runtime import that is allowed only as type-only, a question page hook outside `hooks/`, and an app presentation hook named `page-controller`; removing any one check makes its focused red case fail.
