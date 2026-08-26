@@ -7,6 +7,20 @@ afterEach(() => {
 });
 
 describe('playwright config', () => {
+  it('runs a cleanup project after every project that depends on global setup', () => {
+    const projects = config.projects ?? [];
+    const setupProject = projects.find((project) => project.name === 'setup');
+    const cleanupProject = projects.find(
+      (project) => project.name === 'cleanup',
+    );
+
+    expect(setupProject?.teardown).toBe('cleanup');
+    expect(cleanupProject?.testMatch).toEqual(/global\.teardown\.ts/);
+    expect(cleanupProject?.use?.storageState).toBe(
+      'test-results/.auth/e2e-user.json',
+    );
+  });
+
   it('uses production server mode for e2e webServer', () => {
     const webServer = config.webServer;
     expect(webServer).toBeDefined();

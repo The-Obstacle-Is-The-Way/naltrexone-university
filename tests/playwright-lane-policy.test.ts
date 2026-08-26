@@ -8,8 +8,10 @@ type FilePattern = RegExp | string | readonly (RegExp | string)[];
 
 type PlaywrightProjectPolicy = {
   name?: string;
+  teardown?: string;
   testIgnore?: FilePattern;
   testMatch?: FilePattern;
+  use?: { storageState?: unknown };
 };
 
 const STRIPE_HOSTED_SELECTOR_ALLOWLIST = [
@@ -96,6 +98,23 @@ describe('Playwright E2E lane policy', () => {
     expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
       'tsx scripts/run-local-e2e.ts --project=stripe-hosted',
     );
+  });
+
+  it('requires every Clerk-authenticated spec to load the shared suite auth state', () => {
+    const authenticatedSpecs = listTypeScriptFiles('tests/e2e')
+      .filter((path) => path.endsWith('.spec.ts'))
+      .filter((path) =>
+        readFileSync(path, 'utf8').includes('signInWithClerkPassword'),
+      );
+
+    expect(authenticatedSpecs).toHaveLength(14);
+    for (const path of authenticatedSpecs) {
+      const source = readFileSync(path, 'utf8');
+      expect(source, path).toContain('E2E_CLERK_AUTH_STATE_PATH');
+      expect(source, path).toMatch(
+        /test\.use\(\{\s*storageState:\s*E2E_CLERK_AUTH_STATE_PATH\s*\}\)/,
+      );
+    }
   });
 
   it('pins the official Stripe CLI used by the required completion trigger', () => {

@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
+  E2E_CLERK_AUTH_STATE_PATH,
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
@@ -12,6 +13,8 @@ import {
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { startSession } from './helpers/session';
 import { ensureSubscribed } from './helpers/subscription';
+
+test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 
 // Seeded by content/questions/placeholder/*.mdx
 const CORRECT_SLUG = 'placeholder-01-naltrexone-mechanism';

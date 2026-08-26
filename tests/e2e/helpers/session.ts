@@ -12,7 +12,7 @@ export type StartSessionLocator = {
   fill(value: string): Promise<void>;
   getAttribute(name: string): Promise<string | null>;
   inputValue(): Promise<string>;
-  isEnabled(): Promise<boolean>;
+  isEnabled(options?: { timeout?: number }): Promise<boolean>;
   isVisible(): Promise<boolean>;
   textContent(): Promise<string | null>;
   waitFor(options: { state: 'visible'; timeout?: number }): Promise<void>;
@@ -31,6 +31,7 @@ export type StartSessionPage = {
 
 const DEFAULT_START_SESSION_STATE_TIMEOUT_MS = 30_000;
 const START_SESSION_INPUT_SYNC_TIMEOUT_MS = 10_000;
+const START_SESSION_DIAGNOSTIC_TIMEOUT_MS = 1_000;
 
 export const START_SESSION_NAVIGATION_TIMEOUT_MS =
   STANDARD_MUTATION_TIMEOUT_MS + 5_000;
@@ -91,6 +92,20 @@ function isNavigationContextDestroyed(error: unknown): boolean {
   );
 }
 
+function isClerkSignInRedirect(url: string): boolean {
+  try {
+    return new URL(url, 'http://e2e.invalid').pathname.startsWith('/sign-in');
+  } catch {
+    return false;
+  }
+}
+
+function createClerkAuthLossError(): Error {
+  return new Error(
+    'startSession lost Clerk authentication and was redirected to sign-in',
+  );
+}
+
 function countTexts(texts: readonly string[]): ReadonlyMap<string, number> {
   const counts = new Map<string, number>();
   for (const text of texts) {
@@ -119,6 +134,7 @@ async function waitForSessionStartOutcome(input: {
 }): Promise<void> {
   const expectedUrl = /\/app\/practice\/[^/]+$/;
   const alerts = input.page.getByRole('alert');
+  let clerkAuthLost = false;
   let renderedStartAlert: string | null = null;
 
   try {
@@ -126,6 +142,10 @@ async function waitForSessionStartOutcome(input: {
       .poll(
         async () => {
           if (expectedUrl.test(input.page.url())) return true;
+          if (isClerkSignInRedirect(input.page.url())) {
+            clerkAuthLost = true;
+            return true;
+          }
           try {
             renderedStartAlert = findAdditionalAlert(
               await readNonemptyAlertTexts(alerts),
@@ -145,6 +165,9 @@ async function waitForSessionStartOutcome(input: {
       .toBe(true);
   } catch (error) {
     if (expectedUrl.test(input.page.url())) return;
+    if (isClerkSignInRedirect(input.page.url())) {
+      throw createClerkAuthLossError();
+    }
 
     const currentAlerts = await readNonemptyAlertTexts(alerts).catch(() => []);
     const renderedAlerts =
@@ -155,7 +178,7 @@ async function waitForSessionStartOutcome(input: {
             .join(' | ')
             .slice(0, 500);
     const startEnabled = await input.startSessionButton
-      .isEnabled()
+      .isEnabled({ timeout: START_SESSION_DIAGNOSTIC_TIMEOUT_MS })
       .catch(() => false);
     throw new Error(
       `startSession produced neither navigation nor a new rendered alert; current URL=${redactDiagnosticText(input.page.url())}; Start session enabled=${String(startEnabled)}; rendered alerts=${renderedAlerts}`,
@@ -164,6 +187,9 @@ async function waitForSessionStartOutcome(input: {
   }
 
   if (expectedUrl.test(input.page.url())) return;
+  if (clerkAuthLost || isClerkSignInRedirect(input.page.url())) {
+    throw createClerkAuthLossError();
+  }
   if (renderedStartAlert) {
     throw new Error(
       `startSession failed before navigation: ${redactDiagnosticText(renderedStartAlert)}`,

@@ -1,6 +1,7 @@
 import { expect, type Page, type Route, test } from '@playwright/test';
 import { withTimeout } from '@/lib/with-timeout';
 import {
+  E2E_CLERK_AUTH_STATE_PATH,
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
@@ -11,6 +12,8 @@ import {
   removeE2EUserEntitlement,
   restoreE2EUserEntitlement,
 } from './helpers/subscription';
+
+test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 
 const ACTION_BODY_TIMEOUT_MS = 30_000;
 

@@ -101,3 +101,6 @@ output without ever printing credential values.
   runtime-generated credentials, not only job-level `secrets.*` values.
 - [BUG-304](./bug-304-practice-session-start-no-navigation.md) — its exact-head
   verification exposed this independent logging defect.
+- [BUG-306](./bug-306-required-e2e-clerk-session-loss-and-accumulation.md) — the
+  same per-test Clerk seam accumulated sessions without teardown and later lost
+  a fresh session on a protected navigation; causality remains unproven.
