@@ -39,6 +39,7 @@ describe('resolveStripeProviderGate', () => {
     ['missing', undefined],
     ['live-mode', 'sk_live_contract_key'],
     ['dummy', 'sk_test_dummy'],
+    ['prefix-only', 'sk_test_'],
   ])('throws PROVIDER_KEY_INVALID when the key is %s', (_label, value) => {
     expect(() =>
       resolveStripeProviderGate(environment({ STRIPE_SECRET_KEY: value }), {
@@ -57,6 +58,7 @@ describe('resolveStripeProviderGate', () => {
     ['missing', undefined],
     ['wrong shape', 'product_contract_monthly'],
     ['dummy', 'price_dummy_monthly'],
+    ['prefix-only', 'price_'],
   ])('throws PROVIDER_PRICE_INVALID when the price is %s', (_label, value) => {
     expect(() =>
       resolveStripeProviderGate(

@@ -9,6 +9,9 @@ type StripeProviderGateOptions = {
   priceKeys: readonly string[];
 };
 
+const STRIPE_TEST_KEY_PREFIX = 'sk_test_';
+const STRIPE_PRICE_ID_PREFIX = 'price_';
+
 export type StripeProviderGateResult =
   | { mode: 'skip'; reason: string }
   | {
@@ -30,11 +33,19 @@ export class StripeProviderGateError extends Error {
 export function isUsableStripeTestKey(
   value: string | undefined,
 ): value is string {
-  return Boolean(value?.startsWith('sk_test_') && !value.includes('dummy'));
+  return Boolean(
+    value?.startsWith(STRIPE_TEST_KEY_PREFIX) &&
+      value.length > STRIPE_TEST_KEY_PREFIX.length &&
+      !value.includes('dummy'),
+  );
 }
 
 function isUsableStripePriceId(value: string | undefined): value is string {
-  return Boolean(value?.startsWith('price_') && !value.includes('dummy'));
+  return Boolean(
+    value?.startsWith(STRIPE_PRICE_ID_PREFIX) &&
+      value.length > STRIPE_PRICE_ID_PREFIX.length &&
+      !value.includes('dummy'),
+  );
 }
 
 function firstConfiguredValue(

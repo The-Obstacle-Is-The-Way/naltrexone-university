@@ -9,14 +9,20 @@ export type SkipPolicySourceFile = {
 
 type SourceReader = (filePath: string, encoding: 'utf8') => string;
 
-const SOURCE_GLOBS = [
-  '*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'tests/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'scripts/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'src/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'app/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'components/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'lib/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
+const SOURCE_GLOBS = ['**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}'];
+
+const GENERATED_SOURCE_IGNORES = [
+  '**/node_modules/**',
+  '**/.next/**',
+  '**/.vercel/**',
+  '**/artifacts/**',
+  '**/blob-report/**',
+  '**/build/**',
+  '**/coverage/**',
+  '**/out/**',
+  '**/playwright-report/**',
+  '**/test-results/**',
+  'next-env.d.ts',
 ];
 
 export class SkipPolicyScanError extends Error {
@@ -52,7 +58,7 @@ export function readSkipPolicySources(
 export function readRepositorySkipPolicySources(): SkipPolicySourceFile[] {
   const filePaths = fg.sync(SOURCE_GLOBS, {
     cwd: process.cwd(),
-    ignore: ['**/node_modules/**', '**/.next/**'],
+    ignore: GENERATED_SOURCE_IGNORES,
     onlyFiles: true,
     unique: true,
   });

@@ -598,6 +598,29 @@ describe('skip-policy source scan', () => {
     expect(filePaths).toContain('proxy.test.ts');
   });
 
+  it('walks executable source and test setup files outside the six named roots', () => {
+    const filePaths = readRepositorySkipPolicySources().map(
+      (sourceFile) => sourceFile.filePath,
+    );
+
+    expect(filePaths).toEqual(
+      expect.arrayContaining([
+        'db/schema.test.ts',
+        'instrumentation.ts',
+        'proxy.ts',
+        'vitest.setup.ts',
+      ]),
+    );
+  });
+
+  it('excludes generated source artifacts from the repository walk', () => {
+    const filePaths = readRepositorySkipPolicySources().map(
+      (sourceFile) => sourceFile.filePath,
+    );
+
+    expect(filePaths).not.toContain('next-env.d.ts');
+  });
+
   it('finds no unapproved controls in the live repository', () => {
     expect(collectSkipPolicyIssues(readRepositorySkipPolicySources())).toEqual(
       [],
