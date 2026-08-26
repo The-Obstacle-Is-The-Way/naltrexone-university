@@ -11,6 +11,45 @@ function source(filePath: string, contents: string): SkipPolicySourceFile {
   return { filePath, contents: contents.trimStart() };
 }
 
+function documentedAllowanceSources(
+  overrides: { checkoutGuard?: string; runnerGuard?: string } = {},
+): SkipPolicySourceFile[] {
+  const checkoutGuard =
+    overrides.checkoutGuard ?? "providerGate.mode === 'skip'";
+  const runnerGuard = overrides.runnerGuard ?? "process.platform === 'win32'";
+
+  return [
+    source(
+      'tests/integration/stripe-checkout-client-contract.integration.test.ts',
+      `
+        import { describe } from 'vitest';
+        const selected = ${checkoutGuard} ? describe.skip : describe;
+      `,
+    ),
+    source(
+      'tests/integration/stripe-trial-clock-smoke.integration.test.ts',
+      `
+        import { describe } from 'vitest';
+        const selected = providerGate.mode === 'skip' ? describe.skip : describe;
+      `,
+    ),
+    source(
+      'scripts/run-stripe-provider-contracts.test.ts',
+      `
+        import { it } from 'vitest';
+        it.skipIf(${runnerGuard})('x', () => {});
+      `,
+    ),
+    source(
+      'scripts/run-stripe-provider-contracts-process.test.ts',
+      `
+        import { it } from 'vitest';
+        it.skipIf(process.platform === 'win32')('x', () => {});
+      `,
+    ),
+  ];
+}
+
 describe('skip-policy source scan', () => {
   it.each([
     [
@@ -143,38 +182,31 @@ describe('skip-policy source scan', () => {
   });
 
   it('accepts only the two provider-gate references and two POSIX cases', () => {
-    const issues = collectSkipPolicyIssues([
-      source(
-        'tests/integration/stripe-checkout-client-contract.integration.test.ts',
-        `
-          import { describe } from 'vitest';
-          const selected = gate ? describe.skip : describe;
-        `,
-      ),
-      source(
-        'tests/integration/stripe-trial-clock-smoke.integration.test.ts',
-        `
-          import { describe } from 'vitest';
-          const selected = gate ? describe.skip : describe;
-        `,
-      ),
-      source(
-        'scripts/run-stripe-provider-contracts.test.ts',
-        `
-          import { it } from 'vitest';
-          it.skipIf(process.platform === 'win32')('x', () => {});
-        `,
-      ),
-      source(
-        'scripts/run-stripe-provider-contracts-process.test.ts',
-        `
-          import { it } from 'vitest';
-          it.skipIf(process.platform === 'win32')('x', () => {});
-        `,
-      ),
-    ]);
+    const issues = collectSkipPolicyIssues(documentedAllowanceSources());
 
     expect(issues).toEqual([]);
+  });
+
+  it.each([
+    [
+      'a provider allowance no longer uses the fail-closed gate',
+      { checkoutGuard: 'true' },
+      'stripe-checkout-client-contract.integration.test.ts',
+    ],
+    [
+      'a process allowance no longer targets Windows',
+      { runnerGuard: 'true' },
+      'run-stripe-provider-contracts.test.ts',
+    ],
+  ])('fails when %s', (_label, overrides, expectedFile) => {
+    const issues = collectSkipPolicyIssues(
+      documentedAllowanceSources(overrides),
+    );
+
+    expect(issues).toEqual([
+      expect.stringContaining(expectedFile),
+      expect.stringContaining(expectedFile),
+    ]);
   });
 
   it('fails when a documented allowance grows', () => {
@@ -183,21 +215,21 @@ describe('skip-policy source scan', () => {
         'tests/integration/stripe-checkout-client-contract.integration.test.ts',
         `
           import { describe } from 'vitest';
-          const first = gate ? describe.skip : describe;
-          const second = anotherGate ? describe.skip : describe;
+          const first = providerGate.mode === 'skip' ? describe.skip : describe;
+          const second = providerGate.mode === 'skip' ? describe.skip : describe;
         `,
       ),
       source(
         'tests/integration/stripe-trial-clock-smoke.integration.test.ts',
-        "import { describe } from 'vitest'; const selected = gate ? describe.skip : describe;",
+        "import { describe } from 'vitest'; const selected = providerGate.mode === 'skip' ? describe.skip : describe;",
       ),
       source(
         'scripts/run-stripe-provider-contracts.test.ts',
-        "import { it } from 'vitest'; it.skipIf(true)('x', () => {});",
+        "import { it } from 'vitest'; it.skipIf(process.platform === 'win32')('x', () => {});",
       ),
       source(
         'scripts/run-stripe-provider-contracts-process.test.ts',
-        "import { it } from 'vitest'; it.skipIf(true)('x', () => {});",
+        "import { it } from 'vitest'; it.skipIf(process.platform === 'win32')('x', () => {});",
       ),
     ]);
 

@@ -15,16 +15,14 @@ type ControlKind = 'call' | 'conditional-reference';
 export type FrameworkControlOccurrence = {
   api: TestApi;
   filePath: string;
+  guardExpression?: string;
   kind: ControlKind;
   lineNumber: number;
   method: string;
   moduleName: FrameworkModule;
 };
 
-type SkipPolicyAllowance = Omit<
-  FrameworkControlOccurrence,
-  'lineNumber' | 'moduleName'
-> & {
+type SkipPolicyAllowance = Omit<FrameworkControlOccurrence, 'lineNumber'> & {
   expectedCount: number;
   reason: string;
 };
@@ -59,8 +57,10 @@ const DOCUMENTED_ALLOWANCES: readonly SkipPolicyAllowance[] = [
     api: 'describe',
     filePath:
       'tests/integration/stripe-checkout-client-contract.integration.test.ts',
+    guardExpression: "providerGate.mode==='skip'",
     kind: 'conditional-reference',
     method: 'skip',
+    moduleName: 'vitest',
     expectedCount: 1,
     reason:
       'Flag-off is an intentional hermetic-lane skip; flag-on prerequisites fail closed through the shared provider gate.',
@@ -68,8 +68,10 @@ const DOCUMENTED_ALLOWANCES: readonly SkipPolicyAllowance[] = [
   {
     api: 'describe',
     filePath: 'tests/integration/stripe-trial-clock-smoke.integration.test.ts',
+    guardExpression: "providerGate.mode==='skip'",
     kind: 'conditional-reference',
     method: 'skip',
+    moduleName: 'vitest',
     expectedCount: 1,
     reason:
       'Flag-off is an intentional hermetic-lane skip; flag-on prerequisites fail closed through the shared provider gate.',
@@ -77,8 +79,10 @@ const DOCUMENTED_ALLOWANCES: readonly SkipPolicyAllowance[] = [
   {
     api: 'it',
     filePath: 'scripts/run-stripe-provider-contracts.test.ts',
+    guardExpression: "process.platform==='win32'",
     kind: 'call',
     method: 'skipIf',
+    moduleName: 'vitest',
     expectedCount: 1,
     reason:
       'The descendant-process fixture depends on POSIX process-group semantics.',
@@ -86,8 +90,10 @@ const DOCUMENTED_ALLOWANCES: readonly SkipPolicyAllowance[] = [
   {
     api: 'it',
     filePath: 'scripts/run-stripe-provider-contracts-process.test.ts',
+    guardExpression: "process.platform==='win32'",
     kind: 'call',
     method: 'skipIf',
+    moduleName: 'vitest',
     expectedCount: 1,
     reason:
       'The ignored-signal fixture is constructible only on POSIX platforms.',
@@ -195,15 +201,22 @@ function collectSourceControlOccurrences(
   function recordControl(
     member: ts.PropertyAccessExpression,
     kind: ControlKind,
+    guardExpression?: ts.Expression,
   ): void {
     const method = member.name.text;
     if (!CONTROL_METHODS.has(method)) return;
     const importedApi = resolveImportedApi(member.expression, bindings);
     if (!importedApi) return;
+    const normalizedGuardExpression = guardExpression
+      ? normalizeGuardExpression(guardExpression, parsed)
+      : undefined;
 
     occurrences.push({
       ...importedApi,
       filePath: source.filePath,
+      ...(normalizedGuardExpression
+        ? { guardExpression: normalizedGuardExpression }
+        : {}),
       kind,
       lineNumber:
         parsed.getLineAndCharacterOfPosition(member.name.getStart(parsed))
@@ -217,13 +230,17 @@ function collectSourceControlOccurrences(
       ts.isCallExpression(node) &&
       ts.isPropertyAccessExpression(node.expression)
     ) {
-      recordControl(node.expression, 'call');
+      const method = node.expression.name.text;
+      const guardExpression = ['runIf', 'skipIf'].includes(method)
+        ? node.arguments[0]
+        : undefined;
+      recordControl(node.expression, 'call', guardExpression);
     }
 
     if (ts.isConditionalExpression(node)) {
       for (const branch of [node.whenTrue, node.whenFalse]) {
         if (ts.isPropertyAccessExpression(branch)) {
-          recordControl(branch, 'conditional-reference');
+          recordControl(branch, 'conditional-reference', node.condition);
         }
       }
     }
@@ -233,6 +250,13 @@ function collectSourceControlOccurrences(
 
   visit(parsed);
   return occurrences;
+}
+
+function normalizeGuardExpression(
+  expression: ts.Expression,
+  parsed: ts.SourceFile,
+): string {
+  return expression.getText(parsed).replaceAll(/\s+/g, '');
 }
 
 function collectFrameworkBindings(parsed: ts.SourceFile): FrameworkBindings {
@@ -302,14 +326,16 @@ function isTestApi(value: string): value is TestApi {
 function occurrenceKey(
   occurrence: Pick<
     FrameworkControlOccurrence,
-    'api' | 'filePath' | 'kind' | 'method'
+    'api' | 'filePath' | 'guardExpression' | 'kind' | 'method' | 'moduleName'
   >,
 ): string {
   return [
     occurrence.filePath,
+    occurrence.moduleName,
     occurrence.api,
     occurrence.method,
     occurrence.kind,
+    occurrence.guardExpression ?? '',
   ].join('\0');
 }
 
