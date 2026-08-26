@@ -105,6 +105,10 @@ type ImportedApi = {
   moduleName: FrameworkModule;
 };
 
+type FrameworkControlMember =
+  | ts.ElementAccessExpression
+  | ts.PropertyAccessExpression;
+
 type FrameworkBindings = {
   named: Map<string, ImportedApi>;
   namespaces: Map<string, FrameworkModule>;
@@ -199,11 +203,13 @@ function collectSourceControlOccurrences(
   const occurrences: FrameworkControlOccurrence[] = [];
 
   function recordControl(
-    member: ts.PropertyAccessExpression,
+    member: FrameworkControlMember,
     kind: ControlKind,
     guardExpression?: ts.Expression,
   ): void {
-    const method = member.name.text;
+    const staticMember = getStaticMember(member);
+    if (!staticMember) return;
+    const { method, location } = staticMember;
     if (!CONTROL_METHODS.has(method)) return;
     const importedApi = resolveImportedApi(member.expression, bindings);
     if (!importedApi) return;
@@ -219,8 +225,8 @@ function collectSourceControlOccurrences(
         : {}),
       kind,
       lineNumber:
-        parsed.getLineAndCharacterOfPosition(member.name.getStart(parsed))
-          .line + 1,
+        parsed.getLineAndCharacterOfPosition(location.getStart(parsed)).line +
+        1,
       method,
     });
   }
@@ -228,18 +234,19 @@ function collectSourceControlOccurrences(
   function visit(node: ts.Node): void {
     if (
       ts.isCallExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression)
+      isFrameworkControlMember(node.expression)
     ) {
-      const method = node.expression.name.text;
-      const guardExpression = ['runIf', 'skipIf'].includes(method)
-        ? node.arguments[0]
-        : undefined;
+      const method = getStaticMember(node.expression)?.method;
+      const guardExpression =
+        method !== undefined && ['runIf', 'skipIf'].includes(method)
+          ? node.arguments[0]
+          : undefined;
       recordControl(node.expression, 'call', guardExpression);
     }
 
     if (ts.isConditionalExpression(node)) {
       for (const branch of [node.whenTrue, node.whenFalse]) {
-        if (ts.isPropertyAccessExpression(branch)) {
+        if (isFrameworkControlMember(branch)) {
           recordControl(branch, 'conditional-reference', node.condition);
         }
       }
@@ -303,16 +310,45 @@ function resolveImportedApi(
     return resolveImportedApi(expression.expression, bindings);
   }
 
-  if (!ts.isPropertyAccessExpression(expression)) return undefined;
+  if (!isFrameworkControlMember(expression)) return undefined;
+
+  const staticMember = getStaticMember(expression);
+  if (!staticMember) return undefined;
 
   if (ts.isIdentifier(expression.expression)) {
     const moduleName = bindings.namespaces.get(expression.expression.text);
-    if (moduleName && isTestApi(expression.name.text)) {
-      return { api: expression.name.text, moduleName };
+    if (moduleName && isTestApi(staticMember.method)) {
+      return { api: staticMember.method, moduleName };
     }
   }
 
   return resolveImportedApi(expression.expression, bindings);
+}
+
+function isFrameworkControlMember(
+  node: ts.Node,
+): node is FrameworkControlMember {
+  return (
+    ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)
+  );
+}
+
+function getStaticMember(
+  member: FrameworkControlMember,
+): { method: string; location: ts.Node } | undefined {
+  if (ts.isPropertyAccessExpression(member)) {
+    return { method: member.name.text, location: member.name };
+  }
+
+  const argument = member.argumentExpression;
+  if (
+    ts.isStringLiteral(argument) ||
+    ts.isNoSubstitutionTemplateLiteral(argument)
+  ) {
+    return { method: argument.text, location: argument };
+  }
+
+  return undefined;
 }
 
 function isFrameworkModule(value: string): value is FrameworkModule {

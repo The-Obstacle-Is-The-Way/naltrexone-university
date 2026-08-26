@@ -78,6 +78,11 @@ describe('skip-policy source scan', () => {
       'fixme',
     ],
     ['it.only', "import { it } from 'vitest'; it.only('x', () => {});", 'only'],
+    [
+      "test['skip']",
+      "import { test } from '@playwright/test'; test['skip']('x');",
+      'skip',
+    ],
   ])('detects %s', (_label, contents, method) => {
     const occurrences = collectFrameworkControlOccurrences([
       source('tests/example.test.ts', contents),
