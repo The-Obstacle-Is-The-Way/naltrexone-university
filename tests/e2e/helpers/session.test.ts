@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
+import {
+  SESSION_COUNT_MAX,
+  SESSION_COUNT_MIN,
+} from '@/app/(app)/app/practice/practice-page-session-start';
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import {
   START_SESSION_NAVIGATION_TIMEOUT_MS,
@@ -402,7 +406,7 @@ describe('startSession helper', () => {
     );
   });
 
-  it.each([0, 101, 1.5])(
+  it.each([SESSION_COUNT_MIN - 1, SESSION_COUNT_MAX + 1, 1.5])(
     'rejects invalid requested question count %s before interacting with the page',
     async (count) => {
       const page = createPracticePage({
@@ -411,7 +415,7 @@ describe('startSession helper', () => {
       });
 
       await expect(startSession(page, 'tutor', count)).rejects.toThrow(
-        `startSession count must be an integer between 1 and 100; received ${String(count)}`,
+        `startSession count must be an integer between ${SESSION_COUNT_MIN} and ${SESSION_COUNT_MAX}; received ${String(count)}`,
       );
     },
   );
