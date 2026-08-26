@@ -343,6 +343,7 @@ describe('runVitestWithJsonReporter', () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
+    const eventId = ['ev', 't_secret789'].join('');
     const report = {
       success: false,
       testResults: [
@@ -355,7 +356,7 @@ describe('runVitestWithJsonReporter', () => {
               title: TRIAL_CLOCK_SMOKE_CASE_TITLES[1],
               status: 'failed',
               failureMessages: [
-                'Error: charge failed for cus_secret123 via sk_test_secret456 at https://dashboard.stripe.com/x\nstack line',
+                `Error: charge failed for cus_secret123 via sk_test_secret456 event ${eventId} at https://dashboard.stripe.com/x\nstack line`,
               ],
             },
           ],
@@ -389,6 +390,7 @@ describe('runVitestWithJsonReporter', () => {
       expect(failedLine).toContain('detail=');
       expect(failedLine).not.toContain('cus_secret123');
       expect(failedLine).not.toContain('sk_test_secret456');
+      expect(failedLine).not.toContain(eventId);
       expect(failedLine).not.toContain('dashboard.stripe.com');
       expect(
         printed.some((line) =>
