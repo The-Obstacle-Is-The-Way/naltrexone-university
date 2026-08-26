@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  E2E_CLERK_AUTH_STATE_PATH,
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
@@ -9,6 +10,8 @@ import {
 } from './helpers/paid-checkout';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { resetE2EUserToFirstTimer } from './helpers/subscription';
+
+test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 
 test.describe
   .serial('Stripe Checkout redirect boundary', () => {

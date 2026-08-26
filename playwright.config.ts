@@ -26,7 +26,13 @@ export default defineConfig({
   projects: [
     {
       name: 'setup',
+      teardown: 'cleanup',
       testMatch: /global\.setup\.ts/,
+    },
+    {
+      name: 'cleanup',
+      testMatch: /global-teardown\.ts/,
+      use: { storageState: 'test-results/.auth/e2e-user.json' },
     },
     {
       name: 'chromium',

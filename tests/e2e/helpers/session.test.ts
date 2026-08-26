@@ -13,6 +13,9 @@ type ExpectOptions = {
 
 type LocatorLike = StartSessionLocator;
 type PracticePageLike = StartSessionPage;
+type PracticePageHarness = PracticePageLike & {
+  getSessionStartAlertReadCount(): number;
+};
 type WaitForOptions = Parameters<LocatorLike['waitFor']>[0];
 
 vi.mock('@playwright/test', () => ({
@@ -39,7 +42,7 @@ function createLocator(input: {
   allTextContents?: () => string[];
   inputValue?: () => string;
   getAttribute?: (name: string) => string | null;
-  isEnabled?: () => boolean;
+  isEnabled?: (options?: { timeout?: number }) => boolean;
   isVisible: () => boolean;
   onBlur?: () => void;
   onClick?: () => void;
@@ -66,7 +69,10 @@ function createLocator(input: {
       async (name: string) => input.getAttribute?.(name) ?? null,
     ),
     inputValue: vi.fn(async () => input.inputValue?.() ?? ''),
-    isEnabled: vi.fn(async () => input.isEnabled?.() ?? input.isVisible()),
+    isEnabled: vi.fn(
+      async (options?: { timeout?: number }) =>
+        input.isEnabled?.(options) ?? input.isVisible(),
+    ),
     isVisible: vi.fn(async () => input.isVisible()),
     textContent: vi.fn(async () => input.textContent?.() ?? null),
     waitFor: vi.fn(async ({ state }: WaitForOptions) => {
@@ -91,13 +97,15 @@ function createPracticePage(input: {
   incompleteSession?: boolean;
   countBlurKeepsStartHandlerStale?: boolean;
   countChangeStalesStartHandler?: boolean;
+  navigationCompletesAfterCatchUrlCheck?: boolean;
   navigationCompletesDuringAlertRead?: boolean;
   preexistingAlerts?: string[];
+  redirectsToSignInAfterStart?: boolean;
   sessionStartAlert?: string;
   sessionStartAlertPollDelay?: number;
   selectedModeReselectionStalesStartHandler?: boolean;
   selectedStatusReselectionStalesStartHandler?: boolean;
-}): PracticePageLike {
+}): PracticePageHarness {
   const state = {
     abandonDialogOpen: false,
     currentUrl: '',
@@ -108,8 +116,10 @@ function createPracticePage(input: {
     startClickObserved: false,
     startHandlerIsStale: false,
     startAlertPollCount: 0,
+    sessionStartAlertReadCount: 0,
     startedQuestionCount: null as number | null,
     sessionStarted: false,
+    sessionStartNavigationCompletesOnNextUrlRead: false,
     sessionStartNavigationPending: false,
   };
   const availableStatus = input.availableStatus ?? 'Unanswered';
@@ -141,11 +151,18 @@ function createPracticePage(input: {
 
       state.startClickObserved = true;
       state.startAlertPollCount = 0;
+      if (input.redirectsToSignInAfterStart) {
+        state.currentUrl = '/sign-in?redirect_url=%2Fapp%2Fpractice';
+        return;
+      }
       if (input.sessionStartAlert) {
         return;
       }
 
-      if (input.navigationCompletesDuringAlertRead) {
+      if (
+        input.navigationCompletesDuringAlertRead ||
+        input.navigationCompletesAfterCatchUrlCheck
+      ) {
         state.sessionStartNavigationPending = true;
         return;
       }
@@ -295,8 +312,15 @@ function createPracticePage(input: {
         if (role === 'alert') {
           return createLocator({
             allTextContents: () => {
+              state.sessionStartAlertReadCount += 1;
               if (state.sessionStartNavigationPending) {
                 state.sessionStartNavigationPending = false;
+                if (input.navigationCompletesAfterCatchUrlCheck) {
+                  state.sessionStartNavigationCompletesOnNextUrlRead = true;
+                  throw new Error(
+                    'Execution context was destroyed, most likely because of a navigation',
+                  );
+                }
                 completeSessionStart();
                 throw new Error(
                   'Execution context was destroyed, most likely because of a navigation',
@@ -348,7 +372,14 @@ function createPracticePage(input: {
           state.sessionStarted && matches ? sessionProgress : null,
       });
     }),
-    url: () => state.currentUrl,
+    getSessionStartAlertReadCount: () => state.sessionStartAlertReadCount,
+    url: () => {
+      if (state.sessionStartNavigationCompletesOnNextUrlRead) {
+        state.sessionStartNavigationCompletesOnNextUrlRead = false;
+        completeSessionStart();
+      }
+      return state.currentUrl;
+    },
   };
 }
 
@@ -383,6 +414,19 @@ describe('startSession helper', () => {
     await startSession(page, 'tutor', 2);
 
     expect(page.url()).toBe('/app/practice/session-1');
+  });
+
+  it('observes navigation without waiting for an alert read to reject', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      navigationCompletesAfterCatchUrlCheck: true,
+    });
+
+    await startSession(page, 'exam', 2);
+
+    expect(page.url()).toBe('/app/practice/session-1');
+    expect(page.getSessionStartAlertReadCount()).toBe(2);
   });
 
   it('starts through the current handler when the first supported status is already selected', async () => {
@@ -445,6 +489,34 @@ describe('startSession helper', () => {
     await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
       'startSession produced neither navigation nor a new rendered alert; current URL=/app/practice; Start session enabled=true',
     );
+  });
+
+  it('fails explicitly when Clerk redirects the fresh session back to sign-in', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      redirectsToSignInAfterStart: true,
+    });
+
+    await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
+      'startSession lost Clerk authentication and was redirected to sign-in',
+    );
+  });
+
+  it('bounds the Start-button diagnostic when navigation removes the locator', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      countBlurKeepsStartHandlerStale: true,
+      countChangeStalesStartHandler: true,
+      defaultQuestionCount: 1,
+    });
+    const startButton = page.getByRole('button', { name: 'Start session' });
+
+    await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
+      'startSession produced neither navigation nor a new rendered alert',
+    );
+
+    expect(startButton.isEnabled).toHaveBeenLastCalledWith({ timeout: 1_000 });
   });
 
   it('does not mistake an unchanged pre-existing alert for a start failure', async () => {

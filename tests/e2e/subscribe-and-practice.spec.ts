@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { openQuickPracticeQuestion } from './helpers/bookmark';
 import {
+  E2E_CLERK_AUTH_STATE_PATH,
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
@@ -10,6 +11,8 @@ import {
 } from './helpers/question';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
 import { ensureSubscribed } from './helpers/subscription';
+
+test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 
 test.describe('subscribe and practice', () => {
   // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
