@@ -309,31 +309,91 @@ function collectFrameworkBindings(parsed: ts.SourceFile): FrameworkBindings {
   const namespaces = new Map<string, FrameworkModule>();
 
   for (const statement of parsed.statements) {
-    if (
-      !ts.isImportDeclaration(statement) ||
-      !ts.isStringLiteral(statement.moduleSpecifier) ||
-      !isFrameworkModule(statement.moduleSpecifier.text)
-    ) {
+    if (ts.isImportDeclaration(statement)) {
+      registerImportBindings(statement, named, namespaces);
       continue;
     }
 
-    const moduleName = statement.moduleSpecifier.text;
-    const bindings = statement.importClause?.namedBindings;
-    if (!bindings) continue;
-
-    if (ts.isNamespaceImport(bindings)) {
-      namespaces.set(bindings.name.text, moduleName);
-      continue;
-    }
-
-    for (const element of bindings.elements) {
-      const importedName = (element.propertyName ?? element.name).text;
-      if (!isTestApi(importedName)) continue;
-      named.set(element.name.text, { api: importedName, moduleName });
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      const moduleName = requiredFrameworkModule(declaration.initializer);
+      if (!moduleName) continue;
+      registerCommonJsBindings(declaration.name, moduleName, named, namespaces);
     }
   }
 
   return { named, namespaces };
+}
+
+function registerImportBindings(
+  statement: ts.ImportDeclaration,
+  named: Map<string, ImportedApi>,
+  namespaces: Map<string, FrameworkModule>,
+): void {
+  if (
+    !ts.isStringLiteral(statement.moduleSpecifier) ||
+    !isFrameworkModule(statement.moduleSpecifier.text)
+  ) {
+    return;
+  }
+
+  const moduleName = statement.moduleSpecifier.text;
+  const bindings = statement.importClause?.namedBindings;
+  if (!bindings) return;
+
+  if (ts.isNamespaceImport(bindings)) {
+    namespaces.set(bindings.name.text, moduleName);
+    return;
+  }
+
+  for (const element of bindings.elements) {
+    const importedName = (element.propertyName ?? element.name).text;
+    if (!isTestApi(importedName)) continue;
+    named.set(element.name.text, { api: importedName, moduleName });
+  }
+}
+
+function requiredFrameworkModule(
+  initializer: ts.Expression | undefined,
+): FrameworkModule | undefined {
+  if (
+    !initializer ||
+    !ts.isCallExpression(initializer) ||
+    !ts.isIdentifier(initializer.expression) ||
+    initializer.expression.text !== 'require' ||
+    initializer.arguments.length !== 1
+  ) {
+    return undefined;
+  }
+
+  const moduleSpecifier = initializer.arguments[0];
+  return moduleSpecifier &&
+    ts.isStringLiteral(moduleSpecifier) &&
+    isFrameworkModule(moduleSpecifier.text)
+    ? moduleSpecifier.text
+    : undefined;
+}
+
+function registerCommonJsBindings(
+  binding: ts.BindingName,
+  moduleName: FrameworkModule,
+  named: Map<string, ImportedApi>,
+  namespaces: Map<string, FrameworkModule>,
+): void {
+  if (ts.isIdentifier(binding)) {
+    namespaces.set(binding.text, moduleName);
+    return;
+  }
+  if (!ts.isObjectBindingPattern(binding)) return;
+
+  for (const element of binding.elements) {
+    if (!ts.isIdentifier(element.name)) continue;
+    const importedName = element.propertyName ?? element.name;
+    if (!ts.isIdentifier(importedName) || !isTestApi(importedName.text)) {
+      continue;
+    }
+    named.set(element.name.text, { api: importedName.text, moduleName });
+  }
 }
 
 function resolveImportedApi(
@@ -431,7 +491,11 @@ function compareOccurrences(
 function scriptKindFor(filePath: string): ts.ScriptKind {
   if (filePath.endsWith('.tsx')) return ts.ScriptKind.TSX;
   if (filePath.endsWith('.jsx')) return ts.ScriptKind.JSX;
-  if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+  if (
+    filePath.endsWith('.js') ||
+    filePath.endsWith('.mjs') ||
+    filePath.endsWith('.cjs')
+  ) {
     return ts.ScriptKind.JS;
   }
   return ts.ScriptKind.TS;

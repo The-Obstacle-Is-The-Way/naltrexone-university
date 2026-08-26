@@ -7,6 +7,7 @@ import {
   assertProviderContractsExecuted,
   createStripeProviderContractInvocation,
   loadStripeProviderEnvironment,
+  redactDiagnosticText,
   runStripeProviderContracts,
   runVitestWithJsonReporter,
   STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE,
@@ -314,6 +315,15 @@ describe('runStripeProviderContracts execution proof', () => {
 });
 
 describe('runVitestWithJsonReporter', () => {
+  it.each([
+    ['payment-intent', ['pi', 'fixture', 'secret', 'fixture'].join('_')],
+    ['setup-intent', ['seti', 'fixture', 'secret', 'fixture'].join('_')],
+  ])('redacts a complete %s client secret', (_kind, clientSecret) => {
+    expect(redactDiagnosticText(`detail=${clientSecret}`)).toBe(
+      'detail=[redacted]',
+    );
+  });
+
   it('parses the machine report and removes its scratch directory', async () => {
     const report = reporterOutput(
       TRIAL_CLOCK_SMOKE_CASE_TITLES.map((title) => ({

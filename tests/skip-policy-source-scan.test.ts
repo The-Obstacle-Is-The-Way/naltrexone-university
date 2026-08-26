@@ -113,6 +113,35 @@ describe('skip-policy source scan', () => {
     });
   });
 
+  it.each([
+    [
+      'a namespace assignment',
+      "const vitest = require('vitest'); vitest.test.skip('x', () => {});",
+    ],
+    [
+      'direct destructuring',
+      "const { test } = require('@playwright/test'); test.skip('x');",
+    ],
+    [
+      'aliased destructuring',
+      "const { test: check } = require('vitest'); check.skip('x', () => {});",
+    ],
+  ])('detects CommonJS framework controls through %s', (_label, contents) => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source('tests/example.cjs', contents),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({
+        api: 'test',
+        filePath: 'tests/example.cjs',
+        kind: 'call',
+        lineNumber: 1,
+        method: 'skip',
+      }),
+    ]);
+  });
+
   it('detects a control member used through a chained table API', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(

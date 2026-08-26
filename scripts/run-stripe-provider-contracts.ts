@@ -385,7 +385,7 @@ export async function runVitestWithJsonReporter(
 }
 
 const SENSITIVE_TOKEN_PATTERN =
-  /(?:(?:cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt)_[A-Za-z0-9]+|sk_(?:test|live)_[A-Za-z0-9]+|https?:\/\/\S+|\/(?:Users|home)\/\S+)/g;
+  /(?:(?:pi|seti)_[A-Za-z0-9]+_secret_[A-Za-z0-9]+|(?:cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|pi)_[A-Za-z0-9]+|sk_(?:test|live)_[A-Za-z0-9]+|https?:\/\/\S+|\/(?:Users|home)\/\S+)/g;
 
 export function redactDiagnosticText(text: string): string {
   return text.replaceAll(SENSITIVE_TOKEN_PATTERN, '[redacted]');
