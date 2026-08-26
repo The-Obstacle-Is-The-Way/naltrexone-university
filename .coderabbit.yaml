@@ -97,6 +97,16 @@ reviews:
         Use real browser interactions and async expectations.
         Do not suggest @testing-library/react or jsdom-only interaction patterns here.
 
+    - path: "tests/skip-policy-source-scan*.ts"
+      instructions: |
+        This scanner prevents accidental test-control drift by cooperating authors.
+        Direct Vitest/Playwright receivers are classified, known non-framework imports
+        are ignored, and every unclassified receiver fails closed as a violation.
+        Do not suggest alias, shadowing, reassignment, destructuring, or temporal
+        data-flow resolution merely to label an input that the scanner already rejects.
+        Report a gap only when current code can admit an unapproved control or reject a
+        clearly non-framework import.
+
     # E2E tests - Playwright
     - path: "tests/e2e/**"
       instructions: |

@@ -595,11 +595,26 @@ This is a **blocking requirement**. Violating this rule wastes human time fixing
 1. **Create the PR** via `gh pr create`
 2. **WAIT** for CodeRabbit to comment (1-2 minutes)
 3. **Read ALL CodeRabbit feedback** — do not skim or skip
-4. **Address every issue** before merging:
-   - Valid issue → fix it, push, wait for re-review
-   - False positive → reply explaining why (for the record)
+4. **Adjudicate every finding** before merging. A reviewer finding is a claim,
+   not an order:
+   - Valid, in-scope issue that weakens a required property → fix it, push, and
+     wait for re-review.
+   - Technically possible but outside the documented threat model or invariant
+     → reject it with a concrete receipt showing why no property is weakened.
+   - False positive → reply with the disproving receipt for the record.
 5. **If CodeRabbit reports a rate limit, STOP.** Do not merge based on a prior partial review, a green CodeRabbit status context, or inline acknowledgements. Wait for the full cooldown shown in the rate-limit message, then explicitly request or wait for a fresh CodeRabbit review on the latest PR head commit.
 6. **Only merge after** CodeRabbit has completed a non-rate-limited review of the latest PR head AND all feedback is addressed
+
+### Guard and Scanner Review Discipline
+
+Before implementing a reviewer suggestion against an executable policy scanner,
+CI guard, or test guard, tie it to that guard's stated invariant and threat model
+with a failing or reachable receipt. Minor and Trivial suggestions do not justify
+scope expansion by themselves. If a candidate cannot be classified, fail closed
+by reporting a violation or configuration error; do not grow alias resolution,
+data-flow analysis, or special cases merely to give an already-failing input a
+more precise label. Broaden the resolver only when a governing requirement names
+that behavior or a current-tree false positive prevents legitimate work.
 
 ### Why This Matters
 

@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import type Stripe from 'stripe';
+import { isUsableStripeTestKey } from '@/tests/shared/stripe-provider-gate';
 import { createStripeTestClient } from './stripe-test-client';
 
 const DEFAULT_LOCAL_E2E_STRIPE_OWNER = 'local-dev';
@@ -76,15 +77,11 @@ export async function seedTestSubscription(): Promise<void> {
   }
 }
 
-function isDummyStripeSecretKey(stripeSecretKey: string): boolean {
-  return stripeSecretKey === 'sk_test_dummy';
-}
-
 function resolveE2EStripeOwner(stripeSecretKey: string | undefined): string {
   const configuredOwner = process.env.E2E_STRIPE_OWNER?.trim();
   if (configuredOwner) return configuredOwner;
 
-  if (stripeSecretKey && !isDummyStripeSecretKey(stripeSecretKey)) {
+  if (isUsableStripeTestKey(stripeSecretKey)) {
     throw new Error(
       'E2E_STRIPE_OWNER is required when STRIPE_SECRET_KEY is real',
     );

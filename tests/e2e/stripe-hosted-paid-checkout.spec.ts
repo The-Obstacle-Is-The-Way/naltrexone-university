@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
-  hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import {
@@ -20,7 +19,6 @@ test.describe
   .serial('paid annual checkout', () => {
     // Clerk sign-in, hosted card entry, eager sync, and app entitlement span three origins.
     test.setTimeout(120_000);
-    test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
     test.beforeEach(async () => {
       await runE2EUserStateReset();

@@ -130,12 +130,18 @@ P3 is therefore proportionate.
 
 ## Resolution State
 
-Open. The red-first lifecycle and diagnostic changes are branch-local on PR #837.
-Close only after the exact head passes the complete local gate, required
-CI has no first-attempt E2E failure or raw credential leak, CodeRabbit approves
-that exact head with zero unresolved threads, the fix is promoted to `main`,
-and post-merge CI/deploy complete. Closure must continue to state that the
-original session-loss cause was not reproduced.
+Open. The red-first lifecycle and diagnostic changes are promoted to `main`
+through PR #835, merge commit `47b31234`. CodeRabbit approved exact head
+`92c35965` with zero unresolved threads; PR run `32955114161` and post-merge
+main run `32960005070` each passed required E2E 43/43 on the first attempt with
+zero flaky results or raw Clerk credential assignments. Production deployment
+`6102157792` completed successfully, and the production site and database
+health checks passed.
+
+That proves the suite-owned session lifecycle, cleanup, and bounded diagnostic
+fixes on the promoted tree. It does not establish why the original fresh
+session redirected to sign-in, so BUG-306 remains Open and that cause remains
+explicitly unproven.
 
 The historical active-session backlog is deliberately not mutated in this PR.
 Before closure, the owner must verify whether those TEST-instance sessions are

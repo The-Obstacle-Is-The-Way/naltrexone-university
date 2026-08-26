@@ -9,7 +9,6 @@ export { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
 
 export const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
 export const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;
-export const hasClerkCredentials = Boolean(clerkUsername && clerkPassword);
 
 type ClerkSessionWaitPage = {
   waitForFunction(predicate: () => boolean): Promise<unknown>;

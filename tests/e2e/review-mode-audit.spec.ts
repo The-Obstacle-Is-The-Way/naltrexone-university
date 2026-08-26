@@ -1,7 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
-  hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import {
@@ -61,7 +60,6 @@ async function expectNoChoicesChecked(page: Page): Promise<void> {
 test.describe('review mode audit', () => {
   // Multi-page audit flows can exceed the default timeout due to sequential navigation and assertions in CI.
   test.setTimeout(180_000);
-  test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
   test.beforeEach(async () => {
     await runE2EUserStateReset();
   });

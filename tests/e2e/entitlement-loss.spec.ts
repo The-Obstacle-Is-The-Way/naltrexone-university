@@ -2,7 +2,6 @@ import { expect, type Page, type Route, test } from '@playwright/test';
 import { withTimeout } from '@/lib/with-timeout';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
-  hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
@@ -35,7 +34,6 @@ async function enableStartSession(page: Page): Promise<void> {
 test.describe('entitlement loss', () => {
   // Clerk sign-in, an in-flight Server Action, and the redirect assertion span multiple pages.
   test.setTimeout(120_000);
-  test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
   let entitlementSnapshot: E2EEntitlementSnapshot | null = null;
 

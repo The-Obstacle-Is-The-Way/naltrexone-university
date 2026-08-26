@@ -88,12 +88,19 @@ while its current function is already a redacting wrapper, and rewraps a
 restored method. The redaction suite then passed 4/4; with the existing Clerk
 helper case the focused run passed 5/5.
 
-Close only after exact-head CI proves the mitigation and every exposed
-development session has either been revoked or verified expired. Historical
-public-log deletion or equivalent access containment is a separate required
-action; it cannot substitute for invalidating a still-usable session. Do not
-rotate or delete the shared E2E user or Stripe customer. The closing receipt
-must inspect raw log output without ever printing credential values.
+The corrected mitigation is now promoted to `main` through PR #835, merge
+commit `47b31234`. CodeRabbit approved exact head `92c35965`; PR run
+`32955114161` and post-merge main run `32960005070` each passed required E2E
+43/43 on the first attempt. Non-printing raw-log censuses found zero flaky
+markers and zero assignments for the three redacted Clerk query fields in both
+runs. Production deployment `6102157792` completed successfully.
+
+BUG-305 remains Open until every exposed development session has either been
+revoked or verified expired. Historical public-log deletion or equivalent
+access containment is a separate required action; it cannot substitute for
+invalidating a still-usable session. Do not rotate or delete the shared E2E user
+or Stripe customer. The closing receipt must continue to inspect raw log output
+without ever printing credential values.
 
 ## Related
 

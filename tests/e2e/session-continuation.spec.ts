@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
-  hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
@@ -13,7 +12,6 @@ test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 test.describe('practice session continuation', () => {
   // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.
   test.setTimeout(120_000);
-  test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
   test.beforeEach(async () => {
     await runE2EUserStateReset();
   });

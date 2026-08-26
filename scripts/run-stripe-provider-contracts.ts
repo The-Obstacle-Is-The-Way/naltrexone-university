@@ -3,7 +3,9 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { config } from 'dotenv';
 import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from '@/tests/shared/stripe-checkout-client-contract-cases';
+import { resolveStripeProviderGate } from '@/tests/shared/stripe-provider-gate';
 
 export const TRIAL_CLOCK_SMOKE_FILE =
   'tests/integration/stripe-trial-clock-smoke.integration.test.ts';
@@ -32,13 +34,13 @@ const STRIPE_PROVIDER_CONTRACT_TEST_TIMEOUT_MS = 20_000;
 
 type SmokeEnvironment = Readonly<Record<string, string | undefined>>;
 
-export type TrialClockSmokeInvocation = {
+export type StripeProviderContractInvocation = {
   command: string;
   args: string[];
   env: SmokeEnvironment;
 };
 
-type TrialClockSmokeResult = {
+type StripeProviderContractResult = {
   executed: number;
   passed: number;
   skipped: number;
@@ -46,10 +48,16 @@ type TrialClockSmokeResult = {
 
 type RunVitest = (env: SmokeEnvironment) => Promise<unknown>;
 
-type RunTrialClockSmokeInput = {
+type RunStripeProviderContractsInput = {
   env?: SmokeEnvironment;
   runVitest?: RunVitest;
 };
+
+type StripeProviderEnvironmentLoader = (options: {
+  path: string;
+  override: boolean;
+  quiet: boolean;
+}) => unknown;
 
 type ReporterAssertion = {
   title: string;
@@ -60,42 +68,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isUsableStripeTestKey(value: string | undefined): boolean {
-  return Boolean(value?.startsWith('sk_test_') && !value.includes('dummy'));
+export function loadStripeProviderEnvironment(
+  loadEnvironment: StripeProviderEnvironmentLoader = config,
+): void {
+  loadEnvironment({ path: '.env.local', override: false, quiet: true });
 }
 
-function isUsableStripePriceId(value: string | undefined): boolean {
-  return Boolean(value?.startsWith('price_') && !value.includes('dummy'));
-}
-
-function assertPreflight(env: SmokeEnvironment): void {
-  if (env.RUN_STRIPE_TRIAL_CLOCK_SMOKE !== 'true') {
-    throw new Error(
-      'PREFLIGHT_FLAG_INVALID: RUN_STRIPE_TRIAL_CLOCK_SMOKE must equal true',
-    );
-  }
-
-  if (!isUsableStripeTestKey(env.STRIPE_SECRET_KEY)) {
-    throw new Error(
-      'PREFLIGHT_KEY_INVALID: STRIPE_SECRET_KEY must be a real Stripe test key (sk_test_ and not a dummy placeholder)',
-    );
-  }
-
-  const stripePriceId =
-    env.STRIPE_TRIAL_CLOCK_PRICE_ID ?? env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
-  if (!isUsableStripePriceId(stripePriceId)) {
-    throw new Error(
-      'PREFLIGHT_PRICE_INVALID: provide a real Stripe test price through STRIPE_TRIAL_CLOCK_PRICE_ID or NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY',
-    );
-  }
-}
-
-export function createTrialClockSmokeInvocation(
+export function createStripeProviderContractInvocation(
   outputFile: string,
   env: SmokeEnvironment,
-): TrialClockSmokeInvocation {
+): StripeProviderContractInvocation {
   const contractPriceId =
     env.STRIPE_TRIAL_CLOCK_PRICE_ID ?? env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
+  const childEnvironment = { ...env };
+  delete childEnvironment.DATABASE_URL;
   return {
     command: 'pnpm',
     args: [
@@ -103,17 +89,14 @@ export function createTrialClockSmokeInvocation(
       'vitest',
       'run',
       '--config',
-      'vitest.integration.config.mts',
+      'vitest.stripe-provider.config.mts',
       ...STRIPE_PROVIDER_CONTRACT_FILES,
       `--testTimeout=${STRIPE_PROVIDER_CONTRACT_TEST_TIMEOUT_MS}`,
       '--reporter=json',
       `--outputFile=${outputFile}`,
     ],
     env: {
-      ...env,
-      // The smoke imports no database code. An explicit empty value prevents
-      // .env.test from making the shared integration setup probe Postgres.
-      DATABASE_URL: '',
+      ...childEnvironment,
       RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT: 'true',
       RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true',
       STRIPE_CHECKOUT_CONTRACT_PRICE_ID: contractPriceId,
@@ -179,7 +162,9 @@ function readReporterAssertions(report: unknown): ReporterAssertion[] {
   return assertions;
 }
 
-export function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
+export function assertProviderContractsExecuted(
+  report: unknown,
+): StripeProviderContractResult {
   const assertions = readReporterAssertions(report);
   const skipped = assertions.filter((assertion) =>
     ['skipped', 'pending', 'todo', 'disabled'].includes(assertion.status),
@@ -224,8 +209,8 @@ export function assertSmokeExecuted(report: unknown): TrialClockSmokeResult {
 // The two trial-clock cases and four Checkout client contract cases normally
 // finish in under two minutes. Five minutes bounds a stuck provider process
 // tree while leaving equal headroom inside the workflow's 10-minute job budget.
-const TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
-const TRIAL_CLOCK_SMOKE_SIGNAL_GRACE_MS = 10 * 1000;
+const STRIPE_PROVIDER_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
+const STRIPE_PROVIDER_SIGNAL_GRACE_MS = 10 * 1000;
 
 type KillableChildProcess = Pick<ChildProcess, 'kill' | 'pid'>;
 type KillProcessGroup = (pid: number, signal: NodeJS.Signals) => unknown;
@@ -255,10 +240,10 @@ export function terminateVitestProcessTree(
 }
 
 export async function spawnVitest(
-  invocation: TrialClockSmokeInvocation,
-  timeoutMs: number = TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT_MS,
+  invocation: StripeProviderContractInvocation,
+  timeoutMs: number = STRIPE_PROVIDER_PROCESS_TIMEOUT_MS,
   parentSignals: ParentSignalSource = process,
-  signalGraceMs: number = TRIAL_CLOCK_SMOKE_SIGNAL_GRACE_MS,
+  signalGraceMs: number = STRIPE_PROVIDER_SIGNAL_GRACE_MS,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child: ChildProcess = spawn(invocation.command, invocation.args, {
@@ -313,7 +298,7 @@ export async function spawnVitest(
         terminateVitestProcessTree(child);
         reject(
           new Error(
-            `TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded ${timeoutMs}ms`,
+            `STRIPE_PROVIDER_PROCESS_TIMEOUT: Vitest exceeded ${timeoutMs}ms`,
           ),
         );
       });
@@ -324,7 +309,7 @@ export async function spawnVitest(
       settle(() => {
         reject(
           new Error(
-            'TRIAL_CLOCK_SMOKE_PROCESS_START_FAILED: unable to start Vitest',
+            'STRIPE_PROVIDER_PROCESS_START_FAILED: unable to start Vitest',
             { cause: error },
           ),
         );
@@ -343,7 +328,7 @@ export async function spawnVitest(
             : `signal ${signal}`;
         reject(
           new Error(
-            `TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with ${reason}`,
+            `STRIPE_PROVIDER_PROCESS_FAILED: Vitest ended with ${reason}`,
           ),
         );
       });
@@ -374,7 +359,7 @@ async function readJsonReport(outputFile: string): Promise<unknown> {
 export async function runVitestWithJsonReporter(
   env: SmokeEnvironment,
   runInvocation: (
-    invocation: TrialClockSmokeInvocation,
+    invocation: StripeProviderContractInvocation,
   ) => Promise<void> = spawnVitest,
 ): Promise<unknown> {
   const scratchDirectory = await mkdtemp(
@@ -383,7 +368,7 @@ export async function runVitestWithJsonReporter(
   const outputFile = path.join(scratchDirectory, 'vitest-report.json');
 
   try {
-    const invocation = createTrialClockSmokeInvocation(outputFile, env);
+    const invocation = createStripeProviderContractInvocation(outputFile, env);
     try {
       await runInvocation(invocation);
     } catch (processError) {
@@ -400,7 +385,7 @@ export async function runVitestWithJsonReporter(
 }
 
 const SENSITIVE_TOKEN_PATTERN =
-  /(?:(?:cus|sub|clock|acct|req|seti|si|pm|in|price|cs)_[A-Za-z0-9]+|sk_(?:test|live)_[A-Za-z0-9]+|https?:\/\/\S+|\/(?:Users|home)\/\S+)/g;
+  /(?:(?:pi|seti)_[A-Za-z0-9]+_secret_[A-Za-z0-9]+|(?:cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|pi)_[A-Za-z0-9]+|sk_(?:test|live)_[A-Za-z0-9]+|https?:\/\/\S+|\/(?:Users|home)\/\S+)/g;
 
 export function redactDiagnosticText(text: string): string {
   return text.replaceAll(SENSITIVE_TOKEN_PATTERN, '[redacted]');
@@ -415,7 +400,7 @@ async function printRedactedCaseSummary(outputFile: string): Promise<void> {
     // an already-failing run, so read/parse errors must not mask the primary
     // process failure that the caller is about to rethrow.
     console.error(
-      '[trial-clock-smoke] no readable JSON report to summarize the failure',
+      '[stripe-provider] no readable JSON report to summarize the failure',
     );
     return;
   }
@@ -436,34 +421,52 @@ async function printRedactedCaseSummary(outputFile: string): Promise<void> {
             ).slice(0, 200)
           : '';
       console.error(
-        `[trial-clock-smoke] case "${title}" status=${status}${firstFailureLine ? ` detail=${firstFailureLine}` : ''}`,
+        `[stripe-provider] case "${title}" status=${status}${firstFailureLine ? ` detail=${firstFailureLine}` : ''}`,
       );
     }
   }
 }
 
-export async function runTrialClockSmoke({
+export async function runStripeProviderContracts({
   env = process.env,
   runVitest = runVitestWithJsonReporter,
-}: RunTrialClockSmokeInput = {}): Promise<TrialClockSmokeResult> {
-  assertPreflight(env);
-  const report = await runVitest(env);
-  return assertSmokeExecuted(report);
+}: RunStripeProviderContractsInput = {}): Promise<StripeProviderContractResult> {
+  const gate = resolveStripeProviderGate(
+    { ...env, RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true' },
+    {
+      flag: 'RUN_STRIPE_TRIAL_CLOCK_SMOKE',
+      priceKeys: [
+        'STRIPE_TRIAL_CLOCK_PRICE_ID',
+        'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY',
+      ],
+    },
+  );
+  if (gate.mode !== 'run') {
+    throw new Error('Stripe provider gate did not enter run mode');
+  }
+
+  const report = await runVitest({
+    ...env,
+    STRIPE_SECRET_KEY: gate.stripeSecretKey,
+    STRIPE_TRIAL_CLOCK_PRICE_ID: gate.stripePriceId,
+  });
+  return assertProviderContractsExecuted(report);
 }
 
 const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
 
-/* v8 ignore start -- direct CLI entrypoint; behavior is covered through runTrialClockSmoke */
+/* v8 ignore start -- direct CLI entrypoint; behavior is covered through runStripeProviderContracts */
 if (import.meta.url === executedPath) {
-  runTrialClockSmoke()
+  loadStripeProviderEnvironment();
+  runStripeProviderContracts()
     .then((result) => {
       console.log(
-        `[trial-clock-smoke] PASS executed=${result.executed} passed=${result.passed} skipped=${result.skipped}`,
+        `[stripe-provider] PASS executed=${result.executed} passed=${result.passed} skipped=${result.skipped}`,
       );
     })
     .catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
-      console.error(`[trial-clock-smoke] FAIL ${message}`);
+      console.error(`[stripe-provider] FAIL ${message}`);
       process.exitCode = 1;
     });
 }
