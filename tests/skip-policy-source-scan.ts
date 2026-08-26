@@ -332,7 +332,7 @@ function collectFrameworkBindingIndex(
           : enclosingScope;
     if (node === parsed || ts.isFunctionLike(node)) scope.functionOwner = scope;
     if (scope !== enclosingScope || node === parsed) scopes.set(node, scope);
-    registerNodeBindings(node, scope);
+    registerNodeBindings(node, scope, enclosingScope);
     ts.forEachChild(node, (child) => visit(child, scope));
   }
 
@@ -368,6 +368,7 @@ function isFrameworkBindingScope(node: ts.Node): boolean {
 function registerNodeBindings(
   node: ts.Node,
   scope: FrameworkBindingScope,
+  enclosingScope: FrameworkBindingScope,
 ): void {
   if (ts.isImportDeclaration(node)) {
     registerImportBindings(node, scope);
@@ -382,6 +383,16 @@ function registerNodeBindings(
 
   if (ts.isParameter(node)) {
     declareBindingName(node.name, scope.declared);
+    return;
+  }
+
+  if (
+    (ts.isFunctionDeclaration(node) ||
+      ts.isClassDeclaration(node) ||
+      ts.isEnumDeclaration(node)) &&
+    node.name
+  ) {
+    enclosingScope.declared.add(node.name.text);
     return;
   }
 
