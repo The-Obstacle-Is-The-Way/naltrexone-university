@@ -30,6 +30,7 @@ type SkipPolicyAllowance = Omit<FrameworkControlOccurrence, 'lineNumber'> & {
 type SourceReader = (filePath: string, encoding: 'utf8') => string;
 
 const SOURCE_GLOBS = [
+  '*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
   'tests/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
   'scripts/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
   'src/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',

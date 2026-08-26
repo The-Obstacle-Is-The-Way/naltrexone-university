@@ -286,6 +286,14 @@ describe('skip-policy source scan', () => {
     );
   });
 
+  it('walks test files at the repository root', () => {
+    const filePaths = readRepositorySkipPolicySources().map(
+      (sourceFile) => sourceFile.filePath,
+    );
+
+    expect(filePaths).toContain('proxy.test.ts');
+  });
+
   it('finds no unapproved controls in the live repository', () => {
     expect(collectSkipPolicyIssues(readRepositorySkipPolicySources())).toEqual(
       [],
