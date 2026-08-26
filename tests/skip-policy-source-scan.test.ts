@@ -425,14 +425,22 @@ describe('skip-policy source scan', () => {
 
   it.each([
     [
-      'object',
+      'object destructuring',
       "let spec; ({ test: spec } = require('vitest')); spec.skip('x', () => {});",
     ],
     [
-      'array',
+      'object destructuring with a computed key',
+      "let spec; ({ ['test']: spec } = require('vitest')); spec.skip('x', () => {});",
+    ],
+    [
+      'array destructuring',
       "import { test } from 'vitest'; let spec; [spec] = [test]; spec.skip('x', () => {});",
     ],
-  ])('resolves a receiver assigned through %s destructuring', (_kind, text) => {
+    [
+      'parenthesized identifier',
+      "import { test } from 'vitest'; let spec; (spec) = test; spec.skip('x', () => {});",
+    ],
+  ])('resolves a receiver assigned through %s', (_kind, text) => {
     const occurrences = collectFrameworkControlOccurrences([
       source('tests/example.test.ts', text),
     ]);
