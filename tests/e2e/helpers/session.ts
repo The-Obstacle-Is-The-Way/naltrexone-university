@@ -83,6 +83,14 @@ async function readNonemptyAlertTexts(
     .filter((text) => text.length > 0);
 }
 
+function isNavigationContextDestroyed(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes('Execution context was destroyed') &&
+    error.message.includes('navigation')
+  );
+}
+
 function countTexts(texts: readonly string[]): ReadonlyMap<string, number> {
   const counts = new Map<string, number>();
   for (const text of texts) {
@@ -118,10 +126,18 @@ async function waitForSessionStartOutcome(input: {
       .poll(
         async () => {
           if (expectedUrl.test(input.page.url())) return true;
-          renderedStartAlert = findAdditionalAlert(
-            await readNonemptyAlertTexts(alerts),
-            input.initialAlertCounts,
-          );
+          try {
+            renderedStartAlert = findAdditionalAlert(
+              await readNonemptyAlertTexts(alerts),
+              input.initialAlertCounts,
+            );
+          } catch (error) {
+            // Navigation can invalidate the alert locator between the URL read
+            // and DOM evaluation. Keep polling so the committed URL remains
+            // authoritative instead of entering diagnostics mid-navigation.
+            if (isNavigationContextDestroyed(error)) return false;
+            throw error;
+          }
           return renderedStartAlert !== null;
         },
         { timeout: START_SESSION_NAVIGATION_TIMEOUT_MS },

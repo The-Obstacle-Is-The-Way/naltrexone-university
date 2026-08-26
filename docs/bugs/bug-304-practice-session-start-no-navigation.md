@@ -173,6 +173,40 @@ choices, and requested question count. The focused suite passed 12/12 after the
 change, so a URL transition cannot become a false success while a successful
 navigation can no longer become a false failure.
 
+PR #836 merged that first follow-up to `dev` as merge commit `0cb072a4`.
+Promotion PR #835 then exposed a second ordering in exact-head CI run
+`32912478032`: the exam-mode case timed out at 120 seconds, recovered on retry,
+and produced an aggregate `1 flaky` / `41 passed`. Its saved failure context was
+already on the completed **Session Summary**, with one question represented and
+zero recorded answers. The preserved cause was again an alert-locator read
+whose execution context navigation destroyed, but this time the catch's
+immediate URL re-check ran before navigation committed. The catch then entered
+the diagnostic path, whose second alert read consumed the remaining test bound;
+the final diagnostic observed the session URL only after the test timed out.
+
+The artifact is `playwright-report` (artifact `9587258477`) from run
+`32912478032`. The preserved first-attempt snapshot is
+`test-results/practice-practice-exam-mod-58ef3-without-showing-explanation-chromium/error-context.md`;
+the available `trace.zip` belongs to the passing retry because CI traced only
+the first retry.
+
+A thirteenth focused case models that exact ordering: the first alert read loses
+its execution context, the immediate catch-time URL check still sees the starter,
+and navigation becomes visible on the following poll. It failed red with the
+same contradictory session-URL diagnostic (1 failed / 12 passed). The minimal
+fix treats only Playwright's navigation-destroyed execution-context error as an
+in-progress poll outcome, so the next iteration observes the committed URL;
+other errors still propagate. The focused suite then passed 13/13. Delayed
+rendered alerts and the downstream Tutor/Exam heading, answer-choice, and
+question-count assertions remain required.
+
+The exact exam-mode case that failed in run `32912478032` then ran five times
+through the local orchestrator with Chromium, retries disabled, and tracing on.
+Each invocation selected only global setup plus that case and passed 2/2; wall
+times were 33, 30, 31, 29, and 28 seconds. These runs verify the follow-up under
+the real browser seam but do not erase the failed CI attempt or prove the cause
+of the original 03:15Z no-navigation event.
+
 The render barrier removes the concrete stale-count-handler window from the E2E
 helper, but the five passing characterization runs cannot establish that this
 window caused the 03:15Z incident. A future recurrence now has a longer bound,
@@ -189,11 +223,12 @@ session corruption was observed, so P3 is proportionate.
 ## Resolution
 
 Open. The first diagnostic/synchronization fix merged to `dev` through PR #834,
-but promotion PR #835 is intentionally blocked by its two retry-recovered E2E
-failures. The red-first navigation-observation fix is on
-`fix/bug-304-navigation-observation-race`. Close only after the follow-up is
-reviewed, merged, promoted, and production-verified, with the original
-no-navigation cause still labeled unproven.
+and its first navigation-observation follow-up merged through PR #836. Promotion
+PR #835 remains intentionally blocked: runs `32903291145` and `32912478032`
+each contained retry-recovered required-E2E failures. The second red-first
+navigation-observation fix is on `fix/bug-304-navigation-event-wait`. Close only
+after that follow-up is reviewed, merged, promoted, and production-verified,
+with the original no-navigation cause still labeled unproven.
 
 ## Related
 

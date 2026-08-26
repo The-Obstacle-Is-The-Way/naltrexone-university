@@ -91,6 +91,7 @@ function createPracticePage(input: {
   incompleteSession?: boolean;
   countBlurKeepsStartHandlerStale?: boolean;
   countChangeStalesStartHandler?: boolean;
+  navigationCompletesAfterCatchUrlCheck?: boolean;
   navigationCompletesDuringAlertRead?: boolean;
   preexistingAlerts?: string[];
   sessionStartAlert?: string;
@@ -110,6 +111,7 @@ function createPracticePage(input: {
     startAlertPollCount: 0,
     startedQuestionCount: null as number | null,
     sessionStarted: false,
+    sessionStartNavigationCompletesOnNextAlertRead: false,
     sessionStartNavigationPending: false,
   };
   const availableStatus = input.availableStatus ?? 'Unanswered';
@@ -145,7 +147,10 @@ function createPracticePage(input: {
         return;
       }
 
-      if (input.navigationCompletesDuringAlertRead) {
+      if (
+        input.navigationCompletesDuringAlertRead ||
+        input.navigationCompletesAfterCatchUrlCheck
+      ) {
         state.sessionStartNavigationPending = true;
         return;
       }
@@ -297,10 +302,21 @@ function createPracticePage(input: {
             allTextContents: () => {
               if (state.sessionStartNavigationPending) {
                 state.sessionStartNavigationPending = false;
+                if (input.navigationCompletesAfterCatchUrlCheck) {
+                  state.sessionStartNavigationCompletesOnNextAlertRead = true;
+                  throw new Error(
+                    'Execution context was destroyed, most likely because of a navigation',
+                  );
+                }
                 completeSessionStart();
                 throw new Error(
                   'Execution context was destroyed, most likely because of a navigation',
                 );
+              }
+
+              if (state.sessionStartNavigationCompletesOnNextAlertRead) {
+                state.sessionStartNavigationCompletesOnNextAlertRead = false;
+                completeSessionStart();
               }
 
               const alerts = [...preexistingAlerts];
@@ -381,6 +397,18 @@ describe('startSession helper', () => {
     });
 
     await startSession(page, 'tutor', 2);
+
+    expect(page.url()).toBe('/app/practice/session-1');
+  });
+
+  it('observes navigation without waiting for an alert read to reject', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      defaultQuestionCount: 1,
+      navigationCompletesAfterCatchUrlCheck: true,
+    });
+
+    await startSession(page, 'exam', 2);
 
     expect(page.url()).toBe('/app/practice/session-1');
   });
