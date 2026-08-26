@@ -164,6 +164,19 @@ describe('seedTestSubscription', () => {
     );
   });
 
+  it('uses the shared dummy-key definition for alternate placeholders', async () => {
+    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_dummy_placeholder');
+    vi.stubEnv('E2E_STRIPE_OWNER', '');
+
+    await expect(seedTestSubscription()).resolves.toBeUndefined();
+
+    expect(customersCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ e2e_owner: 'local-dev' }),
+      }),
+    );
+  });
+
   it('creates E2E Stripe customer and subscription with owner-scoped metadata', async () => {
     await expect(seedTestSubscription()).resolves.toBeUndefined();
 

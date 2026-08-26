@@ -4,21 +4,21 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from '@/tests/shared/stripe-checkout-client-contract-cases';
 import {
-  assertSmokeExecuted,
-  createTrialClockSmokeInvocation,
-  runTrialClockSmoke,
+  assertProviderContractsExecuted,
+  createStripeProviderContractInvocation,
+  loadStripeProviderEnvironment,
+  runStripeProviderContracts,
   runVitestWithJsonReporter,
   STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE,
   spawnVitest,
   TRIAL_CLOCK_SMOKE_CASE_TITLES,
   TRIAL_CLOCK_SMOKE_FILE,
-} from './run-trial-clock-smoke';
+} from './run-stripe-provider-contracts';
 
 type SmokeEnvironment = Readonly<Record<string, string | undefined>>;
 
 function validEnvironment(overrides: SmokeEnvironment = {}): SmokeEnvironment {
   return {
-    RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true',
     STRIPE_SECRET_KEY: 'sk_test_contract_only',
     NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: 'price_contract_only',
     ...overrides,
@@ -52,96 +52,23 @@ function reporterOutput(
   };
 }
 
-describe('runTrialClockSmoke preflight', () => {
-  it('fails closed when the opt-in flag is absent', async () => {
-    const runVitest = vi.fn(async () => reporterOutput([]));
+describe('loadStripeProviderEnvironment', () => {
+  it('loads .env.local without overriding an explicitly exported value', () => {
+    const observedOptions: unknown[] = [];
 
-    await expect(
-      runTrialClockSmoke({
-        env: validEnvironment({ RUN_STRIPE_TRIAL_CLOCK_SMOKE: undefined }),
-        runVitest,
-      }),
-    ).rejects.toThrow(
-      'PREFLIGHT_FLAG_INVALID: RUN_STRIPE_TRIAL_CLOCK_SMOKE must equal true',
-    );
-    expect(runVitest).not.toHaveBeenCalled();
-  });
+    loadStripeProviderEnvironment((options) => {
+      observedOptions.push(options);
+    });
 
-  it.each([
-    ['missing', undefined],
-    ['live-mode', 'sk_live_contract_only'],
-    ['dummy', 'sk_test_dummy'],
-  ])('fails closed when the Stripe key is %s', async (_label, value) => {
-    const runVitest = vi.fn(async () => reporterOutput([]));
-
-    await expect(
-      runTrialClockSmoke({
-        env: validEnvironment({ STRIPE_SECRET_KEY: value }),
-        runVitest,
-      }),
-    ).rejects.toThrow(
-      'PREFLIGHT_KEY_INVALID: STRIPE_SECRET_KEY must be a real Stripe test key',
-    );
-    expect(runVitest).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    ['missing', undefined],
-    ['wrong shape', 'prod_contract_only'],
-    ['dummy', 'price_dummy_monthly'],
-  ])('fails closed when the Stripe price is %s', async (_label, value) => {
-    const runVitest = vi.fn(async () => reporterOutput([]));
-
-    await expect(
-      runTrialClockSmoke({
-        env: validEnvironment({
-          STRIPE_TRIAL_CLOCK_PRICE_ID: undefined,
-          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: value,
-        }),
-        runVitest,
-      }),
-    ).rejects.toThrow(
-      'PREFLIGHT_PRICE_INVALID: provide a real Stripe test price through STRIPE_TRIAL_CLOCK_PRICE_ID or NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY',
-    );
-    expect(runVitest).not.toHaveBeenCalled();
-  });
-
-  it('matches the smoke suite by rejecting an invalid override before a valid monthly fallback', async () => {
-    const runVitest = vi.fn(async () => reporterOutput([]));
-
-    await expect(
-      runTrialClockSmoke({
-        env: validEnvironment({
-          STRIPE_TRIAL_CLOCK_PRICE_ID: 'price_dummy_override',
-        }),
-        runVitest,
-      }),
-    ).rejects.toThrow('PREFLIGHT_PRICE_INVALID');
-    expect(runVitest).not.toHaveBeenCalled();
-  });
-
-  it('never includes credential values in a preflight failure', async () => {
-    const invalidKey = 'sk_live_do_not_print_this_value';
-    let failure: unknown;
-
-    try {
-      await runTrialClockSmoke({
-        env: validEnvironment({ STRIPE_SECRET_KEY: invalidKey }),
-        runVitest: async () => reporterOutput([]),
-      });
-    } catch (error) {
-      failure = error;
-    }
-
-    expect(failure).toBeInstanceOf(Error);
-    expect((failure as Error).message).toContain('PREFLIGHT_KEY_INVALID');
-    expect((failure as Error).message).not.toContain(invalidKey);
+    expect(observedOptions).toEqual([
+      { path: '.env.local', override: false, quiet: true },
+    ]);
   });
 });
 
-describe('createTrialClockSmokeInvocation', () => {
+describe('createStripeProviderContractInvocation', () => {
   it('includes the credential-gated Checkout client contract in the scheduled proof', () => {
-    const invocation = createTrialClockSmokeInvocation(
+    const invocation = createStripeProviderContractInvocation(
       '/tmp/trial-clock-smoke.json',
       validEnvironment(),
     );
@@ -153,8 +80,8 @@ describe('createTrialClockSmokeInvocation', () => {
     expect(STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES).toHaveLength(4);
   });
 
-  it('targets only the provider contracts through the integration config and disables the unused database setup', () => {
-    const invocation = createTrialClockSmokeInvocation(
+  it('targets only the provider contracts through a database-free config', () => {
+    const invocation = createStripeProviderContractInvocation(
       '/tmp/trial-clock-smoke.json',
       validEnvironment({ DATABASE_URL: 'postgresql://remote.example/app' }),
     );
@@ -166,7 +93,7 @@ describe('createTrialClockSmokeInvocation', () => {
         'vitest',
         'run',
         '--config',
-        'vitest.integration.config.mts',
+        'vitest.stripe-provider.config.mts',
         TRIAL_CLOCK_SMOKE_FILE,
         STRIPE_CHECKOUT_CLIENT_CONTRACT_FILE,
         '--testTimeout=20000',
@@ -174,10 +101,7 @@ describe('createTrialClockSmokeInvocation', () => {
         '--outputFile=/tmp/trial-clock-smoke.json',
       ],
       env: {
-        ...validEnvironment({
-          DATABASE_URL: 'postgresql://remote.example/app',
-        }),
-        DATABASE_URL: '',
+        ...validEnvironment(),
         RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT: 'true',
         RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true',
         STRIPE_CHECKOUT_CONTRACT_PRICE_ID: 'price_contract_only',
@@ -201,7 +125,7 @@ describe('captured Vitest reporter payload fixtures', () => {
   it('accepts the reporter envelope when all provider cases passed', async () => {
     const report = await loadFixture('trial-clock-smoke-report-passed.json');
 
-    expect(assertSmokeExecuted(report)).toEqual({
+    expect(assertProviderContractsExecuted(report)).toEqual({
       executed: 6,
       passed: 6,
       skipped: 0,
@@ -211,7 +135,7 @@ describe('captured Vitest reporter payload fixtures', () => {
   it('rejects the real skip-shaped payload that exits zero', async () => {
     const report = await loadFixture('trial-clock-smoke-report-skipped.json');
 
-    expect(() => assertSmokeExecuted(report)).toThrow(
+    expect(() => assertProviderContractsExecuted(report)).toThrow(
       'PROOF_SKIPPED: scheduled smoke reported 2 skipped cases',
     );
   });
@@ -221,11 +145,13 @@ describe('captured Vitest reporter payload fixtures', () => {
       'trial-clock-smoke-report-mixed-failure.json',
     );
 
-    expect(() => assertSmokeExecuted(report)).toThrow('PROOF_REPORT_INVALID');
+    expect(() => assertProviderContractsExecuted(report)).toThrow(
+      'PROOF_REPORT_INVALID',
+    );
   });
 });
 
-describe('runTrialClockSmoke execution proof', () => {
+describe('runStripeProviderContracts execution proof', () => {
   it('fails when Vitest reports the smoke cases as skipped', async () => {
     const runVitest = vi.fn(async () =>
       reporterOutput(
@@ -237,7 +163,7 @@ describe('runTrialClockSmoke execution proof', () => {
     );
 
     await expect(
-      runTrialClockSmoke({ env: validEnvironment(), runVitest }),
+      runStripeProviderContracts({ env: validEnvironment(), runVitest }),
     ).rejects.toThrow(
       'PROOF_SKIPPED: scheduled smoke reported 2 skipped cases',
     );
@@ -251,7 +177,7 @@ describe('runTrialClockSmoke execution proof', () => {
     );
 
     await expect(
-      runTrialClockSmoke({ env: validEnvironment(), runVitest }),
+      runStripeProviderContracts({ env: validEnvironment(), runVitest }),
     ).rejects.toThrow(
       `PROOF_MISSING_CASE: ${TRIAL_CLOCK_SMOKE_CASE_TITLES[1]}`,
     );
@@ -267,7 +193,7 @@ describe('runTrialClockSmoke execution proof', () => {
     const runVitest = vi.fn(async () => report);
 
     await expect(
-      runTrialClockSmoke({ env: validEnvironment(), runVitest }),
+      runStripeProviderContracts({ env: validEnvironment(), runVitest }),
     ).resolves.toEqual({ executed: 6, passed: 6, skipped: 0 });
     expect(runVitest).toHaveBeenCalledOnce();
   });
@@ -330,7 +256,7 @@ describe('runTrialClockSmoke execution proof', () => {
     ],
   ])('fails closed for %s', async (_label, report, expectedMessage) => {
     await expect(
-      runTrialClockSmoke({
+      runStripeProviderContracts({
         env: validEnvironment(),
         runVitest: async () => report,
       }),
@@ -341,7 +267,7 @@ describe('runTrialClockSmoke execution proof', () => {
     const [firstTitle, secondTitle] = TRIAL_CLOCK_SMOKE_CASE_TITLES;
 
     await expect(
-      runTrialClockSmoke({
+      runStripeProviderContracts({
         env: validEnvironment(),
         runVitest: async () =>
           reporterOutput([
@@ -357,7 +283,7 @@ describe('runTrialClockSmoke execution proof', () => {
     const [firstTitle, secondTitle] = TRIAL_CLOCK_SMOKE_CASE_TITLES;
 
     await expect(
-      runTrialClockSmoke({
+      runStripeProviderContracts({
         env: validEnvironment(),
         runVitest: async () =>
           reporterOutput([
@@ -370,7 +296,7 @@ describe('runTrialClockSmoke execution proof', () => {
 
   it('rejects an unexpected non-passing case in the smoke file', async () => {
     await expect(
-      runTrialClockSmoke({
+      runStripeProviderContracts({
         env: validEnvironment(),
         runVitest: async () =>
           reporterOutput([
@@ -450,10 +376,10 @@ describe('runVitestWithJsonReporter', () => {
             'utf8',
           );
           throw new Error(
-            'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with exit code 1',
+            'STRIPE_PROVIDER_PROCESS_FAILED: Vitest ended with exit code 1',
           );
         }),
-      ).rejects.toThrow('TRIAL_CLOCK_SMOKE_PROCESS_FAILED');
+      ).rejects.toThrow('STRIPE_PROVIDER_PROCESS_FAILED');
 
       const printed = consoleError.mock.calls.map((call) => String(call[0]));
       const failedLine = printed.find((line) =>
@@ -483,10 +409,10 @@ describe('runVitestWithJsonReporter', () => {
       await expect(
         runVitestWithJsonReporter(validEnvironment(), async () => {
           throw new Error(
-            'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with exit code 1',
+            'STRIPE_PROVIDER_PROCESS_FAILED: Vitest ended with exit code 1',
           );
         }),
-      ).rejects.toThrow('TRIAL_CLOCK_SMOKE_PROCESS_FAILED');
+      ).rejects.toThrow('STRIPE_PROVIDER_PROCESS_FAILED');
 
       expect(
         consoleError.mock.calls
@@ -586,7 +512,7 @@ describe('runVitestWithJsonReporter', () => {
               200,
             );
           }),
-        ).rejects.toThrow('TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT');
+        ).rejects.toThrow('STRIPE_PROVIDER_PROCESS_TIMEOUT');
 
         expect(scratchDirectory).toBeTypeOf('string');
         await expect(access(scratchDirectory ?? '')).rejects.toThrow();

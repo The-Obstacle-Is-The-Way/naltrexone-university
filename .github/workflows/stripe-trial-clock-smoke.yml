@@ -43,4 +43,4 @@ jobs:
           RUN_STRIPE_TRIAL_CLOCK_SMOKE: 'true'
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY }}
-        run: pnpm exec tsx scripts/run-trial-clock-smoke.ts
+        run: pnpm test:stripe-provider

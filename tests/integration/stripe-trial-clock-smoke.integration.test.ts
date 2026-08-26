@@ -1,42 +1,32 @@
 import Stripe from 'stripe';
 import { afterEach, describe, expect, it } from 'vitest';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
+import { resolveStripeProviderGate } from '@/tests/shared/stripe-provider-gate';
 
 const STRIPE_SMOKE_WAIT_BUDGET_MS = 8_500;
 const INITIAL_POLL_DELAY_MS = 150;
 const MAX_POLL_DELAY_MS = 500;
-const RUN_STRIPE_TRIAL_CLOCK_SMOKE =
-  process.env.RUN_STRIPE_TRIAL_CLOCK_SMOKE === 'true';
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY ?? '';
-const stripePriceId =
-  process.env.STRIPE_TRIAL_CLOCK_PRICE_ID ??
-  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY ??
-  '';
-
-function isUsableStripeTestKey(value: string): boolean {
-  return value.startsWith('sk_test_') && !value.includes('dummy');
-}
-
-function isUsableStripePriceId(value: string): boolean {
-  return value.startsWith('price_') && !value.includes('dummy');
-}
-
-const skipReason = !RUN_STRIPE_TRIAL_CLOCK_SMOKE
-  ? 'set RUN_STRIPE_TRIAL_CLOCK_SMOKE=true to run the external Stripe smoke'
-  : !isUsableStripeTestKey(stripeSecretKey)
-    ? 'provide a real Stripe test secret key'
-    : !isUsableStripePriceId(stripePriceId)
-      ? 'provide STRIPE_TRIAL_CLOCK_PRICE_ID or NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY'
-      : null;
-
-const describeStripeSmoke = skipReason ? describe.skip : describe;
+const providerGate = resolveStripeProviderGate(process.env, {
+  flag: 'RUN_STRIPE_TRIAL_CLOCK_SMOKE',
+  priceKeys: [
+    'STRIPE_TRIAL_CLOCK_PRICE_ID',
+    'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY',
+  ],
+});
+const describeStripeSmoke =
+  providerGate.mode === 'skip' ? describe.skip : describe;
 const createdCustomerIds: string[] = [];
 const createdTestClockIds: string[] = [];
 
-function getStripe(): Stripe {
-  if (skipReason) {
-    throw new Error(`Stripe trial clock smoke skipped: ${skipReason}`);
+function requireProviderRun() {
+  if (providerGate.mode === 'skip') {
+    throw new Error(`Stripe trial clock smoke skipped: ${providerGate.reason}`);
   }
+  return providerGate;
+}
+
+function getStripe(): Stripe {
+  const { stripeSecretKey } = requireProviderRun();
 
   return new Stripe(stripeSecretKey, {
     apiVersion: STRIPE_API_VERSION,
@@ -127,6 +117,7 @@ async function createTrialingSubscription(input: {
   stripe: Stripe;
   customerId: string;
 }) {
+  const { stripePriceId } = requireProviderRun();
   return input.stripe.subscriptions.create({
     customer: input.customerId,
     items: [{ price: stripePriceId }],
@@ -159,7 +150,7 @@ async function createTestClockCustomer(input: {
 }
 
 afterEach(async () => {
-  if (skipReason) return;
+  if (providerGate.mode === 'skip') return;
 
   const stripe = getStripe();
   const cleanupErrors: Error[] = [];
@@ -200,9 +191,7 @@ afterEach(async () => {
 });
 
 describeStripeSmoke(
-  `Stripe no-card trial clock smoke${
-    skipReason ? ` (skipped: ${skipReason})` : ''
-  }`,
+  `Stripe no-card trial clock smoke${providerGate.mode === 'skip' ? ` (skipped: ${providerGate.reason})` : ''}`,
   () => {
     it('cancels a trialing subscription at trial end when no card is present', async () => {
       const stripe = getStripe();

@@ -345,4 +345,10 @@ describe('package scripts', () => {
       'tsx scripts/resolve-local-test-target.ts',
     );
   });
+
+  it('exposes the fail-closed Stripe provider contracts through the dedicated runner', () => {
+    expect(packageJson.scripts['test:stripe-provider']).toBe(
+      'tsx scripts/run-stripe-provider-contracts.ts',
+    );
+  });
 });

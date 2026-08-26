@@ -7,37 +7,29 @@ import {
   STRIPE_TEST_REQUEST_TIMEOUT_MS,
 } from '@/tests/e2e/helpers/stripe-test-client';
 import { runStripeCheckoutClientContract } from '@/tests/shared/stripe-checkout-client-contract';
+import { resolveStripeProviderGate } from '@/tests/shared/stripe-provider-gate';
 
-const RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT =
-  process.env.RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT === 'true';
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY ?? '';
-const stripePriceId =
-  process.env.STRIPE_CHECKOUT_CONTRACT_PRICE_ID ??
-  process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY ??
-  '';
+const providerGate = resolveStripeProviderGate(process.env, {
+  flag: 'RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT',
+  priceKeys: [
+    'STRIPE_CHECKOUT_CONTRACT_PRICE_ID',
+    'NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY',
+  ],
+});
+const describeStripeContract =
+  providerGate.mode === 'skip' ? describe.skip : describe;
 
-function isUsableStripeTestKey(value: string): boolean {
-  return value.startsWith('sk_test_') && !value.includes('dummy');
+function requireProviderRun() {
+  if (providerGate.mode === 'skip') {
+    throw new Error(
+      `Stripe Checkout client contract skipped: ${providerGate.reason}`,
+    );
+  }
+  return providerGate;
 }
-
-function isUsableStripePriceId(value: string): boolean {
-  return value.startsWith('price_') && !value.includes('dummy');
-}
-
-const skipReason = !RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT
-  ? 'set RUN_STRIPE_CHECKOUT_CLIENT_CONTRACT=true to run the external Stripe contract'
-  : !isUsableStripeTestKey(stripeSecretKey)
-    ? 'provide a real Stripe test secret key'
-    : !isUsableStripePriceId(stripePriceId)
-      ? 'provide STRIPE_CHECKOUT_CONTRACT_PRICE_ID or NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY'
-      : null;
-
-const describeStripeContract = skipReason ? describe.skip : describe;
 
 function getStripe(): Stripe {
-  if (skipReason) {
-    throw new Error(`Stripe Checkout client contract skipped: ${skipReason}`);
-  }
+  const { stripeSecretKey } = requireProviderRun();
 
   // Bound the provider call so one hung request cannot outrun the per-case
   // budget this contract advertises; stripe-node otherwise defaults to an
@@ -54,9 +46,10 @@ function sleep(ms: number): Promise<void> {
 }
 
 runStripeCheckoutClientContract(
-  `real Stripe TEST mode${skipReason ? ` (skipped: ${skipReason})` : ''}`,
+  `real Stripe TEST mode${providerGate.mode === 'skip' ? ` (skipped: ${providerGate.reason})` : ''}`,
   async () => {
     const stripe = getStripe();
+    const { stripePriceId } = requireProviderRun();
     const customer = await stripe.customers.create({
       metadata: { test_contract: 'debt_472_checkout_client' },
     });
