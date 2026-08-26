@@ -98,6 +98,23 @@ describe('skip-policy source scan', () => {
     });
   });
 
+  it('detects a control member used through a chained table API', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        "import { test } from 'vitest'; test.skip.each([1])('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({
+        api: 'test',
+        kind: 'reference',
+        method: 'skip',
+      }),
+    ]);
+  });
+
   it('resolves an aliased Vitest receiver', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(

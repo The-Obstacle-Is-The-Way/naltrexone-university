@@ -10,7 +10,7 @@ export type SkipPolicySourceFile = {
 
 type TestApi = 'describe' | 'it' | 'test';
 type FrameworkModule = '@playwright/test' | 'vitest';
-type ControlKind = 'call' | 'conditional-reference';
+type ControlKind = 'call' | 'conditional-reference' | 'reference';
 
 export type FrameworkControlOccurrence = {
   api: TestApi;
@@ -252,11 +252,29 @@ function collectSourceControlOccurrences(
       }
     }
 
+    if (
+      isFrameworkControlMember(node) &&
+      !isDirectControlUseHandledByParent(node)
+    ) {
+      recordControl(node, 'reference');
+    }
+
     ts.forEachChild(node, visit);
   }
 
   visit(parsed);
   return occurrences;
+}
+
+function isDirectControlUseHandledByParent(
+  member: FrameworkControlMember,
+): boolean {
+  const parent = member.parent;
+  if (ts.isCallExpression(parent) && parent.expression === member) return true;
+  return (
+    ts.isConditionalExpression(parent) &&
+    (parent.whenTrue === member || parent.whenFalse === member)
+  );
 }
 
 function normalizeGuardExpression(
