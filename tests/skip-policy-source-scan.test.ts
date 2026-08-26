@@ -206,6 +206,23 @@ describe('skip-policy source scan', () => {
     ]);
   });
 
+  it.each([
+    [
+      'parameter',
+      "function configure(require) { const { test } = require('vitest'); test.skip(); }",
+    ],
+    [
+      'local variable',
+      "const require = () => ({ test: { skip() {} } }); const { test } = require('vitest'); test.skip();",
+    ],
+  ])('does not treat a %s named require as CommonJS', (_label, contents) => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source('tests/example.cjs', contents),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
   it('does not attribute a shadowed named binding to the framework import', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(
@@ -269,6 +286,17 @@ describe('skip-policy source scan', () => {
     expect(occurrences).toEqual([]);
   });
 
+  it('does not attribute a nested namespace binding to the framework import', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.ts',
+        "import { test } from 'vitest'; namespace outer { namespace test { export function skip() {} } test.skip(); }",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
   it('resolves a var framework binding from its enclosing function scope', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(
@@ -318,6 +346,102 @@ describe('skip-policy source scan', () => {
 
     expect(occurrences).toEqual([
       expect.objectContaining({ api: 'it', method: 'only', lineNumber: 2 }),
+    ]);
+  });
+
+  it('resolves a receiver copied to a local alias', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        "import { test } from 'vitest'; const spec = test; spec.skip('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'skip' }),
+    ]);
+  });
+
+  it.each([
+    ['parentheses', '(test)'],
+    ['an as-expression', 'test as typeof test'],
+    ['a non-null assertion', 'test!'],
+    ['a satisfies-expression', 'test satisfies typeof test'],
+    ['an angle-bracket assertion', '<typeof test>test'],
+  ])('resolves a receiver alias wrapped in %s', (_label, expression) => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        `import { test } from 'vitest'; const spec = ${expression}; spec.skip('x', () => {});`,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'skip' }),
+    ]);
+  });
+
+  it.each([
+    [
+      'namespace alias',
+      "import * as vitest from 'vitest'; const local = vitest; local.test.skip('x', () => {});",
+    ],
+    [
+      'namespace destructuring',
+      "import * as vitest from 'vitest'; const { test } = vitest; test.skip('x', () => {});",
+    ],
+  ])('resolves a receiver through %s', (_label, contents) => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source('tests/example.test.ts', contents),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'skip' }),
+    ]);
+  });
+
+  it.each([
+    [
+      'a named control',
+      "import { test } from 'vitest'; const { skip } = test; skip();",
+      'test',
+      'skip',
+    ],
+    [
+      'an aliased control',
+      "import { describe } from 'vitest'; const { only: focused } = describe; focused();",
+      'describe',
+      'only',
+    ],
+    [
+      'a control nested under a namespace API',
+      "import * as vitest from 'vitest'; const { test: { todo } } = vitest; todo();",
+      'test',
+      'todo',
+    ],
+  ])(
+    'detects %s destructured from a framework receiver',
+    (_label, contents, api, method) => {
+      const occurrences = collectFrameworkControlOccurrences([
+        source('tests/example.test.ts', contents),
+      ]);
+
+      expect(occurrences).toEqual([
+        expect.objectContaining({ api, kind: 'reference', method }),
+      ]);
+    },
+  );
+
+  it('resolves a framework receiver destructured from a dynamic import', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        "async function configure() { const { test } = await import('vitest'); test.skip('x', () => {}); }",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'skip' }),
     ]);
   });
 

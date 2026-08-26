@@ -1,12 +1,13 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import fg from 'fast-glob';
 import ts from 'typescript';
+import { DOCUMENTED_SKIP_POLICY_ALLOWANCES } from './skip-policy-source-scan-allowances';
+import type { SkipPolicySourceFile } from './skip-policy-source-scan-files';
 
-export type SkipPolicySourceFile = {
-  filePath: string;
-  contents: string;
-};
+export type { SkipPolicySourceFile } from './skip-policy-source-scan-files';
+export {
+  readRepositorySkipPolicySources,
+  readSkipPolicySources,
+  SkipPolicyScanError,
+} from './skip-policy-source-scan-files';
 
 type TestApi = 'bench' | 'describe' | 'it' | 'suite' | 'test';
 type FrameworkModule = '@playwright/test' | 'vitest';
@@ -22,22 +23,13 @@ export type FrameworkControlOccurrence = {
   moduleName: FrameworkModule;
 };
 
-type SkipPolicyAllowance = Omit<FrameworkControlOccurrence, 'lineNumber'> & {
+export type SkipPolicyAllowance = Omit<
+  FrameworkControlOccurrence,
+  'lineNumber'
+> & {
   expectedCount: number;
   reason: string;
 };
-
-type SourceReader = (filePath: string, encoding: 'utf8') => string;
-
-const SOURCE_GLOBS = [
-  '*.{test,spec}.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'tests/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'scripts/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'src/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'app/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'components/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-  'lib/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}',
-];
 
 const FRAMEWORK_MODULES = new Set<FrameworkModule>([
   '@playwright/test',
@@ -59,54 +51,6 @@ const CONTROL_METHODS = new Set([
   'todo',
 ]);
 const CONTROL_TOKEN_PATTERN = /\b(?:fixme|only|runIf|skip|skipIf|todo)\b/;
-
-const DOCUMENTED_ALLOWANCES: readonly SkipPolicyAllowance[] = [
-  {
-    api: 'describe',
-    filePath:
-      'tests/integration/stripe-checkout-client-contract.integration.test.ts',
-    guardExpression: "providerGate.mode==='skip'",
-    kind: 'conditional-reference',
-    method: 'skip',
-    moduleName: 'vitest',
-    expectedCount: 1,
-    reason:
-      'Flag-off is an intentional hermetic-lane skip; flag-on prerequisites fail closed through the shared provider gate.',
-  },
-  {
-    api: 'describe',
-    filePath: 'tests/integration/stripe-trial-clock-smoke.integration.test.ts',
-    guardExpression: "providerGate.mode==='skip'",
-    kind: 'conditional-reference',
-    method: 'skip',
-    moduleName: 'vitest',
-    expectedCount: 1,
-    reason:
-      'Flag-off is an intentional hermetic-lane skip; flag-on prerequisites fail closed through the shared provider gate.',
-  },
-  {
-    api: 'it',
-    filePath: 'scripts/run-stripe-provider-contracts.test.ts',
-    guardExpression: "process.platform==='win32'",
-    kind: 'call',
-    method: 'skipIf',
-    moduleName: 'vitest',
-    expectedCount: 1,
-    reason:
-      'The descendant-process fixture depends on POSIX process-group semantics.',
-  },
-  {
-    api: 'it',
-    filePath: 'scripts/run-stripe-provider-contracts-process.test.ts',
-    guardExpression: "process.platform==='win32'",
-    kind: 'call',
-    method: 'skipIf',
-    moduleName: 'vitest',
-    expectedCount: 1,
-    reason:
-      'The ignored-signal fixture is constructible only on POSIX platforms.',
-  },
-];
 
 type ImportedApi = {
   api: TestApi;
@@ -133,46 +77,6 @@ type FrameworkBindingIndex = {
   scopes: Map<ts.Node, FrameworkBindingScope>;
 };
 
-export class SkipPolicyScanError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = 'SkipPolicyScanError';
-  }
-}
-
-export function readSkipPolicySources(
-  filePaths: readonly string[],
-  readSource: SourceReader = readFileSync,
-): SkipPolicySourceFile[] {
-  if (filePaths.length === 0) {
-    throw new SkipPolicyScanError('SKIP_POLICY_SOURCE_WALK_EMPTY');
-  }
-
-  return [...filePaths].sort().map((filePath) => {
-    try {
-      return {
-        filePath,
-        contents: readSource(path.resolve(process.cwd(), filePath), 'utf8'),
-      };
-    } catch (error) {
-      throw new SkipPolicyScanError(
-        `SKIP_POLICY_SOURCE_UNREADABLE: ${filePath}`,
-        { cause: error },
-      );
-    }
-  });
-}
-
-export function readRepositorySkipPolicySources(): SkipPolicySourceFile[] {
-  const filePaths = fg.sync(SOURCE_GLOBS, {
-    cwd: process.cwd(),
-    ignore: ['**/node_modules/**', '**/.next/**'],
-    onlyFiles: true,
-    unique: true,
-  });
-  return readSkipPolicySources(filePaths);
-}
-
 export function collectFrameworkControlOccurrences(
   sources: readonly SkipPolicySourceFile[],
 ): FrameworkControlOccurrence[] {
@@ -195,7 +99,7 @@ function mayContainFrameworkControl(source: SkipPolicySourceFile): boolean {
 
 export function collectSkipPolicyIssues(
   sources: readonly SkipPolicySourceFile[],
-  allowances: readonly SkipPolicyAllowance[] = DOCUMENTED_ALLOWANCES,
+  allowances: readonly SkipPolicyAllowance[] = DOCUMENTED_SKIP_POLICY_ALLOWANCES,
 ): string[] {
   const occurrences = collectFrameworkControlOccurrences(sources);
   const allowedKeys = new Set(allowances.map(allowanceKey));
@@ -233,18 +137,13 @@ function collectSourceControlOccurrences(
   const bindingIndex = collectFrameworkBindingIndex(parsed);
   const occurrences: FrameworkControlOccurrence[] = [];
 
-  function recordControl(
-    member: FrameworkControlMember,
+  function recordResolvedControl(
+    importedApi: ImportedApi,
+    method: string,
+    location: ts.Node,
     kind: ControlKind,
-    scope: FrameworkBindingScope,
     guardExpression?: ts.Expression,
   ): void {
-    const staticMember = getStaticMember(member);
-    if (!staticMember) return;
-    const { method, location } = staticMember;
-    if (!CONTROL_METHODS.has(method)) return;
-    const importedApi = resolveImportedApi(member.expression, scope);
-    if (!importedApi) return;
     const normalizedGuardExpression = guardExpression
       ? normalizeGuardExpression(guardExpression, parsed)
       : undefined;
@@ -263,8 +162,75 @@ function collectSourceControlOccurrences(
     });
   }
 
+  function recordControl(
+    member: FrameworkControlMember,
+    kind: ControlKind,
+    scope: FrameworkBindingScope,
+    guardExpression?: ts.Expression,
+  ): void {
+    const staticMember = getStaticMember(member);
+    if (!staticMember) return;
+    const { method, location } = staticMember;
+    if (!CONTROL_METHODS.has(method)) return;
+    const importedApi = resolveImportedApi(member.expression, scope);
+    if (!importedApi) return;
+    recordResolvedControl(importedApi, method, location, kind, guardExpression);
+  }
+
+  function recordControlBindings(
+    pattern: ts.ObjectBindingPattern,
+    importedApi: ImportedApi,
+  ): void {
+    for (const element of pattern.elements) {
+      if (!ts.isBindingElement(element)) continue;
+      const method = staticBindingPropertyName(element);
+      if (!method || !CONTROL_METHODS.has(method)) continue;
+      recordResolvedControl(
+        importedApi,
+        method,
+        element.propertyName ?? element.name,
+        'reference',
+      );
+    }
+  }
+
+  function recordDestructuredControls(
+    declaration: ts.VariableDeclaration,
+    scope: FrameworkBindingScope,
+  ): void {
+    if (
+      !ts.isObjectBindingPattern(declaration.name) ||
+      !declaration.initializer
+    ) {
+      return;
+    }
+
+    const importedApi = resolveImportedApi(declaration.initializer, scope);
+    if (importedApi) {
+      recordControlBindings(declaration.name, importedApi);
+      return;
+    }
+
+    const moduleName = resolveFrameworkModuleBinding(
+      declaration.initializer,
+      scope,
+    );
+    if (!moduleName) return;
+    for (const element of declaration.name.elements) {
+      if (!ts.isBindingElement(element)) continue;
+      const api = staticBindingPropertyName(element);
+      if (!api || !isTestApi(api) || !ts.isObjectBindingPattern(element.name)) {
+        continue;
+      }
+      recordControlBindings(element.name, { api, moduleName });
+    }
+  }
+
   function visit(node: ts.Node, enclosingScope: FrameworkBindingScope): void {
     const scope = bindingIndex.scopes.get(node) ?? enclosingScope;
+    if (ts.isVariableDeclaration(node)) {
+      recordDestructuredControls(node, scope);
+    }
     if (
       ts.isCallExpression(node) &&
       isFrameworkControlMember(node.expression)
@@ -323,7 +289,10 @@ function collectFrameworkBindingIndex(
   const scopes = new Map<ts.Node, FrameworkBindingScope>();
   const root = createFrameworkBindingScope(undefined);
 
-  function visit(node: ts.Node, enclosingScope: FrameworkBindingScope): void {
+  function visitDeclarations(
+    node: ts.Node,
+    enclosingScope: FrameworkBindingScope,
+  ): void {
     const scope =
       node === parsed
         ? root
@@ -332,11 +301,21 @@ function collectFrameworkBindingIndex(
           : enclosingScope;
     if (node === parsed || ts.isFunctionLike(node)) scope.functionOwner = scope;
     if (scope !== enclosingScope || node === parsed) scopes.set(node, scope);
-    registerNodeBindings(node, scope, enclosingScope);
-    ts.forEachChild(node, (child) => visit(child, scope));
+    registerDeclaredBindings(node, scope, enclosingScope);
+    ts.forEachChild(node, (child) => visitDeclarations(child, scope));
   }
 
-  visit(parsed, root);
+  function visitFrameworkBindings(
+    node: ts.Node,
+    enclosingScope: FrameworkBindingScope,
+  ): void {
+    const scope = scopes.get(node) ?? enclosingScope;
+    registerFrameworkBindings(node, scope);
+    ts.forEachChild(node, (child) => visitFrameworkBindings(child, scope));
+  }
+
+  visitDeclarations(parsed, root);
+  visitFrameworkBindings(parsed, root);
   return { root, scopes };
 }
 
@@ -363,23 +342,23 @@ function isFrameworkBindingScope(node: ts.Node): boolean {
     ts.isForStatement(node) ||
     ts.isForInStatement(node) ||
     ts.isForOfStatement(node) ||
-    ts.isFunctionLike(node)
+    ts.isFunctionLike(node) ||
+    ts.isModuleBlock(node)
   );
 }
 
-function registerNodeBindings(
+function registerDeclaredBindings(
   node: ts.Node,
   scope: FrameworkBindingScope,
   enclosingScope: FrameworkBindingScope,
 ): void {
   if (ts.isImportDeclaration(node)) {
-    registerImportBindings(node, scope);
+    declareImportBindings(node, scope.declared);
     return;
   }
 
   if (ts.isImportEqualsDeclaration(node)) {
     scope.declared.add(node.name.text);
-    registerImportEqualsBinding(node, scope.namespaces);
     return;
   }
 
@@ -389,6 +368,11 @@ function registerNodeBindings(
   }
 
   if (ts.isEnumDeclaration(node) && node.name) {
+    enclosingScope.declared.add(node.name.text);
+    return;
+  }
+
+  if (ts.isModuleDeclaration(node) && ts.isIdentifier(node.name)) {
     enclosingScope.declared.add(node.name.text);
     return;
   }
@@ -415,7 +399,30 @@ function registerNodeBindings(
     ? scope
     : (scope.functionOwner ?? scope);
   declareBindingName(node.name, declarationScope.declared);
-  const moduleName = requiredFrameworkModule(node.initializer);
+}
+
+function registerFrameworkBindings(
+  node: ts.Node,
+  scope: FrameworkBindingScope,
+): void {
+  if (ts.isImportDeclaration(node)) {
+    registerImportBindings(node, scope);
+    return;
+  }
+
+  if (ts.isImportEqualsDeclaration(node)) {
+    registerImportEqualsBinding(node, scope.namespaces);
+    return;
+  }
+
+  if (!ts.isVariableDeclaration(node)) return;
+  const declarationScope = isBlockScopedVariableDeclaration(node)
+    ? scope
+    : (scope.functionOwner ?? scope);
+  const moduleName = resolveFrameworkModuleBinding(
+    node.initializer,
+    declarationScope,
+  );
   if (moduleName) {
     registerCommonJsBindings(
       node.name,
@@ -427,7 +434,9 @@ function registerNodeBindings(
   }
 
   if (!ts.isIdentifier(node.name)) return;
-  const importedApi = requiredFrameworkApi(node.initializer);
+  const importedApi = node.initializer
+    ? resolveImportedApi(node.initializer, declarationScope)
+    : undefined;
   if (importedApi) declarationScope.named.set(node.name.text, importedApi);
 }
 
@@ -459,18 +468,9 @@ function registerImportBindings(
   statement: ts.ImportDeclaration,
   scope: FrameworkBindingScope,
 ): void {
+  declareImportBindings(statement, scope.declared);
   const importClause = statement.importClause;
-  if (importClause?.name) scope.declared.add(importClause.name.text);
   const bindings = importClause?.namedBindings;
-  if (bindings) {
-    if (ts.isNamespaceImport(bindings)) {
-      scope.declared.add(bindings.name.text);
-    } else {
-      for (const element of bindings.elements) {
-        scope.declared.add(element.name.text);
-      }
-    }
-  }
 
   if (
     !ts.isStringLiteral(statement.moduleSpecifier) ||
@@ -494,6 +494,23 @@ function registerImportBindings(
   }
 }
 
+function declareImportBindings(
+  statement: ts.ImportDeclaration,
+  declared: Set<string>,
+): void {
+  const importClause = statement.importClause;
+  if (importClause?.name) declared.add(importClause.name.text);
+  const bindings = importClause?.namedBindings;
+  if (!bindings) return;
+  if (ts.isNamespaceImport(bindings)) {
+    declared.add(bindings.name.text);
+    return;
+  }
+  for (const element of bindings.elements) {
+    declared.add(element.name.text);
+  }
+}
+
 function registerImportEqualsBinding(
   statement: ts.ImportEqualsDeclaration,
   namespaces: Map<string, FrameworkModule>,
@@ -507,33 +524,55 @@ function registerImportEqualsBinding(
 
 function requiredFrameworkModule(
   initializer: ts.Expression | undefined,
+  scope: FrameworkBindingScope,
 ): FrameworkModule | undefined {
-  if (
-    !initializer ||
-    !ts.isCallExpression(initializer) ||
-    !ts.isIdentifier(initializer.expression) ||
-    initializer.expression.text !== 'require' ||
-    initializer.arguments.length !== 1
-  ) {
-    return undefined;
-  }
+  const candidate = initializer
+    ? unwrapTransparentExpression(initializer)
+    : undefined;
+  if (!candidate || !ts.isCallExpression(candidate)) return undefined;
+  if (candidate.arguments.length !== 1) return undefined;
 
-  const moduleSpecifier = staticStringValue(initializer.arguments[0]);
+  const isDynamicImport =
+    candidate.expression.kind === ts.SyntaxKind.ImportKeyword;
+  const isUnshadowedRequire =
+    ts.isIdentifier(candidate.expression) &&
+    candidate.expression.text === 'require' &&
+    !hasDeclaredBinding('require', scope);
+  if (!isDynamicImport && !isUnshadowedRequire) return undefined;
+
+  const moduleSpecifier = staticStringValue(candidate.arguments[0]);
   return moduleSpecifier && isFrameworkModule(moduleSpecifier)
     ? moduleSpecifier
     : undefined;
 }
 
-function requiredFrameworkApi(
+function resolveFrameworkModuleBinding(
   initializer: ts.Expression | undefined,
-): ImportedApi | undefined {
-  if (!initializer || !isFrameworkControlMember(initializer)) return undefined;
+  scope: FrameworkBindingScope,
+): FrameworkModule | undefined {
+  const directModule = requiredFrameworkModule(initializer, scope);
+  if (directModule) return directModule;
+  if (!initializer) return undefined;
 
-  const staticMember = getStaticMember(initializer);
-  if (!staticMember || !isTestApi(staticMember.method)) return undefined;
+  const candidate = unwrapTransparentExpression(initializer);
+  return ts.isIdentifier(candidate)
+    ? resolveNamespaceBinding(candidate.text, scope)
+    : undefined;
+}
 
-  const moduleName = requiredFrameworkModule(initializer.expression);
-  return moduleName ? { api: staticMember.method, moduleName } : undefined;
+function unwrapTransparentExpression(expression: ts.Expression): ts.Expression {
+  let candidate = expression;
+  while (
+    ts.isAsExpression(candidate) ||
+    ts.isAwaitExpression(candidate) ||
+    ts.isNonNullExpression(candidate) ||
+    ts.isParenthesizedExpression(candidate) ||
+    ts.isSatisfiesExpression(candidate) ||
+    ts.isTypeAssertionExpression(candidate)
+  ) {
+    candidate = candidate.expression;
+  }
+  return candidate;
 }
 
 function registerCommonJsBindings(
@@ -585,27 +624,31 @@ function resolveImportedApi(
   expression: ts.Expression,
   scope: FrameworkBindingScope,
 ): ImportedApi | undefined {
-  if (ts.isIdentifier(expression)) {
-    return resolveNamedBinding(expression.text, scope);
+  const candidate = unwrapTransparentExpression(expression);
+  if (ts.isIdentifier(candidate)) {
+    return resolveNamedBinding(candidate.text, scope);
   }
 
-  if (ts.isCallExpression(expression)) {
-    return resolveImportedApi(expression.expression, scope);
+  if (ts.isCallExpression(candidate)) {
+    return resolveImportedApi(candidate.expression, scope);
   }
 
-  if (!isFrameworkControlMember(expression)) return undefined;
+  if (!isFrameworkControlMember(candidate)) return undefined;
 
-  const staticMember = getStaticMember(expression);
+  const staticMember = getStaticMember(candidate);
   if (!staticMember) return undefined;
 
-  const requiredModuleName = requiredFrameworkModule(expression.expression);
+  const requiredModuleName = requiredFrameworkModule(
+    candidate.expression,
+    scope,
+  );
   if (requiredModuleName && isTestApi(staticMember.method)) {
     return { api: staticMember.method, moduleName: requiredModuleName };
   }
 
-  if (ts.isIdentifier(expression.expression)) {
+  if (ts.isIdentifier(candidate.expression)) {
     const moduleName = resolveNamespaceBinding(
-      expression.expression.text,
+      candidate.expression.text,
       scope,
     );
     if (moduleName && isTestApi(staticMember.method)) {
@@ -613,7 +656,19 @@ function resolveImportedApi(
     }
   }
 
-  return resolveImportedApi(expression.expression, scope);
+  return resolveImportedApi(candidate.expression, scope);
+}
+
+function hasDeclaredBinding(
+  name: string,
+  scope: FrameworkBindingScope,
+): boolean {
+  let current: FrameworkBindingScope | undefined = scope;
+  while (current) {
+    if (current.declared.has(name)) return true;
+    current = current.parent;
+  }
+  return false;
 }
 
 function resolveNamedBinding(
