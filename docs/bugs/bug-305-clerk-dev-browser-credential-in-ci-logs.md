@@ -12,8 +12,9 @@
 
 Required E2E can finish green while `@clerk/testing` prints a failed route-fetch
 warning containing the `__clerk_db_jwt` query value. The repository is public,
-the value is not masked by GitHub, and two of the eight most recent successful
-CI runs contained two such warnings each.
+the value is not masked by GitHub, and an initial eight-run census found two
+successful runs with two such warnings each. The first mitigation's hosted run
+became a third affected run and proved that local/unit success was insufficient.
 
 This is a TEST/development-instance credential, not a production Clerk secret.
 It is still sensitive: Clerk documents the dev-browser object as linked directly
@@ -30,6 +31,11 @@ unsafe in a query string because logs and browser history can expose it.
 - Run `32908317465` contained the same two-warning shape. Six other successful
   runs in the eight-run census contained none, so the disclosure is
   intermittent rather than absent.
+- First-mitigation run `32916441885` passed required E2E 42/42 but again emitted
+  two unmasked warnings immediately after the second bookmarks case. A
+  non-printing raw-log parser counted two unmasked dev-browser values and zero
+  redacted values. This falsified the target-level idempotence guard before
+  merge.
 - The repository visibility is `PUBLIC`.
 - Installed `@clerk/testing` 2.2.24 catches the exhausted `route.fetch()` call
   and passes the original `request().url()` to `console.warn`. Registry release
@@ -61,15 +67,26 @@ bug.
 
 ## Resolution
 
-Open. The branch-local mitigation is red-first:
+Open. The branch-local mitigation is red-first and the failed first attempt is
+part of the record:
 
 - `tests/e2e/helpers/e2e-log-redaction.ts` wraps the test process's five console
-  channels once and redacts Clerk dev-browser, testing-token, and session query
+  channels and redacts Clerk dev-browser, testing-token, and session query
   values while preserving the warning and non-string arguments;
 - `signInWithClerkPassword()` installs it before Clerk registers or exercises
   its route handler; and
 - the focused test first failed because the seam did not exist, then passed
   3/3; together with the existing Clerk helper case the focused run passed 4/4.
+
+That first implementation tracked the target object as “installed.” Hosted run
+`32916441885` proved that this was not the property required across test
+boundaries: a restored console method could remain raw while the target-level
+guard refused to reinstall. A fourth focused case models that reset and failed
+red with the fake credential unchanged (1 failed / 3 passed). The corrected
+implementation tracks the wrapper functions themselves, skips a method only
+while its current function is already a redacting wrapper, and rewraps a
+restored method. The redaction suite then passed 4/4; with the existing Clerk
+helper case the focused run passed 5/5.
 
 Close only after exact-head CI proves the mitigation and the owner decides how
 to contain the historical public artifacts: revoke affected development

@@ -78,4 +78,21 @@ describe('installE2ELogRedaction', () => {
       },
     ]);
   });
+
+  it('reinstalls when the test runner restores a console method', () => {
+    const fake = createFakeLogTarget();
+    const originalWarn = fake.target.warn;
+    installE2ELogRedaction(fake.target);
+    fake.target.warn = originalWarn;
+
+    installE2ELogRedaction(fake.target);
+    fake.target.warn('?__clerk_db_jwt=dev-browser-value');
+
+    expect(fake.captured).toEqual([
+      {
+        method: 'warn',
+        values: ['?__clerk_db_jwt=[redacted]'],
+      },
+    ]);
+  });
 });

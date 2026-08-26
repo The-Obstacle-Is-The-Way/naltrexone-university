@@ -5,7 +5,7 @@ type LogMethod = (...values: unknown[]) => void;
 
 export type E2ELogTarget = Record<LogMethodName, LogMethod>;
 
-const installedTargets = new WeakSet<E2ELogTarget>();
+const redactingLogMethods = new WeakSet<LogMethod>();
 const SENSITIVE_CLERK_VALUE_PATTERN =
   /\b((?:__clerk_db_jwt|__clerk_testing_token|__session)=)[^&;\s)"']+/g;
 
@@ -15,14 +15,15 @@ function redactSensitiveLogValue(value: unknown): unknown {
 }
 
 export function installE2ELogRedaction(target: E2ELogTarget): void {
-  if (installedTargets.has(target)) return;
-
   for (const methodName of LOG_METHOD_NAMES) {
-    const originalMethod = target[methodName].bind(target);
-    target[methodName] = (...values) => {
+    const currentMethod = target[methodName];
+    if (redactingLogMethods.has(currentMethod)) continue;
+
+    const originalMethod = currentMethod.bind(target);
+    const redactingMethod: LogMethod = (...values) => {
       originalMethod(...values.map(redactSensitiveLogValue));
     };
+    redactingLogMethods.add(redactingMethod);
+    target[methodName] = redactingMethod;
   }
-
-  installedTargets.add(target);
 }
