@@ -358,6 +358,8 @@ function isFrameworkBindingScope(node: ts.Node): boolean {
     ts.isBlock(node) ||
     ts.isCaseBlock(node) ||
     ts.isCatchClause(node) ||
+    ts.isClassDeclaration(node) ||
+    ts.isClassExpression(node) ||
     ts.isForStatement(node) ||
     ts.isForInStatement(node) ||
     ts.isForOfStatement(node) ||
@@ -386,13 +388,25 @@ function registerNodeBindings(
     return;
   }
 
+  if (ts.isEnumDeclaration(node) && node.name) {
+    enclosingScope.declared.add(node.name.text);
+    return;
+  }
+
   if (
-    (ts.isFunctionDeclaration(node) ||
-      ts.isClassDeclaration(node) ||
-      ts.isEnumDeclaration(node)) &&
+    (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
     node.name
   ) {
     enclosingScope.declared.add(node.name.text);
+    scope.declared.add(node.name.text);
+    return;
+  }
+
+  if (
+    (ts.isFunctionExpression(node) || ts.isClassExpression(node)) &&
+    node.name
+  ) {
+    scope.declared.add(node.name.text);
     return;
   }
 

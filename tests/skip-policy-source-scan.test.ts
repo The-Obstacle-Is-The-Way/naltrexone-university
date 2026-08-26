@@ -235,6 +235,29 @@ describe('skip-policy source scan', () => {
     },
   );
 
+  it.each([
+    [
+      'named function expression',
+      'const local = function test() { test.skip(); };',
+    ],
+    [
+      'named class expression',
+      'const Local = class test { method() { test.skip(); } };',
+    ],
+  ])(
+    'does not attribute a shadowing %s to the framework import',
+    (_label, declaration) => {
+      const occurrences = collectFrameworkControlOccurrences([
+        source(
+          'tests/example.ts',
+          `import { test } from 'vitest'; ${declaration}`,
+        ),
+      ]);
+
+      expect(occurrences).toEqual([]);
+    },
+  );
+
   it('does not attribute a shadowed namespace binding to the framework import', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(
