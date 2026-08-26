@@ -402,6 +402,20 @@ describe('startSession helper', () => {
     );
   });
 
+  it.each([0, 101, 1.5])(
+    'rejects invalid requested question count %s before interacting with the page',
+    async (count) => {
+      const page = createPracticePage({
+        availableQuestionCount: 5,
+        defaultQuestionCount: 1,
+      });
+
+      await expect(startSession(page, 'tutor', count)).rejects.toThrow(
+        `startSession count must be an integer between 1 and 100; received ${String(count)}`,
+      );
+    },
+  );
+
   it('returns only after the requested session progress indicator is visible', async () => {
     const page = createPracticePage({
       availableQuestionCount: 5,

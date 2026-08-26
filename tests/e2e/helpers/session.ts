@@ -1,4 +1,8 @@
 import { expect } from '@playwright/test';
+import {
+  SESSION_COUNT_MAX,
+  SESSION_COUNT_MIN,
+} from '@/app/(app)/app/practice/practice-page-session-start';
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
 import { redactSensitiveE2EText } from './e2e-log-redaction';
 import { parseQuestionProgressCount } from './question-progress';
@@ -224,6 +228,16 @@ export async function startSession(
   mode: PracticeMode = 'tutor',
   count = 1,
 ): Promise<void> {
+  if (
+    !Number.isInteger(count) ||
+    count < SESSION_COUNT_MIN ||
+    count > SESSION_COUNT_MAX
+  ) {
+    throw new Error(
+      `startSession count must be an integer between ${SESSION_COUNT_MIN} and ${SESSION_COUNT_MAX}; received ${String(count)}`,
+    );
+  }
+
   await page.goto('/app/practice');
   await page
     .getByRole('heading', { name: 'Practice' })

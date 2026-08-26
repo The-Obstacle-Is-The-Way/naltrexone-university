@@ -88,11 +88,12 @@ while its current function is already a redacting wrapper, and rewraps a
 restored method. The redaction suite then passed 4/4; with the existing Clerk
 helper case the focused run passed 5/5.
 
-Close only after exact-head CI proves the mitigation and the owner decides how
-to contain the historical public artifacts: revoke affected development
-sessions and/or delete the affected run logs. Do not rotate or delete the
-shared E2E user or Stripe customer. The closing receipt must inspect raw log
-output without ever printing credential values.
+Close only after exact-head CI proves the mitigation and every exposed
+development session has either been revoked or verified expired. Historical
+public-log deletion or equivalent access containment is a separate required
+action; it cannot substitute for invalidating a still-usable session. Do not
+rotate or delete the shared E2E user or Stripe customer. The closing receipt
+must inspect raw log output without ever printing credential values.
 
 ## Related
 

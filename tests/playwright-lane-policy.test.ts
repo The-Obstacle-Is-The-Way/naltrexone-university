@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import packageJson from '../package.json';
 import playwrightConfig from '../playwright.config';
@@ -67,9 +68,48 @@ function getProject(name: string): PlaywrightProjectPolicy {
 }
 
 function usesSharedAuthState(source: string): boolean {
-  return /test\.use\(\s*\{[\s\S]*?storageState:\s*E2E_CLERK_AUTH_STATE_PATH\s*,?[\s\S]*?\}\s*\)/.test(
+  const sourceFile = ts.createSourceFile(
+    'e2e-spec.ts',
     source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
   );
+  let found = false;
+
+  function visit(node: ts.Node): void {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression) &&
+      node.expression.expression.text === 'test' &&
+      node.expression.name.text === 'use'
+    ) {
+      const options = node.arguments[0];
+      if (
+        options &&
+        ts.isObjectLiteralExpression(options) &&
+        options.properties.some(
+          (property) =>
+            ts.isPropertyAssignment(property) &&
+            ((ts.isIdentifier(property.name) &&
+              property.name.text === 'storageState') ||
+              (ts.isStringLiteral(property.name) &&
+                property.name.text === 'storageState')) &&
+            ts.isIdentifier(property.initializer) &&
+            property.initializer.text === 'E2E_CLERK_AUTH_STATE_PATH',
+        )
+      ) {
+        found = true;
+        return;
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return found;
 }
 
 describe('Playwright E2E lane policy', () => {
@@ -120,6 +160,18 @@ describe('Playwright E2E lane policy', () => {
     ],
   ])('accepts shared auth state in %s test.use syntax', (_label, source) => {
     expect(usesSharedAuthState(source)).toBe(true);
+  });
+
+  it('rejects shared auth state text outside the test.use call', () => {
+    const source = `
+      test.use({ locale: 'en-US' });
+      const unrelatedOptions = {
+        storageState: E2E_CLERK_AUTH_STATE_PATH,
+      };
+      test('unrelated case', () => {});
+    `;
+
+    expect(usesSharedAuthState(source)).toBe(false);
   });
 
   it('requires every Clerk-authenticated spec to load the shared suite auth state', () => {
