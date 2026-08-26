@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
+import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth';
 
 // Prefer `.env.local` for developer-specific secrets, with `.env` as a fallback.
 // Never override explicitly provided environment variables.
@@ -32,7 +33,7 @@ export default defineConfig({
     {
       name: 'cleanup',
       testMatch: /global-teardown\.ts/,
-      use: { storageState: 'test-results/.auth/e2e-user.json' },
+      use: { storageState: E2E_CLERK_AUTH_STATE_PATH },
     },
     {
       name: 'chromium',

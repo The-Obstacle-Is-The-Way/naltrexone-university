@@ -128,7 +128,7 @@ production user, production credential, billing state, or durable application
 data was affected, and the product flow was not shown to fail outside E2E.
 P3 is therefore proportionate.
 
-## Resolution
+## Resolution State
 
 Open. The red-first lifecycle and diagnostic changes are branch-local on PR #837.
 Close only after the exact head passes the complete local gate, required

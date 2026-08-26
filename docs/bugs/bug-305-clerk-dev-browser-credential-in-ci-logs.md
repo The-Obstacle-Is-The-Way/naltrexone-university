@@ -65,7 +65,7 @@ The request failure itself occurs after the test consumer has gone away, so it
 does not invalidate the completed assertion. The unredacted diagnostic is the
 bug.
 
-## Resolution
+## Resolution State
 
 Open. The branch-local mitigation is red-first and the failed first attempt is
 part of the record:

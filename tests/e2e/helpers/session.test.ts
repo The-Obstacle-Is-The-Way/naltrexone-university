@@ -97,6 +97,7 @@ function createPracticePage(input: {
   incompleteSession?: boolean;
   countBlurKeepsStartHandlerStale?: boolean;
   countChangeStalesStartHandler?: boolean;
+  navigationCompletesAfterBaselineAlertRead?: boolean;
   navigationCompletesAfterCatchUrlCheck?: boolean;
   navigationCompletesDuringAlertRead?: boolean;
   preexistingAlerts?: string[];
@@ -160,6 +161,7 @@ function createPracticePage(input: {
       }
 
       if (
+        input.navigationCompletesAfterBaselineAlertRead ||
         input.navigationCompletesDuringAlertRead ||
         input.navigationCompletesAfterCatchUrlCheck
       ) {
@@ -313,6 +315,14 @@ function createPracticePage(input: {
           return createLocator({
             allTextContents: () => {
               state.sessionStartAlertReadCount += 1;
+              if (
+                state.sessionStartNavigationPending &&
+                input.navigationCompletesAfterBaselineAlertRead
+              ) {
+                state.sessionStartNavigationPending = false;
+                state.sessionStartNavigationCompletesOnNextUrlRead = true;
+                return [...preexistingAlerts];
+              }
               if (state.sessionStartNavigationPending) {
                 state.sessionStartNavigationPending = false;
                 if (input.navigationCompletesAfterCatchUrlCheck) {
@@ -523,12 +533,14 @@ describe('startSession helper', () => {
     const page = createPracticePage({
       availableQuestionCount: 5,
       defaultQuestionCount: 1,
+      navigationCompletesAfterBaselineAlertRead: true,
       preexistingAlerts: ['Tags unavailable.'],
     });
 
     await startSession(page, 'tutor', 2);
 
     expect(page.url()).toBe('/app/practice/session-1');
+    expect(page.getSessionStartAlertReadCount()).toBeGreaterThan(1);
   });
 
   it('redacts provider identifiers from rendered alert diagnostics', async () => {

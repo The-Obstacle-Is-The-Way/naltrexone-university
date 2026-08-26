@@ -220,7 +220,7 @@ production interaction seam, but no user-frequency or production incident is
 established. The operation is recoverable by trying again and no committed
 session corruption was observed, so P3 is proportionate.
 
-## Resolution
+## Resolution State
 
 Open. The first diagnostic/synchronization fix merged to `dev` through PR #834,
 and its first navigation-observation follow-up merged through PR #836. Promotion

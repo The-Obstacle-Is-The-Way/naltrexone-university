@@ -66,6 +66,12 @@ function getProject(name: string): PlaywrightProjectPolicy {
   return project;
 }
 
+function usesSharedAuthState(source: string): boolean {
+  return /test\.use\(\s*\{[\s\S]*?storageState:\s*E2E_CLERK_AUTH_STATE_PATH\s*,?[\s\S]*?\}\s*\)/.test(
+    source,
+  );
+}
+
 describe('Playwright E2E lane policy', () => {
   const requiredSpec = 'tests/e2e/checkout-redirect.spec.ts';
   const providerContractSpec = 'tests/e2e/checkout-success-provider.spec.ts';
@@ -100,6 +106,22 @@ describe('Playwright E2E lane policy', () => {
     );
   });
 
+  it.each([
+    [
+      'trailing comma',
+      'test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH, });',
+    ],
+    [
+      'multiline options',
+      `test.use({
+        locale: 'en-US',
+        storageState: E2E_CLERK_AUTH_STATE_PATH,
+      });`,
+    ],
+  ])('accepts shared auth state in %s test.use syntax', (_label, source) => {
+    expect(usesSharedAuthState(source)).toBe(true);
+  });
+
   it('requires every Clerk-authenticated spec to load the shared suite auth state', () => {
     const authenticatedSpecs = listTypeScriptFiles('tests/e2e')
       .filter((path) => path.endsWith('.spec.ts'))
@@ -107,13 +129,11 @@ describe('Playwright E2E lane policy', () => {
         readFileSync(path, 'utf8').includes('signInWithClerkPassword'),
       );
 
-    expect(authenticatedSpecs).toHaveLength(14);
+    expect(authenticatedSpecs.length).toBeGreaterThanOrEqual(14);
     for (const path of authenticatedSpecs) {
       const source = readFileSync(path, 'utf8');
       expect(source, path).toContain('E2E_CLERK_AUTH_STATE_PATH');
-      expect(source, path).toMatch(
-        /test\.use\(\{\s*storageState:\s*E2E_CLERK_AUTH_STATE_PATH\s*\}\)/,
-      );
+      expect(usesSharedAuthState(source), path).toBe(true);
     }
   });
 

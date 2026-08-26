@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from './playwright.config';
+import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -16,8 +18,20 @@ describe('playwright config', () => {
 
     expect(setupProject?.teardown).toBe('cleanup');
     expect(cleanupProject?.testMatch).toEqual(/global-teardown\.ts/);
-    expect(cleanupProject?.use?.storageState).toBe(
-      'test-results/.auth/e2e-user.json',
+    expect(cleanupProject?.use?.storageState).toBe(E2E_CLERK_AUTH_STATE_PATH);
+  });
+
+  it('uses the shared Clerk auth-state path in the cleanup project source', () => {
+    const source = readFileSync('playwright.config.ts', 'utf8');
+
+    expect(source).toContain(
+      "import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth';",
+    );
+    expect(source).toContain(
+      'use: { storageState: E2E_CLERK_AUTH_STATE_PATH }',
+    );
+    expect(source).not.toContain(
+      "storageState: 'test-results/.auth/e2e-user.json'",
     );
   });
 
