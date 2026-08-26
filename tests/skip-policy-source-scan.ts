@@ -314,11 +314,27 @@ function collectFrameworkBindings(parsed: ts.SourceFile): FrameworkBindings {
       continue;
     }
 
+    if (ts.isImportEqualsDeclaration(statement)) {
+      registerImportEqualsBinding(statement, namespaces);
+      continue;
+    }
+
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
       const moduleName = requiredFrameworkModule(declaration.initializer);
-      if (!moduleName) continue;
-      registerCommonJsBindings(declaration.name, moduleName, named, namespaces);
+      if (moduleName) {
+        registerCommonJsBindings(
+          declaration.name,
+          moduleName,
+          named,
+          namespaces,
+        );
+        continue;
+      }
+
+      if (!ts.isIdentifier(declaration.name)) continue;
+      const importedApi = requiredFrameworkApi(declaration.initializer);
+      if (importedApi) named.set(declaration.name.text, importedApi);
     }
   }
 
@@ -353,6 +369,17 @@ function registerImportBindings(
   }
 }
 
+function registerImportEqualsBinding(
+  statement: ts.ImportEqualsDeclaration,
+  namespaces: Map<string, FrameworkModule>,
+): void {
+  if (!ts.isExternalModuleReference(statement.moduleReference)) return;
+  const moduleName = staticStringValue(statement.moduleReference.expression);
+  if (moduleName && isFrameworkModule(moduleName)) {
+    namespaces.set(statement.name.text, moduleName);
+  }
+}
+
 function requiredFrameworkModule(
   initializer: ts.Expression | undefined,
 ): FrameworkModule | undefined {
@@ -366,12 +393,22 @@ function requiredFrameworkModule(
     return undefined;
   }
 
-  const moduleSpecifier = initializer.arguments[0];
-  return moduleSpecifier &&
-    ts.isStringLiteral(moduleSpecifier) &&
-    isFrameworkModule(moduleSpecifier.text)
-    ? moduleSpecifier.text
+  const moduleSpecifier = staticStringValue(initializer.arguments[0]);
+  return moduleSpecifier && isFrameworkModule(moduleSpecifier)
+    ? moduleSpecifier
     : undefined;
+}
+
+function requiredFrameworkApi(
+  initializer: ts.Expression | undefined,
+): ImportedApi | undefined {
+  if (!initializer || !isFrameworkControlMember(initializer)) return undefined;
+
+  const staticMember = getStaticMember(initializer);
+  if (!staticMember || !isTestApi(staticMember.method)) return undefined;
+
+  const moduleName = requiredFrameworkModule(initializer.expression);
+  return moduleName ? { api: staticMember.method, moduleName } : undefined;
 }
 
 function registerCommonJsBindings(
@@ -388,12 +425,35 @@ function registerCommonJsBindings(
 
   for (const element of binding.elements) {
     if (!ts.isIdentifier(element.name)) continue;
-    const importedName = element.propertyName ?? element.name;
-    if (!ts.isIdentifier(importedName) || !isTestApi(importedName.text)) {
-      continue;
-    }
-    named.set(element.name.text, { api: importedName.text, moduleName });
+    const importedName = staticBindingPropertyName(element);
+    if (!importedName || !isTestApi(importedName)) continue;
+    named.set(element.name.text, { api: importedName, moduleName });
   }
+}
+
+function staticBindingPropertyName(
+  element: ts.BindingElement,
+): string | undefined {
+  const propertyName = element.propertyName;
+  if (!propertyName) {
+    return ts.isIdentifier(element.name) ? element.name.text : undefined;
+  }
+  if (ts.isIdentifier(propertyName) || ts.isStringLiteral(propertyName)) {
+    return propertyName.text;
+  }
+  return ts.isComputedPropertyName(propertyName)
+    ? staticStringValue(propertyName.expression)
+    : undefined;
+}
+
+function staticStringValue(
+  expression: ts.Expression | undefined,
+): string | undefined {
+  return expression &&
+    (ts.isStringLiteral(expression) ||
+      ts.isNoSubstitutionTemplateLiteral(expression))
+    ? expression.text
+    : undefined;
 }
 
 function resolveImportedApi(
@@ -412,6 +472,11 @@ function resolveImportedApi(
 
   const staticMember = getStaticMember(expression);
   if (!staticMember) return undefined;
+
+  const requiredModuleName = requiredFrameworkModule(expression.expression);
+  if (requiredModuleName && isTestApi(staticMember.method)) {
+    return { api: staticMember.method, moduleName: requiredModuleName };
+  }
 
   if (ts.isIdentifier(expression.expression)) {
     const moduleName = bindings.namespaces.get(expression.expression.text);

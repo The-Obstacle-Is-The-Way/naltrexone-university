@@ -126,6 +126,26 @@ describe('skip-policy source scan', () => {
       'aliased destructuring',
       "const { test: check } = require('vitest'); check.skip('x', () => {});",
     ],
+    [
+      'an inline module receiver',
+      "require('vitest').test.skip('x', () => {});",
+    ],
+    [
+      'a member assignment',
+      "const check = require('@playwright/test').test; check.skip('x');",
+    ],
+    [
+      'quoted aliased destructuring',
+      "const { 'test': check } = require('vitest'); check.skip('x', () => {});",
+    ],
+    [
+      'computed aliased destructuring',
+      "const { ['test']: check } = require('vitest'); check.skip('x', () => {});",
+    ],
+    [
+      'a template-literal module specifier',
+      "const { test } = require(`vitest`); test.skip('x', () => {});",
+    ],
   ])('detects CommonJS framework controls through %s', (_label, contents) => {
     const occurrences = collectFrameworkControlOccurrences([
       source('tests/example.cjs', contents),
@@ -135,6 +155,25 @@ describe('skip-policy source scan', () => {
       expect.objectContaining({
         api: 'test',
         filePath: 'tests/example.cjs',
+        kind: 'call',
+        lineNumber: 1,
+        method: 'skip',
+      }),
+    ]);
+  });
+
+  it('detects a TypeScript import-equals framework namespace', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.cts',
+        "import vitest = require('vitest'); vitest.test.skip('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({
+        api: 'test',
+        filePath: 'tests/example.cts',
         kind: 'call',
         lineNumber: 1,
         method: 'skip',
