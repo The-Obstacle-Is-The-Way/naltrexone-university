@@ -8,7 +8,7 @@ export type SkipPolicySourceFile = {
   contents: string;
 };
 
-type TestApi = 'describe' | 'it' | 'test';
+type TestApi = 'bench' | 'describe' | 'it' | 'suite' | 'test';
 type FrameworkModule = '@playwright/test' | 'vitest';
 type ControlKind = 'call' | 'conditional-reference' | 'reference';
 
@@ -42,7 +42,13 @@ const FRAMEWORK_MODULES = new Set<FrameworkModule>([
   '@playwright/test',
   'vitest',
 ]);
-const TEST_APIS = new Set<TestApi>(['describe', 'it', 'test']);
+const TEST_APIS = new Set<TestApi>([
+  'bench',
+  'describe',
+  'it',
+  'suite',
+  'test',
+]);
 const CONTROL_METHODS = new Set([
   'fixme',
   'only',

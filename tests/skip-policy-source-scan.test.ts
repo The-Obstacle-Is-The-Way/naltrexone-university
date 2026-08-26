@@ -79,6 +79,16 @@ describe('skip-policy source scan', () => {
     ],
     ['it.only', "import { it } from 'vitest'; it.only('x', () => {});", 'only'],
     [
+      'suite.skip',
+      "import { suite } from 'vitest'; suite.skip('x', () => {});",
+      'skip',
+    ],
+    [
+      'bench.skipIf',
+      "import { bench } from 'vitest'; bench.skipIf(true)('x', () => {});",
+      'skipIf',
+    ],
+    [
       "test['skip']",
       "import { test } from '@playwright/test'; test['skip']('x');",
       'skip',
