@@ -1,5 +1,6 @@
 import ts from 'typescript';
 import { DOCUMENTED_SKIP_POLICY_ALLOWANCES } from './skip-policy-source-scan-allowances';
+import { collectStaticAssignmentBindings } from './skip-policy-source-scan-assignments';
 import type { SkipPolicySourceFile } from './skip-policy-source-scan-files';
 import {
   mayContainFrameworkControl,
@@ -403,12 +404,10 @@ function registerRuntimeFrameworkBindings(
   node: ts.Node,
   scope: FrameworkBindingScope,
 ): void {
-  if (
-    ts.isBinaryExpression(node) &&
-    node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-    ts.isIdentifier(node.left)
-  ) {
-    registerAssignedFrameworkBinding(node.left, node.right, scope);
+  if (ts.isBinaryExpression(node)) {
+    for (const assignment of collectStaticAssignmentBindings(node)) {
+      registerAssignedFrameworkBinding(assignment, scope);
+    }
     return;
   }
 
@@ -438,19 +437,30 @@ function registerRuntimeFrameworkBindings(
 }
 
 function registerAssignedFrameworkBinding(
-  target: ts.Identifier,
-  value: ts.Expression,
+  assignment: ReturnType<typeof collectStaticAssignmentBindings>[number],
   scope: FrameworkBindingScope,
 ): void {
+  const { memberName, operator, target, value } = assignment;
   const declaringScope = findDeclaringScope(target.text, scope);
   if (!declaringScope) return;
 
   const moduleName = resolveFrameworkModuleBinding(value, scope);
-  const importedApi = moduleName ? null : resolveImportedApi(value, scope);
+  const importedApi =
+    moduleName && memberName && isTestApi(memberName)
+      ? { api: memberName, moduleName }
+      : moduleName
+        ? null
+        : resolveImportedApi(value, scope);
+  const preservesExisting =
+    (operator === ts.SyntaxKind.BarBarEqualsToken ||
+      operator === ts.SyntaxKind.QuestionQuestionEqualsToken) &&
+    (declaringScope.named.has(target.text) ||
+      declaringScope.namespaces.has(target.text));
+  if (preservesExisting) return;
   declaringScope.named.delete(target.text);
   declaringScope.namespaces.delete(target.text);
 
-  if (moduleName) {
+  if (moduleName && !memberName) {
     declaringScope.namespaces.set(target.text, moduleName);
     return;
   }
@@ -695,36 +705,21 @@ function hasDeclaredBinding(
   name: string,
   scope: FrameworkBindingScope,
 ): boolean {
-  let current: FrameworkBindingScope | undefined = scope;
-  while (current) {
-    if (current.declared.has(name)) return true;
-    current = current.parent;
-  }
-  return false;
+  return findDeclaringScope(name, scope) !== undefined;
 }
 
 function resolveNamedBinding(
   name: string,
   scope: FrameworkBindingScope,
 ): ImportedApi | undefined {
-  let current: FrameworkBindingScope | undefined = scope;
-  while (current) {
-    if (current.declared.has(name)) return current.named.get(name);
-    current = current.parent;
-  }
-  return undefined;
+  return findDeclaringScope(name, scope)?.named.get(name);
 }
 
 function resolveNamespaceBinding(
   name: string,
   scope: FrameworkBindingScope,
 ): FrameworkModule | undefined {
-  let current: FrameworkBindingScope | undefined = scope;
-  while (current) {
-    if (current.declared.has(name)) return current.namespaces.get(name);
-    current = current.parent;
-  }
-  return undefined;
+  return findDeclaringScope(name, scope)?.namespaces.get(name);
 }
 
 function isFrameworkControlMember(

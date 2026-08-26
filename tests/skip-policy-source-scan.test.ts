@@ -388,6 +388,60 @@ describe('skip-policy source scan', () => {
     ]);
   });
 
+  it.each([
+    ['||=', 'let spec; spec ||= test;'],
+    ['??=', 'let spec; spec ??= test;'],
+    ['&&=', 'let spec = {}; spec &&= test;'],
+  ])('resolves a receiver assigned through %s', (_operator, assignment) => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        `import { test } from 'vitest'; ${assignment} spec.skip('x', () => {});`,
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'skip' }),
+    ]);
+  });
+
+  it.each([
+    ['||=', 'spec ||= runner;', 1],
+    ['??=', 'spec ??= runner;', 1],
+    ['&&=', 'spec &&= runner;', 0],
+  ])(
+    'applies %s short-circuit semantics to an existing alias',
+    (_operator, assignment, expectedCount) => {
+      const occurrences = collectFrameworkControlOccurrences([
+        source(
+          'tests/example.test.ts',
+          `import { test } from 'vitest'; let spec = test; ${assignment} spec.skip('x', () => {});`,
+        ),
+      ]);
+
+      expect(occurrences).toHaveLength(expectedCount);
+    },
+  );
+
+  it.each([
+    [
+      'object',
+      "let spec; ({ test: spec } = require('vitest')); spec.skip('x', () => {});",
+    ],
+    [
+      'array',
+      "import { test } from 'vitest'; let spec; [spec] = [test]; spec.skip('x', () => {});",
+    ],
+  ])('resolves a receiver assigned through %s destructuring', (_kind, text) => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source('tests/example.test.ts', text),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'skip' }),
+    ]);
+  });
+
   it('does not resolve an unrelated assignment as a framework alias', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(
