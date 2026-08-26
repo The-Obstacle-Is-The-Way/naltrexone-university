@@ -157,6 +157,18 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
 });
 
 describe('Stripe provider contract workflow', () => {
+  it('advertises the generalized provider-contract lane', () => {
+    expect(readStripeProviderWorkflow()).toContain(
+      'name: Stripe provider contracts',
+    );
+  });
+
+  it('serializes runs under the generalized provider-contract identity', () => {
+    expect(readStripeProviderWorkflow()).toContain(
+      'group: stripe-provider-contracts',
+    );
+  });
+
   it('invokes the discoverable fail-closed provider command', () => {
     const stepBlock = findStepBlock(
       readStripeProviderWorkflow(),
