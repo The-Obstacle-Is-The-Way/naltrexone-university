@@ -399,6 +399,28 @@ describe('skip-policy source scan', () => {
     expect(occurrences).toEqual([]);
   });
 
+  it('clears a named framework alias when a later assignment replaces it', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        "import { test } from 'vitest'; let spec; spec = test; spec = runner; spec.skip('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('clears a framework namespace when a later assignment replaces it', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.cjs',
+        "let controls; controls = require('vitest'); controls = runner; controls.test.only('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
   it('does not promote an undeclared assignment target to a framework alias', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(

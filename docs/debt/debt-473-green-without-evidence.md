@@ -21,6 +21,8 @@
 
 **Approval-review correction (2026-08-26).** Exact-head CodeRabbit review `5033767757` on `cbdb288a` found one further valid static-binding escape: an identifier declared without an initializer and assigned a Vitest named or namespace binding later was not registered, so `let spec; spec = test; spec.skip(...)` could evade the policy. Both named and CommonJS-namespace fixtures failed red; two counter-fixtures for an unrelated assignment and an undeclared assignment target stayed green. The binding pass now registers direct assignment aliases only in the lexical scope that declares the target, keeps named and namespace shapes mutually exclusive, and leaves unrelated or undeclared targets unresolved. Candidate pruning and script-kind selection moved to the dash-named `tests/skip-policy-source-scan-script-kind.ts`, leaving the engine at 796 lines with no suppression. The focused scan suite passes 64/64.
 
+**Independent pre-approval correction (2026-08-26).** A follow-up audit found the inverse assignment case: after a valid alias was registered, assigning an unrelated value left the old named or namespace binding live and could falsely classify a later same-named method as framework control. Two focused cases failed red while the prior 64 stayed green. Assignment handling now resolves the right-hand side before clearing both prior binding shapes and installs only the newly resolved shape; the focused suite passes 66/66.
+
 ## Description
 
 A green test signal in this repository currently means one of four different things, and the aggregate signal does not distinguish them:

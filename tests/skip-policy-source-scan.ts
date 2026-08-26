@@ -450,15 +450,16 @@ function registerAssignedFrameworkBinding(
   if (!declaringScope) return;
 
   const moduleName = resolveFrameworkModuleBinding(value, scope);
+  const importedApi = moduleName ? null : resolveImportedApi(value, scope);
+  declaringScope.named.delete(target.text);
+  declaringScope.namespaces.delete(target.text);
+
   if (moduleName) {
-    declaringScope.named.delete(target.text);
     declaringScope.namespaces.set(target.text, moduleName);
     return;
   }
 
-  const importedApi = resolveImportedApi(value, scope);
   if (importedApi) {
-    declaringScope.namespaces.delete(target.text);
     declaringScope.named.set(target.text, importedApi);
   }
 }
