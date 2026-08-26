@@ -13,6 +13,9 @@ type ExpectOptions = {
 
 type LocatorLike = StartSessionLocator;
 type PracticePageLike = StartSessionPage;
+type PracticePageHarness = PracticePageLike & {
+  getSessionStartAlertReadCount(): number;
+};
 type WaitForOptions = Parameters<LocatorLike['waitFor']>[0];
 
 vi.mock('@playwright/test', () => ({
@@ -102,7 +105,7 @@ function createPracticePage(input: {
   sessionStartAlertPollDelay?: number;
   selectedModeReselectionStalesStartHandler?: boolean;
   selectedStatusReselectionStalesStartHandler?: boolean;
-}): PracticePageLike {
+}): PracticePageHarness {
   const state = {
     abandonDialogOpen: false,
     currentUrl: '',
@@ -113,9 +116,10 @@ function createPracticePage(input: {
     startClickObserved: false,
     startHandlerIsStale: false,
     startAlertPollCount: 0,
+    sessionStartAlertReadCount: 0,
     startedQuestionCount: null as number | null,
     sessionStarted: false,
-    sessionStartNavigationCompletesOnNextAlertRead: false,
+    sessionStartNavigationCompletesOnNextUrlRead: false,
     sessionStartNavigationPending: false,
   };
   const availableStatus = input.availableStatus ?? 'Unanswered';
@@ -308,10 +312,11 @@ function createPracticePage(input: {
         if (role === 'alert') {
           return createLocator({
             allTextContents: () => {
+              state.sessionStartAlertReadCount += 1;
               if (state.sessionStartNavigationPending) {
                 state.sessionStartNavigationPending = false;
                 if (input.navigationCompletesAfterCatchUrlCheck) {
-                  state.sessionStartNavigationCompletesOnNextAlertRead = true;
+                  state.sessionStartNavigationCompletesOnNextUrlRead = true;
                   throw new Error(
                     'Execution context was destroyed, most likely because of a navigation',
                   );
@@ -320,11 +325,6 @@ function createPracticePage(input: {
                 throw new Error(
                   'Execution context was destroyed, most likely because of a navigation',
                 );
-              }
-
-              if (state.sessionStartNavigationCompletesOnNextAlertRead) {
-                state.sessionStartNavigationCompletesOnNextAlertRead = false;
-                completeSessionStart();
               }
 
               const alerts = [...preexistingAlerts];
@@ -372,7 +372,14 @@ function createPracticePage(input: {
           state.sessionStarted && matches ? sessionProgress : null,
       });
     }),
-    url: () => state.currentUrl,
+    getSessionStartAlertReadCount: () => state.sessionStartAlertReadCount,
+    url: () => {
+      if (state.sessionStartNavigationCompletesOnNextUrlRead) {
+        state.sessionStartNavigationCompletesOnNextUrlRead = false;
+        completeSessionStart();
+      }
+      return state.currentUrl;
+    },
   };
 }
 
@@ -419,6 +426,7 @@ describe('startSession helper', () => {
     await startSession(page, 'exam', 2);
 
     expect(page.url()).toBe('/app/practice/session-1');
+    expect(page.getSessionStartAlertReadCount()).toBe(2);
   });
 
   it('starts through the current handler when the first supported status is already selected', async () => {

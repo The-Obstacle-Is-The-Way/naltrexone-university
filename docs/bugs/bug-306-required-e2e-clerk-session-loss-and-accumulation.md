@@ -130,12 +130,17 @@ P3 is therefore proportionate.
 
 ## Resolution
 
-Open. The red-first lifecycle and diagnostic changes are branch-local on PR
-#837. Close only after the exact head passes the complete local gate, required
+Open. The red-first lifecycle and diagnostic changes are branch-local on PR #837.
+Close only after the exact head passes the complete local gate, required
 CI has no first-attempt E2E failure or raw credential leak, CodeRabbit approves
 that exact head with zero unresolved threads, the fix is promoted to `main`,
 and post-merge CI/deploy complete. Closure must continue to state that the
 original session-loss cause was not reproduced.
+
+The historical active-session backlog is deliberately not mutated in this PR.
+Before closure, the owner must verify whether those TEST-instance sessions are
+used by any other workflow, then either revoke the obsolete sessions without
+rotating the shared E2E user or record why natural expiry is the safer choice.
 
 ## Related
 
@@ -146,4 +151,3 @@ original session-loss cause was not reproduced.
   context closes; log redaction remains independently required.
 - [DEBT-473](../debt/debt-473-green-without-evidence.md) — treats skipped or
   retry-recovered evidence as an explicit test-infrastructure defect.
-
