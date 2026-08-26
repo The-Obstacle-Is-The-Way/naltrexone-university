@@ -1,14 +1,23 @@
 import { expect } from '@playwright/test';
+import {
+  SESSION_COUNT_MAX,
+  SESSION_COUNT_MIN,
+} from '@/app/(app)/app/practice/practice-page-session-start';
+import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
+import { redactSensitiveE2EText } from './e2e-log-redaction';
 import { parseQuestionProgressCount } from './question-progress';
 
 export type PracticeMode = 'tutor' | 'exam';
 
 export type StartSessionLocator = {
+  allTextContents(): Promise<string[]>;
+  blur(): Promise<void>;
   click(): Promise<void>;
   count(): Promise<number>;
   fill(value: string): Promise<void>;
   getAttribute(name: string): Promise<string | null>;
-  isEnabled(): Promise<boolean>;
+  inputValue(): Promise<string>;
+  isEnabled(options?: { timeout?: number }): Promise<boolean>;
   isVisible(): Promise<boolean>;
   textContent(): Promise<string | null>;
   waitFor(options: { state: 'visible'; timeout?: number }): Promise<void>;
@@ -18,7 +27,7 @@ export type StartSessionPage = {
   goto(url: string): Promise<unknown>;
   getByLabel(label: string): StartSessionLocator;
   getByRole(
-    role: 'button' | 'group' | 'heading',
+    role: 'alert' | 'button' | 'group' | 'heading',
     options?: { exact?: boolean; name?: string },
   ): StartSessionLocator;
   getByText(text: RegExp | string): StartSessionLocator;
@@ -26,6 +35,14 @@ export type StartSessionPage = {
 };
 
 const DEFAULT_START_SESSION_STATE_TIMEOUT_MS = 30_000;
+const START_SESSION_INPUT_SYNC_TIMEOUT_MS = 10_000;
+const START_SESSION_DIAGNOSTIC_TIMEOUT_MS = 1_000;
+
+export const START_SESSION_NAVIGATION_TIMEOUT_MS =
+  STANDARD_MUTATION_TIMEOUT_MS + 5_000;
+
+const SENSITIVE_PROVIDER_IDENTIFIER_PATTERN =
+  /\b(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|sk_test)_[A-Za-z0-9]+\b/g;
 
 async function waitForEitherVisible(
   first: StartSessionLocator,
@@ -60,12 +77,134 @@ async function waitForEnabled(
   await expect.poll(() => locator.isEnabled(), { timeout }).toBe(true);
 }
 
-async function waitForUrl(
-  page: StartSessionPage,
-  expected: RegExp,
-  timeout: number,
-): Promise<void> {
-  await expect.poll(() => expected.test(page.url()), { timeout }).toBe(true);
+function redactDiagnosticText(value: string): string {
+  return redactSensitiveE2EText(value).replace(
+    SENSITIVE_PROVIDER_IDENTIFIER_PATTERN,
+    '$1_[REDACTED]',
+  );
+}
+
+async function readNonemptyAlertTexts(
+  alertLocator: StartSessionLocator,
+): Promise<string[]> {
+  return (await alertLocator.allTextContents())
+    .map((text) => text.trim())
+    .filter((text) => text.length > 0);
+}
+
+function isNavigationContextDestroyed(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes('Execution context was destroyed') &&
+    error.message.includes('navigation')
+  );
+}
+
+function isClerkSignInRedirect(url: string): boolean {
+  try {
+    return new URL(url, 'http://e2e.invalid').pathname.startsWith('/sign-in');
+  } catch {
+    return false;
+  }
+}
+
+function createClerkAuthLossError(): Error {
+  return new Error(
+    'startSession lost Clerk authentication and was redirected to sign-in',
+  );
+}
+
+function countTexts(texts: readonly string[]): ReadonlyMap<string, number> {
+  const counts = new Map<string, number>();
+  for (const text of texts) {
+    counts.set(text, (counts.get(text) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function findAdditionalAlert(
+  texts: readonly string[],
+  baselineCounts: ReadonlyMap<string, number>,
+): string | null {
+  const observedCounts = new Map<string, number>();
+  for (const text of texts) {
+    const observed = (observedCounts.get(text) ?? 0) + 1;
+    observedCounts.set(text, observed);
+    if (observed > (baselineCounts.get(text) ?? 0)) return text;
+  }
+  return null;
+}
+
+async function waitForSessionStartOutcome(input: {
+  page: StartSessionPage;
+  startSessionButton: StartSessionLocator;
+  initialAlertCounts: ReadonlyMap<string, number>;
+}): Promise<void> {
+  const expectedUrl = /\/app\/practice\/[^/]+$/;
+  const alerts = input.page.getByRole('alert');
+  let clerkAuthLost = false;
+  let renderedStartAlert: string | null = null;
+
+  try {
+    await expect
+      .poll(
+        async () => {
+          if (expectedUrl.test(input.page.url())) return true;
+          if (isClerkSignInRedirect(input.page.url())) {
+            clerkAuthLost = true;
+            return true;
+          }
+          try {
+            renderedStartAlert = findAdditionalAlert(
+              await readNonemptyAlertTexts(alerts),
+              input.initialAlertCounts,
+            );
+          } catch (error) {
+            // Navigation can invalidate the alert locator between the URL read
+            // and DOM evaluation. Keep polling so the committed URL remains
+            // authoritative instead of entering diagnostics mid-navigation.
+            if (isNavigationContextDestroyed(error)) return false;
+            throw error;
+          }
+          return renderedStartAlert !== null;
+        },
+        { timeout: START_SESSION_NAVIGATION_TIMEOUT_MS },
+      )
+      .toBe(true);
+  } catch (error) {
+    if (expectedUrl.test(input.page.url())) return;
+    if (isClerkSignInRedirect(input.page.url())) {
+      throw createClerkAuthLossError();
+    }
+
+    const currentAlerts = await readNonemptyAlertTexts(alerts).catch(() => []);
+    const renderedAlerts =
+      currentAlerts.length === 0
+        ? '[none]'
+        : currentAlerts
+            .map((text) => redactDiagnosticText(text))
+            .join(' | ')
+            .slice(0, 500);
+    const startEnabled = await input.startSessionButton
+      .isEnabled({ timeout: START_SESSION_DIAGNOSTIC_TIMEOUT_MS })
+      .catch(() => false);
+    throw new Error(
+      `startSession produced neither navigation nor a new rendered alert; current URL=${redactDiagnosticText(input.page.url())}; Start session enabled=${String(startEnabled)}; rendered alerts=${renderedAlerts}`,
+      { cause: error },
+    );
+  }
+
+  if (expectedUrl.test(input.page.url())) return;
+  if (clerkAuthLost || isClerkSignInRedirect(input.page.url())) {
+    throw createClerkAuthLossError();
+  }
+  if (renderedStartAlert) {
+    throw new Error(
+      `startSession failed before navigation: ${redactDiagnosticText(renderedStartAlert)}`,
+    );
+  }
+
+  throw new Error('startSession outcome polling ended without an outcome');
 }
 
 async function verifyRequestedSessionCount(
@@ -89,6 +228,16 @@ export async function startSession(
   mode: PracticeMode = 'tutor',
   count = 1,
 ): Promise<void> {
+  if (
+    !Number.isInteger(count) ||
+    count < SESSION_COUNT_MIN ||
+    count > SESSION_COUNT_MAX
+  ) {
+    throw new Error(
+      `startSession count must be an integer between ${SESSION_COUNT_MIN} and ${SESSION_COUNT_MAX}; received ${String(count)}`,
+    );
+  }
+
   await page.goto('/app/practice');
   await page
     .getByRole('heading', { name: 'Practice' })
@@ -149,8 +298,17 @@ export async function startSession(
       await waitForAttribute(statusButton, 'aria-pressed', 'true', 10_000);
     }
 
-    // Count: label is "Questions" (not "Count")
-    await page.getByLabel('Questions').fill(String(count));
+    // Count: label is "Questions" (not "Count"). Blurring and observing the
+    // controlled value proves React published the count-change render before
+    // Start can invoke a handler captured by the superseded intent.
+    const questionsInput = page.getByLabel('Questions');
+    await questionsInput.fill(String(count));
+    await questionsInput.blur();
+    await expect
+      .poll(() => questionsInput.inputValue(), {
+        timeout: START_SESSION_INPUT_SYNC_TIMEOUT_MS,
+      })
+      .toBe(String(count));
 
     try {
       await waitForEnabled(startSessionButton, 3_000);
@@ -171,9 +329,15 @@ export async function startSession(
     );
   }
 
+  const initialAlertCounts = countTexts(
+    await readNonemptyAlertTexts(page.getByRole('alert')),
+  );
   await startSessionButton.click();
-
-  await waitForUrl(page, /\/app\/practice\/[^/]+$/, 15_000);
+  await waitForSessionStartOutcome({
+    page,
+    startSessionButton,
+    initialAlertCounts,
+  });
   const expectedHeadingName =
     mode === 'tutor' ? 'Tutor Session' : 'Exam Session';
   await page

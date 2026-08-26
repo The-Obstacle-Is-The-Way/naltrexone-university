@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from './playwright.config';
 
@@ -7,6 +8,28 @@ afterEach(() => {
 });
 
 describe('playwright config', () => {
+  it('runs a cleanup project after every project that depends on global setup', () => {
+    const projects = config.projects ?? [];
+    const setupProject = projects.find((project) => project.name === 'setup');
+    const cleanupProject = projects.find(
+      (project) => project.name === 'cleanup',
+    );
+
+    expect(setupProject?.teardown).toBe('cleanup');
+    expect(cleanupProject?.testMatch).toEqual(/global-teardown\.ts/);
+    expect(cleanupProject?.use?.storageState).toBeUndefined();
+  });
+
+  it('defers cleanup auth-state loading until global teardown executes', () => {
+    const source = readFileSync('playwright.config.ts', 'utf8');
+
+    expect(source).not.toContain('E2E_CLERK_AUTH_STATE_PATH');
+    expect(source).not.toContain("from './tests/e2e/helpers/clerk-auth';");
+    expect(source).not.toContain(
+      "storageState: 'test-results/.auth/e2e-user.json'",
+    );
+  });
+
   it('uses production server mode for e2e webServer', () => {
     const webServer = config.webServer;
     expect(webServer).toBeDefined();

@@ -1,8 +1,11 @@
 import { expect, test } from '@playwright/test';
 import {
+  E2E_CLERK_AUTH_STATE_PATH,
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
+
+test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 
 test.describe('subscribe', () => {
   // Authenticated E2E flows include Clerk sign-in and seeded subscription setup; allow CI headroom.

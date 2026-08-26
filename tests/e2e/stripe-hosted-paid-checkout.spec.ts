@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
+  E2E_CLERK_AUTH_STATE_PATH,
   hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
@@ -9,6 +10,8 @@ import {
   restoreE2EUserAfterPaidCheckout,
 } from './helpers/paid-checkout';
 import { runE2EUserStateReset } from './helpers/reset-e2e-user-state';
+
+test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH });
 
 // Observational compatibility coverage for Stripe-owned, unsupported DOM.
 // This file belongs only to the scheduled/manual stripe-hosted project.

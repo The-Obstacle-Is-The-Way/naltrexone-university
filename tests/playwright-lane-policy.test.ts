@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import packageJson from '../package.json';
 import playwrightConfig from '../playwright.config';
@@ -8,8 +9,10 @@ type FilePattern = RegExp | string | readonly (RegExp | string)[];
 
 type PlaywrightProjectPolicy = {
   name?: string;
+  teardown?: string;
   testIgnore?: FilePattern;
   testMatch?: FilePattern;
+  use?: { storageState?: unknown };
 };
 
 const STRIPE_HOSTED_SELECTOR_ALLOWLIST = [
@@ -64,6 +67,51 @@ function getProject(name: string): PlaywrightProjectPolicy {
   return project;
 }
 
+function usesSharedAuthState(source: string): boolean {
+  const sourceFile = ts.createSourceFile(
+    'e2e-spec.ts',
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  let found = false;
+
+  function visit(node: ts.Node): void {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression) &&
+      node.expression.expression.text === 'test' &&
+      node.expression.name.text === 'use'
+    ) {
+      const options = node.arguments[0];
+      if (
+        options &&
+        ts.isObjectLiteralExpression(options) &&
+        options.properties.some(
+          (property) =>
+            ts.isPropertyAssignment(property) &&
+            ((ts.isIdentifier(property.name) &&
+              property.name.text === 'storageState') ||
+              (ts.isStringLiteral(property.name) &&
+                property.name.text === 'storageState')) &&
+            ts.isIdentifier(property.initializer) &&
+            property.initializer.text === 'E2E_CLERK_AUTH_STATE_PATH',
+        )
+      ) {
+        found = true;
+        return;
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return found;
+}
+
 describe('Playwright E2E lane policy', () => {
   const requiredSpec = 'tests/e2e/checkout-redirect.spec.ts';
   const providerContractSpec = 'tests/e2e/checkout-success-provider.spec.ts';
@@ -96,6 +144,49 @@ describe('Playwright E2E lane policy', () => {
     expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
       'tsx scripts/run-local-e2e.ts --project=stripe-hosted',
     );
+  });
+
+  it.each([
+    [
+      'trailing comma',
+      'test.use({ storageState: E2E_CLERK_AUTH_STATE_PATH, });',
+    ],
+    [
+      'multiline options',
+      `test.use({
+        locale: 'en-US',
+        storageState: E2E_CLERK_AUTH_STATE_PATH,
+      });`,
+    ],
+  ])('accepts shared auth state in %s test.use syntax', (_label, source) => {
+    expect(usesSharedAuthState(source)).toBe(true);
+  });
+
+  it('rejects shared auth state text outside the test.use call', () => {
+    const source = `
+      test.use({ locale: 'en-US' });
+      const unrelatedOptions = {
+        storageState: E2E_CLERK_AUTH_STATE_PATH,
+      };
+      test('unrelated case', () => {});
+    `;
+
+    expect(usesSharedAuthState(source)).toBe(false);
+  });
+
+  it('requires every Clerk-authenticated spec to load the shared suite auth state', () => {
+    const authenticatedSpecs = listTypeScriptFiles('tests/e2e')
+      .filter((path) => path.endsWith('.spec.ts'))
+      .filter((path) =>
+        readFileSync(path, 'utf8').includes('signInWithClerkPassword'),
+      );
+
+    expect(authenticatedSpecs.length).toBeGreaterThanOrEqual(14);
+    for (const path of authenticatedSpecs) {
+      const source = readFileSync(path, 'utf8');
+      expect(source, path).toContain('E2E_CLERK_AUTH_STATE_PATH');
+      expect(usesSharedAuthState(source), path).toBe(true);
+    }
   });
 
   it('pins the official Stripe CLI used by the required completion trigger', () => {
