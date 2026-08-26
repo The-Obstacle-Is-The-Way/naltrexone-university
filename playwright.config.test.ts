@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from './playwright.config';
-import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth';
+import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth-state';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -25,8 +25,9 @@ describe('playwright config', () => {
     const source = readFileSync('playwright.config.ts', 'utf8');
 
     expect(source).toContain(
-      "import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth';",
+      "import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth-state';",
     );
+    expect(source).not.toContain("from './tests/e2e/helpers/clerk-auth';");
     expect(source).toContain(
       'use: { storageState: E2E_CLERK_AUTH_STATE_PATH }',
     );

@@ -2,9 +2,10 @@ import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { clerk } from '@clerk/testing/playwright';
 import type { Page } from '@playwright/test';
+import { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
 import { installE2ELogRedaction } from './e2e-log-redaction';
 
-export const E2E_CLERK_AUTH_STATE_PATH = 'test-results/.auth/e2e-user.json';
+export { E2E_CLERK_AUTH_STATE_PATH } from './clerk-auth-state';
 
 export const clerkUsername = process.env.E2E_CLERK_USER_USERNAME;
 export const clerkPassword = process.env.E2E_CLERK_USER_PASSWORD;

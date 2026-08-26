@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { config } from 'dotenv';
-import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth';
+import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth-state';
 
 // Prefer `.env.local` for developer-specific secrets, with `.env` as a fallback.
 // Never override explicitly provided environment variables.
