@@ -43,6 +43,7 @@ function createStripeList<T>(firstPage: T[], allPages = firstPage) {
 describe('seedTestSubscription', () => {
   let seedTestSubscription: SeedTestSubscription;
   let postgresMock: ReturnType<typeof vi.fn>;
+  let sqlClient: ReturnType<typeof createSqlClient>;
   let customersList: ReturnType<typeof vi.fn>;
   let customersCreate: ReturnType<typeof vi.fn>;
   let customersRetrieve: ReturnType<typeof vi.fn>;
@@ -60,13 +61,7 @@ describe('seedTestSubscription', () => {
       vi.stubEnv(key, value);
     }
 
-    const sqlClient = createSqlClient([
-      [{ id: fixtureUser123Id }],
-      [],
-      [],
-      [],
-      [],
-    ]);
+    sqlClient = createSqlClient([[{ id: fixtureUser123Id }], [], [], [], []]);
     postgresMock = vi.fn(() => sqlClient);
     vi.doMock('postgres', () => ({
       default: postgresMock,
@@ -175,6 +170,22 @@ describe('seedTestSubscription', () => {
         metadata: expect.objectContaining({ e2e_owner: 'local-dev' }),
       }),
     );
+  });
+
+  it('rejects a non-test key before any external seed operation', async () => {
+    vi.stubEnv('STRIPE_SECRET_KEY', 'sk_live_forbidden');
+    vi.stubEnv('E2E_STRIPE_OWNER', '');
+
+    await expect(seedTestSubscription()).rejects.toThrow(
+      '[E2E_STRIPE_CLIENT:TEST_MODE_REQUIRED]',
+    );
+
+    expect(sqlClient).not.toHaveBeenCalled();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(customersList).not.toHaveBeenCalled();
+    expect(customersCreate).not.toHaveBeenCalled();
+    expect(subscriptionsList).not.toHaveBeenCalled();
+    expect(subscriptionsCreate).not.toHaveBeenCalled();
   });
 
   it('creates E2E Stripe customer and subscription with owner-scoped metadata', async () => {

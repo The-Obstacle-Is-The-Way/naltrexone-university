@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   collectFrameworkControlOccurrences,
   collectSkipPolicyIssues,
@@ -590,40 +590,38 @@ describe('skip-policy source scan', () => {
     );
   });
 
-  it('walks test files at the repository root', () => {
-    const filePaths = readRepositorySkipPolicySources().map(
-      (sourceFile) => sourceFile.filePath,
-    );
+  describe('live repository', () => {
+    let repositorySources: SkipPolicySourceFile[];
+    let repositoryFilePaths: string[];
 
-    expect(filePaths).toContain('proxy.test.ts');
-  });
+    beforeAll(() => {
+      repositorySources = readRepositorySkipPolicySources();
+      repositoryFilePaths = repositorySources.map(
+        (sourceFile) => sourceFile.filePath,
+      );
+    });
 
-  it('walks executable source and test setup files outside the six named roots', () => {
-    const filePaths = readRepositorySkipPolicySources().map(
-      (sourceFile) => sourceFile.filePath,
-    );
+    it('walks test files at the repository root', () => {
+      expect(repositoryFilePaths).toContain('proxy.test.ts');
+    });
 
-    expect(filePaths).toEqual(
-      expect.arrayContaining([
-        'db/schema.test.ts',
-        'instrumentation.ts',
-        'proxy.ts',
-        'vitest.setup.ts',
-      ]),
-    );
-  });
+    it('walks executable source and test setup files outside the six named roots', () => {
+      expect(repositoryFilePaths).toEqual(
+        expect.arrayContaining([
+          'db/schema.test.ts',
+          'instrumentation.ts',
+          'proxy.ts',
+          'vitest.setup.ts',
+        ]),
+      );
+    });
 
-  it('excludes generated source artifacts from the repository walk', () => {
-    const filePaths = readRepositorySkipPolicySources().map(
-      (sourceFile) => sourceFile.filePath,
-    );
+    it('excludes generated source artifacts from the repository walk', () => {
+      expect(repositoryFilePaths).not.toContain('next-env.d.ts');
+    });
 
-    expect(filePaths).not.toContain('next-env.d.ts');
-  });
-
-  it('finds no unapproved controls in the live repository', () => {
-    expect(collectSkipPolicyIssues(readRepositorySkipPolicySources())).toEqual(
-      [],
-    );
+    it('finds no unapproved controls in the live repository', () => {
+      expect(collectSkipPolicyIssues(repositorySources)).toEqual([]);
+    });
   });
 });
