@@ -31,7 +31,7 @@ export default defineConfig({
     },
     {
       name: 'cleanup',
-      testMatch: /global\.teardown\.ts/,
+      testMatch: /global-teardown\.ts/,
       use: { storageState: 'test-results/.auth/e2e-user.json' },
     },
     {

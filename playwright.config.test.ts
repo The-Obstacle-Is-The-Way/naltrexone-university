@@ -15,7 +15,7 @@ describe('playwright config', () => {
     );
 
     expect(setupProject?.teardown).toBe('cleanup');
-    expect(cleanupProject?.testMatch).toEqual(/global\.teardown\.ts/);
+    expect(cleanupProject?.testMatch).toEqual(/global-teardown\.ts/);
     expect(cleanupProject?.use?.storageState).toBe(
       'test-results/.auth/e2e-user.json',
     );
