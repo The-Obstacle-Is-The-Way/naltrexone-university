@@ -89,15 +89,15 @@ An empty state flip or a stale prior review does not satisfy the repo rule.
 
 ## Dependabot PRs and Secrets
 
-GitHub does not provide repository Actions secrets to Dependabot PR workflows; it provides *Dependabot secrets*, a separate store that this repository has deliberately left empty because CI's secrets are job-scoped ([DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md)). The CI workflow therefore keeps non-secret checks running while skipping the E2E path for `dependabot[bot]` pull requests.
+GitHub does not provide repository Actions secrets to Dependabot PR workflows; it provides *Dependabot secrets*, a separate store that this repository has deliberately left empty pending the least-privilege decision in [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md). CI step-scopes its existing secrets, keeps non-secret checks running, and skips the E2E path for `dependabot[bot]` pull requests.
 
 Current anchors:
 
-- `.github/workflows/ci.yml:42-44` sets `NEXT_PUBLIC_SKIP_CLERK` from whether Clerk secrets are available.
-- `.github/workflows/ci.yml:143-146` skips E2E credential validation on Dependabot PRs.
-- `.github/workflows/ci.yml:197-201` skips the E2E smoke run on Dependabot PRs.
+- `.github/workflows/ci.yml:42-44` sets `NEXT_PUBLIC_SKIP_CLERK` from whether Clerk secrets are available without exposing a secret value at job scope.
+- `.github/workflows/ci.yml:123-140` scopes the real Clerk, Stripe, and E2E values to the conditional E2E step.
+- `.github/workflows/ci.yml:153-194` reports the E2E step's actual `outcome` and the pending DEBT-474 reason when it is skipped.
 
-Until DEBT-473 steps 3 and 6 and DEBT-474 are resolved, Dependabot PRs have a weaker evidence bar: the E2E lane is absent and the aggregate `test` check does not identify that gap. Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. Do not execute an untrusted Dependabot head locally with shared credentials. A `dev`-targeted version update later receives promotion-PR and post-merge `main` E2E; a default-branch security update receives only the post-merge `main` run. Disclose that route-specific, post-merge evidence rather than calling it PR-time proof.
+Until DEBT-473 step 6 and DEBT-474's credential decision are resolved, Dependabot PRs have a weaker evidence bar: the E2E lane is absent, and the required job now says so in its evidence summary. Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. Do not execute an untrusted Dependabot head locally with shared credentials. A `dev`-targeted version update later receives promotion-PR and post-merge `main` E2E; a default-branch security update receives only the post-merge `main` run. Disclose that route-specific, post-merge evidence rather than calling it PR-time proof.
 
 ## Dependabot Config Policy
 

@@ -42,55 +42,59 @@ function buildSuggestedLocalDatabaseUrl(input: {
 // Without this check, a missing/misconfigured Docker container causes
 // 50+ cryptic timeouts instead of one clear error message.
 const databaseUrl = process.env.DATABASE_URL;
-if (databaseUrl) {
-  const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
+if (!databaseUrl?.trim()) {
+  throw new Error(
+    'DATABASE_URL is required to run integration tests. Use pnpm test:integration for the per-clone target.',
+  );
+}
 
-  let url: URL;
-  try {
-    url = new URL(databaseUrl);
-  } catch {
-    throw new Error(
-      [
-        'Invalid DATABASE_URL for integration tests.',
-        '',
-        'Docs: docs/dev/integration-tests.md',
-      ].join('\n'),
-    );
-  }
+const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
 
-  if (!allowNonLocal && !isLocalDatabaseHost(url.hostname)) {
-    throw new Error(
-      `Refusing to run integration tests against non-local DATABASE_URL host "${url.hostname}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
-    );
-  }
-
-  const port = url.port || '5432';
-  const dbName = getDatabaseName(url) ?? 'addiction_boards_test';
-  const suggestedDatabaseUrl = buildSuggestedLocalDatabaseUrl({
-    hostname: url.hostname,
-    port,
-    dbName,
-  });
-  const sql = postgres(databaseUrl, { max: 1, connect_timeout: 3 });
-
-  try {
-    await sql`SELECT 1`;
-  } catch (error) {
-    const message = [
-      `Cannot connect to test database at ${url.hostname}:${port}.`,
-      '',
-      'Run: pnpm db:test:up',
-      '',
-      `Then migrate: DATABASE_URL=${suggestedDatabaseUrl} pnpm db:migrate`,
+let url: URL;
+try {
+  url = new URL(databaseUrl);
+} catch {
+  throw new Error(
+    [
+      'Invalid DATABASE_URL for integration tests.',
       '',
       'Docs: docs/dev/integration-tests.md',
-    ].join('\n');
-    throw new Error(message, { cause: error });
-  } finally {
-    try {
-      await sql.end({ timeout: 1 });
-    } catch {
-      // Ignore cleanup errors so they can't mask the real failure.
-    }
+    ].join('\n'),
+  );
+}
+
+if (!allowNonLocal && !isLocalDatabaseHost(url.hostname)) {
+  throw new Error(
+    `Refusing to run integration tests against non-local DATABASE_URL host "${url.hostname}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
+  );
+}
+
+const port = url.port || '5432';
+const dbName = getDatabaseName(url) ?? 'addiction_boards_test';
+const suggestedDatabaseUrl = buildSuggestedLocalDatabaseUrl({
+  hostname: url.hostname,
+  port,
+  dbName,
+});
+const sql = postgres(databaseUrl, { max: 1, connect_timeout: 3 });
+
+try {
+  await sql`SELECT 1`;
+} catch (error) {
+  const message = [
+    `Cannot connect to test database at ${url.hostname}:${port}.`,
+    '',
+    'Run: pnpm db:test:up',
+    '',
+    `Then migrate: DATABASE_URL=${suggestedDatabaseUrl} pnpm db:migrate`,
+    '',
+    'Docs: docs/dev/integration-tests.md',
+  ].join('\n');
+  throw new Error(message, { cause: error });
+} finally {
+  try {
+    await sql.end({ timeout: 1 });
+  } catch {
+    // Ignore cleanup errors so they can't mask the real failure.
   }
 }

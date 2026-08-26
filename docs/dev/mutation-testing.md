@@ -127,7 +127,7 @@ Mutation runs range from tens of seconds to minutes per module — they do **not
           with: { name: mutation-report, path: reports/mutation }
   ```
 
-  Pin actions following `ci.yml`'s conventions (`actions/checkout` and `pnpm/action-setup` are SHA-pinned there; `setup-node`/`upload-artifact` ride major tags). The run **reports; it does not gate** (`break: null`). Once runtimes and baselines are known, a per-PR incremental variant scoped to changed files (`--mutate` from the diff) can be evaluated — via ADR, like any gate.
+  Pin every action to a full commit SHA with its release version in a comment, following `ci.yml`'s convention. The run **reports; it does not gate** (`break: null`). Once runtimes and baselines are known, a per-PR incremental variant scoped to changed files (`--mutate` from the diff) can be evaluated — via ADR, like any gate.
 
 ## 7. Score policy
 

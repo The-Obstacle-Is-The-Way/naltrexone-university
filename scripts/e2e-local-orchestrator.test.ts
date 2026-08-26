@@ -43,8 +43,8 @@ describe('shouldUseIsolatedLocalE2E', () => {
     expect(shouldUseIsolatedLocalE2E({})).toBe(true);
   });
 
-  it('keeps CI on the existing Playwright path', () => {
-    expect(shouldUseIsolatedLocalE2E({ CI: 'true' })).toBe(false);
+  it('does not treat CI as permission to use an inherited database target', () => {
+    expect(shouldUseIsolatedLocalE2E({ CI: 'true' })).toBe(true);
   });
 
   it('allows an explicit local deploy-target database run', () => {
@@ -116,30 +116,48 @@ describe('createE2ECommandPlan', () => {
     expect(JSON.stringify(plan)).not.toContain('lsof -ti:3000');
   });
 
-  it('does not start Docker or override DATABASE_URL in CI', () => {
+  it('uses the isolated target when CI is set without the explicit passthrough flag', () => {
     const plan = createE2ECommandPlan({
+      cwd: '/repo/a',
       env: {
         CI: 'true',
+        LOCAL_TEST_INSTANCE: 'ci-env-local-run',
+        DB_TEST_PORT: '5544',
+        LOCAL_TEST_APP_PORT: '3301',
         DATABASE_URL:
           'postgresql://postgres:postgres@localhost:5432/addiction_boards_test',
       },
       playwrightArgs: ['tests/e2e/practice.spec.ts'],
     });
 
-    expect(plan).toEqual([
-      {
-        label: 'Run Playwright E2E',
-        command: 'pnpm',
-        args: ['exec', 'playwright', 'test', 'tests/e2e/practice.spec.ts'],
-        omitInheritedEnv: ['NO_COLOR'],
-      },
+    expect(plan.map((step) => step.label)).toEqual([
+      'Start isolated local Docker test database',
+      'Migrate isolated local Docker test database',
+      'Seed isolated local Docker test database',
+      'Run Playwright E2E against isolated local test target',
     ]);
+    expect(plan[3]?.env?.DATABASE_URL).toBe(
+      'postgresql://postgres:postgres@127.0.0.1:5544/addiction_boards_test',
+    );
   });
 
-  it('does not start Docker or override DATABASE_URL for explicit deploy-target runs', () => {
+  it('refuses a non-local existing database without the explicit non-local override', () => {
+    expect(() =>
+      createE2ECommandPlan({
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL: 'postgresql://deploy-target.example/app',
+        },
+        playwrightArgs: [],
+      }),
+    ).toThrow('Refusing to run E2E against non-local DATABASE_URL host');
+  });
+
+  it('passes through an intentional non-local target when both opt-ins are explicit', () => {
     const plan = createE2ECommandPlan({
       env: {
         E2E_USE_EXISTING_DATABASE: 'true',
+        ALLOW_NON_LOCAL_DATABASE_URL: 'true',
         DATABASE_URL: 'postgresql://deploy-target.example/app',
       },
       playwrightArgs: [],
@@ -153,6 +171,14 @@ describe('createE2ECommandPlan', () => {
         omitInheritedEnv: ['NO_COLOR'],
       },
     ]);
+  });
+
+  it('fails closed when existing-database mode has no database URL', () => {
+    expect(() =>
+      createE2ECommandPlan({
+        env: { E2E_USE_EXISTING_DATABASE: 'true', DATABASE_URL: '' },
+      }),
+    ).toThrow('DATABASE_URL is required when E2E_USE_EXISTING_DATABASE=true');
   });
 });
 

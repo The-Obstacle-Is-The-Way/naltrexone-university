@@ -89,7 +89,7 @@ Integration tests require a local Postgres container with migrations **and** see
 TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)" && pnpm db:test:up && DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate && SEED_INCLUDE_PLACEHOLDERS=true DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed && pnpm test:integration
 ```
 
-- **Never hardcode `localhost:5434`** — that is only a raw-invocation fallback (`docker-compose.yml`'s `${DB_TEST_PORT:-5434}` mapping and `.env.test`'s matching no-override URL); the wrappers override both per clone. A wrong port fails *silently*: drizzle-kit swallows the connection error and exits 1 with no message, then `pnpm test:integration` fails en masse on missing tables. Inspect the real target with `pnpm local:test:target` (formats: `json`, `database-url`, `app-url`, `env`).
+- **Never hardcode a test-database port** — `.env.test` deliberately contains no `DATABASE_URL`, and the supported wrappers inject this clone's resolver-owned target. The raw Docker Compose default is not permission to bypass that resolver. A wrong port fails *silently*: drizzle-kit swallows the connection error and exits 1 with no message, then `pnpm test:integration` fails en masse on missing tables. Inspect the real target with `pnpm local:test:target` (formats: `json`, `database-url`, `app-url`, `env`).
 - **Never use `drizzle-kit push`** — it skips migration files (missing `pgcrypto`, constraints)
 - **Always prefix with the resolved `DATABASE_URL=...`** — without it, drizzle-kit reads `.env.local` (remote Neon DB)
 - **Seeding is required** — `tag-taxonomy-census` tests fail without it

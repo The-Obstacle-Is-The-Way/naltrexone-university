@@ -36,9 +36,7 @@ type RunCommandPlanInput = {
 export function shouldUseIsolatedLocalE2E(
   env: E2ECommandEnv = process.env,
 ): boolean {
-  return (
-    !isTruthyEnvFlag(env.CI) && !isTruthyEnvFlag(env.E2E_USE_EXISTING_DATABASE)
-  );
+  return !isTruthyEnvFlag(env.E2E_USE_EXISTING_DATABASE);
 }
 
 export function resolveLocalE2EDatabaseUrl(
@@ -54,6 +52,7 @@ export function createE2ECommandPlan({
   playwrightArgs = [],
 }: CreateE2ECommandPlanInput = {}): E2ECommandStep[] {
   if (!shouldUseIsolatedLocalE2E(env)) {
+    assertExistingE2EDatabaseTarget(env);
     return [
       {
         label: 'Run Playwright E2E',
@@ -96,6 +95,32 @@ export function createE2ECommandPlan({
       omitInheritedEnv: ['NO_COLOR'],
     },
   ];
+}
+
+function assertExistingE2EDatabaseTarget(env: E2ECommandEnv): void {
+  const databaseUrl = env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    throw new Error(
+      'DATABASE_URL is required when E2E_USE_EXISTING_DATABASE=true.',
+    );
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(databaseUrl);
+  } catch {
+    throw new Error(
+      'DATABASE_URL must be a valid URL when E2E_USE_EXISTING_DATABASE=true.',
+    );
+  }
+
+  const localHosts = new Set(['127.0.0.1', '::1', 'localhost']);
+  const allowNonLocal = isTruthyEnvFlag(env.ALLOW_NON_LOCAL_DATABASE_URL);
+  if (!allowNonLocal && !localHosts.has(parsed.hostname)) {
+    throw new Error(
+      `Refusing to run E2E against non-local DATABASE_URL host "${parsed.hostname}". Export ALLOW_NON_LOCAL_DATABASE_URL=true only for an intentional deploy-target check.`,
+    );
+  }
 }
 
 export async function runCommandPlan(
