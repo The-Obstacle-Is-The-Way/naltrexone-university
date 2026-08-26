@@ -1,6 +1,10 @@
 import ts from 'typescript';
 import { DOCUMENTED_SKIP_POLICY_ALLOWANCES } from './skip-policy-source-scan-allowances';
 import type { SkipPolicySourceFile } from './skip-policy-source-scan-files';
+import {
+  mayContainFrameworkControl,
+  scriptKindFor,
+} from './skip-policy-source-scan-script-kind';
 
 export type { SkipPolicySourceFile } from './skip-policy-source-scan-files';
 export {
@@ -50,7 +54,6 @@ const CONTROL_METHODS = new Set([
   'skipIf',
   'todo',
 ]);
-const CONTROL_TOKEN_PATTERN = /\b(?:fixme|only|runIf|skip|skipIf|todo)\b/;
 
 type ImportedApi = {
   api: TestApi;
@@ -84,17 +87,6 @@ export function collectFrameworkControlOccurrences(
     .filter(mayContainFrameworkControl)
     .flatMap(collectSourceControlOccurrences)
     .sort(compareOccurrences);
-}
-
-function mayContainFrameworkControl(source: SkipPolicySourceFile): boolean {
-  // This is candidate pruning only; the AST import/receiver resolver below is
-  // still the authority. Parse escaped sources too so an encoded identifier or
-  // static string (for example, a Unicode-escaped `skip`) cannot bypass policy.
-  return (
-    CONTROL_TOKEN_PATTERN.test(source.contents) ||
-    source.contents.includes('\\u') ||
-    source.contents.includes('\\x')
-  );
 }
 
 export function collectSkipPolicyIssues(
@@ -415,6 +407,15 @@ function registerFrameworkBindings(
     return;
   }
 
+  if (
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+    ts.isIdentifier(node.left)
+  ) {
+    registerAssignedFrameworkBinding(node.left, node.right, scope);
+    return;
+  }
+
   if (!ts.isVariableDeclaration(node)) return;
   const declarationScope = isBlockScopedVariableDeclaration(node)
     ? scope
@@ -438,6 +439,40 @@ function registerFrameworkBindings(
     ? resolveImportedApi(node.initializer, declarationScope)
     : undefined;
   if (importedApi) declarationScope.named.set(node.name.text, importedApi);
+}
+
+function registerAssignedFrameworkBinding(
+  target: ts.Identifier,
+  value: ts.Expression,
+  scope: FrameworkBindingScope,
+): void {
+  const declaringScope = findDeclaringScope(target.text, scope);
+  if (!declaringScope) return;
+
+  const moduleName = resolveFrameworkModuleBinding(value, scope);
+  if (moduleName) {
+    declaringScope.named.delete(target.text);
+    declaringScope.namespaces.set(target.text, moduleName);
+    return;
+  }
+
+  const importedApi = resolveImportedApi(value, scope);
+  if (importedApi) {
+    declaringScope.namespaces.delete(target.text);
+    declaringScope.named.set(target.text, importedApi);
+  }
+}
+
+function findDeclaringScope(
+  name: string,
+  scope: FrameworkBindingScope,
+): FrameworkBindingScope | undefined {
+  let current: FrameworkBindingScope | undefined = scope;
+  while (current) {
+    if (current.declared.has(name)) return current;
+    current = current.parent;
+  }
+  return undefined;
 }
 
 function isBlockScopedVariableDeclaration(
@@ -758,17 +793,4 @@ function compareOccurrences(
     left.lineNumber - right.lineNumber ||
     left.method.localeCompare(right.method)
   );
-}
-
-function scriptKindFor(filePath: string): ts.ScriptKind {
-  if (filePath.endsWith('.tsx')) return ts.ScriptKind.TSX;
-  if (filePath.endsWith('.jsx')) return ts.ScriptKind.JSX;
-  if (
-    filePath.endsWith('.js') ||
-    filePath.endsWith('.mjs') ||
-    filePath.endsWith('.cjs')
-  ) {
-    return ts.ScriptKind.JS;
-  }
-  return ts.ScriptKind.TS;
 }

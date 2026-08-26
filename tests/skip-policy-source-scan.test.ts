@@ -362,6 +362,54 @@ describe('skip-policy source scan', () => {
     ]);
   });
 
+  it('resolves a receiver assigned to an already-declared local alias', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        "import { test } from 'vitest'; let spec; spec = test; spec.skip('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'skip' }),
+    ]);
+  });
+
+  it('resolves a framework namespace assigned to an already-declared local', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.cjs',
+        "let controls; controls = require('vitest'); controls.test.only('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'only' }),
+    ]);
+  });
+
+  it('does not resolve an unrelated assignment as a framework alias', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        "let spec; spec = runner; spec.skip('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('does not promote an undeclared assignment target to a framework alias', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        "import { test } from 'vitest'; spec = test; spec.skip('x', () => {});",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
   it.each([
     ['parentheses', '(test)'],
     ['an as-expression', 'test as typeof test'],
