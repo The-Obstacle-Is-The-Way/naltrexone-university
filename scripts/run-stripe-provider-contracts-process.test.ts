@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   spawnVitest,
   terminateVitestProcessTree,
-} from './run-trial-clock-smoke';
+} from './run-stripe-provider-contracts';
 
 describe('spawnVitest', () => {
   const childEnvironment = { PATH: process.env.PATH };
@@ -63,7 +63,7 @@ describe('spawnVitest', () => {
         new EventEmitter(),
       ),
     ).rejects.toThrow(
-      'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with exit code 7',
+      'STRIPE_PROVIDER_PROCESS_FAILED: Vitest ended with exit code 7',
     );
   });
 
@@ -79,7 +79,7 @@ describe('spawnVitest', () => {
         new EventEmitter(),
       ),
     ).rejects.toThrow(
-      'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal SIGTERM',
+      'STRIPE_PROVIDER_PROCESS_FAILED: Vitest ended with signal SIGTERM',
     );
   });
 
@@ -97,7 +97,7 @@ describe('spawnVitest', () => {
         parentSignals,
       ),
     ).rejects.toThrow(
-      'TRIAL_CLOCK_SMOKE_PROCESS_START_FAILED: unable to start Vitest',
+      'STRIPE_PROVIDER_PROCESS_START_FAILED: unable to start Vitest',
     );
     expectNoParentSignalListeners(parentSignals);
   });
@@ -115,9 +115,7 @@ describe('spawnVitest', () => {
         10,
         parentSignals,
       ),
-    ).rejects.toThrow(
-      'TRIAL_CLOCK_SMOKE_PROCESS_TIMEOUT: Vitest exceeded 10ms',
-    );
+    ).rejects.toThrow('STRIPE_PROVIDER_PROCESS_TIMEOUT: Vitest exceeded 10ms');
     expectNoParentSignalListeners(parentSignals);
   });
 
@@ -205,7 +203,7 @@ describe('spawnVitest', () => {
         parentSignals.emit(signal);
 
         await expect(run).rejects.toThrow(
-          `TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal ${signal}`,
+          `STRIPE_PROVIDER_PROCESS_FAILED: Vitest ended with signal ${signal}`,
         );
         expectNoParentSignalListeners(parentSignals);
       } finally {
@@ -243,7 +241,7 @@ describe('spawnVitest', () => {
         parentSignals.emit('SIGTERM');
 
         await expect(run).rejects.toThrow(
-          'TRIAL_CLOCK_SMOKE_PROCESS_FAILED: Vitest ended with signal SIGKILL',
+          'STRIPE_PROVIDER_PROCESS_FAILED: Vitest ended with signal SIGKILL',
         );
         expectNoParentSignalListeners(parentSignals);
       } finally {

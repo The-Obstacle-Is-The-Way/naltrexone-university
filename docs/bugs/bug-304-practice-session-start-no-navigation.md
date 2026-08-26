@@ -222,13 +222,19 @@ session corruption was observed, so P3 is proportionate.
 
 ## Resolution State
 
-Open. The first diagnostic/synchronization fix merged to `dev` through PR #834,
-and its first navigation-observation follow-up merged through PR #836. Promotion
-PR #835 remains intentionally blocked: runs `32903291145` and `32912478032`
-each contained retry-recovered required-E2E failures. The second red-first
-navigation-observation fix is on `fix/bug-304-navigation-event-wait`. Close only
-after that follow-up is reviewed, merged, promoted, and production-verified,
-with the original no-navigation cause still labeled unproven.
+Open. The diagnostic/synchronization fix and both navigation-observation
+follow-ups are promoted to `main` through PR #835, merge commit `47b31234`.
+CodeRabbit approved exact head `92c35965`; PR run `32955114161` and post-merge
+main run `32960005070` each passed required E2E 43/43 on the first attempt with
+zero flaky results. Production deployment `6102157792` completed successfully,
+`addictionboards.com` returned HTTP 200, and `/api/health` reported the app and
+database healthy.
+
+Those receipts close the diagnosed timeout/diagnostic blind spot and the two
+navigation-observation races. They do not prove why the original 03:15Z click
+left the starter visible with no loading state or alert. BUG-304 therefore
+remains Open; a future recurrence must be adjudicated from the now-preserved
+trace, request, rendered-alert, and URL evidence rather than retry recovery.
 
 ## Related
 

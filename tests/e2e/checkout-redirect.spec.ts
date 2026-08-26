@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import {
   E2E_CLERK_AUTH_STATE_PATH,
-  hasClerkCredentials,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
 import {
@@ -17,7 +16,6 @@ test.describe
   .serial('Stripe Checkout redirect boundary', () => {
     // Clerk sign-in plus real Checkout Session creation can exceed the default budget.
     test.setTimeout(120_000);
-    test.skip(!hasClerkCredentials, 'Missing Clerk E2E credentials');
 
     test.beforeEach(async () => {
       await runE2EUserStateReset();

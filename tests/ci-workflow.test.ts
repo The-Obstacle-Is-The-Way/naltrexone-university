@@ -5,6 +5,8 @@ const CI_WORKFLOW_PATH = '.github/workflows/ci.yml';
 const CODECOV_CONFIG_PATH = 'codecov.yml';
 const STRIPE_HOSTED_WORKFLOW_PATH =
   '.github/workflows/stripe-hosted-checkout-smoke.yml';
+const STRIPE_PROVIDER_WORKFLOW_PATH =
+  '.github/workflows/stripe-trial-clock-smoke.yml';
 const HUMAN_SAME_REPO_PR_CONDITION =
   "github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository";
 const DEPENDABOT_ACTOR_GUARD = "github.actor != 'dependabot[bot]'";
@@ -25,6 +27,10 @@ function readCodecovConfig(): string {
 
 function readStripeHostedWorkflow(): string {
   return readFileSync(STRIPE_HOSTED_WORKFLOW_PATH, 'utf8');
+}
+
+function readStripeProviderWorkflow(): string {
+  return readFileSync(STRIPE_PROVIDER_WORKFLOW_PATH, 'utf8');
 }
 
 function findStepBlock(workflow: string, stepName: string): string {
@@ -79,6 +85,13 @@ describe('CI workflow', () => {
     expect(stepBlock).toContain(
       'bash scripts/ci/install-playwright-chromium.sh',
     );
+  });
+
+  it('delegates skip policy to the parser-backed unit-lane scan', () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).not.toContain('name: Enforce E2E skip policy');
+    expect(workflow).not.toContain('grep -nH "test\\.skip("');
   });
 });
 
@@ -140,5 +153,29 @@ describe('Stripe-hosted Checkout smoke workflow', () => {
     expect(workflow).toContain(`uses: ${PINNED_UPLOAD_ARTIFACT}`);
     expect(workflow).not.toContain('actions/setup-node@v7');
     expect(workflow).not.toContain('actions/upload-artifact@v7');
+  });
+});
+
+describe('Stripe provider contract workflow', () => {
+  it('advertises the generalized provider-contract lane', () => {
+    expect(readStripeProviderWorkflow()).toContain(
+      'name: Stripe provider contracts',
+    );
+  });
+
+  it('serializes runs under the generalized provider-contract identity', () => {
+    expect(readStripeProviderWorkflow()).toContain(
+      'group: stripe-provider-contracts',
+    );
+  });
+
+  it('invokes the discoverable fail-closed provider command', () => {
+    const stepBlock = findStepBlock(
+      readStripeProviderWorkflow(),
+      'Run fail-closed Stripe provider contracts',
+    );
+
+    expect(stepBlock).toContain('run: pnpm test:stripe-provider');
+    expect(stepBlock).not.toContain('scripts/run-trial-clock-smoke.ts');
   });
 });

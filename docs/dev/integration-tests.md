@@ -1,6 +1,6 @@
 # Integration Tests
 
-**Last Updated:** 2026-06-12
+**Last Updated:** 2026-08-26
 
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
@@ -50,6 +50,24 @@ pnpm test:integration
 ```
 
 If the database is unreachable, the test setup fails fast with a clear error message and the exact commands to fix it.
+
+### Live Stripe Provider Contracts (TEST Mode)
+
+The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its six live Stripe cases are reported as skipped. To request all six cases explicitly, use the dedicated fail-closed entry point:
+
+```bash
+pnpm test:stripe-provider
+```
+
+The runner loads `.env.local` with `override: false`, so an explicitly exported value wins. It accepts only a non-dummy `sk_test_` key and non-dummy `price_` Price, runs the two provider files through `vitest.stripe-provider.config.mts` without database setup, injects both opt-in flags only into the bounded child, and rejects missing prerequisites, skips, partial results, malformed reports, timeouts, and non-passing cases. It preserves the POSIX process-group termination, parent-signal forwarding, and escalation contracts needed to clean up Vitest workers.
+
+The success receipt is:
+
+```text
+[stripe-provider] PASS executed=6 passed=6 skipped=0
+```
+
+The 2026-08-26 local TEST-mode activation run produced that exact receipt. Any `PROVIDER_KEY_INVALID` or `PROVIDER_PRICE_INVALID` result is a configuration failure; do not treat it as an expected skip and do not use a live-mode key.
 
 ### One-Liner (Full Setup)
 

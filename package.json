@@ -20,6 +20,7 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "tsx scripts/run-local-integration.ts",
     "test:integration:coverage": "tsx scripts/run-local-integration.ts --coverage",
+    "test:stripe-provider": "tsx scripts/run-stripe-provider-contracts.ts",
     "quality:crap": "tsx scripts/crap-report.ts",
     "test:e2e": "tsx scripts/run-local-e2e.ts --project=chromium",
     "test:e2e:stripe-hosted": "tsx scripts/run-local-e2e.ts --project=stripe-hosted",
