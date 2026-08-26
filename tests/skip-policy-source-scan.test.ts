@@ -181,6 +181,72 @@ describe('skip-policy source scan', () => {
     ]);
   });
 
+  it.each([
+    [
+      'a namespace binding',
+      "function configure() { const vitest = require('vitest'); vitest.test.skip('x', () => {}); }",
+    ],
+    [
+      'a destructured binding',
+      "function configure() { const { test } = require('@playwright/test'); test.skip('x'); }",
+    ],
+  ])('detects nested CommonJS controls through %s', (_label, contents) => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source('tests/example.cjs', contents),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({
+        api: 'test',
+        filePath: 'tests/example.cjs',
+        kind: 'call',
+        lineNumber: 1,
+        method: 'skip',
+      }),
+    ]);
+  });
+
+  it('does not attribute a shadowed named binding to the framework import', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.ts',
+        "import { test } from 'vitest'; function configure() { const test = { skip() {} }; test.skip(); }",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('does not attribute a shadowed namespace binding to the framework import', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.ts',
+        "import * as vitest from 'vitest'; function configure() { const vitest = { test: { skip() {} } }; vitest.test.skip(); }",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it('resolves a var framework binding from its enclosing function scope', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.cjs',
+        "function configure(enabled) { if (enabled) { var test = require('vitest').test; } test.skip('x', () => {}); }",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({
+        api: 'test',
+        filePath: 'tests/example.cjs',
+        kind: 'call',
+        lineNumber: 1,
+        method: 'skip',
+      }),
+    ]);
+  });
+
   it('detects a control member used through a chained table API', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(

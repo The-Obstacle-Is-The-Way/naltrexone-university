@@ -122,6 +122,17 @@ type FrameworkBindings = {
   namespaces: Map<string, FrameworkModule>;
 };
 
+type FrameworkBindingScope = FrameworkBindings & {
+  declared: Set<string>;
+  functionOwner: FrameworkBindingScope | undefined;
+  parent: FrameworkBindingScope | undefined;
+};
+
+type FrameworkBindingIndex = {
+  root: FrameworkBindingScope;
+  scopes: Map<ts.Node, FrameworkBindingScope>;
+};
+
 export class SkipPolicyScanError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -219,19 +230,20 @@ function collectSourceControlOccurrences(
     true,
     scriptKindFor(source.filePath),
   );
-  const bindings = collectFrameworkBindings(parsed);
+  const bindingIndex = collectFrameworkBindingIndex(parsed);
   const occurrences: FrameworkControlOccurrence[] = [];
 
   function recordControl(
     member: FrameworkControlMember,
     kind: ControlKind,
+    scope: FrameworkBindingScope,
     guardExpression?: ts.Expression,
   ): void {
     const staticMember = getStaticMember(member);
     if (!staticMember) return;
     const { method, location } = staticMember;
     if (!CONTROL_METHODS.has(method)) return;
-    const importedApi = resolveImportedApi(member.expression, bindings);
+    const importedApi = resolveImportedApi(member.expression, scope);
     if (!importedApi) return;
     const normalizedGuardExpression = guardExpression
       ? normalizeGuardExpression(guardExpression, parsed)
@@ -251,7 +263,8 @@ function collectSourceControlOccurrences(
     });
   }
 
-  function visit(node: ts.Node): void {
+  function visit(node: ts.Node, enclosingScope: FrameworkBindingScope): void {
+    const scope = bindingIndex.scopes.get(node) ?? enclosingScope;
     if (
       ts.isCallExpression(node) &&
       isFrameworkControlMember(node.expression)
@@ -261,13 +274,13 @@ function collectSourceControlOccurrences(
         method !== undefined && ['runIf', 'skipIf'].includes(method)
           ? node.arguments[0]
           : undefined;
-      recordControl(node.expression, 'call', guardExpression);
+      recordControl(node.expression, 'call', scope, guardExpression);
     }
 
     if (ts.isConditionalExpression(node)) {
       for (const branch of [node.whenTrue, node.whenFalse]) {
         if (isFrameworkControlMember(branch)) {
-          recordControl(branch, 'conditional-reference', node.condition);
+          recordControl(branch, 'conditional-reference', scope, node.condition);
         }
       }
     }
@@ -276,13 +289,13 @@ function collectSourceControlOccurrences(
       isFrameworkControlMember(node) &&
       !isDirectControlUseHandledByParent(node)
     ) {
-      recordControl(node, 'reference');
+      recordControl(node, 'reference', scope);
     }
 
-    ts.forEachChild(node, visit);
+    ts.forEachChild(node, (child) => visit(child, scope));
   }
 
-  visit(parsed);
+  visit(parsed, bindingIndex.root);
   return occurrences;
 }
 
@@ -304,48 +317,136 @@ function normalizeGuardExpression(
   return expression.getText(parsed).replaceAll(/\s+/g, '');
 }
 
-function collectFrameworkBindings(parsed: ts.SourceFile): FrameworkBindings {
-  const named = new Map<string, ImportedApi>();
-  const namespaces = new Map<string, FrameworkModule>();
+function collectFrameworkBindingIndex(
+  parsed: ts.SourceFile,
+): FrameworkBindingIndex {
+  const scopes = new Map<ts.Node, FrameworkBindingScope>();
+  const root = createFrameworkBindingScope(undefined);
 
-  for (const statement of parsed.statements) {
-    if (ts.isImportDeclaration(statement)) {
-      registerImportBindings(statement, named, namespaces);
-      continue;
-    }
-
-    if (ts.isImportEqualsDeclaration(statement)) {
-      registerImportEqualsBinding(statement, namespaces);
-      continue;
-    }
-
-    if (!ts.isVariableStatement(statement)) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      const moduleName = requiredFrameworkModule(declaration.initializer);
-      if (moduleName) {
-        registerCommonJsBindings(
-          declaration.name,
-          moduleName,
-          named,
-          namespaces,
-        );
-        continue;
-      }
-
-      if (!ts.isIdentifier(declaration.name)) continue;
-      const importedApi = requiredFrameworkApi(declaration.initializer);
-      if (importedApi) named.set(declaration.name.text, importedApi);
-    }
+  function visit(node: ts.Node, enclosingScope: FrameworkBindingScope): void {
+    const scope =
+      node === parsed
+        ? root
+        : isFrameworkBindingScope(node)
+          ? createFrameworkBindingScope(enclosingScope)
+          : enclosingScope;
+    if (node === parsed || ts.isFunctionLike(node)) scope.functionOwner = scope;
+    if (scope !== enclosingScope || node === parsed) scopes.set(node, scope);
+    registerNodeBindings(node, scope);
+    ts.forEachChild(node, (child) => visit(child, scope));
   }
 
-  return { named, namespaces };
+  visit(parsed, root);
+  return { root, scopes };
+}
+
+function createFrameworkBindingScope(
+  parent: FrameworkBindingScope | undefined,
+): FrameworkBindingScope {
+  return {
+    declared: new Set<string>(),
+    functionOwner: parent?.functionOwner,
+    named: new Map<string, ImportedApi>(),
+    namespaces: new Map<string, FrameworkModule>(),
+    parent,
+  };
+}
+
+function isFrameworkBindingScope(node: ts.Node): boolean {
+  return (
+    ts.isSourceFile(node) ||
+    ts.isBlock(node) ||
+    ts.isCaseBlock(node) ||
+    ts.isCatchClause(node) ||
+    ts.isForStatement(node) ||
+    ts.isForInStatement(node) ||
+    ts.isForOfStatement(node) ||
+    ts.isFunctionLike(node)
+  );
+}
+
+function registerNodeBindings(
+  node: ts.Node,
+  scope: FrameworkBindingScope,
+): void {
+  if (ts.isImportDeclaration(node)) {
+    registerImportBindings(node, scope);
+    return;
+  }
+
+  if (ts.isImportEqualsDeclaration(node)) {
+    scope.declared.add(node.name.text);
+    registerImportEqualsBinding(node, scope.namespaces);
+    return;
+  }
+
+  if (ts.isParameter(node)) {
+    declareBindingName(node.name, scope.declared);
+    return;
+  }
+
+  if (!ts.isVariableDeclaration(node)) return;
+  const declarationScope = isBlockScopedVariableDeclaration(node)
+    ? scope
+    : (scope.functionOwner ?? scope);
+  declareBindingName(node.name, declarationScope.declared);
+  const moduleName = requiredFrameworkModule(node.initializer);
+  if (moduleName) {
+    registerCommonJsBindings(
+      node.name,
+      moduleName,
+      declarationScope.named,
+      declarationScope.namespaces,
+    );
+    return;
+  }
+
+  if (!ts.isIdentifier(node.name)) return;
+  const importedApi = requiredFrameworkApi(node.initializer);
+  if (importedApi) declarationScope.named.set(node.name.text, importedApi);
+}
+
+function isBlockScopedVariableDeclaration(
+  declaration: ts.VariableDeclaration,
+): boolean {
+  const declarationList = declaration.parent;
+  return (
+    !ts.isVariableDeclarationList(declarationList) ||
+    (declarationList.flags & ts.NodeFlags.BlockScoped) !== 0
+  );
+}
+
+function declareBindingName(
+  binding: ts.BindingName,
+  declared: Set<string>,
+): void {
+  if (ts.isIdentifier(binding)) {
+    declared.add(binding.text);
+    return;
+  }
+  for (const element of binding.elements) {
+    if (!ts.isBindingElement(element)) continue;
+    declareBindingName(element.name, declared);
+  }
 }
 
 function registerImportBindings(
   statement: ts.ImportDeclaration,
-  named: Map<string, ImportedApi>,
-  namespaces: Map<string, FrameworkModule>,
+  scope: FrameworkBindingScope,
 ): void {
+  const importClause = statement.importClause;
+  if (importClause?.name) scope.declared.add(importClause.name.text);
+  const bindings = importClause?.namedBindings;
+  if (bindings) {
+    if (ts.isNamespaceImport(bindings)) {
+      scope.declared.add(bindings.name.text);
+    } else {
+      for (const element of bindings.elements) {
+        scope.declared.add(element.name.text);
+      }
+    }
+  }
+
   if (
     !ts.isStringLiteral(statement.moduleSpecifier) ||
     !isFrameworkModule(statement.moduleSpecifier.text)
@@ -354,18 +455,17 @@ function registerImportBindings(
   }
 
   const moduleName = statement.moduleSpecifier.text;
-  const bindings = statement.importClause?.namedBindings;
   if (!bindings) return;
 
   if (ts.isNamespaceImport(bindings)) {
-    namespaces.set(bindings.name.text, moduleName);
+    scope.namespaces.set(bindings.name.text, moduleName);
     return;
   }
 
   for (const element of bindings.elements) {
     const importedName = (element.propertyName ?? element.name).text;
     if (!isTestApi(importedName)) continue;
-    named.set(element.name.text, { api: importedName, moduleName });
+    scope.named.set(element.name.text, { api: importedName, moduleName });
   }
 }
 
@@ -458,14 +558,14 @@ function staticStringValue(
 
 function resolveImportedApi(
   expression: ts.Expression,
-  bindings: FrameworkBindings,
+  scope: FrameworkBindingScope,
 ): ImportedApi | undefined {
   if (ts.isIdentifier(expression)) {
-    return bindings.named.get(expression.text);
+    return resolveNamedBinding(expression.text, scope);
   }
 
   if (ts.isCallExpression(expression)) {
-    return resolveImportedApi(expression.expression, bindings);
+    return resolveImportedApi(expression.expression, scope);
   }
 
   if (!isFrameworkControlMember(expression)) return undefined;
@@ -479,13 +579,40 @@ function resolveImportedApi(
   }
 
   if (ts.isIdentifier(expression.expression)) {
-    const moduleName = bindings.namespaces.get(expression.expression.text);
+    const moduleName = resolveNamespaceBinding(
+      expression.expression.text,
+      scope,
+    );
     if (moduleName && isTestApi(staticMember.method)) {
       return { api: staticMember.method, moduleName };
     }
   }
 
-  return resolveImportedApi(expression.expression, bindings);
+  return resolveImportedApi(expression.expression, scope);
+}
+
+function resolveNamedBinding(
+  name: string,
+  scope: FrameworkBindingScope,
+): ImportedApi | undefined {
+  let current: FrameworkBindingScope | undefined = scope;
+  while (current) {
+    if (current.declared.has(name)) return current.named.get(name);
+    current = current.parent;
+  }
+  return undefined;
+}
+
+function resolveNamespaceBinding(
+  name: string,
+  scope: FrameworkBindingScope,
+): FrameworkModule | undefined {
+  let current: FrameworkBindingScope | undefined = scope;
+  while (current) {
+    if (current.declared.has(name)) return current.namespaces.get(name);
+    current = current.parent;
+  }
+  return undefined;
 }
 
 function isFrameworkControlMember(
