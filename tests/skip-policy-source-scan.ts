@@ -58,6 +58,7 @@ const CONTROL_METHODS = new Set([
   'skipIf',
   'todo',
 ]);
+const CONTROL_TOKEN_PATTERN = /\b(?:fixme|only|runIf|skip|skipIf|todo)\b/;
 
 const DOCUMENTED_ALLOWANCES: readonly SkipPolicyAllowance[] = [
   {
@@ -165,8 +166,20 @@ export function collectFrameworkControlOccurrences(
   sources: readonly SkipPolicySourceFile[],
 ): FrameworkControlOccurrence[] {
   return sources
+    .filter(mayContainFrameworkControl)
     .flatMap(collectSourceControlOccurrences)
     .sort(compareOccurrences);
+}
+
+function mayContainFrameworkControl(source: SkipPolicySourceFile): boolean {
+  // This is candidate pruning only; the AST import/receiver resolver below is
+  // still the authority. Parse escaped sources too so an encoded identifier or
+  // static string (for example, a Unicode-escaped `skip`) cannot bypass policy.
+  return (
+    CONTROL_TOKEN_PATTERN.test(source.contents) ||
+    source.contents.includes('\\u') ||
+    source.contents.includes('\\x')
+  );
 }
 
 export function collectSkipPolicyIssues(
