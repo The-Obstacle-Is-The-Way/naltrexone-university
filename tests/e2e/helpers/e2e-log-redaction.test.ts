@@ -67,8 +67,10 @@ describe('installE2ELogRedaction', () => {
   it('does not wrap a log target more than once', () => {
     const fake = createFakeLogTarget();
     installE2ELogRedaction(fake.target);
+    const wrappedWarn = fake.target.warn;
     installE2ELogRedaction(fake.target);
 
+    expect(fake.target.warn).toBe(wrappedWarn);
     fake.target.warn('?__clerk_db_jwt=dev-browser-value');
 
     expect(fake.captured).toEqual([

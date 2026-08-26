@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from './playwright.config';
-import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth-state';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -18,19 +17,14 @@ describe('playwright config', () => {
 
     expect(setupProject?.teardown).toBe('cleanup');
     expect(cleanupProject?.testMatch).toEqual(/global-teardown\.ts/);
-    expect(cleanupProject?.use?.storageState).toBe(E2E_CLERK_AUTH_STATE_PATH);
+    expect(cleanupProject?.use?.storageState).toBeUndefined();
   });
 
-  it('uses the shared Clerk auth-state path in the cleanup project source', () => {
+  it('defers cleanup auth-state loading until global teardown executes', () => {
     const source = readFileSync('playwright.config.ts', 'utf8');
 
-    expect(source).toContain(
-      "import { E2E_CLERK_AUTH_STATE_PATH } from './tests/e2e/helpers/clerk-auth-state';",
-    );
+    expect(source).not.toContain('E2E_CLERK_AUTH_STATE_PATH');
     expect(source).not.toContain("from './tests/e2e/helpers/clerk-auth';");
-    expect(source).toContain(
-      'use: { storageState: E2E_CLERK_AUTH_STATE_PATH }',
-    );
     expect(source).not.toContain(
       "storageState: 'test-results/.auth/e2e-user.json'",
     );
