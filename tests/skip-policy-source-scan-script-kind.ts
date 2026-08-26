@@ -6,8 +6,8 @@ const CONTROL_TOKEN_PATTERN = /\b(?:fixme|only|runIf|skip|skipIf|todo)\b/;
 export function mayContainFrameworkControl(
   source: SkipPolicySourceFile,
 ): boolean {
-  // Candidate pruning only: the scanner's AST binding resolver remains the
-  // authority. Escaped identifiers and static strings must still be parsed.
+  // Candidate pruning only: the scanner's AST classifier remains authoritative.
+  // Escaped identifiers and static strings must still be parsed.
   return (
     CONTROL_TOKEN_PATTERN.test(source.contents) ||
     source.contents.includes('\\u') ||
