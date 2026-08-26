@@ -23,6 +23,8 @@
 
 **Independent pre-approval correction (2026-08-26).** A follow-up audit found the inverse assignment case: after a valid alias was registered, assigning an unrelated value left the old named or namespace binding live and could falsely classify a later same-named method as framework control. Two focused cases failed red while the prior 64 stayed green. Assignment handling now resolves the right-hand side before clearing both prior binding shapes and installs only the newly resolved shape; the focused suite passes 66/66.
 
+**Temporal assignment correction (2026-08-26).** A second pre-approval audit falsified the inverse fix against source order: because the binding index previously retained only each file's final assignment state, `spec = test; spec.skip(...); spec = runner` erased the earlier violation retroactively, with the same failure for an assigned CommonJS namespace. Both focused cases failed red while the prior 66 stayed green. Imports remain pre-indexed according to their hoisted module semantics, while mutable variable initializers and assignments are now applied during the occurrence walk in source order. The focused suite passes 68/68, and the engine remains below the 800-line ratchet at 793 lines.
+
 ## Description
 
 A green test signal in this repository currently means one of four different things, and the aggregate signal does not distinguish them:

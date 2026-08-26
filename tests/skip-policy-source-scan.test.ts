@@ -421,6 +421,32 @@ describe('skip-policy source scan', () => {
     expect(occurrences).toEqual([]);
   });
 
+  it('keeps a named framework violation that precedes a later reassignment', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.test.ts',
+        "import { test } from 'vitest'; let spec; spec = test; spec.skip('x', () => {}); spec = runner;",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'skip' }),
+    ]);
+  });
+
+  it('keeps a namespace violation that precedes a later reassignment', () => {
+    const occurrences = collectFrameworkControlOccurrences([
+      source(
+        'tests/example.cjs',
+        "let controls; controls = require('vitest'); controls.test.only('x', () => {}); controls = runner;",
+      ),
+    ]);
+
+    expect(occurrences).toEqual([
+      expect.objectContaining({ api: 'test', method: 'only' }),
+    ]);
+  });
+
   it('does not promote an undeclared assignment target to a framework alias', () => {
     const occurrences = collectFrameworkControlOccurrences([
       source(

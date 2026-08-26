@@ -220,6 +220,7 @@ function collectSourceControlOccurrences(
 
   function visit(node: ts.Node, enclosingScope: FrameworkBindingScope): void {
     const scope = bindingIndex.scopes.get(node) ?? enclosingScope;
+    registerRuntimeFrameworkBindings(node, scope);
     if (ts.isVariableDeclaration(node)) {
       recordDestructuredControls(node, scope);
     }
@@ -297,17 +298,22 @@ function collectFrameworkBindingIndex(
     ts.forEachChild(node, (child) => visitDeclarations(child, scope));
   }
 
-  function visitFrameworkBindings(
+  function visitHoistedFrameworkBindings(
     node: ts.Node,
     enclosingScope: FrameworkBindingScope,
   ): void {
     const scope = scopes.get(node) ?? enclosingScope;
-    registerFrameworkBindings(node, scope);
-    ts.forEachChild(node, (child) => visitFrameworkBindings(child, scope));
+    if (ts.isImportDeclaration(node)) registerImportBindings(node, scope);
+    if (ts.isImportEqualsDeclaration(node)) {
+      registerImportEqualsBinding(node, scope.namespaces);
+    }
+    ts.forEachChild(node, (child) =>
+      visitHoistedFrameworkBindings(child, scope),
+    );
   }
 
   visitDeclarations(parsed, root);
-  visitFrameworkBindings(parsed, root);
+  visitHoistedFrameworkBindings(parsed, root);
   return { root, scopes };
 }
 
@@ -393,20 +399,10 @@ function registerDeclaredBindings(
   declareBindingName(node.name, declarationScope.declared);
 }
 
-function registerFrameworkBindings(
+function registerRuntimeFrameworkBindings(
   node: ts.Node,
   scope: FrameworkBindingScope,
 ): void {
-  if (ts.isImportDeclaration(node)) {
-    registerImportBindings(node, scope);
-    return;
-  }
-
-  if (ts.isImportEqualsDeclaration(node)) {
-    registerImportEqualsBinding(node, scope.namespaces);
-    return;
-  }
-
   if (
     ts.isBinaryExpression(node) &&
     node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
