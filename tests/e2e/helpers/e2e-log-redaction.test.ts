@@ -34,7 +34,8 @@ describe('installE2ELogRedaction', () => {
     for (const method of LOG_METHOD_NAMES) {
       fake.target[method](
         'request ?__clerk_db_jwt=dev-browser-value&next=1 ' +
-          '__clerk_testing_token=testing-value; __session=session-value',
+          '__clerk_testing_token=testing-value; __session=session-value; ' +
+          '__clerk_handshake=handshake-value',
       );
     }
 
@@ -43,7 +44,8 @@ describe('installE2ELogRedaction', () => {
         method,
         values: [
           'request ?__clerk_db_jwt=[redacted]&next=1 ' +
-            '__clerk_testing_token=[redacted]; __session=[redacted]',
+            '__clerk_testing_token=[redacted]; __session=[redacted]; ' +
+            '__clerk_handshake=[redacted]',
         ],
       })),
     );

@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { STANDARD_MUTATION_TIMEOUT_MS } from '@/app/(app)/app/shared/timeout-tiers';
+import { redactSensitiveE2EText } from './e2e-log-redaction';
 import { parseQuestionProgressCount } from './question-progress';
 
 export type PracticeMode = 'tutor' | 'exam';
@@ -73,7 +74,10 @@ async function waitForEnabled(
 }
 
 function redactDiagnosticText(value: string): string {
-  return value.replace(SENSITIVE_PROVIDER_IDENTIFIER_PATTERN, '$1_[REDACTED]');
+  return redactSensitiveE2EText(value).replace(
+    SENSITIVE_PROVIDER_IDENTIFIER_PATTERN,
+    '$1_[REDACTED]',
+  );
 }
 
 async function readNonemptyAlertTexts(

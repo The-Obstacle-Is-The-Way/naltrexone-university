@@ -7,11 +7,15 @@ export type E2ELogTarget = Record<LogMethodName, LogMethod>;
 
 const redactingLogMethods = new WeakSet<LogMethod>();
 const SENSITIVE_CLERK_VALUE_PATTERN =
-  /\b((?:__clerk_db_jwt|__clerk_testing_token|__session)=)[^&;\s)"']+/g;
+  /\b((?:__clerk_db_jwt|__clerk_handshake|__clerk_testing_token|__session)=)[^&;\s)"']+/g;
+
+export function redactSensitiveE2EText(value: string): string {
+  return value.replace(SENSITIVE_CLERK_VALUE_PATTERN, '$1[redacted]');
+}
 
 function redactSensitiveLogValue(value: unknown): unknown {
   if (typeof value !== 'string') return value;
-  return value.replace(SENSITIVE_CLERK_VALUE_PATTERN, '$1[redacted]');
+  return redactSensitiveE2EText(value);
 }
 
 export function installE2ELogRedaction(target: E2ELogTarget): void {

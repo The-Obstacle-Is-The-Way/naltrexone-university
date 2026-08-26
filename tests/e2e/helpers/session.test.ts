@@ -104,6 +104,7 @@ function createPracticePage(input: {
   redirectsToSignInAfterStart?: boolean;
   sessionStartAlert?: string;
   sessionStartAlertPollDelay?: number;
+  silentStartUrl?: string;
   selectedModeReselectionStalesStartHandler?: boolean;
   selectedStatusReselectionStalesStartHandler?: boolean;
 }): PracticePageHarness {
@@ -143,6 +144,7 @@ function createPracticePage(input: {
       state.currentUrl === '/app/practice' && !state.hasIncompleteSession,
     onClick: () => {
       if (state.startHandlerIsStale) {
+        state.currentUrl = input.silentStartUrl ?? state.currentUrl;
         return;
       }
 
@@ -499,6 +501,22 @@ describe('startSession helper', () => {
     await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
       'startSession produced neither navigation nor a new rendered alert; current URL=/app/practice; Start session enabled=true',
     );
+  });
+
+  it('redacts Clerk credentials from silent-start URL diagnostics', async () => {
+    const clerkHandshakeValue = ['clerk', 'handshake', 'value'].join('-');
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      countBlurKeepsStartHandlerStale: true,
+      countChangeStalesStartHandler: true,
+      defaultQuestionCount: 1,
+      silentStartUrl: `/app/practice?__clerk_handshake=${clerkHandshakeValue}&next=1`,
+    });
+
+    const result = startSession(page, 'tutor', 2);
+
+    await expect(result).rejects.toThrow('__clerk_handshake=[redacted]');
+    await expect(result).rejects.not.toThrow(clerkHandshakeValue);
   });
 
   it('fails explicitly when Clerk redirects the fresh session back to sign-in', async () => {
