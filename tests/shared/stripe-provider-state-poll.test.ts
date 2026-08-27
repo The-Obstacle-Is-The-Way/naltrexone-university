@@ -48,4 +48,20 @@ describe('pollStripeProviderState', () => {
       'Stripe test clock did not become ready timed out after 15000ms (budget 15000ms); last observed clock status advancing',
     );
   });
+
+  it('uses the system wait runtime when no fake runtime is supplied', async () => {
+    let fetchCount = 0;
+
+    const result = await pollStripeProviderState({
+      description: 'Stripe test clock did not become ready',
+      describeValue: (clock) => `clock status ${clock.status}`,
+      fetch: async () => ({
+        status: fetchCount++ === 0 ? 'advancing' : 'ready',
+      }),
+      isDone: (clock) => clock.status === 'ready',
+    });
+
+    expect(result.status).toBe('ready');
+    expect(fetchCount).toBe(2);
+  });
 });
