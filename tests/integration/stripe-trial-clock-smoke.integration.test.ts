@@ -2,10 +2,12 @@ import Stripe from 'stripe';
 import { afterEach, describe, expect, it } from 'vitest';
 import { STRIPE_API_VERSION } from '@/lib/stripe-api-version';
 import { resolveStripeProviderGate } from '@/tests/shared/stripe-provider-gate';
+import {
+  createStripeProviderPollDeadline,
+  pollStripeProviderState,
+  type StripeProviderPollDeadline,
+} from '@/tests/shared/stripe-provider-state-poll';
 
-const STRIPE_SMOKE_WAIT_BUDGET_MS = 8_500;
-const INITIAL_POLL_DELAY_MS = 150;
-const MAX_POLL_DELAY_MS = 500;
 const providerGate = resolveStripeProviderGate(process.env, {
   flag: 'RUN_STRIPE_TRIAL_CLOCK_SMOKE',
   priceKeys: [
@@ -37,58 +39,12 @@ function secondsFromIso(value: string): number {
   return Math.floor(new Date(value).getTime() / 1000);
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-type PollDeadline = {
-  readonly startedAtMs: number;
-  readonly expiresAtMs: number;
-};
-
-type PollInput<T> = {
-  readonly description: string;
-  readonly deadline: PollDeadline;
-  readonly fetch: () => Promise<T>;
-  readonly isDone: (value: T) => boolean;
-  readonly describeValue: (value: T) => string;
-};
-
-function createPollDeadline(): PollDeadline {
-  const startedAtMs = Date.now();
-  return {
-    startedAtMs,
-    expiresAtMs: startedAtMs + STRIPE_SMOKE_WAIT_BUDGET_MS,
-  };
-}
-
-async function pollUntil<T>(input: PollInput<T>): Promise<T> {
-  let delayMs = INITIAL_POLL_DELAY_MS;
-  let lastValueDescription = 'no value returned';
-
-  while (Date.now() < input.deadline.expiresAtMs) {
-    const value = await input.fetch();
-    lastValueDescription = input.describeValue(value);
-    if (input.isDone(value)) return value;
-
-    const remainingMs = input.deadline.expiresAtMs - Date.now();
-    if (remainingMs <= 0) break;
-    await sleep(Math.min(delayMs, remainingMs));
-    delayMs = Math.min(MAX_POLL_DELAY_MS, Math.ceil(delayMs * 1.5));
-  }
-
-  const elapsedMs = Date.now() - input.deadline.startedAtMs;
-  throw new Error(
-    `${input.description} timed out after ${elapsedMs}ms (budget ${STRIPE_SMOKE_WAIT_BUDGET_MS}ms); last observed ${lastValueDescription}`,
-  );
-}
-
 async function waitForTestClockReady(
   stripe: Stripe,
   testClockId: string,
-  deadline: PollDeadline,
+  deadline: StripeProviderPollDeadline,
 ) {
-  return pollUntil({
+  return pollStripeProviderState({
     description: `Stripe test clock ${testClockId} did not become ready`,
     deadline,
     fetch: () => stripe.testHelpers.testClocks.retrieve(testClockId),
@@ -101,9 +57,9 @@ async function waitForSubscriptionStatus(
   stripe: Stripe,
   subscriptionId: string,
   expectedStatus: Stripe.Subscription.Status,
-  deadline: PollDeadline,
+  deadline: StripeProviderPollDeadline,
 ) {
-  return pollUntil({
+  return pollStripeProviderState({
     description: `Stripe subscription ${subscriptionId} did not become ${expectedStatus}`,
     deadline,
     fetch: () => stripe.subscriptions.retrieve(subscriptionId),
@@ -210,7 +166,7 @@ describeStripeSmoke(
       await stripe.testHelpers.testClocks.advance(clock.id, {
         frozen_time: (subscription.trial_end ?? clock.frozen_time) + 60,
       });
-      const deadline = createPollDeadline();
+      const deadline = createStripeProviderPollDeadline();
       await waitForTestClockReady(stripe, clock.id, deadline);
 
       await expect(
@@ -250,7 +206,7 @@ describeStripeSmoke(
       await stripe.testHelpers.testClocks.advance(clock.id, {
         frozen_time: (subscription.trial_end ?? clock.frozen_time) + 60,
       });
-      const deadline = createPollDeadline();
+      const deadline = createStripeProviderPollDeadline();
       await waitForTestClockReady(stripe, clock.id, deadline);
 
       await expect(
