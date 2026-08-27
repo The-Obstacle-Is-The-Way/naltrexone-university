@@ -49,6 +49,32 @@ describe('pollStripeProviderState', () => {
     );
   });
 
+  it('rejects a ready result that arrives after the deadline', async () => {
+    let nowMs = 0;
+
+    await expect(
+      pollStripeProviderState(
+        {
+          description: 'Stripe test clock did not become ready',
+          describeValue: (clock) => `clock status ${clock.status}`,
+          fetch: async () => {
+            nowMs = 15_001;
+            return { status: 'ready' };
+          },
+          isDone: (clock) => clock.status === 'ready',
+        },
+        {
+          now: () => nowMs,
+          sleep: async (delayMs) => {
+            nowMs += delayMs;
+          },
+        },
+      ),
+    ).rejects.toThrow(
+      'Stripe test clock did not become ready timed out after 15001ms (budget 15000ms); last observed clock status ready',
+    );
+  });
+
   it('uses the system wait runtime when no fake runtime is supplied', async () => {
     let fetchCount = 0;
 

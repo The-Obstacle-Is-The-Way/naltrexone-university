@@ -51,6 +51,7 @@ export async function pollStripeProviderState<T>(
   while (runtime.now() < deadline.expiresAtMs) {
     const value = await input.fetch();
     lastValueDescription = input.describeValue(value);
+    if (runtime.now() >= deadline.expiresAtMs) break;
     if (input.isDone(value)) return value;
 
     const remainingMs = deadline.expiresAtMs - runtime.now();
