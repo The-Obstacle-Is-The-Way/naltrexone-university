@@ -39,28 +39,6 @@ jobs:
       # App base URL used by redirects / Playwright baseURL
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
-      # Skip Clerk when secrets aren't available (fork PRs or secrets not configured).
-      # Clerk requires real keys even during prerender; dummy values fail validation.
-      NEXT_PUBLIC_SKIP_CLERK: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY == '' && 'true' || 'false' }}
-
-      # Clerk (dev instance keys for CI E2E)
-      # Fall back to dummy values so fork PRs can still run non-E2E jobs.
-      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_dummy' }}
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_dummy' }}
-
-      # Stripe (test mode keys for CI)
-      # Fall back to dummy values so fork PRs can still run non-E2E jobs.
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_dummy' }}
-      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_dummy' }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_dummy' }}
-      NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || 'price_dummy_monthly' }}
-      NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || 'price_dummy_annual' }}
-
-      # Clerk E2E user creds (username/password auth enabled)
-      E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
-      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
-      E2E_STRIPE_OWNER: github-ci
-
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -74,7 +52,7 @@ jobs:
           run_install: false
 
       - name: Setup Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -97,98 +75,72 @@ jobs:
           SEED_INCLUDE_PLACEHOLDERS: 'true'
 
       - name: Unit tests with coverage
+        id: unit_tests
         run: pnpm test:coverage
 
       - name: Integration tests
+        id: integration_tests
         run: pnpm test:integration:coverage
+        env:
+          INTEGRATION_USE_EXISTING_DATABASE: 'true'
 
       - name: Install Playwright browsers
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         timeout-minutes: 12
         run: bash scripts/ci/install-playwright-chromium.sh
 
       - name: Browser tests with coverage
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        id: browser_tests
         run: pnpm test:browser:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/**/coverage-final.json
           fail_ci_if_error: false
 
       - name: Build
+        id: build
         run: pnpm build
+        env:
+          # Build needs Clerk only when the matching public key is available.
+          NEXT_PUBLIC_SKIP_CLERK: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY == '' && 'true' || 'false' }}
+          CLERK_SECRET_KEY: sk_test_dummy
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_dummy' }}
+          STRIPE_SECRET_KEY: sk_test_dummy
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_dummy' }}
+          STRIPE_WEBHOOK_SECRET: whsec_dummy
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || 'price_dummy_monthly' }}
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || 'price_dummy_annual' }}
 
       - name: Validate header-safe CI secrets
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: pnpm exec tsx scripts/validate-header-safe-secret.ts CRON_SECRET --optional
 
-      - name: Validate E2E credential inputs
-        # Dependabot PRs do not receive repository secrets, even when their branch
-        # lives in this repository. Keep E2E on for pushes and human same-repo PRs.
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
-        run: |
-          set -euo pipefail
-
-          failures=()
-
-          require_non_empty() {
-            local name="$1"
-            local value="${!name:-}"
-            if [ -z "$value" ]; then
-              failures+=("$name is missing.")
-            fi
-          }
-
-          require_not_dummy() {
-            local name="$1"
-            local dummy="$2"
-            local value="${!name:-}"
-            if [ "$value" = "$dummy" ]; then
-              failures+=("$name is still using dummy placeholder '$dummy'.")
-            fi
-          }
-
-          require_non_empty DATABASE_URL
-          require_non_empty CLERK_SECRET_KEY
-          require_non_empty NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-          require_non_empty STRIPE_SECRET_KEY
-          require_non_empty NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY
-          require_non_empty NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL
-          require_non_empty E2E_CLERK_USER_USERNAME
-          require_non_empty E2E_CLERK_USER_PASSWORD
-          require_non_empty E2E_STRIPE_OWNER
-
-          require_not_dummy CLERK_SECRET_KEY sk_test_dummy
-          require_not_dummy NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY pk_test_dummy
-          require_not_dummy STRIPE_SECRET_KEY sk_test_dummy
-          require_not_dummy NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY price_dummy_monthly
-          require_not_dummy NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL price_dummy_annual
-
-          if [ "${NEXT_PUBLIC_SKIP_CLERK:-false}" = "true" ]; then
-            failures+=("NEXT_PUBLIC_SKIP_CLERK=true disables Clerk. E2E requires real Clerk credentials.")
-          fi
-
-          if [ "${#failures[@]}" -gt 0 ]; then
-            echo "::error::E2E credential input validation failed:"
-            for failure in "${failures[@]}"; do
-              echo "::error::$failure"
-            done
-            exit 1
-          fi
-
       - name: E2E smoke
+        id: e2e_smoke
         # Dependabot PRs do not receive repository secrets, even when their branch
         # lives in this repository. Keep E2E on for pushes and human same-repo PRs.
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
         run: pnpm test:e2e
+        env:
+          NEXT_PUBLIC_SKIP_CLERK: 'false'
+          E2E_USE_EXISTING_DATABASE: 'true'
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY }}
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL }}
+          E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
+          E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+          E2E_STRIPE_OWNER: github-ci
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: playwright-report
           path: |
@@ -196,6 +148,49 @@ jobs:
             test-results/
           retention-days: 30
           if-no-files-found: ignore
+
+      - name: Evidence summary
+        if: ${{ !cancelled() }}
+        env:
+          UNIT_OUTCOME: ${{ steps.unit_tests.outcome }}
+          INTEGRATION_OUTCOME: ${{ steps.integration_tests.outcome }}
+          BROWSER_OUTCOME: ${{ steps.browser_tests.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          E2E_OUTCOME: ${{ steps.e2e_smoke.outcome }}
+          E2E_SKIP_REASON: ${{ github.actor == 'dependabot[bot]' && 'pending DEBT-474 credential decision' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'fork pull requests do not receive E2E credentials' || 'an earlier required step did not succeed') }}
+        run: |
+          set -euo pipefail
+
+          printf '## Required CI evidence\n\n' >> "$GITHUB_STEP_SUMMARY"
+
+          summarize() {
+            local label="$1"
+            local outcome="$2"
+            local skipped_reason="$3"
+
+            case "$outcome" in
+              success)
+                printf -- '- ✅ %s: executed and passed\n' "$label" >> "$GITHUB_STEP_SUMMARY"
+                ;;
+              failure)
+                printf -- '- ❌ %s: executed and failed\n' "$label" >> "$GITHUB_STEP_SUMMARY"
+                ;;
+              skipped|'')
+                printf -- '- ⚠️ %s: did not execute — %s\n' "$label" "$skipped_reason" >> "$GITHUB_STEP_SUMMARY"
+                echo "::warning title=CI evidence missing::$label did not execute — $skipped_reason"
+                ;;
+              *)
+                printf -- '- ⚠️ %s: outcome %s\n' "$label" "$outcome" >> "$GITHUB_STEP_SUMMARY"
+                echo "::warning title=CI evidence unknown::$label reported outcome $outcome"
+                ;;
+            esac
+          }
+
+          summarize 'Unit tests' "$UNIT_OUTCOME" 'an earlier required step did not succeed'
+          summarize 'Integration tests' "$INTEGRATION_OUTCOME" 'an earlier required step did not succeed'
+          summarize 'Browser tests' "$BROWSER_OUTCOME" 'an earlier required step did not succeed'
+          summarize 'Build' "$BUILD_OUTCOME" 'an earlier required step did not succeed'
+          summarize 'E2E smoke' "$E2E_OUTCOME" "$E2E_SKIP_REASON"
 
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

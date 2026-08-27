@@ -15,7 +15,7 @@ It intentionally avoids hard-coding private dashboard values that the repo canno
 | Production | `https://addictionboards.com` | `main` | Clerk live + Stripe live | Isolated production database | Vercel Production deployment |
 | Preview | `https://*.vercel.app` on non-`main` branches | Any non-`main` branch | Clerk test/dev + Stripe test | Isolated non-production database | Public URL required for webhook testing |
 | Local app runtime | `http://localhost:3000` or `http://127.0.0.1:3000` | Local checkout | Clerk test/dev + Stripe test | Whatever `DATABASE_URL` in `.env.local` points to | Should mirror Preview semantics, not Production |
-| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; `.env.local` database is used only with `E2E_USE_EXISTING_DATABASE=true` |
+| Local E2E | Resolver-scoped `http://127.0.0.1:<port>` | Local checkout | Clerk test/dev + Stripe test from `.env.local` | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | `pnpm test:e2e` migrates/seeds Docker; `.env.local` database requires both existing-target and non-local opt-ins |
 | Local integration tests | n/a | Local checkout | Clerk skipped (`NEXT_PUBLIC_SKIP_CLERK=true`) | Resolver-scoped Docker Postgres via `scripts/resolve-local-test-target.ts` | Uses `pnpm db:test:*` scripts |
 
 ### Core isolation rule
@@ -28,7 +28,7 @@ The current Vercel + Neon setup uses one Neon project with isolated database bra
 
 - Vercel **Production** targets the Neon `main` branch.
 - Vercel **Preview** and **Development** target the Neon `dev` branch.
-- Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment for local app runtime. Normal authenticated local E2E uses the resolver-scoped Docker database; use `E2E_USE_EXISTING_DATABASE=true` only for deliberate deploy-target E2E checks.
+- Local `.env.local` should be pulled from or kept equivalent to the Vercel Development environment for local app runtime. Normal authenticated local E2E uses the resolver-scoped Docker database; combine `E2E_USE_EXISTING_DATABASE=true` with `ALLOW_NON_LOCAL_DATABASE_URL=true` only for deliberate deploy-target E2E checks.
 
 Redacted Vercel metadata checked on 2026-06-16 confirms a `DATABASE_URL` entry exists in Production, Preview, and Development scopes, with no git-branch-specific override observed. A value-free host comparison on 2026-06-16 (each scope's `DATABASE_URL` pulled to a temp directory outside the repo, compared by host, booleans only — no connection strings or hostnames recorded) confirmed that the **Production** host is distinct from both **Preview** and **Development**, and that **Preview** and **Development** resolve to the **same** non-production host. This matches the contract above: production is isolated from the shared non-production database. The literal Neon branch *names* behind each value are confirmable in the Neon/Vercel dashboards; the safety-critical isolation is verified in-repo here without recording any secret.
 
@@ -159,7 +159,7 @@ DATABASE_URL="<production-connection-string>" pnpm db:migrate
 
 For normal local authenticated E2E, do not migrate the `.env.local` database. `pnpm test:e2e` resolves an isolated Docker Postgres target through `scripts/resolve-local-test-target.ts`, then runs migrations and seed against that Docker URL before Playwright starts.
 
-Only use `.env.local`'s `DATABASE_URL` for an intentional deploy-target E2E check with `E2E_USE_EXISTING_DATABASE=true`. Confirm that it is a non-production Neon branch first, then run migrations against that explicit target:
+Only use `.env.local`'s `DATABASE_URL` for an intentional deploy-target E2E check with both explicit opt-ins. Confirm that it is a non-production Neon branch first, then run migrations against that explicit target:
 
 ```bash
 # Prints only the host, not the password.
@@ -170,7 +170,7 @@ node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$LOCAL_E2
 DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm db:migrate
 
 # Then opt into using that existing database for E2E.
-E2E_USE_EXISTING_DATABASE=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
+E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$LOCAL_E2E_DATABASE_URL" pnpm test:e2e
 ```
 
 Do not run migrations by relying on implicit `.env.local` resolution. Every database mutation should pass an explicit `DATABASE_URL` for the intended target.

@@ -98,6 +98,7 @@
     "tsx": "^4.20.5",
     "vite": "8.2.1",
     "vitest": "^4.1.7",
-    "vitest-browser-react": "^2.2.0"
+    "vitest-browser-react": "^2.2.0",
+    "yaml": "2.9.0"
   }
 }

@@ -159,7 +159,7 @@ To intentionally validate a real deploy-target database instead of the local Doc
 ```bash
 DEPLOY_TARGET_DATABASE_URL="$(node -e "require('dotenv').config({ path: '.env.local', quiet: true }); const url = process.env.DATABASE_URL; if (!url) throw new Error('Missing DATABASE_URL in .env.local'); process.stdout.write(url)")"
 node -e "const u = new URL(process.argv[1]); console.log(u.hostname)" "$DEPLOY_TARGET_DATABASE_URL"
-E2E_USE_EXISTING_DATABASE=true DATABASE_URL="$DEPLOY_TARGET_DATABASE_URL" pnpm test:e2e
+E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="$DEPLOY_TARGET_DATABASE_URL" pnpm test:e2e
 ```
 
 Do not rely on implicit `.env.local` resolution for deploy-target checks or migrations. Verify the host, then prefix the command with the exact `DATABASE_URL` you intend to use. Never run `db:migrate` against a remote target unless you intentionally mean to mutate that target.
@@ -213,7 +213,7 @@ The local Docker database makes database state isolated, not the E2E suite herme
 
 `workers: 1` remains deliberate. Parallel workers require proof of independent database users, Clerk sessions, Stripe owner/customer namespaces, rate-limit keys, and cleanup; per-worker usernames alone do not establish that contract.
 
-The scheduled Stripe runner requires six named cases: the two trial-clock outcomes plus four `FakeStripeCheckoutClient` scenarios for frozen idempotent replay versus live retrieval, reverse-chronological cursor pagination with `has_more`, terminal-Session visibility, and same-key/different-parameter rejection. `pnpm test:stripe-provider` is the one supported manual entry point; it loads `.env.local` without overriding exports, validates the TEST-mode key and Price through the shared provider gate, and injects both `RUN_STRIPE_*` flags only into its bounded child process. The ordinary integration lane stays credential-free and reports all six cases as skipped. The child receives a 20-second scheduled-only test budget because a healthy live trial-clock case was measured at 10.28 seconds, just beyond the ordinary integration lane's global 10-second budget; the existing five-minute process-tree limit remains the outer failure bound. The runner rejects a zero-exit skip, a missing/duplicate file or case, any non-passing case, and malformed reporter output. The 2026-08-26 local activation receipt was `PASS executed=6 passed=6 skipped=0`; a hosted six-case receipt remains pending DEBT-473 step 8.
+The scheduled Stripe runner requires six named cases: the two trial-clock outcomes plus four `FakeStripeCheckoutClient` scenarios for frozen idempotent replay versus live retrieval, reverse-chronological cursor pagination with `has_more`, terminal-Session visibility, and same-key/different-parameter rejection. `pnpm test:stripe-provider` is the one supported manual entry point; it loads `.env.local` without overriding exports, validates the TEST-mode key and Price through the shared provider gate, and injects both `RUN_STRIPE_*` flags only into its bounded child process. The ordinary integration lane stays credential-free and reports all six cases as skipped. The child receives a 20-second scheduled-only test budget because a healthy live trial-clock case was measured at 10.28 seconds, just beyond the ordinary integration lane's global 10-second budget; the existing five-minute process-tree limit remains the outer failure bound. The runner rejects a zero-exit skip, a missing/duplicate file or case, any non-passing case, and malformed reporter output. The 2026-08-26 local activation receipt was `PASS executed=6 passed=6 skipped=0`; hosted run `33038731445` supplied the same six-case receipt at verified `main` head `3162a7be91e57eb5c66f0575d675414c91646991` on 2026-08-27.
 
 ### Writing New E2E Tests
 
@@ -390,7 +390,7 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-CI runs the required E2E layer only on pushes and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it, and the single required `test` check is green either way (the omission is visible only in the job's step list — [DEBT-473](../debt/debt-473-green-without-evidence.md) F5, step 3). The browser lane is currently also restricted to pushes and same-repo PRs, but it needs no secrets (measured 2026-08-24: 64 files / 398 tests pass with every credential unset, at 22–28 s of Chromium install plus 43–51 s of tests); DEBT-473 step 3(a) removes that condition (3(b) is the separate evidence-summary action). Fork PRs run typecheck, lint, unit, integration, and build. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
+CI runs the required E2E layer only on pushes and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it. Browser installation and all 398 browser tests run on every trigger because they need no provider credential. A final `Evidence summary` step reads the actual unit, integration, browser, Build, and E2E `steps.<id>.outcome` values, runs after failures with `if: ${{ !cancelled() }}`, and writes skipped evidence plus a warning instead of letting the aggregate green stand alone ([DEBT-473](../debt/debt-473-green-without-evidence.md) F5, step 3). Fork PRs run typecheck, lint, unit, integration, browser, and build; the Build step uses real public values when available and shape-valid server-only placeholders. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
 
 E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 
@@ -399,6 +399,7 @@ E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 - name: Run E2E tests
   run: pnpm test:e2e
   env:
+    E2E_USE_EXISTING_DATABASE: 'true'
     E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
     E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
     E2E_STRIPE_OWNER: github-ci
