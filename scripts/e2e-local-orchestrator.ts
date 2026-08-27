@@ -114,7 +114,7 @@ function assertExistingE2EDatabaseTarget(env: E2ECommandEnv): void {
     );
   }
 
-  const localHosts = new Set(['127.0.0.1', '::1', 'localhost']);
+  const localHosts = new Set(['127.0.0.1', '[::1]', 'localhost']);
   const allowNonLocal = isTruthyEnvFlag(env.ALLOW_NON_LOCAL_DATABASE_URL);
   if (!allowNonLocal && !localHosts.has(parsed.hostname)) {
     throw new Error(

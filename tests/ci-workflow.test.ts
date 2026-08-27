@@ -64,12 +64,28 @@ function readParsedWorkflow(filePath: string): WorkflowDocument {
 }
 
 function findParsedStep(filePath: string, stepName: string): WorkflowStep {
-  const jobs = readParsedWorkflow(filePath).jobs ?? {};
-  const step = Object.values(jobs)
-    .flatMap((job) => job.steps ?? [])
-    .find((candidate) => candidate.name === stepName);
+  return findParsedStepInWorkflow(
+    readParsedWorkflow(filePath),
+    filePath,
+    stepName,
+  );
+}
 
-  if (!step) throw new Error(`Missing workflow step: ${filePath} ${stepName}`);
+function findParsedStepInWorkflow(
+  workflow: WorkflowDocument,
+  sourceLabel: string,
+  stepName: string,
+): WorkflowStep {
+  const jobs = workflow.jobs ?? {};
+  const matches = Object.values(jobs)
+    .flatMap((job) => job.steps ?? [])
+    .filter((candidate) => candidate.name === stepName);
+  const step = matches[0];
+
+  if (!step)
+    throw new Error(`Missing workflow step: ${sourceLabel} ${stepName}`);
+  if (matches.length > 1)
+    throw new Error(`Ambiguous workflow step: ${sourceLabel} ${stepName}`);
   return step;
 }
 
@@ -116,6 +132,11 @@ function collectSecrets(
 ): void {
   const serialized = JSON.stringify(value);
   if (serialized === undefined) return;
+  if (/secrets\s*\[/.test(serialized)) {
+    throw new Error(
+      `Indexed secrets access is unsupported for ${consumer}; use secrets.NAME so scope remains enumerable.`,
+    );
+  }
   for (const match of serialized.matchAll(/secrets\.([A-Za-z0-9_]+)/g)) {
     const secretName = match[1];
     if (secretName) consumers.add(`${consumer}:${secretName}`);
@@ -221,6 +242,24 @@ describe('CI workflow', () => {
 });
 
 describe('workflow secret scope', () => {
+  it('fails closed when a step name is ambiguous across jobs', () => {
+    const workflow = parse(`
+jobs:
+  first:
+    steps:
+      - name: Build
+        run: pnpm build
+  second:
+    steps:
+      - name: Build
+        run: pnpm build
+`) as WorkflowDocument;
+
+    expect(() =>
+      findParsedStepInWorkflow(workflow, 'synthetic workflow', 'Build'),
+    ).toThrow('Ambiguous workflow step: synthetic workflow Build');
+  });
+
   it('scopes Clerk activation to Build and E2E instead of the whole job', () => {
     const requiredBuild = findParsedStep(CI_WORKFLOW_PATH, 'Build');
     const requiredE2e = findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke');
@@ -258,6 +297,21 @@ jobs:
 
     expect(secretConsumersInWorkflow(workflow)).toEqual(
       ['$job:JOB_GATE', '$job:JOB_INPUT', '$workflow:workflow_token'].sort(),
+    );
+  });
+
+  it('fails closed on indexed secret expressions', () => {
+    const workflow = parse(`
+jobs:
+  test:
+    steps:
+      - name: Indexed secret
+        env:
+          TOKEN: \${{ secrets['TOKEN'] }}
+`) as WorkflowDocument;
+
+    expect(() => secretConsumersInWorkflow(workflow)).toThrow(
+      'Indexed secrets access is unsupported',
     );
   });
 

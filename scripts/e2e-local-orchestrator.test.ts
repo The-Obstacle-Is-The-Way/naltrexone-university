@@ -173,6 +173,17 @@ describe('createE2ECommandPlan', () => {
     ]);
   });
 
+  it('accepts an IPv6 loopback existing database without a non-local override', () => {
+    expect(() =>
+      createE2ECommandPlan({
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL: 'postgresql://[::1]:5432/app',
+        },
+      }),
+    ).not.toThrow();
+  });
+
   it('fails closed when existing-database mode has no database URL', () => {
     expect(() =>
       createE2ECommandPlan({
