@@ -1,6 +1,6 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
-import { render } from 'vitest-browser-react';
+import { cleanup, render } from 'vitest-browser-react';
 import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import * as questionController from '@/src/adapters/controllers/question-controller';
@@ -90,7 +90,8 @@ function setupStatusCounts(
   });
 }
 
-afterEach(() => {
+afterEach(async () => {
+  await cleanup();
   vi.resetAllMocks();
 });
 
