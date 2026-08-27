@@ -73,6 +73,12 @@ function findParsedStep(filePath: string, stepName: string): WorkflowStep {
   return step;
 }
 
+function findParsedJob(filePath: string, jobName: string): WorkflowJob {
+  const job = readParsedWorkflow(filePath).jobs?.[jobName];
+  if (!job) throw new Error(`Missing workflow job: ${filePath} ${jobName}`);
+  return job;
+}
+
 function secretConsumers(filePath: string): string[] {
   return secretConsumersInWorkflow(readParsedWorkflow(filePath));
 }
@@ -215,6 +221,29 @@ describe('CI workflow', () => {
 });
 
 describe('workflow secret scope', () => {
+  it('scopes Clerk activation to Build and E2E instead of the whole job', () => {
+    const requiredBuild = findParsedStep(CI_WORKFLOW_PATH, 'Build');
+    const requiredE2e = findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke');
+    const hostedBuild = findParsedStep(STRIPE_HOSTED_WORKFLOW_PATH, 'Build');
+    const hostedE2e = findParsedStep(
+      STRIPE_HOSTED_WORKFLOW_PATH,
+      'Run observational Stripe-hosted Checkout journeys',
+    );
+
+    expect(findParsedJob(CI_WORKFLOW_PATH, 'test').env).not.toHaveProperty(
+      'NEXT_PUBLIC_SKIP_CLERK',
+    );
+    expect(
+      findParsedJob(STRIPE_HOSTED_WORKFLOW_PATH, 'hosted-checkout').env,
+    ).not.toHaveProperty('NEXT_PUBLIC_SKIP_CLERK');
+    expect(requiredBuild.env?.NEXT_PUBLIC_SKIP_CLERK).toBe(
+      `\${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY == '' && 'true' || 'false' }}`,
+    );
+    expect(requiredE2e.env?.NEXT_PUBLIC_SKIP_CLERK).toBe('false');
+    expect(hostedBuild.env?.NEXT_PUBLIC_SKIP_CLERK).toBe('false');
+    expect(hostedE2e.env?.NEXT_PUBLIC_SKIP_CLERK).toBe('false');
+  });
+
   it('finds secret expressions outside step and job env blocks', () => {
     const workflow = parse(`
 env:
@@ -235,7 +264,6 @@ jobs:
   it('gives each secret only to its documented consumer step', () => {
     expect(secretConsumers(CI_WORKFLOW_PATH)).toEqual(
       [
-        '$job:NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
         'Build:NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
         'Build:NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL',
         'Build:NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY',

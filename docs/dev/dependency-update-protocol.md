@@ -93,9 +93,9 @@ GitHub does not provide repository Actions secrets to Dependabot PR workflows; i
 
 Current anchors:
 
-- `.github/workflows/ci.yml:42-44` sets `NEXT_PUBLIC_SKIP_CLERK` from whether Clerk secrets are available without exposing a secret value at job scope.
-- `.github/workflows/ci.yml:123-140` scopes the real Clerk, Stripe, and E2E values to the conditional E2E step.
-- `.github/workflows/ci.yml:153-194` reports the E2E step's actual `outcome` and the pending DEBT-474 reason when it is skipped.
+- `.github/workflows/ci.yml:102-114` derives `NEXT_PUBLIC_SKIP_CLERK` from whether the Clerk public key is available only on Build; no secret expression or Clerk switch is job-scoped.
+- `.github/workflows/ci.yml:121-139` scopes the real Clerk, Stripe, and E2E values to the conditional E2E step and explicitly enables Clerk there.
+- `.github/workflows/ci.yml:152-193` reports the E2E step's actual `outcome` and the pending DEBT-474 reason when it is skipped.
 
 Until DEBT-473 step 6 and DEBT-474's credential decision are resolved, Dependabot PRs have a weaker evidence bar: the E2E lane is absent, and the required job now says so in its evidence summary. Dependabot PRs still run typecheck, lint, unit, browser, integration, build, Vercel, Codecov, and CodeRabbit. Do not execute an untrusted Dependabot head locally with shared credentials. A `dev`-targeted version update later receives promotion-PR and post-merge `main` E2E; a default-branch security update receives only the post-merge `main` run. Disclose that route-specific, post-merge evidence rather than calling it PR-time proof.
 

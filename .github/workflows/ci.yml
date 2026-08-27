@@ -39,10 +39,6 @@ jobs:
       # App base URL used by redirects / Playwright baseURL
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
 
-      # Skip Clerk when secrets aren't available (fork PRs or secrets not configured).
-      # Clerk requires real keys even during prerender; dummy values fail validation.
-      NEXT_PUBLIC_SKIP_CLERK: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY == '' && 'true' || 'false' }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -107,6 +103,8 @@ jobs:
         id: build
         run: pnpm build
         env:
+          # Build needs Clerk only when the matching public key is available.
+          NEXT_PUBLIC_SKIP_CLERK: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY == '' && 'true' || 'false' }}
           CLERK_SECRET_KEY: sk_test_dummy
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_dummy' }}
           STRIPE_SECRET_KEY: sk_test_dummy
@@ -127,6 +125,7 @@ jobs:
         if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
         run: pnpm test:e2e
         env:
+          NEXT_PUBLIC_SKIP_CLERK: 'false'
           E2E_USE_EXISTING_DATABASE: 'true'
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
