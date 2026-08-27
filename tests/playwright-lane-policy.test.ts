@@ -39,6 +39,9 @@ const NETWORKED_STRIPE_HELPERS = [
   'tests/e2e/helpers/subscription.ts',
 ] as const;
 
+const EXACT_SEMVER_PATTERN =
+  /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+
 function listTypeScriptFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -189,8 +192,28 @@ describe('Playwright E2E lane policy', () => {
     }
   });
 
-  it('pins the official Stripe CLI used by the required completion trigger', () => {
-    expect(packageJson.devDependencies['@stripe/cli']).toBe('1.50.1');
+  it.each(['0.0.0', '1.50.1', '2.0.0-beta.1', '2.0.0+build.7'])(
+    'accepts exact semantic version %s',
+    (version) => {
+      expect(version).toMatch(EXACT_SEMVER_PATTERN);
+    },
+  );
+
+  it.each([
+    '^1.50.1',
+    '~1.50.1',
+    '>=1.50.1',
+    '1.50.x',
+    'latest',
+    'workspace:1.50.1',
+  ])('rejects non-exact semantic version %s', (version) => {
+    expect(version).not.toMatch(EXACT_SEMVER_PATTERN);
+  });
+
+  it('requires the official Stripe CLI dependency to use exact semver', () => {
+    expect(packageJson.devDependencies['@stripe/cli']).toMatch(
+      EXACT_SEMVER_PATTERN,
+    );
   });
 
   it('never opens the HTML report server after a local run', () => {
