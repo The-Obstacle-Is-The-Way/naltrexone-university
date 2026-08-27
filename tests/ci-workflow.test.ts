@@ -36,6 +36,7 @@ type WorkflowStep = {
 type WorkflowJob = {
   env?: Record<string, string>;
   steps?: WorkflowStep[];
+  uses?: string;
 };
 
 type WorkflowDocument = {
@@ -73,17 +74,33 @@ function findParsedStep(filePath: string, stepName: string): WorkflowStep {
 }
 
 function secretConsumers(filePath: string): string[] {
-  const consumers = new Set<string>();
-  const jobs = readParsedWorkflow(filePath).jobs ?? {};
+  return secretConsumersInWorkflow(readParsedWorkflow(filePath));
+}
 
+function secretConsumersInWorkflow(workflow: WorkflowDocument): string[] {
+  const consumers = new Set<string>();
+  const jobs = workflow.jobs ?? {};
+
+  for (const [field, value] of Object.entries(workflow)) {
+    if (field !== 'jobs') collectSecrets('$workflow', value, consumers);
+  }
   for (const job of Object.values(jobs)) {
-    collectSecrets('$job', job.env, consumers);
+    for (const [field, value] of Object.entries(job)) {
+      if (field !== 'steps') collectSecrets('$job', value, consumers);
+    }
     for (const step of job.steps ?? []) {
       collectSecrets(step.name ?? '<unnamed>', step, consumers);
     }
   }
 
   return [...consumers].sort();
+}
+
+function actionUsesInWorkflow(workflow: WorkflowDocument): string[] {
+  return Object.values(workflow.jobs ?? {}).flatMap((job) => [
+    ...(job.uses ? [job.uses] : []),
+    ...(job.steps ?? []).flatMap((step) => (step.uses ? [step.uses] : [])),
+  ]);
 }
 
 function collectSecrets(
@@ -93,7 +110,7 @@ function collectSecrets(
 ): void {
   const serialized = JSON.stringify(value);
   if (serialized === undefined) return;
-  for (const match of serialized.matchAll(/secrets\.([A-Z0-9_]+)/g)) {
+  for (const match of serialized.matchAll(/secrets\.([A-Za-z0-9_]+)/g)) {
     const secretName = match[1];
     if (secretName) consumers.add(`${consumer}:${secretName}`);
   }
@@ -198,6 +215,23 @@ describe('CI workflow', () => {
 });
 
 describe('workflow secret scope', () => {
+  it('finds secret expressions outside step and job env blocks', () => {
+    const workflow = parse(`
+env:
+  WORKFLOW_TOKEN: \${{ secrets.workflow_token }}
+jobs:
+  delegated:
+    if: \${{ secrets.JOB_GATE != '' }}
+    uses: owner/repository/.github/workflows/reusable.yml@main
+    with:
+      token: \${{ secrets.JOB_INPUT }}
+`) as WorkflowDocument;
+
+    expect(secretConsumersInWorkflow(workflow)).toEqual(
+      ['$job:JOB_GATE', '$job:JOB_INPUT', '$workflow:workflow_token'].sort(),
+    );
+  });
+
   it('gives each secret only to its documented consumer step', () => {
     expect(secretConsumers(CI_WORKFLOW_PATH)).toEqual(
       [
@@ -262,17 +296,26 @@ describe('workflow secret scope', () => {
 });
 
 describe('workflow action pins', () => {
+  it('finds reusable-workflow references at job level', () => {
+    const workflow = parse(`
+jobs:
+  delegated:
+    uses: owner/repository/.github/workflows/reusable.yml@main
+`) as WorkflowDocument;
+
+    expect(actionUsesInWorkflow(workflow)).toEqual([
+      'owner/repository/.github/workflows/reusable.yml@main',
+    ]);
+  });
+
   it('pins every action to a full commit SHA with a version comment', () => {
     for (const workflowPath of WORKFLOW_PATHS) {
       const source = readFileSync(workflowPath, 'utf8');
-      const jobs = readParsedWorkflow(workflowPath).jobs ?? {};
-      for (const step of Object.values(jobs).flatMap(
-        (job) => job.steps ?? [],
+      for (const uses of actionUsesInWorkflow(
+        readParsedWorkflow(workflowPath),
       )) {
-        if (!step.uses) continue;
-
-        expect(step.uses).toMatch(/^[^@]+@[a-f0-9]{40}$/);
-        expect(source).toContain(`uses: ${step.uses} # v`);
+        expect(uses).toMatch(/^[^@]+@[a-f0-9]{40}$/);
+        expect(source).toContain(`uses: ${uses} # v`);
       }
     }
   });
