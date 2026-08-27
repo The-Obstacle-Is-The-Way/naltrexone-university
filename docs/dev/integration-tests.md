@@ -94,7 +94,7 @@ This runs `docker compose -p <resolved-project> down -v` and then starts the res
 | **Local** | Per-clone derived port | `scripts/resolve-local-test-target.ts` exports `DB_TEST_PORT` into `pnpm db:test:*` and local integration/E2E wrappers |
 | **CI** | 5432 | GitHub Actions PostgreSQL service (`.github/workflows/ci.yml`) |
 
-The `.env.test` file remains a committed fallback, but local wrappers provide `DATABASE_URL` explicitly from the resolver before Vitest loads `.env.test`. CI overrides `DATABASE_URL` with its own service on port 5432.
+The committed `.env.test` file deliberately contains no `DATABASE_URL`. Local wrappers inject the resolver-owned target, and CI opts into its service target with `INTEGRATION_USE_EXISTING_DATABASE=true`. A raw Vitest invocation with no explicit database therefore fails closed instead of guessing a shared local target.
 
 To use a named local target, set `LOCAL_TEST_INSTANCE` before starting Docker. To force a specific DB port, set `DB_TEST_PORT` and use `pnpm exec tsx scripts/resolve-local-test-target.ts database-url` when prefixing migration/seed commands. Do not edit committed `.env.test` just for a one-off local port.
 
@@ -148,20 +148,19 @@ The test setup checks database connectivity before running any tests. If you see
 
 If you see an old Compose project, stop it with `COMPOSE_PROJECT_NAME=<old-project> docker compose down` or remove the specific container intentionally. Do not remove another clone's active project. Run `pnpm exec tsx scripts/resolve-local-test-target.ts env` to confirm the project for this clone, then `pnpm db:test:up`.
 
-**Wrong DATABASE_URL (shell overrides .env.test)**
+**Wrong DATABASE_URL (explicit passthrough only)**
 
-Integration tests load `.env.test` but do **not** override an already-set `DATABASE_URL` (this is required so CI can inject its own database URL). If your shell already exports `DATABASE_URL`, unset it or run tests with an explicit override:
+Normal `pnpm test:integration` ignores an inherited `DATABASE_URL` and uses this clone's resolver-owned target, even when `CI` happens to be set. To intentionally use an existing database, opt in explicitly; remote targets also require the separate non-local override:
 
 ```bash
-TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
-DATABASE_URL="$TEST_DATABASE_URL" pnpm test:integration
+INTEGRATION_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="<verified-target>" pnpm test:integration
 ```
 
 **Refused non-local DATABASE_URL**
 
 `tests/integration/setup.ts` refuses to run against a non-local host by default. If `DATABASE_URL` points at Neon or any other remote host, the suite aborts before running tests. This is intentional protection against hitting shared environments by mistake.
 
-Only use `ALLOW_NON_LOCAL_DATABASE_URL=true` when you explicitly intend to run against a non-local database and understand the risk.
+Only combine `INTEGRATION_USE_EXISTING_DATABASE=true` and `ALLOW_NON_LOCAL_DATABASE_URL=true` when you explicitly intend to run against a non-local database and understand the risk.
 
 **`drizzle-kit push` was used instead of `pnpm db:migrate`**
 

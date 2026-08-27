@@ -26,8 +26,7 @@ type RunLocalIntegrationInput = {
 export function shouldUseLocalIntegrationTarget(
   env: E2ECommandEnv = process.env,
 ): boolean {
-  const databaseUrl = env.DATABASE_URL?.trim();
-  return !isTruthyEnvFlag(env.CI) && !databaseUrl;
+  return !isTruthyEnvFlag(env.INTEGRATION_USE_EXISTING_DATABASE);
 }
 
 export function createLocalIntegrationCommandPlan({
@@ -48,6 +47,11 @@ export function createLocalIntegrationCommandPlan({
   };
 
   if (!shouldUseLocalIntegrationTarget(env)) {
+    if (!env.DATABASE_URL?.trim()) {
+      throw new Error(
+        'DATABASE_URL is required when INTEGRATION_USE_EXISTING_DATABASE=true.',
+      );
+    }
     return [
       {
         label: 'Run integration tests',

@@ -41,37 +41,53 @@ describe('createLocalIntegrationCommandPlan', () => {
     ]);
   });
 
-  it('passes through CI without overriding DATABASE_URL', () => {
-    expect(
-      createLocalIntegrationCommandPlan({
-        env: {
-          CI: 'true',
-          DATABASE_URL:
-            'postgresql://postgres:postgres@localhost:5432/addiction_boards_test',
-        },
-        vitestArgs: ['--coverage'],
-      }),
-    ).toEqual([
-      {
-        label: 'Run integration tests',
-        command: 'pnpm',
-        args: [
-          'exec',
-          'vitest',
-          'run',
-          '--config',
-          'vitest.integration.config.mts',
-          '--coverage',
-        ],
+  it('does not treat CI as permission to use an inherited database target', () => {
+    const plan = createLocalIntegrationCommandPlan({
+      cwd: '/repo/a',
+      env: {
+        CI: 'true',
+        LOCAL_TEST_INSTANCE: 'integration',
+        DB_TEST_PORT: '55439',
+        DATABASE_URL:
+          'postgresql://postgres:postgres@localhost:5432/addiction_boards_test',
       },
-    ]);
+      vitestArgs: ['--coverage'],
+    });
+
+    expect(plan[0]?.label).toBe(
+      'Run integration tests against isolated local test database',
+    );
+    expect(plan[0]?.env?.DATABASE_URL).toBe(
+      'postgresql://postgres:postgres@127.0.0.1:55439/addiction_boards_test',
+    );
   });
 
-  it('passes through an explicitly provided DATABASE_URL for intentional target runs', () => {
+  it('does not treat DATABASE_URL alone as permission to bypass clone isolation', () => {
+    const plan = createLocalIntegrationCommandPlan({
+      cwd: '/repo/a',
+      env: {
+        LOCAL_TEST_INSTANCE: 'integration',
+        DB_TEST_PORT: '55439',
+        DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/manual',
+      },
+      vitestArgs: [],
+    });
+
+    expect(plan[0]?.label).toBe(
+      'Run integration tests against isolated local test database',
+    );
+    expect(plan[0]?.env?.DATABASE_URL).toBe(
+      'postgresql://postgres:postgres@127.0.0.1:55439/addiction_boards_test',
+    );
+  });
+
+  it('passes through the database URL only with the explicit integration opt-in', () => {
     expect(
       createLocalIntegrationCommandPlan({
         env: {
-          DATABASE_URL: 'postgresql://postgres:postgres@localhost:5434/manual',
+          INTEGRATION_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL:
+            'postgresql://postgres:postgres@localhost:5432/addiction_boards_test',
         },
         vitestArgs: [],
       }),
@@ -88,6 +104,19 @@ describe('createLocalIntegrationCommandPlan', () => {
         ],
       },
     ]);
+  });
+
+  it('fails closed when integration passthrough has no database URL', () => {
+    expect(() =>
+      createLocalIntegrationCommandPlan({
+        env: {
+          INTEGRATION_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL: '   ',
+        },
+      }),
+    ).toThrow(
+      'DATABASE_URL is required when INTEGRATION_USE_EXISTING_DATABASE=true',
+    );
   });
 
   it('treats whitespace DATABASE_URL as absent for local target selection', () => {
