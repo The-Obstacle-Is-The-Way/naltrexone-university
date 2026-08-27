@@ -55,7 +55,7 @@ describe('resolveLocalTestTarget', () => {
       },
     });
 
-    expect(target).toMatchObject({
+    expect(target).toEqual({
       instanceId: 'bug-245',
       composeProjectName: 'naltrexone-test-bug-245',
       dbHost: '127.0.0.1',
@@ -67,7 +67,6 @@ describe('resolveLocalTestTarget', () => {
       appPort: '3317',
       appUrl: 'http://127.0.0.1:3317',
     });
-    expect(target.lockPath).toContain('naltrexone-test-bug-245.lock');
   });
 
   it('falls back to E2E_INSTANCE and PORT when the local-specific names are absent', () => {
