@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
-import { tmpdir } from 'node:os';
-import { basename, join, resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export type LocalTestTargetEnv = Readonly<Record<string, string | undefined>>;
@@ -15,7 +14,6 @@ export type LocalTestTarget = {
   appHost: '127.0.0.1';
   appPort: string;
   appUrl: string;
-  lockPath: string;
 };
 
 export type LocalTestTargetOutputFormat =
@@ -79,11 +77,6 @@ export function resolveLocalTestTarget({
     appHost: LOCAL_TEST_APP_HOST,
     appPort,
     appUrl,
-    lockPath: join(
-      tmpdir(),
-      'naltrexone-university-local-tests',
-      `${composeProjectName}.lock`,
-    ),
   };
 }
 
