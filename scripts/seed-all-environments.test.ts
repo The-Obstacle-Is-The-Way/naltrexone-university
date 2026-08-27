@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
 import packageJson from '@/package.json';
 import {
@@ -130,9 +131,26 @@ describe('db:seed:all', () => {
     expect(dependencies.seedDatabase).not.toHaveBeenCalled();
   });
 
-  it('keeps the package script on the checked-in batch wrapper', () => {
+  it('registers the TypeScript entry point directly', () => {
     expect(packageJson.scripts['db:seed:all']).toBe(
-      'bash scripts/seed-all-environments.sh',
+      'tsx scripts/seed-all-environments.ts',
     );
+  });
+
+  it('forwards unsupported arguments and the entry-point exit status', () => {
+    const result = spawnSync(
+      'pnpm',
+      ['db:seed:all', '--', '--unsupported-seed-option'],
+      {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        env: { ...process.env, NO_COLOR: '1' },
+        timeout: 10_000,
+      },
+    );
+    const output = `${result.stdout}\n${result.stderr}`;
+
+    expect(result.status).toBe(1);
+    expect(output).toContain('Usage: pnpm db:seed:all [-- --plan]');
   });
 });
