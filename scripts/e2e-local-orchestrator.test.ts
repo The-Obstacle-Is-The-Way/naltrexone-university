@@ -180,6 +180,19 @@ describe('createE2ECommandPlan', () => {
       }),
     ).toThrow('DATABASE_URL is required when E2E_USE_EXISTING_DATABASE=true');
   });
+
+  it('fails closed when the existing database URL is malformed', () => {
+    expect(() =>
+      createE2ECommandPlan({
+        env: {
+          E2E_USE_EXISTING_DATABASE: 'true',
+          DATABASE_URL: 'not-a-database-url',
+        },
+      }),
+    ).toThrow(
+      'DATABASE_URL must be a valid URL when E2E_USE_EXISTING_DATABASE=true',
+    );
+  });
 });
 
 describe('runCommandPlan', () => {
