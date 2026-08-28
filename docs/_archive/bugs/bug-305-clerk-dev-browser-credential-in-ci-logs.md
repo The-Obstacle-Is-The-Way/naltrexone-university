@@ -1,6 +1,6 @@
 # BUG-305: Clerk Dev-Browser Credential Appears in Public CI Logs
 
-**Status:** Open
+**Status:** Resolved 2026-08-28
 **Severity:** P2
 **Date:** 2026-08-25
 **Confirmed:** 2026-08-25 (public Actions logs contain an unmasked development-browser credential)
@@ -15,6 +15,12 @@ warning containing the `__clerk_db_jwt` query value. The repository is public,
 the value is not masked by GitHub, and an initial eight-run census found two
 successful runs with two such warnings each. The first mitigation's hosted run
 became a third affected run and proved that local/unit success was insufficient.
+
+That initial sample understated the exposure frequency. [BUG-307](../../bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+records the full retained-log census: 455 of 1,210 scanned `CI` workflow logs
+contained 873 unredacted values. Excluding 104 Dependabot-branch CI logs gives
+452 of 1,106. The earlier 1,128 denominator mixed workflow and actor scopes and
+is not retained as a receipt.
 
 This is a TEST/development-instance credential, not a production Clerk secret.
 It is still sensitive: Clerk documents the dev-browser object as linked directly
@@ -67,8 +73,8 @@ bug.
 
 ## Resolution State
 
-Open. The branch-local mitigation is red-first and the failed first attempt is
-part of the record:
+Resolved. The branch-local mitigation was red-first and the failed first
+attempt remains part of the record:
 
 - `tests/e2e/helpers/e2e-log-redaction.ts` wraps the test process's five console
   channels and redacts Clerk dev-browser, testing-token, and session query
@@ -88,27 +94,36 @@ while its current function is already a redacting wrapper, and rewraps a
 restored method. The redaction suite then passed 4/4; with the existing Clerk
 helper case the focused run passed 5/5.
 
-The corrected mitigation is now promoted to `main` through PR #835, merge
+The corrected mitigation was promoted to `main` through PR #835, merge
 commit `47b31234`. CodeRabbit approved exact head `92c35965`; PR run
 `32955114161` and post-merge main run `32960005070` each passed required E2E
 43/43 on the first attempt. Non-printing raw-log censuses found zero flaky
 markers and zero assignments for the three redacted Clerk query fields in both
 runs. Production deployment `6102157792` completed successfully.
 
-BUG-305 remains Open until every exposed development session has either been
-revoked or verified expired. Historical public-log deletion or equivalent
-access containment is a separate required action; it cannot substitute for
-invalidating a still-usable session. Do not rotate or delete the shared E2E user
-or Stripe customer. The closing receipt must continue to inspect raw log output
-without ever printing credential values.
+The owner-side containment requirement is also complete. The Clerk Backend API
+revocation batch reported 4,585 successful revocations and no failures; an
+independent 2026-08-28 count-only Backend API query found one matching TEST user
+and zero active sessions. The three named affected workflow runs now return 404
+from the Actions API. A fresh API download and non-printing scan of all 70
+currently retained post-redaction `CI` logs found zero unredacted
+`__clerk_db_jwt` values.
+
+The distinct trace and artifact-publication defect discovered during containment
+is filed as BUG-307. It does not keep this console-log bug open: BUG-305's
+repository mitigation, deployment proof, credential invalidation, and named-log
+deletion are complete. No root cause is invented for adjacent E2E authentication
+failures.
 
 ## Related
 
-- [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) — the
+- [DEBT-474](../../debt/debt-474-ci-secret-scope-and-action-immutability.md) — the
   broader required-CI credential-scope work; its implementation audit must add
   runtime-generated credentials, not only job-level `secrets.*` values.
-- [BUG-304](./bug-304-practice-session-start-no-navigation.md) — its exact-head
+- [BUG-304](../../bugs/bug-304-practice-session-start-no-navigation.md) — its exact-head
   verification exposed this independent logging defect.
 - [BUG-306](./bug-306-required-e2e-clerk-session-loss-and-accumulation.md) — the
   same per-test Clerk seam accumulated sessions without teardown and later lost
   a fresh session on a protected navigation; causality remains unproven.
+- [BUG-307](../../bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+  — corrects the exposure census and owns the separate public-artifact surface.

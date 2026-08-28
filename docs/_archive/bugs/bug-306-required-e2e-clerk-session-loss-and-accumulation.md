@@ -1,6 +1,6 @@
 # BUG-306: Required E2E Can Lose Clerk Session and Accumulates Sessions
 
-**Status:** Open
+**Status:** Resolved 2026-08-28 — cause unproven; mitigation verified
 **Severity:** P3
 **Date:** 2026-08-25
 **Confirmed:** 2026-08-25 (required-E2E first attempt redirected a freshly signed-in test to Clerk; the suite-wide session leak and diagnostic hang are independently reproducible)
@@ -130,30 +130,43 @@ P3 is therefore proportionate.
 
 ## Resolution State
 
-Open. The red-first lifecycle and diagnostic changes are promoted to `main`
-through PR #835, merge commit `47b31234`. CodeRabbit approved exact head
+Resolved with the original intermittent cause explicitly unproven. The
+red-first lifecycle and diagnostic changes were promoted to `main` through PR
+#835, merge commit `47b31234`. CodeRabbit approved exact head
 `92c35965` with zero unresolved threads; PR run `32955114161` and post-merge
 main run `32960005070` each passed required E2E 43/43 on the first attempt with
 zero flaky results or raw Clerk credential assignments. Production deployment
 `6102157792` completed successfully, and the production site and database
 health checks passed.
 
-That proves the suite-owned session lifecycle, cleanup, and bounded diagnostic
-fixes on the promoted tree. It does not establish why the original fresh
-session redirected to sign-in, so BUG-306 remains Open and that cause remains
-explicitly unproven.
+That proves the repository-owned properties: one setup-created session is reused
+by every authenticated spec, missing stored auth fails closed, teardown signs
+out and removes the state file, a sign-in redirect is reported directly, and
+the fallback diagnostic is bounded. A five-file focused verification command
+completed 51/51 on 2026-08-28; the total includes adjacent Playwright policy
+and log-redaction cases, so it is a command receipt rather than a claim that all
+51 assertions belong to BUG-306.
 
-The historical active-session backlog is deliberately not mutated in this PR.
-Before closure, the owner must verify whether those TEST-instance sessions are
-used by any other workflow, then either revoke the obsolete sessions without
-rotating the shared E2E user or record why natural expiry is the safer choice.
+The historical backlog is also contained. The owner verified the target TEST
+user, revoked all 4,585 sessions that were active in the containment census via
+the Clerk Backend API, and a fresh count-only API query found zero active
+sessions. The shared E2E user was not rotated.
+
+No evidence establishes why the original fresh session redirected to sign-in,
+and this closure does not claim otherwise. Keeping an item Open solely until an
+uncontrolled external event happens again would create no executable next step.
+The proven lifecycle and diagnostic defects are fixed and the backlog is gone;
+a recurrence should be adjudicated from the bounded auth-loss diagnostic and
+filed or reopened with its own evidence.
 
 ## Related
 
-- [BUG-304](./bug-304-practice-session-start-no-navigation.md) — the required
+- [BUG-304](../../bugs/bug-304-practice-session-start-no-navigation.md) — the required
   E2E investigation whose follow-up gate exposed this independent auth failure.
 - [BUG-305](./bug-305-clerk-dev-browser-credential-in-ci-logs.md) — the same
   Clerk test seam can emit sensitive runtime-generated query values after a
-  context closes; log redaction remains independently required.
-- [DEBT-473](../debt/debt-473-green-without-evidence.md) — treats skipped or
+  context closes; its log redaction and owner containment are resolved.
+- [BUG-307](../../bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+  — owns the separate public trace/artifact surface found during containment.
+- [DEBT-473](../../debt/debt-473-green-without-evidence.md) — treats skipped or
   retry-recovered evidence as an explicit test-infrastructure defect.
