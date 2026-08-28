@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-08-20
+**Last Updated:** 2026-08-28
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
@@ -53,7 +53,7 @@ webServer: {
 - Runs Chromium only (for now)
 - `pnpm test:e2e` selects the required `chromium` project and excludes every `stripe-hosted-*.spec.ts` file
 - The `stripe-hosted` project is an observational compatibility probe for Stripe-owned Checkout markup; it is scheduled/manual and never a pull-request or push check
-- The HTML report is retained as an artifact but is configured with `open: 'never'`, so a locally recovered flaky run cannot hold the process open
+- The HTML report is retained as an artifact and configured with `open: 'never'`, so a locally recovered flaky run cannot hold the process open. As of 2026-08-28, both E2E workflows also upload `test-results/`; retry traces can carry TEST-session credentials and are publicly downloadable. [BUG-307](../bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md) owns the red-first split/exclusion fix. Until it lands, treat any trace-bearing workflow artifact as an exposure requiring deletion, not as an ordinary debugging attachment.
 - Starts a production server for E2E runs (`pnpm build && pnpm start` locally, `pnpm start` in CI)
 - Waits on `/api/health`, not just the root URL, so Playwright startup includes a DB-aware readiness check
 - Runs with **1 worker** because authenticated E2E flows share one Clerk user; mutating specs still reset that user to a deterministic baseline in `beforeEach`
@@ -390,7 +390,7 @@ python .agents/skills/webapp-testing/scripts/with_server.py \
 
 ### GitHub Actions
 
-CI runs the required E2E layer only on pushes and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it. Browser installation and all 398 browser tests run on every trigger because they need no provider credential. A final `Evidence summary` step reads the actual unit, integration, browser, Build, and E2E `steps.<id>.outcome` values, runs after failures with `if: ${{ !cancelled() }}`, and writes skipped evidence plus a warning instead of letting the aggregate green stand alone ([DEBT-473](../debt/debt-473-green-without-evidence.md) F5, step 3). Fork PRs run typecheck, lint, unit, integration, browser, and build; the Build step uses real public values when available and shape-valid server-only placeholders. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
+CI runs the required E2E layer only on pushes and human same-repo PRs, because it needs repository secrets; Dependabot and fork PRs skip it. Browser installation and all 398 browser tests run on every trigger because they need no provider credential. A final `Evidence summary` step reads the actual unit, integration, browser, Build, and E2E `steps.<id>.outcome` values, runs after failures with `if: ${{ !cancelled() }}`, and writes skipped evidence plus a warning instead of letting the aggregate green stand alone ([DEBT-473](../debt/debt-473-green-without-evidence.md) F5, step 3). Fork PRs run typecheck, lint, unit, integration, browser, and build; the Build step uses real public values when available and shape-valid server-only placeholders. `.github/workflows/stripe-hosted-checkout-smoke.yml` runs only on its daily schedule or explicit dispatch, uses a separate `E2E_STRIPE_OWNER`, and selects only the observational `stripe-hosted` project. Both workflows currently publish the HTML report and `test-results/` after non-cancelled runs; BUG-307 records why public trace/auth-state publication is unsafe and requires separate report/failure-output uploads with auth and trace exclusions. Path-filtering the required workflow is intentionally deferred: required-check naming and skipped-workflow behavior can block merges or let a misclassified code change evade the lane, while the hosted split and bounded Chromium installer remove most of the incentive.
 
 E2E runs in CI via Playwright (see `.github/workflows/ci.yml`):
 
