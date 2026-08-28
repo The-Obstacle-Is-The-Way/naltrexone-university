@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { installE2ELogRedaction } from './e2e-log-redaction';
+import {
+  installE2ELogRedaction,
+  redactSensitiveE2EText,
+} from './e2e-log-redaction';
 
 const LOG_METHOD_NAMES = ['debug', 'error', 'info', 'log', 'warn'] as const;
 
@@ -49,6 +52,36 @@ describe('installE2ELogRedaction', () => {
         ],
       })),
     );
+  });
+
+  it('redacts every standing Stripe TEST object identifier shape', () => {
+    const prefixes = [
+      'cus',
+      'sub',
+      'clock',
+      'acct',
+      'req',
+      'seti',
+      'si',
+      'pm',
+      'in',
+      'price',
+      'cs',
+      'evt',
+      'sk_test',
+    ];
+    const input = prefixes
+      .map((prefix) => `${prefix}_${['example', '123'].join('')}`)
+      .join(' ');
+
+    const redacted = redactSensitiveE2EText(input);
+    const unredactedShapeRemains =
+      /\b(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|sk_test)_[A-Za-z0-9]+\b/.test(
+        redacted,
+      );
+
+    expect(unredactedShapeRemains).toBe(false);
+    expect(redacted.match(/\[REDACTED\]/g)).toHaveLength(prefixes.length);
   });
 
   it('preserves non-sensitive text and non-string arguments', () => {

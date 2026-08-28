@@ -145,7 +145,20 @@ jobs:
           name: playwright-report
           path: |
             playwright-report/
+            !**/.auth/**
+            !**/trace.zip
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload Playwright failure output
+        if: ${{ !cancelled() && steps.e2e_smoke.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-test-results
+          path: |
             test-results/
+            !**/.auth/**
+            !**/trace.zip
           retention-days: 30
           if-no-files-found: ignore
 

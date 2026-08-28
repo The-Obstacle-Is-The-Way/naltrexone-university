@@ -223,6 +223,14 @@ describe('Playwright E2E lane policy', () => {
     ]);
   });
 
+  it('keeps retry traces local and disables them in hosted CI', () => {
+    const source = readFileSync('playwright.config.ts', 'utf8');
+
+    expect(source).toContain(
+      "trace: process.env.CI ? 'off' : 'on-first-retry'",
+    );
+  });
+
   it('keeps known Stripe-owned selectors in explicitly hosted smoke files', () => {
     const filesWithHostedSelectors = listTypeScriptFiles('tests/e2e')
       .filter((path) => path.endsWith('.ts'))

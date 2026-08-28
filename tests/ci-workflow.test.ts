@@ -241,6 +241,41 @@ describe('CI workflow', () => {
   });
 });
 
+describe('Playwright artifact publication', () => {
+  it.each([
+    [CI_WORKFLOW_PATH, 'E2E smoke', 'e2e_smoke'],
+    [
+      STRIPE_HOSTED_WORKFLOW_PATH,
+      'Run observational Stripe-hosted Checkout journeys',
+      'hosted_e2e',
+    ],
+  ])(
+    'splits reports from failure-only results in %s',
+    (workflowPath, e2eStepName, e2eStepId) => {
+      const e2e = findParsedStep(workflowPath, e2eStepName);
+      const report = findParsedStep(workflowPath, 'Upload Playwright report');
+      const failureOutput = findParsedStep(
+        workflowPath,
+        'Upload Playwright failure output',
+      );
+
+      expect(e2e.id).toBe(e2eStepId);
+      expect(report.if).toBe(`\${{ !cancelled() }}`);
+      expect(report.with?.path).toContain('playwright-report/');
+      expect(report.with?.path).not.toContain('test-results/');
+      expect(failureOutput.if).toBe(
+        `\${{ !cancelled() && steps.${e2eStepId}.outcome == 'failure' }}`,
+      );
+      expect(failureOutput.with?.path).toContain('test-results/');
+
+      for (const upload of [report, failureOutput]) {
+        expect(upload.with?.path).toContain('!**/.auth/**');
+        expect(upload.with?.path).toContain('!**/trace.zip');
+      }
+    },
+  );
+});
+
 describe('workflow secret scope', () => {
   it('fails closed when a step name is ambiguous across jobs', () => {
     const workflow = parse(`

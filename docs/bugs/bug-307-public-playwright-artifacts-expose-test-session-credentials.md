@@ -1,6 +1,6 @@
 # BUG-307: Public Playwright Artifacts Expose TEST Session Credentials
 
-**Status:** Open
+**Status:** Open — fix implemented; promoted-artifact scan pending
 **Severity:** P2
 **Date:** 2026-08-28
 **Confirmed:** 2026-08-26; scope corrected and owner containment reverified 2026-08-28
@@ -21,11 +21,11 @@ The containment sweep for BUG-305 found two distinct defects:
    with a differently scoped denominator. The values occurred from
    2026-05-28T16:14Z through 2026-08-25T02:12Z, including 95 `main` runs and
    105 `dev` runs.
-2. Both E2E workflows publish `playwright-report/` and `test-results/` as
-   artifacts. A retried Playwright test records full network traffic in a
-   trace, and the HTML reporter copies trace attachments into its own output.
-   Those traces contained development-instance Clerk credentials and session
-   cookies. Console redaction cannot sanitize a trace file.
+2. Before this fix, both E2E workflows published `playwright-report/` and
+   `test-results/` as artifacts. A retried Playwright test recorded full network
+   traffic in a trace, and the HTML reporter copied trace attachments into its
+   own output. Those traces contained development-instance Clerk credentials
+   and session cookies. Console redaction cannot sanitize a trace file.
 
 The repository is public. GitHub's artifact API permits unauthenticated reads
 for public resources, and GitHub's web documentation says signed-in users with
@@ -38,19 +38,20 @@ impersonating the test account.
 
 ## Current-Tree Evidence
 
-- `.github/workflows/ci.yml:141-150` uploads both output directories whenever
-  the job is not cancelled, with 30-day retention.
-- `.github/workflows/stripe-hosted-checkout-smoke.yml:104-112` repeats the same
-  publication under a different artifact name.
-- `playwright.config.ts:17,24` uses two CI retries and `on-first-retry` tracing.
-  A trace is therefore expected whenever an initial attempt fails and retries.
+- `.github/workflows/ci.yml:141-163` now uploads `playwright-report/` after every
+  non-cancelled run and uploads `test-results/` only when `e2e_smoke` failed;
+  both paths exclude `**/.auth/**` and `**/trace.zip`.
+- `.github/workflows/stripe-hosted-checkout-smoke.yml:88-127` gives the hosted
+  E2E step a stable ID and applies the same split and exclusions.
+- `playwright.config.ts:17,24` retains two CI retries but resolves tracing to
+  `off` in CI and `on-first-retry` locally.
 - `tests/e2e/helpers/clerk-auth-state.ts:3` stores suite authentication under
   `test-results/.auth/`. `tests/e2e/global-teardown.ts:9-25` normally signs out
-  and deletes it, but an interrupted runner or a dependency-bypassing command
-  can leave the file for the unconditional upload.
-- `tests/e2e/helpers/e2e-log-redaction.ts:9-13` redacts Clerk query fields only
-  from console strings. It neither reads artifacts nor redacts the repository's
-  standing Stripe object-identifier pattern.
+  and deletes it; the upload exclusions now remain effective even if an
+  interrupted runner or dependency-bypassing command leaves that file behind.
+- `tests/e2e/helpers/e2e-log-redaction.ts:9-17` redacts Clerk query fields and
+  the repository's standing Stripe TEST object-identifier pattern from console
+  strings. It deliberately does not attempt to rewrite binary artifacts.
 
 The initial artifact census found 21 trace-bearing public artifacts from
 2026-08-03 through 2026-08-26. Scheduled hosted run `33110618884` then failed
@@ -98,8 +99,9 @@ Containment is complete and was reverified through count-only API calls:
 - an independent scan downloaded every currently retained post-redaction `CI`
   log (70/70) and found zero unredacted dev-browser values.
 
-Those actions invalidate and remove the known exposure. They do not correct the
-workflow that can publish the next failing run.
+Those actions invalidate and remove the known exposure. At filing time, they
+did not correct the workflow that could publish the next failing run; the
+implementation below closes that source-level gap.
 
 ## Required Fix
 
@@ -119,15 +121,36 @@ workflow that can publish the next failing run.
 5. After promotion, inspect the produced artifact with a non-printing
    credential-shape scan. Record only totals and pass/fail status.
 
+## Implementation Receipt (2026-08-28)
+
+The implementation is complete on this branch without expanding the threat
+model beyond the two known workflows:
+
+- each workflow has one always-after-noncancellation HTML-report upload and one
+  failure-only results upload keyed to the corresponding E2E step outcome;
+- every upload path excludes auth-state directories and trace archives;
+- hosted CI tracing is disabled while local `on-first-retry` tracing remains;
+- the shared E2E log-redaction seam now covers all 13 standing Stripe TEST
+  object-identifier prefixes, and the session helper consumes that one seam
+  instead of carrying a duplicate pattern; and
+- the pre-fix focused run failed four new assertions across the two workflow
+  shapes, trace policy, and Stripe redaction. The corrected focused run passed
+  73/73 across those contracts plus the existing session-diagnostic suite.
+
+The bug stays Open for exactly one reason: a promoted artifact does not exist
+until this change reaches `main`, so the required non-printing credential-shape
+scan cannot yet have a truthful receipt. No source-code or workflow-shape gap
+remains open.
+
 ## Verification
 
-- [ ] Required CI uploads `playwright-report/` always and `test-results/` only
+- [x] Required CI uploads `playwright-report/` always and `test-results/` only
       when the E2E step failed.
-- [ ] Hosted compatibility CI applies the same split.
-- [ ] Neither artifact path can include `**/.auth/**` or a Playwright trace.
-- [ ] Workflow and Playwright policy tests fail on the pre-fix shapes and pass
+- [x] Hosted compatibility CI applies the same split.
+- [x] Neither artifact path can include `**/.auth/**` or a Playwright trace.
+- [x] Workflow and Playwright policy tests fail on the pre-fix shapes and pass
       on the corrected shapes.
-- [ ] E2E console output redacts Clerk credential fields and Stripe TEST object
+- [x] E2E console output redacts Clerk credential fields and Stripe TEST object
       identifiers without printing matched values.
 - [ ] The promoted artifact passes a non-printing credential-shape scan.
 
