@@ -1,6 +1,7 @@
 # BUG-307: Public Playwright Artifacts Expose TEST Session Credentials
 
-**Status:** Open — fix implemented; promoted-artifact scan pending
+**Status:** Open
+**Resolution State:** Fix implemented; promoted-artifact scan pending
 **Severity:** P2
 **Date:** 2026-08-28
 **Confirmed:** 2026-08-26; scope corrected and owner containment reverified 2026-08-28
