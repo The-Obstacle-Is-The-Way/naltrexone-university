@@ -234,7 +234,19 @@ Those receipts close the diagnosed timeout/diagnostic blind spot and the two
 navigation-observation races. They do not prove why the original 03:15Z click
 left the starter visible with no loading state or alert. BUG-304 therefore
 remains Open; a future recurrence must be adjudicated from the now-preserved
-trace, request, rendered-alert, and URL evidence rather than retry recovery.
+request, rendered-alert, URL, and redacted-list evidence rather than retry
+recovery. A developer may preserve a local trace, but BUG-307 records why CI
+must not publish credential-bearing traces from this public repository.
+
+**2026-08-28 re-audit:** the current tree still distinguishes this bug from the
+closed E2E-only BUG-306. `use-practice-session-start.ts:98-107,251-257` rejects a
+handler captured by a superseded render by returning a resolved promise without
+starting the action or publishing UI state. The Playwright helper's blur/value
+barrier at `tests/e2e/helpers/session.ts:301-311` protects automation; it does
+not remove that reachable application seam for a user who changes a starter
+control and immediately clicks. The original incident's cause remains unproven,
+but an application-owned no-op path still exists, so closing this item as merely
+“mitigated” would discard a real unresolved property. It stays Open.
 
 ## Related
 
@@ -248,3 +260,10 @@ trace, request, rendered-alert, and URL evidence rather than retry recovery.
   reselected already-active status and mode controls, rotated request ownership,
   and clicked a stale handler; both paths were fixed by waiting on current
   intent rather than retrying the click.
+- [BUG-306](../_archive/bugs/bug-306-required-e2e-clerk-session-loss-and-accumulation.md)
+  — closed after its suite-owned lifecycle, diagnostic mitigation, and owner
+  backlog containment were verified; its original auth-loss cause stays
+  explicitly unproven.
+- [BUG-307](./bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+  — tracks the unsafe publication of retry traces discovered while preserving
+  E2E failure evidence.

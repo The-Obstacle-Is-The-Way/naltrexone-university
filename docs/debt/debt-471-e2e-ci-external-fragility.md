@@ -34,6 +34,20 @@ Attempt 3 passed the *same commit* that attempt 1 failed, with zero code changes
 
 The 2026-08-19 failure was `locator.check: Test timeout of 120000ms exceeded` on the `Card` radio. The downloaded attempt-1 Playwright artifact contains three `error-context.md` snapshots—one per attempt—and all three show Stripe's card-number, expiration, and CVC fields already expanded with no radio role present. The spec reached Stripe successfully every time; only the DOM shape differed.
 
+**2026-08-28 recurrence receipt:** scheduled run `33110618884` started at
+2026-08-27 19:53:23Z and manual run `33175157228` started at 2026-08-28
+13:23:18Z. Each failed the paid hosted journey on all three attempts at
+`tests/e2e/stripe-hosted-paid-checkout.spec.ts:83`. The exact textbox selector
+still expects `CVC`; each preserved accessibility snapshot exposes “Credit or
+debit card CVC/CVV” while retaining placeholder `CVC`. This is the same F1
+class—deterministic Stripe-owned accessible-markup drift—not an application
+regression. The split worked as designed: required CI stayed green and the
+daily/manual observational lane surfaced the incompatibility. DEBT-471 remains
+Resolved because the lane boundary held; the selector repair and its successful
+hosted-lane receipt are pending compatibility maintenance. The two cited starts
+are less than 18 hours apart, so they do not yet establish a repair window
+beyond one day.
+
 The paid spec is the incident trigger, but it is not the only blocking hosted-DOM seam. `trial-start.spec.ts` calls `completeNoCardTrialCheckout()` in `tests/e2e/helpers/subscription.ts`, which selects Stripe's hosted Terms checkbox by English copy and a hosted button by `/start (free )?trial|subscribe|continue/i`. That path did not fail in this incident, but it has the same unsupported third-party-selector dependency and must be included in an honest F1 resolution.
 
 Stripe's own [automated-testing guidance](https://docs.stripe.com/automated-testing) says that front-end interfaces such as Checkout and the Payment Element have security measures that prevent automated testing, and recommends simulated interface/API outputs for application behavior. `tests/e2e/helpers/clerk-auth.ts` demonstrates the general boundary: it uses the official `@clerk/testing/playwright` `clerk.signIn()` API rather than scraping Clerk's hosted DOM. That is evidence for removing third-party UI from required PR automation, not evidence that Clerk and Stripe expose equivalent test APIs.
