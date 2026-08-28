@@ -50,10 +50,12 @@ exact accessible name with anchored suffix fallback `/\bCVC(?:\/CVV)?$/i`,
 which accepts both the prior `CVC` name and the observed `Credit or debit card
 CVC/CVV` name without broadening beyond that field. The new source-policy case
 failed against the old selector and then passed with all 22 lane-policy cases.
-The post-promotion hosted workflow receipt remains pending until this commit is
-on `main`; no passing provider run is claimed yet. The two cited failure starts
-are less than 18 hours apart, so they do not establish a repair window beyond
-one day.
+The local TEST-mode hosted project then passed 4/4 on the first execution,
+including both the repaired paid journey and the unchanged no-card trial. The
+post-promotion hosted workflow receipt remains pending until this commit is on
+`main`; no hosted Actions pass is claimed yet. The two cited failure starts are
+less than 18 hours apart, so they do not establish a repair window beyond one
+day.
 
 The paid spec is the incident trigger, but it is not the only blocking hosted-DOM seam. `trial-start.spec.ts` calls `completeNoCardTrialCheckout()` in `tests/e2e/helpers/subscription.ts`, which selects Stripe's hosted Terms checkbox by English copy and a hosted button by `/start (free )?trial|subscribe|continue/i`. That path did not fail in this incident, but it has the same unsupported third-party-selector dependency and must be included in an honest F1 resolution.
 
