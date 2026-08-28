@@ -25,7 +25,7 @@ const STRIPE_HOSTED_SELECTOR_MARKERS = [
   "name: 'Save my information for faster checkout'",
   '/card number/i',
   '/expiration/i',
-  "name: 'CVC'",
+  'name: /\\bCVC(?:\\/CVV)?$/i',
   '/cardholder name|name on card/i',
   '/zip|postal code/i',
   '/I agree to .*Terms of Service and Privacy Policy/i',
@@ -237,6 +237,16 @@ describe('Playwright E2E lane policy', () => {
     expect(filesWithHostedSelectors).toEqual(
       [...STRIPE_HOSTED_SELECTOR_ALLOWLIST].sort(),
     );
+  });
+
+  it('uses a resilient CVC accessible-name fallback in the hosted paid smoke', () => {
+    const source = readFileSync(
+      'tests/e2e/stripe-hosted-paid-checkout.spec.ts',
+      'utf8',
+    );
+
+    expect(source).toContain('name: /\\bCVC(?:\\/CVV)?$/i');
+    expect(source).not.toContain("name: 'CVC'");
   });
 
   it('bounds direct E2E Stripe SDK calls through the shared test client', () => {

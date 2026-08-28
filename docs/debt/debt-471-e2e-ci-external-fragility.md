@@ -23,7 +23,9 @@ Attempt 3 passed the *same commit* that attempt 1 failed, with zero code changes
 
 ### F1 — E2E asserts against Stripe's hosted Checkout DOM (root cause of the red)
 
-`tests/e2e/paid-checkout.spec.ts` drives Stripe's **hosted** Checkout page and asserts on markup, roles, and English copy that Stripe owns and can change without notice:
+At the original incident, `tests/e2e/paid-checkout.spec.ts` drove Stripe's
+**hosted** Checkout page and asserted on markup, roles, and English copy that
+Stripe owns and can change without notice:
 
 - `getByRole('radio', { name: 'Card', exact: true })` — then `.check({ force: true })`, whose own comment already concedes "Stripe's accordion cover intentionally intercepts the styled radio's pointer area"
 - `getByRole('checkbox', { name: 'Save my information for faster checkout' })`
@@ -43,10 +45,17 @@ debit card CVC/CVV” while retaining placeholder `CVC`. This is the same F1
 class—deterministic Stripe-owned accessible-markup drift—not an application
 regression. The split worked as designed: required CI stayed green and the
 daily/manual observational lane surfaced the incompatibility. DEBT-471 remains
-Resolved because the lane boundary held; the selector repair and its successful
-hosted-lane receipt are pending compatibility maintenance. The two cited starts
-are less than 18 hours apart, so they do not yet establish a repair window
-beyond one day.
+Resolved because the lane boundary held. Repair commit `be7d81bd` replaces the
+exact accessible name with anchored suffix fallback `/\bCVC(?:\/CVV)?$/i`,
+which accepts both the prior `CVC` name and the observed `Credit or debit card
+CVC/CVV` name without broadening beyond that field. The new source-policy case
+failed against the old selector and then passed with all 22 lane-policy cases.
+The local TEST-mode hosted project then passed 4/4 on the first execution,
+including both the repaired paid journey and the unchanged no-card trial. The
+post-promotion hosted workflow receipt remains pending until this commit is on
+`main`; no hosted Actions pass is claimed yet. The two cited failure starts are
+less than 18 hours apart, so they do not establish a repair window beyond one
+day.
 
 The paid spec is the incident trigger, but it is not the only blocking hosted-DOM seam. `trial-start.spec.ts` calls `completeNoCardTrialCheckout()` in `tests/e2e/helpers/subscription.ts`, which selects Stripe's hosted Terms checkbox by English copy and a hosted button by `/start (free )?trial|subscribe|continue/i`. That path did not fail in this incident, but it has the same unsupported third-party-selector dependency and must be included in an honest F1 resolution.
 
