@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-08-20
+**Last Updated:** 2026-08-28
 
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 

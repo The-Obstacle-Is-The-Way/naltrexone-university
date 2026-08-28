@@ -132,7 +132,7 @@ P3 is therefore proportionate.
 
 Resolved with the original intermittent cause explicitly unproven. The
 red-first lifecycle and diagnostic changes were promoted to `main` through PR
-#835, merge commit `47b31234`. CodeRabbit approved exact head
+PR `#835`, merge commit `47b31234`. CodeRabbit approved exact head
 `92c35965` with zero unresolved threads; PR run `32955114161` and post-merge
 main run `32960005070` each passed required E2E 43/43 on the first attempt with
 zero flaky results or raw Clerk credential assignments. Production deployment
@@ -147,10 +147,16 @@ completed 51/51 on 2026-08-28; the total includes adjacent Playwright policy
 and log-redaction cases, so it is a command receipt rather than a claim that all
 51 assertions belong to BUG-306.
 
-The historical backlog is also contained. The owner verified the target TEST
-user, revoked all 4,585 sessions that were active in the containment census via
-the Clerk Backend API, and a fresh count-only API query found zero active
-sessions. The shared E2E user was not rotated.
+The historical backlog is also contained. The incident-time census during the
+2026-08-26 investigation counted 4,684 active sessions. At the later owner
+containment action that day, a fresh active-session enumeration returned 4,585;
+the Backend API revoked all 4,585 successfully, and a subsequent count-only API
+query found zero active sessions. The 99-session difference belongs to the two
+time-separated snapshots: those sessions were no longer in Clerk's active set
+when containment began, and the retained evidence does not distinguish expiry
+from another lifecycle transition. Closure rests on the post-action zero-active
+query, not on treating the two snapshot totals as identical. The shared E2E
+user was not rotated.
 
 No evidence establishes why the original fresh session redirected to sign-in,
 and this closure does not claim otherwise. Keeping an item Open solely until an
