@@ -80,7 +80,9 @@ test.describe
       }
       await cardNumber.fill('4242424242424242');
       await page.getByLabel(/expiration/i).fill('12/30');
-      await page.getByRole('textbox', { name: 'CVC', exact: true }).fill('123');
+      await page
+        .getByRole('textbox', { name: /\bCVC(?:\/CVV)?$/i })
+        .fill('123');
 
       const cardholderName = page.getByLabel(/cardholder name|name on card/i);
       if (await cardholderName.isVisible()) {
