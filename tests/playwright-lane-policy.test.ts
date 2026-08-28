@@ -192,7 +192,7 @@ describe('Playwright E2E lane policy', () => {
     }
   });
 
-  it.each(['0.0.0', '1.50.1', '2.0.0-beta.1', '2.0.0+build.7'])(
+  it.each(['0.0.0', '1.2.3', '2.0.0-beta.1', '2.0.0+build.7'])(
     'accepts exact semantic version %s',
     (version) => {
       expect(version).toMatch(EXACT_SEMVER_PATTERN);
@@ -200,12 +200,12 @@ describe('Playwright E2E lane policy', () => {
   );
 
   it.each([
-    '^1.50.1',
-    '~1.50.1',
-    '>=1.50.1',
-    '1.50.x',
+    '^1.2.3',
+    '~1.2.3',
+    '>=1.2.3',
+    '1.2.x',
     'latest',
-    'workspace:1.50.1',
+    'workspace:1.2.3',
   ])('rejects non-exact semantic version %s', (version) => {
     expect(version).not.toMatch(EXACT_SEMVER_PATTERN);
   });
