@@ -44,6 +44,7 @@ type BaselineRow = {
   completedSessions: number;
   attemptCount: number;
   bookmarkCount: number;
+  placeholderBookmarkCount: number;
   questionStateCount: number;
 };
 
@@ -77,6 +78,7 @@ function createBaselineRow(overrides: Partial<BaselineRow> = {}): BaselineRow {
     completedSessions: 1,
     attemptCount: 2,
     bookmarkCount: 1,
+    placeholderBookmarkCount: 1,
     questionStateCount: 2,
     ...overrides,
   };
@@ -294,6 +296,10 @@ describe('runE2EUserStateReset', () => {
         databaseUrl: env.DATABASE_URL,
         sql: expect.any(Function),
         userId: fixtureDbUser123Id,
+        questionFixtures: {
+          placeholder01Id: fixtureQuestion01Id,
+          placeholder02Id: fixtureQuestion02Id,
+        },
       }),
     );
   });
@@ -754,6 +760,13 @@ describe('runE2EUserStateReset default service diagnostics', () => {
         bookmarkCount: 2,
       }),
     },
+    {
+      label: 'bookmark attached to the wrong question',
+      baselineRow: createBaselineRow({
+        bookmarkCount: 1,
+        placeholderBookmarkCount: 0,
+      }),
+    },
   ])(
     'surfaces invalid baseline verification for $label without wrapping the explicit reset error',
     async ({ baselineRow }) => {
@@ -816,6 +829,7 @@ describe('runE2EUserStateReset default service diagnostics', () => {
       .map(([strings]) => Array.from(strings).join(' '))
       .find((query) => query.includes('"questionStateCount"'));
     expect(baselineQuery).toContain('"incompleteSessionCount"');
+    expect(baselineQuery).toContain('"placeholderBookmarkCount"');
     expect(baselineQuery).toContain('ended_at IS NULL');
     expect(baselineQuery).toContain('WHERE state.practice_session_id = ');
     expect(baselineQuery).not.toContain('INNER JOIN practice_sessions');
