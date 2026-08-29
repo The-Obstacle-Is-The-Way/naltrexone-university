@@ -16,7 +16,7 @@ the value is not masked by GitHub, and an initial eight-run census found two
 successful runs with two such warnings each. The first mitigation's hosted run
 became a third affected run and proved that local/unit success was insufficient.
 
-That initial sample understated the exposure frequency. [BUG-307](../../bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+That initial sample understated the exposure frequency. [BUG-307](./bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
 records the full retained-log census: 455 of 1,210 scanned `CI` workflow logs
 contained 873 unredacted values. Excluding 104 Dependabot-branch CI logs gives
 452 of 1,106. The earlier 1,128 denominator mixed workflow and actor scopes and
@@ -125,5 +125,5 @@ failures.
 - [BUG-306](./bug-306-required-e2e-clerk-session-loss-and-accumulation.md) — the
   same per-test Clerk seam accumulated sessions without teardown and later lost
   a fresh session on a protected navigation; causality remains unproven.
-- [BUG-307](../../bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+- [BUG-307](./bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
   — corrects the exposure census and owns the separate public-artifact surface.

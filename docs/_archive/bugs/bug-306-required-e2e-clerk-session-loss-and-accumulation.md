@@ -172,7 +172,7 @@ filed or reopened with its own evidence.
 - [BUG-305](./bug-305-clerk-dev-browser-credential-in-ci-logs.md) — the same
   Clerk test seam can emit sensitive runtime-generated query values after a
   context closes; its log redaction and owner containment are resolved.
-- [BUG-307](../../bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+- [BUG-307](./bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
   — owns the separate public trace/artifact surface found during containment.
 - [DEBT-473](../../debt/debt-473-green-without-evidence.md) — treats skipped or
   retry-recovered evidence as an explicit test-infrastructure defect.

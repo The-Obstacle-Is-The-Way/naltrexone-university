@@ -80,7 +80,6 @@ const ALLOWED_MULTI_DOT_BASENAMES = new Set([
   'app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.fixtures.ts',
   'app/(app)/app/questions/[slug]/hooks/question-page-model.browser.fixtures.ts',
   'lib/container.skip-clerk.test.ts',
-  'tests/e2e/helpers/reset-bookmarks-for-e2e-user.default-services.test.ts',
   'tests/e2e/global.setup.ts',
   'tests/integration/actions.stripe.integration.test.ts',
 ]);

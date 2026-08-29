@@ -264,6 +264,6 @@ but an application-owned no-op path still exists, so closing this item as merely
   — closed after its suite-owned lifecycle, diagnostic mitigation, and owner
   backlog containment were verified; its original auth-loss cause stays
   explicitly unproven.
-- [BUG-307](./bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
+- [BUG-307](../_archive/bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
   — tracks the unsafe publication of retry traces discovered while preserving
   E2E failure evidence.
