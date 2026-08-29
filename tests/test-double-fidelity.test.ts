@@ -1,4 +1,4 @@
-import { describe, expect, inject, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   collectHandRolledPortDoubleOccurrences,
   collectMaintainedFakePortNames,
@@ -621,19 +621,5 @@ describe('test-double fidelity source scan', () => {
     ).toEqual([
       'app/example.test.ts has 2 own-code module mock site(s), above its ratchet floor of 1 (new site at line 2).',
     ]);
-  });
-});
-
-describe('live test-double fidelity ratchets', () => {
-  it('blocks growth in own-code module mocks', () => {
-    expect(inject('testDoubleRatchetIssues').ownCodeModuleMocks).toEqual([]);
-  });
-
-  it('blocks growth in unknown double casts outside the allowlist', () => {
-    expect(inject('testDoubleRatchetIssues').unknownDoubleCasts).toEqual([]);
-  });
-
-  it('blocks growth in object-literal doubles for maintained fake ports', () => {
-    expect(inject('testDoubleRatchetIssues').handRolledPortDoubles).toEqual([]);
   });
 });

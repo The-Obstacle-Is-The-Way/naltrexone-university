@@ -263,7 +263,7 @@ pnpm build                  # Production build
 pnpm start                  # Run production build
 
 # Quality gates (run before committing)
-pnpm lint                   # Biome check (lint + format)
+pnpm lint                   # Biome check + test-double fidelity ratchet
 pnpm lint:fix               # Auto-fix lint issues
 pnpm typecheck              # TypeScript type checking
 
@@ -526,7 +526,7 @@ See `docs/dev/react-vitest-testing.md` for full details.
 
 The single canonical taxonomy, shape-vs-behavior decision rule, adapter unit-test pattern, contract-test requirement, and `vi.mock()` exceptions live in **`.claude/rules/testing.md` → “Test-Double Fidelity: Shape vs. Behavior.”** Follow that section before creating any double; do not restate or weaken it locally.
 
-The maintained application-fake barrel remains `src/application/test-helpers/fakes/index.ts`. Stripe Checkout client behavior uses adapter-owned `FakeStripeCheckoutClient` at `src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts`. The executable growth ratchets live in `tests/test-double-fidelity.test.ts` with per-file floors in `tests/test-double-fidelity-ratchet-floors.ts`.
+The maintained application-fake barrel remains `src/application/test-helpers/fakes/index.ts`. Stripe Checkout client behavior uses adapter-owned `FakeStripeCheckoutClient` at `src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client.ts`. The executable growth ratchet runs through `pnpm lint:doubles`; its live runner is `tests/test-double-fidelity-live-scan.ts` and its per-file floors live in `tests/test-double-fidelity-ratchet-floors.ts`.
 
 ### Test Quality Rules
 
