@@ -41,9 +41,6 @@ const START_SESSION_DIAGNOSTIC_TIMEOUT_MS = 1_000;
 export const START_SESSION_NAVIGATION_TIMEOUT_MS =
   STANDARD_MUTATION_TIMEOUT_MS + 5_000;
 
-const SENSITIVE_PROVIDER_IDENTIFIER_PATTERN =
-  /\b(cus|sub|clock|acct|req|seti|si|pm|in|price|cs|evt|sk_test)_[A-Za-z0-9]+\b/g;
-
 async function waitForEitherVisible(
   first: StartSessionLocator,
   second: StartSessionLocator,
@@ -78,10 +75,7 @@ async function waitForEnabled(
 }
 
 function redactDiagnosticText(value: string): string {
-  return redactSensitiveE2EText(value).replace(
-    SENSITIVE_PROVIDER_IDENTIFIER_PATTERN,
-    '$1_[REDACTED]',
-  );
+  return redactSensitiveE2EText(value);
 }
 
 async function readNonemptyAlertTexts(
