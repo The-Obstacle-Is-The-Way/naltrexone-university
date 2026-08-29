@@ -1,12 +1,18 @@
 # Question Feedback Analytics
 
-Question feedback is exported through a local-only, read-only script:
+Question feedback is exported through a human-operated, read-only script:
 
 ```bash
 TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback > question-feedback.csv
 DATABASE_URL="$TEST_DATABASE_URL" pnpm --silent export:feedback -- --format json > question-feedback.json
 ```
+
+The command does not load `.env.local` or `.env`: `DATABASE_URL` must be supplied explicitly.
+Local targets need no acknowledgement. A remote target is refused until `DB_TARGET_ACK` exactly
+matches the value-free JSON named by the first refusal; use the same workflow documented in
+[Deployment Procedure](./deployment-procedure.md). The redacted `Database target:` receipt and
+privacy warnings go to stderr, while CSV or JSON remains on stdout.
 
 Default exports redact `user_id` and exclude free-text comments. Raw user identifiers and comment
 bodies require explicit opt-in flags and should only be used for local editorial analysis:
