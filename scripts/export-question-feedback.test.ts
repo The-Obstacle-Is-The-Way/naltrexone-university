@@ -17,6 +17,7 @@ const ORIGINAL_ENV = snapshotProcessEnv();
 
 afterEach(() => {
   restoreProcessEnv(ORIGINAL_ENV);
+  vi.doUnmock('dotenv');
   vi.doUnmock('postgres');
   vi.doUnmock('drizzle-orm/postgres-js');
   vi.resetModules();
@@ -309,17 +310,73 @@ describe('getQuestionFeedbackExportPrivacyWarnings', () => {
 });
 
 describe('runExportQuestionFeedback', () => {
+  it('refuses a DATABASE_URL supplied only by dotenv fallback', async () => {
+    delete process.env.DATABASE_URL;
+    vi.resetModules();
+    const dotenvConfig = vi.fn(() => {
+      process.env.DATABASE_URL =
+        'postgresql://fallback-user:fallback-password@127.0.0.1:55432/app';
+    });
+    vi.doMock('dotenv', () => ({
+      default: { config: dotenvConfig },
+    }));
+    const imported = await import('./export-question-feedback');
+    const createSql = vi.fn(() => ({
+      end: vi.fn().mockResolvedValue(undefined),
+    }));
+
+    await expect(
+      imported.runExportQuestionFeedback(
+        [],
+        createWritableSink(),
+        createWritableSink(),
+        {
+          createSql,
+          createDb: () => ({}),
+          readRows: () => Promise.resolve([]),
+        },
+      ),
+    ).rejects.toThrow(/explicit DATABASE_URL/i);
+
+    expect(dotenvConfig).not.toHaveBeenCalled();
+    expect(createSql).not.toHaveBeenCalled();
+  });
+
   it('requires DATABASE_URL before opening the read-only database client', async () => {
     delete process.env.DATABASE_URL;
 
     await expect(runExportQuestionFeedback([])).rejects.toThrow(
-      /DATABASE_URL environment variable is required/,
+      /explicit DATABASE_URL.*implicit.*fallback/i,
     );
+  });
+
+  it('refuses a remote target without exact acknowledgement before opening the database client', async () => {
+    process.env.DATABASE_URL =
+      'postgresql://remote-user:remote-password@db.example/app';
+    delete process.env.DB_TARGET_ACK;
+    const createSql = vi.fn(() => ({
+      end: vi.fn().mockResolvedValue(undefined),
+    }));
+
+    await expect(
+      runExportQuestionFeedback(
+        [],
+        createWritableSink(),
+        createWritableSink(),
+        {
+          createSql,
+          createDb: () => ({}),
+          readRows: () => Promise.resolve([]),
+        },
+      ),
+    ).rejects.toThrow('DB_TARGET_ACK must exactly equal ["db.example/app"]');
+
+    expect(createSql).not.toHaveBeenCalled();
   });
 
   it('writes formatted output, privacy warnings, and closes the database client', async () => {
     process.env.DATABASE_URL =
-      'postgresql://postgres:postgres@localhost:5434/addiction_boards_test';
+      'postgresql://postgres:postgres@localhost:55432/addiction_boards_test';
     const output = createWritableSink();
     const errorOutput = createWritableSink();
     const sql = {
@@ -366,6 +423,10 @@ describe('runExportQuestionFeedback', () => {
     expect(errorOutput.text()).toContain(
       'WARNING: --include-comments exports free-text comments',
     );
+    expect(errorOutput.text()).toContain(
+      'Database target: LOCAL localhost:55432/addiction_boards_test',
+    );
+    expect(errorOutput.text()).not.toContain('postgres:postgres');
     expect(sql.end).toHaveBeenCalledWith({ timeout: 5 });
   });
 
