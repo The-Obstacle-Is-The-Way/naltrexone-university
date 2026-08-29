@@ -1,7 +1,7 @@
 # BUG-307: Public Playwright Artifacts Expose TEST Session Credentials
 
-**Status:** Open
-**Resolution State:** Fix implemented; promoted-artifact scan pending
+**Status:** Resolved
+**Resolution State:** Promoted to `main`; post-merge CI, deploy, and artifact scan verified 2026-08-28
 **Severity:** P2
 **Date:** 2026-08-28
 **Confirmed:** 2026-08-26; scope corrected and owner containment reverified 2026-08-28
@@ -138,10 +138,23 @@ model beyond the two known workflows:
   shapes, trace policy, and Stripe redaction. The corrected focused run passed
   73/73 across those contracts plus the existing session-diagnostic suite.
 
-The bug stays Open for exactly one reason: a promoted artifact does not exist
-until this change reaches `main`, so the required non-printing credential-shape
-scan cannot yet have a truthful receipt. No source-code or workflow-shape gap
-remains open.
+## Closure Receipt (2026-08-28)
+
+Source PR #865 was CodeRabbit-APPROVED on exact head `829ae687` with zero
+unresolved threads and green CI run `33217468155`, then merged to `dev` as
+`481b6ee2`. Promotion PR #866 was CodeRabbit-APPROVED on exact head `481b6ee2`
+with zero unresolved threads and green promotion CI run `33220909431`, then
+merged to `main` as `7af01e44`. `origin/dev` and `origin/main` were
+tree-identical at `683d9b6766c37a48c5c8b883b8984bae8bbdf0b0`.
+
+Post-merge main run `33227567754` passed its required `test` job, including the
+first E2E execution, and its production deploy trigger. The successful E2E step
+published one `playwright-report` artifact and correctly skipped the
+failure-only results upload. A non-printing scan downloaded that promoted
+artifact and counted one file, zero auth-state files, zero trace archives, and
+zero files containing an unredacted Clerk credential shape or standing Stripe
+TEST object-identifier shape. The scan status was PASS; no matched content or
+identifier was printed.
 
 ## Verification
 
@@ -153,19 +166,19 @@ remains open.
       on the corrected shapes.
 - [x] E2E console output redacts Clerk credential fields and Stripe TEST object
       identifiers without printing matched values.
-- [ ] The promoted artifact passes a non-printing credential-shape scan.
+- [x] The promoted artifact passes a non-printing credential-shape scan.
 
 ## Related
 
-- [BUG-305](../_archive/bugs/bug-305-clerk-dev-browser-credential-in-ci-logs.md)
+- [BUG-305](./bug-305-clerk-dev-browser-credential-in-ci-logs.md)
   — resolved console-log surface whose exposure history this filing corrects.
-- [BUG-306](../_archive/bugs/bug-306-required-e2e-clerk-session-loss-and-accumulation.md)
+- [BUG-306](./bug-306-required-e2e-clerk-session-loss-and-accumulation.md)
   — resolved suite-session lifecycle defect that created the backlog.
-- [BUG-304](./bug-304-practice-session-start-no-navigation.md) — remains Open
+- [BUG-304](../../bugs/bug-304-practice-session-start-no-navigation.md) — remains Open
   because its application-owned silent-handler seam still exists.
-- [DEBT-471](../debt/debt-471-e2e-ci-external-fragility.md) — owns the hosted
+- [DEBT-471](../../debt/debt-471-e2e-ci-external-fragility.md) — owns the hosted
   Checkout drift classification and non-blocking cadence.
-- [DEBT-473](../debt/debt-473-green-without-evidence.md) — owns complete CI
+- [DEBT-473](../../debt/debt-473-green-without-evidence.md) — owns complete CI
   evidence reporting.
-- [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) — owns
+- [DEBT-474](../../debt/debt-474-ci-secret-scope-and-action-immutability.md) — owns
   CI credential scope and action immutability.

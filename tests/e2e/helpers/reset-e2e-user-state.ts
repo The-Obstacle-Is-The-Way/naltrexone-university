@@ -24,6 +24,7 @@ const DETERMINISTIC_BASELINE = {
 const DETERMINISTIC_BASELINE_COMPLETED_SESSION_COUNT = 1;
 const DETERMINISTIC_BASELINE_ATTEMPT_COUNT = 2;
 const DETERMINISTIC_BASELINE_BOOKMARK_COUNT = 1;
+const DETERMINISTIC_BASELINE_PLACEHOLDER_BOOKMARK_COUNT = 1;
 const DETERMINISTIC_BASELINE_QUESTION_STATE_COUNT = Object.keys(
   REQUIRED_QUESTION_SLUGS,
 ).length;
@@ -115,6 +116,7 @@ export type E2EUserStateResetServices = {
     databaseUrl: string;
     sql: E2EResetSql;
     userId: string;
+    questionFixtures: RequiredQuestionFixtures;
   }) => Promise<void>;
 };
 
@@ -515,7 +517,7 @@ const defaultServices: E2EUserStateResetServices = {
     }
   },
 
-  verifyDeterministicBaseline: async ({ sql, userId }) => {
+  verifyDeterministicBaseline: async ({ sql, userId, questionFixtures }) => {
     try {
       const rows = await sql<
         {
@@ -523,6 +525,7 @@ const defaultServices: E2EUserStateResetServices = {
           completedSessions: number;
           attemptCount: number;
           bookmarkCount: number;
+          placeholderBookmarkCount: number;
           questionStateCount: number;
         }[]
       >`
@@ -551,6 +554,12 @@ const defaultServices: E2EUserStateResetServices = {
           ) AS "bookmarkCount",
           (
             SELECT COUNT(*)::int
+            FROM bookmarks
+            WHERE user_id = ${userId}
+              AND question_id = ${questionFixtures.placeholder01Id}
+          ) AS "placeholderBookmarkCount",
+          (
+            SELECT COUNT(*)::int
             FROM practice_session_question_states state
             WHERE state.practice_session_id = ${DETERMINISTIC_BASELINE.sessionId}
           ) AS "questionStateCount"
@@ -561,6 +570,7 @@ const defaultServices: E2EUserStateResetServices = {
       const completedSessions = baseline?.completedSessions ?? 0;
       const attemptCount = baseline?.attemptCount ?? 0;
       const bookmarkCount = baseline?.bookmarkCount ?? 0;
+      const placeholderBookmarkCount = baseline?.placeholderBookmarkCount ?? 0;
       const questionStateCount = baseline?.questionStateCount ?? 0;
 
       if (
@@ -568,6 +578,8 @@ const defaultServices: E2EUserStateResetServices = {
         completedSessions !== DETERMINISTIC_BASELINE_COMPLETED_SESSION_COUNT ||
         attemptCount !== DETERMINISTIC_BASELINE_ATTEMPT_COUNT ||
         bookmarkCount !== DETERMINISTIC_BASELINE_BOOKMARK_COUNT ||
+        placeholderBookmarkCount !==
+          DETERMINISTIC_BASELINE_PLACEHOLDER_BOOKMARK_COUNT ||
         questionStateCount !== DETERMINISTIC_BASELINE_QUESTION_STATE_COUNT
       ) {
         throw new E2EUserStateResetError(
@@ -671,6 +683,7 @@ export async function runE2EUserStateReset(
       databaseUrl,
       sql,
       userId: appUserId,
+      questionFixtures,
     });
   } catch (error) {
     if (error instanceof E2EUserStateResetError) {
