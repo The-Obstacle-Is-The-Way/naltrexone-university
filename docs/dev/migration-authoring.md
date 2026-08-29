@@ -1,6 +1,6 @@
 # Migration Authoring
 
-**Last Updated:** 2026-07-21
+**Last Updated:** 2026-08-29
 
 This guide is the durable review checklist for Drizzle migration files. It
 complements [Deployment Procedure](./deployment-procedure.md), which describes
@@ -113,6 +113,20 @@ sweep after promotion; do not describe the pre-build scan as complete coverage.
 Never use `drizzle-kit push` for this repository. It bypasses checked-in
 migration files and can miss extensions, constraints, custom SQL, and ledger
 history.
+
+The supported migration-generation entry is `pnpm db:generate`. Supply the
+database target explicitly; the command refuses dotenv fallback, classifies the
+target through the same human database boundary as migrate/studio/seed, prints
+only a credential-free target identity, and requires the exact `DB_TARGET_ACK`
+it reports before using a remote target:
+
+```bash
+DATABASE_URL="<verified target connection string>" pnpm db:generate
+```
+
+Do not invoke the raw dependency CLI for repository work. It loads
+`drizzle.config.ts` directly and therefore does not provide the package entry's
+human acknowledgement boundary.
 
 Git-triggered Vercel Preview and Production deploys run a content/ledger
 pre-check, the checked-in migration journal, an exact post-check, and then the
