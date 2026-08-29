@@ -360,7 +360,9 @@ describe('package scripts', () => {
   });
 
   it('fails both lint entry points when Biome reports a warning', () => {
-    expect(packageJson.scripts.lint).toBe('biome check . --error-on-warnings');
+    expect(packageJson.scripts.lint).toBe(
+      'biome check . --error-on-warnings && pnpm lint:doubles',
+    );
     expect(packageJson.scripts['lint:ci']).toBe(
       'biome ci . --error-on-warnings',
     );

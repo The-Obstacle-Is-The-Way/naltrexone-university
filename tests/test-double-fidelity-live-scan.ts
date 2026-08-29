@@ -46,8 +46,30 @@ export function collectLiveTestDoubleRatchetIssues(): LiveTestDoubleRatchetIssue
   };
 }
 
-function runCli(): void {
-  process.stdout.write(JSON.stringify(collectLiveTestDoubleRatchetIssues()));
+function assertNoLiveTestDoubleRatchetIssues(
+  issues: LiveTestDoubleRatchetIssues,
+): void {
+  const violations = [
+    ...issues.ownCodeModuleMocks,
+    ...issues.unknownDoubleCasts,
+    ...issues.handRolledPortDoubles,
+  ];
+
+  if (violations.length > 0) {
+    throw new Error(
+      `Test-double fidelity ratchet failed:\n${violations
+        .map((violation) => `- ${violation}`)
+        .join('\n')}`,
+    );
+  }
+}
+
+export function runCli(
+  collectIssues: () => LiveTestDoubleRatchetIssues = collectLiveTestDoubleRatchetIssues,
+): void {
+  const issues = collectIssues();
+  assertNoLiveTestDoubleRatchetIssues(issues);
+  process.stdout.write('PASS test-double-fidelity issues=0\n');
 }
 
 const executedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
