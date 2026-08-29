@@ -1,12 +1,9 @@
 import { pathToFileURL } from 'node:url';
-import dotenv from 'dotenv';
 import { desc, eq } from 'drizzle-orm';
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '../db/schema';
-
-dotenv.config({ path: '.env.local', quiet: true });
-dotenv.config({ path: '.env', quiet: true });
+import { runHumanDatabaseCommand } from './database-command';
 
 const REDACTED_USER_ID = '[redacted]';
 
@@ -191,27 +188,27 @@ export async function runExportQuestionFeedback(
     unknown
   > = DEFAULT_DEPS,
 ): Promise<void> {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error(
-      'DATABASE_URL environment variable is required for export:feedback',
-    );
-  }
+  await runHumanDatabaseCommand({
+    execute: async (databaseUrl) => {
+      const options = parseQuestionFeedbackExportArgs(argv);
+      for (const warning of getQuestionFeedbackExportPrivacyWarnings(options)) {
+        errorOutput.write(`${warning}\n`);
+      }
 
-  const options = parseQuestionFeedbackExportArgs(argv);
-  for (const warning of getQuestionFeedbackExportPrivacyWarnings(options)) {
-    errorOutput.write(`${warning}\n`);
-  }
+      const sql = deps.createSql(databaseUrl);
+      const db = deps.createDb(sql);
 
-  const sql = deps.createSql(databaseUrl);
-  const db = deps.createDb(sql);
-
-  try {
-    const rows = await deps.readRows(db);
-    output.write(formatQuestionFeedbackExport(rows, options));
-  } finally {
-    await sql.end({ timeout: 5 });
-  }
+      try {
+        const rows = await deps.readRows(db);
+        output.write(formatQuestionFeedbackExport(rows, options));
+      } finally {
+        await sql.end({ timeout: 5 });
+      }
+    },
+    log: (message) => {
+      errorOutput.write(`${message}\n`);
+    },
+  });
 }
 
 function toExportRecord(
