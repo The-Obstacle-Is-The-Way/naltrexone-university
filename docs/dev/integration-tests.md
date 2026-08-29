@@ -177,6 +177,6 @@ DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 
 The tags table is empty because `pnpm db:seed` was not run. See Step 3 above.
 
-**`drizzle.config.ts` reads `.env.local` first**
+**Raw Drizzle Kit configuration reads `.env.local` first**
 
-`drizzle-kit` commands without an explicit `DATABASE_URL` prefix will use `.env.local`, which points to your remote Neon database — not the local test container. Always prefix drizzle-kit and db:migrate/db:seed commands with the test DATABASE_URL when targeting the local test DB.
+The supported `db:generate`, `db:migrate`, `db:studio`, and `db:seed` package entries refuse an implicit target and require an explicit `DATABASE_URL`; remote human targets also require the exact redacted `DB_TARGET_ACK` reported by the command. A raw dependency-CLI invocation loads `drizzle.config.ts` directly and can still resolve `.env.local`, so do not use it for repository work. Always prefix the supported package command with the resolver-selected test `DATABASE_URL` when targeting the local test database.

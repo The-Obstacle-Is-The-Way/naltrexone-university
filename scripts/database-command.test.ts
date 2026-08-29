@@ -58,12 +58,16 @@ describe('database command target boundary', () => {
     expect(execute).toHaveBeenCalledWith(databaseUrl);
   });
 
-  it('routes migrate, studio, and seed through thin human wrappers with no managed flag', () => {
+  it('routes generate, migrate, studio, and seed through thin human wrappers with no managed flag', () => {
+    expect(packageJson.scripts['db:generate']).toBe(
+      'tsx scripts/db-generate.ts',
+    );
     expect(packageJson.scripts['db:migrate']).toBe('tsx scripts/db-migrate.ts');
     expect(packageJson.scripts['db:studio']).toBe('tsx scripts/db-studio.ts');
     expect(packageJson.scripts['db:seed']).toBe('tsx scripts/db-seed.ts');
 
     for (const file of [
+      'scripts/db-generate.ts',
       'scripts/db-migrate.ts',
       'scripts/db-studio.ts',
       'scripts/db-seed.ts',
