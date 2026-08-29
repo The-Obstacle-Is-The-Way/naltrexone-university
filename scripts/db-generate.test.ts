@@ -59,4 +59,27 @@ describe('db:generate target boundary', () => {
     expect(JSON.stringify(logs)).not.toContain('local-user');
     expect(JSON.stringify(logs)).not.toContain('local-password');
   });
+
+  it('forwards Drizzle Kit options after target authorization', async () => {
+    const calls: Array<{ args: readonly string[]; databaseUrl: string }> = [];
+
+    await runDbGenerate({
+      args: ['--name=add-practice-index'],
+      env: {
+        DATABASE_URL:
+          'postgresql://local-user:local-password@127.0.0.1:55432/app',
+      },
+      runProcess: async (args, databaseUrl) => {
+        calls.push({ args, databaseUrl });
+      },
+      log: () => {},
+    });
+
+    expect(calls[0]?.args).toEqual([
+      'exec',
+      'drizzle-kit',
+      'generate',
+      '--name=add-practice-index',
+    ]);
+  });
 });

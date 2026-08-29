@@ -115,7 +115,7 @@ migration files and can miss extensions, constraints, custom SQL, and ledger
 history.
 
 The supported migration-generation entry is `pnpm db:generate`. Supply the
-schema source explicitly; the command refuses dotenv fallback, classifies the
+database target explicitly; the command refuses dotenv fallback, classifies the
 target through the same human database boundary as migrate/studio/seed, prints
 only a credential-free target identity, and requires the exact `DB_TARGET_ACK`
 it reports before using a remote target:
