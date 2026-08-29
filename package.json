@@ -24,7 +24,7 @@
     "quality:crap": "tsx scripts/crap-report.ts",
     "test:e2e": "tsx scripts/run-local-e2e.ts --project=chromium",
     "test:e2e:stripe-hosted": "tsx scripts/run-local-e2e.ts --project=stripe-hosted",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "tsx scripts/db-generate.ts",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:seed": "tsx scripts/db-seed.ts",
     "db:studio": "tsx scripts/db-studio.ts",
