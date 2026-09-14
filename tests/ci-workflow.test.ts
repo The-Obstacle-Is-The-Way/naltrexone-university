@@ -160,6 +160,22 @@ function findStepBlock(workflow: string, stepName: string): string {
 }
 
 describe('CI workflow', () => {
+  it('runs the blocking test-double fidelity command before unit tests', () => {
+    const steps = findParsedJob(CI_WORKFLOW_PATH, 'test').steps ?? [];
+    const fidelityIndex = steps.findIndex(
+      (step) => step.name === 'Test-double fidelity',
+    );
+    const unitIndex = steps.findIndex(
+      (step) => step.name === 'Unit tests with coverage',
+    );
+
+    expect(findParsedStep(CI_WORKFLOW_PATH, 'Test-double fidelity').run).toBe(
+      'pnpm lint:doubles',
+    );
+    expect(fidelityIndex).toBeGreaterThan(-1);
+    expect(fidelityIndex).toBeLessThan(unitIndex);
+  });
+
   it('keeps the Dependabot E2E omission explicit pending the credential decision', () => {
     const stepBlock = findStepBlock(readCiWorkflow(), 'E2E smoke');
 
