@@ -64,9 +64,12 @@ overrides:
   # four inherited CVEs (memory-safety on untrusted image input): CVE-2026-33327
   # (VIPS dimension overflow), CVE-2026-33328 (GIF integer overflow, 32-bit),
   # CVE-2026-35591 (TIFF tile-channel handling), CVE-2026-35590 (EXIF range
-  # validation). Patched in sharp 0.35.0 (libvips 8.18.3); pinned to 0.35.3, the
-  # latest patch. Transitive via next@16.2.12, which still declares ^0.34.5, so
-  # an override is required until Next widens its range.
+  # validation). Patched in sharp 0.35.0 (libvips 8.18.3); pinned to 0.35.4, the
+  # latest patch. Next 16.3.4 itself declares ^0.35.4: it re-enabled AVIF
+  # optimization only once sharp 0.35.4 shipped the libheif 1.23.2 fix for
+  # GHSA-2xp9-vwfh-vxw4 (unauthenticated AVIF RCE in Image Optimization). The
+  # exact pin stays as defense-in-depth so no transitive range can resolve
+  # below that patched floor.
   # No reachable attacker path here today: no next/image usage, no
   # images.remotePatterns in next.config.ts, no direct sharp import, no image
   # upload — so this is defense-in-depth for the installed binary and any future
@@ -74,8 +77,8 @@ overrides:
   # Vercel's own pipeline, not this sharp). Next's optimizer touches only
   # surviving 0.35 APIs (metadata/resize/rotate/format/toBuffer), none of the
   # removed surface (failOnError, paletteBitDepth, format.jp2k). Aged past the
-  # 7-day release gate (published 2026-07-01).
-  sharp: 0.35.3
+  # 7-day release gate (0.35.4 published 2026-08-26).
+  sharp: 0.35.4
 trustPolicy: no-downgrade
 trustPolicyExclude:
   - semver@6.3.1 # legacy Babel dependency published in 2023; exact exception for no-downgrade provenance gap.
