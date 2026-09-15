@@ -139,7 +139,7 @@ Local-environment note: the first browser-lane run failed with `Executable doesn
 - `dev` lockfile resolves `fast-uri@3.1.7`, `js-yaml@3.15.2`, `vitest@4.1.11`, `@vitest/mocker@4.1.11`, `@vitest/browser-playwright@4.1.11`, `@vitest/coverage-v8@4.1.11`; `stream-json` stays `1.9.1` with the rationale above.
 - `package.json` changes only the three vitest-family caret floors (`^4.1.7` → `^4.1.11`); `pnpm-workspace.yaml` gains no `minimumReleaseAgeExclude`.
 - Full gate green on the PR head, including browser and E2E lanes; CodeRabbit review on the exact head.
-- After promotion, seven alerts show `fixed`; #55 is dismissed (owner-approved) or remains open with this record linked.
+- After promotion, the seven alerts this PR targets (#51–#54, #56, #57, #63) show `fixed`, bringing the batch total to twelve of the original thirteen (five from #886 plus these seven); #55 is dismissed (owner-approved) or remains open with this record linked.
 
 ## Risk and reversibility
 
@@ -149,6 +149,6 @@ Local-environment note: the first browser-lane run failed with `Executable doesn
 
 ## Done when
 
-- The remediation PR is merged to `dev` and promoted, the seven pinnable alerts are `fixed`, and #55 carries an owner-approved dismissal or a linked open rationale.
+- The remediation PR is merged to `dev` and promoted, twelve of the thirteen alerts are `fixed` (five via #886, seven via this PR), and #55 carries an owner-approved dismissal or a linked open rationale.
 - The `fast-uri` 3.1.8 follow-up has landed after 2026-09-22.
 - This record moves to `docs/_archive/debt/` with the alert-state receipt.
