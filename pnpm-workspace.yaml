@@ -27,13 +27,15 @@ overrides:
   '@opentelemetry/core': 2.8.0
   '@opentelemetry/resources': 2.8.0
   '@opentelemetry/sdk-trace-base': 2.8.0
-  # Security: GHSA-h67p-54hq-rp68 + GHSA-5p4m-2wfm-xmqj — repeated aliases
-  # and !!omap compact mappings could trigger quadratic CPU use. Transitive via
-  # gray-matter and Clerk test tooling over first-party YAML/Markdown only, so
-  # defense-in-depth. Alert #46 retargeted the v3 backport from 3.15.0 to 3.15.1,
-  # which satisfies both consumers' ^3.13.1. Aged past the 7-day gate as of
-  # 2026-08-07 (published 2026-07-31).
-  js-yaml: 3.15.1
+  # Security: GHSA-2883-xcg3-v3hh (CVE-2026-84375) — maxTotalMergeKeys did not
+  # bound CPU for empty merge sources; the earlier GHSA-h67p-54hq-rp68 +
+  # GHSA-5p4m-2wfm-xmqj alias/!!omap quadratic-CPU fixes remain covered.
+  # Transitive via gray-matter and Clerk's react-native/istanbul test tooling
+  # over first-party YAML/Markdown only, so defense-in-depth. Alert #63
+  # retargeted the v3-legacy line from 3.15.1 to 3.15.2, which satisfies both
+  # consumers' ^3.13.1 (DEBT-476). Aged past the 7-day gate as of 2026-09-02
+  # (published 2026-08-26).
+  js-yaml: 3.15.2
   # Security: GHSA-mh99-v99m-4gvg + GHSA-rgw5-rvv9-x895 — unbounded brace
   # expansion could allocate oversized intermediate arrays and exhaust memory.
   # Build/test globs are repository-controlled. Scoped to minimatch@10's 5.x
@@ -46,13 +48,17 @@ overrides:
   # deliberately scoped away from the 5.x override. Aged past the 7-day gate as
   # of 2026-08-07 (published 2026-07-30).
   'brace-expansion@1': 1.1.18
-  # Security: GHSA-v2hh-gcrm-f6hx + GHSA-7p8r-x3mc-p8w7 — literal backslashes
-  # could confuse host/authority parsing relative to WHATWG URL semantics.
-  # Transitive through ajv under Sentry's webpack path; this Turbopack build does
-  # not execute that path, so defense-in-depth (issue #703). Alert #40 retargeted
-  # 3.1.4 to 3.1.5, which satisfies ajv's ^3.0.1. Aged past the 7-day gate as of
-  # 2026-08-07 (published 2026-07-31).
-  fast-uri: 3.1.5
+  # Security: GHSA-5jgf-p345-68v8 + GHSA-fph4-wmhf-6fwf + GHSA-f65p-4m7j-42xc +
+  # GHSA-jqff-g426-hqxp — host confusion / SSRF via IDN, percent-decoding, IPv6,
+  # and percent-encoded scheme (fixed in 3.1.6), plus GHSA-qw65-cvwx-89v3 +
+  # GHSA-58mr-gqgx-xq4g — port authority injection and unbalanced IP-literal
+  # brackets (fixed in 3.1.7). Transitive through ajv under Sentry's webpack
+  # path; this Turbopack build does not execute that path, so defense-in-depth
+  # (issue #703). Alerts #51-#54 retargeted 3.1.5 to 3.1.7, which satisfies
+  # ajv's ^3.0.1 (DEBT-476). 3.1.8 (GHSA-hrr3-gc8f-f4qj, host case
+  # normalization, medium) ages past the 7-day gate 2026-09-22T07:36Z; move the
+  # pin then. Aged past the 7-day gate as of 2026-09-09 (published 2026-09-02).
+  fast-uri: 3.1.7
   # Security: GHSA-2v37-7h3g-55p8 — custom nanoid generators can loop
   # indefinitely when size is zero. The 2026-08-14 advisory revision moved the
   # patched floor to 3.3.18. Transitive via postcss@8.5.23 (build-time CSS

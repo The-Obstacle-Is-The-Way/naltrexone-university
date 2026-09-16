@@ -93,7 +93,8 @@ out. There are no current package-wide bootstrap exceptions.
 ### Worked example: js-yaml CVE-2026-53550 (2026-06-29)
 
 > Historical snapshot: alert #46 later retargeted the patched v3 floor to
-> `3.15.1`; the live override now uses `3.15.1`, not the `3.15.0` shown below.
+> `3.15.1`, and alert #63 (CVE-2026-84375, DEBT-476) to `3.15.2`; the live
+> override now uses `3.15.2`, not the `3.15.0` shown below.
 
 Dependabot alert #13 flagged `js-yaml` (medium): CVE-2026-53550 /
 GHSA-h67p-54hq-rp68, a quadratic-complexity denial-of-service in merge-key
@@ -333,6 +334,19 @@ auditConfig:
 Do not add audit ignores proactively. An ignore is allowed only after a
 review concludes that the advisory is not reachable, is mitigated by other
 controls, or cannot be fixed without a larger migration.
+
+When an advisory has no compatible patched version at all, the record of
+that conclusion lives in a debt entry. The Dependabot alert is dismissed
+against that record only after the owner explicitly approves the
+dismissal; the record alone does not authorize it, and until that
+approval the alert stays open with the record linked rather than left to
+drift. The worked precedent is `stream-json` in
+[DEBT-476](../debt/debt-476-dependabot-alert-triage-2026-09.md) § F: the
+patched line is ESM-only with renamed entry points that the sole consumer
+cannot load, the vulnerable functions sit on no import path the
+application can take, and the upstream fix is a breaking release two
+majors away. CI does not run `pnpm audit`, so such a case gets no
+`ignoreGhsas` entry.
 
 ## Vercel deploy notes
 
