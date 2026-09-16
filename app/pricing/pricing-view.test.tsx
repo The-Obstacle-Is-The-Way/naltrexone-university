@@ -39,7 +39,27 @@ describe('app/pricing/pricing-view', () => {
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
     expect(html).not.toContain('Subscription needs attention');
-    expect(html).not.toContain('Manage Billing');
+    expect(html).not.toContain('Manage billing');
+  });
+
+  it('keeps both list-bearing plan cards left-aligned', () => {
+    const doc = parseHtml(
+      renderToStaticMarkup(
+        <PricingView
+          isEntitled={false}
+          banner={null}
+          subscribeMonthlyAction={async () => undefined}
+          subscribeAnnualAction={async () => undefined}
+        />,
+      ),
+    );
+    for (const plan of ['monthly', 'annual'] as const) {
+      const card = findHeadingByText(doc, PRICING_DATA[plan].name, {
+        level: 3,
+      })?.closest('[data-slot="card"]');
+      expect(card).not.toBeNull();
+      expect(card?.classList.contains('text-center')).toBe(false);
+    }
   });
 
   it('renders renewal disclosure before each trial CTA', () => {

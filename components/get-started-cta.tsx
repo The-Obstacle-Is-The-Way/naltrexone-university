@@ -10,7 +10,7 @@ import type { LoadContainerFn } from '@/lib/controller-helpers';
 import { ROUTES } from '@/lib/routes';
 
 export type GetStartedCtaDeps = AuthCheckDeps;
-const ctaClassName = 'rounded-full px-8 py-3 text-base';
+const ctaClassName = 'h-auto rounded-full px-8 py-3 text-base';
 
 export async function GetStartedCta({
   deps,
@@ -25,7 +25,7 @@ export async function GetStartedCta({
   if (skipClerk) {
     return (
       <Button asChild className={ctaClassName}>
-        <Link href={ROUTES.PRICING}>Get Started</Link>
+        <Link href={ROUTES.PRICING}>Get started</Link>
       </Button>
     );
   }
@@ -34,7 +34,7 @@ export async function GetStartedCta({
   if (!authState.user) {
     return (
       <Button asChild className={ctaClassName}>
-        <Link href={ROUTES.PRICING}>Get Started</Link>
+        <Link href={ROUTES.PRICING}>Get started</Link>
       </Button>
     );
   }
@@ -43,8 +43,8 @@ export async function GetStartedCta({
     ? ROUTES.APP_DASHBOARD
     : ROUTES.PRICING;
   const label = authState.entitlement.isEntitled
-    ? 'Go to Dashboard'
-    : 'Get Started';
+    ? 'Go to dashboard'
+    : 'Get started';
 
   return (
     <Button asChild className={ctaClassName}>

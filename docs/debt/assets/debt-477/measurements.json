@@ -1,0 +1,4906 @@
+[
+  {
+    "state": "home",
+    "width": 390,
+    "url": "https://addictionboards.com/",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 298.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 16,
+          "y": 64,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 64,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 119.203125,
+          "y": 557,
+          "width": 151.578125,
+          "height": 36
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 has-[>svg]:px-3 rounded-full px-8 py-3 text-base"
+      },
+      {
+        "tag": "A",
+        "text": "View pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 130.671875,
+          "y": 609,
+          "width": 128.640625,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 has-[>svg]:px-3 h-auto rounded-full px-6 py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 49,
+          "y": 2942,
+          "width": 292,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 px-4 has-[>svg]:px-3 mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 50,
+          "y": 3288,
+          "width": 290,
+          "height": 44
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 px-4 has-[>svg]:px-3 mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 107.203125,
+          "y": 3645,
+          "width": 175.578125,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 148.03125,
+          "y": 3711,
+          "width": 93.921875,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 has-[>svg]:px-3 h-auto rounded-full px-6 py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 16,
+          "y": 3990,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 3990,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 3990,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 4018,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 4018,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 4018,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "privacy",
+    "width": 390,
+    "url": "https://addictionboards.com/privacy",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 298.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 64,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 64,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 16,
+          "y": 1094,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 176.984375,
+          "y": 2931,
+          "width": 204.484375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "left",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 138.84375,
+          "y": 6590,
+          "width": 204.484375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "left",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 58.25,
+          "y": 11718,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 16,
+          "y": 14304,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 14618,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 14618,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 14618,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 14646,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 14646,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 14646,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "terms",
+    "width": 390,
+    "url": "https://addictionboards.com/terms",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 298.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 64,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 64,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 44.484375,
+          "y": 1166,
+          "width": 101.78125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 84.984375,
+          "y": 1294,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 40,
+          "y": 3633,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 82.25,
+          "y": 4589,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 126.328125,
+          "y": 5634,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 16,
+          "y": 8288,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 16,
+          "y": 8781,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 16,
+          "y": 9924,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 10238,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 10238,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 10238,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 10266,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 10266,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 10266,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "404",
+    "width": 390,
+    "url": "https://accounts.addictionboards.com/sign-in?redirect_url=https%3A%2F%2Faddictionboards.com%2Freview-debt-477-not-found",
+    "status": 403,
+    "elements": [],
+    "overflow": true
+  },
+  {
+    "state": "sign-in",
+    "width": 390,
+    "url": "https://addictionboards.com/sign-in",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "BUTTON",
+        "text": "Apple",
+        "href": null,
+        "box": {
+          "x": 59,
+          "y": 309.046875,
+          "width": 272,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__apple cl-button__apple 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Google",
+        "href": null,
+        "box": {
+          "x": 59,
+          "y": 349.03125,
+          "width": 272,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__google cl-button__google 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 59,
+          "y": 447,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 223,
+          "y": 459.984375,
+          "width": 32,
+          "height": 25.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "color(srgb 1 1 1 / 0.41)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-formFieldInputShowPasswordButton cl-button 🔒️ cl-internal-18vgzcs"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Continue",
+        "href": null,
+        "box": {
+          "x": 59,
+          "y": 536.96875,
+          "width": 272,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(228, 228, 231)",
+        "classes": "cl-formButtonPrimary cl-button 🔒️ cl-internal-uwefea"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "https://addictionboards.com/sign-up",
+        "box": {
+          "x": 244.046875,
+          "y": 616.953125,
+          "width": 45.359375,
+          "height": 17.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(228, 228, 231)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-footerActionLink 🔒️ cl-internal-14s2hjp"
+      },
+      {
+        "tag": "A",
+        "text": "",
+        "href": "https://go.clerk.com/components",
+        "box": {
+          "x": 204.484375,
+          "y": 668.9375,
+          "width": 48,
+          "height": 14
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": true,
+        "color": "rgb(115, 115, 115)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-internal-1scxde7"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "sign-up",
+    "width": 390,
+    "url": "https://addictionboards.com/sign-up",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "BUTTON",
+        "text": "Apple",
+        "href": null,
+        "box": {
+          "x": 59,
+          "y": 277.046875,
+          "width": 272,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__apple cl-button__apple 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Google",
+        "href": null,
+        "box": {
+          "x": 59,
+          "y": 317.03125,
+          "width": 272,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__google cl-button__google 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 59,
+          "y": 415,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 296,
+          "y": 525.953125,
+          "width": 32,
+          "height": 25.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "color(srgb 1 1 1 / 0.41)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-formFieldInputShowPasswordButton cl-button 🔒️ cl-internal-18vgzcs"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Continue",
+        "href": null,
+        "box": {
+          "x": 59,
+          "y": 586.9375,
+          "width": 272,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(228, 228, 231)",
+        "classes": "cl-formButtonPrimary cl-button 🔒️ cl-internal-uwefea"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "https://addictionboards.com/sign-in",
+        "box": {
+          "x": 253.03125,
+          "y": 666.921875,
+          "width": 40.78125,
+          "height": 17.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(228, 228, 231)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-footerActionLink 🔒️ cl-internal-14s2hjp"
+      },
+      {
+        "tag": "A",
+        "text": "",
+        "href": "https://go.clerk.com/components",
+        "box": {
+          "x": 204.484375,
+          "y": 718.90625,
+          "width": 48,
+          "height": 14
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": true,
+        "color": "rgb(115, 115, 115)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-internal-1scxde7"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "home",
+    "width": 768,
+    "url": "https://addictionboards.com/",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 179.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 668.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 235.890625,
+          "y": 478,
+          "width": 151.578125,
+          "height": 36
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 has-[>svg]:px-3 rounded-full px-8 py-3 text-base"
+      },
+      {
+        "tag": "A",
+        "text": "View pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 403.46875,
+          "y": 473,
+          "width": 128.640625,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 has-[>svg]:px-3 h-auto rounded-full px-6 py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 57,
+          "y": 2182.5,
+          "width": 282,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 px-4 has-[>svg]:px-3 mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 430,
+          "y": 2171.5,
+          "width": 280,
+          "height": 44
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 px-4 has-[>svg]:px-3 mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 241.25,
+          "y": 2520.5,
+          "width": 175.578125,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 434.828125,
+          "y": 2521.5,
+          "width": 93.921875,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 has-[>svg]:px-3 h-auto rounded-full px-6 py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 377.28125,
+          "y": 2699.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 2699.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 2699.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 2699.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 2727.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 2727.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "privacy",
+    "width": 768,
+    "url": "https://addictionboards.com/privacy",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 179.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 668.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 383.609375,
+          "y": 782,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 295.03125,
+          "y": 1803,
+          "width": 204.484375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "left",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 190.125,
+          "y": 4110,
+          "width": 204.484375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "left",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 98.890625,
+          "y": 7102,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 56.640625,
+          "y": 8904,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 377.28125,
+          "y": 9086,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 9086,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 9086,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 9086,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 9114,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 9114,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "terms",
+    "width": 768,
+    "url": "https://addictionboards.com/terms",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 179.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 668.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 429.390625,
+          "y": 822,
+          "width": 101.78125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 125.625,
+          "y": 922,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 80.640625,
+          "y": 2501,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 80.640625,
+          "y": 3037,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 99.40625,
+          "y": 3742,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 56.640625,
+          "y": 5584,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 56.640625,
+          "y": 5909,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 56.640625,
+          "y": 6716,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 377.28125,
+          "y": 6898,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 6898,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 6898,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 6898,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 6926,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 6926,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "404",
+    "width": 768,
+    "url": "https://accounts.addictionboards.com/sign-in?redirect_url=https%3A%2F%2Faddictionboards.com%2Freview-debt-477-not-found",
+    "status": 403,
+    "elements": [],
+    "overflow": false
+  },
+  {
+    "state": "sign-in",
+    "width": 768,
+    "url": "https://addictionboards.com/sign-in",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "BUTTON",
+        "text": "Apple",
+        "href": null,
+        "box": {
+          "x": 223,
+          "y": 329.03125,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__apple cl-button__apple 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Google",
+        "href": null,
+        "box": {
+          "x": 388,
+          "y": 329.03125,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__google cl-button__google 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 223,
+          "y": 427,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 387,
+          "y": 439.984375,
+          "width": 32,
+          "height": 25.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "color(srgb 1 1 1 / 0.41)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-formFieldInputShowPasswordButton cl-button 🔒️ cl-internal-18vgzcs"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Continue",
+        "href": null,
+        "box": {
+          "x": 223,
+          "y": 516.96875,
+          "width": 322,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(228, 228, 231)",
+        "classes": "cl-formButtonPrimary cl-button 🔒️ cl-internal-uwefea"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "https://addictionboards.com/sign-up",
+        "box": {
+          "x": 433.046875,
+          "y": 596.953125,
+          "width": 45.359375,
+          "height": 17.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(228, 228, 231)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-footerActionLink 🔒️ cl-internal-14s2hjp"
+      },
+      {
+        "tag": "A",
+        "text": "",
+        "href": "https://go.clerk.com/components",
+        "box": {
+          "x": 393.484375,
+          "y": 648.9375,
+          "width": 48,
+          "height": 14
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": true,
+        "color": "rgb(115, 115, 115)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-internal-1scxde7"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "sign-up",
+    "width": 768,
+    "url": "https://addictionboards.com/sign-up",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "BUTTON",
+        "text": "Apple",
+        "href": null,
+        "box": {
+          "x": 223,
+          "y": 288.046875,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__apple cl-button__apple 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Google",
+        "href": null,
+        "box": {
+          "x": 388,
+          "y": 288.046875,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__google cl-button__google 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 223,
+          "y": 386.015625,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 510,
+          "y": 496.96875,
+          "width": 32,
+          "height": 25.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "color(srgb 1 1 1 / 0.41)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-formFieldInputShowPasswordButton cl-button 🔒️ cl-internal-18vgzcs"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Continue",
+        "href": null,
+        "box": {
+          "x": 223,
+          "y": 557.953125,
+          "width": 322,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(228, 228, 231)",
+        "classes": "cl-formButtonPrimary cl-button 🔒️ cl-internal-uwefea"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "https://addictionboards.com/sign-in",
+        "box": {
+          "x": 442.03125,
+          "y": 637.9375,
+          "width": 40.78125,
+          "height": 17.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(228, 228, 231)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-footerActionLink 🔒️ cl-internal-14s2hjp"
+      },
+      {
+        "tag": "A",
+        "text": "",
+        "href": "https://go.clerk.com/components",
+        "box": {
+          "x": 393.484375,
+          "y": 689.921875,
+          "width": 48,
+          "height": 14
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": true,
+        "color": "rgb(115, 115, 115)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-internal-1scxde7"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "home",
+    "width": 1024,
+    "url": "https://addictionboards.com/",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 187.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 916.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 363.890625,
+          "y": 526,
+          "width": 151.578125,
+          "height": 36
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 has-[>svg]:px-3 rounded-full px-8 py-3 text-base"
+      },
+      {
+        "tag": "A",
+        "text": "View pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 531.46875,
+          "y": 521,
+          "width": 128.640625,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 has-[>svg]:px-3 h-auto rounded-full px-6 py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 161,
+          "y": 2104.5,
+          "width": 306,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 px-4 has-[>svg]:px-3 mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 558,
+          "y": 2093.5,
+          "width": 304,
+          "height": 44
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 px-4 has-[>svg]:px-3 mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 369.25,
+          "y": 2442.5,
+          "width": 175.578125,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 562.828125,
+          "y": 2443.5,
+          "width": 93.921875,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 has-[>svg]:px-3 h-auto rounded-full px-6 py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 486.484375,
+          "y": 2621.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 2621.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 2621.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 2621.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 2621.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 2621.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "privacy",
+    "width": 1024,
+    "url": "https://addictionboards.com/privacy",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 187.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 916.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 519.609375,
+          "y": 782,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 429.828125,
+          "y": 1851,
+          "width": 204.484375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "left",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 325.171875,
+          "y": 4158,
+          "width": 204.484375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "left",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 234.890625,
+          "y": 7226,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 192.640625,
+          "y": 9056,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 486.484375,
+          "y": 9238,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 9238,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 9238,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 9238,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 9238,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 9238,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "terms",
+    "width": 1024,
+    "url": "https://addictionboards.com/terms",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 187.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 916.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 658.75,
+          "y": 822,
+          "width": 101.78125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 261.625,
+          "y": 922,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 216.640625,
+          "y": 2501,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 216.640625,
+          "y": 3065,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 302.96875,
+          "y": 3770,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 192.640625,
+          "y": 5668,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 192.640625,
+          "y": 5993,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 192.640625,
+          "y": 6800,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 486.484375,
+          "y": 6982,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 6982,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 6982,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 6982,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 6982,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 6982,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "404",
+    "width": 1024,
+    "url": "https://accounts.addictionboards.com/sign-in?redirect_url=https%3A%2F%2Faddictionboards.com%2Freview-debt-477-not-found",
+    "status": 403,
+    "elements": [],
+    "overflow": false
+  },
+  {
+    "state": "sign-in",
+    "width": 1024,
+    "url": "https://addictionboards.com/sign-in",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "BUTTON",
+        "text": "Apple",
+        "href": null,
+        "box": {
+          "x": 351,
+          "y": 329.03125,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__apple cl-button__apple 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Google",
+        "href": null,
+        "box": {
+          "x": 516,
+          "y": 329.03125,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__google cl-button__google 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 351,
+          "y": 427,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 515,
+          "y": 439.984375,
+          "width": 32,
+          "height": 25.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "color(srgb 1 1 1 / 0.41)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-formFieldInputShowPasswordButton cl-button 🔒️ cl-internal-18vgzcs"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Continue",
+        "href": null,
+        "box": {
+          "x": 351,
+          "y": 516.96875,
+          "width": 322,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(228, 228, 231)",
+        "classes": "cl-formButtonPrimary cl-button 🔒️ cl-internal-uwefea"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "https://addictionboards.com/sign-up",
+        "box": {
+          "x": 561.046875,
+          "y": 596.953125,
+          "width": 45.359375,
+          "height": 17.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(228, 228, 231)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-footerActionLink 🔒️ cl-internal-14s2hjp"
+      },
+      {
+        "tag": "A",
+        "text": "",
+        "href": "https://go.clerk.com/components",
+        "box": {
+          "x": 521.484375,
+          "y": 648.9375,
+          "width": 48,
+          "height": 14
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": true,
+        "color": "rgb(115, 115, 115)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-internal-1scxde7"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "sign-up",
+    "width": 1024,
+    "url": "https://addictionboards.com/sign-up",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "BUTTON",
+        "text": "Apple",
+        "href": null,
+        "box": {
+          "x": 351,
+          "y": 288.046875,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__apple cl-button__apple 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Google",
+        "href": null,
+        "box": {
+          "x": 516,
+          "y": 288.046875,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__google cl-button__google 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 351,
+          "y": 386.015625,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 638,
+          "y": 496.96875,
+          "width": 32,
+          "height": 25.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "color(srgb 1 1 1 / 0.41)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-formFieldInputShowPasswordButton cl-button 🔒️ cl-internal-18vgzcs"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Continue",
+        "href": null,
+        "box": {
+          "x": 351,
+          "y": 557.953125,
+          "width": 322,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(228, 228, 231)",
+        "classes": "cl-formButtonPrimary cl-button 🔒️ cl-internal-uwefea"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "https://addictionboards.com/sign-in",
+        "box": {
+          "x": 570.03125,
+          "y": 637.9375,
+          "width": 40.78125,
+          "height": 17.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(228, 228, 231)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-footerActionLink 🔒️ cl-internal-14s2hjp"
+      },
+      {
+        "tag": "A",
+        "text": "",
+        "href": "https://go.clerk.com/components",
+        "box": {
+          "x": 521.484375,
+          "y": 689.921875,
+          "width": 48,
+          "height": 14
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": true,
+        "color": "rgb(115, 115, 115)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-internal-1scxde7"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "home",
+    "width": 1440,
+    "url": "https://addictionboards.com/",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 267.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1252.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 571.890625,
+          "y": 526,
+          "width": 151.578125,
+          "height": 36
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 has-[>svg]:px-3 rounded-full px-8 py-3 text-base"
+      },
+      {
+        "tag": "A",
+        "text": "View pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 739.46875,
+          "y": 521,
+          "width": 128.640625,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 has-[>svg]:px-3 h-auto rounded-full px-6 py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 369,
+          "y": 2064.5,
+          "width": 306,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 px-4 has-[>svg]:px-3 mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 766,
+          "y": 2053.5,
+          "width": 304,
+          "height": 44
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 px-4 has-[>svg]:px-3 mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Get Started",
+        "href": "/pricing",
+        "box": {
+          "x": 577.25,
+          "y": 2402.5,
+          "width": 175.578125,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 770.828125,
+          "y": 2403.5,
+          "width": 93.921875,
+          "height": 46
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "oklab(0.269649 0.0000123158 0.00000539422 / 0.3)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-foreground/40 dark:hover:border-foreground/70 dark:hover:bg-input/50 has-[>svg]:px-3 h-auto rounded-full px-6 py-3 text-sm font-medium"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "#features",
+        "box": {
+          "x": 822.484375,
+          "y": 2581.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 2581.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 2581.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 2581.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 2581.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 2581.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "privacy",
+    "width": 1440,
+    "url": "https://addictionboards.com/privacy",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 267.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1252.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 727.609375,
+          "y": 782,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 637.828125,
+          "y": 1851,
+          "width": 204.484375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "left",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 533.171875,
+          "y": 4158,
+          "width": 204.484375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "left",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 442.890625,
+          "y": 7226,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 400.640625,
+          "y": 9056,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 822.484375,
+          "y": 9238,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 9238,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 9238,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 9238,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 9238,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 9238,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "terms",
+    "width": 1440,
+    "url": "https://addictionboards.com/terms",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 22,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 267.625,
+          "y": 24,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 24,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1252.078125,
+          "y": 16,
+          "width": 75.921875,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(9, 9, 9)",
+        "backgroundColor": "rgb(237, 237, 237)",
+        "classes": "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3 rounded-full"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 866.75,
+          "y": 822,
+          "width": 101.78125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 469.625,
+          "y": 922,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 424.640625,
+          "y": 2501,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 424.640625,
+          "y": 3065,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 510.96875,
+          "y": 3770,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 400.640625,
+          "y": 5668,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 400.640625,
+          "y": 5993,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "support@addictionboards.com",
+        "href": "mailto:support@addictionboards.com",
+        "box": {
+          "x": 400.640625,
+          "y": 6800,
+          "width": 233.703125,
+          "height": 22
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-sm font-medium text-foreground hover:underline ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 822.484375,
+          "y": 6982,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 6982,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 6982,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 6982,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 6982,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 6982,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(131, 131, 131)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "rounded-md text-muted-foreground transition-colors hover:text-foreground ring-focus"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "404",
+    "width": 1440,
+    "url": "https://accounts.addictionboards.com/sign-in?redirect_url=https%3A%2F%2Faddictionboards.com%2Freview-debt-477-not-found",
+    "status": 403,
+    "elements": [],
+    "overflow": false
+  },
+  {
+    "state": "sign-in",
+    "width": 1440,
+    "url": "https://addictionboards.com/sign-in",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "BUTTON",
+        "text": "Apple",
+        "href": null,
+        "box": {
+          "x": 559,
+          "y": 329.03125,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__apple cl-button__apple 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Google",
+        "href": null,
+        "box": {
+          "x": 724,
+          "y": 329.03125,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__google cl-button__google 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 559,
+          "y": 427,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 723,
+          "y": 439.984375,
+          "width": 32,
+          "height": 25.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "color(srgb 1 1 1 / 0.41)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-formFieldInputShowPasswordButton cl-button 🔒️ cl-internal-18vgzcs"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Continue",
+        "href": null,
+        "box": {
+          "x": 559,
+          "y": 516.96875,
+          "width": 322,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(228, 228, 231)",
+        "classes": "cl-formButtonPrimary cl-button 🔒️ cl-internal-uwefea"
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "https://addictionboards.com/sign-up",
+        "box": {
+          "x": 769.046875,
+          "y": 596.953125,
+          "width": 45.359375,
+          "height": 17.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(228, 228, 231)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-footerActionLink 🔒️ cl-internal-14s2hjp"
+      },
+      {
+        "tag": "A",
+        "text": "",
+        "href": "https://go.clerk.com/components",
+        "box": {
+          "x": 729.484375,
+          "y": 648.9375,
+          "width": 48,
+          "height": 14
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": true,
+        "color": "rgb(115, 115, 115)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-internal-1scxde7"
+      }
+    ],
+    "overflow": false
+  },
+  {
+    "state": "sign-up",
+    "width": 1440,
+    "url": "https://addictionboards.com/sign-up",
+    "status": 200,
+    "elements": [
+      {
+        "tag": "BUTTON",
+        "text": "Apple",
+        "href": null,
+        "box": {
+          "x": 559,
+          "y": 288.046875,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__apple cl-button__apple 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Google",
+        "href": null,
+        "box": {
+          "x": 724,
+          "y": 288.046875,
+          "width": 157,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "color(srgb 1 1 1 / 0.62)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-socialButtonsBlockButton cl-button cl-socialButtonsBlockButton__google cl-button__google 🔒️ cl-internal-a5k8yi"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 559,
+          "y": 386.015625,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false,
+        "color": "rgb(237, 237, 237)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": ""
+      },
+      {
+        "tag": "BUTTON",
+        "text": "",
+        "href": null,
+        "box": {
+          "x": 846,
+          "y": 496.96875,
+          "width": 32,
+          "height": 25.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "color(srgb 1 1 1 / 0.41)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-formFieldInputShowPasswordButton cl-button 🔒️ cl-internal-18vgzcs"
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Continue",
+        "href": null,
+        "box": {
+          "x": 559,
+          "y": 557.953125,
+          "width": 322,
+          "height": 31.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "center",
+        "hasSvg": true,
+        "color": "rgb(0, 0, 0)",
+        "backgroundColor": "rgb(228, 228, 231)",
+        "classes": "cl-formButtonPrimary cl-button 🔒️ cl-internal-uwefea"
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "https://addictionboards.com/sign-in",
+        "box": {
+          "x": 778.03125,
+          "y": 637.9375,
+          "width": 40.78125,
+          "height": 17.984375
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": false,
+        "color": "rgb(228, 228, 231)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-footerActionLink 🔒️ cl-internal-14s2hjp"
+      },
+      {
+        "tag": "A",
+        "text": "",
+        "href": "https://go.clerk.com/components",
+        "box": {
+          "x": 729.484375,
+          "y": 689.921875,
+          "width": 48,
+          "height": 14
+        },
+        "fontSize": "13px",
+        "textAlign": "start",
+        "hasSvg": true,
+        "color": "rgb(115, 115, 115)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "classes": "cl-internal-1scxde7"
+      }
+    ],
+    "overflow": false
+  }
+]

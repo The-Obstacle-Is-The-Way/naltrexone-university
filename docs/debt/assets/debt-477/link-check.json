@@ -1,0 +1,20 @@
+[
+  {
+    "file": "docs/debt/debt-477-landing-page-copy-and-cohesion.md",
+    "relativeTargets": 32,
+    "missing": [],
+    "unmatchedAnchors": []
+  },
+  {
+    "file": "docs/debt/debt-478-pricing-plan-consent-dialog.md",
+    "relativeTargets": 11,
+    "missing": [],
+    "unmatchedAnchors": []
+  },
+  {
+    "file": "docs/debt/index.md",
+    "relativeTargets": 498,
+    "missing": [],
+    "unmatchedAnchors": []
+  }
+]

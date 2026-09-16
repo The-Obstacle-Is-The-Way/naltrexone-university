@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes/fake-gateways';
 import { FakeCheckEntitlementUseCase } from '@/src/application/test-helpers/fakes/fake-use-cases';
 import { createUser } from '@/src/domain/test-helpers/factories';
@@ -14,6 +22,10 @@ vi.mock('next/link', () => ({
 }));
 
 const ORIGINAL_ENV = snapshotProcessEnv();
+let GetStartedCta: typeof import('./get-started-cta').GetStartedCta;
+beforeAll(async () => {
+  ({ GetStartedCta } = await import('./get-started-cta'));
+});
 
 describe('GetStartedCta', () => {
   beforeEach(() => {
@@ -22,13 +34,10 @@ describe('GetStartedCta', () => {
 
   afterEach(() => {
     restoreProcessEnv(ORIGINAL_ENV);
-    vi.resetModules();
     vi.restoreAllMocks();
   });
 
   it('links to /pricing when user is not entitled', async () => {
-    const { GetStartedCta } = await import('@/components/get-started-cta');
-
     const authGateway = new FakeAuthGateway(createUser());
     const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
       isEntitled: false,
@@ -40,13 +49,13 @@ describe('GetStartedCta', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('data-slot="button"');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(doc.querySelector('a')?.classList.contains('h-auto')).toBe(true);
     expect(html).toContain('href="/pricing"');
-    expect(html).toContain('Get Started');
+    expect(html).toContain('Get started');
   });
 
   it('links to /pricing when unauthenticated', async () => {
-    const { GetStartedCta } = await import('@/components/get-started-cta');
-
     const authGateway = new FakeAuthGateway(null);
     const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
       isEntitled: true,
@@ -58,14 +67,14 @@ describe('GetStartedCta', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('data-slot="button"');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(doc.querySelector('a')?.classList.contains('h-auto')).toBe(true);
     expect(html).toContain('href="/pricing"');
-    expect(html).toContain('Get Started');
+    expect(html).toContain('Get started');
     expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
 
   it('links to /app/dashboard when user is entitled', async () => {
-    const { GetStartedCta } = await import('@/components/get-started-cta');
-
     const authGateway = new FakeAuthGateway(createUser());
     const checkEntitlementUseCase = new FakeCheckEntitlementUseCase({
       isEntitled: true,
@@ -77,26 +86,26 @@ describe('GetStartedCta', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('data-slot="button"');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(doc.querySelector('a')?.classList.contains('h-auto')).toBe(true);
     expect(html).toContain('href="/app/dashboard"');
-    expect(html).toContain('Go to Dashboard');
+    expect(html).toContain('Go to dashboard');
   });
 
   it('links to /pricing when NEXT_PUBLIC_SKIP_CLERK=true', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'true';
 
-    const { GetStartedCta } = await import('@/components/get-started-cta');
-
     const element = await GetStartedCta({ deps: undefined });
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('data-slot="button"');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(doc.querySelector('a')?.classList.contains('h-auto')).toBe(true);
     expect(html).toContain('href="/pricing"');
-    expect(html).toContain('Get Started');
+    expect(html).toContain('Get started');
   });
 
   it('loads dependencies from the container when deps are omitted', async () => {
-    const { GetStartedCta } = await import('@/components/get-started-cta');
-
     const element = await GetStartedCta({
       options: {
         loadContainer: async () => ({
@@ -109,7 +118,9 @@ describe('GetStartedCta', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('data-slot="button"');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(doc.querySelector('a')?.classList.contains('h-auto')).toBe(true);
     expect(html).toContain('href="/pricing"');
-    expect(html).toContain('Get Started');
+    expect(html).toContain('Get started');
   });
 });

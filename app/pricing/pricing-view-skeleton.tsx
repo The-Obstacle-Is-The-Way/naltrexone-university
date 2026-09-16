@@ -78,7 +78,7 @@ export async function PricingViewSkeleton() {
             href={ROUTES.HOME}
             className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground ring-focus"
           >
-            Back to Home
+            Back to home
           </Link>
         </div>
       </div>
