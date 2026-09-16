@@ -38,7 +38,7 @@ Since SDK 22.4.0 Stripe types response enums as `'known' | 'values' | OtherStrin
 
 - **Response fields** are widened with `StripeOtherString`: Checkout Session `mode`, `payment_method_collection`, and (from SDK 22.6.1) `status`; subscription list `status`.
 - **Request filters** stay narrow (`StripeCheckoutSessionListParams.status`, `StripeSubscriptionListParams.status`) so the app can only ask Stripe for values it understands.
-- Consumers narrow before acting: `hasRecognizedCheckoutSessionStatus` and `isValidStripeSubscriptionStatus` fail closed on values outside the known set.
+- Consumers narrow before acting: `hasRecognizedCheckoutSessionStatus` and `isValidStripeSubscriptionStatus` fail closed on values outside the known set, and `isSessionInactive` treats every reported status other than `open` (including the empty string) as not reusable; only an absent status defers to the expiry check.
 
 A new widening in the SDK surfaces as `Type 'Stripe' is not assignable to type 'StripeClient'` at the composition root. `src/adapters/shared/stripe-types.test.ts` pins the whole contract (`expectTypeOf<Stripe>().toExtend<StripeClient>()`) so the failure lands in the adapter's own test before it lands in `lib/container/gateways.ts`.
 
