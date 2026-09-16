@@ -159,3 +159,13 @@ The current technical policies are:
 ## Source
 
 [New York General Business Law § 899-bb](https://www.nysenate.gov/legislation/laws/GBS/899-BB) requires reasonable administrative, technical, and physical safeguards. Subdivision 2(c) scales the program to a small business's size, complexity, activities, and data sensitivity; it does not remove the duty.
+
+## 2026-09-16 inventory and evidence supplement
+
+**Non-lawyer corrections F09/F11/F12 in the [DEBT-414 review](../debt/debt-414-public-legal-pages-privacy-terms.md#2026-09-16-non-lawyer-adversarial-pre-counsel-review).** Earlier dated adoption and provider records remain unchanged.
+
+- **Resend:** the September 16 activation record supersedes the older absent-account exception. The committed application sends subscription acknowledgments and renewal notices. A direct delivered test is not proof that the deployed application's queue and daily cron sent a notice within its statutory window. Record that separate evidence before relying on automated delivery.
+- **Analytics:** qualify § 5's August 13 “never instrumented, so nothing is collected” conclusion. The August 10 measurements establish no integration in the measured build/pages and no returned page-view groups in the observable 31-day window. Historical collection outside that window remains unverifiable. Do not expand those observations into an all-time absence claim.
+- **Conditional incident-data providers:** add Apple (Notes/iCloud) and Bitwarden (secure-note backup), as designated by the adopted incident procedure § 1. Potential data comprises limited incident facts, affected identifiers, notification records and decision evidence. The incident note is created at first use. Provider terms, access/recovery, encryption, retention and disposal review for this use are still to be recorded before affected-person data is stored. This entry is not a claim that the existing eight production providers were the complete possible data-flow inventory.
+- **Retention:** include incident evidence and its backup in the annual necessity/disposal review. Preserve a qualifying New York inadvertent-disclosure no-notice determination for at least five years; do not turn that minimum into a universal retention period for every incident artifact.
+- **Exercise:** the [incident procedure's September 16 supplement](./incident-response-and-breach-notification.md#2026-09-16-delivery-channel-supplement) adds the direct-electronic and substitute-notice channel decision missing from the prior exercise. Adoption is recorded; completeness of this new exercise is not.

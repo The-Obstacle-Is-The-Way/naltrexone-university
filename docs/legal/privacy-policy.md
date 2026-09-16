@@ -1,5 +1,7 @@
 # Privacy Policy — publication copy
 
+> **2026-09-16 revision: pending production verification.** Findings F11-F13 in [the non-lawyer adversarial review](../debt/debt-414-public-legal-pages-privacy-terms.md#2026-09-16-non-lawyer-adversarial-pre-counsel-review) explain these copy corrections. The following publication record describes the earlier baseline, not this revision.
+
 > **STATUS: PUBLICATION COPY; production verified 2026-08-08.** Signed-out production evidence is recorded in [promotion PR #760](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/760#issuecomment-5227563312). Its source was committed 2026-08-08.
 > It was independently re-audited against the repository on 2026-07-29. The audit corrected unsupported absolute claims about retention, deletion, analytics, Sentry, payment information, cookies, security, and United States-only processing. See *Provenance and adversarial verification* below.
 > Owner decision on record: draft in-house while the product is pre-revenue with no active users, and obtain focused legal review before paid user acquisition.
@@ -9,7 +11,7 @@
 
 ## Privacy Policy
 
-**Last updated: August 8, 2026**
+**Last updated: September 16, 2026**
 
 ## The short version
 
@@ -74,11 +76,13 @@ The following direct providers support the Service:
 | **Sentry** | Error monitoring and sampled server performance diagnostics | Errors, stack traces, page or route context, request context, browser/device information, and the narrow application attributes attached to sampled traces; submitted data can incidentally contain identifiers or content |
 | **ImprovMX** | Forwarding mail sent to support@addictionboards.com | Sender and recipient addresses, message contents, and attachments |
 | **Google Workspace (Google LLC)** | Receiving and storing mail forwarded by ImprovMX | Sender and recipient addresses, message contents, and attachments |
-| **Resend** | Sending transactional account, billing, renewal, and subscription notices when configured; messages remain queued without contacting Resend while the credential is absent | Recipient address, message contents, delivery status, and provider event identifiers |
+| **Resend** | Sending subscription acknowledgments and renewal notices | Recipient address, message contents, provider sending/delivery status, and message identifiers |
+| **Apple (Apple Notes and iCloud)** | Limited incident-response evidence storage, if needed | Incident details, affected identifiers, and notification records included in an incident log |
+| **Bitwarden** | Backup of limited incident-response evidence, if needed | Incident details, affected identifiers, and notification records included in a secure note |
 
 Sentry session replay is disabled. Server tracing is sampled at 5%; client tracing is disabled. Those settings reduce collection but do not establish that an error event can never contain personal information.
 
-The audited application build contains no Vercel Web Analytics component or analytics script. The repository does not establish the deployed project's current Web Analytics dashboard setting or that Web Analytics events are being transmitted; that setting remains an owner verification item. If an analytics script is activated, this policy and the notice at the collection point must be updated before relying on the feature.
+The application does not currently include Vercel Web Analytics or a product-analytics script. Hosting and error-monitoring logs remain in use as described above. We will update this policy and any required notice at the collection point before adding product analytics.
 
 We may also disclose information when reasonably required by valid legal process, to protect the Service or its users, or as part of a business transfer subject to applicable notice and legal requirements.
 
@@ -89,6 +93,8 @@ We may also disclose information when reasonably required by valid legal process
 - The audited application build has no product-analytics or tag-manager integration. Hosting, security, payment, and error-monitoring providers still process the technical and diagnostic information described above.
 - Session replay is disabled.
 - We do not use automated decision-making technology for legally or similarly significant decisions.
+
+On Stripe-hosted checkout and billing pages, Stripe may associate device and transaction information across businesses using Stripe for fraud prevention. If you use Link, Stripe may also recognize you across participating businesses. See [Stripe's Privacy Policy](https://stripe.com/privacy) for its practices and choices.
 
 ## Cookies and similar storage
 
@@ -107,7 +113,8 @@ The audited application code contains no first-party cookie-write call. Clerk us
 | Clerk event records | Handled event records currently have no automatic terminal deletion policy. |
 | Deleted-account record | A Clerk account identifier and deletion timestamp are retained without a current terminal deletion period to prevent unsafe recreation or reprocessing. |
 | Pending Stripe-customer cleanup record | Retained until the external customer-cleanup obligation succeeds. |
-| Support email and provider-held information | Retained under the relevant provider settings and policies, and as needed to respond, secure the Service, resolve disputes, or comply with law. The repository does not prove a single maximum period. |
+| Support email and provider-held information | Retained under the relevant provider settings and policies, and as needed to respond, secure the Service, resolve disputes, or comply with law. There is no single maximum period across these records. |
+| Incident-response evidence, if created | Limited records are retained as needed to investigate, provide required notices, and document legal decisions. A New York inadvertent-disclosure determination that individual notice is unnecessary must be retained for at least five years. Incident-record retention is reviewed at least annually. |
 
 ## Your choices and requests
 
@@ -121,7 +128,7 @@ Account deletion removes the local user row and user-linked application rows thr
 
 ## Security and breach notice
 
-We use service providers, access controls, transport security, logging, and other safeguards intended to protect personal information. Those controls are intended to limit access to the operator and authorized provider personnel with an operational need; the current provider and administrator access lists remain an owner verification item. No safeguard eliminates all risk.
+We use service providers, access controls, transport security, logging, and other safeguards intended to protect personal information. We review administrator access and limit it according to operational need. No safeguard eliminates all risk.
 
 If a breach triggers a legal notice duty, we will provide the notices and regulator reports required by applicable law. This public statement does not replace the separate written security and incident-response program required for operations.
 
@@ -201,3 +208,7 @@ No fourth application source call to `getClientIp` was found, and the source/dep
 - [CPPA regulations effective January 1, 2026](https://cppa.ca.gov/regulations/ccpa_updates.html), including privacy-policy, Notice at Collection, request-method, response-time, look-back, sensitive-information, and automated-decisionmaking provisions
 - [New York General Business Law § 899-bb — reasonable safeguards](https://www.nysenate.gov/legislation/laws/GBS/899-BB) and [§ 899-aa — breach notification](https://www.nysenate.gov/legislation/laws/GBS/899-AA)
 - [COPPA, 15 U.S.C. § 6502](https://uscode.house.gov/view.xhtml?edition=prelim&num=0&req=granuleid%3AUSC-prelim-title15-section6502)
+
+### 2026-09-16 copy correction record
+
+Applied F11-F13 from the [non-lawyer adversarial review](../debt/debt-414-public-legal-pages-privacy-terms.md#2026-09-16-non-lawyer-adversarial-pre-counsel-review): describe active Resend and its actual subscription-message scope; remove completed owner checks from public copy; disclose the incident procedure's conditional Apple/iCloud and Bitwarden stores and incident-record retention; explain Stripe's cross-business processing. The analytics statement describes the current build and does not assert that historical collection never occurred. Earlier dated evidence above is preserved. The public date and typed-page mirror changed together; Terms version and hash did not change. Production verification of this revision remains pending deployment.
