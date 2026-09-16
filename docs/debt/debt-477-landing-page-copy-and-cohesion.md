@@ -1,7 +1,7 @@
-# DEBT-477: Landing Page Copy and Cohesion — Retire the Arrow CTA, Unify Signed-Out CTA Casing and Size, Center the Plan Cards, and Split the Footer Link Row
+# DEBT-477: Landing Page Copy and Cohesion — Retire the Arrow CTA, Unify Signed-Out CTA Casing and Size, Keep Plan Cards Left-Aligned, and Split the Footer Link Row
 
 **Status:** Open — filed 2026-09-16 from an owner walkthrough of the live signed-out surfaces; evidence captured against production (`main` = `58a99635`, tree-identical to `dev` `a0d4378e` for every file cited here); no code changed yet. Owner decisions D1–D4 were recorded later the same day (D1 reversed: plan cards stay left-aligned; D2 held; D3 no; D4 as proposed). The `/pricing` composition and consent-copy proposal that arrived with them is verified and filed separately as [DEBT-478](./debt-478-pricing-plan-consent-dialog.md)
-**Priority:** P3 — no functional defect; every finding is a visible cohesion or copy inconsistency on the first-impression surfaces (`/`, `/pricing`, and the shared marketing header and footer)
+**Priority:** P3 — cohesion work plus the measured F12 contrast defect; every finding is a visible cohesion or copy inconsistency on the first-impression surfaces (`/`, `/pricing`, and the shared marketing header and footer)
 **Date:** 2026-09-16
 **Source:** Owner review of addictionboards.com on 2026-09-16: the bottom "Get Started" is the only CTA with a chevron and should be a plain button; the "Simple pricing" cards read left-aligned under a centered heading; the footer "is starting to look sloppy" with six links crowded on the right. An external design pass produced an eleven-item draft; the owner's rulings on this record's four decisions arrived later the same day together with a `/pricing` proposal (DEBT-478). This record re-verifies each item against source and against headless-Chromium measurements of production, corrects two of the draft's diagnoses (F3's "app chrome is sentence case throughout" and F8's direction of drift), and adds the design-system history the draft did not have.
 **Related:** [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) (Decision 2 approved the D-15 exception this debt retires), [DEBT-258](../_archive/debt/debt-258-marketing-alignment.md) (marketing CTA variants; Decision 1), [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) (hero copy), [DEBT-389](../_archive/debt/debt-389-footer-layout-brand-left-links-right.md) (footer brand-left / links-right layout, which this debt keeps), [DEBT-410](../_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) (trial CTA and disclosure copy), [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) (owns the consent disclosure strings in `lib/pricing-data.ts`; added the footer legal links in #727), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Typography Policy](../frontend/typography-policy.md), `.claude/rules/frontend.md`, [DEBT-478](./debt-478-pricing-plan-consent-dialog.md) (`/pricing` grid width, disclosure placement, and the `Back to home` link; owns everything on `/pricing` other than label casing and CTA size)
@@ -18,9 +18,9 @@ Between February and August 2026 the signed-out surfaces accumulated five small,
 4. DEBT-414 Stage 1 (2026-08-04, #727) appended **Privacy Policy** and **Terms of Service** to that same row, making six, without revisiting the layout.
 5. DEBT-410 (2026-08) made "Start 7-day free trial" (sentence case) the pricing-page CTA while the landing page kept "Get Started" (Title Case).
 
-The result is a page that mixes label casings, CTA heights, section-header alignments, and card alignments, and whose final call to action is the only element on any signed-out surface that carries an icon or an animated border. Nothing is broken; all of it reads as the work of several hands. The owner's three complaints are the three most visible symptoms; the measurements below found five more of the same kind.
+The result is a page that mixes label casings, CTA heights, section-header alignments, and card alignments, and whose final call to action is the only element on any signed-out surface that carries an icon or an animated border. The original findings concern cohesion; the adversarial pass also found the F12 contrast defect. The owner's three complaints are the three most visible symptoms; the measurements below found five more of the same kind.
 
-Every change proposed here moves code **toward** an existing rule in `docs/frontend/` or records a deliberate reversal of a documented decision. No new visual pattern is introduced. The registry rule "pattern doesn't exist? Add it here first" is honored by pairing each code change with its registry or standards edit in the same PR.
+Every change proposed here moves code **toward** an existing rule in `docs/frontend/` or records a deliberate reversal of a documented decision. New footer composition and marketing-eyebrow patterns are registered before implementation. The registry rule "pattern doesn't exist? Add it here first" is honored by pairing each code change with its registry or standards edit in the same PR.
 
 ## Evidence (production, 2026-09-16)
 
@@ -48,7 +48,7 @@ Each finding records: what is wrong, the rule or decision it drifts from, the co
 
 **Wrong.** The bottom "Get Started →" is `MetallicCtaButton`: an animated gradient border, a transparent face, and a trailing `ArrowRight`. It is the only CTA on `/` or `/pricing` with an icon, and the only primary action that is not a filled pill. Beside the outline "Sign in" pill, the closing section has **no filled primary at all**, so the page's last call to action has weaker hierarchy than its first.
 
-**Rule.** Pattern Registry Part 5 "Variant Usage Guide": primary page action = `default` + `rounded-full`. Registry Part 11 lists D-15 as the **only** remaining approved divergence; Standards line 871 says the same. Retiring it makes the marketing surface fully registry-conformant for the first time since the BS-035 audit.
+**Rule.** Pattern Registry Part 5 "Variant Usage Guide": primary page action = `default` + `rounded-full`. Registry Part 11 lists D-15 as the **only** remaining approved divergence; Standards line 871 says the same. Retiring it closes the last active entry in that historical divergence inventory; it does not establish universal conformance.
 
 **This is a deliberate reversal of DEBT-250 Decision 2** (2026-02-28: "keep MetallicCtaButton as documented marketing-only exception"). The owner's 2026-09-16 reasoning supersedes it: one-of-a-kind ornamentation on the closing CTA reads as inconsistency, not personality, now that every other CTA is a system pill. Record the reversal in Part 11 rather than deleting the row silently.
 
@@ -94,7 +94,7 @@ const ctaClassName = 'h-auto rounded-full px-8 py-3 text-base';
 <Button asChild className="h-auto rounded-full px-8 py-3 text-base">
 ```
 
-After the change the primary renders 48 px (`text-base` line-height 24 + `py-3` 24) beside the outline pill's 46 px (`text-sm` 20 + 24 + 2 px border). The remaining 2 px is the outline border and already exists between the two plan-card CTAs today (46 vs 44); it is not a defect and must not be "fixed" with an arbitrary padding value.
+After the change the primary renders 48 px (`text-base` line-height 24 + `py-3` 24) beside the outline pill's 46 px (`text-sm` 20 + 24 + 2 px border). The remaining 2 px is the 4 px line-height difference minus the outline’s 2 px border; it is not a defect and must not be "fixed" with an arbitrary padding value.
 
 **Docs.** Registry "Marketing Button Overrides" table: add a row — Hero primary "Get started" / "Go to dashboard" | `default` + `h-auto rounded-full px-8 py-3 text-base` | `h-auto` is required: without it Button's `h-9` overrides `py-3`.
 
@@ -156,7 +156,7 @@ Nothing else in the section changes; the card grid stays left-aligned inside its
 
 **Decision (owner, 2026-09-16): keep the plan cards left-aligned on both surfaces.** They are list-bearing content (name, price, feature list, full-width button), and a centered text stack over a full-width button never settles. The codebase agrees: of 53 `<Card>` open tags in `app/` and `components/`, only three are `text-center` — the landing impact stats (`marketing-home.tsx:109`) and the two single-message status cards on `/pricing` ("You're already subscribed", "Subscription needs attention"; `pricing-view.tsx:113,130`). Empty states (Standards § 9) are left-aligned too. The forwarded note's "every other card in the app is left-aligned" is slightly overstated; the accurate rule is recorded below.
 
-**Change.** None to the cards. A centered section heading over left-aligned content cards is the same relationship every app page has between its page title and its cards; once the Features header (F4) stops being the outlier, the landing page reads as one system. The width problem that made the `/pricing` cards feel wrong is a composition issue and belongs to [DEBT-478](./debt-478-pricing-plan-consent-dialog.md).
+**Change.** None to the cards. Centered marketing section headings can sit over left-aligned list-bearing cards; authenticated page titles are not uniformly centered. F4 aligns the marketing headings without changing the cards. The width problem that made the `/pricing` cards feel wrong is a composition issue and belongs to [DEBT-478](./debt-478-pricing-plan-consent-dialog.md).
 
 **Docs.** Registry 13.3 Showcase row (line 1232): "`p-8` | Marketing pricing cards, pricing page plan cards — content left-aligned. Only stat cards and single-message status cards are `text-center`."
 
@@ -182,7 +182,7 @@ and addiction medicine.
 <footer className="border-t border-border">
   <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
     <div className="grid gap-y-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-baseline md:gap-x-8">
-      <p className="font-bold font-heading text-foreground md:col-start-1 md:row-start-1">
+      <p className="text-base font-bold font-heading text-foreground md:col-start-1 md:row-start-1">
         Addiction Boards
       </p>
       <p className="text-sm text-muted-foreground md:col-start-1 md:row-start-2">
@@ -234,7 +234,7 @@ Notes:
 
 **Wrong.** Registry 12.3 (line 1154): "Marketing CTA label | `text-base font-medium` | Hero / pricing primary CTAs." `/pricing` complies (`pricing-client.tsx:13`, `pricing-auth-cta.tsx:107`; measured 16 px, 48 px tall). The landing cards use `text-sm` (`marketing-home.tsx:216,242`; measured 14 px, 44/46 px tall). The external draft had this backwards — it read `pricing-view.tsx:30` `DefaultButton` (`mt-8 w-full rounded-full`, `h-9`) as the production button, but `DefaultButton` is only the test fallback; the page injects `SubscribeButton`.
 
-**Change — `marketing-home.tsx:216,242`:** `className="mt-8 h-auto w-full rounded-full py-3 text-base"`. Drop `font-medium`; the Button base already applies it. The cards then render 48 / 50 px, matching `/pricing`. Owner-confirmed 2026-09-16: bump up, not down. DEBT-478 restyles the `/pricing` plan buttons but keeps them `text-base`, so the two surfaces stay matched.
+**Change — `marketing-home.tsx:216,242`:** `className="mt-8 h-auto w-full rounded-full py-3 text-base"`. Drop `font-medium`; the Button base already applies it. The monthly/annual CTAs then render 50 / 48 px, matching `/pricing` typography; its two filled CTAs remain 48 / 48 px. Owner-confirmed 2026-09-16: bump up, not down. DEBT-478 moves the `/pricing` consent interaction but keeps them `text-base`, so the two surfaces stay matched.
 
 **Docs.** None needed for 12.3 — the code moves to the rule. Typography Policy line 45 changes only its example text (F3).
 
@@ -244,13 +244,13 @@ Notes:
 
 **Wrong.** Registry L-4 (line 452) says `rounded-md text-sm font-semibold text-foreground …` and "Implemented in both app and marketing headers". The marketing header brand is `text-base font-bold font-heading whitespace-nowrap` (`marketing-layout.tsx:27-28`) and the footer brand is `font-bold font-heading` (`:83`), both locked by tests (`marketing-layout.test.tsx:139,180`, "stronger … brand treatment"). The code is intentional; the registry lags it.
 
-**Change.** Registry L-4: add "**Marketing variant:** `text-base font-bold font-heading whitespace-nowrap` for the marketing header brand link and `font-bold font-heading` for the footer brand `<p>`. The app shell keeps `text-sm font-semibold`." No code change.
+**Change.** Registry L-4: add "**Marketing variant:** `text-base font-bold font-heading whitespace-nowrap` for the marketing header brand link and `text-base font-bold font-heading` for the footer brand `<p>`. The app shell keeps `text-sm font-semibold`." Add explicit `text-base` to the footer brand to satisfy typography policy without changing its computed size.
 
 ### F10 — Mention the free trial on the landing page? (owner decision D3: no, confirmed 2026-09-16)
 
 DEBT-410 made "Start 7-day free trial" the pricing CTA for eligible visitors, but `/` says "Get started" four times and its closing lede is "Full access, cancel anytime." A visitor learns about the trial only after clicking through.
 
-Recommendation: **leave `/` trial-agnostic.** Every landing section is `'use cache'` (DEBT-348) and cannot know eligibility; the trial is gated per account (canceled ex-subscribers are not eligible, registry "Trial CTA Subtext"). A cached page promising a trial to an ineligible visitor is exactly the accuracy exposure DEBT-414 has been avoiding. If the owner wants the trial as a marketing lever anyway, the only safe form is a hedged sentence in the pricing-section lede ("New accounts can start with a 7-day free trial.") and it must go through DEBT-414's review, not this PR.
+**Ruling: leave `/` trial-agnostic (D3).** Static marketing copy stays in cached fragments; the auth-aware hero CTA remains dynamic. Do not introduce a cached trial promise. The review below corrects the draft's overbroad cache-boundary description.
 
 ### F11 — Adjacent stale documentation to fix in the same PR (docs-only)
 
@@ -274,7 +274,7 @@ Also confirmed the same day: retire D-15 (F1), `h-auto` on the hero CTA (F2), ce
 
 - `/privacy`, `/terms`, `components/legal/*`, `docs/legal/*`, and every string in `lib/pricing-data.ts` (`trialCta`, `postTrialNote`, all disclosures, `disclosureVersion`). Those are DEBT-414 territory and consent evidence.
 - Clerk-rendered surfaces (`/sign-in`, `/sign-up`) — accepted third-party seam (Registry Decision 8).
-- Authenticated app chrome label casing (`Go to Practice`, `Back to Dashboard`, …). Real, larger, and separate; file it if the owner wants it after F3 lands.
+- Authenticated app chrome label casing (`Go to Practice`, `Back to Dashboard`, …). Real, larger, and separate; the dated review below records its inventory and follow-up seed.
 - Hero copy, impact-stat values, feature-card copy, plan names, prices, `pillSizeClasses`, the outline pill treatment (DEBT-258 Decision 1), the `'use cache'` fragment boundaries (DEBT-348), and light mode (DEBT-421).
 - The `MarketingAuthNavFallback` header button.
 - The `/pricing` composition: grid width, the disclosure box and where consent copy lives, the `Plans` heading, and whether `Back to home` exists at all. All of that is [DEBT-478](./debt-478-pricing-plan-consent-dialog.md); this record touches `/pricing` only for label casing (F3 Phase A) and the F8 size match.
@@ -310,11 +310,11 @@ Branch from `dev` (not from `docs/debt-414-terms-read-through`, which is another
 ## Acceptance criteria
 
 - [ ] No `<svg>` inside any CTA on `/`; no `metallic` class in compiled CSS; no `data-debt-exception` attribute anywhere; the registry's live divergence table is empty.
-- [ ] Hero primary and the final CTA are the same `default` + `rounded-full` pill, 48 px tall; the outline sibling is 46 px (border delta only).
+- [ ] Hero primary and the final CTA are the same `default` + `rounded-full` pill, 48 px tall; the outline sibling is 46 px (line-height minus border difference).
 - [ ] Every button and nav-link label on `/`, `/pricing`, `/not-found`, and the marketing header/footer is sentence case except proper nouns, plan names, page titles, and the Phase B `Subscribe Monthly` / `Subscribe Annual` labels named in D2.
 - [ ] All four section headers on `/` are centered.
 - [ ] Plan cards on `/` and `/pricing` remain left-aligned (no `text-center`); registry 13.3 states the rule.
-- [ ] Landing plan-card CTAs are `text-base` and 48 / 50 px, matching `/pricing`.
+- [ ] Landing plan-card CTAs are `text-base`, monthly/annual 50 / 48 px; `/pricing` remains 48 / 48 px.
 - [ ] Footer renders brand + tagline left and two right-anchored, `aria-label`ed link rows; at 390 px it stacks brand, tagline, product/auth links, legal links; the legal pair never splits across lines at 390 px.
 - [ ] Footer tagline names both addiction psychiatry and addiction medicine.
 - [ ] Registry Part 5, Part 11, 12.3, 13.3, 15.2, 15.4, 18.1, L-4 and Standards § 2, § 4, Marketing Shell Footer, lines 799 / 871 / 889-890 updated in the same PR; Typography Policy line 45 updated.
@@ -324,3 +324,46 @@ Branch from `dev` (not from `docs/debt-414-terms-read-through`, which is another
 ## Implementation constraints
 
 Per repo rules: docs before code (`.claude/rules/frontend.md`, Registry "add it here first"); strict TDD; `AGENTS.md` full gate before every push; `CodeRabbit` review on the exact head before merge, with findings adjudicated as claims under "Guard and Scanner Review Discipline". Citations in this record were verified mechanically against `a0d4378e` on 2026-09-16; re-verify line numbers if the implementing PR opens more than a few commits later.
+
+
+## Adversarial review record (2026-09-16)
+
+Independent first impressions were saved **before reading the records** in [first-look](./assets/debt-477/first-look-2026-09-16.md). Fresh production captures cover `/`, `/pricing`, `/pricing?plan=annual`, `/privacy`, `/terms`, an actual 404, `/sign-in`, and `/sign-up` at 390, 768, 1024, and 1440 px, dark Chromium, DPR 1, viewport height 900. Full pages and section crops use `review-before-production-*`; [measurements](./assets/debt-477/measurements.json) contain every requested link/button box, font size, alignment, and SVG flag. [Pricing measurements](./assets/debt-478/measurements.json) and [local authenticated measurements](./assets/debt-478/measurements-local.json) complete the evidence. The 404 never became network-idle within 12 seconds; its rendered 404 was captured after DOM readiness. No deployment or merge occurred.
+
+| Claim | Verdict | Strongest evidence / correction |
+|---|---|---|
+| F1: final CTA alone uses the arrow/metallic treatment | CONFIRMED | Fresh final-CTA crop and `hasSvg` census; DEBT-250 Decision 2 and DEBT-258 explicitly approved it historically. Retirement reverses that decision. It does **not** establish universal registry compliance: F12 is new. |
+| F2: hero height defect and predicted 48/46 result | CORRECTED | [DOM experiment](./assets/debt-477/prototype-measurements.json): 36→48 px at all four widths; outline remains 46. The residual 2 px is **4 px line-height difference minus 2 px outline border**, not “border delta only.” |
+| F3: mixed casing, scoped Phase A | CONFIRMED | Source inventory below includes authenticated Title Case; the new rule cannot truthfully describe app chrome as already standardized. Consent-coupled outer plan labels remain held. |
+| F4: Features header alone left aligned | CONFIRMED | Fresh Features crop and cached `MarketingFeaturesSection`; registry 13.6 already names centered feature headings. |
+| F5: 3 of 53 centered Card sites; keep plans left | CORRECTED | Independent TypeScript AST [census](./assets/debt-477/source-census.json) confirms 3/53 and left-aligned empty states. The assertion that every app page has a **centered page title** is false; D1 follows list readability, not that analogy. |
+| F6: footer grouping and mobile split | CONFIRMED | [390 crop](./assets/debt-477/review-before-production-home-footer-390-2026-09-16.png) shows the legal pair split. The new grid prototype keeps the legal pair on one line at all four widths; no horizontal overflow was observed. |
+| F7: tagline omits psychiatry | CONFIRMED | Footer capture versus hero and `app/layout.tsx` metadata. Adopt the already approved replacement verbatim. |
+| F8: landing CTAs undersized | CORRECTED | 14 px vs 16 px is confirmed. With `text-base`, landing **monthly/annual = 50/48 px**; `/pricing` has two filled 48 px buttons. They match the typography tier, not both physical heights. |
+| F9: L-4 omits marketing variant | CONFIRMED | Header computes 16 px bold; L-4 documents 14 px semibold. Preserve the shipped brand, document its variant and explicit footer `text-base`. |
+| F10: no trial promise on cached landing | CORRECTED | Five copy/section functions and footer are cached; the hero **shell/auth CTA is dynamic**, so “every landing section is cached” is overbroad. D3 remains no trial mention. |
+| F11: stale ThemeToggle and CSS anchors | CONFIRMED | ThemeToggle is unmounted in `MarketingLayout`; registry cites old reduced-motion line numbers. Cite the selector instead. |
+
+**Counts (F1–F11): 7 CONFIRMED / 4 CORRECTED / 0 REFUTED / 0 UNVERIFIABLE.**
+
+### Layout, accessibility, and pattern rulings
+
+The footer grid is a new **composition** even though it uses existing tokens. Register `md:grid-cols-[minmax(0,1fr)_auto]`, explicit cell placement, and `md:items-baseline` in the marketing-footer entry before implementation; do not claim that no new layout pattern is introduced. In the prototype at 768 px the tagline is 40 px/two lines, legal links are 20 px/one line and share its first baseline (both top at 2733.5 px). At 1024 the tagline is one line. Mobile DOM order remains brand, tagline, product navigation, legal navigation. Different labels preserve landmark uniqueness; run axe again on the implemented layout.
+
+Part 11 currently contains only D-15. Replace its empty table with “No active divergences in this inventory”; retain the historical approved-exception wording for Clerk/other accepted decisions. Do not rewrite 2026-02-28 as if metallic had already been removed then. Record retirement on 2026-09-16 as the reversal.
+
+Keyboard-only Tab produced 17 home and 18 pricing stops, with per-stop screenshots and computed outline/shadow receipts in [home accessibility](./assets/debt-477/accessibility-before.json) and [pricing accessibility](./assets/debt-478/accessibility-before.json). Reduced motion changes `metallic-shift` to `none`; that claim is confirmed before deletion.
+
+**F12 — new confirmed defect, included in the DEBT-477 fix:** axe reports the hero eyebrow `text-muted-foreground` on `bg-muted` at **4.49:1** (12 px), below 4.5:1. Use full `text-foreground` on this existing badge surface, documenting the marketing-eyebrow variant under M-1 before code. Write the contrast-role regression first, then rerun axe. No global token change is needed. `/pricing` had zero axe violations in this pass.
+
+The first-look concern about “streaks and trends” is refuted as an unsupported-feature allegation: `dashboard/page.tsx` renders Current streak, Overall accuracy, and Last 7 days accuracy. These support the comparative progress copy, though there is no claim here of a plotted trend chart. The author-credential sentence remains the owner's supplied fact; this source audit cannot independently verify professional credentials.
+
+### Authenticated casing follow-up seed
+
+A separate later debt will standardize authenticated action labels after an inventory-led design review, preserving proper nouns and legal document titles. Current actionable inventory (including prop/string labels, not just literal JSX): `Go to Practice` in six card/empty-state links plus dashboard-error and question-error links; `Back to Dashboard` in practice header/default back-link and history/practice/bookmarks/billing errors; `Back to Practice` in quick-practice back-link and quick/session errors; `Back to History` in question error; `View Summary` in exam-results and both post-exam-review actions; `Review Answers` in two summary branches; `New Session` in summary; `Review & Submit` in practice action, session header, and exam review. Do not silently expand Phase A into these routes. Brand `Addiction Boards`, `Privacy Policy`, `Terms of Service`, and the page name `Quick Practice` are excluded from action recasing. The [exact string inventory](./assets/debt-477/authenticated-casing-inventory.json) also includes dynamic question back-links: `Back to Summary`, `Back to Session`, and `Back to Bookmarks`. Counts include 8 Go to Practice, 7 Back to Dashboard, 5 Back to Practice, 2 Back to History, 3 View Summary, 2 Review Answers, 1 New Session, and 3 Review & Submit sites.
+
+### Tests identified before implementation
+
+Existing anchors were rechecked at `d336f747`: `marketing-home.test.tsx:62,76,204,219,234,286,310`; `marketing-layout.test.tsx:110`; `get-started-cta.test.tsx:29,47,66,84`; `pricing-view.test.tsx:23`; `pricing/page.test.tsx:210,316,378,845,1053,1335`; `not-found.test.tsx:22`; `tests/e2e/subscribe.spec.ts:25`. The metallic component tests are removed with their subjects only after the replacement assertion fails red. F5 preservation tests are expected to be green at baseline. No production code was changed during this audit.
+
+Relative links were checked mechanically: 32 targets in DEBT-477, 11 in DEBT-478, and 498 in the debt index, all existing (angle-bracket destinations containing parentheses parsed correctly). See [link check](./assets/debt-477/link-check.json).
