@@ -1,7 +1,7 @@
 # Stripe Vendor Documentation
 
-**Package:** `stripe` ^22.4.0
-**API Version:** `2026-05-27.dahlia`
+**Package:** `stripe` ^22.6.1
+**API Version:** `2026-08-26.dahlia`
 **Dashboard:** https://dashboard.stripe.com
 **Docs:** https://docs.stripe.com
 **Changelog:** https://docs.stripe.com/changelog
@@ -12,16 +12,35 @@
 
 | Date | API Version | Impact | Notes |
 |------|-------------|--------|-------|
-| 2026-05-27 | `2026-05-27.dahlia` | Current | Our pinned version |
-| 2026-04-22 | `2026-04-22.dahlia` | Non-breaking | Previous pinned version |
+| 2026-08-26 | `2026-08-26.dahlia` | Current | Pinned 2026-09-16 with SDK 22.6.1. Additive GA release: card funding-type restrictions in Checkout, Customer Session entitlement/portal components, Billie for invoices and subscriptions, standardized payment-method error codes. None of the added fields are read or sent by this app. |
+| 2026-07-29 | `2026-07-29.dahlia` | Non-breaking | Pinned 2026-08-08 (PR #758, SDK 22.4.0). That upgrade introduced the `known | OtherString` response-enum modelling described below. |
+| 2026-06-24 | `2026-06-24.dahlia` | Non-breaking | Pinned 2026-07-02 (PR #551, SDK 22.3.0) |
+| 2026-05-27 | `2026-05-27.dahlia` | Non-breaking | Pinned 2026-06-04 (PR #400, DEBT-404) |
+| 2026-04-22 | `2026-04-22.dahlia` | Non-breaking | Pinned 2026-05-24 (PR #332) |
 | 2026-03-25 | `2026-03-25.dahlia` | **BREAKING** | Dahlia cutover |
 | 2026-01-28 | `2026-01-28.clover` | Historical | Former pinned version |
 | 2025-03-31 | `2025-03-31.basil` | **BREAKING** | `current_period_end` moved to items |
+
+Within a named release (Dahlia), Stripe states that only the first version carries breaking changes and every later monthly version is additive. Advancing the pin between monthly Dahlia versions therefore needs a changelog read for fields we touch, not a migration.
 
 **How to check current version:**
 ```bash
 stripe config --list  # Shows API version in use
 ```
+
+---
+
+## SDK Pin Coupling and Response-Enum Widening
+
+`stripe-node` types its `apiVersion` constructor option as the exact string the SDK release pins. A minor SDK bump that advances the pinned version fails `pnpm typecheck` with `Type '"<old>.dahlia"' is not assignable to type '"<new>.dahlia"'` at `lib/stripe.ts` until `lib/stripe-api-version.ts` is advanced with it. The two move together in one PR; never cast around the mismatch (DEBT-404, PR #758).
+
+Since SDK 22.4.0 Stripe types response enums as `'known' | 'values' | OtherString` (`OtherString = string & Record<never, never>`) so integrations handle values that exist in the API before they exist in the SDK. The client-owned port in `src/adapters/shared/stripe-types.ts` mirrors that split:
+
+- **Response fields** are widened with `StripeOtherString`: Checkout Session `mode`, `payment_method_collection`, and (from SDK 22.6.1) `status`; subscription list `status`.
+- **Request filters** stay narrow (`StripeCheckoutSessionListParams.status`, `StripeSubscriptionListParams.status`) so the app can only ask Stripe for values it understands.
+- Consumers narrow before acting: `hasRecognizedCheckoutSessionStatus` and `isValidStripeSubscriptionStatus` fail closed on values outside the known set.
+
+A new widening in the SDK surfaces as `Type 'Stripe' is not assignable to type 'StripeClient'` at the composition root. `src/adapters/shared/stripe-types.test.ts` pins the whole contract (`expectTypeOf<Stripe>().toExtend<StripeClient>()`) so the failure lands in the adapter's own test before it lands in `lib/container/gateways.ts`.
 
 ---
 
@@ -45,6 +64,7 @@ stripe config --list  # Shows API version in use
 |-------|----------|---------|-------|
 | `id` | `session.id` | Checkout success | Session ID |
 | `url` | `session.url` | Subscribe action | Redirect URL |
+| `status` | `session.status` | Session reuse and live-retrieval checks | `open` / `complete` / `expired`; unknown values are treated as not reusable |
 | `subscription` | `session.subscription` | Checkout success | Expanded subscription |
 | `line_items` | `session.line_items` | Session reuse check | Needs `expand` |
 
@@ -140,13 +160,12 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 
 When upgrading Stripe SDK or API version:
 
-- [ ] Read [changelog](https://docs.stripe.com/changelog) for breaking changes
+- [ ] Read the [changelog](https://docs.stripe.com/changelog) entry for the new API version and the [stripe-node release notes](https://github.com/stripe/stripe-node/releases); grep the codebase for every field or enum the notes mark `⚠️`
 - [ ] Search codebase for deprecated fields: `current_period_start`, `current_period_end` at subscription level
-- [ ] Update `StripeSubscriptionLike` type in `stripe-payment-gateway.ts`
-- [ ] Run `pnpm test --run` — webhook tests should catch field changes
-- [ ] Test checkout flow end-to-end locally
-- [ ] Test webhook delivery with `stripe listen`
-- [ ] Update this doc with new version and any migrations
+- [ ] Advance `lib/stripe-api-version.ts` in the same PR as the SDK bump; update the "Last reviewed" date in `lib/stripe.ts`
+- [ ] Run `pnpm typecheck` — a `Stripe` → `StripeClient` assignability error means a response enum widened; widen the matching response type in `src/adapters/shared/stripe-types.ts` (never the request filter) and extend `stripe-types.test.ts`
+- [ ] Run the full gate including `pnpm test:e2e` — the required Checkout contract drives real TEST-mode Sessions and webhooks
+- [ ] Update this doc and `docs/vendor-docs/index.md` with the new versions
 
 ---
 
