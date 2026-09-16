@@ -51,6 +51,9 @@ export type CheckoutSessionCreateParams =
 
 export type StripeCheckoutSessionStatus = 'open' | 'complete' | 'expired';
 type StripeOtherString = string & Record<never, never>;
+export type StripeCheckoutSessionResponseStatus =
+  | StripeCheckoutSessionStatus
+  | StripeOtherString;
 export type StripeCheckoutSessionPaymentMethodCollection =
   | 'always'
   | 'if_required'
@@ -65,7 +68,7 @@ export type StripeCheckoutSession = {
   id: string;
   url: string | null;
   created?: number | undefined;
-  status?: StripeCheckoutSessionStatus | null | undefined;
+  status?: StripeCheckoutSessionResponseStatus | null | undefined;
   expires_at?: number | undefined;
   metadata?: Record<string, string> | null;
   payment_method_collection?: StripeCheckoutSessionPaymentMethodCollection | null;
