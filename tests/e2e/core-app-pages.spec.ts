@@ -79,4 +79,20 @@ test.describe('core app pages', () => {
       page.getByRole('button', { name: 'Manage in Stripe' }),
     ).toBeVisible();
   });
+
+  test('Billing page reaches the Stripe billing portal', async ({ page }) => {
+    await signInWithClerkPassword(page);
+    await ensureSubscribed(page);
+
+    await page.goto('/app/billing');
+    await page.getByRole('button', { name: 'Manage in Stripe' }).click();
+
+    // The server action creates a Stripe billing-portal session and redirects
+    // to it. Reaching Stripe's hosted portal is the self-serve cancellation
+    // entry the legal copy names (DEBT-414 § 8); the portal's own contents are
+    // Stripe's and are not asserted here.
+    await expect(page).toHaveURL(/^https:\/\/billing\.stripe\.com\//, {
+      timeout: 30_000,
+    });
+  });
 });
