@@ -335,12 +335,13 @@ Do not add audit ignores proactively. An ignore is allowed only after a
 review concludes that the advisory is not reachable, is mitigated by other
 controls, or cannot be fixed without a larger migration.
 
-When an advisory has no compatible patched version at all, the record of
-that conclusion lives in a debt entry. The Dependabot alert is dismissed
-against that record only after the owner explicitly approves the
-dismissal; the record alone does not authorize it, and until that
-approval the alert stays open with the record linked rather than left to
-drift. The worked precedent is `stream-json` in
+When an advisory has no patched version compatible with the current
+dependency graph, the record of that conclusion lives in a debt entry.
+The Dependabot alert is dismissed against that record only after the
+owner explicitly approves the dismissal; the record alone does not
+authorize it, and until that approval the alert stays open with the
+record linked rather than left to drift. The worked precedent is
+`stream-json` in
 [DEBT-476](../debt/debt-476-dependabot-alert-triage-2026-09.md) § F: the
 patched line is ESM-only with renamed entry points that the sole consumer
 cannot load, the vulnerable functions sit on no import path the
