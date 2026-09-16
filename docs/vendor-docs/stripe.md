@@ -13,7 +13,7 @@
 | Date | API Version | Impact | Notes |
 |------|-------------|--------|-------|
 | 2026-08-26 | `2026-08-26.dahlia` | Current | Pinned 2026-09-16 with SDK 22.6.1. Additive GA release: card funding-type restrictions in Checkout, Customer Session entitlement/portal components, Billie for invoices and subscriptions, standardized payment-method error codes. None of the added fields are read or sent by this app. |
-| 2026-07-29 | `2026-07-29.dahlia` | Non-breaking | Pinned 2026-08-08 (PR #758, SDK 22.4.0). That upgrade introduced the `known | OtherString` response-enum modelling described below. |
+| 2026-07-29 | `2026-07-29.dahlia` | Non-breaking | Pinned 2026-08-08 (PR #758, SDK 22.4.0). That upgrade introduced the `known \| OtherString` response-enum modelling described below. |
 | 2026-06-24 | `2026-06-24.dahlia` | Non-breaking | Pinned 2026-07-02 (PR #551, SDK 22.3.0) |
 | 2026-05-27 | `2026-05-27.dahlia` | Non-breaking | Pinned 2026-06-04 (PR #400, DEBT-404) |
 | 2026-04-22 | `2026-04-22.dahlia` | Non-breaking | Pinned 2026-05-24 (PR #332) |
