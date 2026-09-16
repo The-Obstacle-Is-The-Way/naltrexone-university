@@ -1,10 +1,10 @@
 # DEBT-477: Landing Page Copy and Cohesion — Retire the Arrow CTA, Unify Signed-Out CTA Casing and Size, Center the Plan Cards, and Split the Footer Link Row
 
-**Status:** Open — filed 2026-09-16 from an owner walkthrough of the live signed-out surfaces; evidence captured against production (`main` = `58a99635`, tree-identical to `dev` `a0d4378e` for every file cited here); no code changed yet
+**Status:** Open — filed 2026-09-16 from an owner walkthrough of the live signed-out surfaces; evidence captured against production (`main` = `58a99635`, tree-identical to `dev` `a0d4378e` for every file cited here); no code changed yet. Owner decisions D1–D4 were recorded later the same day (D1 reversed: plan cards stay left-aligned; D2 held; D3 no; D4 as proposed). The `/pricing` composition and consent-copy proposal that arrived with them is verified and filed separately as [DEBT-478](./debt-478-pricing-plan-consent-dialog.md)
 **Priority:** P3 — no functional defect; every finding is a visible cohesion or copy inconsistency on the first-impression surfaces (`/`, `/pricing`, and the shared marketing header and footer)
 **Date:** 2026-09-16
-**Source:** Owner review of addictionboards.com on 2026-09-16: the bottom "Get Started" is the only CTA with a chevron and should be a plain button; the "Simple pricing" cards read left-aligned under a centered heading; the footer "is starting to look sloppy" with six links crowded on the right. An external design pass produced an eleven-item draft. This record re-verifies each item against source and against headless-Chromium measurements of production, corrects two of the draft's diagnoses (F3's "app chrome is sentence case throughout" and F8's direction of drift), and adds the design-system history the draft did not have.
-**Related:** [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) (Decision 2 approved the D-15 exception this debt retires), [DEBT-258](../_archive/debt/debt-258-marketing-alignment.md) (marketing CTA variants; Decision 1), [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) (hero copy), [DEBT-389](../_archive/debt/debt-389-footer-layout-brand-left-links-right.md) (footer brand-left / links-right layout, which this debt keeps), [DEBT-410](../_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) (trial CTA and disclosure copy), [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) (owns the consent disclosure strings in `lib/pricing-data.ts`; added the footer legal links in #727), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Typography Policy](../frontend/typography-policy.md), `.claude/rules/frontend.md`
+**Source:** Owner review of addictionboards.com on 2026-09-16: the bottom "Get Started" is the only CTA with a chevron and should be a plain button; the "Simple pricing" cards read left-aligned under a centered heading; the footer "is starting to look sloppy" with six links crowded on the right. An external design pass produced an eleven-item draft; the owner's rulings on this record's four decisions arrived later the same day together with a `/pricing` proposal (DEBT-478). This record re-verifies each item against source and against headless-Chromium measurements of production, corrects two of the draft's diagnoses (F3's "app chrome is sentence case throughout" and F8's direction of drift), and adds the design-system history the draft did not have.
+**Related:** [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md) (Decision 2 approved the D-15 exception this debt retires), [DEBT-258](../_archive/debt/debt-258-marketing-alignment.md) (marketing CTA variants; Decision 1), [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) (hero copy), [DEBT-389](../_archive/debt/debt-389-footer-layout-brand-left-links-right.md) (footer brand-left / links-right layout, which this debt keeps), [DEBT-410](../_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) (trial CTA and disclosure copy), [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) (owns the consent disclosure strings in `lib/pricing-data.ts`; added the footer legal links in #727), [Pattern Registry](../frontend/pattern-registry.md), [Frontend Standards](../frontend/standards.md), [Typography Policy](../frontend/typography-policy.md), `.claude/rules/frontend.md`, [DEBT-478](./debt-478-pricing-plan-consent-dialog.md) (`/pricing` grid width, disclosure placement, and the `Back to home` link; owns everything on `/pricing` other than label casing and CTA size)
 
 ---
 
@@ -119,13 +119,13 @@ Sentence case is already the documented direction for auth labels and the majori
 
 **Rule (new, scoped).** Add to `docs/frontend/standards.md` § 2 Button a short "Label casing (signed-out surfaces)" paragraph: *Button and nav-link labels on `/`, `/pricing`, and the marketing header and footer use sentence case ("Get started", "View pricing", "Sign in"). Proper nouns, plan names, and page titles keep their capitals ("Addiction Boards", "Pro Monthly", "Privacy Policy", "Terms of Service"). Authenticated app chrome is not yet standardized; see DEBT-477 F3 for the inventory.*
 
-**Change — Phase A (this PR, no consent-text coupling):**
+**Change — Phase A (this PR, no consent-text coupling; owner-confirmed 2026-09-16):**
 - `Get Started` → `Get started` — `get-started-cta.tsx:28,37,47`; `marketing-home.tsx:66,218,244` and the F1 replacement.
 - `Go to Dashboard` → `Go to dashboard` — `get-started-cta.tsx:46`; `pricing-view.tsx:122`; `tests/e2e/subscribe.spec.ts:25`.
-- `Back to Home` → `Back to home` — `pricing-view.tsx:253`, `pricing-view-skeleton.tsx:81` (must match the view it stands in for), `app/pricing/error.tsx:19`, `app/not-found.tsx:38` (signed-out surface; keep it consistent), plus `app/pricing/page.test.tsx:224` and `app/not-found.test.tsx:29`.
+- `Back to Home` → `Back to home` — `pricing-view.tsx:253`, `pricing-view-skeleton.tsx:81` (must match the view it stands in for), `app/pricing/error.tsx:19`, `app/not-found.tsx:38` (signed-out surface; keep it consistent), plus `app/pricing/page.test.tsx:224` and `app/not-found.test.tsx:29`. DEBT-478 deletes the `/pricing` link outright (the marketing header brand link and footer already provide the route home); if DEBT-478 lands first, the `pricing-view.tsx` and `pricing-view-skeleton.tsx` sites no longer exist and only `error.tsx` and `not-found.tsx` are recased.
 - `Manage Billing` → `Manage billing` — `pricing-view.tsx:98,125,144`; the label appears in no legal or disclosure text (repo grep of `lib/` and `docs/legal/`, 2026-09-16), so it is safe. `app/pricing/page.test.tsx` has 36 assertions across the Subscribe/Manage labels; update only the `Manage Billing` ones in Phase A.
 
-**Phase B (owner decision D2, coordinate with DEBT-414):** `Subscribe Monthly` / `Subscribe Annual`. The `standardDisclosure` strings quote the label verbatim — `lib/pricing-data.ts:32` "By selecting Subscribe Monthly, you authorize recurring monthly charges." and `:50` for annual — under `disclosureVersion: '2026-08-05'` (`:26,43`). Changing the label without the disclosure produces a visible-label / consent-text mismatch; changing the disclosure is consent evidence and belongs to DEBT-414's owner. Phase B therefore waits for a ruling on whether a casing-only change to a quoted label requires a `disclosureVersion` bump. Until then `Subscribe Monthly` / `Subscribe Annual` stay as they are, and this record says so rather than leaving the mismatch implicit. Phase B also touches `tests/e2e/checkout-redirect.spec.ts:57`, `tests/e2e/stripe-hosted-paid-checkout.spec.ts:45,48`, and the remaining `page.test.tsx` / `pricing-view.test.tsx` assertions.
+**Phase B (owner decision D2 — held, confirmed 2026-09-16; coordinate with DEBT-414):** `Subscribe Monthly` / `Subscribe Annual`. The `standardDisclosure` strings quote the label verbatim — `lib/pricing-data.ts:32` "By selecting Subscribe Monthly, you authorize recurring monthly charges." and `:50` for annual — under `disclosureVersion: '2026-08-05'` (`:26,43`). Changing the label without the disclosure produces a visible-label / consent-text mismatch; changing the disclosure is consent evidence and belongs to DEBT-414's owner. Phase B therefore waits for a ruling on whether a casing-only change to a quoted label requires a `disclosureVersion` bump. Until then `Subscribe Monthly` / `Subscribe Annual` stay as they are, and this record says so rather than leaving the mismatch implicit. Phase B also touches `tests/e2e/checkout-redirect.spec.ts:57`, `tests/e2e/stripe-hosted-paid-checkout.spec.ts:45,48`, and the remaining `page.test.tsx` / `pricing-view.test.tsx` assertions.
 
 **Docs.** Typography Policy line 45 example: `"Get Started", "Subscribe Annual"` → `"Get started" (hero and final CTA); plan-card CTAs`. Registry "Marketing Button Overrides" table rows that say "Get Started" → "Get started".
 
@@ -150,19 +150,17 @@ Nothing else in the section changes; the card grid stays left-aligned inside its
 
 **Tests first.** `marketing-home.test.tsx`: the `h2` "Everything you need to prep efficiently" has a parent whose class tokens include `text-center` and `mx-auto`.
 
-### F5 — Plan cards are left-aligned under centered headings (owner decision D1: center)
+### F5 — Plan cards are left-aligned under centered headings (owner decision D1: keep left; document the rule)
 
-**Wrong.** On `/`, the impact-stat cards are `text-center`, the pricing heading is centered, and then the two plan cards snap left. `/pricing` has the same cards, also left. The owner's instinct (center) is sound, but the decision is binary and must apply to **both** surfaces or neither; the two card sets are visibly the same component and are compared side by side within one click.
+**Observed.** On `/`, the impact-stat cards are `text-center`, the pricing heading is centered, and the two plan cards are left-aligned. `/pricing` has the same cards, also left. The first draft of this record defaulted to centering both surfaces.
 
-**Change — `marketing-home.tsx:198,222`:** `<Card className="p-8 text-center">` and `<Card className="border-2 border-primary p-8 text-center">`.
+**Decision (owner, 2026-09-16): keep the plan cards left-aligned on both surfaces.** They are list-bearing content (name, price, feature list, full-width button), and a centered text stack over a full-width button never settles. The codebase agrees: of 53 `<Card>` open tags in `app/` and `components/`, only three are `text-center` — the landing impact stats (`marketing-home.tsx:109`) and the two single-message status cards on `/pricing` ("You're already subscribed", "Subscription needs attention"; `pricing-view.tsx:113,130`). Empty states (Standards § 9) are left-aligned too. The forwarded note's "every other card in the app is left-aligned" is slightly overstated; the accurate rule is recorded below.
 
-**Change — `pricing-view.tsx:160,202`:** add `text-center` to both `className` branches of the monthly card and to the annual card.
+**Change.** None to the cards. A centered section heading over left-aligned content cards is the same relationship every app page has between its page title and its cards; once the Features header (F4) stops being the outlier, the landing page reads as one system. The width problem that made the `/pricing` cards feel wrong is a composition issue and belongs to [DEBT-478](./debt-478-pricing-plan-consent-dialog.md).
 
-**Keep the disclosure box left-aligned.** `app/pricing/pricing-auth-cta.tsx:80` renders a six-line legal paragraph inside the card. Centered legal prose is hard to read and would fight the `leading-relaxed` measure DEBT-410 chose; add `text-left` to that wrapper so it opts out of the card's `text-center`. The existing `SubscribePlanCta` CTA and the "Trial CTA Subtext" (`mt-3 text-center …`, registry Part 5) already center and are unaffected.
+**Docs.** Registry 13.3 Showcase row (line 1232): "`p-8` | Marketing pricing cards, pricing page plan cards — content left-aligned. Only stat cards and single-message status cards are `text-center`."
 
-**Docs.** Registry 13.3 Showcase row (line 1232): "`p-8` | Marketing pricing cards, pricing page plan cards — content centered (`text-center`); the in-card disclosure box stays `text-left`."
-
-**Tests first.** `marketing-home.test.tsx` and `app/pricing/pricing-view.test.tsx`: both plan cards' class tokens include `text-center`; `pricing-view.test.tsx`: the disclosure wrapper's tokens include `text-left`.
+**Tests first.** `marketing-home.test.tsx` and `app/pricing/pricing-view.test.tsx`: both plan cards' class tokens do **not** include `text-center` (a regression guard for the decision).
 
 ### F6 — The DEBT-389 footer link row overflowed when the legal links were added
 
@@ -236,7 +234,7 @@ Notes:
 
 **Wrong.** Registry 12.3 (line 1154): "Marketing CTA label | `text-base font-medium` | Hero / pricing primary CTAs." `/pricing` complies (`pricing-client.tsx:13`, `pricing-auth-cta.tsx:107`; measured 16 px, 48 px tall). The landing cards use `text-sm` (`marketing-home.tsx:216,242`; measured 14 px, 44/46 px tall). The external draft had this backwards — it read `pricing-view.tsx:30` `DefaultButton` (`mt-8 w-full rounded-full`, `h-9`) as the production button, but `DefaultButton` is only the test fallback; the page injects `SubscribeButton`.
 
-**Change — `marketing-home.tsx:216,242`:** `className="mt-8 h-auto w-full rounded-full py-3 text-base"`. Drop `font-medium`; the Button base already applies it. The cards then render 48 / 50 px, matching `/pricing`.
+**Change — `marketing-home.tsx:216,242`:** `className="mt-8 h-auto w-full rounded-full py-3 text-base"`. Drop `font-medium`; the Button base already applies it. The cards then render 48 / 50 px, matching `/pricing`. Owner-confirmed 2026-09-16: bump up, not down. DEBT-478 restyles the `/pricing` plan buttons but keeps them `text-base`, so the two surfaces stay matched.
 
 **Docs.** None needed for 12.3 — the code moves to the rule. Typography Policy line 45 changes only its example text (F3).
 
@@ -248,7 +246,7 @@ Notes:
 
 **Change.** Registry L-4: add "**Marketing variant:** `text-base font-bold font-heading whitespace-nowrap` for the marketing header brand link and `font-bold font-heading` for the footer brand `<p>`. The app shell keeps `text-sm font-semibold`." No code change.
 
-### F10 — Mention the free trial on the landing page? (owner decision D3; recommendation: no)
+### F10 — Mention the free trial on the landing page? (owner decision D3: no, confirmed 2026-09-16)
 
 DEBT-410 made "Start 7-day free trial" the pricing CTA for eligible visitors, but `/` says "Get started" four times and its closing lede is "Full access, cancel anytime." A visitor learns about the trial only after clicking through.
 
@@ -263,12 +261,14 @@ Recommendation: **leave `/` trial-agnostic.** Every landing section is `'use cac
 
 ## Owner decisions
 
-| # | Decision | Default recorded here |
+| # | Decision | Owner ruling (2026-09-16) |
 |---|---|---|
-| D1 | Center plan-card content on both `/` and `/pricing` (F5) | **Yes** — owner stated preference 2026-09-16; the in-card disclosure box stays `text-left` |
-| D2 | Phase B casing: `Subscribe Monthly` / `Subscribe Annual` (F3) | **Hold** until DEBT-414 rules on quoted-label changes and `disclosureVersion`; Phase A ships without it |
-| D3 | Mention the free trial on `/` (F10) | **No** |
-| D4 | Footer stacking order below `md` (F6) | brand, tagline, product/auth links, legal links |
+| D1 | Center plan-card content on both `/` and `/pricing` (F5) | **No — keep left-aligned on both.** Reverses this record's first default. Registry 13.3 records the rule: only stat cards and single-message status cards are `text-center`. |
+| D2 | Phase B casing: `Subscribe Monthly` / `Subscribe Annual` (F3) | **Hold.** Recase everything else on the signed-out surfaces; leave the two labels quoted by dated disclosures to DEBT-414. |
+| D3 | Mention the free trial on `/` (F10) | **No.** |
+| D4 | Footer stacking order below `md` (F6) | **As proposed:** brand, tagline, product/auth links, legal links; two labeled `<nav>`s. |
+
+Also confirmed the same day: retire D-15 (F1), `h-auto` on the hero CTA (F2), center the Features header (F4), the new footer tagline (F7), and the casing-rule scope and CTA-size direction corrections (F3, F8). The `/pricing` composition proposal that arrived with these rulings is verified and filed as [DEBT-478](./debt-478-pricing-plan-consent-dialog.md); nothing in this record centers or restyles the `/pricing` cards.
 
 ## What this debt does NOT touch
 
@@ -277,17 +277,18 @@ Recommendation: **leave `/` trial-agnostic.** Every landing section is `'use cac
 - Authenticated app chrome label casing (`Go to Practice`, `Back to Dashboard`, …). Real, larger, and separate; file it if the owner wants it after F3 lands.
 - Hero copy, impact-stat values, feature-card copy, plan names, prices, `pillSizeClasses`, the outline pill treatment (DEBT-258 Decision 1), the `'use cache'` fragment boundaries (DEBT-348), and light mode (DEBT-421).
 - The `MarketingAuthNavFallback` header button.
+- The `/pricing` composition: grid width, the disclosure box and where consent copy lives, the `Plans` heading, and whether `Back to home` exists at all. All of that is [DEBT-478](./debt-478-pricing-plan-consent-dialog.md); this record touches `/pricing` only for label casing (F3 Phase A) and the F8 size match.
 
 ## Implementation plan (one PR into `dev`, TDD, docs first)
 
 Branch from `dev` (not from `docs/debt-414-terms-read-through`, which is another agent's active legal work; keep the two reviews independent). Read `.claude/rules/frontend.md` and Registry Parts 5, 11, 12, 13, 18 before touching code.
 
 1. **Docs first.** Registry: Part 5 (F1 deletion, F1/F2 override rows, "Get started" casing), Part 11 (D-15 → resolved, reversal recorded), 12.3 example, 13.3 Showcase row, 15.2 / 15.4, 18.1 nav count, L-4 marketing variant. Standards: § 2 label-casing paragraph, § 4 centered marketing headers, "Marketing Shell Footer" block, lines 799 / 871 / 889-890. Typography Policy line 45.
-2. **Red tests** for F1, F2, F3 Phase A, F4, F5, F6, F7, F8 as listed under each finding.
+2. **Red tests** for F1, F2, F3 Phase A, F4, F6, F7, F8 as listed under each finding, plus the F5 not-`text-center` guard.
 3. `components/get-started-cta.tsx` — F2, F3.
 4. `components/marketing/marketing-home.tsx` — F1, F2 fallback, F3, F4, F5, F8.
 5. `components/marketing/marketing-layout.tsx` — F6, F7.
-6. `app/pricing/pricing-view.tsx`, `pricing-view-skeleton.tsx`, `pricing/error.tsx`, `pricing-auth-cta.tsx` (`text-left` on the disclosure wrapper), `app/not-found.tsx` — F3 Phase A, F5.
+6. `app/pricing/pricing-view.tsx`, `pricing-view-skeleton.tsx`, `pricing/error.tsx`, `app/not-found.tsx` — F3 Phase A only (skip the two `/pricing` `Back to home` sites if DEBT-478 has already removed them).
 7. Delete the two metallic components, their tests, and the CSS (F1). `rg -n metallic app components tests` must return nothing; `docs/_archive/` may still mention it historically.
 8. `tests/e2e/subscribe.spec.ts:25` — F3 Phase A. (`checkout-redirect.spec.ts` and `stripe-hosted-paid-checkout.spec.ts` are Phase B only.)
 9. Full gate per `AGENTS.md` "Verify EVERY Change Before Pushing", including `pnpm build` (the cached marketing fragments prerender) and E2E with the credential check. Re-run the same Playwright capture used for the evidence table at 1440 and 390 for `/` and `/pricing`; commit the "after" crops next to the "before" crops in `docs/debt/assets/debt-477/` and attach them to the PR.
@@ -297,10 +298,10 @@ Branch from `dev` (not from `docs/debt-414-terms-read-through`, which is another
 
 | File | Existing tests to update | New assertions |
 |---|---|---|
-| `components/marketing/marketing-home.test.tsx` | `:28` fixture label; `:76-82`; `:286` (add `text-base`, `h-auto`); `:310` (replace, F1) | final CTA is a `default` Button with no `svg`; no `[data-debt-exception]`; features heading wrapper `text-center mx-auto`; plan cards `text-center`; no anchor reads `Get Started` |
+| `components/marketing/marketing-home.test.tsx` | `:28` fixture label; `:76-82`; `:286` (add `text-base`, `h-auto`); `:310` (replace, F1) | final CTA is a `default` Button with no `svg`; no `[data-debt-exception]`; features heading wrapper `text-center mx-auto`; plan cards not `text-center`; no anchor reads `Get Started` |
 | `components/marketing/marketing-layout.test.tsx` | `:110` (replace, F6) | two labeled footer navs with exact membership and order; new tagline present, old absent; `Product` / `Account` still absent |
 | `components/get-started-cta.test.tsx` | `:44` and siblings — `Get started` / `Go to dashboard` | class tokens include `h-auto` |
-| `app/pricing/pricing-view.test.tsx` | `Go to dashboard`, `Manage billing`, `Back to home` | plan cards `text-center`; disclosure wrapper `text-left` |
+| `app/pricing/pricing-view.test.tsx` | `Go to dashboard`, `Manage billing`, `Back to home` | plan cards not `text-center` |
 | `app/pricing/page.test.tsx` | `:224` and the `Manage Billing` assertions (Phase A) | — |
 | `app/not-found.test.tsx` | `:29` | — |
 | `tests/e2e/subscribe.spec.ts` | `:25` | — |
@@ -312,7 +313,7 @@ Branch from `dev` (not from `docs/debt-414-terms-read-through`, which is another
 - [ ] Hero primary and the final CTA are the same `default` + `rounded-full` pill, 48 px tall; the outline sibling is 46 px (border delta only).
 - [ ] Every button and nav-link label on `/`, `/pricing`, `/not-found`, and the marketing header/footer is sentence case except proper nouns, plan names, page titles, and the Phase B `Subscribe Monthly` / `Subscribe Annual` labels named in D2.
 - [ ] All four section headers on `/` are centered.
-- [ ] Plan cards on `/` and `/pricing` are `text-center`; the `/pricing` disclosure box is `text-left`.
+- [ ] Plan cards on `/` and `/pricing` remain left-aligned (no `text-center`); registry 13.3 states the rule.
 - [ ] Landing plan-card CTAs are `text-base` and 48 / 50 px, matching `/pricing`.
 - [ ] Footer renders brand + tagline left and two right-anchored, `aria-label`ed link rows; at 390 px it stacks brand, tagline, product/auth links, legal links; the legal pair never splits across lines at 390 px.
 - [ ] Footer tagline names both addiction psychiatry and addiction medicine.
