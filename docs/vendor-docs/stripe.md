@@ -25,8 +25,10 @@ Within a named release (Dahlia), Stripe states that only the first version carri
 
 **How to check current version:**
 ```bash
-stripe config --list  # Shows API version in use
+git --no-pager show HEAD:lib/stripe-api-version.ts
 ```
+
+`lib/stripe-api-version.ts` is the application's explicit API pin. `stripe config --list` displays CLI configuration, not the application's pin or a webhook endpoint's configured version.
 
 ---
 
@@ -36,11 +38,11 @@ stripe config --list  # Shows API version in use
 
 Since SDK 22.4.0 Stripe types response enums as `'known' | 'values' | OtherString` (`OtherString = string & Record<never, never>`) so integrations handle values that exist in the API before they exist in the SDK. The client-owned port in `src/adapters/shared/stripe-types.ts` mirrors that split:
 
-- **Response fields** are widened with `StripeOtherString`: Checkout Session `mode`, `payment_method_collection`, and (from SDK 22.6.1) `status`; subscription list `status`.
+- **Response fields** are widened with `StripeOtherString`: Checkout Session `mode`, `payment_method_collection`, and `status`; subscription list `status`. Checkout Session status widening arrived in SDK 22.6.0 (pinned to `2026-08-26.dahlia`); this repository mirrored it in the 22.6.1 upgrade.
 - **Request filters** stay narrow (`StripeCheckoutSessionListParams.status`, `StripeSubscriptionListParams.status`) so the app can only ask Stripe for values it understands.
 - Consumers narrow before acting: `hasRecognizedCheckoutSessionStatus` and `isValidStripeSubscriptionStatus` fail closed on values outside the known set, and `isSessionInactive` treats every reported status other than `open` (including the empty string) as not reusable; only an absent status defers to the expiry check.
 
-A new widening in the SDK surfaces as `Type 'Stripe' is not assignable to type 'StripeClient'` at the composition root. `src/adapters/shared/stripe-types.test.ts` pins the whole contract (`expectTypeOf<Stripe>().toExtend<StripeClient>()`) so the failure lands in the adapter's own test before it lands in `lib/container/gateways.ts`.
+A new widening in the SDK surfaces as `Type 'Stripe' is not assignable to type 'StripeClient'` at the composition root. `src/adapters/shared/stripe-types.test.ts` pins the whole contract (`expectTypeOf<Stripe>().toExtend<StripeClient>()`) so the adapter boundary also reports the incompatibility. These `expectTypeOf` contracts are enforced by `pnpm typecheck`, not by Vitest's runtime execution.
 
 ---
 
@@ -80,14 +82,14 @@ Stripe saves the status code and response body from the first request made with 
 
 ### BUG-045: `current_period_end` Moved to Items (2025-03-31)
 
-**What broke:** Checkout success page and webhooks read `subscription.current_period_end`, which returns `null` on API >= `2025-03-31`.
+**What broke:** Checkout success page and webhooks read `subscription.current_period_end`, which is absent on API >= `2025-03-31` (`undefined` when read in JavaScript).
 
 **Stripe changelog:** https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-subscription-current-period-start-and-end
 
 **Fix:**
 ```typescript
 // OLD (broken)
-subscription.current_period_end  // null
+subscription.current_period_end  // undefined: property removed
 
 // NEW (correct)
 subscription.items.data[0].current_period_end  // number
@@ -112,6 +114,13 @@ subscription.items.data[0].current_period_end  // number
 | `customer.subscription.resumed` | `processWebhookEvent` | Resume from pause |
 | `customer.subscription.pending_update_applied` | `processWebhookEvent` | Scheduled change applied |
 | `customer.subscription.pending_update_expired` | `processWebhookEvent` | Scheduled change expired |
+| `checkout.session.completed` | `processWebhookEvent` | Subscription synchronization and initial consent; setup-mode trial payment-method completion |
+| `checkout.session.expired` | `processWebhookEvent` | Subscription synchronization; setup-mode trial payment-method expiration |
+| `invoice.payment_action_required` | `processWebhookEvent` | Synchronize the referenced subscription when payment needs action |
+| `invoice.payment_failed` | `processWebhookEvent` | Synchronize the referenced subscription after payment failure |
+| `invoice.payment_succeeded` | `processWebhookEvent` | Synchronize the referenced subscription after successful payment |
+
+The gateway's `processWebhookEvent` delegates to `processStripeWebhookEvent` in `src/adapters/gateways/stripe/stripe-webhook-processor.ts`.
 
 **Webhook endpoint:** `/api/stripe/webhook`
 
@@ -121,7 +130,7 @@ subscription.items.data[0].current_period_end  // number
 
 ## E2E Test Seeding (API-Based)
 
-**Never automate Stripe's hosted checkout UI.** Stripe frequently changes their checkout DOM (Link integration, accordion payment methods, iframe structure), permanently breaking iframe-based selectors. Per Stripe's own docs and industry consensus, use the Stripe API with test tokens instead.
+**Keep Stripe-owned DOM outside required PR CI.** Under DEBT-471, required E2E uses the Stripe API and CLI for provider-backed Checkout contracts and may verify the redirect to `checkout.stripe.com`, but must not interact with Stripe-owned markup. Hosted-DOM journeys remain in `stripe-hosted-*.spec.ts`, selected only by the scheduled/manual `stripe-hosted` project (`pnpm test:e2e:stripe-hosted`). That observational lane detects hosted-page drift without making Stripe's markup a merge dependency.
 
 Our E2E tests seed subscriptions in `global.setup.ts` via `seedTestSubscription()` (`tests/e2e/helpers/seed-test-user.ts`), which:
 
@@ -164,7 +173,7 @@ When upgrading Stripe SDK or API version:
 - [ ] Search codebase for deprecated fields: `current_period_start`, `current_period_end` at subscription level
 - [ ] Advance `lib/stripe-api-version.ts` in the same PR as the SDK bump; update the "Last reviewed" date in `lib/stripe.ts`
 - [ ] Run `pnpm typecheck` — a `Stripe` → `StripeClient` assignability error means a response enum widened; widen the matching response type in `src/adapters/shared/stripe-types.ts` (never the request filter) and extend `stripe-types.test.ts`
-- [ ] Run the full gate including `pnpm test:e2e` — the required Checkout contract drives real TEST-mode Sessions and webhooks
+- [ ] Run the full gate including `pnpm test:e2e` — the required Checkout contract proves real TEST-mode Sessions and the success-sync path. `tests/integration/webhook-signature-ingress.integration.test.ts` separately verifies signed webhook ingress through the route handlers; neither contract proves live delivery from Stripe to a deployed endpoint.
 - [ ] Update this doc and `docs/vendor-docs/index.md` with the new versions
 
 ---
