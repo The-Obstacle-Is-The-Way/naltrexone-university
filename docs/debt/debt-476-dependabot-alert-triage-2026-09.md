@@ -1,7 +1,7 @@
 # DEBT-476: Dependabot Alert Triage — What #882/#886 Closed and the Four-Package Residue
 
 **Status:** Open — remediation shipped (#888 → promo #889, 2026-09-16); twelve of thirteen alerts `fixed`, #55 dismissed `not_used` on owner approval 2026-09-16; remaining: `fast-uri` 3.1.8 follow-up after 2026-09-22T07:36Z, then archive
-**Priority:** P2 — nothing reachable from a production request path, but five High-rated alerts across two transitive packages sit in the default-branch lockfile and one alert cannot be closed by any version pin
+**Priority:** P2 — at filing, nothing was reachable from a production request path, but five High-rated alerts across two transitive packages sat in the default-branch lockfile and one alert could not be closed by any version pin
 **Date:** 2026-09-15
 **Source:** Owner question after PR #882 (`chore/dependabot-batch-2026-09-14`) merged to `dev` and promo #886 opened: do the 13 open Dependabot alerts get squashed by that merge, or do some still need handling?
 **Related:** [DEBT-393](../_archive/debt/debt-393-dependabot-triage-and-config-hardening.md) (Dependabot triage protocol and config), [DEBT-394](../_archive/debt/debt-394-supply-chain-hardening.md) (7-day `minimumReleaseAge` gate and override discipline), [`docs/dev/supply-chain-overrides.md`](../dev/supply-chain-overrides.md) (override playbook; js-yaml worked example), [`docs/dev/dependency-update-protocol.md`](../dev/dependency-update-protocol.md) (full-gate and E2E rules for repo-owned dependency PRs), [DEBT-474](./debt-474-ci-secret-scope-and-action-immutability.md) (never run a Dependabot head locally with shared credentials), [DEBT-460](../_archive/debt/debt-460-dependency-train-residues.md) (standing dependency-train rules)
@@ -27,7 +27,7 @@ gh api --paginate 'repos/The-Obstacle-Is-The-Way/naltrexone-university/dependabo
 
 | Alert | Package (scope) | Advisory | Severity / CVSS 3.1 | Vulnerable → patched | `main` @ #874 | `dev` @ #882 | Disposition |
 |---|---|---|---|---|---|---|---|
-| #61, #62 | `next` (runtime, direct) | GHSA-p293-qw3h-jr36 / CVE-2026-75604 — unauthenticated RCE on Windows-hosted servers | Critical / 9.0 | `>=16.0.0 <16.3.3` → 16.3.3 | 16.3.1 | **16.3.4** | **Closed by #882 → #886.** Auto-marked `fixed` 2026-09-15T16:05:17Z, six seconds after #886 merged (`8f98e234`). |
+| #61, #62 | `next` (runtime, direct) | GHSA-p293-qw3h-jr36 / CVE-2026-75604 — unauthenticated RCE on Windows-hosted servers | Critical / 9.0 | `>=16.0.0 <16.3.3` → 16.3.3 | 16.3.1 | **16.3.4** | **Closed by #882 → #886.** Auto-marked `fixed` 2026-09-15T16:05:17–18Z, five to six seconds after #886 merged (`8f98e234`). |
 | #59, #60 | `next` (runtime, direct) | GHSA-2xp9-vwfh-vxw4 — unauthenticated RCE in Image Optimization when AVIF files are used | Critical | `>=16.0.0 <16.3.3` → 16.3.3 | 16.3.1 | **16.3.4** | **Closed by #882 → #886** (`fixed` 16:05:17–18Z). The #882 `sharp` override comment already records why 16.3.4 + sharp 0.35.4 is the coherent pair. |
 | #58 | `sharp` (runtime, transitive via `next`; exact override) | GHSA-rgj7-g3m4-5g8c — bundled libheif flaws GHSA-g89c-p67h-r497 + GHSA-2jg2-4ch7-h545 | High | `<0.35.4` → 0.35.4 | 0.35.3 | **0.35.4** | **Closed by #882 → #886** (`fixed` 16:05:18Z). |
 | #51, #52, #53, #54 | `fast-uri` (runtime, transitive; exact override) | GHSA-5jgf-p345-68v8, GHSA-fph4-wmhf-6fwf, GHSA-f65p-4m7j-42xc, GHSA-jqff-g426-hqxp — host confusion / SSRF via IDN, percent-decoding, IPv6, percent-encoded scheme | High / 7.5 (I:H) each | `>=3.0.0 <3.1.6` → 3.1.6 | 3.1.5 | 3.1.5 | **Fixed 2026-09-16T12:56:46Z after promo #889** (override 3.1.5 → 3.1.7, #888). See C. |
@@ -35,7 +35,7 @@ gh api --paginate 'repos/The-Obstacle-Is-The-Way/naltrexone-university/dependabo
 | #56, #57 | `@vitest/mocker`, `vitest` (development; `vitest` direct) | GHSA-82fw-gwwq-j7x9 / CVE-2026-84373 — path traversal / arbitrary file read via redirect mock | Moderate / 5.9 | `>=2.1.0 <4.1.11` → 4.1.11 | 4.1.10 | 4.1.10 | **Fixed 2026-09-16T12:56:46Z after promo #889** (4.1.11; caret floors `^4.1.7` → `^4.1.11`, #888). See E. |
 | #55 | `stream-json` (runtime, transitive) | GHSA-528h-pc64-c93x / CVE-2026-71429 — `pick/ignore/filter/replace` filters are O(depth²) on nested input (DoS) | Moderate / 6.2 (AV:L, A:H) | `<=3.4.0` → 3.5.0 | 1.9.1 | 1.9.1 | **Dismissed `not_used` 2026-09-16T13:45:31Z on owner approval.** Unreachable; upstream-blocked two majors away; not closable by a pin. See F and the post-promotion receipts. |
 
-Summary: **5 of 13 closed by the Dependabot batch** (all four Critical alerts plus the sharp High). **8 remain**, in four packages. Three of the four are mechanical same-line bumps that clear the 7-day maturity gate with no `minimumReleaseAgeExclude`; the fourth is a genuine judgment call.
+At the original filing, **5 of 13 were closed by the Dependabot batch** (all four Critical alerts plus the sharp High). **8 remained**, in four packages. Three were mechanical same-line bumps that cleared the 7-day maturity gate without an exception; the fourth required an owner decision. The completed September 16 disposition is recorded below; these are not current open-alert counts.
 
 ### A–B. `next` and `sharp` — nothing left to do
 
@@ -69,7 +69,7 @@ The bump is done with `pnpm update vitest @vitest/browser-playwright @vitest/cov
 
 ### F. `stream-json` — no closable pin; unreachable; upstream-blocked
 
-**Chain:** `stream-json@1.9.1` ← `jayson@4.3.0` (declares `^1.9.1`) ← `@solana/web3.js@1.98.4` (declares `jayson: ^4.1.1`) ← `@solana/wallet-adapter-react@0.15.39` / `@solana/wallet-adapter-base@0.9.27` / `@solana/wallet-standard@1.1.4` (all **exact-pinned** dependencies of `@clerk/ui@1.32.2`, direct). This is Clerk's Web3 wallet sign-in support; the application enables no Web3 strategy.
+**Chain:** `stream-json@1.9.1` ← `jayson@4.3.0` (declares `^1.9.1`) ← `@solana/web3.js@1.98.4` (declares `jayson: ^4.1.1`) ← `@solana/wallet-adapter-react@0.15.39` / `@solana/wallet-adapter-base@0.9.27` / `@solana/wallet-standard@1.1.4` (all **exact-pinned** dependencies of `@clerk/ui@1.32.2`, direct). This is Clerk's Web3 wallet sign-in support; no Web3 strategy is configured in application code (this does not assert Clerk Dashboard configuration).
 
 **Why an override cannot fix it.** The patched line starts at `stream-json@3.5.0`: `"type": "module"` (ESM-only), `engines.node >=22`, `stream-chain ^4.2.5`, with **renamed entry points**. `jayson@4.3.0` — still the latest release — is CommonJS and requires `stream-json/streamers/StreamValues` and `stream-json/utils/Verifier` (paths that no longer exist in v3) from `lib/utils.js`. Forcing `stream-json: 3.5.0` through `pnpm.overrides` would therefore turn every `require` of `jayson/lib/utils.js` into `MODULE_NOT_FOUND` — the opposite of defense-in-depth — while also being a two-major, out-of-range override, which the playbook has never allowed (the one out-of-range override, `postcss`, stays inside its major). Upstream is aware: tedeh/jayson#241 (opened 2026-09-14, "fix!: patch stream-json/uuid advisories … require Node >= 22") moves jayson to `stream-json ^3.5.0` as a **breaking** release. Even after it ships, `@solana/web3.js`'s `^4.1.1` range cannot take a jayson major, and `@clerk/ui` pins its adapter versions exactly, so the fix reaches this lockfile only after three upstream releases.
 
@@ -86,7 +86,7 @@ So the vulnerable functions are not merely unexecuted — they are not on any im
 
 ### Observation (out of scope): the Solana/React Native tree
 
-Two of the four residual packages (`js-yaml` via react-native/jest tooling, `stream-json` via jayson) enter the lockfile only because `@clerk/ui` hard-depends on the Solana wallet-adapter stack, which in turn drags in `react-native@0.84.1`, `babel-jest`, `@solana/web3.js`, and `jayson`. For a product with no Web3 sign-in this is pure attack surface and lockfile mass. Worth a future check of whether Clerk offers an adapter-free build or a peer/optional arrangement; it must **not** be attacked with stub-package overrides, which would silently break Clerk's sign-in bundle if a Web3 strategy were ever enabled.
+`stream-json` via jayson and an additional `js-yaml` path via react-native/jest tooling enter the lockfile because `@clerk/ui` hard-depends on the Solana wallet-adapter stack, which in turn drags in `react-native@0.84.1`, `babel-jest`, `@solana/web3.js`, and `jayson`. `js-yaml` also enters through `gray-matter` (§D), independently of Clerk. With no Web3 strategy configured in application code, the unused Solana stack adds attack surface and lockfile mass. Worth a future check of whether Clerk offers an adapter-free build or a peer/optional arrangement; it must **not** be attacked with stub-package overrides, which would silently break Clerk's sign-in bundle if a Web3 strategy were ever enabled.
 
 ## Remediation (single repo-owned PR to `dev`)
 
@@ -136,7 +136,7 @@ Local-environment note: the first browser-lane run failed with `Executable doesn
 
 ## Post-promotion receipts (2026-09-16)
 
-Promotion #889 merged `dev` → `main` at `3aecbcdb` (main CI run 35098807874, success, 2026-09-16T12:56:42Z). Alert states from the Dependabot REST API afterwards:
+Promotion #889 merged `dev` → `main` at `3aecbcdb` on 2026-09-16T12:56:39Z. Main CI run [35098807874](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35098807874) was created at 12:56:42Z and concluded successfully at 13:07:39Z (`test` completed at 13:07:31Z; `deploy` at 13:07:38Z). The run's creation time is not its success time. Alert states from the Dependabot REST API afterwards:
 
 | Alert | Package | State | Timestamp |
 |---|---|---|---|
@@ -146,6 +146,19 @@ Promotion #889 merged `dev` → `main` at `3aecbcdb` (main CI run 35098807874, s
 | #55 | `stream-json` | `dismissed`, reason `not_used` | `dismissed_at` 2026-09-16T13:45:31Z, owner account, 258-character comment pointing at §F |
 
 Twelve of the original thirteen alerts are `fixed` (five via #886, seven via #889); the thirteenth carries the owner-approved dismissal. The dismissal followed the owner's 2026-09-16 go-ahead and an independent re-verification of §F against the installed tree: `jayson/lib/utils.js` is the only `stream-json` importer; `jayson/lib/client/browser/index.js` requires only `uuid` and `../../generateRequest`; `@solana/web3.js` imports only `jayson/lib/client/browser`; and `stream-json@3.5.0` is `"type": "module"`, `engines.node >=22`, with `exports` limited to `./src/*`, so the `streamers/StreamValues` and `utils/Verifier` paths jayson requires do not exist there. GitHub retains the reason and comment, and the alert can be reopened if any §F recheck trigger fires.
+
+## Separate dependency follow-through (2026-09-16)
+
+The alert remediation above is distinct from the two routine dependency PRs. Stripe #890 merged to `dev` as `e8a9e5b3`, superseding #877, after CodeRabbit approved exact head `7132a2eb` at 16:33:13Z with zero unresolved threads; CI run 35119290492, Codecov patch, and Vercel passed. Its final commit corrected documentation only. The Sentry/Lucide batch and combined promotion remain pending; their eventual receipts belong in their PRs rather than being asserted before they happen.
+
+`pnpm update @sentry/nextjs lucide-react` resolved Sentry 10.70.0 → 10.74.0 and Lucide 1.42.0 → 1.43.0. Manifest caret floors move `^10.53.1` → `^10.74.0` and `^1.16.0` → `^1.43.0`. npm timestamps establish seven-day eligibility at **2026-09-16T15:54:05.502Z** for Sentry and **2026-09-15T12:08:50.663Z** for Lucide; no age-gate or override policy changed.
+
+- [Sentry 10.74.0](https://github.com/getsentry/sentry-javascript/releases/tag/10.74.0) fixes the jsdom/happy-dom import crash seen on #887's 10.73.0 head. The interval also defaults logs on in [10.71.0](https://github.com/getsentry/sentry-javascript/releases/tag/10.71.0), but this app uses neither `Sentry.logger` nor a log-forwarding integration; it does not opt into new log capture. [10.72.0](https://github.com/getsentry/sentry-javascript/releases/tag/10.72.0) removes transformer packages from server-utils, and [10.73.0](https://github.com/getsentry/sentry-javascript/releases/tag/10.73.0) adds a config entry point that this app does not use. Existing initialization and error-capture code is unchanged.
+- [Lucide 1.43.0](https://github.com/lucide-icons/lucide/releases/tag/1.43.0) adds icons and adjusts the two ID-card icons; none of those changed icons is imported by this app.
+- Disclosed transitive moves: `import-in-the-middle` 3.3.3 → 3.5.0, `cjs-module-lexer` 2.2.0 → 2.2.1, `es-module-lexer` 2.3.1 → 3.0.2; `schema-utils` 4.3.3 → 4.4.0 and its `ajv-formats` 2.1.1 → 3.0.1; Browserslist data `electron-to-chromium` 1.5.423 → 1.5.425 and `node-releases` 2.0.54 → 2.0.55. These are within their immediate consumers' declared ranges and cleared the age gate. Import-in-the-middle 3.5.0 explicitly adapts to lexer v3; schema-utils 4.4.0 explicitly adopts ajv-formats v3. No application consumer or override is forced across a major boundary.
+- Sentry's old code-transformer/bundler-plugins/tracing-hooks subtree and its orphaned `astring`, `esquery`, `meriyah`, and `semifies` entries disappear. Runtime Sentry packages use core 10.74.0; the unchanged webpack-plugin 5.4.0 → bundler-plugins 10.70.0 path still pins a separate core 10.70.0. Do not claim one Sentry-core version or force-dedupe it. The OTel override trio stays 2.8.0; the sole peer warning remains the pre-existing Solana `ws@7.5.13` / `utf-8-validate` mismatch.
+
+**Audit corrections:** The post-promotion CI timestamp above now distinguishes run creation from success; the Web3 statement is limited to application code; the Clerk observation no longer calls it the sole source of `js-yaml`; the #61/#62 timestamps preserve their one-second difference; and the register distinguishes merged alert remediation from pending dependency promotion. DEBT-476 stays Open for the dated `fast-uri` follow-up.
 
 ## Acceptance criteria
 
