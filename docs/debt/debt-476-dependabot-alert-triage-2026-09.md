@@ -1,6 +1,6 @@
 # DEBT-476: Dependabot Alert Triage — What #882/#886 Closed and the Four-Package Residue
 
-**Status:** Open — analysis complete; remediation PR in flight (this document ships with it)
+**Status:** Open — remediation shipped (#888 → promo #889, 2026-09-16); twelve of thirteen alerts `fixed`, #55 dismissed `not_used` on owner approval 2026-09-16; remaining: `fast-uri` 3.1.8 follow-up after 2026-09-22T07:36Z, then archive
 **Priority:** P2 — nothing reachable from a production request path, but five High-rated alerts across two transitive packages sit in the default-branch lockfile and one alert cannot be closed by any version pin
 **Date:** 2026-09-15
 **Source:** Owner question after PR #882 (`chore/dependabot-batch-2026-09-14`) merged to `dev` and promo #886 opened: do the 13 open Dependabot alerts get squashed by that merge, or do some still need handling?
@@ -30,10 +30,10 @@ gh api --paginate 'repos/The-Obstacle-Is-The-Way/naltrexone-university/dependabo
 | #61, #62 | `next` (runtime, direct) | GHSA-p293-qw3h-jr36 / CVE-2026-75604 — unauthenticated RCE on Windows-hosted servers | Critical / 9.0 | `>=16.0.0 <16.3.3` → 16.3.3 | 16.3.1 | **16.3.4** | **Closed by #882 → #886.** Auto-marked `fixed` 2026-09-15T16:05:17Z, six seconds after #886 merged (`8f98e234`). |
 | #59, #60 | `next` (runtime, direct) | GHSA-2xp9-vwfh-vxw4 — unauthenticated RCE in Image Optimization when AVIF files are used | Critical | `>=16.0.0 <16.3.3` → 16.3.3 | 16.3.1 | **16.3.4** | **Closed by #882 → #886** (`fixed` 16:05:17–18Z). The #882 `sharp` override comment already records why 16.3.4 + sharp 0.35.4 is the coherent pair. |
 | #58 | `sharp` (runtime, transitive via `next`; exact override) | GHSA-rgj7-g3m4-5g8c — bundled libheif flaws GHSA-g89c-p67h-r497 + GHSA-2jg2-4ch7-h545 | High | `<0.35.4` → 0.35.4 | 0.35.3 | **0.35.4** | **Closed by #882 → #886** (`fixed` 16:05:18Z). |
-| #51, #52, #53, #54 | `fast-uri` (runtime, transitive; exact override) | GHSA-5jgf-p345-68v8, GHSA-fph4-wmhf-6fwf, GHSA-f65p-4m7j-42xc, GHSA-jqff-g426-hqxp — host confusion / SSRF via IDN, percent-decoding, IPv6, percent-encoded scheme | High / 7.5 (I:H) each | `>=3.0.0 <3.1.6` → 3.1.6 | 3.1.5 | 3.1.5 | **Still open. Fix: override 3.1.5 → 3.1.7** (this PR). See C. |
-| #63 | `js-yaml` (runtime, transitive; exact override) | GHSA-2883-xcg3-v3hh / CVE-2026-84375 — `maxTotalMergeKeys` does not bound CPU for empty merge sources | High / 7.5 (A:H) | `>=3.0.0 <3.15.2` → 3.15.2 | 3.15.1 | 3.15.1 | **Still open. Fix: override 3.15.1 → 3.15.2** (this PR). See D. |
-| #56, #57 | `@vitest/mocker`, `vitest` (development; `vitest` direct) | GHSA-82fw-gwwq-j7x9 / CVE-2026-84373 — path traversal / arbitrary file read via redirect mock | Moderate / 5.9 | `>=2.1.0 <4.1.11` → 4.1.11 | 4.1.10 | 4.1.10 | **Still open. Fix: bump to 4.1.11; caret floors `^4.1.7` → `^4.1.11`** (this PR). See E. |
-| #55 | `stream-json` (runtime, transitive) | GHSA-528h-pc64-c93x / CVE-2026-71429 — `pick/ignore/filter/replace` filters are O(depth²) on nested input (DoS) | Moderate / 6.2 (AV:L, A:H) | `<=3.4.0` → 3.5.0 | 1.9.1 | 1.9.1 | **Still open and not closable by a pin.** Unreachable; upstream-blocked two majors away. Disposition = dismiss as not used, with this record as the rationale, pending owner ruling. See F. |
+| #51, #52, #53, #54 | `fast-uri` (runtime, transitive; exact override) | GHSA-5jgf-p345-68v8, GHSA-fph4-wmhf-6fwf, GHSA-f65p-4m7j-42xc, GHSA-jqff-g426-hqxp — host confusion / SSRF via IDN, percent-decoding, IPv6, percent-encoded scheme | High / 7.5 (I:H) each | `>=3.0.0 <3.1.6` → 3.1.6 | 3.1.5 | 3.1.5 | **Fixed 2026-09-16T12:56:46Z after promo #889** (override 3.1.5 → 3.1.7, #888). See C. |
+| #63 | `js-yaml` (runtime, transitive; exact override) | GHSA-2883-xcg3-v3hh / CVE-2026-84375 — `maxTotalMergeKeys` does not bound CPU for empty merge sources | High / 7.5 (A:H) | `>=3.0.0 <3.15.2` → 3.15.2 | 3.15.1 | 3.15.1 | **Fixed 2026-09-16T12:56:46Z after promo #889** (override 3.15.1 → 3.15.2, #888). See D. |
+| #56, #57 | `@vitest/mocker`, `vitest` (development; `vitest` direct) | GHSA-82fw-gwwq-j7x9 / CVE-2026-84373 — path traversal / arbitrary file read via redirect mock | Moderate / 5.9 | `>=2.1.0 <4.1.11` → 4.1.11 | 4.1.10 | 4.1.10 | **Fixed 2026-09-16T12:56:46Z after promo #889** (4.1.11; caret floors `^4.1.7` → `^4.1.11`, #888). See E. |
+| #55 | `stream-json` (runtime, transitive) | GHSA-528h-pc64-c93x / CVE-2026-71429 — `pick/ignore/filter/replace` filters are O(depth²) on nested input (DoS) | Moderate / 6.2 (AV:L, A:H) | `<=3.4.0` → 3.5.0 | 1.9.1 | 1.9.1 | **Dismissed `not_used` 2026-09-16T13:45:31Z on owner approval.** Unreachable; upstream-blocked two majors away; not closable by a pin. See F and the post-promotion receipts. |
 
 Summary: **5 of 13 closed by the Dependabot batch** (all four Critical alerts plus the sharp High). **8 remain**, in four packages. Three of the four are mechanical same-line bumps that clear the 7-day maturity gate with no `minimumReleaseAgeExclude`; the fourth is a genuine judgment call.
 
@@ -82,7 +82,7 @@ The bump is done with `pnpm update vitest @vitest/browser-playwright @vitest/cov
 
 So the vulnerable functions are not merely unexecuted — they are not on any import path the application can take. The parallel jayson `uuid` advisory (GHSA-w5hq-g745-h8pq) is already covered by the existing `uuid: 14.0.0` override.
 
-**Disposition.** Dismiss alert #55 with reason `not_used` and a comment pointing at this section, and re-check when (a) jayson publishes the #241 major, (b) `@solana/web3.js` or a successor adopts it, and (c) `@clerk/ui` picks that up — or when the Solana adapter tree leaves the lockfile entirely. Dismissal is a repository state change and is held for the **owner's explicit go-ahead**; until then the alert stays open and this document is the standing rationale. Do not add a `pnpm audit` `ignoreGhsas` entry: CI does not run `pnpm audit`, and the playbook forbids proactive ignores.
+**Disposition.** Dismiss alert #55 with reason `not_used` and a comment pointing at this section, and re-check when (a) jayson publishes the #241 major, (b) `@solana/web3.js` or a successor adopts it, and (c) `@clerk/ui` picks that up — or when the Solana adapter tree leaves the lockfile entirely. The owner gave the go-ahead on 2026-09-16 and the alert was dismissed the same day (13:45:31Z) after an independent re-verification of items 1–3 against the installed tree (post-promotion receipts below); this document remains the standing rationale. Do not add a `pnpm audit` `ignoreGhsas` entry: CI does not run `pnpm audit`, and the playbook forbids proactive ignores.
 
 ### Observation (out of scope): the Solana/React Native tree
 
@@ -95,7 +95,7 @@ Two of the four residual packages (`js-yaml` via react-native/jest tooling, `str
 3. `pnpm install` to apply the overrides; `pnpm why fast-uri js-yaml vitest @vitest/mocker` must show only the target versions. Two incidental lockfile moves ride along and are accepted as disclosed: `@vitest/browser@4.1.11` re-resolves its `ws` range onto the already-present 8.21.3, so the duplicate `ws@8.21.0` entry disappears (one package fewer); and `browserslist@4.28.9` re-resolves `electron-to-chromium` 1.5.422 → 1.5.423 (published 2026-09-08, cleared the strict 7-day gate; data-only). Nothing else in the lockfile changes.
 4. Docs: this record; `docs/debt/index.md` (Latest stanza, Active row, Next Debt ID → DEBT-477); the playbook's js-yaml historical note.
 5. Full gate per the dependency-update protocol — `pnpm typecheck && pnpm lint && pnpm test --run && pnpm test:browser && pnpm db:test:up && pnpm test:integration && pnpm build`, then `pnpm test:e2e` (mandatory for repo-owned dependency PRs; receipt in the PR body).
-6. After promotion: confirm #51–#54, #56, #57, #63 flip to `fixed`; dismiss #55 on owner approval.
+6. After promotion: #51–#54, #56, #57, #63 flipped to `fixed` at 2026-09-16T12:56:46Z; #55 dismissed on owner approval at 13:45:31Z (post-promotion receipts below).
 7. Follow-up ticket-in-place: `fast-uri` 3.1.8 after 2026-09-22T07:36Z.
 
 ## Verification commands
@@ -134,12 +134,25 @@ grep -n "require(" node_modules/.pnpm/jayson@4.3.0*/node_modules/jayson/lib/clie
 
 Local-environment note: the first browser-lane run failed with `Executable doesn't exist at …/chromium-1243/…` because Playwright 1.62.1 → 1.63.0 landed in #882 (`d6156d5a`) and this clone's `~/Library/Caches/ms-playwright/` still held only the 1.62.x build. `pnpm exec playwright install chromium` — the same step CI runs from `scripts/ci/install-playwright-chromium.sh` — fixed it; unrelated to this change, but every other clone on current `dev` will hit it once.
 
+## Post-promotion receipts (2026-09-16)
+
+Promotion #889 merged `dev` → `main` at `3aecbcdb` (main CI run 35098807874, success, 2026-09-16T12:56:42Z). Alert states from the Dependabot REST API afterwards:
+
+| Alert | Package | State | Timestamp |
+|---|---|---|---|
+| #51, #52, #53, #54 | `fast-uri` | `fixed` | `fixed_at` 2026-09-16T12:56:46Z |
+| #63 | `js-yaml` | `fixed` | `fixed_at` 2026-09-16T12:56:46Z |
+| #56, #57 | `@vitest/mocker`, `vitest` | `fixed` | `fixed_at` 2026-09-16T12:56:46Z |
+| #55 | `stream-json` | `dismissed`, reason `not_used` | `dismissed_at` 2026-09-16T13:45:31Z, owner account, 258-character comment pointing at §F |
+
+Twelve of the original thirteen alerts are `fixed` (five via #886, seven via #889); the thirteenth carries the owner-approved dismissal. The dismissal followed the owner's 2026-09-16 go-ahead and an independent re-verification of §F against the installed tree: `jayson/lib/utils.js` is the only `stream-json` importer; `jayson/lib/client/browser/index.js` requires only `uuid` and `../../generateRequest`; `@solana/web3.js` imports only `jayson/lib/client/browser`; and `stream-json@3.5.0` is `"type": "module"`, `engines.node >=22`, with `exports` limited to `./src/*`, so the `streamers/StreamValues` and `utils/Verifier` paths jayson requires do not exist there. GitHub retains the reason and comment, and the alert can be reopened if any §F recheck trigger fires.
+
 ## Acceptance criteria
 
 - `dev` lockfile resolves `fast-uri@3.1.7`, `js-yaml@3.15.2`, `vitest@4.1.11`, `@vitest/mocker@4.1.11`, `@vitest/browser-playwright@4.1.11`, `@vitest/coverage-v8@4.1.11`; `stream-json` stays `1.9.1` with the rationale above.
 - `package.json` changes only the three vitest-family caret floors (`^4.1.7` → `^4.1.11`); `pnpm-workspace.yaml` gains no `minimumReleaseAgeExclude`.
 - Full gate green on the PR head, including browser and E2E lanes; CodeRabbit review on the exact head.
-- After promotion, the seven alerts this PR targets (#51–#54, #56, #57, #63) show `fixed`, bringing the batch total to twelve of the original thirteen (five from #886 plus these seven); #55 is dismissed (owner-approved) or remains open with this record linked.
+- After promotion, the seven alerts this PR targets (#51–#54, #56, #57, #63) show `fixed` (**met 2026-09-16T12:56:46Z**), bringing the batch total to twelve of the original thirteen (five from #886 plus these seven); #55 carries an owner-approved `not_used` dismissal (**met 2026-09-16T13:45:31Z**).
 
 ## Risk and reversibility
 
@@ -149,6 +162,6 @@ Local-environment note: the first browser-lane run failed with `Executable doesn
 
 ## Done when
 
-- The remediation PR is merged to `dev` and promoted, twelve of the thirteen alerts are `fixed` (five via #886, seven via this PR), and #55 carries an owner-approved dismissal or a linked open rationale.
+- **Met 2026-09-16:** the remediation PR (#888) merged to `dev` and was promoted (#889); twelve of the thirteen alerts are `fixed` (five via #886, seven via #888), and #55 carries the owner-approved `not_used` dismissal.
 - The `fast-uri` 3.1.8 follow-up has landed after 2026-09-22.
 - This record moves to `docs/_archive/debt/` with the alert-state receipt.
