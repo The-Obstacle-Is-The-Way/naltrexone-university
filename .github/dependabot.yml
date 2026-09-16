@@ -40,7 +40,7 @@ updates:
           - major
       stripe:
         # Split out per DEBT-393 precedent: a stripe SDK bump couples to a
-        # billing-sensitive STRIPE_API_VERSION (lib/stripe.ts) upgrade that
+        # billing-sensitive STRIPE_API_VERSION (lib/stripe-api-version.ts) upgrade that
         # needs changelog review + webhook/checkout verification, so it must
         # not block the routine minor/patch group.
         applies-to: version-updates
