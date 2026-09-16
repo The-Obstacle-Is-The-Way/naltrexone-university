@@ -378,7 +378,10 @@ function isSessionInactive(
   session: StripeCheckoutSession,
   nowMs: () => number,
 ): boolean {
-  if (session.status && session.status !== 'open') {
+  // Any reported status other than 'open' is not reusable, including values
+  // this SDK does not know yet and the empty string. A missing status
+  // (null/undefined) says nothing about the Session and defers to expiry.
+  if (typeof session.status === 'string' && session.status !== 'open') {
     return true;
   }
 
