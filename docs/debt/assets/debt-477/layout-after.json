@@ -1,0 +1,450 @@
+[
+  {
+    "width": 390,
+    "eyebrow": {
+      "text": "Board prep, built for outcomes",
+      "box": {
+        "x": 97.421875,
+        "y": 182,
+        "width": 195.140625,
+        "height": 26
+      },
+      "fontSize": "12px",
+      "textAlign": "center",
+      "color": "rgb(237, 237, 237)",
+      "background": "rgb(28, 28, 28)"
+    },
+    "contrast": 14.556736715134688,
+    "footer": [
+      {
+        "text": "Addiction Boards",
+        "box": {
+          "x": 16,
+          "y": 3902,
+          "width": 358,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "Board exam preparation for addiction psychiatry and addiction medicine.",
+        "box": {
+          "x": 16,
+          "y": 3934,
+          "width": 358,
+          "height": 40
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "FeaturesPricingSign inSign up",
+        "box": {
+          "x": 16,
+          "y": 3998,
+          "width": 358,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "Privacy PolicyTerms of Service",
+        "box": {
+          "x": 16,
+          "y": 4026,
+          "width": 358,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      }
+    ],
+    "features": {
+      "text": "Everything you need to prep efficiently",
+      "box": {
+        "x": 16,
+        "y": 1547,
+        "width": 358,
+        "height": 72
+      },
+      "fontSize": "30px",
+      "textAlign": "center",
+      "color": "rgb(237, 237, 237)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "plans": [
+      {
+        "text": "Pro Monthly$29/moAccess to all questionsDetailed explanationsProgress trackingGet started",
+        "box": {
+          "x": 16,
+          "y": 2700,
+          "width": 358,
+          "height": 337
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgb(18, 18, 18)"
+      },
+      {
+        "text": "Pro Annual$199/yrSave $149 per yearEverything in Pro MonthlyBest valueGet started",
+        "box": {
+          "x": 16,
+          "y": 3061,
+          "width": 358,
+          "height": 325
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgb(18, 18, 18)"
+      }
+    ]
+  },
+  {
+    "width": 768,
+    "eyebrow": {
+      "text": "Board prep, built for outcomes",
+      "box": {
+        "x": 286.421875,
+        "y": 150,
+        "width": 195.140625,
+        "height": 26
+      },
+      "fontSize": "12px",
+      "textAlign": "center",
+      "color": "rgb(237, 237, 237)",
+      "background": "rgb(28, 28, 28)"
+    },
+    "contrast": 14.556736715134688,
+    "footer": [
+      {
+        "text": "Addiction Boards",
+        "box": {
+          "x": 24,
+          "y": 2701.5,
+          "width": 423.984375,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "Board exam preparation for addiction psychiatry and addiction medicine.",
+        "box": {
+          "x": 24,
+          "y": 2733.5,
+          "width": 423.984375,
+          "height": 40
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "FeaturesPricingSign inSign up",
+        "box": {
+          "x": 479.984375,
+          "y": 2704.5,
+          "width": 264.015625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "Privacy PolicyTerms of Service",
+        "box": {
+          "x": 479.984375,
+          "y": 2733.5,
+          "width": 264.015625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      }
+    ],
+    "features": {
+      "text": "Everything you need to prep efficiently",
+      "box": {
+        "x": 48,
+        "y": 1129.5,
+        "width": 672,
+        "height": 40
+      },
+      "fontSize": "36px",
+      "textAlign": "center",
+      "color": "rgb(237, 237, 237)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "plans": [
+      {
+        "text": "Pro Monthly$29/moAccess to all questionsDetailed explanationsProgress trackingGet started",
+        "box": {
+          "x": 24,
+          "y": 1930.5,
+          "width": 348,
+          "height": 337
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgb(18, 18, 18)"
+      },
+      {
+        "text": "Pro Annual$199/yrSave $149 per yearEverything in Pro MonthlyBest valueGet started",
+        "box": {
+          "x": 396,
+          "y": 1930.5,
+          "width": 348,
+          "height": 337
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgb(18, 18, 18)"
+      }
+    ]
+  },
+  {
+    "width": 1024,
+    "eyebrow": {
+      "text": "Board prep, built for outcomes",
+      "box": {
+        "x": 414.421875,
+        "y": 198,
+        "width": 195.140625,
+        "height": 26
+      },
+      "fontSize": "12px",
+      "textAlign": "center",
+      "color": "rgb(237, 237, 237)",
+      "background": "rgb(28, 28, 28)"
+    },
+    "contrast": 14.556736715134688,
+    "footer": [
+      {
+        "text": "Addiction Boards",
+        "box": {
+          "x": 32,
+          "y": 2623.5,
+          "width": 663.984375,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "Board exam preparation for addiction psychiatry and addiction medicine.",
+        "box": {
+          "x": 32,
+          "y": 2655.5,
+          "width": 663.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "FeaturesPricingSign inSign up",
+        "box": {
+          "x": 727.984375,
+          "y": 2626.5,
+          "width": 264.015625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "Privacy PolicyTerms of Service",
+        "box": {
+          "x": 727.984375,
+          "y": 2655.5,
+          "width": 264.015625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      }
+    ],
+    "features": {
+      "text": "Everything you need to prep efficiently",
+      "box": {
+        "x": 176,
+        "y": 1091.5,
+        "width": 672,
+        "height": 40
+      },
+      "fontSize": "36px",
+      "textAlign": "center",
+      "color": "rgb(237, 237, 237)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "plans": [
+      {
+        "text": "Pro Monthly$29/moAccess to all questionsDetailed explanationsProgress trackingGet started",
+        "box": {
+          "x": 128,
+          "y": 1852.5,
+          "width": 372,
+          "height": 337
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgb(18, 18, 18)"
+      },
+      {
+        "text": "Pro Annual$199/yrSave $149 per yearEverything in Pro MonthlyBest valueGet started",
+        "box": {
+          "x": 524,
+          "y": 1852.5,
+          "width": 372,
+          "height": 337
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgb(18, 18, 18)"
+      }
+    ]
+  },
+  {
+    "width": 1440,
+    "eyebrow": {
+      "text": "Board prep, built for outcomes",
+      "box": {
+        "x": 622.421875,
+        "y": 198,
+        "width": 195.140625,
+        "height": 26
+      },
+      "fontSize": "12px",
+      "textAlign": "center",
+      "color": "rgb(237, 237, 237)",
+      "background": "rgb(28, 28, 28)"
+    },
+    "contrast": 14.556736715134688,
+    "footer": [
+      {
+        "text": "Addiction Boards",
+        "box": {
+          "x": 112,
+          "y": 2583.5,
+          "width": 919.984375,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "Board exam preparation for addiction psychiatry and addiction medicine.",
+        "box": {
+          "x": 112,
+          "y": 2615.5,
+          "width": 919.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "FeaturesPricingSign inSign up",
+        "box": {
+          "x": 1063.984375,
+          "y": 2586.5,
+          "width": 264.015625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      },
+      {
+        "text": "Privacy PolicyTerms of Service",
+        "box": {
+          "x": 1063.984375,
+          "y": 2615.5,
+          "width": 264.015625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "color": "rgb(131, 131, 131)",
+        "background": "rgba(0, 0, 0, 0)"
+      }
+    ],
+    "features": {
+      "text": "Everything you need to prep efficiently",
+      "box": {
+        "x": 384,
+        "y": 1091.5,
+        "width": 672,
+        "height": 40
+      },
+      "fontSize": "36px",
+      "textAlign": "center",
+      "color": "rgb(237, 237, 237)",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    "plans": [
+      {
+        "text": "Pro Monthly$29/moAccess to all questionsDetailed explanationsProgress trackingGet started",
+        "box": {
+          "x": 336,
+          "y": 1812.5,
+          "width": 372,
+          "height": 337
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgb(18, 18, 18)"
+      },
+      {
+        "text": "Pro Annual$199/yrSave $149 per yearEverything in Pro MonthlyBest valueGet started",
+        "box": {
+          "x": 732,
+          "y": 1812.5,
+          "width": 372,
+          "height": 337
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "color": "rgb(237, 237, 237)",
+        "background": "rgb(18, 18, 18)"
+      }
+    ]
+  }
+]

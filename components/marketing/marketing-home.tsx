@@ -6,7 +6,6 @@ import { GetStartedCta } from '@/components/get-started-cta';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { MetallicCtaButton } from '@/components/ui/metallic-cta-button';
 import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 import { cn } from '@/lib/utils';
@@ -62,8 +61,8 @@ async function DeferredGetStartedCta() {
 
 export function MarketingPrimaryCtaFallback() {
   return (
-    <Button asChild className="rounded-full px-8 py-3 text-base">
-      <Link href={ROUTES.PRICING}>Get Started</Link>
+    <Button asChild className="h-auto rounded-full px-8 py-3 text-base">
+      <Link href={ROUTES.PRICING}>Get started</Link>
     </Button>
   );
 }
@@ -73,7 +72,7 @@ async function MarketingHeroCopy() {
 
   return (
     <>
-      <p className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+      <p className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground">
         Board prep, built for outcomes
       </p>
       <h1 className="mt-6 font-display text-5xl font-bold tracking-tight md:text-7xl">
@@ -142,7 +141,7 @@ async function MarketingFeaturesSection() {
       className="border-t border-border py-16"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="max-w-2xl">
+        <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">
             Everything you need to prep efficiently
           </h2>
@@ -213,9 +212,9 @@ async function MarketingPricingSection() {
             <Button
               asChild
               variant="outline"
-              className="mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+              className="mt-8 h-auto w-full rounded-full py-3 text-base"
             >
-              <Link href={ROUTES.PRICING}>Get Started</Link>
+              <Link href={ROUTES.PRICING}>Get started</Link>
             </Button>
           </Card>
 
@@ -239,9 +238,9 @@ async function MarketingPricingSection() {
             </ul>
             <Button
               asChild
-              className="mt-8 h-auto w-full rounded-full py-3 text-sm font-medium"
+              className="mt-8 h-auto w-full rounded-full py-3 text-base"
             >
-              <Link href={ROUTES.PRICING}>Get Started</Link>
+              <Link href={ROUTES.PRICING}>Get started</Link>
             </Button>
           </Card>
         </div>
@@ -264,12 +263,9 @@ async function MarketingFinalCtaSection() {
           access, cancel anytime.
         </p>
         <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          {/* @debt-exception D-15: Marketing-only metallic CTA. Do not expand to other pages. */}
-          <div data-debt-exception="D-15">
-            <MetallicCtaButton href={ROUTES.PRICING}>
-              Get Started
-            </MetallicCtaButton>
-          </div>
+          <Button asChild className="h-auto rounded-full px-8 py-3 text-base">
+            <Link href={ROUTES.PRICING}>Get started</Link>
+          </Button>
           <Button asChild variant="outline" className={pillSizeClasses}>
             <Link href={ROUTES.SIGN_IN}>Sign in</Link>
           </Button>

@@ -460,7 +460,9 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 **Design rationale:** Brand links are always visible (not muted), so hover dims slightly rather than brightening. This is the opposite direction from nav links (which brighten from muted to foreground).
 
-**Status:** Implemented in both app and marketing headers (DEBT-258, PR #151).
+**Marketing variant (DEBT-477):** header brand link uses `rounded-md text-base font-bold font-heading whitespace-nowrap text-foreground transition-colors hover:text-foreground/80 ring-focus`. Footer brand is non-interactive `<p>` with `text-base font-bold font-heading text-foreground`. The app shell keeps `text-sm font-semibold`.
+
+**Status:** Implemented in app and marketing headers; marketing sizing is intentionally stronger.
 
 ### L-5: Banner Inline Link
 
@@ -602,8 +604,15 @@ The marketing landing page CTA strategy was standardized in DEBT-258:
 | Button | Treatment | Rationale |
 |--------|----------|-----------|
 | "View pricing" / "Sign in" pills | `variant="outline"` (standard hover) | Replaced custom `hover:bg-muted` (100% opacity) which was far more aggressive than any other hover |
-| Monthly "Get Started" | `variant="outline"` | Previously `variant="secondary"` — 4% lightness difference from card surface (invisible). Outline gives a real border. |
-| Annual "Get Started" | `variant="default"` (primary) | Replaced custom `bg-foreground text-background`. In dark mode `--primary` = `--foreground` (zero visual regression). Highest affordance for the promoted plan. |
+| Monthly "Get started" | `variant="outline"` | Previously `variant="secondary"` — 4% lightness difference from card surface (invisible). Outline gives a real border. |
+| Annual "Get started" | `variant="default"` (primary) | Replaced custom `bg-foreground text-background`. In dark mode `--primary` = `--foreground` (zero visual regression). Highest affordance for the promoted plan. |
+
+**Shared plan-card sizing:** `mt-8 h-auto w-full rounded-full py-3 text-base`. The monthly outline is 50 px high and annual filled is 48 px; both use the same typography tier.
+
+| Button | Treatment | Rationale |
+|---|---|---|
+| Hero primary "Get started" / "Go to dashboard" | `default` + `h-auto rounded-full px-8 py-3 text-base` | `h-auto` removes the primitive's fixed `h-9`, allowing 24 px line-height plus 24 px vertical padding. |
+| Final CTA "Get started" | `default` + `h-auto rounded-full px-8 py-3 text-base` | Same as hero primary; replaces D-15 under DEBT-477. |
 
 ### Trial CTA Subtext (DEBT-410)
 
@@ -621,21 +630,6 @@ mt-3 text-center text-sm text-muted-foreground
 - For non-eligible visitors (any prior or current subscription row, e.g. canceled ex-subscribers), the CTA renders the standard "Subscribe Monthly" / "Subscribe Annual" labels and no subtext.
 
 **Source:** `app/pricing/pricing-view.tsx`
-
-### MetallicCtaButton (Marketing Only — D-15 Exception)
-
-Custom animated-border CTA used at the bottom of the landing page.
-
-```
-metallic-border animated gradient (grays #3f3f46 → #a1a1aa, 6s cycle)
-├── outer: metallic-border inline-flex (animated border via CSS)
-├── inner: bg-background (button face)
-└── text: text-foreground + ArrowRight icon
-```
-
-**Source:** `components/ui/metallic-cta-button.tsx` + `components/ui/metallic-border.tsx` + CSS in `globals.css:193-208`
-
-**Status:** Approved marketing-only exception (Decision 2). One distinctive element at the landing page bottom adds personality without system pollution. Marked with `@debt-exception D-15` in source. Not a standard `Button` variant. Keep scoped to this single marketing slot.
 
 ### Third-Party Component Exceptions (Decision 8)
 
@@ -882,6 +876,8 @@ inline-flex items-center rounded-full border border-border/60 px-2 py-0.5 text-x
 
 **Rule:** Badges are NEVER interactive. If a badge needs to be clickable, it's a FilterChip (I-4), not a badge.
 
+**Marketing eyebrow variant (DEBT-477):** `inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground`. The landing hero uses full foreground because muted text on this full-strength muted fill measured 4.49:1, below AA. This is non-interactive metadata; it adds no dark override or opacity token.
+
 ### M-2: Content Separator
 
 Visual dividers within cards or content areas.
@@ -1071,11 +1067,10 @@ Patterns that are currently copy-pasted and should be extracted to shared consta
 
 Approved exceptions tracked in [DEBT-250](../_archive/debt/debt-250-frontend-visual-divergence-compliance-plan.md):
 
-| ID | Divergence | Status | Files |
-|----|-----------|--------|-------|
-| D-15 | `MetallicCtaButton` remains outside standard Button variants by explicit policy | Approved marketing-only exception (`@debt-exception D-15`) | `metallic-cta-button.tsx`, `marketing-home.tsx` |
+No active divergences in this inventory.
 
-**Resolved (historical):** All 31 items from DEBT-250 are now resolved or documented as approved exceptions:
+**Resolved (historical):** All 31 items from DEBT-250 are resolved or retain their documented accepted-exception decisions:
+- `D-15` — MetallicCtaButton retired 2026-09-16 (DEBT-477); final CTA uses `default` + `rounded-full`. Reverses DEBT-250 Decision 2, preserved by DEBT-258; it was an approved exception until this retirement.
 - `D-1` through `D-10`, `D-12`, `D-14`, `D-16`, `D-17` — code fixes via DEBT-251 through DEBT-258 (PRs #149–#151)
 - `D-11` — pricing page converted to `<Card>` components (DEBT-259, PR #152)
 - `D-13` — `headerActionLinkClasses` extracted to `lib/shared-styles.ts` (DEBT-259, PR #152)
@@ -1229,9 +1224,13 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 |------|---------|-------|
 | Standard | `p-6` | All content cards (stats, sections, practice, bookmarks empty state) |
 | Dense | `p-4` | Compact cards (exam review stats, filter bars, question list items, navigator) |
-| Showcase | `p-8` | Marketing pricing cards, pricing page plan cards |
+| Showcase | `p-8` | Marketing pricing cards, pricing page plan cards — left-aligned list-bearing content. Only stat and single-message status cards use `text-center`. |
 
 **Rule:** `p-3` is for inner list items within cards (dashboard recent lists, feedback choices), never on `<Card>` directly.
+
+### Marketing footer composition (DEBT-477)
+
+`grid gap-y-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-baseline md:gap-x-8` preserves the brand-left / links-right layout. DOM order is brand, tagline, product/auth navigation, legal navigation. Brand/tagline use `md:col-start-1` with `md:row-start-1` / `md:row-start-2`; the two navs use column 2 and corresponding rows. Both navs use `flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground md:justify-end`; the product nav adds `mt-4 md:mt-0`. Names are `Footer product navigation` and `Footer legal navigation`. At 768 px the two-line tagline aligns its first baseline with the legal row. This replaces the DEBT-389 single cluster after legal links made it wrap poorly. The existing divider/copyright row stays.
 
 ### 13.4 Grid Gap Scale
 
@@ -1308,7 +1307,6 @@ Four tiers, cleanly separated by element type:
 
 | Animation | Class/Selector | Duration | Usage | Locations |
 |-----------|---------------|----------|-------|-----------|
-| `metallic-shift` | `.metallic-border` | 6s ease infinite | Animated gradient border | `MetallicCtaButton` (1 location) |
 | `fade-in-up` | `.animate-fade-in-up` | 0.6s ease-out | Staggered entrance for marketing impact stats | `marketing-home.tsx:109` (1 location) |
 
 ### 15.3 Radix UI Animations (tw-animate-css)
@@ -1326,9 +1324,8 @@ The `tw-animate-css` library (imported in `globals.css:7`) provides enter/exit a
 
 ### 15.4 Reduced Motion
 
-All custom CSS animations are properly disabled under `prefers-reduced-motion: reduce` (`globals.css:226-238`):
+All custom CSS animations are properly disabled under `prefers-reduced-motion: reduce` (`app/globals.css`, `@media (prefers-reduced-motion: reduce)`):
 - `scroll-behavior: smooth` → `auto`
-- `.metallic-border` animation → `none`
 - `.animate-fade-in-up` animation → `none`
 
 The `tw-animate-css` library handles its own reduced-motion support internally.
@@ -1443,7 +1440,7 @@ A global skip-to-content link in `app/layout.tsx:38-43` targets the main landmar
 </a>
 ```
 
-All `<nav>` elements (8 total) have `aria-label`. Marketing page `<section>` elements have `aria-label` or `aria-labelledby`.
+All `<nav>` elements (10 total) have `aria-label`. Marketing page `<section>` elements have `aria-label` or `aria-labelledby`.
 
 ### 18.2 Live Regions
 

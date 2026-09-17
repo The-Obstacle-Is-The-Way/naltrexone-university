@@ -221,7 +221,7 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
-    expect(backLink?.textContent?.trim()).toBe('Back to Home');
+    expect(backLink?.textContent?.trim()).toBe('Back to home');
     expect(doc.querySelector('[data-testid="pricing-root"]')).not.toBeNull();
     expect(doc.querySelector('header')).not.toBeNull();
   });
@@ -857,7 +857,7 @@ describe('app/pricing', () => {
       />,
     );
 
-    expect(html).toContain('Manage Billing');
+    expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
   });
@@ -1019,7 +1019,7 @@ describe('app/pricing', () => {
     expect(pricingFallback?.querySelector('button[type="submit"]')).toBeNull();
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
-    expect(html).not.toContain('Manage Billing');
+    expect(html).not.toContain('Manage billing');
     expect(
       doc.querySelector('header a[href="/sign-in"]')?.textContent?.trim(),
     ).toBe('Sign in');
@@ -1068,13 +1068,13 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
     expect(html).not.toContain('Subscription needs attention');
-    expect(html).not.toContain('Manage Billing');
+    expect(html).not.toContain('Manage billing');
   });
 
   it('continues to pass manageBillingAction when reason=manage_billing', async () => {
     const html = await renderPricingPageWithEntitlementReason('manage_billing');
 
-    expect(html).toContain('Manage Billing');
+    expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe Monthly');
   });
 
@@ -1082,7 +1082,7 @@ describe('app/pricing', () => {
     const html =
       await renderPricingPageWithEntitlementReason('payment_processing');
 
-    expect(html).toContain('Manage Billing');
+    expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe Monthly');
   });
 
@@ -1128,7 +1128,7 @@ describe('app/pricing', () => {
     expect(html).not.toContain(
       'Subscription found. Manage billing to resolve payment issues.',
     );
-    expect(html).not.toContain('Manage Billing');
+    expect(html).not.toContain('Manage billing');
   });
 
   it('renders trial CTAs and trial-forward copy for anonymous visitors', async () => {
@@ -1306,9 +1306,9 @@ describe('app/pricing', () => {
     const manageBillingLink = findAnchorByHref(doc, manageBillingHref);
     const bareSignUpManageBillingLinks = Array.from(
       doc.querySelectorAll<HTMLAnchorElement>(`a[href="${ROUTES.SIGN_UP}"]`),
-    ).filter((anchor) => anchor.textContent?.includes('Manage Billing'));
+    ).filter((anchor) => anchor.textContent?.includes('Manage billing'));
 
-    expect(manageBillingLink?.textContent).toContain('Manage Billing');
+    expect(manageBillingLink?.textContent).toContain('Manage billing');
     expect(doc.querySelector('form button[type="submit"]')).toBeNull();
     expect(bareSignUpManageBillingLinks).toHaveLength(0);
   });
@@ -1327,7 +1327,7 @@ describe('app/pricing', () => {
     const paymentProcessingLink = findAnchorByHref(doc, paymentProcessingHref);
     const staleManageBillingLink = findAnchorByHref(doc, manageBillingHref);
 
-    expect(paymentProcessingLink?.textContent).toContain('Manage Billing');
+    expect(paymentProcessingLink?.textContent).toContain('Manage billing');
     expect(staleManageBillingLink).toBeNull();
     expect(doc.querySelector('form button[type="submit"]')).toBeNull();
   });
@@ -1352,7 +1352,7 @@ describe('app/pricing', () => {
     [
       { reason: 'manage_billing' },
       'Subscription found. Manage billing to resolve payment issues.',
-      'Manage Billing',
+      'Manage billing',
     ],
     [
       { reason: 'subscription_canceled' },
@@ -1362,7 +1362,7 @@ describe('app/pricing', () => {
     [
       { reason: 'payment_processing' },
       'Payment processing. It may take a moment for access to activate.',
-      'Manage Billing',
+      'Manage billing',
     ],
     [{ checkout: 'cancel' }, 'Checkout canceled.', 'Start 7-day free trial'],
     [
@@ -1411,7 +1411,7 @@ describe('app/pricing', () => {
     });
     const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('Manage Billing');
+    expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe Monthly');
     expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });

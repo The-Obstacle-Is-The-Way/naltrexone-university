@@ -98,6 +98,8 @@ the mandatory pattern enforcement summary.
 
 ### Button
 
+**Label casing (signed-out surfaces):** Button and navigation labels on `/`, `/pricing`, signed-out error/404 pages, and the marketing header/footer use sentence case ("Get started", "View pricing", "Sign in"). Proper nouns, plan names, and legal/page titles retain capitals. `Subscribe Monthly` / `Subscribe Annual` remain the DEBT-477 D2 consent-coupled exception. Authenticated app chrome is not yet standardized; DEBT-477 records its follow-up inventory.
+
 **Component:** `components/ui/button.tsx`
 **ALWAYS** use `<Button>` for production UI interactive click targets by default. Raw `<button>` is allowed in production only inside `components/ui/` primitives and app-shell disclosure toggles that follow Pattern Registry `I-6`. The production scanner intentionally excludes `*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and `*.probes.tsx`; native semantic controls are allowed there only in test-only hook/state-machine probes, while tests whose subject is Button or design-system behavior must still use `<Button>`.
 
@@ -284,6 +286,8 @@ This section covers **hardcoded UI text** sizing. For content text (question ste
 | Marketing hero h1 | `font-display text-5xl font-bold tracking-tight md:text-7xl` |
 | Marketing section h2 | `font-heading text-3xl font-bold tracking-tight md:text-4xl` |
 | Error/utility page heading | `text-xl font-semibold font-heading tracking-tight text-foreground` (route errors use `<h2>` unless `includeMainLandmark`; `global-error.tsx` uses `text-2xl font-bold font-heading tracking-tight text-foreground`). |
+
+Marketing section h2 + lede wrappers are centered (`mx-auto max-w-2xl text-center`); their standard lede role is `mt-3 text-base text-muted-foreground`. Content cards remain left-aligned.
 
 ### Subtitles and supporting copy
 
@@ -796,7 +800,13 @@ Before adding or changing any question-review link (`mode=review`, `attemptId`, 
 - Inner container: `mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8`
 - Desktop nav: `hidden items-center gap-4 text-sm sm:flex`
 - Mobile nav: `mt-3 flex items-center gap-4 text-sm sm:hidden`
-- Marketing header includes `ThemeToggle` (UX-3 resolved in DEBT-260 / PR #152)
+- ThemeToggle is unmounted while light mode is disabled (DEBT-421).
+
+### Marketing Shell Footer
+
+**Source:** `components/marketing/marketing-layout.tsx`, cached `MarketingFooter`.
+
+Follow the DEBT-477 marketing-footer composition in Pattern Registry Part 13: brand and tagline left, two labeled nav rows right, aligned to their first baselines. Below `md`, stack brand, tagline, product/auth links, then legal links in DOM order. Product navigation contains Features, Pricing, Sign in, Sign up; legal navigation contains Privacy Policy, Terms of Service. New links join the appropriate existing group. The footer owns the tagline "Board exam preparation for addiction psychiatry and addiction medicine." Use explicit `text-base` for the brand and `text-sm` for the tagline/navigation; keep the divider, copyright, UTC year read, and cache boundary.
 
 ### Transitions on interactive elements
 
@@ -868,7 +878,7 @@ Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstormin
 
 | ID | Summary | File(s) |
 |----|---------|---------|
-| — | Visual divergences from BS-035 audit are resolved. Only approved exception `D-15` (MetallicCtaButton) remains. See Pattern Registry Part 11 for historical record. | `docs/frontend/pattern-registry.md` |
+| — | The BS-035 active divergence inventory is closed; D-15 retired in DEBT-477. Historical accepted exceptions remain documented. See Pattern Registry Part 11 for historical record. | `docs/frontend/pattern-registry.md` |
 | — | History sessions expanded breakdown UI remains functionally correct but is under active redesign review for hierarchy/density/navigation clarity (BS-036). | `app/(app)/app/history/components/history-sessions-tab.tsx`, `app/(app)/app/shared/components/session-breakdown-list.tsx`, `docs/_archive/brainstorming/bs-036-history-breakdown-ux-redesign.md` |
 | — | `Markdown.tsx` uses PascalCase filename (violates §13 kebab-case convention) | `components/markdown/Markdown.tsx` |
 
@@ -886,8 +896,6 @@ Contrast compliance gaps (WCAG AA) are documented in `docs/_archive/brainstormin
 | `filter-chip.tsx` | FilterChip | **No** | Yes | **No** | |
 | `input.tsx` | Input | Yes | Yes | No | |
 | `select.tsx` | Select, SelectTrigger, SelectContent, SelectItem, etc. | Yes | Yes | No | Radix UI wrapper |
-| `metallic-border.tsx` | MetallicBorder | **No** | Yes | No | |
-| `metallic-cta-button.tsx` | MetallicCtaButton | No | No | No | |
 | `notification-provider.tsx` | NotificationProvider, useNotification | **No** | Yes | No | |
 | `alert-dialog.tsx` | AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogCancel, AlertDialogAction | Yes | Yes | No | Radix UI wrapper |
 | `segmented-control.tsx` | SegmentedControl | **No** | Yes | **No** | |

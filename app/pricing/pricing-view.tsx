@@ -95,7 +95,7 @@ export function PricingView({
                     className: 'rounded-full',
                   }}
                 >
-                  Manage Billing
+                  Manage billing
                 </AuthAwareCta>
               ) : null}
               <Link
@@ -119,10 +119,10 @@ export function PricingView({
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button asChild className="rounded-full">
-                <Link href={ROUTES.APP_DASHBOARD}>Go to Dashboard</Link>
+                <Link href={ROUTES.APP_DASHBOARD}>Go to dashboard</Link>
               </Button>
               <Button asChild variant="outline" className="rounded-full">
-                <Link href={ROUTES.APP_BILLING}>Manage Billing</Link>
+                <Link href={ROUTES.APP_BILLING}>Manage billing</Link>
               </Button>
             </div>
           </Card>
@@ -141,7 +141,7 @@ export function PricingView({
                 signUpHref={getManageBillingSignUpHref(manageBillingReason)}
                 buttonProps={{ className: 'rounded-full' }}
               >
-                Manage Billing
+                Manage billing
               </AuthAwareCta>
             </div>
           </Card>
@@ -250,7 +250,7 @@ export function PricingView({
             href={ROUTES.HOME}
             className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground ring-focus"
           >
-            Back to Home
+            Back to home
           </Link>
         </div>
       </div>

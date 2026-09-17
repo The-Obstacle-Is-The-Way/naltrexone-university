@@ -191,34 +191,6 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Metallic gradient animation */
-@keyframes metallic-shift {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-.metallic-border {
-  background: linear-gradient(
-    135deg,
-    #3f3f46,
-    #71717a,
-    #a1a1aa,
-    #71717a,
-    #52525b,
-    #71717a,
-    #a1a1aa,
-    #71717a,
-    #3f3f46
-  );
-  background-size: 400% 400%;
-  animation: metallic-shift 6s ease infinite;
-}
-
 /* Staggered entrance animation */
 @keyframes fade-in-up {
   from {
@@ -238,10 +210,6 @@ html {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-
-  .metallic-border {
-    animation: none;
   }
 
   .animate-fade-in-up {

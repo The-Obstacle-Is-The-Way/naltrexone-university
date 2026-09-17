@@ -42,7 +42,7 @@ Text in this application flows through three distinct pipelines. They have separ
 | Stat numbers | `text-3xl font-bold font-display` | "848", "72%" |
 | Error details | `text-xs text-muted-foreground` | Digest codes, fallback messages |
 | App buttons | `text-sm font-medium` | "Submit", "Next", "Bookmark" |
-| Marketing CTA buttons | `text-base font-medium` | "Get Started", "Subscribe Annual" |
+| Marketing CTA buttons | `text-base font-medium` | "Get started" (hero and final CTA); plan-card CTAs |
 
 ### Pipeline 2: Content (Markdown)
 
