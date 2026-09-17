@@ -1,0 +1,391 @@
+{
+  "cards": [
+    {
+      "file": "components/marketing/marketing-home.tsx",
+      "line": 108,
+      "centered": true
+    },
+    {
+      "file": "components/marketing/marketing-home.tsx",
+      "line": 158,
+      "centered": false
+    },
+    {
+      "file": "components/marketing/marketing-home.tsx",
+      "line": 198,
+      "centered": false
+    },
+    {
+      "file": "components/marketing/marketing-home.tsx",
+      "line": 222,
+      "centered": false
+    },
+    {
+      "file": "components/question/feedback.tsx",
+      "line": 180,
+      "centered": false
+    },
+    {
+      "file": "components/question/question-card.tsx",
+      "line": 38,
+      "centered": false
+    },
+    {
+      "file": "app/pricing/pricing-view-skeleton.tsx",
+      "line": 15,
+      "centered": false
+    },
+    {
+      "file": "app/pricing/pricing-view.tsx",
+      "line": 112,
+      "centered": true
+    },
+    {
+      "file": "app/pricing/pricing-view.tsx",
+      "line": 129,
+      "centered": true
+    },
+    {
+      "file": "app/pricing/pricing-view.tsx",
+      "line": 157,
+      "centered": false
+    },
+    {
+      "file": "app/pricing/pricing-view.tsx",
+      "line": 200,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/questions/[slug]/components/review-question-navigator.tsx",
+      "line": 32,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/questions/[slug]/question-page-client.tsx",
+      "line": 315,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/questions/[slug]/question-page-client.tsx",
+      "line": 321,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/questions/[slug]/question-page-client.tsx",
+      "line": 329,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/questions/[slug]/question-page-client.tsx",
+      "line": 354,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/questions/[slug]/question-page-client.tsx",
+      "line": 374,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/billing/page.tsx",
+      "line": 67,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx",
+      "line": 184,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx",
+      "line": 80,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx",
+      "line": 78,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx",
+      "line": 132,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx",
+      "line": 139,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx",
+      "line": 157,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx",
+      "line": 163,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx",
+      "line": 58,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx",
+      "line": 153,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx",
+      "line": 159,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx",
+      "line": 165,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx",
+      "line": 228,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx",
+      "line": 71,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx",
+      "line": 78,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx",
+      "line": 85,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx",
+      "line": 92,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx",
+      "line": 100,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/history/components/history-questions-tab.tsx",
+      "line": 202,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/history/components/history-questions-tab.tsx",
+      "line": 419,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/history/components/history-questions-tab.tsx",
+      "line": 430,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/history/components/history-questions-tab.tsx",
+      "line": 440,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/practice-page-client.tsx",
+      "line": 85,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/bookmarks/page.tsx",
+      "line": 111,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/components/incomplete-session-card.tsx",
+      "line": 28,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/components/practice-session-starter.tsx",
+      "line": 106,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/components/practice-view.tsx",
+      "line": 508,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/practice/components/practice-view.tsx",
+      "line": 531,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 60,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 67,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 76,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 83,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 94,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 104,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 122,
+      "centered": false
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 186,
+      "centered": false
+    }
+  ],
+  "labels": [
+    {
+      "file": "components/marketing/marketing-layout.tsx",
+      "line": 32,
+      "label": "Addiction Boards"
+    },
+    {
+      "file": "components/marketing/marketing-layout.tsx",
+      "line": 97,
+      "label": "Privacy Policy"
+    },
+    {
+      "file": "components/marketing/marketing-layout.tsx",
+      "line": 100,
+      "label": "Terms of Service"
+    },
+    {
+      "file": "components/marketing/marketing-home.tsx",
+      "line": 66,
+      "label": "Get Started"
+    },
+    {
+      "file": "components/marketing/marketing-home.tsx",
+      "line": 218,
+      "label": "Get Started"
+    },
+    {
+      "file": "components/marketing/marketing-home.tsx",
+      "line": 244,
+      "label": "Get Started"
+    },
+    {
+      "file": "components/get-started-cta.tsx",
+      "line": 28,
+      "label": "Get Started"
+    },
+    {
+      "file": "components/get-started-cta.tsx",
+      "line": 37,
+      "label": "Get Started"
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx",
+      "line": 101,
+      "label": "View Summary"
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx",
+      "line": 91,
+      "label": "View Summary"
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx",
+      "line": 192,
+      "label": "View Summary"
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx",
+      "line": 142,
+      "label": "Review Answers"
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx",
+      "line": 153,
+      "label": "Review Answers"
+    },
+    {
+      "file": "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx",
+      "line": 169,
+      "label": "New Session"
+    },
+    {
+      "file": "app/(app)/app/history/components/history-sessions-tab.tsx",
+      "line": 104,
+      "label": "Go to Practice"
+    },
+    {
+      "file": "app/(app)/app/history/components/history-questions-tab.tsx",
+      "line": 435,
+      "label": "Go to Practice"
+    },
+    {
+      "file": "app/(app)/app/layout.tsx",
+      "line": 93,
+      "label": "Addiction Boards"
+    },
+    {
+      "file": "app/(app)/app/layout.tsx",
+      "line": 151,
+      "label": "Terms of Service"
+    },
+    {
+      "file": "app/(app)/app/layout.tsx",
+      "line": 158,
+      "label": "Privacy Policy"
+    },
+    {
+      "file": "app/(app)/app/practice/practice-page-client.tsx",
+      "line": 34,
+      "label": "Back to Dashboard"
+    },
+    {
+      "file": "app/(app)/app/bookmarks/page.tsx",
+      "line": 107,
+      "label": "Go to Practice"
+    },
+    {
+      "file": "app/(app)/app/bookmarks/page.tsx",
+      "line": 226,
+      "label": "Go to Practice"
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 115,
+      "label": "Go to Practice"
+    },
+    {
+      "file": "app/(app)/app/dashboard/page.tsx",
+      "line": 296,
+      "label": "Go to Practice"
+    }
+  ]
+}

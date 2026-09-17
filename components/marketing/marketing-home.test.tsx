@@ -25,7 +25,7 @@ describe('components/marketing/marketing-home', () => {
   async function renderDoc() {
     const element = await MarketingHomeShell({
       authNavSlot: <div>AuthNav</div>,
-      primaryCtaSlot: <a href="/pricing">Get Started</a>,
+      primaryCtaSlot: <a href="/pricing">Get started</a>,
     });
     const html = renderToStaticMarkup(element);
     return new DOMParser().parseFromString(html, 'text/html');
@@ -45,7 +45,7 @@ describe('components/marketing/marketing-home', () => {
   it('renders shared pricing values', async () => {
     const html = await renderShell({
       authNavSlot: <div>AuthNav</div>,
-      primaryCtaSlot: <a href="/pricing">Get Started</a>,
+      primaryCtaSlot: <a href="/pricing">Get started</a>,
     });
 
     expect(html).toContain(PRICING_DATA.monthly.price);
@@ -70,13 +70,13 @@ describe('components/marketing/marketing-home', () => {
     ).toBe('Sign in');
     expect(
       heroSection?.querySelector('a[href="/pricing"]')?.textContent?.trim(),
-    ).toBe('Get Started');
+    ).toBe('Get started');
   });
 
   it('renders injected primary CTA link and feature anchor', async () => {
     const html = (await renderDoc()).documentElement.innerHTML;
 
-    expect(html).toContain('Get Started');
+    expect(html).toContain('Get started');
     expect(html).toContain('href="/pricing"');
     expect(html).toContain('href="#features"');
   });
@@ -106,7 +106,7 @@ describe('components/marketing/marketing-home', () => {
     const subtitleIndex = heroText.indexOf(
       'High-yield questions with detailed explanations for Addiction Psychiatry and Medicine. Practice with confidence and track your progress.',
     );
-    const getStartedIndex = heroText.indexOf('Get Started');
+    const getStartedIndex = heroText.indexOf('Get started');
     const viewPricingIndex = heroText.indexOf('View pricing');
     const credibilityIndex = heroText.indexOf(
       'Authored by a double board-certified addiction psychiatrist. Grounded in primary literature with citations.',
@@ -213,7 +213,7 @@ describe('components/marketing/marketing-home', () => {
     ).toBe('Sign in');
     expect(
       heroSection?.querySelector('a[href="/pricing"]')?.textContent?.trim(),
-    ).toBe('Get Started');
+    ).toBe('Get started');
   });
 
   it('renderMarketingHome preserves the primary CTA when auth nav falls back', async () => {
@@ -243,7 +243,7 @@ describe('components/marketing/marketing-home', () => {
     expect(html).toContain('AuthNav');
     expect(
       heroSection?.querySelector('a[href="/pricing"]')?.textContent?.trim(),
-    ).toBe('Get Started');
+    ).toBe('Get started');
   });
 
   it('labels all major landing sections with aria-label', async () => {
@@ -288,9 +288,13 @@ describe('components/marketing/marketing-home', () => {
     const pricingSection = doc.querySelector('section[aria-label="Pricing"]');
     const ctas = Array.from(
       pricingSection?.querySelectorAll('a[href="/pricing"]') ?? [],
-    ).filter((link) => link.textContent?.trim() === 'Get Started');
+    ).filter((link) => link.textContent?.trim() === 'Get started');
 
     expect(ctas).toHaveLength(2);
+    for (const cta of ctas) {
+      expect(cta.classList.contains('text-base')).toBe(true);
+      expect(cta.classList.contains('h-auto')).toBe(true);
+    }
 
     const monthlyCtaClass = ctas[0]?.getAttribute('class') ?? '';
     const annualCtaClass = ctas[1]?.getAttribute('class') ?? '';
@@ -307,15 +311,58 @@ describe('components/marketing/marketing-home', () => {
     expect(annualCtaClass).not.toContain('text-background');
   });
 
-  it('marks MetallicCtaButton with a div debt-exception wrapper', async () => {
+  it('renders the final CTA as a filled system button without an icon', async () => {
     const doc = await renderDoc();
-    const exceptionWrapper = doc.querySelector('[data-debt-exception="D-15"]');
-    const metallicCta = exceptionWrapper?.querySelector('a[href="/pricing"]');
+    const cta = doc.querySelector(
+      'section[aria-label="Get started"] a[href="/pricing"]',
+    );
 
-    // D-15: machine-verifiable marker and valid block wrapper semantics.
-    expect(exceptionWrapper).not.toBeNull();
-    expect(exceptionWrapper?.tagName).toBe('DIV');
-    expect(metallicCta).not.toBeNull();
+    expect(cta?.getAttribute('data-slot')).toBe('button');
+    expect(cta?.classList.contains('bg-primary')).toBe(true);
+    expect(cta?.classList.contains('rounded-full')).toBe(true);
+    expect(cta?.classList.contains('h-auto')).toBe(true);
+    expect(cta?.querySelector('svg')).toBeNull();
+    expect(doc.querySelector('[data-debt-exception]')).toBeNull();
+  });
+
+  it('centers the Features heading while keeping plan content left-aligned', async () => {
+    const doc = await renderDoc();
+    const heading = doc.querySelector('section[aria-label="Features"] h2');
+    expect(heading?.parentElement?.classList.contains('mx-auto')).toBe(true);
+    expect(heading?.parentElement?.classList.contains('text-center')).toBe(
+      true,
+    );
+    const cards = doc.querySelectorAll(
+      'section[aria-label="Pricing"] [data-slot="card"]',
+    );
+    expect(cards).toHaveLength(2);
+    for (const card of cards)
+      expect(card.classList.contains('text-center')).toBe(false);
+  });
+
+  it('uses the foreground contrast role on the full-muted hero eyebrow', async () => {
+    const doc = await renderDoc();
+    const eyebrow = doc.querySelector('section[aria-label="Hero"] p');
+    expect(eyebrow?.textContent).toContain('Board prep, built for outcomes');
+    expect(eyebrow?.classList.contains('text-foreground')).toBe(true);
+    expect(eyebrow?.classList.contains('text-muted-foreground')).toBe(false);
+  });
+
+  it('keeps primary fallbacks padding-driven and uses sentence-case labels', async () => {
+    const doc = new DOMParser().parseFromString(
+      await renderShell(),
+      'text/html',
+    );
+    expect(
+      doc
+        .querySelector('section[aria-label="Hero"] a[href="/pricing"]')
+        ?.classList.contains('h-auto'),
+    ).toBe(true);
+    expect(
+      Array.from(doc.querySelectorAll('a')).some(
+        (a) => a.textContent?.trim() === 'Get Started',
+      ),
+    ).toBe(false);
   });
 
   it('uses consistent "Sign in" casing in CTA', async () => {

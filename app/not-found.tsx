@@ -35,7 +35,7 @@ export default function NotFound() {
           size="sm"
           className="mx-auto w-full max-w-48 rounded-full"
         >
-          <Link href={ROUTES.HOME}>Back to Home</Link>
+          <Link href={ROUTES.HOME}>Back to home</Link>
         </Button>
       </div>
     </main>

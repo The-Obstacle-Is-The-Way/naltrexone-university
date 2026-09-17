@@ -1,0 +1,91 @@
+[
+  {
+    "label": "Go to Practice",
+    "matches": [
+      "app/(app)/app/questions/[slug]/error.tsx:21:        { href: ROUTES.APP_PRACTICE, label: 'Go to Practice' },",
+      "app/(app)/app/history/components/history-sessions-tab.tsx:104:              <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>",
+      "app/(app)/app/history/components/history-questions-tab.tsx:435:                  <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>",
+      "app/(app)/app/bookmarks/page.tsx:107:          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>",
+      "app/(app)/app/bookmarks/page.tsx:226:          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>",
+      "app/(app)/app/dashboard/error.tsx:19:      links={[{ href: ROUTES.APP_PRACTICE, label: 'Go to Practice' }]}",
+      "app/(app)/app/dashboard/page.tsx:115:              <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>",
+      "app/(app)/app/dashboard/page.tsx:296:          <Link href={ROUTES.APP_PRACTICE}>Go to Practice</Link>"
+    ]
+  },
+  {
+    "label": "Back to Dashboard",
+    "matches": [
+      "app/(app)/app/history/error.tsx:19:      links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}",
+      "app/(app)/app/questions/[slug]/question-page-client.tsx:148:    backLabel: 'Back to Dashboard',",
+      "app/(app)/app/bookmarks/error.tsx:19:      links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}",
+      "app/(app)/app/practice/error.tsx:19:      links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}",
+      "app/(app)/app/practice/practice-page-client.tsx:34:              <Link href={ROUTES.APP_DASHBOARD}>Back to Dashboard</Link>",
+      "app/(app)/app/practice/components/practice-view.tsx:325:    label: 'Back to Dashboard',",
+      "app/(app)/app/billing/error.tsx:19:      links={[{ href: ROUTES.APP_DASHBOARD, label: 'Back to Dashboard' }]}"
+    ]
+  },
+  {
+    "label": "Back to Practice",
+    "matches": [
+      "app/(app)/app/questions/[slug]/question-page-client.tsx:123:      backLabel: sessionId ? 'Back to Summary' : 'Back to Practice',",
+      "app/(app)/app/questions/[slug]/question-page-client.tsx:141:      backLabel: sessionId ? 'Back to Session' : 'Back to Practice',",
+      "app/(app)/app/practice/[sessionId]/error.tsx:19:      links={[{ href: ROUTES.APP_PRACTICE, label: 'Back to Practice' }]}",
+      "app/(app)/app/practice/quick/error.tsx:19:      links={[{ href: ROUTES.APP_PRACTICE, label: 'Back to Practice' }]}",
+      "app/(app)/app/practice/quick/quick-practice-client.tsx:83:      backLink={{ href: ROUTES.APP_PRACTICE, label: 'Back to Practice' }}"
+    ]
+  },
+  {
+    "label": "Back to History",
+    "matches": [
+      "app/(app)/app/questions/[slug]/error.tsx:20:        { href: ROUTES.APP_HISTORY, label: 'Back to History' },",
+      "app/(app)/app/questions/[slug]/question-page-client.tsx:113:      backLabel: 'Back to History',"
+    ]
+  },
+  {
+    "label": "View Summary",
+    "matches": [
+      "app/(app)/app/practice/[sessionId]/components/practice-session-exam-results-renderer.tsx:107:              View Summary",
+      "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:97:            View Summary",
+      "app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:198:            View Summary"
+    ]
+  },
+  {
+    "label": "Review Answers",
+    "matches": [
+      "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:149:            Review Answers",
+      "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:160:              Review Answers"
+    ]
+  },
+  {
+    "label": "New Session",
+    "matches": [
+      "app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx:169:          <Link href={ROUTES.APP_PRACTICE}>New Session</Link>"
+    ]
+  },
+  {
+    "label": "Review & Submit",
+    "matches": [
+      "app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:289:      endSessionLabel={mode === 'exam' ? 'Review & Submit' : 'End session'}",
+      "app/(app)/app/practice/components/practice-view.tsx:303:          ? 'Review & Submit'",
+      "app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx:145:          Review & Submit"
+    ]
+  },
+  {
+    "label": "Back to Summary",
+    "matches": [
+      "app/(app)/app/questions/[slug]/question-page-client.tsx:123:      backLabel: sessionId ? 'Back to Summary' : 'Back to Practice',"
+    ]
+  },
+  {
+    "label": "Back to Session",
+    "matches": [
+      "app/(app)/app/questions/[slug]/question-page-client.tsx:141:      backLabel: sessionId ? 'Back to Session' : 'Back to Practice',"
+    ]
+  },
+  {
+    "label": "Back to Bookmarks",
+    "matches": [
+      "app/(app)/app/questions/[slug]/question-page-client.tsx:131:      backLabel: 'Back to Bookmarks',"
+    ]
+  }
+]

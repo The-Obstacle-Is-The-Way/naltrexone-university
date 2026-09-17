@@ -16,7 +16,7 @@ export default function PricingError({
       reset={reset}
       title="Pricing error"
       description="We couldn't load pricing right now. Please try again."
-      links={[{ href: ROUTES.HOME, label: 'Back to Home' }]}
+      links={[{ href: ROUTES.HOME, label: 'Back to home' }]}
       includeMainLandmark
       logPrefix="app/pricing/error.tsx:"
     />

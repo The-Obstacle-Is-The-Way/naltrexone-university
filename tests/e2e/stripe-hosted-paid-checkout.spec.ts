@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
 import {
+  expectE2ECheckoutConsent,
+  readDisplayedPlanConsent,
+} from './helpers/checkout-consent';
+import {
   E2E_CLERK_AUTH_STATE_PATH,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
@@ -38,14 +42,13 @@ test.describe
       await expect(
         page.getByRole('heading', { name: 'Pricing' }),
       ).toBeVisible();
-      const annualForm = page.locator(
-        'form[aria-label="Subscribe annual plan"]',
-      );
-      await expect(
-        annualForm.getByRole('button', { name: 'Subscribe Annual' }),
-      ).toBeVisible();
-      await annualForm
-        .getByRole('button', { name: 'Subscribe Annual' })
+      await page
+        .getByRole('button', { name: 'Subscribe Annual', exact: true })
+        .click();
+      const displayedConsent = await readDisplayedPlanConsent(page);
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Subscribe', exact: true })
         .click();
 
       await expect(page).toHaveURL(/checkout\.stripe\.com/, {
@@ -110,6 +113,10 @@ test.describe
       ).toBeVisible({ timeout: 30_000 });
 
       await expectE2EUserHasPaidAnnualSubscription();
+      await expectE2ECheckoutConsent(page, {
+        plan: 'annual',
+        ...displayedConsent,
+      });
 
       await expect(page).toHaveURL(/\/app\/dashboard$/, { timeout: 15_000 });
       await page.goto('/app/practice');

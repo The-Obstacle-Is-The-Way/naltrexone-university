@@ -1,13 +1,16 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { termsContent } from '@/app/(marketing)/terms/terms-content';
+import consentRuling from '@/docs/debt/assets/debt-478/consent-ruling-data.json';
 import {
+  ANNUAL_RENEWAL_NOTICE_VERSION,
   CANCELLATION_METHOD,
   createCheckoutRenewalTerms,
   createTrialPaymentRenewalTerms,
   PRICING_DATA,
   TERMS_CONTENT_SHA256,
   TERMS_VERSION,
+  TRIAL_PAYMENT_DISCLOSURE_VERSION,
 } from '@/lib/pricing-data';
 
 // ROSCA / NY GBL § 527-a: the renewal disclosure must accurately describe the
@@ -17,14 +20,26 @@ import {
 // cancellation method in consumer-facing legal copy.
 describe('PRICING_DATA renewal disclosures', () => {
   const disclosures = [
-    ['monthly.trialDisclosure', PRICING_DATA.monthly.trialDisclosure],
-    ['monthly.standardDisclosure', PRICING_DATA.monthly.standardDisclosure],
+    [
+      'monthly.trialDisclosure',
+      createCheckoutRenewalTerms('monthly', true).disclosureSnapshot,
+    ],
+    [
+      'monthly.standardDisclosure',
+      createCheckoutRenewalTerms('monthly', false).disclosureSnapshot,
+    ],
     [
       'monthly.trialPaymentDisclosure',
       PRICING_DATA.monthly.trialPaymentDisclosure,
     ],
-    ['annual.trialDisclosure', PRICING_DATA.annual.trialDisclosure],
-    ['annual.standardDisclosure', PRICING_DATA.annual.standardDisclosure],
+    [
+      'annual.trialDisclosure',
+      createCheckoutRenewalTerms('annual', true).disclosureSnapshot,
+    ],
+    [
+      'annual.standardDisclosure',
+      createCheckoutRenewalTerms('annual', false).disclosureSnapshot,
+    ],
     [
       'annual.trialPaymentDisclosure',
       PRICING_DATA.annual.trialPaymentDisclosure,
@@ -46,6 +61,19 @@ describe('PRICING_DATA renewal disclosures', () => {
     },
   );
 
+  it.each(['monthly', 'annual'] as const)(
+    'keeps every %s consent snapshot within the 480-character metadata budget',
+    (plan) => {
+      for (const snapshot of [
+        createCheckoutRenewalTerms(plan, true),
+        createCheckoutRenewalTerms(plan, false),
+        createTrialPaymentRenewalTerms(plan),
+      ]) {
+        expect(snapshot.disclosureSnapshot.length).toBeLessThanOrEqual(480);
+      }
+    },
+  );
+
   it('pins machine-readable renewal terms to the rendered disclosure and Terms version', () => {
     expect(CANCELLATION_METHOD).toBe(
       'Billing page in the app or support@addictionboards.com',
@@ -54,13 +82,13 @@ describe('PRICING_DATA renewal disclosures', () => {
       amountCents: 2900,
       currency: 'usd',
       frequency: 'month',
-      disclosureVersion: '2026-08-05',
+      disclosureVersion: '2026-09-16',
     });
     expect(PRICING_DATA.annual).toMatchObject({
       amountCents: 19900,
       currency: 'usd',
       frequency: 'year',
-      disclosureVersion: '2026-08-05',
+      disclosureVersion: '2026-09-16',
     });
     expect(TERMS_VERSION).toBe('2026-08-09');
     expect(TERMS_CONTENT_SHA256).toBe(
@@ -71,29 +99,37 @@ describe('PRICING_DATA renewal disclosures', () => {
     );
   });
 
-  it('builds the production annual and trial renewal snapshots from the pricing source of truth', () => {
-    expect(createCheckoutRenewalTerms('annual', false)).toMatchObject({
-      plan: 'annual',
-      amountCents: 19_900,
-      currency: 'usd',
-      frequency: 'year',
-      disclosureSnapshot: PRICING_DATA.annual.standardDisclosure,
-      disclosureVersion: PRICING_DATA.annual.disclosureVersion,
-      termsVersion: TERMS_VERSION,
-      termsHash: TERMS_CONTENT_SHA256,
-      cancellationMethod: CANCELLATION_METHOD,
-    });
-    expect(createCheckoutRenewalTerms('monthly', true)).toMatchObject({
-      plan: 'monthly',
-      amountCents: 2_900,
-      currency: 'usd',
-      frequency: 'month',
-      disclosureSnapshot: PRICING_DATA.monthly.trialDisclosure,
-      disclosureVersion: PRICING_DATA.monthly.disclosureVersion,
-      termsVersion: TERMS_VERSION,
-      termsHash: TERMS_CONTENT_SHA256,
-      cancellationMethod: CANCELLATION_METHOD,
-    });
+  it.each(['monthly', 'annual'] as const)(
+    'records the exact approved %s consent text and version for both offers',
+    (plan) => {
+      for (const hasTrial of [true, false]) {
+        const ruling = consentRuling.cases.find(
+          (entry) => entry.plan === plan && entry.trial === hasTrial,
+        );
+        const consent =
+          PRICING_DATA[plan].consent[hasTrial ? 'trial' : 'standard'];
+        expect(ruling).toBeDefined();
+        expect(consent.rows).toEqual(ruling?.rows);
+        expect(consent.sentence).toBe(ruling?.sentence);
+        expect(consent.buttonLabel).toBe(ruling?.button);
+        expect(createCheckoutRenewalTerms(plan, hasTrial)).toMatchObject({
+          plan,
+          disclosureSnapshot: ruling?.snapshot,
+          disclosureVersion: '2026-09-16',
+          termsVersion: TERMS_VERSION,
+          termsHash: TERMS_CONTENT_SHA256,
+          cancellationMethod: CANCELLATION_METHOD,
+        });
+      }
+    },
+  );
+
+  it('keeps unchanged add-card and annual-notice versions independent of checkout consent', () => {
+    expect(ANNUAL_RENEWAL_NOTICE_VERSION).toBe('2026-08-05');
+    expect(TRIAL_PAYMENT_DISCLOSURE_VERSION).toBe('2026-08-05');
+    expect(ANNUAL_RENEWAL_NOTICE_VERSION).not.toBe(
+      PRICING_DATA.annual.disclosureVersion,
+    );
   });
 
   it('builds trial-payment renewal snapshots from the pricing source of truth', () => {
@@ -103,7 +139,7 @@ describe('PRICING_DATA renewal disclosures', () => {
       currency: 'usd',
       frequency: 'month',
       disclosureSnapshot: PRICING_DATA.monthly.trialPaymentDisclosure,
-      disclosureVersion: PRICING_DATA.monthly.disclosureVersion,
+      disclosureVersion: TRIAL_PAYMENT_DISCLOSURE_VERSION,
       termsVersion: TERMS_VERSION,
       termsHash: TERMS_CONTENT_SHA256,
       cancellationMethod: CANCELLATION_METHOD,
@@ -114,7 +150,7 @@ describe('PRICING_DATA renewal disclosures', () => {
       currency: 'usd',
       frequency: 'year',
       disclosureSnapshot: PRICING_DATA.annual.trialPaymentDisclosure,
-      disclosureVersion: PRICING_DATA.annual.disclosureVersion,
+      disclosureVersion: TRIAL_PAYMENT_DISCLOSURE_VERSION,
       termsVersion: TERMS_VERSION,
       termsHash: TERMS_CONTENT_SHA256,
       cancellationMethod: CANCELLATION_METHOD,

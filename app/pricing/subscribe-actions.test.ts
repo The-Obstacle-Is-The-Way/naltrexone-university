@@ -18,6 +18,13 @@ function createRedirectFn() {
   });
 }
 
+function createConsentForm(): FormData {
+  const data = new FormData();
+  data.set('hasTrial', 'true');
+  data.set('disclosureVersion', '2026-09-16');
+  return data;
+}
+
 describe('app/pricing/subscribe-actions', () => {
   it('subscribes monthly via runSubscribeAction with injected deps', async () => {
     const createCheckoutSessionFn = vi.fn(async ({ plan }: { plan: string }) =>
@@ -27,7 +34,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction(new FormData(), {
+      subscribeMonthlyAction(createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -38,6 +45,7 @@ describe('app/pricing/subscribe-actions', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
       idempotencyKey: undefined,
+      expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
     });
   });
 
@@ -49,7 +57,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeAnnualAction(new FormData(), {
+      subscribeAnnualAction(createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -60,6 +68,7 @@ describe('app/pricing/subscribe-actions', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'annual',
       idempotencyKey: undefined,
+      expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
     });
   });
 
@@ -71,7 +80,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction(new FormData(), {
+      subscribeMonthlyAction(createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -91,6 +100,7 @@ describe('app/pricing/subscribe-actions', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
       idempotencyKey: undefined,
+      expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
     });
   });
 
@@ -102,7 +112,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction(new FormData(), {
+      subscribeMonthlyAction(createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
         logError: () => undefined,
@@ -114,6 +124,7 @@ describe('app/pricing/subscribe-actions', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
       idempotencyKey: undefined,
+      expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
     });
   });
 
@@ -125,7 +136,7 @@ describe('app/pricing/subscribe-actions', () => {
     const redirectFn = createRedirectFn();
 
     await expect(
-      subscribeMonthlyAction(new FormData(), {
+      subscribeMonthlyAction(createConsentForm(), {
         createCheckoutSessionFn,
         redirectFn,
       }),
@@ -136,6 +147,7 @@ describe('app/pricing/subscribe-actions', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
       idempotencyKey: undefined,
+      expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
     });
   });
 
@@ -145,7 +157,7 @@ describe('app/pricing/subscribe-actions', () => {
     );
     const redirectFn = createRedirectFn();
 
-    const formData = new FormData();
+    const formData = createConsentForm();
     formData.set('idempotencyKey', '11111111-1111-1111-1111-111111111111');
 
     await expect(
@@ -157,7 +169,37 @@ describe('app/pricing/subscribe-actions', () => {
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
       idempotencyKey: '11111111-1111-1111-1111-111111111111',
+      expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
     });
+  });
+
+  it.each([subscribeMonthlyAction, subscribeAnnualAction])(
+    'rejects a browser submit without displayed consent identity',
+    async (action) => {
+      const createCheckoutSessionFn = vi.fn(async () =>
+        ok({ url: 'https://checkout/unexpected' }),
+      );
+      const redirectFn = createRedirectFn();
+      await expect(
+        action(new FormData(), { createCheckoutSessionFn, redirectFn }),
+      ).rejects.toThrow('redirect:/pricing?checkout=error&plan=');
+      expect(createCheckoutSessionFn).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects a malformed trial identity without creating Checkout', async () => {
+    const data = createConsentForm();
+    data.set('hasTrial', 'yes');
+    const createCheckoutSessionFn = vi.fn(async () =>
+      ok({ url: 'https://checkout/unexpected' }),
+    );
+    await expect(
+      subscribeMonthlyAction(data, {
+        createCheckoutSessionFn,
+        redirectFn: createRedirectFn(),
+      }),
+    ).rejects.toThrow('redirect:/pricing?checkout=error&plan=monthly');
+    expect(createCheckoutSessionFn).not.toHaveBeenCalled();
   });
 
   it('does not include internal error params in redirect urls even in development', async () => {

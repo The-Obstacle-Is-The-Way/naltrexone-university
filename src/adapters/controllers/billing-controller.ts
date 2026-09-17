@@ -39,6 +39,12 @@ const CreateCheckoutSessionInputSchema = z
   .object({
     plan: zSubscriptionPlan,
     idempotencyKey: zIdempotencyKey.optional(),
+    expectedOffer: z
+      .object({
+        hasTrial: z.boolean(),
+        disclosureVersion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .strict(),
   })
   .strict();
 
@@ -187,7 +193,10 @@ export const createCheckoutSession = createAction({
   getDeps,
   execute: async (input, d) => {
     const user = await d.authGateway.requireUser();
-    const { plan, idempotencyKey } = input;
+    const { plan, expectedOffer } = input;
+    const idempotencyKey = input.idempotencyKey
+      ? `${input.idempotencyKey}:${plan}:${expectedOffer.hasTrial ? 'trial' : 'standard'}:${expectedOffer.disclosureVersion}`
+      : input.idempotencyKey;
 
     async function createNewSession(): Promise<CreateCheckoutSessionOutput> {
       const checkoutSessionInput = {
@@ -195,6 +204,7 @@ export const createCheckoutSession = createAction({
         clerkUserId: await d.getClerkUserId(),
         email: user.email,
         plan,
+        expectedOffer,
         successUrl: toSuccessUrl(d.appUrl),
         cancelUrl: toCancelUrl(d.appUrl),
       } as const;

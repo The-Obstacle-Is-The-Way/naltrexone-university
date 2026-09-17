@@ -78,27 +78,23 @@ async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
   return (
     <footer className="border-t border-border">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="font-bold font-heading text-foreground">
-              Addiction Boards
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Board exam preparation for addiction medicine professionals.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground md:justify-end">
+        <div className="grid gap-y-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-baseline md:gap-x-8">
+          <p className="text-base font-bold font-heading text-foreground md:col-start-1 md:row-start-1">
+            Addiction Boards
+          </p>
+          <p className="text-sm text-muted-foreground md:col-start-1 md:row-start-2">
+            Board exam preparation for addiction psychiatry and addiction
+            medicine.
+          </p>
+          <nav
+            aria-label="Footer product navigation"
+            className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground md:col-start-2 md:row-start-1 md:mt-0 md:justify-end"
+          >
             <Link href={featuresHref} className={marketingNavLinkClass}>
               Features
             </Link>
             <Link href={ROUTES.PRICING} className={marketingNavLinkClass}>
               Pricing
-            </Link>
-            <Link href={ROUTES.PRIVACY} className={marketingNavLinkClass}>
-              Privacy Policy
-            </Link>
-            <Link href={ROUTES.TERMS} className={marketingNavLinkClass}>
-              Terms of Service
             </Link>
             <Link href={ROUTES.SIGN_IN} className={marketingNavLinkClass}>
               Sign in
@@ -106,7 +102,18 @@ async function MarketingFooter({ featuresHref }: { featuresHref: string }) {
             <Link href={ROUTES.SIGN_UP} className={marketingNavLinkClass}>
               Sign up
             </Link>
-          </div>
+          </nav>
+          <nav
+            aria-label="Footer legal navigation"
+            className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground md:col-start-2 md:row-start-2 md:justify-end"
+          >
+            <Link href={ROUTES.PRIVACY} className={marketingNavLinkClass}>
+              Privacy Policy
+            </Link>
+            <Link href={ROUTES.TERMS} className={marketingNavLinkClass}>
+              Terms of Service
+            </Link>
+          </nav>
         </div>
         <div className="mt-8 border-t border-border pt-8 text-sm text-muted-foreground">
           <p>&copy; {currentYear} Addiction Boards</p>
