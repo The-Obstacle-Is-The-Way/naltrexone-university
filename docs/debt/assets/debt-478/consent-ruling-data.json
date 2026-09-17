@@ -1,0 +1,101 @@
+{
+  "disclosureVersion": "2026-09-16",
+  "cases": [
+    {
+      "plan": "monthly",
+      "trial": true,
+      "button": "Start free trial",
+      "rows": [
+        {
+          "label": "Plan",
+          "value": "Pro Monthly"
+        },
+        {
+          "label": "Trial",
+          "value": "7 days free; no payment method required. Without one, trial ends with no charge."
+        },
+        {
+          "label": "After trial",
+          "value": "If you add a payment method before trial end: $29 per month, renewing automatically every month until canceled."
+        },
+        {
+          "label": "Cancel",
+          "value": "Before trial ends or your next billing date via the Billing page or support@addictionboards.com."
+        }
+      ],
+      "sentence": "By selecting \"Start free trial\", you agree to these renewal terms. Review our Terms of Service and Privacy Policy.",
+      "snapshot": "Plan: Pro Monthly\nTrial: 7 days free; no payment method required. Without one, trial ends with no charge.\nAfter trial: If you add a payment method before trial end: $29 per month, renewing automatically every month until canceled.\nCancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.\nBy selecting \"Start free trial\", you agree to these renewal terms. Review our Terms of Service and Privacy Policy.",
+      "length": 450
+    },
+    {
+      "plan": "monthly",
+      "trial": false,
+      "button": "Subscribe",
+      "rows": [
+        {
+          "label": "Plan",
+          "value": "Pro Monthly"
+        },
+        {
+          "label": "Billing",
+          "value": "$29 per month, charged today and renewing automatically every month until canceled."
+        },
+        {
+          "label": "Cancel",
+          "value": "Before your next billing date via the Billing page or support@addictionboards.com."
+        }
+      ],
+      "sentence": "By selecting \"Subscribe\", you authorize recurring monthly charges. Review our Terms of Service and Privacy Policy.",
+      "snapshot": "Plan: Pro Monthly\nBilling: $29 per month, charged today and renewing automatically every month until canceled.\nCancel: Before your next billing date via the Billing page or support@addictionboards.com.\nBy selecting \"Subscribe\", you authorize recurring monthly charges. Review our Terms of Service and Privacy Policy.",
+      "length": 316
+    },
+    {
+      "plan": "annual",
+      "trial": true,
+      "button": "Start free trial",
+      "rows": [
+        {
+          "label": "Plan",
+          "value": "Pro Annual"
+        },
+        {
+          "label": "Trial",
+          "value": "7 days free; no payment method required. Without one, trial ends with no charge."
+        },
+        {
+          "label": "After trial",
+          "value": "If you add a payment method before trial end: $199 per year, renewing automatically every year until canceled."
+        },
+        {
+          "label": "Cancel",
+          "value": "Before trial ends or your next billing date via the Billing page or support@addictionboards.com."
+        }
+      ],
+      "sentence": "By selecting \"Start free trial\", you agree to these renewal terms. Review our Terms of Service and Privacy Policy.",
+      "snapshot": "Plan: Pro Annual\nTrial: 7 days free; no payment method required. Without one, trial ends with no charge.\nAfter trial: If you add a payment method before trial end: $199 per year, renewing automatically every year until canceled.\nCancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.\nBy selecting \"Start free trial\", you agree to these renewal terms. Review our Terms of Service and Privacy Policy.",
+      "length": 448
+    },
+    {
+      "plan": "annual",
+      "trial": false,
+      "button": "Subscribe",
+      "rows": [
+        {
+          "label": "Plan",
+          "value": "Pro Annual"
+        },
+        {
+          "label": "Billing",
+          "value": "$199 per year, charged today and renewing automatically every year until canceled."
+        },
+        {
+          "label": "Cancel",
+          "value": "Before your next billing date via the Billing page or support@addictionboards.com."
+        }
+      ],
+      "sentence": "By selecting \"Subscribe\", you authorize recurring annual charges. Review our Terms of Service and Privacy Policy.",
+      "snapshot": "Plan: Pro Annual\nBilling: $199 per year, charged today and renewing automatically every year until canceled.\nCancel: Before your next billing date via the Billing page or support@addictionboards.com.\nBy selecting \"Subscribe\", you authorize recurring annual charges. Review our Terms of Service and Privacy Policy.",
+      "length": 313
+    }
+  ]
+}

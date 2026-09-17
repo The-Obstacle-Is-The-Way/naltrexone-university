@@ -555,6 +555,8 @@ Destructive actions MUST show a confirmation dialog before executing:
 
 Use `AlertDialog` from `components/ui/alert-dialog.tsx` (Radix UI wrapper). Currently used in bookmarks page, exam review, and incomplete session card.
 
+Non-destructive commitment dialogs, including pricing renewal consent, use `Dialog` from `components/ui/dialog.tsx` and the registered S-4 surface. Terms appear immediately above the actual submit action, using data shared with the recorded disclosure. Plan-query auto-open is presentation only and must never submit. The consent variant scrolls on short mobile viewports; use standard Button variants in its footer.
+
 ---
 
 ## 11. Accessibility

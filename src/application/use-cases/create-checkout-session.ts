@@ -15,6 +15,7 @@ export type CreateCheckoutSessionInput = {
   successUrl: string;
   cancelUrl: string;
   idempotencyKey?: string;
+  expectedOffer?: { hasTrial: boolean; disclosureVersion: string };
 };
 
 export type CreateCheckoutSessionOutput = { url: string };
@@ -125,12 +126,6 @@ export class CreateCheckoutSessionUseCase {
       );
     }
 
-    const stripeCustomerId = await this.getOrCreateStripeCustomerId({
-      userId: input.userId,
-      clerkUserId: input.clerkUserId,
-      email: input.email,
-    });
-
     const trialPeriodDays = subscription === null ? FREE_TRIAL_DAYS : undefined;
     const renewalTerms = this.getRenewalTerms(
       input.plan,
@@ -142,6 +137,24 @@ export class CreateCheckoutSessionUseCase {
         'Checkout renewal terms do not match the selected plan',
       );
     }
+
+    if (
+      input.expectedOffer &&
+      (input.expectedOffer.hasTrial !== (trialPeriodDays !== undefined) ||
+        input.expectedOffer.disclosureVersion !==
+          renewalTerms.disclosureVersion)
+    ) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'The displayed subscription offer has changed. Review the current terms before continuing.',
+      );
+    }
+
+    const stripeCustomerId = await this.getOrCreateStripeCustomerId({
+      userId: input.userId,
+      clerkUserId: input.clerkUserId,
+      email: input.email,
+    });
 
     const baseCheckoutSessionInput = {
       userId: input.userId,

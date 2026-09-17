@@ -7,9 +7,7 @@ import { ROUTES } from '@/lib/routes';
 import {
   findAnchorByHref,
   findButtonByText,
-  findElementByText,
   findHeadingByText,
-  isNodeBefore,
   parseHtml,
 } from '@/tests/shared/dom-helpers';
 
@@ -62,153 +60,79 @@ describe('app/pricing/pricing-view', () => {
     }
   });
 
-  it('renders renewal disclosure before each trial CTA', () => {
-    const html = renderToStaticMarkup(
-      <PricingView
-        isEntitled={false}
-        banner={null}
-        showTrialCtas
-        subscribeMonthlyAction={async () => undefined}
-        subscribeAnnualAction={async () => undefined}
-      />,
-    );
-    const doc = parseHtml(html);
-    const monthlyCard = findHeadingByText(doc, PRICING_DATA.monthly.name, {
-      level: 3,
-    })?.closest('[data-slot="card"]');
-    const annualCard = findHeadingByText(doc, PRICING_DATA.annual.name, {
-      level: 3,
-    })?.closest('[data-slot="card"]');
-    const monthlyDisclosure = monthlyCard
-      ? findElementByText(
-          monthlyCard,
-          'p',
-          PRICING_DATA.monthly.trialDisclosure,
-        )
-      : null;
-    const annualDisclosure = annualCard
-      ? findElementByText(annualCard, 'p', PRICING_DATA.annual.trialDisclosure)
-      : null;
-    const monthlyCta = monthlyCard
-      ? findButtonByText(monthlyCard, PRICING_DATA.monthly.trialCta)
-      : null;
-    const annualCta = annualCard
-      ? findButtonByText(annualCard, PRICING_DATA.annual.trialCta)
-      : null;
-
-    expect(monthlyDisclosure).not.toBeNull();
-    expect(annualDisclosure).not.toBeNull();
-    expect(monthlyCta).not.toBeNull();
-    expect(annualCta).not.toBeNull();
-    expect(
-      monthlyDisclosure && monthlyCta
-        ? isNodeBefore(monthlyDisclosure, monthlyCta)
-        : false,
-    ).toBe(true);
-    expect(
-      annualDisclosure && annualCta
-        ? isNodeBefore(annualDisclosure, annualCta)
-        : false,
-    ).toBe(true);
-    expect(html).not.toContain('Subscribe Monthly');
-    expect(html).not.toContain('Subscribe Annual');
-  });
-
-  it('renders legal links inside each disclosure block before its CTA', () => {
-    const html = renderToStaticMarkup(
-      <PricingView
-        isEntitled={false}
-        banner={null}
-        showTrialCtas
-        subscribeMonthlyAction={async () => undefined}
-        subscribeAnnualAction={async () => undefined}
-      />,
-    );
-    const doc = parseHtml(html);
-
-    for (const plan of ['monthly', 'annual'] as const) {
-      const card = findHeadingByText(doc, PRICING_DATA[plan].name, {
-        level: 3,
-      })?.closest('[data-slot="card"]');
-      const disclosure = card
-        ? findElementByText(card, 'p', PRICING_DATA[plan].trialDisclosure)
-        : null;
-      const disclosureBlock = disclosure?.parentElement ?? null;
-      const termsLink = disclosureBlock
-        ? findAnchorByHref(disclosureBlock, ROUTES.TERMS)
-        : null;
-      const privacyLink = disclosureBlock
-        ? findAnchorByHref(disclosureBlock, ROUTES.PRIVACY)
-        : null;
-      const cta = card
-        ? findButtonByText(card, PRICING_DATA[plan].trialCta)
-        : null;
-
-      expect(termsLink?.textContent).toBe('Terms of Service');
-      expect(privacyLink?.textContent).toBe('Privacy Policy');
+  it.each([true, false])(
+    'keeps plan selection free of legal copy when trial eligibility is %s',
+    (showTrialCtas) => {
+      const doc = parseHtml(
+        renderToStaticMarkup(
+          <PricingView
+            isAuthenticated
+            isEntitled={false}
+            banner={null}
+            showTrialCtas={showTrialCtas}
+            subscribeMonthlyAction={async () => undefined}
+            subscribeAnnualAction={async () => undefined}
+          />,
+        ),
+      );
+      expect(doc.querySelector('dl, form')).toBeNull();
+      expect(findAnchorByHref(doc, ROUTES.TERMS)).toBeNull();
+      expect(findAnchorByHref(doc, ROUTES.PRIVACY)).toBeNull();
+      expect(findAnchorByHref(doc, ROUTES.HOME)).toBeNull();
+      const plans = doc.querySelector(
+        'section[aria-labelledby="pricing-plans-heading"]',
+      );
+      expect(plans?.classList.contains('max-w-3xl')).toBe(true);
+      expect(plans?.querySelector('h2')?.classList.contains('sr-only')).toBe(
+        true,
+      );
       expect(
-        disclosureBlock && cta ? isNodeBefore(disclosureBlock, cta) : false,
-      ).toBe(true);
-    }
-  });
+        doc.querySelectorAll('button[aria-haspopup="dialog"]'),
+      ).toHaveLength(2);
+    },
+  );
 
-  it('renders standard subscribe CTAs for non-trial-eligible visitors by default', () => {
-    const html = renderToStaticMarkup(
-      <PricingView
-        isEntitled={false}
-        banner={null}
-        subscribeMonthlyAction={async () => undefined}
-        subscribeAnnualAction={async () => undefined}
-      />,
+  it.each([
+    { isAuthenticated: true, showTrialCtas: true, visible: true },
+    { isAuthenticated: true, showTrialCtas: false, visible: false },
+    { isAuthenticated: false, showTrialCtas: true, visible: false },
+    { isAuthenticated: false, showTrialCtas: false, visible: false },
+  ])(
+    'renders the trial footnote only for proven eligibility: $isAuthenticated/$showTrialCtas',
+    ({ isAuthenticated, showTrialCtas, visible }) => {
+      const html = renderToStaticMarkup(
+        <PricingView
+          isAuthenticated={isAuthenticated}
+          isEntitled={false}
+          banner={null}
+          showTrialCtas={showTrialCtas}
+          subscribeMonthlyAction={async () => undefined}
+          subscribeAnnualAction={async () => undefined}
+        />,
+      );
+      expect(
+        html.includes(
+          '7-day free trial on either plan. No payment method needed. Cancel anytime.',
+        ),
+      ).toBe(visible);
+    },
+  );
+
+  it('keeps standard plan labels for returning subscribers', () => {
+    const doc = parseHtml(
+      renderToStaticMarkup(
+        <PricingView
+          isAuthenticated
+          isEntitled={false}
+          banner={null}
+          subscribeMonthlyAction={async () => undefined}
+          subscribeAnnualAction={async () => undefined}
+        />,
+      ),
     );
-    const doc = parseHtml(html);
-    const monthlyCard = findHeadingByText(doc, PRICING_DATA.monthly.name, {
-      level: 3,
-    })?.closest('[data-slot="card"]');
-    const annualCard = findHeadingByText(doc, PRICING_DATA.annual.name, {
-      level: 3,
-    })?.closest('[data-slot="card"]');
-    const monthlyDisclosure = monthlyCard
-      ? findElementByText(
-          monthlyCard,
-          'p',
-          PRICING_DATA.monthly.standardDisclosure,
-        )
-      : null;
-    const annualDisclosure = annualCard
-      ? findElementByText(
-          annualCard,
-          'p',
-          PRICING_DATA.annual.standardDisclosure,
-        )
-      : null;
-    const monthlyCta = monthlyCard
-      ? findButtonByText(monthlyCard, 'Subscribe Monthly')
-      : null;
-    const annualCta = annualCard
-      ? findButtonByText(annualCard, 'Subscribe Annual')
-      : null;
-
-    expect(monthlyDisclosure).not.toBeNull();
-    expect(annualDisclosure).not.toBeNull();
-    expect(
-      monthlyDisclosure && monthlyCta
-        ? isNodeBefore(monthlyDisclosure, monthlyCta)
-        : false,
-    ).toBe(true);
-    expect(
-      annualDisclosure && annualCta
-        ? isNodeBefore(annualDisclosure, annualCta)
-        : false,
-    ).toBe(true);
-    expect(
-      findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
-    ).toBeNull();
-    expect(
-      findElementByText(doc, 'p', PRICING_DATA.annual.trialDisclosure),
-    ).toBeNull();
+    expect(findButtonByText(doc, 'Subscribe Monthly')).not.toBeNull();
+    expect(findButtonByText(doc, 'Subscribe Annual')).not.toBeNull();
     expect(findButtonByText(doc, PRICING_DATA.monthly.trialCta)).toBeNull();
-    expect(findButtonByText(doc, PRICING_DATA.annual.trialCta)).toBeNull();
   });
 
   it('renders idempotency fields for manage billing forms', () => {

@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import type { ComponentType, ReactNode } from 'react';
-import { AuthAwareCta, SubscribePlanCta } from '@/app/pricing/pricing-auth-cta';
+import { PlanConsentDialog } from '@/app/pricing/plan-consent-dialog';
+import { AuthAwareCta } from '@/app/pricing/pricing-auth-cta';
 import type { PricingBanner } from '@/app/pricing/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -24,16 +24,7 @@ export type PricingViewProps = {
   manageBillingReason?: PricingBillingRecoveryReason;
   subscribeMonthlyAction: (formData: FormData) => Promise<void>;
   subscribeAnnualAction: (formData: FormData) => Promise<void>;
-  SubscribeButtonComponent?: ComponentType<{ children: ReactNode }>;
 };
-
-function DefaultButton({ children }: { children: ReactNode }) {
-  return (
-    <Button type="submit" className="mt-8 w-full rounded-full">
-      {children}
-    </Button>
-  );
-}
 
 function getPlanSignUpHref(plan: PricingPlan): string {
   return toSignUpRedirectRoute(toPricingRoute({ plan }));
@@ -55,7 +46,6 @@ export function PricingView({
   manageBillingReason = 'manage_billing',
   subscribeMonthlyAction,
   subscribeAnnualAction,
-  SubscribeButtonComponent = DefaultButton,
 }: PricingViewProps) {
   const isMonthlySelected = selectedPlan === 'monthly';
   const isAnnualSelected = selectedPlan === 'annual';
@@ -146,14 +136,14 @@ export function PricingView({
             </div>
           </Card>
         ) : (
-          <section className="mt-16" aria-labelledby="pricing-plans-heading">
-            <h2
-              id="pricing-plans-heading"
-              className="text-center font-heading text-xl font-semibold tracking-tight text-foreground"
-            >
+          <section
+            className="mx-auto mt-16 max-w-3xl"
+            aria-labelledby="pricing-plans-heading"
+          >
+            <h2 id="pricing-plans-heading" className="sr-only">
               Plans
             </h2>
-            <div className="mt-6 grid gap-8 md:grid-cols-2">
+            <div className="mt-10 grid gap-6 md:grid-cols-2">
               <Card
                 aria-current={isMonthlySelected ? 'true' : undefined}
                 className={
@@ -179,23 +169,26 @@ export function PricingView({
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <SubscribePlanCta
-                  isAuthenticated={isAuthenticated}
-                  formAction={subscribeMonthlyAction}
-                  signUpHref={getPlanSignUpHref('monthly')}
-                  formAriaLabel="Subscribe monthly plan"
-                  label={
-                    showTrialCtas
-                      ? PRICING_DATA.monthly.trialCta
-                      : 'Subscribe Monthly'
-                  }
-                  disclosure={
-                    showTrialCtas
-                      ? PRICING_DATA.monthly.trialDisclosure
-                      : PRICING_DATA.monthly.standardDisclosure
-                  }
-                  SubscribeButtonComponent={SubscribeButtonComponent}
-                />
+                {isAuthenticated ? (
+                  <PlanConsentDialog
+                    key={`monthly:${selectedPlan ?? 'none'}`}
+                    plan="monthly"
+                    hasTrial={showTrialCtas}
+                    initiallyOpen={isMonthlySelected}
+                    subscribeAction={subscribeMonthlyAction}
+                  />
+                ) : (
+                  <Button
+                    asChild
+                    className="mt-8 h-auto w-full rounded-full py-3 text-base"
+                  >
+                    <Link href={getPlanSignUpHref('monthly')}>
+                      {showTrialCtas
+                        ? PRICING_DATA.monthly.trialCta
+                        : 'Subscribe Monthly'}
+                    </Link>
+                  </Button>
+                )}
               </Card>
               <Card
                 aria-current={isAnnualSelected ? 'true' : undefined}
@@ -223,36 +216,44 @@ export function PricingView({
                     <li key={feature}>{feature}</li>
                   ))}
                 </ul>
-                <SubscribePlanCta
-                  isAuthenticated={isAuthenticated}
-                  formAction={subscribeAnnualAction}
-                  signUpHref={getPlanSignUpHref('annual')}
-                  formAriaLabel="Subscribe annual plan"
-                  label={
-                    showTrialCtas
-                      ? PRICING_DATA.annual.trialCta
-                      : 'Subscribe Annual'
-                  }
-                  disclosure={
-                    showTrialCtas
-                      ? PRICING_DATA.annual.trialDisclosure
-                      : PRICING_DATA.annual.standardDisclosure
-                  }
-                  SubscribeButtonComponent={SubscribeButtonComponent}
-                />
+                {isAuthenticated ? (
+                  <PlanConsentDialog
+                    key={`annual:${selectedPlan ?? 'none'}`}
+                    plan="annual"
+                    hasTrial={showTrialCtas}
+                    initiallyOpen={isAnnualSelected}
+                    subscribeAction={subscribeAnnualAction}
+                  />
+                ) : (
+                  <Button
+                    asChild
+                    className="mt-8 h-auto w-full rounded-full py-3 text-base"
+                  >
+                    <Link href={getPlanSignUpHref('annual')}>
+                      {showTrialCtas
+                        ? PRICING_DATA.annual.trialCta
+                        : 'Subscribe Annual'}
+                    </Link>
+                  </Button>
+                )}
               </Card>
             </div>
+            {isAuthenticated && showTrialCtas ? (
+              <p className="mt-6 text-center text-sm text-muted-foreground">
+                7-day free trial on either plan. No payment method needed.
+                Cancel anytime.
+              </p>
+            ) : null}
+            {isAuthenticated ? (
+              <noscript>
+                <p className="mt-6 text-center text-sm text-muted-foreground">
+                  Enable JavaScript to review subscription terms and continue.
+                  For help, contact support@addictionboards.com.
+                </p>
+              </noscript>
+            ) : null}
           </section>
         )}
-
-        <div className="mt-8 text-center">
-          <Link
-            href={ROUTES.HOME}
-            className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground ring-focus"
-          >
-            Back to home
-          </Link>
-        </div>
       </div>
     </div>
   );

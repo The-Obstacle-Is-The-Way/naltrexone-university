@@ -71,6 +71,16 @@ describe('renewal notice cron route', () => {
     );
   });
 
+  it('uses the stable notice version independently of checkout consent revisions', () => {
+    const source = readFileSync(new URL('./route.ts', import.meta.url), 'utf8');
+    expect(source).toContain(
+      'disclosureVersion: ANNUAL_RENEWAL_NOTICE_VERSION',
+    );
+    expect(source).not.toContain(
+      'disclosureVersion: PRICING_DATA.annual.disclosureVersion',
+    );
+  });
+
   it('rejects a missing authorization header', async () => {
     const harness = createHarness();
 

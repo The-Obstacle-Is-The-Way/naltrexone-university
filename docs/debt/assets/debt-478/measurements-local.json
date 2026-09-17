@@ -1,0 +1,5038 @@
+[
+  {
+    "state": "subscribed",
+    "width": 390,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nYou're already subscribed\n\nGo to your dashboard or manage billing in Stripe.\n\nGo to Dashboard\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 242.515625,
+          "y": 28,
+          "width": 71.484375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 72,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 72,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Go to Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 49,
+          "y": 454,
+          "width": 292,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Manage Billing",
+        "href": "/app/billing",
+        "box": {
+          "x": 49,
+          "y": 502,
+          "width": 292,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 150.921875,
+          "y": 606,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 844,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 844,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 844,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 872,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 872,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 872,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "subscribed",
+    "width": 768,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nYou're already subscribed\n\nGo to your dashboard or manage billing in Stripe.\n\nGo to Dashboard\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 179.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 612.515625,
+          "y": 28,
+          "width": 71.484375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Go to Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 242.828125,
+          "y": 402,
+          "width": 141.34375,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Manage Billing",
+        "href": "/app/billing",
+        "box": {
+          "x": 396.171875,
+          "y": 402,
+          "width": 129,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 339.921875,
+          "y": 506,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 377.28125,
+          "y": 640,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 640,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 640,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 640,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 668,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 668,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "subscribed",
+    "width": 1024,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nYou're already subscribed\n\nGo to your dashboard or manage billing in Stripe.\n\nGo to Dashboard\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 187.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 860.515625,
+          "y": 28,
+          "width": 71.484375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Go to Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 370.828125,
+          "y": 402,
+          "width": 141.34375,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Manage Billing",
+        "href": "/app/billing",
+        "box": {
+          "x": 524.171875,
+          "y": 402,
+          "width": 129,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 467.921875,
+          "y": 506,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 486.484375,
+          "y": 640,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 640,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 640,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 640,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 640,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 640,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "subscribed",
+    "width": 1440,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nYou're already subscribed\n\nGo to your dashboard or manage billing in Stripe.\n\nGo to Dashboard\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 267.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 1196.515625,
+          "y": 28,
+          "width": 71.484375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Go to Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 578.828125,
+          "y": 402,
+          "width": 141.34375,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Manage Billing",
+        "href": "/app/billing",
+        "box": {
+          "x": 732.171875,
+          "y": 402,
+          "width": 129,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 675.921875,
+          "y": 506,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 822.484375,
+          "y": 640,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 640,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 640,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 640,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 640,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 640,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "past-due-grace",
+    "width": 390,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nYou're already subscribed\n\nGo to your dashboard or manage billing in Stripe.\n\nGo to Dashboard\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 242.515625,
+          "y": 28,
+          "width": 71.484375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 72,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 72,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Go to Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 49,
+          "y": 454,
+          "width": 292,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Manage Billing",
+        "href": "/app/billing",
+        "box": {
+          "x": 49,
+          "y": 502,
+          "width": 292,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 150.921875,
+          "y": 606,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 844,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 844,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 844,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 872,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 872,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 872,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ],
+    "note": "Initial past_due fixture remained entitled; corrected unpaid attention captures are in measurements-local-attention.json."
+  },
+  {
+    "state": "past-due-grace",
+    "width": 768,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nYou're already subscribed\n\nGo to your dashboard or manage billing in Stripe.\n\nGo to Dashboard\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 179.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 612.515625,
+          "y": 28,
+          "width": 71.484375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Go to Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 242.828125,
+          "y": 402,
+          "width": 141.34375,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Manage Billing",
+        "href": "/app/billing",
+        "box": {
+          "x": 396.171875,
+          "y": 402,
+          "width": 129,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 339.921875,
+          "y": 506,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 377.28125,
+          "y": 640,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 640,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 640,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 640,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 668,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 668,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ],
+    "note": "Initial past_due fixture remained entitled; corrected unpaid attention captures are in measurements-local-attention.json."
+  },
+  {
+    "state": "past-due-grace",
+    "width": 1024,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nYou're already subscribed\n\nGo to your dashboard or manage billing in Stripe.\n\nGo to Dashboard\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 187.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 860.515625,
+          "y": 28,
+          "width": 71.484375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Go to Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 370.828125,
+          "y": 402,
+          "width": 141.34375,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Manage Billing",
+        "href": "/app/billing",
+        "box": {
+          "x": 524.171875,
+          "y": 402,
+          "width": 129,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 467.921875,
+          "y": 506,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 486.484375,
+          "y": 640,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 640,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 640,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 640,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 640,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 640,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ],
+    "note": "Initial past_due fixture remained entitled; corrected unpaid attention captures are in measurements-local-attention.json."
+  },
+  {
+    "state": "past-due-grace",
+    "width": 1440,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nYou're already subscribed\n\nGo to your dashboard or manage billing in Stripe.\n\nGo to Dashboard\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 267.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 1196.515625,
+          "y": 28,
+          "width": 71.484375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Go to Dashboard",
+        "href": "/app/dashboard",
+        "box": {
+          "x": 578.828125,
+          "y": 402,
+          "width": 141.34375,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Manage Billing",
+        "href": "/app/billing",
+        "box": {
+          "x": 732.171875,
+          "y": 402,
+          "width": 129,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 675.921875,
+          "y": 506,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 822.484375,
+          "y": 640,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 640,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 640,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 640,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 640,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 640,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ],
+    "note": "Initial past_due fixture remained entitled; corrected unpaid attention captures are in measurements-local-attention.json."
+  },
+  {
+    "state": "trial-eligible",
+    "width": 390,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 109,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 109,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 72,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 72,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 350.171875,
+          "y": 316,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 139.484375,
+          "y": 1072.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 66,
+          "y": 1092.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 49,
+          "y": 1161.5,
+          "width": 292,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 140.484375,
+          "y": 1857,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 67,
+          "y": 1877,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 50,
+          "y": 1946,
+          "width": 290,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 150.921875,
+          "y": 2063,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 2301,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 2301,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 2301,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 2329,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 2329,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 2329,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible-plan-monthly",
+    "width": 390,
+    "url": "http://127.0.0.1:6652/pricing?plan=monthly",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\nSelected plan\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 109,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 109,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 72,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 72,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 350.171875,
+          "y": 316,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 140.484375,
+          "y": 1101.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 67,
+          "y": 1121.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 50,
+          "y": 1190.5,
+          "width": 290,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 140.484375,
+          "y": 1887,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 67,
+          "y": 1907,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 50,
+          "y": 1976,
+          "width": 290,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 150.921875,
+          "y": 2093,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 2331,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 2331,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 2331,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 2359,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 2359,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 2359,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible-plan-annual",
+    "width": 390,
+    "url": "http://127.0.0.1:6652/pricing?plan=annual",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\nSelected plan\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 109,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 109,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 72,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 72,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 350.171875,
+          "y": 316,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 139.484375,
+          "y": 1072.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 66,
+          "y": 1092.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 49,
+          "y": 1161.5,
+          "width": 292,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 140.484375,
+          "y": 1885,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 67,
+          "y": 1905,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 50,
+          "y": 1974,
+          "width": 290,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 150.921875,
+          "y": 2091,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 2329,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 2329,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 2329,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 2357,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 2357,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 2357,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible",
+    "width": 768,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 179.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 696.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 147.484375,
+          "y": 1020.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 74,
+          "y": 1040.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 57,
+          "y": 1109.5,
+          "width": 278,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 524.484375,
+          "y": 1009.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 451,
+          "y": 1029.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 434,
+          "y": 1098.5,
+          "width": 276,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 339.921875,
+          "y": 1225.5,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 377.28125,
+          "y": 1359.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 1359.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 1359.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 1359.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 1387.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 1387.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible-plan-monthly",
+    "width": 768,
+    "url": "http://127.0.0.1:6652/pricing?plan=monthly",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\nSelected plan\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 179.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 696.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 148.484375,
+          "y": 1049.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 75,
+          "y": 1069.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 58,
+          "y": 1138.5,
+          "width": 276,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 524.484375,
+          "y": 1009.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 451,
+          "y": 1029.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 434,
+          "y": 1098.5,
+          "width": 276,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 339.921875,
+          "y": 1255.5,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 377.28125,
+          "y": 1389.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 1389.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 1389.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 1389.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 1417.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 1417.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible-plan-annual",
+    "width": 768,
+    "url": "http://127.0.0.1:6652/pricing?plan=annual",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\nSelected plan\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 179.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 696.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 147.484375,
+          "y": 1020.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 74,
+          "y": 1040.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 57,
+          "y": 1109.5,
+          "width": 278,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 524.484375,
+          "y": 1037.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 451,
+          "y": 1057.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 434,
+          "y": 1126.5,
+          "width": 276,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 339.921875,
+          "y": 1243.5,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 377.28125,
+          "y": 1377.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 1377.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 1377.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 1377.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 1405.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 1405.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible",
+    "width": 1024,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 187.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 824.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 155.484375,
+          "y": 929.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 293.890625,
+          "y": 929.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 65,
+          "y": 998.5,
+          "width": 398,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 652.484375,
+          "y": 895.75,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 790.890625,
+          "y": 895.75,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 562,
+          "y": 964.75,
+          "width": 396,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 467.921875,
+          "y": 1114.5,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 486.484375,
+          "y": 1248.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 1248.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 1248.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 1248.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 1248.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 1248.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible-plan-monthly",
+    "width": 1024,
+    "url": "http://127.0.0.1:6652/pricing?plan=monthly",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\nSelected plan\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 187.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 824.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 156.484375,
+          "y": 958.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 294.890625,
+          "y": 958.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 66,
+          "y": 1027.5,
+          "width": 396,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 652.484375,
+          "y": 895.75,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 790.890625,
+          "y": 895.75,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 562,
+          "y": 964.75,
+          "width": 396,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 467.921875,
+          "y": 1144.5,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 486.484375,
+          "y": 1278.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 1278.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 1278.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 1278.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 1278.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 1278.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible-plan-annual",
+    "width": 1024,
+    "url": "http://127.0.0.1:6652/pricing?plan=annual",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\nSelected plan\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 187.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 824.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 155.484375,
+          "y": 929.5,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 293.890625,
+          "y": 929.5,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 65,
+          "y": 998.5,
+          "width": 398,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 652.484375,
+          "y": 923.75,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 790.890625,
+          "y": 923.75,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 562,
+          "y": 992.75,
+          "width": 396,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 467.921875,
+          "y": 1114.5,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 486.484375,
+          "y": 1248.5,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 1248.5,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 1248.5,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 1248.5,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 1248.5,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 1248.5,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible",
+    "width": 1440,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 267.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 1032.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 235.484375,
+          "y": 861.25,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 373.890625,
+          "y": 861.25,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 145,
+          "y": 930.25,
+          "width": 526,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 860.484375,
+          "y": 850.25,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 998.890625,
+          "y": 850.25,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 770,
+          "y": 919.25,
+          "width": 524,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 675.921875,
+          "y": 1046.25,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 822.484375,
+          "y": 1180.25,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 1180.25,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 1180.25,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 1180.25,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 1180.25,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 1180.25,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible-plan-monthly",
+    "width": 1440,
+    "url": "http://127.0.0.1:6652/pricing?plan=monthly",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\nSelected plan\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 267.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 1032.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 236.484375,
+          "y": 890.25,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 374.890625,
+          "y": 890.25,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 146,
+          "y": 959.25,
+          "width": 524,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 860.484375,
+          "y": 850.25,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 998.890625,
+          "y": 850.25,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 770,
+          "y": 919.25,
+          "width": 524,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 675.921875,
+          "y": 1076.25,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 822.484375,
+          "y": 1210.25,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 1210.25,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 1210.25,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 1210.25,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 1210.25,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 1210.25,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "trial-eligible-plan-annual",
+    "width": 1440,
+    "url": "http://127.0.0.1:6652/pricing?plan=annual",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nStart your free trial to access the app \u2014 no card required.\n\u00d7\nPlans\nPro Monthly\n\n$29/mo\n\nAccess to all questions\nDetailed explanations\nProgress tracking\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Monthly starts at $29 per month and renews automatically every month until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nPro Annual\n\nSelected plan\n\n$199/yr\n\nSave $149 per year\n\nEverything in Pro Monthly\nBest value\n\n7-day free trial; no payment method required to start. If you add a payment method before the trial ends, Pro Annual starts at $199 per year and renews automatically every year until canceled. If you do not add a payment method, the trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Start 7-day free trial, you agree to these renewal terms if you later add a payment method.\n\nReview the Terms of Service and Privacy Policy.\n\nStart 7-day free trial\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 267.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 77,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "\u00d7",
+        "href": "/pricing",
+        "box": {
+          "x": 1032.171875,
+          "y": 274,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 235.484375,
+          "y": 861.25,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 373.890625,
+          "y": 861.25,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 145,
+          "y": 930.25,
+          "width": 526,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 860.484375,
+          "y": 878.25,
+          "width": 108.4375,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 998.890625,
+          "y": 878.25,
+          "width": 89.0625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Start 7-day free trial",
+        "href": null,
+        "box": {
+          "x": 770,
+          "y": 947.25,
+          "width": 524,
+          "height": 48
+        },
+        "fontSize": "16px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 675.921875,
+          "y": 1064.25,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 822.484375,
+          "y": 1198.25,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 1198.25,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 1198.25,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 1198.25,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 1198.25,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 1198.25,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  }
+]

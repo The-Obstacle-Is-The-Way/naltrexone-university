@@ -1,0 +1,874 @@
+[
+  {
+    "state": "needs-attention",
+    "width": 390,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nSubscription found. Manage billing to resolve payment issues.\nManage Billing\n×\nSubscription needs attention\n\nManage billing in Stripe to restore access.\n\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 16,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 72,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 89.03125,
+          "y": 72,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Manage Billing",
+        "href": null,
+        "box": {
+          "x": 201.171875,
+          "y": 330,
+          "width": 121,
+          "height": 32
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "×",
+        "href": "/pricing",
+        "box": {
+          "x": 350.171875,
+          "y": 336,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Manage Billing",
+        "href": null,
+        "box": {
+          "x": 131.5,
+          "y": 580,
+          "width": 127,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 150.921875,
+          "y": 684,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 16,
+          "y": 922,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 97.03125,
+          "y": 922,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 165.21875,
+          "y": 922,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 16,
+          "y": 950,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 146.515625,
+          "y": 950,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 213.40625,
+          "y": 950,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "needs-attention",
+    "width": 768,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nSubscription found. Manage billing to resolve payment issues.\nManage Billing\n×\nSubscription needs attention\n\nManage billing in Stripe to restore access.\n\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 24,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 179.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 252.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Manage Billing",
+        "href": null,
+        "box": {
+          "x": 547.171875,
+          "y": 274,
+          "width": 121,
+          "height": 32
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "×",
+        "href": "/pricing",
+        "box": {
+          "x": 696.171875,
+          "y": 280,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Manage Billing",
+        "href": null,
+        "box": {
+          "x": 320.5,
+          "y": 500,
+          "width": 127,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 339.921875,
+          "y": 604,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 377.28125,
+          "y": 738,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 458.3125,
+          "y": 738,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 526.5,
+          "y": 738,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 637.484375,
+          "y": 738,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 629.203125,
+          "y": 766,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 696.09375,
+          "y": 766,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "needs-attention",
+    "width": 1024,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nSubscription found. Manage billing to resolve payment issues.\nManage Billing\n×\nSubscription needs attention\n\nManage billing in Stripe to restore access.\n\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 32,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 187.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 260.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Manage Billing",
+        "href": null,
+        "box": {
+          "x": 675.171875,
+          "y": 274,
+          "width": 121,
+          "height": 32
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "×",
+        "href": "/pricing",
+        "box": {
+          "x": 824.171875,
+          "y": 280,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Manage Billing",
+        "href": null,
+        "box": {
+          "x": 448.5,
+          "y": 500,
+          "width": 127,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 467.921875,
+          "y": 604,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 486.484375,
+          "y": 738,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 567.515625,
+          "y": 738,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 635.703125,
+          "y": 738,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 746.6875,
+          "y": 738,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 877.203125,
+          "y": 738,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 944.09375,
+          "y": 738,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  },
+  {
+    "state": "needs-attention",
+    "width": 1440,
+    "url": "http://127.0.0.1:6652/pricing",
+    "text": "Pricing\n\nChoose the plan that works for you.\n\nSubscription found. Manage billing to resolve payment issues.\nManage Billing\n×\nSubscription needs attention\n\nManage billing in Stripe to restore access.\n\nManage Billing\nBack to Home",
+    "elements": [
+      {
+        "tag": "A",
+        "text": "Addiction Boards",
+        "href": "/",
+        "box": {
+          "x": 112,
+          "y": 26,
+          "width": 131.625,
+          "height": 24
+        },
+        "fontSize": "16px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 267.625,
+          "y": 28,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 340.65625,
+          "y": 28,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Manage Billing",
+        "href": null,
+        "box": {
+          "x": 883.171875,
+          "y": 274,
+          "width": 121,
+          "height": 32
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "×",
+        "href": "/pricing",
+        "box": {
+          "x": 1032.171875,
+          "y": 280,
+          "width": 6.828125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "BUTTON",
+        "text": "Manage Billing",
+        "href": null,
+        "box": {
+          "x": 656.5,
+          "y": 500,
+          "width": 127,
+          "height": 36
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Back to Home",
+        "href": "/",
+        "box": {
+          "x": 675.921875,
+          "y": 604,
+          "width": 88.15625,
+          "height": 19
+        },
+        "fontSize": "14px",
+        "textAlign": "center",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Features",
+        "href": "/#features",
+        "box": {
+          "x": 822.484375,
+          "y": 738,
+          "width": 57.03125,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Pricing",
+        "href": "/pricing",
+        "box": {
+          "x": 903.515625,
+          "y": 738,
+          "width": 44.1875,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Privacy Policy",
+        "href": "/privacy",
+        "box": {
+          "x": 971.703125,
+          "y": 738,
+          "width": 86.984375,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Terms of Service",
+        "href": "/terms",
+        "box": {
+          "x": 1082.6875,
+          "y": 738,
+          "width": 106.515625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign in",
+        "href": "/sign-in",
+        "box": {
+          "x": 1213.203125,
+          "y": 738,
+          "width": 42.890625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      },
+      {
+        "tag": "A",
+        "text": "Sign up",
+        "href": "/sign-up",
+        "box": {
+          "x": 1280.09375,
+          "y": 738,
+          "width": 47.90625,
+          "height": 20
+        },
+        "fontSize": "14px",
+        "textAlign": "start",
+        "hasSvg": false
+      }
+    ]
+  }
+]

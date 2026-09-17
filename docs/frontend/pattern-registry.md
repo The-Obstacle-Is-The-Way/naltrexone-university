@@ -256,6 +256,10 @@ General-purpose dialogs reuse the same overlay and card class strings as alert d
 needs a scroll-safe mobile variant or any other overlay/card change, document the S-4 variant here
 before adding new production UI classes.
 
+**Scrollable consent variant (DEBT-478):** `DialogContent` adds `max-h-[calc(100dvh-2rem)] overflow-y-auto`. Four trial rows exceed the 635 px available at 390×667; scrolling the card preserves access to all terms and both footer buttons without clipping. Keep the existing `max-w-lg` surface, overlay, focus trap, and Escape/trigger focus behavior. Initially focus the dialog title (`tabIndex={-1}`, `rounded-sm ring-focus`) so short viewports start at the terms heading rather than scrolling to the legal links near the footer. Use the canonical ring on this programmatic focus target instead of the browser's native heading outline.
+
+**Plan consent composition:** `app/pricing/plan-consent-dialog.tsx` uses `DialogHeader`, a labeled form, and `DialogFooter`. The form has `space-y-4`, the idempotency key and displayed-offer identity, `<dl className="text-sm">`, and the exact consent sentence. Each row wrapper is `grid gap-x-6 gap-y-1 border-t border-border/40 py-3 sm:grid-cols-3`; `dt` uses `text-sm text-muted-foreground`, includes its colon, and `dd` uses `text-sm font-bold text-foreground sm:col-span-2`. Bold values make renewal terms conspicuous. The sentence uses `text-sm text-muted-foreground` with L-2 legal links; it measures 4.94:1 on `bg-card`. All row/sentence text comes from `PRICING_DATA[plan].consent`, the same object serialized as consent evidence. Buttons keep standard `rounded-md`, outline Cancel and default submit. Signed-out visitors retain a direct signup link. Only authenticated plan views render the eligibility footnote (`mt-6 text-center text-sm text-muted-foreground`); no personalized content enters cached fragments.
+
 Action buttons inside dialogs use `buttonVariants` from `components/ui/button.tsx` (not ad-hoc dialog button styles).
 
 ---
@@ -614,22 +618,7 @@ The marketing landing page CTA strategy was standardized in DEBT-258:
 | Hero primary "Get started" / "Go to dashboard" | `default` + `h-auto rounded-full px-8 py-3 text-base` | `h-auto` removes the primitive's fixed `h-9`, allowing 24 px line-height plus 24 px vertical padding. |
 | Final CTA "Get started" | `default` + `h-auto rounded-full px-8 py-3 text-base` | Same as hero primary; replaces D-15 under DEBT-477. |
 
-### Trial CTA Subtext (DEBT-410)
-
-For trial-eligible visitors (not entitled, no subscription row — anonymous visitors included), the pricing-card primary CTAs read "Start 7-day free trial" and carry a one-line post-trial price note directly under the button:
-
-```text
-mt-3 text-center text-sm text-muted-foreground
-```
-
-**Copy source:** `lib/pricing-data.ts` (`trialCta` / `postTrialNote` fields) — copy lives in data, not in the view.
-
-**Rules:**
-- Uses the 12.3 "Card body / dense helper copy" role (`text-sm text-muted-foreground`); no new type role.
-- The note is non-interactive metadata for the CTA above it — never a link or button.
-- For non-eligible visitors (any prior or current subscription row, e.g. canceled ex-subscribers), the CTA renders the standard "Subscribe Monthly" / "Subscribe Annual" labels and no subtext.
-
-**Source:** `app/pricing/pricing-view.tsx`
+**Pricing plan action (DEBT-478):** `mt-8 h-auto w-full rounded-full py-3 text-base`; authenticated visitors open the S-4 consent dialog, while signed-out visitors follow the existing signup link with selected-plan context. Trial-eligible labels remain "Start 7-day free trial"; standard outer labels remain "Subscribe Monthly" / "Subscribe Annual". The dialog's actual commit label is taken from its consent data. The obsolete `postTrialNote` subtext recipe is retired.
 
 ### Third-Party Component Exceptions (Decision 8)
 
@@ -1238,8 +1227,7 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 |-----|-------|
 | `gap-3` | Dense filter bar grids |
 | `gap-4` | Standard card grids (stats, features, section layouts) |
-| `gap-6` | Marketing pricing card grid |
-| `gap-8` | Pricing page plan grid |
+| `gap-6` | Marketing pricing and `/pricing` plan grids |
 
 ### 13.5 List Spacing Scale
 
@@ -1256,7 +1244,7 @@ mx-auto max-w-7xl px-4 sm:px-6 lg:px-8
 | `max-w-7xl` (1280px) | Full-page layouts | App layout, marketing layout |
 | `max-w-4xl` | Hero content | Marketing hero section |
 | `max-w-[72ch]` | Sustained legal reading measure, including responsive page padding | Privacy Policy, Terms of Service |
-| `max-w-3xl` | Featured sections | Marketing pricing grid, CTA section |
+| `max-w-3xl` | Featured sections | Marketing pricing grid, CTA section, and `/pricing` plans section (outer shell/status cards retain their existing width) |
 | `max-w-2xl` | Centered content | Pricing cards, subtitles, feature headings |
 | `max-w-lg` | Dialogs | Alert dialog |
 | `max-w-md` | Error pages | Not Found, Global Error, Error Boundary |

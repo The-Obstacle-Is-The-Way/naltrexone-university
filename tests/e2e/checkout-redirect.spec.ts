@@ -37,6 +37,11 @@ test.describe
         .first()
         .click();
 
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Start free trial', exact: true })
+        .click();
+
       // Stripe owns everything after this origin boundary. Required CI stops here.
       await expect(page).toHaveURL(/^https:\/\/checkout\.stripe\.com\//, {
         timeout: 30_000,
@@ -50,11 +55,12 @@ test.describe
       await signInWithClerkPassword(page);
       await page.goto('/pricing');
 
-      const annualForm = page.locator(
-        'form[aria-label="Subscribe annual plan"]',
-      );
-      await annualForm
-        .getByRole('button', { name: 'Subscribe Annual' })
+      await page
+        .getByRole('button', { name: 'Subscribe Annual', exact: true })
+        .click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Subscribe', exact: true })
         .click();
 
       // Stripe owns everything after this origin boundary. Required CI stops here.
