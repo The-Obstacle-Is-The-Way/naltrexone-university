@@ -123,7 +123,10 @@ describe('billing controllers (integration)', () => {
     );
 
     const result = await createCheckoutSession(
-      { plan: 'monthly' },
+      {
+        plan: 'monthly',
+        expectedOffer: { hasTrial: true, disclosureVersion: '2026-08-05' },
+      },
       {
         authGateway: new FakeAuthGateway(user),
         logger: new FakeLogger(),
@@ -203,7 +206,10 @@ describe('billing controllers (integration)', () => {
     );
 
     await createCheckoutSession(
-      { plan: 'annual' },
+      {
+        plan: 'annual',
+        expectedOffer: { hasTrial: true, disclosureVersion: '2026-08-05' },
+      },
       {
         authGateway: new FakeAuthGateway(user),
         logger: new FakeLogger(),

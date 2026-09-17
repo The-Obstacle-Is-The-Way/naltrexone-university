@@ -1,7 +1,5 @@
-import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { PRICING_DATA } from '@/lib/pricing-data';
-import { ROUTES } from '@/lib/routes';
 
 type PricingPlanSkeletonCardProps = {
   plan: (typeof PRICING_DATA)['monthly'] | (typeof PRICING_DATA)['annual'];
@@ -59,28 +57,19 @@ export async function PricingViewSkeleton() {
           </p>
         </header>
 
-        <section className="mt-16" aria-labelledby="pricing-plans-heading">
-          <h2
-            id="pricing-plans-heading"
-            className="text-center font-heading text-xl font-semibold tracking-tight text-foreground"
-          >
+        <section
+          className="mx-auto mt-16 max-w-3xl"
+          aria-labelledby="pricing-plans-heading"
+        >
+          <h2 id="pricing-plans-heading" className="sr-only">
             Plans
           </h2>
           <p className="sr-only">Loading pricing actions</p>
-          <div className="mt-6 grid gap-8 md:grid-cols-2">
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
             <PricingPlanSkeletonCard plan={PRICING_DATA.monthly} />
             <PricingPlanSkeletonCard plan={PRICING_DATA.annual} featured />
           </div>
         </section>
-
-        <div className="mt-8 text-center">
-          <Link
-            href={ROUTES.HOME}
-            className="rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground ring-focus"
-          >
-            Back to home
-          </Link>
-        </div>
       </div>
     </div>
   );

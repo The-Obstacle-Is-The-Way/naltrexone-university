@@ -191,10 +191,34 @@ describe('billing-controller', () => {
   });
 
   describe('createCheckoutSession', () => {
+    const expectedOffer = {
+      hasTrial: true,
+      disclosureVersion: '2026-09-16',
+    };
+
+    it('returns VALIDATION_ERROR without creating Checkout when the displayed offer is omitted', async () => {
+      const deps = createDeps();
+
+      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          fieldErrors: { expectedOffer: expect.any(Array) },
+        },
+      });
+      expect(deps.createCheckoutSessionUseCase.inputs).toEqual([]);
+      expect(deps._calls.clerkCalls).toEqual([]);
+    });
+
     it('returns VALIDATION_ERROR when input is invalid', async () => {
       const deps = createDeps();
 
-      const result = await createCheckoutSession({ plan: 'weekly' }, deps);
+      const result = await createCheckoutSession(
+        { plan: 'weekly', expectedOffer },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
@@ -209,7 +233,10 @@ describe('billing-controller', () => {
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
       const deps = createDeps({ user: null });
 
-      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
+      const result = await createCheckoutSession(
+        { plan: 'monthly', expectedOffer },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
@@ -228,7 +255,10 @@ describe('billing-controller', () => {
         }),
       });
 
-      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
+      const result = await createCheckoutSession(
+        { plan: 'monthly', expectedOffer },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
@@ -240,7 +270,10 @@ describe('billing-controller', () => {
     it('returns checkout URL when inputs are valid', async () => {
       const deps = createDeps({ appUrl: 'https://app.example.com' });
 
-      const result = await createCheckoutSession({ plan: 'annual' }, deps);
+      const result = await createCheckoutSession(
+        { plan: 'annual', expectedOffer },
+        deps,
+      );
 
       expect(result).toEqual({
         ok: true,
@@ -252,6 +285,7 @@ describe('billing-controller', () => {
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
           plan: 'annual',
+          expectedOffer,
           successUrl:
             'https://app.example.com/checkout/success?session_id={CHECKOUT_SESSION_ID}',
           cancelUrl: 'https://app.example.com/pricing?checkout=cancel',
@@ -265,6 +299,7 @@ describe('billing-controller', () => {
 
       const input = {
         plan: 'monthly',
+        expectedOffer,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -278,6 +313,48 @@ describe('billing-controller', () => {
       expect(second).toEqual(first);
       expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
       expect(deps._calls.clerkCalls).toHaveLength(1);
+    });
+
+    it('scopes replay and provider keys to the plan and displayed offer', async () => {
+      const deps = createDeps();
+      const idempotencyKey = '11111111-1111-1111-1111-111111111111';
+      const offers = [
+        {
+          plan: 'monthly',
+          expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+        },
+        {
+          plan: 'annual',
+          expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+        },
+        {
+          plan: 'annual',
+          expectedOffer: { hasTrial: false, disclosureVersion: '2026-09-16' },
+        },
+        {
+          plan: 'annual',
+          expectedOffer: { hasTrial: false, disclosureVersion: '2026-09-17' },
+        },
+      ];
+      for (const offer of offers) {
+        expect(
+          await createCheckoutSession({ ...offer, idempotencyKey }, deps),
+        ).toMatchObject({ ok: true });
+      }
+      expect(
+        await createCheckoutSession({ ...offers[0], idempotencyKey }, deps),
+      ).toMatchObject({ ok: true });
+      expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(4);
+      expect(
+        new Set(
+          deps.createCheckoutSessionUseCase.inputs.map(
+            (input) => input.idempotencyKey,
+          ),
+        ).size,
+      ).toBe(4);
+      expect(
+        deps.createCheckoutSessionUseCase.inputs[0]?.expectedOffer,
+      ).toEqual(offers[0]?.expectedOffer);
     });
 
     it('does not cache RATE_LIMITED under the checkout idempotency key', async () => {
@@ -299,6 +376,7 @@ describe('billing-controller', () => {
       });
       const input = {
         plan: 'monthly',
+        expectedOffer,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -335,6 +413,7 @@ describe('billing-controller', () => {
       });
       const input = {
         plan: 'monthly',
+        expectedOffer,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -356,6 +435,7 @@ describe('billing-controller', () => {
 
       const input = {
         plan: 'monthly',
+        expectedOffer,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -371,7 +451,8 @@ describe('billing-controller', () => {
       expect(second).toEqual(first);
       expect(deps.createCheckoutSessionUseCase.inputs).toHaveLength(1);
       expect(deps.createCheckoutSessionUseCase.inputs[0]).toMatchObject({
-        idempotencyKey: '11111111-1111-1111-1111-111111111111',
+        idempotencyKey:
+          '11111111-1111-1111-1111-111111111111:monthly:trial:2026-09-16',
       });
     });
 
@@ -383,7 +464,10 @@ describe('billing-controller', () => {
         ),
       });
 
-      const result = await createCheckoutSession({ plan: 'monthly' }, deps);
+      const result = await createCheckoutSession(
+        { plan: 'monthly', expectedOffer },
+        deps,
+      );
 
       expect(result).toEqual({
         ok: false,
@@ -403,6 +487,7 @@ describe('billing-controller', () => {
       });
       const input = {
         plan: 'monthly',
+        expectedOffer,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -426,6 +511,7 @@ describe('billing-controller', () => {
       });
       const input = {
         plan: 'monthly',
+        expectedOffer,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 

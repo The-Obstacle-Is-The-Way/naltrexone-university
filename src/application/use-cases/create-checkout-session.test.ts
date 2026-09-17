@@ -153,6 +153,62 @@ async function createUseCaseWithExistingCustomer(input: {
 }
 
 describe('CreateCheckoutSessionUseCase', () => {
+  it.each([
+    { status: null, expectedTrial: true, version: '2026-01-01' },
+    { status: 'canceled' as const, expectedTrial: true, version: '2026-08-05' },
+    { status: null, expectedTrial: false, version: '2026-08-05' },
+  ])(
+    'rejects stale displayed consent before provider effects: $status/$expectedTrial/$version',
+    async ({ status, expectedTrial, version }) => {
+      const payments = createPaymentGateway();
+      const useCase = new CreateCheckoutSessionUseCase(
+        new FakeStripeCustomerRepository(),
+        new FakeSubscriptionRepository(
+          status ? [createSubscription({ userId: 'user-1', status })] : [],
+        ),
+        payments,
+        new FakeLogger(),
+        () => new Date('2026-02-01T00:00:00Z'),
+        getRenewalTerms,
+      );
+      await expect(
+        useCase.execute({
+          ...defaultCheckoutInput,
+          expectedOffer: {
+            hasTrial: expectedTrial,
+            disclosureVersion: version,
+          },
+        }),
+      ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+      expect(payments.customerInputs).toEqual([]);
+      expect(payments.checkoutInputs).toEqual([]);
+    },
+  );
+
+  it.each([true, false])(
+    'creates Checkout when the displayed trial=%s offer still matches',
+    async (hasTrial) => {
+      const { useCase, paymentGateway } =
+        await createUseCaseWithExistingCustomer(
+          hasTrial
+            ? {}
+            : {
+                status: 'canceled',
+                currentPeriodEnd: new Date('2026-01-01T00:00:00Z'),
+              },
+        );
+      await expect(
+        useCase.execute({
+          ...defaultCheckoutInput,
+          expectedOffer: { hasTrial, disclosureVersion: '2026-08-05' },
+        }),
+      ).resolves.toEqual({ url: 'https://stripe/checkout' });
+      expect(paymentGateway.checkoutInputs[0]).toMatchObject(
+        getRenewalTerms('monthly', hasTrial),
+      );
+    },
+  );
+
   it('allows checkout when local row is canceled even with future currentPeriodEnd', async () => {
     const { paymentGateway, useCase } = await createUseCaseWithExistingCustomer(
       {

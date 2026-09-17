@@ -1,14 +1,15 @@
 import { toPricingRoute, toSignUpRedirectRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
+import type { CreateCheckoutSessionInput } from '@/src/application/use-cases';
 
 type RedirectFn = (url: string) => never;
 
 type LogErrorFn = (context: Record<string, unknown>, msg: string) => void;
 
-type SubscribeActionInput = {
-  plan: 'monthly' | 'annual';
-  idempotencyKey?: string;
-};
+type SubscribeActionInput = Pick<
+  CreateCheckoutSessionInput,
+  'plan' | 'idempotencyKey' | 'expectedOffer'
+>;
 
 type SubscribeActionDeps = {
   createCheckoutSessionFn: (
@@ -24,6 +25,7 @@ export async function runSubscribeAction(
 ): Promise<void> {
   const result = await deps.createCheckoutSessionFn({
     plan: input.plan,
+    ...(input.expectedOffer ? { expectedOffer: input.expectedOffer } : {}),
     ...(input.idempotencyKey !== undefined
       ? { idempotencyKey: input.idempotencyKey }
       : {}),

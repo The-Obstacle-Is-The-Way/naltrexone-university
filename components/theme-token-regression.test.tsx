@@ -51,7 +51,7 @@ let Feedback: typeof import('@/components/question/feedback').Feedback;
 let QuestionRatingFooter: typeof import('@/components/question/question-rating-footer').QuestionRatingFooter;
 let BillingContent: typeof import('@/app/(app)/app/billing/page').BillingContent;
 let LegalDocument: typeof import('@/components/legal/legal-document').LegalDocument;
-let SubscribePlanCta: typeof import('@/app/pricing/pricing-auth-cta').SubscribePlanCta;
+let PlanConsentDetails: typeof import('@/app/pricing/plan-consent-dialog').PlanConsentDetails;
 
 function extractBlock(source: string, selector: ':root' | '.dark'): string {
   const selectorEscaped = selector.replace('.', '\\.');
@@ -176,7 +176,9 @@ describe('theme token regression', () => {
     ));
     ({ BillingContent } = await import('@/app/(app)/app/billing/page'));
     ({ LegalDocument } = await import('@/components/legal/legal-document'));
-    ({ SubscribePlanCta } = await import('@/app/pricing/pricing-auth-cta'));
+    ({ PlanConsentDetails } = await import(
+      '@/app/pricing/plan-consent-dialog'
+    ));
   });
 
   beforeEach(() => {
@@ -292,15 +294,7 @@ describe('theme token regression', () => {
 
   it('uses the shared focus ring utility on pricing legal-consent links', () => {
     const html = renderToStaticMarkup(
-      <SubscribePlanCta
-        isAuthenticated={false}
-        formAction={async () => {}}
-        signUpHref={ROUTES.SIGN_UP}
-        formAriaLabel="Subscribe"
-        label="Subscribe"
-        disclosure="Renews automatically."
-        SubscribeButtonComponent={({ children }) => <span>{children}</span>}
-      />,
+      <PlanConsentDetails plan="monthly" hasTrial />,
     );
     const doc = parseHtml(html);
 
