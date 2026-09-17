@@ -29,7 +29,7 @@ function publicPrivacyMarkdown(): string {
     .split('## Privacy Policy\n\n')[1]
     ?.split('\n---\n\n## Provenance and adversarial verification')[0];
   const body = publicSection?.replace(
-    /^\*\*Last updated: August 8, 2026\*\*\n\n/,
+    /^\*\*Last updated: September 16, 2026\*\*\n\n/,
     '',
   );
 
@@ -41,11 +41,11 @@ function publicPrivacyMarkdown(): string {
 }
 
 describe('PrivacyPage', () => {
-  it('records production verification for the current publication copy', () => {
+  it('distinguishes the revised copy from the verified production baseline', () => {
     const source = readFileSync('docs/legal/privacy-policy.md', 'utf8');
 
     expect(source).toContain(
-      '**STATUS: PUBLICATION COPY; production verified 2026-08-08.**',
+      '**2026-09-16 revision: pending production verification.**',
     );
     expect(source).toContain(
       'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/760#issuecomment-5227563312',
@@ -54,7 +54,7 @@ describe('PrivacyPage', () => {
 
   it('keeps the typed page content verbatim with the committed public copy', () => {
     expect(privacyContent.title).toBe('Privacy Policy');
-    expect(privacyContent.effectiveDate).toBe('August 8, 2026');
+    expect(privacyContent.effectiveDate).toBe('September 16, 2026');
     expect(privacyContent.bodyMarkdown).toBe(publicPrivacyMarkdown());
   });
 
@@ -82,6 +82,8 @@ describe('PrivacyPage', () => {
       'ImprovMX',
       'Google Workspace',
       'Resend',
+      'Apple',
+      'Bitwarden',
     ]) {
       expect(text).toContain(provider);
     }
@@ -98,7 +100,7 @@ describe('PrivacyPage', () => {
       'local user reference cleared and the pseudonymous consumer reference retained',
     );
     expect(text).toContain(
-      'messages remain queued without contacting Resend while the credential is absent',
+      'Sending subscription acknowledgments and renewal notices',
     );
     expect(text).toContain(
       'Renewal acknowledgment and notice delivery records',
