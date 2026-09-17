@@ -1,0 +1,32 @@
+[
+  {
+    "tag": "A",
+    "text": "Terms of Service",
+    "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.510275 0.000023216 0.0000101924 / 0.5) 0px 0px 0px 3px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "outline": "oklab(0.510275 0.000023216 0.0000101924 / 0.5) none 1px"
+  },
+  {
+    "tag": "A",
+    "text": "Privacy Policy",
+    "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.510275 0.000023216 0.0000101924 / 0.5) 0px 0px 0px 3px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "outline": "oklab(0.510275 0.000023216 0.0000101924 / 0.5) none 1px"
+  },
+  {
+    "tag": "BUTTON",
+    "text": "Cancel",
+    "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.510275 0.000023216 0.0000101924 / 0.5) 0px 0px 0px 3px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+    "outline": "oklab(0.510275 0.000023216 0.0000101924 / 0.5) none 1px"
+  },
+  {
+    "tag": "BUTTON",
+    "text": "Start free trial",
+    "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.510275 0.000023216 0.0000101924 / 0.5) 0px 0px 0px 3px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+    "outline": "oklab(0.510275 0.000023216 0.0000101924 / 0.5) none 1px"
+  },
+  {
+    "tag": "A",
+    "text": "Terms of Service",
+    "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklab(0.510275 0.000023216 0.0000101924 / 0.5) 0px 0px 0px 3px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+    "outline": "oklab(0.510275 0.000023216 0.0000101924 / 0.5) none 1px"
+  }
+]

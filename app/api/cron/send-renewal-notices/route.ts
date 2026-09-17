@@ -1,5 +1,9 @@
 import { createContainer } from '@/lib/container';
-import { CANCELLATION_METHOD, PRICING_DATA } from '@/lib/pricing-data';
+import {
+  ANNUAL_RENEWAL_NOTICE_VERSION,
+  CANCELLATION_METHOD,
+  PRICING_DATA,
+} from '@/lib/pricing-data';
 import {
   listAnnualSubscriptionsDue,
   SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
@@ -37,7 +41,7 @@ export function createSendRenewalNoticesCronHandler(
               amountCents: PRICING_DATA.annual.amountCents,
               currency: PRICING_DATA.annual.currency,
               frequency: PRICING_DATA.annual.frequency,
-              disclosureVersion: PRICING_DATA.annual.disclosureVersion,
+              disclosureVersion: ANNUAL_RENEWAL_NOTICE_VERSION,
               cancellationMethod: CANCELLATION_METHOD,
             },
             sendDueRenewalNotices:

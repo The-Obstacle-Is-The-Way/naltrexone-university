@@ -107,7 +107,7 @@ describe('MarketingLayout', () => {
     ).toBe('Terms of Service');
   });
 
-  it('renders footer links in a single untitled group', async () => {
+  it('renders footer links in two labeled groups', async () => {
     const html = await renderLayout({ authNavSlot: <div>Auth</div> });
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const footer = doc.querySelector('footer');
@@ -131,9 +131,44 @@ describe('MarketingLayout', () => {
     });
 
     const linkGroups = new Set(footerLinks.map((link) => link?.parentElement));
-    expect(linkGroups.size).toBe(1);
+    expect(linkGroups.size).toBe(2);
+    const product = footer.querySelector(
+      'nav[aria-label="Footer product navigation"]',
+    );
+    const legal = footer.querySelector(
+      'nav[aria-label="Footer legal navigation"]',
+    );
+    expect(
+      Array.from(product?.querySelectorAll('a') ?? [], (a) =>
+        a.textContent?.trim(),
+      ),
+    ).toEqual(['Features', 'Pricing', 'Sign in', 'Sign up']);
+    expect(
+      Array.from(legal?.querySelectorAll('a') ?? [], (a) =>
+        a.textContent?.trim(),
+      ),
+    ).toEqual(['Privacy Policy', 'Terms of Service']);
     expect(footer.textContent).not.toContain('Product');
     expect(footer.textContent).not.toContain('Account');
+  });
+
+  it('stacks brand, the two-specialty tagline, product links, and legal links in reading order', async () => {
+    const doc = parseHtml(await renderLayout({ authNavSlot: <div>Auth</div> }));
+    const brand = doc.querySelector('footer p');
+    const grid = brand?.parentElement;
+    expect(Array.from(grid?.children ?? [], (child) => child.tagName)).toEqual([
+      'P',
+      'P',
+      'NAV',
+      'NAV',
+    ]);
+    expect(grid?.children[1]?.textContent?.trim()).toBe(
+      'Board exam preparation for addiction psychiatry and addiction medicine.',
+    );
+    expect(grid?.classList.contains('md:items-baseline')).toBe(true);
+    expect(doc.querySelector('footer')?.textContent).not.toContain(
+      'addiction medicine professionals',
+    );
   });
 
   it('applies the stronger header brand treatment to the brand link', async () => {
@@ -192,6 +227,7 @@ describe('MarketingLayout', () => {
       .split(/\s+/)
       .filter(Boolean);
 
+    expect(classTokens).toContain('text-base');
     expect(classTokens).toContain('font-heading');
     expect(classTokens).toContain('font-bold');
     expect(classTokens).toContain('text-foreground');

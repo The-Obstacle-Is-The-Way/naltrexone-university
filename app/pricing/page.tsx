@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { type ReactNode, Suspense } from 'react';
 import { manageBillingAction } from '@/app/pricing/manage-billing-actions';
-import { SubscribeButton } from '@/app/pricing/pricing-client';
 import { PricingView } from '@/app/pricing/pricing-view';
 import { PricingViewSkeleton } from '@/app/pricing/pricing-view-skeleton';
 import {
@@ -241,7 +240,6 @@ export async function DeferredPricingView({
         : {})}
       subscribeMonthlyAction={subscribeMonthlyAction}
       subscribeAnnualAction={subscribeAnnualAction}
-      SubscribeButtonComponent={SubscribeButton}
     />
   );
 }
@@ -282,7 +280,6 @@ async function renderInjectedPricingPage(input: {
           : {})}
         subscribeMonthlyAction={subscribeMonthlyAction}
         subscribeAnnualAction={subscribeAnnualAction}
-        SubscribeButtonComponent={SubscribeButton}
       />
     ),
   });

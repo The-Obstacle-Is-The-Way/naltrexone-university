@@ -26,7 +26,7 @@ describe('app/not-found', () => {
     const main = findMainLandmarkById(doc, 'main-content');
 
     expect(html).toContain('Page Not Found');
-    expect(html).toContain('Back to Home');
+    expect(html).toContain('Back to home');
     expect(main).not.toBeNull();
     expect(main?.getAttribute('tabindex')).toBe('-1');
     expect(heading?.getAttribute('class') ?? '').toContain('font-heading');

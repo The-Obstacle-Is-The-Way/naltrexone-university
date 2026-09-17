@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
 import {
+  expectE2ECheckoutConsent,
+  readDisplayedPlanConsent,
+} from './helpers/checkout-consent';
+import {
   E2E_CLERK_AUTH_STATE_PATH,
   signInWithClerkPassword,
 } from './helpers/clerk-auth';
@@ -42,6 +46,11 @@ test.describe('trial start', () => {
       .first()
       .click();
 
+    const displayedConsent = await readDisplayedPlanConsent(page);
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Start free trial', exact: true })
+      .click();
     await completeNoCardTrialCheckout(page);
 
     await expect(
@@ -57,5 +66,9 @@ test.describe('trial start', () => {
     ).toBeVisible();
 
     await expectE2EUserHasTrialWithoutPaymentMethod();
+    await expectE2ECheckoutConsent(page, {
+      plan: 'monthly',
+      ...displayedConsent,
+    });
   });
 });

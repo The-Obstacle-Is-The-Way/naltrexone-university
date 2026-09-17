@@ -22,7 +22,7 @@ test.describe('subscribe', () => {
       timeout: 15_000,
     });
 
-    await page.getByRole('link', { name: 'Go to Dashboard' }).click();
+    await page.getByRole('link', { name: 'Go to dashboard' }).click();
     await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 15_000 });
     const appNavigation = page.getByRole('navigation', {
       name: 'App navigation',

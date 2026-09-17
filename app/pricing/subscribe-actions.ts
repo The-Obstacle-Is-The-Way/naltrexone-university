@@ -3,13 +3,17 @@
 import { redirect } from 'next/navigation';
 import { runSubscribeAction } from '@/app/pricing/subscribe-action';
 import { createRequestContext, getRequestLogger } from '@/lib/request-context';
+import { toPricingRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { createCheckoutSession } from '@/src/adapters/controllers/billing-controller';
+import type { CreateCheckoutSessionInput } from '@/src/application/use-cases';
 
-type CreateCheckoutSessionFn = (input: {
-  plan: 'monthly' | 'annual';
-  idempotencyKey?: string;
-}) => Promise<ActionResult<{ url: string }>>;
+type CreateCheckoutSessionFn = (
+  input: Pick<
+    CreateCheckoutSessionInput,
+    'plan' | 'idempotencyKey' | 'expectedOffer'
+  >,
+) => Promise<ActionResult<{ url: string }>>;
 
 export type SubscribeActionsDeps = {
   createCheckoutSessionFn: CreateCheckoutSessionFn;
@@ -42,44 +46,44 @@ async function getDeps(
   };
 }
 
-export async function subscribeMonthlyAction(
+async function subscribeToPlan(
+  plan: 'monthly' | 'annual',
   formData: FormData,
   deps?: Partial<SubscribeActionsDeps>,
 ): Promise<void> {
   const d = await getDeps(deps);
   const rawKey = formData.get('idempotencyKey');
   const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
+  const disclosureVersion = formData.get('disclosureVersion');
+  const hasTrial = formData.get('hasTrial');
+  if (
+    typeof disclosureVersion !== 'string' ||
+    !disclosureVersion ||
+    (hasTrial !== 'true' && hasTrial !== 'false')
+  ) {
+    return d.redirectFn(toPricingRoute({ checkout: 'error', plan }));
+  }
 
   return runSubscribeAction(
     {
-      plan: 'monthly',
+      plan,
       ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+      expectedOffer: { disclosureVersion, hasTrial: hasTrial === 'true' },
     },
-    {
-      createCheckoutSessionFn: d.createCheckoutSessionFn,
-      redirectFn: d.redirectFn,
-      logError: d.logError,
-    },
+    d,
   );
+}
+
+export async function subscribeMonthlyAction(
+  formData: FormData,
+  deps?: Partial<SubscribeActionsDeps>,
+): Promise<void> {
+  return subscribeToPlan('monthly', formData, deps);
 }
 
 export async function subscribeAnnualAction(
   formData: FormData,
   deps?: Partial<SubscribeActionsDeps>,
 ): Promise<void> {
-  const d = await getDeps(deps);
-  const rawKey = formData.get('idempotencyKey');
-  const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
-
-  return runSubscribeAction(
-    {
-      plan: 'annual',
-      ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
-    },
-    {
-      createCheckoutSessionFn: d.createCheckoutSessionFn,
-      redirectFn: d.redirectFn,
-      logError: d.logError,
-    },
-  );
+  return subscribeToPlan('annual', formData, deps);
 }

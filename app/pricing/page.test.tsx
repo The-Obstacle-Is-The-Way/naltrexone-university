@@ -52,7 +52,6 @@ process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL ??= 'price_dummy_annual';
 process.env.NEXT_PUBLIC_SKIP_CLERK ??= 'true';
 
 type PricingPageModule = typeof import('@/app/pricing/page');
-type PricingClientModule = typeof import('@/app/pricing/pricing-client');
 type PricingPageInput = Parameters<PricingPageModule['default']>[0];
 type PricingSearchParamsForTest = Awaited<PricingPageInput['searchParams']>;
 
@@ -62,24 +61,19 @@ let loadPricingData: PricingPageModule['loadPricingData'];
 let runSubscribeAction: PricingPageModule['runSubscribeAction'];
 let DeferredPricingView: PricingPageModule['DeferredPricingView'];
 let PricingPage: PricingPageModule['default'];
-let SubscribeButton: PricingClientModule['SubscribeButton'];
 
 type CreateCheckoutSessionFn = Parameters<
   typeof import('@/app/pricing/page').runSubscribeAction
 >[1]['createCheckoutSessionFn'];
 
 beforeAll(async () => {
-  const [pageModule, pricingClientModule] = await Promise.all([
-    import('@/app/pricing/page'),
-    import('@/app/pricing/pricing-client'),
-  ]);
+  const pageModule = await import('@/app/pricing/page');
   PricingView = pageModule.PricingView;
   getPricingBanner = pageModule.getPricingBanner;
   loadPricingData = pageModule.loadPricingData;
   runSubscribeAction = pageModule.runSubscribeAction;
   DeferredPricingView = pageModule.DeferredPricingView;
   PricingPage = pageModule.default;
-  SubscribeButton = pricingClientModule.SubscribeButton;
 });
 
 function createTrackedThenable<T>() {
@@ -221,7 +215,7 @@ describe('app/pricing', () => {
 
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
-    expect(backLink?.textContent?.trim()).toBe('Back to Home');
+    expect(backLink).toBeNull();
     expect(doc.querySelector('[data-testid="pricing-root"]')).not.toBeNull();
     expect(doc.querySelector('header')).not.toBeNull();
   });
@@ -338,7 +332,7 @@ describe('app/pricing', () => {
     expect(nonPrimitiveButtons).toHaveLength(0);
   });
 
-  it('uses the shared Button primitive for subscribe form submit actions', async () => {
+  it('uses the shared Button primitive for plan consent triggers', async () => {
     const html = renderToStaticMarkup(
       <PricingView
         isEntitled={false}
@@ -348,14 +342,14 @@ describe('app/pricing', () => {
       />,
     );
     const doc = new DOMParser().parseFromString(html, 'text/html');
-    const submitButtons = Array.from(
-      doc.querySelectorAll('form button[type="submit"]'),
+    const triggerButtons = Array.from(
+      doc.querySelectorAll('button[aria-haspopup="dialog"]'),
     );
-    const nonPrimitiveButtons = submitButtons.filter(
-      (button) => button.getAttribute('data-slot') !== 'button',
+    const nonPrimitiveButtons = triggerButtons.filter(
+      (button) => button.getAttribute('data-variant') !== 'default',
     );
 
-    expect(submitButtons.length).toBeGreaterThan(0);
+    expect(triggerButtons.length).toBeGreaterThan(0);
     expect(nonPrimitiveButtons).toHaveLength(0);
   });
 
@@ -857,7 +851,7 @@ describe('app/pricing', () => {
       />,
     );
 
-    expect(html).toContain('Manage Billing');
+    expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
   });
@@ -886,16 +880,6 @@ describe('app/pricing', () => {
     expect(dismissClasses).toContain('hover:text-foreground');
     expect(dismissClasses).not.toContain('text-current');
     expect(dismissClasses).not.toContain('hover:opacity-70');
-  });
-
-  it('SubscribeButton renders children when not pending', async () => {
-    const html = renderToStaticMarkup(
-      <SubscribeButton>Subscribe Monthly</SubscribeButton>,
-    );
-
-    expect(html).toContain('data-slot="button"');
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).not.toContain('Processing...');
   });
 
   it('does not render dismiss link when banner is null', async () => {
@@ -1019,7 +1003,7 @@ describe('app/pricing', () => {
     expect(pricingFallback?.querySelector('button[type="submit"]')).toBeNull();
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
-    expect(html).not.toContain('Manage Billing');
+    expect(html).not.toContain('Manage billing');
     expect(
       doc.querySelector('header a[href="/sign-in"]')?.textContent?.trim(),
     ).toBe('Sign in');
@@ -1068,13 +1052,13 @@ describe('app/pricing', () => {
     expect(html).toContain('Subscribe Monthly');
     expect(html).toContain('Subscribe Annual');
     expect(html).not.toContain('Subscription needs attention');
-    expect(html).not.toContain('Manage Billing');
+    expect(html).not.toContain('Manage billing');
   });
 
   it('continues to pass manageBillingAction when reason=manage_billing', async () => {
     const html = await renderPricingPageWithEntitlementReason('manage_billing');
 
-    expect(html).toContain('Manage Billing');
+    expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe Monthly');
   });
 
@@ -1082,7 +1066,7 @@ describe('app/pricing', () => {
     const html =
       await renderPricingPageWithEntitlementReason('payment_processing');
 
-    expect(html).toContain('Manage Billing');
+    expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe Monthly');
   });
 
@@ -1128,7 +1112,7 @@ describe('app/pricing', () => {
     expect(html).not.toContain(
       'Subscription found. Manage billing to resolve payment issues.',
     );
-    expect(html).not.toContain('Manage Billing');
+    expect(html).not.toContain('Manage billing');
   });
 
   it('renders trial CTAs and trial-forward copy for anonymous visitors', async () => {
@@ -1148,12 +1132,7 @@ describe('app/pricing', () => {
     expect(
       findElementByText(doc, 'a', 'Start 7-day free trial'),
     ).not.toBeNull();
-    expect(
-      findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
-    ).not.toBeNull();
-    expect(
-      findElementByText(doc, 'p', PRICING_DATA.annual.trialDisclosure),
-    ).not.toBeNull();
+    expect(doc.querySelector('dl')).toBeNull();
     expect(html).not.toContain('Subscription required to access the app.');
     expect(html).not.toContain('Subscribe Monthly');
     expect(html).not.toContain('Subscribe Annual');
@@ -1215,12 +1194,8 @@ describe('app/pricing', () => {
     );
     expect(annualCard?.getAttribute('aria-current')).toBe('true');
     expect(annualCard?.textContent).toContain('Selected plan');
-    expect(
-      findElementByText(doc, 'p', PRICING_DATA.monthly.trialDisclosure),
-    ).toBeNull();
-    expect(
-      findElementByText(doc, 'p', PRICING_DATA.annual.trialDisclosure),
-    ).toBeNull();
+    expect(doc.querySelector('dl')).toBeNull();
+    expect(doc.querySelector('dl')).toBeNull();
   });
 
   it('renders trial CTAs for signed-in first-time users', async () => {
@@ -1239,7 +1214,7 @@ describe('app/pricing', () => {
     expect(html).not.toContain('Subscribe Monthly');
   });
 
-  it('keeps signed-in first-time trial CTAs as checkout submit actions', async () => {
+  it('renders signed-in trial CTAs as consent-dialog triggers', async () => {
     const html = await renderPricingPageWithEntitlement({
       isEntitled: false,
       reason: 'subscription_required',
@@ -1255,12 +1230,10 @@ describe('app/pricing', () => {
         toSignUpRedirectRoute(toPricingRoute({ plan: 'monthly' })),
       ),
     ).toBeNull();
-    expect(
-      doc.querySelector('form[aria-label="Subscribe monthly plan"]'),
-    ).not.toBeNull();
-    expect(
-      doc.querySelector('form[aria-label="Subscribe annual plan"]'),
-    ).not.toBeNull();
+    expect(doc.querySelector('button[aria-haspopup="dialog"]')).not.toBeNull();
+    expect(doc.querySelectorAll('button[aria-haspopup="dialog"]')).toHaveLength(
+      2,
+    );
   });
 
   it('marks the returned plan from the pricing query string', async () => {
@@ -1295,6 +1268,30 @@ describe('app/pricing', () => {
     expect(annualCard?.getAttribute('aria-current')).toBeNull();
   });
 
+  it('ignores an invalid plan query without selecting or opening an offer', async () => {
+    const view = await DeferredPricingView({
+      searchParams: Promise.resolve({ plan: 'lifetime' }),
+      deps: {
+        authGateway: new FakeAuthGateway(pricingTestUser),
+        checkEntitlementUseCase: new FakeUseCase<
+          CheckEntitlementInput,
+          CheckEntitlementOutput
+        >({
+          isEntitled: false,
+          reason: 'subscription_required',
+          subscriptionStatus: null,
+          hasActiveSubscriptionPeriod: false,
+          trialEndsAt: null,
+        }),
+      },
+    });
+
+    expect(view.props.selectedPlan).toBeNull();
+    const doc = parseHtml(renderToStaticMarkup(view));
+    expect(doc.querySelector('[aria-current="true"]')).toBeNull();
+    expect(doc.querySelector('button[data-state="open"]')).toBeNull();
+  });
+
   it('renders anonymous manage-billing recovery as a sign-up link carrying its return destination', async () => {
     const { html } = await renderAnonymousPricingPage({
       reason: 'manage_billing',
@@ -1306,9 +1303,9 @@ describe('app/pricing', () => {
     const manageBillingLink = findAnchorByHref(doc, manageBillingHref);
     const bareSignUpManageBillingLinks = Array.from(
       doc.querySelectorAll<HTMLAnchorElement>(`a[href="${ROUTES.SIGN_UP}"]`),
-    ).filter((anchor) => anchor.textContent?.includes('Manage Billing'));
+    ).filter((anchor) => anchor.textContent?.includes('Manage billing'));
 
-    expect(manageBillingLink?.textContent).toContain('Manage Billing');
+    expect(manageBillingLink?.textContent).toContain('Manage billing');
     expect(doc.querySelector('form button[type="submit"]')).toBeNull();
     expect(bareSignUpManageBillingLinks).toHaveLength(0);
   });
@@ -1327,7 +1324,7 @@ describe('app/pricing', () => {
     const paymentProcessingLink = findAnchorByHref(doc, paymentProcessingHref);
     const staleManageBillingLink = findAnchorByHref(doc, manageBillingHref);
 
-    expect(paymentProcessingLink?.textContent).toContain('Manage Billing');
+    expect(paymentProcessingLink?.textContent).toContain('Manage billing');
     expect(staleManageBillingLink).toBeNull();
     expect(doc.querySelector('form button[type="submit"]')).toBeNull();
   });
@@ -1352,7 +1349,7 @@ describe('app/pricing', () => {
     [
       { reason: 'manage_billing' },
       'Subscription found. Manage billing to resolve payment issues.',
-      'Manage Billing',
+      'Manage billing',
     ],
     [
       { reason: 'subscription_canceled' },
@@ -1362,7 +1359,7 @@ describe('app/pricing', () => {
     [
       { reason: 'payment_processing' },
       'Payment processing. It may take a moment for access to activate.',
-      'Manage Billing',
+      'Manage billing',
     ],
     [{ checkout: 'cancel' }, 'Checkout canceled.', 'Start 7-day free trial'],
     [
@@ -1411,7 +1408,7 @@ describe('app/pricing', () => {
     });
     const html = renderToStaticMarkup(element);
 
-    expect(html).toContain('Manage Billing');
+    expect(html).toContain('Manage billing');
     expect(html).not.toContain('Subscribe Monthly');
     expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
