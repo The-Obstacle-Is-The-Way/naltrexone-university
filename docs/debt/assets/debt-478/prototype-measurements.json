@@ -1,0 +1,32 @@
+[
+  {
+    "width": 390,
+    "height": 844,
+    "initialHeight": 669,
+    "availableHeight": 812,
+    "needsScroll": false,
+    "fg": "rgb(131, 131, 131)",
+    "bg": "rgb(18, 18, 18)",
+    "constrainedHeight": 669
+  },
+  {
+    "width": 390,
+    "height": 667,
+    "initialHeight": 669,
+    "availableHeight": 635,
+    "needsScroll": true,
+    "fg": "rgb(131, 131, 131)",
+    "bg": "rgb(18, 18, 18)",
+    "constrainedHeight": 635
+  },
+  {
+    "width": 1440,
+    "height": 900,
+    "initialHeight": 509,
+    "availableHeight": 868,
+    "needsScroll": false,
+    "fg": "rgb(131, 131, 131)",
+    "bg": "rgb(18, 18, 18)",
+    "constrainedHeight": 509
+  }
+]
