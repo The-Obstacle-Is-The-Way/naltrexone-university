@@ -176,7 +176,7 @@ identifier was printed.
   — resolved suite-session lifecycle defect that created the backlog.
 - [BUG-304](../../bugs/bug-304-practice-session-start-no-navigation.md) — remains Open
   because its application-owned silent-handler seam still exists.
-- [DEBT-471](../../debt/debt-471-e2e-ci-external-fragility.md) — owns the hosted
+- [DEBT-471](../debt/debt-471-e2e-ci-external-fragility.md) — owns the hosted
   Checkout drift classification and non-blocking cadence.
 - [DEBT-473](../../debt/debt-473-green-without-evidence.md) — owns complete CI
   evidence reporting.

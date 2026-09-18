@@ -1,6 +1,6 @@
 # DEBT-470: Checkout Replay Traversal Needs a Constant-Depth Tail Jump
 
-**Status:** Resolved
+**Status:** Resolved — archived 2026-09-18 after current-code, regression-contract, and main-ancestry verification; historical receipts below are unchanged.
 **Priority:** P3
 **Date:** 2026-08-17
 **Resolved:** 2026-08-17
@@ -52,6 +52,6 @@ The temporary `assertLocalTrialCheckoutReplayCapacity()` helper and its `[E2E_CH
 ## Related
 
 - [DEBT-466](./debt-466-checkout-idempotency-replay-chain-exhaustion.md) — settled finite-bound implementation and 2026-08-17 saturation receipt
-- [BUG-245](../_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) — deterministic key and concurrency-collapse contract
-- [ADR-015 §4](../adr/adr-015-idempotency-strategy.md) — conditioned deterministic Checkout exception
-- [DEBT-386](../_archive/debt/debt-386-e2e-stripe-customer-ownership-drift-webhook-500s.md) — why test identity/customer rotation is not the fix
+- [BUG-245](../bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) — deterministic key and concurrency-collapse contract
+- [ADR-015 §4](../../adr/adr-015-idempotency-strategy.md) — conditioned deterministic Checkout exception
+- [DEBT-386](./debt-386-e2e-stripe-customer-ownership-drift-webhook-500s.md) — why test identity/customer rotation is not the fix

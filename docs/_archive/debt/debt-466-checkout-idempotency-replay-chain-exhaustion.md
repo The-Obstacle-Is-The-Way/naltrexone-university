@@ -1,6 +1,6 @@
 # DEBT-466: Checkout Idempotency Replay-Chain Exhaustion (Subscription Recovery Bound Stops Traversal)
 
-**Status:** Resolved
+**Status:** Resolved — archived 2026-09-18 after current-code, regression-contract, and main-ancestry verification; historical receipts below are unchanged.
 **Priority:** P3
 **Date:** 2026-08-13
 **Resolved:** 2026-08-17
@@ -95,8 +95,8 @@ Candidate receipts using the same formula (`primary + cap` rungs): cap 6 = 8.814
 
 ## Related
 
-- Design lineage: [BUG-148](../_archive/bugs/bug-148-stripe-checkout-idempotency-key-fallback-random.md) (historical deterministic fallback + single-shot recovery, later superseded for caller keys by BUG-245), [DEBT-305](../_archive/debt/debt-305-checkout-session-reuse-expire-race.md) (`isSessionInactive` + terminal-expire classification), [DEBT-410](../_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) §B.11 item 8 (variant-scoped keys), [BUG-245](../_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) (primary-key determinism + the original 20-rung bounded ladder + subscription request-fingerprint recovery), [DEBT-414 H10](./debt-414-public-legal-pages-privacy-terms.md) (setup request-fingerprint and inactive-response loop; shared bound reduced to 3)
-- Constraint boundaries: [ADR-015 §4](../adr/adr-015-idempotency-strategy.md) (dated amendments license the bounded subscription path and the later strict-retrieval setup path under their distinct failure policies), [DEBT-386](../_archive/debt/debt-386-e2e-stripe-customer-ownership-drift-webhook-500s.md) (E2E Stripe-resource ownership discipline)
+- Design lineage: [BUG-148](../bugs/bug-148-stripe-checkout-idempotency-key-fallback-random.md) (historical deterministic fallback + single-shot recovery, later superseded for caller keys by BUG-245), [DEBT-305](./debt-305-checkout-session-reuse-expire-race.md) (`isSessionInactive` + terminal-expire classification), [DEBT-410](./debt-410-free-trial-pathway-and-pricing-access-copy.md) §B.11 item 8 (variant-scoped keys), [BUG-245](../bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) (primary-key determinism + the original 20-rung bounded ladder + subscription request-fingerprint recovery), [DEBT-414 H10](../../debt/debt-414-public-legal-pages-privacy-terms.md) (setup request-fingerprint and inactive-response loop; shared bound reduced to 3)
+- Constraint boundaries: [ADR-015 §4](../../adr/adr-015-idempotency-strategy.md) (dated amendments license the bounded subscription path and the later strict-retrieval setup path under their distinct failure policies), [DEBT-386](./debt-386-e2e-stripe-customer-ownership-drift-webhook-500s.md) (E2E Stripe-resource ownership discipline)
 - Spawned and resolved filing: [DEBT-467](./debt-467-trial-setup-checkout-stale-session-url-replay.md) — the setup path's stale terminal-URL replay defect the spike surfaced; implemented after Part A's constant split
 - Spawned and resolved structural filing: [DEBT-470](./debt-470-checkout-replay-tail-jump.md) — bounded exact-metadata tail selection now jumps the subscription path to the existing recovery-key tail while preserving the deterministic fallback ladder
 - Adjacent, deliberately still unfiled (Audit #21 noted-only item, `docs/bugs/index.md`): Stripe `409 idempotency_key_in_use` is not classified transient, so an exactly-concurrent duplicate under the deterministic key fails one side with a generic `checkout=error` — became live when BUG-245 adopted deterministic keys; remains a separate P4 polish candidate, not absorbed here
