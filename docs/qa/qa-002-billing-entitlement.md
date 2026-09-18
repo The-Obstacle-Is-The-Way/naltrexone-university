@@ -28,7 +28,7 @@ Known environment quirk (not a bug): in Clerk development mode, the redirect bac
 |---|--------|----------|
 | 5 | As a non-entitled user, go to `/app/dashboard` | Redirected to `/pricing?reason=subscription_required`; pricing shows the reason banner, not the app shell |
 | 6 | Try `/app/practice` and `/app/bookmarks` directly | Same redirect — the gate covers every `/app/*` route |
-| 7 | On `/pricing`, confirm plan CTAs are actionable | **Start 7-day free trial** for a first-timer, or **Subscribe Monthly** / **Subscribe Annual** for a user no longer trial-eligible (never the "already subscribed" state) |
+| 7 | On `/pricing`, confirm plan CTAs are actionable | **Start 7-day free trial** for a first-timer, or **Subscribe monthly** / **Subscribe annual** for a user no longer trial-eligible (never the "already subscribed" state) |
 
 ## Section C — Trial and checkout lifecycle (test mode)
 

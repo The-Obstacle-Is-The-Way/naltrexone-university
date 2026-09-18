@@ -96,8 +96,8 @@ export function PlanConsentDialog({
           {hasTrial
             ? pricing.trialCta
             : plan === 'monthly'
-              ? 'Subscribe Monthly'
-              : 'Subscribe Annual'}
+              ? 'Subscribe monthly'
+              : 'Subscribe annual'}
         </Button>
       </DialogTrigger>
       <DialogContent

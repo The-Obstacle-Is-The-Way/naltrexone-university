@@ -618,7 +618,7 @@ The marketing landing page CTA strategy was standardized in DEBT-258:
 | Hero primary "Get started" / "Go to dashboard" | `default` + `h-auto rounded-full px-8 py-3 text-base` | `h-auto` removes the primitive's fixed `h-9`, allowing 24 px line-height plus 24 px vertical padding. |
 | Final CTA "Get started" | `default` + `h-auto rounded-full px-8 py-3 text-base` | Same as hero primary; replaces D-15 under DEBT-477. |
 
-**Pricing plan action (DEBT-478):** `mt-8 h-auto w-full rounded-full py-3 text-base`; authenticated visitors open the S-4 consent dialog, while signed-out visitors follow the existing signup link with selected-plan context. Trial-eligible labels remain "Start 7-day free trial"; standard outer labels remain "Subscribe Monthly" / "Subscribe Annual". The dialog's actual commit label is taken from its consent data. The obsolete `postTrialNote` subtext recipe is retired.
+**Pricing plan action (DEBT-478):** `mt-8 h-auto w-full rounded-full py-3 text-base`; authenticated visitors open the S-4 consent dialog, while signed-out visitors follow the existing signup link with selected-plan context. Trial-eligible labels remain "Start 7-day free trial"; standard outer labels are "Subscribe monthly" / "Subscribe annual" (sentence case per DEBT-477 D2, 2026-09-18). The dialog's actual commit label is taken from its consent data. The obsolete `postTrialNote` subtext recipe is retired.
 
 ### Third-Party Component Exceptions (Decision 8)
 

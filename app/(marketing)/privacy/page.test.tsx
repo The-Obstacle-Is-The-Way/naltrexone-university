@@ -45,7 +45,10 @@ describe('PrivacyPage', () => {
     const source = readFileSync('docs/legal/privacy-policy.md', 'utf8');
 
     expect(source).toContain(
-      '**2026-09-16 revision: pending production verification.**',
+      '**2026-09-16 revision: production-verified 2026-09-17.**',
+    );
+    expect(source).toContain(
+      '#2026-09-17-revised-privacy-production-verification',
     );
     expect(source).toContain(
       'https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/760#issuecomment-5227563312',

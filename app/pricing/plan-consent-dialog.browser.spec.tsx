@@ -19,8 +19,8 @@ for (const plan of ['monthly', 'annual'] as const) {
       const label = hasTrial
         ? 'Start 7-day free trial'
         : plan === 'monthly'
-          ? 'Subscribe Monthly'
-          : 'Subscribe Annual';
+          ? 'Subscribe monthly'
+          : 'Subscribe annual';
       const trigger = screen.getByRole('button', { name: label, exact: true });
       await trigger.click();
       const dialog = screen.getByRole('dialog');
@@ -68,7 +68,7 @@ test('submits the displayed offer and a fresh idempotency key after reopening a 
     />,
   );
   const trigger = screen.getByRole('button', {
-    name: 'Subscribe Annual',
+    name: 'Subscribe annual',
     exact: true,
   });
   await trigger.click();

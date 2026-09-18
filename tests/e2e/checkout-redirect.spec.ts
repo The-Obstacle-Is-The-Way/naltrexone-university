@@ -56,7 +56,7 @@ test.describe
       await page.goto('/pricing');
 
       await page
-        .getByRole('button', { name: 'Subscribe Annual', exact: true })
+        .getByRole('button', { name: 'Subscribe annual', exact: true })
         .click();
       await page
         .getByRole('dialog')
