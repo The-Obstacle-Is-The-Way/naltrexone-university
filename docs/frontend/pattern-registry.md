@@ -1152,7 +1152,7 @@ Two distinct stat card presentations:
 
 ### 12.5 Legal Document Surface
 
-Long-form policy pages (`/privacy`, `/terms`) rendered by `components/legal/legal-document.tsx` from mirrored markdown content modules. Registered 2026-08-05 and redesigned 2026-08-08 under [DEBT-463](../debt/debt-463-legal-page-redesign.md).
+Long-form policy pages (`/privacy`, `/terms`) rendered by `components/legal/legal-document.tsx` from mirrored markdown content modules. Registered 2026-08-05 and redesigned 2026-08-08 under [DEBT-463](../_archive/debt/debt-463-legal-page-redesign.md).
 
 | Element | Classes |
 |---|---|
