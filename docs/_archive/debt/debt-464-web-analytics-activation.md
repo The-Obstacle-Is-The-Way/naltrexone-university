@@ -1,6 +1,8 @@
 # DEBT-464: Vercel Web Analytics activation with privacy-policy coherence
 
-**Status:** Open (parked 2026-08-11: execution gated on the owner Pro upgrade at first real users)
+**Status:** Deferred — archived 2026-09-18 for filing only, not resolved. The 2026-08-11 owner gate still requires a Pro upgrade and explicit activation before execution; revive at first real users or an earlier owner authorization.
+
+**Pre-archive status record:** Open (parked 2026-08-11: execution gated on the owner Pro upgrade at first real users)
 **Priority:** P3
 **Filed:** 2026-08-10
 **Filed baseline:** `origin/dev` at `d7af4f009ec9f3be49a350c730f5df3cc5a90a69`

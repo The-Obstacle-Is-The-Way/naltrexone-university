@@ -1,6 +1,6 @@
 # DEBT-463: Public legal-page readability and copy
 
-**Status:** Resolved
+**Status:** Resolved — archived 2026-09-18 after implementation ancestry and production verification; historical receipts below are unchanged.
 **Priority:** P3
 **Filed:** 2026-08-08
 **Resolved:** 2026-08-09
@@ -89,7 +89,7 @@ The August 9 clarification changes only the connective before the existing small
 |---|---|---|
 | “Either party may bring an individual claim in small-claims court where it qualifies.” | “Despite the preceding sentence, either party may bring an individual claim in small-claims court where it qualifies.” | The parties, individual-claim limit, small-claims forum, and qualification condition are unchanged. The added connective removes the need to infer that the permission overrides the immediately preceding mandatory New York forum sentence. |
 
-Visual evidence: [production before](./assets/debt-463/terms-forum-before-2026-08-09.png) and [local after](./assets/debt-463/terms-forum-after-2026-08-09.png). The typography, measure, hierarchy, and spacing are unchanged.
+Visual evidence: [production before](../../debt/assets/debt-463/terms-forum-before-2026-08-09.png) and [local after](../../debt/assets/debt-463/terms-forum-after-2026-08-09.png). The typography, measure, hierarchy, and spacing are unchanged.
 
 ## TDD and verification
 
@@ -100,14 +100,14 @@ Visual evidence: [production before](./assets/debt-463/terms-forum-before-2026-0
 
 ## Phase 4 measured verification
 
-Method: optimized local production build at the DEBT-463 head, using the same Chromium procedure and viewports as the baseline. All 16 after-state captures are in gitignored `audit-screenshots/debt-463/after/`; representative dark production-theme evidence is committed under [`assets/debt-463/`](./assets/debt-463/).
+Method: optimized local production build at the DEBT-463 head, using the same Chromium procedure and viewports as the baseline. All 16 after-state captures are in gitignored `audit-screenshots/debt-463/after/`; representative dark production-theme evidence is committed under [`assets/debt-463/`](../../debt/assets/debt-463).
 
 | Surface | Before | After |
 |---|---|---|
-| Terms desktop | [1600px before](./assets/debt-463/terms-desktop-before.webp) | [1600px after](./assets/debt-463/terms-desktop-after.webp) |
-| Terms mobile | [390px before](./assets/debt-463/terms-mobile-before.webp) | [390px after](./assets/debt-463/terms-mobile-after.webp) |
-| Privacy desktop | [1600px before](./assets/debt-463/privacy-desktop-before.webp) | [1600px after](./assets/debt-463/privacy-desktop-after.webp) |
-| Privacy mobile | [390px before](./assets/debt-463/privacy-mobile-before.webp) | [390px after](./assets/debt-463/privacy-mobile-after.webp) |
+| Terms desktop | [1600px before](../../debt/assets/debt-463/terms-desktop-before.webp) | [1600px after](../../debt/assets/debt-463/terms-desktop-after.webp) |
+| Terms mobile | [390px before](../../debt/assets/debt-463/terms-mobile-before.webp) | [390px after](../../debt/assets/debt-463/terms-mobile-after.webp) |
+| Privacy desktop | [1600px before](../../debt/assets/debt-463/privacy-desktop-before.webp) | [1600px after](../../debt/assets/debt-463/privacy-desktop-after.webp) |
+| Privacy mobile | [390px before](../../debt/assets/debt-463/privacy-mobile-before.webp) | [390px after](../../debt/assets/debt-463/privacy-mobile-after.webp) |
 
 | Measurement | Terms | Privacy |
 |---|---:|---:|

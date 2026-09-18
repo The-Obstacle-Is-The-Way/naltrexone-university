@@ -1,6 +1,6 @@
 # DEBT-467: Trial Setup Checkout Replays a Stale Terminal Session URL
 
-**Status:** Resolved
+**Status:** Resolved — archived 2026-09-18 after current-code, regression-contract, and main-ancestry verification. The unchecked completed-hosted-URL observation below remains optional under Resolution item 6; it is not claimed executed.
 **Priority:** P3
 **Date:** 2026-08-14
 **Resolved:** 2026-08-15
@@ -65,7 +65,7 @@ The subscription ladder's live-state guard now protects the setup path, with a s
 ## Related
 
 - [DEBT-466](./debt-466-checkout-idempotency-replay-chain-exhaustion.md) — the spike that proved the replay mechanism (probe receipts recorded there and in ADR-015 §4); its Part A constant split supplied this item's interim setup-specific bound
-- [ADR-015 §4](../adr/adr-015-idempotency-strategy.md) — dated amendment extended 2026-08-15 to license setup only under the implemented strict-retrieval conditions
-- [DEBT-414 H10](./debt-414-public-legal-pages-privacy-terms.md) — introduced the setup fingerprint recovery and inactive-response loop; its commit `a4464f2f` reduced the then-shared bound to 3
-- [BUG-245](../_archive/bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) — the deterministic-key + live-retrieve pattern this fix mirrors
-- [DEBT-305](../_archive/debt/debt-305-checkout-session-reuse-expire-race.md) — `isSessionInactive` and terminal-expire classification
+- [ADR-015 §4](../../adr/adr-015-idempotency-strategy.md) — dated amendment extended 2026-08-15 to license setup only under the implemented strict-retrieval conditions
+- [DEBT-414 H10](../../debt/debt-414-public-legal-pages-privacy-terms.md) — introduced the setup fingerprint recovery and inactive-response loop; its commit `a4464f2f` reduced the then-shared bound to 3
+- [BUG-245](../bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md) — the deterministic-key + live-retrieve pattern this fix mirrors
+- [DEBT-305](./debt-305-checkout-session-reuse-expire-race.md) — `isSessionInactive` and terminal-expire classification

@@ -24,7 +24,7 @@ Caveat pinned for future readers: `vitest.config.mts` coverage has no `all: true
 
 5. [x] **At filing, the two unattended billing cron routes had never been executed against real Postgres.** `vercel.json` invokes `/api/cron/reconcile-stripe-subscriptions?dryRun=false&scope=all` and `/api/cron/send-renewal-notices` daily. Their HTTP authorization matrix and reconciliation clamping were unit-tested; the reconciliation route substituted its container and jobs, while the renewal route tested its extracted handler and source-pinned `route.ts`'s duration. `vercel.test.ts` pinned both production URL shapes, but no integration test ran either route with production container wiring against a live DB. *Completed 2026-08-16:* `tests/integration/cron-routes.integration.test.ts` invokes both exact production URL shapes through route-owned container resolver seams. Four cases prove each 401 path plus authorized reconciliation and renewal-delivery rows in Postgres, with Stripe and transactional email isolated at their gateway seams.
 
-Also flow-adjacent, smaller: `createTrialPaymentMethodSetupSession` is never driven from the UI ("Add a card to keep access" is asserted visible, never clicked — [DEBT-467](./debt-467-trial-setup-checkout-stale-session-url-replay.md) has corrected the adapter behavior, so the E2E click-through can now land against it); `discardPracticeSession` runs only as incidental E2E cleanup, never asserted; `rateQuestion`/`submitQuestionReport` actions and the practice tag/difficulty filter UI have no E2E; `/sign-up` is never submitted (Clerk-rendered form — accepted residual, manual per QA-001 until a Clerk-testing approach is chosen).
+Also flow-adjacent, smaller: `createTrialPaymentMethodSetupSession` is never driven from the UI ("Add a card to keep access" is asserted visible, never clicked — [DEBT-467](../_archive/debt/debt-467-trial-setup-checkout-stale-session-url-replay.md) has corrected the adapter behavior, so the E2E click-through can now land against it); `discardPracticeSession` runs only as incidental E2E cleanup, never asserted; `rateQuestion`/`submitQuestionReport` actions and the practice tag/difficulty filter UI have no E2E; `/sign-up` is never submitted (Clerk-rendered form — accepted residual, manual per QA-001 until a Clerk-testing approach is chosen).
 
 ## Part 2 — File-level gaps (three-lane composite, verified individually)
 
@@ -93,8 +93,8 @@ Coverage is uploaded to Codecov with no `codecov.yml` and no vitest `coverage.th
 ## Related
 
 - [DEBT-469](./debt-469-toolchain-warning-debt.md) — warning policy + file-size burn-down that these fixtures shrink
-- [DEBT-467](./debt-467-trial-setup-checkout-stale-session-url-replay.md) — seeded and consumes proposal (a) for its replay-faithful red and boundary tests
-- [DEBT-466](./debt-466-checkout-idempotency-replay-chain-exhaustion.md) — key-family arithmetic constraining new checkout E2Es
+- [DEBT-467](../_archive/debt/debt-467-trial-setup-checkout-stale-session-url-replay.md) — seeded and consumes proposal (a) for its replay-faithful red and boundary tests
+- [DEBT-466](../_archive/debt/debt-466-checkout-idempotency-replay-chain-exhaustion.md) — key-family arithmetic constraining new checkout E2Es
 - [DEBT-465](./debt-465-test-quality-practices-adoption.md) — mutation pilot consuming proposal (f); QA procedures covering the manual interim
 - [DEBT-410](../_archive/debt/debt-410-free-trial-pathway-and-pricing-access-copy.md) §B.13 — the free-trial implementation plan that recorded the gated trial-clock smoke
 - [QA-001](../qa/qa-001-practice-core-flows.md) / [QA-002](../qa/qa-002-billing-entitlement.md) — manual coverage of surfaces this item automates over time

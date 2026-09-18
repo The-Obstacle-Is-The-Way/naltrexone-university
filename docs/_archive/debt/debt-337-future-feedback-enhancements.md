@@ -1,8 +1,10 @@
 # DEBT-337: Future Feedback & Practice Session Enhancements
 
+**Status:** Deferred — archived 2026-09-18 for filing only, not resolved. Revive when the owner prioritizes one of the named enhancements or the direct-URL inconsistency. No implementation is claimed.
+
 **Priority:** P4
 **Created:** 2026-03-24
-**Source:** [DEBT-275](../_archive/debt/debt-275-bs033-residual-open-items.md) (Future Enhancement Ideas F2/F3/F5/F6/F7)
+**Source:** [DEBT-275](./debt-275-bs033-residual-open-items.md) (Future Enhancement Ideas F2/F3/F5/F6/F7)
 **Scope:** Five deferred enhancements identified during BS-033 analysis. None are bugs — all are polish or new features. Build when prioritized.
 
 **Audit verified:** 2026-04-27 against `87284372`.
