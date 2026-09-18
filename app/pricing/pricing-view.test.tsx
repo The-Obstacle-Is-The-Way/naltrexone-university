@@ -34,8 +34,8 @@ describe('app/pricing/pricing-view', () => {
       />,
     );
 
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).toContain('Subscribe Annual');
+    expect(html).toContain('Subscribe monthly');
+    expect(html).toContain('Subscribe annual');
     expect(html).not.toContain('Subscription needs attention');
     expect(html).not.toContain('Manage billing');
   });
@@ -130,8 +130,8 @@ describe('app/pricing/pricing-view', () => {
         />,
       ),
     );
-    expect(findButtonByText(doc, 'Subscribe Monthly')).not.toBeNull();
-    expect(findButtonByText(doc, 'Subscribe Annual')).not.toBeNull();
+    expect(findButtonByText(doc, 'Subscribe monthly')).not.toBeNull();
+    expect(findButtonByText(doc, 'Subscribe annual')).not.toBeNull();
     expect(findButtonByText(doc, PRICING_DATA.monthly.trialCta)).toBeNull();
   });
 

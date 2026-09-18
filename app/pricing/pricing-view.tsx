@@ -185,7 +185,7 @@ export function PricingView({
                     <Link href={getPlanSignUpHref('monthly')}>
                       {showTrialCtas
                         ? PRICING_DATA.monthly.trialCta
-                        : 'Subscribe Monthly'}
+                        : 'Subscribe monthly'}
                     </Link>
                   </Button>
                 )}
@@ -232,7 +232,7 @@ export function PricingView({
                     <Link href={getPlanSignUpHref('annual')}>
                       {showTrialCtas
                         ? PRICING_DATA.annual.trialCta
-                        : 'Subscribe Annual'}
+                        : 'Subscribe annual'}
                     </Link>
                   </Button>
                 )}

@@ -43,7 +43,7 @@ test.describe
         page.getByRole('heading', { name: 'Pricing' }),
       ).toBeVisible();
       await page
-        .getByRole('button', { name: 'Subscribe Annual', exact: true })
+        .getByRole('button', { name: 'Subscribe annual', exact: true })
         .click();
       const displayedConsent = await readDisplayedPlanConsent(page);
       await page

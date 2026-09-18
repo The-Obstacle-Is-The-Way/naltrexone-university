@@ -31,8 +31,8 @@ describe('plan consent rendering', () => {
           hasTrial
             ? 'Start 7-day free trial'
             : plan === 'monthly'
-              ? 'Subscribe Monthly'
-              : 'Subscribe Annual',
+              ? 'Subscribe monthly'
+              : 'Subscribe annual',
         );
         expect(
           doc.querySelector('dialog, [role="dialog"], dl, form'),
