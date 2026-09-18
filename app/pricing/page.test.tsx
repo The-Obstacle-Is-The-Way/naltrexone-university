@@ -213,8 +213,8 @@ describe('app/pricing', () => {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const backLink = doc.querySelector('a[href="/"]');
 
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).toContain('Subscribe Annual');
+    expect(html).toContain('Subscribe monthly');
+    expect(html).toContain('Subscribe annual');
     expect(backLink).toBeNull();
     expect(doc.querySelector('[data-testid="pricing-root"]')).not.toBeNull();
     expect(doc.querySelector('header')).not.toBeNull();
@@ -380,8 +380,8 @@ describe('app/pricing', () => {
     );
 
     expect(html).toContain('already subscribed');
-    expect(html).not.toContain('Subscribe Monthly');
-    expect(html).not.toContain('Subscribe Annual');
+    expect(html).not.toContain('Subscribe monthly');
+    expect(html).not.toContain('Subscribe annual');
   });
 
   it('renders the subscribed state content inside the shared Card primitive', async () => {
@@ -852,8 +852,8 @@ describe('app/pricing', () => {
     );
 
     expect(html).toContain('Manage billing');
-    expect(html).not.toContain('Subscribe Monthly');
-    expect(html).not.toContain('Subscribe Annual');
+    expect(html).not.toContain('Subscribe monthly');
+    expect(html).not.toContain('Subscribe annual');
   });
 
   it('renders dismiss link when banner is present', async () => {
@@ -1001,8 +1001,8 @@ describe('app/pricing', () => {
     expect(pricingFallback?.getAttribute('aria-busy')).toBe('true');
     expect(pricingFallback?.querySelector('form')).toBeNull();
     expect(pricingFallback?.querySelector('button[type="submit"]')).toBeNull();
-    expect(html).not.toContain('Subscribe Monthly');
-    expect(html).not.toContain('Subscribe Annual');
+    expect(html).not.toContain('Subscribe monthly');
+    expect(html).not.toContain('Subscribe annual');
     expect(html).not.toContain('Manage billing');
     expect(
       doc.querySelector('header a[href="/sign-in"]')?.textContent?.trim(),
@@ -1049,8 +1049,8 @@ describe('app/pricing', () => {
     expect(html).toContain(
       'Your subscription is inactive. Choose a plan to restart access.',
     );
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).toContain('Subscribe Annual');
+    expect(html).toContain('Subscribe monthly');
+    expect(html).toContain('Subscribe annual');
     expect(html).not.toContain('Subscription needs attention');
     expect(html).not.toContain('Manage billing');
   });
@@ -1059,7 +1059,7 @@ describe('app/pricing', () => {
     const html = await renderPricingPageWithEntitlementReason('manage_billing');
 
     expect(html).toContain('Manage billing');
-    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe monthly');
   });
 
   it('continues to pass manageBillingAction when reason=payment_processing', async () => {
@@ -1067,7 +1067,7 @@ describe('app/pricing', () => {
       await renderPricingPageWithEntitlementReason('payment_processing');
 
     expect(html).toContain('Manage billing');
-    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe monthly');
   });
 
   it('renders trial-forward copy for logged-in first-timer redirects', async () => {
@@ -1080,8 +1080,8 @@ describe('app/pricing', () => {
     );
     expect(html).toContain('Start 7-day free trial');
     expect(html).not.toContain('Subscription required to access the app.');
-    expect(html).not.toContain('Subscribe Monthly');
-    expect(html).not.toContain('Subscribe Annual');
+    expect(html).not.toContain('Subscribe monthly');
+    expect(html).not.toContain('Subscribe annual');
   });
 
   it('uses authenticated entitlement state over stale return reason params', async () => {
@@ -1134,8 +1134,8 @@ describe('app/pricing', () => {
     ).not.toBeNull();
     expect(doc.querySelector('dl')).toBeNull();
     expect(html).not.toContain('Subscription required to access the app.');
-    expect(html).not.toContain('Subscribe Monthly');
-    expect(html).not.toContain('Subscribe Annual');
+    expect(html).not.toContain('Subscribe monthly');
+    expect(html).not.toContain('Subscribe annual');
   });
 
   it('renders anonymous trial CTAs as sign-up links carrying the selected plan', async () => {
@@ -1187,10 +1187,10 @@ describe('app/pricing', () => {
     })?.closest('[data-slot="card"]');
 
     expect(findAnchorByHref(doc, monthlyHref)?.textContent).toContain(
-      'Subscribe Monthly',
+      'Subscribe monthly',
     );
     expect(findAnchorByHref(doc, annualHref)?.textContent).toContain(
-      'Subscribe Annual',
+      'Subscribe annual',
     );
     expect(annualCard?.getAttribute('aria-current')).toBe('true');
     expect(annualCard?.textContent).toContain('Selected plan');
@@ -1211,7 +1211,7 @@ describe('app/pricing', () => {
       'Start your free trial to access the app — no card required.',
     );
     expect(html).toContain('Start 7-day free trial');
-    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe monthly');
   });
 
   it('renders signed-in trial CTAs as consent-dialog triggers', async () => {
@@ -1339,8 +1339,8 @@ describe('app/pricing', () => {
     });
 
     expect(html).toContain('Your access ended — choose a plan to continue.');
-    expect(html).toContain('Subscribe Monthly');
-    expect(html).toContain('Subscribe Annual');
+    expect(html).toContain('Subscribe monthly');
+    expect(html).toContain('Subscribe annual');
     expect(html).not.toContain('Start 7-day free trial');
     expect(html).not.toContain('Your free trial ended');
   });
@@ -1409,7 +1409,7 @@ describe('app/pricing', () => {
     const html = renderToStaticMarkup(element);
 
     expect(html).toContain('Manage billing');
-    expect(html).not.toContain('Subscribe Monthly');
+    expect(html).not.toContain('Subscribe monthly');
     expect(checkEntitlementUseCase.inputs).toHaveLength(0);
   });
 });

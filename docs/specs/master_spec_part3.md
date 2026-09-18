@@ -431,7 +431,7 @@ As a user, I can subscribe and manage billing so that I can access the question 
 
 **Acceptance Criteria:**
 
-* Given I am logged in, when I click "Subscribe Monthly/Annual" on `/pricing`, then I'm redirected to Stripe Checkout.
+* Given I am logged in, when I click "Subscribe monthly/annual" on `/pricing`, then I'm redirected to Stripe Checkout.
 * Given I complete payment, when I return to `/checkout/success`, then my subscription is active in the DB and I can access `/app/dashboard`.
 * Given I am subscribed, when I open `/app/billing`, then I can open Stripe Customer Portal.
 * Given my subscription is canceled/deleted, when webhooks arrive, then my entitlement is removed and `/app/*` redirects to `/pricing`.
