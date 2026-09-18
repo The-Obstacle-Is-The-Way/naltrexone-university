@@ -99,5 +99,8 @@ claim of anchor-heading or external-URL validity.
 files** before this pass. The broader all-local-destination check has 775
 failures (including historical source/assets). The archive/link repointing
 leaves both counts unchanged; it has not repaired unrelated prior archives.
-The requested repo-wide zero-broken-link condition therefore remains pending
-an explicit scope decision. Do not present zero new breakage as global zero.
+The owner clarified the acceptance rule on September 18: **zero new broken
+links introduced by this change**, not a globally clean baseline. This pass
+adds zero broken destinations. Existing archive links remain historical
+record; broken links in live documentation are a separate follow-up, not
+repairs included here. Do not present zero new breakage as global zero.
