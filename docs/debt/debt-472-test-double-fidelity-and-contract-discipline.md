@@ -82,6 +82,13 @@ Red proofs for the 11 integration cases: omit explicit timestamps; replace the d
 
 Disposition delta: unit **33 → 5** in this file; integration **+11**. Cast floor **273 → 240**, raw casts **311 → 278**, and `RepoDb` casts **171 → 138** (22 → 21 files). Own-code/port-double floors stay **22 / 45**. Suppressions **28 → 27**. The broader step-4 inventory remains open; the fake-attempt waiver is not promoted to shared parity by these real-adapter tests.
 
+
+### Bounded mock classifier (2026-09-19; delegated DEBT-475 row)
+
+The historical step-2 description of alias and assignment resolution is superseded by the DEBT-475 row's bounded rule: own-code `vi.mock` and `vi.doMock` accept one argument, or exactly two arguments whose second argument is the direct object literal `{ spy: true }` (one identifier-named property and the literal `true`). Indirect bindings, unresolved identifiers, factories, type assertions, computed/quoted property names, spreads, extra properties, and extra arguments fail closed. Semantically equivalent spellings must use the documented literal form; the scanner does not interpret arbitrary code to prove equivalence.
+
+Before replacement, 27 assertions failed against the old classifier, including seven formerly accepted indirect forms and 13 noncanonical option forms. Separate mutations proved all four allowed API/form pairs fail when rejected and both direct factory APIs fail when admitted. The replacement removes 140 net lines from the scanner, and the focused suite passes 68 cases. Test/spec globs, cast allowlist, fake-port scan, and floors **22 / 240 / 45** are unchanged. The three setup-file factories still require migration before widening the source walk. This closes only the delegated classifier row; step 4's migration set remains open.
+
 ## Description
 
 "Fakes over mocks" is the right principle. The repository adopted half of it.
