@@ -202,11 +202,3 @@ jobs:
           summarize 'Browser tests' "$BROWSER_OUTCOME" 'an earlier required step did not succeed'
           summarize 'Build' "$BUILD_OUTCOME" 'an earlier required step did not succeed'
           summarize 'E2E smoke' "$E2E_OUTCOME" "$E2E_SKIP_REASON"
-
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Trigger Vercel Production Deployment
-        run: echo "Production deploy is handled by Vercel Git integration on main."

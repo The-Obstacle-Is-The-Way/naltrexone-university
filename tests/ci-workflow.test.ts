@@ -160,6 +160,12 @@ function findStepBlock(workflow: string, stepName: string): string {
 }
 
 describe('CI workflow', () => {
+  it('does not report an echo-only production deployment job as deployment evidence', () => {
+    expect(readParsedWorkflow(CI_WORKFLOW_PATH).jobs).not.toHaveProperty(
+      'deploy',
+    );
+  });
+
   it('runs the blocking test-double fidelity command before unit tests', () => {
     const steps = findParsedJob(CI_WORKFLOW_PATH, 'test').steps ?? [];
     const fidelityIndex = steps.findIndex(

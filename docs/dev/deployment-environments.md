@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Reviewed (code/docs):** 2026-06-16 (full guide); cron-secret section reverified 2026-09-19.
+**Last Reviewed (code/docs):** 2026-06-16 (full guide); cron-secret and production release-gate sections reverified 2026-09-19.
 
 This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
@@ -33,6 +33,12 @@ The current Vercel + Neon setup uses one Neon project with isolated database bra
 Redacted Vercel metadata checked on 2026-06-16 confirms a `DATABASE_URL` entry exists in Production, Preview, and Development scopes, with no git-branch-specific override observed. A value-free host comparison on 2026-06-16 (each scope's `DATABASE_URL` pulled to a temp directory outside the repo, compared by host, booleans only — no connection strings or hostnames recorded) confirmed that the **Production** host is distinct from both **Preview** and **Development**, and that **Preview** and **Development** resolve to the **same** non-production host. This matches the contract above: production is isolated from the shared non-production database. The literal Neon branch *names* behind each value are confirmable in the Neon/Vercel dashboards; the safety-critical isolation is verified in-repo here without recording any secret.
 
 Do not hard-code branch hostnames, account ids, passwords, or connection strings in the repo. Verify those values through the Vercel Storage dashboard, Vercel environment variables, or a local redacted host check before running migrations.
+
+### Production Release Gate
+
+Promotion-PR E2E precedes the merge to `main`. Vercel builds the main commit in parallel with main's GitHub Actions `test` job; the required production Deployment Check consumes that exact check before assigning production domains. The Vercel setting, not an echo-only CI `deploy` job, owns this hold. Build Ready alone is not proof of promotion. See [Deployment Procedure](./deployment-procedure.md#production-deployment-check) for required configuration and the separate CI/domain-assignment receipt.
+
+Production database migrations run during the build, **before** the release gate. They must remain compatible with the live application under the existing [expand/contract authoring contract](./migration-authoring.md#deployed-code-compatibility), even if the check fails and the old release keeps serving.
 
 ### Deploy Migration Contract
 
