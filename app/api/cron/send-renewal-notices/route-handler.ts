@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import type { SendDueRenewalNoticesJobResult } from '@/src/adapters/jobs/send-due-renewal-notices';
+import { validateHeaderSecret } from '@/src/adapters/shared/header-secret';
 import {
   HTTP_INTERNAL_SERVER_ERROR,
   HTTP_OK,
@@ -72,6 +73,16 @@ export function createRenewalNoticeCronHandler(
       dependencies.logger.error(
         { route: ROUTE },
         'CRON_SECRET is not configured',
+      );
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: HTTP_UNAUTHORIZED },
+      );
+    }
+    if (!validateHeaderSecret('CRON_SECRET', dependencies.cronSecret).ok) {
+      dependencies.logger.error(
+        { route: ROUTE },
+        'CRON_SECRET is not header-safe',
       );
       return NextResponse.json(
         { error: 'Unauthorized' },
