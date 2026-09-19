@@ -644,6 +644,22 @@ gh pr view <PR_NUMBER> --comments
 # and a fresh CodeRabbit review has landed on the latest PR head commit.
 ```
 
+### Production Release Gate
+
+Promotion-PR E2E must pass before merging to `main`. Vercel then builds that
+commit, while main's GitHub Actions `test` job runs independently. Require that
+exact GitHub check through Vercel Deployment Checks for **production**: the build
+must not receive the production domains until `test` passes. Do not rename the
+job without updating the Vercel setting, reuse its name in another workflow, or
+use Force Promote to bypass the gate. An echo-only CI job is not deployment
+evidence; verify the actual production promotion separately.
+
+The Vercel build applies production database migrations **before** this gate.
+They must remain compatible with the currently serving release (expand/contract),
+including when CI fails and that release continues serving. See
+[Deployment Procedure](docs/dev/deployment-procedure.md#production-deployment-check)
+for configuration, failure handling, and timestamp receipts.
+
 ## Documentation
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
