@@ -26,6 +26,14 @@ Caveat pinned for future readers: `vitest.config.mts` coverage has no `all: true
 
 Also flow-adjacent, smaller: `createTrialPaymentMethodSetupSession` is never driven from the UI ("Add a card to keep access" is asserted visible, never clicked — [DEBT-467](../_archive/debt/debt-467-trial-setup-checkout-stale-session-url-replay.md) has corrected the adapter behavior, so the E2E click-through can now land against it); `discardPracticeSession` runs only as incidental E2E cleanup, never asserted; `rateQuestion`/`submitQuestionReport` actions and the practice tag/difficulty filter UI have no E2E; `/sign-up` is never submitted (Clerk-rendered form — accepted residual, manual per QA-001 until a Clerk-testing approach is chosen).
 
+## Execution scope forward pointer (2026-09-19)
+
+DEBT-472 step 5 governs Parts 2–4 from this point. Its current-dev execution audit supersedes stale present-tense counts without rewriting the historical coverage run. “Colocated contract coverage” in the baseline means isolation tests, not fake↔real parity; the authoritative 24-surface inventory is [the contract register](../dev/test-double-contract-register.md).
+
+First migrate `stripe-checkout-sessions-live-retrieve.test.ts` using the existing provider fake; then extend only the behavior needed for recovery, trials, trial recovery, reconciliation, base Checkout, concurrency, and webhook processing, in that order. Each behavioral fake change updates its contract/waiver and known-divergence record. F4/F8 real-Postgres replacements under DEBT-472 precede unit deletion. Fixture extraction and DEBT-469 splits occur together when an oversized file shrinks. Part 2 gaps are rechecked at the time of their bounded change; filing-era percentages are not proof of a current gap. Part 4 remains observational: no threshold/configuration change is authorized without the separate ADR required by ADR-019. This execution changes tests and maintained test helpers, not the other clone's CI or package configuration.
+
+The historical trial-clock runner and paid-checkout names above now point to `scripts/run-stripe-provider-contracts.ts` and `tests/e2e/stripe-hosted-paid-checkout.spec.ts`; the adjacent dated corrections retain their original completion receipts.
+
 ## Part 2 — File-level gaps (three-lane composite, verified individually)
 
 **Backend (each cross-checked for indirect coverage before listing):**
