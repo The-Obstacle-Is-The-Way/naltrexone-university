@@ -89,7 +89,9 @@ The owner chose Vercel's built-in [GitHub Deployment Checks](https://vercel.com/
 
 Required configuration: project Settings → Deployment Checks → Add Checks → GitHub → **`test`**, targeting **Production** and blocking production-domain assignment. Keep automatic production aliasing enabled. The `test` job is unique across the current three workflows; changing its name or duplicating it requires revisiting this setting. There is no `repository_dispatch` workflow or additional status-reporting action: Vercel consumes the existing push check on the same commit. Preview deployments are not blocked by this production-only check.
 
-The deleted `deploy` job only echoed a message. Its success never proved that production waited for CI. Repository tests pin its removal; they do **not** prove the live Vercel setting. Read back the project's checks after configuration, and prove the first promoted commit end to end:
+**Configuration receipt (2026-09-19 21:28:31Z):** the project's Checks V2 API returned one GitHub-source check named `test`, with `externalCheckName=test`, `targets=[production]`, `requires=build-ready`, `blocks=deployment-alias`, and `timeout=3600`. Automatic production aliasing remained enabled. The first promoted-commit enforcement receipt is still pending; configuration alone is not release evidence.
+
+The deleted `deploy` job only echoed a message. Its success never proved that production waited for CI. Repository tests pin its removal; they do **not** prove the live Vercel setting. Read back the project's checks after configuration changes, and prove the first promoted commit end to end:
 
 1. Record the main merge SHA and that commit's GitHub `test` run ID, conclusion, and completion timestamp.
 2. Record the matching Vercel deployment's commit, build completion, required check outcome, and production-domain assignment timestamp. Observe it withheld from the production domains while `test` is pending; build Ready alone is not release evidence.
