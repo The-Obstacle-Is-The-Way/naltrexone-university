@@ -7,6 +7,8 @@
 // other baselines are 22 own-code module factories in 13 files (17 vi.mock
 // sites plus 5 vi.doMock sites) and 45 hand-rolled maintained-port doubles in
 // 18 files.
+// 2026-09-19: Stripe-event repository integration replacements retire all 16
+// casts in its unit suite: enforced casts are now 273 sites across 49 files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -110,7 +112,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
     5,
   ],
   ['src/adapters/repositories/drizzle-stripe-customer-repository.test.ts', 8],
-  ['src/adapters/repositories/drizzle-stripe-event-repository.test.ts', 16],
   ['src/adapters/repositories/drizzle-subscription-repository.test.ts', 1],
   ['src/adapters/repositories/drizzle-tag-repository.test.ts', 1],
   [
