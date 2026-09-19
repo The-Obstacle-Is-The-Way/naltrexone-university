@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Reviewed (code/docs):** 2026-06-16
+**Last Reviewed (code/docs):** 2026-06-16 (full guide); cron-secret section reverified 2026-09-19.
 
 This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
@@ -108,18 +108,20 @@ Vercel stores environment variables per scope. Production, Preview, Development,
 Generate the replacement only in process memory. Do not print it or write it to a file, ticket, shell history, log, or chat. Rotate immediately before the reviewed production promotion; an environment-store update alone does not update an already-created deployment. Check each command's status and stop on failure.
 
 ```bash
-# Never enable shell tracing around a secret operation.
-set +x
-# Keep one generated value only in memory; send the same bytes via stdin.
-rotation_secret="$(openssl rand -hex 32)" &&
-  printf '%s' "$rotation_secret" | vercel env add CRON_SECRET production --force &&
-  printf '%s' "$rotation_secret" | vercel env add CRON_SECRET preview --force &&
-  printf '%s' "$rotation_secret" | vercel env add CRON_SECRET development --force
-unset rotation_secret
-
-# Remove stale branch-specific overrides unless a branch truly needs different bytes.
-vercel env rm CRON_SECRET preview <branch-name> --yes
+(
+  # Never enable shell tracing around a secret operation.
+  set +x
+  trap 'unset rotation_secret' EXIT
+  # One value lives only in this subshell; every later operation is conditional.
+  rotation_secret="$(openssl rand -hex 32)" &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET production --force &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET preview --force &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET development --force &&
+    vercel env rm CRON_SECRET preview <branch-name> --yes
+)
 ```
+
+Replace `<branch-name>` with a verified override target; if there is no override, omit that final `&&`/removal command. For multiple overrides, keep their removals in the same `&&` chain. The subshell returns the failing operation's nonzero status and clears its in-memory value on exit; a failed scope update cannot proceed to override removal.
 
 After resetting, redeploy the affected Preview and Production targets. Env changes do not repair an already-created deployment.
 
