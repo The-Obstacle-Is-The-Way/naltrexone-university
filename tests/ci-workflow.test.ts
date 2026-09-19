@@ -383,7 +383,6 @@ jobs:
         'E2E smoke:STRIPE_SECRET_KEY',
         'E2E smoke:STRIPE_WEBHOOK_SECRET',
         'Upload coverage to Codecov:CODECOV_TOKEN',
-        'Validate header-safe CI secrets:CRON_SECRET',
       ].sort(),
     );
     expect(secretConsumers(STRIPE_HOSTED_WORKFLOW_PATH)).toEqual(

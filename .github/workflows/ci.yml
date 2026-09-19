@@ -116,11 +116,6 @@ jobs:
           NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || 'price_dummy_monthly' }}
           NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || 'price_dummy_annual' }}
 
-      - name: Validate header-safe CI secrets
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: pnpm exec tsx scripts/validate-header-safe-secret.ts CRON_SECRET --optional
-
       - name: E2E smoke
         id: e2e_smoke
         # Dependabot PRs do not receive repository secrets, even when their branch

@@ -386,6 +386,44 @@ describe('POST /api/cron/reconcile-stripe-subscriptions', () => {
     );
   });
 
+  it.each([
+    ['leading whitespace', ' secret'],
+    ['trailing whitespace', 'secret '],
+    ['internal whitespace', 'sec ret'],
+    ['line feed', 'secret\n'],
+    ['tab', 'sec\tret'],
+    ['NUL', 'sec\0ret'],
+    ['DEL', 'sec\u007fret'],
+    ['non-ASCII', 'secret\u0100'],
+  ])(
+    'fails closed with a value-free configuration error for %s',
+    async (_label, secret) => {
+      container.env.CRON_SECRET = secret;
+      const rateLimiter = new FakeRateLimiter();
+      container.createRateLimiter = () => rateLimiter;
+
+      const response = await POST(
+        new Request(
+          'http://localhost/api/cron/reconcile-stripe-subscriptions',
+          {
+            method: 'POST',
+            headers: { authorization: 'Bearer test-secret' },
+          },
+        ),
+      );
+
+      expect(response.status).toBe(401);
+      expect(rateLimiter.inputs).toEqual([]);
+      expect(reconcileStripeSubscriptions).not.toHaveBeenCalled();
+      expect(reconcileAllStripeSubscriptionPages).not.toHaveBeenCalled();
+      expect(drainPendingStripeCustomerCleanups).not.toHaveBeenCalled();
+      expect(container.logger.error).toHaveBeenCalledExactlyOnceWith(
+        { route: '/api/cron/reconcile-stripe-subscriptions' },
+        'CRON_SECRET is not header-safe',
+      );
+    },
+  );
+
   it('returns 401 when authorization header is missing', async () => {
     const response = await POST(
       new Request('http://localhost/api/cron/reconcile-stripe-subscriptions', {
