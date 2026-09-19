@@ -154,16 +154,50 @@ describe('renewal notice cron route', () => {
     ]);
   });
 
-  it('preserves spaces in a configured bearer token', async () => {
+  it('rejects a whitespace-tainted secret even when the bearer token matches', async () => {
     const harness = createHarness({ cronSecret: 'secret with spaces' });
 
     const response = await harness.handle(
       authorizedRequest('secret with spaces'),
     );
 
-    expect(response.status).toBe(200);
-    expect(harness.jobCalls()).toBe(1);
+    expect(response.status).toBe(401);
+    expect(harness.jobCalls()).toBe(0);
+    expect(harness.rateLimiterFactoryCalls()).toBe(0);
+    expect(harness.logger.errorCalls).toEqual([
+      {
+        context: { route: '/api/cron/send-renewal-notices' },
+        msg: 'CRON_SECRET is not header-safe',
+      },
+    ]);
   });
+
+  it.each([
+    ['leading whitespace', ' secret'],
+    ['trailing whitespace', 'secret '],
+    ['line feed', 'secret\n'],
+    ['tab', 'sec\tret'],
+    ['NUL', 'sec\0ret'],
+    ['DEL', 'sec\u007fret'],
+    ['non-ASCII', 'secret\u0100'],
+  ])(
+    'fails closed with a value-free configuration error for %s',
+    async (_label, cronSecret) => {
+      const harness = createHarness({ cronSecret });
+
+      const response = await harness.handle(authorizedRequest());
+
+      expect(response.status).toBe(401);
+      expect(harness.jobCalls()).toBe(0);
+      expect(harness.rateLimiterFactoryCalls()).toBe(0);
+      expect(harness.logger.errorCalls).toEqual([
+        {
+          context: { route: '/api/cron/send-renewal-notices' },
+          msg: 'CRON_SECRET is not header-safe',
+        },
+      ]);
+    },
+  );
 
   it('pins the bearer comparison to equal-length hashes and timingSafeEqual', () => {
     const source = readFileSync(

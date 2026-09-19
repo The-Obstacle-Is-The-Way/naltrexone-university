@@ -1,6 +1,6 @@
 # Deployment Environments: Source of Truth
 
-**Last Reviewed (code/docs):** 2026-06-16
+**Last Reviewed (code/docs):** 2026-06-16 (full guide); cron-secret section reverified 2026-09-19.
 
 This document is the repo-backed source of truth for environment scoping and the operator checklist around Clerk, Stripe, Postgres/Neon, and Vercel.
 
@@ -91,7 +91,7 @@ See [BUG-080](../_archive/bugs/bug-080-vercel-env-var-deployment-issues.md).
 
 ### Header-Safe `CRON_SECRET` Across Vercel Scopes
 
-`CRON_SECRET` is used as an HTTP `Authorization: Bearer ...` value for the Vercel cron route. Once a `crons` block exists in `vercel.json`, Vercel validates that raw env value as an HTTP header during deployment. A value with leading/trailing whitespace or control characters fails before `next build` runs, so application code cannot fix it with `.trim()`.
+`CRON_SECRET` is used as an HTTP `Authorization: Bearer ...` value for both Vercel cron routes. Vercel's [troubleshooting guide](https://vercel.com/kb/guide/troubleshooting-vercel-cron-jobs) tells operators to check for invalid header characters; it does not establish the previously claimed guarantee that every malformed value is rejected during deployment. **Corrected 2026-09-19:** validate at the request boundary, not at application startup. After parsing the authorization header, both routes reject a configured value containing whitespace, control characters, or characters that cannot be encoded in a Fetch header. They return the same generic `401` as other authorization failures and log only `CRON_SECRET is not header-safe` plus the route. No rate limiter, reconciliation, cleanup, or notice delivery runs on that path. Do not silently repair the value with `.trim()`.
 
 Vercel stores environment variables per scope. Production, Preview, Development, and git-branch-specific Preview overrides can each carry different bytes for the same name. Keep `CRON_SECRET` non-empty, identical, and header-safe in every scope where cron or manual cron calls are expected.
 
@@ -101,26 +101,31 @@ Vercel stores environment variables per scope. Production, Preview, Development,
 - Do not use `echo`, which appends a newline.
 - Do not silently trim secrets in application code; reject or reset the bad value at the provider.
 - After setting a secret, verify only safe metadata: present, length, trim delta, leading/trailing/internal whitespace booleans, and header-unsafe booleans. Never print the value.
-- In GitHub Actions, `scripts/validate-header-safe-secret.ts` checks any observable `CRON_SECRET` secret without logging the value. This does not validate Vercel env stores; Vercel Production/Preview/Development still need provider-side verification after changes.
+- GitHub Actions does not need `CRON_SECRET`: its former validator checked only the unrelated Actions copy. The owner ruled deletion and rotation on 2026-09-19. `scripts/validate-header-safe-secret.ts` remains a value-free operator tool, using the same `src/adapters/shared/header-secret.ts` validator as both runtime handlers. Vercel Production/Preview/Development still need verification after changes; removing the CI consumer does not prove the provider values were rotated.
 
 **Safe Vercel reset procedure**
 
-The owner supplies the actual secret value. Do not paste it into tickets, docs, shell history, or chat.
+Generate the replacement only in process memory. Do not print it or write it to a file, ticket, shell history, log, or chat. Rotate immediately before the reviewed production promotion; an environment-store update alone does not update an already-created deployment. Check each command's status and stop on failure.
 
 ```bash
-# Generate a candidate without a trailing newline if rotating the value.
-openssl rand -hex 32
-
-# Set each scope from stdin using printf, not echo.
-printf '%s' "$CRON_SECRET_VALUE" | vercel env add CRON_SECRET production --force
-printf '%s' "$CRON_SECRET_VALUE" | vercel env add CRON_SECRET preview --force
-printf '%s' "$CRON_SECRET_VALUE" | vercel env add CRON_SECRET development --force
-
-# Remove stale branch-specific overrides unless a branch truly needs different bytes.
-vercel env rm CRON_SECRET preview <branch-name> --yes
+(
+  # Never enable shell tracing around a secret operation.
+  set +x
+  trap 'unset rotation_secret' EXIT
+  # One value lives only in this subshell; every later operation is conditional.
+  rotation_secret="$(openssl rand -hex 32)" &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET production --force &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET preview --force &&
+    printf '%s' "$rotation_secret" | vercel env add CRON_SECRET development --force &&
+    vercel env rm CRON_SECRET preview <branch-name> --yes
+)
 ```
 
+Replace `<branch-name>` with a verified override target; if there is no override, omit that final `&&`/removal command. For multiple overrides, keep their removals in the same `&&` chain. The subshell returns the failing operation's nonzero status and clears its in-memory value on exit; a failed scope update cannot proceed to override removal.
+
 After resetting, redeploy the affected Preview and Production targets. Env changes do not repair an already-created deployment.
+
+Verify only value-free metadata after the update (present, length, header-safe). The current schedules in `vercel.json` are **08:00 UTC** for reconciliation and **09:00 UTC** for renewal notices, not two 08:00 runs. Confirm each next scheduled production invocation returns `200` in Vercel logs; a deployment becoming Ready or a manual unauthorized probe does not supply that receipt. On the Hobby plan, allow the scheduled hour per [Vercel's cron accuracy contract](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-jobs-accuracy).
 
 ### `NEXT_PUBLIC_*` Vars Require Fresh Builds
 
