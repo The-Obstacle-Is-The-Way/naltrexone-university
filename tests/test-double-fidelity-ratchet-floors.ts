@@ -9,6 +9,8 @@
 // 18 files.
 // 2026-09-19: Stripe-event repository integration replacements retire all 16
 // casts in its unit suite: enforced casts are now 273 sites across 49 files.
+// 2026-09-19: Attempt behavior moves to Postgres and five retained error units
+// use typed prepared-query faults: 33 more casts retire, leaving 240 / 48 files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -65,7 +67,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/gateways/stripe/stripe-portal.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
-  ['src/adapters/repositories/drizzle-attempt-repository.test.ts', 33],
   ['src/adapters/repositories/drizzle-bookmark-repository.test.ts', 9],
   ['src/adapters/repositories/drizzle-clerk-event-repository.test.ts', 6],
   [
