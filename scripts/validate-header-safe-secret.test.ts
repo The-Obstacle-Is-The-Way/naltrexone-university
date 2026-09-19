@@ -65,6 +65,13 @@ describe('validateHeaderSecret', () => {
     expect(formatHeaderSecretValidation(result)).not.toContain('abc def');
   });
 
+  it('rejects a value that cannot be encoded in an HTTP header', () => {
+    const result = validateHeaderSecret('CRON_SECRET', 'secret\u0100');
+
+    expect(result.ok).toBe(false);
+    expect(result.headerUnsafe).toBe(true);
+  });
+
   it('allows an optional missing value and rejects a required missing value', () => {
     expect(
       validateHeaderSecret('CRON_SECRET', undefined, { optional: true }),
