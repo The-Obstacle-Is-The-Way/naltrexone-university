@@ -21,6 +21,8 @@
 
 **2026-09-19 production-gate activation (21:28 UTC; supersedes the preparation note's pending configuration).** After #919 merged as `bd2b690d` with exact-head approval on `53e94933`, the project Checks V2 API accepted the production-only GitHub check. Readback at `21:28:31Z` returned exactly one check: `name=test`, `source.kind=git-provider`, `source.provider=github`, `source.externalCheckName=test`, `targets=[production]`, `requires=build-ready`, `blocks=deployment-alias`, and `timeout=3600`. Preview settings and automatic production aliasing were unchanged. This proves configuration, not enforcement on a release: the first main-commit check/domain-assignment timestamp receipt remains pending. No secret rotation or production redeployment was performed by activation.
 
+**2026-09-19 production-gate review adjudication (#924).** Corrected the deployment checklist's broad E2E-trigger wording to match `ci.yml`: main pushes and non-Dependabot same-repository PRs. Rejected a proposed duplicate job-presence assertion with executable receipts: removing the parsed `jobs` property makes the existing negative deployment-job assertion fail (`TypeError: Cannot convert undefined or null to object`; 9/28 cases fail overall), while renaming only `test` makes two existing `findParsedJob` callers fail with `Missing workflow job`. Restoring the unchanged workflow returns 28/28 green. The required job cannot disappear behind a green suite; no extra guard or assertion was added.
+
 The findings below describe the dated filing baseline; completed steps 1–2 and the dated implementation notes govern current state.
 
 Two facts about `.github/workflows/ci.yml` combine into one exposure.

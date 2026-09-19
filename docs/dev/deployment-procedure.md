@@ -66,7 +66,7 @@ envelope or upcaster framework.
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # every trigger; no provider secret required
    └─ pnpm build
-   └─ pnpm test:e2e             # main pushes + owner-authored same-repo PRs
+   └─ pnpm test:e2e             # main pushes + non-Dependabot same-repo PRs
    └─ Must pass before merge
 
 2. After merge to main (in parallel)
@@ -195,7 +195,7 @@ Before merging to `main` (production deploy):
 - [ ] `pnpm test:browser` passes
 - [ ] `pnpm test:integration` passes
 - [ ] `pnpm build` passes
-- [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on pushes and same-repo PRs)
+- [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on main pushes and non-Dependabot same-repository PRs)
 - [ ] CodeRabbit APPROVED the exact promotion head, with zero unresolved review threads
 - [ ] Vercel's production Deployment Check requires GitHub `test`; after merging, record main's test result and actual domain-assignment timing separately
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
