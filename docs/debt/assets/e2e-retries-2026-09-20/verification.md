@@ -64,3 +64,15 @@ The [adversarial review](../adversarial-2026-09-20/review.md#promotion-evidence)
 **CONFIRMED:** the earlier pending-production observation is now closed. `gh run view 35515003421 --json status,conclusion,headSha` returned `completed`, `success`, and `b58949e8870415d95a8c17df65cf569902a9e345`. Authenticated Vercel `GET /v4/aliases/addictionboards.com` named `dpl_Fg7R2mumKfTQsghmfEy5TgNSQVfZ`; `GET /v13/deployments/dpl_Fg7R2mumKfTQsghmfEy5TgNSQVfZ` returned `readyState: READY`, `target: production`, and that same Git SHA. GET probes to `/` and `/api/health` both returned 200. This checks the actual public alias, not only the incoming production target.
 
 **CONFIRMED:** #934 subsequently landed on dev as `76c930b4` with local `retain-on-failure` tracing, CI tracing disabled, and product retries still zero. `playwright.config.ts:23` and `tests/playwright-lane-policy.test.ts` own that trace policy. It preserves diagnostics when an attempt fails; it does not expose a product error that a helper recovered inside a successful attempt. At `fc0049f7`, the session/bookmark loops and the error-then-success bookmark unit witness remain unchanged. This is a dev-source receipt for #934, not a claim that #934 was included in the earlier #932 production deployment.
+
+## Subsequent branch/register conflict — 2026-09-20
+
+**CONFIRMED:** the next dev/main synchronization has a debt-ID collision. A fresh `git fetch origin` after [PR #937](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/937) merged returned main `92f70c71` while dev remained `327f95ef`. `git show <sha>:docs/debt/index.md` and the linked record titles give these distinct assignments:
+
+| ID | Dev `327f95ef` (PR A #933) | Main `92f70c71` (PR #937) |
+| --- | --- | --- |
+| DEBT-479 | Public-surface discoverability and field performance | Import Output Path Traversal |
+| DEBT-480 | Canonical security.txt anonymously unreachable | Import/Seed Validation Disagreement |
+| DEBT-481 | Master-spec implementation drift | Draft Splitter Silent Omission |
+
+Main also assigns DEBT-482/483/484 to duplicate-QID output collision, content withdrawal/release rollback, and question rewrite/history identity, with `Next Debt ID: DEBT-485`; dev still says `DEBT-482`. Thus neither an automatic index conflict resolution nor allocating dev's next ID is safe. Preserve both sets of findings, honor the owner's reserved public-surface IDs, assign unused IDs to the conflicting importer records, and update their filenames, references, and the combined next-ID pointer in a dedicated docs reconciliation before the next branch synchronization. Recheck both branch heads before choosing those IDs. This note does not rename, delete, close, or duplicate either set of records and does not adjudicate the importer runtime fix. PR C remains the five requested register/runbook files on dev; main's unrelated runtime changes are not part of its validation.
