@@ -1,6 +1,6 @@
 # DEBT-483: No Complete Content Withdrawal or Release Rollback
 
-**Status:** In Progress — static prevalidation and explicit withdrawal safeguards; clean staging and release milestones remain open
+**Status:** In Progress — initial prevalidation, withdrawal and clean-staging safeguards; release milestones remain open
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED implementation gap; production incident not established
@@ -50,8 +50,8 @@ The initial safeguards milestone has no release-interface prerequisite.
 Static bundle prevalidation is the first implemented safeguard, described below.
 The next safeguard adds explicit withdrawal QIDs and an app-owned operator path
 that preserves stored history, with seed refusing archived-to-active transitions.
-Still generate imports into clean staging.
-Each mechanism should remain a separate PR. This reduces current exposure
+Clean import staging is the third independent safeguard, described below.
+Each mechanism remains a separate PR. This reduces current exposure
 but is not atomic release activation. This milestone must not close the debt.
 Full closure follows SPEC-007 and also requires a verified
 release boundary with all-or-nothing visibility and explicit rollback.
@@ -205,16 +205,81 @@ cases stayed refused. All four focused suites then passed **66/66**; typecheck
 and Biome passed. The final full gate on merged base `31d3a718` passed:
 typecheck, lint, **4,421 unit / 411 browser / 349 integration** tests (6 existing
 skips), production build and **44 authenticated E2E** tests with no retries.
-Exact-head review, merge and production promotion remain pending.
+PR #953 merged as `8da15de2` after exact-head CodeRabbit approval
+`5261806134` on `0aeda526`, zero unresolved threads and CI run `35538749320`
+(4,421 unit / 411 browser / 349 integration +6 skips / 44 E2E, no retries).
+Production promotion remains pending.
 
 **Remaining limits:** withdrawal preserves stored history but does not make all
 archived questions reviewable through today's published-only application queries
 (DEBT-484). It is not immutable revision support, an undo path, an atomic corpus
 release, or revocation-aware rollback. Old MDX must still be removed or marked
 archived to let a later seed proceed; the guard rejects stale input rather than
-silently filtering it. Clean import staging remains the next independent initial
+silently filtering it. The next receipt covers the separate clean-staging
 safeguard. Full release identity/activation/rollback still belongs to private
 SPEC-007, and this debt remains open.
+
+## Clean import staging safeguard — 2026-09-20
+
+**CONFIRMED:** before changing runtime code, against parent `0aeda526`,
+`pnpm test --run scripts/import-draft-questions.test.ts` produced **6 failed /
+25 passed**. Normal import and dry-run both accepted three populated destinations:
+an existing current-QID file, a stale QID under another source, and an unrelated
+hidden file. The normal runs reported `written=1`; the old writer used ordinary
+`writeFile`, overwriting the current destination or retaining the unrelated/stale
+entry alongside the new output. The existing-empty-directory positive case
+already passed.
+
+`scripts/import-draft-questions.ts` now requires an absent or empty output root
+before the write loop, after full input/identity/path/symlink preflight. The same
+check applies to dry-run. Its refusal names the output root and directs the
+operator to a fresh staging directory; existing output is neither pruned nor
+overwritten. Existing symlink-error precedence is retained.
+
+The three focused importer/parser suites passed **86/86**:
+
+```bash
+pnpm test --run scripts/import-draft-questions.test.ts scripts/draft-question-import.test.ts scripts/seed.test.ts
+```
+
+The six rejection cases verify existing sentinel bytes survive and no new output
+appears beside stale/unrelated files. An absent or existing-empty destination
+still succeeds. A read-only check of the actual local corpus ran:
+
+```bash
+STAGING_CHECK_DIR="$(mktemp -d)"
+pnpm content:import:drafts -- --out "$STAGING_CHECK_DIR" --dry-run
+rmdir "$STAGING_CHECK_DIR"
+```
+
+Real output: `files=170 questions=948 written=0 (dry-run) uniqueQids=948`.
+`rmdir` succeeded, confirming the freshly created destination remained empty.
+No proprietary content was written or changed by that check. The full local gate
+passed: typecheck, lint, **4,428 unit / 411 browser / 349 integration** tests
+(6 existing skips), production build and **44 E2E** tests without retries.
+Fast-forwarding to merged #953 (`8da15de2`) changed ancestry only; its tree matches
+tested parent `0aeda526`. Exact-head review, merge and production promotion
+remain pending for this staging safeguard.
+
+[Content pipeline operations](../practice-engine/content-pipeline.md#import-drafts--mdx-generated)
+now prescribe a fresh temporary directory **outside** the seed glob, followed by
+artifact review and a separate deliberate placement of approved MDX. The previous
+procedure deleted the current imported tree before regeneration; the new procedure
+preserves it while generating and validating its replacement. Only the import
+workflow was updated; the guide's other architectural/format sections retain their
+earlier verification scope.
+
+**Remaining boundary:** the CLI enforces an empty destination, not automatic
+activation, a signed/fresh release, filesystem transactionality or database
+atomicity. A late filesystem error may leave incomplete files in the new staging
+directory; that directory must not be treated as an approved artifact. Concurrent
+hostile filesystem replacement remains outside the existing DEBT-485 boundary.
+The seed glob itself is unchanged, so operators must keep staging outside
+`content/questions/` until the separate review/placement step. Missing draft IDs
+still do not implicitly withdraw database rows. Use the explicit withdrawal
+command, and keep release identity, all-or-nothing activation and revocation-aware
+rollback open under private SPEC-007. No production content/database mutation was
+performed.
 
 ## Related
 
