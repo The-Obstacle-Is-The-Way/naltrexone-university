@@ -15,7 +15,11 @@ import {
 } from '../seed-helpers';
 import { computeContentRewriteChanges } from './content-rewrite-policy';
 import type { SeedSourceFile } from './file-reader';
-import { buildSeedRepFromDb, parseSeedQuestionFile } from './question-parser';
+import {
+  buildSeedRepFromDb,
+  parseSeedQuestionFile,
+  type SeedTag,
+} from './question-parser';
 import { upsertTags, validateSeedQuestionTags } from './tag-manager';
 
 export type SeedSyncCounts = {
@@ -132,6 +136,49 @@ function createSeedQuestionSyncError(input: {
   );
 }
 
+function prepareSeedQuestions(files: readonly SeedSourceFile[]) {
+  const questionPaths = new Map<string, string>();
+  const tags = new Map<string, { tag: SeedTag; path: string }>();
+
+  return files.map((file) => {
+    let seedSlug = extractSeedSlugForError(file.raw);
+    try {
+      const seedFromFile = parseSeedQuestionFile(file.raw, file.absolutePath);
+      seedSlug = seedFromFile.slug;
+      validateSeedQuestionTags({ slug: seedSlug, tags: seedFromFile.tags });
+
+      const firstPath = questionPaths.get(seedSlug);
+      if (firstPath !== undefined) {
+        throw new Error(
+          `Duplicate seed question "${seedSlug}" appears in both ${firstPath} and ${file.absolutePath}`,
+        );
+      }
+      questionPaths.set(seedSlug, file.absolutePath);
+
+      for (const tag of seedFromFile.tags) {
+        const previous = tags.get(tag.slug);
+        if (
+          previous &&
+          (previous.tag.name !== tag.name || previous.tag.kind !== tag.kind)
+        ) {
+          throw new Error(
+            `Conflicting seed tag "${tag.slug}" in ${previous.path} and ${file.absolutePath}: name and kind must agree across the bundle`,
+          );
+        }
+        if (!previous) tags.set(tag.slug, { tag, path: file.absolutePath });
+      }
+
+      return {
+        file,
+        seedFromFile,
+        fileHash: sha256Hex(canonicalJsonString(seedFromFile)),
+      };
+    } catch (error) {
+      throw createSeedQuestionSyncError({ file, slug: seedSlug, cause: error });
+    }
+  });
+}
+
 async function moveExistingChoicesToTemporarySortOrders(
   tx: PostgresJsDatabase<typeof schema>,
   existingChoices: ReadonlyArray<{ id: string; sortOrder: number }>,
@@ -148,23 +195,13 @@ export async function syncQuestionsFromFiles(
   db: PostgresJsDatabase<typeof schema>,
   files: SeedSourceFile[],
 ): Promise<SeedSyncCounts> {
+  const prepared = prepareSeedQuestions(files);
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
 
-  for (const file of files) {
-    let seedSlug = extractSeedSlugForError(file.raw);
-
+  for (const { file, seedFromFile, fileHash } of prepared) {
     try {
-      const seedFromFile = parseSeedQuestionFile(file.raw, file.absolutePath);
-      seedSlug = seedFromFile.slug;
-      validateSeedQuestionTags({
-        slug: seedFromFile.slug,
-        tags: seedFromFile.tags,
-      });
-
-      const fileHash = sha256Hex(canonicalJsonString(seedFromFile));
-
       const existing = await db
         .select()
         .from(schema.questions)
@@ -423,7 +460,7 @@ export async function syncQuestionsFromFiles(
     } catch (error) {
       throw createSeedQuestionSyncError({
         file,
-        slug: seedSlug,
+        slug: seedFromFile.slug,
         cause: error,
       });
     }
