@@ -241,11 +241,9 @@ describe('Playwright E2E lane policy', () => {
     ]);
   });
 
-  it('keeps retry traces local and disables them in hosted CI', () => {
-    const source = readFileSync('playwright.config.ts', 'utf8');
-
-    expect(source).toContain(
-      "trace: process.env.CI ? 'off' : 'on-first-retry'",
+  it('retains local failure traces from the first attempt and disables CI traces', () => {
+    expect(playwrightConfig.use?.trace).toBe(
+      process.env.CI ? 'off' : 'retain-on-failure',
     );
   });
 
