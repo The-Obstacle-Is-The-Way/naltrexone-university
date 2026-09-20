@@ -8,7 +8,7 @@
 
 **What this filing does not claim.** Stability has real machinery: `src/adapters/shared/circuit-breaker.ts`, `src/adapters/gateways/stripe/stripe-retry.ts`, `lib/with-timeout.ts`, and the Resend provider timeout. Security headers are enforced *and* contract-tested: `next.config.ts:25-53` sets five headers and `next.config.test.ts:17-37` asserts them while leaving CSP ownership with `proxy.ts`. Application rate limiting is broader than the old spec table (F8). These receipts exonerate the named mechanisms; they do not prove the entire stability/security axes are defect-free or explain the CodeRabbit dashboard's scoring. The newly verified anonymous security-contact failure is separately filed as DEBT-480.
 
-**The corrected through-line.** Crawl and social metadata are absent (F1–F4), browser performance sampling is off (F5), and there is no dedicated metadata contract (F6). **Server telemetry already exists.** The original claim that DEBT-450 and SPEC-017 triggers are “unfireable by construction” is withdrawn: server tracing is sampled at 5%, Sentry returns production spans, and Vercel Firewall exposes traffic observations without Web Analytics. No DEBT-450 threshold was demonstrated by this review. Its read-only census and server measurement work are actionable now, independently of browser telemetry or a Pro upgrade. SPEC-016/017 corrections are applied in this docs-only pass; the E1 owner decision is recorded as a structural deferral with observable triggers and an unapplied incident lever.
+**The corrected through-line.** Crawl and social metadata are absent (F1–F4), browser performance sampling is off (F5), and there is no dedicated metadata contract (F6). **Server telemetry already exists.** The original claim that DEBT-450 and SPEC-017 triggers are “unfireable by construction” is withdrawn: server tracing is sampled at 5%, Sentry returns production spans, and Vercel Firewall exposes traffic observations without Web Analytics. No DEBT-450 threshold was demonstrated by this review. Its read-only census and server measurement work are actionable now, independently of browser telemetry or a Pro upgrade. SPEC-016/017 corrections are prepared for specs-only PR B and remain pending. The E1 owner decision is recorded in this filing/evidence as a structural deferral with observable triggers and an unapplied incident lever; its SPEC-017 update also belongs to B.
 
 ---
 
@@ -82,7 +82,7 @@ Metadata contracts should pin output behavior, following `next.config.test.ts:17
 
 ### F7 — SPEC-016 is stale and internally contradictory
 
-At filing, SPEC-016 was dated `Updated: 2026-03-15` and had drifted in three ways (corrected by step 6 on 2026-09-20):
+At filing, SPEC-016 was dated `Updated: 2026-03-15` and had drifted in three ways (step 6 correction prepared on 2026-09-20; pending PR B):
 
 1. **It contradicts the running configuration.** The spec says errors only, with performance tracing out of scope. `instrumentation.ts:21` sets `tracesSampleRate: 0.05`. Server performance tracing is *already on* at 5%; only the client is at zero. The spec describes a state the code left behind, which is why F5's true shape — server-sampled, client-blind — is not readable from the spec at all.
 2. **A "future" goal has partly shipped.** Goal 3, *"Request tracing to follow requests across async boundaries (future)"*, is partly implemented: `lib/request-context.ts` supplies `createRequestContext`/`getRequestLogger`, consumed at `app/api/health/route.ts:12-13` among others, and DEBT-475 promoted a typed runtime-filtered span boundary on 2026-09-20. Explicit context passing is not universal async-local propagation; initial named span instrumentation was already shipped under DEBT-462.
@@ -90,7 +90,7 @@ At filing, SPEC-016 was dated `Updated: 2026-03-15` and had drifted in three way
 
 ### F8 — SPEC-017 undercounts its implementation; E1 owner decision now recorded
 
-At filing, SPEC-017 was marked **Complete (MVP)** and presented a table of *"all 9 endpoints"* (the table is corrected by step 7). The code covers more than that:
+At filing, SPEC-017 was marked **Complete (MVP)** and presented a table of *"all 9 endpoints"* (step 7 prepares its correction for PR B). The code covers more than that:
 
 - `src/adapters/shared/rate-limits.ts` defines **14** limit constants, not 9. Absent from the spec's table: `PRACTICE_SESSION_MUTATION_RATE_LIMIT` (60/min), `EXAM_DRAFT_SAVE_RATE_LIMIT` (120/min), `QUESTION_RATING_RATE_LIMIT` (60/min), `QUESTION_REPORT_RATE_LIMIT` (10/min), and `CRON_SEND_RENEWAL_NOTICES_RATE_LIMIT` (5/min).
 - There are **13** non-test **RateLimiter** `.limit(` call sites across 10 files, including `app/api/cron/send-renewal-notices/route-handler.ts:104` and `src/adapters/controllers/question-feedback-controller.ts:152,211`, none of which the table lists.
@@ -99,7 +99,7 @@ The drift direction is favorable — coverage exceeds documentation — so this 
 
 **E1 is an owner-approved deferral, not demonstrated abuse.** The old “before launch, or anytime” wording is a planning milestone; a live domain proves serving, not customer launch or an abuse threshold. The authenticated team API confirms Hobby. Published limits were read, but the project dashboard allowance is **UNPROVEN** under the owner's verification requirement; do not assume a rule slot. The active-config 404 establishes no saved custom configuration. It does not establish absent protection: the fresh overview reports baseline `sys_dos_mitigation` denies/challenges. Nor does every passing request hit Neon: the cron handler rejects invalid auth before constructing a limiter (`app/api/cron/send-renewal-notices/route-handler.ts:60-104`).
 
-**Owner decision, 2026-09-20:** defer blocking and decline a log-only rule. [SPEC-017 E1](../specs/spec-017-rate-limiting.md#e1-vercel-waf-rate-limiting) owns the full **reason / trigger / lever**: auth plus subscription entitlement, Clerk throttling, signed webhooks, header-secret cron routes, six PPR-enabled page families and default Vercel filtering constrain the exposed work; shared institutional NAT makes a guessed IP bucket harmful to legitimate cohorts. The reason is structural, not “insufficient traffic evidence,” and does not disappear with traffic growth. Reopen on invocation-count/Neon-compute anomalies or Firewall events available today; the events API returned `{"actions":[]}` successfully. Web Analytics is explicitly excluded. Attack Mode enable/disable is the unapplied incident path; measured reaction time remains unproven. This supersedes both earlier offered options without changing the independent F5 server-telemetry adjudication.
+**Owner decision, 2026-09-20:** defer blocking and decline a log-only rule. PR B will put the full **reason / trigger / lever** in [SPEC-017 E1](../specs/spec-017-rate-limiting.md#e1-vercel-waf-rate-limiting); the decision recorded here is: auth plus subscription entitlement, Clerk throttling, signed webhooks, header-secret cron routes, six PPR-enabled page families and default Vercel filtering constrain the exposed work; shared institutional NAT makes a guessed IP bucket harmful to legitimate cohorts. The reason is structural, not “insufficient traffic evidence,” and does not disappear with traffic growth. Reopen on invocation-count/Neon-compute anomalies or Firewall events available today; the events API returned `{"actions":[]}` successfully. Web Analytics is explicitly excluded. Attack Mode enable/disable is the unapplied incident path; measured reaction time remains unproven. This supersedes both earlier offered options without changing the independent F5 server-telemetry adjudication.
 
 ---
 
@@ -113,13 +113,13 @@ The drift direction is favorable — coverage exceeds documentation — so this 
 
 **Regression risk — CONFIRMED bounded gap.** There is no metadata contract or anonymous crawl-resource check. An exported handler test alone cannot detect proxy interception.
 
-**Spec trust — CONFIRMED.** SPEC-016/017's verifiable drift is corrected here. Further current master-spec drift is separately filed under DEBT-481; do not copy those old implementation blocks as current contracts.
+**Spec trust — CONFIRMED.** SPEC-016/017's verifiable drift is documented here; its correction remains pending PR B. Further current master-spec drift is separately filed under DEBT-481; do not copy those old implementation blocks as current contracts.
 
 ---
 
 ## Resolution
 
-One mechanism per PR; red proof before green. Steps 6/7 documentation are applied now. Step 2 needs the public-resource auth seam; step 3 depends on step 1's URL convention and an anonymously reachable image. Steps 4/5 remain separate owner choices. See the [whole-backlog execution order](./assets/adversarial-2026-09-20/review.md#execution-order).
+One mechanism per PR; red proof before green. Steps 6/7 documentation is prepared for PR B, not applied by this filing PR. Step 2 needs the public-resource auth seam; step 3 depends on step 1's URL convention and an anonymously reachable image. Steps 4/5 remain separate owner choices. See the [whole-backlog execution order](./assets/adversarial-2026-09-20/review.md#execution-order).
 
 **Step 1 — Canonical metadata and auth noindex.**
 Pin four content pages' meaningful descriptions and canonical apex URLs; pin noindex on both auth catch-all pages. Configure `metadataBase` using the verified environment-origin convention, excluding query strings and identifiers. Keep the existing title fallback unless a separate requirement needs a template. Do not require self-canonicals, unique descriptions or social cards for noindex auth interstitials. Extend frontend standards §15 with the adopted contract.
@@ -144,11 +144,11 @@ Only if prioritized: `Organization` plus a truthful `Product`/`Offer` descriptio
 **Step 5 — Browser field measurement (owner decision).**
 Choose a supported source, sampling/quota and privacy policy before raising browser Sentry sampling. Verify that the selected SDK/version emits the required LCP/CLS/INP measurements and excludes private identifiers/query payloads. Source configuration, collection-point/privacy changes if needed, and SPEC-016 amendment belong together. Red proof: with today's zero browser tracing, a controlled sampled navigation must yield no required measurement event and fail the new collector test; after implementation, force sampling back to zero or inject a private query token and require the appropriate collection/privacy assertion to fail. Retain captured production sample counts and window; do not invent percentiles from absent samples. This does not block DEBT-450. Web Analytics stays under DEBT-464; Speed Insights is outside that record's scope.
 
-**Step 6 — SPEC-016 corrected (docs complete).**
-The 2026-09-20 iteration states server 5% / browser 0%, explicit request correlation and named spans, and distinguishes those from universal async propagation. `LOG_LEVEL` is supported and documented in the spec; adding an example-file entry is explicitly declined as optional. No `.env.example` or runtime change was made.
+**Step 6 — Correct SPEC-016 (prepared; pending PR B).**
+The prepared 2026-09-20 iteration states server 5% / browser 0%, explicit request correlation and named spans, and distinguishes those from universal async propagation. `LOG_LEVEL` is supported and documented in the spec; adding an example-file entry is explicitly declined as optional. No `.env.example` or runtime change was made.
 
-**Step 7 — SPEC-017 corrected; E1 owner decision recorded.**
-The table now covers 14 policies, 13 invocation sites and 18 named operations, including shared-helper fanout and the actual bookmark key. The proposed “every constant has a caller” test is declined: changing a Markdown limit would leave it green. It cannot make this table self-maintaining. E1 records the owner-approved structural deferral, observed baseline mitigation, currently observable invocation/compute/Firewall triggers and the unapplied Attack Mode incident path. Project rule allowance remains unverified pending the dashboard check; log-only is declined too. E2 now requires query attribution, not merely function duration.
+**Step 7 — Correct SPEC-017 (prepared; pending PR B); E1 decision recorded here.**
+The prepared table covers 14 policies, 13 invocation sites and 18 named operations, including shared-helper fanout and the actual bookmark key. The proposed “every constant has a caller” test is declined: changing a Markdown limit would leave it green. It cannot make this table self-maintaining. The prepared E1 text records the owner-approved structural deferral, observed baseline mitigation, currently observable invocation/compute/Firewall triggers and the unapplied Attack Mode incident path. Project rule allowance remains unverified pending the dashboard check; log-only is declined too. The prepared E2 text requires query attribution, not merely function duration.
 
 **Not authorized or justified by this review:** a new numeric CI budget, mandatory Lighthouse/axe lane, Upstash adoption, blanket middleware limits, or a guessed WAF threshold. Absence of a dedicated tool is not itself a defect. Existing coverage/CRAP/mutation/acceptance work remains DEBT-468/465 under ADR-019.
 
@@ -161,21 +161,21 @@ The table now covers 14 policies, 13 invocation sites and 18 named operations, i
 3. Four content heads have correct descriptions, canonical URLs and the chosen social metadata. Both auth catch-all pages serve noindex; auth behavior still passes.
 4. Social preview evidence comes from an authorized channel or preview inspector; none was produced by this docs-only review.
 5. Browser measurement, if authorized, requires actual production measurements and privacy/quota review. Server trigger assessment is independent; see the dated matrix.
-6. SPEC-016/017 `Updated:` dates and scope/table corrections are complete. E1's dated owner decision contains the structural reason, observable trigger and unapplied incident lever; no custom-rule entitlement or measured response time is assumed.
+6. PR B must land the prepared SPEC-016/017 `Updated:` dates and scope/table corrections before steps 6/7 are complete. E1's dated owner decision contains the structural reason, observable trigger and unapplied incident lever; no custom-rule entitlement or measured response time is assumed.
 7. Every future push follows AGENTS.md's full gate; each implementation PR needs exact-head review and production verification where applicable. A unit test, Ready deployment or green check alone proves less than this list.
 
 ---
 
 ## Related
 
-- [SPEC-016](../specs/spec-016-observability.md) — F5/F7; amended by Resolution steps 5–6
-- [SPEC-017](../specs/spec-017-rate-limiting.md) — F8; amended by Resolution step 7
+- [SPEC-016](../specs/spec-016-observability.md) — F5/F7; amendments planned under Resolution steps 5–6
+- [SPEC-017](../specs/spec-017-rate-limiting.md) — F8; amendment prepared under Resolution step 7
 - `lib/public-routes.ts:3-15`, `lib/routes.ts`, `lib/env.ts:71`, `app/layout.tsx:9-13`, `proxy.ts`
 - `next.config.ts:25-53` and `next.config.test.ts:17-37` — the enforced-and-tested precedent this debt should copy
 - `sentry.client.config.ts:11-13`, `instrumentation.ts:21`, `lib/request-context.ts`, `src/adapters/shared/rate-limits.ts`
 - `docs/frontend/standards.md:827-840` — §15 Page Metadata, currently tab-titles only
 - [DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md) — Vercel Web Analytics activation; parked, not duplicated here
 - [DEBT-450](../_archive/debt/debt-450-hot-path-query-efficiency.md) — deferred parts; server measurement and the census are actionable independently of F5
-- [DEBT-475](./debt-475-toolchain-coherence.md) — typed server-tracing boundary and the separately recorded E2E helper-retry residual
+- [DEBT-475](./debt-475-toolchain-coherence.md) — typed server-tracing boundary; the E2E helper-retry residual is evidenced in this review and its register correction is pending PR C
 - [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) — owns `/privacy` and `/terms` copy; this filing touches their metadata only, never their text
 - [DEBT-465](./debt-465-test-quality-practices-adoption.md) — Gherkin/acceptance and mutation lanes; steps 1–3's contracts are ordinary Vitest and do not depend on it
