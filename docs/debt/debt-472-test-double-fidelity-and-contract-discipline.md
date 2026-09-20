@@ -37,6 +37,26 @@ Path/SHA audit: all 25 commit identifiers cited across the four records (includi
 
 Execution order: land missing real-Postgres filter coverage first; then dispose each repository unit with a named twin and lower its floor. Stripe-event prune/peek coverage precedes their disposition. Keep cron-route changes blocked until PR #919 merges and the branch incorporates updated `dev`. Split suppression-bearing files when migrating them; do not transfer cast debt into a new ratchet entry. The other clone owns CI, deployment, secrets, production telemetry, orchestration, and every DEBT-475 row except the classifier replacement.
 
+### Stripe-event repository disposition (2026-09-19)
+
+Replacement tests were added and proved before deleting any unit. `tests/integration/stripe-event-repository.integration.test.ts` exercises the real adapter and Postgres in 17 cases; `stripe-repositories.integration.test.ts` retains the original claim/lock/lifecycle coverage. All 17 new cases failed under the targeted mutations below before passing against the restored, unchanged adapter. This disposes one of the 23 `RepoDb` files; the other 22 remain work.
+
+| Removed unit cases (`drizzle-stripe-event-repository.test.ts`, pre-delete lines) | Real-Postgres twin |
+| --- | --- |
+| Claim success / duplicate (16, 43) | New `claims an event once…` verifies persisted type, boolean results, and immutable processed state on replay; existing `stripe-repositories.integration.test.ts:33` also exercises both outcomes. |
+| Lock processed / pending / failed / missing (66, 85, 103, 121) | Existing `persists Stripe events with idempotency and processed tracking` checks all three stored lock states; new `rejects a missing event in lock…` checks the error class and code. The review follow-up below adds pending/failed two-connection contention cases proving the lock lasts until transaction completion. |
+| Peek missing / existing without locking (141, 157) | New missing-peek case, three stored-state cases, and a second transaction holding the target row lock while `peek` must complete. |
+| Mark processed / missing (179, 207) | New `marks only the requested event processed…` checks the injected timestamp, error clearing, and preservation of another event; missing-mark case checks error class/code. |
+| Mark failed / missing (227, 250) | New `marks only the requested event failed…` checks timestamp clearing, error persistence, and preservation of another event; missing-mark case checks error class/code. |
+| Invalid limit / empty batch (270, 295) | Three invalid-limit cases retain the no-transaction assertion against the real Drizzle object; the empty-batch case checks zero and cutoff-row preservation. |
+| Bounded deletion / delete cutoff recheck (333, 373) | New batch case checks oldest-first deletion, batch count, strict cutoff, pending/failed preservation, and the remaining batch. The refresh race holds a concurrent update until PostgreSQL reports the pruner blocked, then commits a fresh timestamp and proves the selected row survives with deleted count zero. |
+
+Red receipts: removing the peek selector fails 4 cases; adding a row lock to peek fails 1; changing missing-event codes fails 3; omitting cleared write fields fails 2; removing the invalid-limit guard fails 3; increasing the batch limit fails 1; returning a nonzero empty count fails 1; omitting the delete-side cutoff fails the refresh-race case; corrupting the claimed event type fails the replay/persistence case. The lock tests use separate real connections and bounded PostgreSQL lock waits; no production mutation remains. The epoch-era prune fixtures avoid the recent retained E2E event history.
+
+Disposition delta: 16 call-chain unit cases and their file are removed only after the above twins pass; 17 integration cases are added. The unknown-cast floor drops **289 → 273** (50 → 49 files), raw casts **327 → 311** (61 → 60 files), and `RepoDb` casts **187 → 171** (23 → 22 files). Own-code and maintained-port floors remain **22 / 45**; size suppressions remain **28**. The `FakeStripeEventRepository` waiver remains explicit: these are real-adapter tests, not a new shared fake↔real contract.
+
+Review correction (2026-09-19, PR #921): the original replacement suite checked `lock()` state but did not prove successful row-lock contention. The reviewer claim is **CONFIRMED**. Two additional real-Postgres cases, pending and failed events, now acquire the repository lock inside one transaction, verify PostgreSQL reports that exact backend blocking a second repository transaction, then prove the second lock completes after the first transaction ends. Replacing `.for('update')` with an ordinary select made both cases fail (`expected false to be true`); restoring the byte-identical production adapter passed all **28** focused cases. This brings the new suite to **19** cases and the integration estate to **282**, with no additional unit deletion or floor change. The first direct Vitest invocation stopped at the missing-`DATABASE_URL` setup guard and is not red evidence; the accepted red and green runs used the per-clone `pnpm test:integration` wrapper.
+
 ## Description
 
 "Fakes over mocks" is the right principle. The repository adopted half of it.
