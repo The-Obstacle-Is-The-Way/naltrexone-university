@@ -1,6 +1,6 @@
 # DEBT-487: Frontmatter Order Can Silently Omit Questions
 
-**Status:** In Progress — implementation verified locally; review and promotion pending
+**Status:** In Progress — merged to dev; production promotion pending
 **Priority:** P1
 **Date:** 2026-09-20
 **ID reconciliation:** Renumbered from DEBT-481 after PR #937 collided with the owner's reserved public-surface IDs; original evidence and status are preserved.
@@ -93,7 +93,14 @@ The full local gate passed: typecheck, lint, **4,330 unit / 411 browser / 293
 integration** tests (six existing opt-in skips), production build, and **44
 authenticated E2E** tests without retries. Clerk/Stripe credentials were
 confirmed TEST-mode; integration and E2E used this clone's isolated Docker
-database. Exact-head review, merge and promotion receipts remain pending.
+database.
+
+[PR #943](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/943)
+merged to dev as `95c8f93e` at 2026-09-20T19:04:43Z after CodeRabbit review
+`5261420106` approved exact head `df8a4baf`, zero unresolved threads, and all
+checks passed. [CI 35530510447](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35530510447)
+also passed 44 E2E tests without retries. [Closeout and warning adjudication](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/943#issuecomment-5751958877).
+Production promotion remains pending; no production import or seed was run.
 
 ## Related
 

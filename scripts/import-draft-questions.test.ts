@@ -185,4 +185,78 @@ describe('draft import filesystem boundary', () => {
       expect(existsSync(output)).toBe(false);
     },
   );
+
+  describe.each([false, true])('identity preflight (dryRun=%s)', (dryRun) => {
+    it.each(['same-file', 'cross-file', 'cross-source', 'cross-family'])(
+      'rejects %s duplicate QIDs with both block locations before writes',
+      (scenario) => {
+        const first = path.join(input, 'group', 'recall.md');
+        const second =
+          scenario === 'same-file'
+            ? first
+            : scenario === 'cross-family'
+              ? path.join(input, 'other-group', 'recall.md')
+              : path.join(input, 'group', 'vignettes.md');
+        const duplicate = draft(
+          'fixture-001',
+          scenario === 'cross-source' ? 'other-source' : 'fixture-source',
+        );
+        mkdirSync(path.dirname(second), { recursive: true });
+        writeFileSync(
+          second,
+          scenario === 'same-file'
+            ? `${draft('fixture-001')}\n${duplicate}`
+            : duplicate,
+        );
+
+        const result = run(dryRun);
+
+        expect(result.status, result.stdout).toBe(1);
+        expect(result.stderr).toContain('Duplicate QID "fixture-001"');
+        expect(result.stderr).toContain(`${first} (block 1)`);
+        expect(result.stderr).toContain(
+          `${second} (block ${scenario === 'same-file' ? 2 : 1})`,
+        );
+        expect(existsSync(output)).toBe(false);
+      },
+    );
+  });
+
+  it('preserves existing output when a duplicate is discovered', () => {
+    const existing = path.join(
+      output,
+      'group',
+      'fixture-source',
+      'fixture-001.mdx',
+    );
+    mkdirSync(path.dirname(existing), { recursive: true });
+    writeFileSync(existing, 'Existing published content');
+    writeFileSync(
+      path.join(input, 'group', 'vignettes.md'),
+      draft('fixture-001'),
+    );
+
+    const result = run();
+
+    expect(result.status, result.stdout).toBe(1);
+    expect(readFileSync(existing, 'utf8')).toBe('Existing published content');
+  });
+
+  it('imports distinct QIDs across files and reports the distinct count', () => {
+    writeFileSync(
+      path.join(input, 'group', 'vignettes.md'),
+      draft('fixture-002'),
+    );
+
+    const result = run();
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain('files=2 questions=2 written=2');
+    expect(result.stdout).toContain('uniqueQids=2');
+    for (const qid of ['fixture-001', 'fixture-002']) {
+      expect(
+        existsSync(path.join(output, 'group', 'fixture-source', `${qid}.mdx`)),
+      ).toBe(true);
+    }
+  });
 });
