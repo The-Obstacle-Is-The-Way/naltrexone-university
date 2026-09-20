@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import fg from 'fast-glob';
 import {
@@ -64,6 +64,29 @@ function outputGroupFromPath(
   return first;
 }
 
+async function assertNoOutputSymlinks(
+  outRoot: string,
+  outFile: string,
+): Promise<void> {
+  const root = path.resolve(outRoot);
+  // outFile has already passed lexical containment. Check the root itself and
+  // every existing component below it, including a symlinked destination file.
+  for (let entry = outFile; ; entry = path.dirname(entry)) {
+    try {
+      if ((await lstat(entry)).isSymbolicLink()) {
+        throw new Error(`Draft output contains a symlink: ${entry}`);
+      }
+    } catch (error) {
+      if (
+        !(error instanceof Error && 'code' in error && error.code === 'ENOENT')
+      ) {
+        throw error;
+      }
+    }
+    if (entry === root) return;
+  }
+}
+
 async function main(): Promise<void> {
   const { inRoot, outRoot, status, dryRun } = parseArgs(process.argv.slice(2));
 
@@ -80,7 +103,7 @@ async function main(): Promise<void> {
   }
 
   let written = 0;
-  let questions = 0;
+  const outputs: { file: string; mdx: string }[] = [];
 
   for (const file of files) {
     const raw = await readFile(file, 'utf8');
@@ -100,21 +123,24 @@ async function main(): Promise<void> {
         draft.frontmatter.source,
         draft.frontmatter.qid,
       );
-      const outDir = path.dirname(outFile);
+      await assertNoOutputSymlinks(outRoot, outFile);
+      outputs.push({ file: outFile, mdx });
+    }
+  }
 
-      if (!dryRun) {
-        await mkdir(outDir, { recursive: true });
-        await writeFile(outFile, mdx, 'utf8');
-        written += 1;
-      }
-
-      questions += 1;
+  if (!dryRun) {
+    for (const output of outputs) {
+      await assertNoOutputSymlinks(outRoot, output.file);
+      await mkdir(path.dirname(output.file), { recursive: true });
+      await assertNoOutputSymlinks(outRoot, output.file);
+      await writeFile(output.file, output.mdx, 'utf8');
+      written += 1;
     }
   }
 
   const suffix = dryRun ? ' (dry-run)' : '';
   console.info(
-    `Imported draft questions: files=${files.length} questions=${questions} written=${written}${suffix}`,
+    `Imported draft questions: files=${files.length} questions=${outputs.length} written=${written}${suffix}`,
   );
   console.info(`Output root: ${path.resolve(outRoot)}`);
 }
