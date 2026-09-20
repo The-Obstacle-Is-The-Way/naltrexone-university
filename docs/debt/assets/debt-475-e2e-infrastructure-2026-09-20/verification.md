@@ -29,4 +29,6 @@ Local red output is retained under `/private/tmp/codex-debt475-runtime.Xan40q/`:
 
 ## Merge evidence
 
+Hosted CI `35520551535` exposed a real coverage gap on the first PR head: Codecov patch was 76.47%, with 16 missing lines in the process runner. Five additional boundary cases cover successful listener cleanup, missing executable, failed process discovery, and initial/escalated OS signal errors. All five fail under the corresponding swallowed-error / omitted-cleanup mutations (`runner-failures-mutation-red.log`) and pass against the restored implementation. No production behavior or coverage policy changed. Focused verification is now 4 files / 36 cases; the runner has 97.72% line coverage, with only the documented Windows direct-child fallback uncovered on POSIX. The unit-count delta is now 4,285 → 4,284 (11 duplicate cases removed, 10 boundary cases added), not an unchanged proof set.
+
 Full local gate, hosted check-runs, exact-head review, and promotion evidence are to be recorded on the PR. No merge or production success is implied by the focused proofs above. No retry, trace, fixture-ownership, skip, ratchet floor, dependency or public-artifact policy changes are included.
