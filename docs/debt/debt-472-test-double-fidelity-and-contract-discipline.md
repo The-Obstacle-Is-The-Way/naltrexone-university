@@ -57,6 +57,34 @@ Disposition delta: 16 call-chain unit cases and their file are removed only afte
 
 Review correction (2026-09-19, PR #921): the original replacement suite checked `lock()` state but did not prove successful row-lock contention. The reviewer claim is **CONFIRMED**. Two additional real-Postgres cases, pending and failed events, now acquire the repository lock inside one transaction, verify PostgreSQL reports that exact backend blocking a second repository transaction, then prove the second lock completes after the first transaction ends. Replacing `.for('update')` with an ordinary select made both cases fail (`expected false to be true`); restoring the byte-identical production adapter passed all **28** focused cases. This brings the new suite to **19** cases and the integration estate to **282**, with no additional unit deletion or floor change. The first direct Vitest invocation stopped at the missing-`DATABASE_URL` setup guard and is not red evidence; the accepted red and green runs used the per-clone `pnpm test:integration` wrapper.
 
+### Attempt repository disposition (2026-09-19)
+
+The 28 removed cases have the following real-Postgres replacements. Five hard-to-force adapter error cases remain in the original unit file; its behavior cases move to integration, retiring the size suppression in the same change. No assertion about SQL behavior is left on a canned query result.
+
+| Removed unit cases (`drizzle-attempt-repository.test.ts`, pre-change lines) | Real-Postgres twin / corrected premise |
+| --- | --- |
+| Insert mapping / explicit timestamp (274, 333) | `attempt-repository-reads-writes.integration.test.ts`: explicit timestamp plus every mapped field, persisted choice/correctness/time, and the database-default timestamp. |
+| Omitted insert (370) | `session-attempt-repository.integration.test.ts:78`: omitted outcome, raw nullable choice, incorrect score, and repository readback. |
+| Duplicate session-answer conflict (466) | New `maps a real duplicate session answer…`: exact conflict class/message and original-row preservation. |
+| User mapping / limit guard / negative offset (549, 595, 607) | New explicit-field case, three invalid-limit cases with the real query spy untouched, and descending user-scoped pagination including negative-offset clamping. |
+| Session mapping / cap / ordering (643) | Existing session scoping at `session-attempt-repository.integration.test.ts:32`; new `bounds session reads…` checks 501 persisted rows, exact 500-row bound and ID tie-breaking. The large result is deliberately seeded at the DB boundary because current session creation caps its parameter list at 200. |
+| Empty question IDs (694) | New empty-ID case checks the real Drizzle select method is never called. |
+| Null latest timestamps (705, 896) | **Corrected premise:** `attempts.answered_at` is `NOT NULL` (`db/schema.ts:893-895`); both projections derive from real attempt rows. New `rejects null timestamps…` checks SQLSTATE 23502 and no projection rows after the rejected write. Null-row fixtures represented impossible stored state, not filtering coverage; the schema invariant replaces them. |
+| Aggregate/latest left joins (723, 745) | `bug-regression-active-exam-latest-attempt-fallback.integration.test.ts:571,621,677,733,786,829`: actual visible fallback for standalone/tutor/ended exam and hidden active-exam-only state. |
+| Four counts / timestamp list (788, 877) | New inclusive-date case checks total/correct counts with and without cutoff, user isolation, and descending timestamps. Existing active-exam timestamp cases at `bug-regression-active-exam-latest-attempt-fallback.integration.test.ts:43,153` remain. |
+| Active-exam count / recent / attempted-list / attempted-count joins (811, 865, 1057, 1107) | `bug-regression-active-exam-projections.integration.test.ts:130,204,304` checks actual exclusion before end and visibility afterward. |
+| Recent-attempt mapping (824) | New explicit-field case checks the whole recent-attempt value including nullable session mode. |
+| Five result/source filters (932, 957, 982, 1007, 1032) | All five cases in `attempted-question-filters.integration.test.ts` (PR #920), including latest-history selection and accurate counts. |
+| Attempted counts / tutor / exam (1071, 1083, 1095) | Existing latest-question case at `session-attempt-repository.integration.test.ts:708`, plus PR #920's source-filter count cases. |
+
+The retained five units cover empty insert results, corrupted answered rows on insert/read, an unrelated unique-constraint name, and an unexpected driver exception. They inject only the prepared-query execution response on an actual typed Drizzle mock database; no query-chain object is cast into `RepoDb`, and no filtering behavior is attributed to the stub. The response rows are checked against the schema's selected-row type. These fault cases cannot be produced safely through the normal schema-constrained adapter contract.
+
+Red proofs for the 11 integration cases: omit explicit timestamps; replace the default timestamp; change the duplicate error code; remove offset clamping; remove the invalid-limit/empty-ID guards; replace the inclusive date predicate; raise the session cap; and temporarily drop the local DB's NOT NULL constraint. Every case fails under its targeted mutation and passes with the unchanged production source and restored constraint. The first timestamp/cap probes exposed fixture errors (raw PostgreSQL timestamps are strings; session creation caps at 200), which were fixed before accepting their mutation receipts.
+
+Disposition delta: unit **33 → 5** in this file; integration **+11**. Cast floor **273 → 240**, raw casts **311 → 278**, and `RepoDb` casts **171 → 138** (22 → 21 files). Own-code/port-double floors stay **22 / 45**. Suppressions **28 → 27**. The broader step-4 inventory remains open; the fake-attempt waiver is not promoted to shared parity by these real-adapter tests.
+
+**Review correction (2026-09-20 UTC, PR #922):** The bounded-session fixture originally gave every row the same timestamp, so it did not prove chronological selection. Confirmed by removing `answeredAt` from `findBySessionId` ordering: the entire integration lane still passed **293/293** (six opt-in cases skipped). The strengthened fixture assigns the newest timestamp to the lowest-ID row, which an ID-only 500-row bound would exclude; older equal-timestamp rows still assert the ID tie-breaker. With that mutation, the changed case fails (**1 failed / 10 passed**); restoring the byte-identical production adapter passes **11/11**. No production change, new case, floor increase, or weakened assertion is needed.
+
 ## Description
 
 "Fakes over mocks" is the right principle. The repository adopted half of it.
