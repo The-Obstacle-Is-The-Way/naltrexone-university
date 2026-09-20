@@ -20,7 +20,7 @@ test.describe('subscribe and practice', () => {
     await runE2EUserStateReset();
   });
 
-  test('user can subscribe and answer a question', async ({ page }) => {
+  test('pre-subscribed user can answer a question', async ({ page }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
 
