@@ -9,6 +9,7 @@ type FilePattern = RegExp | string | readonly (RegExp | string)[];
 
 type PlaywrightProjectPolicy = {
   name?: string;
+  retries?: number;
   teardown?: string;
   testIgnore?: FilePattern;
   testMatch?: FilePattern;
@@ -119,6 +120,23 @@ describe('Playwright E2E lane policy', () => {
   const requiredSpec = 'tests/e2e/checkout-redirect.spec.ts';
   const providerContractSpec = 'tests/e2e/checkout-success-provider.spec.ts';
   const hostedSpec = 'tests/e2e/stripe-hosted-trial-start.spec.ts';
+
+  it('defaults new projects to no retries', () => {
+    expect(playwrightConfig.retries).toBe(0);
+  });
+
+  it.each(['chromium', 'stripe-hosted', 'cleanup'])(
+    'does not retry a failure in the %s project',
+    (name) => {
+      const project = getProject(name);
+
+      expect(project.retries ?? playwrightConfig.retries ?? 0).toBe(0);
+    },
+  );
+
+  it('limits bootstrap retries to the setup project', () => {
+    expect(getProject('setup').retries).toBe(process.env.CI ? 2 : 1);
+  });
 
   it('keeps Stripe-hosted specs out of the required Chromium project', () => {
     const project = getProject('chromium');

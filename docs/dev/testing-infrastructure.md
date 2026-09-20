@@ -2,6 +2,8 @@
 
 **Last Updated:** 2026-08-28
 
+**Retry policy reverified:** 2026-09-20; the remaining sections were not fully re-audited on this date.
+
 This document covers our E2E testing tools: Playwright and Vercel's agent-browser.
 
 ---
@@ -25,11 +27,12 @@ This document covers our E2E testing tools: Playwright and Vercel's agent-browse
 ```ts
 testDir: './tests/e2e',
 fullyParallel: false,
-retries: process.env.CI ? 2 : 1,
+retries: 0,
 workers: 1,
 reporter: [['html', { open: 'never' }], ['list']],
 projects: [
-  { name: 'setup' },
+  { name: 'setup', retries: process.env.CI ? 2 : 1, teardown: 'cleanup' },
+  { name: 'cleanup' },
   {
     name: 'chromium',
     dependencies: ['setup'],
@@ -58,6 +61,34 @@ webServer: {
 - Waits on `/api/health`, not just the root URL, so Playwright startup includes a DB-aware readiness check
 - Runs with **1 worker** because authenticated E2E flows share one Clerk user; mutating specs still reset that user to a deterministic baseline in `beforeEach`
 - Local `pnpm test:e2e` runs through `scripts/run-local-e2e.ts`, which mirrors CI by preparing a local Docker Postgres first and then invoking Playwright with the Docker `DATABASE_URL`
+
+### Playwright Retry Policy
+
+The default is zero retries, including the required `chromium`, observational
+`stripe-hosted`, and `cleanup` projects. A failed product assertion fails that
+run; do not override retries to obtain green evidence. Observational means
+non-blocking for merge, not permission to hide hosted-test failures.
+
+Only `setup` permits bounded bootstrap recovery: two retries in CI, one locally.
+This is an explicit owner-approved exception (2026-09-20), not a provider-outage
+classifier: setup runs credential/schema preflight, subscription seeding, state
+reset, Clerk setup, and authentication. A recovered setup remains visible as
+flaky and must be reported and inspected; a seed/reset/application defect is not
+excused by its project name. Exhausted setup attempts fail the run. No global
+`failOnFlakyTests` is needed because product projects have no configured retries.
+The existing local `on-first-retry` tracing now normally captures setup retries
+only; use explicit local `--trace=on` for first-attempt product diagnostics,
+without publishing auth-bearing traces or changing the retry count.
+
+Motivating receipt: [promotion CI 35505691274](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35505691274)
+reported **43 passed / 1 flaky**: 42 product cases and cleanup passed on their
+first attempts; credential preflight failed in 856 ms and setup recovered in
+5.4 seconds. `CLERK_API_UNAVAILABLE`'s generic fetch-error message does not prove
+HTTP 5xx, a 15-second timeout, or a Clerk-wide outage. The owner accepted this
+specific setup-only recovery after inspection; no rerun was used. DEBT-471's
+hosted-DOM exclusion does not exempt required provider API calls from failure.
+The source PR's separate CI 35504721507 passed all 44 cases without retries.
+`tests/playwright-lane-policy.test.ts` pins the project retry boundary.
 
 ### Playwright Timeout Policy
 

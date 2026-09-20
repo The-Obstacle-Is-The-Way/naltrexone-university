@@ -12,9 +12,8 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  // Local retry is an ergonomics buffer now that reset failures surface causes.
-  // It is not a substitute for diagnosable E2E reset errors.
-  retries: process.env.CI ? 2 : 1,
+  // Product and cleanup failures must fail the run on their first attempt.
+  retries: 0,
   // All authenticated E2E tests share a single test user, so concurrent workers
   // cause session and bookmark state conflicts. Use 1 worker to run sequentially.
   workers: 1,
@@ -26,6 +25,9 @@ export default defineConfig({
   projects: [
     {
       name: 'setup',
+      // Bounded bootstrap recovery only; this retries preflight, seed/reset,
+      // and auth together, not just provider-availability failures.
+      retries: process.env.CI ? 2 : 1,
       teardown: 'cleanup',
       testMatch: /global\.setup\.ts/,
     },
