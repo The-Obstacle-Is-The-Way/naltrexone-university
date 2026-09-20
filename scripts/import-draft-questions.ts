@@ -3,6 +3,7 @@ import path from 'node:path';
 import fg from 'fast-glob';
 import {
   convertDraftQuestionToMdx,
+  draftQuestionOutputPath,
   parseDraftQuestionBlock,
   splitDraftQuestionsFile,
 } from './draft-question-import';
@@ -93,8 +94,13 @@ async function main(): Promise<void> {
         status,
       });
 
-      const outDir = path.join(outRoot, outputGroup, draft.frontmatter.source);
-      const outFile = path.join(outDir, `${draft.frontmatter.qid}.mdx`);
+      const outFile = draftQuestionOutputPath(
+        outRoot,
+        outputGroup,
+        draft.frontmatter.source,
+        draft.frontmatter.qid,
+      );
+      const outDir = path.dirname(outFile);
 
       if (!dryRun) {
         await mkdir(outDir, { recursive: true });
