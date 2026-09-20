@@ -155,4 +155,34 @@ describe('draft import filesystem boundary', () => {
     expect(result.stdout).toContain('questions=1 written=0 (dry-run)');
     expect(existsSync(output)).toBe(false);
   });
+
+  it.each([false, true])(
+    'rejects a discovered empty file before writes (dryRun=%s)',
+    (dryRun) => {
+      const emptyFile = path.join(input, 'group', 'vignettes.md');
+      writeFileSync(emptyFile, '# No questions\n');
+      const result = run(dryRun);
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stderr).toContain(emptyFile);
+      expect(result.stderr).toMatch(/no question blocks/i);
+      expect(existsSync(output)).toBe(false);
+    },
+  );
+
+  it.each([false, true])(
+    'rejects a later reordered block before writes (dryRun=%s)',
+    (dryRun) => {
+      const file = path.join(input, 'group', 'recall.md');
+      const reordered = draft('fixture-002').replace(
+        'qid: "fixture-002"\ntype: "recall"',
+        'type: "recall"\nqid: "fixture-002"',
+      );
+      writeFileSync(file, `${draft('fixture-001')}\n${reordered}`);
+      const result = run(dryRun);
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stderr).toContain(file);
+      expect(result.stderr).toMatch(/line \d+.*qid.*first/i);
+      expect(existsSync(output)).toBe(false);
+    },
+  );
 });

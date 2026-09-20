@@ -202,7 +202,7 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md) | Stale outputs and per-item sync provide no general withdrawal or atomic corpus rollback. | P1 | - |
 | [DEBT-484](./debt-484-question-rewrite-history-identity.md) | In-place prose rewrites can change what historical attempts refer to without answer-key changes. | P1 | - |
 | [DEBT-486](./debt-486-import-seed-validation-disagreement.md) | Import accepts empty stems rejected by seed; required Reference is unenforced by both. | P1 | - |
-| [DEBT-487](./debt-487-draft-splitter-silent-omission.md) | Frontmatter order can silently omit parsed questions from a discovered file. | P1 | - |
+| [DEBT-487](./debt-487-draft-splitter-silent-omission.md) | Complete draft block consumption implemented; 14 red cases, 60 focused green tests, and unchanged parsed content for all 948 local questions. Review and promotion pending. | P1 | - |
 
 **Next Debt ID:** DEBT-488
 
