@@ -163,11 +163,12 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
 }
 ```
 
-**In webhook handlers:**
+**Illustrative webhook handler (production error boundaries live in `app/api/stripe/webhook/handler.ts`):**
 
 ```typescript
 // app/api/stripe/webhook/route.ts
 import { logger } from '@/lib/logger';
+import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 
 export async function POST(req: Request) {
   try {
@@ -179,7 +180,7 @@ export async function POST(req: Request) {
 
     return new Response('OK', { status: 200 });
   } catch (error) {
-    logger.error({}, 'webhook failed'); // Project unknown diagnostics before attaching them.
+    logger.error({ error: projectSafeErrorDiagnostics(error) }, 'webhook failed');
     return new Response('Error', { status: 500 });
   }
 }
