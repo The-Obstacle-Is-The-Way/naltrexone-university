@@ -201,6 +201,7 @@ export async function spawnCommand(
     });
 
     let interrupted: NodeJS.Signals | undefined;
+    let signalFailure: { error: unknown } | undefined;
     let groups: number[] = [];
     let timer: ReturnType<typeof setTimeout> | undefined;
     const cleanup = () => {
@@ -213,6 +214,7 @@ export async function spawnCommand(
         child.kill(signal);
         return;
       }
+      let failure: { error: unknown } | undefined;
       for (const group of groups) {
         try {
           process.kill(-group, signal);
@@ -225,9 +227,10 @@ export async function spawnCommand(
               error.code === 'ESRCH'
             )
           )
-            throw error;
+            failure ??= { error };
         }
       }
+      if (failure) throw failure.error;
     };
     const interrupt = (signal: NodeJS.Signals) => {
       if (interrupted) return;
@@ -254,18 +257,22 @@ export async function spawnCommand(
       timer = setTimeout(() => {
         try {
           killTree('SIGKILL');
-          reject(new Error(`Local E2E interrupted by ${signal}.`));
         } catch (error) {
-          reject(error);
+          signalFailure ??= { error };
         } finally {
           cleanup();
         }
+        reject(
+          signalFailure
+            ? signalFailure.error
+            : new Error(`Local E2E interrupted by ${signal}.`),
+        );
       }, signalGraceMs);
       try {
         killTree(signal);
       } catch (error) {
-        cleanup();
-        reject(error);
+        // A partial failure must not cancel escalation for signalable groups.
+        signalFailure ??= { error };
       }
     };
     const onSigint = () => interrupt('SIGINT');
