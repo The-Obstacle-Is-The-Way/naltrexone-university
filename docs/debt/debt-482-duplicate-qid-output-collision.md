@@ -1,11 +1,16 @@
 # DEBT-482: Duplicate QIDs Collapse to One Output File
 
-**Status:** Open
+**Status:** In Progress — implementation verified locally; review and promotion pending
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED defect; no collision found in the measured local corpus
 
 ## Evidence
+
+The original snapshot below predates #937's preflight-before-write change.
+That change prevented writes on parsing failures, but did not reject duplicate
+identities. The dated implementation receipt below supersedes the duplicate
+behavior after reproducing it on the newer tree.
 
 scripts/import-draft-questions.ts:84-106 converts and writes each block without
 a corpus-wide identity/destination set. At :97 the filename is qid.mdx; :101
@@ -79,14 +84,59 @@ files targeting the same downstream identity.
 
 ## Smallest fix
 
-Preflight global QID uniqueness and resolved output-path uniqueness before
-writing any file. Reject duplicates with both file/block locations. Do not
-silently keep first or last, renumber, or collapse duplicates.
+Preflight global QID uniqueness before writing any file. Reject duplicates with
+both file/block locations. Under the existing writer, this also guarantees
+distinct resolved destinations: conversion validates every QID against the
+lowercase kebab-case slug schema (`lib/content/schemas.ts:72-75`), and the final
+path component is exactly `<qid>.mdx`. Distinct valid QIDs cannot normalize to
+one filename. A second path set would duplicate this protection and has no
+independently reachable collision case under that contract. Revisit this proof
+if output naming or slug validation changes. Do not silently keep first or
+last, renumber, or collapse duplicates.
 
 ## Verification
 
 Same-file, cross-file, cross-source, and cross-family duplicates fail before
 writes. Distinct valid QIDs still import. Report parsed and distinct counts.
+
+## Implementation receipt — 2026-09-20
+
+**CONFIRMED:** a disposable CLI probe at `95c8f93e` reproduced all four cases:
+
+| Input | Exit | CLI count | Actual output files |
+|-------|------|-----------|---------------------|
+| Same-file duplicate | 0 | questions=2 written=2 | 1 |
+| Cross-file duplicate | 0 | questions=2 written=2 | 1 |
+| Cross-source duplicate | 0 | questions=2 written=2 | 2, one shared QID |
+| Cross-family duplicate | 0 | questions=2 written=2 | 2, one shared QID |
+
+Before implementation,
+`pnpm test --run scripts/import-draft-questions.test.ts` produced **10 failed /
+12 passed**. Eight cases exercise all four duplicate arrangements in normal
+and dry-run modes; another verifies an existing output is not overwritten;
+the last requires the distinct count on a valid multi-file import. All use
+synthetic content and real CLI processes in disposable directories.
+
+`scripts/import-draft-questions.ts` now retains the first file/block location
+for every validated QID during the existing all-files preflight. A second
+occurrence rejects the entire import before the write loop, naming both
+locations. The success summary includes parsed (`questions`) and distinct
+(`uniqueQids`) counts. No seed identity, content, floor, CI or retry policy
+changes are included.
+
+`pnpm test --run scripts/draft-question-import.test.ts scripts/draft-question-split.test.ts scripts/import-draft-questions.test.ts`
+passed **70/70**. A read-only CLI run against the current local corpus produced:
+
+```text
+pnpm exec tsx scripts/import-draft-questions.ts --in content/drafts/questions --out /tmp/content-integrity-2026-09-20/482-dry-run-output --dry-run
+Imported draft questions: files=170 questions=948 written=0 (dry-run) uniqueQids=948
+```
+
+No real content or remote database rows were changed. The full local gate
+passed: typecheck, lint, **4,340 unit / 411 browser / 293 integration** tests
+(six existing opt-in skips), production build, and **44 authenticated TEST-mode
+E2E** tests without retries against the clone's isolated Docker database.
+Exact-head review, merge and promotion receipts remain pending.
 
 ## Related
 
