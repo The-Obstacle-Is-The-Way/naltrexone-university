@@ -183,11 +183,9 @@ describe('CI workflow', () => {
   });
 
   it('withholds shared E2E credentials from Dependabot PRs while retaining main-push E2E', () => {
-    const stepBlock = findStepBlock(readCiWorkflow(), 'E2E smoke');
-
-    expect(stepBlock).toContain("github.event_name == 'push'");
-    expect(stepBlock).toContain(HUMAN_SAME_REPO_PR_CONDITION);
-    expect(stepBlock).toContain(DEPENDABOT_ACTOR_GUARD);
+    expect(findParsedStep(CI_WORKFLOW_PATH, 'E2E smoke').if).toBe(
+      `github.event_name == 'push' || (${HUMAN_SAME_REPO_PR_CONDITION} && ${DEPENDABOT_ACTOR_GUARD})`,
+    );
   });
 
   it('reports the decided shared-credential boundary when Dependabot E2E is skipped', () => {
