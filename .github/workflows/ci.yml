@@ -168,7 +168,7 @@ jobs:
           BROWSER_OUTCOME: ${{ steps.browser_tests.outcome }}
           BUILD_OUTCOME: ${{ steps.build.outcome }}
           E2E_OUTCOME: ${{ steps.e2e_smoke.outcome }}
-          E2E_SKIP_REASON: ${{ github.actor == 'dependabot[bot]' && 'pending DEBT-474 credential decision' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'fork pull requests do not receive E2E credentials' || 'an earlier required step did not succeed') }}
+          E2E_SKIP_REASON: ${{ github.actor == 'dependabot[bot]' && 'shared TEST credentials are withheld from Dependabot; main E2E gates production promotion' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'fork pull requests do not receive E2E credentials' || 'an earlier required step did not succeed') }}
         run: |
           set -euo pipefail
 
