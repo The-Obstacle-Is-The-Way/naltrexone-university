@@ -1,5 +1,7 @@
 # Master Spec — Part 3: Content Pipeline, Directory Structure & Vertical Slices
 
+> **Updated: 2026-09-20 — current-contract warning.** The [DEBT-481 audit](../debt/debt-481-master-spec-implementation-drift.md) confirms stale schema, action/limit, content/seed, CI and timing examples across the master/split copies. Do not copy these “exact” blocks as current implementation authority. Follow the linked source/runtime contracts and current SPEC-016/017 while documentation ownership is reconciled; product decisions are not superseded by this warning.
+
 > **This is Part 3 of the master spec, split for readability.**
 > Covers: Content Pipeline (§5), Directory Structure (§6), Vertical Slice Specifications (§7).
 >

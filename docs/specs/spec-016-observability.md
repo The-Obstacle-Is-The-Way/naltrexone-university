@@ -4,16 +4,16 @@
 > **Priority:** P1 (Critical for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
-> **Updated:** 2026-03-15
+> **Updated:** 2026-09-20
 
 ---
 
 ## Current State
 
 ✅ **Implemented:**
-- `lib/logger.ts` — Pino structured JSON logger with redaction (43 files, 100+ call sites)
-- `pino` package installed (v10.3.0)
-- Sentry error tracking (errors only) via `@sentry/nextjs` + Next instrumentation hooks
+- `lib/logger.ts` — Pino structured JSON logger with redaction; raw errors require `projectSafeErrorDiagnostics` before logging
+- `pino` package installed (resolved version: `pnpm-lock.yaml`)
+- Sentry errors on client/server, plus **5% server tracing** when a DSN is configured (`instrumentation.ts:19-23`); browser tracing and both replay rates remain **0** (`sentry.client.config.ts:9-14`)
 - Sentry DSNs configured in Vercel (Production, Preview, Development) and local `.env.local`
 - Server `onRequestError` wired to `Sentry.captureRequestError` for unhandled request errors
 - Sentry environment auto-tagged via `VERCEL_ENV` / `NODE_ENV`
@@ -41,7 +41,7 @@ Production systems need observability to:
 
 1. **Structured logging** for server-side code (searchable, parseable) ✅
 2. **Error tracking** with stack traces and context (client + server) ✅
-3. **Request tracing** to follow requests across async boundaries (future)
+3. **Request correlation and sampled server spans** implemented: `lib/request-context.ts:10-24` creates an explicit request ID and child logger; callers pass the context. This is not automatic async-local propagation. `src/adapters/shared/server-tracing.ts:133` wraps named spans with runtime-filtered attributes (DEBT-462 instrumentation; DEBT-475 typed boundary).
 4. **Business event logging** for audit trails
 5. **Zero logging in domain layer** (preserve purity)
 
@@ -49,7 +49,7 @@ Production systems need observability to:
 
 ## Non-Goals (MVP)
 
-- APM (Application Performance Monitoring) - use Vercel Analytics
+- Browser performance/RUM collection is not enabled; evaluate separately under DEBT-479 step 5. Vercel Web Analytics is traffic analytics, not a prerequisite for server tracing.
 - Custom metrics dashboards - use Vercel's built-in
 - Log aggregation beyond Vercel's log drain
 - Distributed tracing across services (we're monolithic)
@@ -67,7 +67,7 @@ We use [pino](https://github.com/pinojs/pino) - the fastest Node.js logger, opti
 - Supports log levels, child loggers, redaction
 - First-class Vercel/serverless support
 
-### Error Tracking: Sentry ✅ IMPLEMENTED (Errors Only)
+### Error Tracking and Sampled Server Tracing: Sentry ✅ IMPLEMENTED
 
 We use [Sentry](https://sentry.io) for error tracking:
 
@@ -76,7 +76,7 @@ We use [Sentry](https://sentry.io) for error tracking:
 - Groups similar errors, tracks resolution
 - Free tier sufficient for MVP
 
-**Scope:** Errors only — performance tracing, replay, profiling, and source map upload are intentionally omitted for now.
+**Scope:** Client/server error reporting and server performance tracing at `tracesSampleRate: 0.05`. Browser `tracesSampleRate` and both replay sample rates are zero. Profiling and source map upload are not configured. Sampling is not proof of samples for a particular action: the [2026-09-20 production readback](../debt/assets/adversarial-2026-09-20/review.md#server-trigger-adjudication) found production spans, but no matching action/DB spans for DEBT-450 in the queried 30-day window.
 
 ---
 
@@ -126,84 +126,29 @@ We use [Sentry](https://sentry.io) for error tracking:
 
 ### File: `lib/logger.ts` ✅ EXISTS
 
-This is the **actual current implementation**:
+Implementation authority is [lib/logger.ts](../../lib/logger.ts); do not maintain a second purportedly exact copy here. A nonempty trimmed `LOG_LEVEL` overrides the default. Otherwise tests are silent, Vercel/Node production uses `info`, and other environments use `debug` (`lib/logger.ts:4-16`). The logger removes configured secret fields; unknown errors still require the separate safe diagnostic projector.
 
-```typescript
-import 'server-only';
-import pino from 'pino';
+### Request Correlation and Sentry
 
-const level =
-  process.env.LOG_LEVEL ??
-  (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
+- `lib/request-context.ts` creates request IDs and child loggers; `app/api/health/route.ts:12-13` is a consumer. Async-local propagation across every request is not claimed.
+- Browser entry `instrumentation-client.ts` imports `sentry.client.config.ts` (errors only).
+- Server/Edge entry `instrumentation.ts` initializes Sentry at 5% tracing and exposes `onRequestError`.
+- `src/adapters/shared/server-tracing.ts` owns five registered families at six callers: finalize, bookmarks, stats, attempted questions, and Stripe webhook/retrieve. `lib/container/use-cases.ts:174` wraps the finalize transaction. The wrapper projects initial and later attributes; arbitrary PII, SQL and payloads are not permitted.
+- DSNs: `NEXT_PUBLIC_SENTRY_DSN` (browser), `SENTRY_DSN` (server with public-DSN fallback). The 2026-09-20 Vercel key-name readback confirmed both in all three environments without exposing values.
 
-/**
- * Structured JSON logger (Vercel-friendly).
- *
- * Security note: do not log PII (emails) or secrets. Prefer logging internal IDs.
- */
-export const logger = pino({
-  level,
-  redact: {
-    paths: [
-      // Common HTTP secret locations
-      'req.headers.authorization',
-      'req.headers.cookie',
-      'req.headers["stripe-signature"]',
-      'headers.authorization',
-      'headers.cookie',
-      'headers["stripe-signature"]',
-      // Common auth/billing fields
-      'authorization',
-      'cookie',
-      'stripeSignature',
-      // Never log these env vars if accidentally attached
-      'env.CLERK_SECRET_KEY',
-      'env.STRIPE_SECRET_KEY',
-      'env.STRIPE_WEBHOOK_SECRET',
-    ],
-    remove: true,
-  },
-});
-```
-
-### Optional Enhancement: Child Loggers
-
-If more granular logging is needed, add child loggers:
-
-```typescript
-// Add to lib/logger.ts if needed
-export const dbLogger = logger.child({ module: 'database' });
-export const stripeLogger = logger.child({ module: 'stripe' });
-export const webhookLogger = logger.child({ module: 'webhook' });
-```
-
-### Sentry (Error Tracking)
-
-Sentry is installed and configured for **error tracking only** (no performance tracing, replay, or profiling). Initialization is done manually to avoid committing secrets and to keep the setup minimal.
-
-**Implementation:**
-- Browser: `sentry.client.config.ts`
-- Server/Edge: `instrumentation.ts` (`register()` calls `Sentry.init`, and `onRequestError` is wired via `Sentry.captureRequestError`)
-- Client entry: `instrumentation-client.ts` (imports `sentry.client.config.ts`)
-
-**Environment variables (do not commit real DSNs):**
-- `NEXT_PUBLIC_SENTRY_DSN` (client)
-- `SENTRY_DSN` (server; optional if using one DSN everywhere)
-
-**Out of scope (future work):**
-- source map upload (`SENTRY_AUTH_TOKEN` in CI only)
-- performance tracing, replay, profiling
-- attaching user PII (email, request bodies, tokens)
+**Not enabled:** browser performance tracing, replay, profiling, and source map upload. Adding browser sampling requires a separate quota/privacy decision and observed production measurements, not just changing a number. See DEBT-479 step 5. DEBT-450's server measurement work does not depend on that decision.
 
 ### Usage Examples
 
-**In adapters (repositories, gateways):**
+**Illustrative adapters (not a current implementation to copy):**
 
 ```typescript
 // src/adapters/repositories/drizzle-subscription-repository.ts
-import { logger } from '@/lib/logger';
+import type { Logger } from '@/src/application/ports/logger';
 
 export class DrizzleSubscriptionRepository implements SubscriptionRepository {
+  constructor(private readonly db: DrizzleDb, private readonly logger: Logger) {}
+
   async findByUserId(userId: string): Promise<Subscription | null> {
     try {
       const row = await this.db.query.stripeSubscriptions.findFirst({
@@ -211,7 +156,7 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
       });
       return row ? this.toDomain(row) : null;
     } catch (error) {
-      logger.error({ userId, error }, 'findByUserId failed');
+      this.logger.error({ userId }, 'findByUserId failed');
       throw error;
     }
   }
@@ -234,7 +179,7 @@ export async function POST(req: Request) {
 
     return new Response('OK', { status: 200 });
   } catch (error) {
-    logger.error({ error }, 'webhook failed');
+    logger.error({}, 'webhook failed'); // Project unknown diagnostics before attaching them.
     return new Response('Error', { status: 500 });
   }
 }
@@ -247,7 +192,10 @@ export async function POST(req: Request) {
 import type { Logger } from '@/src/application/ports/logger';
 
 export class CheckEntitlementUseCase {
-  constructor(private readonly logger: Logger) {}
+  constructor(
+    private readonly subscriptions: SubscriptionRepository,
+    private readonly logger: Logger,
+  ) {}
 
   async execute(input: { userId: string }): Promise<{ isEntitled: boolean }> {
     const subscription = await this.subscriptions.findByUserId(input.userId);
@@ -288,15 +236,11 @@ export class CheckEntitlementUseCase {
 
 ## Environment Variables
 
-Currently in `.env.example`:
+`.env.example` documents the two Sentry DSNs. `LOG_LEVEL` is supported by `lib/logger.ts:4-16`; **adding it to `.env.example` is declined as an optional documentation expansion in this pass**, not a missing runtime feature. Defaults and override behavior are specified above. `pino-pretty` remains optional and unimplemented.
 
 ```bash
-# LOG_LEVEL is supported but not documented in .env.example yet
-LOG_LEVEL=debug                     # debug | info | warn | error (optional)
-
-# SENTRY (Error Tracking)
-NEXT_PUBLIC_SENTRY_DSN=             # Sentry DSN (from sentry.io)
-SENTRY_DSN=                         # Server DSN (optional)
+NEXT_PUBLIC_SENTRY_DSN=             # Browser DSN
+SENTRY_DSN=                         # Server DSN (public DSN is fallback)
 ```
 
 ---
@@ -319,8 +263,8 @@ SENTRY_DSN=                         # Server DSN (optional)
 
 **Already Installed:**
 ```bash
-pnpm add pino                        # ✅ v10.3.0 installed
-pnpm add @sentry/nextjs              # ✅ Error tracking
+pnpm add pino                        # Installed; version authority is the lockfile
+pnpm add @sentry/nextjs              # Errors and sampled server tracing
 ```
 
 **Optional (add when needed):**
@@ -341,7 +285,7 @@ pnpm add -D pino-pretty              # Pretty logs in dev terminal
 
 **Not Yet Done (Optional):**
 - [ ] Pretty logs in dev (requires `pino-pretty`)
-- [ ] LOG_LEVEL documented in .env.example
+- `LOG_LEVEL` example-file addition: declined optional (2026-09-20); supported behavior documented above.
 
 **Completed (DEBT-286: Client-Side Error Reporting):**
 - [x] `reportClientError()` utility exists in `lib/`
@@ -367,7 +311,7 @@ Logging is infrastructure - test behavior, not log output.
 
 For critical audit logs, you can:
 1. Use a fake logger in tests to verify calls
-2. Or just trust the implementation (logs are observability, not behavior)
+2. Assert redaction/filtering behavior where it is a security boundary; logging is not exempt from regression testing.
 
 ```typescript
 // If you need to verify logging in tests:

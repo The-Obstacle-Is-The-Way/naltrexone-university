@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-29 — normalized mutable practice-session question state into `practice_session_question_states`; `PracticeSessionParams` now carries immutable selection metadata only.
+**Last Updated:** 2026-09-20 — SPEC-016/017 corrected; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
 
 ---
 
@@ -17,8 +17,8 @@ Implementation specifications provide detailed technical guidance for building e
 
 | ID | Title | Status | Layer |
 |----|-------|--------|-------|
-| [Master Spec](./master_spec.md) | Complete Technical Specification (SSOT) | Living | All |
-| [SPEC-016](./spec-016-observability.md) | Observability (Logging, Error Tracking) | Implemented (DEBT-286 resolved) | Infrastructure |
+| [Master Spec](./master_spec.md) | Technical Specification (known implementation drift: DEBT-481) | Reconciliation open | All |
+| [SPEC-016](./spec-016-observability.md) | Observability (Errors, Request Correlation, Sampled Server Tracing) | Implemented; browser performance off | Infrastructure |
 | [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Implemented (MVP complete) | Infrastructure |
 
 **Master Spec split parts (readability):**
