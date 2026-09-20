@@ -47,12 +47,15 @@ describe('playwright config', () => {
     expect(webServer.url).toContain('/api/health');
   });
 
-  it('keeps one local retry as an ergonomics buffer after reset errors are diagnosable', async () => {
+  it('keeps one local bootstrap retry on setup instead of the global default', async () => {
     vi.stubEnv('CI', '');
     vi.resetModules();
 
     const localConfig = (await import('./playwright.config')).default;
 
-    expect(localConfig.retries).toBe(1);
+    const setupProject = localConfig.projects?.find(
+      (project) => project.name === 'setup',
+    );
+    expect(setupProject?.retries).toBe(1);
   });
 });

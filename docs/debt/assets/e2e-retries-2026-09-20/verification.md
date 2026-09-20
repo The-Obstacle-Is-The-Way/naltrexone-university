@@ -41,4 +41,13 @@ implements the policy; no scanner or custom retry framework is introduced.
 
 Local red receipt: `/private/tmp/e2e-retry-policy-red.log`.
 Green receipts: `/private/tmp/codex-e2e-retry-policy.2MTOW4/green-local.log` and
-`green-ci.log`. Full gate and this change's review/promotion are pending.
+`green-ci.log`.
+
+The first full gate stopped in unit tests: the older `playwright.config.test.ts`
+still required a global local retry. E2E did not start and nothing was pushed.
+Its assertion was changed to require the same local allowance on setup only.
+Restoring the old retry configuration made the combined suites fail **6/32**;
+the new configuration passed **32/32 locally and with `CI=1`**. No test was
+deleted. Receipts: `all-policy-red.log`, `all-policy-green.log` in the same
+directory. The complete gate must restart before the first push; final gate,
+review, and promotion receipts belong to the PR's verification record.
