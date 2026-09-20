@@ -160,6 +160,12 @@ function findStepBlock(workflow: string, stepName: string): string {
 }
 
 describe('CI workflow', () => {
+  it('does not report an echo-only production deployment job as deployment evidence', () => {
+    expect(readParsedWorkflow(CI_WORKFLOW_PATH).jobs).not.toHaveProperty(
+      'deploy',
+    );
+  });
+
   it('runs the blocking test-double fidelity command before unit tests', () => {
     const steps = findParsedJob(CI_WORKFLOW_PATH, 'test').steps ?? [];
     const fidelityIndex = steps.findIndex(
@@ -383,7 +389,6 @@ jobs:
         'E2E smoke:STRIPE_SECRET_KEY',
         'E2E smoke:STRIPE_WEBHOOK_SECRET',
         'Upload coverage to Codecov:CODECOV_TOKEN',
-        'Validate header-safe CI secrets:CRON_SECRET',
       ].sort(),
     );
     expect(secretConsumers(STRIPE_HOSTED_WORKFLOW_PATH)).toEqual(

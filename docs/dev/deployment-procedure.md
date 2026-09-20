@@ -1,7 +1,7 @@
 # Deployment Procedure
 
 > **Parent:** [Deployment Environments](./deployment-environments.md)
-> **Last Updated:** 2026-07-21
+> **Last Updated:** 2026-09-19 (production release gate; other procedures retain their existing scope)
 
 ---
 
@@ -57,7 +57,7 @@ JSON. This is a per-change release obligation, not a permanent versioned
 envelope or upcaster framework.
 
 ```text
-1. CI (GitHub Actions)
+1. Promotion PR (dev → main): CI (GitHub Actions)
    └─ pnpm typecheck
    └─ pnpm lint:ci
    └─ pnpm exec tsx scripts/internal/run-managed-db-migrate.ts # CI database only
@@ -66,13 +66,15 @@ envelope or upcaster framework.
    └─ pnpm test:integration:coverage
    └─ pnpm test:browser:coverage # every trigger; no provider secret required
    └─ pnpm build
-   └─ pnpm test:e2e             # pushes + same-repo PRs
+   └─ pnpm test:e2e             # main pushes + non-Dependabot same-repo PRs
    └─ Must pass before merge
 
-2. Vercel (automatic on push/merge)
+2. After merge to main (in parallel)
+   └─ GitHub Actions runs test again on the main merge commit, including E2E
+   └─ Vercel creates a production deployment of that same commit
    └─ buildCommand (vercel.json): pre-check → managed migrate → exact post-check → build
-   └─ Preview: any non-main branch
-   └─ Production: main branch
+   └─ Deployment Check: GitHub test must pass before production domains move
+   └─ Preview builds remain independent; the release check targets production only
 
 3. Operator
    └─ Verify the Vercel build ran the migration before serving; manual migrate only as fallback
@@ -80,6 +82,24 @@ envelope or upcaster framework.
 ```
 
 **Important:** CI never migrates or seeds the actual Preview/Production database used by Vercel. It only validates migrations and seed logic against the CI database. Target-environment schema migration and ledger verification run via the Vercel Build Command; reseeding remains a manual operator step.
+
+### Production Deployment Check
+
+The owner chose Vercel's built-in [GitHub Deployment Checks](https://vercel.com/docs/deployment-checks#github-checks), not a custom deployment runner. The feature is [available to GitHub-connected projects](https://vercel.com/changelog/block-vercel-deployment-promotions-with-github-actions); the 2026-09-19 read-only check confirmed this project's Hobby plan, GitHub link, `main` production branch, and enabled automatic production aliasing. This setting is operator-managed in Vercel, not encoded by `ci.yml`.
+
+Required configuration: project Settings → Deployment Checks → Add Checks → GitHub → **`test`**, targeting **Production** and blocking production-domain assignment. Keep automatic production aliasing enabled. The `test` job is unique across the current three workflows; changing its name or duplicating it requires revisiting this setting. There is no `repository_dispatch` workflow or additional status-reporting action: Vercel consumes the existing push check on the same commit. Preview deployments are not blocked by this production-only check.
+
+**Configuration receipt (2026-09-19 21:28:31Z):** the project's Checks V2 API returned one GitHub-source check named `test`, with `externalCheckName=test`, `targets=[production]`, `requires=build-ready`, `blocks=deployment-alias`, and `timeout=3600`. Automatic production aliasing remained enabled. The first promoted-commit enforcement receipt is still pending; configuration alone is not release evidence.
+
+The deleted `deploy` job only echoed a message. Its success never proved that production waited for CI. Repository tests pin its removal; they do **not** prove the live Vercel setting. Read back the project's checks after configuration changes, and prove the first promoted commit end to end:
+
+1. Record the main merge SHA and that commit's GitHub `test` run ID, conclusion, and completion timestamp.
+2. Record the matching Vercel deployment's commit, build completion, required check outcome, and production-domain assignment timestamp. Observe it withheld from the production domains while `test` is pending; build Ready alone is not release evidence.
+3. Confirm production-domain assignment happened only after `test` succeeded, then check `/` and `/api/health` and compare `origin/dev^{tree}` with `origin/main^{tree}`.
+
+On a failed, cancelled, missing, or timed-out check, keep the previous release serving and investigate. Do not use **Force Promote**. A missing check requires checking the job name and workflow trigger; a failed E2E requires defect investigation, not retry-to-green.
+
+**Database caveat:** the production migration runs during the Vercel build, **before** Deployment Checks permit promotion. The gate does not postpone or roll back that migration. The old application may therefore keep serving against the new schema throughout CI or indefinitely after a failed check. [DEBT-445 Part 3](../_archive/debt/debt-445-migration-deploy-pipeline-guardrails.md) already established the [deployed-code compatibility contract](./migration-authoring.md#deployed-code-compatibility): expand first, deploy compatible readers/writers, contract only after old code no longer needs the old shape. This gate preserves that obligation rather than replacing it.
 
 For a manual Preview or Production reseed, export the verified target, run the
 guard once without an acknowledgement, and confirm it refuses before opening
@@ -175,8 +195,9 @@ Before merging to `main` (production deploy):
 - [ ] `pnpm test:browser` passes
 - [ ] `pnpm test:integration` passes
 - [ ] `pnpm build` passes
-- [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on pushes and same-repo PRs)
-- [ ] CodeRabbit review completed and feedback addressed
+- [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on main pushes and non-Dependabot same-repository PRs)
+- [ ] CodeRabbit APPROVED the exact promotion head, with zero unresolved review threads
+- [ ] Vercel's production Deployment Check requires GitHub `test`; after merging, record main's test result and actual domain-assignment timing separately
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
 - [ ] If schema changed: confirm the Vercel build ran the Build Command migration (`pnpm db:migrate`) before `pnpm build` — the deploy fails closed otherwise, so a READY deployment means the migration applied (see [Known Gotchas](./deployment-environments.md#missing-database-migration-causes-silent-write-failures))
