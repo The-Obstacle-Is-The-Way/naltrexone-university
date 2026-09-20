@@ -14,6 +14,7 @@ import {
   reconcileStripeSubscriptions,
 } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
 import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
+import { validateHeaderSecret } from '@/src/adapters/shared/header-secret';
 import {
   HTTP_INTERNAL_SERVER_ERROR,
   HTTP_OK,
@@ -102,6 +103,14 @@ async function handleCronRequest(
   const cronSecret = container.env.CRON_SECRET ?? null;
   if (!cronSecret) {
     container.logger.error({ route: ROUTE }, 'CRON_SECRET is not configured');
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: HTTP_UNAUTHORIZED },
+    );
+  }
+
+  if (!validateHeaderSecret('CRON_SECRET', cronSecret).ok) {
+    container.logger.error({ route: ROUTE }, 'CRON_SECRET is not header-safe');
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: HTTP_UNAUTHORIZED },

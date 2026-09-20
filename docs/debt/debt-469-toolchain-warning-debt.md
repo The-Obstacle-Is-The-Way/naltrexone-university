@@ -117,6 +117,12 @@ Physical lines are the post-annotation `wc -l` values. The head comment in every
 | 853 | `app/(app)/app/shared/question-feedback-actions.test.ts` |
 | 823 | `tests/e2e/helpers/reset-e2e-user-state.test.ts` |
 
+### Current ledger forward pointer (2026-09-19)
+
+At `dev` `ed07103f`, all 28 suppression paths above still exist and the count is still 28. Three physical lengths changed: `app/pricing/page.test.tsx` is 1,415 (was 1,418), `src/adapters/gateways/stripe-payment-gateway.test.ts` is 1,537 (was 1,531), and `tests/e2e/helpers/reset-e2e-user-state.test.ts` is 837 (was 823). The other 25 lengths match the historical ledger. These current measurements supplement that ledger rather than rewriting its 2026-08-15 receipt. No suppression or threshold is added. Each migration that shrinks a suppressed file also splits it by concern and retires its directive in the same PR. Cron-route splitting waits for PR #919 and updated `dev`.
+
+**Attempt-repository burn-down (2026-09-19):** The first directive retires from `src/adapters/repositories/drizzle-attempt-repository.test.ts`: 28 behavior cases move to named real-Postgres twins, leaving five error-translation cases with typed prepared-query faults. The concern split is adapter errors in the unit file versus persistence/query behavior in integration. The live suppression count is **27**, down from 28; the historical ledger above remains unchanged. See [the per-case deletion map](./debt-472-test-double-fidelity-and-contract-discipline.md#attempt-repository-disposition-2026-09-19).
+
 **Rejected alternatives:**
 
 - **`VITE_CONFIG_NATIVE_IGNORE_WARNING=true`** — mutes the messenger; the CJS/ESM mismatch would resurface as a hard break on Vite's next major.
