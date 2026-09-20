@@ -646,6 +646,12 @@ gh pr view <PR_NUMBER> --comments
 
 ### Production Release Gate
 
+Follow the [CI Secret Standard](docs/dev/deployment-environments.md#ci-secret-standard):
+step-scoped credentials, SHA-pinned actions, no shared credentials for Dependabot,
+and owner-authored PRs when dependency changes require PR-time E2E. The built-in
+GitHub token is distinct from provider credentials. Main's E2E is pre-release
+evidence through the production gate below, not PR-time evidence for bot PRs.
+
 Promotion-PR E2E must pass before merging to `main`. Vercel then builds that
 commit, while main's GitHub Actions `test` job runs independently. Require that
 exact GitHub check through Vercel Deployment Checks for **production**: the build

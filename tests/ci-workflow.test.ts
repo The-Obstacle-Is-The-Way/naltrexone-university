@@ -182,12 +182,20 @@ describe('CI workflow', () => {
     expect(fidelityIndex).toBeLessThan(unitIndex);
   });
 
-  it('keeps the Dependabot E2E omission explicit pending the credential decision', () => {
+  it('withholds shared E2E credentials from Dependabot PRs while retaining main-push E2E', () => {
     const stepBlock = findStepBlock(readCiWorkflow(), 'E2E smoke');
 
     expect(stepBlock).toContain("github.event_name == 'push'");
     expect(stepBlock).toContain(HUMAN_SAME_REPO_PR_CONDITION);
     expect(stepBlock).toContain(DEPENDABOT_ACTOR_GUARD);
+  });
+
+  it('reports the decided shared-credential boundary when Dependabot E2E is skipped', () => {
+    const summary = findParsedStep(CI_WORKFLOW_PATH, 'Evidence summary');
+
+    expect(summary.env?.E2E_SKIP_REASON).toBe(
+      `\${{ github.actor == 'dependabot[bot]' && 'shared TEST credentials are withheld from Dependabot; main E2E gates production promotion' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'fork pull requests do not receive E2E credentials' || 'an earlier required step did not succeed') }}`,
+    );
   });
 
   it('bounds the Chromium-only Playwright browser installation step', () => {
