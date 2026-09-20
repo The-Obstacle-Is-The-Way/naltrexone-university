@@ -24,6 +24,8 @@ Readiness uses Compose `--wait --wait-timeout 60`; local E2E delegates to the sa
 
 On the supported macOS/Linux hosts, the orchestrator forwards `SIGINT`/`SIGTERM` to the active command's process groups, including Playwright's separately detached web server, then kills survivors after a two-second grace period. It snapshots descendant ancestry before signalling so a parent exiting early does not strand a server. An interruption is a failed run, never a successful setup. `reuseExistingServer: false` remains mandatory.
 
+If process discovery itself fails, cleanup can still kill the known root group and reports the error; separately detached descendants cannot be discovered on that path. Use the same cwd-verified orphan check below before restarting.
+
 Before another authenticated E2E run, check for running Playwright/`run-local-e2e` processes in every `naltrexone-university*` clone and wait if one is active (the provider user is shared). For a listener left by an uncatchable interruption such as `SIGKILL`, get this clone's app port from `pnpm exec tsx scripts/resolve-local-test-target.ts json`. Inspect it with `lsof -nP -iTCP:<resolved-app-port> -sTCP:LISTEN`, then check each candidate with `lsof -a -p <pid> -d cwd`. Terminate only a confirmed orphan whose cwd is this clone; never kill another clone's processes or use a blanket port kill.
 
 ### 2. Run Migrations

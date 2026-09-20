@@ -13,13 +13,14 @@ async function withRunningCommand(
   check: (fixture: {
     signals: EventEmitter;
     result: Promise<unknown>;
+    pids: number[];
   }) => Promise<void>,
 ) {
   const originalEnv = snapshotProcessEnv();
   const directory = await mkdtemp(path.join(tmpdir(), 'e2e-runner-failure-'));
   const ready = path.join(directory, 'ready');
   const signals = new EventEmitter();
-  let pid: number | undefined;
+  let pids: number[] = [];
   const result = spawnCommand(
     {
       label: 'failure fixture',
@@ -27,8 +28,10 @@ async function withRunningCommand(
       args: [
         '-e',
         `process.on('SIGTERM', () => {});
-         require('node:fs').writeFileSync(${JSON.stringify(ready)}, String(process.pid));
-         setInterval(() => {}, 1000);`,
+         const child = require('node:child_process').spawn(process.execPath,
+           ['-e', "process.on('SIGTERM', () => {}); process.send('ready'); setInterval(() => {}, 1000);"],
+           { stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
+         child.on('message', () => require('node:fs').writeFileSync(${JSON.stringify(ready)}, JSON.stringify([process.pid, child.pid])));`,
       ],
       env: {},
     },
@@ -37,17 +40,17 @@ async function withRunningCommand(
   ).catch((error: unknown) => error);
   try {
     await vi.waitFor(async () => {
-      pid = Number(await readFile(ready, 'utf8'));
-      expect(pid).toBeGreaterThan(0);
+      pids = JSON.parse(await readFile(ready, 'utf8')) as number[];
+      expect(pids).toHaveLength(2);
     });
-    await check({ signals, result });
+    await check({ signals, result, pids });
     expect(signals.listenerCount('SIGINT')).toBe(0);
     expect(signals.listenerCount('SIGTERM')).toBe(0);
   } finally {
     vi.unstubAllEnvs();
     restoreProcessEnv(originalEnv);
     vi.restoreAllMocks();
-    if (pid !== undefined) {
+    for (const pid of pids) {
       try {
         process.kill(pid, 'SIGKILL');
       } catch {
@@ -98,6 +101,35 @@ describe('local E2E command failures', () => {
       vi.stubEnv('PATH', '/nonexistent/e2e-fixture');
       signals.emit('SIGTERM');
       expect(await result).toMatchObject({ code: 'ENOENT', path: 'ps' });
+    });
+  });
+
+  it('kills the known root group when process discovery fails', async () => {
+    await withRunningCommand(async ({ signals, result, pids }) => {
+      vi.stubEnv('PATH', '/nonexistent/e2e-fixture');
+      signals.emit('SIGTERM');
+      await result;
+      await vi.waitFor(() => {
+        for (const pid of pids) {
+          expect(() => process.kill(pid, 0)).toThrow();
+        }
+      });
+    });
+  });
+
+  it('reports root-group cleanup failure when process discovery also failed', async () => {
+    await withRunningCommand(async ({ signals, result }) => {
+      vi.stubEnv('PATH', '/nonexistent/e2e-fixture');
+      const failure = Object.assign(new Error('group cleanup denied'), {
+        code: 'EPERM',
+      });
+      const kill = process.kill.bind(process);
+      vi.spyOn(process, 'kill').mockImplementation((pid, signal) => {
+        if (pid < 0 && signal === 'SIGKILL') throw failure;
+        return kill(pid, signal);
+      });
+      signals.emit('SIGTERM');
+      expect(await result).toBe(failure);
     });
   });
 

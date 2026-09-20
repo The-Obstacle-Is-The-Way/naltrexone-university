@@ -233,10 +233,17 @@ export async function spawnCommand(
       if (interrupted) return;
       interrupted = signal;
       if (process.platform !== 'win32' && child.pid !== undefined) {
+        groups = [child.pid];
         try {
           groups = ownedProcessGroups(child.pid);
         } catch (error) {
-          child.kill('SIGKILL');
+          try {
+            killTree('SIGKILL');
+          } catch (cleanupError) {
+            cleanup();
+            reject(cleanupError);
+            return;
+          }
           cleanup();
           reject(error);
           return;
