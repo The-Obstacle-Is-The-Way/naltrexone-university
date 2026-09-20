@@ -1,12 +1,11 @@
 'use server';
 
-import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import { BOOKMARK_MUTATION_RATE_LIMIT } from '@/src/adapters/shared/rate-limits';
 import {
-  projectSafeSpanAttributes,
   SERVER_SPAN_FAMILIES,
+  startServerSpan,
 } from '@/src/adapters/shared/server-tracing';
 import { zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
@@ -146,35 +145,22 @@ export const getBookmarks = createAction({
   execute: async (_input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
     const family = SERVER_SPAN_FAMILIES.getBookmarks;
-    return Sentry.startSpan(
-      {
-        name: family.name,
-        op: family.op,
-        attributes: projectSafeSpanAttributes({
-          'app.action': family.action,
-        }),
-      },
-      async (span) => {
-        try {
-          const output = await d.getBookmarksUseCase.execute({ userId });
-          span.setAttributes(
-            projectSafeSpanAttributes({
-              'app.count': output.rows.length,
-            }),
-          );
-          return output;
-        } catch (error) {
-          if (isApplicationError(error)) {
-            span.setAttributes(
-              projectSafeSpanAttributes({
-                'app.error_code': error.code,
-              }),
-            );
-          }
-          throw error;
+    return startServerSpan(family, {}, async (span) => {
+      try {
+        const output = await d.getBookmarksUseCase.execute({ userId });
+        span.setAttributes({
+          'app.count': output.rows.length,
+        });
+        return output;
+      } catch (error) {
+        if (isApplicationError(error)) {
+          span.setAttributes({
+            'app.error_code': error.code,
+          });
         }
-      },
-    );
+        throw error;
+      }
+    });
   },
 });
 

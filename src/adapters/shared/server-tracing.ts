@@ -1,4 +1,8 @@
-import { ApplicationErrorCodes } from '@/src/application/errors';
+import * as Sentry from '@sentry/nextjs';
+import {
+  type ApplicationErrorCode,
+  ApplicationErrorCodes,
+} from '@/src/application/errors';
 
 export const SERVER_SPAN_FAMILIES = {
   finalizeExamAnswers: {
@@ -99,4 +103,46 @@ export function projectSafeSpanAttributes(input: unknown): SafeSpanAttributes {
   }
 
   return attributes;
+}
+
+type ServerSpanFamily =
+  | (typeof SERVER_SPAN_FAMILIES)[Exclude<
+      keyof typeof SERVER_SPAN_FAMILIES,
+      'stripe'
+    >]
+  | (typeof SERVER_SPAN_FAMILIES.stripe)[keyof typeof SERVER_SPAN_FAMILIES.stripe];
+
+type ServerSpanFields = {
+  'app.count'?: number;
+  'app.duration_ms'?: number;
+  'app.error_code'?: ApplicationErrorCode;
+};
+
+export function startServerSpan<T>(
+  family: ServerSpanFamily,
+  fields: ServerSpanFields,
+  callback: (span: { setAttributes: (fields: ServerSpanFields) => void }) => T,
+): T {
+  const identity =
+    'action' in family
+      ? { 'app.action': family.action }
+      : 'route' in family
+        ? { 'app.route': family.route }
+        : { 'app.operation': family.operation };
+
+  return Sentry.startSpan(
+    {
+      name: family.name,
+      op: family.op,
+      attributes: {
+        ...projectSafeSpanAttributes(fields),
+        ...projectSafeSpanAttributes(identity),
+      },
+    },
+    (span) =>
+      callback({
+        setAttributes: (updates) =>
+          span.setAttributes(projectSafeSpanAttributes(updates)),
+      }),
+  );
 }
