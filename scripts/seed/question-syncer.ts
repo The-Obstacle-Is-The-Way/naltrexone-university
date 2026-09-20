@@ -147,7 +147,7 @@ export async function syncQuestionsFromFiles(
     let seedSlug = extractSeedSlugForError(file.raw);
 
     try {
-      const seedFromFile = parseSeedQuestionFile(file.raw);
+      const seedFromFile = parseSeedQuestionFile(file.raw, file.absolutePath);
       seedSlug = seedFromFile.slug;
       validateSeedQuestionTags({
         slug: seedFromFile.slug,
