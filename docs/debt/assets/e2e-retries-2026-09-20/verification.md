@@ -35,8 +35,11 @@ The bounded exception retries the entire bootstrap (preflight, subscription
 seed, database reset, Clerk setup, authentication). It does not classify causes.
 Recovered setup failures remain visible and require inspection; deterministic
 seed/reset/application defects are not automatically excused. Exhausting setup
-attempts still fails. A product first-attempt failure now fails its run, so no
-global `failOnFlakyTests` setting is added. Native Playwright project inheritance
+attempts still fails. A failed product Playwright attempt now fails its run, so no
+global `failOnFlakyTests` setting is added. **2026-09-20 qualification:** session
+and bookmark helpers can still recover visible product errors within that one
+attempt; [the independent review](../adversarial-2026-09-20/review.md#pr-932) records
+this existing DEBT-475 follow-through. Native Playwright project inheritance
 implements the policy; no scanner or custom retry framework is introduced.
 
 Local red receipt: `/private/tmp/e2e-retry-policy-red.log`.
@@ -51,3 +54,13 @@ the new configuration passed **32/32 locally and with `CI=1`**. No test was
 deleted. Receipts: `all-policy-red.log`, `all-policy-green.log` in the same
 directory. The complete gate must restart before the first push; final gate,
 review, and promotion receipts belong to the PR's verification record.
+
+## Independent closeout readback — 2026-09-20
+
+The [adversarial review](../adversarial-2026-09-20/review.md#promotion-evidence) read the actual final local gate and hosted CI logs, then observed exact-head approval and merge of #932 as `b58949e8`. Main CI/production alias verification was still pending at that readback. The earlier “gate must restart” instruction above is historical and was satisfied by the inspected source-change gate; it is not a claim that this docs-only review ran the full gate. The same review narrows the first-attempt guarantee because helpers can recover product errors inside one attempt.
+
+## Production closeout — 2026-09-20 14:53Z
+
+**CONFIRMED:** the earlier pending-production observation is now closed. `gh run view 35515003421 --json status,conclusion,headSha` returned `completed`, `success`, and `b58949e8870415d95a8c17df65cf569902a9e345`. Authenticated Vercel `GET /v4/aliases/addictionboards.com` named `dpl_Fg7R2mumKfTQsghmfEy5TgNSQVfZ`; `GET /v13/deployments/dpl_Fg7R2mumKfTQsghmfEy5TgNSQVfZ` returned `readyState: READY`, `target: production`, and that same Git SHA. GET probes to `/` and `/api/health` both returned 200. This checks the actual public alias, not only the incoming production target.
+
+**CONFIRMED:** #934 subsequently landed on dev as `76c930b4` with local `retain-on-failure` tracing, CI tracing disabled, and product retries still zero. `playwright.config.ts:23` and `tests/playwright-lane-policy.test.ts` own that trace policy. It preserves diagnostics when an attempt fails; it does not expose a product error that a helper recovered inside a successful attempt. At `fc0049f7`, the session/bookmark loops and the error-then-success bookmark unit witness remain unchanged. This is a dev-source receipt for #934, not a claim that #934 was included in the earlier #932 production deployment.
