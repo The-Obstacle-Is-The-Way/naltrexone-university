@@ -46,7 +46,7 @@ function buildDraftBlock(input: {
     stem = 'Question?',
     explanation = 'Because.',
     extraFrontmatterLines = [],
-    extraBodyLines = [],
+    extraBodyLines = ['### Reference', '', 'Synthetic test citation.'],
   } = input;
 
   const lines = [

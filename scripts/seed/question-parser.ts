@@ -1,3 +1,4 @@
+import path from 'node:path';
 import matter from 'gray-matter';
 import type {
   Choice,
@@ -88,16 +89,48 @@ function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
   };
 }
 
-export function parseSeedQuestionFile(raw: string): SeedQuestionRep {
+export function isSyntheticPlaceholderSource(
+  slug: string,
+  sourcePath?: string,
+): boolean {
+  return (
+    sourcePath !== undefined &&
+    path.dirname(path.resolve(sourcePath)) ===
+      path.resolve('content/questions/placeholder') &&
+    slug.startsWith('placeholder-')
+  );
+}
+
+export function parseSeedQuestionFile(
+  raw: string,
+  sourcePath?: string,
+): SeedQuestionRep {
   const { data, content } = matter(raw);
   const frontmatter = QuestionFrontmatterSchema.parse(data);
   const { stemMd, explanationMd } = parseMdxQuestionBody(content);
 
-  return buildSeedRepFromParsed({
+  const question = buildSeedRepFromParsed({
     frontmatter,
     stemMd,
     explanationMd,
   });
+
+  if (!question.explanation_md) {
+    throw new Error('General explanation markdown is empty after parsing');
+  }
+
+  // Only the dedicated synthetic seed fixtures may omit a citation. Import
+  // conversion supplies no source path and therefore always requires one.
+  if (
+    !question.reference_md &&
+    !isSyntheticPlaceholderSource(question.slug, sourcePath)
+  ) {
+    throw new Error(
+      `${question.slug}: a nonempty terminal Reference is required`,
+    );
+  }
+
+  return question;
 }
 
 export function buildSeedRepFromDb(
