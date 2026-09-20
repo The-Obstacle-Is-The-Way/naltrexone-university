@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/nextjs';
 import {
   createCheckoutRenewalTerms,
   createTrialPaymentRenewalTerms,
@@ -9,8 +8,8 @@ import {
 } from '@/src/adapters/repositories/postgres-errors';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import {
-  projectSafeSpanAttributes,
   SERVER_SPAN_FAMILIES,
+  startServerSpan,
 } from '@/src/adapters/shared/server-tracing';
 import {
   ApplicationError,
@@ -172,37 +171,26 @@ export function createUseCaseFactories(input: {
       repositories.createPracticeSessionRepository(),
       async (fn) => {
         const family = SERVER_SPAN_FAMILIES.finalizeExamAnswers;
-        return Sentry.startSpan(
-          {
-            name: family.name,
-            op: family.op,
-            attributes: projectSafeSpanAttributes({
-              'app.action': family.action,
-            }),
-          },
-          async (span) => {
-            try {
-              return await runPracticeSessionStateWriteTransaction(
-                primitives,
-                async (tx) =>
-                  fn({
-                    questions: repositories.createQuestionRepository(tx),
-                    attempts: repositories.createAttemptRepository(tx),
-                    sessions: repositories.createPracticeSessionRepository(tx),
-                  }),
-              );
-            } catch (error) {
-              if (isApplicationError(error)) {
-                span.setAttributes(
-                  projectSafeSpanAttributes({
-                    'app.error_code': error.code,
-                  }),
-                );
-              }
-              throw error;
+        return startServerSpan(family, {}, async (span) => {
+          try {
+            return await runPracticeSessionStateWriteTransaction(
+              primitives,
+              async (tx) =>
+                fn({
+                  questions: repositories.createQuestionRepository(tx),
+                  attempts: repositories.createAttemptRepository(tx),
+                  sessions: repositories.createPracticeSessionRepository(tx),
+                }),
+            );
+          } catch (error) {
+            if (isApplicationError(error)) {
+              span.setAttributes({
+                'app.error_code': error.code,
+              });
             }
-          },
-        );
+            throw error;
+          }
+        });
       },
       primitives.now,
       primitives.logger,

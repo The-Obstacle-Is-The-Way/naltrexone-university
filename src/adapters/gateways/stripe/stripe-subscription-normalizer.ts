@@ -1,10 +1,9 @@
-import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
 import {
-  projectSafeSpanAttributes,
   SERVER_SPAN_FAMILIES,
+  startServerSpan,
 } from '@/src/adapters/shared/server-tracing';
 import {
   STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD,
@@ -133,33 +132,22 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
   }
 
   const family = SERVER_SPAN_FAMILIES.stripe.subscriptionRetrieve;
-  const subscription = await Sentry.startSpan(
-    {
-      name: family.name,
-      op: family.op,
-      attributes: projectSafeSpanAttributes({
-        'app.operation': family.operation,
-      }),
-    },
-    async (span) => {
-      try {
-        return await callStripeWithRetry({
-          operation: 'subscriptions.retrieve',
-          fn: () => stripeSubscriptions.retrieve(stripeSubscriptionId),
-          logger: input.logger,
+  const subscription = await startServerSpan(family, {}, async (span) => {
+    try {
+      return await callStripeWithRetry({
+        operation: 'subscriptions.retrieve',
+        fn: () => stripeSubscriptions.retrieve(stripeSubscriptionId),
+        logger: input.logger,
+      });
+    } catch (error) {
+      if (isApplicationError(error)) {
+        span.setAttributes({
+          'app.error_code': error.code,
         });
-      } catch (error) {
-        if (isApplicationError(error)) {
-          span.setAttributes(
-            projectSafeSpanAttributes({
-              'app.error_code': error.code,
-            }),
-          );
-        }
-        throw error;
       }
-    },
-  );
+      throw error;
+    }
+  });
 
   const parsedSubscription = stripeSubscriptionSchema.safeParse(subscription);
   if (!parsedSubscription.success) {

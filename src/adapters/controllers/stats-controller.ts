@@ -1,13 +1,12 @@
 'use server';
 
-import * as Sentry from '@sentry/nextjs';
 import { z } from 'zod';
 import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
 import type { CheckEntitlementUseCase } from '@/src/adapters/controllers/require-entitled-user-id';
 import { requireEntitledUserId } from '@/src/adapters/controllers/require-entitled-user-id';
 import {
-  projectSafeSpanAttributes,
   SERVER_SPAN_FAMILIES,
+  startServerSpan,
 } from '@/src/adapters/shared/server-tracing';
 import { isApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -44,34 +43,21 @@ export const getUserStats = createAction({
   execute: async (_input, d, meta) => {
     const userId = await requireEntitledUserId(d, meta);
     const family = SERVER_SPAN_FAMILIES.getUserStats;
-    return Sentry.startSpan(
-      {
-        name: family.name,
-        op: family.op,
-        attributes: projectSafeSpanAttributes({
-          'app.action': family.action,
-        }),
-      },
-      async (span) => {
-        try {
-          const output = await d.getUserStatsUseCase.execute({ userId });
-          span.setAttributes(
-            projectSafeSpanAttributes({
-              'app.count': output.totalAnswered,
-            }),
-          );
-          return output;
-        } catch (error) {
-          if (isApplicationError(error)) {
-            span.setAttributes(
-              projectSafeSpanAttributes({
-                'app.error_code': error.code,
-              }),
-            );
-          }
-          throw error;
+    return startServerSpan(family, {}, async (span) => {
+      try {
+        const output = await d.getUserStatsUseCase.execute({ userId });
+        span.setAttributes({
+          'app.count': output.totalAnswered,
+        });
+        return output;
+      } catch (error) {
+        if (isApplicationError(error)) {
+          span.setAttributes({
+            'app.error_code': error.code,
+          });
         }
-      },
-    );
+        throw error;
+      }
+    });
   },
 });
