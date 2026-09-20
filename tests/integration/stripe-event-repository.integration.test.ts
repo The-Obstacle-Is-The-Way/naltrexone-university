@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { stripeEvents } from '@/db/schema';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
@@ -103,6 +103,55 @@ describe('Stripe event reads and writes against real Postgres', () => {
       await sql`reset lock_timeout`;
     }
   });
+
+  it.each([
+    { name: 'pending', state: { processedAt: null, error: null } },
+    { name: 'failed', state: { processedAt: null, error: 'delivery failed' } },
+  ])(
+    'holds the $name event lock until its transaction ends',
+    async ({ state }) => {
+      const id = await seedEvent(state);
+      const [holder] = await sql<
+        { pid: number }[]
+      >`select pg_backend_pid() as pid`;
+      const [waiter] = await lockHolder.sql<
+        { pid: number }[]
+      >`select pg_backend_pid() as pid`;
+      if (!holder || !waiter) throw new Error('Missing event lock backend pid');
+      await lockHolder.sql`set lock_timeout = '3s'`;
+
+      try {
+        const { competingLock } = await db.transaction(async (tx) => {
+          const repo = new DrizzleStripeEventRepository(tx);
+          await expect(repo.lock(id)).resolves.toEqual(state);
+          const competingLock = lockHolder.db
+            .transaction((waitingTx) =>
+              new DrizzleStripeEventRepository(waitingTx).lock(id),
+            )
+            .then(
+              (lockedState) => ({ state: lockedState }),
+              (error: unknown) => ({ error }),
+            );
+          await expect
+            .poll(
+              async () => {
+                const [row] = await tx.execute<{ waiting: boolean }>(
+                  drizzleSql`select ${holder.pid} = any(pg_blocking_pids(${waiter.pid})) as waiting`,
+                );
+                return row?.waiting;
+              },
+              { timeout: 2_000 },
+            )
+            .toBe(true);
+          return { competingLock };
+        });
+
+        await expect(competingLock).resolves.toEqual({ state });
+      } finally {
+        await lockHolder.sql`reset lock_timeout`;
+      }
+    },
+  );
 
   it.each(['lock', 'markProcessed', 'markFailed'] as const)(
     'rejects a missing event in %s with NOT_FOUND',
