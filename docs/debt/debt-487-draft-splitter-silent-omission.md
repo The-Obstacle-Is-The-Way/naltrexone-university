@@ -19,7 +19,7 @@ violation should be rejected, not treated as absent input.
 
 ## Reproduction
 
-Run [DEBT-485's synthetic fixture](debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
+Run [DEBT-485's synthetic fixture](../_archive/debt/debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
 with PROBE=reordered. It places type before qid.
 
 Observed: blocks=0, outputs=[], uniqueOutputs=0, seed=[]; no exception.

@@ -22,7 +22,7 @@ accepts them too.
 
 ## Reproduction
 
-Run [DEBT-485's read-only synthetic fixture](debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
+Run [DEBT-485's read-only synthetic fixture](../_archive/debt/debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
 twice, setting PROBE=empty and PROBE=no_reference.
 
 Observed:
@@ -57,5 +57,5 @@ Verify actual parseSeedQuestionFile parity without database access.
 
 ## Related
 
-- [DEBT-485](debt-485-import-output-path-traversal.md)
+- [DEBT-485](../_archive/debt/debt-485-import-output-path-traversal.md)
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
