@@ -166,9 +166,9 @@ These remain conditional enhancements. A live domain does not establish paying-u
 
 **Why this still disqualifies a guessed threshold — the hazard is conditional and inverts on success:**
 
-- **Today the NAT exposure is low.** The dominant path is residential addresses at roughly one user per address, where IP-keyed and user-keyed limiting behave nearly identically. The user population is small and nationally dispersed across many fellowship programs, so concurrent users behind one institutional address are unlikely.
-- **Program-level adoption concentrates users behind one address.** This project's documented growth path targets program directors and coordinators. That path produces cohorts of roughly 6–10 fellows at a single institution, on one egress address, studying in overlapping windows.
-- **Therefore a threshold tuned against today's dispersed residential traffic becomes wrong exactly when the growth plan works.** It would block an entire program's cohort simultaneously — the highest-value segment, in the failure mode most damaging to renewal, and the hardest to attribute because the blocked users share one address and would report it as "the site is down."
+- **Current exposure, inferred from that account:** predominantly residential use suggests less shared-egress concentration today. This is not a measured concurrency distribution, and a residential IP is not an identity guarantee.
+- **Program-level adoption can concentrate users behind one address.** The owner-described growth plan targets program directors and coordinators. A cohort of roughly 6–10 fellows sharing institutional egress and overlapping study windows is the planning scenario, not an observed traffic distribution.
+- **A threshold tuned against dispersed residential traffic can become inappropriate as that growth plan succeeds.** One shared bucket could block a legitimate program cohort together. The owner declines that avoidable failure mode; no false-positive rate, renewal impact or incident attribution difficulty is claimed as measured.
 
 **Consequence for the trigger.** Institutional growth makes an IP-keyed blocking rule *more* hazardous, not less. Rising traffic therefore never authorizes one on volume grounds alone: a reopened E1 must first establish whether the increase is dispersed or concentrated, because the two imply opposite responses. The structural boundary protections above remain in force at any volume.
 
