@@ -14,7 +14,7 @@ not distinct emitted questions. Snapshot: 6199084a1a4407d4d9d800bd798b37c422662b
 
 ## Reproduction
 
-Run [DEBT-479's synthetic fixture](debt-479-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
+Run [DEBT-485's synthetic fixture](../_archive/debt/debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
 with PROBE=duplicate.
 
 Observed: blocks=2, uniqueOutputs=1, two identical destination paths, no error.

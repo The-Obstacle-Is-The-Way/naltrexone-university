@@ -1,8 +1,9 @@
-# DEBT-481: Frontmatter Order Can Silently Omit Questions
+# DEBT-487: Frontmatter Order Can Silently Omit Questions
 
 **Status:** Open
 **Priority:** P1
 **Date:** 2026-09-20
+**ID reconciliation:** Renumbered from DEBT-481 after PR #937 collided with the owner's reserved public-surface IDs; original evidence and status are preserved.
 **Confidence:** CONFIRMED
 
 ## Evidence
@@ -18,7 +19,7 @@ violation should be rejected, not treated as absent input.
 
 ## Reproduction
 
-Run [DEBT-479's synthetic fixture](debt-479-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
+Run [DEBT-485's synthetic fixture](../_archive/debt/debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
 with PROBE=reordered. It places type before qid.
 
 Observed: blocks=0, outputs=[], uniqueOutputs=0, seed=[]; no exception.

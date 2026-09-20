@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { runCommandPlan } from './e2e-local-orchestrator';
 import {
   createLocalTestDbCommandPlan,
   runLocalTestDbCommand,
@@ -24,6 +25,8 @@ describe('createLocalTestDbCommandPlan', () => {
           'up',
           '-d',
           '--wait',
+          '--wait-timeout',
+          '60',
           'db',
         ],
         env: {
@@ -55,12 +58,44 @@ describe('createLocalTestDbCommandPlan', () => {
       }).map((step) => step.args),
     ).toEqual([
       ['compose', '-p', 'naltrexone-test-dbcli', 'down', '-v'],
-      ['compose', '-p', 'naltrexone-test-dbcli', 'up', '-d', '--wait', 'db'],
+      [
+        'compose',
+        '-p',
+        'naltrexone-test-dbcli',
+        'up',
+        '-d',
+        '--wait',
+        '--wait-timeout',
+        '60',
+        'db',
+      ],
     ]);
   });
 });
 
 describe('runLocalTestDbCommand', () => {
+  it('propagates a failed readiness command without including environment values', async () => {
+    const result = runLocalTestDbCommand({
+      argv: ['node', 'scripts/run-local-test-db.ts', 'up'],
+      env: {
+        LOCAL_TEST_INSTANCE: 'readiness',
+        PRIVATE_VALUE: 'must-not-appear',
+      },
+      cwd: '/repo/a',
+      runPlan: async (plan, options) =>
+        runCommandPlan(
+          plan.map((step) => ({
+            ...step,
+            command: process.execPath,
+            args: ['-e', 'process.exit(1)'],
+          })),
+          options,
+        ),
+    });
+    await expect(result).rejects.toThrow('exit code 1');
+    await expect(result).rejects.not.toThrow('must-not-appear');
+  });
+
   it('runs the requested isolated DB command plan', async () => {
     const runPlan = vi.fn(async () => {});
 

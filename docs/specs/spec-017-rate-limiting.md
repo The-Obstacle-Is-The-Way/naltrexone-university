@@ -4,7 +4,7 @@
 > **Priority:** P2 (Important for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
-> **Updated:** 2026-03-15
+> **Updated:** 2026-09-20
 
 ---
 
@@ -18,19 +18,28 @@
 - `db/schema.ts` — `rateLimits` table with composite PK `(key, window_start)` + migration `0002`
 - `lib/container/gateways.ts` — `DrizzleRateLimiter` wired via constructor injection
 - `src/application/test-helpers/fakes/fake-gateways.ts` — `FakeRateLimiter` for unit tests
-- Rate limiting applied to **all 9 endpoints**:
+- **14 policy constants, 13 limiter invocation sites in 10 production files, covering 18 named operations.** Recounted 2026-09-20 from `src/adapters/shared/rate-limits.ts:12-80` and the callers below. `ONE_MINUTE_MS` is a duration constant, not a fifteenth policy. All windows are 60 seconds.
 
-| Endpoint | Controller / Handler | Rate Limit Key | Limit |
-|----------|---------------------|----------------|-------|
-| Checkout session creation | `billing-controller.ts` | `billing:createCheckoutSession:{userId}` | 10/min |
-| Portal session creation | `billing-controller.ts` | `billing:createPortalSession:{userId}` | 20/min |
-| Practice session start | `practice-controller.ts` | `practice:startPracticeSession:{userId}` | 20/min |
-| Answer submission | `question-controller.ts` | `question:submitAnswer:{userId}` | 120/min |
-| Bookmark toggle | `bookmark-controller.ts` | `bookmark:toggleBookmark:{userId}` | 60/min |
-| Stripe webhook | `stripe/webhook/handler.ts` | `webhook:stripe:{ip}` | 1000/min |
-| Clerk webhook | `webhooks/clerk/handler.ts` | `webhook:clerk:{ip}` | 100/min |
-| Health check | `health/handler.ts` | `health:{ip}` | 600/min |
-| Cron reconcile | `cron/reconcile-stripe-subscriptions/route.ts` | `cron:reconcile-stripe-subscriptions` | 5/min |
+| Policy (`_RATE_LIMIT` suffix) | Operation(s) and key | Limit/min | Invocation receipt |
+| --- | --- | ---: | --- |
+| `CHECKOUT_SESSION` | Checkout `billing:createCheckoutSession:{userId}`; trial setup `billing:createTrialPaymentMethodSetupSession:{userId}` (separate buckets) | 10 | `src/adapters/controllers/billing-controller.ts:166,220` |
+| `PORTAL_SESSION` | `billing:createPortalSession:{userId}` | 20 | `billing-controller.ts:268` |
+| `START_PRACTICE_SESSION` | `practice:startPracticeSession:{userId}` | 20 | `practice-controller.ts:190,239` |
+| `PRACTICE_SESSION_MUTATION` | `practice:endPracticeSession:{userId}`, `practice:discardPracticeSession:{userId}`, `practice:finalizeExamAnswers:{userId}`, `practice:setPracticeSessionQuestionMark:{userId}` (four separate buckets) | 60 | `practice-controller.ts:190,202,313,342,381,477` |
+| `EXAM_DRAFT_SAVE` | `practice:saveExamDraftAnswer:{userId}` | 120 | `practice-controller.ts:190,413` |
+| `SUBMIT_ANSWER` | `question:submitAnswer:{userId}` | 120 | `question-controller.ts:253` |
+| `BOOKMARK_MUTATION` | `bookmark:setBookmark:{userId}` (not the old toggle key) | 60 | `bookmark-controller.ts:117` |
+| `QUESTION_RATING` | `question-feedback:rateQuestion:{userId}` | 60 | `question-feedback-controller.ts:152` |
+| `QUESTION_REPORT` | `question-feedback:submitQuestionReport:{userId}` | 10 | `question-feedback-controller.ts:211` |
+| `STRIPE_WEBHOOK` | `webhook:stripe:{ip}` | 1000 | `app/api/stripe/webhook/handler.ts:50` |
+| `CLERK_WEBHOOK` | `webhook:clerk:{ip}` | 100 | `app/api/webhooks/clerk/handler.ts:59` |
+| `HEALTH_CHECK` | `health:{ip}` | 600 | `app/api/health/handler.ts:26` |
+| `CRON_RECONCILE_STRIPE_SUBSCRIPTIONS` | `cron:reconcile-stripe-subscriptions` | 5 | `app/api/cron/reconcile-stripe-subscriptions/route.ts:135` |
+| `CRON_SEND_RENEWAL_NOTICES` | `cron:send-renewal-notices` | 5 | `app/api/cron/send-renewal-notices/route-handler.ts:104` |
+
+Controller paths without a directory above are relative to `src/adapters/controllers/`. The practice controller's six operations share **one** `enforceRateLimit()` invocation site, with four using `mutationBeforeExecute()`. Count `RateLimiter.limit` calls, not SQL query-builder `.limit()` calls. Shared key literals are in `src/adapters/controllers/shared/idempotency-error-policy.ts:9-19`. Idempotent actions apply these policies through `beforeExecute`; successful cached replays do not consume a fresh execution's limit. Limits do not replace auth, entitlement, schema validation, or webhook verification.
+
+This is an audited table, not an automatically enforced Markdown contract. A test proving every constant has a caller cannot detect an incorrect value/key in this table; no such self-maintenance claim is made.
 
 **Response headers on route-handler 429s:** `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`
 
@@ -56,20 +65,20 @@ This aligns with [OWASP API4:2023 "Unrestricted Resource Consumption"](https://o
 
 | Layer | Protection | Notes |
 |-------|------------|-------|
-| **Vercel WAF** | Infrastructure-level IP rate limiting | GA on Hobby (free): 1 rule, 1M requests/month. See [Enhancement E1](#e1-vercel-waf-rate-limiting) |
+| **Vercel WAF** | Optional custom edge rate limiting | Available on Hobby; no saved custom configuration at the 2026-09-20 readback. See [E1](#e1-vercel-waf-rate-limiting). |
 | **Vercel Edge** | DDoS protection | Automatic, no config needed |
 | **Application** | Per-user, per-action fixed-window counters | Our `DrizzleRateLimiter` — the core of this spec |
-| **Clerk** | Auth endpoint rate limiting | Built into Clerk SDK |
-| **Stripe** | API rate limits | Stripe enforces 100 req/sec |
-| **Neon** | Connection pooling limits | Serverless driver has built-in limits |
+| **Clerk** | Provider auth endpoint controls | Provider controls do not replace application limits. |
+| **Stripe** | Provider API limits | Account/mode/endpoint limits are provider-owned; avoid a single universal threshold. |
+| **Neon/Postgres** | Database capacity and connection limits | Capacity limits are not per-user abuse protection. |
 
 ### Why Postgres-Backed Fixed-Window Is Correct for Now
 
-Community consensus (as of March 2026) confirms this approach:
-- **Postgres fixed-window** is universally considered sufficient for zero-to-low traffic apps. `node-rate-limiter-flexible` benchmarks Postgres at ~995 req/s with 7.48ms average latency.
-- **Known trade-off:** burst at window boundaries allows up to 2× the configured limit. Acceptable at low scale; sliding window is an optimization for later.
-- **Neon cold-start latency** (500ms–3s after inactivity) is irrelevant here because rate-limit checks fire on already-active connections (the user request already warmed the compute).
-- **Controller-level placement** is the correct location for business-logic-aware limits (per-user, per-action). Middleware-level is better for blanket IP-based throttling — that role is served by Vercel WAF.
+The current atomic fixed-window implementation is retained until attributable production evidence justifies replacement. This is a project tradeoff, not a universal throughput guarantee.
+
+- Window boundaries can admit approximately twice the configured limit across adjacent windows.
+- Do not assume the database is warm: `app/api/health/handler.ts:26` invokes the limiter before its health query, and authenticated cron requests can encounter a cold database too. Measure cold-start and limiter statement time separately.
+- Controllers hold user/action-aware limits; routes hold IP/job limits. The optional custom WAF rule is absent, although baseline edge DDoS mitigation is active.
 
 ### IP Spoofing Mitigation
 
@@ -79,23 +88,23 @@ Community consensus (as of March 2026) confirms this approach:
 
 Our HTTP route handlers return `Retry-After`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining` on 429 responses. This matches the de facto standard used by GitHub, Stripe, and most major APIs.
 
-The IETF is drafting standardized headers (`RateLimit-Policy`, `RateLimit`) via [draft-ietf-httpapi-ratelimit-headers](https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/) (draft-10, not yet an RFC as of March 2026). No action needed until ratified; when it becomes an RFC, consider dual-emitting both `X-RateLimit-*` and the standard headers during a transition period.
+The IETF is drafting standardized headers (`RateLimit-Policy`, `RateLimit`) via [draft-ietf-httpapi-ratelimit-headers](https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/) (draft-11, still an active Internet-Draft at the 2026-09-20 readback). No action needed until ratified; when it becomes an RFC, consider dual-emitting both `X-RateLimit-*` and the standard headers during a transition period.
 
 ---
 
 ## Test Coverage
 
-| Test Suite | File | Cases |
-|------------|------|-------|
-| Drizzle rate limiter unit | `src/adapters/gateways/drizzle-rate-limiter.test.ts` | 12 (pruning, invalid input, overflow, INTERNAL_ERROR paths) |
-| Fake rate limiter unit | `src/application/test-helpers/fakes/fake-rate-limiter.test.ts` | 5 (scripted results, errors) |
-| Integration (real Postgres) | `tests/integration/rate-limiter.integration.test.ts` | Counter increments + rejection |
-| Billing controller | `billing-controller.test.ts` | RATE_LIMITED path for checkout + portal |
-| Question controller | `question-controller.test.ts` | RATE_LIMITED path for answer submission |
-| Health route | `health/route.test.ts` | 8 (GET + POST success, DB failure, 429 headers, limiter failure) |
-| Stripe webhook route | `stripe/webhook/route.test.ts` | Rate limiter mocked + tested |
-| Clerk webhook route | `clerk/route.test.ts` | Rate limiter created + tested |
-| Cron reconcile route | `cron/reconcile-stripe-subscriptions/route.test.ts` | Rate limiter in mock container |
+The executable suites, rather than copied case counts, are the coverage authority:
+
+| Boundary | Current suite(s) |
+| --- | --- |
+| Postgres counter/pruning/error semantics | `src/adapters/gateways/drizzle-rate-limiter.test.ts`; `tests/integration/rate-limiter.integration.test.ts` |
+| Maintained fake behavior | `src/application/test-helpers/fakes/fake-rate-limiter.test.ts` |
+| Billing, answers, bookmarks, feedback | Colocated `billing-controller.test.ts`, `question-controller.test.ts`, `bookmark-controller.test.ts`, `question-feedback-controller.test.ts` |
+| Practice shared-helper fanout | Colocated `practice-controller-session-admission.test.ts`, `practice-controller-session-lifecycle.test.ts`, `practice-controller-exam-draft.test.ts`, `practice-controller-mark-and-count.test.ts` and finalize/idempotency suites |
+| Route rejection/header/error behavior | `app/api/health/route.test.ts`, `app/api/stripe/webhook/route.test.ts`, `app/api/webhooks/clerk/route.test.ts`, and both `app/api/cron/*/route.test.ts` suites |
+
+Suite existence is not a proof of every policy's behavior. Follow `.claude/rules/testing.md` for fake/adapter fidelity, and record a changed-key/changed-limit or removed-enforcement red mutation for any new rate-limit contract. No new gate or claimed mutation score was added in this documentation iteration.
 
 ---
 
@@ -106,7 +115,7 @@ src/
 ├── adapters/
 │   ├── gateways/
 │   │   ├── drizzle-rate-limiter.ts          # ✅ Postgres fixed-window implementation
-│   │   └── drizzle-rate-limiter.test.ts     # ✅ 12 unit tests
+│   │   └── drizzle-rate-limiter.test.ts     # ✅ Unit boundary tests
 │   └── shared/
 │       └── rate-limits.ts                   # ✅ Centralized limit configuration
 ├── application/
@@ -115,7 +124,7 @@ src/
 │   └── test-helpers/
 │       └── fakes/
 │           ├── fake-gateways.ts            # ✅ FakeRateLimiter
-│           └── fake-rate-limiter.test.ts   # ✅ 5 unit tests
+│           └── fake-rate-limiter.test.ts   # ✅ Fake behavior tests
 lib/
 ├── container/
 │   └── gateways.ts                         # ✅ DrizzleRateLimiter wiring
@@ -133,21 +142,49 @@ tests/
 
 ## Future Enhancements
 
-These are **not needed now** (zero users, pre-launch). Each includes a trigger for when to revisit.
+These remain conditional enhancements. A live domain does not establish paying-user count or an abuse threshold. Decisions below distinguish available measurements from evidence that actually meets a trigger.
 
 ### E1: Vercel WAF Rate Limiting
 
-**What:** Configure 1 free WAF rule in the Vercel dashboard for infrastructure-level IP throttling. Zero code changes required — takes effect globally within 300ms.
+**Owner decision — CONFIRMED, 2026-09-20:** defer the custom blocking rule. Decline a log-only rule too. This supersedes the earlier “inspect traffic first” recommendation; the reason is the existing boundary design and shared-IP harm, not insufficient evidence. No rule or attack mode is applied by this decision.
 
-**Trigger:** Before launch, or anytime. Free on Hobby plan (1 rule, 1M requests/month).
+**Project rule budget — UNPROVEN:** the claimed Hobby allowance of one rate-limit rule / 1,000,000 included requests has **not been verified in this project's dashboard**. The earlier review read published [Vercel limits](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting), but that is not the project-specific confirmation the owner requires. Do not treat the allowance or available slot as an operational premise until that check is recorded. The authenticated team API does confirm `billing.plan: hobby`; the active custom-config 404 confirms no saved custom configuration, not absent baseline protection. [Existing state receipts](../debt/assets/adversarial-2026-09-20/review.md#provider-receipts).
 
-**Details:** [Vercel WAF Rate Limiting Docs](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting). The `@vercel/firewall` SDK also exposes a `checkRateLimit` function for programmatic integration if needed later.
+**REASON — structural:** the owner accepts the current residual abuse/capacity risk because:
+
+- The question corpus requires authentication plus a currently entitled subscription (`question-controller.ts:200,226`, `require-entitled-user-id.ts:24-30`). “Active subscription” here includes the implemented trial and past-due grace statuses while the period remains current; it does not mean only Stripe status `active` (`src/domain/services/entitlement.ts:13-19`, `src/domain/value-objects/subscription-status.ts:29-33`).
+- Clerk owns sign-in throttling ([Clerk system limits](https://clerk.com/docs/guides/how-clerk-works/system-limits)); the app does not expose its own password-validation endpoint.
+- Both webhook ingress paths verify provider signatures before processing events (`app/api/stripe/webhook/handler.ts:80-100`, `app/api/webhooks/clerk/handler.ts:88-102`). Both cron routes require an Authorization header secret before job work (`app/api/cron/reconcile-stripe-subscriptions/route.ts:120`, `app/api/cron/send-renewal-notices/route-handler.ts:60-104`).
+- The unauthenticated **page** surface is six PPR-enabled page families (`next.config.ts:4`, `lib/public-routes.ts:3-9`), including Clerk auth catch-alls. This is six page shells, not exactly six possible URLs or the exclusion of the five separately listed machine endpoints. These boundaries limit privileged work; they do not make health/webhook requests free of invocation or limiter-query cost.
+- Vercel's automatic DDoS mitigation and system-level filtering apply by default ([platform protection](https://vercel.com/docs/vercel-firewall)); the project's observed `sys_dos_mitigation` denies/challenges independently confirm baseline filtering. A missing custom rule is not a missing firewall.
+
+**Disqualifying hazard — owner first-hand account, 2026-09-20:** a default IP-keyed WAF rule shares one counter across every client behind a single public address, and institutional networks NAT many devices onto one address.
+
+**Evidence class.** The owner is an addiction fellow and is a user of this product. The usage pattern below is first-hand practitioner testimony, not telemetry and not an inference drawn from the outreach plan. It is real evidence of a kind this project cannot currently measure; it is not a measured false-positive rate, and it should not be restated as one. It supersedes the earlier reviewer-inferred claim that the audience predominantly shares institutional egress, which overstated today's pattern.
+
+**Stated pattern:** primarily home networks, with intermittent hospital use during downtime between clinical duties.
+
+**Why this still disqualifies a guessed threshold — the hazard is conditional and inverts on success:**
+
+- **Current exposure, inferred from that account:** predominantly residential use suggests less shared-egress concentration today. This is not a measured concurrency distribution, and a residential IP is not an identity guarantee.
+- **Program-level adoption can concentrate users behind one address.** The owner-described growth plan targets program directors and coordinators. A cohort of roughly 6–10 fellows sharing institutional egress and overlapping study windows is the planning scenario, not an observed traffic distribution.
+- **A threshold tuned against dispersed residential traffic can become inappropriate as that growth plan succeeds.** One shared bucket could block a legitimate program cohort together. The owner declines that avoidable failure mode; no false-positive rate, renewal impact or incident attribution difficulty is claimed as measured.
+
+**Consequence for the trigger.** Institutional growth makes an IP-keyed blocking rule *more* hazardous, not less. Rising traffic therefore never authorizes one on volume grounds alone: a reopened E1 must first establish whether the increase is dispersed or concentrated, because the two imply opposite responses. The structural boundary protections above remain in force at any volume.
+
+A log-only rule is also declined: it would consume custom-rule capacity merely to gather observations already available through invocation counts and Firewall events, while this project's precise allowance remains unverified. No custom-rule slot is reserved or assumed.
+
+**TRIGGER — observable on the current plan:** reopen E1 when **Vercel dashboard function-invocation counts** show an unexpected increase, **Neon compute hours** increase unexpectedly, or **`GET /v1/security/firewall/events`** shows recurring traffic/mitigation events warranting investigation. The project owner is the decision owner: preserve the time window and comparable baseline (and route/source/action when exposed), attribute the cost or incident, then decide whether a narrowly scoped control is warranted despite the NAT hazard. An active attack follows the incident path below immediately; it does not wait for rule design or a collection rollout.
+
+The Firewall endpoint is verified reachable now: authenticated CLI `vercel api '/v1/security/firewall/events?projectId=prj_vTWS0YcTJPcAAjgpPjovC0PydAP7&teamId=team_G6SwBNivWshoygtOPgu67vhE' --method GET` exited 0 on 2026-09-20 and returned `{"actions":[]}`. Empty events do not establish absence of all abuse, but they do prove that the read path is available. Use dashboard invocation counts, not the Observability Plus-only `vercel metrics` query that returned `payment_required` in the prior review. **Explicitly not Vercel Web Analytics:** DEBT-464 parks that collection path. No new SDK, log-only rule, plan upgrade or browser tracing is a prerequisite for these triggers.
+
+**LEVER — incident path, pre-documented and unapplied:** for an observed attack, the operator runs `vercel firewall attack-mode enable` against the linked project. It challenges traffic at the edge without designing a rate threshold. Inspect effects and auth/integration health; run `vercel firewall attack-mode disable` to roll back or end incident mode. [Attack Mode](https://vercel.com/docs/vercel-firewall/attack-mode) allows known bots/internal requests but can block unrecognized automation, so keep rollback authority available. While unapplied it cannot itself cause false-positive blocking. The owner chooses this direct incident path over a guessed permanent threshold. **Measured mean-time-to-react — UNPROVEN:** no timed drill/incident receipt exists; a documented one-command path is not a measured response-time guarantee. Capture detection, enable and recovery times when used; this decision does not enable it or claim a known duration.
 
 ### E2: Redis-Backed Rate Limiting (Upstash)
 
 **What:** Migrate from Postgres to Upstash Redis for lower-latency counters and sliding-window / token-bucket semantics.
 
-**Trigger:** When Postgres rate-limit query latency appears in Vercel metrics, or when multi-region deployment requires edge-local counters.
+**Trigger:** Production traces/Neon query analysis attribute material latency or load to the limiter statement, or a documented multi-region requirement needs distributed counters. Vercel function duration alone cannot identify the limiter query. Diagnose and compare alternatives before choosing Redis; client Web Vitals and Web Analytics are not prerequisites.
 
 ```typescript
 // lib/rate-limit.ts (future)
@@ -173,11 +210,11 @@ export const apiRateLimiter = new Ratelimit({
 
 ### E3: Next.js Middleware-Level Rate Limiting
 
-**What:** Add blanket IP-based throttling in Next.js middleware (Edge Runtime) to reject abusive traffic before serverless function cold-starts.
+**What:** Evaluate a request-entry limiter only if a named requirement remains after WAF/application controls. [Next.js Proxy defaults to Node.js](https://nextjs.org/docs/app/api-reference/file-conventions/proxy#runtime), so the old Edge Runtime premise is stale. Re-establish deployment/cost semantics before claiming an invocation saving.
 
 **Trigger:** When Vercel WAF's free tier is insufficient, or when you need custom logic (e.g., per-path limits at the edge).
 
-**Note:** Requires an external store (Redis/KV) since Edge Runtime has no persistent memory. Upstash (E2) is a prerequisite.
+**Note:** Cross-instance counters need shared storage. Redis/Upstash is one option, not an unconditional dependency or decision already made by this spec.
 
 ### E4: IETF Standard Rate Limit Headers
 
@@ -199,13 +236,9 @@ export const apiRateLimiter = new Ratelimit({
 
 Before the Postgres-backed limiter existed, the MVP plan was to rely only on upstream protections (Clerk/Stripe/Vercel). That plan is now fully superseded by the current implementation.
 
-### Monitoring Triggers (Retained for Reference)
+### Monitoring Triggers (Current)
 
-Escalate to Redis (E2) or WAF (E1) when ANY of these occur:
-- Unusual traffic spikes in Vercel Analytics
-- Neon DB costs increase unexpectedly
-- User reports of slow response times
-- Evidence of content scraping
+Reopen E1 on an unexpected increase in **Vercel dashboard function-invocation counts**, unexpected **Neon compute hours**, or actionable events from **`/v1/security/firewall/events`**, using the owner/receipt/incident procedure above. This replaces the former “Unusual traffic spikes in Vercel Analytics” trigger: DEBT-464 parks that collection path, so it cannot be the prerequisite. E2 still requires attribution to the limiter query; slow-response reports prompt diagnosis, not automatic Redis adoption. Server tracing remains sampled at 5% (SPEC-016), independently of browser collection.
 
 ---
 

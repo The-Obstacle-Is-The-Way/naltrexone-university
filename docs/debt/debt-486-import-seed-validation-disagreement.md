@@ -1,8 +1,9 @@
-# DEBT-480: Import and Seed Validation Disagreement
+# DEBT-486: Import and Seed Validation Disagreement
 
 **Status:** Open
 **Priority:** P1
 **Date:** 2026-09-20
+**ID reconciliation:** Renumbered from DEBT-480 after PR #937 collided with the owner's reserved public-surface IDs; original evidence and status are preserved.
 **Confidence:** CONFIRMED
 
 ## Evidence
@@ -21,7 +22,7 @@ accepts them too.
 
 ## Reproduction
 
-Run [DEBT-479's read-only synthetic fixture](debt-479-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
+Run [DEBT-485's read-only synthetic fixture](../_archive/debt/debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
 twice, setting PROBE=empty and PROBE=no_reference.
 
 Observed:
@@ -56,5 +57,5 @@ Verify actual parseSeedQuestionFile parity without database access.
 
 ## Related
 
-- [DEBT-479](debt-479-import-output-path-traversal.md)
+- [DEBT-485](../_archive/debt/debt-485-import-output-path-traversal.md)
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
