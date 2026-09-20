@@ -308,17 +308,17 @@ export function collectOwnCodeModuleMockOccurrences(
     function visit(node: ts.Node): void {
       const moduleMockApi = getVitestModuleMockApi(node);
       if (moduleMockApi && ts.isCallExpression(node)) {
-        const [moduleArgument, implementationArgument] = node.arguments;
+        const [moduleArgument] = node.arguments;
         if (
           moduleArgument &&
           ts.isStringLiteralLike(moduleArgument) &&
           isOwnCodePath(moduleArgument.text) &&
-          isModuleFactory(implementationArgument)
+          !isAllowedOwnCodeModuleMock(node.arguments)
         ) {
           occurrences.push({
             filePath: source.filePath,
             lineNumber: lineNumberFor(parsed, node),
-            detail: `own-code module '${moduleArgument.text}' must not use a factory-form vi.${moduleMockApi}`,
+            detail: `own-code module '${moduleArgument.text}' requires no second argument or exact literal { spy: true } in vi.${moduleMockApi}`,
           });
         }
       }
@@ -577,168 +577,28 @@ function isOwnCodePath(modulePath: string): boolean {
   );
 }
 
-function isModuleFactory(
-  implementationArgument: ts.Expression | undefined,
+function isAllowedOwnCodeModuleMock(
+  arguments_: ts.NodeArray<ts.Expression>,
 ): boolean {
-  return implementationArgument
-    ? isModuleFactoryExpression(implementationArgument, new Set())
-    : false;
-}
+  if (arguments_.length === 1) return true;
+  if (arguments_.length !== 2) return false;
 
-function isModuleFactoryExpression(
-  expression: ts.Expression,
-  seenDeclarations: Set<ts.Declaration>,
-): boolean {
-  const unwrapped = unwrapParentheses(expression);
-  if (ts.isArrowFunction(unwrapped) || ts.isFunctionExpression(unwrapped)) {
-    return true;
-  }
-  if (!ts.isIdentifier(unwrapped)) {
+  const options = arguments_[1];
+  if (
+    !options ||
+    !ts.isObjectLiteralExpression(options) ||
+    options.properties.length !== 1
+  ) {
     return false;
   }
-
-  const declaration = findLocalBindingDeclaration(unwrapped);
-  if (!declaration || seenDeclarations.has(declaration)) {
-    return false;
-  }
-  seenDeclarations.add(declaration);
-
-  if (ts.isFunctionDeclaration(declaration)) {
-    return true;
-  }
-  if (!ts.isVariableDeclaration(declaration)) {
-    return false;
-  }
-
-  const assignedValue = findLatestBindingValue(declaration, unwrapped);
-  return assignedValue
-    ? isModuleFactoryExpression(assignedValue, seenDeclarations)
-    : false;
-}
-
-type LocalFactoryBinding =
-  | ts.FunctionDeclaration
-  | ts.ParameterDeclaration
-  | ts.VariableDeclaration;
-
-function findLocalBindingDeclaration(
-  identifier: ts.Identifier,
-): LocalFactoryBinding | null {
-  let current: ts.Node | undefined = identifier.parent;
-
-  while (current) {
-    if (ts.isBlock(current) || ts.isSourceFile(current)) {
-      for (const statement of current.statements) {
-        if (
-          ts.isFunctionDeclaration(statement) &&
-          statement.name?.text === identifier.text
-        ) {
-          return statement;
-        }
-        if (ts.isVariableStatement(statement)) {
-          const declaration = statement.declarationList.declarations.find(
-            (candidate) =>
-              ts.isIdentifier(candidate.name) &&
-              candidate.name.text === identifier.text,
-          );
-          if (declaration) {
-            return declaration;
-          }
-        }
-      }
-    }
-    if (ts.isFunctionLike(current)) {
-      const parameter = current.parameters.find(
-        (candidate) =>
-          ts.isIdentifier(candidate.name) &&
-          candidate.name.text === identifier.text,
-      );
-      if (parameter) {
-        return parameter;
-      }
-    }
-    current = current.parent;
-  }
-
-  return null;
-}
-
-function findLatestBindingValue(
-  declaration: ts.VariableDeclaration,
-  reference: ts.Identifier,
-): ts.Expression | null {
-  const referencePosition = reference.getStart();
-  let latestValue =
-    declaration.initializer &&
-    declaration.initializer.getStart() < referencePosition
-      ? declaration.initializer
-      : null;
-  let latestPosition = latestValue?.getStart() ?? -1;
-  const executionScopes = findEnclosingExecutionScopes(reference, declaration);
-
-  const visitIn = (executionScope: ts.Node): void => {
-    const visit = (node: ts.Node): void => {
-      if (node !== executionScope && ts.isFunctionLike(node)) {
-        return;
-      }
-      if (node.getStart() >= referencePosition) {
-        return;
-      }
-
-      if (
-        ts.isBinaryExpression(node) &&
-        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-        ts.isIdentifier(node.left) &&
-        node.left.text === reference.text &&
-        findLocalBindingDeclaration(node.left) === declaration &&
-        node.getStart() > latestPosition
-      ) {
-        latestValue = node.right;
-        latestPosition = node.getStart();
-      }
-
-      ts.forEachChild(node, visit);
-    };
-
-    visit(executionScope);
-  };
-
-  for (const executionScope of executionScopes) {
-    visitIn(executionScope);
-  }
-  return latestValue;
-}
-
-function findEnclosingExecutionScopes(
-  reference: ts.Identifier,
-  declaration: ts.VariableDeclaration,
-): ts.Node[] {
-  const declarationScope = findExecutionScope(declaration);
-  const scopes: ts.Node[] = [];
-  let current: ts.Node | undefined = reference.parent;
-
-  while (current) {
-    if (ts.isFunctionLike(current) || ts.isSourceFile(current)) {
-      scopes.push(current);
-      if (current === declarationScope) {
-        return scopes.reverse();
-      }
-    }
-    current = current.parent;
-  }
-
-  throw new Error('Could not trace factory reference to its declaration scope');
-}
-
-function findExecutionScope(node: ts.Node): ts.Node {
-  let current: ts.Node | undefined = node.parent;
-  while (current && !ts.isSourceFile(current)) {
-    if (ts.isFunctionLike(current)) {
-      return current;
-    }
-    current = current.parent;
-  }
-  return node.getSourceFile();
+  const property = options.properties[0];
+  return Boolean(
+    property &&
+      ts.isPropertyAssignment(property) &&
+      ts.isIdentifier(property.name) &&
+      property.name.text === 'spy' &&
+      property.initializer.kind === ts.SyntaxKind.TrueKeyword,
+  );
 }
 
 function asUnknownCast(expression: ts.Expression): ts.AsExpression | null {

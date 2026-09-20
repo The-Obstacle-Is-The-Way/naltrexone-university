@@ -36,7 +36,7 @@ describe('test-double fidelity source scan', () => {
         filePath: 'app/example.test.ts',
         lineNumber: 3,
         detail:
-          "own-code module '@/lib/example' must not use a factory-form vi.mock",
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
       },
     ]);
   });
@@ -90,26 +90,33 @@ describe('test-double fidelity source scan', () => {
         filePath: 'app/use-example.test.ts',
         lineNumber: 1,
         detail:
-          "own-code module '@/lib/example' must not use a factory-form vi.mock",
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
       },
     ]);
   });
 
-  it('ignores an own-code automock call without a factory argument', () => {
-    const occurrences = collectOwnCodeModuleMockOccurrences([
-      source('app/example.test.ts', `vi.mock('@/lib/example');`),
-    ]);
+  it.each(['mock', 'doMock'] as const)(
+    'accepts no second argument for vi.%s',
+    (api) => {
+      const occurrences = collectOwnCodeModuleMockOccurrences([
+        source('app/example.test.ts', `vi.${api}('@/lib/example');`),
+      ]);
+      expect(occurrences).toEqual([]);
+    },
+  );
 
-    expect(occurrences).toEqual([]);
-  });
-
-  it('ignores an own-code spy configuration because it is not a factory', () => {
-    const occurrences = collectOwnCodeModuleMockOccurrences([
-      source('app/example.test.ts', `vi.mock('@/lib/example', { spy: true });`),
-    ]);
-
-    expect(occurrences).toEqual([]);
-  });
+  it.each(['mock', 'doMock'] as const)(
+    'accepts exact literal spy options for vi.%s',
+    (api) => {
+      const occurrences = collectOwnCodeModuleMockOccurrences([
+        source(
+          'app/example.test.ts',
+          `vi.${api}('@/lib/example', { spy: true });`,
+        ),
+      ]);
+      expect(occurrences).toEqual([]);
+    },
+  );
 
   it('detects an own-code factory-form vi.doMock call', () => {
     const factoryCall = [
@@ -125,7 +132,7 @@ describe('test-double fidelity source scan', () => {
         filePath: 'app/example.test.ts',
         lineNumber: 1,
         detail:
-          "own-code module '@/lib/example' must not use a factory-form vi.doMock",
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.doMock",
       },
     ]);
   });
@@ -146,7 +153,7 @@ describe('test-double fidelity source scan', () => {
         filePath: 'app/example.test.ts',
         lineNumber: 2,
         detail:
-          "own-code module '@/lib/example' must not use a factory-form vi.mock",
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
       },
     ]);
   });
@@ -168,12 +175,12 @@ describe('test-double fidelity source scan', () => {
         filePath: 'app/example.test.ts',
         lineNumber: 3,
         detail:
-          "own-code module '@/lib/example' must not use a factory-form vi.doMock",
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.doMock",
       },
     ]);
   });
 
-  it('uses the latest assignment before an own-code module mock call', () => {
+  it('rejects an indirect options binding regardless of its latest assignment', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
         'app/example.test.ts',
@@ -185,10 +192,17 @@ describe('test-double fidelity source scan', () => {
       ),
     ]);
 
-    expect(occurrences).toEqual([]);
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 3,
+        detail:
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
+      },
+    ]);
   });
 
-  it('ignores assignments after an own-code module mock call', () => {
+  it('rejects an uninitialized options binding even if assigned after the call', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
         'app/example.test.ts',
@@ -200,10 +214,17 @@ describe('test-double fidelity source scan', () => {
       ),
     ]);
 
-    expect(occurrences).toEqual([]);
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 2,
+        detail:
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.doMock",
+      },
+    ]);
   });
 
-  it('ignores assignments in a nested execution scope', () => {
+  it('rejects an indirect binding assigned inside another execution scope', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
         'app/example.test.ts',
@@ -217,7 +238,14 @@ describe('test-double fidelity source scan', () => {
       ),
     ]);
 
-    expect(occurrences).toEqual([]);
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 5,
+        detail:
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
+      },
+    ]);
   });
 
   it('detects a module-scope factory assignment used inside beforeEach', () => {
@@ -239,7 +267,7 @@ describe('test-double fidelity source scan', () => {
         filePath: 'app/example.test.ts',
         lineNumber: 4,
         detail:
-          "own-code module '@/lib/example' must not use a factory-form vi.doMock",
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.doMock",
       },
     ]);
   });
@@ -277,7 +305,7 @@ describe('test-double fidelity source scan', () => {
         filePath: 'app/example.test.ts',
         lineNumber: 2,
         detail:
-          "own-code module '@/lib/example' must not use a factory-form vi.doMock",
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.doMock",
       },
     ]);
   });
@@ -297,7 +325,7 @@ describe('test-double fidelity source scan', () => {
     expect(occurrences).toHaveLength(1);
   });
 
-  it('ignores a referenced spy-options object because it is not a factory', () => {
+  it('rejects referenced spy options because the allowed object must be literal', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
         'app/example.test.ts',
@@ -308,10 +336,17 @@ describe('test-double fidelity source scan', () => {
       ),
     ]);
 
-    expect(occurrences).toEqual([]);
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 2,
+        detail:
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
+      },
+    ]);
   });
 
-  it('does not resolve past a parameter that shadows a factory declaration', () => {
+  it('rejects a parameter instead of chasing a shadowed declaration', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
         'app/example.test.ts',
@@ -324,10 +359,17 @@ describe('test-double fidelity source scan', () => {
       ),
     ]);
 
-    expect(occurrences).toEqual([]);
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 3,
+        detail:
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
+      },
+    ]);
   });
 
-  it('ignores an unresolved factory identifier', () => {
+  it('rejects an unresolved options or factory identifier', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
         'app/example.test.ts',
@@ -335,10 +377,17 @@ describe('test-double fidelity source scan', () => {
       ),
     ]);
 
-    expect(occurrences).toEqual([]);
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 1,
+        detail:
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
+      },
+    ]);
   });
 
-  it('stops resolving a cycle of local aliases', () => {
+  it('rejects a cyclic alias without resolving the cycle', () => {
     const occurrences = collectOwnCodeModuleMockOccurrences([
       source(
         'app/example.test.ts',
@@ -350,7 +399,14 @@ describe('test-double fidelity source scan', () => {
       ),
     ]);
 
-    expect(occurrences).toEqual([]);
+    expect(occurrences).toEqual([
+      {
+        filePath: 'app/example.test.ts',
+        lineNumber: 3,
+        detail:
+          "own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.mock",
+      },
+    ]);
   });
 
   it('ignores external package factories', () => {
@@ -365,6 +421,41 @@ describe('test-double fidelity source scan', () => {
 
     expect(occurrences).toEqual([]);
   });
+
+  it.each([
+    'undefined',
+    'null',
+    '{}',
+    '{ spy: false }',
+    '{ spy: enabled }',
+    '{ spy: true, extra: true }',
+    '{ ...options, spy: true }',
+    '{ ["spy"]: true }',
+    '{ spy: true } as const',
+    'getOptions()',
+    'options.spy',
+    '{ spy: true }, { extra: true }',
+    '{ "spy": true }',
+  ])(
+    'rejects noncanonical own-code mock options %s for both APIs',
+    (options) => {
+      for (const api of ['mock', 'doMock']) {
+        const occurrences = collectOwnCodeModuleMockOccurrences([
+          source(
+            'app/example.test.ts',
+            `vi.${api}('@/lib/example', ${options});`,
+          ),
+        ]);
+        expect(occurrences).toEqual([
+          {
+            filePath: 'app/example.test.ts',
+            lineNumber: 1,
+            detail: `own-code module '@/lib/example' requires no second argument or exact literal { spy: true } in vi.${api}`,
+          },
+        ]);
+      }
+    },
+  );
 
   it('fails closed when a scanned test source cannot be parsed', () => {
     expect(() =>
