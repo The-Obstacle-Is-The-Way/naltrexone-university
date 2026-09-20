@@ -198,11 +198,11 @@ Technical debt documents known shortcuts, deferred work, and architectural compr
 | [DEBT-480](./debt-480-anonymous-security-contact-reachability.md) | Canonical security.txt is not anonymously reachable: production GET returns Clerk 404/307 while the local file-content/expiry test passes. Exact public-resource exemption plus real HTTP/proxy proof; separate from DEBT-475 expiry-warning work. | P2 | — |
 | [DEBT-481](./debt-481-master-spec-implementation-drift.md) | Master and four current spec copies prescribe stale schema, rate-limit, content/seed, CI-secret/toolchain and timing contracts. Reconcile ownership and remove misleading exact implementation copies; warning banners are containment only. | P2 | — |
 
-| [DEBT-482](./debt-482-duplicate-qid-output-collision.md) | Duplicate QIDs can overwrite one output; current local corpus has 948 distinct IDs and destinations. | P1 | - |
+| [DEBT-482](./debt-482-duplicate-qid-output-collision.md) | Global duplicate-QID preflight implemented: 10 red cases, 70 focused green tests, and a read-only import of 948 distinct local QIDs. Validated QID filenames also prove distinct destinations. Review and promotion pending. | P1 | - |
 | [DEBT-483](./debt-483-content-withdrawal-and-release-rollback.md) | Stale outputs and per-item sync provide no general withdrawal or atomic corpus rollback. | P1 | - |
 | [DEBT-484](./debt-484-question-rewrite-history-identity.md) | In-place prose rewrites can change what historical attempts refer to without answer-key changes. | P1 | - |
 | [DEBT-486](./debt-486-import-seed-validation-disagreement.md) | Import accepts empty stems rejected by seed; required Reference is unenforced by both. | P1 | - |
-| [DEBT-487](./debt-487-draft-splitter-silent-omission.md) | Complete draft block consumption implemented; 14 red cases, 60 focused green tests, and unchanged parsed content for all 948 local questions. Review and promotion pending. | P1 | - |
+| [DEBT-487](./debt-487-draft-splitter-silent-omission.md) | Complete draft block consumption merged in #943 with exact-head approval and green CI; 14 red cases, 60 focused green tests, and unchanged parsed content for all 948 local questions. Production promotion pending. | P1 | - |
 
 **Next Debt ID:** DEBT-488
 
