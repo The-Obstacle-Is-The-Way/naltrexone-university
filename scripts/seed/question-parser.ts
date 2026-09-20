@@ -89,6 +89,18 @@ function buildSeedRepFromParsed(full: unknown): SeedQuestionRep {
   };
 }
 
+export function isSyntheticPlaceholderSource(
+  slug: string,
+  sourcePath?: string,
+): boolean {
+  return (
+    sourcePath !== undefined &&
+    path.dirname(path.resolve(sourcePath)) ===
+      path.resolve('content/questions/placeholder') &&
+    slug.startsWith('placeholder-')
+  );
+}
+
 export function parseSeedQuestionFile(
   raw: string,
   sourcePath?: string,
@@ -109,12 +121,10 @@ export function parseSeedQuestionFile(
 
   // Only the dedicated synthetic seed fixtures may omit a citation. Import
   // conversion supplies no source path and therefore always requires one.
-  const isSyntheticPlaceholder =
-    sourcePath !== undefined &&
-    path.dirname(path.resolve(sourcePath)) ===
-      path.resolve('content/questions/placeholder') &&
-    question.slug.startsWith('placeholder-');
-  if (!question.reference_md && !isSyntheticPlaceholder) {
+  if (
+    !question.reference_md &&
+    !isSyntheticPlaceholderSource(question.slug, sourcePath)
+  ) {
     throw new Error(
       `${question.slug}: a nonempty terminal Reference is required`,
     );

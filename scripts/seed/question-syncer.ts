@@ -17,6 +17,7 @@ import { computeContentRewriteChanges } from './content-rewrite-policy';
 import type { SeedSourceFile } from './file-reader';
 import {
   buildSeedRepFromDb,
+  isSyntheticPlaceholderSource,
   parseSeedQuestionFile,
   type SeedTag,
 } from './question-parser';
@@ -266,6 +267,16 @@ export async function syncQuestionsFromFiles(
         if (!lockedQuestion) {
           throw new Error(
             `Question disappeared during seed sync for slug "${seedFromFile.slug}"`,
+          );
+        }
+
+        if (
+          lockedQuestion.status === 'archived' &&
+          seedFromFile.status !== 'archived' &&
+          !isSyntheticPlaceholderSource(seedFromFile.slug, file.absolutePath)
+        ) {
+          throw new Error(
+            `Refusing to reactivate archived question "${seedFromFile.slug}" from seed input. Use a new question QID for a replacement.`,
           );
         }
 
