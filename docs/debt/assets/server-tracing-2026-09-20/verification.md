@@ -2,7 +2,7 @@
 
 Base: main `86336194` (same tree as dev `bad0c71a`). Owner ruling:
 typed wrapper plus Biome import restriction, retaining runtime filtering.
-This is implementation evidence; review and promotion are still pending.
+This initial implementation evidence precedes the reviewed promotion recorded below.
 
 ## Replacement-before-deletion proofs
 
@@ -42,3 +42,23 @@ Sanitized local logs: `/private/tmp/codex-server-tracing.vuffa3/`
 (`real-file-lint-red.log`, `type-red.log`, `filter-red.log`, `focused-green.log`).
 The earlier stdin-lint experiments were harness failures and are **not** counted
 as product red proofs: Biome's stdin mode did not emit the required diagnostics.
+
+## Reviewed promotion
+
+Source #929 was approved on exact head `d258a732` and merged as `32bcdd93`.
+The requested generalized Sentry-client injection was rejected with the explicit
+typed-boundary ruling and runtime/type/lint receipts; CodeRabbit withdrew the
+finding and approved. No wider abstraction was added.
+
+Promotion #930 was approved on exact head `32bcdd93` with zero unresolved
+threads and merged as `f8300d25`. Its pre-merge setup recovery was explicitly
+adjudicated by the owner; see the [retry-policy evidence](../e2e-retries-2026-09-20/verification.md).
+Post-merge main CI **35511099388** passed 4,280 unit, 411 browser, 293 integration
+(six opt-in skips), and **44/44 E2E without failed attempts or retries**.
+
+The production build was Ready at **12:37:45.083Z** but observed Staged with the
+old alias through **12:46:30Z**. GitHub `test` passed at **12:46:40Z**; Vercel's
+native check succeeded **12:46:42.011Z**, then www was assigned **12:46:42.170Z**
+and apex **12:46:42.175Z**. Both serve `f8300d25`; home and health returned 200.
+Dev/main share tree `89861133ee00f04221f5cdf493b38dcb0dccca0a`.
+See [the promotion closeout](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/930#issuecomment-5749896625).
