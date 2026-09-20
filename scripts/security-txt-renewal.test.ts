@@ -46,6 +46,29 @@ const document = (days: number) =>
   `Expires: ${new Date(now.getTime() + days * 86_400_000).toISOString()}\n`;
 
 describe('security.txt renewal reminder', () => {
+  it.each(['expires', 'eXpIrEs'])(
+    'accepts the RFC case-insensitive field name %s',
+    async (field) => {
+      expect(
+        await checkSecurityTxtRenewal(
+          document(91).replace('Expires', field),
+          now,
+          new MemoryIssues(),
+        ),
+      ).toBe('not-due');
+    },
+  );
+
+  it('accepts a real leap day', async () => {
+    expect(
+      await checkSecurityTxtRenewal(
+        'Expires: 2028-02-29T01:00:00+01:00',
+        now,
+        new MemoryIssues(),
+      ),
+    ).toBe('not-due');
+  });
+
   it.each([90, 91, 365])(
     'does nothing with %s days remaining',
     async (days) => {
@@ -96,7 +119,12 @@ describe('security.txt renewal reminder', () => {
     '',
     'Expires: invalid',
     'Expires: 2026-13-01T00:00:00Z',
+    'Expires: 2024-02-30T00:00:00Z',
+    'Expires: 2027-02-29T01:00:00+01:00',
+    'Expires: 2027-04-31T00:00:00Z',
+    'Expires: 2027-01-31T24:00:00Z',
     `${document(10)}${document(20)}`,
+    `${document(10)}${document(20).replace('Expires', 'expires')}`,
   ])(
     'rejects malformed expiry %j before writing an issue',
     async (contents) => {
@@ -197,6 +225,57 @@ describe('renewal command outcome', () => {
 });
 
 describe('renewal workflow', () => {
+  it.each([
+    { number: -1 },
+    { number: 1.5 },
+    { number: Number.MAX_SAFE_INTEGER + 1 },
+    { title: null },
+    { state: 'unknown' },
+    { body: 42 },
+    { pull_request: true },
+  ])('refuses malformed issue fields %j before writing', async (overrides) => {
+    const commands: string[][] = [];
+    const issues = createGithubRenewalIssues((args) => {
+      commands.push(args);
+      return JSON.stringify([
+        [
+          {
+            number: 42,
+            title: 'Renew security.txt contact metadata',
+            body: null,
+            state: 'open',
+            ...overrides,
+          },
+        ],
+      ]);
+    });
+    await expect(
+      checkSecurityTxtRenewal(document(10), now, issues),
+    ).rejects.toThrow('Invalid GitHub issue response');
+    expect(commands).toHaveLength(1);
+  });
+
+  it.each([{}, [null], [{}], [[null]]].map((data) => ({ data })))(
+    'refuses malformed page data $data',
+    async ({ data }) => {
+      const issues = createGithubRenewalIssues(() => JSON.stringify(data));
+      await expect(issues.list()).rejects.toThrow(
+        'Invalid GitHub issue response',
+      );
+    },
+  );
+
+  it('accepts a null issue body without inventing content', async () => {
+    const issues = createGithubRenewalIssues(() =>
+      JSON.stringify([
+        [{ number: 42, title: 'Reminder', body: null, state: 'open' }],
+      ]),
+    );
+    expect(await issues.list()).toEqual([
+      { number: 42, title: 'Reminder', body: '', state: 'OPEN' },
+    ]);
+  });
+
   it('executes the default GitHub adapter with a bounded credential-free argument list', async () => {
     const run = vi.mocked(execFileSync).mockReturnValue('');
     await createGithubRenewalIssues().create('Reminder', 'Renewal guidance');

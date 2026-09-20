@@ -23,7 +23,7 @@ export async function checkSecurityTxtRenewal(
   now: Date,
   issues: RenewalIssues,
 ): Promise<'not-due' | 'created' | 'updated' | 'unchanged'> {
-  const timestamps = [...contents.matchAll(/^Expires:\s*(.+)$/gm)];
+  const timestamps = [...contents.matchAll(/^Expires:\s*(.+)$/gim)];
   const expires = timestamps[0]?.[1]?.trim() ?? '';
   const expiresAt = Date.parse(expires);
   if (
@@ -31,7 +31,12 @@ export async function checkSecurityTxtRenewal(
     !Number.isFinite(expiresAt) ||
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(
       expires,
-    )
+    ) ||
+    // Date.parse normalizes February 30 and 24:00; round-trip local components
+    // independently of the offset so valid timezone crossings remain valid.
+    new Date(`${expires.slice(0, 19).toUpperCase()}Z`)
+      .toISOString()
+      .slice(0, 19) !== expires.slice(0, 19).toUpperCase()
   ) {
     throw new Error('Expected one valid security.txt Expires timestamp');
   }
@@ -74,32 +79,56 @@ function gh(args: string[]): string {
 export function createGithubRenewalIssues(run: typeof gh = gh): RenewalIssues {
   return {
     async list() {
-      const pages = JSON.parse(
+      const pages: unknown = JSON.parse(
         run([
           'api',
           '--paginate',
           '--slurp',
           'repos/{owner}/{repo}/issues?state=all&per_page=100',
         ]),
-      ) as Array<
-        Array<{
-          number: number;
-          title: string;
-          body: string | null;
-          state: 'open' | 'closed';
-          pull_request?: object;
-        }>
-      >;
-      return pages
-        .flat()
-        .filter((issue) => !issue.pull_request)
-        .map((issue) => ({
+      );
+      if (!Array.isArray(pages) || !pages.every(Array.isArray)) {
+        throw new Error('Invalid GitHub issue response');
+      }
+      const entries: unknown[] = pages.flat();
+      const issues: RenewalIssue[] = [];
+      for (const issue of entries) {
+        if (!issue || typeof issue !== 'object' || Array.isArray(issue)) {
+          throw new Error('Invalid GitHub issue response');
+        }
+        // Pull requests share this endpoint, but their fields are not consumed.
+        if ('pull_request' in issue) {
+          if (
+            !issue.pull_request ||
+            typeof issue.pull_request !== 'object' ||
+            Array.isArray(issue.pull_request)
+          ) {
+            throw new Error('Invalid GitHub issue response');
+          }
+          continue;
+        }
+        if (
+          !('number' in issue) ||
+          typeof issue.number !== 'number' ||
+          !Number.isSafeInteger(issue.number) ||
+          issue.number <= 0 ||
+          !('title' in issue) ||
+          typeof issue.title !== 'string' ||
+          !('body' in issue) ||
+          (issue.body !== null && typeof issue.body !== 'string') ||
+          !('state' in issue) ||
+          (issue.state !== 'open' && issue.state !== 'closed')
+        ) {
+          throw new Error('Invalid GitHub issue response');
+        }
+        issues.push({
           number: issue.number,
           title: issue.title,
           body: issue.body ?? '',
-          state:
-            issue.state === 'open' ? ('OPEN' as const) : ('CLOSED' as const),
-        }));
+          state: issue.state === 'open' ? 'OPEN' : 'CLOSED',
+        });
+      }
+      return issues;
     },
     async create(title, body) {
       run(['issue', 'create', '--title', title, '--body', body]);
