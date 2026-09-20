@@ -586,6 +586,21 @@ git stash -m "Preserving work from another session"
 
 ## ⚠️ MANDATORY: CodeRabbit Review Before Merge
 
+### GitHub Enforcement Versus Process
+
+The active `main-and-dev-protection` ruleset (17666822, verified 2026-09-20)
+requires a PR, GitHub Actions' `test` check, an up-to-date branch, and resolved
+review threads on both `main` and `dev`. It blocks deletion and non-fast-forward
+updates, has no bypass actors, and requires zero approving reviews so the solo
+owner is not locked out (BUG-248).
+
+CodeRabbit **APPROVED on the exact head** and use of a **merge commit** remain
+mandatory process checks. GitHub's green `CodeRabbit` status is not that verdict;
+it can be green during a rate limit or with requested changes. Check actual
+reviews, all unresolved threads, and CI before merging. Never use `--admin`,
+Force Promote, or a ruleset bypass. Do not directly push synchronization commits
+to `dev`; use the [reviewed ancestry workflow](docs/dev/deployment-procedure.md#6-branch-ancestry-after-promotion).
+
 **NEVER merge a PR without CodeRabbit review. NO EXCEPTIONS.**
 
 This is a **blocking requirement**. Violating this rule wastes human time fixing preventable issues.

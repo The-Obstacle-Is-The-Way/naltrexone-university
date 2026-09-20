@@ -207,20 +207,25 @@ Before merging to `main` (production deploy):
 
 ---
 
-## 6. Branch Sync After Merging to Main
+## 6. Branch Ancestry After Promotion
 
-After merging a PR to `main`, the `dev` branch falls behind. To keep them in sync:
+**Corrected 2026-09-20:** both `main` and `dev` require PRs without bypass actors. Do not directly push `dev` to synchronize it. A merge-commit promotion adds ancestry to `main`, but when the trees are identical it does not leave `dev` missing migration files or other content.
 
-```bash
-git fetch origin
-git switch dev
-git merge --ff-only origin/main
-git push origin dev
-```
+After every promotion, fetch and compare `origin/main^{tree}` with `origin/dev^{tree}`. For the next change, start the feature branch from the latest `origin/dev`, then merge `origin/main` **into that feature branch** before editing. When the only difference is the promotion merge, that merge is a fast-forward. If either branch has gained content, inspect and resolve the actual divergence on the feature branch rather than assuming tree identity. Include the result in the normal fully gated/reviewed PR to `dev`.
 
-This is especially important when the PR included **migrations** — without syncing, any clone on `dev` will have an incomplete migration journal, which can cause confusion (the DB has the tables, but the local journal doesn't know about them).
+That next PR carries main's promotion ancestry into `dev`; the next `dev` → `main` promotion can satisfy strict up-to-date checks without direct protected-branch pushes or a repeating chain of empty synchronization PRs. If `main` advances while any PR is open, integrate its new ancestry/content before the final gate and review. A new head needs a new full gate and exact-head approval.
 
-**Rule of thumb:** Keep `dev` fast-forwarded to `main` after every merge. If `git merge --ff-only origin/main` fails, stop and resolve the divergence explicitly rather than creating an accidental merge commit.
+### Enforced Merge Bar
+
+Read back ruleset `17666822` (`main-and-dev-protection`) and each branch's rules when changing repository settings. On 2026-09-20 at `06:34:27Z`, both branch endpoints returned the same active requirements:
+
+- PR required, with zero required approvals (BUG-248's solo-owner constraint), all review threads resolved, and no bypass actors.
+- GitHub Actions `test` required (`integration_id=15368`), with `strict_required_status_checks_policy=true` and enforcement on branch creation.
+- Deletion and non-fast-forward updates blocked.
+
+The ruleset is one shared policy for explicit `refs/heads/main` and `refs/heads/dev`, avoiding two independently maintained copies. Before activation, PR #926 into `dev` reported `test=success` from `github-actions`; the workflow/script inventory contained no direct `dev` pusher. The old direct-push runbook above was the incompatible instruction, not an automation requirement. The read-only 11-property assertion failed for dev coverage, thread resolution and strict checks before activation, then passed all 11 after; both branch rule endpoints were checked independently.
+
+CodeRabbit exact-head **APPROVED** and merge-commit use remain operator/process requirements. The ruleset does not require the `CodeRabbit` status, which can be successful with requested changes or a rate limit; inspect actual reviews. Existing unrelated settings were preserved, including the extra-approval rule for unattributed changes, no CODEOWNERS/last-push approval requirement, and the platform's allowed merge methods (`merge`, `squash`, `rebase`); repository policy still selects `merge`. No admin override or bypass is allowed. [GitHub's strict-check documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging) explains why an updated base may require another gate/review cycle.
 
 ---
 
