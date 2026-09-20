@@ -40,6 +40,16 @@ Promotion-PR E2E precedes the merge to `main`. Vercel builds the main commit in 
 
 Production database migrations run during the build, **before** the release gate. They must remain compatible with the live application under the existing [expand/contract authoring contract](./migration-authoring.md#deployed-code-compatibility), even if the check fails and the old release keeps serving.
 
+### CI Secret Standard
+
+Owner ruling 2026-09-19, recorded 2026-09-20:
+
+- Keep secrets on their consuming steps, never at workflow/job scope. Required and hosted-checkout Build steps use real compiled public values (or documented credential-free fallbacks) and shape-valid server-only placeholders. Real TEST-mode provider/E2E credentials belong only on E2E; the scheduled provider-contract runner receives only its required Stripe inputs. Codecov gets only its upload token.
+- Typecheck, lint, unit, database migrate/seed, integration and browser steps receive no provider credential. Public values are not authentication secrets. Step scoping does not isolate a secret from dependency code executing within the authorized step.
+- SHA-pin every action. `tests/ci-workflow.test.ts` enumerates permitted secret consumers and verifies pins in the current three workflows; include every added workflow in that contract. `strictDepBuilds`/`allowBuilds` constrain install scripts, not all later package execution.
+- Keep the Dependabot secret store empty and retain its E2E actor guard. Do not run bot heads locally with shared credentials. Re-author a reviewed owner PR when PR-time E2E is needed. Revisit only after separate Stripe Sandbox and Clerk-instance isolation at the paying-customer/second-engineer trigger; see [Dependency Update Protocol](./dependency-update-protocol.md#dependabot-prs-and-secrets).
+- GitHub Actions has no consumer for `CRON_SECRET`. Its unused copy was deleted on 2026-09-20; API readback found zero matching secrets. This does not attest to Vercel rotation. Cron authentication validates the value actually consumed at request time, without making application startup depend on it.
+
 ### Deploy Migration Contract
 
 [BUG-241](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) is fixed: the Vercel Build Command (`buildCommand` in `vercel.json`) runs `pnpm db:migrate && pnpm build`, so checked-in Drizzle migrations apply to the environment-scoped `DATABASE_URL` before a deployment can serve. This is live on Preview/Development builds immediately and on Production once the change is on `main`. A failed migration fails the build closed, leaving the current deployment serving. Schema migrations are therefore no longer a manual operator step; `pnpm db:seed` (content) remains manual.
