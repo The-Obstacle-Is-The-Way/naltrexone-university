@@ -227,12 +227,16 @@ SPEC-007, and this debt remains open.
 an existing current-QID file, a stale QID under another source, and an unrelated
 hidden file. The normal runs reported `written=1`; the old writer used ordinary
 `writeFile`, overwriting the current destination or retaining the unrelated/stale
-entry alongside the new output. The existing-empty-directory positive case
-already passed.
+entry alongside the new output. Those three normal-write cases demonstrate the
+defect; the three initial dry-run-refusal expectations were superseded by the
+caller compatibility correction below. The existing-empty-directory positive
+case already passed.
 
 `scripts/import-draft-questions.ts` now requires an absent or empty output root
-before the write loop, after full input/identity/path/symlink preflight. The same
-check applies to dry-run. Its refusal names the output root and directs the
+before the write loop, after full input/identity/path/symlink preflight.
+Dry-run preserves read-only input/body/identity and path/symlink validation;
+it may inspect populated output and does not promise that directory is writable
+as a new bundle. A normal-write refusal names the output root and directs the
 operator to a fresh staging directory; existing output is neither pruned nor
 overwritten. Existing symlink-error precedence is retained.
 
@@ -242,8 +246,9 @@ The three focused importer/parser suites passed **86/86**:
 pnpm test --run scripts/import-draft-questions.test.ts scripts/draft-question-import.test.ts scripts/seed.test.ts
 ```
 
-The six rejection cases verify existing sentinel bytes survive and no new output
-appears beside stale/unrelated files. An absent or existing-empty destination
+The three write-refusal cases verify existing sentinel bytes survive and no new
+output appears beside stale/unrelated files. The three dry-run cases verify
+read-only success without modifying those same existing files. An absent or existing-empty destination
 still succeeds. A read-only check of the actual local corpus ran:
 
 ```bash
@@ -254,12 +259,32 @@ rmdir "$STAGING_CHECK_DIR"
 
 Real output: `files=170 questions=948 written=0 (dry-run) uniqueQids=948`.
 `rmdir` succeeded, confirming the freshly created destination remained empty.
-No proprietary content was written or changed by that check. The full local gate
+No proprietary content was written or changed by that check. The initial full local gate
 passed: typecheck, lint, **4,428 unit / 411 browser / 349 integration** tests
 (6 existing skips), production build and **44 E2E** tests without retries.
 Fast-forwarding to merged #953 (`8da15de2`) changed ancestry only; its tree matches
-tested parent `0aeda526`. Exact-head review, merge and production promotion
-remain pending for this staging safeguard.
+tested parent `0aeda526`.
+
+**CONFIRMED caller compatibility correction:** read-only inspection of
+`scripts/seed-environment-runtime.ts:108-123` found `prepareCorpus` first invokes
+`content:import:drafts -- --status published --dry-run` against existing output.
+Requiring an empty directory in that non-writing mode would block that existing
+caller before its normal regeneration. Three real-CLI compatibility cases failed
+against the initial staging guard (**3 failed / 28 passed**); limiting the empty
+check to actual writes restored **86/86** focused cases. Separately removing
+`await assertEmptyOutputRoot(outRoot)` made the three write-refusal cases fail
+(**3 failed / 28 passed**), proving the final guard still detects its forbidden
+state. The final full local gate on base `8da15de2` also passed: typecheck,
+lint, **4,428 unit / 411 browser / 349 integration** tests (6 existing skips),
+production build and **44 E2E** tests without retries. Exact-head review, merge
+and production promotion remain pending.
+
+The managed caller still removes the imported tree between validation and
+regeneration. It does **not** use the new safe staging procedure yet; adapting
+that caller is a remaining DEBT-483 task in the other clone's assigned runtime
+file. This PR preserves its existing non-writing preflight rather than changing
+that owned file. A passing manual staging test does not prove managed seeding is
+transactional or that its delete-before-regenerate window is closed.
 
 [Content pipeline operations](../practice-engine/content-pipeline.md#import-drafts--mdx-generated)
 now prescribe a fresh temporary directory **outside** the seed glob, followed by

@@ -160,9 +160,8 @@ async function main(): Promise<void> {
     }
   }
 
-  await assertEmptyOutputRoot(outRoot);
-
   if (!dryRun) {
+    await assertEmptyOutputRoot(outRoot);
     for (const output of outputs) {
       await assertNoOutputSymlinks(outRoot, output.file);
       await mkdir(path.dirname(output.file), { recursive: true });

@@ -158,7 +158,7 @@ describe('draft import filesystem boundary', () => {
 
   describe.each([false, true])('clean staging (dryRun=%s)', (dryRun) => {
     it.each(['current-qid', 'stale-qid', 'hidden-file'])(
-      'refuses a populated output root containing %s without changing it',
+      'preserves existing %s during validation or write refusal',
       (existingKind) => {
         const destination = path.join(
           output,
@@ -177,9 +177,14 @@ describe('draft import filesystem boundary', () => {
 
         const result = run(dryRun);
 
-        expect(result.status, result.stdout).toBe(1);
-        expect(result.stderr).toMatch(/output root.*not empty/i);
-        expect(result.stderr).toContain('fresh staging directory');
+        if (dryRun) {
+          expect(result.status, result.stderr).toBe(0);
+          expect(result.stdout).toContain('written=0 (dry-run)');
+        } else {
+          expect(result.status, result.stdout).toBe(1);
+          expect(result.stderr).toMatch(/output root.*not empty/i);
+          expect(result.stderr).toContain('fresh staging directory');
+        }
         expect(readFileSync(existing, 'utf8')).toBe(
           'Existing output must survive unchanged',
         );

@@ -195,15 +195,17 @@ read a staging bundle while it is being generated or reviewed:
 
 ```bash
 CONTENT_STAGE_DIR="$(mktemp -d)"
-# Validate input and the empty destination without writing:
+# Validate input and path boundaries without writing:
 pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --dry-run
 # Generate the complete staged bundle (default status: draft):
 pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR"
 ```
 
 The importer accepts an absent or empty output directory. A populated output
-root is refused in both normal and dry-run modes, preserving existing files.
-Each new import needs a fresh destination, including after a failed filesystem
+root is refused before actual writes, preserving existing files. Dry-run remains
+input/body/identity and path/symlink validation: it may inspect a populated output
+root without changing it, but does **not** certify that the destination is ready
+for a write. Each new import needs a fresh destination, including after a failed filesystem
 write. The defaults remain input `content/drafts/questions`, output
 `content/questions/imported`, and status `draft`; use `--out` as above for staging.
 
@@ -535,18 +537,20 @@ By default, `pnpm db:seed` **excludes** placeholder questions and archives any e
 - Scans `content/drafts/questions/` for files named `recall.md` and `vignettes.md`
 - Splits multi-question blocks within each file into individual questions
 - Validates tag slugs against the canonical taxonomy in `lib/content/draftTaxonomy.ts`
-- Requires an absent or empty output root (`--out`); the same check runs during dry-run
+- Requires an absent or empty output root (`--out`) before actual writes
 - Writes one `.mdx` file per question into that fresh output tree
 
 ### What it does NOT do
 
-- **Does not prune or merge existing output.** A populated destination is refused. Generate into a fresh temporary directory outside `content/questions/` and preserve the current imported tree during review. Removing a draft does not withdraw its database row; use the explicit-QID withdrawal path documented in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
+- **Does not prune or merge existing output.** A populated destination is refused for actual writes. Generate into a fresh temporary directory outside `content/questions/` and preserve the current imported tree during review. Removing a draft does not withdraw its database row; use the explicit-QID withdrawal path documented in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
 - **Does not touch the database.** Import is a local file operation only. You must run `pnpm db:seed` separately.
 - **Does not read from `content/questions/`.** It reads drafts and writes MDX. The seed reads MDX.
 
 ### Dry-run mode
 
-Validate without writing files:
+Validate input/body/identity and path/symlink boundaries without writing files.
+A populated destination is allowed for this read-only check; success does not
+certify the empty-destination prerequisite for a later write:
 
 ```bash
 CONTENT_STAGE_DIR="$(mktemp -d)"
