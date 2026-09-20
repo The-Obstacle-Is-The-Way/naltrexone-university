@@ -13,6 +13,7 @@ import {
   computeReferencedChoiceIds,
   computeTemporarySortOrders,
 } from '../seed-helpers';
+import { computeContentRewriteChanges } from './content-rewrite-policy';
 import type { SeedSourceFile } from './file-reader';
 import { buildSeedRepFromDb, parseSeedQuestionFile } from './question-parser';
 import { upsertTags, validateSeedQuestionTags } from './tag-manager';
@@ -70,13 +71,14 @@ async function countGradedHistoryForQuestion(
   };
 }
 
-async function enforceAnswerKeyChangePolicy(input: {
+async function enforceGradedHistoryPolicy(input: {
   tx: PostgresJsDatabase<typeof schema>;
   questionId: string;
   slug: string;
   changes: readonly AnswerKeyChange[];
+  contentChanges: readonly string[];
 }): Promise<void> {
-  if (input.changes.length === 0) return;
+  if (input.changes.length === 0 && input.contentChanges.length === 0) return;
 
   const counts = await countGradedHistoryForQuestion(
     input.tx,
@@ -84,8 +86,15 @@ async function enforceAnswerKeyChangePolicy(input: {
   );
   if (!hasGradedHistory(counts)) return;
 
-  const changeSummary = formatAnswerKeyChanges(input.changes);
   const countSummary = `attempts=${counts.attempts}, practiceSessionStates=${counts.practiceSessionStates}`;
+
+  if (input.contentChanges.length > 0) {
+    throw new Error(
+      `Refusing to rewrite content for "${input.slug}" because graded history exists (${countSummary}; changes=${input.contentChanges.join(', ')}). Use a new question ID and explicitly archive the replaced question.`,
+    );
+  }
+
+  const changeSummary = formatAnswerKeyChanges(input.changes);
 
   if (shouldAllowKeyChangesOverGradedHistory()) {
     console.warn(
@@ -260,11 +269,15 @@ export async function syncQuestionsFromFiles(
             isCorrect: choice.is_correct,
           })),
         });
-        await enforceAnswerKeyChangePolicy({
+        await enforceGradedHistoryPolicy({
           tx,
           questionId: lockedQuestion.id,
           slug: seedFromFile.slug,
           changes: answerKeyChanges,
+          contentChanges: computeContentRewriteChanges(
+            seedFromDb,
+            seedFromFile,
+          ),
         });
 
         const desiredLabels = new Set(
