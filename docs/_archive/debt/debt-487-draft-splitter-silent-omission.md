@@ -1,6 +1,6 @@
 # DEBT-487: Frontmatter Order Can Silently Omit Questions
 
-**Status:** In Progress — merged to dev; production promotion pending
+**Status:** Resolved — #943; promoted and verified through #946 on 2026-09-20
 **Priority:** P1
 **Date:** 2026-09-20
 **ID reconciliation:** Renumbered from DEBT-481 after PR #937 collided with the owner's reserved public-surface IDs; original evidence and status are preserved.
@@ -22,7 +22,7 @@ violation should be rejected, not treated as absent input.
 
 ## Reproduction
 
-Run [DEBT-485's synthetic fixture](../_archive/debt/debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
+Run [DEBT-485's synthetic fixture](debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
 with PROBE=reordered. It places type before qid.
 
 Observed: blocks=0, outputs=[], uniqueOutputs=0, seed=[]; no exception.
@@ -100,7 +100,10 @@ merged to dev as `95c8f93e` at 2026-09-20T19:04:43Z after CodeRabbit review
 `5261420106` approved exact head `df8a4baf`, zero unresolved threads, and all
 checks passed. [CI 35530510447](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35530510447)
 also passed 44 E2E tests without retries. [Closeout and warning adjudication](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/943#issuecomment-5751958877).
-Production promotion remains pending; no production import or seed was run.
+**CONFIRMED:** [promotion #946 and its production receipt](../../debt/assets/content-integrity-2026-09-20/verification.md#verified-production-milestone)
+verify that this change reached main `7e41deaa`, the exact production alias and
+successful HTTP probes after main CI. No production import or seed was run;
+this closes the splitter defect without claiming a live omission or corpus count.
 
 ## Related
 
