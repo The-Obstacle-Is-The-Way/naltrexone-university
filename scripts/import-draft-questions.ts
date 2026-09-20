@@ -104,24 +104,40 @@ async function main(): Promise<void> {
 
   let written = 0;
   const outputs: { file: string; mdx: string }[] = [];
+  const qidLocations = new Map<string, string>();
 
   for (const file of files) {
     const raw = await readFile(file, 'utf8');
-    const blocks = splitDraftQuestionsFile(raw);
+    let blocks: string[];
+    try {
+      blocks = splitDraftQuestionsFile(raw);
+    } catch (error) {
+      throw new Error(`Invalid draft file ${file}: ${String(error)}`, {
+        cause: error,
+      });
+    }
     const outputGroup = outputGroupFromPath(inRoot, file) ?? 'misc';
 
-    for (const block of blocks) {
+    for (const [index, block] of blocks.entries()) {
       const draft = parseDraftQuestionBlock(block);
       const mdx = convertDraftQuestionToMdx({
         draft,
         status,
       });
 
+      const qid = draft.frontmatter.qid;
+      const location = `${file} (block ${index + 1})`;
+      const previous = qidLocations.get(qid);
+      if (previous !== undefined) {
+        throw new Error(`Duplicate QID "${qid}": ${previous} and ${location}`);
+      }
+      qidLocations.set(qid, location);
+
       const outFile = draftQuestionOutputPath(
         outRoot,
         outputGroup,
         draft.frontmatter.source,
-        draft.frontmatter.qid,
+        qid,
       );
       await assertNoOutputSymlinks(outRoot, outFile);
       outputs.push({ file: outFile, mdx });
@@ -140,7 +156,7 @@ async function main(): Promise<void> {
 
   const suffix = dryRun ? ' (dry-run)' : '';
   console.info(
-    `Imported draft questions: files=${files.length} questions=${outputs.length} written=${written}${suffix}`,
+    `Imported draft questions: files=${files.length} questions=${outputs.length} written=${written}${suffix} uniqueQids=${qidLocations.size}`,
   );
   console.info(`Output root: ${path.resolve(outRoot)}`);
 }
