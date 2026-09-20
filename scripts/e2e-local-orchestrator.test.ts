@@ -84,7 +84,7 @@ describe('createE2ECommandPlan', () => {
     ]);
     expect(plan[0]).toMatchObject({
       command: 'pnpm',
-      args: ['exec', 'tsx', 'scripts/ensure-local-test-db.ts'],
+      args: ['exec', 'tsx', 'scripts/run-local-test-db.ts', 'up'],
       env: targetEnv,
     });
     expect(plan[1]).toMatchObject({
@@ -207,6 +207,21 @@ describe('createE2ECommandPlan', () => {
 });
 
 describe('runCommandPlan', () => {
+  it('stops before migrations when database readiness fails', async () => {
+    const failure = new Error('Database readiness timed out.');
+    const labels: string[] = [];
+    await expect(
+      runCommandPlan(createE2ECommandPlan({ cwd: '/repo/a', env: {} }), {
+        env: {},
+        runCommand: async (invocation) => {
+          labels.push(invocation.label);
+          throw failure;
+        },
+      }),
+    ).rejects.toBe(failure);
+    expect(labels).toEqual(['Start isolated local Docker test database']);
+  });
+
   it('omits inherited NO_COLOR only from the Playwright child environment', async () => {
     const invocations: E2ECommandInvocation[] = [];
     const runCommand = vi.fn(async (invocation: E2ECommandInvocation) => {
