@@ -156,6 +156,11 @@ pnpm test:e2e
 
 `pnpm test:e2e` selects only the required `chromium` project. Stripe-owned Checkout DOM journeys use the `stripe-hosted-*.spec.ts` prefix and run only through the scheduled/manual `pnpm test:e2e:stripe-hosted` compatibility lane; they are observational and are not part of the pre-push or merge gate. Required E2E may assert the redirect reached the `checkout.stripe.com` origin but must not act on or assert against Stripe-owned markup.
 
+Product and cleanup projects have zero retries; never override that to obtain a
+green run. Only bootstrap has bounded retries. Report and inspect any recovered
+setup failure rather than treating its project name as proof of a provider
+outage. See the canonical [Playwright retry policy](docs/dev/testing-infrastructure.md#playwright-retry-policy).
+
 Never run E2E migrations by relying on implicit `.env.local` resolution alone. Normal local E2E does not need remote migrations. For an intentional deploy-target E2E check, verify the host and use `E2E_USE_EXISTING_DATABASE=true ALLOW_NON_LOCAL_DATABASE_URL=true DATABASE_URL="<target>" pnpm test:e2e`; migrate a remote target only when you deliberately mean to mutate it.
 
 This is not optional. This is not "before opening a PR." This is **before every push**, including follow-up fix commits. Every single time.
