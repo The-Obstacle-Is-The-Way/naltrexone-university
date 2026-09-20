@@ -1,0 +1,79 @@
+[
+  {
+    "name": "production_ops",
+    "path": "/api/0/organizations/novamindnyc/events/",
+    "parameters": [
+      ["dataset", "spans"],
+      ["project", "4510829539164160"],
+      ["statsPeriod", "30d"],
+      ["query", "environment:production"],
+      ["field", "span.op"],
+      ["field", "count()"]
+    ],
+    "http_status": "200",
+    "data": [
+      {
+        "span.op": "function.nextjs",
+        "count()": 4980.0
+      },
+      {
+        "span.op": "http.server.middleware",
+        "count()": 2460.0
+      },
+      {
+        "span.op": "stripe.api",
+        "count()": 280.0
+      },
+      {
+        "span.op": "http.client",
+        "count()": 540.0
+      },
+      {
+        "span.op": "http.server",
+        "count()": 4480.0
+      },
+      {
+        "span.op": "default",
+        "count()": 8360.0
+      },
+      {
+        "span.op": "stripe.webhook",
+        "count()": 20.0
+      }
+    ]
+  },
+  {
+    "name": "production_actions",
+    "path": "/api/0/organizations/novamindnyc/events/",
+    "parameters": [
+      ["dataset", "spans"],
+      ["project", "4510829539164160"],
+      ["statsPeriod", "30d"],
+      ["query", "environment:production span.op:server.action"],
+      ["field", "span.description"],
+      ["field", "count()"],
+      ["field", "p95(span.duration)"]
+    ],
+    "http_status": "200",
+    "data": []
+  },
+  {
+    "name": "production_db",
+    "path": "/api/0/organizations/novamindnyc/events/",
+    "parameters": [
+      ["dataset", "spans"],
+      ["project", "4510829539164160"],
+      ["statsPeriod", "30d"],
+      ["query", "environment:production span.op:db"],
+      ["field", "count()"],
+      ["field", "p95(span.duration)"]
+    ],
+    "http_status": "200",
+    "data": [
+      {
+        "count()": 0,
+        "p95(span.duration)": null
+      }
+    ]
+  }
+]
