@@ -1,6 +1,6 @@
 # DEBT-484: Substantive Rewrites Can Reinterpret Historical Attempts
 
-**Status:** In Progress — initial rewrite guard and full gate verified locally; rebase/review pending
+**Status:** In Progress — initial rewrite guard and full gate verified locally; review pending
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED behavior boundary; affected production attempts unknown
@@ -102,6 +102,12 @@ It does not print clinical text and has no content-rewrite override.
 - Publication status and classification metadata are not frozen. Explicit
   archival remains possible without deleting attempts or changing their text.
   This guard is not a promise of immutable historical classification/analytics.
+  **CONFIRMED review boundary:** `get-previous-attempt.ts:169-178,206-213`
+  requires `findPublishedById`; `drizzle-question-repository.ts:107-119`
+  filters by `status=published` for ID/slug lookups. An archived question returns
+  null through those paths even though its attempts remain stored. Historical
+  review after archival is therefore still part of the revision milestone;
+  row-preservation tests do not establish that user-facing outcome.
 - With no graded history, the current same-ID update remains allowed. The later
   SPEC-007 design still needs immutable revisions for attempts and active sessions,
   including a learner viewing an ungraded item while a seed changes it. This
@@ -129,8 +135,10 @@ key error or a successful destructive sync.
 The full local gate on parent `b0955d02` passed: typecheck, lint, **4,407 unit /
 411 browser / 313 integration** tests (6 existing skips), production build, and
 **44 authenticated E2E** tests without retries. Clerk/Stripe were TEST-mode and
-the database lanes used clone-isolated Docker. This branch will incorporate the
-new dev base after PR #949; a fresh full gate is required before its first push.
+the database lanes used clone-isolated Docker. After rebasing onto PR #949's updated head `852c26d5` (including dev PR #948),
+the full gate passed again: **4,421 unit / 411 browser / 313 integration**
+tests (6 existing skips), build, and **44 E2E** tests with no retries; typecheck
+and lint passed as well.
 No real content or remote database was changed. Exact-head approval, merge and
 production-promotion receipts remain pending.
 
