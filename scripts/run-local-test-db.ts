@@ -10,6 +10,7 @@ import {
 } from './resolve-local-test-target';
 
 type LocalTestDbAction = 'up' | 'down' | 'reset';
+const DATABASE_READY_TIMEOUT_SECONDS = 60;
 
 type CreateLocalTestDbCommandPlanInput = {
   action: LocalTestDbAction;
@@ -38,7 +39,15 @@ export function createLocalTestDbCommandPlan({
       {
         label: 'Start isolated local test database',
         command: 'docker',
-        args: [...projectArgs, 'up', '-d', '--wait', 'db'],
+        args: [
+          ...projectArgs,
+          'up',
+          '-d',
+          '--wait',
+          '--wait-timeout',
+          String(DATABASE_READY_TIMEOUT_SECONDS),
+          'db',
+        ],
         env: targetEnv,
       },
     ];
@@ -65,7 +74,15 @@ export function createLocalTestDbCommandPlan({
     {
       label: 'Start isolated local test database',
       command: 'docker',
-      args: [...projectArgs, 'up', '-d', '--wait', 'db'],
+      args: [
+        ...projectArgs,
+        'up',
+        '-d',
+        '--wait',
+        '--wait-timeout',
+        String(DATABASE_READY_TIMEOUT_SECONDS),
+        'db',
+      ],
       env: targetEnv,
     },
   ];
