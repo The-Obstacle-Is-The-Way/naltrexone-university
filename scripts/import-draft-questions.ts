@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import fg from 'fast-glob';
 import {
@@ -87,6 +87,22 @@ async function assertNoOutputSymlinks(
   }
 }
 
+async function assertEmptyOutputRoot(outRoot: string): Promise<void> {
+  try {
+    if ((await readdir(outRoot)).length > 0) {
+      throw new Error(
+        `Output root is not empty: ${path.resolve(outRoot)}. Use --out with a fresh staging directory; existing files were not changed.`,
+      );
+    }
+  } catch (error) {
+    if (
+      !(error instanceof Error && 'code' in error && error.code === 'ENOENT')
+    ) {
+      throw error;
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const { inRoot, outRoot, status, dryRun } = parseArgs(process.argv.slice(2));
 
@@ -145,6 +161,7 @@ async function main(): Promise<void> {
   }
 
   if (!dryRun) {
+    await assertEmptyOutputRoot(outRoot);
     for (const output of outputs) {
       await assertNoOutputSymlinks(outRoot, output.file);
       await mkdir(path.dirname(output.file), { recursive: true });
