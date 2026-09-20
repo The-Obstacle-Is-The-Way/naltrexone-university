@@ -194,6 +194,15 @@ function buildSeedQuestionWithAnswerKey(input: {
   ].join('\n');
 }
 
+async function syncOriginalAnswerKey(slug: string): Promise<void> {
+  await syncQuestionsFromFiles(db, [
+    {
+      absolutePath: `/tmp/${slug}.mdx`,
+      raw: buildSeedQuestionWithAnswerKey({ slug, correctLabel: 'B' }),
+    },
+  ]);
+}
+
 function buildSeedQuestionWithInvalidTag(slug: string): string {
   return [
     '---',
@@ -378,13 +387,18 @@ describe('BUG-266 seed choice sync guard', () => {
     );
   });
 
-  it('reports the domain guard when a choice becomes referenced after the preflight check but before delete', async () => {
+  it('reports the rewrite guard when a graded attempt arrives before the question lock is acquired', async () => {
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {
       slug: `it-seed-choice-sync-race-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
+    const originalChoices = await db
+      .select()
+      .from(schema.choices)
+      .where(eq(schema.choices.questionId, question.id))
+      .orderBy(schema.choices.label);
     const { sql: blockerSql } = createIntegrationDb();
     const { db: writerDb, sql: writerSql } = createIntegrationDb();
     const { sql: monitorSql } = createIntegrationDb();
@@ -431,8 +445,15 @@ describe('BUG-266 seed choice sync guard', () => {
       releaseLock.resolve();
 
       await expect(syncPromise).rejects.toThrow(
-        `Refusing to delete choice ${question.incorrectChoiceId} (A) because it is referenced by an attempt or practice session state`,
+        /Refusing to rewrite content.*graded history.*attempts=1.*choice_labels/,
       );
+      expect(
+        await db
+          .select()
+          .from(schema.choices)
+          .where(eq(schema.choices.questionId, question.id))
+          .orderBy(schema.choices.label),
+      ).toEqual(originalChoices);
     } finally {
       releaseLock.resolve();
       await Promise.allSettled([blocker, syncPromise]);
@@ -529,6 +550,7 @@ describe('BUG-281 seed answer-key change guard', () => {
       status: 'published',
       difficulty: 'easy',
     });
+    await syncOriginalAnswerKey(question.slug);
     await insertGradedAttempt({
       userId: user.id,
       questionId: question.id,
@@ -570,6 +592,7 @@ describe('BUG-281 seed answer-key change guard', () => {
       status: 'published',
       difficulty: 'easy',
     });
+    await syncOriginalAnswerKey(question.slug);
     await insertGradedAttempt({
       userId: user.id,
       questionId: question.id,
@@ -621,7 +644,7 @@ describe('BUG-281 seed answer-key change guard', () => {
     await expect(readCorrectLabels(question.id)).resolves.toEqual(['A']);
   });
 
-  it('allows text-only edits over graded history', async () => {
+  it('refuses text-only rewrites over graded history', async () => {
     delete process.env.SEED_ALLOW_KEY_CHANGES_OVER_GRADED_HISTORY;
     const user = await createUser(db, cleanup);
     const question = await createQuestion(db, cleanup, {
@@ -629,6 +652,7 @@ describe('BUG-281 seed answer-key change guard', () => {
       status: 'published',
       difficulty: 'easy',
     });
+    await syncOriginalAnswerKey(question.slug);
     await insertGradedAttempt({
       userId: user.id,
       questionId: question.id,
@@ -647,7 +671,7 @@ describe('BUG-281 seed answer-key change guard', () => {
           }),
         },
       ]),
-    ).resolves.toEqual({ inserted: 0, updated: 1, skipped: 0 });
+    ).rejects.toThrow(/Refusing to rewrite content.*graded history/i);
 
     const [choiceB] = await db
       .select({ textMd: schema.choices.textMd })
@@ -659,7 +683,7 @@ describe('BUG-281 seed answer-key change guard', () => {
         ),
       );
 
-    expect(choiceB?.textMd).toBe('Updated Choice B');
+    expect(choiceB?.textMd).toBe('Choice B');
     await expect(readCorrectLabels(question.id)).resolves.toEqual(['B']);
   });
 
@@ -672,6 +696,7 @@ describe('BUG-281 seed answer-key change guard', () => {
       difficulty: 'easy',
     });
     const skippedSlug = `it-seed-key-batch-skipped-${randomUUID()}`;
+    await syncOriginalAnswerKey(question.slug);
     await insertGradedAttempt({
       userId: user.id,
       questionId: question.id,
