@@ -1,10 +1,9 @@
-import * as Sentry from '@sentry/nextjs';
 import { toConsumerReference } from '@/src/adapters/shared/consumer-reference';
 import { PRUNE_BATCH_LIMIT } from '@/src/adapters/shared/prune-constants';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import {
-  projectSafeSpanAttributes,
   SERVER_SPAN_FAMILIES,
+  startServerSpan,
 } from '@/src/adapters/shared/server-tracing';
 import {
   isE2EOwnerMismatchEvent,
@@ -801,27 +800,16 @@ export async function processStripeWebhook(
   input: StripeWebhookInput,
 ): Promise<void> {
   const family = SERVER_SPAN_FAMILIES.stripe.parent;
-  return Sentry.startSpan(
-    {
-      name: family.name,
-      op: family.op,
-      attributes: projectSafeSpanAttributes({
-        'app.route': family.route,
-      }),
-    },
-    async (span) => {
-      try {
-        await processStripeWebhookWithinSpan(deps, input);
-      } catch (error) {
-        if (isApplicationError(error)) {
-          span.setAttributes(
-            projectSafeSpanAttributes({
-              'app.error_code': error.code,
-            }),
-          );
-        }
-        throw error;
+  return startServerSpan(family, {}, async (span) => {
+    try {
+      await processStripeWebhookWithinSpan(deps, input);
+    } catch (error) {
+      if (isApplicationError(error)) {
+        span.setAttributes({
+          'app.error_code': error.code,
+        });
       }
-    },
-  );
+      throw error;
+    }
+  });
 }

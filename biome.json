@@ -34,11 +34,35 @@
         "noUnusedImports": "error"
       },
       "style": {
-        "noNonNullAssertion": "error"
+        "noNonNullAssertion": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@sentry/nextjs": "Use the typed server-tracing boundary instead of importing the SDK directly."
+            }
+          }
+        }
       }
     }
   },
   "overrides": [
+    {
+      "includes": [
+        "src/adapters/shared/server-tracing.ts",
+        "instrumentation.ts",
+        "sentry.client.config.ts",
+        "lib/report-client-error.ts",
+        "vitest.browser.setup.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.browser.spec.tsx"],
       "linter": {
