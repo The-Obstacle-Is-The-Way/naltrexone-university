@@ -1,3 +1,4 @@
+import path from 'node:path';
 import matter from 'gray-matter';
 import { z } from 'zod';
 import {
@@ -34,7 +35,12 @@ const DraftFrontmatterBaseSchema = z.object({
   topics: z.array(DraftTopicSlugSchema).min(1),
   treatments: z.array(DraftTreatmentSlugSchema).default([]),
   diagnoses: z.array(DraftTagSlugSchema).default([]),
-  source: z.string().min(1),
+  source: z
+    .string()
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      'source must be a kebab-case identifier',
+    ),
 });
 
 const DraftYamlChoiceSchema = z
@@ -325,4 +331,24 @@ export function convertDraftQuestionToMdx(input: {
   lines.push('');
 
   return lines.join('\n');
+}
+
+export function draftQuestionOutputPath(
+  outRoot: string,
+  outputGroup: string,
+  source: string,
+  qid: string,
+): string {
+  const root = path.resolve(outRoot);
+  const output = path.resolve(root, outputGroup, source, `${qid}.mdx`);
+  const relative = path.relative(root, output);
+  if (
+    !relative ||
+    relative === '..' ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  ) {
+    throw new Error(`Draft destination is outside output root: ${output}`);
+  }
+  return output;
 }

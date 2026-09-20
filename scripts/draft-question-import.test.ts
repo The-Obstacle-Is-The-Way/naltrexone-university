@@ -1,3 +1,4 @@
+import path from 'node:path';
 import matter from 'gray-matter';
 import { describe, expect, it } from 'vitest';
 import { parseMdxQuestionBody } from '../lib/content/parse-mdx-question';
@@ -7,6 +8,7 @@ import {
 } from '../lib/content/schemas';
 import {
   convertDraftQuestionToMdx,
+  draftQuestionOutputPath,
   parseDraftQuestionBlock,
   splitDraftQuestionsFile,
 } from './draft-question-import';
@@ -668,4 +670,61 @@ describe('draft question import', () => {
     );
     FullQuestionSchema.parse({ frontmatter, stemMd, explanationMd });
   });
+});
+
+describe('draft import output boundary', () => {
+  it.each([
+    '../../../../outside',
+    '../sibling',
+    '/absolute',
+    '..',
+    '.',
+    'with/slash',
+    'with\\backslash',
+    'C:\\outside',
+    'two words',
+  ])('rejects source %s before conversion', (source) => {
+    const block = buildDraftBlock({
+      qid: 'demo-001',
+      source,
+      choices: [
+        { label: 'A', text: 'Right', correct: true },
+        { label: 'B', text: 'Wrong', correct: false, explanation: 'Reason.' },
+      ],
+    });
+    expect(() => parseDraftQuestionBlock(block)).toThrow(/source/);
+  });
+
+  it('resolves valid nested output beneath the output root', () => {
+    expect(
+      draftQuestionOutputPath(
+        'out',
+        'article-based-pathway',
+        'white-2020',
+        'demo-001',
+      ),
+    ).toBe(
+      path.resolve(
+        'out',
+        'article-based-pathway',
+        'white-2020',
+        'demo-001.mdx',
+      ),
+    );
+  });
+
+  it.each([
+    ['group', '../../../../outside', 'demo-001'],
+    ['../../outside', 'source', 'demo-001'],
+    ['group', 'source', '../../../outside'],
+    ['../output-sibling', 'source', 'demo-001'],
+    ['/absolute', 'source', 'demo-001'],
+  ])(
+    'rejects escaping destination components %s %s %s',
+    (group, source, qid) => {
+      expect(() =>
+        draftQuestionOutputPath('output', group, source, qid),
+      ).toThrow(/outside output root/);
+    },
+  );
 });
