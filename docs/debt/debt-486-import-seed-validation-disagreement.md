@@ -136,7 +136,18 @@ integration** tests (6 existing skips), build, and **44 authenticated E2E** test
 with no retries. The previously failing history case passed in that fresh run.
 The first run remains a failed attempt; the new result does not erase it.
 Clerk/Stripe were TEST-mode and both database lanes used clone-isolated Docker.
-Exact-head review, merge and promotion receipts remain pending.
+[PR #949](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/949)
+first received CodeRabbit approval `5261620430` on `b0955d02`, zero unresolved
+threads, and [CI 35534593526](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35534593526)
+passed (44 E2E, no retries). GitHub refused the merge with `Base branch was
+modified` when PR #948 advanced dev to `e4e53598` between the final readiness
+check and merge request. No override was used.
+
+After integrating that base, the full gate passed again: typecheck, lint,
+**4,421 unit / 411 browser / 293 integration** tests (6 existing skips), build,
+and **44 authenticated E2E** tests without retries. The earlier approval does
+not cover this updated head; fresh exact-head approval, CI, merge and promotion
+receipts remain pending.
 
 ## Related
 
