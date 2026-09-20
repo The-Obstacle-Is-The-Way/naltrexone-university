@@ -11,6 +11,7 @@ import {
 } from '../lib/content/draft-taxonomy';
 import { canonicalizeMarkdown } from '../lib/content/parse-mdx-question';
 import { QuestionFrontmatterSchema } from '../lib/content/schemas';
+import { parseSeedQuestionFile } from './seed/question-parser';
 
 const DraftTagSlugSchema = z
   .string()
@@ -355,7 +356,9 @@ export function convertDraftQuestionToMdx(input: {
   lines.push(canonicalizeMarkdown(draft.explanationMd));
   lines.push('');
 
-  return lines.join('\n');
+  const mdx = lines.join('\n');
+  parseSeedQuestionFile(mdx);
+  return mdx;
 }
 
 export function draftQuestionOutputPath(

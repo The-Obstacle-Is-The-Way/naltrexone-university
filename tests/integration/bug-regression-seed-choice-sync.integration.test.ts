@@ -63,6 +63,10 @@ function buildSeedQuestionWithRemovedChoice(slug: string): string {
     '## Explanation',
     '',
     '# Explanation',
+    '',
+    '### Reference',
+    '',
+    'Synthetic test citation.',
   ].join('\n');
 }
 
@@ -100,6 +104,10 @@ function buildSeedQuestionWithInsertedChoice(slug: string): string {
     '## Explanation',
     '',
     '# Explanation',
+    '',
+    '### Reference',
+    '',
+    'Synthetic test citation.',
   ].join('\n');
 }
 
@@ -133,6 +141,10 @@ function buildSeedQuestionWithExistingChoices(slug: string): string {
     '## Explanation',
     '',
     '# Updated Explanation',
+    '',
+    '### Reference',
+    '',
+    'Synthetic test citation.',
   ].join('\n');
 }
 
@@ -175,6 +187,10 @@ function buildSeedQuestionWithAnswerKey(input: {
     '## Explanation',
     '',
     '# Explanation',
+    '',
+    '### Reference',
+    '',
+    'Synthetic test citation.',
   ].join('\n');
 }
 
@@ -208,6 +224,10 @@ function buildSeedQuestionWithInvalidTag(slug: string): string {
     '## Explanation',
     '',
     '# Explanation',
+    '',
+    '### Reference',
+    '',
+    'Synthetic test citation.',
   ].join('\n');
 }
 

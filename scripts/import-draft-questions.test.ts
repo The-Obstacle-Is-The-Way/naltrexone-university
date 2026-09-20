@@ -259,4 +259,18 @@ describe('draft import filesystem boundary', () => {
       ).toBe(true);
     }
   });
+
+  it.each([false, true])(
+    'rejects a later uncited body before writing (dryRun=%s)',
+    (dryRun) => {
+      writeFileSync(
+        path.join(input, 'group', 'vignettes.md'),
+        draft('fixture-002').replace('### Reference\nSynthetic citation.', ''),
+      );
+      const result = run(dryRun);
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stderr).toMatch(/reference.*required/i);
+      expect(existsSync(output)).toBe(false);
+    },
+  );
 });
