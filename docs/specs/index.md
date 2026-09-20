@@ -82,6 +82,7 @@ Implementation specifications provide detailed technical guidance for building e
 - **In Progress** — Being implemented
 - **Partial** — Partially implemented
 - **Implemented** — Complete and verified
+- **Reconciliation open** — Shipped behavior and this document disagree; follow the named authorities until the linked debt is reconciled
 - **Deprecated** — No longer applicable
 
 ## Architecture Layers
@@ -112,7 +113,7 @@ Specs are organized by Clean Architecture layer:
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Proposed | Ready | In Progress | Partial | Implemented | Deprecated
+**Status:** Proposed | Ready | In Progress | Partial | Implemented | Reconciliation open | Deprecated
 **Layer:** Domain | Application | Adapters | Feature | Infrastructure
 **Date:** YYYY-MM-DD
 
