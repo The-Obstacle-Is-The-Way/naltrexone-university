@@ -107,7 +107,14 @@ async function main(): Promise<void> {
 
   for (const file of files) {
     const raw = await readFile(file, 'utf8');
-    const blocks = splitDraftQuestionsFile(raw);
+    let blocks: string[];
+    try {
+      blocks = splitDraftQuestionsFile(raw);
+    } catch (error) {
+      throw new Error(`Invalid draft file ${file}: ${String(error)}`, {
+        cause: error,
+      });
+    }
     const outputGroup = outputGroupFromPath(inRoot, file) ?? 'misc';
 
     for (const block of blocks) {

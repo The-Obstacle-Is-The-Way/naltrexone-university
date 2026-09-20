@@ -111,32 +111,57 @@ export type DraftQuestion = {
 };
 
 export function splitDraftQuestionsFile(raw: string): string[] {
-  const normalized = raw.replace(/\r\n?/g, '\n');
-  const startPattern = /^---\nqid:/gm;
+  const lines = raw.replace(/\r\n?/g, '\n').split('\n');
+  const delimiterAfter = (start: number) =>
+    lines.findIndex((line, index) => index >= start && line === '---');
+  let start = delimiterAfter(0);
+  if (start === -1) throw new Error('No question blocks found');
 
-  const starts: number[] = [];
-  for (
-    let match = startPattern.exec(normalized);
-    match;
-    match = startPattern.exec(normalized)
-  ) {
-    starts.push(match.index);
-  }
-
-  if (starts.length === 0) {
-    return [];
-  }
-
-  const blocks: string[] = [];
-  for (let index = 0; index < starts.length; index += 1) {
-    const start = starts[index];
-    const end = starts[index + 1] ?? normalized.length;
-    const block = normalized.slice(start, end).trim();
-    if (block) {
-      blocks.push(block);
+  // Existing files may introduce the questions with a title and quoted source
+  // notes. Anything else before frontmatter is unconsumed input, not a question
+  // we can safely ignore.
+  for (let index = 0; index < start; index += 1) {
+    const line = lines[index];
+    if (line?.trim() && !/^(# |> )/.test(line)) {
+      throw new Error(`Line ${index + 1}: unsupported draft preamble`);
     }
   }
+  const afterPreamble = lines.findIndex(
+    (line, index) => index > start && line.trim().length > 0,
+  );
+  if (start > 0 && lines[afterPreamble] === '---') {
+    start = afterPreamble; // Existing source-note preambles may end in a rule.
+  }
+  const blocks: string[] = [];
+  while (start < lines.length) {
+    if (!lines[start + 1]?.startsWith('qid:')) {
+      throw new Error(
+        `Line ${start + 1}: qid must be the first frontmatter key`,
+      );
+    }
+    const frontmatterEnd = delimiterAfter(start + 2);
+    if (frontmatterEnd === -1) {
+      throw new Error(`Line ${start + 1}: unclosed frontmatter`);
+    }
+    const bodyEnd = delimiterAfter(frontmatterEnd + 1);
+    const end = bodyEnd === -1 ? lines.length : bodyEnd;
+    for (let index = frontmatterEnd + 1; index < end; index += 1) {
+      if (lines[index]?.startsWith('qid:')) {
+        throw new Error(
+          `Line ${index + 1}: missing frontmatter opening delimiter`,
+        );
+      }
+    }
+    blocks.push(lines.slice(start, end).join('\n').trim());
+    if (bodyEnd === -1) break;
 
+    const next = lines.findIndex(
+      (line, index) => index > bodyEnd && line.trim().length > 0,
+    );
+    if (next === -1) break; // Optional final question separator.
+    // Accept adjacent frontmatter or a separate closing/opening delimiter pair.
+    start = lines[next] === '---' ? next : bodyEnd;
+  }
   return blocks;
 }
 
