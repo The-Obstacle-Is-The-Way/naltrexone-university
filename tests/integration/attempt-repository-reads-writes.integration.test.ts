@@ -250,13 +250,21 @@ describe('attempt reads and writes against real Postgres', () => {
       isCorrect: false,
       answeredAt: oldDate,
     }));
-    // Insert IDs out of order so the query, not fixture ordering, chooses the bound.
+    // The newest row has the lowest ID: ID-only ordering would exclude it at
+    // the 500-row boundary. The older tied rows still prove the ID tie-breaker.
+    const newest = rows.reduce((lowest, row) =>
+      row.id < lowest.id ? row : lowest,
+    );
+    newest.answeredAt = newDate;
     await db.insert(schema.attempts).values(rows);
-    const expectedIds = rows
-      .map((row) => row.id)
-      .sort()
-      .reverse()
-      .slice(0, 500);
+    const expectedIds = [
+      newest.id,
+      ...rows
+        .filter((row) => row.id !== newest.id)
+        .map((row) => row.id)
+        .sort()
+        .reverse(),
+    ].slice(0, 500);
     const actual = await attempts.findBySessionId(session.id, user.id);
     expect(actual.map((attempt) => attempt.id)).toEqual(expectedIds);
     expect(actual.every((attempt) => attempt.outcome.kind === 'omitted')).toBe(

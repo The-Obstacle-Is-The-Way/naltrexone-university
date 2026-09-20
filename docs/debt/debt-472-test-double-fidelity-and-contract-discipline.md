@@ -83,6 +83,8 @@ Red proofs for the 11 integration cases: omit explicit timestamps; replace the d
 
 Disposition delta: unit **33 → 5** in this file; integration **+11**. Cast floor **273 → 240**, raw casts **311 → 278**, and `RepoDb` casts **171 → 138** (22 → 21 files). Own-code/port-double floors stay **22 / 45**. Suppressions **28 → 27**. The broader step-4 inventory remains open; the fake-attempt waiver is not promoted to shared parity by these real-adapter tests.
 
+**Review correction (2026-09-20 UTC, PR #922):** The bounded-session fixture originally gave every row the same timestamp, so it did not prove chronological selection. Confirmed by removing `answeredAt` from `findBySessionId` ordering: the entire integration lane still passed **293/293** (six opt-in cases skipped). The strengthened fixture assigns the newest timestamp to the lowest-ID row, which an ID-only 500-row bound would exclude; older equal-timestamp rows still assert the ID tie-breaker. With that mutation, the changed case fails (**1 failed / 10 passed**); restoring the byte-identical production adapter passes **11/11**. No production change, new case, floor increase, or weakened assertion is needed.
+
 ## Description
 
 "Fakes over mocks" is the right principle. The repository adopted half of it.
