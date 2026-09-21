@@ -595,19 +595,22 @@ describe('bookmark helper flow control', () => {
     expect(state.bookmarkVisitCount).toBe(2);
   });
 
-  it('retries the bookmarks page after an error before succeeding', async () => {
+  it('rejects the first bookmarks error even when a revisit would recover', async () => {
     const { page, state } = createFakeInteractivePage({
       bookmarksPageStates: ['error', 'populated'],
     });
 
-    await ensureBookmarkExistsOnBookmarksPage(page as never);
+    await expect(
+      ensureBookmarkExistsOnBookmarksPage(page as never),
+    ).rejects.toThrow(
+      'Bookmarks page rendered an error: Unable to load bookmarks.',
+    );
 
-    expect(state.bookmarkVisitCount).toBe(2);
-    expect(page.waitForTimeout).toHaveBeenCalledTimes(1);
-    expect(page.waitForTimeout).toHaveBeenCalledWith(500);
+    expect(state.bookmarkVisitCount).toBe(1);
+    expect(page.waitForTimeout).not.toHaveBeenCalled();
   });
 
-  it('throws after the bookmarks page renders only error states', async () => {
+  it('rejects a persistent bookmarks error on the first visit', async () => {
     const { page } = createFakeInteractivePage({
       bookmarksPageStates: ['error', 'error', 'error'],
     });
@@ -615,10 +618,9 @@ describe('bookmark helper flow control', () => {
     await expect(
       ensureBookmarkExistsOnBookmarksPage(page as never),
     ).rejects.toThrow(
-      'Bookmarks page rendered its error state 3 times in a row.',
+      'Bookmarks page rendered an error: Unable to load bookmarks.',
     );
-    expect(page.waitForTimeout).toHaveBeenCalledTimes(2);
-    expect(page.waitForTimeout).toHaveBeenNthCalledWith(1, 500);
-    expect(page.waitForTimeout).toHaveBeenNthCalledWith(2, 500);
+    expect(page.goto).toHaveBeenCalledTimes(1);
+    expect(page.waitForTimeout).not.toHaveBeenCalled();
   });
 });
