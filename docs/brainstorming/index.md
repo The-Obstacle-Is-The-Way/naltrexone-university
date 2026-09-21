@@ -1,7 +1,9 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-07-07 (added **BS-064** as the BUG-274 radio-choice modality decision record: pointer choice activation remains instant commit in Tutor/Quick Practice, while keyboard/AT radio selection uses the visible selected-uncommitted Submit/Enter path.)
+**Last Updated:** 2026-09-21 — archive convention and BS-064 closeout only.
+
+**Earlier (2026-07-07):** added **BS-064** as the BUG-274 radio-choice modality decision record: pointer choice activation remains instant commit in Tutor/Quick Practice, while keyboard/AT radio selection uses the visible selected-uncommitted Submit/Enter path.
 
 ---
 

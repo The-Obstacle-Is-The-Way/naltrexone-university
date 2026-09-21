@@ -1,7 +1,7 @@
 # Audit Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-06-13
+**Last Updated:** 2026-09-21 — archive convention and index-link maintenance only; the prior audit cycle remains dated 2026-06-13.
 **Next ID:** AUDIT-013
 
 ---

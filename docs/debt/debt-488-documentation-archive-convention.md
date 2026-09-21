@@ -149,6 +149,13 @@ diagnostic granularity, **not new product coverage**. The slowest assertion is
 subprocess is no longer the repository test's execution model; the real-file
 CLI failure/exit tests remain. Hosted final-head validation is still required.
 
+The subsequent review's test-colocation suggestion was withdrawn after checking
+the existing repository-wide guard placement in `tests/`. Its outside-diff
+metadata finding was confirmed: audits and brainstorming now date this scoped
+register maintenance. QA also received September 21 table changes, contrary to
+the review's proposed exclusion, so its metadata names that limited update too.
+No date claims that the historical audit or QA procedure content was reverified.
+
 ## Related
 
 - [Debt register](./index.md)
