@@ -95,6 +95,30 @@ Before replacement, 27 assertions failed against the old classifier, including s
 
 **Takeover verification (2026-09-20 UTC, PR #923):** Re-executing the old classifier against these tests reproduces **27 failed / 41 passed**. Seven failures are diagnostic-text changes; normalizing only that message leaves **20 behavior failures / 48 passed** (the seven indirect forms and 13 noncanonical forms above). Restoring the replacement passes **68/68**. Current `dev`, including #922's chronological-bound regression proof and #919/#924's cron/deployment work, is integrated without changing their implementation or tests. The scan still recognizes direct `vi.mock`/`vi.doMock` calls with literal own-code module paths; this replacement bounds second-argument classification, not arbitrary JavaScript receiver or module-path resolution.
 
+### Rate-limiter F8 disposition (2026-09-19)
+
+The next F8 audit corrects two filing claims without rewriting the historical census:
+
+| Item | Claim | Verdict | Evidence (before this disposition) |
+| --- | --- | --- | --- |
+| F8 subtotal | The named hand-rolled-double set contains 25 sites | **REFUTED** | The listed subtotals are **12 + 2 + 7 + 1 + 1 = 23**, at `drizzle-rate-limiter.test.ts:31-250`, `stripe-portal.test.ts:20,45`, `stripe-customers.test.ts:28-207`, `scripts/export-question-feedback.test.ts:473` (the filing's 412 anchor moved), and `lib/container.test.ts:669`. The five type lies are separate, so the named actionable total is 28, not 30. All named sites remain in scope; no two additional sites are invented to preserve the arithmetic. |
+| Rate-limiter parity | The three existing Postgres cases prove every one of the twelve unit cases | **REFUTED** | `rate-limiter.integration.test.ts:28,53,97` covers window increments/overflow, explicit bounded pruning, and skip-locked progress. It does not prove automatic 24-hour cleanup, its 100-row limit, no cleanup on increment, invalid-input guards, cleanup-failure reporting, or corrupted-counter rejection. |
+
+Fourteen new cases in `rate-limiter-guards.integration.test.ts` replace those gaps before unit deletion. All fourteen failed under targeted production mutations and passed after byte-for-byte restoration. The existing three Postgres cases remain unchanged.
+
+| Removed unit cases (`drizzle-rate-limiter.test.ts`, pre-change lines) | Real-Postgres twin |
+| --- | --- |
+| Automatic 24-hour cutoff / 100-row limit (27) | New `prunes at most 100 windows…`: 101 expired rows, the exact cutoff row, two fresh counter keys, and two cleanup passes prove both bound and strict retention cutoff. |
+| No cleanup on increment (50) | New `increments an existing counter…`: an expired row seeded after counter creation survives the second increment. |
+| Cleanup failure result / warning (65, 84) | New `keeps the persisted counter and logs…`: a fault injected only at `db.execute` leaves the real counter upsert intact, returns the full result, and asserts the complete warning context. |
+| Invalid limit / window (109, 126) | Six invalid-input cases verify the exact nonblocking response and no call to the real DB's insert method. |
+| Non-positive counter (165) | New `rejects a non-positive count…`: the schema permits a stored -1; the real upsert returns zero and the adapter must throw `INTERNAL_ERROR`. This can be forced safely in Postgres and therefore leaves the unit lane. |
+| Remaining count clamp (179) | Existing `rate-limiter.integration.test.ts:28` increments beyond the limit and asserts remaining zero. |
+| Atomic bounded prune SQL shape (196) | Existing batch/skip-locked cases plus new `deletes only the oldest key-window pair…`: colliding keys/windows prove both join keys and tie order. Spies observe one real statement and no wrapper transaction; no canned query result or SQL-string matching remains. |
+| Invalid prune limits (235, 247) | Three invalid-limit cases verify zero and no call to the real DB's execute method. |
+
+Only the impossible empty driver-response case (143) remains as a typed prepared-query fault unit. Its error-code mutation fails before the restored source passes. Integration grows **291 → 305**; unit cases fall **4,243 → 4,232**. The cast floor falls **240 → 228** (48 → 47 files), raw casts **278 → 266** (59 → 58 files); own-code/port-double floors stay **22 / 45**, `RepoDb` remains **138 / 21**, and suppressions stay **27**. Twelve of the 23 enumerated F8 doubles are disposed; the remaining eleven and five type lies remain work. `FakeRateLimiter` retains its dated shared-contract waiver; additional real-adapter tests are not fake↔real parity.
+
 ## Description
 
 "Fakes over mocks" is the right principle. The repository adopted half of it.
