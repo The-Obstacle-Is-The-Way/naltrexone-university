@@ -3,6 +3,7 @@
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Full end-to-end trace from authored MDX files through seeding, database, shuffling, and UI rendering
 > **Last Verified:** 2026-03-17
+> **Import workflow updated:** 2026-09-20 — clean staging; other architectural/format sections retain their earlier verification scope.
 
 This document serves two purposes:
 1. **Architectural trace** — understanding where data flows and where bugs happen (e.g., BS-011 choice label desync)
@@ -189,25 +190,40 @@ Notes:
 
 ### Import Drafts → MDX (Generated)
 
-```bash
-pnpm content:import:drafts
-```
-
-Defaults: Input root `content/drafts/questions`, output root `content/questions/imported`, output status `draft`.
-
-Useful modes:
+Use a fresh directory **outside `content/questions/`** so the seed glob cannot
+read a staging bundle while it is being generated or reviewed:
 
 ```bash
-# Validate parsing without writing files
-pnpm content:import:drafts -- --dry-run
-
-# Generate MDX as published (so the app can serve these questions)
-pnpm content:import:drafts -- --status published
+CONTENT_STAGE_DIR="$(mktemp -d)"
+# Validate input and path boundaries without writing:
+pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --dry-run
+# Generate the complete staged bundle (default status: draft):
+pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR"
 ```
+
+The importer accepts an absent or empty output directory. A populated output
+root is refused before actual writes, preserving existing files. Dry-run remains
+input/body/identity and path/symlink validation: it may inspect a populated output
+root without changing it, but does **not** certify that the destination is ready
+for a write. Each new import needs a fresh destination, including after a failed filesystem
+write. The defaults remain input `content/drafts/questions`, output
+`content/questions/imported`, and status `draft`; use `--out` as above for staging.
+
+Review the complete staged artifact before a separate, deliberate placement of
+approved MDX under `content/questions/`. The importer does not activate or swap
+that tree, delete old output, withdraw database rows, or run seed. Preserve the
+current imported tree while generating and checking its replacement. A failed
+write can leave an incomplete **staging** directory; successful parsing alone is
+not a completed artifact. No atomic release/rollback interface is provided here.
+See [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
+
+The `--status published` flag changes generated frontmatter only; it does not
+approve content or publish it to the database. Choose the intended status during
+the approved generation step, using a new empty destination for each bundle.
 
 Notes:
 - Imported MDX files are generated from drafts by a deterministic canonical taxonomy path (no domain repair pass).
-- The importer validates output against `lib/content/schemas.ts` before writing.
+- Complete input, identity, body and output-boundary preflight runs before writes.
 
 ---
 
@@ -410,7 +426,9 @@ Both bugs identified during the BS-011 audit have been fixed:
 | **Bug B: Choice label desync** | `getQuestionBySlug` now calls `buildShuffledChoiceViews()` — all paths produce consistent shuffled labels | SPEC-025 |
 | **Bug A: Result-dependent `mode=review` wiring** | History Questions tab now routes all rows through `mode=review` consistently, regardless of result | SPEC-026 |
 
-No known content-pipeline bugs remain as of 2026-03-17.
+That conclusion applied to the 2026-03-17 audit. Current withdrawal/release and
+historical-identity gaps remain tracked in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md)
+and [DEBT-484](../debt/debt-484-question-rewrite-history-identity.md).
 
 ---
 
@@ -436,7 +454,8 @@ Recommended end-to-end sanity check:
 pnpm db:test:reset
 TEST_DATABASE_URL="$(pnpm exec tsx scripts/resolve-local-test-target.ts database-url)"
 DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
-pnpm content:import:drafts -- --status published
+# Prerequisite: approved MDX is already placed under content/questions/.
+# Generate/review replacements separately using the clean-staging procedure above.
 SEED_INCLUDE_PLACEHOLDERS=false DATABASE_URL="$TEST_DATABASE_URL" pnpm db:seed
 pnpm dev
 ```
@@ -503,7 +522,7 @@ You may have multiple local clones of the repo (e.g., `naltrexone-university`, `
 
 **The only risk:** If clone A has an *older* set of imported MDX files and you seed from it *after* seeding from clone B with newer content, it will **downgrade** those questions to the older version. The seed output will show this as "updated" (not "skipped"), which is your signal that content changed.
 
-**Best practice:** Always import (`pnpm content:import:drafts`) from the clone with the latest drafts before seeding. Or simply keep drafts in sync across clones by copying the `content/drafts/questions/` directory.
+**Import procedure:** generate a fresh staged bundle from the intended draft version using [Import Drafts → MDX](#import-drafts--mdx-generated), review it, and separately place the approved artifact before seeding. A fresh directory prevents stale generated files from joining the new bundle; it does not prove release freshness or authorize a rollback.
 
 ### What about placeholders?
 
@@ -518,20 +537,24 @@ By default, `pnpm db:seed` **excludes** placeholder questions and archives any e
 - Scans `content/drafts/questions/` for files named `recall.md` and `vignettes.md`
 - Splits multi-question blocks within each file into individual questions
 - Validates tag slugs against the canonical taxonomy in `lib/content/draftTaxonomy.ts`
-- Writes one `.mdx` file per question to `content/questions/imported/`
+- Requires an absent or empty output root (`--out`) before actual writes
+- Writes one `.mdx` file per question into that fresh output tree
 
 ### What it does NOT do
 
-- **Does not prune stale files.** If you remove a question from a draft file and re-import, the old MDX file remains in `imported/`. On the next seed, that stale file will still be read from `content/questions/**/*.mdx` and seeded into the database, which means stale questions can persist. To prevent that: delete `content/questions/imported/` before re-importing, then regenerate it from the latest drafts with `rm -rf content/questions/imported && pnpm content:import:drafts -- --status published`.
+- **Does not prune or merge existing output.** A populated destination is refused for actual writes. Generate into a fresh temporary directory outside `content/questions/` and preserve the current imported tree during review. Removing a draft does not withdraw its database row; use the explicit-QID withdrawal path documented in [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
 - **Does not touch the database.** Import is a local file operation only. You must run `pnpm db:seed` separately.
 - **Does not read from `content/questions/`.** It reads drafts and writes MDX. The seed reads MDX.
 
 ### Dry-run mode
 
-Validate without writing files:
+Validate input/body/identity and path/symlink boundaries without writing files.
+A populated destination is allowed for this read-only check; success does not
+certify the empty-destination prerequisite for a later write:
 
 ```bash
-pnpm content:import:drafts -- --dry-run
+CONTENT_STAGE_DIR="$(mktemp -d)"
+pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --dry-run
 ```
 
 ### Status flag
@@ -539,8 +562,11 @@ pnpm content:import:drafts -- --dry-run
 Controls the `status` field in generated MDX frontmatter:
 
 ```bash
-pnpm content:import:drafts -- --status published   # Questions will be served by the app
-pnpm content:import:drafts -- --status draft        # Default — questions seed but aren't served
+# Choose one status per newly created staging directory:
+CONTENT_STAGE_DIR="$(mktemp -d)"
+pnpm content:import:drafts -- --out "$CONTENT_STAGE_DIR" --status draft
+# An approved published-status artifact also needs its own fresh destination:
+# pnpm content:import:drafts -- --out "$ANOTHER_EMPTY_STAGE_DIR" --status published
 ```
 
 ---

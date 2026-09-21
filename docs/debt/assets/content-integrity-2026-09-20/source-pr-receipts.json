@@ -1,0 +1,147 @@
+{
+  "observedAt": "2026-09-20T23:40:31.740279+00:00",
+  "main": "7e41deaab3bcad02afcc74497ce7ad0ef8dc13ab",
+  "dev": "65bd70c017afcfe1ee688232e20eab1c01295fb3",
+  "sourcePullRequests": [
+    {
+      "headRefOid": "df8a4bafc67ec131acd2a0beef7d83200c8ae79d",
+      "mergeCommit": {
+        "oid": "95c8f93e86a13404e61aa5a9617a776819d2acef"
+      },
+      "mergedAt": "2026-09-20T19:04:43Z",
+      "number": 943,
+      "state": "MERGED",
+      "title": "Fix silent draft-question omission (DEBT-487)",
+      "url": "https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/943",
+      "exactHeadApprovals": [
+        {
+          "id": 5261420106,
+          "commit_id": "df8a4bafc67ec131acd2a0beef7d83200c8ae79d",
+          "state": "APPROVED"
+        }
+      ],
+      "unresolvedThreads": 0,
+      "mergeInObservedMain": true
+    },
+    {
+      "headRefOid": "efc1d3d3d8d2e76b7be61a6694c56113f6522652",
+      "mergeCommit": {
+        "oid": "3cad67d4fb2384ee89dd77e0527254a522a866af"
+      },
+      "mergedAt": "2026-09-20T19:26:33Z",
+      "number": 945,
+      "state": "MERGED",
+      "title": "Reject duplicate draft question IDs before writes (DEBT-482)",
+      "url": "https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/945",
+      "exactHeadApprovals": [
+        {
+          "id": 5261470841,
+          "commit_id": "efc1d3d3d8d2e76b7be61a6694c56113f6522652",
+          "state": "APPROVED"
+        }
+      ],
+      "unresolvedThreads": 0,
+      "mergeInObservedMain": true
+    },
+    {
+      "headRefOid": "852c26d5d4f405d853cd92da15cdd45e4410f385",
+      "mergeCommit": {
+        "oid": "b2efba9c82ef71e3e0bac47de993600b3ac4eeb0"
+      },
+      "mergedAt": "2026-09-20T20:41:24Z",
+      "number": 949,
+      "state": "MERGED",
+      "title": "Unify import and seed body validation (DEBT-486)",
+      "url": "https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/949",
+      "exactHeadApprovals": [
+        {
+          "id": 5261681489,
+          "commit_id": "852c26d5d4f405d853cd92da15cdd45e4410f385",
+          "state": "APPROVED"
+        }
+      ],
+      "unresolvedThreads": 0,
+      "mergeInObservedMain": false
+    },
+    {
+      "headRefOid": "d8bf8adc060265e3d10ca8bb7ff11bc7fb776f3d",
+      "mergeCommit": {
+        "oid": "269ffeecc6bf31271f0b3f23bc0a14c14a0746fd"
+      },
+      "mergedAt": "2026-09-20T21:03:24Z",
+      "number": 951,
+      "state": "MERGED",
+      "title": "Protect graded question history from content rewrites (DEBT-484)",
+      "url": "https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/951",
+      "exactHeadApprovals": [
+        {
+          "id": 5261726459,
+          "commit_id": "d8bf8adc060265e3d10ca8bb7ff11bc7fb776f3d",
+          "state": "APPROVED"
+        }
+      ],
+      "unresolvedThreads": 0,
+      "mergeInObservedMain": false
+    },
+    {
+      "headRefOid": "936de53ebb20911e2a6b3878b1d50b99b3aa4df9",
+      "mergeCommit": {
+        "oid": "31d3a718210232a8108ecdb6f81d90afe588df4d"
+      },
+      "mergedAt": "2026-09-20T21:16:51Z",
+      "number": 952,
+      "state": "MERGED",
+      "title": "Prevalidate complete seed inputs before database writes (DEBT-483)",
+      "url": "https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/952",
+      "exactHeadApprovals": [
+        {
+          "id": 5261750605,
+          "commit_id": "936de53ebb20911e2a6b3878b1d50b99b3aa4df9",
+          "state": "APPROVED"
+        }
+      ],
+      "unresolvedThreads": 0,
+      "mergeInObservedMain": false
+    },
+    {
+      "headRefOid": "0aeda5261eb4e3ba7f06cf78c942f6e3442c84c7",
+      "mergeCommit": {
+        "oid": "8da15de285f9b52f615e51ef2a52d4ea012ca4e9"
+      },
+      "mergedAt": "2026-09-20T21:38:24Z",
+      "number": 953,
+      "state": "MERGED",
+      "title": "Withdraw explicit content QIDs and prevent stale reactivation (DEBT-483)",
+      "url": "https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/953",
+      "exactHeadApprovals": [
+        {
+          "id": 5261806134,
+          "commit_id": "0aeda5261eb4e3ba7f06cf78c942f6e3442c84c7",
+          "state": "APPROVED"
+        }
+      ],
+      "unresolvedThreads": 0,
+      "mergeInObservedMain": false
+    },
+    {
+      "headRefOid": "844cc5cb7ce32524c95c459cc830d0d2945296db",
+      "mergeCommit": {
+        "oid": "65bd70c017afcfe1ee688232e20eab1c01295fb3"
+      },
+      "mergedAt": "2026-09-20T22:09:06Z",
+      "number": 954,
+      "state": "MERGED",
+      "title": "Require clean draft-import staging destinations (DEBT-483)",
+      "url": "https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/954",
+      "exactHeadApprovals": [
+        {
+          "id": 5261882451,
+          "commit_id": "844cc5cb7ce32524c95c459cc830d0d2945296db",
+          "state": "APPROVED"
+        }
+      ],
+      "unresolvedThreads": 0,
+      "mergeInObservedMain": false
+    }
+  ]
+}

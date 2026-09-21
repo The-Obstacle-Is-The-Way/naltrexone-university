@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import dotenv from 'dotenv';
@@ -28,6 +28,7 @@ export type SeedProcessSpawner = (
 type SeedEnvironmentFileReader = (filePath: string) => Promise<Buffer>;
 
 export const SEED_ENVIRONMENT_COMMAND_TIMEOUT_MS = 5 * 60_000;
+const REQUIRED_VERCEL_CLI_VERSION = '59.16.0';
 
 const spawnSeedProcess: SeedProcessSpawner = (command, args, options) =>
   spawn(command, args, options);
@@ -50,18 +51,37 @@ export function createSeedEnvironmentRuntime(
   };
 }
 
-async function pullVercelDatabaseUrl(
+export function runVercelCommand(args: readonly string[]): string {
+  try {
+    return execFileSync('vercel', [...args], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: SEED_ENVIRONMENT_COMMAND_TIMEOUT_MS,
+      killSignal: 'SIGTERM',
+    });
+  } catch {
+    // CLI failures may carry captured provider output; never echo that payload.
+    throw new Error(
+      'Preinstalled Vercel CLI failed; verify the reviewed version and authentication before seeding.',
+    );
+  }
+}
+
+export async function pullVercelDatabaseUrl(
   tempDirectory: string,
   environment: VercelSeedEnvironment,
+  run: (args: readonly string[]) => string | Promise<string> = runVercelCommand,
+  read: typeof readDatabaseUrlFromFile = readDatabaseUrlFromFile,
 ): Promise<string> {
+  const version = (await run(['--version'])).trim();
+  if (version !== REQUIRED_VERCEL_CLI_VERSION) {
+    throw new Error(
+      `Seeding requires preinstalled Vercel CLI ${REQUIRED_VERCEL_CLI_VERSION}.`,
+    );
+  }
   const outputPath = path.join(tempDirectory, `${environment}.env`);
-  await runProcess(
-    'npx',
-    ['vercel', 'env', 'pull', outputPath, `--environment=${environment}`],
-    process.env,
-    true,
-  );
-  return readDatabaseUrlFromFile(outputPath);
+  await run(['env', 'pull', outputPath, `--environment=${environment}`]);
+  return read(outputPath);
 }
 
 export async function readDatabaseUrlFromFile(

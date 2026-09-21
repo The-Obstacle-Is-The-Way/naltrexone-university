@@ -13,8 +13,14 @@ import {
   computeReferencedChoiceIds,
   computeTemporarySortOrders,
 } from '../seed-helpers';
+import { computeContentRewriteChanges } from './content-rewrite-policy';
 import type { SeedSourceFile } from './file-reader';
-import { buildSeedRepFromDb, parseSeedQuestionFile } from './question-parser';
+import {
+  buildSeedRepFromDb,
+  isSyntheticPlaceholderSource,
+  parseSeedQuestionFile,
+  type SeedTag,
+} from './question-parser';
 import { upsertTags, validateSeedQuestionTags } from './tag-manager';
 
 export type SeedSyncCounts = {
@@ -70,13 +76,14 @@ async function countGradedHistoryForQuestion(
   };
 }
 
-async function enforceAnswerKeyChangePolicy(input: {
+async function enforceGradedHistoryPolicy(input: {
   tx: PostgresJsDatabase<typeof schema>;
   questionId: string;
   slug: string;
   changes: readonly AnswerKeyChange[];
+  contentChanges: readonly string[];
 }): Promise<void> {
-  if (input.changes.length === 0) return;
+  if (input.changes.length === 0 && input.contentChanges.length === 0) return;
 
   const counts = await countGradedHistoryForQuestion(
     input.tx,
@@ -84,8 +91,15 @@ async function enforceAnswerKeyChangePolicy(input: {
   );
   if (!hasGradedHistory(counts)) return;
 
-  const changeSummary = formatAnswerKeyChanges(input.changes);
   const countSummary = `attempts=${counts.attempts}, practiceSessionStates=${counts.practiceSessionStates}`;
+
+  if (input.contentChanges.length > 0) {
+    throw new Error(
+      `Refusing to rewrite content for "${input.slug}" because graded history exists (${countSummary}; changes=${input.contentChanges.join(', ')}). Use a new question ID and explicitly archive the replaced question.`,
+    );
+  }
+
+  const changeSummary = formatAnswerKeyChanges(input.changes);
 
   if (shouldAllowKeyChangesOverGradedHistory()) {
     console.warn(
@@ -123,6 +137,49 @@ function createSeedQuestionSyncError(input: {
   );
 }
 
+function prepareSeedQuestions(files: readonly SeedSourceFile[]) {
+  const questionPaths = new Map<string, string>();
+  const tags = new Map<string, { tag: SeedTag; path: string }>();
+
+  return files.map((file) => {
+    let seedSlug = extractSeedSlugForError(file.raw);
+    try {
+      const seedFromFile = parseSeedQuestionFile(file.raw, file.absolutePath);
+      seedSlug = seedFromFile.slug;
+      validateSeedQuestionTags({ slug: seedSlug, tags: seedFromFile.tags });
+
+      const firstPath = questionPaths.get(seedSlug);
+      if (firstPath !== undefined) {
+        throw new Error(
+          `Duplicate seed question "${seedSlug}" appears in both ${firstPath} and ${file.absolutePath}`,
+        );
+      }
+      questionPaths.set(seedSlug, file.absolutePath);
+
+      for (const tag of seedFromFile.tags) {
+        const previous = tags.get(tag.slug);
+        if (
+          previous &&
+          (previous.tag.name !== tag.name || previous.tag.kind !== tag.kind)
+        ) {
+          throw new Error(
+            `Conflicting seed tag "${tag.slug}" in ${previous.path} and ${file.absolutePath}: name and kind must agree across the bundle`,
+          );
+        }
+        if (!previous) tags.set(tag.slug, { tag, path: file.absolutePath });
+      }
+
+      return {
+        file,
+        seedFromFile,
+        fileHash: sha256Hex(canonicalJsonString(seedFromFile)),
+      };
+    } catch (error) {
+      throw createSeedQuestionSyncError({ file, slug: seedSlug, cause: error });
+    }
+  });
+}
+
 async function moveExistingChoicesToTemporarySortOrders(
   tx: PostgresJsDatabase<typeof schema>,
   existingChoices: ReadonlyArray<{ id: string; sortOrder: number }>,
@@ -139,23 +196,13 @@ export async function syncQuestionsFromFiles(
   db: PostgresJsDatabase<typeof schema>,
   files: SeedSourceFile[],
 ): Promise<SeedSyncCounts> {
+  const prepared = prepareSeedQuestions(files);
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
 
-  for (const file of files) {
-    let seedSlug = extractSeedSlugForError(file.raw);
-
+  for (const { file, seedFromFile, fileHash } of prepared) {
     try {
-      const seedFromFile = parseSeedQuestionFile(file.raw);
-      seedSlug = seedFromFile.slug;
-      validateSeedQuestionTags({
-        slug: seedFromFile.slug,
-        tags: seedFromFile.tags,
-      });
-
-      const fileHash = sha256Hex(canonicalJsonString(seedFromFile));
-
       const existing = await db
         .select()
         .from(schema.questions)
@@ -223,6 +270,16 @@ export async function syncQuestionsFromFiles(
           );
         }
 
+        if (
+          lockedQuestion.status === 'archived' &&
+          seedFromFile.status !== 'archived' &&
+          !isSyntheticPlaceholderSource(seedFromFile.slug, file.absolutePath)
+        ) {
+          throw new Error(
+            `Refusing to reactivate archived question "${seedFromFile.slug}" from seed input. Use a new question QID for a replacement.`,
+          );
+        }
+
         const existingChoices = await tx
           .select()
           .from(schema.choices)
@@ -260,11 +317,15 @@ export async function syncQuestionsFromFiles(
             isCorrect: choice.is_correct,
           })),
         });
-        await enforceAnswerKeyChangePolicy({
+        await enforceGradedHistoryPolicy({
           tx,
           questionId: lockedQuestion.id,
           slug: seedFromFile.slug,
           changes: answerKeyChanges,
+          contentChanges: computeContentRewriteChanges(
+            seedFromDb,
+            seedFromFile,
+          ),
         });
 
         const desiredLabels = new Set(
@@ -410,7 +471,7 @@ export async function syncQuestionsFromFiles(
     } catch (error) {
       throw createSeedQuestionSyncError({
         file,
-        slug: seedSlug,
+        slug: seedFromFile.slug,
         cause: error,
       });
     }

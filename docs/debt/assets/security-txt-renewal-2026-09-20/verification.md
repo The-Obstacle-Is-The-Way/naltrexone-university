@@ -1,0 +1,30 @@
+# Security contact renewal — 2026-09-20
+
+Property: warn through one GitHub issue before security.txt expires, without changing the hard future-expiry test or automatically extending the date.
+
+## Red-first and restored proofs
+
+- Restored the saved test before implementation: the focused suite exited 1 because `./security-txt-renewal` was absent. This is a missing-entry proof, not a threshold-behavior proof.
+- The command-outcome cases then failed because the executable reporting function was absent. The restored command returns 1 with a value-free message on check failure, rather than reporting a delivered reminder.
+- Targeted mutations changed `>= 90 days` to `> 90 days`, disabled issue-title matching, changed failure exit 1 to 0, and removed issue-write permission. Five assertions failed: exact-90-day no-op, repeat/cycle single-issue reuse, duplicate refusal, nonzero failure, and workflow permission. After restoring the implementation, 21 renewal cases and the unchanged hard-expiry case passed (22/22).
+- The fixtures cover future, near-expiry and expired files, malformed/multiple timestamps, invalid check date, API failure, reopening the existing issue, paginated direct listing (excluding PRs), atomic body/state update, and the bounded GitHub CLI call. The in-memory issue store supplies behavior; a narrow transport stub checks CLI translation without live writes.
+- `pnpm typecheck` passes. Focused V8 coverage is 97.43% lines (38/39); only the direct-invocation assignment is outside the Vitest import path. No exclusion or threshold was changed. Actual `node scripts/security-txt-renewal.ts` exits 0 with `security.txt renewal: not-due` for the current file, without reaching GitHub.
+
+Local raw receipts are in `/private/tmp/codex-security-renewal.zGc0Gq/`: `missing-red.log`, `command-red.log`, `invariants-red.log`. The command-red log also contains a test-harness error from spying on a native ESM namespace; that is not claimed as product proof. The final test uses the permitted external Node transport boundary. A restoration typo in the mutation experiment was caught by the outcome tests and corrected before the passing run.
+
+## Workflow and operational boundary
+
+- First day of each month, 07:11 UTC, plus manual dispatch; fixed concurrency group with `cancel-in-progress: false` prevents overlapping writes from this workflow. GitHub scheduling can be delayed; this is a monthly reminder, not guaranteed delivery exactly 90 days before expiry.
+- Workflow `contents: read`; renewal job adds only `issues: write`. Checkout does not persist credentials. `GH_TOKEN` and `GH_REPO` are scoped to the command step. No provider credentials, dependency install, secret output, or repository-content write is needed.
+- GitHub API readback confirms the pinned checkout v7.0.1 commit `3d3c42e5aac5ba805825da76410c181273ba90b1` and setup-node v7.0.0 commit `820762786026740c76f36085b0efc47a31fe5020`.
+- Existing issues are enumerated directly with pagination, not eventually consistent search. The fixed title identifies the reminder; preserve it. Duplicate matching issues fail explicitly for operator consolidation. An API/permission failure fails the job and does not claim a reminder was delivered. Human acknowledgement is not proven by issue creation.
+- The workflow never renews the file. The issue instructs the operator to re-verify contact and policy links, then set Expires less than one year after the verification date ([RFC 9116 §2.5.5](https://www.rfc-editor.org/rfc/rfc9116.html#section-2.5.5)).
+- Hosted execution, full-gate totals, review, merge and promotion receipts must be recorded from their real results in the PR; they are not inferred from these focused tests. A current-date manual dispatch is expected to report `not-due`, not create a spurious issue.
+
+## First review adjudication (2026-09-20, #944)
+
+Both actionable findings were verified before implementation. The timestamp parser rejected RFC-valid case-insensitive field names while accepting impossible dates normalized by `Date.parse`; the GitHub response assertion allowed malformed issue fields and mapped an unknown state to closed, permitting an update. Seventeen assertions failed against the reviewed implementation (`review-red.log`), including malformed-page diagnostic contracts whose old behavior already threw. An additional `24:00` normalization case failed separately (`time-normalization-red.log`). The fix round-trips the local timestamp components independently of its offset and checks only the response envelope, PR discriminator, and issue fields this script consumes. It does not reproduce the full GitHub schema or add a parser framework. The restored renewal suite plus unchanged hard-expiry case passes 42/42. Main's promotion ancestry and dev's subsequent #943 content changes are integrated without altering the other clone's files.
+
+The generic child-process warning is not a command-injection finding here: `execFileSync` receives a fixed executable and argument array, never shell text. The spelling warning concerns the literal `.github` path; it must not be capitalized. The suggested extra workflow display name/permission comment does not protect an uncovered property: token scope and the pinned action set already have executable contracts and are documented above. No scope expansion was made for those non-actionable diagnostics.
+
+**Receipt clarification (second review, 2026-09-20):** the initial 22/22 result above is historical, before the review additions. The current command is `pnpm test --run scripts/security-txt-renewal.test.ts tests/security-txt.test.ts`: **41 renewal cases + 1 unchanged hard-expiry case = 42**. The 20 added renewal cases comprise eight timestamp/field-name cases (two casing variants, one valid leap day, five invalid/duplicate timestamps) and twelve GitHub-response cases (seven invalid-field variants, four malformed-page shapes, one accepted null body). No existing case was removed or weakened; 42 is not a different lane or a duplicated run.

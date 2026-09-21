@@ -156,6 +156,60 @@ describe('draft import filesystem boundary', () => {
     expect(existsSync(output)).toBe(false);
   });
 
+  describe.each([false, true])('clean staging (dryRun=%s)', (dryRun) => {
+    it.each(['current-qid', 'stale-qid', 'hidden-file'])(
+      'preserves existing %s during validation or write refusal',
+      (existingKind) => {
+        const destination = path.join(
+          output,
+          'group',
+          'fixture-source',
+          'fixture-001.mdx',
+        );
+        const existing =
+          existingKind === 'current-qid'
+            ? destination
+            : existingKind === 'stale-qid'
+              ? path.join(output, 'old-source', 'withdrawn-qid.mdx')
+              : path.join(output, '.sentinel');
+        mkdirSync(path.dirname(existing), { recursive: true });
+        writeFileSync(existing, 'Existing output must survive unchanged');
+
+        const result = run(dryRun);
+
+        if (dryRun) {
+          expect(result.status, result.stderr).toBe(0);
+          expect(result.stdout).toContain('written=0 (dry-run)');
+        } else {
+          expect(result.status, result.stdout).toBe(1);
+          expect(result.stderr).toMatch(/output root.*not empty/i);
+          expect(result.stderr).toContain('fresh staging directory');
+        }
+        expect(readFileSync(existing, 'utf8')).toBe(
+          'Existing output must survive unchanged',
+        );
+        if (existingKind !== 'current-qid') {
+          expect(existsSync(destination)).toBe(false);
+        }
+      },
+    );
+  });
+
+  it('accepts an existing empty staging directory', () => {
+    mkdirSync(output);
+
+    const result = run();
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.stdout).toContain('questions=1 written=1');
+    expect(
+      readFileSync(
+        path.join(output, 'group', 'fixture-source', 'fixture-001.mdx'),
+        'utf8',
+      ),
+    ).toContain('Which example applies?');
+  });
+
   it.each([false, true])(
     'rejects a discovered empty file before writes (dryRun=%s)',
     (dryRun) => {
@@ -259,4 +313,18 @@ describe('draft import filesystem boundary', () => {
       ).toBe(true);
     }
   });
+
+  it.each([false, true])(
+    'rejects a later uncited body before writing (dryRun=%s)',
+    (dryRun) => {
+      writeFileSync(
+        path.join(input, 'group', 'vignettes.md'),
+        draft('fixture-002').replace('### Reference\nSynthetic citation.', ''),
+      );
+      const result = run(dryRun);
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stderr).toMatch(/reference.*required/i);
+      expect(existsSync(output)).toBe(false);
+    },
+  );
 });

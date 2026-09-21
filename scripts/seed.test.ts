@@ -294,7 +294,7 @@ describe('parseSeedQuestionFile', () => {
     );
   });
 
-  it('sets reference_md to null when no reference section exists for new-format questions', () => {
+  it('rejects a non-placeholder question with no reference section', () => {
     const raw = [
       '---',
       'slug: "demo-101"',
@@ -327,9 +327,7 @@ describe('parseSeedQuestionFile', () => {
       '',
     ].join('\n');
 
-    const parsed = parseSeedQuestionFile(raw);
-
-    expect(parsed.reference_md).toBeNull();
+    expect(() => parseSeedQuestionFile(raw)).toThrow(/reference.*required/i);
   });
 
   it('finds tracked placeholder seed files', () => {
@@ -340,8 +338,13 @@ describe('parseSeedQuestionFile', () => {
 
   it.each(readPlaceholderSeedFiles())(
     'parses tracked placeholder seed file $fileName with the Phase 2 schema',
-    ({ raw }) => {
-      expect(() => parseSeedQuestionFile(raw)).not.toThrow();
+    ({ raw, fileName }) => {
+      expect(() =>
+        parseSeedQuestionFile(
+          raw,
+          path.join(process.cwd(), 'content/questions/placeholder', fileName),
+        ),
+      ).not.toThrow();
     },
   );
 });
