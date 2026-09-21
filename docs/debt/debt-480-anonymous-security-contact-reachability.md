@@ -8,6 +8,8 @@
 
 ## Description
 
+**2026-09-21 implementation, pending release verification:** the exact static path now exits the proxy before Clerk initializes. A public-route entry alone was insufficient: built-app HTML requests still hit Clerk's `dev-browser-missing` handshake. Both anonymous Accept variants now pass with the unchanged contact file, and real-matcher negative tests retain protection for dashboard and neighboring/prefix paths. Red proofs and scope are in the [inventory ledger](./assets/inventory-2026-09-21/verification.md#debt-480-redgreen-and-scope). Status remains Open until the full gate, review, promotion and signed-out production receipt exist; the dated no-fix statements below describe their original snapshots.
+
 **2026-09-21 re-execution.** The defect still exists on deployed main `76e65e9c`: anonymous, non-redirect-following GET returns **404** with `Accept: */*` and a Clerk `protect-rewrite` reason, and **307** with `Accept: text/html`. The file-content/expiry guard and newly shipped renewal reminder do not establish HTTP publication. No fix is claimed. [Audit receipt](./assets/active-audit-2026-09-21/verification.md).
 
 **CONFIRMED:** `public/.well-known/security.txt` exists, but its canonical production URL is intercepted by Clerk. Fresh signed-out GETs on 2026-09-20 returned 404 with `Accept: */*` and `x-clerk-auth-reason: protect-rewrite`; `Accept: text/html` returned 307 to the identity host. [Commands and outputs](./assets/adversarial-2026-09-20/review.md#http-receipts).
