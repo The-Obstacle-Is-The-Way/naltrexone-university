@@ -53,7 +53,7 @@ Changing `PUBLIC_ROUTE_PATTERNS` alone is not sufficient; redirect semantics and
 
 ### Completion Notes
 
-- [x] Add rollout instrumentation (tracked in [SPEC-016](../../specs/spec-016-observability.md)):
+- [x] Add rollout instrumentation (tracked in [SPEC-016](../specs/spec-016-observability.md)):
   - auth bounce count on `/checkout/success`
   - `%` of checkout-success requests missing `session_id`
   - checkout error redirect rate (`/pricing?checkout=error`)

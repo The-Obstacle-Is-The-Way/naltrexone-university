@@ -1,6 +1,6 @@
 # SPEC-016: Observability (Logging, Error Tracking, Monitoring)
 
-> **Status:** Implemented (Core) — Pino + Sentry bootstrap complete; DEBT-286 client-side reporting rollout resolved ([DEBT-286](../_archive/debt/debt-286-client-side-error-reporting.md))
+> **Status:** Resolved (core), archived 2026-09-21. Optional tails remain in the [spec register's Deferred table](../../specs/index.md#deferred-tails-not-resolved).
 > **Priority:** P1 (Critical for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
@@ -9,6 +9,15 @@
 ---
 
 ## Current State
+
+**Archive receipt (2026-09-21):** the implemented Pino/Sentry and typed tracing
+boundary are present on promoted main `ce5439b0`; main CI `35647115419` passed
+4,503 unit, 411 browser, 349 integration and 46 required E2E cases. Production
+`/api/health` returned 200 after the Deployment Check released that commit.
+The prior [DEBT-286 rollout](../debt/debt-286-client-side-error-reporting.md)
+and [DEBT-475 typed boundary](../debt/debt-475-toolchain-coherence.md)
+retain their implementation receipts. This closes core implementation, not the
+optional instrumentation choices below or a claim that every span was sampled.
 
 ✅ **Implemented:**
 - `lib/logger.ts` — Pino structured JSON logger with redaction; raw errors require `projectSafeErrorDiagnostics` before logging
@@ -76,7 +85,7 @@ We use [Sentry](https://sentry.io) for error tracking:
 - Groups similar errors, tracks resolution
 - Free tier sufficient for MVP
 
-**Scope:** Client/server error reporting and server performance tracing at `tracesSampleRate: 0.05`. Browser `tracesSampleRate` and both replay sample rates are zero. Profiling and source map upload are not configured. Sampling is not proof of samples for a particular action: the [2026-09-20 production readback](../debt/assets/adversarial-2026-09-20/review.md#server-trigger-adjudication) found production spans, but no matching action/DB spans for DEBT-450 in the queried 30-day window.
+**Scope:** Client/server error reporting and server performance tracing at `tracesSampleRate: 0.05`. Browser `tracesSampleRate` and both replay sample rates are zero. Profiling and source map upload are not configured. Sampling is not proof of samples for a particular action: the [2026-09-20 production readback](../../debt/assets/adversarial-2026-09-20/review.md#server-trigger-adjudication) found production spans, but no matching action/DB spans for DEBT-450 in the queried 30-day window.
 
 ---
 
@@ -126,7 +135,7 @@ We use [Sentry](https://sentry.io) for error tracking:
 
 ### File: `lib/logger.ts` ✅ EXISTS
 
-Implementation authority is [lib/logger.ts](../../lib/logger.ts); do not maintain a second purportedly exact copy here. A nonempty trimmed `LOG_LEVEL` overrides the default. Otherwise tests are silent, Vercel/Node production uses `info`, and other environments use `debug` (`lib/logger.ts:4-16`). The logger removes configured secret fields; unknown errors still require the separate safe diagnostic projector.
+Implementation authority is [lib/logger.ts](../../../lib/logger.ts); do not maintain a second purportedly exact copy here. A nonempty trimmed `LOG_LEVEL` overrides the default. Otherwise tests are silent, Vercel/Node production uses `info`, and other environments use `debug` (`lib/logger.ts:4-16`). The logger removes configured secret fields; unknown errors still require the separate safe diagnostic projector.
 
 ### Request Correlation and Sentry
 
@@ -297,7 +306,7 @@ pnpm add -D pino-pretty              # Pretty logs in dev terminal
 
 Route/global error-boundary console cleanup remains observability-adjacent work, but it is not part of the core DEBT-286 rollout inventory unless that debt is explicitly expanded.
 
-See [DEBT-286](../_archive/debt/debt-286-client-side-error-reporting.md) for the full rollout plan and target inventory.
+See [DEBT-286](../debt/debt-286-client-side-error-reporting.md) for the full rollout plan and target inventory.
 
 **Completed (DEBT-249 Rollout Instrumentation):**
 - [x] Auth bounce count on `/checkout/success` — track middleware redirect bounces on this route

@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-21
 **Source:** Deep security audit prompted by Delve/Supabase public-bucket incident
-**Related:** [ADR-009 Security Hardening](../../adr/adr-009-security-hardening.md), [SPEC-017 Rate Limiting](../../specs/spec-017-rate-limiting.md), [next.config.ts](../../../next.config.ts), [proxy.ts](../../../proxy.ts)
+**Related:** [ADR-009 Security Hardening](../../adr/adr-009-security-hardening.md), [SPEC-017 Rate Limiting](../specs/spec-017-rate-limiting.md), [next.config.ts](../../../next.config.ts), [proxy.ts](../../../proxy.ts)
 
 **Audit verified:** 2026-04-27 against `87284372`.
 

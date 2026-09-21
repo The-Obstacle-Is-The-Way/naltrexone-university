@@ -1,13 +1,19 @@
 # BS-064: Radio Choice Modality Split
 
-**Status:** Decision recorded; implemented by BUG-274 fix arc
+**Status:** Resolved; archived 2026-09-21
 **Created:** 2026-07-07
 **Owner:** Product / Engineering
-**Related:** [BUG-274](../bugs/bug-274-radio-choice-arrow-key-auto-commits-answer.md), [Interaction Contracts](../practice-engine/interaction-contracts.md), [Practice Modes](../practice-engine/practice-modes.md)
+**Related:** [BUG-274](../bugs/bug-274-radio-choice-arrow-key-auto-commits-answer.md), [Interaction Contracts](../../practice-engine/interaction-contracts.md), [Practice Modes](../../practice-engine/practice-modes.md)
 
 ---
 
 ## Decision
+
+**Archive receipt (2026-09-21):** BUG-274's fix arc is recorded in its canonical
+archive. GitHub confirms promotion #587 merged as `4c380f61` on 2026-07-08;
+`git merge-base --is-ancestor 4c380f61 origin/main` returns 0. The real-browser
+modality suite remains present; promoted main CI `35647115419` passed the browser
+lane (411 cases). This is the implemented decision, not outstanding design work.
 
 Quick Practice and Tutor mode keep the 2026-05-04 one-click answer commit behavior for pointer users. The permanent interaction contract is a modality split:
 

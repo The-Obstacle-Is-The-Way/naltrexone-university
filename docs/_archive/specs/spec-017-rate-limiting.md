@@ -1,6 +1,6 @@
 # SPEC-017: Rate Limiting
 
-> **Status:** Complete (MVP)
+> **Status:** Resolved (MVP), archived 2026-09-21. E1–E5 remain conditional in the [spec register's Deferred table](../../specs/index.md#deferred-tails-not-resolved).
 > **Priority:** P2 (Important for Production)
 > **Author:** Claude
 > **Created:** 2026-02-01
@@ -9,6 +9,13 @@
 ---
 
 ## Current State
+
+**Archive receipt (2026-09-21):** the Postgres-backed limiter, controller/route
+callers and listed tests are present on promoted main `ce5439b0`; main CI
+`35647115419` passed 4,503 unit, 411 browser, 349 integration and 46 required E2E
+cases. Production `/api/health` returned 200 after the Deployment Check released
+that commit. E1's owner deferral and unproven measurements below remain unchanged;
+archival does not claim custom WAF rules, Redis, or additional controls shipped.
 
 ✅ **Implemented (MVP Complete):**
 - `src/adapters/gateways/drizzle-rate-limiter.ts` — Postgres-backed **fixed-window** rate limiter (atomic `INSERT ... ON CONFLICT DO UPDATE`)
@@ -148,7 +155,7 @@ These remain conditional enhancements. A live domain does not establish paying-u
 
 **Owner decision — CONFIRMED, 2026-09-20:** defer the custom blocking rule. Decline a log-only rule too. This supersedes the earlier “inspect traffic first” recommendation; the reason is the existing boundary design and shared-IP harm, not insufficient evidence. No rule or attack mode is applied by this decision.
 
-**Project rule budget — UNPROVEN:** the claimed Hobby allowance of one rate-limit rule / 1,000,000 included requests has **not been verified in this project's dashboard**. The earlier review read published [Vercel limits](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting), but that is not the project-specific confirmation the owner requires. Do not treat the allowance or available slot as an operational premise until that check is recorded. The authenticated team API does confirm `billing.plan: hobby`; the active custom-config 404 confirms no saved custom configuration, not absent baseline protection. [Existing state receipts](../debt/assets/adversarial-2026-09-20/review.md#provider-receipts).
+**Project rule budget — UNPROVEN:** the claimed Hobby allowance of one rate-limit rule / 1,000,000 included requests has **not been verified in this project's dashboard**. The earlier review read published [Vercel limits](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting), but that is not the project-specific confirmation the owner requires. Do not treat the allowance or available slot as an operational premise until that check is recorded. The authenticated team API does confirm `billing.plan: hobby`; the active custom-config 404 confirms no saved custom configuration, not absent baseline protection. [Existing state receipts](../../debt/assets/adversarial-2026-09-20/review.md#provider-receipts).
 
 **REASON — structural:** the owner accepts the current residual abuse/capacity risk because:
 

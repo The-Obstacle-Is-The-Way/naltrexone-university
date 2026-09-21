@@ -1,7 +1,7 @@
 # UI QA Procedure Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-08-14
+**Last Updated:** 2026-09-21 — archive convention and disposition tables only; prior register metadata was 2026-08-14. Procedure content was not re-audited in this pass.
 
 **2026-08-13 update:** Register created (ADR-019 / DEBT-465 Part 4). QA-001 and QA-002 filed as the first two procedures. Once Active, QA-001 absorbs Core Flow Verification Flows A–C from `docs/dev/stabilization-checklist.md` (Flow D remains), and QA-002 can give the operator checklist's "auth and payment flows smoke-tested" item an executable form when DEBT-465 Part 4 links it. Next QA ID is QA-003.
 
@@ -24,6 +24,7 @@ Numbered, versioned scripts that test the system **at the UI** — by a human, a
 
 - **Draft** — written, not yet executed end-to-end twice
 - **Active** — validated by runs; part of the per-PR / pre-promotion / smoke rotation
+- **Resolved** — scoped work completed and promoted with receipts; archive under the canonical convention. Executing a reusable Active procedure does not close it.
 - **Superseded** — promoted to a Playwright spec (see `Promoted to`) or retired
 
 ## Proposed procedures (backlog — no ID until filed)
@@ -42,13 +43,36 @@ Derived from the 2026-08-13 UI-coverage audit; file by creating the doc and bump
 | Rendered legal/marketing pages | `/privacy` and `/terms` have rich unit-render tests plus E2E HTTP checks, but no real-browser route-render pass over typography, anchors, and footer links | Agent screenshots + human review |
 | Exam-timer expiry at the UI | Browser hook/page-model and integration tests cover expiry and auto-finalize; the route-level UI journey remains unobserved | PW-assisted |
 
+## How to close and archive
+
+### Deferred tails
+
+Put unfinished tails here before retiring a numbered procedure.
+
+| Record | Unfinished work | Revive trigger |
+| --- | --- | --- |
+
+### Archived procedures
+
+Active reusable procedures stay live. Move a completed or superseded procedure
+here only with the canonical closeout receipts; preserve its actual disposition.
+
+| Record | Disposition | Verification receipts |
+| --- | --- | --- |
+
+Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records). That is the canonical procedure; this register records dispositions and receipts.
+
 ## Template
 
 ```markdown
 # QA-NNN: Title
 
-**Status:** Draft | Active | Superseded
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
+**Status:** Draft | Active | Resolved | Superseded
 **Created:** YYYY-MM-DD
+**Resolved:** YYYY-MM-DD | —
+**Verification receipts:** Promoted implementation and verification links | —
 **Surfaces:** routes
 **Preconditions:** environment, auth, seed state (executable, not aspirational)
 **Execution modes:** which modes run it fully; which steps are ⚠ human/PW

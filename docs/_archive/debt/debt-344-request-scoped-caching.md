@@ -4,7 +4,7 @@
 **Created:** 2026-04-02
 **Resolved:** 2026-04-03
 **Source:** Performance investigation prompted by production codebase comparison
-**Related:** [ADR-010 Caching Strategy](../../adr/adr-010-caching-strategy.md), [SPEC-016 Observability](../../specs/spec-016-observability.md), [DEBT-349 Cross-Request Published Content Caching](./debt-349-cross-request-published-content-caching.md)
+**Related:** [ADR-010 Caching Strategy](../../adr/adr-010-caching-strategy.md), [SPEC-016 Observability](../specs/spec-016-observability.md), [DEBT-349 Cross-Request Published Content Caching](./debt-349-cross-request-published-content-caching.md)
 
 ---
 
