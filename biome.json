@@ -49,6 +49,148 @@
   "overrides": [
     {
       "includes": [
+        "src/domain/**/*.{ts,tsx}",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!**/*.spec.tsx",
+        "!**/*.fixtures.ts",
+        "!**/*.probes.tsx",
+        "!**/*.setup.ts",
+        "!**/*test-helpers.ts",
+        "!**/*test-helpers.tsx",
+        "!src/**/test-helpers/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**", "!./**", "!../**"],
+                    "message": "Domain code uses only relative domain imports."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/application/**/*.{ts,tsx}",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!**/*.spec.tsx",
+        "!**/*.fixtures.ts",
+        "!**/*.probes.tsx",
+        "!**/*.setup.ts",
+        "!**/*test-helpers.ts",
+        "!**/*test-helpers.tsx",
+        "!src/**/test-helpers/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "**",
+                      "!./**",
+                      "!../**",
+                      "!@/**",
+                      "@/src/adapters/**",
+                      "@/app/**",
+                      "@/components/**",
+                      "@/lib/**",
+                      "@/db",
+                      "@/db/**"
+                    ],
+                    "message": "Application code must not import outer-layer or package code."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/adapters/**/*.{ts,tsx}",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.spec.ts",
+        "!**/*.spec.tsx",
+        "!**/*.fixtures.ts",
+        "!**/*.probes.tsx",
+        "!**/*.setup.ts",
+        "!**/*test-helpers.ts",
+        "!**/*test-helpers.tsx",
+        "!src/**/test-helpers/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/app/**", "@/components/**", "@sentry/nextjs"],
+                    "message": "Adapters must not import app or component code."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "app/**/*.{ts,tsx}",
+        "components/**/*.{ts,tsx}",
+        "db/**/*.{ts,tsx}",
+        "lib/**/*.{ts,tsx}",
+        "scripts/**/*.{ts,tsx}",
+        "src/**/*.{ts,tsx}",
+        "tests/**/*.{ts,tsx}",
+        "!app/(app)/app/billing/page.manage-billing.test.tsx",
+        "!app/(app)/app/practice/\\[sessionId\\]/components/post-exam-review-view.fixtures.ts",
+        "!app/(app)/app/practice/\\[sessionId\\]/hooks/practice-session-page-model.browser.fixtures.ts",
+        "!app/(app)/app/practice/\\[sessionId\\]/hooks/practice-session-page-model.browser.probes.tsx",
+        "!app/(app)/app/practice/\\[sessionId\\]/hooks/practice-session-page-model.browser.setup.ts",
+        "!app/(app)/app/practice/\\[sessionId\\]/hooks/use-practice-session-exam-results-continuity.fixtures.ts",
+        "!app/(app)/app/questions/\\[slug\\]/hooks/question-page-model.browser.fixtures.ts",
+        "!lib/container.skip-clerk.test.ts",
+        "!tests/e2e/global.setup.ts",
+        "!tests/integration/actions.stripe.integration.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": {
+              "level": "error",
+              "options": {
+                "filenameCases": ["kebab-case"],
+                "requireAscii": false,
+                "match": "([^.]+)[.]((?:(?:browser[.]spec|integration[.]test|test|spec|e2e)[.])?tsx?)"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "app/**/*.tsx",
         "components/**/*.tsx",
         "!components/ui/**",

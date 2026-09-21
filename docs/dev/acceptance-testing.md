@@ -89,7 +89,7 @@ tests/acceptance/
     └── bookmarks/
 ```
 
-- Binding files are named **`*.acceptance.test.ts`**, colocated beside their `.feature` file. This matches the existing Vitest unit-config include (`**/*.test.ts`), so no Vitest config or runner change is needed: acceptance tests run inside `pnpm test`, the full gate, CI, coverage, and (deliberately) inside the mutation-testing lane, where they can kill business-rule mutants (`docs/dev/mutation-testing.md`). The first adoption PR must also add `.acceptance.test` to `STANDARD_TEST_SUFFIXES` in `tests/architecture-boundary-source-scan.ts`; otherwise the repository filename-policy test rejects the binding name.
+- Binding files are named **`*.acceptance.test.ts`**, colocated beside their `.feature` file. This matches the existing Vitest unit-config include (`**/*.test.ts`), so no Vitest config or runner change is needed: acceptance tests run inside `pnpm test`, the full gate, CI, coverage, and (deliberately) inside the mutation-testing lane, where they can kill business-rule mutants (`docs/dev/mutation-testing.md`). The first adoption PR must also add `acceptance.test` to the filename suffix pattern in `biome.json`'s `useFilenamingConvention` override and its real-lint contract in `tests/architecture-lint-policy.test.ts`; otherwise lint rejects the binding name.
 - Run just this suite with `pnpm test tests/acceptance`. If the suite ever needs its own lane (reporting, timing), split a dedicated config then — not before.
 - When the first feature lands, add the `tests/acceptance/` row to the Test Locations table in `AGENTS.md` (and the `.claude/rules/testing.md` table), plus the filename-policy suffix above, in the same PR.
 

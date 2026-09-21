@@ -32,10 +32,16 @@ function lintElement(filePath: string, element = 'button') {
     fixture,
     `${element === 'Button' ? "import { Button } from './ui/button';\n" : ''}export function Example() { return <${element}\n type="button" />; }\n`,
   );
-  return spawnSync(biome, ['lint', filePath], {
-    cwd: fixtureRoot,
-    encoding: 'utf8',
-  });
+  // Synthetic probe names exercise the JSX scope, not the independent filename
+  // policy. Full repository lint still checks both rules on real source paths.
+  return spawnSync(
+    biome,
+    ['lint', '--only=correctness/noRestrictedElements', filePath],
+    {
+      cwd: fixtureRoot,
+      encoding: 'utf8',
+    },
+  );
 }
 
 describe('production raw button lint policy', () => {

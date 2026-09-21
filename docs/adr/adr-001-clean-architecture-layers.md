@@ -385,6 +385,8 @@ const getDeps = createDepsResolver<TagControllerDeps, TagControllerContainer>(
 
 ### How to Verify
 
+**Dated amendment — 2026-09-21 (DEBT-475).** Biome now owns ordinary import-specifier restrictions and filename syntax. The existing Vitest scan remains responsible for resolved relative targets, outer-layer type-only exceptions, question-hook placement, and page-model naming. Installed Biome 2.5.12 does not reject the documented `require()` and template-literal import fixtures, so those literal call forms retain a bounded check in that same scanner. No alias/data-flow resolver or new scanner is introduced. The red/green equivalence and semantic mutation receipts are in [the implementation proof](../debt/assets/biome-architecture-2026-09-21/verification.md). This supersedes the scanner-only enforcement prescription below, not the dependency rules or the prohibition on adding dependency-analysis tools.
+
 1. **Import Boundary Enforcement:** ADR-001's original `madge` / `dependency-cruiser` recommendation is superseded by AUDIT-012. Implement the boundary check as a custom Vitest source scan using existing project dependencies; do not add `dependency-cruiser` or `madge` unless a future ADR explicitly reopens that decision.
 2. **Import Shapes:** The custom test must inspect static imports, side-effect imports, `export ... from` re-exports, and dynamic `import()` specifiers so boundary enforcement cannot be bypassed by changing import syntax.
 3. **Testability:** Domain and Use Cases must remain unit-testable without mocks
