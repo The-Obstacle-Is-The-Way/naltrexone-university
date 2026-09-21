@@ -30,4 +30,6 @@ Sources: [Biome import rule](https://biomejs.dev/linter/rules/no-restricted-impo
 
 ## Release receipts
 
+The first full gate stopped in unit tests: 2 failed / 4,493 passed. The raw-button harness's synthetic `*.probes.tsx` names correctly violated the new independent filename rule. Its actual-lint invocation now selects only `noRestrictedElements`, retaining all 13 button-scope assertions and the unchanged real repository configuration; the architecture suite tests filenames independently. No lint exception was added. The four combined focused suites then pass 81/81. Build, E2E, and push were not reached by the failed chain.
+
 Full gate, hosted CI, exact-head review, merge, promotion, and production hold are pending. Focused proof is not a claim that this branch has shipped.
