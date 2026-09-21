@@ -128,9 +128,11 @@ Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Proposed | Ready | In Progress | Partial | Implemented | Reconciliation open | Deprecated
+**Status:** Proposed | Ready | In Progress | Partial | Resolved | Reconciliation open | Deprecated
 **Layer:** Domain | Application | Adapters | Feature | Infrastructure
 **Date:** YYYY-MM-DD
+**Resolved:** YYYY-MM-DD | —
+**Verification receipts:** Promoted implementation and verification links | —
 
 ---
 

@@ -957,6 +957,8 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 **Status:** Open | In Progress | Resolved | Accepted
 **Priority:** P0 | P1 | P2 | P3 | P4
 **Date:** YYYY-MM-DD
+**Resolved:** YYYY-MM-DD | —
+**Verification receipts:** Promoted implementation and verification links | —
 
 ---
 

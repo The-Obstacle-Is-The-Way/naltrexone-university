@@ -32,7 +32,7 @@
 
 ## 2. Active Follow-Ups (Practice-Specific)
 
-- **Open bug register:** [BUG-238](../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md) and [BUG-239](../_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md) were filed on 2026-04-25 after the BUG-235/236/237 active-exam visibility trilogy was fixed and archived.
+- **2026-09-21 status correction:** [BUG-238](../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md) and [BUG-239](../_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md), filed on 2026-04-25, were subsequently resolved in PRs #287 and #290. They are archived regression references, not open work. This correction does not re-date the full April verification above.
 - **[BS-014](../_archive/brainstorming/bs-014-practice-starter-question-count-ux.md):** Practice Starter question-count UX polish remains an active product/design follow-up.
 - **[DEBT-318](../_archive/debt/debt-318-tutor-bookmark-before-answer.md):** Resolved on 2026-03-23; tutor mode and Quick Practice now hide bookmark actions until inline feedback is visible.
 - Canonical cross-layer invariant: [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md)

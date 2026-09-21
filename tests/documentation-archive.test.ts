@@ -87,6 +87,15 @@ describe('documentation archive convention', () => {
     ).toEqual([]);
   });
 
+  it('keeps a proposed record open when its explanation says it is not implemented', () => {
+    expect(
+      audit({
+        'docs/specs/spec-001-example.md':
+          '# Example\n\n**Status:** Proposed — not implemented',
+      }).closedLive,
+    ).toEqual([]);
+  });
+
   it('reports a missing register-row destination', () => {
     expect(
       audit({

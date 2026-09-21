@@ -134,6 +134,9 @@ Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Date:** YYYY-MM-DD
+**Status:** Active | Resolved
+**Resolved:** YYYY-MM-DD | —
+**Verification receipts:** Promoted implementation and verification links | —
 **Triggered by:** What prompted this investigation?
 **Scope:** One-sentence summary of the problem
 **Related:** Links to related docs, specs, or other brainstorming

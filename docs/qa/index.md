@@ -24,6 +24,7 @@ Numbered, versioned scripts that test the system **at the UI** — by a human, a
 
 - **Draft** — written, not yet executed end-to-end twice
 - **Active** — validated by runs; part of the per-PR / pre-promotion / smoke rotation
+- **Resolved** — scoped work completed and promoted with receipts; archive under the canonical convention. Executing a reusable Active procedure does not close it.
 - **Superseded** — promoted to a Playwright spec (see `Promoted to`) or retired
 
 ## Proposed procedures (backlog — no ID until filed)
@@ -68,8 +69,10 @@ Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and
 
 > Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
-**Status:** Draft | Active | Superseded
+**Status:** Draft | Active | Resolved | Superseded
 **Created:** YYYY-MM-DD
+**Resolved:** YYYY-MM-DD | —
+**Verification receipts:** Promoted implementation and verification links | —
 **Surfaces:** routes
 **Preconditions:** environment, auth, seed state (executable, not aspirational)
 **Execution modes:** which modes run it fully; which steps are ⚠ human/PW

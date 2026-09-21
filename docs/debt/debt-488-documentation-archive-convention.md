@@ -188,6 +188,20 @@ lifecycle no longer implies that only spec-driven implementation can close a
 record. BS-064 is the existing promoted bug-driven counterexample. The full gate
 and exact-head review remain required after these documentation corrections.
 
+### Final-head review corrections (2026-09-21)
+
+The review of `d38c9185` found a real status false positive. At 22:11:25Z a
+focused regression failed because `Proposed — not implemented` was treated as
+closed. Matching the terminal status only at the start of the field fixes it
+and removes the redundant open-status exception list; this simplifies the
+guard instead of adding status-by-status exceptions.
+
+All five existing templates now expose the canonical Resolved status,
+resolution date and verification-receipt fields. Reusable Active QA
+procedures remain live. Scoped practice-engine corrections point to BUG-238,
+BUG-239 and DEBT-397's existing resolutions without changing the dated April
+snapshot or claiming that the entire historical practice audit was repeated.
+
 ## Related
 
 - [Debt register](./index.md)

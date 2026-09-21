@@ -1259,6 +1259,8 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 **Status:** Open | In Progress | Blocked - Manual Action Required | Resolved | Won't Fix | Reclassified
 **Priority:** P0 | P1 | P2 | P3 | P4
 **Date:** YYYY-MM-DD
+**Resolved:** YYYY-MM-DD | —
+**Verification receipts:** Promoted implementation and verification links | —
 
 ---
 

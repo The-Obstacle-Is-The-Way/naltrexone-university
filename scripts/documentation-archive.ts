@@ -118,9 +118,7 @@ function hasClosedStatus(contents: string): boolean {
   if (!status) return false;
   // Current status precedes its historical explanation. In particular, an
   // Active record may correctly explain which earlier slices are resolved.
-  if (/^(?:active|open|in progress|draft|partial|blocked)\b/i.test(status))
-    return false;
-  return /\b(?:resolved|archived|implemented|closed|complete)\b/i.test(status);
+  return /^(?:resolved|archived|implemented|closed|complete)\b/i.test(status);
 }
 
 export function auditRecordLifecycle(
