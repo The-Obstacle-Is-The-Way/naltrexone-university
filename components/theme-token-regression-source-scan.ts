@@ -13,12 +13,6 @@ type OpacityOccurrence = {
   token: string;
 };
 
-type CountedExemption = readonly [
-  filePath: string,
-  expectedCount: number,
-  reason: string,
-];
-
 type OpacityExemption = readonly [
   filePath: string,
   token: string,
@@ -40,14 +34,6 @@ const OPACITY_UTILITY_PATTERN =
   /(?:^|:)(?:bg|text|border|divide|ring|focus:bg|focus-visible:ring|focus-within:ring|aria-invalid:ring|hover:bg|hover:border|hover:text)-/;
 const CONTROLLED_OPACITY_TOKEN_PATTERN =
   /(?:^|:)(?:bg-muted|hover:bg-muted|divide-border|dark:divide-foreground|border-border|dark:border-foreground|bg-foreground|hover:bg-foreground|dark:hover:bg-foreground|dark:bg-foreground|text-foreground|hover:text-foreground|border-foreground|hover:border-foreground|dark:hover:border-foreground)\//;
-
-export const RAW_BUTTON_EXEMPTIONS: readonly CountedExemption[] = [
-  [
-    'components/mobile-nav.tsx',
-    1,
-    'Pattern Registry I-6 app-shell disclosure toggle exception.',
-  ],
-];
 
 // Add new source-scan allowlist entries only when the Pattern Registry
 // documents the pattern; temporary exemptions must shrink over time.
@@ -102,60 +88,21 @@ export function readProductionUiSources(): SourceFile[] {
     }));
 }
 
-function countRawButtonSites(source: SourceFile): number[] {
-  return source.lines.flatMap((line, index) =>
-    Array.from(line.matchAll(RAW_BUTTON_PATTERN)).map(() => index + 1),
-  );
-}
-
-export function collectRawButtonIssues(
+// Biome enforces the general JSX ban. Its file-level exception cannot enforce
+// the exact occurrence count required by Pattern Registry I-6, so retain that.
+export function collectRawButtonExemptionIssues(
   sources: readonly SourceFile[],
-  options: {
-    exemptions?: readonly CountedExemption[];
-    enforceExemptionCounts?: boolean;
-  } = {},
 ): string[] {
-  const exemptions = options.exemptions ?? RAW_BUTTON_EXEMPTIONS;
-  const allowedByFilePath = new Map(
-    exemptions.map((exemption) => [exemption[0], exemption]),
-  );
-  const actualCountByFilePath = new Map<string, number>();
-  const issues: string[] = [];
-
-  for (const source of sources) {
-    if (source.filePath.startsWith('components/ui/')) {
-      continue;
-    }
-
-    const rawButtonLineNumbers = countRawButtonSites(source);
-    if (rawButtonLineNumbers.length === 0) {
-      continue;
-    }
-
-    actualCountByFilePath.set(source.filePath, rawButtonLineNumbers.length);
-    if (allowedByFilePath.has(source.filePath)) {
-      continue;
-    }
-
-    for (const lineNumber of rawButtonLineNumbers) {
-      issues.push(
-        `${source.filePath}:${lineNumber} raw <button> outside components/ui/ is not allowed by DEBT-398 PR 3. Use <Button> or add a documented Pattern Registry exception.`,
-      );
-    }
-  }
-
-  if (options.enforceExemptionCounts) {
-    for (const [filePath, expectedCount, reason] of exemptions) {
-      const actualCount = actualCountByFilePath.get(filePath) ?? 0;
-      if (actualCount !== expectedCount) {
-        issues.push(
-          `${filePath} expected exactly ${expectedCount} exempt raw <button> occurrence(s), found ${actualCount}. ${reason}`,
-        );
-      }
-    }
-  }
-
-  return issues;
+  const filePath = 'components/mobile-nav.tsx';
+  const source = sources.find((candidate) => candidate.filePath === filePath);
+  const actualCount =
+    source?.lines.flatMap((line) => [...line.matchAll(RAW_BUTTON_PATTERN)])
+      .length ?? 0;
+  return actualCount === 1
+    ? []
+    : [
+        `${filePath} expected exactly 1 exempt raw <button> occurrence(s), found ${actualCount}. Pattern Registry I-6 app-shell disclosure toggle exception.`,
+      ];
 }
 
 function extractOpacityOccurrences(source: SourceFile): OpacityOccurrence[] {
