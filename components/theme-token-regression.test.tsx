@@ -212,6 +212,12 @@ describe('theme token regression', () => {
     },
   );
 
+  it('rejects a missing mobile-nav exception source instead of passing an empty walk', () => {
+    expect(collectRawButtonExemptionIssues([])).toEqual([
+      'components/mobile-nav.tsx expected exactly 1 exempt raw <button> occurrence(s), found 0. Pattern Registry I-6 app-shell disclosure toggle exception.',
+    ]);
+  });
+
   it('blocks undocumented opacity tokens outside documented exemptions', () => {
     const issues = collectOpacityIssues(readProductionUiSources(), {
       enforceExemptionCounts: true,

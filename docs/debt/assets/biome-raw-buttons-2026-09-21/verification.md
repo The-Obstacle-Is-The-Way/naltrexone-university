@@ -44,3 +44,15 @@ cases and 21 theme cases). Focused Biome checks passed too.
 
 Full-gate counts, exact-head review, merge and promotion receipts will be
 recorded on the PR; focused proof alone is not release evidence.
+
+## Patch-coverage follow-up
+
+CI `35553747672` reported a separate red `codecov/patch` check: 85.71%,
+one missing line. A local V8 coverage run located the unexercised `?? 0`
+fallback when mobile-nav is absent from the acquired sources. The zero-count
+fixture already covered a present file with no buttons, not this missing-file
+case. At 02:26:53 UTC, a new absent-source case failed under the targeted
+`?? 1` mutation (1 failed / 21 passed), then passed with the original correct
+fallback restored. The focused suites now pass 35/35; both fallback branches
+and both cardinality outcomes have nonzero coverage. No implementation,
+coverage threshold, or exclusion was changed to clear the check.
