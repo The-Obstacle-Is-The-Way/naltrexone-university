@@ -245,6 +245,23 @@ and JSON serialization now live in the existing tested command function, with a
 red-first explicit-argument/no-write test and the real CLI parity tests retained.
 No coverage exclusion, target, timeout, or assertion was weakened.
 
+### PR 2 review and coverage correction (2026-09-21)
+
+CI 35665874357 passed on `6328e4f1`, but its 96.29630% patch coverage still
+missed the unchanged 96.38% target. A focused archive-only boundary case failed
+at 23:13:51Z when that existing guard was temporarily removed: it offered an
+archive repair for a broken live link. Restoring the guard makes the case pass;
+the implementation is unchanged. The full focused coverage run passed 1,052
+cases with 98.33% script line coverage. Hosted patch coverage remains a separate
+required receipt, not implied by this local percentage.
+
+Review 5272767459 confirmed a stray `+` breaking the first exception-table row;
+it is removed. The other three proposed link corrections are not valid repairs:
+BS-044, BS-052 and BS-059 are live records, so their existing live destinations
+are correct. The proposed BUG-133/134 slugs and removed practice-controller
+filename still do not exist after changing depth. Those occurrences stay in
+the explicit historical exception list below; no replacement is guessed.
+
 ### Historical targets without a mechanically proven replacement
 
 All 41 occurrences below remain untouched. The source link resolves; the old
@@ -255,7 +272,7 @@ owner supplies an authoritative replacement or explicitly reopens that record.
 
 | Archived source and line | Unresolved historical destination |
 | --- | --- |
-+| [bs-018-question-view-ux-unification.md:6](../_archive/brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-133-stale-closure-auto-advance.md` |
+| [bs-018-question-view-ux-unification.md:6](../_archive/brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-133-stale-closure-auto-advance.md` |
 | [bs-018-question-view-ux-unification.md:6](../_archive/brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-134-mark-for-review-race-condition.md` |
 | [bs-019-action-bar-label-and-ordering-consistency.md:359](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md#L359) | `../../tests/e2e/bs-019-action-bar-audit.spec.ts` |
 | [bs-020-card-contrast-and-hover-consistency.md:401](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md#L401) | `../../tests/e2e/bs-020-card-contrast-audit.spec.ts` |

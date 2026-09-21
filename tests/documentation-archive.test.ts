@@ -181,6 +181,20 @@ describe('documentation archive convention', () => {
     expect(result.brokenLive).toEqual([]);
     expect(result.brokenArchive).toHaveLength(1);
   });
+
+  it('does not offer archive repair for a broken link in a live record', () => {
+    const files = {
+      'docs/bugs/bug-001-example.md': '[Moved](../specs/spec-001-example.md)',
+      'docs/_archive/specs/spec-001-example.md': '# Archived target',
+    };
+    const result = audit(files);
+    expect(result.brokenLive).toHaveLength(1);
+    expect(
+      archiveLinkRepairs(result.brokenLive, (file) =>
+        Object.hasOwn(files, file),
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe('documentation archive command', () => {
