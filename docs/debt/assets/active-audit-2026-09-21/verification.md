@@ -58,7 +58,7 @@ message, database migration or content seed was used for the read-only audit.
 - `db/schema.ts`: **21** `pgTable` declarations; master spec: **14**.
   Controller source: **29** exported `createAction` declarations.
   `src/adapters/shared/rate-limits.ts`: **14** policy constants.
-  [SPEC-017](../../../specs/spec-017-rate-limiting.md) distinguishes these from its **13 invocation sites / 18 operations**.
+  [SPEC-017](../../../_archive/specs/spec-017-rate-limiting.md) distinguishes these from its **13 invocation sites / 18 operations**.
 - Read-only filesystem census (including ignored generated MDX, not merely
   `git ls-files`) invokes `parseSeedQuestionFile(raw, path)`:
   **958 files / 958 parsed / 948 authored / 10 synthetic / 0 uncited authored**.

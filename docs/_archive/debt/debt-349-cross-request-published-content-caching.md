@@ -4,7 +4,7 @@
 **Status:** **Deferred / archived (NOT resolved) — 2026-06-15.** No code shipped. Moved off the active register because it is not currently actionable: it is a pure scale optimization with no measured bottleneck (tracing is disabled, so the trigger metrics cannot even be collected today) and no Next-runtime invalidation seam for script-driven content updates. Revive into the active register only when **both** reactivation conditions in the Verdict below are met. The DEBT-344 Tier-1 request-scoped dedup that this split off from *is* shipped; this cross-request Tier-2 layer is the deferred remainder.
 **Created:** 2026-04-03
 **Source:** Follow-up split from DEBT-344 after Tier 1 request-scoped dedup shipped
-**Related:** [ADR-010 Caching Strategy](../../adr/adr-010-caching-strategy.md), [DEBT-344 Request-Scoped Auth/Entitlement Dedup + Static Read Caching](./debt-344-request-scoped-caching.md), [SPEC-016 Observability](../../specs/spec-016-observability.md)
+**Related:** [ADR-010 Caching Strategy](../../adr/adr-010-caching-strategy.md), [DEBT-344 Request-Scoped Auth/Entitlement Dedup + Static Read Caching](./debt-344-request-scoped-caching.md), [SPEC-016 Observability](../specs/spec-016-observability.md)
 
 **Audit verified:** 2026-06-15 against `b5fc4056`.
 

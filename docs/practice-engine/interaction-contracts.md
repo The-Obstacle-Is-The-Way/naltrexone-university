@@ -2,7 +2,7 @@
 
 > **Parent:** [Practice Engine Index](./index.md)
 > **Scope:** Click-by-click UI contracts for tutor and exam modes — buttons, persistence, locking, navigation, and post-session flows
-> **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam decisions), [BS-064](../brainstorming/bs-064-radio-choice-modality-split.md) (Tutor/Quick choice modality decision)
+> **Related:** [Practice Modes](./practice-modes.md) (lifecycle/data), [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) (exam decisions), [BS-064](../_archive/brainstorming/bs-064-radio-choice-modality-split.md) (Tutor/Quick choice modality decision)
 > **Status:** Current implementation. Historical BS-055 rationale remains, but the contracts below now describe shipped behavior; follow-up deltas are tracked separately in debt docs where noted.
 > **Last Updated:** 2026-07-07
 
@@ -23,7 +23,7 @@ These principles govern both modes. They are derived from BS-055 first-principle
 
 Controller action-output datetimes must be ISO 8601 strings. Schema-backed output fields in `src/adapters/controllers/` must use `z.string().datetime()` or its nullable equivalent; pass-through output fields without a controller output schema must still be ISO strings produced from `Date.toISOString()`. `z.date()` and date-like epoch `z.number()` fields are not allowed at the controller action-output boundary.
 
-Migration status: this is the required target state. [DEBT-397](../debt/debt-397-datetime-boundary-type-normalization.md) tracks the current known violations in `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt`; PR 2 migrates those fields and their consumers to ISO strings.
+Migration status: this is the required target state. [DEBT-397](../_archive/debt/debt-397-datetime-boundary-type-normalization.md) tracks the current known violations in `SaveExamDraftAnswerOutputSchema.latestAnsweredAt` and `SaveExamDraftAnswerOutputSchema.draftSavedAt`; PR 2 migrates those fields and their consumers to ISO strings.
 
 Domain entities and application use cases may keep `Date` objects where date math belongs. The controller adapter is responsible for serializing those `Date` values to ISO strings before returning an action output. This keeps the boundary JSON-native and consistent with persisted practice-session JSON while avoiding per-field exceptions such as the `latestAnsweredAt` / `draftSavedAt` Date drift tracked by DEBT-397.
 
@@ -96,7 +96,7 @@ Question displayed
 
 ### Implementation note
 
-Tutor mode is unchanged by BS-055's exam overhaul, but its input contract was clarified by [BS-064](../brainstorming/bs-064-radio-choice-modality-split.md) and BUG-274. `ChoiceButton` arms a transient pointer flag on wrapper primary-button `pointerdown` (secondary buttons never arm); the subsequent radio `change` consumes that flag to report pointer activation, while unarmed changes report non-pointer selection. Held pointer activations stay armed until `change`; stale arms are cleared by arrow/Space keydown, context menu, window blur, and pointer/click cleanup when no radio change follows. `usePracticeSessionQuestionFlow` selects either way, commits only pointer selections in Tutor, and keeps Exam's existing draft-only guard ahead of the commit path. Enter commits only when pressed on the radio inputs themselves — focusable content inside choice markdown (links) keeps its native Enter behavior. On commit, focus moves to the answer feedback region, since the activated control (Submit button or radio) is removed or disabled by the feedback state.
+Tutor mode is unchanged by BS-055's exam overhaul, but its input contract was clarified by [BS-064](../_archive/brainstorming/bs-064-radio-choice-modality-split.md) and BUG-274. `ChoiceButton` arms a transient pointer flag on wrapper primary-button `pointerdown` (secondary buttons never arm); the subsequent radio `change` consumes that flag to report pointer activation, while unarmed changes report non-pointer selection. Held pointer activations stay armed until `change`; stale arms are cleared by arrow/Space keydown, context menu, window blur, and pointer/click cleanup when no radio change follows. `usePracticeSessionQuestionFlow` selects either way, commits only pointer selections in Tutor, and keeps Exam's existing draft-only guard ahead of the commit path. Enter commits only when pressed on the radio inputs themselves — focusable content inside choice markdown (links) keeps its native Enter behavior. On commit, focus moves to the answer feedback region, since the activated control (Submit button or radio) is removed or disabled by the feedback state.
 
 **Known issue (AF-8, accepted):** a keyboard-reached selected-uncommitted choice is discarded by pre-feedback navigation (Previous, question navigator) — the selection was never persisted, so nothing is lost server-side, but the visible selection does not survive the round-trip. Tutor mode has no draft mechanism (drafts are exam-only by design); fixing this would require one. Accepted as a known limitation of the keyboard two-step, matching the pre-existing AF-5 class; revisit if tutor drafts ever exist.
 
@@ -363,5 +363,5 @@ Both modes share rendering components but must have separate action contracts. T
 - [Practice Modes](./practice-modes.md) — lifecycle, grading, concurrency (data layer)
 - [Exam Answer Secrecy Policy](./exam-answer-secrecy-policy.md) — when correctness/explanations are exposed
 - [BS-055](../_archive/brainstorming/bs-055-exam-session-interaction-model-rethink.md) — full exam interaction analysis, decisions, and audit findings
-- [BS-064](../brainstorming/bs-064-radio-choice-modality-split.md) — Tutor/Quick pointer-vs-keyboard answer modality decision
+- [BS-064](../_archive/brainstorming/bs-064-radio-choice-modality-split.md) — Tutor/Quick pointer-vs-keyboard answer modality decision
 - [Bookmark Surface Policy](../frontend/bookmark-surface-policy.md) — where bookmark appears per surface

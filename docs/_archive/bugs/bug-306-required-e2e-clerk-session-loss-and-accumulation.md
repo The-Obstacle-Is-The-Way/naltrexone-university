@@ -174,5 +174,5 @@ filed or reopened with its own evidence.
   context closes; its log redaction and owner containment are resolved.
 - [BUG-307](./bug-307-public-playwright-artifacts-expose-test-session-credentials.md)
   — owns the separate public trace/artifact surface found during containment.
-- [DEBT-473](../../debt/debt-473-green-without-evidence.md) — treats skipped or
+- [DEBT-473](../debt/debt-473-green-without-evidence.md) — treats skipped or
   retry-recovered evidence as an explicit test-infrastructure defect.

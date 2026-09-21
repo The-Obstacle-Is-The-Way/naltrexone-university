@@ -2,7 +2,7 @@
 
 **Feature:** Bookmarking (cross-cutting, not a single page)
 **Last Updated:** 2026-03-19
-**Related:** [BS-053](../../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), [BS-052](../../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [Bookmark Surface Policy](../bookmark-surface-policy.md)
+**Related:** [BS-053](../../_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), [BS-052](../../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [Bookmark Surface Policy](../bookmark-surface-policy.md)
 
 ---
 

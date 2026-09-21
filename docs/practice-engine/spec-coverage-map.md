@@ -41,6 +41,6 @@
 
 ## 2. Spec/Doc Drift Summary
 
-As of **2026-04-25**, SPEC-021 through SPEC-030 implementation coverage remains strong. The open practice-area bug register contains [BUG-238](../bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md) and [BUG-239](../bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md), both filed after the BUG-235/236/237 active-exam visibility trilogy was fixed and archived. [BS-014](../brainstorming/bs-014-practice-starter-question-count-ux.md) remains a UX follow-up, while [DEBT-318](../_archive/debt/debt-318-tutor-bookmark-before-answer.md) is resolved.
+As of **2026-04-25**, SPEC-021 through SPEC-030 implementation coverage remains strong. The open practice-area bug register contains [BUG-238](../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md) and [BUG-239](../_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md), both filed after the BUG-235/236/237 active-exam visibility trilogy was fixed and archived. [BS-014](../_archive/brainstorming/bs-014-practice-starter-question-count-ux.md) remains a UX follow-up, while [DEBT-318](../_archive/debt/debt-318-tutor-bookmark-before-answer.md) is resolved.
 
 When behavior changes introduce new public contracts (ports/use case IO/controller outputs), update the corresponding spec and add a changelog entry.

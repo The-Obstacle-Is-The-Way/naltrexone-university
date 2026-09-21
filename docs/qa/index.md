@@ -42,10 +42,16 @@ Derived from the 2026-08-13 UI-coverage audit; file by creating the doc and bump
 | Rendered legal/marketing pages | `/privacy` and `/terms` have rich unit-render tests plus E2E HTTP checks, but no real-browser route-render pass over typography, anchors, and footer links | Agent screenshots + human review |
 | Exam-timer expiry at the UI | Browser hook/page-model and integration tests cover expiry and auto-finalize; the route-level UI journey remains unobserved | PW-assisted |
 
+## How to close and archive
+
+Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records). That is the canonical procedure; this register records dispositions and receipts.
+
 ## Template
 
 ```markdown
 # QA-NNN: Title
+
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 **Status:** Draft | Active | Superseded
 **Created:** YYYY-MM-DD

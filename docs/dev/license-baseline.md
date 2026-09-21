@@ -74,5 +74,5 @@ These entries are allowed in the current resolved tree, but any new direct depen
 
 ## Related
 
-- [DEBT-392 Dependency Hygiene Audit](../debt/debt-392-dependency-hygiene-audit.md)
+- [DEBT-392 Dependency Hygiene Audit](../_archive/debt/debt-392-dependency-hygiene-audit.md)
 - [Deployment Procedure](./deployment-procedure.md)

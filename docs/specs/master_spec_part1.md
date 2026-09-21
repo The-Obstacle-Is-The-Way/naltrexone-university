@@ -1,6 +1,6 @@
 # Master Spec — Part 1: Overview, Architecture & Database Schema
 
-> **Updated: 2026-09-20 — current-contract warning.** The [DEBT-481 audit](../debt/debt-481-master-spec-implementation-drift.md) confirms stale schema, action/limit, content/seed, CI and timing examples across the master/split copies. Do not copy these “exact” blocks as current implementation authority. Follow the linked source/runtime contracts and current [SPEC-016](./spec-016-observability.md) and [SPEC-017](./spec-017-rate-limiting.md) while documentation ownership is reconciled; product decisions are not superseded by this warning.
+> **Updated: 2026-09-20 — current-contract warning.** The [DEBT-481 audit](../debt/debt-481-master-spec-implementation-drift.md) confirms stale schema, action/limit, content/seed, CI and timing examples across the master/split copies. Do not copy these “exact” blocks as current implementation authority. Follow the linked source/runtime contracts and current [SPEC-016](../_archive/specs/spec-016-observability.md) and [SPEC-017](../_archive/specs/spec-017-rate-limiting.md) while documentation ownership is reconciled; product decisions are not superseded by this warning.
 >
 > **This is Part 1 of the master spec, split for readability.**
 > Covers: System Overview (§1), Architecture Diagram (§2), Complete Database Schema (§3).

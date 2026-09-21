@@ -1254,6 +1254,8 @@ Audit #3 produced BUG-136 and BUG-139. BUG-137 was reclassified as SSOT-consiste
 ```markdown
 # BUG-NNN: Short Title
 
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
+
 **Status:** Open | In Progress | Blocked - Manual Action Required | Resolved | Won't Fix | Reclassified
 **Priority:** P0 | P1 | P2 | P3 | P4
 **Date:** YYYY-MM-DD
@@ -1293,6 +1295,84 @@ How was the fix verified?
 
 ---
 
-## Archive
+## Historical archive links restored (2026-09-21)
 
-Resolved bugs are archived to `docs/_archive/bugs/` after verification.
+These existing files were not linked by filename in this register. This restores
+discoverability; it does not re-audit or change their historical disposition.
+
+| Record | Disposition |
+| --- | --- |
+| [BUG-155: Feedback Card Visual Overhaul — Verdict Badge, Correct Answer Display, Wrong-Answer Cards, Accessibility](../_archive/bugs/bug-155-feedback-card-visual-overhaul.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-157: Question Card and Choice Button Visual Polish — Text Size, Spacing, Contrast, Post-Submit Indicators](../_archive/bugs/bug-157-question-card-choice-button-visual-polish.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-160: Dashboard "Recent Sessions" Cards All Link to Generic History Page](../_archive/bugs/bug-160-dashboard-session-cards-link-to-generic-history.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-161: Stripe `incomplete_expired` Routes to Misleading `payment_processing` Messaging](../_archive/bugs/bug-161-incomplete-expired-maps-to-misleading-payment-failed.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-162: Review Controller Pagination Offset Missing Upper Bound Validation](../_archive/bugs/bug-162-review-controller-offset-missing-upper-bound.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-163: Dashboard Session Fraction Denominator Mismatches Accuracy Calculation](../_archive/bugs/bug-163-dashboard-session-fraction-denominator-mismatches-accuracy.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-164: Tutor Accuracy Denominator Inconsistent Across Session Summary vs History/Dashboard](../_archive/bugs/bug-164-tutor-accuracy-denominator-inconsistent-across-summary-vs-history.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-165: App Billing Manage-Billing Action Missing `unauthenticated` Redirect](../_archive/bugs/bug-165-app-billing-missing-unauthenticated-redirect.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-166: manage-billing-core Catch Block Swallows Errors Without Logging](../_archive/bugs/bug-166-manage-billing-core-swallows-errors-silently.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-186: Active Exam Review Projection Leaks Correctness](../_archive/bugs/bug-186-active-exam-review-projection-leaks-correctness.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-187: Dashboard Accuracy Includes Active Exam Attempts](../_archive/bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-188: Legacy Session CAS JSON Shape Mismatch Breaks Updates](../_archive/bugs/bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-189: Question Review Cross-Slug Async State Corruption](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-190: History Session Reopen Race Applies Stale Result](../_archive/bugs/bug-190-history-session-reopen-race-applies-stale-result.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-191: GetNextQuestion Returns latestIsCorrect for Active Exams](../_archive/bugs/bug-191-get-next-question-leaks-latestIsCorrect-active-exam.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-192: History Page Exposes Active Exam Attempt Correctness](../_archive/bugs/bug-192-history-page-exposes-active-exam-correctness.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-193: SubmitAnswer Returns isCorrect for Active Exams](../_archive/bugs/bug-193-submit-answer-returns-isCorrect-active-exam.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-194: Practice Submit Flow Missing Stale-Request Guard](../_archive/bugs/bug-194-practice-submit-flow-missing-stale-request-guard.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-195: Question Candidate Status Filter Leaks Active Exam Correctness via Inference](../_archive/bugs/bug-195-question-candidate-status-filter-leaks-active-exam-correctness.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-196: Practice Session Review Stage loadReview Double-Call Race](../_archive/bugs/bug-196-review-stage-load-review-double-call-race.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-197: SubmitAnswer Two-Phase Write Without Transaction](../_archive/bugs/bug-197-submit-answer-two-phase-write-without-transaction.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-198: Idempotency Key Zombie on Server Crash](../_archive/bugs/bug-198-idempotency-key-zombie-on-server-crash.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [~~BUG-199~~ → INVALIDATED: Stripe Subscription Items Are Already Validated Upstream](../_archive/bugs/bug-199-unsafe-array-index-access.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-200 — reclassified as DEBT-286](../_archive/bugs/bug-200-production-error-observability-gaps.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-201: Clerk Webhook Route Uses an Unnecessary Output Cast](../_archive/bugs/bug-201-clerk-webhook-double-cast.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-202: Redundant Condition After `.find()`](../_archive/bugs/bug-202-redundant-condition-after-find.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [~~BUG-203~~ → INVALIDATED: `whsec_dummy` Fallback Is Not Used by Clerk Webhook Verification](../_archive/bugs/bug-203-clerk-webhook-public-fallback-secret.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-204: Billing Portal Session Creation Lacks Abuse Controls](../_archive/bugs/bug-204-billing-portal-missing-abuse-controls.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-205: Reconciliation Prefers Stale Local Subscription Over Canonical Stripe State](../_archive/bugs/bug-205-reconciliation-prefers-stale-local-subscription-over-canonical-stripe-state.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-206: Raw DB Errors Escape Adapter Layer via `throw error` Fallback](../_archive/bugs/bug-206-raw-db-errors-escape-adapter-layer.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-207: Cron Route Leaks Internal Configuration State to Unauthenticated Callers](../_archive/bugs/bug-207-cron-route-leaks-config-state.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-208: Clerk Webhook User Deletion Is Not Transactional](../_archive/bugs/bug-208-clerk-webhook-deletion-not-transactional.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-209: Clerk Webhook Replay Gap Can Recreate Deleted Users](../_archive/bugs/bug-209-clerk-webhook-lacks-idempotency.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-210: Hard-Wired `Date.now()` in Stripe Checkout Session Inactivity Check](../_archive/bugs/bug-210-non-injectable-date-now-in-checkout-session.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-211: `row?.count ?? 0` Fallback Silently Masks Query Failures](../_archive/bugs/bug-211-count-query-fallback-masks-failures.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-212: Bookmark Toggle Drops Failure Context at the Hook Boundary](../_archive/bugs/bug-212-bookmark-toggle-swallows-errors.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-213: Session Start Thrown Errors Are Not Reported Client-Side](../_archive/bugs/bug-213-session-start-error-not-logged.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-214: `runTransitionedAsyncAction` Dev-Only Error Logging](../_archive/bugs/bug-214-production-errors-silenced-in-transition-action.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-215: Checkout Success Assertions Import `db/schema` Types Directly](../_archive/bugs/bug-215-checkout-success-business-logic-in-app-layer.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-216: Health Handler Directly Imports `drizzle-orm` in App Layer](../_archive/bugs/bug-216-health-handler-imports-drizzle-orm.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-217: `getPreviousAttempt` Accepts Non-UUID `questionId` Values](../_archive/bugs/bug-217-questionid-validation-inconsistency.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-218: Cached Idempotency Parse Failures Drop Their Original Cause](../_archive/bugs/bug-218-idempotency-parse-error-loses-cause.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-219: Unused `SkipAuthGateway` Dead Code; `DropdownMenu` Is Spec-Mandated](../_archive/bugs/bug-219-dead-code-dropdown-menu-skip-auth-gateway.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-220: Two Tests Still Assert Existence Instead of Behavior](../_archive/bugs/bug-220-weak-test-assertions.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-221: Checkout Success Rejects Repeated `session_id` Query Params](../_archive/bugs/bug-221-checkout-success-repeated-session-id-breaks-sync.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-222: Pricing Page Ignores Repeated `checkout` / `reason` Query Params](../_archive/bugs/bug-222-pricing-page-array-query-banners.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-223: Bookmarks Page Drops Repeated `error` / `toast` Query Params](../_archive/bugs/bug-223-bookmarks-page-array-query-feedback-loss.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-224: Practice Session Page Drops Repeated Session-Start Toast Params](../_archive/bugs/bug-224-practice-session-array-toast-loss.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-225: Question Review Page Drops Repeated Review-Context Query Params](../_archive/bugs/bug-225-question-review-array-context-loss.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-226: Completed Session "Next" Button Can Dead-End Into "No More Questions"](../_archive/bugs/bug-226-tutor-session-next-button-no-questions-after-completion.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-227: Header Brand Uses Body Font; App Nav Wraps Immediately Above `sm`](../_archive/bugs/bug-227-header-brand-font-mismatch-and-nav-wrapping.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-230: Post-Exam Review Retry Race Can Reapply Stale Error or Stale Success](../_archive/bugs/bug-230-post-exam-review-retry-race.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-234: AuthNav Can Render Clerk UserButton Without an Active ClerkProvider](../_archive/bugs/bug-234-auth-nav-user-button-missing-clerk-provider.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-240: SPEC-041 Question Feedback Is Dead End-to-End — Migrations 0019/0020 Never Applied to Dev/Prod DB](../_archive/bugs/bug-240-question-feedback-migrations-not-applied-to-dev-prod.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-241: Deploy Pipeline Has No Migration Step — Schema PRs Ship Code Without Applying Migrations (Green CI, Broken Runtime)](../_archive/bugs/bug-241-deploy-pipeline-has-no-migration-step.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-250: Feedback Comment CSV Export Allows Spreadsheet Formula Injection](../_archive/bugs/bug-250-question-feedback-csv-formula-injection.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-251: Active Exam Abandon Completes Without Finalization](../_archive/bugs/bug-251-active-exam-abandon-bypasses-finalization.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-252: Unanswered Exam Question Time Is Not Persisted Before Finalization](../_archive/bugs/bug-252-unanswered-exam-time-not-persisted.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-264: Stale Remove-Bookmark Surfaces Can Re-Add the Bookmark](../_archive/bugs/bug-264-bookmark-remove-intent-can-readd-from-stale-surfaces.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-271: No Focus Management When Reaching Session Summary](../_archive/bugs/bug-271-no-focus-management-on-session-summary-transition.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-272: Exam-Timer Milestone Announcements Can Be Silently Skipped Across a Backgrounded Tab](../_archive/bugs/bug-272-exam-timer-milestone-announcements-can-skip.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-273: `app/not-found.tsx` Is the Only Page Missing Per-Page Metadata](../_archive/bugs/bug-273-not-found-missing-page-metadata.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-274: Arrow-Key Navigation Between Answer Choices Auto-Submits and Locks an Unintended Choice](../_archive/bugs/bug-274-radio-choice-arrow-key-auto-commits-answer.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-275: Pricing "Subscribe" CTA Drops Return Destination and Plan Selection for Signed-Out Visitors](../_archive/bugs/bug-275-pricing-cta-drops-redirect-context-unauthenticated.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-277: Exam-Expiry Finalize Carrying a Stale Draft Flush Aborts the Entire Finalization With a Reason-less CONFLICT](../_archive/bugs/bug-277-exam-expiry-finalize-stale-flush-aborts-finalization.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-278: End/Discard Idempotency Caches Transient Errors Under a Never-Rotating Key, Bricking Session Abandonment for 24 Hours](../_archive/bugs/bug-278-end-discard-idempotency-caches-transient-errors-under-fixed-key.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-279: Idempotency Wrapper Conflates a Failed Outcome-Write With a Failed Execution, Caching an Error for a Request That Succeeded](../_archive/bugs/bug-279-idempotency-wrapper-caches-error-after-committed-success.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-280: Double-Finalize Race Surfaces as a Reason-less "Already Answered" CONFLICT That Gets Cached Under the Loser's Idempotency Key](../_archive/bugs/bug-280-double-finalize-race-maps-to-reasonless-conflict.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-281: Seed Re-Import Silently Rewrites `choices.is_correct` Under Graded History, Making Stored Grades Contradict the Displayed Answer Key](../_archive/bugs/bug-281-seed-reimport-rewrites-answer-key-under-graded-history.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+| [BUG-282: Tutor Session Ended in Another Tab Leaves the Losing Tab in a Reason-less CONFLICT Dead-End Loop](../_archive/bugs/bug-282-tutor-two-tab-ended-session-dead-end-loop.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
+
+## How to close and archive
+
+Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records). That is the canonical procedure; this register records dispositions and receipts.

@@ -101,7 +101,7 @@ These code paths are current as of 2026-04-27:
 - `DrizzleAttemptRepository` also applies the shared active-exam visibility predicate inside the attempted-question latest-attempt subquery before `row_number()` ranking, so History excludes active-exam attempts without dropping older visible attempts for the same question. See [BUG-235](../_archive/bugs/bug-235-attempted-question-history-drops-latest-visible-attempt.md).
 - Implicit latest-attempt readers (`findLatestByUserAndQuestion(...)`, `findMostRecentAnsweredAtByQuestionIds(...)`) apply active-exam visibility before row selection / aggregation, so older visible attempts surface as the fallback when a newer active-exam attempt would be hidden. See [BUG-239](../_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md).
 - `DrizzleQuestionRepository` excludes active-exam attempts from status-filter and user-history correctness projections via the shared active-exam visibility predicate.
-- `FakeAttemptRepository` mirrors production active-exam visibility for the ten read paths in the BUG-235/236/237/239 family, including filter-before-rank for attempted-question history and filter-before-aggregate for implicit latest-attempt timestamps. See [DEBT-367](../debt/debt-367-fake-attempt-repository-missing-active-exam-visibility.md).
+- `FakeAttemptRepository` mirrors production active-exam visibility for the ten read paths in the BUG-235/236/237/239 family, including filter-before-rank for attempted-question history and filter-before-aggregate for implicit latest-attempt timestamps. See [DEBT-367](../_archive/debt/debt-367-fake-attempt-repository-missing-active-exam-visibility.md).
 
 ---
 

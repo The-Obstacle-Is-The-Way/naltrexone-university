@@ -1,7 +1,7 @@
 # Bookmark Surface Policy
 
 **Last Updated:** 2026-04-23
-**Related:** [BS-053](../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), [BS-052](../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [Bookmarks Dossier](./pages/bookmarks.md) (complete vertical-slice documentation), [DEBT-365](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) Concern 2 (closed 2026-04-23 as intentional-by-design — stage disambiguates `Mark for review` from `Bookmark`)
+**Related:** [BS-053](../_archive/brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md) (bookmark vs mark-for-review collision), [BS-052](../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [Bookmarks Dossier](./pages/bookmarks.md) (complete vertical-slice documentation), [DEBT-365](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md) Concern 2 (closed 2026-04-23 as intentional-by-design — stage disambiguates `Mark for review` from `Bookmark`)
 
 ---
 

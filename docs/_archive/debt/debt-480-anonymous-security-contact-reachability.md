@@ -44,5 +44,5 @@ After ordinary full gates/review/promotion, repeat anonymous production GETs and
 
 - [Adjudication and HTTP receipts](../../debt/assets/adversarial-2026-09-20/review.md)
 - [DEBT-479](../../debt/debt-479-public-surface-discoverability-and-field-performance.md) — crawl/image resources need the same auth-boundary reasoning
-- [DEBT-475](../../debt/debt-475-toolchain-coherence.md) — existing expiry warning/hard expiry work, unchanged
+- [DEBT-475](./debt-475-toolchain-coherence.md) — existing expiry warning/hard expiry work, unchanged
 - `public/.well-known/security.txt`, `tests/security-txt.test.ts`, `lib/public-routes.ts`, `proxy.ts`
