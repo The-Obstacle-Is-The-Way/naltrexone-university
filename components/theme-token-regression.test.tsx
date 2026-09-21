@@ -13,7 +13,7 @@ import {
 } from 'vitest';
 import {
   collectOpacityIssues,
-  collectRawButtonIssues,
+  collectRawButtonExemptionIssues,
   readProductionUiSources,
 } from '@/components/theme-token-regression-source-scan';
 import { ROUTES } from '@/lib/routes';
@@ -190,29 +190,31 @@ describe('theme token regression', () => {
     vi.restoreAllMocks();
   });
 
-  it('blocks new raw button bypasses outside documented exemptions', () => {
-    const issues = collectRawButtonIssues(readProductionUiSources(), {
-      enforceExemptionCounts: true,
-    });
+  it('retains exactly one raw button in the documented mobile-nav exception', () => {
+    const issues = collectRawButtonExemptionIssues(readProductionUiSources());
 
     expect(issues).toEqual([]);
   });
 
-  it('reports a synthetic raw button bypass with file and line context', () => {
-    const issues = collectRawButtonIssues(
-      [
+  it.each([0, 2])(
+    'rejects %i raw buttons in the single-button mobile-nav exception',
+    (count) => {
+      const issues = collectRawButtonExemptionIssues([
         {
-          filePath: 'components/example-cta.tsx',
-          lines: [
-            'export function Example() { return <button type="button" />; }',
-          ],
+          filePath: 'components/mobile-nav.tsx',
+          lines: Array.from({ length: count }, () => '<button />'),
         },
-      ],
-      { exemptions: [] },
-    );
+      ]);
 
-    expect(issues).toEqual([
-      'components/example-cta.tsx:1 raw <button> outside components/ui/ is not allowed by DEBT-398 PR 3. Use <Button> or add a documented Pattern Registry exception.',
+      expect(issues).toEqual([
+        `components/mobile-nav.tsx expected exactly 1 exempt raw <button> occurrence(s), found ${count}. Pattern Registry I-6 app-shell disclosure toggle exception.`,
+      ]);
+    },
+  );
+
+  it('rejects a missing mobile-nav exception source instead of passing an empty walk', () => {
+    expect(collectRawButtonExemptionIssues([])).toEqual([
+      'components/mobile-nav.tsx expected exactly 1 exempt raw <button> occurrence(s), found 0. Pattern Registry I-6 app-shell disclosure toggle exception.',
     ]);
   });
 
