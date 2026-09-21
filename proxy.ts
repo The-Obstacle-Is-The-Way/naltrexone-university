@@ -4,7 +4,10 @@ import {
   type NextRequest,
   NextResponse,
 } from 'next/server';
-import { PUBLIC_ROUTE_PATTERNS } from '@/lib/public-routes';
+import {
+  PUBLIC_ROUTE_PATTERNS,
+  SECURITY_CONTACT_PATH,
+} from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
 
 export function parseSentryIngestOrigin(
@@ -229,6 +232,12 @@ export default async function proxy(
   request: NextRequest,
   event: NextFetchEvent,
 ) {
+  // This exact static disclosure resource must not require even Clerk's
+  // anonymous dev-browser handshake, which redirects HTML requests.
+  if (request.nextUrl?.pathname === SECURITY_CONTACT_PATH) {
+    return NextResponse.next();
+  }
+
   if (shouldBypassClerkAuth()) {
     return NextResponse.next();
   }
