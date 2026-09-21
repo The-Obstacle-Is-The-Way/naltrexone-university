@@ -9,6 +9,8 @@
 
 ## Measured baseline (what is NOT the problem)
 
+**2026-09-21 audit forward pointer.** This section's percentages, file counts, fake inventory and skip census describe the dated filing run, not the current estate. Required E2E credential skips have since been removed under DEBT-473; fake isolation tests are not shared fake↔real contracts (24 registered surfaces, three shared contracts, 21 explicit waivers). Current integration still has the one-case tag and two-case bookmark suites; no dedicated Clerk-event/deleted-Clerk-user repository suite was found. The content-parser gap has narrowed: DEBT-486 now exercises real canonicalized body parsing through importer/seed tests; that does **not** prove direct coverage of all three hashing helpers. Other Part 2 gaps need their targeted red proofs, not reuse of old percentages. Parts 2–3 remain open; Part 4 is a proposal requiring an ADR/owner decision, not an authorized missing gate. [Audit receipts](./assets/active-audit-2026-09-21/verification.md).
+
 Merged unit+browser coverage: **93.3% statements / 87.6% branches / 94.8% lines.** By layer: domain services 99.3%, use-cases 95.4%, controllers 95.8%, gateways 95.2%, `app/(app)/app` 94.2% merged (63.8% unit-only — the browser lane carries the hooks, so single-lane numbers understate the app tree by ~30 points; always read the merge). Repositories sit at 83.2% in the unit lane by design and confirm covered in the integration lane (spot receipts: `drizzle-renewal-notice-delivery-repository` 88.2%, `drizzle-renewal-consent-record-repository` 80.0%, `drizzle-tag-repository` 100%, `drizzle-bookmark-repository` 95.0%). All 17 Drizzle repositories have at least one integration suite constructing them against real Postgres. The fakes barrel exports 50 concrete application-layer fakes; their shared implementations have colocated contract coverage except `FakeSha256Hasher`, which is exercised as a collaborator but has no dedicated contract test. The skip census is clean: no `.only`/`.todo`/`.fixme` anywhere; 11 E2E `test.skip` gates are the CI-enforced credential policy; the only other skip is deliberate (below).
 
 Caveat pinned for future readers: `vitest.config.mts` coverage has no `all: true`, so never-imported files are invisible in reports. A three-lane file-presence diff found 10 runtime-emitting `app`/`components`/`lib`/`src` paths absent after type-only files were excluded; those that matter appear in Part 2.
@@ -61,7 +63,7 @@ The historical trial-clock runner and paid-checkout names above now point to `sc
 
 ## Part 3 — Shared-fixture debt (quantified)
 
-The doctrine (fakes-over-mocks) is followed at every port. At filing, the estate stopped one layer short at the provider boundary, and the duplication concentrated exactly where files were largest (DEBT-469's burn-down list). DEBT-467 has since seeded the first provider-boundary fake and its contract suite; the estate-wide migration and remaining fixture families stay open here:
+The doctrine requires verified behavior doubles at port seams; it is not universally followed. DEBT-472's maintained-port-double ratchet still records 45 sites, so the earlier “followed at every port” claim was too broad. Duplication also concentrates at the provider boundary in DEBT-469's largest files. DEBT-467 seeded the first provider-boundary fake and its contract suite; the estate-wide migration and remaining fixture families stay open here:
 
 | # | Proposal | Location | Replaces | Projected net LOC |
 |---|----------|----------|----------|--------:|
@@ -87,7 +89,7 @@ Coverage is uploaded to Codecov with no Vitest `coverage.thresholds`: measured, 
 
 1. [x] Part 1 items 2, 3, 5 (signature ingress, entitlement-loss E2E, cron integration) — completed 2026-08-16 with the named receipts above.
 2. [x] Part 1 item 4's paid annual checkout E2E using the existing reset/reseed lifecycle — completed 2026-08-18 with the named receipts above.
-3. [x] Part 1 item 1's fail-closed scheduled trial-clock workflow — completed 2026-08-17 with a historical 43-case harness contract (grown from 37 at completion by the DEBT-469 split) and a 2/2 live Stripe test-mode proof; DEBT-472 later widened the current combined provider wrapper suite to 44 cases, and the first GitHub-hosted run after the workflow reaches `main` remains in Verification.
+3. [x] Part 1 item 1's fail-closed scheduled trial-clock workflow — completed 2026-08-17 with a historical 43-case harness contract (grown from 37 at completion by the DEBT-469 split) and a 2/2 live Stripe test-mode proof; DEBT-472 later widened the combined provider wrapper suite to a historical 44 cases. Activation is verified by manual run `33038731445` and scheduled run `35510373087` (`PASS executed=6 passed=6 skipped=0`); the current gate/wrapper test census and provenance are in Verification below.
 4. [ ] Part 2 backend contract tests; Part 2 UI (error-boundary behavior first); thin integration suites.
 5. [ ] Part 3 (a)'s existing-double migrations and (b)/(b2)/(f) interleaved with DEBT-469 splits; then the trial setup add-card click-through, (d)/(e)/(c), and Part 4 thresholds last, re-floored.
 
@@ -97,7 +99,7 @@ Coverage is uploaded to Codecov with no Vitest `coverage.thresholds`: measured, 
 - [ ] Part 2 files each gain direct assertions or a recorded accepted-residual rationale
 - [ ] Remaining fixture proposals and migration waves land with colocated contract tests; replaced hand-rolled sites deleted in the same migration PRs; `fixture-integrity.md` respected (Part 3(a)'s DEBT-467 seed is contract-tested, with its existing-site migration still open)
 - [ ] Coverage thresholds active in all three vitest configs; CI red on regression below floors
-- [ ] Trial-clock scheduled workflow green at least once against Stripe test mode
+- [x] Trial-clock scheduled workflow green at least once against Stripe test mode — reverified 2026-09-21: scheduled run [35510373087](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35510373087), head `86336194`, logged `PASS executed=6 passed=6 skipped=0` at `2026-09-20T12:22:37Z`. Manual activation `33038731445` was already green on 2026-08-27. The renamed provider runner covers both trial-clock cases and four Checkout-client cases; this is not a hosted-DOM run. This closes the stale activation qualifier in Resolution item 3 without changing its historical harness counts.
 - [ ] No new test file exceeds DEBT-469's restored size policy without a reasoned suppression
 
 ## Related

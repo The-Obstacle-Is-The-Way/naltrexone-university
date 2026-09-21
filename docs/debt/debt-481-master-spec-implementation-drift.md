@@ -8,6 +8,8 @@
 
 ## Description
 
+**2026-09-21 forward pointer.** #936 (`327f95ef`) shipped the warning banners and SPEC-016/017 corrections and is an ancestor of deployed main. The filing's “prepared PR B” qualifiers below are historical, not open deployment work. The six master/copy contradictions remain: the current schema has **21** tables versus **14** in the master, and there are **29** controller `createAction` declarations, distinct from **14** rate policies and **18** limited operations. Warning banners do not reconcile the stale schema, bookmark key, content/choice identity, workflow and timing examples. This remains an Open docs-ownership/reconciliation task, not a runtime change. [Audit receipts](./assets/active-audit-2026-09-21/verification.md).
+
 **CONFIRMED:** the current master specification and its four readability copies contain demonstrably stale “complete”/“exact” implementation claims. `docs/specs/index.md` identifies the master as the technical SSOT; a new implementer can copy unsafe or incompatible examples. The [all-current-specs audit](./assets/adversarial-2026-09-20/review.md#all-current-specs-audit) covers all eight current files, including SPEC-016/017 corrections prepared for separate specs-only PR B.
 
 Receipts at `5bc118f3` (warning banners are prepared for PR B, not included in this filing):

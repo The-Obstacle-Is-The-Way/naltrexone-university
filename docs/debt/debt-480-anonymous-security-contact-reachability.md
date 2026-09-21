@@ -8,6 +8,8 @@
 
 ## Description
 
+**2026-09-21 re-execution.** The defect still exists on deployed main `76e65e9c`: anonymous, non-redirect-following GET returns **404** with `Accept: */*` and a Clerk `protect-rewrite` reason, and **307** with `Accept: text/html`. The file-content/expiry guard and newly shipped renewal reminder do not establish HTTP publication. No fix is claimed. [Audit receipt](./assets/active-audit-2026-09-21/verification.md).
+
 **CONFIRMED:** `public/.well-known/security.txt` exists, but its canonical production URL is intercepted by Clerk. Fresh signed-out GETs on 2026-09-20 returned 404 with `Accept: */*` and `x-clerk-auth-reason: protect-rewrite`; `Accept: text/html` returned 307 to the identity host. [Commands and outputs](./assets/adversarial-2026-09-20/review.md#http-receipts).
 
 `proxy.ts:196-201` protects paths absent from `lib/public-routes.ts:3-15`. The matcher at `proxy.ts:246` does not skip TXT; neither public list nor matcher admits this resource. `tests/security-txt.test.ts:5-24` says it “publishes” the contact but only reads the local file and validates fields/expiry. That test passed during this review, alongside the production failure.

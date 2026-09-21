@@ -11,6 +11,8 @@
 
 ## Execution re-audit (2026-09-19)
 
+> **2026-09-21 current-tree forward pointer:** #920/#921/#922/#923 are merged and promoted. Five real-Postgres filter twins, the 19-case Stripe-event suite (including `peek` and bounded pruning), and the attempt disposition are complete. The live floors are **22 / 240 / 45** across **13 / 48 / 18** files; textual casts are **278 / 59** files, including fixture strings, and `RepoDb` casts are **138 / 21** files. There are **27** size suppressions. The older Part-A alias-resolution description is superseded by #923's bounded explicit-form/fail-closed classifier, not current resolver behavior. The three browser setup factories remain outside the scanner's test/spec walk, all five type lies remain, and the first live-retrieve fake migration is still outstanding. Step 4 is partially complete, not a mandate to repeat already-landed deletions. Step 5's migration ordering is already recorded in DEBT-468; execution remains. Step 6's index guard convention already exists; the live DEBT-035/444 adjudication remains. No floor or allowlist changed in this audit. [Receipts](./assets/active-audit-2026-09-21/verification.md).
+
 Baseline: `dev` `ed07103f7c40c47ccbe83a0afccee076d25cbd44`. This dated section is the forward pointer for current execution; the filing and Part A/B receipts above and below remain historical. Node 24.16.0, frozen pnpm 11.3.0 install, installed/locked Zod 4.6.0, all eight required E2E key names, and 958 parseable seed files were verified without logging credentials. Migrations and seeding used this clone's resolver-selected local Postgres. Baseline unit: 463 files / 4,272 passing cases.
 
 | Item | Claim | Verdict | Current evidence (file:line at the baseline) |
