@@ -157,3 +157,28 @@ head. Source releases:
 [Stripe](https://github.com/stripe/stripe-node/releases/tag/v22.6.2).
 This is policy triage, not a completed eleven-package supply-chain audit.
 
+## Reviewed dev merge and ancestry correction
+
+#976 merged as `0b074cee` after formal CodeRabbit approval `5270082915`
+on exact source head `97567220`, zero unresolved threads and successful
+CI `35634701830`. Hosted E2E passed 46/46. Codecov patch and preview were green.
+The full local gate passed 4,503 unit / 411 browser / 349 integration plus six
+intentional provider skips / 23 build routes / 46 E2E, without retries. A
+non-failing `destination stream closed early` server message near teardown is
+disclosed, not investigated outside this pass's scope. The relative-link
+comparison found zero new missing destinations (1,093 existing broken
+occurrences / 319 destinations when relative assets are included); one Latest
+stanza remains.
+
+CodeRabbit withdrew both requested historical rewrites after checking the
+adjacent dated corrections and current execution instructions. No new code
+was added to satisfy those Minor comments.
+
+Promotion #978 initially reported BEHIND: the executor omitted the
+[deployment runbook's ancestry step](../../../dev/deployment-procedure.md#promotion-ancestry-under-strict-branch-protection)
+before #976. Main `d67a3e98` had not been merged into the feature branch even
+though the starting trees matched. #978 was closed temporarily; main's ancestry
+is now carried through a normal follow-up PR to dev on the same inventory
+branch, with a full gate and fresh review. The merge itself has no content
+delta against dev. No direct protected-branch push, rebase, force-push or
+override is used. DEBT-480 remains Open until the subsequent production proof.
