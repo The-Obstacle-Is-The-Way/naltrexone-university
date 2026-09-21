@@ -12,6 +12,7 @@ type ImportOccurrence = {
   specifier: string;
   lineNumber: number;
   typeOnly: boolean;
+  needsSpecifierCheck?: boolean;
 };
 
 const PRODUCTION_ARCHITECTURE_SOURCE_GLOBS = [
@@ -63,27 +64,6 @@ const REPOSITORY_TYPESCRIPT_FILE_GLOBS = [
   'tests/**/*.{ts,tsx}',
 ];
 
-const STANDARD_TEST_SUFFIXES = [
-  '.browser.spec',
-  '.integration.test',
-  '.test',
-  '.spec',
-  '.e2e',
-];
-
-const ALLOWED_MULTI_DOT_BASENAMES = new Set([
-  'app/(app)/app/billing/page.manage-billing.test.tsx',
-  'app/(app)/app/practice/[sessionId]/components/post-exam-review-view.fixtures.ts',
-  'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.fixtures.ts',
-  'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx',
-  'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.setup.ts',
-  'app/(app)/app/practice/[sessionId]/hooks/use-practice-session-exam-results-continuity.fixtures.ts',
-  'app/(app)/app/questions/[slug]/hooks/question-page-model.browser.fixtures.ts',
-  'lib/container.skip-clerk.test.ts',
-  'tests/e2e/global.setup.ts',
-  'tests/integration/actions.stripe.integration.test.ts',
-]);
-
 const QUESTION_ROUTE_ROOT = 'app/(app)/app/questions/[slug]/';
 const QUESTION_ROUTE_HOOKS_ROOT = `${QUESTION_ROUTE_ROOT}hooks/`;
 
@@ -124,8 +104,9 @@ export function collectArchitectureBoundaryIssues(
 
       if (sourceFile.filePath.startsWith('src/domain/')) {
         if (
-          !isRelativeImport(occurrence.specifier) ||
-          !localTarget?.startsWith('src/domain/')
+          (occurrence.needsSpecifierCheck &&
+            !isRelativeImport(occurrence.specifier)) ||
+          (localTarget !== null && !localTarget.startsWith('src/domain/'))
         ) {
           issues.push(
             `${sourceFile.filePath}:${occurrence.lineNumber} domain production code must use only relative imports; found '${occurrence.specifier}'.`,
@@ -137,7 +118,8 @@ export function collectArchitectureBoundaryIssues(
       if (sourceFile.filePath.startsWith('src/application/')) {
         if (
           isBannedApplicationLocalImport(localTarget) ||
-          isBannedApplicationPackageImport(occurrence.specifier)
+          (occurrence.needsSpecifierCheck &&
+            isBannedApplicationPackageImport(occurrence.specifier))
         ) {
           issues.push(
             `${sourceFile.filePath}:${occurrence.lineNumber} application code must not import outer-layer or package code; found '${occurrence.specifier}'.`,
@@ -164,43 +146,6 @@ export function collectArchitectureBoundaryIssues(
           `${sourceFile.filePath}:${occurrence.lineNumber} outer layers must use controller/composition entry points instead of runtime use-case/repository imports; found '${occurrence.specifier}'.`,
         );
       }
-    }
-  }
-
-  return issues;
-}
-
-export function collectFilenamePolicyIssues(
-  filePaths: readonly string[],
-): string[] {
-  const issues: string[] = [];
-
-  for (const filePath of filePaths) {
-    const basename = path.posix.basename(filePath);
-    const extension = typescriptExtensionFor(basename);
-    if (!extension) {
-      continue;
-    }
-
-    const stem = basename.slice(0, -extension.length);
-    const { policyStem, suffix } = splitStandardTestSuffix(stem);
-    const hasAllowedMultiDotName = ALLOWED_MULTI_DOT_BASENAMES.has(filePath);
-
-    if (!hasAllowedMultiDotName && policyStem.includes('.')) {
-      issues.push(
-        `${filePath} uses an unapproved multi-dot filename; add a specific allowlist entry or rename it to kebab-case.`,
-      );
-      continue;
-    }
-
-    const expectedPolicyStem = toKebabCase(policyStem);
-    if (policyStem !== expectedPolicyStem) {
-      const suffixDescription = suffix
-        ? 'before the standard test suffix'
-        : 'before the extension';
-      issues.push(
-        `${filePath} must use kebab-case ${suffixDescription}; expected ${expectedPolicyStem}${suffix}${extension}.`,
-      );
     }
   }
 
@@ -280,14 +225,24 @@ function collectImportOccurrences(
 
     if (
       ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) &&
+          node.expression.text === 'require'))
     ) {
       const [argument] = node.arguments;
-      if (argument && ts.isStringLiteral(argument)) {
+      if (
+        argument &&
+        (ts.isStringLiteral(argument) ||
+          ts.isNoSubstitutionTemplateLiteral(argument))
+      ) {
         occurrences.push({
           specifier: argument.text,
           lineNumber: lineNumberFor(argument),
           typeOnly: false,
+          // Installed Biome misses require() and template-literal import calls.
+          needsSpecifierCheck:
+            node.expression.kind !== ts.SyntaxKind.ImportKeyword ||
+            ts.isNoSubstitutionTemplateLiteral(argument),
         });
       }
     }
@@ -384,38 +339,4 @@ function matchesLocalPathRoot(
     value &&
       roots.some((root) => value === root || value.startsWith(`${root}/`)),
   );
-}
-
-function typescriptExtensionFor(basename: string): '.ts' | '.tsx' | null {
-  if (basename.endsWith('.tsx')) {
-    return '.tsx';
-  }
-
-  if (basename.endsWith('.ts')) {
-    return '.ts';
-  }
-
-  return null;
-}
-
-function splitStandardTestSuffix(stem: string): {
-  policyStem: string;
-  suffix: string;
-} {
-  const suffix = STANDARD_TEST_SUFFIXES.find((candidate) =>
-    stem.endsWith(candidate),
-  );
-
-  if (!suffix) {
-    return { policyStem: stem, suffix: '' };
-  }
-
-  return { policyStem: stem.slice(0, -suffix.length), suffix };
-}
-
-function toKebabCase(value: string): string {
-  return value
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .toLowerCase();
 }

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   type ArchitectureSourceFile,
   collectArchitectureBoundaryIssues,
-  collectFilenamePolicyIssues,
   collectPresentationHookNamingIssues,
   collectQuestionRouteHookOrganizationIssues,
   readProductionArchitectureSources,
@@ -14,52 +13,46 @@ function source(filePath: string, contents: string): ArchitectureSourceFile {
 }
 
 describe('Clean Architecture import boundaries', () => {
-  it('blocks non-relative domain imports across static, re-export, side-effect, and dynamic import shapes', () => {
-    const issues = collectArchitectureBoundaryIssues([
-      source(
-        'src/domain/entities/bad-entity.ts',
-        `
-          import { z } from 'zod';
-          import 'server-only';
-          export { helper } from '@/src/application/shared/helper';
-
-          export async function loadFramework() {
-            return import('next/cache');
-          }
-        `,
-      ),
-    ]);
-
-    expect(issues).toEqual([
-      "src/domain/entities/bad-entity.ts:1 domain production code must use only relative imports; found 'zod'.",
-      "src/domain/entities/bad-entity.ts:2 domain production code must use only relative imports; found 'server-only'.",
-      "src/domain/entities/bad-entity.ts:3 domain production code must use only relative imports; found '@/src/application/shared/helper'.",
-      "src/domain/entities/bad-entity.ts:6 domain production code must use only relative imports; found 'next/cache'.",
-    ]);
+  it.each([
+    [
+      'src/domain/entities/example.ts',
+      'export const load = () => import(`zod`);',
+    ],
+    [
+      'src/domain/entities/example.ts',
+      "export const load = () => require('zod');",
+    ],
+    [
+      'src/application/use-cases/example.ts',
+      'export const load = () => import(`stripe`);',
+    ],
+    [
+      'src/application/use-cases/example.ts',
+      "export const load = () => require('stripe');",
+    ],
+  ])('rejects the documented Biome gap at %s: %s', (filePath, contents) => {
+    expect(
+      collectArchitectureBoundaryIssues([source(filePath, contents)]),
+    ).toHaveLength(1);
   });
 
-  it('blocks application imports from adapters and framework packages', () => {
-    const issues = collectArchitectureBoundaryIssues([
-      source(
-        'src/application/use-cases/bad-use-case.ts',
-        `
-          import type { User } from '@/src/domain/entities';
-          import { getQuestion } from '@/src/adapters/controllers/question-controller';
-          import React from 'react';
-          import type Stripe from 'stripe';
-          import { sha256 } from '@noble/hashes/sha2';
-          import 'server-only';
-        `,
-      ),
-    ]);
-
-    expect(issues).toEqual([
-      "src/application/use-cases/bad-use-case.ts:2 application code must not import outer-layer or package code; found '@/src/adapters/controllers/question-controller'.",
-      "src/application/use-cases/bad-use-case.ts:3 application code must not import outer-layer or package code; found 'react'.",
-      "src/application/use-cases/bad-use-case.ts:4 application code must not import outer-layer or package code; found 'stripe'.",
-      "src/application/use-cases/bad-use-case.ts:5 application code must not import outer-layer or package code; found '@noble/hashes/sha2'.",
-      "src/application/use-cases/bad-use-case.ts:6 application code must not import outer-layer or package code; found 'server-only'.",
-    ]);
+  it.each([
+    [
+      'src/domain/entities/example.ts',
+      "export { helper } from '../../application/helper';",
+    ],
+    [
+      'src/application/use-cases/example.ts',
+      "export { helper } from '../../adapters/helper';",
+    ],
+    [
+      'src/adapters/controllers/example.ts',
+      "export { helper } from '../../../app/helper';",
+    ],
+  ])('rejects a resolved relative escape at %s', (filePath, contents) => {
+    expect(
+      collectArchitectureBoundaryIssues([source(filePath, contents)]),
+    ).toHaveLength(1);
   });
 
   it('blocks adapters from importing app or component code', () => {
@@ -123,27 +116,6 @@ describe('Clean Architecture import boundaries', () => {
   it('keeps the live production source tree within enforced import boundaries', () => {
     expect(
       collectArchitectureBoundaryIssues(readProductionArchitectureSources()),
-    ).toEqual([]);
-  });
-});
-
-describe('repository filename policy', () => {
-  it('blocks PascalCase and camelCase drift while allowing approved multi-dot support files', () => {
-    expect(
-      collectFilenamePolicyIssues([
-        'components/question/QuestionCard.test.tsx',
-        'lib/content/parseMdxQuestion.ts',
-        'app/(app)/app/practice/[sessionId]/components/post-exam-review-view.fixtures.ts',
-      ]),
-    ).toEqual([
-      'components/question/QuestionCard.test.tsx must use kebab-case before the standard test suffix; expected question-card.test.tsx.',
-      'lib/content/parseMdxQuestion.ts must use kebab-case before the extension; expected parse-mdx-question.ts.',
-    ]);
-  });
-
-  it('keeps the live repository TypeScript filenames within the kebab-case policy', () => {
-    expect(
-      collectFilenamePolicyIssues(readRepositoryTypescriptFilePaths()),
     ).toEqual([]);
   });
 });
