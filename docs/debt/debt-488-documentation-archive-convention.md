@@ -132,6 +132,23 @@ Rejected the suggested 60-second hook timeout: the full coverage lane passed
 Mechanical archive-link failure enforcement remains the explicit PR 2 scope,
 not a reason to fold the historical repair into PR 1.
 
+### Hosted-run follow-up (2026-09-21)
+
+The preceding subprocess correction was insufficient on the hosted runner:
+run 35652409795 failed its 14-second child deadline. It is not a successful
+verification receipt. The guard now separates register lifecycle checks (all
+record names/statuses and six index ASTs) from one assertion per live document.
+All 142 live documentation files are still checked, and the CLI still reports
+the complete archive census. Archive link assertions join the per-file checks
+in PR 2. No timeout was raised and no file was excluded.
+
+The focused coverage run passes 161 cases: 16 fixtures/command cases, three
+lifecycle assertions and 142 per-document link assertions. That increase is
+diagnostic granularity, **not new product coverage**. The slowest assertion is
+1.48 seconds locally, with 95.89% script line coverage. The earlier whole-estate
+subprocess is no longer the repository test's execution model; the real-file
+CLI failure/exit tests remain. Hosted final-head validation is still required.
+
 ## Related
 
 - [Debt register](./index.md)

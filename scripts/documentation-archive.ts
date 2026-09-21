@@ -103,7 +103,7 @@ function hasClosedStatus(contents: string): boolean {
   return /\b(?:resolved|archived|implemented|closed|complete)\b/i.test(status);
 }
 
-export function auditDocumentation(
+export function auditRecordLifecycle(
   files: ReadonlyMap<string, string>,
   exists: (file: string) => boolean,
 ): DocumentationAudit {
@@ -119,10 +119,10 @@ export function auditDocumentation(
     counts: [],
   };
   const links = new Map(
-    [...files].map(([file, contents]) => [
-      file,
-      documentationLinks(file, contents),
-    ]),
+    Object.keys(REGISTERS).map((register) => {
+      const file = `docs/${register}/index.md`;
+      return [file, documentationLinks(file, files.get(file) ?? '')];
+    }),
   );
 
   for (const [register, pattern] of Object.entries(REGISTERS)) {
@@ -164,9 +164,29 @@ export function auditDocumentation(
       archived: archived.length,
     });
   }
-  for (const fileLinks of links.values()) {
-    for (const link of fileLinks) {
-      if (targetExists(link.target)) continue;
+  return result;
+}
+
+export function brokenDocumentationLinks(
+  file: string,
+  contents: string,
+  exists: (file: string) => boolean,
+): DocumentationLink[] {
+  return documentationLinks(file, contents).filter(
+    (link) =>
+      link.target === '..' ||
+      link.target.startsWith('../') ||
+      !exists(link.target),
+  );
+}
+
+export function auditDocumentation(
+  files: ReadonlyMap<string, string>,
+  exists: (file: string) => boolean,
+): DocumentationAudit {
+  const result = auditRecordLifecycle(files, exists);
+  for (const [file, contents] of files) {
+    for (const link of brokenDocumentationLinks(file, contents, exists)) {
       const list = link.file.startsWith('docs/_archive/')
         ? result.brokenArchive
         : result.brokenLive;
@@ -176,7 +196,7 @@ export function auditDocumentation(
   return result;
 }
 
-export function readDocumentation(root: string): DocumentationAudit {
+export function readDocumentationFiles(root: string): Map<string, string> {
   // Repository-authored documentation, not vendored skill packages or build
   // artifacts. Numbered records are direct children of their register folder;
   // indexes, templates, assets, living guides and ADRs are not open records.
@@ -188,10 +208,13 @@ export function readDocumentation(root: string): DocumentationAudit {
     if (!names.includes(`docs/${register}/index.md`))
       throw new Error(`Missing documentation register: ${register}`);
   }
-  const files = new Map(
+  return new Map(
     names.map((file) => [file, readFileSync(path.join(root, file), 'utf8')]),
   );
-  return auditDocumentation(files, (file) =>
+}
+
+export function readDocumentation(root: string): DocumentationAudit {
+  return auditDocumentation(readDocumentationFiles(root), (file) =>
     existsSync(path.resolve(root, file)),
   );
 }

@@ -1,13 +1,22 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   auditDocumentation,
+  auditRecordLifecycle,
+  brokenDocumentationLinks,
   type DocumentationAudit,
   REGISTERS,
   readDocumentation,
+  readDocumentationFiles,
   runDocumentationCommand,
 } from '../scripts/documentation-archive';
 
@@ -191,16 +200,13 @@ describe('documentation archive command', () => {
 });
 
 describe('repository documentation', () => {
+  const files = readDocumentationFiles(process.cwd());
+  const exists = (file: string) => existsSync(path.resolve(file));
   let result: DocumentationAudit;
 
   beforeAll(() => {
-    // The thousand-document integration census runs through the real CLI.
-    // Unit fixtures above cover its policies without profiling every call in
-    // the vendor Markdown parser across the entire historical estate.
-    const child = runArchiveCommand(process.cwd());
-    expect(child.error).toBeUndefined();
-    expect(child.status, child.stderr || child.stdout).toBe(0);
-    result = JSON.parse(child.stdout);
+    // Lifecycle needs all record names/statuses, but only the six index ASTs.
+    result = auditRecordLifecycle(files, exists);
   });
 
   it('has no record in both live and archived folders', () => {
@@ -216,7 +222,11 @@ describe('repository documentation', () => {
     expect(result.missingRowTargets).toEqual([]);
   });
 
-  it('resolves every relative file link in live documentation', () => {
-    expect(result.brokenLive).toEqual([]);
+  it.each(
+    [...files.keys()].filter((file) => !file.startsWith('docs/_archive/')),
+  )('resolves relative file links in %s', (file) => {
+    expect(
+      brokenDocumentationLinks(file, files.get(file) ?? '', exists),
+    ).toEqual([]);
   });
 });
