@@ -262,6 +262,14 @@ are correct. The proposed BUG-133/134 slugs and removed practice-controller
 filename still do not exist after changing depth. Those occurrences stay in
 the explicit historical exception list below; no replacement is guessed.
 
+The `1da66764` follow-up received normal exact-head approval (5272868341),
+but its hosted patch report still failed at 96.29630%. Reading Codecov's
+line-level report identified an uncovered preservation branch: a repaired
+document also containing an already-correct link. The existing function/CLI
+parity fixture now includes that mixed case. Both variants failed at 23:45:02Z
+when preservation of the untouched URL was temporarily removed; restoring it
+makes them pass. No implementation change or coverage-policy relaxation remains.
+
 ### Historical targets without a mechanically proven replacement
 
 All 41 occurrences below remain untouched. The source link resolves; the old

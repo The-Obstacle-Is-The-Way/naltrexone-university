@@ -272,6 +272,7 @@ describe('documentation archive command', () => {
         '[Source](../../src/example.ts#L7)',
         '[Later](../../debt/debt-001-example.md?view=raw#receipt)',
         '![Asset](../../docs/assets/example.png)',
+        '[Already correct](../../../src/existing.ts)',
         '[Reference][source]',
         '',
         '[source]: <../../src/example.ts> "Original title"',
@@ -280,6 +281,7 @@ describe('documentation archive command', () => {
       populate(root, {
         [file]: original,
         'src/example.ts': 'export {};',
+        'src/existing.ts': 'export {};',
         'docs/assets/example.png': 'fixture',
         'docs/_archive/debt/debt-001-example.md': '# Existing record',
       });
