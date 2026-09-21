@@ -170,6 +170,24 @@ plain-ID/title-link format remains supported by a positive control. No heading
 classifier was added: section placement remains part of the closeout procedure,
 not an additional guard policy. All 163 focused cases pass under coverage.
 
+### Full-review adjudication (2026-09-21)
+
+Hosted CI 35656722168 passed on `45a2b736`, with no unresolved threads before
+the subsequent full review. That review's DEBT-475 link claim is false: line
+261 already points to the requested archived sibling on the reviewed head.
+The malformed-percent URL probe exits 1 with `URIError`; it fails closed rather
+than accepting a bad destination. Structured recovery is not required for that
+invalid-input path. The command test exercises one exit-status contract through
+its command body and real CLI, with a repaired-link positive control; splitting
+it is not a correction to a failing property. Neither suggestion expands the
+guard in this change.
+
+Two documentation inconsistencies were confirmed: the spec register's metadata
+now dates its actual September 21 archival maintenance, and brainstorming's
+lifecycle no longer implies that only spec-driven implementation can close a
+record. BS-064 is the existing promoted bug-driven counterexample. The full gate
+and exact-head review remain required after these documentation corrections.
+
 ## Related
 
 - [Debt register](./index.md)

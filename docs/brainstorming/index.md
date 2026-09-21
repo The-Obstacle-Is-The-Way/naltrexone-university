@@ -18,11 +18,11 @@ Brainstorming docs capture UX audits, gap analyses, and design explorations befo
 ## Lifecycle
 
 ```text
-Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
+Brainstorming (BS-NNN) → Spec, bug or debt work → Implementation → Promotion → Archive
 ```
 
-- A brainstorming doc is **Active** while the problem is unresolved and no spec covers it
-- Once a spec is written and implemented, the brainstorming doc is **Archived**
+- A brainstorming doc is **Active** while its scoped problem remains unresolved
+- Completed, promoted spec-, bug- or debt-driven work can close the brainstorming doc under the canonical procedure linked below
 - Some brainstorming docs are superseded without a direct spec (e.g., a broader spec covers the concern)
 
 ## Brainstorming Index (Active)

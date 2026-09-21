@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-20 — SPEC-016/017 corrected; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
+**Last Updated:** 2026-09-21 — SPEC-016/017 archived with explicit deferred tails, following their September 20 corrections; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
 
 ---
 
