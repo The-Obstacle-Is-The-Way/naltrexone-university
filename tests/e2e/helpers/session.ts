@@ -338,32 +338,21 @@ export async function startSession(
     .getByRole('heading', { name: expectedHeadingName })
     .waitFor({ state: 'visible', timeout: 15_000 });
 
-  // Wait for the first question to load. In dev mode, the getNextQuestion
-  // server action may hit its 15s withTimeout on the first call due to
-  // on-demand compilation, showing "Request timed out. Please try again."
-  // Most runs recover on the next call after compilation is cached, but we
-  // keep one extra retry to absorb occasional cold-start variance in CI/local.
+  // This is a success-path helper. A visible product error must fail this
+  // attempt, even when clicking Try again could recover within the attempt.
   const answerChoices = page.getByRole('group', { name: 'Answer choices' });
   const tryAgainButton = page.getByRole('button', { name: 'Try again' });
-  const maxLoadAttempts = 3;
+  await waitForEitherVisible(answerChoices, tryAgainButton, 60_000);
 
-  for (let attempt = 1; attempt <= maxLoadAttempts; attempt++) {
-    await waitForEitherVisible(answerChoices, tryAgainButton, 60_000);
-
-    if (await answerChoices.isVisible().catch(() => false)) {
-      await verifyRequestedSessionCount(page, count);
-      return; // Question loaded successfully
-    }
-
-    // "Request timed out" — click "Try again" while attempts remain.
-    if (
-      attempt < maxLoadAttempts &&
-      (await tryAgainButton.isVisible().catch(() => false))
-    ) {
-      await tryAgainButton.click();
-    }
+  if (await tryAgainButton.isVisible()) {
+    const alerts = await readNonemptyAlertTexts(page.getByRole('alert'));
+    const detail =
+      alerts.length > 0 ? alerts.join(' | ') : 'Try again is visible';
+    throw new Error(
+      `startSession failed loading the first question: ${redactDiagnosticText(detail)}`,
+    );
   }
 
-  // Final check — if still no answer choices after retries, fail explicitly
   await answerChoices.waitFor({ state: 'visible', timeout: 60_000 });
+  await verifyRequestedSessionCount(page, count);
 }

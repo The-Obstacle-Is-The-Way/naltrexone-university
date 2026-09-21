@@ -6,8 +6,6 @@ const QUESTION_BUTTON_VISIBILITY_TIMEOUT_MS = 2_000;
 const QUICK_PRACTICE_ANSWER_CHOICES_TIMEOUT_MS = 15_000;
 const BOOKMARKS_PAGE_STATE_TIMEOUT_MS = 10_000;
 const PAGE_NAVIGATION_TIMEOUT_MS = 60_000;
-const BOOKMARKS_PAGE_ERROR_RETRY_COUNT = 3;
-const BOOKMARKS_PAGE_ERROR_RETRY_DELAY_MS = 500;
 
 type QuickPracticeStatus = 'unanswered' | 'incorrect';
 export type BookmarksPageLike = Pick<Page, 'getByRole' | 'getByText'>;
@@ -179,39 +177,26 @@ async function openBookmarksPage(page: Page): Promise<BookmarksPageState> {
   return waitForBookmarksPageState(page, BOOKMARKS_PAGE_STATE_TIMEOUT_MS);
 }
 
-async function openBookmarksPageStateWithRetry(
+async function openBookmarksPageOrThrow(
   page: Page,
 ): Promise<Exclude<BookmarksPageState, 'error'>> {
-  for (
-    let attempt = 0;
-    attempt < BOOKMARKS_PAGE_ERROR_RETRY_COUNT;
-    attempt += 1
-  ) {
-    const state = await openBookmarksPage(page);
-    if (state !== 'error') {
-      return state;
-    }
-
-    if (attempt < BOOKMARKS_PAGE_ERROR_RETRY_COUNT - 1) {
-      await page.waitForTimeout(BOOKMARKS_PAGE_ERROR_RETRY_DELAY_MS);
-    }
+  const state = await openBookmarksPage(page);
+  if (state === 'error') {
+    throw new Error(
+      'Bookmarks page rendered an error: Unable to load bookmarks.',
+    );
   }
-
-  throw new Error(
-    `Bookmarks page rendered its error state ${BOOKMARKS_PAGE_ERROR_RETRY_COUNT} times in a row.`,
-  );
+  return state;
 }
 
 export async function ensureBookmarkExistsOnBookmarksPage(
   page: Page,
 ): Promise<void> {
-  const initialState = await openBookmarksPageStateWithRetry(page);
+  const initialState = await openBookmarksPageOrThrow(page);
   if (initialState === 'populated') {
     return;
   }
 
   await ensureBookmarkedQuestion(page);
-  await expect(openBookmarksPageStateWithRetry(page)).resolves.toBe(
-    'populated',
-  );
+  await expect(openBookmarksPageOrThrow(page)).resolves.toBe('populated');
 }
