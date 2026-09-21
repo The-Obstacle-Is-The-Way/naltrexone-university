@@ -3,7 +3,7 @@
 **Date:** 2026-02-21
 **Triggered by:** Localhost sign-in with Google OAuth crashed with `ApplicationError: CONFLICT — User could not be upserted due to a uniqueness constraint`
 **Scope:** `DrizzleUserRepository.upsertByClerkId` does not handle `emailUq` constraint conflicts; only handles `clerkUserIdUq`
-**Related:** [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md) (same bug on Preview, 2026-02-06), [SPEC-029](../specs/spec-029-dev-environment-resilience.md) (Dev Environment Resilience), E2E seed script (`tests/e2e/helpers/seed-test-user.ts`)
+**Related:** [BUG-079](../bugs/bug-079-preview-dev-environment-verification-failures.md) (same bug on Preview, 2026-02-06), [SPEC-029](../specs/spec-029-dev-environment-resilience.md) (Dev Environment Resilience), E2E seed script (`tests/e2e/helpers/seed-test-user.ts`)
 
 ---
 
@@ -35,7 +35,7 @@ The IDs differ. Same email, different Clerk identities.
 
 ### Prior occurrence: BUG-079 (2026-02-06)
 
-**This is the second time this exact bug has been hit.** [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md) Issue 2 documents the same crash on the Preview deployment after a Neon `dev` branch was created from `main` with stale Clerk Development user data. The fix then was also manual DB surgery (wiping user tables). The root cause was identified but not fixed in code.
+**This is the second time this exact bug has been hit.** [BUG-079](../bugs/bug-079-preview-dev-environment-verification-failures.md) Issue 2 documents the same crash on the Preview deployment after a Neon `dev` branch was created from `main` with stale Clerk Development user data. The fix then was also manual DB surgery (wiping user tables). The root cause was identified but not fixed in code.
 
 ---
 

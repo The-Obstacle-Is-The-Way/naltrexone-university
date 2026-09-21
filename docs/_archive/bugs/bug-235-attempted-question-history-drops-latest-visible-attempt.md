@@ -32,11 +32,11 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. `DrizzleAttemptRepository.latestAttemptRowsSubquery(...)` ranks all user attempts in [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L68) through [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L83).
-2. `buildAttemptedQuestionsConditions(...)` then requires `attemptRank = 1` and only applies the active-exam visibility predicate afterward in [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L92) through [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L95).
-3. `listAttemptedQuestionsByUserId(...)` and `countAttemptedQuestionsByUserId(...)` both consume that already-ranked subquery in [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L414) through [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L500).
+1. `DrizzleAttemptRepository.latestAttemptRowsSubquery(...)` ranks all user attempts in [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L68) through [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L83).
+2. `buildAttemptedQuestionsConditions(...)` then requires `attemptRank = 1` and only applies the active-exam visibility predicate afterward in [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L92) through [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L95).
+3. `listAttemptedQuestionsByUserId(...)` and `countAttemptedQuestionsByUserId(...)` both consume that already-ranked subquery in [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L414) through [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L500).
 4. When an active-exam attempt is the newest row, it receives rank 1. The outer visibility filter removes it, but the older visible attempt is rank 2 and cannot be selected.
-5. The safer pattern already exists in `DrizzleQuestionRepository.latestAttemptRowsSubquery(...)`: it joins `practice_sessions` and applies `activeExamVisibilityCondition()` inside the subquery before ranking in [drizzle-question-repository.ts](../../src/adapters/repositories/drizzle-question-repository.ts#L195) through [drizzle-question-repository.ts](../../src/adapters/repositories/drizzle-question-repository.ts#L214).
+5. The safer pattern already exists in `DrizzleQuestionRepository.latestAttemptRowsSubquery(...)`: it joins `practice_sessions` and applies `activeExamVisibilityCondition()` inside the subquery before ranking in [drizzle-question-repository.ts](../../../src/adapters/repositories/drizzle-question-repository.ts#L195) through [drizzle-question-repository.ts](../../../src/adapters/repositories/drizzle-question-repository.ts#L214).
 
 This is a follow-up gap to BUG-192. BUG-192 correctly stopped active-exam attempts from appearing in History, but its coverage did not include the fallback case where an older visible attempt should still be returned. BUG-237 tracks the upstream server-action boundary that can still create active-exam attempt rows before exam finalization.
 
@@ -100,7 +100,7 @@ The unit-test mock infrastructure for `latestAttemptRowsSubquery` in `src/adapte
 
 ## Related
 
-- Policy: [exam-answer-secrecy-policy.md](../practice-engine/exam-answer-secrecy-policy.md)
+- Policy: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md)
 - Upstream write-path bug: [BUG-237](./bug-237-submit-answer-allows-active-exam-session-writes.md)
-- Prior fix: [BUG-192](../_archive/bugs/bug-192-history-page-exposes-active-exam-correctness.md)
-- Related implementation pattern: [drizzle-question-repository.ts](../../src/adapters/repositories/drizzle-question-repository.ts)
+- Prior fix: [BUG-192](bug-192-history-page-exposes-active-exam-correctness.md)
+- Related implementation pattern: [drizzle-question-repository.ts](../../../src/adapters/repositories/drizzle-question-repository.ts)

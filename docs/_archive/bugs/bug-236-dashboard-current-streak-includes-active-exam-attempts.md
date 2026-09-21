@@ -30,12 +30,12 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. `GetUserStatsUseCase` computes `currentStreakDays` from `attemptsLast60Days` in [get-user-stats.ts](../../src/application/use-cases/get-user-stats.ts#L81) through [get-user-stats.ts](../../src/application/use-cases/get-user-stats.ts#L102).
-2. `attemptsLast60Days` comes from `AttemptStatsReader.listAnsweredAtByUserIdSince(...)` in [get-user-stats.ts](../../src/application/use-cases/get-user-stats.ts#L93).
-3. `DrizzleAttemptRepository.listAnsweredAtByUserIdSince(...)` queries `attempts` directly with only user/date predicates in [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L401) through [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L412).
+1. `GetUserStatsUseCase` computes `currentStreakDays` from `attemptsLast60Days` in [get-user-stats.ts](../../../src/application/use-cases/get-user-stats.ts#L81) through [get-user-stats.ts](../../../src/application/use-cases/get-user-stats.ts#L102).
+2. `attemptsLast60Days` comes from `AttemptStatsReader.listAnsweredAtByUserIdSince(...)` in [get-user-stats.ts](../../../src/application/use-cases/get-user-stats.ts#L93).
+3. `DrizzleAttemptRepository.listAnsweredAtByUserIdSince(...)` queries `attempts` directly with only user/date predicates in [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L401) through [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L412).
 4. That method does not join `practice_sessions` and does not apply `activeExamVisibilityCondition()`.
-5. The adjacent dashboard count and recent-activity paths already apply the visibility predicate in [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L323) through [drizzle-attempt-repository.ts](../../src/adapters/repositories/drizzle-attempt-repository.ts#L398).
-6. The dashboard renders `stats.currentStreakDays` directly in [dashboard/page.tsx](../../app/(app)/app/dashboard/page.tsx#L93) through [dashboard/page.tsx](../../app/(app)/app/dashboard/page.tsx#L101).
+5. The adjacent dashboard count and recent-activity paths already apply the visibility predicate in [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L323) through [drizzle-attempt-repository.ts](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L398).
+6. The dashboard renders `stats.currentStreakDays` directly in [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L93) through [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx#L101).
 
 This is a follow-up gap to BUG-187. BUG-187 fixed dashboard aggregate counts and recent activity, but the streak timestamp reader remained outside the shared active-exam visibility predicate. BUG-237 tracks the upstream server-action boundary that can still create active-exam attempt rows before exam finalization.
 
@@ -66,7 +66,7 @@ Do NOT modify any other repository methods. Do NOT modify the `AttemptStatsReade
 
 ## Related
 
-- Policy: [exam-answer-secrecy-policy.md](../practice-engine/exam-answer-secrecy-policy.md)
+- Policy: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md)
 - Upstream write-path bug: [BUG-237](./bug-237-submit-answer-allows-active-exam-session-writes.md)
-- Prior fix: [BUG-187](../_archive/bugs/bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
-- Related dashboard surface: [dashboard/page.tsx](../../app/(app)/app/dashboard/page.tsx)
+- Prior fix: [BUG-187](bug-187-dashboard-accuracy-includes-active-exam-attempts.md)
+- Related dashboard surface: [dashboard/page.tsx](../../../app/(app)/app/dashboard/page.tsx)

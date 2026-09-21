@@ -66,16 +66,16 @@ The following debt items were initially accepted as findings but invalidated dur
 
 | ID | Title | Component |
 |----|-------|-----------|
-| [BUG-105](../_archive/bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Practice Engine |
-| [BUG-106](../_archive/bugs/bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | Billing |
+| [BUG-105](../bugs/bug-105-concurrent-answer-submission-race-condition.md) | Concurrent Answer Submission Can Create Duplicate Attempts | Practice Engine |
+| [BUG-106](../bugs/bug-106-stripe-customer-search-query-interpolation.md) | Stripe Customer Search Query Uses String Interpolation | Billing |
 
 ### P2 (Medium)
 
 | ID | Title | Component |
 |----|-------|-----------|
-| [BUG-107](../_archive/bugs/bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | UI |
-| [BUG-108](../_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | Practice Engine |
-| [BUG-109](../_archive/bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | Billing |
+| [BUG-107](../bugs/bug-107-hardcoded-route-incomplete-session-card.md) | Hardcoded Route Path in Incomplete Session Card | UI |
+| [BUG-108](../bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md) | submitAnswer Allows Unbounded timeSpentSeconds at Use-Case Layer | Practice Engine |
+| [BUG-109](../bugs/bug-109-cron-route-limit-mismatch.md) | Cron Route MAX_LIMIT (1000) Exceeds Reconciliation MAX_LIMIT (500) | Billing |
 
 ---
 
@@ -85,27 +85,27 @@ The following debt items were initially accepted as findings but invalidated dur
 
 | ID | Title | Component |
 |----|-------|-----------|
-| [DEBT-158](../_archive/debt/debt-158-missing-idempotency-key-repository-tests.md) | Missing Tests for Idempotency Key Repository | Testing |
+| [DEBT-158](../debt/debt-158-missing-idempotency-key-repository-tests.md) | Missing Tests for Idempotency Key Repository | Testing |
 
 ### P2 (Medium)
 
 | ID | Title | Component |
 |----|-------|-----------|
-| [DEBT-159](../_archive/debt/debt-159-practice-session-review-missing-state-corruption-warning.md) | Practice Session Review Silently Backfills Missing Question States | Practice Engine |
-| [DEBT-160](../_archive/debt/debt-160-cron-secret-not-required-in-production.md) | CRON_SECRET Not Enforced as Required in Production | Security |
-| [DEBT-161](../_archive/debt/debt-161-incomplete-csp-headers.md) | ~~Incomplete CSP Headers~~ *(Invalidated)* | Security |
-| [DEBT-162](../_archive/debt/debt-162-stripe-portal-missing-retry-consistency.md) | Stripe Portal Session Creation Has Inconsistent Retry Behavior | Billing |
-| [DEBT-163](../_archive/debt/debt-163-fakes-file-approaching-split-threshold.md) | Test Fakes File Approaching Split Threshold (1472 Lines) | Testing |
-| [DEBT-164](../_archive/debt/debt-164-missing-suspense-boundary-practice-session-history.md) | ~~Missing Suspense Boundary for Practice Session History Panel~~ *(Invalidated)* | UI |
-| [DEBT-165](../_archive/debt/debt-165-stripe-gateway-barrel-file-inconsistency.md) | Stripe Gateway Modules Bypass Barrel File Pattern | Code Quality |
+| [DEBT-159](../debt/debt-159-practice-session-review-missing-state-corruption-warning.md) | Practice Session Review Silently Backfills Missing Question States | Practice Engine |
+| [DEBT-160](../debt/debt-160-cron-secret-not-required-in-production.md) | CRON_SECRET Not Enforced as Required in Production | Security |
+| [DEBT-161](../debt/debt-161-incomplete-csp-headers.md) | ~~Incomplete CSP Headers~~ *(Invalidated)* | Security |
+| [DEBT-162](../debt/debt-162-stripe-portal-missing-retry-consistency.md) | Stripe Portal Session Creation Has Inconsistent Retry Behavior | Billing |
+| [DEBT-163](../debt/debt-163-fakes-file-approaching-split-threshold.md) | Test Fakes File Approaching Split Threshold (1472 Lines) | Testing |
+| [DEBT-164](../debt/debt-164-missing-suspense-boundary-practice-session-history.md) | ~~Missing Suspense Boundary for Practice Session History Panel~~ *(Invalidated)* | UI |
+| [DEBT-165](../debt/debt-165-stripe-gateway-barrel-file-inconsistency.md) | Stripe Gateway Modules Bypass Barrel File Pattern | Code Quality |
 
 ### P3 (Low)
 
 | ID | Title | Component |
 |----|-------|-----------|
-| [DEBT-166](../_archive/debt/debt-166-practice-view-missing-focus-management-after-error.md) | Practice View Missing Focus Management After Error Recovery | Accessibility |
-| [DEBT-167](../_archive/debt/debt-167-idempotency-key-prune-select-delete-race.md) | Idempotency Key Prune Uses Non-Atomic SELECT→DELETE | Database |
-| [DEBT-168](../_archive/debt/debt-168-stripe-event-table-missing-check-constraint.md) | ~~Stripe Events Table Missing CHECK Constraint~~ *(Invalidated)* | Database |
+| [DEBT-166](../debt/debt-166-practice-view-missing-focus-management-after-error.md) | Practice View Missing Focus Management After Error Recovery | Accessibility |
+| [DEBT-167](../debt/debt-167-idempotency-key-prune-select-delete-race.md) | Idempotency Key Prune Uses Non-Atomic SELECT→DELETE | Database |
+| [DEBT-168](../debt/debt-168-stripe-event-table-missing-check-constraint.md) | ~~Stripe Events Table Missing CHECK Constraint~~ *(Invalidated)* | Database |
 
 ---
 

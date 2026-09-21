@@ -105,6 +105,6 @@ Replace inline stubs in `container.test.ts`, `container.skip-clerk.test.ts`, and
 
 ## Related
 
-- [DEBT-051](../_archive/debt/debt-051-controller-tests-use-mocks-not-fakes.md) (Resolved) — Same pattern, fixed in controller tests only
+- [DEBT-051](debt-051-controller-tests-use-mocks-not-fakes.md) (Resolved) — Same pattern, fixed in controller tests only
 - CLAUDE.md "FAKES OVER MOCKS" section — The rule being violated
 - `src/application/test-helpers/fakes.ts` — Canonical FakeLogger (lines 74-95)

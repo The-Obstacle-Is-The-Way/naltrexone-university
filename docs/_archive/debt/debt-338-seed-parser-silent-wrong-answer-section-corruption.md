@@ -4,7 +4,7 @@
 **Created:** 2026-03-24
 **Updated:** 2026-03-28 (Phase 2 implemented and merged — PR #254)
 **Status:** Resolved — Phase 1 hardening, 24-file content repair, instruction-file consolidation, external repo sync, and Phase 2 YAML frontmatter migration are all complete. Post-migration legacy path cleanup tracked separately in [DEBT-341](./debt-341-post-migration-legacy-path-removal.md).
-**Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](../../debt/debt-336-content-markdown-quality-pass.md)
+**Source:** Codebase-wide audit after DEBT-335 / adjacent to [DEBT-336](debt-336-content-markdown-quality-pass.md)
 **Scope:** legacy seed-parser hardening, content format alignment in external `addiction-final-2026` repo, and Phase 2 migration across draft schemas, draft import, MDX schemas, and seed parsing
 
 ---
@@ -137,7 +137,7 @@ The 24 affected files required formatting fixes in the `addiction-final-2026` ex
 
 The consolidated instruction stack in this repo (`SCHEMA.md`, `CLAUDE.md`, `AGENTS.md`, `PLAN.md`, `NOTES.md`) now documents the ordering rules that prevent recurrence. The external repo has the synced copies as of 2026-03-27.
 
-See [NOTES.md](../../content/drafts/questions/NOTES.md) in the content drafts directory for the full affected file list with line numbers.
+See [NOTES.md](../../../content/drafts/questions/NOTES.md) in the content drafts directory for the full affected file list with line numbers.
 
 ### Track 2: Parser Hardening (This Repo)
 
@@ -376,7 +376,7 @@ Palis H, Xavier C, Dobrer S, et al. Concurrent use of opioids and stimulants and
 
 ## Content Instruction File Consolidation (Before Phase 2)
 
-This consolidation track is now also tracked explicitly as [DEBT-339](../_archive/debt/debt-339-consolidate-question-instruction-files.md).
+This consolidation track is now also tracked explicitly as [DEBT-339](debt-339-consolidate-question-instruction-files.md).
 
 **Status:** Consolidation is complete in both repos (local 2026-03-25, external sync 2026-03-27).
 
@@ -432,7 +432,7 @@ Phase 2 changes the question format in a major way. If we update 8 fragmented fi
 ### Sequencing
 
 1. ~~**Phase 1** (this repo): Strict parser validation~~ — done (2026-03-24)
-2. ~~**Consolidate instruction files** ([DEBT-339](../_archive/debt/debt-339-consolidate-question-instruction-files.md))~~ — done (2026-03-25)
+2. ~~**Consolidate instruction files** ([DEBT-339](debt-339-consolidate-question-instruction-files.md))~~ — done (2026-03-25)
 3. ~~**Transplant consolidated docs** to external `addiction-final-2026` repo~~ — done (2026-03-27)
 4. ~~**Fix 24 corrupted files** (external repo → re-import → re-seed)~~ — done (2026-03-27): all 24 files fixed, re-imported (`pnpm content:import:drafts -- --status published`), and re-seeded (`pnpm db:seed`) with zero errors. 948 questions pass strict validation. 24 updated in DB, 924 unchanged.
 5. **Phase 2** (both repos): Add `explanation` to YAML frontmatter, update consolidated docs, migrate content
@@ -515,6 +515,6 @@ DEBT-338 should remain open until all of the following are true:
 
 ## Relationship to Existing Debt
 
-- [DEBT-335](../_archive/debt/debt-335-remove-all-or-nothing-wrong-answer-guard.md): UI-side fix — show whatever explanations exist (resolved)
-- [DEBT-336](../../debt/debt-336-content-markdown-quality-pass.md): external content completeness/format cleanup (C1–C4)
+- [DEBT-335](debt-335-remove-all-or-nothing-wrong-answer-guard.md): UI-side fix — show whatever explanations exist (resolved)
+- [DEBT-336](debt-336-content-markdown-quality-pass.md): external content completeness/format cleanup (C1–C4)
 - DEBT-338: internal parser validation so malformed content cannot silently corrupt seeded data

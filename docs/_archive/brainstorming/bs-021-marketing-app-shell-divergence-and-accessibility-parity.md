@@ -3,7 +3,7 @@
 **Date:** 2026-02-17
 **Triggered by:** Side-by-side audit of logged-out landing page vs logged-in dashboard shell
 **Scope:** Structural, semantic, navigation, and shell-level parity policy between marketing and authenticated app shells (separate from BS-020 card contrast root cause)
-**Related:** [BS-020](./bs-020-card-contrast-and-hover-consistency.md), [Design Principles](../frontend/design-principles.md), [Frontend Standards](../frontend/standards.md)
+**Related:** [BS-020](./bs-020-card-contrast-and-hover-consistency.md), [Design Principles](../../frontend/design-principles.md), [Frontend Standards](../../frontend/standards.md)
 
 ---
 

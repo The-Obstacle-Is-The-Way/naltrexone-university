@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-03-04
-**Source:** [DEBT-275 F1](./debt-275-bs033-residual-open-items.md), [BS-041 §Deferred](../_archive/brainstorming/bs-041-feedback-display-content-vs-code-separation.md)
+**Source:** [DEBT-275 F1](./debt-275-bs033-residual-open-items.md), [BS-041 §Deferred](../brainstorming/bs-041-feedback-display-content-vs-code-separation.md)
 **Scope:** Detect `**Clinical pearl:**` pattern in the `<Markdown>` component and render as a visually distinct callout with the label separated from content.
 
 ---

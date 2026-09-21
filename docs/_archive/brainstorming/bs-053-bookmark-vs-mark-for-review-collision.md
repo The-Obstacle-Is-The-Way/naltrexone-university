@@ -4,7 +4,7 @@
 **Status:** Implemented
 **Triggered by:** Visual audit of exam session action bar — "Bookmark" and "Mark for review" appear side-by-side as identically-styled pills, creating a confusing dual-action that maps to fundamentally different mental models.
 **Scope:** Bookmark presence in active sessions (especially exam mode) creates UX confusion when combined with the exam-only "Mark for review" action.
-**Related:** [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-316](../_archive/debt/debt-316-exam-post-submit-review-flow.md) (exam post-submit review flow), [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) (bookmark availability registry)
+**Related:** [BS-052](../../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) (bookmark icon toggle), [DEBT-316](../debt/debt-316-exam-post-submit-review-flow.md) (exam post-submit review flow), [bookmark-surface-policy.md](../../frontend/bookmark-surface-policy.md) (bookmark availability registry)
 
 ---
 
@@ -309,7 +309,7 @@ History → Questions tab → Click question ───────────�
 
 This is a natural study workflow: take the exam first, then reflect and curate.
 
-**See also:** [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) for the full surface registry and decision tree.
+**See also:** [bookmark-surface-policy.md](../../frontend/bookmark-surface-policy.md) for the full surface registry and decision tree.
 
 ### Implementation follow-through
 
@@ -328,7 +328,7 @@ The implemented shape stays aligned with the decision:
 |------|----------|-----------|
 | 2026-03-16 | BS-053 opened | Exam action bar shows Bookmark + Mark for review side-by-side, creating cognitive collision |
 | 2026-03-16 | Scope expanded to include missing bookmark on question review page | Visual audit revealed the review page (`/app/questions/[slug]?mode=review`) — the ideal bookmarking surface — has no bookmark action |
-| 2026-03-16 | Created [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md) | Registry of where bookmark should/shouldn't appear and why, to prevent future surface drift |
+| 2026-03-16 | Created [bookmark-surface-policy.md](../../frontend/bookmark-surface-policy.md) | Registry of where bookmark should/shouldn't appear and why, to prevent future surface drift |
 | 2026-03-16 | First-principles review reconfirmed Option A | Confusion is real for first-time exam users; mode-specific asymmetry is acceptable; post-session review is the right primary bookmark surface; list-surface discoverability remains a separate follow-up concern |
 | 2026-03-16 | Implemented Option A | Removed bookmark from exam-mode `PracticeView`, added bookmark state + action to question review, and extracted shared toggle logic into `app/(app)/app/shared/bookmark-toggle.ts` |
 | 2026-03-16 | Hardened the shared toggle helper after review | Persisted request idempotency keys before dispatch and made review-page bookmark hydration/saving state explicit |

@@ -4,13 +4,13 @@
 **Created:** 2026-04-02
 **Status:** Resolved (2026-04-03)
 **Source:** Performance investigation prompted by production codebase comparison
-**Related:** [ADR-018 Resilience Patterns](../adr/adr-018-resilience-patterns.md), [src/adapters/shared/retry.ts](../../src/adapters/shared/retry.ts), [src/adapters/gateways/stripe/stripe-retry.ts](../../src/adapters/gateways/stripe/stripe-retry.ts), [SPEC-017 Rate Limiting](../specs/spec-017-rate-limiting.md)
+**Related:** [ADR-018 Resilience Patterns](../../adr/adr-018-resilience-patterns.md), [src/adapters/shared/retry.ts](../../../src/adapters/shared/retry.ts), [src/adapters/gateways/stripe/stripe-retry.ts](../../../src/adapters/gateways/stripe/stripe-retry.ts), [SPEC-017 Rate Limiting](../specs/spec-017-rate-limiting.md)
 
 ---
 
 ## Context
 
-The codebase already has solid retry logic with exponential backoff (`src/adapters/shared/retry.ts`) and transient error detection (`isTransientExternalError`). Stripe API calls are generally wrapped with [`callStripeWithRetry`](../../src/adapters/gateways/stripe/stripe-retry.ts), and some auxiliary Stripe paths use direct `retry(...)` with the shared defaults. Clerk also uses the shared retry utility.
+The codebase already has solid retry logic with exponential backoff (`src/adapters/shared/retry.ts`) and transient error detection (`isTransientExternalError`). Stripe API calls are generally wrapped with [`callStripeWithRetry`](../../../src/adapters/gateways/stripe/stripe-retry.ts), and some auxiliary Stripe paths use direct `retry(...)` with the shared defaults. Clerk also uses the shared retry utility.
 
 **What's missing:** a circuit breaker. Retries help with transient blips, but during a sustained outage every incoming request still keeps attempting upstream calls that are likely to fail.
 
@@ -27,7 +27,7 @@ Request 3: same pattern
 ... every request repeats the full retry budget
 ```
 
-With the current defaults in [`src/adapters/shared/retry-defaults.ts`](../../src/adapters/shared/retry-defaults.ts), the explicit backoff waits are only **100ms and 200ms**. The bigger cost is the repeated upstream timeout/latency itself. A breaker still matters because it stops re-attempting known-bad upstream calls during an outage window.
+With the current defaults in [`src/adapters/shared/retry-defaults.ts`](../../../src/adapters/shared/retry-defaults.ts), the explicit backoff waits are only **100ms and 200ms**. The bigger cost is the repeated upstream timeout/latency itself. A breaker still matters because it stops re-attempting known-bad upstream calls during an outage window.
 
 ### Desired Behavior With Circuit Breaker
 

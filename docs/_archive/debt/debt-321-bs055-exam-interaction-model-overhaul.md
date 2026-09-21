@@ -2,7 +2,7 @@
 
 **Priority:** P1
 **Created:** 2026-03-17
-**Related:** [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), [Interaction Contracts](../practice-engine/interaction-contracts.md), [Practice Modes](../practice-engine/practice-modes.md)
+**Related:** [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), [Interaction Contracts](../../practice-engine/interaction-contracts.md), [Practice Modes](../../practice-engine/practice-modes.md)
 
 ---
 

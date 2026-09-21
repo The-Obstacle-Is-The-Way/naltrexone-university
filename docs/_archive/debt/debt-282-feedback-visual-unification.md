@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-07
 **Source:** [BS-043](../brainstorming/bs-043-question-flow-typography-and-feedback-visual-unification.md)
-**Governing Policy:** [Typography Policy](../frontend/typography-policy.md)
+**Governing Policy:** [Typography Policy](../../frontend/typography-policy.md)
 **Scope:** Unify badge treatment, typography tiers, and layout spacing in `feedback.tsx` to match `choice-button.tsx`
 **Prerequisite:** [DEBT-278](./debt-278-verdict-badge-solid-pill-styling.md) (verdict badge solid pill) — ships first, touches the same file but different element
 
@@ -202,7 +202,7 @@ Same as correct-flow wrong-answer card (see above).
 - **Verdict badge** — handled by [DEBT-278](./debt-278-verdict-badge-solid-pill-styling.md)
 - **Section card border colors** (`border-success/60`, `border-destructive`, `border-border/60`) — intentionally deferred. They are functionally acceptable for this pass, but not part of the typography/layout contract this debt resolves.
 - **Section card background fills** (`bg-success/5`, `bg-destructive/5`, `bg-background/50`) — intentionally deferred. Surface-token harmonization can be evaluated in a later visual pass if the question flow still feels split after DEBT-278 + DEBT-282.
-- **Regular React/app-chrome supporting-copy typography drift** — resolved separately in [DEBT-283](../_archive/debt/debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md)
+- **Regular React/app-chrome supporting-copy typography drift** — resolved separately in [DEBT-283](debt-283-hardcoded-ui-typography-explicit-sizing-alignment.md)
 - **Clinical pearl callout styling** — already correct, preserved as-is
 - **Reference section** — already compliant (`Reference` label is `text-xs font-semibold uppercase tracking-wide text-muted-foreground`; citation Markdown is `mt-1 text-xs`)
 - **Explanation text size** — stays at `text-sm` (Secondary tier). Wrong-answer explanation color changes to `text-muted-foreground` (Change 4 hierarchy fix)

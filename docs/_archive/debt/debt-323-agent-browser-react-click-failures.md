@@ -3,7 +3,7 @@
 **Date:** 2026-03-18
 **Triggered by:** BS-057 agent-browser auth investigation. After solving Clerk auth via `--profile`, live testing revealed that `agent-browser click @ref` is unreliable across parts of the React practice flow.
 **Scope:** agent-browser interaction reliability with React 19 + Radix UI components in practice flows. This is not a confirmed user-facing application bug; it is a tooling limitation unless reproduced in a real browser.
-**Related:** [BS-057](../brainstorming/bs-057-agent-browser-clerk-auth-reliability.md), [agent-browser docs](../tooling/agent-browser.md)
+**Related:** [BS-057](../brainstorming/bs-057-agent-browser-clerk-auth-reliability.md), [agent-browser docs](../../tooling/agent-browser.md)
 
 ---
 

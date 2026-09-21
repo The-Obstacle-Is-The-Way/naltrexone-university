@@ -46,5 +46,5 @@ Contract-style paired tests: the same scenario table executed against `FakeUserR
 ## Related
 
 - [BUG-284 (archived, resolved PR #628)](../bugs/bug-284-user-upsert-email-reclaim-cross-identity-takeover.md) — the fix that introduced both methods; its regression matrix covers the fresh-observation paths, not these stale-path orderings.
-- [DEBT-451](./debt-451-attempts-integrity-enforcement-and-verification-gaps.md) part 4 and [DEBT-443](../../debt/debt-443-idempotency-cache-durability-and-evolution.md) part 3 — the register's fake-fidelity precedents.
+- [DEBT-451](./debt-451-attempts-integrity-enforcement-and-verification-gaps.md) part 4 and [DEBT-443](debt-443-idempotency-cache-durability-and-evolution.md) part 3 — the register's fake-fidelity precedents.
 - Found during the 2026-07-11 wave-1 close adversarial regression review; both divergences reproduced by executing the scenarios against the fake and real Postgres.

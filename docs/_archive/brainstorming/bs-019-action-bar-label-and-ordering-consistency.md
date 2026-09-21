@@ -3,7 +3,7 @@
 **Date:** 2026-02-17
 **Triggered by:** Live UI audit — visual comparison of bottom action bars across Practice, Quick Practice, and review views
 **Scope:** Bottom action bar label, ordering, boundary behavior, and navigation consistency across Practice, Quick Practice, and review origins (`history`, `practice`, `dashboard`, `bookmarks`)
-**Related:** [BS-018](../_archive/brainstorming/bs-018-question-view-ux-unification.md), [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md), [BS-020](./bs-020-card-contrast-and-hover-consistency.md), [BS-021](./bs-021-marketing-app-shell-divergence-and-accessibility-parity.md), [Design Principles §2](../frontend/design-principles.md)
+**Related:** [BS-018](bs-018-question-view-ux-unification.md), [SPEC-030](../specs/spec-030-question-view-ux-unification.md), [BS-020](./bs-020-card-contrast-and-hover-consistency.md), [BS-021](./bs-021-marketing-app-shell-divergence-and-accessibility-parity.md), [Design Principles §2](../../frontend/design-principles.md)
 
 ---
 
@@ -353,9 +353,9 @@ Concrete direction:
 
 ## Related Documentation
 
-- [BS-018 Concern 3](../_archive/brainstorming/bs-018-question-view-ux-unification.md) — Action bar inconsistency (high-level)
-- [Design Principles §2](../frontend/design-principles.md) — Action bar composition ordering
-- [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) — Implemented structural unification; did not reconcile labels/ordering
+- [BS-018 Concern 3](bs-018-question-view-ux-unification.md) — Action bar inconsistency (high-level)
+- [Design Principles §2](../../frontend/design-principles.md) — Action bar composition ordering
+- [SPEC-030](../specs/spec-030-question-view-ux-unification.md) — Implemented structural unification; did not reconcile labels/ordering
 - [E2E Audit Test](../../tests/e2e/bs-019-action-bar-audit.spec.ts) — Playwright tests verifying all 9 inconsistencies across Quick Practice, Tutor, Exam, and History Review
 
 ---

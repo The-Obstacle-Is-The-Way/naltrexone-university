@@ -302,7 +302,7 @@ Option F fixes the root cause: remove the inner borders entirely, and compensate
 | `bg-foreground/6` | #1F1F1F | rgb(31) | 1.14:1 | Perceptible — step-up if 5% is too subtle |
 | `bg-foreground/8` (too much) | #242424 | rgb(36) | 1.21:1 | Punched-out risk |
 
-> **Note on WCAG ratios at very dark values:** The WCAG contrast formula includes a +0.05 luminance floor that compresses dark-on-dark ratios. An 11 RGB-level lift (rgb(18) → rgb(29)) is clearly visible to the eye, but the WCAG ratio is only 1.11:1. This is fine — these fills are supplementary hierarchy hints, not required boundaries. WCAG SC 1.4.11's 3:1 threshold does not apply here (see [Contrast Policy §3.2](../frontend/contrast-policy.md)).
+> **Note on WCAG ratios at very dark values:** The WCAG contrast formula includes a +0.05 luminance floor that compresses dark-on-dark ratios. An 11 RGB-level lift (rgb(18) → rgb(29)) is clearly visible to the eye, but the WCAG ratio is only 1.11:1. This is fine — these fills are supplementary hierarchy hints, not required boundaries. WCAG SC 1.4.11's 3:1 threshold does not apply here (see [Contrast Policy §3.2](../../frontend/contrast-policy.md)).
 
 The implementation default is **`bg-foreground/5`**. `bg-foreground/6` is no longer part of the initial implementation decision; if 5% proves too subtle in visual QA, that should be filed as a follow-up debt item rather than improvised during implementation. `bg-foreground/[0.04]` is the lower bound — usable but borderline on lower-quality displays.
 
@@ -364,7 +364,7 @@ rounded-xl bg-foreground/5 p-3
 - The fill-only shape is subtle at rest — some users may not immediately perceive the inner cards as distinct elements. This is intentional (Material Design's philosophy) but worth validating visually.
 - Mode/difficulty badge borders become the loudest strokes inside the card once row borders are gone — addressed as companion change (see "Badge treatment" above).
 
-**WCAG consideration:** The fill at `bg-foreground/5` does not meet 3:1 as a required boundary (SC 1.4.11), and at WCAG 1.11:1 it is well below the threshold. However, the inner rows are identifiable without the fill through: (1) text content and layout, (2) cursor change to pointer on hover, (3) hover fill change (`bg-foreground/[0.08]`), (4) focus-visible ring on keyboard navigation. The tonal fill is a **supplementary visual cue**, not the primary boundary — per [Contrast Policy §3.2](../frontend/contrast-policy.md), 3:1 applies only to required boundaries. The outer card's border remains the section-level required boundary. This mirrors Material Design's approach where elevation overlays are not relied upon as accessibility boundaries — they're hierarchy hints. No contrast policy violation.
+**WCAG consideration:** The fill at `bg-foreground/5` does not meet 3:1 as a required boundary (SC 1.4.11), and at WCAG 1.11:1 it is well below the threshold. However, the inner rows are identifiable without the fill through: (1) text content and layout, (2) cursor change to pointer on hover, (3) hover fill change (`bg-foreground/[0.08]`), (4) focus-visible ring on keyboard navigation. The tonal fill is a **supplementary visual cue**, not the primary boundary — per [Contrast Policy §3.2](../../frontend/contrast-policy.md), 3:1 applies only to required boundaries. The outer card's border remains the section-level required boundary. This mirrors Material Design's approach where elevation overlays are not relied upon as accessibility boundaries — they're hierarchy hints. No contrast policy violation.
 
 ---
 
@@ -384,7 +384,7 @@ Option F preserves the rounded-rectangle card shape for each row — the visual 
 - **Safest:** Option A (explicit borders on page background)
 - **Acceptable:** Option F and Option B
 
-Option F's fill at `bg-foreground/5` (WCAG 1.11:1) does not meet 3:1 as a required boundary, but the fill is not the required boundary — it's a supplementary hierarchy hint. Row identification comes from text content, cursor, hover fill (`bg-foreground/[0.08]`), and focus ring. Per [Contrast Policy §3.2](../frontend/contrast-policy.md), 3:1 applies only to required boundaries — no violation. This mirrors Material Design 3's approach. Option B faces the same question with dividers.
+Option F's fill at `bg-foreground/5` (WCAG 1.11:1) does not meet 3:1 as a required boundary, but the fill is not the required boundary — it's a supplementary hierarchy hint. Row identification comes from text content, cursor, hover fill (`bg-foreground/[0.08]`), and focus ring. Per [Contrast Policy §3.2](../../frontend/contrast-policy.md), 3:1 applies only to required boundaries — no violation. This mirrors Material Design 3's approach. Option B faces the same question with dividers.
 
 ### Information density
 

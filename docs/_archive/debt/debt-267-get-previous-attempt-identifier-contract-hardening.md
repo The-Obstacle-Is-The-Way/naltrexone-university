@@ -4,7 +4,7 @@
 **Priority:** P3
 **Date:** 2026-03-01
 **Owner:** Practice Engine
-**Related:** [Retry Logic SSOT](../practice-engine/retry-logic.md), [DEBT-265](./debt-265-retry-lineage-and-review-practice-unification.md), [DEBT-266](./debt-266-retry-observability-and-session-review-marker-persistence.md)
+**Related:** [Retry Logic SSOT](../../practice-engine/retry-logic.md), [DEBT-265](./debt-265-retry-lineage-and-review-practice-unification.md), [DEBT-266](./debt-266-retry-observability-and-session-review-marker-persistence.md)
 
 ---
 

@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-04-07
 **Source:** [BS-061 Review Surface Divergence Audit](../brainstorming/bs-061-review-surface-divergence-audit.md)
-**Related:** [exam-review-view.tsx](../../app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx), [Pattern Registry — Review Surface Map](../frontend/pattern-registry.md)
+**Related:** [exam-review-view.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/components/exam-review-view.tsx), [Pattern Registry — Review Surface Map](../../frontend/pattern-registry.md)
 
 ---
 
@@ -25,11 +25,11 @@ This debt cleans up the exam-mode `Review & Submit` surface before final submiss
 - `PostExamReviewView`
 - `SessionSummaryView`
 - `question-page-client.tsx`
-- bookmark icon-toggle exploration tracked separately in [BS-052](../brainstorming/bs-052-bookmark-icon-toggle-replacement.md)
+- bookmark icon-toggle exploration tracked separately in [BS-052](../../brainstorming/bs-052-bookmark-icon-toggle-replacement.md)
 
 ## Current Code References
 
-- [exam-review-view.tsx](../../app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx)
+- [exam-review-view.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/components/exam-review-view.tsx)
 
 ## Exact Decided Behavior
 

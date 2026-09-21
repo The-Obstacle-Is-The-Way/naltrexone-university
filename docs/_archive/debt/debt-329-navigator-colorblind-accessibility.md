@@ -4,7 +4,7 @@
 **Created:** 2026-03-19
 **Updated:** 2026-03-23 (Chrome agent visual audit, adversarial review, final implementation reconciliation, and DEBT-329 closure)
 **Source:** Chrome browser agent visual audit during DEBT-324 pre-removal documentation
-**Related:** [DEBT-326](./debt-326-post-exam-review-focus-management.md), [ReviewQuestionNavigator](../../app/(app)/app/questions/[slug]/components/review-question-navigator.tsx), [QuestionNavigator](../../app/(app)/app/practice/[sessionId]/components/exam-review-view.tsx)
+**Related:** [DEBT-326](./debt-326-post-exam-review-focus-management.md), [ReviewQuestionNavigator](../../../app/(app)/app/questions/%5Bslug%5D/components/review-question-navigator.tsx), [QuestionNavigator](../../../app/(app)/app/practice/%5BsessionId%5D/components/exam-review-view.tsx)
 
 ---
 

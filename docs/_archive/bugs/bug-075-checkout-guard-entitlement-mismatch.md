@@ -32,7 +32,7 @@ So users are not in a true dead-end, but they get a misleading initial CTA and a
 
 Checkout blocks whenever there is any subscription with `currentPeriodEnd > now`, regardless of status.
 
-This behavior was intentionally introduced in [BUG-052](../_archive/bugs/bug-052-non-entitled-subscriptions-could-start-new-checkout.md) to prevent duplicate/concurrent Stripe subscriptions.
+This behavior was intentionally introduced in [BUG-052](bug-052-non-entitled-subscriptions-could-start-new-checkout.md) to prevent duplicate/concurrent Stripe subscriptions.
 
 ## Root Cause
 
@@ -79,4 +79,4 @@ Implemented Option A (status-aware entitlement context) without relaxing checkou
 - `src/application/use-cases/check-entitlement.ts`
 - `app/pricing/page.tsx`
 - `app/pricing/subscribe-action.ts`
-- [BUG-052](../_archive/bugs/bug-052-non-entitled-subscriptions-could-start-new-checkout.md)
+- [BUG-052](bug-052-non-entitled-subscriptions-could-start-new-checkout.md)

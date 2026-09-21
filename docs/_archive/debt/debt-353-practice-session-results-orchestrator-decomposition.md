@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-04-08
 **Source:** DEBT-350 implementation review
-**Related:** [DEBT-350](./debt-350-exam-results-session-continuity.md), [use-practice-session-review-stage.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts), [practice-session-page-view.tsx](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx), [FE-002](../_archive/debt/fe-002-usepracticesessionreviewstage-exceeds-150-line-guideline.md)
+**Related:** [DEBT-350](./debt-350-exam-results-session-continuity.md), [use-practice-session-review-stage.ts](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage.ts), [practice-session-page-view.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/components/practice-session-page-view.tsx), [FE-002](../_archive/debt/fe-002-usepracticesessionreviewstage-exceeds-150-line-guideline.md)
 
 ---
 
@@ -11,8 +11,8 @@
 
 [DEBT-350](./debt-350-exam-results-session-continuity.md) shipped the correct user-facing behavior: exam results now stay inside the session orchestrator, summary re-entry is callback-driven, and completed-feedback state survives summary transitions. The implementation is functionally correct, but it concentrated even more coordination logic into two already-large surfaces:
 
-- [`use-practice-session-review-stage.ts`](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts) now owns generic review-stage orchestration, exam-results substage transitions, lazy post-exam hydration, cursor resolution, retry state, and summary promotion in one 500+ line hook.
-- [`practice-session-page-view.tsx`](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx) now decides among practice, exam review, post-exam review, tutor summary, and exam summary branches in one procedural render tree.
+- [`use-practice-session-review-stage.ts`](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage.ts) now owns generic review-stage orchestration, exam-results substage transitions, lazy post-exam hydration, cursor resolution, retry state, and summary promotion in one 500+ line hook.
+- [`practice-session-page-view.tsx`](../../../app/(app)/app/practice/%5BsessionId%5D/components/practice-session-page-view.tsx) now decides among practice, exam review, post-exam review, tutor summary, and exam summary branches in one procedural render tree.
 
 That concentration does not make DEBT-350 incorrect, but it does make the continuity contract harder to reason about, harder to unit test in isolation, and easier to regress the next time this flow changes.
 
@@ -33,11 +33,11 @@ That concentration does not make DEBT-350 incorrect, but it does make the contin
 
 ## Current Code References
 
-- [use-practice-session-review-stage.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts)
-- [use-practice-session-review-stage-state.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts)
-- [practice-session-page-view.tsx](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx)
-- [use-practice-session-review-stage.test.tsx](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.test.tsx)
-- [use-practice-session-review-stage.browser.spec.tsx](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.browser.spec.tsx)
+- [use-practice-session-review-stage.ts](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage.ts)
+- [use-practice-session-review-stage-state.ts](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage-state.ts)
+- [practice-session-page-view.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/components/practice-session-page-view.tsx)
+- [use-practice-session-review-stage.test.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage.test.tsx)
+- [use-practice-session-review-stage.browser.spec.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage.browser.spec.tsx)
 
 ## Exact Decided Behavior
 

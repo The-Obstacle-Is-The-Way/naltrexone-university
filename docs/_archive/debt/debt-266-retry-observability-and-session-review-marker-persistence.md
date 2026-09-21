@@ -4,7 +4,7 @@
 **Priority:** P3
 **Date:** 2026-03-01
 **Owner:** Practice Engine
-**Related:** [DEBT-265](./debt-265-retry-lineage-and-review-practice-unification.md), [DEBT-267](./debt-267-get-previous-attempt-identifier-contract-hardening.md), [Retry Logic SSOT](../practice-engine/retry-logic.md)
+**Related:** [DEBT-265](./debt-265-retry-lineage-and-review-practice-unification.md), [DEBT-267](./debt-267-get-previous-attempt-identifier-contract-hardening.md), [Retry Logic SSOT](../../practice-engine/retry-logic.md)
 
 ---
 

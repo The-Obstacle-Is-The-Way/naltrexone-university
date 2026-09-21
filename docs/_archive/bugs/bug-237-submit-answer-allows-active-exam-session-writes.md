@@ -32,13 +32,13 @@ Expected behavior:
 ## Root Cause
 
 Tracer-bullet path:
-1. The interaction contract says exam mode has no per-question submit and answers remain drafts until `Submit exam` in [interaction-contracts.md](../practice-engine/interaction-contracts.md#L15) through [interaction-contracts.md](../practice-engine/interaction-contracts.md#L18), [interaction-contracts.md](../practice-engine/interaction-contracts.md#L122) through [interaction-contracts.md](../practice-engine/interaction-contracts.md#L127), and [interaction-contracts.md](../practice-engine/interaction-contracts.md#L157) through [interaction-contracts.md](../practice-engine/interaction-contracts.md#L167).
-2. `SubmitAnswerInputSchema` still permits an optional `sessionId` without any mode-level restriction in [question-controller.ts](../../src/adapters/controllers/question-controller.ts#L77) through [question-controller.ts](../../src/adapters/controllers/question-controller.ts#L92).
-3. The controller forwards that `sessionId` directly to `SubmitAnswerUseCase` in [question-controller.ts](../../src/adapters/controllers/question-controller.ts#L214) through [question-controller.ts](../../src/adapters/controllers/question-controller.ts#L270).
-4. `SubmitAnswerUseCase` only rejects missing sessions, questions outside the session, and already-ended sessions in [submit-answer.ts](../../src/application/use-cases/submit-answer.ts#L170) through [submit-answer.ts](../../src/application/use-cases/submit-answer.ts#L183). It does not reject active exam sessions.
-5. For any accepted session, the use case inserts a final attempt and calls `recordQuestionAnswer(...)` in [submit-answer.ts](../../src/application/use-cases/submit-answer.ts#L194) through [submit-answer.ts](../../src/application/use-cases/submit-answer.ts#L225).
-6. Exam finalization later inserts attempts for draft states in [finalize-exam-answers.ts](../../src/application/use-cases/finalize-exam-answers.ts#L85) through [finalize-exam-answers.ts](../../src/application/use-cases/finalize-exam-answers.ts#L119).
-7. The database enforces a single attempt per session question with `attempts_session_question_uq` in [schema.ts](../../db/schema.ts#L474) through [schema.ts](../../db/schema.ts#L478), so a direct active-exam submit followed by a draft finalization can fail the exam submission transaction.
+1. The interaction contract says exam mode has no per-question submit and answers remain drafts until `Submit exam` in [interaction-contracts.md](../../practice-engine/interaction-contracts.md#L15) through [interaction-contracts.md](../../practice-engine/interaction-contracts.md#L18), [interaction-contracts.md](../../practice-engine/interaction-contracts.md#L122) through [interaction-contracts.md](../../practice-engine/interaction-contracts.md#L127), and [interaction-contracts.md](../../practice-engine/interaction-contracts.md#L157) through [interaction-contracts.md](../../practice-engine/interaction-contracts.md#L167).
+2. `SubmitAnswerInputSchema` still permits an optional `sessionId` without any mode-level restriction in [question-controller.ts](../../../src/adapters/controllers/question-controller.ts#L77) through [question-controller.ts](../../../src/adapters/controllers/question-controller.ts#L92).
+3. The controller forwards that `sessionId` directly to `SubmitAnswerUseCase` in [question-controller.ts](../../../src/adapters/controllers/question-controller.ts#L214) through [question-controller.ts](../../../src/adapters/controllers/question-controller.ts#L270).
+4. `SubmitAnswerUseCase` only rejects missing sessions, questions outside the session, and already-ended sessions in [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L170) through [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L183). It does not reject active exam sessions.
+5. For any accepted session, the use case inserts a final attempt and calls `recordQuestionAnswer(...)` in [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L194) through [submit-answer.ts](../../../src/application/use-cases/submit-answer.ts#L225).
+6. Exam finalization later inserts attempts for draft states in [finalize-exam-answers.ts](../../../src/application/use-cases/finalize-exam-answers.ts#L85) through [finalize-exam-answers.ts](../../../src/application/use-cases/finalize-exam-answers.ts#L119).
+7. The database enforces a single attempt per session question with `attempts_session_question_uq` in [schema.ts](../../../db/schema.ts#L474) through [schema.ts](../../../db/schema.ts#L478), so a direct active-exam submit followed by a draft finalization can fail the exam submission transaction.
 
 ## Impact
 
@@ -73,6 +73,6 @@ After the use-case guard lands, update the exam-answer secrecy policy's `SubmitA
 
 ## Related
 
-- Current contract: [interaction-contracts.md](../practice-engine/interaction-contracts.md)
-- Policy note to update after fix: [exam-answer-secrecy-policy.md](../practice-engine/exam-answer-secrecy-policy.md)
+- Current contract: [interaction-contracts.md](../../practice-engine/interaction-contracts.md)
+- Policy note to update after fix: [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md)
 - Downstream projection bugs: [BUG-235](./bug-235-attempted-question-history-drops-latest-visible-attempt.md), [BUG-236](./bug-236-dashboard-current-streak-includes-active-exam-attempts.md)

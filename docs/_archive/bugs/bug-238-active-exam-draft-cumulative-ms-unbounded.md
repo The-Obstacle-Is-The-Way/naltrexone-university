@@ -35,14 +35,14 @@ This is a same-user data integrity bug, not a cross-user security issue.
 
 Tracer-bullet path:
 
-1. [`SaveExamDraftAnswerInputSchema`](../../src/adapters/controllers/practice-schemas.ts#L55) validates `cumulativeMs` with `z.number().int().min(0)` but no upper bound.
-2. [`SaveExamDraftAnswerUseCase`](../../src/application/use-cases/save-exam-draft-answer.ts#L64) forwards `input.cumulativeMs` directly to `sessions.saveDraftAnswer(...)`.
-3. [`DrizzlePracticeSessionRepository.saveDraftAnswer(...)`](../../src/adapters/repositories/drizzle-practice-session-repository.ts#L233) persists the raw value into `draftCumulativeMs`.
-4. [`practice-session-params.ts`](../../src/adapters/repositories/practice-session-params.ts#L33) accepts persisted `draftCumulativeMs` with only `z.number().int().min(0)`, so oversized values remain valid session state.
-5. [`FinalizeExamAnswersUseCase`](../../src/application/use-cases/finalize-exam-answers.ts#L103) inserts the final attempt with `timeSpentSeconds: Math.floor(state.draftCumulativeMs / 1000)`.
-6. [`attempts.time_spent_seconds`](../../db/schema.ts#L441) is a Postgres `integer`, and the already-established submit-answer limit is `MAX_TIME_SPENT_SECONDS = 86_400`.
+1. [`SaveExamDraftAnswerInputSchema`](../../../src/adapters/controllers/practice-schemas.ts#L55) validates `cumulativeMs` with `z.number().int().min(0)` but no upper bound.
+2. [`SaveExamDraftAnswerUseCase`](../../../src/application/use-cases/save-exam-draft-answer.ts#L64) forwards `input.cumulativeMs` directly to `sessions.saveDraftAnswer(...)`.
+3. [`DrizzlePracticeSessionRepository.saveDraftAnswer(...)`](../../../src/adapters/repositories/drizzle-practice-session-repository.ts#L233) persists the raw value into `draftCumulativeMs`.
+4. [`practice-session-params.ts`](../../../src/adapters/repositories/practice-session-params.ts#L33) accepts persisted `draftCumulativeMs` with only `z.number().int().min(0)`, so oversized values remain valid session state.
+5. [`FinalizeExamAnswersUseCase`](../../../src/application/use-cases/finalize-exam-answers.ts#L103) inserts the final attempt with `timeSpentSeconds: Math.floor(state.draftCumulativeMs / 1000)`.
+6. [`attempts.time_spent_seconds`](../../../db/schema.ts#L441) is a Postgres `integer`, and the already-established submit-answer limit is `MAX_TIME_SPENT_SECONDS = 86_400`.
 
-This is the draft/finalize sibling of archived [BUG-108](../_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md). BUG-108 fixed direct `submitAnswer` timing, but the active-exam draft path was added later and did not inherit the same invariant.
+This is the draft/finalize sibling of archived [BUG-108](bug-108-submit-answer-unbounded-time-spent-seconds.md). BUG-108 fixed direct `submitAnswer` timing, but the active-exam draft path was added later and did not inherit the same invariant.
 
 ## Expected Fix
 
@@ -71,6 +71,6 @@ Keep the invariant close to both ingress and finalization:
 
 ## Related
 
-- [BUG-108](../_archive/bugs/bug-108-submit-answer-unbounded-time-spent-seconds.md)
-- [Interaction Contracts](../practice-engine/interaction-contracts.md)
-- [Exam Answer Secrecy Policy](../practice-engine/exam-answer-secrecy-policy.md)
+- [BUG-108](bug-108-submit-answer-unbounded-time-spent-seconds.md)
+- [Interaction Contracts](../../practice-engine/interaction-contracts.md)
+- [Exam Answer Secrecy Policy](../../practice-engine/exam-answer-secrecy-policy.md)

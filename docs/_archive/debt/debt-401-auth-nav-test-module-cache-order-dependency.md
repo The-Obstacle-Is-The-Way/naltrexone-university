@@ -3,7 +3,7 @@
 **Priority:** P2 (confirmed hidden unit-test order dependency. Before PR #362, the full unit suite passed in declaration order, but `pnpm test --run --sequence.shuffle` could fail before any DEBT-395 fixes landed. This blocked using shuffled unit runs as a clean process-env isolation signal until the test was fixed.)
 **Created:** 2026-05-28
 **Source:** DEBT-395 PR 1 pre-execution audit. The required shuffled-order verification exposed a separate `components/auth-nav.test.tsx` module-cache/mock-order dependency with seed `1779972928761`.
-**Related:** [DEBT-395](../../debt/debt-395-test-environment-isolation-hardening.md), [components/auth-nav.test.tsx](../../../components/auth-nav.test.tsx), [components/marketing/marketing-layout.tsx](../../../components/marketing/marketing-layout.tsx), [components/auth-nav.tsx](../../../components/auth-nav.tsx)
+**Related:** [DEBT-395](debt-395-test-environment-isolation-hardening.md), [components/auth-nav.test.tsx](../../../components/auth-nav.test.tsx), [components/marketing/marketing-layout.tsx](../../../components/marketing/marketing-layout.tsx), [components/auth-nav.tsx](../../../components/auth-nav.tsx)
 
 **Status:** Resolved 2026-05-28 ([PR #362](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/362))
 

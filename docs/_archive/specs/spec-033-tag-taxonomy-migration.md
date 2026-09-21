@@ -514,7 +514,7 @@ No manual SQL cleanup is needed — migration 0010 deletes all `question_tags` a
 ## 13. Related
 
 - [BS-024](../brainstorming/bs-024-tag-taxonomy-cleanup.md)
-- [Tag Taxonomy Pipeline Trace](../content/tag-taxonomy-pipeline.md)
-- [Tag Taxonomy Golden Spec](../content/tag-taxonomy-golden-spec.md)
-- [`content/drafts/questions/SCHEMA.md`](../../content/drafts/questions/SCHEMA.md)
-- [Content Pipeline](../practice-engine/content-pipeline.md)
+- [Tag Taxonomy Pipeline Trace](../../content/tag-taxonomy-pipeline.md)
+- [Tag Taxonomy Golden Spec](../../content/tag-taxonomy-golden-spec.md)
+- [`content/drafts/questions/SCHEMA.md`](../../../content/drafts/questions/SCHEMA.md)
+- [Content Pipeline](../../practice-engine/content-pipeline.md)

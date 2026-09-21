@@ -4,7 +4,7 @@
 **Created:** 2026-03-20
 **Resolved:** 2026-03-21 — [PR #241](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/241)
 **Source:** Manual UI review during DEBT-326 investigation
-**Related:** [PostExamReviewView](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+**Related:** [PostExamReviewView](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.tsx)
 
 ---
 
@@ -38,7 +38,7 @@ In the post-exam review bottom action bar, the Bookmark button sat between Previ
 
 Verified pre-fix production implementation:
 
-- The bottom bar lives at [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:143-185`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx). The previous `:133-175` citation was wrong; lines 133-140 are still inside the unavailable/empty-state branch.
+- The bottom bar lives at [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:143-185`](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.tsx). The previous `:133-175` citation was wrong; lines 133-140 are still inside the unavailable/empty-state branch.
 - The flex container is exactly `className="flex flex-col gap-3 sm:flex-row"`.
 - `Previous` and `Bookmark` both use `<Button variant="outline" className="rounded-full">`.
 - `Next` and `Finish review` use the default filled button with the same `rounded-full` shape.
@@ -58,15 +58,15 @@ So the original description was directionally correct for the common available-q
 
 Consumer check:
 
-- `PostExamReviewView` is mounted only by [`app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:176-191`](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx).
-- There is no shared action-bar component. [`docs/frontend/design-principles.md:52-83`](../frontend/design-principles.md) explicitly says action bars are inline per context.
-- A similar interleaved review layout also exists in [`app/(app)/app/questions/[slug]/question-page-client.tsx:371-469`](../../app/(app)/app/questions/[slug]/question-page-client.tsx), so the pattern is not unique to this file even though this specific component is single-use.
-- The active practice-session comparator file named in older notes as `question-page-view.tsx` no longer exists. The current in-session action bar lives in [`app/(app)/app/practice/components/practice-view.tsx:112-170`](../../app/(app)/app/practice/components/practice-view.tsx).
+- `PostExamReviewView` is mounted only by [`app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx:176-191`](../../../app/(app)/app/practice/%5BsessionId%5D/components/practice-session-page-view.tsx).
+- There is no shared action-bar component. [`docs/frontend/design-principles.md:52-83`](../../frontend/design-principles.md) explicitly says action bars are inline per context.
+- A similar interleaved review layout also exists in [`app/(app)/app/questions/[slug]/question-page-client.tsx:371-469`](../../../app/(app)/app/questions/%5Bslug%5D/question-page-client.tsx), so the pattern is not unique to this file even though this specific component is single-use.
+- The active practice-session comparator file named in older notes as `question-page-view.tsx` no longer exists. The current in-session action bar lives in [`app/(app)/app/practice/components/practice-view.tsx:112-170`](../../../app/(app)/app/practice/components/practice-view.tsx).
 
 Test coverage check:
 
-- At audit time, [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx) covered panel semantics, focus-ring classes, and feedback states only.
-- At audit time, [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx) covered focus movement only.
+- At audit time, [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx`](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.test.tsx) covered panel semantics, focus-ring classes, and feedback states only.
+- At audit time, [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx`](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.browser.spec.tsx) covered focus movement only.
 - At audit time, there was no regression test for button order or grouping.
 
 ## Why This Is Confusing
@@ -79,7 +79,7 @@ Test coverage check:
 
 ## Cross-Surface Consistency
 
-The closest existing practice-session surface is the tutor/quick-practice action bar in [`PracticeView`](../../app/(app)/app/practice/components/practice-view.tsx). Its shipped order is:
+The closest existing practice-session surface is the tutor/quick-practice action bar in [`PracticeView`](../../../app/(app)/app/practice/components/practice-view.tsx). Its shipped order is:
 
 ```text
 Before submit: [ Previous ] [ Submit ] [ Next ] [ Bookmark ]
@@ -89,7 +89,7 @@ Quick practice after submit: [ Next ] [ Bookmark ]
 
 That surface already places Bookmark after the sequential navigation controls, which is more consistent with the underlying task hierarchy.
 
-By contrast, the standalone review question surface in [`question-page-client.tsx`](../../app/(app)/app/questions/[slug]/question-page-client.tsx) currently renders `[ Previous ] [ Bookmark ] [ Next ] [ Back ]` when session navigation exists. That means review surfaces are already inconsistent today. DEBT-330 should fix the post-exam review stage based on first principles and the active-session precedent, not preserve a weaker pattern just because another review page also has it.
+By contrast, the standalone review question surface in [`question-page-client.tsx`](../../../app/(app)/app/questions/%5Bslug%5D/question-page-client.tsx) currently renders `[ Previous ] [ Bookmark ] [ Next ] [ Back ]` when session navigation exists. That means review surfaces are already inconsistent today. DEBT-330 should fix the post-exam review stage based on first principles and the active-session precedent, not preserve a weaker pattern just because another review page also has it.
 
 ## Option Review
 
@@ -107,7 +107,7 @@ By contrast, the standalone review question surface in [`question-page-client.ts
 
 ### 3. Replace the text button with an icon-only bookmark toggle
 
-- **Pros:** Strong visual distinction between navigation pills and bookmarking. If the product ever needs bookmark and mark-for-review on the same surface again, icon vs text would help. This direction is also compatible with the future-facing note in [`docs/frontend/bookmark-surface-policy.md:87`](../frontend/bookmark-surface-policy.md).
+- **Pros:** Strong visual distinction between navigation pills and bookmarking. If the product ever needs bookmark and mark-for-review on the same surface again, icon vs text would help. This direction is also compatible with the future-facing note in [`docs/frontend/bookmark-surface-policy.md:87`](../../frontend/bookmark-surface-policy.md).
 - **Breaks / risks:** On its own, icon-only does not solve grouping; placement still has to be decided. It would also be inconsistent with the currently shipped text-pill bookmark affordance in `PracticeView` and `question-page-client.tsx`. Discoverability would drop unless the icon treatment is rolled out deliberately across all bookmark surfaces with proper `aria-label` coverage.
 - **Mobile verdict:** Compact, but only worth the tradeoff as part of a broader bookmark-pattern redesign, not as an isolated fix for this debt.
 
@@ -146,10 +146,10 @@ Recommendation boundaries:
 
 ## Scope
 
-- **Production file:** [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:143-185`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
-- **Comparator file:** [`app/(app)/app/practice/components/practice-view.tsx:112-170`](../../app/(app)/app/practice/components/practice-view.tsx)
-- **Related review surface:** [`app/(app)/app/questions/[slug]/question-page-client.tsx:371-469`](../../app/(app)/app/questions/[slug]/question-page-client.tsx)
-- **Test files:** [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx), [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx`](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx)
+- **Production file:** [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx:143-185`](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.tsx)
+- **Comparator file:** [`app/(app)/app/practice/components/practice-view.tsx:112-170`](../../../app/(app)/app/practice/components/practice-view.tsx)
+- **Related review surface:** [`app/(app)/app/questions/[slug]/question-page-client.tsx:371-469`](../../../app/(app)/app/questions/%5Bslug%5D/question-page-client.tsx)
+- **Test files:** [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.test.tsx`](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.test.tsx), [`app/(app)/app/practice/[sessionId]/components/post-exam-review-view.browser.spec.tsx`](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.browser.spec.tsx)
 
 ## Acceptance Criteria
 

@@ -80,4 +80,4 @@ const customersSearch = stripe.customers.search?.bind(stripe.customers);
 ## Related
 
 - [BUG-069](./bug-069-stripe-checkout-fails-localhost.md) — same root cause, first repro surfaced on localhost
-- [DEBT-104](../../debt/debt-104-missing-e2e-test-credentials.md)
+- [DEBT-104](../debt/debt-104-missing-e2e-test-credentials.md)

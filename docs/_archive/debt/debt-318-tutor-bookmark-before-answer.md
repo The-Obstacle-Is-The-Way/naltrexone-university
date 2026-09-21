@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-03-16
-**Related:** [BS-053](../../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md), [Bookmark Surface Policy](../../frontend/bookmark-surface-policy.md), [Bookmarks Dossier](../../frontend/pages/bookmarks.md)
+**Related:** [BS-053](../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md), [Bookmark Surface Policy](../../frontend/bookmark-surface-policy.md), [Bookmarks Dossier](../../frontend/pages/bookmarks.md)
 
 ---
 

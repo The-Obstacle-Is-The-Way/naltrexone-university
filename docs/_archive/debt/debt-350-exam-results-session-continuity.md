@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-04-07
 **Source:** [BS-061 Review Surface Divergence Audit](../brainstorming/bs-061-review-surface-divergence-audit.md)
-**Related:** [BS-059](../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md), [Pattern Registry — Review Surface Map](../frontend/pattern-registry.md), [practice-session-page-view.tsx](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx), [use-practice-session-review-stage.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts)
+**Related:** [BS-059](../../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md), [Pattern Registry — Review Surface Map](../../frontend/pattern-registry.md), [practice-session-page-view.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/components/practice-session-page-view.tsx), [use-practice-session-review-stage.ts](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage.ts)
 
 ---
 
@@ -34,20 +34,20 @@ This is not a one-line CTA swap. The current stage model clears post-exam review
 ## Out of Scope
 
 - standalone `question-page-client.tsx` review origins (`history`, `bookmarks`, `dashboard`, `practice`, residual `summary` route visits)
-- standalone action-bar cleanup tracked separately in [BS-059](../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md)
+- standalone action-bar cleanup tracked separately in [BS-059](../../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md)
 - merging `QuestionNavigator` with `ReviewQuestionNavigator`
 - persisting the last reviewed question in the URL
 - changing summary exit routes (`Back to Practice`, `View in History`)
 
 ## Current Code References
 
-- [practice-session-page-view.tsx](../../app/(app)/app/practice/[sessionId]/components/practice-session-page-view.tsx)
-- [use-practice-session-review-stage.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage.ts)
-- [use-practice-session-review-stage-state.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-review-stage-state.ts)
-- [use-practice-session-summary-review.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-summary-review.ts)
-- [session-summary-view.tsx](../../app/(app)/app/practice/[sessionId]/components/session-summary-view.tsx)
-- [session-breakdown-list.tsx](../../app/(app)/app/shared/components/session-breakdown-list.tsx)
-- [post-exam-review-view.tsx](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+- [practice-session-page-view.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/components/practice-session-page-view.tsx)
+- [use-practice-session-review-stage.ts](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage.ts)
+- [use-practice-session-review-stage-state.ts](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-review-stage-state.ts)
+- [use-practice-session-summary-review.ts](../../../app/(app)/app/practice/%5BsessionId%5D/hooks/use-practice-session-summary-review.ts)
+- [session-summary-view.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/components/session-summary-view.tsx)
+- [session-breakdown-list.tsx](../../../app/(app)/app/shared/components/session-breakdown-list.tsx)
+- [post-exam-review-view.tsx](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.tsx)
 
 ## Exact Decided Behavior
 

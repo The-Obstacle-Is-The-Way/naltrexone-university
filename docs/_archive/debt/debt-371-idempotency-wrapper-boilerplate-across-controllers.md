@@ -4,7 +4,7 @@
 **Created:** 2026-04-25
 **Resolution State:** Fixed in PR #293, merged to dev `722825d6` and main on 2026-04-28.
 **Source:** Production complexity audit, 2026-04-25
-**Related:** [withIdempotency helper](../../src/adapters/shared/with-idempotency.ts), [Master Spec — Idempotency](../specs/master_spec.md)
+**Related:** [withIdempotency helper](../../../src/adapters/shared/with-idempotency.ts), [Master Spec — Idempotency](../../specs/master_spec.md)
 
 **Audit verified:** 2026-04-27 against `87284372`.
 

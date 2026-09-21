@@ -3,7 +3,7 @@
 **Date:** 2026-03-04
 **Triggered by:** Visual inspection of incorrect-answer feedback after DEBT-274 (PR #171) shipped
 **Scope:** Identify exactly what must change in MDX content files (question-generation repo) vs what must change in code (`feedback.tsx` / `Markdown.tsx`) to achieve consistent, non-redundant feedback display
-**Related:** [DEBT-274](../_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md), [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3, F1), [DEBT-276](../debt/debt-276-feedback-section-card-containment.md) (Part B), [Question Format Spec](../content/question-format-spec.md)
+**Related:** [DEBT-274](../debt/debt-274-incorrect-answer-feedback-flow-reorder.md), [DEBT-275](../debt/debt-275-bs033-residual-open-items.md) (C2, C3, F1), [DEBT-276](../debt/debt-276-feedback-section-card-containment.md) (Part B), [Question Format Spec](../../content/question-format-spec.md)
 
 ---
 

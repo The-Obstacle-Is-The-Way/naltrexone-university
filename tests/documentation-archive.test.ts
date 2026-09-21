@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -10,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
+  archiveLinkRepairs,
   auditDocumentation,
   auditRecordLifecycle,
   brokenDocumentationLinks,
@@ -26,13 +28,14 @@ function audit(files: Record<string, string>) {
   );
 }
 
-function runArchiveCommand(root: string) {
+function runArchiveCommand(root: string, args: string[] = []) {
   return spawnSync(
     process.execPath,
     [
       '--import',
       import.meta.resolve('tsx'),
       path.resolve('scripts/documentation-archive.ts'),
+      ...args,
     ],
     { cwd: root, encoding: 'utf8', timeout: 14_000 },
   );
@@ -191,6 +194,119 @@ describe('documentation archive command', () => {
     return root;
   }
 
+  function populate(root: string, files: Record<string, string>): void {
+    for (const register of Object.keys(REGISTERS)) {
+      files[`docs/${register}/index.md`] ??= '# Register';
+    }
+    for (const [file, contents] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+      writeFileSync(path.join(root, file), contents);
+    }
+  }
+
+  it.each([
+    ['depth', '../../src/example.ts', 'src/example.ts'],
+    [
+      'later archive',
+      '../../debt/debt-001-example.md',
+      'docs/_archive/debt/debt-001-example.md',
+    ],
+  ])('exits nonzero for a provable %s archive break', (_kind, url, target) => {
+    const root = fixture();
+    populate(root, {
+      'docs/_archive/bugs/bug-001-example.md': `[Target](${url})`,
+      [target]: '# Existing target',
+    });
+    expect(runDocumentationCommand(root, () => {})).toBe(1);
+    expect(runArchiveCommand(root).status).toBe(1);
+  });
+
+  it.each(['function', 'CLI'])(
+    'repairs only destinations and preserves historical text through the %s',
+    (entrypoint) => {
+      const root = fixture();
+      const file = 'docs/_archive/bugs/bug-001-example.md';
+      const original = [
+        '# Historical record',
+        '[Source](../../src/example.ts#L7)',
+        '[Later](../../debt/debt-001-example.md?view=raw#receipt)',
+        '![Asset](../../docs/assets/example.png)',
+        '[Reference][source]',
+        '',
+        '[source]: <../../src/example.ts> "Original title"',
+        '`[Example](../../not-a-link.md)`',
+      ].join('\n');
+      populate(root, {
+        [file]: original,
+        'src/example.ts': 'export {};',
+        'docs/assets/example.png': 'fixture',
+        'docs/_archive/debt/debt-001-example.md': '# Existing record',
+      });
+      if (entrypoint === 'function') {
+        expect(runDocumentationCommand(root, () => {}, true)).toBe(0);
+      } else {
+        const child = runArchiveCommand(root, ['--repair-archive']);
+        expect(child.error).toBeUndefined();
+        expect(child.status).toBe(0);
+      }
+      expect(readFileSync(path.join(root, file), 'utf8')).toBe(
+        original
+          .replaceAll('../../src/example.ts', '../../../src/example.ts')
+          .replace(
+            '../../debt/debt-001-example.md',
+            '../debt/debt-001-example.md',
+          )
+          .replace('../../docs/assets/example.png', '../../assets/example.png'),
+      );
+      expect(readDocumentation(root).brokenArchive).toEqual([]);
+    },
+  );
+
+  it('leaves a historical missing target unchanged and reported', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Deleted](../../src/deleted.ts)';
+    populate(root, { [file]: original });
+    const child = runArchiveCommand(root, ['--repair-archive']);
+    expect(child.status).toBe(0);
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+    expect(JSON.parse(child.stdout).brokenArchive).toHaveLength(1);
+  });
+
+  it('writes nothing when a proven repair has an unsupported source spelling', () => {
+    const root = fixture();
+    const first = 'docs/_archive/bugs/bug-001-example.md';
+    const unsupported = 'docs/_archive/bugs/bug-002-example.md';
+    const original = '[Source](../../src/example.ts)';
+    populate(root, {
+      [first]: original,
+      [unsupported]: '[Escaped](../../src/part\\(one\\).ts)',
+      'src/example.ts': 'export {};',
+      'src/part(one).ts': 'export {};',
+    });
+    expect(() => runDocumentationCommand(root, () => {}, true)).toThrow(
+      'Cannot safely rewrite',
+    );
+    const child = runArchiveCommand(root, ['--repair-archive']);
+    expect(child.status).toBe(1);
+    expect(child.stderr).toContain('Cannot safely rewrite');
+    expect(readFileSync(path.join(root, first), 'utf8')).toBe(original);
+  });
+
+  it('does not guess between two existing historical destinations', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Ambiguous](../../docs/specs/spec-001-example.md)';
+    populate(root, {
+      [file]: original,
+      'docs/specs/spec-001-example.md': '# First candidate',
+      'docs/_archive/specs/spec-001-example.md': '# Second candidate',
+    });
+    runDocumentationCommand(root, () => {}, true);
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+    expect(readDocumentation(root).repairableArchive).toEqual([]);
+  });
+
   it('fails closed if the documentation walk has no registers', () => {
     expect(() => readDocumentation(fixture())).toThrow(
       'Missing documentation register',
@@ -257,6 +373,17 @@ describe('repository documentation', () => {
   )('resolves relative file links in %s', (file) => {
     expect(
       brokenDocumentationLinks(file, files.get(file) ?? '', exists),
+    ).toEqual([]);
+  });
+
+  it.each(
+    [...files.keys()].filter((file) => file.startsWith('docs/_archive/')),
+  )('has no mechanically repairable archive links in %s', (file) => {
+    expect(
+      archiveLinkRepairs(
+        brokenDocumentationLinks(file, files.get(file) ?? '', exists),
+        exists,
+      ),
     ).toEqual([]);
   });
 });

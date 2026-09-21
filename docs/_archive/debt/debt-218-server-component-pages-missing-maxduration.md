@@ -54,5 +54,5 @@ Associated unit tests were updated to cover only the remaining exports.
 
 ## Related
 
-- [SPEC-029](../../specs/spec-029-dev-environment-resilience.md)
-- [BS-017](../../brainstorming/bs-017-dev-environment-resilience.md)
+- [SPEC-029](../specs/spec-029-dev-environment-resilience.md)
+- [BS-017](../brainstorming/bs-017-dev-environment-resilience.md)

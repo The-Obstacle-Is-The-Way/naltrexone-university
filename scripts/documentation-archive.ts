@@ -1,4 +1,4 @@
-import { existsSync, globSync, readFileSync } from 'node:fs';
+import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import Markdown from 'react-markdown';
@@ -42,8 +42,61 @@ export type DocumentationAudit = {
   missingRowTargets: string[];
   brokenLive: DocumentationLink[];
   brokenArchive: DocumentationLink[];
+  repairableArchive: ArchiveLinkRepair[];
   counts: { register: string; live: number; archived: number }[];
 };
+
+type ArchiveLinkRepair = DocumentationLink & {
+  replacementTarget: string;
+  replacementUrl: string;
+  kind: 'depth' | 'later-archive';
+};
+
+export function archiveLinkRepairs(
+  links: DocumentationLink[],
+  exists: (file: string) => boolean,
+): ArchiveLinkRepair[] {
+  return links.flatMap((link) => {
+    if (!link.file.startsWith('docs/_archive/')) return [];
+    const originalFile = link.file.replace('docs/_archive/', 'docs/');
+    const originalTarget = path.posix.normalize(
+      path.posix.join(
+        path.posix.dirname(originalFile),
+        decodeURIComponent(link.url.split(/[?#]/)[0] ?? ''),
+      ),
+    );
+    const archived = (target: string) =>
+      target.replace(
+        /^docs\/(debt|bugs|specs|brainstorming|audits|qa)\//,
+        'docs/_archive/$1/',
+      );
+    const candidates = [
+      ...new Set([
+        originalTarget,
+        archived(originalTarget),
+        archived(link.target),
+      ]),
+    ].filter(
+      (target) =>
+        target !== '..' && !target.startsWith('../') && exists(target),
+    );
+    const target = candidates[0];
+    // No filename guessing: ambiguous and missing historical targets stay reported.
+    if (candidates.length !== 1 || !target) return [];
+    const suffix = link.url.match(/[?#].*$/)?.[0] ?? '';
+    return [
+      {
+        ...link,
+        replacementTarget: target,
+        replacementUrl:
+          encodeURI(
+            path.posix.relative(path.posix.dirname(link.file), target),
+          ) + suffix,
+        kind: target === originalTarget ? 'depth' : 'later-archive',
+      },
+    ];
+  });
+}
 
 function recordIdentity(value: string): string | undefined {
   return value.match(/^[a-z]+-\d+/i)?.[0].toLowerCase();
@@ -134,6 +187,7 @@ export function auditRecordLifecycle(
     missingRowTargets: [],
     brokenLive: [],
     brokenArchive: [],
+    repairableArchive: [],
     counts: [],
   };
   const links = new Map(
@@ -213,7 +267,57 @@ export function auditDocumentation(
       list.push(link);
     }
   }
+  result.repairableArchive = archiveLinkRepairs(result.brokenArchive, exists);
   return result;
+}
+
+function repairArchiveLinks(root: string, repairs: ArchiveLinkRepair[]): void {
+  const edits = new Map<string, ArchiveLinkRepair[]>();
+  for (const repair of repairs) {
+    const fileEdits = edits.get(repair.file) ?? [];
+    fileEdits.push(repair);
+    edits.set(repair.file, fileEdits);
+  }
+  const rewritten = new Map<string, string>();
+  for (const [file, fileEdits] of edits) {
+    const original = readFileSync(path.join(root, file), 'utf8');
+    let contents = original;
+    for (const repair of fileEdits.toSorted((a, b) => b.start - a.start)) {
+      const span = original.slice(repair.start, repair.end);
+      const offset = span.lastIndexOf(repair.url);
+      if (offset < 0)
+        throw new Error(`Cannot safely rewrite ${file}:${repair.line}`);
+      const start = repair.start + offset;
+      contents =
+        contents.slice(0, start) +
+        repair.replacementUrl +
+        contents.slice(start + repair.url.length);
+    }
+    const expected = documentationLinks(file, original).map(
+      (link) =>
+        fileEdits.find((repair) => repair.start === link.start)
+          ?.replacementUrl ?? link.url,
+    );
+    const actual = documentationLinks(file, contents);
+    if (
+      actual.length !== expected.length ||
+      actual.some((link, i) => link.url !== expected[i])
+    )
+      throw new Error(
+        `Cannot safely rewrite ${file}: Markdown destinations changed unexpectedly`,
+      );
+    for (const repair of fileEdits) {
+      if (!existsSync(path.join(root, repair.replacementTarget)))
+        throw new Error(
+          `Repair target disappeared: ${repair.replacementTarget}`,
+        );
+    }
+    rewritten.set(file, contents);
+  }
+  // Validate every planned rewrite before any write; unsupported syntax cannot
+  // leave a partially repaired batch. Write failures still fail the command.
+  for (const [file, contents] of rewritten)
+    writeFileSync(path.join(root, file), contents);
 }
 
 export function readDocumentationFiles(root: string): Map<string, string> {
@@ -242,8 +346,13 @@ export function readDocumentation(root: string): DocumentationAudit {
 export function runDocumentationCommand(
   root: string,
   report: (result: DocumentationAudit) => void,
+  repair = false,
 ): number {
-  const result = readDocumentation(root);
+  let result = readDocumentation(root);
+  if (repair) {
+    repairArchiveLinks(root, result.repairableArchive);
+    result = readDocumentation(root);
+  }
   report(result);
   return [
     result.duplicates,
@@ -251,6 +360,7 @@ export function runDocumentationCommand(
     result.missingLiveRows,
     result.missingRowTargets,
     result.brokenLive,
+    result.repairableArchive,
   ].some((issues) => issues.length > 0)
     ? 1
     : 0;
@@ -260,7 +370,11 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 ) {
-  process.exitCode = runDocumentationCommand(process.cwd(), (result) => {
-    console.log(JSON.stringify(result, null, 2));
-  });
+  process.exitCode = runDocumentationCommand(
+    process.cwd(),
+    (result) => {
+      console.log(JSON.stringify(result, null, 2));
+    },
+    process.argv.includes('--repair-archive'),
+  );
 }
