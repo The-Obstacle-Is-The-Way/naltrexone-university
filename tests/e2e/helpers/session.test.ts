@@ -98,6 +98,7 @@ function createPracticePage(input: {
   availableStatus?: 'Unanswered' | 'Incorrect' | 'Bookmarked';
   defaultQuestionCount?: number;
   forcedActualCount?: number;
+  firstQuestionAlert?: string;
   incompleteSession?: boolean;
   countBlurKeepsStartHandlerStale?: boolean;
   countChangeStalesStartHandler?: boolean;
@@ -125,6 +126,7 @@ function createPracticePage(input: {
     sessionStartAlertReadCount: 0,
     startedQuestionCount: null as number | null,
     sessionStarted: false,
+    firstQuestionFailed: Boolean(input.firstQuestionAlert),
     sessionStartNavigationCompletesOnNextUrlRead: false,
     sessionStartNavigationPending: false,
   };
@@ -196,11 +198,14 @@ function createPracticePage(input: {
   });
 
   const answerChoices = createLocator({
-    isVisible: () => state.sessionStarted,
+    isVisible: () => state.sessionStarted && !state.firstQuestionFailed,
   });
 
   const tryAgainButton = createLocator({
-    isVisible: () => false,
+    isVisible: () => state.sessionStarted && state.firstQuestionFailed,
+    onClick: () => {
+      state.firstQuestionFailed = false;
+    },
   });
 
   return {
@@ -344,6 +349,9 @@ function createPracticePage(input: {
               }
 
               const alerts = [...preexistingAlerts];
+              if (state.sessionStarted && state.firstQuestionFailed) {
+                alerts.push(input.firstQuestionAlert ?? 'Question failed.');
+              }
               if (state.startClickObserved && input.sessionStartAlert) {
                 state.startAlertPollCount += 1;
                 if (
@@ -591,6 +599,20 @@ describe('startSession helper', () => {
 
     await expect(result).rejects.toThrow('cus_[REDACTED]');
     await expect(result).rejects.not.toThrow(providerIdentifier);
+  });
+
+  it('rejects the first question error even when Try again would recover', async () => {
+    const page = createPracticePage({
+      availableQuestionCount: 5,
+      firstQuestionAlert: 'Request timed out. Please try again.',
+    });
+
+    await expect(startSession(page, 'tutor', 2)).rejects.toThrow(
+      'startSession failed loading the first question: Request timed out. Please try again.',
+    );
+    expect(
+      page.getByRole('button', { name: 'Try again' }).click,
+    ).not.toHaveBeenCalled();
   });
 
   it('fails explicitly when the created session is smaller than requested', async () => {
