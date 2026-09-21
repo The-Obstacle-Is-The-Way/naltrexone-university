@@ -89,7 +89,7 @@ Coverage is uploaded to Codecov with no Vitest `coverage.thresholds`: measured, 
 
 1. [x] Part 1 items 2, 3, 5 (signature ingress, entitlement-loss E2E, cron integration) — completed 2026-08-16 with the named receipts above.
 2. [x] Part 1 item 4's paid annual checkout E2E using the existing reset/reseed lifecycle — completed 2026-08-18 with the named receipts above.
-3. [x] Part 1 item 1's fail-closed scheduled trial-clock workflow — completed 2026-08-17 with a historical 43-case harness contract (grown from 37 at completion by the DEBT-469 split) and a 2/2 live Stripe test-mode proof; DEBT-472 later widened the current combined provider wrapper suite to 44 cases, and the first GitHub-hosted run after the workflow reaches `main` remains in Verification.
+3. [x] Part 1 item 1's fail-closed scheduled trial-clock workflow — completed 2026-08-17 with a historical 43-case harness contract (grown from 37 at completion by the DEBT-469 split) and a 2/2 live Stripe test-mode proof; DEBT-472 later widened the combined provider wrapper suite to a historical 44 cases. Activation is verified by manual run `33038731445` and scheduled run `35510373087` (`PASS executed=6 passed=6 skipped=0`); the current gate/wrapper test census and provenance are in Verification below.
 4. [ ] Part 2 backend contract tests; Part 2 UI (error-boundary behavior first); thin integration suites.
 5. [ ] Part 3 (a)'s existing-double migrations and (b)/(b2)/(f) interleaved with DEBT-469 splits; then the trial setup add-card click-through, (d)/(e)/(c), and Part 4 thresholds last, re-floored.
 
