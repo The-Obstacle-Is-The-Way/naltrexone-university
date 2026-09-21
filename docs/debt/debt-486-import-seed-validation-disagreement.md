@@ -1,6 +1,6 @@
 # DEBT-486: Import and Seed Validation Disagreement
 
-**Status:** In Progress — full gate passed; review and promotion pending
+**Status:** In Progress — #949 merged to dev; release readback remains to be recorded
 **Priority:** P1
 **Date:** 2026-09-20
 **ID reconciliation:** Renumbered from DEBT-480 after PR #937 collided with the owner's reserved public-surface IDs; original evidence and status are preserved.
@@ -21,8 +21,8 @@ content/drafts/questions/SCHEMA.md:284 requires a final Reference subsection.
 
 Missing references expose a separate contract hole within this same body-
 validation boundary: scripts/seed-helpers.ts:118 parses references and returns
-null when absent. Do not claim seed rejects missing references; it currently
-accepts them too.
+null when absent. At that pre-fix snapshot, seed accepted missing references
+too; the implementation receipt below records the changed boundary.
 
 ## Reproduction
 
@@ -120,10 +120,10 @@ local MDX file and counted returned representations:
 {"files":958,"parsed":958,"uncitedSyntheticPlaceholders":10,"uncitedImported":0}
 ```
 
-No real content or remote database rows were changed. Whole-bundle seed
-prevalidation and atomic release/rollback remain DEBT-483; rejecting an invalid
-individual file does not make the current per-question seed transactions
-atomic across the corpus. The first full local gate passed typecheck, lint, 4,366 unit tests, 411 browser
+No real content or remote database rows were changed. Static whole-input seed
+prevalidation subsequently landed under DEBT-483 in #952; atomic release/rollback
+remains open there. Rejecting invalid files does not make the current per-question
+seed transactions atomic across the corpus. The first full local gate passed typecheck, lint, 4,366 unit tests, 411 browser
 tests, 293 integration tests (6 existing skips), and build, then failed E2E:
 **43 passed / 1 failed**. `review-mode-audit.spec.ts:115` could not find the
 Question heading (`helpers/question.ts:97`). The server logged Clerk
@@ -145,9 +145,13 @@ check and merge request. No override was used.
 
 After integrating that base, the full gate passed again: typecheck, lint,
 **4,421 unit / 411 browser / 293 integration** tests (6 existing skips), build,
-and **44 authenticated E2E** tests without retries. The earlier approval does
-not cover this updated head; fresh exact-head approval, CI, merge and promotion
-receipts remain pending.
+and **44 authenticated E2E** tests without retries. The earlier approval did
+not cover the updated head. **CONFIRMED:** fresh review `5261681489` approved
+exact head `852c26d5`; zero unresolved threads and [CI 35535698571](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35535698571)
+preceded merge `b2efba9c` at 20:41:24 UTC. [The closeout](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/949#issuecomment-5752527561)
+retains that evidence. At the [reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot),
+main was still `7e41deaa`; this record remains Active for the later release
+readback, not additional body-validator implementation.
 
 ## Related
 

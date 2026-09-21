@@ -115,5 +115,5 @@ content tree. The fix is in #937; this document records its historical criteria 
 ## Related
 
 - [DEBT-486: Import/seed disagreement](../../debt/debt-486-import-seed-validation-disagreement.md)
-- [DEBT-487: Silent omission](../../debt/debt-487-draft-splitter-silent-omission.md)
-- [DEBT-482: Duplicate output collisions](../../debt/debt-482-duplicate-qid-output-collision.md)
+- [DEBT-487: Silent omission](debt-487-draft-splitter-silent-omission.md)
+- [DEBT-482: Duplicate output collisions](debt-482-duplicate-qid-output-collision.md)

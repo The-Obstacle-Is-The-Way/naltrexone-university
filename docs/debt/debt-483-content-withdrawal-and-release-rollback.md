@@ -1,6 +1,6 @@
 # DEBT-483: No Complete Content Withdrawal or Release Rollback
 
-**Status:** In Progress — initial prevalidation, withdrawal and clean-staging safeguards; release milestones remain open
+**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed staging and release milestones remain open
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED implementation gap; production incident not established
@@ -114,7 +114,7 @@ base `269ffeec` changed ancestry only: its tree matches tested parent `d8bf8adc`
 PR #952 merged as `31d3a718` after exact-head CodeRabbit approval
 `5261750605` on `936de53e`, zero unresolved threads, and CI run `35537614430`
 (4,421 unit / 411 browser / 330 integration +6 skips / 44 E2E, no retries).
-Production promotion remains pending.
+The [reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot) separates this dev merge from the later release readback.
 
 **CONFIRMED local corpus compatibility:** a read-only census using
 `readSeedQuestionFiles(true)` and `parseSeedQuestionFile(raw, absolutePath)`
@@ -134,8 +134,9 @@ with an already-stored tag definition), concurrency and infrastructure errors
 can still happen after an earlier per-question transaction commits. The
 transaction boundaries and publication semantics are unchanged. Explicit
 withdrawal and stale-file resurrection were pending at that milestone (see the
-subsequent receipt below). Clean staging, immutable release identity,
-all-or-nothing activation, and authorized rollback/revocation remain open. Preserving stored attempts also does not establish that archived
+subsequent receipt below). Clean staging was also pending at that milestone;
+its later receipt follows. Immutable release identity, all-or-nothing activation
+and authorized rollback/revocation remain open. Preserving stored attempts also does not establish that archived
 questions remain accessible through every current review path; see DEBT-484's
 published-only lookup receipt. No real content or remote database was changed.
 
@@ -208,7 +209,7 @@ skips), production build and **44 authenticated E2E** tests with no retries.
 PR #953 merged as `8da15de2` after exact-head CodeRabbit approval
 `5261806134` on `0aeda526`, zero unresolved threads and CI run `35538749320`
 (4,421 unit / 411 browser / 349 integration +6 skips / 44 E2E, no retries).
-Production promotion remains pending.
+The [reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot) separates this dev merge from the later release readback.
 
 **Remaining limits:** withdrawal preserves stored history but does not make all
 archived questions reviewable through today's published-only application queries
@@ -276,8 +277,13 @@ check to actual writes restored **86/86** focused cases. Separately removing
 (**3 failed / 28 passed**), proving the final guard still detects its forbidden
 state. The final full local gate on base `8da15de2` also passed: typecheck,
 lint, **4,428 unit / 411 browser / 349 integration** tests (6 existing skips),
-production build and **44 E2E** tests without retries. Exact-head review, merge
-and production promotion remain pending.
+production build and **44 E2E** tests without retries. **CONFIRMED:** [#954](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/954)
+merged as `65bd70c0` at 22:09:06 UTC after review `5261882451` approved exact
+head `844cc5cb`, zero unresolved threads and green [CI 35540192530](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35540192530).
+The [closeout](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/954#issuecomment-5753029651)
+separates the superseded cancelled CI run from the successful final run. The
+[reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot)
+records the release-evidence boundary; the implementation limits below remain open.
 
 The managed caller still removes the imported tree between validation and
 regeneration. It does **not** use the new safe staging procedure yet; adapting

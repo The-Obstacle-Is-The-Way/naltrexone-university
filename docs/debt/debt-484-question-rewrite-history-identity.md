@@ -1,6 +1,6 @@
 # DEBT-484: Substantive Rewrites Can Reinterpret Historical Attempts
 
-**Status:** In Progress — initial rewrite guard and full gate verified locally; review pending
+**Status:** In Progress — initial guard merged in #951; immutable revision and review milestones remain open
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED behavior boundary; affected production attempts unknown
@@ -139,8 +139,15 @@ the database lanes used clone-isolated Docker. After rebasing onto PR #949's upd
 the full gate passed again: **4,421 unit / 411 browser / 313 integration**
 tests (6 existing skips), build, and **44 E2E** tests with no retries; typecheck
 and lint passed as well.
-No real content or remote database was changed. Exact-head approval, merge and
-production-promotion receipts remain pending.
+No real content or remote database was changed. **CONFIRMED:** [#951](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/951)
+merged as `269ffeec` at 21:03:24 UTC after review `5261726459` approved exact
+head `d8bf8adc`, zero unresolved threads, and green [CI 35536461282](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35536461282).
+The [review adjudication](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/951#issuecomment-5752644555)
+retains the mutation evidence for canonical whitespace coverage. The
+[reconciliation snapshot](assets/content-integrity-2026-09-20/verification.md#reconciliation-snapshot)
+separates that dev merge from the release readback. Immutable revision binding,
+active-session behavior and archived-question review remain open regardless of
+that deployment milestone.
 
 ## Related
 

@@ -1,6 +1,6 @@
 # DEBT-482: Duplicate QIDs Collapse to One Output File
 
-**Status:** In Progress — implementation verified locally; review and promotion pending
+**Status:** Resolved — #945; promoted and verified through #946 on 2026-09-20
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED defect; no collision found in the measured local corpus
@@ -19,7 +19,7 @@ not distinct emitted questions. Snapshot: 6199084a1a4407d4d9d800bd798b37c422662b
 
 ## Reproduction
 
-Run [DEBT-485's synthetic fixture](../_archive/debt/debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
+Run [DEBT-485's synthetic fixture](debt-485-import-output-path-traversal.md#read-only-reproduction-and-shared-fixture)
 with PROBE=duplicate.
 
 Observed: blocks=2, uniqueOutputs=1, two identical destination paths, no error.
@@ -136,9 +136,17 @@ No real content or remote database rows were changed. The full local gate
 passed: typecheck, lint, **4,340 unit / 411 browser / 293 integration** tests
 (six existing opt-in skips), production build, and **44 authenticated TEST-mode
 E2E** tests without retries against the clone's isolated Docker database.
-Exact-head review, merge and promotion receipts remain pending.
+**CONFIRMED:** [#945](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/945)
+merged as `3cad67d4` after review `5261470841` approved exact head `efc1d3d3`,
+zero unresolved threads and green [CI 35531729042](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35531729042).
+[Promotion #946 and its production receipt](../../debt/assets/content-integrity-2026-09-20/verification.md#verified-production-milestone)
+verify main `7e41deaa`, the held-then-promoted production alias and HTTP 200s.
+This closes the implementation defect; no production content import or row census
+was performed.
 
 ## Related
 
 Content-repository DEBT-06 documents its same-file duplicate-check defect.
-The current clean census does not close either defect.
+The clean census alone closes neither defect; this app record closes on the
+regression, review and release evidence above. The separate content-repository
+record is not adjudicated here.
