@@ -175,7 +175,7 @@ adjacent dated corrections and current execution instructions. No new code
 was added to satisfy those Minor comments.
 
 Promotion #978 initially reported BEHIND: the executor omitted the
-[deployment runbook's ancestry step](../../../dev/deployment-procedure.md#promotion-ancestry-under-strict-branch-protection)
+[deployment runbook's ancestry step](../../../dev/deployment-procedure.md#6-branch-ancestry-after-promotion)
 before #976. Main `d67a3e98` had not been merged into the feature branch even
 though the starting trees matched. #978 was closed temporarily; main's ancestry
 is now carried through a normal follow-up PR to dev on the same inventory
