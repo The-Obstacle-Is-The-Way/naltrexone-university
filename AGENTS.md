@@ -194,7 +194,7 @@ Before writing or editing ANY UI code in `app/**` or `components/**`, you MUST c
 
 ### Mandates (no exceptions without a registry entry + design review)
 
-- **Component-system** (`standards.md` § 2): All production UI interactive click targets MUST use the `<Button>` component. Raw `<button>` is allowed in production only inside `components/ui/` primitives and app-shell disclosure toggles per Pattern Registry I-6. The production scanner intentionally excludes `*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and `*.probes.tsx`; native semantic controls are allowed there only in test-only hook/state-machine probes, while tests whose subject is Button or design-system behavior must still use `<Button>`.
+- **Component-system** (`standards.md` § 2): All production UI interactive click targets MUST use the `<Button>` component. Raw `<button>` is allowed in production only inside `components/ui/` primitives and app-shell disclosure toggles per Pattern Registry I-6. The production raw-button lint rule intentionally excludes `*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and `*.probes.tsx`; native semantic controls are allowed there only in test-only hook/state-machine probes, while tests whose subject is Button or design-system behavior must still use `<Button>`.
 - **Focus ring** (`standards.md` § 3): One canonical pattern — `focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]`. Never hand-roll variants.
 - **Semantic tokens** (`standards.md` § 1): Never use raw hex (`#fff`, `#121212`) or palette colors (`bg-zinc-400`, `text-slate-300`) in `.tsx` UI code except documented third-party API seams such as Clerk `appearance.variables`. Always use semantic tokens (`bg-primary`, `text-foreground`, `border-border`, etc.).
 - **Opacity scale** (`pattern-registry.md` § 1.2): Use the canonical muted/layer-2 scale (`/20`, `/40`, `/50`, `/60`) for `bg-muted`-class fills. Documented foreground-ramp arbitrary values are allowed ONLY in their documented Pattern Registry contexts. Undocumented arbitrary values (`/[0.03]`, `/[0.10]`, `/[13%]`) are forbidden — add the pattern to the registry first or choose an existing token.
@@ -206,7 +206,7 @@ If you cannot find a pattern in the design docs above, do NOT invent one. Either
 
 ### Enforcement Status
 
-The formal enforcement layer is live: `.claude/rules/frontend.md` gateways UI work to the design docs, and `components/theme-token-regression.test.tsx` / `components/theme-token-regression-source-scan.ts` fail CI on raw `<button>` drift and undocumented opacity values.
+The formal enforcement layer is live: `.claude/rules/frontend.md` gateways UI work to the design docs, and Biome's `noRestrictedElements` blocks raw JSX `<button>` outside the existing production exceptions. `components/theme-token-regression.test.tsx` / `components/theme-token-regression-source-scan.ts` retain the mobile-nav exception's exact occurrence count, undocumented-opacity checks, and render contracts.
 
 See `docs/_archive/debt/debt-398-design-system-enforcement-gap.md` for the completed enforcement arc. See `docs/_archive/debt/debt-399-component-system-bypass-cleanup.md` for the completed cleanup of existing bypass sites; only the documented `components/mobile-nav.tsx` Pattern Registry I-6 app-shell disclosure exception remains.
 

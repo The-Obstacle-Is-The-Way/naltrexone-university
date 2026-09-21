@@ -77,7 +77,7 @@ coverage.
 All production UI interactive click targets MUST use the `<Button>`
 component (standards.md § 2). Raw `<button>` is allowed in production
 only inside `components/ui/` primitives and app-shell disclosure toggles
-per Pattern Registry I-6. The production scanner intentionally excludes
+per Pattern Registry I-6. The production Biome restriction intentionally excludes
 `*.test.tsx`, `*.browser.spec.tsx`, `*test-helpers.tsx`, and
 `*.probes.tsx`; native semantic controls are allowed there only in
 test-only hook/state-machine probes, while tests whose subject is Button
@@ -85,7 +85,8 @@ or design-system behavior must still use `<Button>`.
 
 DEBT-399 completed the cleanup of existing bypass sites. Only the
 documented `components/mobile-nav.tsx` Pattern Registry I-6 app-shell
-disclosure exception remains.
+disclosure exception remains; its exact-one count stays enforced by the
+theme regression test because a file-level lint exception cannot bound it.
 
 ### 5. Dark-mode strategy
 

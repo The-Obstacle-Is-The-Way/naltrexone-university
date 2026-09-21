@@ -49,6 +49,32 @@
   "overrides": [
     {
       "includes": [
+        "app/**/*.tsx",
+        "components/**/*.tsx",
+        "!components/ui/**",
+        "!components/mobile-nav.tsx",
+        "!**/*.test.tsx",
+        "!**/*.browser.spec.tsx",
+        "!**/*test-helpers.tsx",
+        "!**/*.probes.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noRestrictedElements": {
+              "level": "error",
+              "options": {
+                "elements": {
+                  "button": "Use the design-system Button. Raw buttons are restricted to primitives and documented Pattern Registry exceptions."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "src/adapters/shared/server-tracing.ts",
         "instrumentation.ts",
         "sentry.client.config.ts",
