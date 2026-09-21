@@ -11,6 +11,8 @@
 
 ## Description
 
+**2026-09-21 audit forward pointer.** The following warning inventory and 28-file ledger are historical implementation receipts. Current tracked tests contain **27** `noExcessiveLinesPerFile` suppressions; the attempt-repository directive was retired by #922. Biome still enforces warn/800 and both lint commands fail on warnings. #919 is merged, so the later note waiting for its cron-route base is no longer a scheduling blocker. Step 5's concern-based splits remain real work; W5's six-month observation period has not elapsed. [Fresh census and audit scope](./assets/active-audit-2026-09-21/verification.md).
+
 The repository's standing practice has been to note warnings as "pre-existing" in gate summaries and move on. This item replaces that practice with a complete inventory, a root cause for each warning, and a fix-or-justify verdict — then installs the ratchets that keep the count of **actionable** warnings at zero. W1, W2, and W7 are now eliminated at the root; W3/W4 are non-actionable runner notices that still appear in lane output but gate nothing; W5 remains a narrowly documented exception with its own observation duty; W6 is historical because DEBT-466 Part A fixed it before this implementation. The final size-debt ledger is 28 reasoned `noExcessiveLinesPerFile` suppressions; including the repository's eight unrelated Biome directives, the full surface is now 36 `biome-ignore` directives across 34 files plus 14 `@ts-expect-error` uses across 7 files.
 
 ### Complete warning inventory (every lane, verbatim)
@@ -28,7 +30,7 @@ The repository's standing practice has been to note warnings as "pre-existing" i
 Institutional (not printed warnings, but the reason warnings persist):
 
 - Before this implementation, `lint` / `lint:ci` (`biome check .` / `biome ci .`) exited 0 on warning-level diagnostics. Both scripts now pass `--error-on-warnings`; installed Biome 2.5.6 exposes that flag on both commands.
-- Coverage is collected in CI on all three vitest lanes and uploaded to Codecov, but there is no `codecov.yml` and no `coverage.thresholds` in any vitest config — measurement without enforcement. The threshold ratchet is designed in [DEBT-468](./debt-468-test-estate-coverage-and-fixture-debt.md) Part 4, not here.
+- Coverage is collected on all three Vitest lanes and uploaded to Codecov. **2026-09-21 correction:** `codecov.yml` exists and ignores `tests/e2e`; it defines no numeric thresholds, and none is configured in Vitest. The ruleset requires `test`, not `codecov/patch`; a displayed Codecov verdict is not a required merge check. The proposed threshold ratchet belongs to [DEBT-468](./debt-468-test-estate-coverage-and-fixture-debt.md) Part 4 and requires ADR-019's separate authorization.
 
 ### W1 history — a policy lost in an upgrade, not a decision
 
@@ -61,7 +63,7 @@ Restoring `style.noExcessiveLinesPerFile` to `{ "level": "warn", "options": { "m
 
 - A warning that has survived every gate summary since the Biome upgrade trains readers to skim past the warning section — which is how new warnings get absorbed silently.
 - The lost policy is doing no work while the condition it guarded against grows: the three largest offenders are exactly the files DEBT-468's fixture analysis identifies as duplication-heavy, and reviewers (human and agent) demonstrably struggle with them.
-- Warning-level diagnostics cannot block CI today, so the only enforcement is humans reading logs.
+- Warning-level diagnostics could not block CI at filing. The completed `--error-on-warnings` change now makes them fail; the remaining work is the explicitly suppressed oversized suites, not restoring an absent gate.
 
 ## Resolution (current-dev execution audit complete; coordinates with DEBT-468)
 

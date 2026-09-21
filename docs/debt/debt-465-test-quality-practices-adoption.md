@@ -10,6 +10,8 @@
 
 ## Description
 
+**2026-09-21 audit forward pointer.** Part 1 is shipped: `package.json` exposes `quality:crap`, and the reporter requires all three Istanbul inputs. The top-25 table below is the **2026-08-22 baseline**, not a fresh measurement of today's tree. The opening 556-file census and “no ranked report” observation are likewise filing history. Parts 2–4 remain unimplemented: no Stryker configuration/dependencies or acceptance directory exists, and QA-001/QA-002 both remain Draft without their required two complete evidenced runs. ADR-019 still requires a new ADR before a metric gates CI. The existing entitlement-loss E2E means that particular item in the older QA-gap inventory is no longer absent. [Current-tree audit and limits](./assets/active-audit-2026-09-21/verification.md).
+
 The suite ADR-003 built is broad (556 test files, ~151k lines, four lanes) but nothing audits or specifies it from the outside. The audit made the gap concrete:
 
 - `src/domain/services/grading.ts` — the product's core correctness function — has 5 tests; `subscription-write-guard.ts`, which decides whether a paying customer's stored subscription may be overwritten, has 21 table-driven cases nothing has ever audited for bite. No tool measures whether any of those tests would catch a flipped boundary.
