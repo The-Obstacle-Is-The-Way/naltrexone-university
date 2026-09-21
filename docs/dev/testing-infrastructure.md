@@ -68,7 +68,7 @@ The default is zero retries, including the required `chromium`, observational
 `stripe-hosted`, and `cleanup` projects. A failed product assertion fails that
 run; do not override retries to obtain green evidence. This describes Playwright
 attempts: shared session/bookmark helpers still recover visible errors inside a
-single attempt. That residual is recorded in [DEBT-475](../debt/debt-475-toolchain-coherence.md#2026-09-20-adversarial-retry-follow-through); a zero flaky count does not prove it never occurred. Observational means
+single attempt. That residual is recorded in [DEBT-475](../_archive/debt/debt-475-toolchain-coherence.md#2026-09-20-adversarial-retry-follow-through); a zero flaky count does not prove it never occurred. Observational means
 non-blocking for merge, not permission to hide hosted-test failures.
 
 Only `setup` permits bounded bootstrap recovery: two retries in CI, one locally.
