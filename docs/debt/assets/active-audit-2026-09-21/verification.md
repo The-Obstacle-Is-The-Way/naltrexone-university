@@ -214,3 +214,29 @@ cleanup can close legal compliance.
 
 New observation (report only): issue #423 still describes the older cron
 verification deferral; no issue or new debt record was changed in this sweep.
+
+## Follow-up receipt — DEBT-473, 2026-09-21 13:18 UTC
+
+This dated receipt supersedes only the earlier snapshot's DEBT-473 Open
+disposition. The audit was promoted by #969 (`3f3eed65`); main CI `35602596483`
+passed 4,495 unit / 411 browser / 349 integration plus six intentional provider
+skips / 44 required E2E, without failures or retries. Dev/main tree is
+`b88f541a18409f65687d5e5c7be0b570346f1972`. Vercel held the ready build at
+13:00:11 UTC, observed main `test` success at 13:08:19.840, then assigned the
+production domain at 13:08:20.021; home/health returned 200.
+[Promotion receipt](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/969#issuecomment-5761024141).
+
+The scheduled Actions updater `35603829211` opened Dependabot #970. Its actual
+[CI run 35603926345](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/35603926345)
+at head `10568e0e73b784344220330c99e981973a1643c9` finished successfully at
+13:16:36 UTC: all four non-E2E lanes passed, E2E was skipped, and the executed
+evidence summary warned at 13:16:32.006 that shared TEST credentials are withheld
+from Dependabot and main E2E gates production promotion. Unit/browser/integration
+counts are 4,495 / 411 / 349, with the existing six opt-in provider skips. The
+separate npm updater was still running when this receipt was captured; its
+completion is not needed to prove the same actor-based CI policy. No Dependabot
+head was executed locally and no dependency PR was merged by this audit.
+
+DEBT-473 can now be Resolved and archived with its old-path pointer. This leaves
+**12 Active records**. DEBT-474 still needs retained scheduled cron 200s;
+DEBT-476 is still date-gated. No new implementation is included.
