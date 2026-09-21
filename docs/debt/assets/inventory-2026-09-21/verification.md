@@ -159,7 +159,7 @@ This is policy triage, not a completed eleven-package supply-chain audit.
 
 ## Reviewed dev merge and ancestry correction
 
-#976 merged as `0b074cee` after formal CodeRabbit approval `5270082915`
+PR #976 merged as `0b074cee` after formal CodeRabbit approval `5270082915`
 on exact source head `97567220`, zero unresolved threads and successful
 CI `35634701830`. Hosted E2E passed 46/46. Codecov patch and preview were green.
 The full local gate passed 4,503 unit / 411 browser / 349 integration plus six
@@ -182,3 +182,46 @@ is now carried through a normal follow-up PR to dev on the same inventory
 branch, with a full gate and fresh review. The merge itself has no content
 delta against dev. No direct protected-branch push, rebase, force-push or
 override is used. DEBT-480 remains Open until the subsequent production proof.
+
+## DEBT-480 production closeout
+
+**2026-09-21, 19:01 UTC:** this receipt supersedes the pending-release labels
+above. PR #979 merged as `43ec7be7` after formal approval of exact head
+`2696877c` at 18:31:03 UTC, zero unresolved threads and green CI
+`35638528510`. Promotion #978 merged as `ac9d0fba` after formal approval of
+exact head `43ec7be7` at 18:44:36 UTC, zero unresolved threads and green CI
+`35639721268`. All five check-runs/statuses, including Codecov patch, were
+green separately from the local gates. No override was used.
+
+Post-merge main CI `35640880064` passed at **19:00:18 UTC**: 4,503 unit /
+411 browser / 349 integration with six intentional provider skips /
+23 build routes / 46 E2E. Main/dev shared tree
+`fe6851dbdc994a71880a523935138f25e76373b8`.
+
+| Production-gate event | UTC receipt |
+| --- | --- |
+| Vercel build ready | 18:50:51.870 |
+| Observed READY / STAGED, check pending, no domain assignment; previous main `d67a3e98` still served | 18:51:03.556 (still held at 18:58:15.756) |
+| Main GitHub `test` completed successfully | 19:00:18 |
+| Vercel deployment-alias check succeeded | 19:00:20.180 |
+| Production domain assigned to `ac9d0fba` | 19:00:20.500 |
+
+Fresh anonymous production GETs at 19:01 UTC used `redirect: 'manual'`:
+`/` returned 200; `/api/health` returned 200 with `ok=true`, `db=true`;
+`/.well-known/security.txt` returned 200 and `text/plain; charset=utf-8`
+for both `Accept: */*` and `Accept: text/html`, with the response body exactly
+equal to the unchanged tracked file. This is release/HTTP evidence, not an
+inference from a local expiry test or a Ready build.
+
+DEBT-480 is now Resolved and archived with an old-path pointer. **11 Active
+records remain**; no other debt's missing receipt is inferred from this one.
+The optional `PR` prefix requested by CodeRabbit on #979 is included in this
+substantive ledger update; GitHub's renderer had already proved the original
+`#976` paragraph correct, and the reviewer formally approved that adjudication.
+
+The archive's like-for-like inline relative-Markdown-link check against
+`ac9d0fba` found 777 existing broken occurrences / 323 destinations both before
+and after, **zero new missing destinations**. This narrower parser's counts
+are not a reduction from the earlier differently scoped link census. All four
+473/475/480/486 pointer stubs resolve; the index has one Latest and 11 Active
+rows. No unrelated historical link was repaired.
