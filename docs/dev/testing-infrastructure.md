@@ -66,9 +66,11 @@ webServer: {
 
 The default is zero retries, including the required `chromium`, observational
 `stripe-hosted`, and `cleanup` projects. A failed product assertion fails that
-run; do not override retries to obtain green evidence. This describes Playwright
-attempts: shared session/bookmark helpers still recover visible errors inside a
-single attempt. That residual is recorded in [DEBT-475](../debt/debt-475-toolchain-coherence.md#2026-09-20-adversarial-retry-follow-through); a zero flaky count does not prove it never occurred. Observational means
+run; do not override retries to obtain green evidence. The shared session/bookmark
+success-path helpers also fail on the first visible product error within an
+attempt; explicit error-state tests use the state detector separately. The
+[DEBT-475 helper-recovery receipts](../debt/assets/helper-recovery-2026-09-21/verification.md)
+record the red-first proof and replacement. Observational means
 non-blocking for merge, not permission to hide hosted-test failures.
 
 Only `setup` permits bounded bootstrap recovery: two retries in CI, one locally.
