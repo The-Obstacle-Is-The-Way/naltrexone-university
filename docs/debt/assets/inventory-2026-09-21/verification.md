@@ -228,8 +228,9 @@ rows. No unrelated historical link was repaired.
 
 ## Concurrent dependency-batch handoff
 
-At 19:11:01 UTC another executor merged owner-authored #977 as `a7d88722`,
-superseding #970–#973 and deleting their remote branches. This executor did not
+At 19:11:01 UTC another executor merged owner-authored #977 as `a7d88722`.
+PRs #970–#973 were closed without merges at 19:11:38–49 UTC; their remote
+branches were absent on fetch. This executor did not
 merge those PRs or delete those four protected branches. The triage above is
 the earlier snapshot, not a claim that they remain open. #977 had formal
 CodeRabbit approval on exact head `e712c7fa` at 19:06:23 UTC and successful CI
