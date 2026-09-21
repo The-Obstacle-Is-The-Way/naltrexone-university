@@ -271,7 +271,10 @@ export function auditDocumentation(
   return result;
 }
 
-function repairArchiveLinks(root: string, repairs: ArchiveLinkRepair[]): void {
+export function repairArchiveLinks(
+  root: string,
+  repairs: ArchiveLinkRepair[],
+): void {
   const edits = new Map<string, ArchiveLinkRepair[]>();
   for (const repair of repairs) {
     const fileEdits = edits.get(repair.file) ?? [];
@@ -345,15 +348,15 @@ export function readDocumentation(root: string): DocumentationAudit {
 
 export function runDocumentationCommand(
   root: string,
-  report: (result: DocumentationAudit) => void,
-  repair = false,
+  report: (json: string) => void,
+  args: readonly string[] = [],
 ): number {
   let result = readDocumentation(root);
-  if (repair) {
+  if (args.includes('--repair-archive')) {
     repairArchiveLinks(root, result.repairableArchive);
     result = readDocumentation(root);
   }
-  report(result);
+  report(JSON.stringify(result, null, 2));
   return [
     result.duplicates,
     result.closedLive,
@@ -372,9 +375,7 @@ if (
 ) {
   process.exitCode = runDocumentationCommand(
     process.cwd(),
-    (result) => {
-      console.log(JSON.stringify(result, null, 2));
-    },
-    process.argv.includes('--repair-archive'),
+    console.log,
+    process.argv.slice(2),
   );
 }

@@ -230,6 +230,21 @@ mechanically repairable archive links and zero broken live links. Register
 counts remain exactly the PR 1 counts above. These are file-destination proofs,
 not revalidation of historical line-number fragments or old incident claims.
 
+### PR 2 coverage follow-up (2026-09-21)
+
+Hosted CI 35664380936 passed on `17f7f30a`, but Codecov reported 89.09% patch
+coverage against its unchanged 96.38% target. This is not an all-green receipt.
+The repair behavior already refused unsafe rewrites; the missing evidence was
+coverage of those refusal paths and of the subprocess-only CLI formatting.
+
+At 22:55:03Z a real-file test failed when the reparse safeguard was temporarily
+removed: a matching URL in a link title was changed instead of its destination.
+At 22:56:09Z a vanished-target case failed with its existence safeguard removed.
+Restoring both guards makes them pass; neither mutation remains. Argument parsing
+and JSON serialization now live in the existing tested command function, with a
+red-first explicit-argument/no-write test and the real CLI parity tests retained.
+No coverage exclusion, target, timeout, or assertion was weakened.
+
 ### Historical targets without a mechanically proven replacement
 
 All 41 occurrences below remain untouched. The source link resolves; the old

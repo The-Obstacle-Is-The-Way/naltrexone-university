@@ -19,6 +19,7 @@ import {
   REGISTERS,
   readDocumentation,
   readDocumentationFiles,
+  repairArchiveLinks,
   runDocumentationCommand,
 } from '../scripts/documentation-archive';
 
@@ -204,6 +205,32 @@ describe('documentation archive command', () => {
     }
   }
 
+  it('reports JSON and does not repair without the explicit command argument', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Source](../../src/example.ts)';
+    populate(root, { [file]: original, 'src/example.ts': 'export {};' });
+    const output: string[] = [];
+    expect(runDocumentationCommand(root, (json) => output.push(json), [])).toBe(
+      1,
+    );
+    expect(typeof output[0]).toBe('string');
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+  });
+
+  it('refuses the entire batch if a previously classified target disappears', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Source](../../src/example.ts)';
+    populate(root, { [file]: original, 'src/example.ts': 'export {};' });
+    const repairs = readDocumentation(root).repairableArchive;
+    rmSync(path.join(root, 'src/example.ts'));
+    expect(() => repairArchiveLinks(root, repairs)).toThrow(
+      'Repair target disappeared',
+    );
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+  });
+
   it.each([
     ['depth', '../../src/example.ts', 'src/example.ts'],
     [
@@ -243,7 +270,9 @@ describe('documentation archive command', () => {
         'docs/_archive/debt/debt-001-example.md': '# Existing record',
       });
       if (entrypoint === 'function') {
-        expect(runDocumentationCommand(root, () => {}, true)).toBe(0);
+        expect(
+          runDocumentationCommand(root, () => {}, ['--repair-archive']),
+        ).toBe(0);
       } else {
         const child = runArchiveCommand(root, ['--repair-archive']);
         expect(child.error).toBeUndefined();
@@ -284,9 +313,9 @@ describe('documentation archive command', () => {
       'src/example.ts': 'export {};',
       'src/part(one).ts': 'export {};',
     });
-    expect(() => runDocumentationCommand(root, () => {}, true)).toThrow(
-      'Cannot safely rewrite',
-    );
+    expect(() =>
+      runDocumentationCommand(root, () => {}, ['--repair-archive']),
+    ).toThrow('Cannot safely rewrite');
     const child = runArchiveCommand(root, ['--repair-archive']);
     expect(child.status).toBe(1);
     expect(child.stderr).toContain('Cannot safely rewrite');
@@ -302,9 +331,23 @@ describe('documentation archive command', () => {
       'docs/specs/spec-001-example.md': '# First candidate',
       'docs/_archive/specs/spec-001-example.md': '# Second candidate',
     });
-    runDocumentationCommand(root, () => {}, true);
+    runDocumentationCommand(root, () => {}, ['--repair-archive']);
     expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
     expect(readDocumentation(root).repairableArchive).toEqual([]);
+  });
+
+  it('refuses an apparent URL replacement that actually changes a link title', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Source](../../src/example.ts "../../src/example.ts")';
+    populate(root, {
+      [file]: original,
+      'src/example.ts': 'export {};',
+    });
+    expect(() =>
+      runDocumentationCommand(root, () => {}, ['--repair-archive']),
+    ).toThrow('Markdown destinations changed unexpectedly');
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
   });
 
   it('fails closed if the documentation walk has no registers', () => {
@@ -326,12 +369,16 @@ describe('documentation archive command', () => {
     // Cover the same command body with real files and captured reporting.
     const reports: DocumentationAudit[] = [];
     expect(
-      runDocumentationCommand(root, (report) => reports.push(report)),
+      runDocumentationCommand(root, (report) =>
+        reports.push(JSON.parse(report)),
+      ),
     ).toBe(1);
     expect(reports[0]?.brokenLive).toHaveLength(1);
     writeFileSync(path.join(root, 'missing.md'), '# Repaired');
     expect(
-      runDocumentationCommand(root, (report) => reports.push(report)),
+      runDocumentationCommand(root, (report) =>
+        reports.push(JSON.parse(report)),
+      ),
     ).toBe(0);
     expect(reports[1]?.brokenLive).toEqual([]);
     writeFileSync(
