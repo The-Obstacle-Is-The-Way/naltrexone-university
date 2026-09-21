@@ -225,3 +225,20 @@ and after, **zero new missing destinations**. This narrower parser's counts
 are not a reduction from the earlier differently scoped link census. All four
 473/475/480/486 pointer stubs resolve; the index has one Latest and 11 Active
 rows. No unrelated historical link was repaired.
+
+## Concurrent dependency-batch handoff
+
+At 19:11:01 UTC another executor merged owner-authored #977 as `a7d88722`,
+superseding #970–#973 and deleting their remote branches. This executor did not
+merge those PRs or delete those four protected branches. The triage above is
+the earlier snapshot, not a claim that they remain open. #977 had formal
+CodeRabbit approval on exact head `e712c7fa` at 19:06:23 UTC and successful CI
+`35641873942`. Its dependency changes are now part of the dev base, not changes
+authored by the inventory/archive PR. Current dev was merged normally before
+the archive's next full gate; no rebase or force-push was used.
+
+The batch explicitly accepted the SHA-pinned, immutable Codecov action at about
+6.5 days old. This differs from this audit's recommendation to wait until
+September 22 00:35:03 UTC. The seven-day Actions cooldown is configured in
+Dependabot; pnpm's npm release-age enforcement does not cover Actions. No
+policy setting or age exception was changed by this inventory pass.
