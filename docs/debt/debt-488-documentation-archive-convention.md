@@ -156,6 +156,20 @@ register maintenance. QA also received September 21 table changes, contrary to
 the review's proposed exclusion, so its metadata names that limited update too.
 No date claims that the historical audit or QA procedure content was reverified.
 
+### Own-row identity proof (2026-09-21)
+
+The next review proposed classifying Archived headings. Checking the actual
+indexes found a narrower violation of the requested property: BS-044 and BS-059
+are cross-linked from other archived records' notes as well as having their own
+Active rows. Removing an Active row could therefore leave the guard green.
+A fixture reproducing the BS-042 → BS-044 relationship failed at 21:13:24Z.
+
+The guard now requires the row's first-cell record identity to match the linked
+record, so a related link cannot substitute for its own row. The audit register's
+plain-ID/title-link format remains supported by a positive control. No heading
+classifier was added: section placement remains part of the closeout procedure,
+not an additional guard policy. All 163 focused cases pass under coverage.
+
 ## Related
 
 - [Debt register](./index.md)

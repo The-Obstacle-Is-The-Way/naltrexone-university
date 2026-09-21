@@ -15,6 +15,7 @@ export const REGISTERS = {
 
 type MarkdownNode = {
   type: string;
+  value?: string;
   url?: string;
   children?: MarkdownNode[];
   position?: {
@@ -29,6 +30,7 @@ export type DocumentationLink = {
   url: string;
   target: string;
   inTable: boolean;
+  rowId?: string;
   start: number;
   end: number;
 };
@@ -43,6 +45,14 @@ export type DocumentationAudit = {
   counts: { register: string; live: number; archived: number }[];
 };
 
+function recordIdentity(value: string): string | undefined {
+  return value.match(/^[a-z]+-\d+/i)?.[0].toLowerCase();
+}
+
+function nodeText(node?: MarkdownNode): string {
+  return node?.value ?? (node?.children ?? []).map(nodeText).join('');
+}
+
 export function documentationLinks(
   file: string,
   contents: string,
@@ -55,8 +65,16 @@ export function documentationLinks(
     remarkPlugins: [
       remarkGfm,
       () => (tree: MarkdownNode) => {
-        function visit(node: MarkdownNode, inTable = false): void {
+        function visit(
+          node: MarkdownNode,
+          inTable = false,
+          rowId?: string,
+        ): void {
           const table = inTable || node.type === 'table';
+          const identity =
+            node.type === 'tableRow'
+              ? recordIdentity(nodeText(node.children?.[0]).trim())
+              : rowId;
           if (
             ['link', 'image', 'definition'].includes(node.type) &&
             node.url &&
@@ -77,11 +95,13 @@ export function documentationLinks(
                 path.posix.join(path.posix.dirname(file), destination),
               ),
               inTable: table,
+              ...(identity ? { rowId: identity } : {}),
               start,
               end,
             });
           }
-          for (const child of node.children ?? []) visit(child, table);
+          for (const child of node.children ?? [])
+            visit(child, table, identity);
         }
         visit(tree);
       },
@@ -137,15 +157,17 @@ export function auditRecordLifecycle(
     const live = records(liveDirectory);
     const archived = records(archiveDirectory);
     const recordId = (file: string) =>
-      path.posix
-        .basename(file)
-        .match(/^[^-]+-\d+/)?.[0]
-        .toLowerCase();
+      recordIdentity(path.posix.basename(file));
     const archivedIds = new Set(archived.map(recordId));
     const rows = (links.get(`${liveDirectory}/index.md`) ?? []).filter(
       (link) => link.inTable,
     );
-    const registered = new Set(rows.map((link) => link.target));
+    // A related link in another record's notes is not this record's own row.
+    const registered = new Set(
+      rows
+        .filter((link) => link.rowId === recordId(link.target))
+        .map((link) => link.target),
+    );
     for (const record of live) {
       if (archivedIds.has(recordId(record))) result.duplicates.push(record);
       if (hasClosedStatus(files.get(record) ?? ''))

@@ -105,6 +105,27 @@ describe('documentation archive convention', () => {
     ).toEqual(['docs/qa/qa-001-example.md']);
   });
 
+  it("does not count another record's related-link cell as the live record's own row", () => {
+    expect(
+      audit({
+        'docs/brainstorming/bs-044-open.md': '# Open\n\n**Status:** Active',
+        'docs/_archive/brainstorming/bs-042-closed.md': '# Closed',
+        'docs/brainstorming/index.md':
+          '## Archived\n\n| ID | Notes |\n| --- | --- |\n| [BS-042](../_archive/brainstorming/bs-042-closed.md) | Residual [BS-044](./bs-044-open.md) |',
+      }).missingLiveRows,
+    ).toEqual(['docs/brainstorming/bs-044-open.md']);
+  });
+
+  it('accepts a record row with a plain ID and its file linked in the title column', () => {
+    expect(
+      audit({
+        'docs/audits/audit-001-open.md': '# Open\n\n**Status:** Active',
+        'docs/audits/index.md':
+          '| ID | Title |\n| --- | --- |\n| AUDIT-001 | [Audit](./audit-001-open.md) |',
+      }).missingLiveRows,
+    ).toEqual([]);
+  });
+
   it('accepts a real row with a working archived destination', () => {
     expect(
       audit({
