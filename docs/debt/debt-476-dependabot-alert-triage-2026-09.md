@@ -10,6 +10,8 @@
 
 ## Problem
 
+**2026-09-21 audit forward pointer.** The Dependabot API still reports twelve of the original thirteen alerts fixed and #55 dismissed `not_used` at `2026-09-16T13:45:31Z`; this is not a claim that the vulnerable package disappeared. The lockfile still resolves `fast-uri@3.1.7`. npm reports 3.1.8 publication at `2026-09-15T07:36:25.444Z`, so the seven-day gate clears at **2026-09-22T07:36:25.444Z**, not the start of that minute. No pin or dependency implementation is made by this audit. The separate Sentry/Lucide batch and promotion pending in the dated September 16 note have since landed; they are not additional open work. Only the dated 3.1.8 update, its gate/review/promotion and archive remain. [API/registry receipts](./assets/active-audit-2026-09-21/verification.md).
+
 On 2026-09-15 the repository's Dependabot page listed 13 open alerts. Dependabot evaluates alerts against the **default branch's** manifest and lockfile, so every alert was computed from `main` at `54623ec1` (promo #874), which still carried `next@16.3.1`, `sharp@0.35.3`, `fast-uri@3.1.5`, `js-yaml@3.15.1`, `stream-json@1.9.1`, and `vitest`/`@vitest/mocker@4.1.10`.
 
 PR #882 had already merged to `dev` (`c64cb986`, 2026-09-15T15:54Z) with `next` 16.3.1 → 16.3.4 and the `sharp` override 0.35.3 → 0.35.4, but touched none of the other four packages. The question was therefore answerable only per package, by comparing each alert's `first_patched_version` (from the Dependabot REST API, not the summary page) against `dev`'s resolved lockfile versions.

@@ -14,6 +14,8 @@
 
 ## Description
 
+**2026-09-21 current-state correction.** The filing's “prepared/pending PR B” statements are now historical: #936 merged as `327f95ef` after exact-head approval on `605a72cf` and is included in deployed main `76e65e9c`. SPEC-016/017 both say Updated 2026-09-20 and contain the corrected sampling, request-context, limit inventory and structural E1 deferral. Resolution steps 6–7 are complete. Fresh anonymous production probes still find no canonical/Open Graph output and the same inherited description on the checked public/auth pages; crawl files remain protected, and browser tracing remains zero. Steps 1–3 and owner-gated 4–5 remain Open. The helper-recovery residual mentioned below was separately resolved by #960/#961 and DEBT-475 is archived; it is not remaining PR C work. Current provider quota/custom-rule entitlement and historical Sentry samples are not recertified by source inspection. [Audit receipts and limits](./assets/active-audit-2026-09-21/verification.md).
+
 The application has six public **page route families**, not exactly six URLs. `lib/public-routes.ts:3-15` defines matchers: `/`, `/pricing(.*)`, `/privacy(.*)`, `/terms(.*)`, `/sign-in(.*)`, `/sign-up(.*)`, plus five machine endpoints (two cron routes, health, and the Stripe and Clerk webhooks). The question corpus lives behind `/app/questions/[slug]`, which `proxy.ts` protects via `auth.protect()`. That gating is a deliberate product decision and this filing does not propose changing it. The four intended indexable content URLs are `/`, `/pricing`, `/privacy`, `/terms`. Auth catch-all pages also serve subpaths: signed-out production `/sign-up/verify-email-address` returned 200 with the same inherited description and no noindex. Query variants are not separate sitemap entries. A live database census of the question count was not performed.
 
 ### F1 — No crawl files, and their URLs currently enter Clerk protection
@@ -119,7 +121,7 @@ The drift direction is favorable — coverage exceeds documentation — so this 
 
 ## Resolution
 
-One mechanism per PR; red proof before green. Steps 6/7 documentation is prepared for PR B, not applied by this filing PR. Step 2 needs the public-resource auth seam; step 3 depends on step 1's URL convention and an anonymously reachable image. Steps 4/5 remain separate owner choices. See the [whole-backlog execution order](./assets/adversarial-2026-09-20/review.md#execution-order).
+One mechanism per PR; red proof before green. Steps 6/7 documentation shipped in #936; the filing-era PR B labels above are preserved as history. Step 2 needs the public-resource auth seam; step 3 depends on step 1's URL convention and an anonymously reachable image. Steps 4/5 remain separate owner choices. See the [whole-backlog execution order](./assets/adversarial-2026-09-20/review.md#execution-order).
 
 **Step 1 — Canonical metadata and auth noindex.**
 Pin four content pages' meaningful descriptions and canonical apex URLs; pin noindex on both auth catch-all pages. Configure `metadataBase` using the verified environment-origin convention, excluding query strings and identifiers. Keep the existing title fallback unless a separate requirement needs a template. Do not require self-canonicals, unique descriptions or social cards for noindex auth interstitials. Extend frontend standards §15 with the adopted contract.
@@ -144,11 +146,11 @@ Only if prioritized: `Organization` plus a truthful `Product`/`Offer` descriptio
 **Step 5 — Browser field measurement (owner decision).**
 Choose a supported source, sampling/quota and privacy policy before raising browser Sentry sampling. Verify that the selected SDK/version emits the required LCP/CLS/INP measurements and excludes private identifiers/query payloads. Source configuration, collection-point/privacy changes if needed, and SPEC-016 amendment belong together. Red proof: with today's zero browser tracing, a controlled sampled navigation must yield no required measurement event and fail the new collector test; after implementation, force sampling back to zero or inject a private query token and require the appropriate collection/privacy assertion to fail. Retain captured production sample counts and window; do not invent percentiles from absent samples. This does not block DEBT-450. Web Analytics stays under DEBT-464; Speed Insights is outside that record's scope.
 
-**Step 6 — Correct SPEC-016 (prepared; pending PR B).**
-The prepared 2026-09-20 iteration states server 5% / browser 0%, explicit request correlation and named spans, and distinguishes those from universal async propagation. `LOG_LEVEL` is supported and documented in the spec; adding an example-file entry is explicitly declined as optional. No `.env.example` or runtime change was made.
+**Step 6 — [x] Correct SPEC-016 (shipped in #936; reverified 2026-09-21).**
+The 2026-09-20 iteration states server 5% / browser 0%, explicit request correlation and named spans, and distinguishes those from universal async propagation. `LOG_LEVEL` is supported and documented in the spec; adding an example-file entry is explicitly declined as optional. No `.env.example` or runtime change was made.
 
-**Step 7 — Correct SPEC-017 (prepared; pending PR B); E1 decision recorded here.**
-The prepared table covers 14 policies, 13 invocation sites and 18 named operations, including shared-helper fanout and the actual bookmark key. The proposed “every constant has a caller” test is declined: changing a Markdown limit would leave it green. It cannot make this table self-maintaining. The prepared E1 text records the owner-approved structural deferral, observed baseline mitigation, currently observable invocation/compute/Firewall triggers and the unapplied Attack Mode incident path. Project rule allowance remains unverified pending the dashboard check; log-only is declined too. The prepared E2 text requires query attribution, not merely function duration.
+**Step 7 — [x] Correct SPEC-017 (shipped in #936; reverified 2026-09-21).**
+The table covers 14 policies, 13 invocation sites and 18 named operations, including shared-helper fanout and the actual bookmark key. The proposed “every constant has a caller” test is declined: changing a Markdown limit would leave it green. It cannot make this table self-maintaining. E1 records the owner-approved structural deferral, observed baseline mitigation, currently observable invocation/compute/Firewall triggers and the unapplied Attack Mode incident path. Project rule allowance remains unverified pending the dashboard check; log-only is declined too. E2 requires query attribution, not merely function duration.
 
 **Not authorized or justified by this review:** a new numeric CI budget, mandatory Lighthouse/axe lane, Upstash adoption, blanket middleware limits, or a guessed WAF threshold. Absence of a dedicated tool is not itself a defect. Existing coverage/CRAP/mutation/acceptance work remains DEBT-468/465 under ADR-019.
 
@@ -161,21 +163,21 @@ The prepared table covers 14 policies, 13 invocation sites and 18 named operatio
 3. Four content heads have correct descriptions, canonical URLs and the chosen social metadata. Both auth catch-all pages serve noindex; auth behavior still passes.
 4. Social preview evidence comes from an authorized channel or preview inspector; none was produced by this docs-only review.
 5. Browser measurement, if authorized, requires actual production measurements and privacy/quota review. Server trigger assessment is independent; see the dated matrix.
-6. PR B must land the prepared SPEC-016/017 `Updated:` dates and scope/table corrections before steps 6/7 are complete. E1's dated owner decision contains the structural reason, observable trigger and unapplied incident lever; no custom-rule entitlement or measured response time is assumed.
+6. **Met in #936, reverified 2026-09-21:** SPEC-016/017 contain the updated dates and scope/table corrections. E1's dated owner decision contains the structural reason, observable trigger and unapplied incident lever; no custom-rule entitlement or measured response time is assumed.
 7. Every future push follows AGENTS.md's full gate; each implementation PR needs exact-head review and production verification where applicable. A unit test, Ready deployment or green check alone proves less than this list.
 
 ---
 
 ## Related
 
-- [SPEC-016](../specs/spec-016-observability.md) — F5/F7; amendments planned under Resolution steps 5–6
-- [SPEC-017](../specs/spec-017-rate-limiting.md) — F8; amendment prepared under Resolution step 7
+- [SPEC-016](../specs/spec-016-observability.md) — F5/F7; step 6 shipped; optional browser-measurement decision remains step 5
+- [SPEC-017](../specs/spec-017-rate-limiting.md) — F8; step 7 shipped
 - `lib/public-routes.ts:3-15`, `lib/routes.ts`, `lib/env.ts:71`, `app/layout.tsx:9-13`, `proxy.ts`
 - `next.config.ts:25-53` and `next.config.test.ts:17-37` — the enforced-and-tested precedent this debt should copy
 - `sentry.client.config.ts:11-13`, `instrumentation.ts:21`, `lib/request-context.ts`, `src/adapters/shared/rate-limits.ts`
 - `docs/frontend/standards.md:827-840` — §15 Page Metadata, currently tab-titles only
 - [DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md) — Vercel Web Analytics activation; parked, not duplicated here
 - [DEBT-450](../_archive/debt/debt-450-hot-path-query-efficiency.md) — deferred parts; server measurement and the census are actionable independently of F5
-- [DEBT-475](./debt-475-toolchain-coherence.md) — typed server-tracing boundary; the E2E helper-retry residual is evidenced in this review and its register correction is pending PR C
+- [DEBT-475](../_archive/debt/debt-475-toolchain-coherence.md) — resolved typed tracing/toolchain work, including the same-attempt helper-recovery residual
 - [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) — owns `/privacy` and `/terms` copy; this filing touches their metadata only, never their text
 - [DEBT-465](./debt-465-test-quality-practices-adoption.md) — Gherkin/acceptance and mutation lanes; steps 1–3's contracts are ordinary Vitest and do not depend on it

@@ -7,6 +7,8 @@
 
 ## Evidence
 
+**2026-09-21 release readback.** #952/#953/#954's merge commits (`31d3a718`, `8da15de2`, `65bd70c0`) are ancestors of deployed main `76e65e9c`, not merely dev-only safeguards. Their source heads have formal exact-head CodeRabbit approvals and successful CI; the release passed main CI `35562531386`. This supersedes pending-release qualifications in the dated receipts below, but does not close this debt. `scripts/seed-environment-runtime.ts:108-123` still dry-runs, deletes the managed imported tree, then regenerates it; question sync still commits per question. Immutable release/freshness/atomic activation/rollback and the archived-question review seam remain open. The static invalid-file case and explicit QID withdrawal are already implemented and must not be repeated as new work. [Shared audit ledger](./assets/active-audit-2026-09-21/verification.md).
+
 The original snapshot and reproduction plan below predate the initial safeguard.
 The dated receipt records the synthetic database tests subsequently executed.
 
