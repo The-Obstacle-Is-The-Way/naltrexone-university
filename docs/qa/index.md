@@ -1,7 +1,7 @@
 # UI QA Procedure Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-21 — archive convention and disposition tables only; procedure content last updated 2026-08-14, not re-audited in this pass.
+**Last Updated:** 2026-09-21 — archive convention and disposition tables only; prior register metadata was 2026-08-14. Procedure content was not re-audited in this pass.
 
 **2026-08-13 update:** Register created (ADR-019 / DEBT-465 Part 4). QA-001 and QA-002 filed as the first two procedures. Once Active, QA-001 absorbs Core Flow Verification Flows A–C from `docs/dev/stabilization-checklist.md` (Flow D remains), and QA-002 can give the operator checklist's "auth and payment flows smoke-tested" item an executable form when DEBT-465 Part 4 links it. Next QA ID is QA-003.
 
