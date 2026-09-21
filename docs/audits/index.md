@@ -41,6 +41,16 @@ Audit reports capture deep, cross-cutting evaluations of architecture, implement
 
 ## How to close and archive
 
+### Deferred tails
+
+Put unfinished tails from future closeouts here before moving their records.
+
+| Record | Unfinished work | Revive trigger |
+| --- | --- | --- |
+
+Completed records belong in Archived Audits above; findings transferred to
+another register retain a link to that register's open record.
+
 Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records). That is the canonical procedure; this register records dispositions and receipts.
 
 ## Notes

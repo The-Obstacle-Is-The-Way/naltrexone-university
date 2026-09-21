@@ -44,6 +44,21 @@ Derived from the 2026-08-13 UI-coverage audit; file by creating the doc and bump
 
 ## How to close and archive
 
+### Deferred tails
+
+Put unfinished tails here before retiring a numbered procedure.
+
+| Record | Unfinished work | Revive trigger |
+| --- | --- | --- |
+
+### Archived procedures
+
+Active reusable procedures stay live. Move a completed or superseded procedure
+here only with the canonical closeout receipts; preserve its actual disposition.
+
+| Record | Disposition | Verification receipts |
+| --- | --- | --- |
+
 Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records). That is the canonical procedure; this register records dispositions and receipts.
 
 ## Template

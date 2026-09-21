@@ -107,6 +107,8 @@ export function auditDocumentation(
   files: ReadonlyMap<string, string>,
   exists: (file: string) => boolean,
 ): DocumentationAudit {
+  const targetExists = (file: string) =>
+    file !== '..' && !file.startsWith('../') && exists(file);
   const result: DocumentationAudit = {
     duplicates: [],
     closedLive: [],
@@ -134,19 +136,24 @@ export function auditDocumentation(
       );
     const live = records(liveDirectory);
     const archived = records(archiveDirectory);
+    const recordId = (file: string) =>
+      path.posix
+        .basename(file)
+        .match(/^[^-]+-\d+/)?.[0]
+        .toLowerCase();
+    const archivedIds = new Set(archived.map(recordId));
     const rows = (links.get(`${liveDirectory}/index.md`) ?? []).filter(
       (link) => link.inTable,
     );
     const registered = new Set(rows.map((link) => link.target));
     for (const record of live) {
-      if (archived.includes(record.replace('docs/', 'docs/_archive/')))
-        result.duplicates.push(record);
+      if (archivedIds.has(recordId(record))) result.duplicates.push(record);
       if (hasClosedStatus(files.get(record) ?? ''))
         result.closedLive.push(record);
       if (!registered.has(record)) result.missingLiveRows.push(record);
     }
     for (const row of rows) {
-      if (!exists(row.target))
+      if (!targetExists(row.target))
         result.missingRowTargets.push(
           `${row.file}:${row.line} -> ${row.target}`,
         );
@@ -159,7 +166,7 @@ export function auditDocumentation(
   }
   for (const fileLinks of links.values()) {
     for (const link of fileLinks) {
-      if (exists(link.target)) continue;
+      if (targetExists(link.target)) continue;
       const list = link.file.startsWith('docs/_archive/')
         ? result.brokenArchive
         : result.brokenLive;
@@ -189,13 +196,13 @@ export function readDocumentation(root: string): DocumentationAudit {
   );
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
-) {
-  const result = readDocumentation(process.cwd());
-  console.log(JSON.stringify(result, null, 2));
-  process.exitCode = [
+export function runDocumentationCommand(
+  root: string,
+  report: (result: DocumentationAudit) => void,
+): number {
+  const result = readDocumentation(root);
+  report(result);
+  return [
     result.duplicates,
     result.closedLive,
     result.missingLiveRows,
@@ -204,4 +211,13 @@ if (
   ].some((issues) => issues.length > 0)
     ? 1
     : 0;
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  process.exitCode = runDocumentationCommand(process.cwd(), (result) => {
+    console.log(JSON.stringify(result, null, 2));
+  });
 }

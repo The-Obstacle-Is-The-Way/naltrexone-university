@@ -112,6 +112,16 @@ Brainstorming (BS-NNN) → Spec (SPEC-NNN) → Implementation → Archive
 
 ## How to close and archive
 
+### Deferred tails
+
+Put unfinished tails from future closeouts here before moving their records.
+
+| Record | Unfinished work | Revive trigger |
+| --- | --- | --- |
+
+Completed records belong in the Archived table above; preserve the distinction
+between implemented work and ideas deliberately superseded or declined.
+
 Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records). That is the canonical procedure; this register records dispositions and receipts.
 
 ## Brainstorming Template

@@ -37,7 +37,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 ## Tracking Convention
 
 - Bugs discovered in shipped code stay active until their fix is merged and the required deploy or production proof is complete. Archived shipped-bug docs must not imply production verification until that proof exists.
-- Bugs discovered only on an unmerged implementation branch may be marked resolved and archived in the same PR once the fix is implemented, red-first regression coverage or equivalent focused proof is green, and the PR still goes through the normal CI and review gate before merge. These docs must state that the defect was branch-local or fixed before the branch shipped, so future readers do not mistake the archive for post-deploy proof.
+- **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
 **Next Bug ID:** BUG-308
@@ -1374,5 +1374,15 @@ discoverability; it does not re-audit or change their historical disposition.
 | [BUG-282: Tutor Session Ended in Another Tab Leaves the Losing Tab in a Reason-less CONFLICT Dead-End Loop](../_archive/bugs/bug-282-tutor-two-tab-ended-session-dead-end-loop.md) | Original disposition and receipts retained in the linked record; indexed 2026-09-21. |
 
 ## How to close and archive
+
+### Deferred tails
+
+Put unfinished tails from future closeouts here before moving their records;
+historical accepted-risk dispositions remain in the Parked section above.
+
+| Record | Unfinished work | Revive trigger |
+| --- | --- | --- |
+
+Completed records belong in the Resolved or Archived Bugs tables above.
 
 Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records). That is the canonical procedure; this register records dispositions and receipts.

@@ -98,6 +98,40 @@ its current row now links it and explicitly records that correction. Historical
 body text and historical status/date claims are not rewritten. The new guard
 does not claim to re-prove every old resolution.
 
+### Coverage-run correction (2026-09-21)
+
+PR #982's first head passed the normal local gate, but hosted run 35650149864
+failed: profiling the entire Markdown estate in the unit process exceeded the
+existing 15-second hook bound. A local coverage run reproduced the failure
+(14 cases passed; four repository assertions did not execute). This is a real
+guard-performance defect, not a passing gate.
+
+The repository census now exercises the real CLI in a bounded subprocess;
+small real-file fixtures cover the same command body, exit decision and report,
+and unit fixtures cover the link/lifecycle policies. No document, assertion,
+coverage path or global timeout was excluded or relaxed. The focused coverage
+run passed 18/18 in 7.51 seconds with 95.38% script line coverage. Final-head CI
+and review are still required separately.
+
+### Review adjudication (2026-09-21)
+
+Confirmed and corrected the bug register's conflicting pre-merge closeout
+exception and supplied Deferred tables in bugs, brainstorming, audits and QA,
+plus QA's Archived table. The current owner convention controls future closes;
+historical dispositions are unchanged.
+
+Two focused cases failed at 20:30:53Z before the code corrections: a renamed
+record evaded the duplicate check, and an extra parent path segment accepted a
+file outside the repository. Numbered identity now includes the record prefix
+(FE and DEBT remain distinct); link existence is confined to repository-relative
+targets. This is link portability, not a new filesystem-security framework.
+The coverage run then passed 20/20 in 7.22 seconds (95.71% script lines).
+
+Rejected the suggested 60-second hook timeout: the full coverage lane passed
+4,521 cases after the subprocess correction without increasing that bound.
+Mechanical archive-link failure enforcement remains the explicit PR 2 scope,
+not a reason to fold the historical repair into PR 1.
+
 ## Related
 
 - [Debt register](./index.md)

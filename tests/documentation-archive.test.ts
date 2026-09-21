@@ -8,11 +8,24 @@ import {
   type DocumentationAudit,
   REGISTERS,
   readDocumentation,
+  runDocumentationCommand,
 } from '../scripts/documentation-archive';
 
 function audit(files: Record<string, string>) {
   return auditDocumentation(new Map(Object.entries(files)), (file) =>
     Object.hasOwn(files, file),
+  );
+}
+
+function runArchiveCommand(root: string) {
+  return spawnSync(
+    process.execPath,
+    [
+      '--import',
+      import.meta.resolve('tsx'),
+      path.resolve('scripts/documentation-archive.ts'),
+    ],
+    { cwd: root, encoding: 'utf8', timeout: 14_000 },
   );
 }
 
@@ -24,6 +37,25 @@ describe('documentation archive convention', () => {
         'docs/_archive/debt/debt-001-example.md': '# Canonical record',
       }).duplicates,
     ).toEqual(['docs/debt/debt-001-example.md']);
+  });
+
+  it('detects the same numbered record after its title changes', () => {
+    expect(
+      audit({
+        'docs/debt/debt-001-old-title.md': '# Active copy',
+        'docs/_archive/debt/debt-001-new-title.md': '# Archived copy',
+        'docs/debt/fe-001-unrelated.md': '# Different record',
+      }).duplicates,
+    ).toEqual(['docs/debt/debt-001-old-title.md']);
+  });
+
+  it('does not accept an extra parent segment just because a file exists outside the repository', () => {
+    expect(
+      audit({
+        'docs/guide.md': '[Outside](../../outside.md)',
+        '../outside.md': '# Not published with this repository',
+      }).brokenLive.map((link) => link.target),
+    ).toEqual(['../outside.md']);
   });
 
   it.each(['Resolved', 'Archived', 'Implemented', 'Closed', 'Complete (MVP)'])(
@@ -136,15 +168,22 @@ describe('documentation archive command', () => {
       );
     }
     writeFileSync(path.join(root, 'README.md'), '[Missing](./missing.md)');
-    const child = spawnSync(
-      process.execPath,
-      [
-        '--import',
-        import.meta.resolve('tsx'),
-        path.resolve('scripts/documentation-archive.ts'),
-      ],
-      { cwd: root, encoding: 'utf8' },
+    // Cover the same command body with real files and captured reporting.
+    const reports: DocumentationAudit[] = [];
+    expect(
+      runDocumentationCommand(root, (report) => reports.push(report)),
+    ).toBe(1);
+    expect(reports[0]?.brokenLive).toHaveLength(1);
+    writeFileSync(path.join(root, 'missing.md'), '# Repaired');
+    expect(
+      runDocumentationCommand(root, (report) => reports.push(report)),
+    ).toBe(0);
+    expect(reports[1]?.brokenLive).toEqual([]);
+    writeFileSync(
+      path.join(root, 'README.md'),
+      '[Missing](./another-missing.md)',
     );
+    const child = runArchiveCommand(root);
     expect(child.error).toBeUndefined();
     expect(JSON.parse(child.stdout).brokenLive).toHaveLength(1);
     expect(child.status).toBe(1);
@@ -155,7 +194,13 @@ describe('repository documentation', () => {
   let result: DocumentationAudit;
 
   beforeAll(() => {
-    result = readDocumentation(process.cwd());
+    // The thousand-document integration census runs through the real CLI.
+    // Unit fixtures above cover its policies without profiling every call in
+    // the vendor Markdown parser across the entire historical estate.
+    const child = runArchiveCommand(process.cwd());
+    expect(child.error).toBeUndefined();
+    expect(child.status, child.stderr || child.stdout).toBe(0);
+    result = JSON.parse(child.stdout);
   });
 
   it('has no record in both live and archived folders', () => {
