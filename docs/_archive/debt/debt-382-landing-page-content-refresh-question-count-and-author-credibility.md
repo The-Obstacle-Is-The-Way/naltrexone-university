@@ -6,7 +6,9 @@
 **Source:** User-reported gap on the marketing landing page: the headline question count (`500+`) understates the actual content library, the `2 Study Modes` stat omits Quick Practice as a distinct practice surface, and there is no mention anywhere on the public marketing surface of the product being authored by a practicing, double board-certified psychiatrist. The 948-question count came from the local authoring workspace's imported-content corpus under `content/questions/imported/`; those files are not currently tracked in git, so DEBT-382 implementation must make the count evidence portable before changing the public numeric claim.
 **Related:** [Frontend Standards](../../frontend/standards.md), [DEBT-378](debt-378-tutor-drop-submit-button-choice-click-commits.md), [DEBT-379](debt-379-exam-action-bar-promote-primary-cta-to-right-slot.md), [DEBT-380](debt-380-exam-footer-cluster-previous-and-primary-cta-mirror-tutor.md), [DEBT-381](./debt-381-question-content-typography-audit-and-preference-path.md)
 
-**Status:** Active — decisions locked (revised 2026-05-20); DEBT-383 dependency resolved; requires portable content-count evidence before implementation
+**Status:** Resolved — Register date: 2026-05-21. Receipt: [PR #313](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/313); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
+*Status as filed (superseded 2026-09-22):* Active — decisions locked (revised 2026-05-20); DEBT-383 dependency resolved; requires portable content-count evidence before implementation
 
 ---
 

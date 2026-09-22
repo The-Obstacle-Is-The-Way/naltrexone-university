@@ -1,5 +1,7 @@
 # DEBT-334: Practice Session Bootstrap Summary Bypasses Client Timeout Guard
 
+**Status:** Resolved — Register date: 2026-03-22. Receipt: [PR #247](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/247); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-03-21
 **Source:** Repo-wide async/await audit prompted by DEBT-333 / PR #244

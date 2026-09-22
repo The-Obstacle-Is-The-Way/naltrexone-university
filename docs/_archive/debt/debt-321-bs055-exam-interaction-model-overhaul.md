@@ -1,5 +1,7 @@
 # DEBT-321: BS-055 Exam Interaction Model Overhaul
 
+**Status:** Resolved — Register date: 2026-03-18. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P1
 **Created:** 2026-03-17
 **Related:** [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), [Interaction Contracts](../../practice-engine/interaction-contracts.md), [Practice Modes](../../practice-engine/practice-modes.md)

@@ -1,5 +1,7 @@
 # DEBT-331: "Session Started" Toast Overlaps Navigation Bar
 
+**Status:** Resolved — Register date: 2026-03-21. Receipt: [PR #240](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/240); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-03-20
 **Source:** Manual UI review during DEBT-326 investigation

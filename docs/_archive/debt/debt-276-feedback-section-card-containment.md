@@ -1,5 +1,7 @@
 # DEBT-276: Feedback Section Card Containment
 
+**Status:** Resolved — Register date: 2026-03-04. Receipt: [PR #172](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/172); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-03-04
 **Source:** [BS-041](../brainstorming/bs-041-feedback-display-content-vs-code-separation.md)

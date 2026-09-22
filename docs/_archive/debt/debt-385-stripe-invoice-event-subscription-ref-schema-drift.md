@@ -4,7 +4,9 @@
 **Created:** 2026-05-14
 **Source:** Filed from DEBT-384 after live Stripe payload inspection found invoice events no longer expose the subscription reference at the root field our schema reads.
 **Related:** [DEBT-384](debt-384-stripe-webhook-error-rate-investigation.md)
-**Status:** Active — implementation in PR #312, pending user grade and merge. DEBT-384 has shipped and been archived; this remains a separate follow-up.
+**Status:** Resolved — Register date: 2026-05-20. Receipt: [PR #312](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/312); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
+*Status as filed (superseded 2026-09-22):* Active — implementation in PR #312, pending user grade and merge. DEBT-384 has shipped and been archived; this remains a separate follow-up.
 
 **Origin:** The app is pinned to Stripe API version `2026-01-28.clover` at `lib/stripe.ts:22`. The value changed from `2025-04-30.basil` to Clover in commit `d9f3cbe4` (`Fix Stripe API version for updated stripe SDK`) on 2026-01-31, and commit `84b4c0463` only moved that already-Clover pin into lazy initialization. Current Clover invoice events expose the subscription reference at `data.object.parent.subscription_details.subscription`, so this schema drift has been possible since the Clover pin.
 

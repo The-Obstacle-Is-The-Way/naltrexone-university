@@ -1,6 +1,6 @@
 # Developer Docs Index
 
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-09-22 (navigation maintenance; linked runbooks retain their own verification dates)
 
 Use this index to route to the right developer runbook. Universal agent rules and required push gates remain canonical in [`AGENTS.md`](../../AGENTS.md).
 
@@ -31,5 +31,10 @@ Use this index to route to the right developer runbook. Universal agent rules an
 
 ## Content And Analytics
 
-- [Question Content Pipeline](./question-content-pipeline.md) — content authoring/import flow.
+- [Question Content Pipeline](../practice-engine/content-pipeline.md) — canonical content authoring/import flow.
 - [Question Feedback Analytics](./question-feedback-analytics.md) — feedback export and analytics workflow.
+
+## Legal And Security References
+
+- [Terms of Service publication copy](../legal/terms-of-service.md) — versioned legal copy; implementation and owner-review limits are recorded in DEBT-414.
+- [Information Security Program](../security/information-security-program.md) — adopted program, evidence scope and operational exceptions.
