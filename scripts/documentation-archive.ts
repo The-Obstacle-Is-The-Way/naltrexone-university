@@ -29,6 +29,7 @@ export type DocumentationLink = {
   line: number;
   url: string;
   target: string;
+  invalidEncoding?: true;
   inTable: boolean;
   rowId?: string;
   start: number;
@@ -52,18 +53,26 @@ type ArchiveLinkRepair = DocumentationLink & {
   kind: 'depth' | 'later-archive';
 };
 
+function decodedLinkPath(url: string): string | undefined {
+  try {
+    return decodeURIComponent(url.split(/[?#]/)[0] ?? '');
+  } catch {
+    // Malformed encoding is an unresolvable link, never a guessed raw path.
+    return undefined;
+  }
+}
+
 export function archiveLinkRepairs(
   links: DocumentationLink[],
   exists: (file: string) => boolean,
 ): ArchiveLinkRepair[] {
   return links.flatMap((link) => {
     if (!link.file.startsWith('docs/_archive/')) return [];
+    const destination = decodedLinkPath(link.url);
+    if (destination === undefined) return [];
     const originalFile = link.file.replace('docs/_archive/', 'docs/');
     const originalTarget = path.posix.normalize(
-      path.posix.join(
-        path.posix.dirname(originalFile),
-        decodeURIComponent(link.url.split(/[?#]/)[0] ?? ''),
-      ),
+      path.posix.join(path.posix.dirname(originalFile), destination),
     );
     const archived = (target: string) =>
       target.replace(
@@ -139,16 +148,20 @@ export function documentationLinks(
             const end = node.position?.end.offset;
             if (start === undefined || end === undefined)
               throw new Error(`Missing Markdown source position: ${file}`);
-            const destination = decodeURIComponent(
-              node.url.split(/[?#]/)[0] ?? '',
-            );
+            const destination = decodedLinkPath(node.url);
             links.push({
               file,
               line: node.position?.start.line ?? 1,
               url: node.url,
               target: path.posix.normalize(
-                path.posix.join(path.posix.dirname(file), destination),
+                path.posix.join(
+                  path.posix.dirname(file),
+                  destination ?? node.url.split(/[?#]/)[0] ?? '',
+                ),
               ),
+              ...(destination === undefined
+                ? { invalidEncoding: true as const }
+                : {}),
               inTable: table,
               ...(identity ? { rowId: identity } : {}),
               start,
@@ -219,7 +232,10 @@ export function auditRecordLifecycle(
     // A related link in another record's notes is not this record's own row.
     const registered = new Set(
       rows
-        .filter((link) => link.rowId === recordId(link.target))
+        .filter(
+          (link) =>
+            !link.invalidEncoding && link.rowId === recordId(link.target),
+        )
         .map((link) => link.target),
     );
     for (const record of live) {
@@ -229,7 +245,7 @@ export function auditRecordLifecycle(
       if (!registered.has(record)) result.missingLiveRows.push(record);
     }
     for (const row of rows) {
-      if (!targetExists(row.target))
+      if (row.invalidEncoding || !targetExists(row.target))
         result.missingRowTargets.push(
           `${row.file}:${row.line} -> ${row.target}`,
         );
@@ -250,6 +266,7 @@ export function brokenDocumentationLinks(
 ): DocumentationLink[] {
   return documentationLinks(file, contents).filter(
     (link) =>
+      link.invalidEncoding ||
       link.target === '..' ||
       link.target.startsWith('../') ||
       !exists(link.target),
@@ -366,6 +383,7 @@ export function runDocumentationCommand(
     result.missingRowTargets,
     result.brokenLive,
     result.repairableArchive,
+    result.brokenArchive.filter((link) => link.invalidEncoding),
   ].some((issues) => issues.length > 0)
     ? 1
     : 0;

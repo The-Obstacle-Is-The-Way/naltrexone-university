@@ -285,6 +285,23 @@ those exact files exist only in the archive, so the current links are correct.
 Its FE-002/practice-logic deletion request conflicts with the explicit historical
 exception scope; those absent targets remain listed below, not silently removed.
 
+### Promotion-review correction (2026-09-22 UTC)
+
+On #984, six link findings were rechecked against `9a0ab172`. The archived
+BUG/DEBT/specification sibling links already resolve; their suggested live
+alternatives do not. The DEBT-334 controller, DEBT-354 shell script, and FE-002
+targets remain absent even at the proposed paths. They are already in the 41
+historical exceptions below, so changing depth would not repair them.
+
+The owner requested a narrower malformed-input reporting contract after the
+earlier fail-closed `URIError` adjudication: a malformed percent sequence must
+be reported as an unresolvable link, not abort the audit. Five cases failed at
+2026-09-22 01:23:04Z before the correction (live/archive links, register rows,
+and both CLI locations). Both decoding sites now share guarded decoding. The
+report marks invalid encoding, the command exits nonzero, and repair mode does
+not guess a raw-path destination even if such a file exists. This does not
+relax the historical-target policy or change any of the 647 repaired links.
+
 ### Historical targets without a mechanically proven replacement
 
 All 41 occurrences below remain untouched. The source link resolves; the old
