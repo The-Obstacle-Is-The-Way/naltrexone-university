@@ -10,6 +10,7 @@ import {
 import type { PricingBanner } from '@/app/pricing/types';
 import { MarketingLayout } from '@/components/marketing/marketing-layout';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
+import { publicPageMetadata } from '@/lib/public-page-metadata';
 import {
   type PricingBillingRecoveryReason,
   type PricingPlan,
@@ -21,12 +22,12 @@ import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases'
 import type { NonEntitledReason } from '@/src/application/use-cases/check-entitlement';
 import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'Pricing - Addiction Boards',
   description:
     'Compare monthly and annual Addiction Boards plans and learn how the free trial works before choosing your board-prep subscription.',
-  alternates: { canonical: ROUTES.PRICING },
-};
+  path: ROUTES.PRICING,
+});
 
 export const maxDuration = 30;
 

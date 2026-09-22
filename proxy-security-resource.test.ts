@@ -21,7 +21,12 @@ describe('security contact proxy boundary', () => {
     vi.resetModules();
   });
 
-  it.each(['/.well-known/security.txt', '/robots.txt', '/sitemap.xml'])(
+  it.each([
+    '/.well-known/security.txt',
+    '/robots.txt',
+    '/sitemap.xml',
+    '/opengraph-image',
+  ])(
     'serves %s without initializing Clerk or its dev-browser handshake',
     async (path) => {
       vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
@@ -50,6 +55,9 @@ describe('security contact proxy boundary', () => {
     ['/robots.txt', false],
     ['/sitemap.xml', false],
     ['/sitemap.xml?source=crawler', false],
+    ['/opengraph-image', false],
+    ['/opengraph-image/extra', true],
+    ['/opengraph-image-private', true],
     ['/app/dashboard', true],
     ['/sitemap.xml.backup', true],
     ['/sitemap.xml/extra', true],
