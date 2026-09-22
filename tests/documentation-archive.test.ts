@@ -174,6 +174,15 @@ describe('documentation archive convention', () => {
     ]);
   });
 
+  it.each(['<a href="./missing.md">Missing</a>', '<img src="./missing.png">'])(
+    'rejects unsupported raw HTML link attributes: %s',
+    (html) => {
+      expect(() => audit({ 'docs/guide.md': html })).toThrow(
+        'Unsupported HTML link attributes: docs/guide.md:1; use Markdown links or images',
+      );
+    },
+  );
+
   it('keeps historical unresolvable archive links separate from live failures', () => {
     const result = audit({
       'docs/_archive/bugs/bug-001-example.md': '[Removed](../../../removed.ts)',

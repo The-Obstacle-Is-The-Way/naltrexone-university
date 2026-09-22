@@ -92,7 +92,8 @@ Implementation specifications provide detailed technical guidance for building e
 - **Ready** — Ready for implementation
 - **In Progress** — Being implemented
 - **Partial** — Partially implemented
-- **Implemented** — Complete and verified
+- **Resolved** — Scoped work shipped, promoted to main, and verified; archive with receipts under the canonical convention
+- **Implemented** — Legacy completed-status label retained in historical records; use Resolved for new closeouts
 - **Reconciliation open** — Shipped behavior and this document disagree; follow the named authorities until the linked debt is reconciled
 - **Deprecated** — No longer applicable
 

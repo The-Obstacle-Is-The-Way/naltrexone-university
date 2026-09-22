@@ -302,6 +302,16 @@ report marks invalid encoding, the command exits nonzero, and repair mode does
 not guess a raw-path destination even if such a file exists. This does not
 relax the historical-target policy or change any of the 647 repaired links.
 
+The subsequent full promotion review (5273564451) confirmed two remaining
+contract gaps. The spec register's status list now names Resolved for new
+closeouts and Implemented only as historical terminology, matching its template.
+The Markdown visitor previously ignored raw HTML link attributes. A current-tree
+AST census found four HTML nodes and zero `href`/`src` nodes, so no additional
+parser is needed: the guard rejects those unsupported attributes with a file/line
+diagnostic and directs authors to Markdown links/images. Both missing-href and
+missing-src fixtures failed before this fail-closed correction. Code examples
+remain excluded. The canonical convention now names this supported syntax.
+
 ### Historical targets without a mechanically proven replacement
 
 All 41 occurrences below remain untouched. The source link resolves; the old

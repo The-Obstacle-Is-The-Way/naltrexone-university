@@ -729,6 +729,11 @@ It checks relative file destinations, not web URLs, root-relative site routes
 the archive are reported separately; never invent a replacement for a deleted
 target merely to turn the guard green.
 
+Use Markdown link/image syntax (including reference definitions) for document
+destinations. Raw HTML `href`/`src` attributes are unsupported and fail closed
+with a location diagnostic; do not extend the guard into an HTML resolver.
+Fenced and inline code examples remain examples, not document links.
+
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)
 - `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018 accepted; ADR-019 proposed)
