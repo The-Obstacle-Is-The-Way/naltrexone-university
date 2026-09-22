@@ -40,7 +40,7 @@ Coverage gap that let this ship: every test in `app/(marketing)/checkout/success
 
 - A paying user can lock **themselves** out instantly and reproducibly, with the same no-self-service-recovery loop as BUG-242 (heals only on the next sub-B webhook — up to ~30 days monthly / ~1 year annual — or manual intervention).
 - The trigger artifact is permanent and universal: every trial-converted user's history contains a superseded success URL forever. Tab-restore and URL-bar autocomplete make accidental revisits realistic, not adversarial.
-- Scope note: the replay persists whatever sub A's *current* live state is, so the canceled-A case above is the real trigger. A still inside its cancel-at-period-end window (status `active`) only matters here if a newer active sub B already coexists with the still-active A — which itself requires the concurrent-duplicate path ([BUG-245](../../bugs/bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md)), since an otherwise-active A would block B's creation (`src/application/use-cases/create-checkout-session.ts:113-122`). It is a compounding edge, not an independent trigger.
+- Scope note: the replay persists whatever sub A's *current* live state is, so the canceled-A case above is the real trigger. A still inside its cancel-at-period-end window (status `active`) only matters here if a newer active sub B already coexists with the still-active A — which itself requires the concurrent-duplicate path ([BUG-245](bug-245-concurrent-two-tab-checkout-creates-duplicate-subscriptions.md)), since an otherwise-active A would block B's creation (`src/application/use-cases/create-checkout-session.ts:113-122`). It is a compounding edge, not an independent trigger.
 
 ## Implemented Fix
 

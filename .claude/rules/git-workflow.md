@@ -7,6 +7,7 @@
 
 ## Pull Requests
 
+- Documentation closeout follows [AGENTS.md — Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records).
 - Include short problem/solution summary
 - Link spec/ADR updates in `docs/`
 - Add screenshots/GIFs for UI changes

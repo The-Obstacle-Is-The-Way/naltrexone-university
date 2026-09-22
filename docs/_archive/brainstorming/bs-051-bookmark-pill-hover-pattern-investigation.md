@@ -3,7 +3,7 @@
 **Date:** 2026-03-13
 **Triggered by:** While investigating the practice chip hover problem (BS-050), we noticed that the Bookmarks page Remove pill already has a superior hover pattern: the pill border brightens on hover (`dark:hover:border-foreground/70`) and its fill also deepens, producing a much clearer signal than the practice chips. This doc investigates that pattern and asks whether (a) it should be the standard for pill-shaped interactive elements and (b) what changes are planned for the bookmark pill itself.
 **Scope:** Investigate the bookmark Remove pill's hover behavior, document it as a reference pattern, and note planned near-term changes to the bookmark pill (icon replacement).
-**Related:** [BS-050](./bs-050-practice-chip-hover-affordance.md) (practice chip hover fix), [BS-049 (archived)](../_archive/brainstorming/bs-049-bookmarks-card-visual-unification.md) (bookmark card unification), [DEBT-307 (archived)](../_archive/debt/debt-307-bookmarks-row-visual-unification.md) (bookmark row visual unification), [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (border tiering)
+**Related:** [BS-050](./bs-050-practice-chip-hover-affordance.md) (practice chip hover fix), [BS-049 (archived)](bs-049-bookmarks-card-visual-unification.md) (bookmark card unification), [DEBT-307 (archived)](../debt/debt-307-bookmarks-row-visual-unification.md) (bookmark row visual unification), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md) (border tiering)
 
 ---
 
@@ -109,5 +109,5 @@ The border hover behavior doesn't need to be invented — it exists in `button.t
 |------|----------|-----------|
 | 2026-03-13 | Created BS-051 | Document the bookmark pill's hover pattern as a reference, note planned icon replacement, and cross-reference with BS-050 practice chip fix |
 | 2026-03-13 | No immediate code changes to bookmark pill | The current hover behavior is the positive example. Changes are deferred to a future icon-replacement pass. |
-| 2026-03-13 | Icon replacement brainstormed in [BS-052](./bs-052-bookmark-icon-toggle-replacement.md) | Full exploration of replacing text pills with filled/unfilled Bookmark icon toggle across both the Bookmarks page and Practice action bar. |
+| 2026-03-13 | Icon replacement brainstormed in [BS-052](../../brainstorming/bs-052-bookmark-icon-toggle-replacement.md) | Full exploration of replacing text pills with filled/unfilled Bookmark icon toggle across both the Bookmarks page and Practice action bar. |
 | 2026-03-16 | Archived | Primary value was feeding BS-050/DEBT-309 (now resolved via PR #209). Icon replacement tracked in BS-052. No further action needed on this doc. |

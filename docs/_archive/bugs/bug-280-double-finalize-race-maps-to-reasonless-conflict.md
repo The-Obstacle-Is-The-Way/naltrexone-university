@@ -75,5 +75,5 @@ The fix catches the duplicate-attempt loser at the finalize write boundary, re-r
 
 - BUG-105 (archived) introduced `attempts_session_question_uq` — the constraint is correct; this bug is about the error mapped onto it in a new (finalize) context.
 - [BUG-277](bug-277-exam-expiry-finalize-stale-flush-aborts-finalization.md) — sibling reason-less CONFLICT on the same finalize surface.
-- [DEBT-438](../../debt/debt-438-conflict-reason-client-coverage-gaps.md) — the umbrella conflict-reason coverage debt.
+- [DEBT-438](../debt/debt-438-conflict-reason-client-coverage-gaps.md) — the umbrella conflict-reason coverage debt.
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review (five independent DDIA-lens reviewers; line-level verification against `e3853656`).

@@ -85,5 +85,5 @@ The fix replaced the bare ended-session CONFLICTs on submit/load with `practiceS
 ## Related
 
 - DEBT-426 (archived) — the conflict-reason contract these paths predate.
-- [DEBT-438](../../debt/debt-438-conflict-reason-client-coverage-gaps.md) — umbrella coverage debt (this bug is its highest-value concrete instance).
+- [DEBT-438](../debt/debt-438-conflict-reason-client-coverage-gaps.md) — umbrella coverage debt (this bug is its highest-value concrete instance).
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review (five independent DDIA-lens reviewers; line-level verification against `e3853656`).

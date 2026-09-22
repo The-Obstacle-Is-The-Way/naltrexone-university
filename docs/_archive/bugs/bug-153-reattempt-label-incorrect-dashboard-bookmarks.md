@@ -46,7 +46,7 @@ const reattemptLabel =
 
 The label condition gates on `isStandaloneHistoryReview`, which requires `origin === 'history'`. Dashboard (`origin === 'dashboard'`) and Bookmarks (`origin === 'bookmarks'`) are both standalone review contexts but are excluded by this condition, so they always fall through to "Try Again".
 
-**Context:** [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) and [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md) cleaned up major reattempt issues (hiding Try Again in session review, bookmarks review-first mode). This is a residual label bug that slipped through.
+**Context:** [SPEC-034](../specs/spec-034-review-mode-readonly-and-try-again-scoping.md) and [SPEC-036](../specs/spec-036-bookmark-review-mode-alignment.md) cleaned up major reattempt issues (hiding Try Again in session review, bookmarks review-first mode). This is a residual label bug that slipped through.
 
 ## Fix
 
@@ -93,5 +93,5 @@ After this fix, `isStandaloneHistoryReview` is only used at line 157 as a declar
 
 - [BS-033](../brainstorming/bs-033-question-display-formatting-and-feedback-ux.md) — Residual section documents this bug
 - [BS-034](../brainstorming/bs-034-history-questions-tab-review-navigator-mismatch.md) — Related UX Inconsistencies #3
-- [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) — Review Mode Readonly and Try Again Scoping
-- [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md) — Bookmark Review Mode Alignment
+- [SPEC-034](../specs/spec-034-review-mode-readonly-and-try-again-scoping.md) — Review Mode Readonly and Try Again Scoping
+- [SPEC-036](../specs/spec-036-bookmark-review-mode-alignment.md) — Bookmark Review Mode Alignment

@@ -183,9 +183,9 @@ Why this fix:
 ## Related
 
 - [BS-029 brainstorming doc](../brainstorming/bs-029-clerk-user-id-email-upsert-conflict.md)
-- [BUG-079](../_archive/bugs/bug-079-preview-dev-environment-verification-failures.md)
-- [Deployment environments SSOT](../dev/deployment-environments.md)
-- [DEBT-084](../_archive/debt/debt-084-user-email-race-condition.md)
+- [BUG-079](bug-079-preview-dev-environment-verification-failures.md)
+- [Deployment environments SSOT](../../dev/deployment-environments.md)
+- [DEBT-084](../debt/debt-084-user-email-race-condition.md)
 - `src/adapters/repositories/drizzle-user-repository.ts`
 - `src/adapters/controllers/clerk-webhook-controller.ts`
 - `tests/e2e/helpers/seed-test-user.ts`

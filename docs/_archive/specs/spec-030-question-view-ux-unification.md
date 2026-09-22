@@ -712,7 +712,7 @@ Phase 5: Full Verification
 ## 12. Related
 
 - **[BS-018](../brainstorming/bs-018-question-view-ux-unification.md)** — Brainstorming doc with full UI audit, severity assessment, and verified code paths
-- **[Question Rendering Architecture](../practice-engine/question-rendering-architecture.md)** — Canonical reference for all 6 question-viewing contexts
+- **[Question Rendering Architecture](../../practice-engine/question-rendering-architecture.md)** — Canonical reference for all 6 question-viewing contexts
 - **SPEC-027** — Session Review Navigation (introduced the inline `SessionNavigationBar` that this spec relocates to the bottom bar)
 - **SPEC-028** — Review Question Navigator (color-coded grid that remains at the top)
 - **SPEC-020** — Practice Engine Completion (original practice session implementation)

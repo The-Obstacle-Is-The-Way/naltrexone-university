@@ -3,7 +3,7 @@
 **Date:** 2026-02-16
 **Triggered by:** Live UI audit (Chrome agent walkthrough) + codebase analysis across all 6 question-viewing contexts
 **Scope:** The 6 question-viewing contexts have diverged in navigation placement, action bar composition, and state persistence — creating a disjointed UX that undermines the product's learning experience
-**Related:** [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md), [BUG-133](../_archive/bugs/bug-133-stale-closure-auto-advance.md), [BUG-134](../_archive/bugs/bug-134-mark-for-review-race-condition.md), SPEC-027, SPEC-028
+**Related:** [Question Rendering Architecture](../../practice-engine/question-rendering-architecture.md), [BUG-133](../_archive/bugs/bug-133-stale-closure-auto-advance.md), [BUG-134](../_archive/bugs/bug-134-mark-for-review-race-condition.md), SPEC-027, SPEC-028
 
 ---
 
@@ -231,7 +231,7 @@ All file paths and line numbers verified against codebase on 2026-02-16.
 
 ## Related Documentation
 
-- [Question Rendering Architecture](../practice-engine/question-rendering-architecture.md) — canonical reference for all 6 contexts (verified accurate 2026-02-16)
+- [Question Rendering Architecture](../../practice-engine/question-rendering-architecture.md) — canonical reference for all 6 contexts (verified accurate 2026-02-16)
 - SPEC-020 — Practice Engine Completion (historical context; documents missing in-run navigation as a gap, not an intentional no-Previous decision)
 - SPEC-027 — Session Review Navigation (added the inline Previous/Next row)
 - SPEC-028 — Review Question Navigator (the color-coded grid)

@@ -4,7 +4,7 @@
 **Created:** 2026-03-19
 **Resolved:** 2026-03-19
 **Source:** BS-058 post-implementation audit
-**Related:** [bookmark-surface-policy.md](../frontend/bookmark-surface-policy.md)
+**Related:** [bookmark-surface-policy.md](../../frontend/bookmark-surface-policy.md)
 
 ---
 

@@ -75,7 +75,7 @@ difference was reported explicitly. See the [production closeout](https://github
 - Missing drafts do not imply withdrawal. Explicit QIDs are required; stale
   authored seed files cannot reactivate archived rows through the seed path.
 
-1. Record the later release readback for [DEBT-486](../../debt-486-import-seed-validation-disagreement.md) when it exists; its shared parser implementation and review are complete. Promotion execution belongs to the other clone.
+1. Record the later release readback for [DEBT-486](../../../_archive/debt/debt-486-import-seed-validation-disagreement.md) when it exists; its shared parser implementation and review are complete. Promotion execution belongs to the other clone.
 2. Adapt the existing managed caller to the safe staging boundary under [DEBT-483](../../debt-483-content-withdrawal-and-release-rollback.md#clean-import-staging-safeguard--2026-09-20). This is actionable without private SPEC-007, but `scripts/seed-environment-runtime.ts:108-123` is outside this clone's assigned files. Do not claim that fresh manual staging fixes that caller.
 3. Agree the private SPEC-007 revision/release interface before implementing immutable revision binding, atomic activation or revocation-aware rollback. [DEBT-484](../../debt-484-question-rewrite-history-identity.md#deliberate-boundaries) preserves the published-only review and active-session limitations. A manifest or row-preservation assertion is insufficient to close either record.
 

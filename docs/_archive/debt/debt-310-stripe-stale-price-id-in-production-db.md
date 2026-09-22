@@ -182,7 +182,7 @@ The production crash is caused by **non-production subscription data written int
    - non-live price ID from the stale local Stripe env
    - no matching Stripe subscription in live or test mode
 
-4. **On 2026-02-22**, the E2E seed helper in [tests/e2e/helpers/seed-test-user.ts](../../tests/e2e/helpers/seed-test-user.ts) wrote a real Stripe **test-mode** subscription into the database using `DATABASE_URL` plus `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
+4. **On 2026-02-22**, the E2E seed helper in [tests/e2e/helpers/seed-test-user.ts](../../../tests/e2e/helpers/seed-test-user.ts) wrote a real Stripe **test-mode** subscription into the database using `DATABASE_URL` plus `NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY`.
    Because `.env.local` had not yet been corrected to Neon `dev`, that write landed in Neon `main`.
 
 5. **On 2026-03-13**, the affected user hit `/app/dashboard`.

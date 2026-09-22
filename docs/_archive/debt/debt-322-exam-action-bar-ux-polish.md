@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-03-18
 **Status:** Ready for implementation
-**Related:** [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), [DEBT-321](./debt-321-bs055-exam-interaction-model-overhaul.md), [Interaction Contracts](../practice-engine/interaction-contracts.md)
+**Related:** [BS-055](../brainstorming/bs-055-exam-session-interaction-model-rethink.md), [DEBT-321](./debt-321-bs055-exam-interaction-model-overhaul.md), [Interaction Contracts](../../practice-engine/interaction-contracts.md)
 
 ---
 

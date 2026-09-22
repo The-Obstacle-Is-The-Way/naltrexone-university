@@ -55,7 +55,7 @@ If Clerk redirects to sign-in, the profile session has expired — redo the head
 | `--state` / storageState | `agent-browser --state` silently fails to restore cookies/localStorage, even for non-Clerk sites. Upstream bug. |
 | Direct CLI fill | Clerk's anti-automation blocks it |
 
-Full auth investigation: [BS-057](../brainstorming/bs-057-agent-browser-clerk-auth-reliability.md)
+Full auth investigation: [BS-057](../_archive/brainstorming/bs-057-agent-browser-clerk-auth-reliability.md)
 
 ### Loading `.env.local` values
 

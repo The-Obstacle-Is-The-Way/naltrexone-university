@@ -3,7 +3,7 @@
 **Date:** 2026-03-03
 **Triggered by:** Visual inspection of Quick Practice multiple choice view — answer choices show inconsistent dark gradation and an uncanny hover effect
 **Scope:** The `ChoiceButton` component uses `bg-background` (Layer 0) inside a `<Card>` (`bg-card`, Layer 1), creating an inverted visual hierarchy where interactive elements are darker than their container
-**Related:** [BS-035 (archived)](../_archive/brainstorming/bs-035-card-hover-and-gray-consistency-audit.md) — identified choice hover shade mismatch as symptom #4 but only fixed hover opacity, not base surface; [Pattern Registry I-3](../../frontend/pattern-registry.md); [choice-button.tsx](../../components/question/choice-button.tsx)
+**Related:** [BS-035 (archived)](bs-035-card-hover-and-gray-consistency-audit.md) — identified choice hover shade mismatch as symptom #4 but only fixed hover opacity, not base surface; [Pattern Registry I-3](../../frontend/pattern-registry.md); [choice-button.tsx](../../../components/question/choice-button.tsx)
 
 ---
 
@@ -262,7 +262,7 @@ The Pattern Registry I-3 rationale should be updated to acknowledge that choices
 
 ### Additional inconsistencies found (not fully covered in original BS-039)
 
-1. **~~Quick Practice submit error~~ (RESOLVED — missing DB migration):** The `Internal error` banner on submit was caused by migration 0014 (`claimed_at` column on `idempotency_keys`) not being applied to the Neon `dev` branch after PR #169 merged. Fixed by running `pnpm db:migrate`. Not a code bug — unrelated to the surface hierarchy issue. See [deployment-environments.md Known Gotchas](../dev/deployment-environments.md#missing-database-migration-causes-silent-write-failures).
+1. **~~Quick Practice submit error~~ (RESOLVED — missing DB migration):** The `Internal error` banner on submit was caused by migration 0014 (`claimed_at` column on `idempotency_keys`) not being applied to the Neon `dev` branch after PR #169 merged. Fixed by running `pnpm db:migrate`. Not a code bug — unrelated to the surface hierarchy issue. See [deployment-environments.md Known Gotchas](../../dev/deployment-environments.md#missing-database-migration-causes-silent-write-failures).
 2. **History session review route inconsistency:** one captured session-review navigation reached a `Question` header but rendered no QuestionCard content (`session-review-question.png`, style metrics `null`).
 3. **Bookmarks currently dominated by unavailable items:** `bookmarks-default.png` shows unavailable rows with `Remove` but no `Review` link, preventing Bookmarks → QuestionCard verification in this run.
 4. **History Questions tab also surfaced unavailable-only rows in this dataset (`history-questions-default.png`), limiting hover/row behavior comparison for active review links.**

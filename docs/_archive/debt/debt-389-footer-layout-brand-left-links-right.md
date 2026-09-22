@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-05-21
 **Source:** Visual iteration on the landing page (full-page review + a Claude Design exploration). The footer is a `grid gap-8 md:grid-cols-3` with three equal-width columns, but the content is unbalanced: column 1 (brand + two-line tagline) is full, while `Product` (Features, Pricing) and `Account` (Sign in, Sign up) are short link stacks left-aligned inside their thirds. On desktop, each link column receives a full grid third while holding only a short stack of text, so the content bunches into the left/middle of the container and leaves a large dead zone on the right with no right-edge anchor — reading as unevenly spaced / left-heavy.
-**Related:** [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md), [DEBT-387](../_archive/debt/debt-387-features-card-understates-study-modes.md), [DEBT-388](./debt-388-hero-credibility-line-concision-and-reposition.md) (sibling hero polish), [Frontend Standards](../frontend/standards.md)
+**Related:** [DEBT-382](debt-382-landing-page-content-refresh-question-count-and-author-credibility.md), [DEBT-387](debt-387-features-card-understates-study-modes.md), [DEBT-388](./debt-388-hero-credibility-line-concision-and-reposition.md) (sibling hero polish), [Frontend Standards](../../frontend/standards.md)
 
 **Status:** Active — layout direction locked (chosen after a Claude Design A/B across several variants); copy and link set unchanged.
 

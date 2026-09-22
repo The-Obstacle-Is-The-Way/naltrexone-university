@@ -29,4 +29,4 @@ Confirmed via `vercel env ls` — CRON_SECRET now present in all three environme
 
 - `app/api/cron/reconcile-stripe-subscriptions/route.ts` — the cron endpoint
 - `lib/env.ts` — Zod schema with `CRON_SECRET` as optional
-- [DEBT-160](../_archive/debt/debt-160-cron-secret-not-required-in-production.md) — earlier CRON_SECRET enforcement debt (resolved 2026-02-08)
+- [DEBT-160](debt-160-cron-secret-not-required-in-production.md) — earlier CRON_SECRET enforcement debt (resolved 2026-02-08)

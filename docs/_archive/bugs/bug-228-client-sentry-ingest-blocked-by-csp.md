@@ -122,5 +122,5 @@ Two approaches:
 - `lib/report-client-error.ts`
 - `instrumentation.ts`
 - `docs/specs/spec-016-observability.md`
-- [DEBT-286](../_archive/debt/debt-286-client-side-error-reporting.md)
-- [BUG-071](../_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md) — prior CSP regression; the fix must preserve Clerk-owned CSP strategy
+- [DEBT-286](../debt/debt-286-client-side-error-reporting.md)
+- [BUG-071](bug-071-nextjs-preview-blank-page-csp.md) — prior CSP regression; the fix must preserve Clerk-owned CSP strategy

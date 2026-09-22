@@ -556,5 +556,5 @@ Single PR is appropriate — the change is a coherent vertical slice with no int
 
 - [BS-025](../brainstorming/BS-025-reference-section-pipeline-support.md) — First-principles analysis and option evaluation
 - [SPEC-033](spec-033-tag-taxonomy-migration.md) — Tag taxonomy (prerequisite, completed)
-- [Question Format Spec](../content/question-format-spec.md) — Pipeline reference
-- [`content/drafts/questions/SCHEMA.md`](../../content/drafts/questions/SCHEMA.md) — Authoring format
+- [Question Format Spec](../../content/question-format-spec.md) — Pipeline reference
+- [`content/drafts/questions/SCHEMA.md`](../../../content/drafts/questions/SCHEMA.md) — Authoring format

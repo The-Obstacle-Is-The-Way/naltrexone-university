@@ -4,7 +4,7 @@
 **Created:** 2026-05-13
 **Status:** Open — root cause confirmed; implementation in this PR; rollout pending merge
 **Owner:** Billing / entitlement
-**Related:** [DEBT-310 (archived)](../_archive/debt/debt-310-stripe-stale-price-id-in-production-db.md), [DEBT-155 (archived)](../_archive/debt/debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md), [DEBT-332](./debt-332-security-posture-audit.md)
+**Related:** [DEBT-310 (archived)](debt-310-stripe-stale-price-id-in-production-db.md), [DEBT-155 (archived)](debt-155-stripe-legacy-duplicate-subscriptions-reconciliation.md), [DEBT-332](./debt-332-security-posture-audit.md)
 
 ---
 

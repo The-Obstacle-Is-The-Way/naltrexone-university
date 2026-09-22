@@ -2,7 +2,7 @@
 
 **Priority:** P3
 **Created:** 2026-03-17
-**Related:** [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md), [Practice Page](../frontend/pages/practice.md)
+**Related:** [Frontend Standards](../../frontend/standards.md), [Pattern Registry](../../frontend/pattern-registry.md), [Practice Page](../../frontend/pages/practice.md)
 
 ---
 

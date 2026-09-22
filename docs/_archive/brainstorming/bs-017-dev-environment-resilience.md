@@ -5,7 +5,7 @@
 **Date:** 2026-02-15
 **Triggered by:** Two AI agent sessions hung indefinitely while running Playwright screenshots against localhost:3000. Server actions returned no response, leaving the UI in a permanent "Loading..." state with no timeout or error recovery.
 **Scope:** The codebase has no client-side timeout on server action calls — the only layer in the stack without a timeout. When a server action hangs (database stall, network partition, Neon cold start edge case), the UI waits forever with no error feedback.
-**Related:** [Testing Infrastructure](../dev/testing-infrastructure.md), [AGENTS.md](../../AGENTS.md) (port 3000 cleanup tip)
+**Related:** [Testing Infrastructure](../../dev/testing-infrastructure.md), [AGENTS.md](../../../AGENTS.md) (port 3000 cleanup tip)
 
 ---
 
@@ -380,5 +380,5 @@ Per Robert C. Martin's dependency rule and industry best practices:
 - [Next.js Route Segment Config](https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config) — `maxDuration` goes on pages/layouts, not server action files
 - [Vercel Functions Duration](https://vercel.com/docs/functions/configuring-functions/duration) — Fluid Compute defaults to 300s
 - [Vercel: Efficiently Manage DB Pools with Fluid](https://vercel.com/kb/guide/efficiently-manage-database-connection-pools-with-fluid-compute) — Pool reuse in serverless
-- [Testing Infrastructure](../dev/testing-infrastructure.md) — Playwright config, troubleshooting
-- [AGENTS.md](../../AGENTS.md) — Port 3000 cleanup tip
+- [Testing Infrastructure](../../dev/testing-infrastructure.md) — Playwright config, troubleshooting
+- [AGENTS.md](../../../AGENTS.md) — Port 3000 cleanup tip

@@ -1,7 +1,7 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-20 — SPEC-016/017 corrected; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
+**Last Updated:** 2026-09-21 — SPEC-016/017 archived with explicit deferred tails, following their September 20 corrections; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
 
 ---
 
@@ -18,8 +18,6 @@ Implementation specifications provide detailed technical guidance for building e
 | ID | Title | Status | Layer |
 |----|-------|--------|-------|
 | [Master Spec](./master_spec.md) | Technical Specification (known implementation drift: DEBT-481) | Reconciliation open | All |
-| [SPEC-016](./spec-016-observability.md) | Observability (Errors, Request Correlation, Sampled Server Tracing) | Implemented; browser performance off | Infrastructure |
-| [SPEC-017](./spec-017-rate-limiting.md) | Rate Limiting | Implemented (MVP complete) | Infrastructure |
 
 **Master Spec split parts (readability):**
 
@@ -32,8 +30,21 @@ Implementation specifications provide detailed technical guidance for building e
 
 ## Archived Specs
 
+### Deferred tails (not resolved)
+
+| Record | Unfinished work | Revive trigger |
+| --- | --- | --- |
+| [SPEC-016](../_archive/specs/spec-016-observability.md) | Optional `pino-pretty` and log-level example; core logging/error reporting/server spans are shipped. Browser RUM, replay, profiling and source-map upload are not claimed enabled. | A concrete local log-readability need for the optional tooling; separate quota/privacy approval and production measurement for browser instrumentation, coordinated with DEBT-479 step 5. |
+| [SPEC-017 E1](../_archive/specs/spec-017-rate-limiting.md#e1-vercel-waf-rate-limiting) | Custom WAF/log-only rules deliberately declined; project-specific allowance and response-time drill remain unproven. | Unexpected invocation/Neon compute growth or actionable Firewall events; owner attributes the incident and reassesses shared-IP harm. Verify allowance before relying on a slot. |
+| [SPEC-017 E2–E3](../_archive/specs/spec-017-rate-limiting.md#e2-redis-backed-rate-limiting-upstash) | Redis or request-entry limiting remains optional, not a missing MVP implementation. | Attributable limiter-query cost/latency, a multi-region requirement, or a named requirement not met by existing WAF/application controls. |
+| [SPEC-017 E4–E5](../_archive/specs/spec-017-rate-limiting.md#e4-ietf-standard-rate-limit-headers) | Standard headers and additional resource-consumption controls. | Rate-limit draft becomes an RFC; or new uploads/large payloads/expensive endpoints require a separate control. |
+
+### Completed implementations
+
 | ID | Title | Layer |
 |----|-------|-------|
+| [SPEC-016](../_archive/specs/spec-016-observability.md) | Observability (Errors, Request Correlation, Sampled Server Tracing) — core resolved; optional tails retained in Deferred | Infrastructure |
+| [SPEC-017](../_archive/specs/spec-017-rate-limiting.md) | Rate Limiting — core resolved; optional tails retained in Deferred | Infrastructure |
 | [SPEC-001](../_archive/specs/spec-001-domain-entities.md) | Domain Entities | Domain |
 | [SPEC-002](../_archive/specs/spec-002-value-objects.md) | Value Objects | Domain |
 | [SPEC-003](../_archive/specs/spec-003-domain-services.md) | Domain Services | Domain |
@@ -81,7 +92,8 @@ Implementation specifications provide detailed technical guidance for building e
 - **Ready** — Ready for implementation
 - **In Progress** — Being implemented
 - **Partial** — Partially implemented
-- **Implemented** — Complete and verified
+- **Resolved** — Scoped work shipped, promoted to main, and verified; archive with receipts under the canonical convention
+- **Implemented** — Legacy completed-status label retained in historical records; use Resolved for new closeouts
 - **Reconciliation open** — Shipped behavior and this document disagree; follow the named authorities until the linked debt is reconciled
 - **Deprecated** — No longer applicable
 
@@ -106,16 +118,22 @@ Specs are organized by Clean Architecture layer:
 
 ## Spec Template
 
+Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records) for the template's eventual closeout.
+
 ```markdown
 # SPEC-NNN: Title
+
+> Close using [the archive convention](../../AGENTS.md#closing-and-archiving-documentation-records).
 
 > **⚠️ TDD MANDATE:** This spec follows Test-Driven Development (Uncle Bob / Robert C. Martin).
 > Write tests FIRST. Red → Green → Refactor. No implementation without a failing test.
 > Principles: SOLID, DRY, Clean Code, Gang of Four patterns where appropriate.
 
-**Status:** Proposed | Ready | In Progress | Partial | Implemented | Reconciliation open | Deprecated
+**Status:** Proposed | Ready | In Progress | Partial | Resolved | Reconciliation open | Deprecated
 **Layer:** Domain | Application | Adapters | Feature | Infrastructure
 **Date:** YYYY-MM-DD
+**Resolved:** YYYY-MM-DD | —
+**Verification receipts:** Promoted implementation and verification links | —
 
 ---
 
@@ -157,6 +175,10 @@ Any additional guidance for implementers.
 ```
 
 ---
+
+## How to close and archive
+
+Follow [Closing and Archiving Documentation Records](../../AGENTS.md#closing-and-archiving-documentation-records). That is the canonical procedure; this register records dispositions and receipts.
 
 ## Related Documentation
 

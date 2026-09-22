@@ -316,6 +316,6 @@ Each phase merges only after:
 ## 8. Related
 
 - [BS-028](../brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md)
-- [SPEC-027](../_archive/specs/spec-027-session-review-navigation.md)
-- [SPEC-037](../_archive/specs/spec-037-tab-switch-visual-unification.md)
-- [docs/dev/testing-infrastructure.md](../dev/testing-infrastructure.md)
+- [SPEC-027](spec-027-session-review-navigation.md)
+- [SPEC-037](spec-037-tab-switch-visual-unification.md)
+- [docs/dev/testing-infrastructure.md](../../dev/testing-infrastructure.md)

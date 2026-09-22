@@ -327,7 +327,7 @@ app/, lib/, db/    → Next.js framework code, infrastructure (outermost layer)
 
 ### Current State
 
-All layers are implemented. See `docs/specs/index.md` for the full spec register (SPEC-001 through SPEC-038, with SPEC-016 and SPEC-017 now implemented).
+All layers are implemented. See `docs/specs/index.md` for the full spec register; implemented numbered specs are archived and their unfinished tails remain in its Deferred table.
 
 - **Domain:** entities, value objects, services, errors (`src/domain/**`)
 - **Application:** ports, core use cases, app errors (`src/application/**`)
@@ -688,8 +688,54 @@ for configuration, failure handling, and timestamp receipts.
 
 ## Documentation
 
+### Closing and Archiving Documentation Records
+
+**Convention adopted 2026-09-21 (DEBT-488).** Applies to numbered records in
+`docs/debt/`, `docs/bugs/`, `docs/specs/`, `docs/brainstorming/`, `docs/audits/`
+and `docs/qa/`. These live folders are the open-record list.
+
+1. Close a record only when its scoped work is shipped and promoted to `main`,
+   with verification receipts. Do not infer completion from a status label or
+   a green PR alone. For a documentation-only record, its reviewed publication
+   and the checks it requires are its deliverable.
+2. Before moving it, put every unfinished tail in that register's **Deferred**
+   table, with an explicit revive trigger and a link to the record. Deferred
+   work is not resolved. Preserve existing historical dispositions such as
+   invalidated, superseded or accepted-risk; do not relabel them as shipped fixes.
+3. Set completed work's status to **Resolved**, with the date and receipts.
+   Use `git mv` to move the complete record to `docs/_archive/<register>/`.
+   Leave **no stub, pointer file or copy** in the live folder.
+4. In the same PR, rewrite **every inbound link** to the record and the
+   record's **own outbound links** for its new depth. Include links from other
+   archives. Preserve fragments and historical prose; changing a destination
+   is link maintenance, not rewriting history. Keep assets in place unless
+   moving them is necessary, and prove their links still resolve.
+5. Move the register row to its **Resolved** or **Archived** table, using the
+   archive path. The Deferred table keeps any unfinished tail visible. Keep
+   exactly one `**Latest**` stanza when updating a register that uses one;
+   demote the prior stanza without rewriting its dated claims.
+6. Run the documentation unit guard and the full pre-push gate. A move is not
+   complete until live links resolve, register rows resolve, and no live/archive
+   duplicate or terminal-status live record remains. Follow normal exact-head
+   review and promotion rules; record actual post-promotion evidence.
+
+**Exemptions and scope:** ADRs are **superseded, not archived**. Living guides
+and policy documents (including `master_spec*.md`) stay live. Indexes,
+templates and asset folders are supporting material, not open numbered records.
+The guard checks repository-authored Markdown under `docs/`, root Markdown,
+`.claude/rules/` and `.github/`; vendored skill packages are upstream material.
+It checks relative file destinations, not web URLs, root-relative site routes
+(such as `/privacy`), or heading correctness. Historical missing targets inside
+the archive are reported separately; never invent a replacement for a deleted
+target merely to turn the guard green.
+
+Use Markdown link/image syntax (including reference definitions) for document
+destinations. Raw HTML `href`/`src` attributes are unsupported and fail closed
+with a location diagnostic; do not extend the guard into an HTML resolver.
+Fenced and inline code examples remain examples, not document links.
+
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
-- `docs/specs/index.md` — Full spec register (SPEC-001 through SPEC-038 archived; SPEC-016 and SPEC-017 active)
+- `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)
 - `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018 accepted; ADR-019 proposed)
 - `docs/debt/index.md` — Technical debt register (active + resolved)
 - `docs/bugs/index.md` — Bug report register

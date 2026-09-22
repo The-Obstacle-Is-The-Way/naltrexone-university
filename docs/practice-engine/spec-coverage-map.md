@@ -18,8 +18,8 @@
 | Database schema | SPEC-006 | Implemented | Synced to implementation (`rate_limits`, `idempotency_keys`, partial unique attempt index) |
 | Repository implementations | SPEC-007 | Implemented | Synced to implementation (includes `DrizzleIdempotencyKeyRepository`; unit + integration testing strategy) |
 | Server actions / controllers | SPEC-010 | Implemented | Synced to implementation (`ActionErrorCode` = `ApplicationErrorCode`; `createAction` + `handleError`) |
-| Core question loop (fetch → render → submit → grade → explain) | SPEC-012 | Implemented | Active exam uses draft-save/finalize rather than per-question submit; BUG-239 tracks a remaining implicit latest-reader fallback gap |
-| Practice sessions (start → answer → navigate → review → end/finalize → summary) | SPEC-013 | Implemented | Active exam draft/finalize flow shipped; BUG-238 tracks an unbounded draft timing validation gap |
+| Core question loop (fetch → render → submit → grade → explain) | SPEC-012 | Implemented | Active exam uses draft-save/finalize rather than per-question submit; 2026-09-21 status correction: BUG-239's implicit latest-reader fallback gap was resolved in PR #290 |
+| Practice sessions (start → answer → navigate → review → end/finalize → summary) | SPEC-013 | Implemented | Active exam draft/finalize flow shipped; 2026-09-21 status correction: BUG-238's draft timing validation gap was resolved in PR #287 |
 | History + bookmarks | SPEC-014 / SPEC-021 | Implemented | `/app/review` restructured to `/app/history` with Sessions + Questions tabs (SPEC-021) |
 | Dashboard stats | SPEC-015 | Implemented | Activity items clickable + difficulty badges via SPEC-019 Phase 3 |
 | UI integration patterns | SPEC-018 | Implemented | No architecture violations |
@@ -41,6 +41,11 @@
 
 ## 2. Spec/Doc Drift Summary
 
-As of **2026-04-25**, SPEC-021 through SPEC-030 implementation coverage remains strong. The open practice-area bug register contains [BUG-238](../bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md) and [BUG-239](../bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md), both filed after the BUG-235/236/237 active-exam visibility trilogy was fixed and archived. [BS-014](../brainstorming/bs-014-practice-starter-question-count-ux.md) remains a UX follow-up, while [DEBT-318](../_archive/debt/debt-318-tutor-bookmark-before-answer.md) is resolved.
+As of **2026-04-25**, SPEC-021 through SPEC-030 implementation coverage remains strong. The open practice-area bug register contains [BUG-238](../_archive/bugs/bug-238-active-exam-draft-cumulative-ms-unbounded.md) and [BUG-239](../_archive/bugs/bug-239-active-exam-latest-attempt-readers-drop-visible-fallback.md), both filed after the BUG-235/236/237 active-exam visibility trilogy was fixed and archived. [BS-014](../_archive/brainstorming/bs-014-practice-starter-question-count-ux.md) remains a UX follow-up, while [DEBT-318](../_archive/debt/debt-318-tutor-bookmark-before-answer.md) is resolved.
+
+**2026-09-21 forward note:** The preceding dated snapshot is historical. BUG-238
+and BUG-239 are now resolved and archived (PRs #287 and #290); their links above
+carry the closeout receipts. BS-014's archived record retains optional decisions,
+not an unarchived implementation. This note does not reverify the full map.
 
 When behavior changes introduce new public contracts (ports/use case IO/controller outputs), update the corresponding spec and add a changelog entry.

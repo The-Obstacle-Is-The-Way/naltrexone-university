@@ -4,7 +4,7 @@
 **Created:** 2026-04-08
 **Status:** Resolved (PR #273)
 **Source:** Follow-up from [DEBT-354](./debt-354-god-file-and-clean-code-audit.md)
-**Related:** [docs/dev/react-vitest-testing.md](../../dev/react-vitest-testing.md), [clerk-auth-gateway.test.ts](../../src/adapters/gateways/clerk-auth-gateway.test.ts), [get-started-cta.test.tsx](../../components/get-started-cta.test.tsx), [auth-nav.test.tsx](../../components/auth-nav.test.tsx)
+**Related:** [docs/dev/react-vitest-testing.md](../../dev/react-vitest-testing.md), [clerk-auth-gateway.test.ts](../../../src/adapters/gateways/clerk-auth-gateway.test.ts), [get-started-cta.test.tsx](../../../components/get-started-cta.test.tsx), [auth-nav.test.tsx](../../../components/auth-nav.test.tsx)
 
 ## Resolution
 
@@ -17,9 +17,9 @@ Added `FakeCheckEntitlementUseCase` to `src/application/test-helpers/fakes/fake-
 The repo standard is "fakes over mocks" for our own code, but some render and
 adapter tests have drifted back toward ad hoc inline doubles:
 
-- [`clerk-auth-gateway.test.ts`](../../src/adapters/gateways/clerk-auth-gateway.test.ts) builds an inline `UserRepository` fake even though `FakeUserRepository` exists
-- [`get-started-cta.test.tsx`](../../components/get-started-cta.test.tsx) repeatedly inlines `AuthGateway` objects and entitlement use-case stubs instead of using `FakeAuthGateway` plus `FakeUseCase`
-- [`auth-nav.test.tsx`](../../components/auth-nav.test.tsx) already uses `FakeAuthGateway` but still repeats inline entitlement use-case stubs across scenarios
+- [`clerk-auth-gateway.test.ts`](../../../src/adapters/gateways/clerk-auth-gateway.test.ts) builds an inline `UserRepository` fake even though `FakeUserRepository` exists
+- [`get-started-cta.test.tsx`](../../../components/get-started-cta.test.tsx) repeatedly inlines `AuthGateway` objects and entitlement use-case stubs instead of using `FakeAuthGateway` plus `FakeUseCase`
+- [`auth-nav.test.tsx`](../../../components/auth-nav.test.tsx) already uses `FakeAuthGateway` but still repeats inline entitlement use-case stubs across scenarios
 
 This is not the catastrophic kind of test debt, but it is exactly how a test
 suite slowly drifts away from the repo's stated conventions.

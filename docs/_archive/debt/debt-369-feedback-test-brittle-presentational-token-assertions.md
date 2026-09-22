@@ -62,7 +62,7 @@ Triage the ~70 affected assertions in `Feedback.test.tsx`:
 
 - Do NOT delete the test file or wholesale-rewrite it. Many of the tests are valuable behavior assertions; only the presentational-token portion is brittle.
 - Do NOT replace utility-class assertions with snapshot tests. Snapshots have their own brittleness mode and the existing structural assertions are healthier.
-- Pair this cleanup with [DEBT-370](../../debt/debt-370-oversized-test-files-without-enforced-size-rule.md) when this file is split. The split should land *after* the brittle cleanup, not before.
+- Pair this cleanup with [DEBT-370](debt-370-oversized-test-files-without-enforced-size-rule.md) when this file is split. The split should land *after* the brittle cleanup, not before.
 
 ## Why P3 (not P2)
 

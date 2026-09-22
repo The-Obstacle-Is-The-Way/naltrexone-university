@@ -4,7 +4,7 @@
 **Created:** 2026-04-08
 **Status:** Resolved (PR #272, merged 2026-04-10)
 **Source:** Follow-up from [DEBT-354](./debt-354-god-file-and-clean-code-audit.md)
-**Related:** [question-page-logic.ts](../../app/(app)/app/questions/[slug]/question-page-logic.ts), [question-flow-actions.ts](../../app/(app)/app/practice/shared/question-flow-actions.ts), [practice-session-page-logic.ts](../../app/(app)/app/practice/[sessionId]/practice-session-page-logic.ts)
+**Related:** [question-page-logic.ts](../../../app/(app)/app/questions/%5Bslug%5D/question-page-logic.ts), [question-flow-actions.ts](../../../app/(app)/app/practice/shared/question-flow-actions.ts), [practice-session-page-logic.ts](../../../app/(app)/app/practice/%5BsessionId%5D/practice-session-page-logic.ts)
 
 ### Resolution
 
@@ -17,9 +17,9 @@ Extracted `getActionResultErrorMessage`, `getThrownErrorMessage`, and `runTransi
 The standalone question-review feature currently depends on practice-feature
 internals for generic flow behavior:
 
-- [`question-page-logic.ts`](../../app/(app)/app/questions/[slug]/question-page-logic.ts) imports error helpers from [`practice-logic.ts`](../../app/(app)/app/practice/practice-logic.ts)
-- [`question-page-logic.ts`](../../app/(app)/app/questions/[slug]/question-page-logic.ts) imports `runTransitionedAsyncAction` from [`question-flow-actions.ts`](../../app/(app)/app/practice/shared/question-flow-actions.ts)
-- [`question-flow-actions.ts`](../../app/(app)/app/practice/shared/question-flow-actions.ts) itself depends on `practice-logic.ts`
+- [`question-page-logic.ts`](../../../app/(app)/app/questions/%5Bslug%5D/question-page-logic.ts) imports error helpers from [`practice-logic.ts`](../../app/(app)/app/practice/practice-logic.ts)
+- [`question-page-logic.ts`](../../../app/(app)/app/questions/%5Bslug%5D/question-page-logic.ts) imports `runTransitionedAsyncAction` from [`question-flow-actions.ts`](../../../app/(app)/app/practice/shared/question-flow-actions.ts)
+- [`question-flow-actions.ts`](../../../app/(app)/app/practice/shared/question-flow-actions.ts) itself depends on `practice-logic.ts`
 
 That makes the question feature depend on implementation details parked under
 the practice feature path, even though the logic being reused is now feature-neutral.

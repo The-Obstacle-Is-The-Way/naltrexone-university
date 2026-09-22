@@ -61,4 +61,4 @@ These should be tuned for production. At minimum, `replaysOnErrorSampleRate` sho
 - `sentry.client.config.ts` — client-side Sentry initialization (uses `NEXT_PUBLIC_VERCEL_ENV` for environment tagging)
 - `instrumentation.ts` — server-side Sentry initialization (uses `VERCEL_ENV` for environment tagging)
 - `lib/env.ts` — Zod schema (DSN not included — could be added as required field in future)
-- [DEBT-101](../_archive/debt/debt-101-add-sentry-error-tracking.md) — original Sentry setup (resolved 2026-02-05)
+- [DEBT-101](debt-101-add-sentry-error-tracking.md) — original Sentry setup (resolved 2026-02-05)

@@ -107,5 +107,5 @@ The audit found four concrete cleanup items that should be addressed to keep the
 
 ## Related
 
-- [DEBT-246](../../debt/debt-246-e2e-coverage-gaps-visual-testing-strategy.md)
+- [DEBT-246](debt-246-e2e-coverage-gaps-visual-testing-strategy.md)
 - `.claude/rules/testing.md`

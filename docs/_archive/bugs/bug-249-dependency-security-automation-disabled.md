@@ -5,7 +5,7 @@
 **Date:** 2026-06-13
 **Resolution State:** Resolved — GitHub vulnerability alerts and automated security fixes are now enabled (`gh api .../vulnerability-alerts` → HTTP 204; `automated-security-fixes` → `{"enabled":true}`; `security_and_analysis.dependabot_security_updates: enabled`), and the Dependabot security-update PR cap was raised from 0 to 5. Residual esbuild advisory remains tracked in DEBT-419.
 **Family:** Security / dependency automation / repository governance
-**Related:** [AUDIT-012](../_archive/audits/audit-012-repo-org-devx.md)
+**Related:** [AUDIT-012](../audits/audit-012-repo-org-devx.md)
 
 ---
 

@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-20
 **Source:** Manual UI review during DEBT-326 investigation
-**Related:** [NotificationProvider](../../components/ui/notification-provider.tsx), [PracticeSessionToast](../../app/(app)/app/practice/[sessionId]/practice-session-toast.tsx)
+**Related:** [NotificationProvider](../../../components/ui/notification-provider.tsx), [PracticeSessionToast](../../../app/(app)/app/practice/%5BsessionId%5D/practice-session-toast.tsx)
 
 ---
 

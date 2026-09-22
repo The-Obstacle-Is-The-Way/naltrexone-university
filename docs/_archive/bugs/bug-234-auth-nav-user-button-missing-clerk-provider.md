@@ -21,8 +21,8 @@ The defect is low-severity because it is currently isolated to preview traffic, 
 - Stack includes `Object.throwMissingClerkProviderError`
 
 ## Root Cause Analysis
-- [`components/providers.tsx`](../../components/providers.tsx) loads `ClerkProvider` through `next/dynamic(..., { ssr: false })`, so the provider does not participate in the server render path.
-- [`components/auth-nav.tsx`](../../components/auth-nav.tsx) previously imported `UserButton` directly inside the async server component and rendered it whenever the request was authenticated.
+- [`components/providers.tsx`](../../../components/providers.tsx) loads `ClerkProvider` through `next/dynamic(..., { ssr: false })`, so the provider does not participate in the server render path.
+- [`components/auth-nav.tsx`](../../../components/auth-nav.tsx) previously imported `UserButton` directly inside the async server component and rendered it whenever the request was authenticated.
 - In preview renders, Next.js evaluated that server path before the client-owned Clerk provider existed, so Clerk threw the runtime invariant that `UserButton` must be rendered within `<ClerkProvider />`.
 
 ## User Impact
@@ -36,8 +36,8 @@ The defect is low-severity because it is currently isolated to preview traffic, 
 - After deployment, resolve `WEB-K` in Sentry and confirm no new preview events recur.
 
 ## References
-- [AuthNav](../../components/auth-nav.tsx)
-- [AuthUserButton](../../components/auth-user-button.tsx)
-- [Providers](../../components/providers.tsx)
+- [AuthNav](../../../components/auth-nav.tsx)
+- [AuthUserButton](../../../components/auth-user-button.tsx)
+- [Providers](../../../components/providers.tsx)
 - [Clerk CSP Docs](https://clerk.com/docs/security/clerk-csp)
 - [Clerk Next.js Authentication Guide](https://clerk.com/blog/nextjs-authentication)

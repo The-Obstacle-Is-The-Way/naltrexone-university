@@ -32,7 +32,7 @@ Today those strings usually inherit browser/root `1rem`, so the visual output is
 2. **Regression risk:** if parent composition or root sizing changes, these strings can drift without any explicit typography token changing.
 3. **Ambiguous hierarchy:** developers cannot tell whether a string is meant to be dense chrome (`text-sm`) or standard supporting copy (`text-base`) just by reading the JSX.
 
-This debt is about the **regular React/UI pipeline**, not Markdown content. [DEBT-282](../../debt/debt-282-feedback-visual-unification.md) already covers the Markdown-backed feedback mismatch inside the question flow.
+This debt is about the **regular React/UI pipeline**, not Markdown content. [DEBT-282](debt-282-feedback-visual-unification.md) already covers the Markdown-backed feedback mismatch inside the question flow.
 
 ---
 
@@ -105,7 +105,7 @@ The following apparent matches were audited and excluded:
 - `app/pricing/pricing-view.tsx:48-57` — the pricing banner inherits `text-sm` from the alert container (`className="... p-4 text-sm shadow-sm ..."`). This is compact alert chrome, not standard supporting copy.
 - `app/not-found.tsx:23`, `app/pricing/pricing-view.tsx:42`, and `components/marketing/marketing-home.tsx:78` already claim explicit `text-base` or `text-lg` roles and are compliant.
 - Nav/icon utility classes in `components/app-desktop-nav.tsx`, `components/mobile-nav.tsx`, `components/marketing/marketing-layout.tsx`, `components/theme-toggle.tsx`, `components/auth-nav.tsx`, and `components/ui/*` are interactive chrome or icon tinting, not supporting-copy typography.
-- `components/question/feedback.tsx` remains intentionally excluded from this debt and is still tracked by [DEBT-282](../../debt/debt-282-feedback-visual-unification.md).
+- `components/question/feedback.tsx` remains intentionally excluded from this debt and is still tracked by [DEBT-282](debt-282-feedback-visual-unification.md).
 
 Representative current pattern:
 

@@ -3,7 +3,7 @@
 **Date:** 2026-03-21
 **Triggered by:** DEBT-330 investigation revealed the same bookmark-between-nav-controls problem exists on the question review / session review bottom action bar (`app/(app)/app/questions/[slug]/question-page-client.tsx`, the `data-testid="bottom-action-bar"` block), but with more buttons and more state combinations making it harder to reason about in isolation.
 **Scope:** Audit the question review / session review bottom action bar's arrangement across all states (pre-submit, post-submit, review mode, session nav present/absent) and determine if the button grouping needs the same kind of fix as DEBT-330 (post-exam review surface).
-**Related:** [BS-061](./bs-061-review-surface-divergence-audit.md), [DEBT-330 (resolved)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
+**Related:** [BS-061](../_archive/brainstorming/bs-061-review-surface-divergence-audit.md), [DEBT-330 (resolved)](../_archive/debt/debt-330-review-action-bar-bookmark-placement.md), [BS-052](./bs-052-bookmark-icon-toggle-replacement.md), [BS-019 (archived)](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md)
 
 **Status:** Active — still unresolved on `question-page-client.tsx`. Post-exam review was fixed by DEBT-330 (PR #241), and the active tutor practice bar already renders `Previous / Next / Bookmark` after feedback, but the question review / session review surface still keeps bookmark between reattempt/previous controls and next/back controls.
 

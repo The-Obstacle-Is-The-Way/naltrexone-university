@@ -2,8 +2,8 @@
 
 **Priority:** P3
 **Created:** 2026-05-21
-**Source:** Spun out of [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) / PR #313. That ticket updated the impact-stat row from `2` to `3 Study Modes` (Tutor, Exam, and Quick Practice are three real, separately-routed surfaces) but explicitly held the Features array out of scope to keep the diff text-only. The result is a self-contradiction now live on `/`: the stat row claims **3** study modes, while the Features section card a few sections down still names exactly **two** (`Tutor + Exam Modes`).
-**Related:** [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) (parent), [Frontend Standards](../frontend/standards.md)
+**Source:** Spun out of [DEBT-382](debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) / PR #313. That ticket updated the impact-stat row from `2` to `3 Study Modes` (Tutor, Exam, and Quick Practice are three real, separately-routed surfaces) but explicitly held the Features array out of scope to keep the diff text-only. The result is a self-contradiction now live on `/`: the stat row claims **3** study modes, while the Features section card a few sections down still names exactly **two** (`Tutor + Exam Modes`).
+**Related:** [DEBT-382](debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) (parent), [Frontend Standards](../../frontend/standards.md)
 
 **Status:** Active — implementation-ready; exact copy locked below.
 

@@ -178,7 +178,7 @@ identifier was printed.
   because its application-owned silent-handler seam still exists.
 - [DEBT-471](../debt/debt-471-e2e-ci-external-fragility.md) — owns the hosted
   Checkout drift classification and non-blocking cadence.
-- [DEBT-473](../../debt/debt-473-green-without-evidence.md) — owns complete CI
+- [DEBT-473](../debt/debt-473-green-without-evidence.md) — owns complete CI
   evidence reporting.
 - [DEBT-474](../../debt/debt-474-ci-secret-scope-and-action-immutability.md) — owns
   CI credential scope and action immutability.

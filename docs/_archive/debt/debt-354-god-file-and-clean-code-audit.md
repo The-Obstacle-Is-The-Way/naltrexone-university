@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-04-08
 **Source:** April 2026 debt sweep
-**Related:** [DEBT-224](../_archive/debt/debt-224-file-size-audit-production-and-test.md), [DEBT-234](../_archive/debt/debt-234-add-max-lines-lint-rule.md), [DEBT-350](./debt-350-exam-results-session-continuity.md), [scripts/check-file-size.sh](../../scripts/check-file-size.sh)
+**Related:** [DEBT-224](debt-224-file-size-audit-production-and-test.md), [DEBT-234](debt-234-add-max-lines-lint-rule.md), [DEBT-350](./debt-350-exam-results-session-continuity.md), [scripts/check-file-size.sh](../../scripts/check-file-size.sh)
 
 ---
 

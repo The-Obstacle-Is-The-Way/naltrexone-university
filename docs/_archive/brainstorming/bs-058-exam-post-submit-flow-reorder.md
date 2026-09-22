@@ -199,7 +199,7 @@ Session Summary stays the first screen, but each question in the breakdown is ex
 
 ### G3 — Exam answer secrecy timing
 
-The [exam-answer-secrecy-policy.md](../practice-engine/exam-answer-secrecy-policy.md) gates correctness/explanation exposure on session completion. The finalization step (`FinalizeExamAnswers`) must complete before any feedback is rendered. This is already the case today — no change needed. But the code must be careful not to optimistically render feedback before the server confirms finalization.
+The [exam-answer-secrecy-policy.md](../../practice-engine/exam-answer-secrecy-policy.md) gates correctness/explanation exposure on session completion. The finalization step (`FinalizeExamAnswers`) must complete before any feedback is rendered. This is already the case today — no change needed. But the code must be careful not to optimistically render feedback before the server confirms finalization.
 
 ### G4 — "Skip review" escape hatch
 

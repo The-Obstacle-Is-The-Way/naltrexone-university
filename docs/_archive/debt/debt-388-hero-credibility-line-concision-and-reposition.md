@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-05-21
 **Source:** Visual iteration on the hero after DEBT-382 (credibility line + hero copy) and DEBT-387 (features card) shipped. Three small issues remain on `/`: (1) the credibility line is wordier than it needs to be; (2) it sits *between* the pill and the h1, crowding "Master the Addiction Boards." out of the first-read slot; and (3) the hero subtitle wraps mid-first-sentence rather than breaking by sentence.
-**Related:** [DEBT-382](../_archive/debt/debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) (parent — set the original placement/wording), [DEBT-387](../_archive/debt/debt-387-features-card-understates-study-modes.md)
+**Related:** [DEBT-382](debt-382-landing-page-content-refresh-question-count-and-author-credibility.md) (parent — set the original placement/wording), [DEBT-387](debt-387-features-card-understates-study-modes.md)
 
 **Status:** Active — wording + position locked (below); wrapping is a visual-tune to verify in-browser.
 

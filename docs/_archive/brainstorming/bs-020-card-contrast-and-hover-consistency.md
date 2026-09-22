@@ -3,7 +3,7 @@
 **Date:** 2026-02-17
 **Triggered by:** Visual audit — dashboard cards lose contrast on hover, blending into the page background; landing page cards don't have this problem
 **Scope:** Background color layering, card hover effects, and visual consistency between the marketing site and the authenticated app, with the landing visual system as the baseline reference
-**Related:** [Design Principles](../frontend/design-principles.md), [DEBT-108](../_archive/debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) (original semantic color cleanup)
+**Related:** [Design Principles](../../frontend/design-principles.md), [DEBT-108](../debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) (original semantic color cleanup)
 
 ---
 
@@ -396,6 +396,6 @@ Dashboard, Practice, Quick Practice, Session pages, History, Bookmarks, Billing,
 
 ## Related Documentation
 
-- [DEBT-108](../_archive/debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) — Original semantic color cleanup that established current token values
-- [Standards: Stat card hover](../frontend/standards.md) — Documents `hover:border-border/80 hover:bg-muted/50` as the standard (this standard may need updating)
+- [DEBT-108](../debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) — Original semantic color cleanup that established current token values
+- [Standards: Stat card hover](../../frontend/standards.md) — Documents `hover:border-border/80 hover:bg-muted/50` as the standard (this standard may need updating)
 - [E2E Audit Test](../../tests/e2e/bs-020-card-contrast-audit.spec.ts) — Playwright tests measuring contrast inversion, disappearing hover, and hover pattern divergence with computed lightness values

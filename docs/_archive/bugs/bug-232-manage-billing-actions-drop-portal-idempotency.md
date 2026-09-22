@@ -40,12 +40,12 @@ Expected behavior:
 
 Tracer-bullet path:
 
-1. [`src/adapters/controllers/billing-controller.ts`](../../src/adapters/controllers/billing-controller.ts) now accepts optional `idempotencyKey` and wraps portal creation in `withIdempotency(...)` when provided.
-2. [`app/pricing/manage-billing-actions.ts`](../../app/pricing/manage-billing-actions.ts) ignores its `FormData` argument and forwards only injected deps.
-3. [`app/(app)/app/billing/manage-billing-actions.ts`](../../app/(app)/app/billing/manage-billing-actions.ts) does the same.
-4. [`lib/manage-billing/manage-billing-core.ts`](../../lib/manage-billing/manage-billing-core.ts) hardcodes `deps.createPortalSessionFn({})`.
-5. [`lib/manage-billing/manage-billing-types.ts`](../../lib/manage-billing/manage-billing-types.ts) types `CreatePortalSessionFn` as `input: Record<string, never>`, preventing callers from threading an idempotency key through the shared helper.
-6. The rendered pricing and billing forms in [`app/pricing/pricing-view.tsx`](../../app/pricing/pricing-view.tsx) and [`app/(app)/app/billing/page.tsx`](../../app/(app)/app/billing/page.tsx) do not emit any hidden idempotency field for manage-billing submits.
+1. [`src/adapters/controllers/billing-controller.ts`](../../../src/adapters/controllers/billing-controller.ts) now accepts optional `idempotencyKey` and wraps portal creation in `withIdempotency(...)` when provided.
+2. [`app/pricing/manage-billing-actions.ts`](../../../app/pricing/manage-billing-actions.ts) ignores its `FormData` argument and forwards only injected deps.
+3. [`app/(app)/app/billing/manage-billing-actions.ts`](../../../app/(app)/app/billing/manage-billing-actions.ts) does the same.
+4. [`lib/manage-billing/manage-billing-core.ts`](../../../lib/manage-billing/manage-billing-core.ts) hardcodes `deps.createPortalSessionFn({})`.
+5. [`lib/manage-billing/manage-billing-types.ts`](../../../lib/manage-billing/manage-billing-types.ts) types `CreatePortalSessionFn` as `input: Record<string, never>`, preventing callers from threading an idempotency key through the shared helper.
+6. The rendered pricing and billing forms in [`app/pricing/pricing-view.tsx`](../../../app/pricing/pricing-view.tsx) and [`app/(app)/app/billing/page.tsx`](../../../app/(app)/app/billing/page.tsx) do not emit any hidden idempotency field for manage-billing submits.
 
 ## Recommended Fix
 
@@ -64,9 +64,9 @@ Tracer-bullet path:
 
 ## Related
 
-- [`app/pricing/manage-billing-actions.ts`](../../app/pricing/manage-billing-actions.ts)
-- [`app/(app)/app/billing/manage-billing-actions.ts`](../../app/(app)/app/billing/manage-billing-actions.ts)
-- [`lib/manage-billing/manage-billing-core.ts`](../../lib/manage-billing/manage-billing-core.ts)
-- [`lib/manage-billing/manage-billing-types.ts`](../../lib/manage-billing/manage-billing-types.ts)
-- [`src/adapters/controllers/billing-controller.ts`](../../src/adapters/controllers/billing-controller.ts)
-- [`docs/_archive/bugs/bug-204-billing-portal-missing-abuse-controls.md`](../_archive/bugs/bug-204-billing-portal-missing-abuse-controls.md)
+- [`app/pricing/manage-billing-actions.ts`](../../../app/pricing/manage-billing-actions.ts)
+- [`app/(app)/app/billing/manage-billing-actions.ts`](../../../app/(app)/app/billing/manage-billing-actions.ts)
+- [`lib/manage-billing/manage-billing-core.ts`](../../../lib/manage-billing/manage-billing-core.ts)
+- [`lib/manage-billing/manage-billing-types.ts`](../../../lib/manage-billing/manage-billing-types.ts)
+- [`src/adapters/controllers/billing-controller.ts`](../../../src/adapters/controllers/billing-controller.ts)
+- [`docs/_archive/bugs/bug-204-billing-portal-missing-abuse-controls.md`](bug-204-billing-portal-missing-abuse-controls.md)

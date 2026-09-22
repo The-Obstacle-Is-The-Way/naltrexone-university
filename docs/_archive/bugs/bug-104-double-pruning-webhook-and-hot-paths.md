@@ -67,7 +67,7 @@ The previous agent added hot-path pruning (commit `94b2ffb`) but did not remove 
 
 ## Related
 
-- [BUG-102](../_archive/bugs/bug-102-rate-limits-table-unbounded-growth.md) — Original rate_limits pruning fix
-- [BUG-103](../_archive/bugs/bug-103-idempotency-key-pruning-never-wired.md) — Original idempotency_keys pruning fix
+- [BUG-102](bug-102-rate-limits-table-unbounded-growth.md) — Original rate_limits pruning fix
+- [BUG-103](bug-103-idempotency-key-pruning-never-wired.md) — Original idempotency_keys pruning fix
 - Commit `53bc601` — Added webhook pruning
 - Commit `94b2ffb` — Added hot-path pruning (but didn't remove webhook pruning)

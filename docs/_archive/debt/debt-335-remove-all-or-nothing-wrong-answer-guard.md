@@ -4,7 +4,7 @@
 **Created:** 2026-03-24
 **Updated:** 2026-03-24 (implemented, verified, and closed)
 **Status:** Resolved (2026-03-24)
-**Source:** [DEBT-275](../../debt/debt-275-bs033-residual-open-items.md) (Open Design Decision)
+**Source:** [DEBT-275](debt-275-bs033-residual-open-items.md) (Open Design Decision)
 **Scope:** Shared `Feedback` render-rule change in `components/question/feedback.tsx`, plus targeted regression tests and authoring-doc updates
 
 ---

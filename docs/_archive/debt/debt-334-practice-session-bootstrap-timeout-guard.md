@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-21
 **Source:** Repo-wide async/await audit prompted by DEBT-333 / PR #244
-**Related:** [DEBT-333](../_archive/debt/debt-333-browser-test-flakiness-audit.md), [use-practice-session-page-controller.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts), [with-timeout.ts](../../lib/with-timeout.ts), [timeout-tiers](../../app/(app)/app/shared/timeout-tiers.ts)
+**Related:** [DEBT-333](debt-333-browser-test-flakiness-audit.md), [use-practice-session-page-controller.ts](../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts), [with-timeout.ts](../../../lib/with-timeout.ts), [timeout-tiers](../../../app/(app)/app/shared/timeout-tiers.ts)
 
 ---
 

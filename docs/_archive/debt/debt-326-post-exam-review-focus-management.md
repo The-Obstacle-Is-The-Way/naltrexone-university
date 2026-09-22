@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-03-19
 **Source:** BS-058 post-implementation audit
-**Related:** [PostExamReviewView](../../app/(app)/app/practice/[sessionId]/components/post-exam-review-view.tsx)
+**Related:** [PostExamReviewView](../../../app/(app)/app/practice/%5BsessionId%5D/components/post-exam-review-view.tsx)
 
 ---
 

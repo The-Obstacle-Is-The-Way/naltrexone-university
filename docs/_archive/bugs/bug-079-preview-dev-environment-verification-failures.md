@@ -141,9 +141,9 @@ This happened because the initial Stripe setup (days earlier) used a separate te
 ## Related
 
 - [BUG-078](bug-078-clerk-production-google-oauth-not-configured.md) — Predecessor: Production auth failures (same day), Fix #4 wiped `main` user data but not `dev`
-- [BUG-066](../_archive/bugs/bug-066-clerk-development-keys-in-production.md) — Original key switch that created the stale data problem
-- [BUG-040](../_archive/bugs/bug-040-clerk-key-mismatch-infinite-redirect.md) — Previous Clerk redirect loop bug (same symptom, different root cause)
-- [BUG-069](../_archive/bugs/bug-069-stripe-checkout-fails-localhost.md) / [BUG-070](../_archive/bugs/bug-070-e2e-test-user-checkout-fails.md) — Previous Stripe checkout failures (binding bug, different root cause)
+- [BUG-066](bug-066-clerk-development-keys-in-production.md) — Original key switch that created the stale data problem
+- [BUG-040](bug-040-clerk-key-mismatch-infinite-redirect.md) — Previous Clerk redirect loop bug (same symptom, different root cause)
+- [BUG-069](bug-069-stripe-checkout-fails-localhost.md) / [BUG-070](bug-070-e2e-test-user-checkout-fails.md) — Previous Stripe checkout failures (binding bug, different root cause)
 - `docs/dev/deployment-environments.md` — Environment key mapping SSOT
 - `src/adapters/controllers/action-result.ts:51-61` — Generic error handler that obscures Stripe errors
 - [BUG-080](bug-080-vercel-env-var-deployment-issues.md) — Successor: Additional Preview deployment issues discovered during E2E verification (Deployment Protection, trailing `\n`, `NEXT_PUBLIC_APP_URL`)

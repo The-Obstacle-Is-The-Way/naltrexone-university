@@ -3,7 +3,7 @@
 **Date:** 2026-03-13
 **Triggered by:** Visual review of the Practice page topic/substance/treatment filter chips. On hover, the contrast change is barely perceptible in both dark and light mode (7% → 10% foreground opacity). Meanwhile, the Bookmarks page Remove pill (outline Button variant) gains a noticeably brighter border on hover in dark mode (`dark:hover:border-foreground/70`) alongside a stronger fill change, creating a much clearer hover signal. The practice chips lack this border-level feedback entirely.
 **Scope:** Improve hover affordance on unselected `FilterChip` components used in the Practice Session Starter, so users can clearly see which chip they're about to click.
-**Related:** [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (dark-mode border tiering), [BS-046 (archived)](../_archive/brainstorming/bs-046-filter-chip-fill-depth-and-summary-hover.md) (prior chip fill depth work), [DEBT-294](../_archive/debt/debt-294-filter-chip-fill-depth-and-cursor.md) (chip fill + cursor fix), [BS-051](./bs-051-bookmark-pill-hover-pattern-investigation.md) (bookmark pill investigation)
+**Related:** [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md) (dark-mode border tiering), [BS-046 (archived)](bs-046-filter-chip-fill-depth-and-summary-hover.md) (prior chip fill depth work), [DEBT-294](../debt/debt-294-filter-chip-fill-depth-and-cursor.md) (chip fill + cursor fix), [BS-051](./bs-051-bookmark-pill-hover-pattern-investigation.md) (bookmark pill investigation)
 
 ---
 
@@ -97,7 +97,7 @@ The Bookmarks Remove pill works well with a border-forward hover treatment becau
 
 3. **Does this interact with BS-044 border tiering?** FilterChip is classified as T1 (interactive) in BS-044's tiering model, so stronger borders on hover align with the tiering philosophy. But if BS-044 ever softens resting borders on chips, the hover delta would become even more dramatic (which might be a good thing).
 
-4. **Dark-mode rest border parity (40% vs 45%)** — Chrome audit noted the dark rest border (`dark:border-foreground/40`) is 5% weaker than light (`border-foreground/45`), which compounds the hover problem in dark mode. This is a rest-state concern, not a hover concern — tracked in [BS-044](./bs-044-dark-mode-border-weight-tiering.md) as part of the broader border tiering question, not in DEBT-309.
+4. **Dark-mode rest border parity (40% vs 45%)** — Chrome audit noted the dark rest border (`dark:border-foreground/40`) is 5% weaker than light (`border-foreground/45`), which compounds the hover problem in dark mode. This is a rest-state concern, not a hover concern — tracked in [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md) as part of the broader border tiering question, not in DEBT-309.
 
 5. **Focus-visible ring clarity in dark mode** — Chrome audit flagged that `focus-visible:ring-ring/50` may be too subtle in dark mode for keyboard navigation. Separate accessibility concern, not related to hover. Needs independent verification.
 
@@ -108,7 +108,7 @@ The Bookmarks Remove pill works well with a border-forward hover treatment becau
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-03-13 | Created BS-050 | Hover affordance on practice chips is barely perceptible; bookmark Remove pill demonstrates the border-brightening pattern that should be adopted |
-| 2026-03-13 | Promoted to [DEBT-309](../_archive/debt/debt-309-filter-chip-hover-border-affordance.md) | Implementation-ready debt doc with exact token changes, test scope, and doc updates |
+| 2026-03-13 | Promoted to [DEBT-309](../debt/debt-309-filter-chip-hover-border-affordance.md) | Implementation-ready debt doc with exact token changes, test scope, and doc updates |
 | 2026-03-13 | Light-mode hover border settled at 60 | Adversarial review: 70 has no light-mode precedent; 45→60 is proportional to dark 40→70 |
 | 2026-03-13 | Chrome visual audit confirms problem | Hover rated 1.5/5 dark, 2/5 light. Border brightening called "single highest-impact change." Also surfaced: selected chips have zero hover feedback, dark rest border 5% weaker than light, focus ring may be too subtle |
 | 2026-03-16 | Archived — DEBT-309 resolved (PR #209) | Hover border affordance and fill lift implemented on FilterChip. Residual items (selected chip hover, dark rest border parity) tracked in BS-044. |
