@@ -117,7 +117,7 @@ failures.
 
 ## Related
 
-- [DEBT-474](../../debt/debt-474-ci-secret-scope-and-action-immutability.md) — the
+- [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) — the
   broader required-CI credential-scope work; its implementation audit must add
   runtime-generated credentials, not only job-level `secrets.*` values.
 - [BUG-304](../../bugs/bug-304-practice-session-start-no-navigation.md) — its exact-head
