@@ -4,7 +4,7 @@
 **Created:** 2026-03-13
 **Status:** Resolved
 **Resolved:** 2026-03-13
-**Promoted from:** [BS-050](../../brainstorming/bs-050-practice-chip-hover-affordance.md)
+**Promoted from:** [BS-050](../brainstorming/bs-050-practice-chip-hover-affordance.md)
 
 ---
 

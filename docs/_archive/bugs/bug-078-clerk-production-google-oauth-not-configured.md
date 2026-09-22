@@ -134,8 +134,8 @@ When setting up a new Clerk Production instance, ALL of these must be completed:
 
 ## Related
 
-- [BUG-066](../_archive/bugs/bug-066-clerk-development-keys-in-production.md) — Predecessor: switched to Production keys but didn't complete verification
-- [BUG-071](../_archive/bugs/bug-071-nextjs-preview-blank-page-csp.md) — Previous blank screen issue (CSP-related, different root cause)
+- [BUG-066](bug-066-clerk-development-keys-in-production.md) — Predecessor: switched to Production keys but didn't complete verification
+- [BUG-071](bug-071-nextjs-preview-blank-page-csp.md) — Previous blank screen issue (CSP-related, different root cause)
 - `docs/dev/deployment-environments.md` — Environment key mapping documentation
 - `proxy.ts` — Clerk middleware (NOT modified, not the cause)
 - `lib/env.ts` — Environment validation (NOT modified, not the cause)

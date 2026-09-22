@@ -4,7 +4,7 @@
 **Created:** 2026-03-19
 **Resolved:** 2026-03-19
 **Source:** BS-058 post-implementation audit
-**Related:** [interaction-contracts.md](../practice-engine/interaction-contracts.md)
+**Related:** [interaction-contracts.md](../../practice-engine/interaction-contracts.md)
 
 ---
 

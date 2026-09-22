@@ -4,7 +4,7 @@
 **Priority:** P2
 **Date:** 2026-03-01
 **Owner:** Practice Engine
-**Related:** [Practice Engine Retry Logic](../practice-engine/retry-logic.md) (SSOT), [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md), [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md), BUG-068, BUG-153
+**Related:** [Practice Engine Retry Logic](../../practice-engine/retry-logic.md) (SSOT), [SPEC-034](../specs/spec-034-review-mode-readonly-and-try-again-scoping.md), [SPEC-036](../specs/spec-036-bookmark-review-mode-alignment.md), BUG-068, BUG-153
 
 ---
 

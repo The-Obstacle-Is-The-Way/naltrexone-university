@@ -4,8 +4,8 @@
 **Created:** 2026-03-07
 **Status:** Resolved in current branch
 **Resolved in branch:** 2026-03-07 — commit `c9275d58` (`Implement DEBT-284: Badge coloring and explanation muting`)
-**Source:** Visual review after [DEBT-282](../_archive/debt/debt-282-feedback-visual-unification.md) (PR #179)
-**Governing Policy:** [Typography Policy](../frontend/typography-policy.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Source:** Visual review after [DEBT-282](debt-282-feedback-visual-unification.md) (PR #179)
+**Governing Policy:** [Typography Policy](../../frontend/typography-policy.md), [Frontend Standards](../../frontend/standards.md), [Pattern Registry](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md)
 **Scope:** Remaining visual inconsistencies between question-flow choice buttons and post-submission feedback cards, plus explanation color consistency and type scale readability
 
 ---
@@ -244,7 +244,7 @@ None for DEBT-284 implementation.
 ## Scope Boundary
 
 This debt covers feedback card visual polish only. It does NOT cover:
-- Dark mode border weight tiering ([BS-044](../brainstorming/bs-044-dark-mode-border-weight-tiering.md))
+- Dark mode border weight tiering ([BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md))
 - User-selectable content font size (future feature in Typography Policy)
 - Card background surface harmonization (deferred from DEBT-282)
 - Any changes to `choice-button.tsx` or `question-card.tsx`

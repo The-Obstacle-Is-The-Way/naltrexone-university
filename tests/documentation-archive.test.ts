@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -10,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
+  archiveLinkRepairs,
   auditDocumentation,
   auditRecordLifecycle,
   brokenDocumentationLinks,
@@ -17,6 +19,7 @@ import {
   REGISTERS,
   readDocumentation,
   readDocumentationFiles,
+  repairArchiveLinks,
   runDocumentationCommand,
 } from '../scripts/documentation-archive';
 
@@ -26,13 +29,14 @@ function audit(files: Record<string, string>) {
   );
 }
 
-function runArchiveCommand(root: string) {
+function runArchiveCommand(root: string, args: string[] = []) {
   return spawnSync(
     process.execPath,
     [
       '--import',
       import.meta.resolve('tsx'),
       path.resolve('scripts/documentation-archive.ts'),
+      ...args,
     ],
     { cwd: root, encoding: 'utf8', timeout: 14_000 },
   );
@@ -177,6 +181,20 @@ describe('documentation archive convention', () => {
     expect(result.brokenLive).toEqual([]);
     expect(result.brokenArchive).toHaveLength(1);
   });
+
+  it('does not offer archive repair for a broken link in a live record', () => {
+    const files = {
+      'docs/bugs/bug-001-example.md': '[Moved](../specs/spec-001-example.md)',
+      'docs/_archive/specs/spec-001-example.md': '# Archived target',
+    };
+    const result = audit(files);
+    expect(result.brokenLive).toHaveLength(1);
+    expect(
+      archiveLinkRepairs(result.brokenLive, (file) =>
+        Object.hasOwn(files, file),
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe('documentation archive command', () => {
@@ -190,6 +208,182 @@ describe('documentation archive command', () => {
     roots.push(root);
     return root;
   }
+
+  function populate(root: string, files: Record<string, string>): void {
+    for (const register of Object.keys(REGISTERS)) {
+      files[`docs/${register}/index.md`] ??= '# Register';
+    }
+    for (const [file, contents] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+      writeFileSync(path.join(root, file), contents);
+    }
+  }
+
+  it('reports JSON and does not repair without the explicit command argument', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Source](../../src/example.ts)';
+    populate(root, { [file]: original, 'src/example.ts': 'export {};' });
+    const output: string[] = [];
+    expect(runDocumentationCommand(root, (json) => output.push(json), [])).toBe(
+      1,
+    );
+    expect(typeof output[0]).toBe('string');
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+  });
+
+  it('refuses the entire batch if a previously classified target disappears', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Source](../../src/example.ts)';
+    populate(root, { [file]: original, 'src/example.ts': 'export {};' });
+    const repairs = readDocumentation(root).repairableArchive;
+    rmSync(path.join(root, 'src/example.ts'));
+    expect(() => repairArchiveLinks(root, repairs)).toThrow(
+      'Repair target disappeared',
+    );
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+  });
+
+  it.each([
+    ['depth', '../../src/example.ts', 'src/example.ts'],
+    [
+      'later archive',
+      '../../debt/debt-001-example.md',
+      'docs/_archive/debt/debt-001-example.md',
+    ],
+  ])('exits nonzero for a provable %s archive break', (_kind, url, target) => {
+    const root = fixture();
+    populate(root, {
+      'docs/_archive/bugs/bug-001-example.md': `[Target](${url})`,
+      [target]: '# Existing target',
+    });
+    expect(runDocumentationCommand(root, () => {})).toBe(1);
+    expect(runArchiveCommand(root).status).toBe(1);
+  });
+
+  it.each(['function', 'CLI'])(
+    'repairs only destinations and preserves historical text through the %s',
+    (entrypoint) => {
+      const root = fixture();
+      const file = 'docs/_archive/bugs/bug-001-example.md';
+      const original = [
+        '# Historical record',
+        '[Source](../../src/example.ts#L7)',
+        '[Later](../../debt/debt-001-example.md?view=raw#receipt)',
+        '![Asset](../../docs/assets/example.png)',
+        '[Already correct](../../../src/existing.ts)',
+        '[Reference][source]',
+        '',
+        '[source]: <../../src/example.ts> "Original title"',
+        '`[Example](../../not-a-link.md)`',
+      ].join('\n');
+      populate(root, {
+        [file]: original,
+        'src/example.ts': 'export {};',
+        'src/existing.ts': 'export {};',
+        'docs/assets/example.png': 'fixture',
+        'docs/_archive/debt/debt-001-example.md': '# Existing record',
+      });
+      if (entrypoint === 'function') {
+        expect(
+          runDocumentationCommand(root, () => {}, ['--repair-archive']),
+        ).toBe(0);
+      } else {
+        const child = runArchiveCommand(root, ['--repair-archive']);
+        expect(child.error).toBeUndefined();
+        expect(child.status).toBe(0);
+      }
+      expect(readFileSync(path.join(root, file), 'utf8')).toBe(
+        original
+          .replaceAll('../../src/example.ts', '../../../src/example.ts')
+          .replace(
+            '../../debt/debt-001-example.md',
+            '../debt/debt-001-example.md',
+          )
+          .replace('../../docs/assets/example.png', '../../assets/example.png'),
+      );
+      expect(readDocumentation(root).brokenArchive).toEqual([]);
+    },
+  );
+
+  it('leaves a historical missing target unchanged and reported', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Deleted](../../src/deleted.ts)';
+    populate(root, { [file]: original });
+    const child = runArchiveCommand(root, ['--repair-archive']);
+    expect(child.status).toBe(0);
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+    expect(JSON.parse(child.stdout).brokenArchive).toHaveLength(1);
+  });
+
+  it.each([
+    ['file%23name.ts', 'file#name.ts'],
+    ['file%3Fname.ts', 'file?name.ts'],
+  ])('preserves encoded filename delimiters in %s', (encoded, filename) => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    populate(root, {
+      [file]: `[Source](../../src/${encoded}?view=raw#L7)`,
+      [`src/${filename}`]: 'export {};',
+    });
+    expect(runDocumentationCommand(root, () => {}, ['--repair-archive'])).toBe(
+      0,
+    );
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(
+      `[Source](../../../src/${encoded}?view=raw#L7)`,
+    );
+    expect(readDocumentation(root).brokenArchive).toEqual([]);
+  });
+
+  it('writes nothing when a proven repair has an unsupported source spelling', () => {
+    const root = fixture();
+    const first = 'docs/_archive/bugs/bug-001-example.md';
+    const unsupported = 'docs/_archive/bugs/bug-002-example.md';
+    const original = '[Source](../../src/example.ts)';
+    populate(root, {
+      [first]: original,
+      [unsupported]: '[Escaped](../../src/part\\(one\\).ts)',
+      'src/example.ts': 'export {};',
+      'src/part(one).ts': 'export {};',
+    });
+    expect(() =>
+      runDocumentationCommand(root, () => {}, ['--repair-archive']),
+    ).toThrow('Cannot safely rewrite');
+    const child = runArchiveCommand(root, ['--repair-archive']);
+    expect(child.status).toBe(1);
+    expect(child.stderr).toContain('Cannot safely rewrite');
+    expect(readFileSync(path.join(root, first), 'utf8')).toBe(original);
+  });
+
+  it('does not guess between two existing historical destinations', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Ambiguous](../../docs/specs/spec-001-example.md)';
+    populate(root, {
+      [file]: original,
+      'docs/specs/spec-001-example.md': '# First candidate',
+      'docs/_archive/specs/spec-001-example.md': '# Second candidate',
+    });
+    runDocumentationCommand(root, () => {}, ['--repair-archive']);
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+    expect(readDocumentation(root).repairableArchive).toEqual([]);
+  });
+
+  it('refuses an apparent URL replacement that actually changes a link title', () => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    const original = '[Source](../../src/example.ts "../../src/example.ts")';
+    populate(root, {
+      [file]: original,
+      'src/example.ts': 'export {};',
+    });
+    expect(() =>
+      runDocumentationCommand(root, () => {}, ['--repair-archive']),
+    ).toThrow('Markdown destinations changed unexpectedly');
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+  });
 
   it('fails closed if the documentation walk has no registers', () => {
     expect(() => readDocumentation(fixture())).toThrow(
@@ -210,12 +404,16 @@ describe('documentation archive command', () => {
     // Cover the same command body with real files and captured reporting.
     const reports: DocumentationAudit[] = [];
     expect(
-      runDocumentationCommand(root, (report) => reports.push(report)),
+      runDocumentationCommand(root, (report) =>
+        reports.push(JSON.parse(report)),
+      ),
     ).toBe(1);
     expect(reports[0]?.brokenLive).toHaveLength(1);
     writeFileSync(path.join(root, 'missing.md'), '# Repaired');
     expect(
-      runDocumentationCommand(root, (report) => reports.push(report)),
+      runDocumentationCommand(root, (report) =>
+        reports.push(JSON.parse(report)),
+      ),
     ).toBe(0);
     expect(reports[1]?.brokenLive).toEqual([]);
     writeFileSync(
@@ -257,6 +455,17 @@ describe('repository documentation', () => {
   )('resolves relative file links in %s', (file) => {
     expect(
       brokenDocumentationLinks(file, files.get(file) ?? '', exists),
+    ).toEqual([]);
+  });
+
+  it.each(
+    [...files.keys()].filter((file) => file.startsWith('docs/_archive/')),
+  )('has no mechanically repairable archive links in %s', (file) => {
+    expect(
+      archiveLinkRepairs(
+        brokenDocumentationLinks(file, files.get(file) ?? '', exists),
+        exists,
+      ),
     ).toEqual([]);
   });
 });

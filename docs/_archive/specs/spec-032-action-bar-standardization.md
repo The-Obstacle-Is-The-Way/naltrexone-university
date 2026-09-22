@@ -319,6 +319,6 @@ Exam mode already uses the same `PracticeView` component as Tutor. The label cha
 ## Related
 
 - [BS-019](../brainstorming/bs-019-action-bar-label-and-ordering-consistency.md) — Full 38-state audit matrix, 9 inconsistencies, root cause analysis
-- [SPEC-030](../_archive/specs/spec-030-question-view-ux-unification.md) — Established navigation zone model (Phase 1 of action bar work)
-- [Design Principles](../frontend/design-principles.md) — Action bar composition (§2), to be updated
+- [SPEC-030](spec-030-question-view-ux-unification.md) — Established navigation zone model (Phase 1 of action bar work)
+- [Design Principles](../../frontend/design-principles.md) — Action bar composition (§2), to be updated
 - [E2E Tests](../../tests/e2e/bs-019-action-bar-audit.spec.ts) — Playwright audit covering all 4 contexts

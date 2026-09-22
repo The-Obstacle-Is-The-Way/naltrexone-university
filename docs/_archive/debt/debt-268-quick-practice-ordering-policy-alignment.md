@@ -4,7 +4,7 @@
 **Priority:** P2
 **Date:** 2026-03-02
 **Owner:** Practice Engine
-**Related:** [BS-038](../_archive/brainstorming/bs-038-quick-practice-question-ordering-not-randomized.md), [Ordering Policy](../practice-engine/ordering-policy.md), Issue #54, SPEC-013, SPEC-024
+**Related:** [BS-038](../brainstorming/bs-038-quick-practice-question-ordering-not-randomized.md), [Ordering Policy](../../practice-engine/ordering-policy.md), Issue #54, SPEC-013, SPEC-024
 
 ---
 
@@ -15,7 +15,7 @@
 
 Important correction: the leak was not raw table insertion order; it was explicit repository ordering (`ORDER BY questions.createdAt DESC, questions.id ASC`) from `DrizzleQuestionRepository.listPublishedCandidateIds()`.
 
-This violated [ordering-policy.md](../practice-engine/ordering-policy.md) Section 3.3, which requires a daily-seeded shuffle before Quick Practice selection.
+This violated [ordering-policy.md](../../practice-engine/ordering-policy.md) Section 3.3, which requires a daily-seeded shuffle before Quick Practice selection.
 
 ## Resolution
 

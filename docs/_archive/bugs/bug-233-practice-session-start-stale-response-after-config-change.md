@@ -41,10 +41,10 @@ Expected behavior:
 
 Tracer-bullet path:
 
-1. [`app/(app)/app/practice/components/practice-session-starter.tsx`](../../app/(app)/app/practice/components/practice-session-starter.tsx) only disables the start button while `sessionStartStatus === 'loading'`; the rest of the controls remain interactive.
-2. The control handlers in [`app/(app)/app/practice/practice-page-session-start.ts`](../../app/(app)/app/practice/practice-page-session-start.ts) keep mutating filters and rotating the local idempotency key during that loading window.
-3. [`app/(app)/app/practice/hooks/use-practice-session-start.ts`](../../app/(app)/app/practice/hooks/use-practice-session-start.ts) captures the current filters/mode/count in the `onStartSession` closure and delegates to `startSession(...)`.
-4. [`app/(app)/app/practice/practice-page-session-start.ts`](../../app/(app)/app/practice/practice-page-session-start.ts) checks only `isMounted()` after the await; it has no request token, no stale-config guard, and no comparison against the latest idempotency key.
+1. [`app/(app)/app/practice/components/practice-session-starter.tsx`](../../../app/(app)/app/practice/components/practice-session-starter.tsx) only disables the start button while `sessionStartStatus === 'loading'`; the rest of the controls remain interactive.
+2. The control handlers in [`app/(app)/app/practice/practice-page-session-start.ts`](../../../app/(app)/app/practice/practice-page-session-start.ts) keep mutating filters and rotating the local idempotency key during that loading window.
+3. [`app/(app)/app/practice/hooks/use-practice-session-start.ts`](../../../app/(app)/app/practice/hooks/use-practice-session-start.ts) captures the current filters/mode/count in the `onStartSession` closure and delegates to `startSession(...)`.
+4. [`app/(app)/app/practice/practice-page-session-start.ts`](../../../app/(app)/app/practice/practice-page-session-start.ts) checks only `isMounted()` after the await; it has no request token, no stale-config guard, and no comparison against the latest idempotency key.
 5. A stale success therefore still calls `navigateTo(...)`, and a stale failure still commits error UI, even after the user has moved the UI to a newer configuration.
 
 ## Recommended Fix
@@ -62,9 +62,9 @@ Tracer-bullet path:
 
 ## Related
 
-- [`app/(app)/app/practice/components/practice-session-starter.tsx`](../../app/(app)/app/practice/components/practice-session-starter.tsx)
-- [`app/(app)/app/practice/practice-page-session-start.ts`](../../app/(app)/app/practice/practice-page-session-start.ts)
-- [`app/(app)/app/practice/hooks/use-practice-session-start.ts`](../../app/(app)/app/practice/hooks/use-practice-session-start.ts)
-- [`app/(app)/app/practice/hooks/use-practice-session-start.browser.spec.tsx`](../../app/(app)/app/practice/hooks/use-practice-session-start.browser.spec.tsx)
-- [`docs/_archive/bugs/bug-190-history-session-reopen-race-applies-stale-result.md`](../_archive/bugs/bug-190-history-session-reopen-race-applies-stale-result.md)
-- [`docs/_archive/bugs/bug-230-post-exam-review-retry-race.md`](../_archive/bugs/bug-230-post-exam-review-retry-race.md)
+- [`app/(app)/app/practice/components/practice-session-starter.tsx`](../../../app/(app)/app/practice/components/practice-session-starter.tsx)
+- [`app/(app)/app/practice/practice-page-session-start.ts`](../../../app/(app)/app/practice/practice-page-session-start.ts)
+- [`app/(app)/app/practice/hooks/use-practice-session-start.ts`](../../../app/(app)/app/practice/hooks/use-practice-session-start.ts)
+- [`app/(app)/app/practice/hooks/use-practice-session-start.browser.spec.tsx`](../../../app/(app)/app/practice/hooks/use-practice-session-start.browser.spec.tsx)
+- [`docs/_archive/bugs/bug-190-history-session-reopen-race-applies-stale-result.md`](bug-190-history-session-reopen-race-applies-stale-result.md)
+- [`docs/_archive/bugs/bug-230-post-exam-review-retry-race.md`](bug-230-post-exam-review-retry-race.md)

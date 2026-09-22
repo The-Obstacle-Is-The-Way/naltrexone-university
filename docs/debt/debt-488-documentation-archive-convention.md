@@ -66,7 +66,7 @@ Read-only census on promoted main `ce5439b0` (promotion #981), 2026-09-21:
 - [x] No duplicate/stub or terminal record remains live; register targets work.
 - [x] Zero broken live relative file links (16/16 focused cases green at
   20:08:06Z; command failure-contract cases added separately).
-- [ ] Mechanical archive repairs individually resolve; unresolved targets listed.
+- [x] Mechanical archive repairs individually resolve; unresolved targets listed below (PR 2; promotion still pending).
 - [ ] Exact-head review, full gate, promotion, and production receipts recorded.
 - [ ] This record is itself archived without a compatibility stub.
 
@@ -201,6 +201,141 @@ resolution date and verification-receipt fields. Reusable Active QA
 procedures remain live. Scoped practice-engine corrections point to BUG-238,
 BUG-239 and DEBT-397's existing resolutions without changing the dated April
 snapshot or claiming that the entire historical practice audit was repeated.
+
+## PR 2 mechanical repairs (2026-09-21)
+
+PR #982 merged to dev as `0cd12052`, after normal exact-head approval on
+`2070d762` (review 5272471458) and passing CI 35662286285. Required E2E passed
+46/46 without failures or retries. Two final wording suggestions were declined
+with the existing canonical-rule receipts; no override was used.
+
+After PR 1, 688 archive link occurrences remained: 647 with a unique existing
+destination (589 depth errors, 58 later archive moves), and 41 without a proven
+replacement. The PR 2 command tests failed four ways at 22:34:50Z before the
+implementation: both mechanical classes returned success, repair mode made no
+change, and an unsupported source spelling was not refused. Before tree repair,
+the new per-document archive assertions failed for 147 files at 22:36:25Z.
+
+`pnpm exec tsx scripts/documentation-archive.ts --repair-archive` repaired those
+647 occurrences in 147 files. It stages changes in memory, reparses each edited
+document to verify the intended URLs, and verifies every replacement target
+exists before writing any file. Labels, fragments, queries, and historical prose
+remain unchanged. Ambiguous destinations and missing targets are not guessed;
+unsupported source spelling fails before any write. File write errors still
+fail the command; the tracked diff remains available for recovery.
+
+The unit guard now checks every archive document for these two mechanical
+classes, and the CLI exits nonzero when one remains. A readback reports zero
+mechanically repairable archive links and zero broken live links. Register
+counts remain exactly the PR 1 counts above. These are file-destination proofs,
+not revalidation of historical line-number fragments or old incident claims.
+
+### PR 2 coverage follow-up (2026-09-21)
+
+Hosted CI 35664380936 passed on `17f7f30a`, but Codecov reported 89.09% patch
+coverage against its unchanged 96.38% target. This is not an all-green receipt.
+The repair behavior already refused unsafe rewrites; the missing evidence was
+coverage of those refusal paths and of the subprocess-only CLI formatting.
+
+At 22:55:03Z a real-file test failed when the reparse safeguard was temporarily
+removed: a matching URL in a link title was changed instead of its destination.
+At 22:56:09Z a vanished-target case failed with its existence safeguard removed.
+Restoring both guards makes them pass; neither mutation remains. Argument parsing
+and JSON serialization now live in the existing tested command function, with a
+red-first explicit-argument/no-write test and the real CLI parity tests retained.
+No coverage exclusion, target, timeout, or assertion was weakened.
+
+### PR 2 review and coverage correction (2026-09-21)
+
+CI 35665874357 passed on `6328e4f1`, but its 96.29630% patch coverage still
+missed the unchanged 96.38% target. A focused archive-only boundary case failed
+at 23:13:51Z when that existing guard was temporarily removed: it offered an
+archive repair for a broken live link. Restoring the guard makes the case pass;
+the implementation is unchanged. The full focused coverage run passed 1,052
+cases with 98.33% script line coverage. Hosted patch coverage remains a separate
+required receipt, not implied by this local percentage.
+
+Review 5272767459 confirmed a stray `+` breaking the first exception-table row;
+it is removed. The other three proposed link corrections are not valid repairs:
+BS-044, BS-052 and BS-059 are live records, so their existing live destinations
+are correct. The proposed BUG-133/134 slugs and removed practice-controller
+filename still do not exist after changing depth. Those occurrences stay in
+the explicit historical exception list below; no replacement is guessed.
+
+The `1da66764` follow-up received normal exact-head approval (5272868341),
+but its hosted patch report still failed at 96.29630%. Reading Codecov's
+line-level report identified an uncovered preservation branch: a repaired
+document also containing an already-correct link. The existing function/CLI
+parity fixture now includes that mixed case. Both variants failed at 23:45:02Z
+when preservation of the untouched URL was temporarily removed; restoring it
+makes them pass. No implementation change or coverage-policy relaxation remains.
+
+### Encoded-path correction (2026-09-22 UTC)
+
+CI 35669565894 and Codecov passed on `25ddf6bb`. Full review 5273057201
+identified a real repair defect: `encodeURI` retained filename `#` and `?`
+characters, turning them into URL delimiters. Both real-file cases failed at
+00:12:15Z before the correction. Encoding each relative path segment preserves
+those filename characters while leaving slash separators and the original
+query/fragment suffix intact. This corrects the existing repair operation; it
+does not broaden destination discovery or alter the 647 repaired occurrences.
+
+The review's DEBT-104 and SPEC-028/034/036 location suggestions are false:
+those exact files exist only in the archive, so the current links are correct.
+Its FE-002/practice-logic deletion request conflicts with the explicit historical
+exception scope; those absent targets remain listed below, not silently removed.
+
+### Historical targets without a mechanically proven replacement
+
+All 41 occurrences below remain untouched. The source link resolves; the old
+destination is shown as code so it does not create a new broken live link.
+This is a bounded historical exception, not a claim that these files still
+exist or an authorization to invent their replacements. Revisit only when an
+owner supplies an authoritative replacement or explicitly reopens that record.
+
+| Archived source and line | Unresolved historical destination |
+| --- | --- |
+| [bs-018-question-view-ux-unification.md:6](../_archive/brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-133-stale-closure-auto-advance.md` |
+| [bs-018-question-view-ux-unification.md:6](../_archive/brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-134-mark-for-review-race-condition.md` |
+| [bs-019-action-bar-label-and-ordering-consistency.md:359](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md#L359) | `../../tests/e2e/bs-019-action-bar-audit.spec.ts` |
+| [bs-020-card-contrast-and-hover-consistency.md:401](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md#L401) | `../../tests/e2e/bs-020-card-contrast-audit.spec.ts` |
+| [bs-028-history-session-scoring-and-navigation-gaps.md:7](../_archive/brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md#L7) | `../specs/spec-034-unanswered-question-review-handling.md` |
+| [bug-180-active-exam-answer-leak-via-review-hydration.md:42](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md#L42) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L321` |
+| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:40](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L40) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L405` |
+| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:55](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L55) | `../../../src/application/use-cases/submit-answer.test.ts#L360` |
+| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:55](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L55) | `../../../src/application/use-cases/submit-answer.test.ts#L404` |
+| [bug-183-stripe-webhook-failure-state-rolled-back.md:73](../_archive/bugs/bug-183-stripe-webhook-failure-state-rolled-back.md#L73) | `../../../src/application/test-helpers/fakes.test.ts` |
+| [bug-186-active-exam-review-projection-leaks-correctness.md:33](../_archive/bugs/bug-186-active-exam-review-projection-leaks-correctness.md#L33) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L252` |
+| [bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md:45](../_archive/bugs/bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md#L45) | `../../../src/adapters/repositories/drizzle-practice-session-repository.test.ts` |
+| [bug-189-question-review-cross-slug-async-state-corruption.md:31](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L31) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L121` |
+| [bug-189-question-review-cross-slug-async-state-corruption.md:31](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L31) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L141` |
+| [bug-189-question-review-cross-slug-async-state-corruption.md:33](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L33) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L306` |
+| [bug-189-question-review-cross-slug-async-state-corruption.md:34](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L34) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L374` |
+| [bug-194-practice-submit-flow-missing-stale-request-guard.md:34](../_archive/bugs/bug-194-practice-submit-flow-missing-stale-request-guard.md#L34) | `../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts#L60` |
+| [bug-203-clerk-webhook-public-fallback-secret.md:24](../_archive/bugs/bug-203-clerk-webhook-public-fallback-secret.md#L24) | `../../../node_modules/.pnpm/@clerk+nextjs@6.37.1_next@16.1.6_@babel+core@7.29.0_@opentelemetry+api@1.9.0_@playwrigh_6efdc9384cdd89288039aac9aa09ecc4/node_modules/@clerk/nextjs/dist/cjs/webhooks.js#L31` |
+| [bug-203-clerk-webhook-public-fallback-secret.md:34](../_archive/bugs/bug-203-clerk-webhook-public-fallback-secret.md#L34) | `../../../node_modules/.pnpm/@clerk+backend@2.30.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/@clerk/backend/dist/webhooks.js#L62` |
+| [debt-333-browser-test-flakiness-audit.md:6](../_archive/debt/debt-333-browser-test-flakiness-audit.md#L6) | `../../../vitest.browser.config.ts` |
+| [debt-334-practice-session-bootstrap-timeout-guard.md:6](../_archive/debt/debt-334-practice-session-bootstrap-timeout-guard.md#L6) | `../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` |
+| [debt-345-circuit-breaker-external-services.md:146](../_archive/debt/debt-345-circuit-breaker-external-services.md#L146) | `../../src/adapters/gateways/stripe-subscription-canceler.ts` |
+| [debt-353-practice-session-results-orchestrator-decomposition.md:6](../_archive/debt/debt-353-practice-session-results-orchestrator-decomposition.md#L6) | `../_archive/debt/fe-002-usepracticesessionreviewstage-exceeds-150-line-guideline.md` |
+| [debt-354-god-file-and-clean-code-audit.md:6](../_archive/debt/debt-354-god-file-and-clean-code-audit.md#L6) | `../../scripts/check-file-size.sh` |
+| [debt-355-cross-feature-question-flow-coupling.md:20](../_archive/debt/debt-355-cross-feature-question-flow-coupling.md#L20) | `../../app/(app)/app/practice/practice-logic.ts` |
+| [debt-358-exam-review-question-navigation-stranded.md:6](../_archive/debt/debt-358-exam-review-question-navigation-stranded.md#L6) | `../_archive/debt/fe-002-usepracticesessionreviewstage-exceeds-150-line-guideline.md` |
+| [debt-360-action-bar-below-fold.md:99](../_archive/debt/debt-360-action-bar-below-fold.md#L99) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
+| [debt-360-action-bar-below-fold.md:100](../_archive/debt/debt-360-action-bar-below-fold.md#L100) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
+| [debt-360-action-bar-below-fold.md:101](../_archive/debt/debt-360-action-bar-below-fold.md#L101) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
+| [debt-446-local-db-script-target-guards.md:67](../_archive/debt/debt-446-local-db-script-target-guards.md#L67) | `../../../scripts/seed-all-environments.sh#L132` |
+| [debt-446-local-db-script-target-guards.md:119](../_archive/debt/debt-446-local-db-script-target-guards.md#L119) | `../../../scripts/seed-all-environments.sh#L112` |
+| [debt-446-local-db-script-target-guards.md:122](../_archive/debt/debt-446-local-db-script-target-guards.md#L122) | `../../../scripts/seed-all-environments.sh#L142` |
+| [debt-446-local-db-script-target-guards.md:124](../_archive/debt/debt-446-local-db-script-target-guards.md#L124) | `../../../scripts/seed-all-environments.sh#L166` |
+| [debt-446-local-db-script-target-guards.md:128](../_archive/debt/debt-446-local-db-script-target-guards.md#L128) | `../../../scripts/seed-all-environments.sh#L147` |
+| [debt-446-local-db-script-target-guards.md:131](../_archive/debt/debt-446-local-db-script-target-guards.md#L131) | `../../../scripts/seed-all-environments.sh#L132` |
+| [debt-446-local-db-script-target-guards.md:133](../_archive/debt/debt-446-local-db-script-target-guards.md#L133) | `../../../scripts/seed-all-environments.sh#L152` |
+| [debt-462-observability-instrument-gap-parked-triggers.md:83](../_archive/debt/debt-462-observability-instrument-gap-parked-triggers.md#L83) | `../../../tests/server-span-family-boundary.test.ts` |
+| [spec-020-practice-engine-completion.md:391](../_archive/specs/spec-020-practice-engine-completion.md#L391) | `../../adr/adr-001-clean-architecture.md` |
+| [spec-029-dev-environment-resilience.md:270](../_archive/specs/spec-029-dev-environment-resilience.md#L270) | `../adr/adr-012-clean-architecture-layers.md` |
+| [spec-031-unified-visual-front.md:313](../_archive/specs/spec-031-unified-visual-front.md#L313) | `../../tests/e2e/bs-020-card-contrast-audit.spec.ts` |
+| [spec-032-action-bar-standardization.md:324](../_archive/specs/spec-032-action-bar-standardization.md#L324) | `../../tests/e2e/bs-019-action-bar-audit.spec.ts` |
 
 ## Related
 

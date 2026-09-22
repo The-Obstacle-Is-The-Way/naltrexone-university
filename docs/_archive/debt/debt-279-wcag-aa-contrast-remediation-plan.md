@@ -6,7 +6,7 @@
 **Resolved:** 2026-03-06
 **PR:** [#174](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/174)
 **Owner:** Frontend
-**Related:** [BS-042](../brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md), [Contrast Policy](../../frontend/contrast-policy.md), [Pattern Registry](../../frontend/pattern-registry.md), [DEBT-278](../../debt/debt-278-verdict-badge-solid-pill-styling.md)
+**Related:** [BS-042](../brainstorming/bs-042-contrast-consistency-and-wcag-compliance-audit.md), [Contrast Policy](../../frontend/contrast-policy.md), [Pattern Registry](../../frontend/pattern-registry.md), [DEBT-278](debt-278-verdict-badge-solid-pill-styling.md)
 
 ---
 

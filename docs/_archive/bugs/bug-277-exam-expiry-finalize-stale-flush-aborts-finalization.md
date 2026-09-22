@@ -92,5 +92,5 @@ The fix made stale final-draft flushes an optional enhancement instead of a fina
 - BUG-254 (archived) introduced the grace-window flush this bug is the failure mode of.
 - DEBT-426 (archived) introduced the conflict-reason contract this CONFLICT bypasses.
 - [BUG-280](bug-280-double-finalize-race-maps-to-reasonless-conflict.md) — a second reason-less CONFLICT on the same finalize surface.
-- [DEBT-438](../../debt/debt-438-conflict-reason-client-coverage-gaps.md) — the broader reason-coverage debt this instance belongs to.
+- [DEBT-438](../debt/debt-438-conflict-reason-client-coverage-gaps.md) — the broader reason-coverage debt this instance belongs to.
 - Found during the 2026-07-05 post-Track-A adversarial database-seam review (five independent DDIA-lens reviewers; line-level verification against `e3853656`).

@@ -37,12 +37,12 @@ This does not reveal correctness, so it is lower severity than the original acti
 
 Tracer-bullet path:
 
-1. [`DrizzleAttemptRepository.findLatestByUserAndQuestion(...)`](../../src/adapters/repositories/drizzle-attempt-repository.ts#L275) selects from `attempts`, filters only by `userId` and `questionId`, orders by `answeredAt desc, id desc`, and returns one row.
-2. [`GetPreviousAttemptUseCase`](../../src/application/use-cases/get-previous-attempt.ts#L94) uses that method for the implicit latest-attempt path.
-3. [`GetPreviousAttemptUseCase`](../../src/application/use-cases/get-previous-attempt.ts#L153) then checks whether the selected attempt belongs to an active exam session and returns `null` if it does.
+1. [`DrizzleAttemptRepository.findLatestByUserAndQuestion(...)`](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L275) selects from `attempts`, filters only by `userId` and `questionId`, orders by `answeredAt desc, id desc`, and returns one row.
+2. [`GetPreviousAttemptUseCase`](../../../src/application/use-cases/get-previous-attempt.ts#L94) uses that method for the implicit latest-attempt path.
+3. [`GetPreviousAttemptUseCase`](../../../src/application/use-cases/get-previous-attempt.ts#L153) then checks whether the selected attempt belongs to an active exam session and returns `null` if it does.
 4. Because the visibility decision happens after the raw latest row is selected, an older visible attempt cannot be selected as fallback.
-5. [`DrizzleAttemptRepository.findMostRecentAnsweredAtByQuestionIds(...)`](../../src/adapters/repositories/drizzle-attempt-repository.ts#L516) similarly computes `max(attempts.answeredAt)` without joining `practice_sessions` or applying `activeExamVisibilityCondition()`.
-6. The correct filter-before-rank/filter-before-aggregate pattern now exists in [`DrizzleAttemptRepository.latestAttemptRowsSubquery(...)`](../../src/adapters/repositories/drizzle-attempt-repository.ts#L68) after BUG-235 and in [`DrizzleQuestionRepository.latestAttemptRowsSubquery(...)`](../../src/adapters/repositories/drizzle-question-repository.ts#L195).
+5. [`DrizzleAttemptRepository.findMostRecentAnsweredAtByQuestionIds(...)`](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L516) similarly computes `max(attempts.answeredAt)` without joining `practice_sessions` or applying `activeExamVisibilityCondition()`.
+6. The correct filter-before-rank/filter-before-aggregate pattern now exists in [`DrizzleAttemptRepository.latestAttemptRowsSubquery(...)`](../../../src/adapters/repositories/drizzle-attempt-repository.ts#L68) after BUG-235 and in [`DrizzleQuestionRepository.latestAttemptRowsSubquery(...)`](../../../src/adapters/repositories/drizzle-question-repository.ts#L195).
 
 ## Expected Fix
 
@@ -66,6 +66,6 @@ Apply active-exam visibility before latest-row selection in the remaining implic
 
 ## Related
 
-- [BUG-235](../_archive/bugs/bug-235-attempted-question-history-drops-latest-visible-attempt.md)
-- [BUG-237](../_archive/bugs/bug-237-submit-answer-allows-active-exam-session-writes.md)
-- [Exam Answer Secrecy Policy](../practice-engine/exam-answer-secrecy-policy.md)
+- [BUG-235](bug-235-attempted-question-history-drops-latest-visible-attempt.md)
+- [BUG-237](bug-237-submit-answer-allows-active-exam-session-writes.md)
+- [Exam Answer Secrecy Policy](../../practice-engine/exam-answer-secrecy-policy.md)

@@ -6,7 +6,7 @@
 **Updated:** 2026-02-15
 **Triggered by:** UX comparison of active session view (question navigator grid) vs review mode (linear previous/next only)
 **Scope:** Review mode lacks the question navigator grid, forcing linear traversal to find incorrect answers in a completed session
-**Related:** [SPEC-027](../specs/spec-027-session-review-navigation.md) (Session Review Navigation — implemented), [BS-009](../_archive/brainstorming/bs-009-session-review-navigation-gap.md) (Session Review Navigation Gap — archived)
+**Related:** [SPEC-027](../specs/spec-027-session-review-navigation.md) (Session Review Navigation — implemented), [BS-009](bs-009-session-review-navigation-gap.md) (Session Review Navigation Gap — archived)
 
 ---
 

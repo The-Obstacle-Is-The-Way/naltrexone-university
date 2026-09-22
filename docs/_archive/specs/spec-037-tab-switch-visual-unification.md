@@ -397,9 +397,9 @@ Phase 5: Full Verification
 ## 10. Related
 
 - [BS-027](../brainstorming/bs-027-history-tab-bar-visual-inconsistency.md) — Full audit, root cause analysis, browser-agent cross-check
-- [SPEC-028](../_archive/specs/spec-028-status-filter-segmented-control.md) — Created the `SegmentedControl` component (predecessor)
-- [SPEC-031](../_archive/specs/spec-031-unified-visual-front.md) — Unified visual front (card contrast + shell parity)
-- [Frontend Standards](../frontend/standards.md) — To be updated with tab-switch standard
+- [SPEC-028](spec-028-status-filter-segmented-control.md) — Created the `SegmentedControl` component (predecessor)
+- [SPEC-031](spec-031-unified-visual-front.md) — Unified visual front (card contrast + shell parity)
+- [Frontend Standards](../../frontend/standards.md) — To be updated with tab-switch standard
 - `components/ui/segmented-control.tsx` — Button-based consumer
 - `app/(app)/app/history/components/history-tab-bar.tsx` — Link-based consumer
 - `components/ui/filter-chip.tsx` — Reference: uses `bg-primary` correctly (proves pill shape is not the issue)

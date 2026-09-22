@@ -56,8 +56,8 @@ The codebase uses **upsert-on-login** pattern (line 46 of clerk-auth-gateway.ts)
 
 | Item | Status | Reference |
 |------|--------|-----------|
-| `user.deleted` webhook | Resolved | [BUG-023](../_archive/bugs/bug-023-missing-clerk-user-deletion-webhook.md) |
-| `user.updated` webhook | Resolved | [BUG-038](../_archive/bugs/bug-038-missing-clerk-user-updated-webhook.md) |
+| `user.deleted` webhook | Resolved | [BUG-023](../bugs/bug-023-missing-clerk-user-deletion-webhook.md) |
+| `user.updated` webhook | Resolved | [BUG-038](../bugs/bug-038-missing-clerk-user-updated-webhook.md) |
 
 ### Recommendation
 
@@ -114,10 +114,10 @@ The upsert-on-login pattern is CORRECT for this use case. Do NOT add unnecessary
 
 | Item | Status | Reference |
 |------|--------|-----------|
-| Renewals/payment-failure race window | Accepted (won’t fix) | [BUG-024](../_archive/bugs/bug-024-entitlement-race-condition-past-due.md) |
-| `paused`/`resumed` handlers | Resolved | [BUG-025](../_archive/bugs/bug-025-missing-subscription-event-handlers.md) |
-| `stripe_events` retention/pruning | Resolved | [BUG-027](../_archive/bugs/bug-027-stripe-events-unbounded-growth.md) |
-| Preserve webhook error context | Resolved | [BUG-034](../_archive/bugs/bug-034-webhook-error-context-lost.md) |
+| Renewals/payment-failure race window | Accepted (won’t fix) | [BUG-024](../bugs/bug-024-entitlement-race-condition-past-due.md) |
+| `paused`/`resumed` handlers | Resolved | [BUG-025](../bugs/bug-025-missing-subscription-event-handlers.md) |
+| `stripe_events` retention/pruning | Resolved | [BUG-027](../bugs/bug-027-stripe-events-unbounded-growth.md) |
+| Preserve webhook error context | Resolved | [BUG-034](../bugs/bug-034-webhook-error-context-lost.md) |
 
 ### Recommendation
 
@@ -189,12 +189,12 @@ Adopting paykit would require significant refactoring with minimal benefit.
 
 ## Related Documentation
 
-- [BUG-023](../_archive/bugs/bug-023-missing-clerk-user-deletion-webhook.md): Clerk `user.deleted` webhook
-- [BUG-038](../_archive/bugs/bug-038-missing-clerk-user-updated-webhook.md): Clerk `user.updated` webhook
-- [BUG-024](../_archive/bugs/bug-024-entitlement-race-condition-past-due.md): Entitlement race window (accepted)
-- [BUG-025](../_archive/bugs/bug-025-missing-subscription-event-handlers.md): Subscription paused/resumed handlers
-- [BUG-027](../_archive/bugs/bug-027-stripe-events-unbounded-growth.md): Stripe events retention/pruning
-- [BUG-034](../_archive/bugs/bug-034-webhook-error-context-lost.md): Webhook error context preservation
+- [BUG-023](../bugs/bug-023-missing-clerk-user-deletion-webhook.md): Clerk `user.deleted` webhook
+- [BUG-038](../bugs/bug-038-missing-clerk-user-updated-webhook.md): Clerk `user.updated` webhook
+- [BUG-024](../bugs/bug-024-entitlement-race-condition-past-due.md): Entitlement race window (accepted)
+- [BUG-025](../bugs/bug-025-missing-subscription-event-handlers.md): Subscription paused/resumed handlers
+- [BUG-027](../bugs/bug-027-stripe-events-unbounded-growth.md): Stripe events retention/pruning
+- [BUG-034](../bugs/bug-034-webhook-error-context-lost.md): Webhook error context preservation
 - DEBT-069: Document Stripe eager sync pattern
 
 ## Sources

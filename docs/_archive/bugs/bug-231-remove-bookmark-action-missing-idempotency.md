@@ -46,11 +46,11 @@ Expected behavior:
 
 Tracer-bullet path:
 
-1. [`app/(app)/app/bookmarks/page.tsx`](../../app/(app)/app/bookmarks/page.tsx) renders `<form action={removeBookmarkAction}>` with only `questionId` as hidden input.
-2. [`app/(app)/app/bookmarks/bookmarks-actions.ts`](../../app/(app)/app/bookmarks/bookmarks-actions.ts) reads that `questionId` and calls `toggleBookmarkFn({ questionId })`.
-3. [`src/adapters/controllers/bookmark-controller.ts`](../../src/adapters/controllers/bookmark-controller.ts) only enters `withIdempotency(...)` when callers supply `idempotencyKey`.
+1. [`app/(app)/app/bookmarks/page.tsx`](../../../app/(app)/app/bookmarks/page.tsx) renders `<form action={removeBookmarkAction}>` with only `questionId` as hidden input.
+2. [`app/(app)/app/bookmarks/bookmarks-actions.ts`](../../../app/(app)/app/bookmarks/bookmarks-actions.ts) reads that `questionId` and calls `toggleBookmarkFn({ questionId })`.
+3. [`src/adapters/controllers/bookmark-controller.ts`](../../../src/adapters/controllers/bookmark-controller.ts) only enters `withIdempotency(...)` when callers supply `idempotencyKey`.
 4. Without an idempotency key, duplicate submits execute the raw toggle path twice.
-5. The current page test in [`app/(app)/app/bookmarks/page.test.tsx`](../../app/(app)/app/bookmarks/page.test.tsx) explicitly asserts the no-idempotency contract by expecting `toggleBookmarkFn` to be called with only `{ questionId: 'q_1' }`.
+5. The current page test in [`app/(app)/app/bookmarks/page.test.tsx`](../../../app/(app)/app/bookmarks/page.test.tsx) explicitly asserts the no-idempotency contract by expecting `toggleBookmarkFn` to be called with only `{ questionId: 'q_1' }`.
 6. This is a page-action follow-up to BUG-096: controller-level bookmark idempotency exists, but the bookmarks removal form still bypasses it.
 
 ## Recommended Fix
@@ -69,8 +69,8 @@ Tracer-bullet path:
 
 ## Related
 
-- [`app/(app)/app/bookmarks/page.tsx`](../../app/(app)/app/bookmarks/page.tsx)
-- [`app/(app)/app/bookmarks/bookmarks-actions.ts`](../../app/(app)/app/bookmarks/bookmarks-actions.ts)
-- [`app/(app)/app/bookmarks/page.test.tsx`](../../app/(app)/app/bookmarks/page.test.tsx)
-- [`src/adapters/controllers/bookmark-controller.ts`](../../src/adapters/controllers/bookmark-controller.ts)
-- [`docs/_archive/bugs/bug-096-toggle-bookmark-missing-idempotency-key.md`](../_archive/bugs/bug-096-toggle-bookmark-missing-idempotency-key.md)
+- [`app/(app)/app/bookmarks/page.tsx`](../../../app/(app)/app/bookmarks/page.tsx)
+- [`app/(app)/app/bookmarks/bookmarks-actions.ts`](../../../app/(app)/app/bookmarks/bookmarks-actions.ts)
+- [`app/(app)/app/bookmarks/page.test.tsx`](../../../app/(app)/app/bookmarks/page.test.tsx)
+- [`src/adapters/controllers/bookmark-controller.ts`](../../../src/adapters/controllers/bookmark-controller.ts)
+- [`docs/_archive/bugs/bug-096-toggle-bookmark-missing-idempotency-key.md`](bug-096-toggle-bookmark-missing-idempotency-key.md)

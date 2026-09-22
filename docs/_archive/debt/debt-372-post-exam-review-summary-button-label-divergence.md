@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-05-01
 **Source:** Manual UX walkthrough of post-exam review surface, 2026-05-01
-**Related:** [DEBT-365 Exam flow affordance and label consistency (archived)](../_archive/debt/debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-359 Session Summary CTA labels (archived)](../_archive/debt/debt-359-session-summary-cta-labels.md), [Frontend Standards](../frontend/standards.md), [Pattern Registry](../frontend/pattern-registry.md)
+**Related:** [DEBT-365 Exam flow affordance and label consistency (archived)](debt-365-exam-flow-affordance-and-label-consistency.md), [DEBT-359 Session Summary CTA labels (archived)](debt-359-session-summary-cta-labels.md), [Frontend Standards](../../frontend/standards.md), [Pattern Registry](../../frontend/pattern-registry.md)
 
 **Status:** Resolved 2026-05-01 ([PR #300](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/300)).
 

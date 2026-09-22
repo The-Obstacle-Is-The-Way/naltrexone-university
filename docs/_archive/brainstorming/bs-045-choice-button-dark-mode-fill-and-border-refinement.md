@@ -1,9 +1,9 @@
 # BS-045: Choice Button Dark Mode Fill and Border Refinement
 
 **Date:** 2026-03-06
-**Triggered by:** Per-page visual audit of Quick Practice in dark mode ([page audit](../frontend/pages/quick-practice.md)). The DEBT-279 remediation made choice buttons WCAG compliant but aesthetically heavy — gray fills look unnatural, borders are too prominent, and hover/selected states are nearly indistinguishable.
+**Triggered by:** Per-page visual audit of Quick Practice in dark mode ([page audit](../../frontend/pages/quick-practice.md)). The DEBT-279 remediation made choice buttons WCAG compliant but aesthetically heavy — gray fills look unnatural, borders are too prominent, and hover/selected states are nearly indistinguishable.
 **Scope:** Refine the dark-mode visual treatment of choice buttons: remove the resting fill, keep the border WCAG-compliant, and widen the fill steps so hover and selected states are clearly perceptible.
-**Related:** [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (broad border tiering), [DEBT-279](../_archive/debt/debt-279-wcag-aa-contrast-remediation-plan.md) (original remediation), [Contrast Policy](../frontend/contrast-policy.md), [Pattern Registry](../frontend/pattern-registry.md), [Page Audit](../frontend/pages/quick-practice.md)
+**Related:** [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md) (broad border tiering), [DEBT-279](../debt/debt-279-wcag-aa-contrast-remediation-plan.md) (original remediation), [Contrast Policy](../../frontend/contrast-policy.md), [Pattern Registry](../../frontend/pattern-registry.md), [Page Audit](../../frontend/pages/quick-practice.md)
 
 ---
 

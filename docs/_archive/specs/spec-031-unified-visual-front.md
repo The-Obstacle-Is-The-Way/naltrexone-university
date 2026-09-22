@@ -309,7 +309,7 @@ Phase 1 and Phase 2 can be **separate PRs** or **one PR with two commits**. Phas
 
 - [BS-020](../brainstorming/bs-020-card-contrast-and-hover-consistency.md) — Full card audit, impact analysis, color stack reference
 - [BS-021](../brainstorming/bs-021-marketing-app-shell-divergence-and-accessibility-parity.md) — Shell divergence analysis, verified code paths
-- [DEBT-108](../_archive/debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) — Original semantic color cleanup
+- [DEBT-108](../debt/debt-108-hardcoded-zinc-colors-break-light-dark-toggle.md) — Original semantic color cleanup
 - [E2E Tests](../../tests/e2e/bs-020-card-contrast-audit.spec.ts) — Playwright contrast verification
-- [Frontend Standards](../frontend/standards.md) — Stat card hover standard (to be updated)
-- [Design Principles](../frontend/design-principles.md) — Navigation zone model, action bar composition
+- [Frontend Standards](../../frontend/standards.md) — Stat card hover standard (to be updated)
+- [Design Principles](../../frontend/design-principles.md) — Navigation zone model, action bar composition

@@ -3,7 +3,7 @@
 **Priority:** P3
 **Created:** 2026-04-25
 **Source:** Test suite quality audit, 2026-04-25
-**Related:** [.claude/rules/testing-browser.md](../../.claude/rules/testing-browser.md), [.claude/rules/testing.md](../../.claude/rules/testing.md)
+**Related:** [.claude/rules/testing-browser.md](../../../.claude/rules/testing-browser.md), [.claude/rules/testing.md](../../../.claude/rules/testing.md)
 
 **Status:** Resolved 2026-04-29 ([PR #296](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/296)).
 

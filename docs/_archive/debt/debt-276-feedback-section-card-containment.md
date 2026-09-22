@@ -326,4 +326,4 @@ Then:  [role="status"] element class does NOT contain "border-success", "bg-succ
 
 - [BS-041](../brainstorming/bs-041-feedback-display-content-vs-code-separation.md) — Source analysis and Part A/Part B boundary
 - [DEBT-275](./debt-275-bs033-residual-open-items.md) — Residual content-layer items (C2, C3) and clinical-pearl enhancement (F1)
-- [DEBT-274](../_archive/debt/debt-274-incorrect-answer-feedback-flow-reorder.md) — Prior incorrect-flow ordering change
+- [DEBT-274](debt-274-incorrect-answer-feedback-flow-reorder.md) — Prior incorrect-flow ordering change

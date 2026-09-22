@@ -115,10 +115,10 @@ Three BS-028 findings (P2-7, P2-11, P2-13) are not covered by the E2E audit test
 
 ## Related
 
-- [BS-027](../_archive/brainstorming/bs-027-history-tab-bar-visual-inconsistency.md) — Tab bar visual inconsistency (Archived — resolved by SPEC-037)
+- [BS-027](../brainstorming/bs-027-history-tab-bar-visual-inconsistency.md) — Tab bar visual inconsistency (Archived — resolved by SPEC-037)
 - [BS-028](../brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md) — History page UX audit (14 findings, 10 confirmed by E2E)
-- [SPEC-037](../_archive/specs/spec-037-tab-switch-visual-unification.md) — Tab switch visual unification (Implemented, verified by E2E)
-- [DEBT-104](../_archive/debt/debt-104-missing-e2e-test-credentials.md) — Previously "resolved" E2E credentials issue
+- [SPEC-037](../specs/spec-037-tab-switch-visual-unification.md) — Tab switch visual unification (Implemented, verified by E2E)
+- [DEBT-104](debt-104-missing-e2e-test-credentials.md) — Previously "resolved" E2E credentials issue
 - `.env.example` — Defines expected env vars including E2E credentials
 - `tests/e2e/bs-028-history-ux-audit.spec.ts` — The audit test file
 - `tests/e2e/helpers/session.ts` — Session start helper with retry logic

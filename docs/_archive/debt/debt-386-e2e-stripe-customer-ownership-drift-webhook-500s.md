@@ -3,7 +3,7 @@
 **Priority:** P2
 **Created:** 2026-05-15
 **Source:** Follow-up investigation after DEBT-384 was merged, archived, and the debt register was synchronized. Stripe still showed undelivered test-mode webhook events after PR #310, but the payloads no longer matched the missing-`metadata.user_id` failure that DEBT-384 fixed.
-**Related:** [DEBT-384 archived](./debt-384-stripe-webhook-error-rate-investigation.md), [DEBT-385 invoice schema drift](../../debt/debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), [DEBT-293 E2E shared state](./debt-293-e2e-shared-state-structural-flakiness.md), [DEBT-306 Stripe customer search/create race](./debt-306-stripe-customer-search-create-race.md)
+**Related:** [DEBT-384 archived](./debt-384-stripe-webhook-error-rate-investigation.md), [DEBT-385 invoice schema drift](debt-385-stripe-invoice-event-subscription-ref-schema-drift.md), [DEBT-293 E2E shared state](./debt-293-e2e-shared-state-structural-flakiness.md), [DEBT-306 Stripe customer search/create race](./debt-306-stripe-customer-search-create-race.md)
 **Status:** Resolved - PR #311 shipped the code-fixable T2/T3 work and this doc was archived on 2026-05-16. Post-merge ops verification on 2026-05-19 confirmed the dev-preview Vercel owner env var is applied and redeployed, both test-mode and live Stripe endpoints include `customer.subscription.created`, and live mode has zero currently undelivered events. Remaining test-mode undelivered events are historical pre-fix deliveries; no post-fix event accumulation is observed.
 
 ---

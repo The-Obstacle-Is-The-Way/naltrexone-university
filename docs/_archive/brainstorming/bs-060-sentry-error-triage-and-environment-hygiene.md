@@ -249,11 +249,11 @@ It is not a real resolution because:
 
 This was the minimal implementation contract that followed the policy above. PR #250 implemented it in the live file referenced below:
 
-1. In [proxy.ts](../../proxy.ts#L25), extend the Sentry CSP report URI helper to append `sentry_environment` when available.
-2. In [proxy.ts](../../proxy.ts#L96), split CSP directives into:
+1. In [proxy.ts](../../../proxy.ts#L25), extend the Sentry CSP report URI helper to append `sentry_environment` when available.
+2. In [proxy.ts](../../../proxy.ts#L96), split CSP directives into:
    - base directives for all environments
    - preview-only Toolbar additions when `process.env.VERCEL_ENV === 'preview'`
-3. Keep [proxy.ts](../../proxy.ts#L206) as `reportOnly: true` unless CSP enforcement work is intentionally in scope.
+3. Keep [proxy.ts](../../../proxy.ts#L206) as `reportOnly: true` unless CSP enforcement work is intentionally in scope.
 4. After deploy, resolve `WEB-B` and verify it stays closed.
 
 ---

@@ -48,7 +48,7 @@ Side-effect audit before choosing auto-retry: both affected callbacks perform on
 
 - PR #537, [BUG-267 (archived)](./bug-267-nested-repeatable-read-silently-drops-isolation.md)
 - [BUG-269 (invalidated)](./bug-269-finalize-exam-stale-snapshot-clobbers-concurrent-draft-save.md) — its stale finalize window is a trigger for this bug, not an independent silent-clobber defect under current HEAD
-- [DEBT-426](../../debt/debt-426-session-wide-lock-defeats-row-concurrency.md) — same lock/transaction-shape surface, sequence any future lock redesign with this retry boundary
+- [DEBT-426](../debt/debt-426-session-wide-lock-defeats-row-concurrency.md) — same lock/transaction-shape surface, sequence any future lock redesign with this retry boundary
 - `src/adapters/repositories/practice-session-question-state-updater.ts:146-211`
 - `lib/container/use-cases.ts` (`PRACTICE_SESSION_STATE_WRITE_TRANSACTION_CONFIG`)
 - Found via a systematic post-fix transaction/locking audit (2026-07-01), independently re-verified by reading the actual code (not the audit agent's summary alone)

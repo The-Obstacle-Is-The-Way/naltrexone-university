@@ -27,7 +27,7 @@ Choice hover: bg-muted/40    →  ~8.6%  (smooth ~0.8% step up)
 Card surface: bg-card        →  7.0%   (parent)
 ```
 
-All composited lightness values are over `bg-card` (7%). See [Pattern Registry §1.2](../frontend/pattern-registry.md) for the full opacity scale.
+All composited lightness values are over `bg-card` (7%). See [Pattern Registry §1.2](../../frontend/pattern-registry.md) for the full opacity scale.
 
 ---
 
@@ -210,5 +210,5 @@ After implementing, visually verify in dark mode:
 ## Related
 
 - [BS-039](../brainstorming/bs-039-choice-button-surface-hierarchy-and-hover-ux.md) — Original analysis with visual verification screenshots
-- [Pattern Registry §1.2](../frontend/pattern-registry.md) — Background opacity scale reference
+- [Pattern Registry §1.2](../../frontend/pattern-registry.md) — Background opacity scale reference
 - `audit-screenshots/bs-039-visual-verification-2026-03-03/` — Playwright dark-mode captures

@@ -3,7 +3,7 @@
 **Date:** 2026-03-10
 **Triggered by:** Visual audit of the History page (both tabs) after dashboard (DEBT-289) and practice (DEBT-290/291/292/294/295/297) received tonal fill, borderless nested surfaces, and chevron disclosure patterns. The History page is now the most visually dated page in the app.
 **Scope:** Identify every visual gap between the History page and the established patterns on Dashboard and Practice, so the fixes can be specced and implemented sequentially.
-**Related:** [Dashboard page doc](../frontend/pages/dashboard.md), [Practice page doc](../frontend/pages/practice.md), [BS-044](./bs-044-dark-mode-border-weight-tiering.md) (border tiering), [Pattern Registry](../frontend/pattern-registry.md), [Contrast Policy](../frontend/contrast-policy.md)
+**Related:** [Dashboard page doc](../../frontend/pages/dashboard.md), [Practice page doc](../../frontend/pages/practice.md), [BS-044](../../brainstorming/bs-044-dark-mode-border-weight-tiering.md) (border tiering), [Pattern Registry](../../frontend/pattern-registry.md), [Contrast Policy](../../frontend/contrast-policy.md)
 **Validated by:** Chrome Claude cross-page visual audit (2026-03-10) — compared History against Dashboard and Practice side-by-side in both dark and light mode
 
 ---

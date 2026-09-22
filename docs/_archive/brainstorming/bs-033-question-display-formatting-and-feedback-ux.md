@@ -785,7 +785,7 @@ Because this condition gates on `isStandaloneHistoryReview`, only history-origin
 
 The condition should cover ALL standalone review contexts (Dashboard, History, Bookmarks), not just history. When a user got the answer right, the button should say "Practice Again" regardless of which entry point they came from.
 
-**Context:** [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) and [SPEC-036](../_archive/specs/spec-036-bookmark-review-mode-alignment.md) already cleaned up the major reattempt issues (Try Again hidden in session review, bookmarks switched to review-first mode). This is a residual label bug that slipped through. The codebase is moving away from reattemptability — a future "reset question bank" feature would handle re-attempts at a higher level.
+**Context:** [SPEC-034](../specs/spec-034-review-mode-readonly-and-try-again-scoping.md) and [SPEC-036](../specs/spec-036-bookmark-review-mode-alignment.md) already cleaned up the major reattempt issues (Try Again hidden in session review, bookmarks switched to review-first mode). This is a residual label bug that slipped through. The codebase is moving away from reattemptability — a future "reset question bank" feature would handle re-attempts at a higher level.
 
 **Fix:** Replace `isStandaloneHistoryReview` with a condition that keys off correctness across all standalone review origins. A safe implementation is:
 

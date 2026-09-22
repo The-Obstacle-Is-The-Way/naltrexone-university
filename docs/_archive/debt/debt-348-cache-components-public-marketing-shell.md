@@ -5,7 +5,7 @@
 **Created:** 2026-04-02
 **Resolved:** 2026-04-03
 **Source:** Broader Next.js 16 / Vercel performance audit
-**Related:** [ADR-010 Caching Strategy](../adr/adr-010-caching-strategy.md), [next.config.ts](../../next.config.ts), [app/page.tsx](../../app/page.tsx), [app/pricing/page.tsx](../../app/pricing/page.tsx), [components/marketing/marketing-home.tsx](../../components/marketing/marketing-home.tsx), [components/marketing/marketing-layout.tsx](../../components/marketing/marketing-layout.tsx)
+**Related:** [ADR-010 Caching Strategy](../../adr/adr-010-caching-strategy.md), [next.config.ts](../../../next.config.ts), [app/page.tsx](../../../app/page.tsx), [app/pricing/page.tsx](../../../app/pricing/page.tsx), [components/marketing/marketing-home.tsx](../../../components/marketing/marketing-home.tsx), [components/marketing/marketing-layout.tsx](../../../components/marketing/marketing-layout.tsx)
 
 ---
 
@@ -17,7 +17,7 @@ Next.js 16 Cache Components make it possible to keep a route's static shell cach
 - `/pricing` is mostly static plan content
 - only the auth-aware nav / CTA / entitlement guidance needs per-request personalization
 
-The repo does **not** currently enable `cacheComponents` in [`next.config.ts`](../../next.config.ts), and there is no `use cache` usage checked in.
+The repo does **not** currently enable `cacheComponents` in [`next.config.ts`](../../../next.config.ts), and there is no `use cache` usage checked in.
 
 ---
 
@@ -25,8 +25,8 @@ The repo does **not** currently enable `cacheComponents` in [`next.config.ts`](.
 
 The current public pages do personalized server work directly in the main render path:
 
-- [`app/page.tsx`](../../app/page.tsx) renders [`components/marketing/marketing-home.tsx`](../../components/marketing/marketing-home.tsx), which resolves `AuthNav()` and `GetStartedCta()` before returning the full page
-- [`app/pricing/page.tsx`](../../app/pricing/page.tsx) resolves `loadPricingData()` and `AuthNav()` before returning the page shell
+- [`app/page.tsx`](../../../app/page.tsx) renders [`components/marketing/marketing-home.tsx`](../../../components/marketing/marketing-home.tsx), which resolves `AuthNav()` and `GetStartedCta()` before returning the full page
+- [`app/pricing/page.tsx`](../../../app/pricing/page.tsx) resolves `loadPricingData()` and `AuthNav()` before returning the page shell
 - both auth-aware helpers currently perform Clerk user lookup plus entitlement lookup for signed-in users
 
 That means pages that are mostly static still wait on user-specific server work. The result is:
@@ -41,7 +41,7 @@ That means pages that are mostly static still wait on user-specific server work.
 
 ### Phase 1: Enable Cache Components
 
-Turn on `cacheComponents` in [`next.config.ts`](../../next.config.ts) after targeted verification of the marketing routes.
+Turn on `cacheComponents` in [`next.config.ts`](../../../next.config.ts) after targeted verification of the marketing routes.
 
 ### Phase 2: Keep the Marketing Shell Static
 

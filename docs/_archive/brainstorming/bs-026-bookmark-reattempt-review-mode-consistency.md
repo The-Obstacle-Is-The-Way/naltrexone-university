@@ -3,7 +3,7 @@
 **Date:** 2026-02-20
 **Triggered by:** Manual UX audit of the bookmarks page — clicking "Reattempt" opens a fresh attempt form instead of showing the previous answer, which is inconsistent with every other entry point in the system (Dashboard, History, Session Breakdown)
 **Scope:** Bookmarks are the only entry point that bypasses review mode, creating a disjointed mental model for users who expect to see their previous answer before deciding to reattempt
-**Related:** [SPEC-034](../_archive/specs/spec-034-review-mode-readonly-and-try-again-scoping.md) (Review Mode Read-Only & Try Again Scoping), [SPEC-023](../_archive/specs/spec-023-question-review-mode.md) (Question Review Mode), [BS-022](../_archive/brainstorming/bs-022-unanswered-question-review-handling.md), [BS-023](../_archive/brainstorming/bs-023-try-again-state-consistency.md)
+**Related:** [SPEC-034](../specs/spec-034-review-mode-readonly-and-try-again-scoping.md) (Review Mode Read-Only & Try Again Scoping), [SPEC-023](../specs/spec-023-question-review-mode.md) (Question Review Mode), [BS-022](bs-022-unanswered-question-review-handling.md), [BS-023](bs-023-try-again-state-consistency.md)
 
 ---
 

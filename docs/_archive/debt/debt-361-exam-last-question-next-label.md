@@ -52,7 +52,7 @@ So the pre-fix implementation already acknowledged the semantic mismatch for ass
 
 ## Contract Status
 
-When this debt was opened, it was aligned with the shipped contract in [interaction-contracts.md](../practice-engine/interaction-contracts.md): the last exam question still used `Next`, and that click entered the review stage.
+When this debt was opened, it was aligned with the shipped contract in [interaction-contracts.md](../../practice-engine/interaction-contracts.md): the last exam question still used `Next`, and that click entered the review stage.
 
 That made this debt item a product/UI debt issue against the then-current contract, not a code/doc mismatch bug.
 
