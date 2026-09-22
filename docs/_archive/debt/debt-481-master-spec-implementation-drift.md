@@ -1,10 +1,47 @@
 # DEBT-481: Master Spec Copies Still Prescribe Superseded Implementation Contracts
 
-**Status:** Open
+**Status:** Resolved — 2026-09-22; reconciliation promoted through #992 and production-verified before archival
 **Priority:** P2
 **Date:** 2026-09-20
 
 ---
+
+## Verified closeout (2026-09-22 UTC)
+
+The six filed contradictions and the remaining bookmark filename are reconciled.
+The master links to executable authorities; all four split parts are navigation
+views. This closes the bounded documentation task, not an assertion that every
+product-design sentence was re-audited. No unfinished scoped work is deferred.
+The dated pending-publication statements below are historical and superseded by
+these receipts; no runtime behavior or test policy changed.
+
+| Source PR | Exact approved head | Formal approval | Merge | Successful CI |
+| --- | --- | --- | --- | --- |
+| #991 — six-contract reconciliation | `2385da98` | 5274546657 | `8a6c0e94` | 35692339793 |
+| #993 — promotion-review residue | `23f066e5` | 5274771102 | `04562680` | 35694682518 |
+
+Both source approvals preceded their merges, with zero unresolved threads and
+full local gates. Promotion #992 verified the source-provenance rule, passed CI
+`35695932909`, and merged as `22444a9a0ad9d898c789abc47a1d8d7f98873741`.
+Main CI **35696895987** passed: 474 unit files / 5,637 cases; 65 browser files /
+411 cases; 46 integration files / 349 cases, plus six existing provider opt-in
+skips; and **46/46 required E2E cases**, no failures or retries. Build passed.
+Production `/` and `/api/health` returned 200 with app/database healthy. The exact
+security-contact body also returned 200 under both tested Accept variants.
+Dev and main shared tree `f76c3952acc0730ab1c8079fefe690e8defc8cf6`.
+
+| Production event (UTC) | Observed receipt |
+| --- | --- |
+| Vercel build Ready | 06:54:47.653Z |
+| Still STAGED; no production alias; old release serving | Through 07:04:20.914Z |
+| Main `test` passed | 07:04:30Z |
+| Vercel required check succeeded | 07:04:31.899Z |
+| Production domains assigned to `22444a9a` | 07:04:32.132Z |
+
+[Published release receipt](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/992#issuecomment-5772505797).
+This archival move leaves no live stub; inbound and outbound links are updated
+without rewriting the dated history. Its own reviewed publication and promotion
+remain the normal closeout process, not an additional implementation gap.
 
 ## Description
 
@@ -27,9 +64,9 @@ This is a docs-only correction; no failing behavioral test or mutation proof is 
 
 **2026-09-22 promotion-review correction.** #991 merged as `8a6c0e94` after exact-head approval on `2385da98` and green CI `35692339793`. Promotion #992 exposed one residue: the §7 SLICE-2 file list still named `toggle-bookmark.ts`, despite the corrected desired-state contract. The source tree contains `set-bookmark.ts`, not that former filename; the list is corrected here. The spec index now defines its existing Living guide label consistently with AGENTS.md's exemption. Neither change expands the archive guard or changes application behavior. Promotion and closeout remain pending.
 
-**2026-09-21 forward pointer.** #936 (`327f95ef`) shipped the warning banners and SPEC-016/017 corrections and is an ancestor of deployed main. The filing's “prepared PR B” qualifiers below are historical, not open deployment work. The six master/copy contradictions remain: the current schema has **21** tables versus **14** in the master, and there are **29** controller `createAction` declarations, distinct from **14** rate policies and **18** limited operations. Warning banners do not reconcile the stale schema, bookmark key, content/choice identity, workflow and timing examples. This remains an Open docs-ownership/reconciliation task, not a runtime change. [Audit receipts](./assets/active-audit-2026-09-21/verification.md).
+**2026-09-21 forward pointer.** #936 (`327f95ef`) shipped the warning banners and SPEC-016/017 corrections and is an ancestor of deployed main. The filing's “prepared PR B” qualifiers below are historical, not open deployment work. The six master/copy contradictions remain: the current schema has **21** tables versus **14** in the master, and there are **29** controller `createAction` declarations, distinct from **14** rate policies and **18** limited operations. Warning banners do not reconcile the stale schema, bookmark key, content/choice identity, workflow and timing examples. This remains an Open docs-ownership/reconciliation task, not a runtime change. [Audit receipts](../../debt/assets/active-audit-2026-09-21/verification.md).
 
-**CONFIRMED:** the current master specification and its four readability copies contain demonstrably stale “complete”/“exact” implementation claims. `docs/specs/index.md` identifies the master as the technical SSOT; a new implementer can copy unsafe or incompatible examples. The [all-current-specs audit](./assets/adversarial-2026-09-20/review.md#all-current-specs-audit) covers all eight current files, including SPEC-016/017 corrections prepared for separate specs-only PR B.
+**CONFIRMED:** the current master specification and its four readability copies contain demonstrably stale “complete”/“exact” implementation claims. `docs/specs/index.md` identifies the master as the technical SSOT; a new implementer can copy unsafe or incompatible examples. The [all-current-specs audit](../../debt/assets/adversarial-2026-09-20/review.md#all-current-specs-audit) covers all eight current files, including SPEC-016/017 corrections prepared for separate specs-only PR B.
 
 Receipts at `5bc118f3` (warning banners are prepared for PR B, not included in this filing):
 
@@ -66,8 +103,8 @@ This pass proposes no automated gate, so no red test is claimed. If a later PR p
 
 ## Related
 
-- [Current spec index](../specs/index.md)
-- [Master spec](../specs/master_spec.md) and its four linked parts
-- [SPEC-016](../_archive/specs/spec-016-observability.md), [SPEC-017](../_archive/specs/spec-017-rate-limiting.md)
-- [DEBT-474](./debt-474-ci-secret-scope-and-action-immutability.md) — current workflow boundary, not reopened
-- [DEBT-479](./debt-479-public-surface-discoverability-and-field-performance.md) — independently corrected public/spec scope
+- [Current spec index](../../specs/index.md)
+- [Master spec](../../specs/master_spec.md) and its four linked parts
+- [SPEC-016](../specs/spec-016-observability.md), [SPEC-017](../specs/spec-017-rate-limiting.md)
+- [DEBT-474](../../debt/debt-474-ci-secret-scope-and-action-immutability.md) — current workflow boundary, not reopened
+- [DEBT-479](../../debt/debt-479-public-surface-discoverability-and-field-performance.md) — independently corrected public/spec scope
