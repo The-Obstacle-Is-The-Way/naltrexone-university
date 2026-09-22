@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 
-const REPOSITORY = 'The-Obstacle-Is-The-Way/naltrexone-university';
+export const REPOSITORY = 'The-Obstacle-Is-The-Way/naltrexone-university';
 const sha = z.string().regex(/^[a-f0-9]{40}$/);
 const pageInfo = z.object({ hasNextPage: z.boolean() });
 const checks = z.object({
@@ -23,7 +23,7 @@ const checks = z.object({
     ]),
   ),
 });
-const pullRequestSchema = z.object({
+export const pullRequestSchema = z.object({
   number: z.number().int().positive(),
   state: z.string(),
   isDraft: z.boolean(),
@@ -60,9 +60,7 @@ const reviewPagesSchema = z.array(
 
 export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
   const parsed = pullRequestSchema.safeParse(input);
-  const reviews = reviewPagesSchema.safeParse(reviewPages);
-  if (!parsed.success || !reviews.success)
-    throw new Error('Invalid GitHub merge response');
+  if (!parsed.success) throw new Error('Invalid GitHub merge response');
   const pr = parsed.data;
   if (
     pr.state !== 'OPEN' ||
@@ -83,18 +81,7 @@ export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
   if (pr.reviewThreads.nodes.some((thread) => !thread.isResolved)) {
     throw new Error('PR has unresolved review threads');
   }
-  const approval = reviews.data
-    .flat()
-    .filter(
-      (entry) =>
-        entry.user?.login === 'coderabbitai[bot]' &&
-        entry.commit_id === pr.headRefOid &&
-        ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(entry.state),
-    )
-    .at(-1);
-  if (approval?.state !== 'APPROVED' || !approval.submitted_at) {
-    throw new Error('Missing current exact-head CodeRabbit approval');
-  }
+  const approval = exactHeadApproval(reviewPages, pr.headRefOid);
   if (
     !contexts.nodes.some(
       (check) =>
@@ -124,10 +111,30 @@ export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
   };
 }
 
+export function exactHeadApproval(reviewPages: unknown, head: string) {
+  const reviews = reviewPagesSchema.safeParse(reviewPages);
+  if (!reviews.success) throw new Error('Invalid GitHub review response');
+  const approval = reviews.data
+    .flat()
+    .filter(
+      (entry) =>
+        entry.user?.login === 'coderabbitai[bot]' &&
+        entry.commit_id === head &&
+        ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(entry.state),
+    )
+    .at(-1);
+  if (approval?.state !== 'APPROVED' || !approval.submitted_at) {
+    throw new Error('Missing current exact-head CodeRabbit approval');
+  }
+  return { id: approval.id, submitted_at: approval.submitted_at };
+}
+
 const query = `query($number:Int!) {
   repository(owner:"The-Obstacle-Is-The-Way",name:"naltrexone-university") {
     pullRequest(number:$number) {
       number state isDraft baseRefName headRefOid mergeable mergeStateStatus
+      baseRefOid headRefName headRepository { nameWithOwner }
+      mergeCommit { oid } mergedAt
       reviewThreads(first:100) { nodes { isResolved } pageInfo { hasNextPage } }
       commits(last:1) { nodes { commit { oid statusCheckRollup {
         contexts(first:100) {
@@ -150,22 +157,7 @@ function gh(args: string[]): string {
   });
 }
 
-export function runMergeReviewedPr(
-  args: string[],
-  write: (value: string) => void = console.log,
-) {
-  const number = args[0];
-  if (
-    !number ||
-    !/^[1-9]\d*$/.test(number) ||
-    !Number.isSafeInteger(Number(number)) ||
-    args.length > 2 ||
-    (args[1] !== undefined && args[1] !== '--merge')
-  ) {
-    throw new Error(
-      'Usage: tsx scripts/merge-reviewed-pr.ts PR_NUMBER [--merge]',
-    );
-  }
+export function readMergeEvidence(number: string) {
   const response = z
     .object({
       data: z.object({ repository: z.object({ pullRequest: z.unknown() }) }),
@@ -190,10 +182,27 @@ export function runMergeReviewedPr(
       `repos/${REPOSITORY}/pulls/${number}/reviews?per_page=100`,
     ]),
   );
-  const receipt = checkFeatureMerge(
-    response.data.repository.pullRequest,
-    reviewPages,
-  );
+  return { pullRequest: response.data.repository.pullRequest, reviewPages };
+}
+
+export function runMergeReviewedPr(
+  args: string[],
+  write: (value: string) => void = console.log,
+) {
+  const number = args[0];
+  if (
+    !number ||
+    !/^[1-9]\d*$/.test(number) ||
+    !Number.isSafeInteger(Number(number)) ||
+    args.length > 2 ||
+    (args[1] !== undefined && args[1] !== '--merge')
+  ) {
+    throw new Error(
+      'Usage: tsx scripts/merge-reviewed-pr.ts PR_NUMBER [--merge]',
+    );
+  }
+  const evidence = readMergeEvidence(number);
+  const receipt = checkFeatureMerge(evidence.pullRequest, evidence.reviewPages);
   if (receipt.number !== Number(number))
     throw new Error('PR number changed during verification');
   write(JSON.stringify(receipt));
