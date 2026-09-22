@@ -63,12 +63,24 @@ describe('app/layout', () => {
   let RootLayout: typeof import('@/app/layout').default;
   let NonceBoundProviders: typeof import('@/app/layout').NonceBoundProviders;
   let viewport: typeof import('@/app/layout').viewport;
+  let metadata: typeof import('@/app/layout').metadata;
 
   beforeAll(async () => {
     const module = await import('@/app/layout');
     RootLayout = module.default;
     NonceBoundProviders = module.NonceBoundProviders;
     viewport = module.viewport;
+    metadata = module.metadata;
+  });
+
+  it('resolves public metadata against the canonical production apex', () => {
+    expect(metadata.metadataBase?.toString()).toBe(
+      'https://addictionboards.com/',
+    );
+  });
+
+  it('does not impose a root canonical on auth or private pages', () => {
+    expect(metadata.alternates?.canonical).toBeUndefined();
   });
 
   it('adds data-scroll-behavior on the html element', () => {

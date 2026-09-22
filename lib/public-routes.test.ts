@@ -27,4 +27,20 @@ describe('PUBLIC_ROUTE_PATTERNS', () => {
     expect(PUBLIC_ROUTE_PATTERNS).toContain(`${ROUTES.PRIVACY}(.*)`);
     expect(PUBLIC_ROUTE_PATTERNS).toContain(`${ROUTES.TERMS}(.*)`);
   });
+
+  it('preserves the existing page-family and machine-route auth matchers', () => {
+    expect(PUBLIC_ROUTE_PATTERNS).toEqual([
+      '/',
+      '/pricing(.*)',
+      '/privacy(.*)',
+      '/terms(.*)',
+      '/sign-in(.*)',
+      '/sign-up(.*)',
+      '/api/cron/reconcile-stripe-subscriptions(.*)',
+      '/api/cron/send-renewal-notices(.*)',
+      '/api/health(.*)',
+      '/api/stripe/webhook(.*)',
+      '/api/webhooks/clerk(.*)',
+    ]);
+  });
 });

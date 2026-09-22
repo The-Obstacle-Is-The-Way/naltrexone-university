@@ -180,5 +180,5 @@ identifier was printed.
   Checkout drift classification and non-blocking cadence.
 - [DEBT-473](../debt/debt-473-green-without-evidence.md) — owns complete CI
   evidence reporting.
-- [DEBT-474](../../debt/debt-474-ci-secret-scope-and-action-immutability.md) — owns
+- [DEBT-474](../debt/debt-474-ci-secret-scope-and-action-immutability.md) — owns
   CI credential scope and action immutability.

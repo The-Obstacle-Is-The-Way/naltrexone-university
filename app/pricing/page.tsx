@@ -23,6 +23,9 @@ import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 export const metadata: Metadata = {
   title: 'Pricing - Addiction Boards',
+  description:
+    'Compare monthly and annual Addiction Boards plans and learn how the free trial works before choosing your board-prep subscription.',
+  alternates: { canonical: ROUTES.PRICING },
 };
 
 export const maxDuration = 30;
