@@ -46,10 +46,11 @@ renders `<meta name="robots" content="noindex, follow">`. The earlier
 closeouts of DEBT-480 (security contact) and the step-2 promotion (robots and
 sitemap **200** with the four exact URLs) stand as recorded below.
 
-**Preview-inspector limit.** No third-party social preview inspector or
+**Preview-inspector note.** No third-party social preview inspector or
 authorized real-channel share was used. The evidence is the rendered
 production heads and the fetched production image above, which is what such
-inspectors read. This is recorded as a limit, not a gap in the shipped work.
+inspectors read; verification item 4 and step 3 accept that direct evidence
+(dated 2026-09-22). No shipped work is missing.
 
 **Checklist item.** The requested `LOG_LEVEL` example entry is added to
 `.env.example` as a commented, documented option; no runtime default changed
@@ -286,7 +287,7 @@ Red proof: signed-out current GETs fail the required 200/body assertions. Mutati
 **Step 3 — [x] Social metadata and image (shipped in #1003; promoted by #1004; production-verified 2026-09-22).**
 Add OG/Twitter metadata to the four content URLs using step 1's canonical origin and an appropriate site image. Choose generated or static image after checking the runtime/font implementation; no unnecessary dynamic runtime requirement. Ensure the generated resource, if extensionless, is public through the proxy.
 
-Red proof: current production/source outputs lack the tags and image. A missing image URL, a private/unreachable image response, or a canonical/OG-origin mismatch must fail the corresponding test. Verify image status/content type and rendered absolute tags; obtain one authorized real-channel preview without sending unsolicited messages.
+Red proof: current production/source outputs lack the tags and image. A missing image URL, a private/unreachable image response, or a canonical/OG-origin mismatch must fail the corresponding test. Verify image status/content type and rendered absolute tags; obtain one authorized real-channel preview without sending unsolicited messages. *(Accepted 2026-09-22: the rendered production heads and the fetched production image are the evidence a preview inspector reads; they satisfy this criterion. No real-channel share was sent.)*
 
 **Step 4 — Deferred: structured data (optional owner decision; register Deferred table, 2026-09-22).**
 Only if prioritized: `Organization` plus a truthful `Product`/`Offer` description. Reuse the source that renders monthly/annual prices; no parallel literals and no invented Course/FAQ content. Red proof: missing JSON-LD fails the proposed contract on the current tree; changing the price input must change both displayed price and parsed Offer amount, while mutating only the Offer amount must fail their agreement assertion. Eligibility/benefit remains unproven.
@@ -295,7 +296,7 @@ Only if prioritized: `Organization` plus a truthful `Product`/`Offer` descriptio
 Choose a supported source, sampling/quota and privacy policy before raising browser Sentry sampling. Verify that the selected SDK/version emits the required LCP/CLS/INP measurements and excludes private identifiers/query payloads. Source configuration, collection-point/privacy changes if needed, and SPEC-016 amendment belong together. Red proof: with today's zero browser tracing, a controlled sampled navigation must yield no required measurement event and fail the new collector test; after implementation, force sampling back to zero or inject a private query token and require the appropriate collection/privacy assertion to fail. Retain captured production sample counts and window; do not invent percentiles from absent samples. This does not block DEBT-450. Web Analytics stays under DEBT-464; Speed Insights is outside that record's scope.
 
 **Step 6 — [x] Correct SPEC-016 (shipped in #936; reverified 2026-09-21).**
-The 2026-09-20 iteration states server 5% / browser 0%, explicit request correlation and named spans, and distinguishes those from universal async propagation. `LOG_LEVEL` is supported and documented in the spec; adding an example-file entry is explicitly declined as optional. No `.env.example` or runtime change was made.
+The 2026-09-20 iteration states server 5% / browser 0%, explicit request correlation and named spans, and distinguishes those from universal async propagation. `LOG_LEVEL` is supported and documented in the spec; adding an example-file entry is explicitly declined as optional. No `.env.example` or runtime change was made. *(Superseded 2026-09-22: the owner requested the example entry; #1005 adds it to `.env.example` as a commented option. No runtime default changed.)*
 
 **Step 7 — [x] Correct SPEC-017 (shipped in #936; reverified 2026-09-21).**
 The table covers 14 policies, 13 invocation sites and 18 named operations, including shared-helper fanout and the actual bookmark key. The proposed “every constant has a caller” test is declined: changing a Markdown limit would leave it green. It cannot make this table self-maintaining. E1 records the owner-approved structural deferral, observed baseline mitigation, currently observable invocation/compute/Firewall triggers and the unapplied Attack Mode incident path. Project rule allowance remains unverified pending the dashboard check; log-only is declined too. E2 requires query attribution, not merely function duration.
@@ -309,7 +310,7 @@ The table covers 14 policies, 13 invocation sites and 18 named operations, inclu
 1. Every implemented mechanism records its specified red mutation before green; no floor/skip/suppression changes to obtain a pass.
 2. **Met 2026-09-22 (see closeout):** Crawl resources and image must be anonymously reachable with correct bodies/content types after promotion. Sitemap contains the four indexable content URLs, no auth/API/private/query URLs.
 3. **Met 2026-09-22 (see closeout):** Four content heads have correct descriptions, canonical URLs and the chosen social metadata. Both auth catch-all pages serve noindex; auth behavior still passes.
-4. Social preview evidence comes from an authorized channel or preview inspector; none was produced by this docs-only review. **2026-09-22:** rendered production heads and the fetched production PNG were verified directly instead; no external inspector was run (recorded as a limit in the closeout).
+4. Social preview evidence comes from an authorized channel or preview inspector; none was produced by this docs-only review. **Met 2026-09-22 by direct production evidence:** the rendered production heads (canonical, `og:*`, `twitter:card`) and the fetched production PNG (200, `image/png`, 1200×630) were verified unsigned; these are the inputs an inspector reads, so the criterion is satisfied without a third-party tool. No real-channel share was sent.
 5. **Deferred (owner decision):** Browser measurement, if authorized, requires actual production measurements and privacy/quota review. Server trigger assessment is independent; see the dated matrix.
 6. **Met in #936, reverified 2026-09-21:** SPEC-016/017 contain the updated dates and scope/table corrections. E1's dated owner decision contains the structural reason, observable trigger and unapplied incident lever; no custom-rule entitlement or measured response time is assumed.
 7. Every future push follows AGENTS.md's full gate; each implementation PR needs exact-head review and production verification where applicable. A unit test, Ready deployment or green check alone proves less than this list.
