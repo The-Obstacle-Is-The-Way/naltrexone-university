@@ -1,14 +1,59 @@
 # DEBT-479: Public Crawl/Sharing Metadata, Browser Field Measurement, and SPEC-016/017 Drift
 
-**Status:** Open
+**Status:** Resolved — 2026-09-22; steps 1–3 promoted through #1002/#1004 and production-verified before archival; steps 4–5 remain Deferred owner decisions
 **Priority:** P2
 **Date:** 2026-09-20
-**Updated:** 2026-09-20 — independent adversarial review; [claim-by-claim adjudication, live receipts, PR #932 review and execution order](./assets/adversarial-2026-09-20/review.md).
-**Source:** Third-pass review requested by the owner after the CodeRabbit 30-day analytics radar showed review attention concentrated on Maintainability/Code Quality, Functional Correctness, and Data Integrity, with Performance and Scalability, Stability and Availability, and Security and Privacy comparatively unexercised. The owner then directed that [SPEC-016](../_archive/specs/spec-016-observability.md) and [SPEC-017](../_archive/specs/spec-017-rate-limiting.md) be checked for completeness and iterated where needed. Receipts read at `dev` `6199084a`, from production `https://addictionboards.com`, and from the Vercel API on 2026-09-20.
+**Updated:** 2026-09-22 — verified closeout below. 2026-09-20 — independent adversarial review; [claim-by-claim adjudication, live receipts, PR #932 review and execution order](../../debt/assets/adversarial-2026-09-20/review.md).
+**Source:** Third-pass review requested by the owner after the CodeRabbit 30-day analytics radar showed review attention concentrated on Maintainability/Code Quality, Functional Correctness, and Data Integrity, with Performance and Scalability, Stability and Availability, and Security and Privacy comparatively unexercised. The owner then directed that [SPEC-016](../specs/spec-016-observability.md) and [SPEC-017](../specs/spec-017-rate-limiting.md) be checked for completeness and iterated where needed. Receipts read at `dev` `6199084a`, from production `https://addictionboards.com`, and from the Vercel API on 2026-09-20.
 
 **What this filing does not claim.** Stability has real machinery: `src/adapters/shared/circuit-breaker.ts`, `src/adapters/gateways/stripe/stripe-retry.ts`, `lib/with-timeout.ts`, and the Resend provider timeout. Security headers are enforced *and* contract-tested: `next.config.ts:25-53` sets five headers and `next.config.test.ts:17-37` asserts them while leaving CSP ownership with `proxy.ts`. Application rate limiting is broader than the old spec table (F8). These receipts exonerate the named mechanisms; they do not prove the entire stability/security axes are defect-free or explain the CodeRabbit dashboard's scoring. The newly verified anonymous security-contact failure is separately filed as DEBT-480.
 
 **The corrected through-line.** Crawl and social metadata are absent (F1–F4), browser performance sampling is off (F5), and there is no dedicated metadata contract (F6). **Server telemetry already exists.** The original claim that DEBT-450 and SPEC-017 triggers are “unfireable by construction” is withdrawn: server tracing is sampled at 5%, Sentry returns production spans, and Vercel Firewall exposes traffic observations without Web Analytics. No DEBT-450 threshold was demonstrated by this review. Its read-only census and server measurement work are actionable now, independently of browser telemetry or a Pro upgrade. SPEC-016/017 corrections are prepared for specs-only PR B and remain pending. The E1 owner decision is recorded in this filing/evidence as a structural deferral with observable triggers and an unapplied incident lever; its SPEC-017 update also belongs to B.
+
+---
+
+## Verified closeout — 2026-09-22 UTC
+
+Steps 1–3 are implemented, reviewed, promoted to `main` and verified on
+production. Steps 4 (structured data) and 5 (browser field measurement) were
+always owner decisions; they are recorded in the register's Deferred table
+with revive triggers and are **not** claimed as done. The dated "not yet
+promoted" and "promotion pending" paragraphs below are historical execution
+receipts, superseded by this section.
+
+| Source PR | Exact approved head | Formal approval | Merge | Successful CI |
+| --- | --- | --- | --- | --- |
+| #999 — canonical metadata and auth `noindex` (step 1) | `37564e7a` | 5276325344 | `faf486aa` | 35710469568 |
+| #1000 — anonymous robots and sitemap (step 2) | `134a846c` | 5276576664 | `24456349` | 35713062852 |
+| #1003 — social cards and site image (step 3) | `458a21d1` | 5277379945 | `cb91605a` | 35720723494 |
+| #1002 — promotion of steps 1–2 | `ab264018` | 5277062683 | `0d4bcf40` | 35718830873 (main) |
+| #1004 — promotion of step 3 | `cb91605a` | 5277505303 | `c6036653` | 35723256006 (main) |
+
+**Release hold receipt (#1004, main `c6036653`).** Vercel deployment
+`dpl_71AGa2xfA7XBrQ6FTpa4XWQsUwuR` was created at `11:45:39.270Z` and Ready at
+`11:47:09.216Z`; main CI `35723256006` completed successfully at `11:56:36Z`;
+the production domains were assigned at `11:56:38.266Z`, after the check. The
+previous release served during the hold. Main and dev trees are identical.
+
+**Production receipts (2026-09-22, ~12:40Z, unsigned requests to
+`https://addictionboards.com`).** All four content pages (`/`, `/pricing`,
+`/privacy`, `/terms`) render their own `<link rel="canonical">` at the apex
+origin, `og:title`, `og:url` equal to the canonical, `og:image` pointing at
+`https://addictionboards.com/opengraph-image`, and `twitter:card` =
+`summary_large_image`. `/opengraph-image` returns **200**, `image/png`,
+50,716 bytes, a valid PNG signature and **1200×630** dimensions. `/sign-in`
+renders `<meta name="robots" content="noindex, follow">`. The earlier
+closeouts of DEBT-480 (security contact) and the step-2 promotion (robots and
+sitemap **200** with the four exact URLs) stand as recorded below.
+
+**Preview-inspector limit.** No third-party social preview inspector or
+authorized real-channel share was used. The evidence is the rendered
+production heads and the fetched production image above, which is what such
+inspectors read. This is recorded as a limit, not a gap in the shipped work.
+
+**Checklist item.** The requested `LOG_LEVEL` example entry is added to
+`.env.example` as a commented, documented option; no runtime default changed
+and the existing logger tests pass unchanged.
 
 ---
 
@@ -117,7 +162,7 @@ returned `200` for both ordinary-browser and Twitterbot requests during the
 same window. Keep the failed probe receipts; require the canonical full E2E
 lane and post-promotion unsigned-head proof before marking step 1 complete.
 
-**2026-09-21 current-state correction.** The filing's “prepared/pending PR B” statements are now historical: #936 merged as `327f95ef` after exact-head approval on `605a72cf` and is included in deployed main `76e65e9c`. SPEC-016/017 both say Updated 2026-09-20 and contain the corrected sampling, request-context, limit inventory and structural E1 deferral. Resolution steps 6–7 are complete. Fresh anonymous production probes still find no canonical/Open Graph output and the same inherited description on the checked public/auth pages; crawl files remain protected, and browser tracing remains zero. Steps 1–3 and owner-gated 4–5 remain Open. The helper-recovery residual mentioned below was separately resolved by #960/#961 and DEBT-475 is archived; it is not remaining PR C work. Current provider quota/custom-rule entitlement and historical Sentry samples are not recertified by source inspection. [Audit receipts and limits](./assets/active-audit-2026-09-21/verification.md).
+**2026-09-21 current-state correction.** The filing's “prepared/pending PR B” statements are now historical: #936 merged as `327f95ef` after exact-head approval on `605a72cf` and is included in deployed main `76e65e9c`. SPEC-016/017 both say Updated 2026-09-20 and contain the corrected sampling, request-context, limit inventory and structural E1 deferral. Resolution steps 6–7 are complete. Fresh anonymous production probes still find no canonical/Open Graph output and the same inherited description on the checked public/auth pages; crawl files remain protected, and browser tracing remains zero. Steps 1–3 and owner-gated 4–5 remain Open. The helper-recovery residual mentioned below was separately resolved by #960/#961 and DEBT-475 is archived; it is not remaining PR C work. Current provider quota/custom-rule entitlement and historical Sentry samples are not recertified by source inspection. [Audit receipts and limits](../../debt/assets/active-audit-2026-09-21/verification.md).
 
 The application has six public **page route families**, not exactly six URLs. `lib/public-routes.ts:3-15` defines matchers: `/`, `/pricing(.*)`, `/privacy(.*)`, `/terms(.*)`, `/sign-in(.*)`, `/sign-up(.*)`, plus five machine endpoints (two cron routes, health, and the Stripe and Clerk webhooks). The question corpus lives behind `/app/questions/[slug]`, which `proxy.ts` protects via `auth.protect()`. That gating is a deliberate product decision and this filing does not propose changing it. The four intended indexable content URLs are `/`, `/pricing`, `/privacy`, `/terms`. Auth catch-all pages also serve subpaths: signed-out production `/sign-up/verify-email-address` returned 200 with the same inherited description and no noindex. Query variants are not separate sitemap entries. A live database census of the question count was not performed.
 
@@ -168,7 +213,7 @@ There is no `application/ld+json` block in production page source or the app/com
 
 No configured first-party browser performance collector was found. LCP, CLS and INP are Core Web Vitals; TTFB is a separate performance metric. “No field data from any source” is unproven because external datasets such as CrUX were not queried. Disabled browser tracing does not prevent server measurement, user reports, cost inspection or Firewall analysis.
 
-The [independent trigger matrix](./assets/adversarial-2026-09-20/review.md#server-trigger-adjudication) distinguishes all four deferred DEBT-450 paths:
+The [independent trigger matrix](../../debt/assets/adversarial-2026-09-20/review.md#server-trigger-adjudication) distinguishes all four deferred DEBT-450 paths:
 
 - Part 1 has an existing outer-finalize span and timeout/error path. A timeout can be investigated today; the p95 branch additionally requires dominant-loop and companion statement evidence, not just total request duration.
 - Part 3b's monthly read-only 500-bookmark census is actionable without telemetry. The named bookmark span can measure its separate latency branch.
@@ -204,7 +249,7 @@ The drift direction is favorable — coverage exceeds documentation — so this 
 
 **E1 is an owner-approved deferral, not demonstrated abuse.** The old “before launch, or anytime” wording is a planning milestone; a live domain proves serving, not customer launch or an abuse threshold. The authenticated team API confirms Hobby. Published limits were read, but the project dashboard allowance is **UNPROVEN** under the owner's verification requirement; do not assume a rule slot. The active-config 404 establishes no saved custom configuration. It does not establish absent protection: the fresh overview reports baseline `sys_dos_mitigation` denies/challenges. Nor does every passing request hit Neon: the cron handler rejects invalid auth before constructing a limiter (`app/api/cron/send-renewal-notices/route-handler.ts:60-104`).
 
-**Owner decision, 2026-09-20:** defer blocking and decline a log-only rule. PR B will put the full **reason / trigger / lever** in [SPEC-017 E1](../_archive/specs/spec-017-rate-limiting.md#e1-vercel-waf-rate-limiting); the decision recorded here is: auth plus subscription entitlement, Clerk throttling, signed webhooks, header-secret cron routes, six PPR-enabled page families and default Vercel filtering constrain the exposed work; shared institutional NAT makes a guessed IP bucket harmful to legitimate cohorts. The reason is structural, not “insufficient traffic evidence,” and does not disappear with traffic growth. Reopen on invocation-count/Neon-compute anomalies or Firewall events available today; the events API returned `{"actions":[]}` successfully. Web Analytics is explicitly excluded. Attack Mode enable/disable is the unapplied incident path; measured reaction time remains unproven. This supersedes both earlier offered options without changing the independent F5 server-telemetry adjudication.
+**Owner decision, 2026-09-20:** defer blocking and decline a log-only rule. PR B will put the full **reason / trigger / lever** in [SPEC-017 E1](../specs/spec-017-rate-limiting.md#e1-vercel-waf-rate-limiting); the decision recorded here is: auth plus subscription entitlement, Clerk throttling, signed webhooks, header-secret cron routes, six PPR-enabled page families and default Vercel filtering constrain the exposed work; shared institutional NAT makes a guessed IP bucket harmful to legitimate cohorts. The reason is structural, not “insufficient traffic evidence,” and does not disappear with traffic growth. Reopen on invocation-count/Neon-compute anomalies or Firewall events available today; the events API returned `{"actions":[]}` successfully. Web Analytics is explicitly excluded. Attack Mode enable/disable is the unapplied incident path; measured reaction time remains unproven. This supersedes both earlier offered options without changing the independent F5 server-telemetry adjudication.
 
 ---
 
@@ -224,29 +269,29 @@ The drift direction is favorable — coverage exceeds documentation — so this 
 
 ## Resolution
 
-One mechanism per PR; red proof before green. Steps 6/7 documentation shipped in #936; the filing-era PR B labels above are preserved as history. Step 2 needs the public-resource auth seam; step 3 depends on step 1's URL convention and an anonymously reachable image. Steps 4/5 remain separate owner choices. See the [whole-backlog execution order](./assets/adversarial-2026-09-20/review.md#execution-order).
+One mechanism per PR; red proof before green. Steps 6/7 documentation shipped in #936; the filing-era PR B labels above are preserved as history. Step 2 needs the public-resource auth seam; step 3 depends on step 1's URL convention and an anonymously reachable image. Steps 4/5 remain separate owner choices. See the [whole-backlog execution order](../../debt/assets/adversarial-2026-09-20/review.md#execution-order).
 
-**Step 1 — Canonical metadata and auth noindex.**
+**Step 1 — [x] Canonical metadata and auth noindex (shipped in #999; promoted by #1002; production-verified 2026-09-22).**
 Pin four content pages' meaningful descriptions and canonical apex URLs; pin noindex on both auth catch-all pages. Configure `metadataBase` using the verified environment-origin convention, excluding query strings and identifiers. Keep the existing title fallback unless a separate requirement needs a template. Do not require self-canonicals, unique descriptions or social cards for noindex auth interstitials. Extend frontend standards §15 with the adopted contract.
 
 Red proof: the current four content pages have no canonical and share the root description, and auth pages lack noindex. The new suite must fail those assertions before implementation. Then remove one canonical or auth noindex entry and require a targeted failure. Verify signed-out rendered heads, including an auth subpath; existing auth journeys must still pass.
 
-**Step 2 — Typed public URL policy, robots and sitemap.**
+**Step 2 — [x] Typed public URL policy, robots and sitemap (shipped in #1000; promoted by #1002; production-verified 2026-09-22).**
 `PUBLIC_ROUTE_PATTERNS` contains matchers (`/pricing(.*)`), not URLs. Do not strip regex syntax. Use a small framework-layer policy keyed by existing `ROUTES` constants with a literal URL path, explicit exact/prefix matcher scope and `indexable` flag (scope terminology corrected by the 2026-09-22 execution receipt). Derive the page auth matchers from that policy; keep machine auth exemptions separate. Sitemap consumes only the four indexable paths. This gives one policy for indexability and matching without a second independently maintained URL list; do not move routing policy into domain/application layers.
 
 Explicitly admit `/robots.txt` and `/sitemap.xml` through the actual proxy. Do not exempt all XML/TXT, `/api/*`, or private page prefixes. DEBT-480's exact security-contact exemption can land independently and should be reused at this seam. Robots declares the canonical sitemap, disallows private `/app/`, `/api/`, `/checkout/`, and permits fetching auth pages so their noindex is visible. Auth catch-all variants and query strings never enter the sitemap.
 
 Red proof: signed-out current GETs fail the required 200/body assertions. Mutations must independently remove `/pricing` from the expected output, add an auth URL, add a matcher suffix to an emitted URL, and remove the sitemap's proxy exemption. The expectations must include the explicit four business URLs, not merely compare two transformations of the same policy. Assert `/app/dashboard` and a prefix-lookalike resource remain protected. Verify both Accept modes against the built app and then production.
 
-**Step 3 — Social metadata and image.**
+**Step 3 — [x] Social metadata and image (shipped in #1003; promoted by #1004; production-verified 2026-09-22).**
 Add OG/Twitter metadata to the four content URLs using step 1's canonical origin and an appropriate site image. Choose generated or static image after checking the runtime/font implementation; no unnecessary dynamic runtime requirement. Ensure the generated resource, if extensionless, is public through the proxy.
 
 Red proof: current production/source outputs lack the tags and image. A missing image URL, a private/unreachable image response, or a canonical/OG-origin mismatch must fail the corresponding test. Verify image status/content type and rendered absolute tags; obtain one authorized real-channel preview without sending unsolicited messages.
 
-**Step 4 — Structured data (optional owner decision).**
+**Step 4 — Deferred: structured data (optional owner decision; register Deferred table, 2026-09-22).**
 Only if prioritized: `Organization` plus a truthful `Product`/`Offer` description. Reuse the source that renders monthly/annual prices; no parallel literals and no invented Course/FAQ content. Red proof: missing JSON-LD fails the proposed contract on the current tree; changing the price input must change both displayed price and parsed Offer amount, while mutating only the Offer amount must fail their agreement assertion. Eligibility/benefit remains unproven.
 
-**Step 5 — Browser field measurement (owner decision).**
+**Step 5 — Deferred: browser field measurement (owner decision; register Deferred table, 2026-09-22).**
 Choose a supported source, sampling/quota and privacy policy before raising browser Sentry sampling. Verify that the selected SDK/version emits the required LCP/CLS/INP measurements and excludes private identifiers/query payloads. Source configuration, collection-point/privacy changes if needed, and SPEC-016 amendment belong together. Red proof: with today's zero browser tracing, a controlled sampled navigation must yield no required measurement event and fail the new collector test; after implementation, force sampling back to zero or inject a private query token and require the appropriate collection/privacy assertion to fail. Retain captured production sample counts and window; do not invent percentiles from absent samples. This does not block DEBT-450. Web Analytics stays under DEBT-464; Speed Insights is outside that record's scope.
 
 **Step 6 — [x] Correct SPEC-016 (shipped in #936; reverified 2026-09-21).**
@@ -262,10 +307,10 @@ The table covers 14 policies, 13 invocation sites and 18 named operations, inclu
 ## Verification
 
 1. Every implemented mechanism records its specified red mutation before green; no floor/skip/suppression changes to obtain a pass.
-2. Crawl resources and image must be anonymously reachable with correct bodies/content types after promotion. Sitemap contains the four indexable content URLs, no auth/API/private/query URLs.
-3. Four content heads have correct descriptions, canonical URLs and the chosen social metadata. Both auth catch-all pages serve noindex; auth behavior still passes.
-4. Social preview evidence comes from an authorized channel or preview inspector; none was produced by this docs-only review.
-5. Browser measurement, if authorized, requires actual production measurements and privacy/quota review. Server trigger assessment is independent; see the dated matrix.
+2. **Met 2026-09-22 (see closeout):** Crawl resources and image must be anonymously reachable with correct bodies/content types after promotion. Sitemap contains the four indexable content URLs, no auth/API/private/query URLs.
+3. **Met 2026-09-22 (see closeout):** Four content heads have correct descriptions, canonical URLs and the chosen social metadata. Both auth catch-all pages serve noindex; auth behavior still passes.
+4. Social preview evidence comes from an authorized channel or preview inspector; none was produced by this docs-only review. **2026-09-22:** rendered production heads and the fetched production PNG were verified directly instead; no external inspector was run (recorded as a limit in the closeout).
+5. **Deferred (owner decision):** Browser measurement, if authorized, requires actual production measurements and privacy/quota review. Server trigger assessment is independent; see the dated matrix.
 6. **Met in #936, reverified 2026-09-21:** SPEC-016/017 contain the updated dates and scope/table corrections. E1's dated owner decision contains the structural reason, observable trigger and unapplied incident lever; no custom-rule entitlement or measured response time is assumed.
 7. Every future push follows AGENTS.md's full gate; each implementation PR needs exact-head review and production verification where applicable. A unit test, Ready deployment or green check alone proves less than this list.
 
@@ -273,14 +318,14 @@ The table covers 14 policies, 13 invocation sites and 18 named operations, inclu
 
 ## Related
 
-- [SPEC-016](../_archive/specs/spec-016-observability.md) — F5/F7; step 6 shipped; optional browser-measurement decision remains step 5
-- [SPEC-017](../_archive/specs/spec-017-rate-limiting.md) — F8; step 7 shipped
+- [SPEC-016](../specs/spec-016-observability.md) — F5/F7; step 6 shipped; optional browser-measurement decision remains step 5
+- [SPEC-017](../specs/spec-017-rate-limiting.md) — F8; step 7 shipped
 - `lib/public-routes.ts:3-15`, `lib/routes.ts`, `lib/env.ts:71`, `app/layout.tsx:9-13`, `proxy.ts`
 - `next.config.ts:25-53` and `next.config.test.ts:17-37` — the enforced-and-tested precedent this debt should copy
 - `sentry.client.config.ts:11-13`, `instrumentation.ts:21`, `lib/request-context.ts`, `src/adapters/shared/rate-limits.ts`
 - `docs/frontend/standards.md:827-840` — §15 Page Metadata, currently tab-titles only
-- [DEBT-464](../_archive/debt/debt-464-web-analytics-activation.md) — Vercel Web Analytics activation; parked, not duplicated here
-- [DEBT-450](../_archive/debt/debt-450-hot-path-query-efficiency.md) — deferred parts; server measurement and the census are actionable independently of F5
-- [DEBT-475](../_archive/debt/debt-475-toolchain-coherence.md) — resolved typed tracing/toolchain work, including the same-attempt helper-recovery residual
-- [DEBT-414](./debt-414-public-legal-pages-privacy-terms.md) — owns `/privacy` and `/terms` copy; this filing touches their metadata only, never their text
-- [DEBT-465](./debt-465-test-quality-practices-adoption.md) — Gherkin/acceptance and mutation lanes; steps 1–3's contracts are ordinary Vitest and do not depend on it
+- [DEBT-464](debt-464-web-analytics-activation.md) — Vercel Web Analytics activation; parked, not duplicated here
+- [DEBT-450](debt-450-hot-path-query-efficiency.md) — deferred parts; server measurement and the census are actionable independently of F5
+- [DEBT-475](debt-475-toolchain-coherence.md) — resolved typed tracing/toolchain work, including the same-attempt helper-recovery residual
+- [DEBT-414](../../debt/debt-414-public-legal-pages-privacy-terms.md) — owns `/privacy` and `/terms` copy; this filing touches their metadata only, never their text
+- [DEBT-465](../../debt/debt-465-test-quality-practices-adoption.md) — Gherkin/acceptance and mutation lanes; steps 1–3's contracts are ordinary Vitest and do not depend on it
