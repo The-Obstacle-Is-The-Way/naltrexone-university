@@ -1,6 +1,6 @@
 # DEBT-476: Dependabot Alert Triage — What #882/#886 Closed and the Four-Package Residue
 
-**Status:** Open — remediation shipped (#888 → promo #889, 2026-09-16); twelve of thirteen alerts `fixed`, #55 dismissed `not_used` on owner approval 2026-09-16; remaining: `fast-uri` 3.1.8 follow-up after 2026-09-22T07:36Z, then archive
+**Status:** Open — initial remediation promoted; age-eligible `fast-uri` 3.1.8 follow-up implemented locally on 2026-09-22, awaiting full gate, exact-head review and verified promotion before archive
 **Priority:** P2 — at filing, nothing was reachable from a production request path, but five High-rated alerts across two transitive packages sat in the default-branch lockfile and one alert could not be closed by any version pin
 **Date:** 2026-09-15
 **Source:** Owner question after PR #882 (`chore/dependabot-batch-2026-09-14`) merged to `dev` and promo #886 opened: do the 13 open Dependabot alerts get squashed by that merge, or do some still need handling?
@@ -9,6 +9,15 @@
 ---
 
 ## Problem
+
+**2026-09-22 audit and follow-up.** The original thirteen alert dispositions are unchanged: twelve fixed and #55 dismissed `not_used`; the complete open-alert API query returns **0**. This is not a claim that `stream-json@1.9.1` was removed. Rechecking the installed Solana browser-client import path still supports §F, and its upstream/reachability revisit triggers remain in force. The older #879 auto-close instruction is superseded: GitHub shows it closed, not merged. The Sentry/Lucide batch pending in the dated September 16 note subsequently merged as #892 (`a0d4378e`) and is an ancestor of current main.
+
+The final override update began at **07:36:44 UTC**, after npm's exact seven-day threshold of **07:36:25.444 UTC**. [Upstream 3.1.8](https://github.com/fastify/fast-uri/releases/tag/v3.1.8) fixes [GHSA-hrr3-gc8f-f4qj](https://github.com/fastify/fast-uri/security/advisories/GHSA-hrr3-gc8f-f4qj): host case was not folded again after percent-decoding. The upstream patch changes host normalization, its regression cases and the package version; no new application behavior or dependency major is required. `ajv@8.20.0` still accepts it through `^3.0.1`.
+
+- **Red, 07:36:44 UTC:** a standalone assertion that `parse('//%41.com').host === 'a.com'` fails on installed 3.1.7 (`actual: 'A.com'`, exit 1).
+- **Green, 07:37:32 UTC:** the identical assertion passes on installed 3.1.8 (`host: 'a.com'`). This is an upstream defect reproduction, not a new repository test or claimed product coverage.
+- `pnpm install && pnpm install --frozen-lockfile` exits 0. The lockfile changes only the fast-uri override, package/integrity entry, ajv edge and snapshot from 3.1.7 to 3.1.8; there are no incidental resolutions. `pnpm why fast-uri` reports one version, 3.1.8. The existing `ws@7.5.13` / `utf-8-validate` peer warning remains unchanged.
+- The seven-day gate, strict missing-time behavior, provenance policy and install-script allowlist are unchanged; no exception was added. Full gate, reviewed merge, production promotion and post-promotion alert readback remain required. The acceptance criteria below describe the original September 16 remediation; this follow-up supersedes only its fast-uri 3.1.7 pin.
 
 **2026-09-21 audit forward pointer.** The Dependabot API still reports twelve of the original thirteen alerts fixed and #55 dismissed `not_used` at `2026-09-16T13:45:31Z`; this is not a claim that the vulnerable package disappeared. The lockfile still resolves `fast-uri@3.1.7`. npm reports 3.1.8 publication at `2026-09-15T07:36:25.444Z`, so the seven-day gate clears at **2026-09-22T07:36:25.444Z**, not the start of that minute. No pin or dependency implementation is made by this audit. The separate Sentry/Lucide batch and promotion pending in the dated September 16 note have since landed; they are not additional open work. Only the dated 3.1.8 update, its gate/review/promotion and archive remain. [API/registry receipts](./assets/active-audit-2026-09-21/verification.md).
 
