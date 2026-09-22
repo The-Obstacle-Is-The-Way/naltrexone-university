@@ -182,6 +182,34 @@ describe('documentation archive convention', () => {
     expect(result.brokenArchive).toHaveLength(1);
   });
 
+  it.each(['docs/guide.md', 'docs/_archive/bugs/bug-001-example.md'])(
+    'reports malformed percent encoding in %s even when a raw-path file exists',
+    (file) => {
+      const result = audit({
+        [file]: '[Malformed](./assets/100%.png)',
+        [path.posix.join(path.posix.dirname(file), 'assets/100%.png')]: 'asset',
+      });
+      expect([...result.brokenLive, ...result.brokenArchive]).toEqual([
+        expect.objectContaining({
+          file,
+          url: './assets/100%.png',
+          invalidEncoding: true,
+        }),
+      ]);
+      expect(result.repairableArchive).toEqual([]);
+    },
+  );
+
+  it('reports malformed encoding in a register row instead of crashing', () => {
+    expect(
+      audit({
+        'docs/bugs/index.md':
+          '| ID | Title |\n| --- | --- |\n| [BUG-001](./bug-001-100%.md) | Malformed |',
+        'docs/bugs/bug-001-100%.md': '# Open record',
+      }).missingRowTargets,
+    ).toEqual(['docs/bugs/index.md:3 -> docs/bugs/bug-001-100%.md']);
+  });
+
   it('does not offer archive repair for a broken link in a live record', () => {
     const files = {
       'docs/bugs/bug-001-example.md': '[Moved](../specs/spec-001-example.md)',
@@ -231,6 +259,27 @@ describe('documentation archive command', () => {
     expect(typeof output[0]).toBe('string');
     expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
   });
+
+  it.each(['docs/guide.md', 'docs/_archive/bugs/bug-001-example.md'])(
+    'reports malformed encoding in %s as a failing CLI result without a crash or rewrite',
+    (file) => {
+      const root = fixture();
+      const original = '[Malformed](./assets/100%.png)';
+      populate(root, { [file]: original });
+      const child = runArchiveCommand(root, ['--repair-archive']);
+      expect(child.error).toBeUndefined();
+      expect(child.stderr).toBe('');
+      expect(child.status).toBe(1);
+      const result = JSON.parse(child.stdout);
+      expect([...result.brokenLive, ...result.brokenArchive]).toEqual([
+        expect.objectContaining({
+          url: './assets/100%.png',
+          invalidEncoding: true,
+        }),
+      ]);
+      expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
+    },
+  );
 
   it('refuses the entire batch if a previously classified target disappears', () => {
     const root = fixture();
@@ -461,11 +510,12 @@ describe('repository documentation', () => {
   it.each(
     [...files.keys()].filter((file) => file.startsWith('docs/_archive/')),
   )('has no mechanically repairable archive links in %s', (file) => {
-    expect(
-      archiveLinkRepairs(
-        brokenDocumentationLinks(file, files.get(file) ?? '', exists),
-        exists,
-      ),
-    ).toEqual([]);
+    const broken = brokenDocumentationLinks(
+      file,
+      files.get(file) ?? '',
+      exists,
+    );
+    expect(broken.filter((link) => link.invalidEncoding)).toEqual([]);
+    expect(archiveLinkRepairs(broken, exists)).toEqual([]);
   });
 });
