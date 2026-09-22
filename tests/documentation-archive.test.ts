@@ -318,6 +318,25 @@ describe('documentation archive command', () => {
     expect(JSON.parse(child.stdout).brokenArchive).toHaveLength(1);
   });
 
+  it.each([
+    ['file%23name.ts', 'file#name.ts'],
+    ['file%3Fname.ts', 'file?name.ts'],
+  ])('preserves encoded filename delimiters in %s', (encoded, filename) => {
+    const root = fixture();
+    const file = 'docs/_archive/bugs/bug-001-example.md';
+    populate(root, {
+      [file]: `[Source](../../src/${encoded}?view=raw#L7)`,
+      [`src/${filename}`]: 'export {};',
+    });
+    expect(runDocumentationCommand(root, () => {}, ['--repair-archive'])).toBe(
+      0,
+    );
+    expect(readFileSync(path.join(root, file), 'utf8')).toBe(
+      `[Source](../../../src/${encoded}?view=raw#L7)`,
+    );
+    expect(readDocumentation(root).brokenArchive).toEqual([]);
+  });
+
   it('writes nothing when a proven repair has an unsupported source spelling', () => {
     const root = fixture();
     const first = 'docs/_archive/bugs/bug-001-example.md';

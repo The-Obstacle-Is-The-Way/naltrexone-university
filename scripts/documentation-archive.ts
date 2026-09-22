@@ -89,9 +89,11 @@ export function archiveLinkRepairs(
         ...link,
         replacementTarget: target,
         replacementUrl:
-          encodeURI(
-            path.posix.relative(path.posix.dirname(link.file), target),
-          ) + suffix,
+          path.posix
+            .relative(path.posix.dirname(link.file), target)
+            .split('/')
+            .map(encodeURIComponent)
+            .join('/') + suffix,
         kind: target === originalTarget ? 'depth' : 'later-archive',
       },
     ];

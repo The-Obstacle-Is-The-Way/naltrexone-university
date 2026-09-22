@@ -270,6 +270,21 @@ parity fixture now includes that mixed case. Both variants failed at 23:45:02Z
 when preservation of the untouched URL was temporarily removed; restoring it
 makes them pass. No implementation change or coverage-policy relaxation remains.
 
+### Encoded-path correction (2026-09-22 UTC)
+
+CI 35669565894 and Codecov passed on `25ddf6bb`. Full review 5273057201
+identified a real repair defect: `encodeURI` retained filename `#` and `?`
+characters, turning them into URL delimiters. Both real-file cases failed at
+00:12:15Z before the correction. Encoding each relative path segment preserves
+those filename characters while leaving slash separators and the original
+query/fragment suffix intact. This corrects the existing repair operation; it
+does not broaden destination discovery or alter the 647 repaired occurrences.
+
+The review's DEBT-104 and SPEC-028/034/036 location suggestions are false:
+those exact files exist only in the archive, so the current links are correct.
+Its FE-002/practice-logic deletion request conflicts with the explicit historical
+exception scope; those absent targets remain listed below, not silently removed.
+
 ### Historical targets without a mechanically proven replacement
 
 All 41 occurrences below remain untouched. The source link resolves; the old
