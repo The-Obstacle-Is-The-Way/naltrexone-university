@@ -839,6 +839,17 @@ export const metadata: Metadata = {
 
 Format: `{Page Name} - Addiction Boards`
 
+**Public discovery contract (DEBT-479, 2026-09-22):** `/`, `/pricing`,
+`/privacy`, and `/terms` each declare their own meaningful description and
+query-free canonical path from `ROUTES`. The root layout sets `metadataBase`
+to the canonical production apex in `lib/public-routes.ts`; preview or local
+`NEXT_PUBLIC_APP_URL` values must not become canonical origins. Do not set a
+root canonical that private or auth pages would inherit. Both auth catch-all
+pages declare `robots: { index: false, follow: true }`, including their subpaths;
+they do not need self-canonicals or unique descriptions. Keep existing tab
+titles. Metadata exports have unit contracts, supplemented by signed-out
+rendered-head verification and the existing authenticated E2E journeys.
+
 ---
 
 ## 16. Dark Mode

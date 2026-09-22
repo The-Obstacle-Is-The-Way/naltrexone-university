@@ -14,6 +14,41 @@
 
 ## Description
 
+**2026-09-22 execution audit — step 1 implemented locally, not yet promoted.**
+The six metadata exports still lacked their own descriptions/canonicals or auth
+`noindex` on deployed main `00032629`; the four content pages inherited the root
+description. The security-contact example in F1 is now historical: DEBT-480 is
+archived, and unsigned production requests with both Accept modes return its
+exact file with `200`. Robots/sitemap and social metadata remain outstanding.
+DEBT-481's master/copied-contract reconciliation is also shipped and archived
+via #991/#993/#994 and promotions #992/#996; it is not remaining work here.
+The owner's current execution instruction explicitly requests the `LOG_LEVEL`
+example entry, superseding the optional decline preserved in step 6 below.
+
+Step 1's new assertions failed **11/19** at `08:49:24Z` against unchanged
+production code: missing four descriptions, four canonicals, two auth `noindex`
+entries and the root metadata base. All imports succeeded. The metadata-only
+implementation passed **19/19**; independently removing the pricing canonical
+(`08:50:53Z`) and sign-in `noindex` (`08:51:17Z`) each failed its named case.
+Both mutations are restored. The root does not declare a canonical, so private
+and auth pages do not inherit a public-page URL. Legal copy, authentication
+behavior, test-double floors and retry policy are unchanged. Rendered-head,
+full-gate, review and production receipts are still required; step 1 is not
+marked shipped by these local tests. Steps 2–3 and the requested example entry
+remain to implement; optional structured data and browser field measurement
+remain owner decisions.
+
+**Local verification limit (2026-09-22, 09:15 UTC).** Ad hoc unsigned local
+HTTP/browser probes did not establish rendered-head evidence: HTML requests
+entered Clerk's development-browser handshake, and the bot-style request timed
+out before returning headers. A rebuilt control with `app/layout.tsx` and
+`app/page.tsx` byte-identical to main reproduced the same timeout, so this is
+not evidence that the new root metadata caused it. The diagnostic does not
+establish the underlying cause or excuse a required E2E failure. Production
+returned `200` for both ordinary-browser and Twitterbot requests during the
+same window. Keep the failed probe receipts; require the canonical full E2E
+lane and post-promotion unsigned-head proof before marking step 1 complete.
+
 **2026-09-21 current-state correction.** The filing's “prepared/pending PR B” statements are now historical: #936 merged as `327f95ef` after exact-head approval on `605a72cf` and is included in deployed main `76e65e9c`. SPEC-016/017 both say Updated 2026-09-20 and contain the corrected sampling, request-context, limit inventory and structural E1 deferral. Resolution steps 6–7 are complete. Fresh anonymous production probes still find no canonical/Open Graph output and the same inherited description on the checked public/auth pages; crawl files remain protected, and browser tracing remains zero. Steps 1–3 and owner-gated 4–5 remain Open. The helper-recovery residual mentioned below was separately resolved by #960/#961 and DEBT-475 is archived; it is not remaining PR C work. Current provider quota/custom-rule entitlement and historical Sentry samples are not recertified by source inspection. [Audit receipts and limits](./assets/active-audit-2026-09-21/verification.md).
 
 The application has six public **page route families**, not exactly six URLs. `lib/public-routes.ts:3-15` defines matchers: `/`, `/pricing(.*)`, `/privacy(.*)`, `/terms(.*)`, `/sign-in(.*)`, `/sign-up(.*)`, plus five machine endpoints (two cron routes, health, and the Stripe and Clerk webhooks). The question corpus lives behind `/app/questions/[slug]`, which `proxy.ts` protects via `auth.protect()`. That gating is a deliberate product decision and this filing does not propose changing it. The four intended indexable content URLs are `/`, `/pricing`, `/privacy`, `/terms`. Auth catch-all pages also serve subpaths: signed-out production `/sign-up/verify-email-address` returned 200 with the same inherited description and no noindex. Query variants are not separate sitemap entries. A live database census of the question count was not performed.

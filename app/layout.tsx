@@ -5,8 +5,10 @@ import { headers } from 'next/headers';
 import { Suspense } from 'react';
 import { Providers } from '@/components/providers';
 import { ThemeProvider } from '@/components/theme-provider';
+import { PUBLIC_SITE_ORIGIN } from '@/lib/public-routes';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(PUBLIC_SITE_ORIGIN),
   title: 'Addiction Boards Question Bank',
   description:
     'Board-relevant questions with detailed explanations for Addiction Psychiatry and Addiction Medicine exam prep.',
