@@ -1722,7 +1722,7 @@ As a subscribed user, I can answer questions and see explanations so that I can 
 * `src/domain/entities/question.ts`, `choice.ts`, `attempt.ts`
 * `src/domain/services/grading.ts` — gradeAnswer() pure function
 * `src/application/ports/*.ts` (re-exported via `src/application/ports/repositories.ts`) — QuestionRepository, AttemptRepository interfaces
-* `src/application/use-cases/submit-answer.ts`, `get-next-question.ts`, `toggle-bookmark.ts`
+* `src/application/use-cases/submit-answer.ts`, `get-next-question.ts`, `set-bookmark.ts`
 * `src/adapters/repositories/drizzle-question-repository.ts`, `drizzle-attempt-repository.ts`
 * `src/adapters/controllers/question-controller.ts`, `bookmark-controller.ts`
 * `lib/container.ts` (add new factories)
