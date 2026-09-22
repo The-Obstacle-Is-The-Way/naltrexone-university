@@ -1480,6 +1480,17 @@ Additionally, `html { scroll-behavior: smooth; }` (`globals.css:178-180`) enable
 
 ## Part 19: CSS Infrastructure
 
+### Public social-card renderer (DEBT-479, 2026-09-22)
+
+`app/opengraph-image.tsx` is a build-time raster renderer, not a browser UI.
+Its `ImageResponse`/Satori styles cannot inherit the DOM's CSS custom properties.
+Use the dark semantic background/foreground equivalents from `globals.css`
+(`hsl(0, 0%, 3.5%)` and `hsl(0, 0%, 93%)`) only at this renderer boundary.
+The 1200×630 card uses a simple left-aligned brand/title hierarchy, generous
+padding and the renderer's bundled Geist font; no remote font, icon asset or
+interactive control is needed. This is not permission for raw colors elsewhere.
+Review the actual PNG for clipping and legibility before shipping it.
+
 ### 19.1 Tailwind Version
 
 The project uses **Tailwind CSS v4** with CSS-first configuration (`@theme` block in `globals.css`). There is no `tailwind.config.js`; source detection is controlled from `app/globals.css`, including the DEBT-409 `@source not "../docs"` exclusion that prevents documentation examples from entering generated production CSS. The CSS `@theme` is the authoritative source for theme tokens.

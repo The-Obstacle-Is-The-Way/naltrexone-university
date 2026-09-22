@@ -14,6 +14,42 @@
 
 ## Description
 
+**2026-09-22 promoted correction — steps 1–2 complete.** #1000 merged as
+`24456349` after exact-head approval on `134a846c`, zero unresolved threads and
+CI `35713062852` (**50/50 E2E**, no failures/retries). #999/#1000 were promoted
+by #1002 (`0d4bcf40`); main CI `35718830873` passed at `11:09:14Z` with **50/50**.
+Vercel was Ready at `10:59:17.734Z` and remained staged; production assignment
+was `11:09:16.581Z`, after the check. Main/dev tree:
+`99b18fcf1a546d07136c95b57370bdb14b2a6206`. All 16 unsigned production head
+checks passed, including the pricing query and auth verification subpath,
+under both Accept modes. Robots/sitemap both returned **200**, correct MIME
+types and the four exact sitemap URLs. Home/health were **200**, app/database
+healthy. The older pending paragraphs below are historical, not current gaps.
+
+**2026-09-22 social-preview execution (local; not yet promoted).** Step 3
+adds four page-specific OG/Twitter declarations and a 1200×630 PNG rendered
+with Next's bundled Geist font. No dependency, remote font, provider call or
+forced dynamic runtime is added. The public image exemption is exact-path;
+lookalikes and private routes remain protected. The raster color boundary is
+documented in the frontend pattern registry, and the real generated PNG was
+visually checked for clipping and legibility.
+
+At `11:02:08Z`, the unchanged implementation failed **six behavioral cases**:
+four missing social declarations and two image-auth checks. The missing image
+module separately prevented its renderer case from running; that is not a
+behavioral red proof. After implementation, **36/36** focused cases passed.
+Restored mutations failed for missing image metadata (**4 cases**), the wrong
+OG canonical origin (**4**), removal of the image exemption (**2**) and a
+600-pixel renderer width instead of 1200 (**1**). No skip, timeout, retry or
+ratchet policy changed. Built-app, review, promotion and external preview
+receipts remain required; this paragraph does not mark step 3 complete.
+
+The two new anonymous image HTTP cases also failed against the pre-fix build
+at `11:09 UTC`: both Accept modes returned **307**, not `200`; bootstrap and
+cleanup passed (**2 expected failures / 2 passes**, 7.5 seconds). This is an
+intentional red-first reproduction, not a retried gate failure. Its artifacts
+are preserved in the execution receipt directory before rebuilding.
+
 **2026-09-22 crawl-resource execution (local; promotion pending).** Step 1
 merged into `dev` as #999 (`faf486aa`), with formal exact-head approval on
 `37564e7a`, zero unresolved threads and CI `35710469568` (**46/46 E2E**, no

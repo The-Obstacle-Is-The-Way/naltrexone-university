@@ -4,11 +4,13 @@ import { ROUTES } from '@/lib/routes';
 export const PUBLIC_SITE_ORIGIN = 'https://addictionboards.com';
 
 export const SECURITY_CONTACT_PATH = '/.well-known/security.txt';
+export const PUBLIC_SOCIAL_IMAGE_PATH = '/opengraph-image';
 
 export const PUBLIC_RESOURCE_PATHS: readonly string[] = [
   SECURITY_CONTACT_PATH,
   '/robots.txt',
   '/sitemap.xml',
+  PUBLIC_SOCIAL_IMAGE_PATH,
 ];
 
 // Preserve Clerk's existing prefix matchers; sitemap entries use only the keys.
