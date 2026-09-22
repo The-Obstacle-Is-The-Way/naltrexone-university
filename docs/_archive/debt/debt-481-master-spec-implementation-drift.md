@@ -107,4 +107,4 @@ This pass proposes no automated gate, so no red test is claimed. If a later PR p
 - [Master spec](../../specs/master_spec.md) and its four linked parts
 - [SPEC-016](../specs/spec-016-observability.md), [SPEC-017](../specs/spec-017-rate-limiting.md)
 - [DEBT-474](./debt-474-ci-secret-scope-and-action-immutability.md) — current workflow boundary, not reopened
-- [DEBT-479](../../debt/debt-479-public-surface-discoverability-and-field-performance.md) — independently corrected public/spec scope
+- [DEBT-479](debt-479-public-surface-discoverability-and-field-performance.md) — independently corrected public/spec scope
