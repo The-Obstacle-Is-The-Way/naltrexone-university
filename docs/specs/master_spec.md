@@ -2,7 +2,7 @@
 
 > **2026-09-22 reconciliation (DEBT-481).** The six confirmed contradictions are corrected below. This master owns product/design narrative; executable source owns physical schema, validation, action configuration, seed identity and CI. Linked practice-engine policies own shipped interaction details. The four split parts are navigation views, not independent copies. Remaining narrative examples are not a complete inventory or a claim that every implementation detail was re-audited. The dated warning below is preserved as history and superseded for the six reconciled contracts.
 
-> **Updated: 2026-09-20 — current-contract warning.** The [DEBT-481 audit](../debt/debt-481-master-spec-implementation-drift.md) confirms stale schema, action/limit, content/seed, CI and timing examples across the master/split copies. Do not copy these “exact” blocks as current implementation authority. Follow the linked source/runtime contracts and current [SPEC-016](../_archive/specs/spec-016-observability.md) and [SPEC-017](../_archive/specs/spec-017-rate-limiting.md) while documentation ownership is reconciled; product decisions are not superseded by this warning.
+> **Updated: 2026-09-20 — current-contract warning.** The [DEBT-481 audit](../_archive/debt/debt-481-master-spec-implementation-drift.md) confirms stale schema, action/limit, content/seed, CI and timing examples across the master/split copies. Do not copy these “exact” blocks as current implementation authority. Follow the linked source/runtime contracts and current [SPEC-016](../_archive/specs/spec-016-observability.md) and [SPEC-017](../_archive/specs/spec-017-rate-limiting.md) while documentation ownership is reconciled; product decisions are not superseded by this warning.
 
 ## 1. System Overview
 
