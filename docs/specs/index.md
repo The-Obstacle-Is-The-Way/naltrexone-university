@@ -1,7 +1,11 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-21 — SPEC-016/017 archived with explicit deferred tails, following their September 20 corrections; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
+**Last Updated:** 2026-09-22 — scoped master-contract reconciliation described below.
+
+**2026-09-21 register maintenance:** SPEC-016/017 archived with explicit deferred tails, following their September 20 corrections; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
+
+**2026-09-22 reconciliation:** the six DEBT-481 contradictions are corrected in the master; the split parts are navigation views rather than independent implementation copies. Executable schema, parser/seed, controller and CI files own their respective contracts. This supersedes the September 21 warning for that bounded scope, not a claim that every historical design example was re-audited.
 
 ---
 
@@ -17,9 +21,9 @@ Implementation specifications provide detailed technical guidance for building e
 
 | ID | Title | Status | Layer |
 |----|-------|--------|-------|
-| [Master Spec](./master_spec.md) | Technical Specification (known implementation drift: DEBT-481) | Reconciliation open | All |
+| [Master Spec](./master_spec.md) | Product/design narrative with links to executable implementation authorities; six DEBT-481 contradictions reconciled | Living guide | All |
 
-**Master Spec split parts (readability):**
+**Master Spec navigation views (no independent implementation copies):**
 
 - [Master Spec — Part 1](./master_spec_part1.md) — Overview, Architecture, Database Schema
 - [Master Spec — Part 2](./master_spec_part2.md) — API & Server Actions
@@ -88,6 +92,7 @@ Implementation specifications provide detailed technical guidance for building e
 
 ## Spec Statuses
 
+- **Living guide** — Maintained product/design guidance, not a numbered implementation record; exempt from completion-based archiving under AGENTS.md
 - **Proposed** — Under review, not yet approved
 - **Ready** — Ready for implementation
 - **In Progress** — Being implemented

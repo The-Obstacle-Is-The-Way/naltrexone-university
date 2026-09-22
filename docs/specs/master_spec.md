@@ -1,5 +1,7 @@
 # Addiction Boards Question Bank SaaS — Technical Specification (SPEC.md)
 
+> **2026-09-22 reconciliation (DEBT-481).** The six confirmed contradictions are corrected below. This master owns product/design narrative; executable source owns physical schema, validation, action configuration, seed identity and CI. Linked practice-engine policies own shipped interaction details. The four split parts are navigation views, not independent copies. Remaining narrative examples are not a complete inventory or a claim that every implementation detail was re-audited. The dated warning below is preserved as history and superseded for the six reconciled contracts.
+
 > **Updated: 2026-09-20 — current-contract warning.** The [DEBT-481 audit](../debt/debt-481-master-spec-implementation-drift.md) confirms stale schema, action/limit, content/seed, CI and timing examples across the master/split copies. Do not copy these “exact” blocks as current implementation authority. Follow the linked source/runtime contracts and current [SPEC-016](../_archive/specs/spec-016-observability.md) and [SPEC-017](../_archive/specs/spec-017-rate-limiting.md) while documentation ownership is reconciled; product decisions are not superseded by this warning.
 
 ## 1. System Overview
@@ -70,568 +72,28 @@ Next.js Route Handlers use the Web `Request`/`Response` APIs and live inside the
 
 ---
 
-## 3. Complete Database Schema
+## 3. Database Schema
 
-### 3.1 Drizzle ORM Schema File — `db/schema.ts`
+### 3.1 Physical schema and migration authority
 
-> Notes enforced by this spec:
->
-> * All timestamps are stored as `timestamptz` (timezone-aware) in UTC.
-> * UUID primary keys use `gen_random_uuid()` via Drizzle `defaultRandom()`; therefore the DB must have `pgcrypto` enabled. ([Drizzle ORM][2])
+The executable [Drizzle schema](../../db/schema.ts) owns table, column,
+constraint, enum and relation definitions. The [migration ledger](../../db/migrations/meta/_journal.json)
+and its SQL files own the deployed evolution; the
+[migration runbook](../dev/deployment-environments.md#deploy-migration-contract)
+describes applying that history. Do not recreate the database from a copied
+schema block or use schema push to bypass migrations.
 
-```ts
-// db/schema.ts
-import {
-  boolean,
-  check,
-  foreignKey,
-  index,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-  varchar,
-} from 'drizzle-orm/pg-core';
-import { desc, relations, sql } from 'drizzle-orm';
+**Reconciled 2026-09-22:** the implementation has 21 tables. The former
+14-table copy omitted trial payment-method setup operations, renewal consent
+records, renewal notice deliveries, Clerk events, deleted Clerk users, pending
+Stripe cancellations and question feedback. This dated census is not a second
+schema to maintain; consult the linked source for the current inventory.
 
-/**
- * ENUMS
- */
-export const questionDifficultyEnum = pgEnum('question_difficulty', [
-  'easy',
-  'medium',
-  'hard',
-]);
-
-export const questionStatusEnum = pgEnum('question_status', [
-  'draft',
-  'published',
-  'archived',
-]);
-
-export const tagKindEnum = pgEnum('tag_kind', [
-  'topic',      // clinical topic
-  'substance',  // alcohol/opioids/etc
-  'treatment',  // meds/psychosocial tx
-  'diagnosis',  // DSM/ICD category
-]);
-
-export const practiceModeEnum = pgEnum('practice_mode', [
-  'tutor', // shows explanation immediately after answer
-  'exam',  // hides correctness/explanation until session ends
-]);
-
-export const stripeSubscriptionStatusEnum = pgEnum('stripe_subscription_status', [
-  'incomplete',
-  'incomplete_expired',
-  'trialing',
-  'active',
-  'past_due',
-  'canceled',
-  'unpaid',
-  'paused',
-]);
-
-/**
- * TYPES (shared)
- */
-export type QuestionDifficulty = (typeof questionDifficultyEnum.enumValues)[number];
-export type QuestionStatus = (typeof questionStatusEnum.enumValues)[number];
-export type TagKind = (typeof tagKindEnum.enumValues)[number];
-export type PracticeMode = (typeof practiceModeEnum.enumValues)[number];
-export type StripeSubscriptionStatus =
-  (typeof stripeSubscriptionStatusEnum.enumValues)[number];
-
-export type PracticeSessionParams = {
-  count: number;                 // number of questions in this session
-  tagSlugs: string[];            // filter; empty = no tag filter
-  difficulties: QuestionDifficulty[]; // filter; empty = no difficulty filter
-  questionIds: string[];         // ordered UUID list selected at session start
-};
-
-/**
- * TABLES
- */
-
-// users
-export const users = pgTable(
-  'users',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    clerkUserId: varchar('clerk_user_id', { length: 64 }).notNull(),
-    email: varchar('email', { length: 320 }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    clerkUserIdUq: uniqueIndex('users_clerk_user_id_uq').on(t.clerkUserId),
-    emailUq: uniqueIndex('users_email_uq').on(t.email),
-  }),
-);
-
-// stripe_customers
-export const stripeCustomers = pgTable(
-  'stripe_customers',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    stripeCustomerId: varchar('stripe_customer_id', { length: 255 }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    userIdUq: uniqueIndex('stripe_customers_user_id_uq').on(t.userId),
-    stripeCustomerIdUq: uniqueIndex('stripe_customers_stripe_customer_id_uq').on(
-      t.stripeCustomerId,
-    ),
-  }),
-);
-
-// stripe_subscriptions
-export const stripeSubscriptions = pgTable(
-  'stripe_subscriptions',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    stripeSubscriptionId: varchar('stripe_subscription_id', { length: 255 }).notNull(),
-    status: stripeSubscriptionStatusEnum('status').notNull(),
-    priceId: varchar('price_id', { length: 255 }).notNull(),
-    currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }).notNull(),
-    cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    userIdUq: uniqueIndex('stripe_subscriptions_user_id_uq').on(t.userId),
-    stripeSubscriptionIdUq: uniqueIndex(
-      'stripe_subscriptions_stripe_subscription_id_uq',
-    ).on(t.stripeSubscriptionId),
-    userStatusIdx: index('stripe_subscriptions_user_status_idx').on(
-      t.userId,
-      t.status,
-    ),
-  }),
-);
-
-// stripe_events (id = Stripe event id)
-export const stripeEvents = pgTable(
-  'stripe_events',
-  {
-    id: varchar('id', { length: 255 }).primaryKey(),
-    type: varchar('type', { length: 255 }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    processedAt: timestamp('processed_at', { withTimezone: true }),
-    error: text('error'),
-  },
-  (t) => ({
-    typeIdx: index('stripe_events_type_idx').on(t.type),
-    processedAtIdx: index('stripe_events_processed_at_idx').on(t.processedAt),
-  }),
-);
-
-// rate_limits (composite PK: key + window_start)
-export const rateLimits = pgTable(
-  'rate_limits',
-  {
-    key: varchar('key', { length: 255 }).notNull(),
-    windowStart: timestamp('window_start', { withTimezone: true }).notNull(),
-    count: integer('count').notNull(),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.key, t.windowStart] }),
-    windowStartIdx: index('rate_limits_window_start_idx').on(t.windowStart),
-  }),
-);
-
-// idempotency_keys (composite PK: user_id + action + key)
-export const idempotencyKeys = pgTable(
-  'idempotency_keys',
-  {
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    action: varchar('action', { length: 255 }).notNull(),
-    key: varchar('key', { length: 255 }).notNull(),
-    resultJson: jsonb('result_json').$type<unknown>(),
-    errorCode: varchar('error_code', { length: 255 }),
-    errorMessage: text('error_message'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.userId, t.action, t.key] }),
-    expiresAtIdx: index('idempotency_keys_expires_at_idx').on(t.expiresAt),
-  }),
-);
-
-// questions
-export const questions = pgTable(
-  'questions',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    slug: varchar('slug', { length: 255 }).notNull(),
-    stemMd: text('stem_md').notNull(),
-    explanationMd: text('explanation_md').notNull(),
-    difficulty: questionDifficultyEnum('difficulty').notNull(),
-    status: questionStatusEnum('status').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    slugUq: uniqueIndex('questions_slug_uq').on(t.slug),
-    statusDifficultyIdx: index('questions_status_difficulty_idx').on(
-      t.status,
-      t.difficulty,
-    ),
-    statusCreatedAtIdx: index('questions_status_created_at_idx').on(
-      t.status,
-      desc(t.createdAt),
-    ),
-  }),
-);
-
-// choices
-export const choices = pgTable(
-  'choices',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    questionId: uuid('question_id')
-      .notNull()
-      .references(() => questions.id, { onDelete: 'cascade' }),
-    label: varchar('label', { length: 4 }).notNull(), // A, B, C, D, E
-    textMd: text('text_md').notNull(),
-    isCorrect: boolean('is_correct').notNull(),
-    explanationMd: text('explanation_md'),
-    sortOrder: integer('sort_order').notNull(), // 1..N
-  },
-  (t) => ({
-    idQuestionIdUq: uniqueIndex('choices_id_question_id_uq').on(t.id, t.questionId),
-    questionIdIdx: index('choices_question_id_idx').on(t.questionId),
-    questionLabelUq: uniqueIndex('choices_question_id_label_uq').on(
-      t.questionId,
-      t.label,
-    ),
-    questionSortOrderUq: uniqueIndex('choices_question_id_sort_order_uq').on(
-      t.questionId,
-      t.sortOrder,
-    ),
-  }),
-);
-
-// tags
-export const tags = pgTable(
-  'tags',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    slug: varchar('slug', { length: 255 }).notNull(),
-    name: varchar('name', { length: 255 }).notNull(),
-    kind: tagKindEnum('kind').notNull(),
-  },
-  (t) => ({
-    slugUq: uniqueIndex('tags_slug_uq').on(t.slug),
-    kindSlugIdx: index('tags_kind_slug_idx').on(t.kind, t.slug),
-  }),
-);
-
-// question_tags (composite PK)
-export const questionTags = pgTable(
-  'question_tags',
-  {
-    questionId: uuid('question_id')
-      .notNull()
-      .references(() => questions.id, { onDelete: 'cascade' }),
-    tagId: uuid('tag_id')
-      .notNull()
-      .references(() => tags.id, { onDelete: 'cascade' }),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.questionId, t.tagId] }),
-    tagIdIdx: index('question_tags_tag_id_idx').on(t.tagId),
-    questionIdIdx: index('question_tags_question_id_idx').on(t.questionId),
-  }),
-);
-
-// practice_sessions
-export const practiceSessions = pgTable(
-  'practice_sessions',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    mode: practiceModeEnum('mode').notNull(),
-    paramsJson: jsonb('params_json').$type<PracticeSessionParams>().notNull(),
-    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
-    endedAt: timestamp('ended_at', { withTimezone: true }),
-  },
-  (t) => ({
-    userStartedAtIdx: index('practice_sessions_user_started_at_idx').on(
-      t.userId,
-      desc(t.startedAt),
-    ),
-    userEndedAtIdx: index('practice_sessions_user_ended_at_idx').on(
-      t.userId,
-      desc(t.endedAt),
-    ),
-    userIncompleteUq: uniqueIndex('practice_sessions_user_incomplete_uq')
-      .on(t.userId)
-      .where(sql`ended_at IS NULL`),
-  }),
-);
-
-export const practiceSessionQuestionStates = pgTable(
-  'practice_session_question_states',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    practiceSessionId: uuid('practice_session_id')
-      .notNull()
-      .references(() => practiceSessions.id, { onDelete: 'cascade' }),
-    questionId: uuid('question_id')
-      .notNull()
-      // Intentionally no cascade: hard-deleting referenced questions should fail
-      // so practice-session history cannot silently lose its question anchor.
-      // This intentionally differs from attempts.questionId because attempts
-      // are derived answer events, while session state anchors session history.
-      .references(() => questions.id),
-    position: integer('position').notNull(), // 0-based order in params_json.questionIds
-    markedForReview: boolean('marked_for_review').notNull().default(false),
-    latestSelectedChoiceId: uuid('latest_selected_choice_id'),
-    latestIsCorrect: boolean('latest_is_correct'),
-    latestAnsweredAt: timestamp('latest_answered_at', { withTimezone: true }),
-    draftSelectedChoiceId: uuid('draft_selected_choice_id'),
-    draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
-    draftCumulativeMs: integer('draft_cumulative_ms').notNull().default(0),
-    version: integer('version').notNull().default(0), // row-level optimistic concurrency token
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    sessionQuestionUq: uniqueIndex('practice_session_question_states_session_question_uq').on(t.practiceSessionId, t.questionId),
-    sessionPositionUq: uniqueIndex('practice_session_question_states_session_position_uq').on(t.practiceSessionId, t.position),
-    questionIdIdx: index('practice_session_question_states_question_id_idx').on(t.questionId),
-    latestChoiceQuestionIdx: index('practice_session_question_states_latest_choice_question_idx').on(t.latestSelectedChoiceId, t.questionId),
-    draftChoiceQuestionIdx: index('practice_session_question_states_draft_choice_question_idx').on(t.draftSelectedChoiceId, t.questionId),
-    latestChoiceQuestionFk: foreignKey({
-      name: 'practice_session_question_states_latest_choice_question_fk',
-      columns: [t.latestSelectedChoiceId, t.questionId],
-      foreignColumns: [choices.id, choices.questionId],
-    }).onDelete('restrict'),
-    draftChoiceQuestionFk: foreignKey({
-      name: 'practice_session_question_states_draft_choice_question_fk',
-      columns: [t.draftSelectedChoiceId, t.questionId],
-      foreignColumns: [choices.id, choices.questionId],
-    }).onDelete('restrict'),
-    draftCumulativeMsChk: check('practice_session_question_states_draft_cumulative_ms_chk', sql`${t.draftCumulativeMs} BETWEEN 0 AND ${DAY_MS}`),
-    latestAnswerChk: check('practice_session_question_states_latest_answer_chk', sql`(latest_is_correct IS NULL) = (latest_answered_at IS NULL) AND (latest_selected_choice_id IS NOT NULL OR latest_is_correct IS NOT TRUE) AND (latest_selected_choice_id IS NULL OR (latest_is_correct IS NOT NULL AND latest_answered_at IS NOT NULL))`),
-    draftSavedChk: check('practice_session_question_states_draft_saved_chk', sql`(draft_selected_choice_id IS NULL AND draft_cumulative_ms = 0) OR draft_saved_at IS NOT NULL`),
-    positionChk: check('practice_session_question_states_position_chk', sql`${t.position} >= 0`),
-    versionChk: check('practice_session_question_states_version_chk', sql`${t.version} >= 0`),
-  }),
-);
-
-// attempts
-export const attempts = pgTable(
-  'attempts',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    questionId: uuid('question_id')
-      .notNull()
-      .references(() => questions.id, { onDelete: 'cascade' }),
-    practiceSessionId: uuid('practice_session_id').references(() => practiceSessions.id, {
-      onDelete: 'set null',
-    }),
-    selectedChoiceId: uuid('selected_choice_id')
-      .notNull()
-      .references(() => choices.id, { onDelete: 'restrict' }),
-    isCorrect: boolean('is_correct').notNull(),
-    timeSpentSeconds: integer('time_spent_seconds').notNull().default(0),
-    answeredAt: timestamp('answered_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    userAnsweredAtIdx: index('attempts_user_answered_at_idx').on(
-      t.userId,
-      desc(t.answeredAt),
-    ),
-    userQuestionAnsweredAtIdx: index('attempts_user_question_answered_at_idx').on(
-      t.userId,
-      t.questionId,
-      desc(t.answeredAt),
-    ),
-    userIsCorrectAnsweredAtIdx: index('attempts_user_is_correct_answered_at_idx').on(
-      t.userId,
-      t.isCorrect,
-      desc(t.answeredAt),
-    ),
-    sessionAnsweredAtIdx: index('attempts_session_answered_at_idx').on(
-      t.practiceSessionId,
-      desc(t.answeredAt),
-    ),
-    sessionUserAnsweredAtIdx: index('attempts_session_user_answered_at_idx').on(
-      t.practiceSessionId,
-      t.userId,
-      desc(t.answeredAt),
-    ),
-    questionIdIdx: index('attempts_question_id_idx').on(t.questionId),
-    sessionQuestionUq: uniqueIndex('attempts_session_question_uq')
-      .on(t.practiceSessionId, t.questionId)
-      .where(sql`practice_session_id IS NOT NULL`),
-  }),
-);
-
-// bookmarks (composite PK)
-export const bookmarks = pgTable(
-  'bookmarks',
-  {
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    questionId: uuid('question_id')
-      .notNull()
-      .references(() => questions.id, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.userId, t.questionId] }),
-    userCreatedAtIdx: index('bookmarks_user_created_at_idx').on(
-      t.userId,
-      desc(t.createdAt),
-    ),
-    questionIdIdx: index('bookmarks_question_id_idx').on(t.questionId),
-  }),
-);
-
-/**
- * RELATIONS
- */
-
-export const usersRelations = relations(users, ({ one, many }) => ({
-  stripeCustomer: one(stripeCustomers, {
-    fields: [users.id],
-    references: [stripeCustomers.userId],
-  }),
-  stripeSubscription: one(stripeSubscriptions, {
-    fields: [users.id],
-    references: [stripeSubscriptions.userId],
-  }),
-  sessions: many(practiceSessions),
-  attempts: many(attempts),
-  bookmarks: many(bookmarks),
-}));
-
-export const questionsRelations = relations(questions, ({ many }) => ({
-  choices: many(choices),
-  questionTags: many(questionTags),
-  attempts: many(attempts),
-  bookmarks: many(bookmarks),
-}));
-
-export const choicesRelations = relations(choices, ({ one }) => ({
-  question: one(questions, {
-    fields: [choices.questionId],
-    references: [questions.id],
-  }),
-}));
-
-export const tagsRelations = relations(tags, ({ many }) => ({
-  questionTags: many(questionTags),
-}));
-
-export const questionTagsRelations = relations(questionTags, ({ one }) => ({
-  question: one(questions, {
-    fields: [questionTags.questionId],
-    references: [questions.id],
-  }),
-  tag: one(tags, {
-    fields: [questionTags.tagId],
-    references: [tags.id],
-  }),
-}));
-
-export const practiceSessionsRelations = relations(practiceSessions, ({ one, many }) => ({
-  user: one(users, {
-    fields: [practiceSessions.userId],
-    references: [users.id],
-  }),
-  attempts: many(attempts),
-}));
-
-export const attemptsRelations = relations(attempts, ({ one }) => ({
-  user: one(users, {
-    fields: [attempts.userId],
-    references: [users.id],
-  }),
-  question: one(questions, {
-    fields: [attempts.questionId],
-    references: [questions.id],
-  }),
-  session: one(practiceSessions, {
-    fields: [attempts.practiceSessionId],
-    references: [practiceSessions.id],
-  }),
-  selectedChoice: one(choices, {
-    fields: [attempts.selectedChoiceId],
-    references: [choices.id],
-  }),
-}));
-
-export const bookmarksRelations = relations(bookmarks, ({ one }) => ({
-  user: one(users, {
-    fields: [bookmarks.userId],
-    references: [users.id],
-  }),
-  question: one(questions, {
-    fields: [bookmarks.questionId],
-    references: [questions.id],
-  }),
-}));
-
-/**
- * EXPORTED TS TYPES
- */
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-
-export type StripeCustomer = typeof stripeCustomers.$inferSelect;
-export type NewStripeCustomer = typeof stripeCustomers.$inferInsert;
-
-export type StripeSubscription = typeof stripeSubscriptions.$inferSelect;
-export type NewStripeSubscription = typeof stripeSubscriptions.$inferInsert;
-
-export type StripeEvent = typeof stripeEvents.$inferSelect;
-export type NewStripeEvent = typeof stripeEvents.$inferInsert;
-
-export type Question = typeof questions.$inferSelect;
-export type NewQuestion = typeof questions.$inferInsert;
-
-export type Choice = typeof choices.$inferSelect;
-export type NewChoice = typeof choices.$inferInsert;
-
-export type Tag = typeof tags.$inferSelect;
-export type NewTag = typeof tags.$inferInsert;
-
-export type QuestionTag = typeof questionTags.$inferSelect;
-export type NewQuestionTag = typeof questionTags.$inferInsert;
-
-export type PracticeSession = typeof practiceSessions.$inferSelect;
-export type NewPracticeSession = typeof practiceSessions.$inferInsert;
-
-export type Attempt = typeof attempts.$inferSelect;
-export type NewAttempt = typeof attempts.$inferInsert;
-
-export type Bookmark = typeof bookmarks.$inferSelect;
-export type NewBookmark = typeof bookmarks.$inferInsert;
-```
+The design keeps vendor identifiers in persistence rather than domain entities,
+uses timezone-aware timestamps, and preserves user/question/choice relationships
+through database constraints. Details such as normalized practice-question state
+belong to the physical schema and the owning [practice-engine contracts](../practice-engine/index.md),
+not an independent implementation in this document.
 
 ---
 
@@ -643,7 +105,7 @@ export type NewBookmark = typeof bookmarks.$inferInsert;
 * **authenticated**: authentication required (Clerk session)
 * **subscribed**: subscription entitlement required (in addition to authentication; see below)
 
-### 4.2 Subscription Entitlement (Server-Side, Exact Logic)
+### 4.2 Subscription Entitlement (Design Summary)
 
 A user is **entitled** if and only if there exists a row in `stripe_subscriptions` for the user with:
 
@@ -780,7 +242,7 @@ export type StripeWebhookResponse = { received: true };
   4. On success: set `processed_at = now()`, `error = null`
   5. On failure: set `error = <string>`, leave `processed_at` null
 
-**Events handled (exact):**
+**Events handled:**
 
 * `checkout.session.completed`
 * `checkout.session.expired`
@@ -858,35 +320,25 @@ export const zPagination = z.object({
 
 #### 4.5.0 Cross-Cutting Controller Policies (Required)
 
-**Idempotency (supported server actions):**
+**Idempotency.** The current action names and error dispositions are defined in
+[idempotency-error-policy.ts](../../src/adapters/controllers/shared/idempotency-error-policy.ts).
+Controllers use [executeIdempotent](../../src/adapters/controllers/shared/execute-idempotent.ts)
+and the owning use case's transaction boundary. A supported request key scopes
+replay to its user/action; it does not make every failure cacheable or every
+mutation an idempotent action. Follow those executable contracts rather than
+the former partial action list.
 
-* Controllers that support idempotent replay accept optional `idempotencyKey?: UUID` and apply `withIdempotency(...)` when provided.
-* Supported actions:
-  * `billing:createCheckoutSession`
-  * `billing:createPortalSession` (explicit callers only; default manage-billing UI omits the key because portal session URLs are short-lived)
-  * `practice:startPracticeSession`
-  * `practice:endPracticeSession`
-  * `practice:setPracticeSessionQuestionMark`
-  * `question:submitAnswer`
-  * `bookmark:toggleBookmark`
-* Replayed requests with the same `(userId, action, idempotencyKey)` return cached prior results and must not re-run use-case side effects.
+**Rate limiting.** [SPEC-017's current-state inventory](../_archive/specs/spec-017-rate-limiting.md#current-state)
+owns the audited policy-to-operation table; [rate-limits.ts](../../src/adapters/shared/rate-limits.ts)
+owns the numeric configuration, and the linked controller/route callers own
+enforcement and response behavior. The 2026-09-22 census is 14 policies covering
+18 limited operations, distinct from 29 exported controller actions. Shared
+helpers mean operation count is not invocation-site count.
 
-**Server action rate limiting (fixed-window, 60s):**
-
-* `createCheckoutSession`: `10/min` per user key `billing:createCheckoutSession:${userId}`
-* `createPortalSession`: `20/min` per user key `billing:createPortalSession:${userId}`
-* `startPracticeSession`: `20/min` per user key `practice:startPracticeSession:${userId}`
-* `submitAnswer`: `120/min` per user key `question:submitAnswer:${userId}`
-* `toggleBookmark`: `60/min` per user key `bookmark:toggleBookmark:${userId}`
-* On limit exceeded: return `ActionResult` error code `RATE_LIMITED` with retry guidance in message text.
-
-**Route handler rate limiting (IP-scoped, fixed-window, 60s):**
-
-* `POST /api/health`: `600/min`
-* `POST /api/webhooks/clerk`: `100/min`
-* `POST /api/stripe/webhook`: `1000/min`
-* On limit exceeded: return `429` with headers `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`.
-* On rate-limiter failure: return `503` fail-closed.
+The bookmark mutation uses `bookmark:setBookmark` and an explicit desired state,
+not a toggle replay. Successful cached replays do not execute a fresh
+rate-limited mutation. Route authentication/signature validation and entitlement
+remain separate protections; a rate limit is not an authorization mechanism.
 
 ---
 
@@ -923,7 +375,7 @@ export type CreateCheckoutSessionOutput = {
 * `STRIPE_ERROR` on Stripe API failure
 * `INTERNAL_ERROR` on DB failure
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Enforce per-user rate limit: max 10 checkout session attempts per 60s window.
 2. Ensure local `users` row exists for Clerk user (upsert by `clerk_user_id`).
@@ -987,7 +439,7 @@ export type CreatePortalSessionOutput = { url: string };
 * `STRIPE_ERROR`
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Enforce per-user rate limit: max 20 billing portal attempts per 60s window.
 2. Ensure user row exists.
@@ -1067,7 +519,7 @@ export type GetNextQuestionOutput = NextQuestion | null; // null means no remain
 * `NOT_FOUND` if sessionId provided but session not found or not owned by user
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 ##### Case A: sessionId provided
 
@@ -1143,7 +595,7 @@ export type SubmitAnswerOutput = {
 * `RATE_LIMITED` if answer submit limit is exceeded
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Enforce per-user rate limit: max 120 submissions per 60s window.
 2. Validate question exists and `status='published'`.
@@ -1207,7 +659,7 @@ export type StartPracticeSessionOutput = { sessionId: string };
 * `RATE_LIMITED` if session start limit is exceeded
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Enforce per-user rate limit: max 20 session starts per 60s window.
 2. Compute candidate question IDs from DB using filters:
@@ -1274,7 +726,7 @@ export type EndPracticeSessionOutput = {
 * `CONFLICT` if session already ended
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Load session by id and user_id.
 2. If `ended_at` is not null: return `CONFLICT`.
@@ -1345,7 +797,7 @@ export type UserStatsOutput = {
 * `UNSUBSCRIBED`
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 * `totalAnswered` = count attempts for user
 * `accuracyOverall` = correct / total (0 if total=0)
@@ -1421,7 +873,7 @@ export type GetAttemptedQuestionsOutput = {
 * `VALIDATION_ERROR`
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 * For each question the user has attempted, find the most recent attempt per question.
 * If `result` filter is provided (`'correct'` or `'incorrect'`), only include questions where the most recent attempt matches.
@@ -1435,46 +887,23 @@ export type GetAttemptedQuestionsOutput = {
 
 ---
 
-#### 4.5.9 Server Action: `toggleBookmark(questionId)`
+#### 4.5.9 Server Action: `setBookmark(questionId, bookmarked)`
 
-* **Name:** `toggleBookmark`
-* **Type:** Server Action
-* **Auth:** subscribed
-* **File:** `src/adapters/controllers/bookmark-controller.ts`
+The [bookmark controller](../../src/adapters/controllers/bookmark-controller.ts)
+owns the validated input and ActionResult boundary; the
+[SetBookmark use case](../../src/application/use-cases/set-bookmark.ts) owns
+desired-state behavior.
 
-**Input (Zod):**
+- Requires an entitled user and a valid question UUID.
+- Accepts an explicit `bookmarked: boolean` plus an optional UUID
+  `idempotencyKey`; returns the resulting `bookmarked` state.
+- The controller uses the configured bookmark-mutation rate policy and
+  `bookmark:setBookmark` idempotency identity.
+- Repeating the same desired state must not invert it. Do not reintroduce the
+  former toggle pseudocode, which could undo state on a repeated request.
 
-```ts
-export const ToggleBookmarkInputSchema = z.object({
-  questionId: zUuid,
-  idempotencyKey: zUuid.optional(),
-}).strict();
-```
-
-**Output:**
-
-```ts
-export type ToggleBookmarkOutput = {
-  bookmarked: boolean;
-};
-```
-
-**Errors:**
-
-* `UNAUTHENTICATED`
-* `UNSUBSCRIBED`
-* `VALIDATION_ERROR`
-* `NOT_FOUND` if question not found or not published
-* `RATE_LIMITED` if bookmark mutation limit is exceeded
-* `INTERNAL_ERROR`
-
-**Behavior (exact):**
-
-1. Enforce per-user rate limit: max 60 bookmark mutations per 60s window.
-2. Validate question exists and published.
-3. If bookmark exists (user_id, question_id): delete it, return `bookmarked=false`.
-4. Else insert bookmark with created_at now, return `bookmarked=true`.
-5. If `idempotencyKey` is provided, wrap execution with application-level idempotency (`action='bookmark:toggleBookmark'`) so retries replay the prior toggle result.
+The controller schema, shared error policy and use case are the authorities for
+validation/error details; this summary is not a copied implementation.
 
 ---
 
@@ -1520,7 +949,7 @@ export type GetBookmarksOutput = {
 * `UNSUBSCRIBED`
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 * Select bookmarks for user ordered by `created_at DESC`.
 * Resolve question metadata from published questions when available.
@@ -1587,7 +1016,7 @@ export type GetPracticeSessionReviewOutput = {
 * `NOT_FOUND` if session not found or not owned by user
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Load session by id and user_id.
 2. Build ordered review rows from persisted `practice_session_question_states`.
@@ -1632,7 +1061,7 @@ export type SetPracticeSessionQuestionMarkOutput = {
 * `CONFLICT` if session mode is not exam or session already ended
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Load session by id and user_id.
 2. Reject if session is not in exam mode.
@@ -1686,7 +1115,7 @@ export type GetSessionHistoryOutput = {
 * `VALIDATION_ERROR`
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Load completed practice sessions (`ended_at IS NOT NULL`) for user, ordered by `ended_at DESC`.
 2. For each session, compute stats from persisted `practice_session_question_states`:
@@ -1733,7 +1162,7 @@ export type GetIncompletePracticeSessionOutput =
 * `UNSUBSCRIBED`
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Load the most recent in-progress session for user (`ended_at IS NULL`).
 2. If none exists, return `null`.
@@ -1778,7 +1207,7 @@ export type GetTagsOutput = {
 * `UNSUBSCRIBED`
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Enforce entitlement (subscribed user).
 2. Return all tags from repository for practice filter UI.
@@ -1825,7 +1254,7 @@ export type GetQuestionBySlugOutput = {
 * `NOT_FOUND` if question slug does not map to a published question
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Enforce entitlement (subscribed user).
 2. Load question by slug from published questions only.
@@ -1895,7 +1324,7 @@ export type GetPreviousAttemptOutput =
 * `NOT_FOUND` when `attemptId` exists but belongs to a different question
 * `INTERNAL_ERROR`
 
-**Behavior (exact):**
+**Behavior:**
 
 1. Enforce entitlement (subscribed user).
 2. Reject input when both `attemptId` and `sessionId` are provided.
@@ -1924,222 +1353,69 @@ export type GetPreviousAttemptOutput =
 
 ## 5. Content Pipeline
 
-### 5.1 MDX Question File Format (Exact)
+### 5.1 MDX question format
 
-* File extension: `.mdx`
-* Location: `/content/questions/**/*.mdx`
-* Frontmatter: YAML
-* Body must contain exactly two H2 headings in this order:
+The [content schema](../../lib/content/schemas.ts) and
+[MDX parser](../../lib/content/parse-mdx-question.ts) own the accepted format:
+question files under `content/questions/` have YAML frontmatter and ordered
+`## Stem` / `## Explanation` sections. Use the
+[content import runbook](../dev/question-content-pipeline.md) for authoring/import operations.
 
-  1. `## Stem`
-  2. `## Explanation`
+### 5.2 Frontmatter validation
 
-Everything under `## Stem` until `## Explanation` is the stem markdown. Everything after `## Explanation` is explanation markdown.
+Use `QuestionFrontmatterSchema`, not a separately copied schema.
+It enforces two to five uniquely labelled choices, exactly one correct choice,
+unique tag slugs and the required canonical topic/substance taxonomy.
+Each wrong choice requires a nonblank `explanation`; the correct choice must
+not carry one. The schema and [draft taxonomy](../../lib/content/draft-taxonomy.ts)
+own the complete accepted field/value set.
 
-### 5.2 Frontmatter Schema (Exact)
+### 5.3 Examples and references
 
-Fields:
+The old inline MDX example omitted required wrong-choice explanations and is
+removed rather than presented as valid input. The
+[seed parser tests](../../scripts/seed.test.ts) contain
+executable accepted/rejected examples.
 
-* `slug`: string, kebab-case, unique
-* `difficulty`: `"easy" | "medium" | "hard"`
-* `status`: `"draft" | "published" | "archived"`
-* `tags`: array of objects `{ slug, name, kind }`
-* `choices`: array of objects `{ label, text, correct }`
+The [seed parser](../../scripts/seed/question-parser.ts) splits a terminal
+reference from the general explanation and requires a nonempty citation for
+non-synthetic questions. Only the explicitly identified placeholder source has
+the documented exemption. Do not strip references or reintroduce the old
+combined wrong-answer Markdown section.
 
-Rules:
+### 5.4 Validation authority
 
-* `choices` must contain **2–5** entries
-* exactly **1** choice must have `correct: true`
-* labels must be unique and match `^[A-E]$`
+[schemas.ts](../../lib/content/schemas.ts), [parse-mdx-question.ts](../../lib/content/parse-mdx-question.ts)
+and [question-parser.ts](../../scripts/seed/question-parser.ts) are the current
+executable parsing contracts. Their tests verify accepted/rejected inputs.
+No “exact” schema is duplicated here.
 
-### 5.3 Example MDX File (Exact)
+### 5.5 Seed synchronization and identity
 
-```mdx
----
-slug: "buprenorphine-induction-precipitated-withdrawal"
-difficulty: "medium"
-status: "published"
-tags:
-  - slug: "opioids"
-    name: "Opioids"
-    kind: "substance"
-  - slug: "buprenorphine"
-    name: "Buprenorphine"
-    kind: "treatment"
-  - slug: "withdrawal"
-    name: "Withdrawal"
-    kind: "topic"
-choices:
-  - label: "A"
-    text: "Start buprenorphine immediately at a high dose to outcompete full agonists."
-    correct: false
-  - label: "B"
-    text: "Wait until moderate withdrawal symptoms are present before starting buprenorphine."
-    correct: true
-  - label: "C"
-    text: "Use naltrexone first, then transition to buprenorphine within 1 hour."
-    correct: false
-  - label: "D"
-    text: "Add a benzodiazepine and continue full agonist opioids until symptoms resolve."
-    correct: false
----
+The entry point is [scripts/seed.ts](../../scripts/seed.ts), invoked with
+`pnpm db:seed` under the [database-target safety procedure](../dev/deployment-environments.md).
+Target selection and acknowledgement are mandatory; a content update does not
+authorize a different database.
 
-## Stem
+- The canonical file/database representations in
+  [question-parser.ts](../../scripts/seed/question-parser.ts) include the
+  question reference and each choice's explanation, as well as question fields,
+  ordered choices and tags. [Canonical JSON/hash helpers](../../lib/content/parse-mdx-question.ts)
+  normalize the representation for change detection.
+- [question-syncer.ts](../../scripts/seed/question-syncer.ts) locks the existing
+  question, compares the canonical hash, and applies the
+  graded-history policy and [content-rewrite classification](../../scripts/seed/content-rewrite-policy.ts) before
+  writes. Archived questions are not silently reactivated by ordinary seeding.
+- Existing choice identity is preserved by label. Removal candidates are checked
+  against attempts and normalized practice state; the
+  [choice-sync plan](../../scripts/seed-helpers.ts) refuses unsafe removal.
+  Surviving choices are upserted instead of deleting and recreating the whole set.
+- Rewrites and withdrawals must follow those protections and their owning
+  records. This reconciliation does not select unresolved content-history or
+  release/rollback policies.
 
-A 34-year-old patient with opioid use disorder using fentanyl daily requests buprenorphine. They last used fentanyl 6 hours ago and have mild rhinorrhea but no objective withdrawal. What is the best next step to reduce the risk of precipitated withdrawal?
-
-## Explanation
-
-Buprenorphine is a partial agonist with high receptor affinity. Starting too early can displace full agonists and precipitate withdrawal. Initiation is safest when the patient is in **moderate** withdrawal (e.g., higher COWS score), or via a micro-induction protocol (not covered in this question).
-```
-
-### 5.4 Zod Schemas (Exact)
-
-```ts
-// lib/content/schemas.ts
-import { z } from 'zod';
-
-export const ChoiceFrontmatterSchema = z.object({
-  label: z.string().regex(/^[A-E]$/, 'label must be A-E'),
-  text: z.string().min(1),
-  correct: z.boolean(),
-}).strict();
-
-export const TagFrontmatterSchema = z.object({
-  slug: z.string().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  name: z.string().min(1),
-  kind: z.enum(['topic', 'substance', 'treatment', 'diagnosis']),
-}).strict();
-
-export const QuestionFrontmatterSchema = z.object({
-  slug: z.string().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-  difficulty: z.enum(['easy', 'medium', 'hard']),
-  status: z.enum(['draft', 'published', 'archived']),
-  tags: z.array(TagFrontmatterSchema).max(50),
-  choices: z.array(ChoiceFrontmatterSchema).min(2).max(5),
-}).strict().superRefine((val, ctx) => {
-  const correctCount = val.choices.filter((c) => c.correct).length;
-  if (correctCount !== 1) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'choices must contain exactly 1 correct=true',
-      path: ['choices'],
-    });
-  }
-  const labelSet = new Set(val.choices.map((c) => c.label));
-  if (labelSet.size !== val.choices.length) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'choice labels must be unique',
-      path: ['choices'],
-    });
-  }
-
-  const tagSlugSet = new Set(val.tags.map((t) => t.slug));
-  if (tagSlugSet.size !== val.tags.length) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'tag slugs must be unique',
-      path: ['tags'],
-    });
-  }
-});
-
-export const FullQuestionSchema = z.object({
-  frontmatter: QuestionFrontmatterSchema,
-  stemMd: z.string().min(1),
-  explanationMd: z.string().min(1),
-}).strict();
-```
-
-### 5.5 Seed Script (Required)
-
-* Entry point: `/scripts/seed.ts`
-* Command: `pnpm db:seed`
-* Libraries:
-
-  * `fast-glob` (glob files)
-  * `gray-matter` (parse frontmatter)
-  * Node `crypto` (sha256)
-  * Drizzle for DB writes
-
-#### Content hash for change detection (Exact)
-
-* Compute `fileHash = sha256(canonicalJsonString(fullQuestion))`
-* Compute `dbHash = sha256(canonicalJsonString(dbRepresentation))`
-
-  * dbRepresentation includes:
-
-    * question.slug, stem_md, explanation_md, difficulty, status
-    * choices: label, text_md, is_correct, sort_order
-    * tags: slug, name, kind (sorted by slug)
-* If hashes match: skip update (no writes)
-
-#### Seed Script Pseudocode (Exact)
-
-```ts
-// scripts/seed.ts (pseudocode)
-load env (DATABASE_URL)
-
-connect drizzle db
-
-files = glob("/content/questions/**/*.mdx")
-
-for each file in files:
-  raw = readFile(file)
-  { data, content } = grayMatter(raw)
-
-  frontmatter = QuestionFrontmatterSchema.parse(data)
-
-  // split content into Stem + Explanation
-  // REQUIRE exact headings in this order
-  stemMd = extractBetween(content, "## Stem", "## Explanation")
-  explanationMd = extractAfter(content, "## Explanation")
-
-  full = FullQuestionSchema.parse({ frontmatter, stemMd, explanationMd })
-
-  fileHash = sha256(canonicalJson(full))
-
-  // find existing question by slug
-  existingQuestion = select questions where slug = frontmatter.slug
-
-  if exists:
-    existingChoices = select choices where question_id = existingQuestion.id order by sort_order asc
-    existingTags = select tags join question_tags where question_id = existingQuestion.id order by tags.slug asc
-
-    dbRep = buildCanonicalDbRep(existingQuestion, existingChoices, existingTags)
-    dbHash = sha256(canonicalJson(dbRep))
-
-    if dbHash == fileHash:
-      continue
-
-    transaction:
-      update questions set stem_md, explanation_md, difficulty, status, updated_at=now where id=...
-      delete from choices where question_id=...
-      insert choices (question_id, label, text_md, is_correct, sort_order)
-      delete from question_tags where question_id=...
-      for each tag in frontmatter.tags:
-        upsert tags by slug; if slug exists but name/kind mismatch => throw (hard error)
-      insert question_tags (question_id, tag_id)
-  else:
-    transaction:
-      insert into questions (...)
-      insert choices
-      upsert tags and insert question_tags
-
-print summary: inserted/updated/skipped counts
-exit 0
-```
-
-Canonical JSON rules (Exact):
-
-* keys sorted alphabetically
-* arrays sorted:
-
-  * tags by `slug`
-  * choices by `label`
-* newline normalization: `\r\n` → `\n`
-* trim trailing whitespace on each line
+The former unconditional choice-delete pseudocode is withdrawn. Copying it
+would bypass protections that the executable seed path now enforces.
 
 ---
 
@@ -2435,7 +1711,7 @@ As a subscribed user, I can answer questions and see explanations so that I can 
    * fetch next question via controller
    * select choice
    * submit and show explanation
-8. Add bookmark toggle button on question view (calls toggleBookmark controller).
+8. Add bookmark state control on question view (calls the `setBookmark` controller with the desired state).
 
 **Files to Create/Modify:**
 
@@ -2446,7 +1722,7 @@ As a subscribed user, I can answer questions and see explanations so that I can 
 * `src/domain/entities/question.ts`, `choice.ts`, `attempt.ts`
 * `src/domain/services/grading.ts` — gradeAnswer() pure function
 * `src/application/ports/*.ts` (re-exported via `src/application/ports/repositories.ts`) — QuestionRepository, AttemptRepository interfaces
-* `src/application/use-cases/submit-answer.ts`, `get-next-question.ts`, `toggle-bookmark.ts`
+* `src/application/use-cases/submit-answer.ts`, `get-next-question.ts`, `set-bookmark.ts`
 * `src/adapters/repositories/drizzle-question-repository.ts`, `drizzle-attempt-repository.ts`
 * `src/adapters/controllers/question-controller.ts`, `bookmark-controller.ts`
 * `lib/container.ts` (add new factories)
@@ -2708,147 +1984,29 @@ it('records attempt when answer submitted', async () => {
 
 ### 8.4 CI Pipeline (GitHub Actions)
 
-> Next.js 16 removed `next lint`. Use **Biome** for linting and formatting. Locally we run `pnpm lint` (`biome check .`); in CI we run `pnpm lint:ci` (`biome ci .`). Biome is 10-100x faster than ESLint+Prettier and combines both tools into one. ([Biome][9])
+The executable [.github/workflows/ci.yml](../../.github/workflows/ci.yml) is the
+workflow authority. [package.json](../../package.json) owns command/toolchain
+versions, and [ci-workflow.test.ts](../../tests/ci-workflow.test.ts) pins the
+workflow boundary. This section intentionally does not reproduce YAML.
 
-**Workflow file:** `.github/workflows/ci.yml`
+Follow the [CI Secret Standard](../dev/deployment-environments.md#ci-secret-standard):
+provider credentials belong only to consuming E2E steps; Build receives compiled
+public values and shape-valid server-only placeholders. Actions are SHA-pinned.
+Dependabot keeps the credential-free non-E2E lane policy; its omitted E2E evidence
+must be explicit, not reported as executed.
 
-```yaml
-name: CI
+The workflow runs unit, integration, browser, build and eligible required E2E
+lanes, and emits their actual outcomes. The separate hosted-provider DOM lane is
+observational, not required PR coverage. See the
+[dependency update protocol](../dev/dependency-update-protocol.md) and
+[testing infrastructure guide](../dev/testing-infrastructure.md) for execution rules.
 
-on:
-  pull_request:
-  push:
-    branches: [main]
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
-
-jobs:
-  test:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: addiction_boards_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres -d addiction_boards_test"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=10
-
-    env:
-      NODE_ENV: test
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/addiction_boards_test
-
-      # App base URL used by redirects / Playwright baseURL
-      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3000
-
-      # Skip Clerk when secrets aren't available (fork PRs or secrets not configured).
-      # Clerk requires real keys even during prerender; dummy values fail validation.
-      NEXT_PUBLIC_SKIP_CLERK: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY == '' && 'true' || 'false' }}
-
-      # Clerk (dev instance keys for CI E2E)
-      # Fall back to dummy values so fork PRs can still run non-E2E jobs.
-      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_dummy' }}
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_dummy' }}
-
-      # Stripe (test mode keys for CI)
-      # Fall back to dummy values so fork PRs can still run non-E2E jobs.
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY || 'sk_test_dummy' }}
-      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_dummy' }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET || 'whsec_dummy' }}
-      NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || 'price_dummy_monthly' }}
-      NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: ${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || 'price_dummy_annual' }}
-
-      # Clerk E2E user creds (username/password auth enabled)
-      E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
-      E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.9.0
-          run_install: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install deps
-        run: pnpm install --frozen-lockfile
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Lint and Format Check (Biome)
-        run: pnpm lint:ci
-
-      - name: Migrate DB
-        run: pnpm db:migrate
-
-      - name: Seed DB (placeholder content)
-        run: pnpm db:seed
-
-      - name: Unit tests
-        run: pnpm test --run
-
-      - name: Integration tests
-        run: pnpm test:integration
-
-      - name: Build
-        run: pnpm build
-
-      - name: Install Playwright browsers
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        run: pnpm exec playwright install --with-deps
-
-      - name: E2E smoke
-        if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-        run: pnpm test:e2e
-
-      - name: Upload Playwright report
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 30
-          if-no-files-found: ignore
-
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [test]
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Trigger Vercel Production Deployment
-        run: echo "Production deploy is handled by Vercel Git integration on main."
-```
-
-**Deployment behavior in CI (exact):**
-
-* Vercel Git integration performs preview deploys on PR and production deploy on merge to main.
-* The `deploy` job is a no-op sentinel ensuring main only deploys if tests pass.
+**Production ordering:** promotion-PR E2E precedes the merge; Vercel builds main
+while main CI runs; production domains are assigned only after main's required
+`test` passes. The [Deployment Check procedure](../dev/deployment-procedure.md#production-deployment-check)
+owns the configuration and timestamp proof. The Vercel build applies migrations
+before domain assignment, so migrations must remain compatible with the serving
+release. An echo-only deployment job is not a gate.
 
 ---
 
@@ -2916,7 +2074,7 @@ jobs:
 
 ## 11. Stripe Setup
 
-### 11.1 Products / Prices (Exact)
+### 11.1 Products / Prices
 
 Create in Stripe Dashboard (Test mode first, then Live mode):
 
@@ -2934,7 +2092,7 @@ Create in Stripe Dashboard (Test mode first, then Live mode):
    * Billing: Recurring, every year
    * Copy the created Price ID into `NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL`
 
-### 11.2 Webhook Events (Exact)
+### 11.2 Webhook Events
 
 Configure webhook endpoint:
 
@@ -2955,7 +2113,7 @@ Configure webhook endpoint:
   * `customer.subscription.pending_update_applied`
   * `customer.subscription.pending_update_expired`
 
-### 11.3 Customer Portal Configuration (Exact)
+### 11.3 Customer Portal Configuration
 
 Enable Stripe Customer Portal and configure:
 
@@ -3006,7 +2164,7 @@ Enable Stripe Customer Portal and configure:
 
 * **Admin UI for question authoring** — content is authored in MDX and seeded via script; admin UI adds large surface area and auth roles.
 * **Spaced repetition algorithm** — requires scheduling, per-tag modeling, and more complex data structures; MVP focuses on straightforward practice/review.
-* **Time spent tracking / pacing analytics** — MVP persists `attempts.time_spent_seconds = 0` and does not attempt to measure per-question timing.
+* **Advanced pacing analytics** — per-question timing is already persisted, not universally zero. [SubmitAnswer](../../src/application/use-cases/submit-answer.ts) bounds supplied seconds (zero is the missing/invalid fallback); [FinalizeExamAnswers](../../src/application/use-cases/finalize-exam-answers.ts) converts bounded cumulative draft milliseconds to seconds. See [practice timing](../practice-engine/interaction-contracts.md#per-question-time-accumulation) and the [exam timing bound](../practice-engine/exam-answer-secrecy-policy.md). A richer pacing-analysis product remains out of scope.
 * **AI-generated questions** — quality/safety and editorial control are MVP priorities; AI generation introduces validation risk.
 * **Native mobile app** — web app is sufficient for initial market; mobile adds parallel build/test/deploy complexity.
 * **Offline mode** — requires caching and conflict resolution; not needed for initial board prep workflow.
