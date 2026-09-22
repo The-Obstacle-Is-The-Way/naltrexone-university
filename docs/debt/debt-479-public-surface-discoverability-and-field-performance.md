@@ -14,6 +14,38 @@
 
 ## Description
 
+**2026-09-22 crawl-resource execution (local; promotion pending).** Step 1
+merged into `dev` as #999 (`faf486aa`), with formal exact-head approval on
+`37564e7a`, zero unresolved threads and CI `35710469568` (**46/46 E2E**, no
+failures/retries). The eight unsigned exact-head preview requests with
+`Accept: */*` verified the four descriptions/canonicals, the pricing query
+variant and auth `noindex` including the verification subpath. HTML-browser
+requests to that TEST-key preview still take Clerk's development handshake;
+they are not passing rendered-head receipts. Production verification remains
+required. CodeRabbit withdrew its static-import finding after checking that
+the rule says not to **require** dynamic imports, not to forbid them.
+
+Step 2's four new anonymous HTTP cases failed on the pre-fix built application
+at `09:42 UTC`: robots and sitemap returned **307**, not `200`, under both
+Accept modes; setup/cleanup passed. Separately, the proxy unit suite failed
+five behavioral cases; the two missing metadata modules are additional
+feature-absence failures, not behavioral proof. The implementation adds the
+two metadata handlers and reuses DEBT-480's exact-path bypass. Private routes,
+lookalike resources and the existing page/API matcher array remain protected
+or unchanged as appropriate. The typed policy uses literal `ROUTES` keys and
+explicit **exact/prefix** scope: the old Clerk `(.*)` expressions are prefix
+matchers, so calling them strict subtrees would overstate their behavior.
+No existing page-auth matcher is widened or tightened in this change.
+
+The four required mutations each failed before restoration: removing pricing
+from indexable output (**1 failed**), admitting sign-in (**1 failed**), emitting
+matcher syntax in URLs (**1 failed**), and removing the sitemap proxy exemption
+(**3 failed**). The sitemap expectation names the four business URLs literally;
+it does not derive its oracle from the policy. Red HTTP artifacts and mutation
+logs are retained under `/private/tmp/debt-execution-2026-09-22.cfpNOr/`.
+Full-gate, review, built-app green and production receipts are still required;
+neither step is marked promoted here.
+
 **2026-09-22 execution audit — step 1 implemented locally, not yet promoted.**
 The six metadata exports still lacked their own descriptions/canonicals or auth
 `noindex` on deployed main `00032629`; the four content pages inherited the root
@@ -164,7 +196,7 @@ Pin four content pages' meaningful descriptions and canonical apex URLs; pin noi
 Red proof: the current four content pages have no canonical and share the root description, and auth pages lack noindex. The new suite must fail those assertions before implementation. Then remove one canonical or auth noindex entry and require a targeted failure. Verify signed-out rendered heads, including an auth subpath; existing auth journeys must still pass.
 
 **Step 2 — Typed public URL policy, robots and sitemap.**
-`PUBLIC_ROUTE_PATTERNS` contains matchers (`/pricing(.*)`), not URLs. Do not strip regex syntax. Use a small framework-layer policy keyed by existing `ROUTES` constants with a literal URL path, explicit exact/subtree matcher scope and `indexable` flag. Derive the page auth matchers from that policy; keep machine auth exemptions separate. Sitemap consumes only the four indexable paths. This gives one policy for indexability and matching without a second independently maintained URL list; do not move routing policy into domain/application layers.
+`PUBLIC_ROUTE_PATTERNS` contains matchers (`/pricing(.*)`), not URLs. Do not strip regex syntax. Use a small framework-layer policy keyed by existing `ROUTES` constants with a literal URL path, explicit exact/prefix matcher scope and `indexable` flag (scope terminology corrected by the 2026-09-22 execution receipt). Derive the page auth matchers from that policy; keep machine auth exemptions separate. Sitemap consumes only the four indexable paths. This gives one policy for indexability and matching without a second independently maintained URL list; do not move routing policy into domain/application layers.
 
 Explicitly admit `/robots.txt` and `/sitemap.xml` through the actual proxy. Do not exempt all XML/TXT, `/api/*`, or private page prefixes. DEBT-480's exact security-contact exemption can land independently and should be reused at this seam. Robots declares the canonical sitemap, disallows private `/app/`, `/api/`, `/checkout/`, and permits fetching auth pages so their noindex is visible. Auth catch-all variants and query strings never enter the sitemap.
 

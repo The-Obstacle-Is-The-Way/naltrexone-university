@@ -5,8 +5,8 @@ import {
   NextResponse,
 } from 'next/server';
 import {
+  PUBLIC_RESOURCE_PATHS,
   PUBLIC_ROUTE_PATTERNS,
-  SECURITY_CONTACT_PATH,
 } from '@/lib/public-routes';
 import { ROUTES } from '@/lib/routes';
 
@@ -232,9 +232,11 @@ export default async function proxy(
   request: NextRequest,
   event: NextFetchEvent,
 ) {
-  // This exact static disclosure resource must not require even Clerk's
+  // These exact public machine resources must not require even Clerk's
   // anonymous dev-browser handshake, which redirects HTML requests.
-  if (request.nextUrl?.pathname === SECURITY_CONTACT_PATH) {
+  if (
+    PUBLIC_RESOURCE_PATHS.some((path) => path === request.nextUrl?.pathname)
+  ) {
     return NextResponse.next();
   }
 

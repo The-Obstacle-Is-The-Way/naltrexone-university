@@ -21,32 +21,40 @@ describe('security contact proxy boundary', () => {
     vi.resetModules();
   });
 
-  it('serves the public contact without initializing Clerk or its dev-browser handshake', async () => {
-    vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
-    vi.doMock('@clerk/nextjs/server', () => {
-      throw new Error(
-        'Clerk must not initialize for this static public resource',
-      );
-    });
-    const { default: proxy } = await import('./proxy');
-    const request = new NextRequest(
-      'https://example.com/.well-known/security.txt',
-    );
-    const event = new NextFetchEvent({
-      request,
-      page: '/proxy',
-      context: undefined,
-    });
+  it.each(['/.well-known/security.txt', '/robots.txt', '/sitemap.xml'])(
+    'serves %s without initializing Clerk or its dev-browser handshake',
+    async (path) => {
+      vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+      vi.doMock('@clerk/nextjs/server', () => {
+        throw new Error(
+          'Clerk must not initialize for this static public resource',
+        );
+      });
+      const { default: proxy } = await import('./proxy');
+      const request = new NextRequest(`https://example.com${path}`);
+      const event = new NextFetchEvent({
+        request,
+        page: '/proxy',
+        context: undefined,
+      });
 
-    const response = await proxy(request, event);
+      const response = await proxy(request, event);
 
-    expect(response?.headers.get('x-middleware-next')).toBe('1');
-  });
+      expect(response?.headers.get('x-middleware-next')).toBe('1');
+    },
+  );
 
   it.each([
     ['/.well-known/security.txt', false],
     ['/.well-known/security.txt?source=disclosure', false],
+    ['/robots.txt', false],
+    ['/sitemap.xml', false],
+    ['/sitemap.xml?source=crawler', false],
     ['/app/dashboard', true],
+    ['/sitemap.xml.backup', true],
+    ['/sitemap.xml/extra', true],
+    ['/other.xml', true],
+    ['/robots.txt.backup', true],
     ['/.well-known/other.txt', true],
     ['/.well-known/security.txt.backup', true],
     ['/.well-known/security.txt/extra', true],
