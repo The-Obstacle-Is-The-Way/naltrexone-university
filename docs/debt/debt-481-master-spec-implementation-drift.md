@@ -8,6 +8,23 @@
 
 ## Description
 
+**2026-09-22 execution audit and reconciliation (publication/promotion pending).** All six filed contradictions still existed on `c7e59a7f`; #936's warning-only correction is confirmed by GitHub and ancestry on main. The current counts remain 21 physical tables, 29 controller `createAction` exports and 14 rate policies covering 18 operations. The later seed changes make the old example still less safe: ordinary questions now require a terminal reference, archived questions cannot silently reactivate, and content rewrites over graded history are refused. The master now links to those executable authorities instead of reproducing a partial schema, parser, seed algorithm or workflow. Its bookmark contract names explicit desired state. Its timing exclusion now distinguishes persisted per-question timing from optional advanced pacing analytics. The four split files are navigation views. No product/runtime behavior, scanner, gate or dependency changes.
+
+The former split copies were not perfectly synchronized with the master: Part 2 had older portal/idempotency and previous-attempt signatures, and Part 3 still prescribed `questionStates` in `params_json`. Those unique lines were compared with `billing-controller.ts`, `question-view-controller.ts`, `get-previous-attempt.ts` and the normalized schema before replacement; no unique product requirement is being discarded. The master's other design narratives are not newly certified exact implementations. Unsupported “exact” qualifiers were removed, not used to claim a whole-product audit. The dated filing and warning history below remain unchanged.
+
+### Current-tree reconciliation receipts (2026-09-22)
+
+| Contract | Authority and observed property | Reconciliation |
+| --- | --- | --- |
+| Physical schema | `db/schema.ts:178-971`: 21 `pgTable` declarations; `db/migrations/meta/_journal.json` owns migration order | Master §3 links to schema/ledger; no stale 14-table implementation copy |
+| Actions, limits, bookmark state | `src/adapters/controllers/shared/idempotency-error-policy.ts:9-19`; `bookmark-controller.ts:36-42,100-139`; `src/adapters/shared/rate-limits.ts:12-80`; SPEC-017 current inventory | §4.5.0 links to the configuration and inventory; §4.5.9 describes `setBookmark(questionId, bookmarked)` |
+| Content validation | `lib/content/schemas.ts:14-157`; `scripts/seed/question-parser.ts:112-142` | §5 links to executable validation; wrong-choice explanations and terminal references are explicit |
+| Seed/hash identity | `scripts/seed/question-parser.ts:27-98,130-163`; `scripts/seed/question-syncer.ts:80-114,263-444`; `scripts/seed-helpers.ts` | §5.5 names canonical reference/explanation fields, row locking, history refusal and identity-preserving synchronization; unconditional delete/reinsert removed |
+| CI and release | `.github/workflows/ci.yml:43-157`; `docs/dev/deployment-procedure.md`; main CI `35687034621` success on `c7e59a7f` | §8.4 links to actual workflow, secret standard and Deployment Check; no copied tags, old toolchain, job-scoped provider secrets or echo gate |
+| Timing | `src/application/use-cases/submit-answer.ts:193-208`; `finalize-exam-answers.ts:215-258`; practice-engine timing/secrecy contracts | §13 no longer says timing is always zero; optional richer analytics remains optional |
+
+This is a docs-only correction; no failing behavioral test or mutation proof is claimed. The documentation guard, full gate, exact-head review and publication/promotion receipts are still required before closeout.
+
 **2026-09-21 forward pointer.** #936 (`327f95ef`) shipped the warning banners and SPEC-016/017 corrections and is an ancestor of deployed main. The filing's “prepared PR B” qualifiers below are historical, not open deployment work. The six master/copy contradictions remain: the current schema has **21** tables versus **14** in the master, and there are **29** controller `createAction` declarations, distinct from **14** rate policies and **18** limited operations. Warning banners do not reconcile the stale schema, bookmark key, content/choice identity, workflow and timing examples. This remains an Open docs-ownership/reconciliation task, not a runtime change. [Audit receipts](./assets/active-audit-2026-09-21/verification.md).
 
 **CONFIRMED:** the current master specification and its four readability copies contain demonstrably stale “complete”/“exact” implementation claims. `docs/specs/index.md` identifies the master as the technical SSOT; a new implementer can copy unsafe or incompatible examples. The [all-current-specs audit](./assets/adversarial-2026-09-20/review.md#all-current-specs-audit) covers all eight current files, including SPEC-016/017 corrections prepared for separate specs-only PR B.
