@@ -198,7 +198,7 @@ Before merging to `main` (production deploy):
 - [ ] `pnpm test:integration` passes
 - [ ] `pnpm build` passes
 - [ ] `pnpm test:e2e` passes when local auth/billing env is available (CI enforces this on main pushes and non-Dependabot same-repository PRs)
-- [ ] CodeRabbit APPROVED the exact promotion head, with zero unresolved review threads
+- [ ] The [reviewed-source promotion proof](../../AGENTS.md#reviewed-source-promotions) is in the PR body for the current base/head; every first-parent source PR had exact-head approval before merge, and source/promotion threads are resolved. No separate promotion CodeRabbit approval is required (owner decision, 2026-09-22).
 - [ ] Vercel's production Deployment Check requires GitHub `test`; after merging, record main's test result and actual domain-assignment timing separately
 - [ ] If a keyed action output changed incompatibly: coexistable writer and rollback shapes have additive replay parsers + pre-deploy fixtures, with removal no earlier than one full 24-hour TTL after the last writer is gone
 - [ ] If schema changed: migration tested on local + preview DB first
@@ -213,7 +213,7 @@ Before merging to `main` (production deploy):
 
 After every promotion, fetch and compare `origin/main^{tree}` with `origin/dev^{tree}`. For the next change, start the feature branch from the latest `origin/dev`, then merge `origin/main` **into that feature branch** before editing. When the only difference is the promotion merge, that merge is a fast-forward. If either branch has gained content, inspect and resolve the actual divergence on the feature branch rather than assuming tree identity. Include the result in the normal fully gated/reviewed PR to `dev`.
 
-That next PR carries main's promotion ancestry into `dev`; the next `dev` → `main` promotion can satisfy strict up-to-date checks without direct protected-branch pushes or a repeating chain of empty synchronization PRs. If `main` advances while any PR is open, integrate its new ancestry/content before the final gate and review. A new head needs a new full gate and exact-head approval.
+That next PR carries main's promotion ancestry into `dev`; the next `dev` → `main` promotion can satisfy strict up-to-date checks without direct protected-branch pushes or a repeating chain of empty synchronization PRs. If `main` advances while any PR is open, integrate its new ancestry/content before the final gate and review. A new feature head needs a new full gate and exact-head approval; a promotion needs refreshed CI and source-provenance proof.
 
 ### Enforced Merge Bar
 
@@ -225,7 +225,7 @@ Read back ruleset `17666822` (`main-and-dev-protection`) and each branch's rules
 
 The ruleset is one shared policy for explicit `refs/heads/main` and `refs/heads/dev`, avoiding two independently maintained copies. Before activation, PR #926 into `dev` reported `test=success` from `github-actions`; the workflow/script inventory contained no direct `dev` pusher. The old direct-push runbook above was the incompatible instruction, not an automation requirement. The read-only 11-property assertion failed for dev coverage, thread resolution and strict checks before activation, then passed all 11 after; both branch rule endpoints were checked independently.
 
-CodeRabbit exact-head **APPROVED** and merge-commit use remain operator/process requirements. The ruleset does not require the `CodeRabbit` status, which can be successful with requested changes or a rate limit; inspect actual reviews. Existing unrelated settings were preserved, including the extra-approval rule for unattributed changes, no CODEOWNERS/last-push approval requirement, and the platform's allowed merge methods (`merge`, `squash`, `rebase`); repository policy still selects `merge`. No admin override or bypass is allowed. [GitHub's strict-check documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging) explains why an updated base may require another gate/review cycle.
+Feature PRs require CodeRabbit exact-head **APPROVED** through the [checked-in merge command](../../AGENTS.md#how-to-check). As of the 2026-09-22 owner decision, promotions instead verify the source PRs through the [reviewed-source procedure](../../AGENTS.md#reviewed-source-promotions). These and merge-commit use are operator/process requirements. The ruleset does not require the `CodeRabbit` status, which can be successful with requested changes or a rate limit; inspect actual reviews. Existing unrelated settings were preserved, including the extra-approval rule for unattributed changes, no CODEOWNERS/last-push approval requirement, and the platform's allowed merge methods (`merge`, `squash`, `rebase`); repository policy still selects `merge`. No admin override or bypass is allowed. [GitHub's strict-check documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging) explains why an updated base may require refreshed verification.
 
 ---
 

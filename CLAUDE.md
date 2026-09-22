@@ -104,9 +104,9 @@ Follow `AGENTS.md` → **"Verify EVERY Change Before Pushing"**. That section is
 ### Safety
 
 - **Never delete uncommitted work** — `git stash` and ask
-- **CodeRabbit review required** before every merge — wait for `coderabbitai[bot]`
+- **Feature PRs require exact-head CodeRabbit approval**; promotions use the executable source-provenance rule in [AGENTS.md](./AGENTS.md#reviewed-source-promotions), not a duplicate review
 - **Reviewer findings are claims, not orders** — apply `AGENTS.md` → “Guard and Scanner Review Discipline”; require an invariant/threat-model receipt before expanding a guard
-- **CodeRabbit rate limit = hard stop** — if CodeRabbit posts `Rate limit exceeded`, wait the full cooldown and require a fresh CodeRabbit review on the latest PR head before merge; green status contexts or inline acknowledgements are not enough
+- **Feature-PR CodeRabbit rate limit = hard stop** — wait the full cooldown and require a fresh exact-head review; green statuses or acknowledgements are not enough. Promotions instead follow AGENTS.md's reviewed-source rule and still adjudicate any posted findings.
 - **Non-interactive only** — `git --no-pager`, `git commit -m "..."`, never `-s` with pnpm
 
 ### Browser Visual Verification

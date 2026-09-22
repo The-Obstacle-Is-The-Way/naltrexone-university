@@ -599,18 +599,23 @@ review threads on both `main` and `dev`. It blocks deletion and non-fast-forward
 updates, has no bypass actors, and requires zero approving reviews so the solo
 owner is not locked out (BUG-248).
 
-CodeRabbit **APPROVED on the exact head** and use of a **merge commit** remain
-mandatory process checks. GitHub's green `CodeRabbit` status is not that verdict;
+Feature PRs require CodeRabbit **APPROVED on the exact head**; promotions use
+the source-provenance rule below. Use of a **merge commit** remains mandatory.
+These are process checks. GitHub's green `CodeRabbit` status is not that verdict;
 it can be green during a rate limit or with requested changes. Check actual
 reviews, all unresolved threads, and CI before merging. Never use `--admin`,
 Force Promote, or a ruleset bypass. Do not directly push synchronization commits
 to `dev`; use the [reviewed ancestry workflow](docs/dev/deployment-procedure.md#6-branch-ancestry-after-promotion).
 
-**NEVER merge a PR without CodeRabbit review. NO EXCEPTIONS.**
+**NEVER merge a feature PR without exact-head CodeRabbit approval.** A
+`dev` → `main` promotion proves its source reviews instead of requesting another
+review of the same content.
 
 This is a **blocking requirement**. Violating this rule wastes human time fixing preventable issues.
 
 ### The Rule
+
+For feature PRs into `dev`:
 
 1. **Create the PR** via `gh pr create`
 2. **WAIT** for CodeRabbit to comment (1-2 minutes)
@@ -645,6 +650,9 @@ that behavior or a current-tree false positive prevents legitimate work.
 
 ### Red Flags (STOP if any apply)
 
+These review-status checks apply to feature PRs. Promotions follow
+**Reviewed-Source Promotions** below.
+
 - PR was just created seconds ago → **WAIT**
 - No `coderabbitai[bot]` comment visible → **WAIT**
 - CodeRabbit posted `Rate limit exceeded` at any point on the PR after the latest review cycle began → **WAIT THE FULL COOLDOWN, REQUEST/WAIT FOR FRESH REVIEW, THEN RECHECK**
@@ -653,6 +661,25 @@ that behavior or a current-tree false positive prevents legitimate work.
 - Thinking "This is just docs, doesn't need review" → **WRONG, everything needs review**
 
 ### How to Check
+
+**Feature-PR merge command (2026-09-22):** use the checked-in guard for every
+feature PR into `dev`; do not substitute a badge, a hand-written session check,
+the merge button, or a bare `gh pr merge`. The first command is read-only; the
+second re-reads GitHub and merges only the verified head with a merge commit:
+
+```bash
+pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER>
+pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER> --merge
+```
+
+The command reads all review pages and requires the latest decisive CodeRabbit
+review on the current SHA to be APPROVED. It also requires zero unresolved
+threads, successful CI `test`, green checks, and a clean, mergeable, non-draft
+PR. Incomplete/truncated thread or check data fails closed. The merge uses
+`--match-head-commit` so a subsequent push cannot substitute unreviewed code.
+Keep the emitted SHA/review-ID receipt with the PR. No override flag exists.
+This is mandatory operator tooling, not a claim that GitHub's zero-approval
+ruleset enforces CodeRabbit itself. Promotions use the following distinct proof.
 
 ```bash
 # List comments on a PR
@@ -663,6 +690,36 @@ gh pr view <PR_NUMBER> --comments
 # If a rate-limit warning is present, DO NOT MERGE until after the cooldown
 # and a fresh CodeRabbit review has landed on the latest PR head commit.
 ```
+
+### Reviewed-Source Promotions
+
+**Owner decision, 2026-09-22:** `dev` → `main` promotions do not require their
+own CodeRabbit review or approval. Re-reviewing already-approved content cost
+hours during #984 without adding a new implementation boundary. Every feature
+PR still requires normal exact-head approval before entering `dev`.
+
+For each promotion:
+
+1. Fetch `origin`. Wait for promotion CI `test` to pass. Run
+   `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER>` and put its complete
+   output in the promotion PR body. The command verifies same-repository
+   `dev` → `main`, up-to-date ancestry, every first-parent merge's source PR,
+   the actual second-parent head, formal approval predating the source merge,
+   and zero unresolved source/promotion threads. Direct commits, ambiguous PR
+   associations, missing approvals or incomplete evidence fail closed.
+2. Source-thread counts are current API observations; GitHub cannot reconstruct
+   their historical count from that response. Preserve source merge receipts;
+   the enforced thread-resolution ruleset covers the merge-time requirement.
+3. Read and adjudicate any findings CodeRabbit nevertheless posts on the
+   promotion. Resolve threads with receipts. A stale requested-changes review
+   on an older promotion head may be dismissed with a comment citing this rule
+   and the current source proof; never dismiss an unaddressed finding. Do not
+   request another promotion review or wait for its CodeRabbit status alone.
+4. Merge with `gh pr merge <PR_NUMBER> --merge --match-head-commit <VERIFIED_HEAD>`.
+   If either branch moves, refresh the proof and CI before merging. No `--admin`
+   or ruleset bypass. A feature/hotfix branch into `main` is not this exception.
+5. Verify main CI, production-domain assignment after main's `test`, matching
+   dev/main trees, and production health as required below.
 
 ### Production Release Gate
 

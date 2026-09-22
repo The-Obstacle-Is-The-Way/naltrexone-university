@@ -18,13 +18,21 @@ The pre-push git hook only runs typecheck + unit tests. It does NOT run `pnpm bu
 
 ## CodeRabbit Review (MANDATORY)
 
-NEVER merge a PR without CodeRabbit review. No exceptions.
+Feature PRs require exact-head CodeRabbit approval. `dev` → `main` promotions
+use [AGENTS.md — Reviewed-Source Promotions](../../AGENTS.md#reviewed-source-promotions),
+not a second CodeRabbit review of already-approved content.
+
+For feature PRs:
 
 1. Create PR via `gh pr create`
 2. WAIT for `coderabbitai[bot]` comment (1-2 minutes)
 3. Read ALL feedback — do not skim
 4. Adjudicate every finding under `AGENTS.md` → **“Guard and Scanner Review Discipline”**; a finding is a claim, not an order
 5. Only merge after CodeRabbit has reviewed AND feedback is addressed
+
+Feature PRs must use the checked-in merge command in
+[AGENTS.md — How to Check](../../AGENTS.md#how-to-check); an approval badge or
+a session-local check is not a substitute for its exact-head verification.
 
 ## Never Delete Uncommitted Work
 

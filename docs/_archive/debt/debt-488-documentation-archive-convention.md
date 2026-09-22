@@ -1,6 +1,6 @@
 # DEBT-488: Documentation archive convention is unwritten and unenforced
 
-**Status:** Open
+**Status:** Resolved — 2026-09-22 UTC; shipped through promotion #984 and archived after production verification
 **Priority:** P2
 **Date:** 2026-09-21
 
@@ -10,6 +10,12 @@ Finished records belong in `docs/_archive/<register>/`; live register folders
 are the open list. The convention was not written once for all registers and
 had no executable link/lifecycle guard. Historical moves left broken links,
 missing register entries, and, most recently, compatibility stubs.
+
+**Closeout:** the scoped convention, guards and mechanical repairs are shipped.
+The 41 unproven historical link occurrences remain explicitly **Deferred**, with
+their revive trigger in the debt register. They are not repaired or silently
+discarded. The dated implementation ledger below is preserved; its then-pending
+review/promotion statements are superseded by the verified closeout receipt.
 
 ## Verified baseline
 
@@ -66,9 +72,65 @@ Read-only census on promoted main `ce5439b0` (promotion #981), 2026-09-21:
 - [x] No duplicate/stub or terminal record remains live; register targets work.
 - [x] Zero broken live relative file links (16/16 focused cases green at
   20:08:06Z; command failure-contract cases added separately).
-- [x] Mechanical archive repairs individually resolve; unresolved targets listed below (PR 2; promotion still pending).
-- [ ] Exact-head review, full gate, promotion, and production receipts recorded.
-- [ ] This record is itself archived without a compatibility stub.
+- [x] Mechanical archive repairs individually resolve; unresolved targets listed below (PR 2; promoted in #984).
+- [x] Exact-head review, full gate, promotion, and production receipts recorded below.
+- [x] This record is itself archived without a compatibility stub; inbound and outbound destinations retain their targets.
+
+## Verified closeout (2026-09-22 UTC)
+
+The source PRs passed the full pre-push gate, normal exact-head CodeRabbit
+review, hosted CI and thread adjudication before entering dev:
+
+| PR | Approved head | Formal approval | Merge | Successful CI |
+| --- | --- | --- | --- | --- |
+| #982 — convention/live cleanup | `2070d762` | 5272471458 | `0cd12052` | 35662286285 |
+| #983 — mechanical archive repair | `3ab50bad` | 5273129902 | `9a0ab172` | 35671524516 |
+| #985 — malformed-link reporting | `ad33129d` | 5273410298 | `0411abb7` | 35676147756 |
+| #986 — status/supported-link contract | `bd38f03f` | 5273658869 | `53f32e44` | 35679410125 |
+
+Promotion #984 received normal formal approval 5273741480 on exact head
+`53f32e449105dcdd1594777c2209442ba3ef947d` at 02:49:27Z, with zero unresolved
+threads and green checks. It merged at 02:50:37Z as
+`7bd893dcd341166b90a6843afcfc42d00676123b`. **No override was used.** The
+earlier assertion that #982 lacked final-head approval was refuted by the
+paginated review API: approval 5272471458 on `2070d762` at September 21
+22:32:18Z preceded its 22:33:42Z merge. A first-page-only lookup was incomplete.
+
+Post-merge main CI **35680951802** passed: 5,564 unit cases, 411 browser cases,
+349 integration cases plus six intentional provider opt-in skips, and 46/46
+required E2E cases without failures or retries. Production `/` and `/api/health`
+returned 200, with app and database healthy; the exact security-contact resource
+also returned 200 with its unchanged body for both tested Accept variants.
+Main and dev shared tree `2c4db3252aacffe3c6fbbc7ddd4a9110abd1af81` at that
+verified release milestone.
+
+The Vercel gate was observed, not inferred from a Ready build:
+
+| Event (2026-09-22 UTC) | Receipt |
+| --- | --- |
+| Build Ready | 02:51:58.597Z |
+| Still STAGED, no production alias; previous release serving | Observed through 03:01:28.325Z |
+| Main GitHub `test` completed successfully | 03:01:58Z |
+| Vercel required check succeeded | 03:02:00.467Z |
+| Production domains assigned to `7bd893dc` | 03:02:00.671Z |
+
+[Recorded production verification](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/984#issuecomment-5770614750).
+The subsequent feature-merge guard (#987) and reviewed-source promotion policy
+(#988) are separate owner-directed process changes, not missing archive work.
+This docs-only closeout follows the published procedure after the implementation
+was promoted; its own reviewed publication is promoted separately as authorized.
+
+After this move, the debt folder contains **11 open records**, with 480 numbered
+debt archive files. The other register counts are unchanged from the PR 1 table.
+No compatibility stub remains. The guard verifies the moved record and its
+register rows; all existing relative destinations are preserved at the new depth.
+The closeout's focused guard passes 1,061 cases. An AST before/after comparison
+proves all 43 existing relative link targets and suffixes are unchanged. The
+census reports zero duplicate/closed live records, missing rows/row targets,
+broken live links or mechanical archive breaks, with exactly 41 historical
+exceptions retained. The debt register contains exactly one Latest stanza.
+The closeout required no further change to AGENTS.md: the implemented procedure
+already covers deferred tails, complete moves, both link directions and receipts.
 
 ## PR 1 census and corrections
 
@@ -322,50 +384,50 @@ owner supplies an authoritative replacement or explicitly reopens that record.
 
 | Archived source and line | Unresolved historical destination |
 | --- | --- |
-| [bs-018-question-view-ux-unification.md:6](../_archive/brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-133-stale-closure-auto-advance.md` |
-| [bs-018-question-view-ux-unification.md:6](../_archive/brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-134-mark-for-review-race-condition.md` |
-| [bs-019-action-bar-label-and-ordering-consistency.md:359](../_archive/brainstorming/bs-019-action-bar-label-and-ordering-consistency.md#L359) | `../../tests/e2e/bs-019-action-bar-audit.spec.ts` |
-| [bs-020-card-contrast-and-hover-consistency.md:401](../_archive/brainstorming/bs-020-card-contrast-and-hover-consistency.md#L401) | `../../tests/e2e/bs-020-card-contrast-audit.spec.ts` |
-| [bs-028-history-session-scoring-and-navigation-gaps.md:7](../_archive/brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md#L7) | `../specs/spec-034-unanswered-question-review-handling.md` |
-| [bug-180-active-exam-answer-leak-via-review-hydration.md:42](../_archive/bugs/bug-180-active-exam-answer-leak-via-review-hydration.md#L42) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L321` |
-| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:40](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L40) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L405` |
-| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:55](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L55) | `../../../src/application/use-cases/submit-answer.test.ts#L360` |
-| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:55](../_archive/bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L55) | `../../../src/application/use-cases/submit-answer.test.ts#L404` |
-| [bug-183-stripe-webhook-failure-state-rolled-back.md:73](../_archive/bugs/bug-183-stripe-webhook-failure-state-rolled-back.md#L73) | `../../../src/application/test-helpers/fakes.test.ts` |
-| [bug-186-active-exam-review-projection-leaks-correctness.md:33](../_archive/bugs/bug-186-active-exam-review-projection-leaks-correctness.md#L33) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L252` |
-| [bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md:45](../_archive/bugs/bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md#L45) | `../../../src/adapters/repositories/drizzle-practice-session-repository.test.ts` |
-| [bug-189-question-review-cross-slug-async-state-corruption.md:31](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L31) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L121` |
-| [bug-189-question-review-cross-slug-async-state-corruption.md:31](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L31) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L141` |
-| [bug-189-question-review-cross-slug-async-state-corruption.md:33](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L33) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L306` |
-| [bug-189-question-review-cross-slug-async-state-corruption.md:34](../_archive/bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L34) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L374` |
-| [bug-194-practice-submit-flow-missing-stale-request-guard.md:34](../_archive/bugs/bug-194-practice-submit-flow-missing-stale-request-guard.md#L34) | `../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts#L60` |
-| [bug-203-clerk-webhook-public-fallback-secret.md:24](../_archive/bugs/bug-203-clerk-webhook-public-fallback-secret.md#L24) | `../../../node_modules/.pnpm/@clerk+nextjs@6.37.1_next@16.1.6_@babel+core@7.29.0_@opentelemetry+api@1.9.0_@playwrigh_6efdc9384cdd89288039aac9aa09ecc4/node_modules/@clerk/nextjs/dist/cjs/webhooks.js#L31` |
-| [bug-203-clerk-webhook-public-fallback-secret.md:34](../_archive/bugs/bug-203-clerk-webhook-public-fallback-secret.md#L34) | `../../../node_modules/.pnpm/@clerk+backend@2.30.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/@clerk/backend/dist/webhooks.js#L62` |
-| [debt-333-browser-test-flakiness-audit.md:6](../_archive/debt/debt-333-browser-test-flakiness-audit.md#L6) | `../../../vitest.browser.config.ts` |
-| [debt-334-practice-session-bootstrap-timeout-guard.md:6](../_archive/debt/debt-334-practice-session-bootstrap-timeout-guard.md#L6) | `../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` |
-| [debt-345-circuit-breaker-external-services.md:146](../_archive/debt/debt-345-circuit-breaker-external-services.md#L146) | `../../src/adapters/gateways/stripe-subscription-canceler.ts` |
-| [debt-353-practice-session-results-orchestrator-decomposition.md:6](../_archive/debt/debt-353-practice-session-results-orchestrator-decomposition.md#L6) | `../_archive/debt/fe-002-usepracticesessionreviewstage-exceeds-150-line-guideline.md` |
-| [debt-354-god-file-and-clean-code-audit.md:6](../_archive/debt/debt-354-god-file-and-clean-code-audit.md#L6) | `../../scripts/check-file-size.sh` |
-| [debt-355-cross-feature-question-flow-coupling.md:20](../_archive/debt/debt-355-cross-feature-question-flow-coupling.md#L20) | `../../app/(app)/app/practice/practice-logic.ts` |
-| [debt-358-exam-review-question-navigation-stranded.md:6](../_archive/debt/debt-358-exam-review-question-navigation-stranded.md#L6) | `../_archive/debt/fe-002-usepracticesessionreviewstage-exceeds-150-line-guideline.md` |
-| [debt-360-action-bar-below-fold.md:99](../_archive/debt/debt-360-action-bar-below-fold.md#L99) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
-| [debt-360-action-bar-below-fold.md:100](../_archive/debt/debt-360-action-bar-below-fold.md#L100) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
-| [debt-360-action-bar-below-fold.md:101](../_archive/debt/debt-360-action-bar-below-fold.md#L101) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
-| [debt-446-local-db-script-target-guards.md:67](../_archive/debt/debt-446-local-db-script-target-guards.md#L67) | `../../../scripts/seed-all-environments.sh#L132` |
-| [debt-446-local-db-script-target-guards.md:119](../_archive/debt/debt-446-local-db-script-target-guards.md#L119) | `../../../scripts/seed-all-environments.sh#L112` |
-| [debt-446-local-db-script-target-guards.md:122](../_archive/debt/debt-446-local-db-script-target-guards.md#L122) | `../../../scripts/seed-all-environments.sh#L142` |
-| [debt-446-local-db-script-target-guards.md:124](../_archive/debt/debt-446-local-db-script-target-guards.md#L124) | `../../../scripts/seed-all-environments.sh#L166` |
-| [debt-446-local-db-script-target-guards.md:128](../_archive/debt/debt-446-local-db-script-target-guards.md#L128) | `../../../scripts/seed-all-environments.sh#L147` |
-| [debt-446-local-db-script-target-guards.md:131](../_archive/debt/debt-446-local-db-script-target-guards.md#L131) | `../../../scripts/seed-all-environments.sh#L132` |
-| [debt-446-local-db-script-target-guards.md:133](../_archive/debt/debt-446-local-db-script-target-guards.md#L133) | `../../../scripts/seed-all-environments.sh#L152` |
-| [debt-462-observability-instrument-gap-parked-triggers.md:83](../_archive/debt/debt-462-observability-instrument-gap-parked-triggers.md#L83) | `../../../tests/server-span-family-boundary.test.ts` |
-| [spec-020-practice-engine-completion.md:391](../_archive/specs/spec-020-practice-engine-completion.md#L391) | `../../adr/adr-001-clean-architecture.md` |
-| [spec-029-dev-environment-resilience.md:270](../_archive/specs/spec-029-dev-environment-resilience.md#L270) | `../adr/adr-012-clean-architecture-layers.md` |
-| [spec-031-unified-visual-front.md:313](../_archive/specs/spec-031-unified-visual-front.md#L313) | `../../tests/e2e/bs-020-card-contrast-audit.spec.ts` |
-| [spec-032-action-bar-standardization.md:324](../_archive/specs/spec-032-action-bar-standardization.md#L324) | `../../tests/e2e/bs-019-action-bar-audit.spec.ts` |
+| [bs-018-question-view-ux-unification.md:6](../brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-133-stale-closure-auto-advance.md` |
+| [bs-018-question-view-ux-unification.md:6](../brainstorming/bs-018-question-view-ux-unification.md#L6) | `../_archive/bugs/bug-134-mark-for-review-race-condition.md` |
+| [bs-019-action-bar-label-and-ordering-consistency.md:359](../brainstorming/bs-019-action-bar-label-and-ordering-consistency.md#L359) | `../../tests/e2e/bs-019-action-bar-audit.spec.ts` |
+| [bs-020-card-contrast-and-hover-consistency.md:401](../brainstorming/bs-020-card-contrast-and-hover-consistency.md#L401) | `../../tests/e2e/bs-020-card-contrast-audit.spec.ts` |
+| [bs-028-history-session-scoring-and-navigation-gaps.md:7](../brainstorming/bs-028-history-session-scoring-and-navigation-gaps.md#L7) | `../specs/spec-034-unanswered-question-review-handling.md` |
+| [bug-180-active-exam-answer-leak-via-review-hydration.md:42](../bugs/bug-180-active-exam-answer-leak-via-review-hydration.md#L42) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L321` |
+| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:40](../bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L40) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L405` |
+| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:55](../bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L55) | `../../../src/application/use-cases/submit-answer.test.ts#L360` |
+| [bug-181-session-review-retry-allows-active-exam-answer-reveal.md:55](../bugs/bug-181-session-review-retry-allows-active-exam-answer-reveal.md#L55) | `../../../src/application/use-cases/submit-answer.test.ts#L404` |
+| [bug-183-stripe-webhook-failure-state-rolled-back.md:73](../bugs/bug-183-stripe-webhook-failure-state-rolled-back.md#L73) | `../../../src/application/test-helpers/fakes.test.ts` |
+| [bug-186-active-exam-review-projection-leaks-correctness.md:33](../bugs/bug-186-active-exam-review-projection-leaks-correctness.md#L33) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L252` |
+| [bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md:45](../bugs/bug-188-legacy-session-cas-json-shape-mismatch-breaks-updates.md#L45) | `../../../src/adapters/repositories/drizzle-practice-session-repository.test.ts` |
+| [bug-189-question-review-cross-slug-async-state-corruption.md:31](../bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L31) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L121` |
+| [bug-189-question-review-cross-slug-async-state-corruption.md:31](../bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L31) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L141` |
+| [bug-189-question-review-cross-slug-async-state-corruption.md:33](../bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L33) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L306` |
+| [bug-189-question-review-cross-slug-async-state-corruption.md:34](../bugs/bug-189-question-review-cross-slug-async-state-corruption.md#L34) | `../../../app/(app)/app/questions/[slug]/use-question-page-controller.ts#L374` |
+| [bug-194-practice-submit-flow-missing-stale-request-guard.md:34](../bugs/bug-194-practice-submit-flow-missing-stale-request-guard.md#L34) | `../../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts#L60` |
+| [bug-203-clerk-webhook-public-fallback-secret.md:24](../bugs/bug-203-clerk-webhook-public-fallback-secret.md#L24) | `../../../node_modules/.pnpm/@clerk+nextjs@6.37.1_next@16.1.6_@babel+core@7.29.0_@opentelemetry+api@1.9.0_@playwrigh_6efdc9384cdd89288039aac9aa09ecc4/node_modules/@clerk/nextjs/dist/cjs/webhooks.js#L31` |
+| [bug-203-clerk-webhook-public-fallback-secret.md:34](../bugs/bug-203-clerk-webhook-public-fallback-secret.md#L34) | `../../../node_modules/.pnpm/@clerk+backend@2.30.1_react-dom@19.2.4_react@19.2.4__react@19.2.4/node_modules/@clerk/backend/dist/webhooks.js#L62` |
+| [debt-333-browser-test-flakiness-audit.md:6](../debt/debt-333-browser-test-flakiness-audit.md#L6) | `../../../vitest.browser.config.ts` |
+| [debt-334-practice-session-bootstrap-timeout-guard.md:6](../debt/debt-334-practice-session-bootstrap-timeout-guard.md#L6) | `../../app/(app)/app/practice/[sessionId]/hooks/use-practice-session-page-controller.ts` |
+| [debt-345-circuit-breaker-external-services.md:146](../debt/debt-345-circuit-breaker-external-services.md#L146) | `../../src/adapters/gateways/stripe-subscription-canceler.ts` |
+| [debt-353-practice-session-results-orchestrator-decomposition.md:6](../debt/debt-353-practice-session-results-orchestrator-decomposition.md#L6) | `../_archive/debt/fe-002-usepracticesessionreviewstage-exceeds-150-line-guideline.md` |
+| [debt-354-god-file-and-clean-code-audit.md:6](../debt/debt-354-god-file-and-clean-code-audit.md#L6) | `../../scripts/check-file-size.sh` |
+| [debt-355-cross-feature-question-flow-coupling.md:20](../debt/debt-355-cross-feature-question-flow-coupling.md#L20) | `../../app/(app)/app/practice/practice-logic.ts` |
+| [debt-358-exam-review-question-navigation-stranded.md:6](../debt/debt-358-exam-review-question-navigation-stranded.md#L6) | `../_archive/debt/fe-002-usepracticesessionreviewstage-exceeds-150-line-guideline.md` |
+| [debt-360-action-bar-below-fold.md:99](../debt/debt-360-action-bar-below-fold.md#L99) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
+| [debt-360-action-bar-below-fold.md:100](../debt/debt-360-action-bar-below-fold.md#L100) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
+| [debt-360-action-bar-below-fold.md:101](../debt/debt-360-action-bar-below-fold.md#L101) | `../../../app/(app)/app/practice/components/sticky-action-bar.tsx` |
+| [debt-446-local-db-script-target-guards.md:67](../debt/debt-446-local-db-script-target-guards.md#L67) | `../../../scripts/seed-all-environments.sh#L132` |
+| [debt-446-local-db-script-target-guards.md:119](../debt/debt-446-local-db-script-target-guards.md#L119) | `../../../scripts/seed-all-environments.sh#L112` |
+| [debt-446-local-db-script-target-guards.md:122](../debt/debt-446-local-db-script-target-guards.md#L122) | `../../../scripts/seed-all-environments.sh#L142` |
+| [debt-446-local-db-script-target-guards.md:124](../debt/debt-446-local-db-script-target-guards.md#L124) | `../../../scripts/seed-all-environments.sh#L166` |
+| [debt-446-local-db-script-target-guards.md:128](../debt/debt-446-local-db-script-target-guards.md#L128) | `../../../scripts/seed-all-environments.sh#L147` |
+| [debt-446-local-db-script-target-guards.md:131](../debt/debt-446-local-db-script-target-guards.md#L131) | `../../../scripts/seed-all-environments.sh#L132` |
+| [debt-446-local-db-script-target-guards.md:133](../debt/debt-446-local-db-script-target-guards.md#L133) | `../../../scripts/seed-all-environments.sh#L152` |
+| [debt-462-observability-instrument-gap-parked-triggers.md:83](../debt/debt-462-observability-instrument-gap-parked-triggers.md#L83) | `../../../tests/server-span-family-boundary.test.ts` |
+| [spec-020-practice-engine-completion.md:391](../specs/spec-020-practice-engine-completion.md#L391) | `../../adr/adr-001-clean-architecture.md` |
+| [spec-029-dev-environment-resilience.md:270](../specs/spec-029-dev-environment-resilience.md#L270) | `../adr/adr-012-clean-architecture-layers.md` |
+| [spec-031-unified-visual-front.md:313](../specs/spec-031-unified-visual-front.md#L313) | `../../tests/e2e/bs-020-card-contrast-audit.spec.ts` |
+| [spec-032-action-bar-standardization.md:324](../specs/spec-032-action-bar-standardization.md#L324) | `../../tests/e2e/bs-019-action-bar-audit.spec.ts` |
 
 ## Related
 
-- [Debt register](./index.md)
-- [Prior inventory](./assets/inventory-2026-09-21/verification.md)
+- [Debt register](../../debt/index.md)
+- [Prior inventory](../../debt/assets/inventory-2026-09-21/verification.md)
 - [Promotion #981](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/981#issuecomment-5766690336)
