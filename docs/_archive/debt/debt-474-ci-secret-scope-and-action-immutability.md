@@ -26,9 +26,11 @@ requests, not inferred from a homepage, middleware response or manual call.
 | `/api/cron/send-renewal-notices` | `2026-09-22T09:54:04.107Z` | `09:55:11.545Z` | **200 / 200** |
 
 Both were GETs in production on main, within their Hobby scheduling-hour
-windows, with `clientUserAgent` beginning `vercel-cron/`. Read-only Vercel
-request-log API detail confirmed the actual serverless route events at
-`09:27:11.955Z` and `09:55:45.837Z`, respectively. The CLI's first-event
+windows, with `clientUserAgent` beginning `vercel-cron/`. The read-only Vercel
+request-log API readbacks occurred at `09:27:11.955Z` and `09:55:45.837Z`,
+respectively; these are inspection times, not additional invocations. They
+confirmed the serverless function events for the request times in the table.
+The CLI's first-event
 source label alone was not used as proof. No manual production invocation,
 repeat rotation or provider mutation was performed to manufacture receipts.
 This establishes scheduled HTTP success, not a count of processed business
