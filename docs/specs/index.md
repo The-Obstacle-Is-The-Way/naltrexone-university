@@ -92,6 +92,7 @@ Implementation specifications provide detailed technical guidance for building e
 
 ## Spec Statuses
 
+- **Living guide** — Maintained product/design guidance, not a numbered implementation record; exempt from completion-based archiving under AGENTS.md
 - **Proposed** — Under review, not yet approved
 - **Ready** — Ready for implementation
 - **In Progress** — Being implemented
