@@ -58,4 +58,31 @@ describe('public page metadata', () => {
       expect(pages[path]?.alternates?.canonical).toBeUndefined();
     },
   );
+
+  it.each(['/', '/pricing', '/privacy', '/terms'])(
+    'shares %s with its own canonical identity and the public site image',
+    (path) => {
+      const page = pages[path];
+      const image = {
+        url: 'https://addictionboards.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'Addiction Boards — Addiction Psychiatry and Addiction Medicine board preparation',
+      };
+      expect(page?.openGraph).toEqual({
+        type: 'website',
+        siteName: 'Addiction Boards',
+        title: page?.title,
+        description: page?.description,
+        url: new URL(path, 'https://addictionboards.com').href,
+        images: [image],
+      });
+      expect(page?.twitter).toEqual({
+        card: 'summary_large_image',
+        title: page?.title,
+        description: page?.description,
+        images: [image],
+      });
+    },
+  );
 });

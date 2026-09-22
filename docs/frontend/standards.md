@@ -850,6 +850,15 @@ they do not need self-canonicals or unique descriptions. Keep existing tab
 titles. Metadata exports have unit contracts, supplemented by signed-out
 rendered-head verification and the existing authenticated E2E journeys.
 
+The same four content pages publish Open Graph and Twitter large-image cards
+with their own title, description and canonical production URL. The shared
+`publicPageMetadata` helper keeps these declarations aligned without changing
+the original tab titles. The site image at `/opengraph-image` must return a
+real PNG anonymously; admit only that exact resource through the proxy. Its
+build-time renderer uses the narrowly documented [raster-renderer boundary](./pattern-registry.md#public-social-card-renderer-debt-479-2026-09-22),
+not a separate browser theme or a remote font dependency. Verify rendered
+absolute tags and the fetched image, not just the exported metadata objects.
+
 ---
 
 ## 16. Dark Mode
