@@ -134,6 +134,14 @@ export function documentationLinks(
           inTable = false,
           rowId?: string,
         ): void {
+          if (
+            node.type === 'html' &&
+            /\b(?:href|src)\s*=/i.test(node.value ?? '')
+          ) {
+            throw new Error(
+              `Unsupported HTML link attributes: ${file}:${node.position?.start.line ?? 1}; use Markdown links or images`,
+            );
+          }
           const table = inTable || node.type === 'table';
           const identity =
             node.type === 'tableRow'
