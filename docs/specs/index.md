@@ -1,7 +1,9 @@
 # Implementation Specifications
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-21 — SPEC-016/017 archived with explicit deferred tails, following their September 20 corrections; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
+**Last Updated:** 2026-09-22 — scoped master-contract reconciliation described below.
+
+**2026-09-21 register maintenance:** SPEC-016/017 archived with explicit deferred tails, following their September 20 corrections; all five master files carry the [DEBT-481 current-contract warning](../debt/debt-481-master-spec-implementation-drift.md). The June 29 normalized practice-state change remains implemented.
 
 **2026-09-22 reconciliation:** the six DEBT-481 contradictions are corrected in the master; the split parts are navigation views rather than independent implementation copies. Executable schema, parser/seed, controller and CI files own their respective contracts. This supersedes the September 21 warning for that bounded scope, not a claim that every historical design example was re-audited.
 
