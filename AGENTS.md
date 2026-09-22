@@ -654,6 +654,26 @@ that behavior or a current-tree false positive prevents legitimate work.
 
 ### How to Check
 
+**Feature-PR merge command (2026-09-22):** use the checked-in guard for every
+feature PR into `dev`; do not substitute a badge, a hand-written session check,
+the merge button, or a bare `gh pr merge`. The first command is read-only; the
+second re-reads GitHub and merges only the verified head with a merge commit:
+
+```bash
+pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER>
+pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER> --merge
+```
+
+The command reads all review pages and requires the latest decisive CodeRabbit
+review on the current SHA to be APPROVED. It also requires zero unresolved
+threads, successful CI `test`, green checks, and a clean, mergeable, non-draft
+PR. Incomplete/truncated thread or check data fails closed. The merge uses
+`--match-head-commit` so a subsequent push cannot substitute unreviewed code.
+Keep the emitted SHA/review-ID receipt with the PR. No override flag exists.
+This is mandatory operator tooling, not a claim that GitHub's zero-approval
+ruleset enforces CodeRabbit itself. Promotion review rules remain as stated
+above until separately changed.
+
 ```bash
 # List comments on a PR
 gh pr view <PR_NUMBER> --comments

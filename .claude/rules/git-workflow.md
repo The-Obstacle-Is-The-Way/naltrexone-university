@@ -26,6 +26,10 @@ NEVER merge a PR without CodeRabbit review. No exceptions.
 4. Adjudicate every finding under `AGENTS.md` → **“Guard and Scanner Review Discipline”**; a finding is a claim, not an order
 5. Only merge after CodeRabbit has reviewed AND feedback is addressed
 
+Feature PRs must use the checked-in merge command in
+[AGENTS.md — How to Check](../../AGENTS.md#how-to-check); an approval badge or
+a session-local check is not a substitute for its exact-head verification.
+
 ## Never Delete Uncommitted Work
 
 - See files you didn't create? Leave them alone or commit them.
