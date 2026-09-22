@@ -55,10 +55,11 @@ overrides:
   # brackets (fixed in 3.1.7). Transitive through ajv under Sentry's webpack
   # path; this Turbopack build does not execute that path, so defense-in-depth
   # (issue #703). Alerts #51-#54 retargeted 3.1.5 to 3.1.7, which satisfies
-  # ajv's ^3.0.1 (DEBT-476). 3.1.8 (GHSA-hrr3-gc8f-f4qj, host case
-  # normalization, medium) ages past the 7-day gate 2026-09-22T07:36Z; move the
-  # pin then. Aged past the 7-day gate as of 2026-09-09 (published 2026-09-02).
-  fast-uri: 3.1.7
+  # ajv's ^3.0.1 (DEBT-476). The 3.1.8 follow-up also fixes
+  # GHSA-hrr3-gc8f-f4qj (host case normalization, medium). Published
+  # 2026-09-15T07:36:25.444Z; the unchanged 7-day gate cleared at
+  # 2026-09-22T07:36:25.444Z. No maturity or trust exception is needed.
+  fast-uri: 3.1.8
   # Security: GHSA-2v37-7h3g-55p8 — custom nanoid generators can loop
   # indefinitely when size is zero. The 2026-08-14 advisory revision moved the
   # patched floor to 3.3.18. Transitive via postcss@8.5.23 (build-time CSS
