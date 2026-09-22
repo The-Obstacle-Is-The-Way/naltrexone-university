@@ -342,12 +342,16 @@ owner explicitly approves the dismissal; the record alone does not
 authorize it, and until that approval the alert stays open with the
 record linked rather than left to drift. The worked precedent is
 `stream-json` in
-[DEBT-476](../debt/debt-476-dependabot-alert-triage-2026-09.md) § F: the
+[DEBT-476](../_archive/debt/debt-476-dependabot-alert-triage-2026-09.md) § F: the
 patched line is ESM-only with renamed entry points that the sole consumer
 cannot load, the vulnerable functions sit on no import path the
-application can take, and the upstream fix is a breaking release two
-majors away. CI does not run `pnpm audit`, so such a case gets no
-`ignoreGhsas` entry.
+application can take, and forcing that two-major upgrade is not supported.
+As reverified on 2026-09-22, jayson 5.0.0 has removed its stream-json
+dependency, but even Solana 1.99.0 still requires jayson `^4.3.0` and Clerk
+retains its adapter pins. The archived record and Deferred register row
+retain the adoption/reachability triggers. Zero open alerts does not mean
+the installed package was removed. CI does not run `pnpm audit`, so such a
+case gets no `ignoreGhsas` entry.
 
 ## Vercel deploy notes
 
