@@ -1,6 +1,8 @@
 # BUG-204: Billing Portal Session Creation Lacks Abuse Controls
 
-**Status:** Open
+**Status:** Resolved — Register archival date: 2026-03-10. Receipt: [PR #193](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/193); [register disposition](../../bugs/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
+*Status as filed (superseded 2026-09-22):* Open
 **Priority:** P3
 **Date:** 2026-03-10
 **Component:** Billing / Server Actions / Stripe

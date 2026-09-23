@@ -1,6 +1,8 @@
 # BUG-234: AuthNav Can Render Clerk UserButton Without an Active ClerkProvider
 
-## Status: Resolved (PR #271, merged 2026-04-09)
+**Status:** Resolved — Register archival date: 2026-04-09. Receipt: [PR #271](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/271); [register disposition](../../bugs/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
+*Status as filed (superseded 2026-09-22):* Resolved (PR #271, merged 2026-04-09)
 
 ## Severity: Low
 
