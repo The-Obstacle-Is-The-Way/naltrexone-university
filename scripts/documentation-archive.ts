@@ -188,16 +188,39 @@ export function documentationLinks(
   return links;
 }
 
-function recordStatus(contents: string): string {
-  return (
-    contents
-      .match(
-        /^\s*(?:>\s*)?\*\*(?:Status|Resolution State):?\*\*:?\s*(.+)$/im,
-      )?.[1]
-      ?.replaceAll('**', '')
-      .replace(/^[^\p{L}\p{N}]+/u, '')
-      .trim() ?? ''
-  );
+function recordStatus(file: string, contents: string): string {
+  const field =
+    /^\s*(?:>\s*)?\*\*(?:Status|Resolution State):?\*\*:?\s*(.+)$/im.exec(
+      contents,
+    );
+  if (!field) return '';
+  const offset = field.index + field[0].indexOf('**');
+  const prefix = contents.slice(0, field.index + field[0].length);
+  // Validate the first candidate's code-block context, not every historical
+  // body. Ambiguous metadata fails closed instead of searching for a later
+  // status that happens to pass. Existing unrelated earlier code is allowed.
+  Markdown({
+    children: prefix,
+    remarkPlugins: [
+      () => (tree: MarkdownNode) => {
+        function visit(node: MarkdownNode): void {
+          if (
+            node.type === 'code' &&
+            (node.position?.end.offset ?? prefix.length) >= offset
+          )
+            throw new Error(
+              `Status metadata inside a code example: ${file}; put the record disposition before examples`,
+            );
+          for (const child of node.children ?? []) visit(child);
+        }
+        visit(tree);
+      },
+    ],
+  });
+  return (field[1] ?? '')
+    .replaceAll('**', '')
+    .replace(/^[^\p{L}\p{N}]+/u, '')
+    .trim();
 }
 
 // Only the leading disposition counts; explanations may describe earlier work.
@@ -283,12 +306,12 @@ export function auditRecordLifecycle(
     );
     for (const record of live) {
       if (archivedIds.has(recordId(record))) result.duplicates.push(record);
-      if (CLOSED_STATUS.test(recordStatus(files.get(record) ?? '')))
+      if (CLOSED_STATUS.test(recordStatus(record, files.get(record) ?? '')))
         result.closedLive.push(record);
       if (!registered.has(record)) result.missingLiveRows.push(record);
     }
     for (const record of archived) {
-      const status = recordStatus(files.get(record) ?? '');
+      const status = recordStatus(record, files.get(record) ?? '');
       if (!CLOSED_STATUS.test(status) && !HISTORICAL_DISPOSITION.test(status))
         result.missingArchiveDispositions.push(record);
     }

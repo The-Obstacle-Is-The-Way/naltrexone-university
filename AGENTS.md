@@ -807,6 +807,11 @@ or parked); missing or unrecognized values fail closed. This is a metadata
 check, not proof that the work shipped or that its dates are true. Review the
 actual receipts before closing a record.
 
+If the first status-shaped field is inside a code block, the guard reports an
+ambiguous-metadata configuration error rather than searching for a later value.
+Put the actual record disposition before status examples. Unrelated earlier
+code blocks in historical records remain valid.
+
 Debt and bug indexes already use the literal `**Latest**` stanza and must retain
 exactly one. Other registers may omit update stanzas, but must not have multiple
 Latest entries. The guard counts top-level Markdown paragraphs beginning with

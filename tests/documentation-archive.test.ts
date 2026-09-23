@@ -174,6 +174,31 @@ describe('documentation archive convention', () => {
     });
   });
 
+  it.each([
+    'docs/debt/debt-001-example.md',
+    'docs/_archive/debt/debt-001-example.md',
+  ])(
+    'fails closed when the first status field in %s is a fenced example',
+    (file) => {
+      expect(() =>
+        audit({
+          [file]: '```md\n**Status:** Resolved\n```\n\n**Status:** Open',
+        }),
+      ).toThrow(
+        `Status metadata inside a code example: ${file}; put the record disposition before examples`,
+      );
+    },
+  );
+
+  it('accepts historical metadata after an unrelated code block', () => {
+    expect(
+      audit({
+        'docs/_archive/debt/debt-001-example.md':
+          '```ts\nconst example = true;\n```\n\n**Status:** Resolved',
+      }),
+    ).toMatchObject({ missingArchiveDispositions: [] });
+  });
+
   it.each(['debt', 'bugs', 'specs', 'brainstorming', 'audits', 'qa'])(
     'rejects duplicate Latest stanzas in %s',
     (register) => {
@@ -426,6 +451,20 @@ describe('documentation archive command', () => {
       expect(runDocumentationCommand(root, () => {})).toBe(0);
     },
   );
+
+  it('exits nonzero with a diagnostic for ambiguous fenced status metadata', () => {
+    const root = fixture();
+    populate(root, {
+      'docs/_archive/debt/debt-001-example.md':
+        '```md\n**Status:** Resolved\n```\n\n**Status:** Open',
+    });
+    const child = runArchiveCommand(root);
+    expect(child.error).toBeUndefined();
+    expect(child.status).toBe(1);
+    expect(child.stderr).toContain(
+      'Status metadata inside a code example: docs/_archive/debt/debt-001-example.md',
+    );
+  });
 
   it('reports JSON and does not repair without the explicit command argument', () => {
     const root = fixture();
