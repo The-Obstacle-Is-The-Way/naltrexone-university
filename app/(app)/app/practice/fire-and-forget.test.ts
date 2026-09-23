@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { reportClientErrorMock } = vi.hoisted(() => ({
-  reportClientErrorMock: vi.fn(),
+const { captureExceptionMock } = vi.hoisted(() => ({
+  captureExceptionMock: vi.fn(),
 }));
 
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
+vi.mock('@sentry/nextjs', () => ({
+  captureException: captureExceptionMock,
 }));
 
 import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
@@ -13,7 +13,7 @@ import { fireAndForget, logUnhandledAsyncError } from './fire-and-forget';
 describe('fireAndForget', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    reportClientErrorMock.mockReset();
+    captureExceptionMock.mockReset();
   });
 
   it('does not call onError when promise resolves', async () => {
@@ -40,9 +40,11 @@ describe('fireAndForget', () => {
 
     logUnhandledAsyncError(error);
 
-    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-      component: 'FireAndForget',
-      action: 'unhandledAsyncAction',
+    expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+      tags: {
+        component: 'FireAndForget',
+        action: 'unhandledAsyncAction',
+      },
     });
   });
 
@@ -57,9 +59,11 @@ describe('fireAndForget', () => {
     await Promise.resolve();
 
     expect(onError).toHaveBeenCalledWith(error);
-    expect(reportClientErrorMock).toHaveBeenCalledWith(handlerError, {
-      component: 'FireAndForget',
-      action: 'onErrorHandler',
+    expect(captureExceptionMock).toHaveBeenCalledWith(handlerError, {
+      tags: {
+        component: 'FireAndForget',
+        action: 'onErrorHandler',
+      },
     });
   });
 
@@ -75,9 +79,11 @@ describe('fireAndForget', () => {
     await Promise.resolve();
 
     expect(onError).toHaveBeenCalledWith(error);
-    expect(reportClientErrorMock).toHaveBeenCalledWith(handlerError, {
-      component: 'FireAndForget',
-      action: 'onErrorHandler',
+    expect(captureExceptionMock).toHaveBeenCalledWith(handlerError, {
+      tags: {
+        component: 'FireAndForget',
+        action: 'onErrorHandler',
+      },
     });
   });
 });

@@ -25,12 +25,12 @@ const {
   fixtureSession1Id2: crypto.randomUUID(),
 }));
 
-const { reportClientErrorMock } = vi.hoisted(() => ({
-  reportClientErrorMock: vi.fn(),
+const { captureExceptionMock } = vi.hoisted(() => ({
+  captureExceptionMock: vi.fn(),
 }));
 
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
+vi.mock('@sentry/nextjs', () => ({
+  captureException: captureExceptionMock,
 }));
 
 import type { QuestionPageSubmitResult } from '@/app/(app)/app/questions/[slug]/question-page-logic';
@@ -77,7 +77,7 @@ function createQuestionOutput(): GetQuestionBySlugOutput {
 describe('question-page-logic', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    reportClientErrorMock.mockReset();
+    captureExceptionMock.mockReset();
   });
 
   describe('canSubmitQuestionAnswer', () => {
@@ -278,9 +278,11 @@ describe('question-page-logic', () => {
           status: 'error',
           message: 'Request timed out. Please try again.',
         });
-        expect(reportClientErrorMock).toHaveBeenCalledWith(expect.any(Error), {
-          component: 'QuestionPageLogic',
-          action: 'loadQuestion',
+        expect(captureExceptionMock).toHaveBeenCalledWith(expect.any(Error), {
+          tags: {
+            component: 'QuestionPageLogic',
+            action: 'loadQuestion',
+          },
         });
       } finally {
         vi.useRealTimers();
@@ -380,9 +382,11 @@ describe('question-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'QuestionPageLogic',
-        action: 'loadQuestion',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'QuestionPageLogic',
+          action: 'loadQuestion',
+        },
       });
     });
   });
@@ -638,9 +642,11 @@ describe('question-page-logic', () => {
       expect(setSelectedChoiceId).not.toHaveBeenCalled();
       expect(setSubmitResult).not.toHaveBeenCalled();
       expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'QuestionPageLogic',
-        action: 'loadPreviousAttempt',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'QuestionPageLogic',
+          action: 'loadPreviousAttempt',
+        },
       });
     });
 
@@ -731,9 +737,11 @@ describe('question-page-logic', () => {
         expect(setSelectedChoiceId).not.toHaveBeenCalled();
         expect(setSubmitResult).not.toHaveBeenCalled();
         expect(setReviewHydrationState).toHaveBeenCalledWith('hydration_error');
-        expect(reportClientErrorMock).toHaveBeenCalledWith(expect.any(Error), {
-          component: 'QuestionPageLogic',
-          action: 'loadPreviousAttempt',
+        expect(captureExceptionMock).toHaveBeenCalledWith(expect.any(Error), {
+          tags: {
+            component: 'QuestionPageLogic',
+            action: 'loadPreviousAttempt',
+          },
         });
       } finally {
         vi.useRealTimers();
@@ -1189,9 +1197,11 @@ describe('question-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'QuestionPageLogic',
-        action: 'submitSelectedAnswer',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'QuestionPageLogic',
+          action: 'submitSelectedAnswer',
+        },
       });
     });
   });
