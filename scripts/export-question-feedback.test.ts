@@ -479,15 +479,11 @@ function createQuestionFeedbackSelectStub(rows: QuestionFeedbackExportRow[]) {
   return {
     select() {
       return {
-        from(table: unknown) {
-          expect(table).toBeDefined();
+        from() {
           return {
-            innerJoin(tableToJoin: unknown, condition: unknown) {
-              expect(tableToJoin).toBeDefined();
-              expect(condition).toBeDefined();
+            innerJoin() {
               return {
-                orderBy(...orderings: unknown[]) {
-                  expect(orderings).toHaveLength(2);
+                orderBy() {
                   return Promise.resolve(rows);
                 },
               };

@@ -168,6 +168,8 @@ The CLI's default-adapter wiring test retains a small canned query-result **stub
 
 Disposition: one unit removed, two integration cases added; one cast removed. Floors fall **226 → 225** (46 → 45 files); raw casts fall **264 → 263** (57 → 56 files). Own-code/port-double floors remain **22 / 45**, `RepoDb` casts **138 / 21**, and size suppressions **27**. Fifteen of the named 23 F8 doubles are disposed; the other eight and all five type lies remain work. This is not DEBT-472 completion.
 
+**Review correction (2026-09-23 UTC, #1016):** Confirmed the narrow implementation-coupling finding, not an application defect. An equivalent query grouped both descending sort keys in one SQL expression: both Postgres cases passed at **03:33:11Z**, but the CLI unit failed at **03:33:01Z** solely on `orderBy` argument count (one instead of two). Removing the four retained defined-value/argument-count checks from the canned wiring stub makes that unit independent of this equivalent query shape; all 20 unit cases pass. Its CLI output, constructor and connection-closure assertions remain, and the real projection/join/order assertions stay in Postgres. Production source is restored byte-for-byte; no new case, floor change or policy exception is introduced. Receipts: `feedback-review-red.log`, `feedback-review-equivalent-sql.log`, and `feedback-review-shape-green.log` in the same sanitized receipt directory.
+
 ## Description
 
 "Fakes over mocks" is the right principle. The repository adopted half of it.
