@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-react';
-import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import {
   PracticeSessionConflictMessages,
   PracticeSessionConflictReasons,
@@ -280,7 +279,10 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
   });
 
   it('deduplicates concurrent ended-session summary recovery requests', async () => {
-    const recoverySummary = createDeferred<ActionResult<unknown>>();
+    const recoverySummary =
+      createDeferred<
+        Awaited<ReturnType<typeof getPracticeSessionSummaryMock>>
+      >();
     getPracticeSessionSummaryMock
       .mockResolvedValueOnce(
         errorResult('CONFLICT', 'Practice session has not ended'),
@@ -314,7 +316,10 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
   });
 
   it('does not let stale ended-session recovery overwrite a newer question load', async () => {
-    const recoverySummary = createDeferred<ActionResult<unknown>>();
+    const recoverySummary =
+      createDeferred<
+        Awaited<ReturnType<typeof getPracticeSessionSummaryMock>>
+      >();
     getPracticeSessionSummaryMock
       .mockResolvedValueOnce(
         errorResult('CONFLICT', 'Practice session has not ended'),
@@ -379,7 +384,10 @@ describe('usePracticeSessionPageModel ended-session conflict recovery', () => {
   });
 
   it('does not let stale ended-session recovery overwrite a newer session summary', async () => {
-    const recoverySummary = createDeferred<ActionResult<unknown>>();
+    const recoverySummary =
+      createDeferred<
+        Awaited<ReturnType<typeof getPracticeSessionSummaryMock>>
+      >();
     getPracticeSessionSummaryMock
       .mockResolvedValueOnce(
         errorResult('CONFLICT', 'Practice session has not ended'),

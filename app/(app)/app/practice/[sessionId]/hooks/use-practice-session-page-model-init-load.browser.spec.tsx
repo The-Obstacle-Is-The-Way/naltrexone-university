@@ -300,7 +300,10 @@ describe('usePracticeSessionPageModel (browser)', () => {
   });
 
   it('does not commit expired-exam recovery results after unmount', async () => {
-    const recoverySummary = createDeferred<ActionResult<unknown>>();
+    const recoverySummary =
+      createDeferred<
+        Awaited<ReturnType<typeof getPracticeSessionSummaryMock>>
+      >();
 
     getPracticeSessionSummaryMock
       .mockResolvedValueOnce(

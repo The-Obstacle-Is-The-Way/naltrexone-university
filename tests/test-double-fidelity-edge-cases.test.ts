@@ -16,6 +16,16 @@ function source(filePath: string, contents: string): TestSourceFile {
 }
 
 describe('test-double fidelity scan edge cases', () => {
+  it.each([
+    'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.setup.ts',
+    'src/adapters/controllers/practice-controller-test-helpers.ts',
+    'app/(app)/app/questions/[slug]/hooks/use-question-page-model-test-helpers.tsx',
+  ])('includes support source %s in the repository census', (filePath) => {
+    expect(
+      readTestSources().some((source) => source.filePath === filePath),
+    ).toBe(true);
+  });
+
   it('reads the repository test estate and maintained fake ports', () => {
     const sources = readTestSources();
     const portNames = readMaintainedFakePortNames();

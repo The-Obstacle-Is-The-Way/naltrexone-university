@@ -253,7 +253,7 @@ export function setupPracticeSessionPageModelBrowserSpec() {
           typeof input.selectedChoiceId === 'string'
             ? input.selectedChoiceId
             : BROWSER_CHOICE_1_ID,
-        draftSavedAt: new Date('2026-02-07T00:00:00.000Z'),
+        draftSavedAt: '2026-02-07T00:00:00.000Z',
         draftCumulativeMs:
           typeof input === 'object' &&
           input &&

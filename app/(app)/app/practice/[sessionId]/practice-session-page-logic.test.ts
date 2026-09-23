@@ -17,12 +17,12 @@ const {
   fixtureSession1Id: crypto.randomUUID(),
 }));
 
-const { reportClientErrorMock } = vi.hoisted(() => ({
-  reportClientErrorMock: vi.fn(),
+const { captureExceptionMock } = vi.hoisted(() => ({
+  captureExceptionMock: vi.fn(),
 }));
 
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
+vi.mock('@sentry/nextjs', () => ({
+  captureException: captureExceptionMock,
 }));
 
 import {
@@ -84,7 +84,7 @@ function createFixturePracticeSessionReview(
 describe('practice-session-page-logic', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    reportClientErrorMock.mockReset();
+    captureExceptionMock.mockReset();
   });
 
   describe('loadNextQuestion', () => {
@@ -915,9 +915,11 @@ describe('practice-session-page-logic', () => {
         status: 'error',
         message: 'Summary fetch failed',
       });
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'PracticeSessionPageLogic',
-        action: 'getPracticeSessionSummary',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'PracticeSessionPageLogic',
+          action: 'getPracticeSessionSummary',
+        },
       });
     });
 
@@ -941,9 +943,11 @@ describe('practice-session-page-logic', () => {
         status: 'error',
         message: 'Boom',
       });
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'PracticeSessionPageLogic',
-        action: 'endSession',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'PracticeSessionPageLogic',
+          action: 'endSession',
+        },
       });
     });
 
@@ -1050,7 +1054,7 @@ describe('practice-session-page-logic', () => {
 describe('practice-session-page-logic effects', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    reportClientErrorMock.mockReset();
+    captureExceptionMock.mockReset();
   });
 
   describe('createNavigatorEffect', () => {
@@ -1213,9 +1217,11 @@ describe('practice-session-page-logic effects', () => {
         status: 'error',
         message: 'boom',
       });
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'PracticeSessionPageLogic',
-        action: 'loadNavigator',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'PracticeSessionPageLogic',
+          action: 'loadNavigator',
+        },
       });
     });
   });
@@ -1305,9 +1311,11 @@ describe('practice-session-page-logic effects', () => {
         status: 'error',
         message: 'boom',
       });
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'PracticeSessionPageLogic',
-        action: 'loadSummaryReview',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'PracticeSessionPageLogic',
+          action: 'loadSummaryReview',
+        },
       });
     });
 
