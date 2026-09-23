@@ -14,6 +14,9 @@ import {
 } from './helpers';
 
 const { db, sql } = createIntegrationDb();
+// A second session for lock-strength probes; the pooled client above holds a
+// single connection that the transaction under test reserves.
+const lockProbe = createIntegrationDb();
 const cleanup = createCleanupState();
 
 function createScriptedNow(...timestamps: Date[]) {
@@ -48,6 +51,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
+  await closeConnection(lockProbe.sql);
   await closeConnection(sql);
 });
 
@@ -163,6 +167,15 @@ describe('DrizzleUserRepository', () => {
           and mode = 'RowShareLock'
       `);
       expect(locks).toEqual({ held: 1 });
+
+      // Only FOR UPDATE blocks a concurrent FOR KEY SHARE on the row; the
+      // weaker row locks (NO KEY UPDATE, SHARE, KEY SHARE) also take
+      // RowShareLock but would let this second session through.
+      await expect(
+        lockProbe.sql`
+          select id from users where id = ${user.id} for key share nowait
+        `,
+      ).rejects.toMatchObject({ code: '55P03' });
     });
   });
 
@@ -544,7 +557,7 @@ describe('DrizzleUserRepository', () => {
     await expect(repo.findByClerkId(clerkUserId)).resolves.toBeNull();
   });
 
-  it('finds a user by local id and returns null for an absent id', async () => {
+  it('finds a user by local id', async () => {
     const repo = new DrizzleUserRepository(db);
     const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
     const email = `it-${randomUUID()}@example.com`;
@@ -557,6 +570,11 @@ describe('DrizzleUserRepository', () => {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
+  });
+
+  it('returns null from findById for an absent local id', async () => {
+    const repo = new DrizzleUserRepository(db);
+
     await expect(repo.findById(randomUUID())).resolves.toBeNull();
   });
 
@@ -577,24 +595,37 @@ describe('DrizzleUserRepository', () => {
       `it-${randomUUID()}@example.com`,
     );
     cleanup.userIds.push(user.id);
-    const heldAdvisoryLocks = drizzleSql<{ held: number }>`
+    // pg_advisory_xact_lock(bigint) exposes its key as classid (high 32 bits)
+    // and objid (low 32 bits) with objsubid 1; hashtext(user id) is that key.
+    const heldUserAdvisoryLocks = (pid: number) => drizzleSql<{ held: number }>`
       select count(*)::int as held
       from pg_locks
-      where locktype = 'advisory' and pid = pg_backend_pid()
+      where locktype = 'advisory'
+        and pid = ${pid}
+        and objsubid = 1
+        and classid::bigint = ((hashtext(${user.id})::bigint >> 32) & 4294967295)
+        and objid::bigint = (hashtext(${user.id})::bigint & 4294967295)
     `;
 
-    await db.transaction(async (tx) => {
+    const backendPid = await db.transaction(async (tx) => {
       const txRepo = new DrizzleUserRepository(tx);
+      const [backend] = await tx.execute<{ pid: number }>(
+        drizzleSql`select pg_backend_pid() as pid`,
+      );
+      if (!backend) throw new Error('Expected a backend pid');
+
       await expect(
         txRepo.acquireSubscriptionWriteLock(user.id),
       ).resolves.toBeUndefined();
 
-      const [inside] = await tx.execute(heldAdvisoryLocks);
+      const [inside] = await tx.execute(heldUserAdvisoryLocks(backend.pid));
       expect(inside).toEqual({ held: 1 });
+      return backend.pid;
     });
 
-    // A transaction-scoped lock must not survive the commit.
-    const [outside] = await db.execute(heldAdvisoryLocks);
+    // A transaction-scoped lock must not survive the commit on the backend
+    // that acquired it (a session-level lock would).
+    const [outside] = await db.execute(heldUserAdvisoryLocks(backendPid));
     expect(outside).toEqual({ held: 0 });
   });
 });

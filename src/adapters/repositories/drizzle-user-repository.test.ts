@@ -73,6 +73,9 @@ describe('DrizzleUserRepository error translation', () => {
     const promise = repo.upsertByClerkId('clerk_1', 'a@example.com');
     await expect(promise).rejects.toBeInstanceOf(ApplicationError);
     await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    // The empty result must have come from the boundary, not from a wrapper
+    // failure that never reached it.
+    expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(1);
   });
 
   it('maps a unique violation outside the email constraint to CONFLICT', async () => {
@@ -117,23 +120,28 @@ describe('DrizzleUserRepository error translation', () => {
   });
 
   it('maps email update persistence failures to INTERNAL_ERROR', async () => {
+    const databaseError = new Error('boom');
     vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
-      new Error('boom'),
+      databaseError,
     );
 
     await expect(
       repo.updateEmailByClerkId('clerk_1', 'new@example.com'),
-    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR', cause: databaseError });
   });
 
   it('throws INTERNAL_ERROR when the delete query throws', async () => {
+    const databaseError = new Error('boom');
     vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
-      new Error('boom'),
+      databaseError,
     );
 
     const promise = repo.deleteByClerkId('clerk_1');
     await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-    await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: databaseError,
+    });
   });
 
   it('preserves the driver error as cause so deadlock SQLSTATEs stay observable', async () => {
