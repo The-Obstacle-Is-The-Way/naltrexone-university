@@ -25,6 +25,8 @@
 // 216 enforced sites across 43 files. No SDK/fake behavior changes.
 // 2026-09-23 UTC: Real container transaction coverage retires two more casts
 // and its canned payment gateway: 214 casts / 43 files, 44 port doubles / 17.
+// 2026-09-23 UTC: Four customer fault/request-shape cases reuse the typed
+// maintained client: 210 casts / 43 files. Three Search behavior cases remain.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -75,7 +77,7 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ],
   ['src/adapters/gateways/stripe/stripe-checkout-sessions-trials.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts', 2],
-  ['src/adapters/gateways/stripe/stripe-customers.test.ts', 7],
+  ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
   ['src/adapters/repositories/drizzle-bookmark-repository.test.ts', 9],
