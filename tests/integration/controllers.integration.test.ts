@@ -1,270 +1,60 @@
-// biome-ignore lint/style/noExcessiveLinesPerFile: Keep cross-controller database contract coverage together — split tracked by DEBT-469.
 import { randomUUID } from 'node:crypto';
-import { and, eq, inArray } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { and, eq } from 'drizzle-orm';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
-import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
-import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import type { QuestionControllerDeps } from '@/src/adapters/controllers/question-controller';
 import {
   getNextQuestion,
   submitAnswer,
 } from '@/src/adapters/controllers/question-controller';
-import { getAttemptedQuestions } from '@/src/adapters/controllers/review-controller';
-import { getUserStats } from '@/src/adapters/controllers/stats-controller';
-import type { StripeWebhookInput } from '@/src/adapters/controllers/stripe-webhook-controller';
-import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
-import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
-import { DrizzleClerkEventRepository } from '@/src/adapters/repositories/drizzle-clerk-event-repository';
-import { DrizzleDeletedClerkUserRepository } from '@/src/adapters/repositories/drizzle-deleted-clerk-user-repository';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
-import { DrizzlePendingStripeCustomerCleanupRepository } from '@/src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
 import { DrizzleQuestionRepository } from '@/src/adapters/repositories/drizzle-question-repository';
-import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
-import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
-import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
-import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
-import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
-import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
 import {
-  FakeAuthGateway,
   FakeLogger,
-  FakePaymentGateway,
   FakeRateLimiter,
 } from '@/src/application/test-helpers/fakes';
 import { FinalizeExamAnswersUseCase } from '@/src/application/use-cases/finalize-exam-answers';
-import { GetAttemptedQuestionsUseCase } from '@/src/application/use-cases/get-attempted-questions';
 import { GetNextQuestionUseCase } from '@/src/application/use-cases/get-next-question';
-import { GetUserStatsUseCase } from '@/src/application/use-cases/get-user-stats';
 import { SaveExamDraftAnswerUseCase } from '@/src/application/use-cases/save-exam-draft-answer';
 import { SubmitAnswerUseCase } from '@/src/application/use-cases/submit-answer';
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error(
-    'DATABASE_URL is required to run integration tests. Did you forget to set it?',
-  );
-}
+import {
+  cleanupAfterEach,
+  closeConnection,
+  createAuthGateway,
+  createCleanupState,
+  createIntegrationDb,
+  createQuestion,
+  createTag,
+  createUser,
+} from './helpers';
 
-const allowNonLocal = process.env.ALLOW_NON_LOCAL_DATABASE_URL === 'true';
-const host = new URL(databaseUrl).hostname;
-const isLocalhost =
-  host === 'localhost' || host === '127.0.0.1' || host === '::1';
-if (!allowNonLocal && !isLocalhost) {
-  throw new Error(
-    `Refusing to run integration tests against non-local DATABASE_URL host "${host}". Set DATABASE_URL to a local Postgres (recommended: Docker) or export ALLOW_NON_LOCAL_DATABASE_URL=true to override.`,
-  );
-}
-
-const sql = postgres(databaseUrl, { max: 1 });
-const db = drizzle(sql, { schema });
-
-type CleanupState = {
-  userIds: string[];
-  questionIds: string[];
-  tagIds: string[];
-  clerkEventIds: string[];
-  deletedClerkUserIds: string[];
-  stripeEventIds: string[];
-};
-
-const cleanup: CleanupState = {
-  userIds: [],
-  questionIds: [],
-  tagIds: [],
-  clerkEventIds: [],
-  deletedClerkUserIds: [],
-  stripeEventIds: [],
-};
-
-async function createUser(): Promise<{
-  id: string;
-  email: string;
-  clerkUserId: string;
-}> {
-  const email = `it-${randomUUID()}@example.com`;
-  const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
-
-  const [row] = await db
-    .insert(schema.users)
-    .values({ email, clerkUserId })
-    .returning({
-      id: schema.users.id,
-      email: schema.users.email,
-      clerkUserId: schema.users.clerkUserId,
-    });
-
-  if (!row) {
-    throw new Error('Failed to insert user');
-  }
-
-  cleanup.userIds.push(row.id);
-  return row;
-}
-
-function createAuthGateway(input: { id: string; email: string }) {
-  return new FakeAuthGateway({
-    id: input.id,
-    email: input.email,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
-}
-
-async function createTag(input: {
-  slug: string;
-  kind: schema.TagKind;
-  name?: string;
-}): Promise<{ id: string; slug: string }> {
-  const [row] = await db
-    .insert(schema.tags)
-    .values({
-      slug: input.slug,
-      kind: input.kind,
-      name: input.name ?? input.slug,
-    })
-    .returning({ id: schema.tags.id, slug: schema.tags.slug });
-
-  if (!row) {
-    throw new Error('Failed to insert tag');
-  }
-
-  cleanup.tagIds.push(row.id);
-  return row;
-}
-
-async function createQuestion(input: {
-  slug: string;
-  status: schema.QuestionStatus;
-  difficulty: schema.QuestionDifficulty;
-  tagIds?: readonly string[];
-}): Promise<{ id: string; correctChoiceId: string; wrongChoiceId: string }> {
-  const createdAt = new Date();
-  const updatedAt = createdAt;
-
-  const [question] = await db
-    .insert(schema.questions)
-    .values({
-      slug: input.slug,
-      stemMd: '# Stem',
-      explanationMd: '# Explanation',
-      status: input.status,
-      difficulty: input.difficulty,
-      createdAt,
-      updatedAt,
-    })
-    .returning({ id: schema.questions.id });
-
-  if (!question) {
-    throw new Error('Failed to insert question');
-  }
-
-  cleanup.questionIds.push(question.id);
-
-  const [choiceA, choiceB] = await db
-    .insert(schema.choices)
-    .values([
-      {
-        questionId: question.id,
-        label: 'A',
-        textMd: 'Choice A',
-        isCorrect: false,
-        sortOrder: 1,
-      },
-      {
-        questionId: question.id,
-        label: 'B',
-        textMd: 'Choice B',
-        isCorrect: true,
-        sortOrder: 2,
-      },
-    ])
-    .returning({ id: schema.choices.id });
-
-  if (!choiceA || !choiceB) {
-    throw new Error('Failed to insert choices');
-  }
-
-  if (input.tagIds && input.tagIds.length > 0) {
-    await db.insert(schema.questionTags).values(
-      input.tagIds.map((tagId) => ({
-        questionId: question.id,
-        tagId,
-      })),
-    );
-  }
-
-  return {
-    id: question.id,
-    wrongChoiceId: choiceA.id,
-    correctChoiceId: choiceB.id,
-  };
-}
+const { db, sql } = createIntegrationDb();
+const cleanup = createCleanupState();
 
 afterEach(async () => {
-  if (cleanup.clerkEventIds.length > 0) {
-    await db
-      .delete(schema.clerkEvents)
-      .where(inArray(schema.clerkEvents.id, cleanup.clerkEventIds));
-  }
-
-  if (cleanup.deletedClerkUserIds.length > 0) {
-    await db
-      .delete(schema.deletedClerkUsers)
-      .where(
-        inArray(
-          schema.deletedClerkUsers.clerkUserId,
-          cleanup.deletedClerkUserIds,
-        ),
-      );
-  }
-
-  if (cleanup.stripeEventIds.length > 0) {
-    await db
-      .delete(schema.stripeEvents)
-      .where(inArray(schema.stripeEvents.id, cleanup.stripeEventIds));
-  }
-
-  if (cleanup.userIds.length > 0) {
-    await db
-      .delete(schema.users)
-      .where(inArray(schema.users.id, cleanup.userIds));
-  }
-
-  if (cleanup.questionIds.length > 0) {
-    await db
-      .delete(schema.questions)
-      .where(inArray(schema.questions.id, cleanup.questionIds));
-  }
-
-  if (cleanup.tagIds.length > 0) {
-    await db.delete(schema.tags).where(inArray(schema.tags.id, cleanup.tagIds));
-  }
-
-  cleanup.userIds.length = 0;
-  cleanup.questionIds.length = 0;
-  cleanup.tagIds.length = 0;
-  cleanup.clerkEventIds.length = 0;
-  cleanup.deletedClerkUserIds.length = 0;
-  cleanup.stripeEventIds.length = 0;
+  await cleanupAfterEach(db, cleanup);
 });
-
 afterAll(async () => {
-  await sql.end({ timeout: 5 });
+  await closeConnection(sql);
 });
+
+class FailingRecordPracticeSessionRepository extends DrizzlePracticeSessionRepository {
+  override async recordQuestionAnswer(): Promise<never> {
+    throw new Error('Simulated recordQuestionAnswer failure');
+  }
+}
 
 describe('question controllers (integration)', () => {
   it('fetches a question and inserts an attempts row when submitting an answer', async () => {
-    const user = await createUser();
-    const tag = await createTag({
+    const user = await createUser(db, cleanup);
+    const tag = await createTag(db, cleanup, {
       slug: `it-tag-${randomUUID()}`,
       kind: 'topic',
     });
-    const question = await createQuestion({
+    const question = await createQuestion(db, cleanup, {
       slug: `it-q-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -344,8 +134,8 @@ describe('question controllers (integration)', () => {
   });
 
   it('BUG-237 rejects active-exam submitAnswer without attempt or latest-state writes', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-submit-exam-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -452,13 +242,13 @@ describe('question controllers (integration)', () => {
   });
 
   it('BUG-237 keeps draft finalization from colliding with a prior active-exam submitAnswer', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-submit-exam-finalize-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
     });
-    const omittedQuestion = await createQuestion({
+    const omittedQuestion = await createQuestion(db, cleanup, {
       slug: `it-submit-exam-omitted-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -574,8 +364,8 @@ describe('question controllers (integration)', () => {
   });
 
   it('rolls back the attempt insert when recordQuestionAnswer fails inside a transaction', async () => {
-    const user = await createUser();
-    const question = await createQuestion({
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
       slug: `it-txn-rollback-${randomUUID()}`,
       status: 'published',
       difficulty: 'easy',
@@ -605,18 +395,17 @@ describe('question controllers (integration)', () => {
       }) => Promise<T>,
     ): Promise<T> =>
       db.transaction(async (tx) => {
-        const txSessions = new DrizzlePracticeSessionRepository(
+        const txSessions = new FailingRecordPracticeSessionRepository(
           tx,
           () => new Date(),
         );
+        // Only the write is faulted; inherited reads must still use this transaction.
+        expect(
+          await txSessions.findByIdAndUserId(session.id, user.id),
+        ).toMatchObject({ id: session.id });
         return fn({
           attempts: new DrizzleAttemptRepository(tx),
-          sessions: {
-            ...txSessions,
-            recordQuestionAnswer: async () => {
-              throw new Error('Simulated recordQuestionAnswer failure');
-            },
-          } as unknown as DrizzlePracticeSessionRepository,
+          sessions: txSessions,
         });
       });
 
@@ -646,700 +435,5 @@ describe('question controllers (integration)', () => {
       (a) => a.questionId === question.id,
     );
     expect(attemptsForQuestion).toHaveLength(0);
-  });
-});
-
-describe('stats controller (integration)', () => {
-  it('aggregates totals, windows, streak, and recent activity from real DB', async () => {
-    const user = await createUser();
-    const slugA = `it-stats-a-${randomUUID()}`;
-    const questionA = await createQuestion({
-      slug: slugA,
-      status: 'published',
-      difficulty: 'easy',
-    });
-    const slugB = `it-stats-b-${randomUUID()}`;
-    const questionB = await createQuestion({
-      slug: slugB,
-      status: 'published',
-      difficulty: 'easy',
-    });
-    const slugC = `it-stats-omitted-${randomUUID()}`;
-    const questionC = await createQuestion({
-      slug: slugC,
-      status: 'published',
-      difficulty: 'easy',
-    });
-
-    const now = new Date('2026-02-10T12:00:00.000Z');
-
-    await db.insert(schema.attempts).values([
-      {
-        userId: user.id,
-        questionId: questionA.id,
-        practiceSessionId: null,
-        selectedChoiceId: questionA.correctChoiceId,
-        isCorrect: true,
-        timeSpentSeconds: 10,
-        answeredAt: new Date('2026-02-02T12:00:00.000Z'),
-      },
-      {
-        userId: user.id,
-        questionId: questionB.id,
-        practiceSessionId: null,
-        selectedChoiceId: questionB.wrongChoiceId,
-        isCorrect: false,
-        timeSpentSeconds: 10,
-        answeredAt: new Date('2026-02-09T12:00:00.000Z'),
-      },
-      {
-        userId: user.id,
-        questionId: questionA.id,
-        practiceSessionId: null,
-        selectedChoiceId: questionA.correctChoiceId,
-        isCorrect: true,
-        timeSpentSeconds: 10,
-        answeredAt: new Date('2026-02-10T11:00:00.000Z'),
-      },
-      {
-        userId: user.id,
-        questionId: questionC.id,
-        practiceSessionId: null,
-        selectedChoiceId: null,
-        isOmitted: true,
-        isCorrect: false,
-        timeSpentSeconds: 0,
-        answeredAt: new Date('2026-02-10T10:00:00.000Z'),
-      },
-    ]);
-
-    const authGateway = createAuthGateway(user);
-
-    const result = await getUserStats(
-      {},
-      {
-        authGateway,
-        checkEntitlementUseCase: {
-          execute: async () => ({ isEntitled: true }),
-        },
-        getUserStatsUseCase: new GetUserStatsUseCase(
-          new DrizzleAttemptRepository(db),
-          new DrizzleQuestionRepository(db),
-          new FakeLogger(),
-          () => now,
-        ),
-      },
-    );
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-
-    expect(result.data.totalAnswered).toBe(4);
-    expect(result.data.accuracyOverall).toBeCloseTo(2 / 4);
-    expect(result.data.answeredLast7Days).toBe(3);
-    expect(result.data.accuracyLast7Days).toBeCloseTo(1 / 3);
-    expect(result.data.currentStreakDays).toBe(2);
-    expect(result.data.recentActivity[0]).toMatchObject({
-      isAvailable: true,
-      slug: slugA,
-      isCorrect: true,
-    });
-    const slugs = result.data.recentActivity.flatMap((row) =>
-      row.isAvailable ? [row.slug] : [],
-    );
-    expect(slugs).toContain(slugB);
-    expect(slugs).toContain(slugC);
-    expect(result.data.recentActivity).toContainEqual(
-      expect.objectContaining({
-        isAvailable: true,
-        slug: slugC,
-        isCorrect: false,
-      }),
-    );
-  });
-});
-
-describe('review controller (integration)', () => {
-  it('lists attempted questions (incorrect) and marks unavailable ones when they are no longer published', async () => {
-    const user = await createUser();
-    const incorrectSlug = `it-incorrect-${randomUUID()}`;
-    const incorrectQuestion = await createQuestion({
-      slug: incorrectSlug,
-      status: 'published',
-      difficulty: 'easy',
-    });
-    const recoveredQuestion = await createQuestion({
-      slug: `it-recovered-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'easy',
-    });
-
-    const t1 = new Date('2026-02-01T00:00:00.000Z');
-    const t2 = new Date('2026-02-02T00:00:00.000Z');
-    const t3 = new Date('2026-02-03T00:00:00.000Z');
-    const t4 = new Date('2026-02-04T00:00:00.000Z');
-
-    await db.insert(schema.attempts).values([
-      {
-        userId: user.id,
-        questionId: incorrectQuestion.id,
-        practiceSessionId: null,
-        selectedChoiceId: incorrectQuestion.correctChoiceId,
-        isCorrect: true,
-        timeSpentSeconds: 1,
-        answeredAt: t1,
-      },
-      {
-        userId: user.id,
-        questionId: incorrectQuestion.id,
-        practiceSessionId: null,
-        selectedChoiceId: incorrectQuestion.wrongChoiceId,
-        isCorrect: false,
-        timeSpentSeconds: 1,
-        answeredAt: t2,
-      },
-      {
-        userId: user.id,
-        questionId: recoveredQuestion.id,
-        practiceSessionId: null,
-        selectedChoiceId: recoveredQuestion.wrongChoiceId,
-        isCorrect: false,
-        timeSpentSeconds: 1,
-        answeredAt: t3,
-      },
-      {
-        userId: user.id,
-        questionId: recoveredQuestion.id,
-        practiceSessionId: null,
-        selectedChoiceId: recoveredQuestion.correctChoiceId,
-        isCorrect: true,
-        timeSpentSeconds: 1,
-        answeredAt: t4,
-      },
-    ]);
-
-    const logger = new FakeLogger();
-
-    const authGateway = createAuthGateway(user);
-
-    const deps = {
-      authGateway,
-      checkEntitlementUseCase: {
-        execute: async () => ({ isEntitled: true }),
-      },
-      getAttemptedQuestionsUseCase: new GetAttemptedQuestionsUseCase(
-        new DrizzleAttemptRepository(db),
-        new DrizzleQuestionRepository(db),
-        logger,
-      ),
-    };
-
-    const first = await getAttemptedQuestions(
-      { limit: 10, offset: 0, result: 'incorrect' },
-      deps,
-    );
-
-    expect(first.ok).toBe(true);
-    if (!first.ok) return;
-
-    expect(first.data.rows).toHaveLength(1);
-    expect(first.data.rows[0]).toMatchObject({
-      isAvailable: true,
-      questionId: incorrectQuestion.id,
-      isCorrect: false,
-      sessionId: null,
-      sessionMode: null,
-      slug: incorrectSlug,
-      stemMd: '# Stem',
-      difficulty: 'easy',
-      tagSlugs: [],
-      lastAnsweredAt: t2.toISOString(),
-    });
-    expect(logger.warnCalls).toHaveLength(0);
-
-    await db
-      .update(schema.questions)
-      .set({ status: 'draft' })
-      .where(eq(schema.questions.id, incorrectQuestion.id));
-
-    const second = await getAttemptedQuestions(
-      { limit: 10, offset: 0, result: 'incorrect' },
-      deps,
-    );
-
-    expect(second.ok).toBe(true);
-    if (!second.ok) return;
-
-    expect(second.data.rows).toEqual([
-      {
-        isAvailable: false,
-        questionId: incorrectQuestion.id,
-        isCorrect: false,
-        sessionId: null,
-        sessionMode: null,
-        lastAnsweredAt: t2.toISOString(),
-      },
-    ]);
-    expect(logger.warnCalls).toEqual([
-      {
-        context: { questionId: incorrectQuestion.id },
-        msg: 'Attempted question references missing question',
-      },
-    ]);
-  });
-
-  it('applies incorrect-first ordering before pagination across pages', async () => {
-    const user = await createUser();
-    const correctRecent = await createQuestion({
-      slug: `it-correct-recent-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'easy',
-    });
-    const incorrectRecent = await createQuestion({
-      slug: `it-incorrect-recent-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'easy',
-    });
-    const correctOld = await createQuestion({
-      slug: `it-correct-old-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'easy',
-    });
-    const incorrectOld = await createQuestion({
-      slug: `it-incorrect-old-${randomUUID()}`,
-      status: 'published',
-      difficulty: 'easy',
-    });
-
-    await db.insert(schema.attempts).values([
-      {
-        userId: user.id,
-        questionId: correctRecent.id,
-        practiceSessionId: null,
-        selectedChoiceId: correctRecent.correctChoiceId,
-        isCorrect: true,
-        timeSpentSeconds: 1,
-        answeredAt: new Date('2026-02-04T00:00:00.000Z'),
-      },
-      {
-        userId: user.id,
-        questionId: incorrectRecent.id,
-        practiceSessionId: null,
-        selectedChoiceId: incorrectRecent.wrongChoiceId,
-        isCorrect: false,
-        timeSpentSeconds: 1,
-        answeredAt: new Date('2026-02-03T00:00:00.000Z'),
-      },
-      {
-        userId: user.id,
-        questionId: correctOld.id,
-        practiceSessionId: null,
-        selectedChoiceId: correctOld.correctChoiceId,
-        isCorrect: true,
-        timeSpentSeconds: 1,
-        answeredAt: new Date('2026-02-02T00:00:00.000Z'),
-      },
-      {
-        userId: user.id,
-        questionId: incorrectOld.id,
-        practiceSessionId: null,
-        selectedChoiceId: incorrectOld.wrongChoiceId,
-        isCorrect: false,
-        timeSpentSeconds: 1,
-        answeredAt: new Date('2026-02-01T00:00:00.000Z'),
-      },
-    ]);
-
-    const authGateway = createAuthGateway(user);
-
-    const deps = {
-      authGateway,
-      checkEntitlementUseCase: {
-        execute: async () => ({ isEntitled: true }),
-      },
-      getAttemptedQuestionsUseCase: new GetAttemptedQuestionsUseCase(
-        new DrizzleAttemptRepository(db),
-        new DrizzleQuestionRepository(db),
-        new FakeLogger(),
-      ),
-    };
-
-    const firstPage = await getAttemptedQuestions(
-      { limit: 2, offset: 0, sort: 'incorrect-first' },
-      deps,
-    );
-
-    expect(firstPage.ok).toBe(true);
-    if (!firstPage.ok) return;
-
-    expect(firstPage.data.rows.map((row) => row.questionId)).toEqual([
-      incorrectRecent.id,
-      incorrectOld.id,
-    ]);
-    expect(firstPage.data.rows.every((row) => row.isCorrect === false)).toBe(
-      true,
-    );
-
-    const secondPage = await getAttemptedQuestions(
-      { limit: 2, offset: 2, sort: 'incorrect-first' },
-      deps,
-    );
-
-    expect(secondPage.ok).toBe(true);
-    if (!secondPage.ok) return;
-
-    expect(secondPage.data.rows.map((row) => row.questionId)).toEqual([
-      correctRecent.id,
-      correctOld.id,
-    ]);
-    expect(secondPage.data.rows.every((row) => row.isCorrect === true)).toBe(
-      true,
-    );
-  });
-});
-
-describe('stripe webhook controller (integration)', () => {
-  it('persists subscription updates and marks the Stripe event as processed', async () => {
-    const user = await createUser();
-    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    cleanup.stripeEventIds.push(eventId);
-
-    const subscriptionUpdate = {
-      userId: user.id,
-      externalCustomerId: `cus_${randomUUID().replaceAll('-', '')}`,
-      externalSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
-      plan: 'monthly' as const,
-      status: 'active' as const,
-      currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-      cancelAtPeriodEnd: false,
-    };
-
-    const paymentGateway = new FakePaymentGateway({
-      externalCustomerId: 'cus_unused',
-      checkoutUrl: 'https://stripe.test/checkout',
-      portalUrl: 'https://stripe.test/portal',
-      webhookResult: {
-        eventId,
-        type: 'customer.subscription.updated',
-        subscriptionUpdate,
-      },
-    });
-
-    const priceIds = {
-      monthly: 'price_test_monthly',
-      annual: 'price_test_annual',
-    };
-
-    const input: StripeWebhookInput = { rawBody: 'raw', signature: 'sig_1' };
-    const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
-
-    await processStripeWebhook(
-      {
-        paymentGateway,
-        subscriptionVersions: new DrizzleSubscriptionRepository(db, priceIds),
-        logger: new FakeLogger(),
-        now: () => new Date(),
-        ...acknowledgment.webhook,
-        transaction: async (fn) =>
-          db.transaction(async (tx) =>
-            fn({
-              stripeEvents: new DrizzleStripeEventRepository(tx),
-              subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
-              stripeCustomers: new DrizzleStripeCustomerRepository(tx),
-              trialPaymentMethodSetupOperations:
-                new DrizzleTrialPaymentMethodSetupOperationRepository(tx),
-              renewalConsentRecords: new DrizzleRenewalConsentRecordRepository(
-                tx,
-              ),
-              ...acknowledgment.transaction,
-            }),
-          ),
-      },
-      input,
-    );
-
-    const stripeCustomers = new DrizzleStripeCustomerRepository(db);
-    await expect(stripeCustomers.findByUserId(user.id)).resolves.toEqual({
-      stripeCustomerId: subscriptionUpdate.externalCustomerId,
-    });
-
-    const subscriptions = new DrizzleSubscriptionRepository(db, priceIds);
-    const subscription = await subscriptions.findByUserId(user.id);
-    expect(subscription).toMatchObject({
-      userId: user.id,
-      plan: 'monthly',
-      status: 'active',
-      cancelAtPeriodEnd: false,
-    });
-    expect(subscription?.currentPeriodEnd.toISOString()).toBe(
-      subscriptionUpdate.currentPeriodEnd.toISOString(),
-    );
-
-    const event = await db.query.stripeEvents.findFirst({
-      where: eq(schema.stripeEvents.id, eventId),
-    });
-    expect(event).toMatchObject({
-      id: eventId,
-      type: 'customer.subscription.updated',
-      error: null,
-    });
-    expect(event?.processedAt).toBeInstanceOf(Date);
-  });
-});
-
-describe('clerk webhook controller (integration)', () => {
-  it('deletes the user and cascades stripe data on user.deleted', async () => {
-    const user = await createUser();
-    const stripeCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
-    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
-
-    await db.insert(schema.stripeCustomers).values({
-      userId: user.id,
-      stripeCustomerId,
-    });
-
-    await db.insert(schema.stripeSubscriptions).values({
-      userId: user.id,
-      stripeSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
-      status: 'active',
-      priceId: 'price_test_monthly',
-      currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-    });
-
-    const deleteStripeCustomer = vi.fn(async () => undefined);
-    const userRepository = new DrizzleUserRepository(db);
-    const clerkEventRepository = new DrizzleClerkEventRepository(db);
-    const deletedClerkUserRepository = new DrizzleDeletedClerkUserRepository(
-      db,
-    );
-    const pendingStripeCustomerCleanupRepository =
-      new DrizzlePendingStripeCustomerCleanupRepository(db);
-    const stripeCustomerRepository = new DrizzleStripeCustomerRepository(db);
-
-    const deps = {
-      transaction: async <T>(
-        fn: (tx: {
-          clerkEvents: DrizzleClerkEventRepository;
-          deletedClerkUsers: DrizzleDeletedClerkUserRepository;
-          pendingStripeCustomerCleanups: DrizzlePendingStripeCustomerCleanupRepository;
-          userRepository: DrizzleUserRepository;
-          stripeCustomerRepository: DrizzleStripeCustomerRepository;
-        }) => Promise<T>,
-      ) =>
-        db.transaction(async (tx) =>
-          fn({
-            clerkEvents: new DrizzleClerkEventRepository(tx),
-            deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
-            pendingStripeCustomerCleanups:
-              new DrizzlePendingStripeCustomerCleanupRepository(tx),
-            userRepository: new DrizzleUserRepository(tx),
-            stripeCustomerRepository: new DrizzleStripeCustomerRepository(tx),
-          }),
-        ),
-      deleteStripeCustomer,
-      getClerkUserById: async () => null,
-      logger: new FakeLogger(),
-    };
-
-    const event: ClerkWebhookEvent = {
-      eventId,
-      type: 'user.deleted',
-      data: { id: user.clerkUserId },
-    };
-
-    cleanup.clerkEventIds.push(eventId);
-    cleanup.deletedClerkUserIds.push(user.clerkUserId);
-    await processClerkWebhook(deps, event);
-
-    expect(deleteStripeCustomer).toHaveBeenCalledTimes(1);
-    expect(deleteStripeCustomer).toHaveBeenCalledWith(stripeCustomerId);
-
-    await expect(
-      userRepository.findByClerkId(user.clerkUserId),
-    ).resolves.toBeNull();
-    await expect(
-      deletedClerkUserRepository.exists(user.clerkUserId),
-    ).resolves.toBe(true);
-    await expect(clerkEventRepository.peek(eventId)).resolves.toMatchObject({
-      processedAt: expect.any(Date),
-      error: null,
-    });
-    await expect(
-      pendingStripeCustomerCleanupRepository.findByEventId(eventId),
-    ).resolves.toBeNull();
-    await expect(
-      stripeCustomerRepository.findByUserId(user.id),
-    ).resolves.toBeNull();
-    await expect(
-      db.query.stripeSubscriptions.findFirst({
-        where: eq(schema.stripeSubscriptions.userId, user.id),
-      }),
-    ).resolves.toBeUndefined();
-  });
-
-  it('retries a pending Stripe customer cleanup after the local delete already committed', async () => {
-    const user = await createUser();
-    const stripeCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
-    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
-
-    await db.insert(schema.stripeCustomers).values({
-      userId: user.id,
-      stripeCustomerId,
-    });
-
-    const clerkEventRepository = new DrizzleClerkEventRepository(db);
-    const deletedClerkUserRepository = new DrizzleDeletedClerkUserRepository(
-      db,
-    );
-    const pendingStripeCustomerCleanupRepository =
-      new DrizzlePendingStripeCustomerCleanupRepository(db);
-    const userRepository = new DrizzleUserRepository(db);
-
-    let shouldFailCustomerDelete = true;
-    const deleteStripeCustomer = vi.fn(async () => {
-      if (shouldFailCustomerDelete) {
-        throw new Error('stripe customer delete failed');
-      }
-    });
-
-    const deps = {
-      transaction: async <T>(
-        fn: (tx: {
-          clerkEvents: DrizzleClerkEventRepository;
-          deletedClerkUsers: DrizzleDeletedClerkUserRepository;
-          pendingStripeCustomerCleanups: DrizzlePendingStripeCustomerCleanupRepository;
-          userRepository: DrizzleUserRepository;
-          stripeCustomerRepository: DrizzleStripeCustomerRepository;
-        }) => Promise<T>,
-      ) =>
-        db.transaction(async (tx) =>
-          fn({
-            clerkEvents: new DrizzleClerkEventRepository(tx),
-            deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
-            pendingStripeCustomerCleanups:
-              new DrizzlePendingStripeCustomerCleanupRepository(tx),
-            userRepository: new DrizzleUserRepository(tx),
-            stripeCustomerRepository: new DrizzleStripeCustomerRepository(tx),
-          }),
-        ),
-      deleteStripeCustomer,
-      getClerkUserById: async () => null,
-      logger: new FakeLogger(),
-    };
-
-    const event: ClerkWebhookEvent = {
-      eventId,
-      type: 'user.deleted',
-      data: { id: user.clerkUserId },
-    };
-
-    cleanup.clerkEventIds.push(eventId);
-    cleanup.deletedClerkUserIds.push(user.clerkUserId);
-
-    await expect(processClerkWebhook(deps, event)).rejects.toThrow(
-      'stripe customer delete failed',
-    );
-
-    await expect(
-      userRepository.findByClerkId(user.clerkUserId),
-    ).resolves.toBeNull();
-    await expect(
-      deletedClerkUserRepository.exists(user.clerkUserId),
-    ).resolves.toBe(true);
-    await expect(
-      pendingStripeCustomerCleanupRepository.findByEventId(eventId),
-    ).resolves.toEqual({ stripeCustomerId });
-    const storedEvent = await clerkEventRepository.peek(eventId);
-    expect(storedEvent).toMatchObject({
-      processedAt: null,
-      error: expect.any(String),
-    });
-    expect(JSON.parse(storedEvent?.error ?? '{}')).toEqual({ name: 'Error' });
-    expect(storedEvent?.error).not.toContain('stripe customer delete failed');
-
-    shouldFailCustomerDelete = false;
-    await expect(processClerkWebhook(deps, event)).resolves.toBeUndefined();
-
-    expect(deleteStripeCustomer).toHaveBeenCalledTimes(2);
-    await expect(
-      pendingStripeCustomerCleanupRepository.findByEventId(eventId),
-    ).resolves.toBeNull();
-    await expect(clerkEventRepository.peek(eventId)).resolves.toMatchObject({
-      processedAt: expect.any(Date),
-      error: null,
-    });
-  });
-
-  it('ignores replayed user.updated deliveries after user.deleted', async () => {
-    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
-    const updatedEventId = `evt_${randomUUID().replaceAll('-', '')}`;
-    const deletedEventId = `evt_${randomUUID().replaceAll('-', '')}`;
-
-    cleanup.clerkEventIds.push(updatedEventId, deletedEventId);
-    cleanup.deletedClerkUserIds.push(clerkUserId);
-
-    const userRepository = new DrizzleUserRepository(db);
-    const deletedClerkUserRepository = new DrizzleDeletedClerkUserRepository(
-      db,
-    );
-
-    const deps = {
-      transaction: async <T>(
-        fn: (tx: {
-          clerkEvents: DrizzleClerkEventRepository;
-          deletedClerkUsers: DrizzleDeletedClerkUserRepository;
-          pendingStripeCustomerCleanups: DrizzlePendingStripeCustomerCleanupRepository;
-          userRepository: DrizzleUserRepository;
-          stripeCustomerRepository: DrizzleStripeCustomerRepository;
-        }) => Promise<T>,
-      ) =>
-        db.transaction(async (tx) =>
-          fn({
-            clerkEvents: new DrizzleClerkEventRepository(tx),
-            deletedClerkUsers: new DrizzleDeletedClerkUserRepository(tx),
-            pendingStripeCustomerCleanups:
-              new DrizzlePendingStripeCustomerCleanupRepository(tx),
-            userRepository: new DrizzleUserRepository(tx),
-            stripeCustomerRepository: new DrizzleStripeCustomerRepository(tx),
-          }),
-        ),
-      deleteStripeCustomer: vi.fn(async () => undefined),
-      getClerkUserById: async () => null,
-      logger: new FakeLogger(),
-    };
-
-    const updatedEvent: ClerkWebhookEvent = {
-      eventId: updatedEventId,
-      type: 'user.updated',
-      data: {
-        id: clerkUserId,
-        primary_email_address_id: 'email_1',
-        updated_at: 1769904000000,
-        email_addresses: [
-          { id: 'email_1', email_address: `it-${randomUUID()}@example.com` },
-        ],
-      },
-    };
-
-    await processClerkWebhook(deps, updatedEvent);
-
-    const createdUser = await userRepository.findByClerkId(clerkUserId);
-    expect(createdUser).toMatchObject({ email: expect.stringContaining('@') });
-    if (createdUser) {
-      cleanup.userIds.push(createdUser.id);
-    }
-
-    await processClerkWebhook(deps, {
-      eventId: deletedEventId,
-      type: 'user.deleted',
-      data: { id: clerkUserId },
-    });
-
-    await processClerkWebhook(deps, updatedEvent);
-
-    await expect(userRepository.findByClerkId(clerkUserId)).resolves.toBeNull();
-    await expect(deletedClerkUserRepository.exists(clerkUserId)).resolves.toBe(
-      true,
-    );
   });
 });
