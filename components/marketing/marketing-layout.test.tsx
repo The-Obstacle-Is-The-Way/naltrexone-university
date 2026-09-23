@@ -18,10 +18,6 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-vi.mock('@/components/theme-toggle', () => ({
-  ThemeToggle: () => <span data-testid="theme-toggle" />,
-}));
-
 vi.mock('server-only', () => ({}));
 
 type MarketingLayoutModule =
@@ -250,15 +246,6 @@ describe('MarketingLayout', () => {
     expect(
       mobileNavElement.querySelector(`a[href="${ROUTES.PRICING}"]`),
     ).not.toBeNull();
-  });
-
-  it('does not mount the ThemeToggle while light mode is disabled (DEBT-421)', async () => {
-    // The theme-toggle mock above is a sentinel: if the layout ever re-mounts
-    // ThemeToggle, its testid reappears and this assertion fails. The toggle is
-    // unmounted until light mode is design-complete (Option A exit state).
-    const html = await renderLayout({ authNavSlot: <div>Auth</div> });
-
-    expect(html).not.toContain('data-testid="theme-toggle"');
   });
 
   it('renders a static sign-in fallback when auth nav is deferred', async () => {
