@@ -522,4 +522,81 @@ describe('BUG-195: Question candidate status filters exclude active-exam attempt
       }),
     ).resolves.toBe(2);
   });
+
+  it('keeps active tutor-session attempts visible to unanswered/incorrect status filters', async () => {
+    // The retired unit suite only checked that the generated SQL referenced the
+    // `mode` and `ended_at` columns; this twin proves the `mode != 'exam'` branch
+    // against real Postgres: an attempt inside a still-active tutor session is
+    // visible immediately, unlike an active exam attempt.
+    const user = await createUser(db, cleanup);
+    const questionRepo = new DrizzleQuestionRepository(db);
+    const sessionRepo = new DrizzlePracticeSessionRepository(db);
+    const attemptRepo = new DrizzleAttemptRepository(db);
+    const tag = await createTag(db, cleanup, {
+      slug: `it-bug195-tutor-tag-${randomUUID()}`,
+      kind: 'topic',
+    });
+
+    const qTutorIncorrect = await createQuestion(db, cleanup, {
+      slug: `it-bug195-tutor-incorrect-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      createdAt: new Date('2026-01-05T00:00:00.000Z'),
+      tagIds: [tag.id],
+    });
+    const qNeverAnswered = await createQuestion(db, cleanup, {
+      slug: `it-bug195-tutor-never-answered-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+      createdAt: new Date('2026-01-06T00:00:00.000Z'),
+      tagIds: [tag.id],
+    });
+
+    const tutorSession = await sessionRepo.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [qTutorIncorrect.id],
+      },
+    });
+    await attemptRepo.insert({
+      userId: user.id,
+      questionId: qTutorIncorrect.id,
+      practiceSessionId: tutorSession.id,
+      outcome: answeredOutcome(qTutorIncorrect.incorrectChoiceId),
+      isCorrect: false,
+      timeSpentSeconds: 0,
+    });
+
+    const filters = { tagSlugs: [tag.slug], difficulties: [], userId: user.id };
+
+    await expect(
+      questionRepo.listPublishedCandidateIds({
+        ...filters,
+        statuses: ['unanswered'],
+      }),
+    ).resolves.toEqual([qNeverAnswered.id]);
+    await expect(
+      questionRepo.countPublishedCandidateIds({
+        ...filters,
+        statuses: ['unanswered'],
+      }),
+    ).resolves.toBe(1);
+
+    await expect(
+      questionRepo.listPublishedCandidateIds({
+        ...filters,
+        statuses: ['incorrect'],
+      }),
+    ).resolves.toEqual([qTutorIncorrect.id]);
+    await expect(
+      questionRepo.countPublishedCandidateIds({
+        ...filters,
+        statuses: ['incorrect'],
+      }),
+    ).resolves.toBe(1);
+  });
 });
