@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
 import type { LoadState } from '@/app/(app)/app/practice/practice-page-logic';
+import { useIsMounted } from '@/lib/use-is-mounted';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import type { NextQuestion } from '@/src/application/use-cases/get-next-question';
@@ -54,10 +55,9 @@ const reportContext = {
     action: 'toggleMarkForReview',
   },
 };
-const isMounted = () => true;
-
 function renderMarkHook(request: SetPracticeSessionQuestionMarkFn) {
   return renderHook(() => {
+    const isMounted = useIsMounted();
     const [loadState, setLoadState] = useState<LoadState>({ status: 'ready' });
     const [sessionInfo, setSessionInfo] =
       useState<NextQuestion['session']>(initialSessionInfo);
