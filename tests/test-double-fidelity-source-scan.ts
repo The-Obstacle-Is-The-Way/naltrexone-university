@@ -51,6 +51,10 @@ const TEST_FILE_GLOBS = [
   '**/*.test.tsx',
   '**/*.spec.ts',
   '**/*.spec.tsx',
+  '**/*.setup.ts',
+  '**/*.setup.tsx',
+  '**/*-test-helpers.ts',
+  '**/*-test-helpers.tsx',
 ];
 
 const TEST_FILE_IGNORE_GLOBS = [
