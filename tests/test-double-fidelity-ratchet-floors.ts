@@ -56,6 +56,8 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // behavior to real Postgres, retiring its 20 casts.
 // 2026-09-23 UTC: The idempotency-key unit suite keeps only its no-query limit
 // guard and moves every behavior case to real Postgres, retiring its 19 casts.
+// 2026-09-23 UTC: The bookmark unit suite keeps one impossible-driver-response
+// case and moves membership, upsert, removal and ordering to real Postgres.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -89,7 +91,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
-  ['src/adapters/repositories/drizzle-bookmark-repository.test.ts', 9],
   ['src/adapters/repositories/drizzle-clerk-event-repository.test.ts', 6],
   [
     'src/adapters/repositories/drizzle-deleted-clerk-user-repository.test.ts',
