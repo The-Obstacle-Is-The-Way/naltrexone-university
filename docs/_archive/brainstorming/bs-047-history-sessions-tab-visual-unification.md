@@ -1,5 +1,7 @@
 # BS-047: History Page — Visual Unification with Dashboard & Practice
 
+**Status:** Resolved — Promoted to [DEBT-301](../debt/debt-301-history-page-visual-unification.md), resolved 2026-03-10. Gaps were converted into an implementation-ready History visual unification spec covering both Sessions and Questions tabs, with Gap 3 (`no wrapping Card`) explicitly decided as out of scope. Register resolution date: 2026-03-10. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-10
 **Triggered by:** Visual audit of the History page (both tabs) after dashboard (DEBT-289) and practice (DEBT-290/291/292/294/295/297) received tonal fill, borderless nested surfaces, and chevron disclosure patterns. The History page is now the most visually dated page in the app.
 **Scope:** Identify every visual gap between the History page and the established patterns on Dashboard and Practice, so the fixes can be specced and implemented sequentially.

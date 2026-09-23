@@ -1,5 +1,7 @@
 # BS-043: Question Flow Typography and Feedback Visual Unification
 
+**Status:** Resolved — Promoted to [DEBT-282](../debt/debt-282-feedback-visual-unification.md). Resolved by PR #179. Option B implemented: feedback badges, typography, layout, and hierarchy unified with choice buttons. Register disposition date: not recorded. Receipt: [PR #179](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/179); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-05
 **Triggered by:** Visual review of question stem, choice buttons, and feedback cards showing inconsistent text sizing and badge treatment across the pre/post-submission states.
 **Scope:** Audit and plan for typography consistency and visual unification across the question flow — from question stem through choice buttons to feedback cards.

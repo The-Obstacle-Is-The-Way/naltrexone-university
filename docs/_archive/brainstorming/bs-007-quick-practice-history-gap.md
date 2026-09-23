@@ -1,5 +1,7 @@
 # Quick Practice History Gap — Brainstorming
 
+**Status:** Resolved — Specced as SPEC-022 (implemented). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-10
 **Triggered by:** Visual review of Dashboard, Practice, and History pages after SPEC-021
 **Scope:** Correctly-answered Quick Practice (ad-hoc) questions are invisible in the entire review flow

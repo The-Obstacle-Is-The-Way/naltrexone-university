@@ -1,5 +1,7 @@
 # AUDIT-011: Error Observability & Defensive Coding Sweep
 
+**Status:** Resolved — Resolved 2026-03-19. BUG-201, BUG-202 resolved; BUG-199 invalidated; DEBT-286 resolved (PR #218). Register resolution date: 2026-03-19. Receipt: [PR #218](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/218); [register disposition](../../audits/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-07
 **Scope:** Primary production sweep (`src/`, `app/`) with targeted spot checks in adjacent runtime files — error handling, type safety, array access, concurrency
 **Method:** Initial multi-agent sweep plus post-commit tracer-bullet verification against the live codebase

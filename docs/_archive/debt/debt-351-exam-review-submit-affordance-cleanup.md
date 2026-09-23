@@ -1,5 +1,7 @@
 # DEBT-351: Review & Submit Affordance Cleanup — Whole-Card Rows, No Default “Not Marked” Noise
 
+**Status:** Resolved — Register date: 2026-04-07. Receipt: [PR #268](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/268); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-04-07
 **Source:** [BS-061 Review Surface Divergence Audit](../brainstorming/bs-061-review-surface-divergence-audit.md)

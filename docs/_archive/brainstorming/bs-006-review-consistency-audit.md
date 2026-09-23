@@ -1,5 +1,7 @@
 # Cross-Page Review Consistency Audit
 
+**Status:** Resolved — Resolved by SPEC-021; follow-up enhancements deferred. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-09
 **Scope:** Every place in the app where a user views/reviews questions they've interacted with
 **Relationship:** Parallel rail to `practice-ux-audit.md` — this documents the consistency problems; Practice page fixes come first.

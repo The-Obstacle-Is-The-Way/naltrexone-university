@@ -1,5 +1,7 @@
 # BS-021: Marketing/App Shell Divergence and Accessibility Parity
 
+**Status:** Resolved — Specced as SPEC-031 (Implemented). All actionable items resolved: nested main, section labels, casing. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-17
 **Triggered by:** Side-by-side audit of logged-out landing page vs logged-in dashboard shell
 **Scope:** Structural, semantic, navigation, and shell-level parity policy between marketing and authenticated app shells (separate from BS-020 card contrast root cause)

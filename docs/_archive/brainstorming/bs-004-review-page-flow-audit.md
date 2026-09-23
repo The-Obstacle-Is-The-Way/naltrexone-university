@@ -1,6 +1,8 @@
 # UI/UX Assessment: Review Functionality Distribution
 
-> **Status:** Brainstorming
+**Status:** Resolved — Fully resolved by SPEC-021. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
+*Status as filed (superseded 2026-09-22):* Brainstorming
 > **Date:** 2026-02-10
 > **Source:** Claude in Chrome extension audit of production app + codebase analysis
 > **Scope:** Dashboard, Practice, Review page flows and information architecture

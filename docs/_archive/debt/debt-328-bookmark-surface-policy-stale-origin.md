@@ -1,5 +1,7 @@
 # DEBT-328: Bookmark Surface Policy — Stale Summary-Review Origin Wording (Resolved)
 
+**Status:** Resolved — Register date: 2026-03-19. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P4
 **Created:** 2026-03-19
 **Resolved:** 2026-03-19

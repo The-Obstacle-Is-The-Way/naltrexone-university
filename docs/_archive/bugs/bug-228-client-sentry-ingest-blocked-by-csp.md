@@ -1,6 +1,8 @@
 # BUG-228: Client Sentry Ingest Is Blocked by Clerk-Owned CSP
 
-**Status:** Open — Confirmed active in Production
+**Status:** Resolved — Register archival date: 2026-03-18. Receipt: register row only; [register disposition](../../bugs/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
+*Status as filed (superseded 2026-09-22):* Open — Confirmed active in Production
 **Priority:** P1
 **Date:** 2026-03-16
 **Confirmed:** 2026-03-17

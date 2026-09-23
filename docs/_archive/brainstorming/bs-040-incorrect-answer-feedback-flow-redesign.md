@@ -1,5 +1,7 @@
 # BS-040: Incorrect Answer Feedback Flow Redesign
 
+**Status:** Resolved — Promoted to [DEBT-274](../debt/debt-274-incorrect-answer-feedback-flow-reorder.md). Implemented in PR #171. Register disposition date: not recorded. Receipt: [PR #171](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/171); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-04
 **Triggered by:** Manual review of correct vs incorrect answer display flow in Quick Practice
 **Scope:** The Feedback component renders identical section ordering for correct and incorrect answers — the incorrect flow is cognitively jarring because it doesn't prioritize explaining the user's mistake

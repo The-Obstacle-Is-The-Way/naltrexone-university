@@ -1,5 +1,7 @@
 # BS-011: History Review Wiring Bug & Choice Label Randomization Desync
 
+**Status:** Resolved — Bug A: Specced as SPEC-026 (Implemented); Bug B: Specced as SPEC-025 (Implemented). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-11
 **Last Verified:** 2026-02-12 (code audit)
 **Triggered by:** Systematic Chrome browser audit of all review mode entry points and feedback rendering

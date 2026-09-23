@@ -1,5 +1,7 @@
 # BS-028: History Page UX Audit — Scoring, Navigation, and Interaction Gaps
 
+**Status:** Resolved — Resolved by SPEC-038 (Implemented). Re-verified by Playwright audit (`17/17` passing on 2026-02-23). Register verification date: 2026-02-23. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-21
 **Last Re-Validated:** 2026-02-22
 **Triggered by:** Dogfooding + comprehensive browser agent audit of the History page (both Sessions and Questions tabs)

@@ -1,5 +1,7 @@
 # DEBT-323: Agent-Browser Ref-Click Failures with React Components
 
+**Status:** Resolved — Documented upstream limitation, not a product-code repair. Register date: 2026-03-18. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-18
 **Triggered by:** BS-057 agent-browser auth investigation. After solving Clerk auth via `--profile`, live testing revealed that `agent-browser click @ref` is unreliable across parts of the React practice flow.
 **Scope:** agent-browser interaction reliability with React 19 + Radix UI components in practice flows. This is not a confirmed user-facing application bug; it is a tooling limitation unless reproduced in a real browser.

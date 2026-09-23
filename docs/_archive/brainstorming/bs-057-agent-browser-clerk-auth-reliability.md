@@ -1,5 +1,7 @@
 # BS-057: Agent-Browser Clerk Authentication Reliability
 
+**Status:** Resolved — Resolved 2026-03-18. Known limitation permanently documented in `docs/tooling/agent-browser.md`. `--profile` is the verified working path. Register resolution date: 2026-03-18. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-18
 **Triggered by:** DEBT-322 audit agent failed to visually verify exam UX issues because it could not authenticate through Clerk in agent-browser. This is a recurring pattern — every agent tasked with browser-based verification hits the same Clerk auth wall.
 **Scope:** Native `agent-browser` auth/state reuse cannot reliably access Clerk-protected `/app/*` routes. The verified working path is a persistent `--profile` with one-time human login.

@@ -1,5 +1,7 @@
 # DEBT-329: Question Navigator Colorblind Accessibility
 
+**Status:** Resolved — Register date: 2026-03-23. Receipt: [PR #249](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/249); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-03-19
 **Updated:** 2026-03-23 (Chrome agent visual audit, adversarial review, final implementation reconciliation, and DEBT-329 closure)

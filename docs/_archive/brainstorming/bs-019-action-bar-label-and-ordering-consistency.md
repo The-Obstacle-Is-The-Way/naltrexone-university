@@ -1,5 +1,7 @@
 # BS-019: Action Bar Label and Ordering Consistency
 
+**Status:** Resolved — Specced as SPEC-032 (Implemented). Core inconsistencies 1-5 resolved; residual items (bookmark in history, mobile layout) deferred. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-17
 **Triggered by:** Live UI audit — visual comparison of bottom action bars across Practice, Quick Practice, and review views
 **Scope:** Bottom action bar label, ordering, boundary behavior, and navigation consistency across Practice, Quick Practice, and review origins (`history`, `practice`, `dashboard`, `bookmarks`)

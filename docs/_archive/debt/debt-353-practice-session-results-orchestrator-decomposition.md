@@ -1,5 +1,7 @@
 # DEBT-353: Practice Session Results Orchestrator Decomposition — Split DEBT-350 Continuity Logic Into Focused Hook/View Units
 
+**Status:** Resolved — Register date: 2026-04-09. Receipt: [PR #270](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/270); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-04-08
 **Source:** DEBT-350 implementation review

@@ -1,8 +1,10 @@
 # Audit Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-21 — archive convention and index-link maintenance only; the prior audit cycle remains dated 2026-06-13.
+**Last Updated:** 2026-09-22 — archived-disposition metadata only; the archive convention/index-link maintenance remains dated 2026-09-21, and the prior audit cycle remains dated 2026-06-13.
 **Next ID:** AUDIT-013
+
+**2026-09-22 metadata maintenance:** five archived reports gain their existing register dispositions. Audit dates are labeled as audit dates, not inferred fix or deployment dates; AUDIT-011 uses its explicitly recorded March 19 resolution date. AUDIT-009 records a completed zero-finding report, not a newly shipped runtime fix. No audit is rerun by this maintenance. [Evidence and sample](../debt/assets/archive-metadata-2026-09-22/verification.md#brainstorming-and-audit-follow-through).
 
 ---
 

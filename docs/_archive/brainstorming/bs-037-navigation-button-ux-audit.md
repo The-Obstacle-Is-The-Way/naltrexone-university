@@ -1,5 +1,7 @@
 # BS-037: Navigation Button UX Audit — Arrows, Visibility, and Contextual Hiding
 
+**Status:** Resolved — Fully resolved. All arrow glyphs removed from nav labels (4 source files), boundary controls changed from disabled to hidden with `<span />` spacers (PR #158). 11 deep tracers verified across all modes. Register disposition date: not recorded. Receipt: [PR #158](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/158); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-01
 **Code-truth validation:** 2026-03-02
 **Triggered by:** Visual review of Quick Practice and Tutor Session screens

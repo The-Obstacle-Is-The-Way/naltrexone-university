@@ -1,5 +1,7 @@
 # DEBT-332: Security Posture Audit — CSP Findings, Health Endpoint Disclosure, Hardening Opportunities
 
+**Status:** Resolved — Audit fixes plus the documented report-only CSP and no-RLS accepted-risk decisions. Register date: 2026-06-15. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P2
 **Created:** 2026-03-21
 **Source:** Deep security audit prompted by Delve/Supabase public-bucket incident

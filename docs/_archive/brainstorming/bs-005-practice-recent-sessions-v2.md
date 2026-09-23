@@ -1,5 +1,7 @@
 # Practice "Recent Sessions" Panel — Iteration 2
 
+**Status:** Superseded — Superseded by SPEC-021 (panel removed). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-09
 **Scope:** ONLY the "Recent sessions" panel on `/app/practice` and the shared `SessionBreakdownList` component.
 **Prerequisite:** PR #83 (Phase 1-4 from `practice-ux-audit.md`) must be merged first.

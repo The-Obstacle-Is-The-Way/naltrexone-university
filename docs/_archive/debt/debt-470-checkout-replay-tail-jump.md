@@ -3,7 +3,11 @@
 **Status:** Resolved — archived 2026-09-18 after current-code, regression-contract, and main-ancestry verification; historical receipts below are unchanged.
 **Priority:** P3
 **Date:** 2026-08-17
-**Resolved:** 2026-08-17
+**Resolved:** 2026-08-18 (merge receipt; implementation was recorded on August 17)
+
+*Resolved date as filed (superseded 2026-09-22):* 2026-08-17.
+
+**Release receipt (backfilled 2026-09-22):** [PR #804](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/804) merged as `9aae44374abbff663990ac02f8f0eaa7a2628824` at `2026-08-18T14:56:38Z`. That merge is an ancestor of current `origin/main`; `git --no-pager merge-base --is-ancestor 9aae4437 origin/main` exits 0. This brings the existing [September archive verification](../../debt/assets/archive-2026-09-18/verification.md) into the record. August 17 below remains the implementation/red-green date, not the merge date.
 **Source:** DEBT-466 residual-cap execution audit: a local campaign burst retained 11 completed `(user, monthly, trial:7)` Checkout Sessions and exhausted `SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT = 10`.
 
 ---

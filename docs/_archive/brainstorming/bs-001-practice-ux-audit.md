@@ -1,5 +1,7 @@
 # Practice UX Audit & Brainstorming
 
+**Status:** Resolved — All 8 problems resolved; led to SPEC-019. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-09
 **Triggered by:** Visual review of live app screenshots
 **Scope:** Practice page and Quick Practice — scoped to these two pages only. Review/Dashboard/Bookmarks consistency is a separate follow-up.

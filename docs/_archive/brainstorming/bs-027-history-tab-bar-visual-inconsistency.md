@@ -1,7 +1,9 @@
 # BS-027: History Tab Bar Visual Inconsistency - Verified Audit and Fix Direction
 
 **Date:** 2026-02-21  
-**Status:** Re-audited against current codebase + cross-checked against browser-agent feedback  
+**Status:** Resolved — Resolved by SPEC-037 (Implemented). Shared style constants unify SegmentedControl and HistoryTabBar. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
+*Status as filed (superseded 2026-09-22):* Re-audited against current codebase + cross-checked against browser-agent feedback
 **Scope:** History tab switcher drift, related toggle consumers, token usage, row/card consistency, and recommended integration path  
 **Related files:**  
 - `app/(app)/app/history/components/history-tab-bar.tsx`  

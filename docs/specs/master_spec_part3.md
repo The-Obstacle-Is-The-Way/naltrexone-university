@@ -12,7 +12,7 @@
 
 ## Implementation authority
 
-The [content runbook](../dev/question-content-pipeline.md), [schema](../../lib/content/schemas.ts), [seed parser](../../scripts/seed/question-parser.ts) and [synchronizer](../../scripts/seed/question-syncer.ts) own the current content contract. Normalized practice state is defined in [db/schema.ts](../../db/schema.ts); do not restore the former Part 3 `questionStates`-in-`params_json` implementation instruction.
+The [content runbook](../practice-engine/content-pipeline.md), [schema](../../lib/content/schemas.ts), [seed parser](../../scripts/seed/question-parser.ts) and [synchronizer](../../scripts/seed/question-syncer.ts) own the current content contract. Normalized practice state is defined in [db/schema.ts](../../db/schema.ts); do not restore the former Part 3 `questionStates`-in-`params_json` implementation instruction.
 
 ## Other parts
 
