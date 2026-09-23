@@ -8,12 +8,12 @@ const { fixtureSession1Id } = vi.hoisted(() => ({
   fixtureSession1Id: crypto.randomUUID(),
 }));
 
-const { reportClientErrorMock } = vi.hoisted(() => ({
-  reportClientErrorMock: vi.fn(),
+const { captureExceptionMock } = vi.hoisted(() => ({
+  captureExceptionMock: vi.fn(),
 }));
 
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
+vi.mock('@sentry/nextjs', () => ({
+  captureException: captureExceptionMock,
 }));
 
 import {
@@ -27,7 +27,7 @@ import {
 describe('practice-page-incomplete-session', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    reportClientErrorMock.mockReset();
+    captureExceptionMock.mockReset();
   });
 
   describe('createIncompleteSessionEffect', () => {
@@ -78,9 +78,11 @@ describe('practice-page-incomplete-session', () => {
       expect(setStatus).toHaveBeenLastCalledWith('error');
       expect(setError).toHaveBeenLastCalledWith('boom');
       expect(setSession).not.toHaveBeenCalled();
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'PracticePageIncompleteSession',
-        action: 'loadIncompleteSession',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'PracticePageIncompleteSession',
+          action: 'loadIncompleteSession',
+        },
       });
     });
 
@@ -261,7 +263,7 @@ describe('practice-page-incomplete-session', () => {
         error: null,
         session: { sessionId: fixtureSession1Id },
       });
-      expect(reportClientErrorMock).not.toHaveBeenCalled();
+      expect(captureExceptionMock).not.toHaveBeenCalled();
     });
   });
 
@@ -455,9 +457,11 @@ describe('practice-page-incomplete-session', () => {
       // preserved key is the only handle to a possibly-committed abandon.
       expect(rotateIdempotencyKey).not.toHaveBeenCalled();
       expect(setSession).not.toHaveBeenCalled();
-      expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-        component: 'PracticePageIncompleteSession',
-        action: 'abandonIncompleteSession',
+      expect(captureExceptionMock).toHaveBeenCalledWith(error, {
+        tags: {
+          component: 'PracticePageIncompleteSession',
+          action: 'abandonIncompleteSession',
+        },
       });
     });
 

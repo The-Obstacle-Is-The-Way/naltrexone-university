@@ -27,6 +27,8 @@
 // and its canned payment gateway: 214 casts / 43 files, 44 port doubles / 17.
 // 2026-09-23 UTC: Four customer fault/request-shape cases reuse the typed
 // maintained client: 210 casts / 43 files. Three Search behavior cases remain.
+// 2026-09-23 UTC: Four logic suites exercise the real client reporter and
+// fake only Sentry: 18 own-code module factories remain across nine files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -35,12 +37,8 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
     'app/(app)/app/practice/[sessionId]/hooks/use-practice-session-mark-for-review.test.tsx',
     1,
   ],
-  ['app/(app)/app/practice/[sessionId]/practice-session-page-logic.test.ts', 1],
-  ['app/(app)/app/practice/fire-and-forget.test.ts', 1],
   ['app/(app)/app/practice/practice-page-client.test.tsx', 2],
-  ['app/(app)/app/practice/practice-page-incomplete-session.test.ts', 1],
   ['app/(app)/app/practice/quick/quick-practice-client.test.tsx', 1],
-  ['app/(app)/app/questions/[slug]/question-page-logic.test.ts', 1],
   ['app/api/cron/reconcile-stripe-subscriptions/route.test.ts', 4],
   ['app/layout.test.tsx', 2],
   ['components/auth-nav.test.tsx', 5],
