@@ -1,5 +1,7 @@
 # Spec Alignment Audit (2026-02-06)
 
+**Status:** Resolved — All items reclassified/resolved. Register audit date: 2026-02-06. Receipt: register row only; [register disposition](../../audits/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Scope:** Active bugs/debt for practice/review/dashboard flows, validated against current implementation and `master_spec.md`.
 
 ---

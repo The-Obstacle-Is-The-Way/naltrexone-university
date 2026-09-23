@@ -1,5 +1,7 @@
 # BS-032: Stripe Checkout → Clerk Session Friction — Post-Payment Auth Bounce
 
+**Status:** Resolved — Promoted to DEBT-249; core auth-boundary hardening implemented, rollout instrumentation tracked in SPEC-016. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-25
 **Triggered by:** Manual testing of new-user signup flow on Vercel Preview (`dev` branch)
 **Scope:** After Apple OAuth signup → Stripe checkout → payment, user is redirected to Clerk sign-in instead of dashboard

@@ -1,5 +1,7 @@
 # BS-045: Choice Button Dark Mode Fill and Border Refinement
 
+**Status:** Resolved — Resolved by [DEBT-280](../debt/debt-280-choice-button-dark-mode-surface-refinement.md) (PR #175). Approach A implemented: rest fill removed, hover/selected steps widened, segmented control border softened. Register disposition date: not recorded. Receipt: [PR #175](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/175); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-06
 **Triggered by:** Per-page visual audit of Quick Practice in dark mode ([page audit](../../frontend/pages/quick-practice.md)). The DEBT-279 remediation made choice buttons WCAG compliant but aesthetically heavy — gray fills look unnatural, borders are too prominent, and hover/selected states are nearly indistinguishable.
 **Scope:** Refine the dark-mode visual treatment of choice buttons: remove the resting fill, keep the border WCAG-compliant, and widen the fill steps so hover and selected states are clearly perceptible.

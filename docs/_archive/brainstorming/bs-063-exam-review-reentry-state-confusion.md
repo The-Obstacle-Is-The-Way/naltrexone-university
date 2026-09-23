@@ -1,5 +1,7 @@
 # BS-063: Exam Review Re-Entry State Confusion
 
+**Status:** Decomposed — Archived 2026-04-17. Fully promoted to [DEBT-364](../debt/debt-364-post-exam-review-reentry-cursor-persistence.md) after independent code trace confirmed the cursor-persistence root cause; DEBT-364 resolved 2026-04-21 via PR #282. Register archival date: 2026-04-17. Receipt: [PR #282](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/282); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-04-11
 **Triggered by:** User walkthrough of the exam flow end-to-end. After completing an exam, the initial post-exam review and the summary-launched re-entry review can expose different visible button states because they reopen the same review surface at different cursor positions. The user described it as "we're getting crossed here" and suspected the review state machine was mixing states.
 **Scope:** Audit the current Summary <-> Post-exam review loop inside `/app/practice/[sessionId]`, trace the actual cursor/label behavior through the shipped hooks, and document where the current implementation creates product confusion.

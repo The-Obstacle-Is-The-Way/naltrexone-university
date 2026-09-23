@@ -1,5 +1,7 @@
 # Review Mode Attempt Identity Gap — Brainstorming
 
+**Status:** Resolved — Specced as SPEC-027 (Implemented). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-11
 **Last Verified:** 2026-02-12 (code audit)
 **Triggered by:** Post-SPEC-023 external review audit of review mode behavior

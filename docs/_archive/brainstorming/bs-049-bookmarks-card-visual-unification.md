@@ -1,5 +1,7 @@
 # BS-049: Bookmarks Card Visual Unification
 
+**Status:** Resolved — Resolved by [DEBT-307](../debt/debt-307-bookmarks-row-visual-unification.md) on 2026-03-12. Bookmarks now use page-background tonal rows with delegated pointer activation, outline `Remove`, and no attempt-result metadata expansion in this pass. Register resolution date: 2026-03-12. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-12
 **Triggered by:** Visual comparison of Bookmarks page against recently unified History Questions tab and Dashboard Recent Activity
 **Scope:** Bookmark cards use bordered `<Card>` with elevated styling, redundant "Review" button, and title link hover. That bordered-card treatment now looks visually dated next to the borderless tonal-fill row patterns used by History Questions and Dashboard Recent Activity.

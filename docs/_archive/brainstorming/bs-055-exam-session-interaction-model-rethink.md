@@ -1,5 +1,7 @@
 # BS-055: Exam Session Interaction Model — Submit Redundancy and Button Bar Inconsistency
 
+**Status:** Resolved — Resolved 2026-03-19. Implemented via DEBT-321 (full overhaul, 8 stages) and DEBT-322 (UX polish, PR #235). Interaction contracts documented in `docs/practice-engine/interaction-contracts.md`. Register resolution date: 2026-03-19. Receipt: [PR #235](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/235); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-17
 **Triggered by:** Manual walkthrough of exam mode. The select → submit → auto-advance flow requires too many clicks when no feedback is shown, and the bottom action bar mutates unpredictably between questions.
 **Scope:** Exam mode's interaction model (click count, button presence, and navigation consistency) needs a first-principles rethink relative to tutor mode.

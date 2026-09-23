@@ -1,5 +1,7 @@
 # BS-038: Practice Engine Question Ordering Audit and Simplification Plan
 
+**Status:** Resolved — Promoted to [DEBT-268](../debt/debt-268-quick-practice-ordering-policy-alignment.md). Ordering policy codified in [ordering-policy.md](../../practice-engine/ordering-policy.md). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-02  
 **Triggered by:** Quick Practice feels clustered and "not random"  
 **Scope:** End-to-end ordering behavior across session, quick-practice, and review flows  

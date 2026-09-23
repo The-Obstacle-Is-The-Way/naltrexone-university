@@ -1,5 +1,7 @@
 # BS-013: Status Filter UX Confusion (Multi-Select OR Logic Is Not Obvious)
 
+**Status:** Resolved — Resolved by SPEC-028 (Implemented). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-12
 **Triggered by:** Product owner confusion during manual testing — selecting multiple status chips feels contradictory ("How can a question be both unanswered AND incorrect?") because the UI implies AND but the code implements OR
 **Scope:** The status filter chip UI on Practice and Quick Practice doesn't communicate its multi-select OR semantics, creating a confusing UX

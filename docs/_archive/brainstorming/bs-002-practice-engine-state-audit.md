@@ -1,5 +1,7 @@
 # Practice Engine State Management Audit
 
+**Status:** Resolved — All critical findings fixed; informed SPEC-020. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-09
 **Scope:** Complete practice engine — server to client, tutor and exam modes, Quick Practice and Session Practice
 **Triggered by:** Manual testing revealing inconsistencies in answer persistence, navigation, and session lifecycle

@@ -1,5 +1,7 @@
 # BS-054: Session End UX -- Button Simplification and Ended-Session Reopen Bugs
 
+**Status:** Resolved — Resolved by PR #229 on 2026-03-17. Session summaries now use the simplified CTA set, ended-session URLs bootstrap directly into durable summaries, stale double-end flows recover idempotently, and the verification matrix in BS-054 passed before archival. Register resolution date: 2026-03-17. Receipt: [PR #229](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/229); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-16
 **Triggered by:** Manual walkthrough of tutor/exam session-end flow; browser back from "View in History" lands on a stale session runner, and re-ending can produce "Practice session already ended"
 **Scope:** Session summary action buttons are redundant/misdirected, and reopening an ended session URL exposes broken runner states instead of the durable summary

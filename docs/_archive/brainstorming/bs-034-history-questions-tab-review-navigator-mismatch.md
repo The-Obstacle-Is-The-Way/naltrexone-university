@@ -1,5 +1,7 @@
 # BS-034: History Questions Tab — Ad-Hoc Questions Incorrectly Grouped into Question Navigator
 
+**Status:** Resolved — Fully resolved. Core bug fixed as BUG-152 (PR #141). Residual label fixed as BUG-153 (PR #143). Position A (ad-hoc only) decided and implemented. Register disposition date: not recorded. Receipt: [PR #141](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/141), [PR #143](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/143); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-25
 **Archived:** 2026-02-26
 **Outcome:** Fully resolved. Core bug fixed as BUG-152 (PR #141). All 4 open questions resolved. Position A (ad-hoc only) decided and implemented. Residual "Try Again" label bug tracked in BS-033 and fixed as BUG-153 (PR #143). Related UX inconsistencies (subtitle, back link) deferred to future polish.

@@ -1,5 +1,7 @@
 # BS-024: Tag Taxonomy Cleanup — Unify Pipeline and Eliminate Drift
 
+**Status:** Resolved — Specced as SPEC-033 (Implemented). All 7 problems resolved: domain removed, pipeline hardened, taxonomy canonical. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-17  
 **Last Re-Verified:** 2026-02-17  
 **Triggered by:** Practice filter audit surfaced overlap, rogue tags, and fragile domain assignment  

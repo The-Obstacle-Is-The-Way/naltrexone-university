@@ -1,5 +1,7 @@
 # BS-051: Bookmark Pill Hover Pattern Investigation — Remove Button Border Affordance
 
+**Status:** Decided — Reference doc for BS-050; primary value consumed by DEBT-309 (PR #209). Icon replacement tracked in BS-052. Register disposition date: not recorded. Receipt: [PR #209](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/209); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-13
 **Triggered by:** While investigating the practice chip hover problem (BS-050), we noticed that the Bookmarks page Remove pill already has a superior hover pattern: the pill border brightens on hover (`dark:hover:border-foreground/70`) and its fill also deepens, producing a much clearer signal than the practice chips. This doc investigates that pattern and asks whether (a) it should be the standard for pill-shaped interactive elements and (b) what changes are planned for the bookmark pill itself.
 **Scope:** Investigate the bookmark Remove pill's hover behavior, document it as a reference pattern, and note planned near-term changes to the bookmark pill (icon replacement).

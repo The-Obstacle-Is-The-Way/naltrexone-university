@@ -1,5 +1,7 @@
 # BS-036: History Page Breakdown UX Redesign
 
+**Status:** Resolved — Fully resolved by DEBT-265 (2026-03-01). Implemented across history sessions + shared breakdown list with unit/browser coverage and full pre-PR gate green. Register resolution date: 2026-03-01. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-01
 **Triggered by:** Visual review of the history page breakdown expansion — janky inner-card layering, redundant "Review session" button, and overall lack of visual elegance
 **Scope:** Redesign the expanded breakdown area in history session cards to eliminate visual layering issues, remove redundant navigation, and establish a clean information hierarchy

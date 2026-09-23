@@ -1,5 +1,7 @@
 # BS-014: Practice Starter — Question Count UX Polish
 
+**Status:** Deferred — Core fix shipped (GitHub #82). 4 optional polish decisions remain documented if future tuning desired. Register disposition date: not recorded. Receipt: [closed issue #82](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/issues/82); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-13
 **Last Updated:** 2026-02-24
 **Triggered by:** UX review of practice session starter question count behavior

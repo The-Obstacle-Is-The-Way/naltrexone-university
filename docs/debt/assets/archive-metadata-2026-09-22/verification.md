@@ -88,3 +88,33 @@ All nine prior status values are preserved as filed, including BUG-234's already
 | Debt-index Latest / Earlier | New maintenance entry; prior #1008 entry | Exactly one Latest stanza; seven active debts and Next Debt ID unchanged. |
 
 **Prior step receipt:** #1008 merged into dev as `199de7d851720c464a2130ea121f399edeb28f94`, after exact-head approval `5285399945` on `81ff932e`, zero threads and CI `35800189131` (5,669 unit, 411 browser, 349 integration plus six intentional skips, 52 E2E with no retry markers). It is not yet a production-promotion receipt; the register/guard milestone is still in progress.
+
+## Brainstorming and audit follow-through
+
+**2026-09-22 metadata maintenance:** 48 brainstorming records and five audits gain explicit document-level dispositions. The original proposed 46-record brainstorming census omitted BS-027 and BS-057. A further qualification to the initial field-only census above: BS-057's “verified locally” field is a tool subsection's historical finding, not an incorrect document status. It remains untouched, as do that file's other tool statuses; a new top-level field records the register's disposition. Only BS-004's Brainstorming and BS-027's Re-audited document statuses are superseded and retained as filed.
+
+This is backfill of existing dispositions, not 53 new closures. BS-005 stays Superseded, BS-014 is Deferred with its four optional polish decisions, BS-051 is a consumed decision with icon replacement still tracked in live BS-052, and BS-061/063 are Decomposed into their named children. Other scoped completions retain their explicit tails. No optional implementation is inferred from archival location. No historical body or tool-observation status is rewritten.
+
+Thirty-seven records have no disposition date in their register row; their new metadata says **not recorded**. Other dates are explicitly labeled resolution, archival, verification or audit dates according to their actual source. In particular, BS-033's March 24 date belongs to child DEBT-335, not the parent's component work; AUDIT-011's March 7 date is the audit date, while March 19 is its recorded resolution. BS-063 was archived April 17 and records its child resolution as April 21; #282's merge timestamp is April 20 UTC, not either of those other events.
+
+Fourteen existing source PR citations were checked through GitHub and their merge commits are ancestors of baseline main `66172ad6`: #92, #141–143, #158, #170–171, #175, #179, #209, #218, #229, #235 and #282. Issue #82 is a **closed issue**, not PR #82. The register's BS-008 “implementing” wording is stale: #92 merged as `672b504f` on February 12; a dated correction follows the original row text. No PR is inferred for a record whose row only cites a spec, debt or historical outcome.
+
+| Sampled edit | Source and date treatment | Receipt / preservation check |
+| --- | --- | --- |
+| BS-004 | Fully resolved by SPEC-021; no row date | Register row only; original Brainstorming status retained as filed. |
+| BS-005 | Superseded by SPEC-021 after panel removal | Superseded, not falsely labeled an implemented iteration. No date invented. |
+| BS-008 | SPEC-023 / #92 | Existing citation checked: merged February 12; dated row correction preserves old wording. |
+| BS-011 | Two own-ID rows, Bug A and Bug B | Both SPEC-026 and SPEC-025 outcomes retained; a related-link row is not substituted. |
+| BS-014 | Core shipped, four optional polish questions remain | Deferred; issue #82 is closed but is not an implementation PR receipt. |
+| BS-027 | SPEC-037 implemented; no row date | Old Re-audited value preserved; no filing date relabeled as resolution. |
+| BS-033 | Component work #141–143; residual DEBT-335/336/337 | March 24 is not copied into the parent's disposition-date field. |
+| BS-051 | Reference decision consumed by DEBT-309 / #209 | Decided, with icon replacement still in BS-052; not a new UI claim. |
+| BS-057 | Documented limitation / March 18 | Register row only; all tool-level observation statuses preserved exactly. |
+| BS-061 | Archived April 17, decomposed to 350/351/352 | Direction A remains explicitly tracked in live BS-059. |
+| BS-063 | Archived April 17; child resolved April 21 / #282 | These dates are not conflated with #282's April 20 merge. |
+| AUDIT-003 | February 2 audit; recommendations addressed | Register row only; audit date is not a newly proven fix date. |
+| AUDIT-008 | March 2 audit date; findings resolved | Original March 1 filing and March 2 re-verification text unchanged. |
+| AUDIT-009 | March 9 zero-finding report | Register row only; preserve the September 21 correction, do not claim new fixes. |
+| AUDIT-011 | Explicit March 19 resolution / #218 | Audit date March 7 and #218 merge March 15 remain distinct events. |
+
+**Prior step receipt:** #1009 merged to dev as `9e7ec7bb4f516050426268dab741646385283342`, after normal exact-head approval `5285566639` on `ed82d1fb`, zero threads and CI `35802099282` (5,669 unit, 411 browser, 349 integration plus six intentional skips, 52 E2E; zero failure/retry/flaky markers). This is source-PR evidence, not yet milestone promotion. Seven active debt records remain.

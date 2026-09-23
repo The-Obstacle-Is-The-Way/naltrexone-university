@@ -1,5 +1,7 @@
 # BS-023: Try Again — State Consistency and Business Logic Gaps
 
+**Status:** Resolved — Specced as SPEC-034 (Implemented). Try Again removed from session review, kept in standalone contexts. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-17
 **Triggered by:** Suspicion that "Try Again" in review mode doesn't integrate consistently with session scoring, attempt history, or user progress tracking
 **Scope:** Does the Try Again feature produce coherent state transitions, or does it silently create orphaned attempts with no business logic impact?
