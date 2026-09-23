@@ -3,6 +3,7 @@ import { inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
+import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -114,6 +115,15 @@ export async function createUser(
 
   cleanup.userIds.push(row.id);
   return row;
+}
+
+export function createAuthGateway(input: { id: string; email: string }) {
+  return new FakeAuthGateway({
+    id: input.id,
+    email: input.email,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 }
 
 export async function createTag(

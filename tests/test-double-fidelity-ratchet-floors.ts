@@ -19,6 +19,8 @@
 // 225 enforced sites across 45 files.
 // 2026-09-23 UTC: The lost-session fixture uses public discard, not private
 // state access: 224 enforced sites across 44 files.
+// 2026-09-23 UTC: The transactional controller fault uses a real subclass,
+// not a prototype-dropping cast: 223 enforced sites across 43 files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -134,7 +136,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
     'tests/integration/bug-regression-practice-session-transaction-isolation.integration.test.ts',
     2,
   ],
-  ['tests/integration/controllers.integration.test.ts', 1],
 ]);
 
 export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
