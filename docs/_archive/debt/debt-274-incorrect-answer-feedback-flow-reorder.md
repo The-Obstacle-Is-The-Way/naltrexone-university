@@ -1,5 +1,7 @@
 # DEBT-274: Incorrect Answer Feedback Flow Reorder
 
+**Status:** Resolved — Register date: 2026-03-04. Receipt: [PR #171](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/171); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P2
 **Created:** 2026-03-04
 **Source:** [BS-040](../brainstorming/bs-040-incorrect-answer-feedback-flow-redesign.md)

@@ -1,5 +1,7 @@
 # DEBT-325: Post-Exam Review Unanswered Question Display
 
+**Status:** Resolved — Register date: 2026-03-20. Receipt: [PR #238](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/238); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P2
 **Created:** 2026-03-19
 **Source:** BS-058 post-implementation audit

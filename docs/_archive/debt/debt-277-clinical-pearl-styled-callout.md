@@ -1,5 +1,7 @@
 # DEBT-277: Clinical Pearl Styled Callout
 
+**Status:** Resolved — Register date: 2026-03-04. Receipt: [PR #173](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/173); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-03-04
 **Source:** [DEBT-275 F1](./debt-275-bs033-residual-open-items.md), [BS-041 §Deferred](../brainstorming/bs-041-feedback-display-content-vs-code-separation.md)

@@ -1,5 +1,7 @@
 # DEBT-318: Bookmark visible before feedback in tutor mode and quick practice
 
+**Status:** Resolved — Register date: 2026-03-23. Receipt: [PR #248](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/248); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-03-16
 **Related:** [BS-053](../brainstorming/bs-053-bookmark-vs-mark-for-review-collision.md), [Bookmark Surface Policy](../../frontend/bookmark-surface-policy.md), [Bookmarks Dossier](../../frontend/pages/bookmarks.md)

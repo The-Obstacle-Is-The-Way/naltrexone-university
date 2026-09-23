@@ -593,15 +593,20 @@ git stash -m "Preserving work from another session"
 
 ### GitHub Enforcement Versus Process
 
-The active `main-and-dev-protection` ruleset (17666822, verified 2026-09-20)
+The active `main-and-dev-protection` ruleset (17666822, reverified 2026-09-22)
 requires a PR, GitHub Actions' `test` check, an up-to-date branch, and resolved
 review threads on both `main` and `dev`. It blocks deletion and non-fast-forward
 updates, has no bypass actors, and requires zero approving reviews so the solo
-owner is not locked out (BUG-248).
+owner is not locked out (BUG-248). Since 2026-09-22 it also enforces
+`allowed_merge_methods: ["merge"]`; squash and rebase merges are not permitted.
+Its enabled `require_extra_approval_for_unattributed_changes` flag concerns
+unattributed Copilot-authored PRs, not ordinary agent commits. GitHub documents
+that it has no effect with zero required approvals ([ruleset reference](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#additional-approval-for-unattributed-copilot-pull-requests)).
 
 Feature PRs require CodeRabbit **APPROVED on the exact head**; promotions use
-the source-provenance rule below. Use of a **merge commit** remains mandatory.
-These are process checks. GitHub's green `CodeRabbit` status is not that verdict;
+the source-provenance rule below. Those approval/provenance requirements are
+process checks enforced by the repository merge tools; merge-only is also
+enforced by GitHub. GitHub's green `CodeRabbit` status is not that verdict;
 it can be green during a rate limit or with requested changes. Check actual
 reviews, all unresolved threads, and CI before merging. Never use `--admin`,
 Force Promote, or a ruleset bypass. Do not directly push synchronization commits

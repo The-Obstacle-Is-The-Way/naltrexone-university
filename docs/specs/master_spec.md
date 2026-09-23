@@ -1359,7 +1359,7 @@ The [content schema](../../lib/content/schemas.ts) and
 [MDX parser](../../lib/content/parse-mdx-question.ts) own the accepted format:
 question files under `content/questions/` have YAML frontmatter and ordered
 `## Stem` / `## Explanation` sections. Use the
-[content import runbook](../dev/question-content-pipeline.md) for authoring/import operations.
+[content import runbook](../practice-engine/content-pipeline.md) for authoring/import operations.
 
 ### 5.2 Frontmatter validation
 

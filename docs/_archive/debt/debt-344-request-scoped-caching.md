@@ -1,5 +1,7 @@
 # DEBT-344: Request-Scoped Auth/Entitlement Dedup + Static Read Caching
 
+**Status:** Resolved — Approved Tier 1 scope only; Tier 2 remains deferred under DEBT-349. Register date: 2026-04-03. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P2
 **Created:** 2026-04-02
 **Resolved:** 2026-04-03

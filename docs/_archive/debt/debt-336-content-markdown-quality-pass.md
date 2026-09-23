@@ -1,5 +1,7 @@
 # DEBT-336: Content Markdown Quality Pass — RESOLVED (Tabled)
 
+**Status:** Resolved — C1/C2/C4 fixed; C3 remains the recorded accepted cosmetic residual. Register date: 2026-03-29. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-03-24
 **Updated:** 2026-03-29

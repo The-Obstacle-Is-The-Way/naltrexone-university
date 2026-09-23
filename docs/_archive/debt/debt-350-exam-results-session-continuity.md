@@ -1,5 +1,7 @@
 # DEBT-350: Exam Results Continuity — Keep Summary Review Inside the Session Orchestrator
 
+**Status:** Resolved — Register date: 2026-04-08. Receipt: [PR #269](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/269); [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P2
 **Created:** 2026-04-07
 **Source:** [BS-061 Review Surface Divergence Audit](../brainstorming/bs-061-review-surface-divergence-audit.md)

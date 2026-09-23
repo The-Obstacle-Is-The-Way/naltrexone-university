@@ -1,5 +1,7 @@
 # DEBT-319: Lucide icon size shorthand drift in disclosure chevrons
 
+**Status:** Resolved — Register date: 2026-03-17. Receipt: register row only; [register disposition](../../debt/index.md#resolved). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Priority:** P3
 **Created:** 2026-03-17
 **Related:** [Frontend Standards](../../frontend/standards.md), [Pattern Registry](../../frontend/pattern-registry.md), [Practice Page](../../frontend/pages/practice.md)
