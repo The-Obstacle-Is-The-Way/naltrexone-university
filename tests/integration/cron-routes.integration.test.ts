@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
-import { createReconcileStripeSubscriptionsCronHandler } from '@/app/api/cron/reconcile-stripe-subscriptions/route';
+import {
+  createReconcileStripeSubscriptionsCronHandler,
+  GET as reconcileGet,
+  POST as reconcilePost,
+} from '@/app/api/cron/reconcile-stripe-subscriptions/route';
 import { createSendRenewalNoticesCronHandler } from '@/app/api/cron/send-renewal-notices/route';
 import * as schema from '@/db/schema';
 import { createContainer } from '@/lib/container';
@@ -24,6 +28,8 @@ const cleanup = createCleanupState();
 const renewalSubscriptionIds: string[] = [];
 const subscriptionsToRestore: ReconciliationRow[] = [];
 const stripeCustomerUserIdsToDelete: string[] = [];
+const clerkEventIdsToDelete: string[] = [];
+const deletedStripeCustomerIds: string[] = [];
 const CRON_SECRET = 'debt468-cron-integration-only';
 const MONTHLY_PRICE_ID = 'price_debt468_monthly';
 const ANNUAL_PRICE_ID = 'price_debt468_annual';
@@ -96,6 +102,16 @@ class ReconciliationStripeHttpClient extends Stripe.HttpClient {
     path: string,
     method: string,
   ): Promise<Stripe.HttpClientResponse> {
+    const deleteMatch = /^\/v1\/customers\/([^?/]+)$/.exec(path);
+    if (method === 'DELETE' && deleteMatch?.[1]) {
+      const stripeCustomerId = decodeURIComponent(deleteMatch[1]);
+      deletedStripeCustomerIds.push(stripeCustomerId);
+      return new ReconciliationStripeResponse({
+        id: stripeCustomerId,
+        object: 'customer',
+        deleted: true,
+      });
+    }
     if (method !== 'GET') {
       throw new Error(`Unexpected Stripe request: ${method} ${path}`);
     }
@@ -208,6 +224,14 @@ afterEach(async () => {
       );
   }
   stripeCustomerUserIdsToDelete.length = 0;
+  if (clerkEventIdsToDelete.length > 0) {
+    // pending_stripe_cancellations cascades from clerk_events.
+    await db
+      .delete(schema.clerkEvents)
+      .where(inArray(schema.clerkEvents.id, clerkEventIdsToDelete));
+  }
+  clerkEventIdsToDelete.length = 0;
+  deletedStripeCustomerIds.length = 0;
   if (renewalSubscriptionIds.length > 0) {
     await db
       .delete(schema.renewalNoticeDeliveries)
@@ -316,6 +340,86 @@ describe('reconcile Stripe subscriptions cron route', () => {
   });
 });
 
+describe('reconcile Stripe subscriptions cron route drain wiring', () => {
+  it('drains a stale pending customer cleanup through container wiring', async () => {
+    const reconciliationRows = await db
+      .select({
+        id: schema.stripeSubscriptions.id,
+        userId: schema.stripeSubscriptions.userId,
+        stripeSubscriptionId: schema.stripeSubscriptions.stripeSubscriptionId,
+        status: schema.stripeSubscriptions.status,
+        priceId: schema.stripeSubscriptions.priceId,
+        currentPeriodEnd: schema.stripeSubscriptions.currentPeriodEnd,
+        cancelAtPeriodEnd: schema.stripeSubscriptions.cancelAtPeriodEnd,
+        version: schema.stripeSubscriptions.version,
+        updatedAt: schema.stripeSubscriptions.updatedAt,
+        stripeCustomerId: schema.stripeCustomers.stripeCustomerId,
+      })
+      .from(schema.stripeSubscriptions)
+      .leftJoin(
+        schema.stripeCustomers,
+        eq(schema.stripeCustomers.userId, schema.stripeSubscriptions.userId),
+      );
+    subscriptionsToRestore.push(...reconciliationRows);
+    stripeCustomerUserIdsToDelete.push(
+      ...reconciliationRows
+        .filter((row) => row.stripeCustomerId === null)
+        .map((row) => row.userId),
+    );
+    const stripe = createReconciliationStripe({
+      rows: reconciliationRows,
+      targetSubscriptionId: 'sub_none',
+    });
+    const container = createContainer({
+      primitives: {
+        db,
+        env: createTestEnv(),
+        getStripe: () => stripe,
+        now: () => NOW,
+      },
+    });
+    const eventId = `evt_${randomUUID().replaceAll('-', '')}`;
+    const stripeCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+    clerkEventIdsToDelete.push(eventId);
+    await container.createClerkEventRepository().claim(eventId, 'user.deleted');
+    await db.insert(schema.pendingStripeCancellations).values({
+      eventId,
+      stripeCustomerId,
+      createdAt: new Date(Date.now() - DAY_MS),
+    });
+    cleanup.rateLimitKeys.push('cron:reconcile-stripe-subscriptions');
+    const handler = createReconcileStripeSubscriptionsCronHandler(
+      () => container,
+    );
+
+    const response = await handler(
+      authorizedRequest(
+        'http://localhost/api/cron/reconcile-stripe-subscriptions?dryRun=false&scope=all',
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as {
+      pendingStripeCustomerCleanups: { drained: number; failed: number };
+    };
+    expect(result.pendingStripeCustomerCleanups).toMatchObject({
+      drained: 1,
+      failed: 0,
+    });
+    expect(deletedStripeCustomerIds).toEqual([stripeCustomerId]);
+    await expect(
+      db.query.pendingStripeCancellations.findFirst({
+        where: eq(schema.pendingStripeCancellations.eventId, eventId),
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      db.query.clerkEvents.findFirst({
+        where: eq(schema.clerkEvents.id, eventId),
+      }),
+    ).resolves.toMatchObject({ processedAt: expect.any(Date), error: null });
+  });
+});
+
 describe('send renewal notices cron route', () => {
   it('runs the production URL through container wiring and persists deliveries', async () => {
     const user = await createUser(db, cleanup);
@@ -376,6 +480,25 @@ describe('send renewal notices cron route', () => {
     );
     expect(email.sendInputs).toHaveLength(2);
   });
+});
+
+describe('reconcile Stripe subscriptions route exports', () => {
+  it.each([
+    { method: 'GET', invoke: reconcileGet },
+    { method: 'POST', invoke: reconcilePost },
+  ])(
+    'rejects an unauthenticated $method through the exported handler',
+    async ({ invoke }) => {
+      const response = await invoke(
+        new Request(
+          'http://localhost/api/cron/reconcile-stripe-subscriptions?dryRun=false',
+        ),
+      );
+
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toEqual({ error: 'Unauthorized' });
+    },
+  );
 });
 
 describe('cron authorization', () => {
