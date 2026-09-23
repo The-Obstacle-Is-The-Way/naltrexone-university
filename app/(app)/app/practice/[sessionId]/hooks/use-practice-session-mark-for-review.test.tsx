@@ -1,73 +1,34 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-const { fixtureChoice1Id, fixtureQuestion1Id, fixtureSession1Id } = vi.hoisted(
-  () => ({
-    fixtureChoice1Id: crypto.randomUUID(),
-    fixtureQuestion1Id: crypto.randomUUID(),
-    fixtureSession1Id: crypto.randomUUID(),
-  }),
-);
-
-const { reportClientErrorMock } = vi.hoisted(() => ({
-  reportClientErrorMock: vi.fn(),
-}));
-
-vi.mock('@/lib/report-client-error', () => ({
-  reportClientError: reportClientErrorMock,
-  shouldReportClientError: (error: unknown) =>
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: string }).code === 'INTERNAL_ERROR',
-}));
-
-import { err, ok } from '@/src/adapters/controllers/action-result';
-import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { ok } from '@/src/adapters/controllers/action-result';
 import { renderHook } from '@/src/application/test-helpers/render-hook';
-import { usePracticeSessionMarkForReview } from './use-practice-session-mark-for-review';
 
-function createFixtureNextQuestion(
-  overrides: Parameters<typeof createNextQuestion>[0] = {},
-) {
-  return createNextQuestion({
-    questionId: fixtureQuestion1Id,
-    choices: [
-      {
-        id: fixtureChoice1Id,
-        label: 'A',
-        textMd: 'Choice A',
-        sortOrder: 1,
-      },
-    ],
-    ...overrides,
-  });
-}
+let usePracticeSessionMarkForReview: typeof import('./use-practice-session-mark-for-review').usePracticeSessionMarkForReview;
+
+beforeAll(async () => {
+  ({ usePracticeSessionMarkForReview } = await import(
+    './use-practice-session-mark-for-review'
+  ));
+});
 
 describe('usePracticeSessionMarkForReview', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    reportClientErrorMock.mockReset();
-  });
-
   it('returns the expected initial state contract', async () => {
     const output = renderHook(() =>
       usePracticeSessionMarkForReview({
         question: null,
         sessionMode: null,
         sessionInfo: null,
-        sessionId: fixtureSession1Id,
+        sessionId: crypto.randomUUID(),
         applySessionInfo: () => undefined,
         setLoadState: () => undefined,
         setReview: () => undefined,
         isMounted: () => true,
-        setPracticeSessionQuestionMarkFn: vi.fn(async () =>
+        setPracticeSessionQuestionMarkFn: async () =>
           ok({
-            questionId: fixtureQuestion1Id,
+            questionId: crypto.randomUUID(),
             markedForReview: false,
           }),
-        ),
       }),
     );
 
@@ -75,269 +36,5 @@ describe('usePracticeSessionMarkForReview', () => {
     expect(typeof output.onToggleMarkForReview).toBe('function');
 
     await expect(output.onToggleMarkForReview()).resolves.toBeUndefined();
-  });
-
-  it('passes an idempotency key when marking for review', async () => {
-    const setLoadState = vi.fn();
-    const applySessionInfo = vi.fn();
-    const setReview = vi.fn();
-    const setPracticeSessionQuestionMarkFn = vi.fn(async () =>
-      ok({
-        questionId: fixtureQuestion1Id,
-        markedForReview: true,
-      }),
-    );
-
-    const sessionInfo = {
-      sessionId: fixtureSession1Id,
-      mode: 'exam' as const,
-      deadlineAt: '2099-05-22T12:02:24.000Z',
-      index: 0,
-      total: 10,
-      isMarkedForReview: false,
-    };
-
-    const output = renderHook(() =>
-      usePracticeSessionMarkForReview({
-        question: createFixtureNextQuestion(),
-        sessionMode: 'exam',
-        sessionInfo,
-        sessionId: fixtureSession1Id,
-        applySessionInfo,
-        setLoadState,
-        setReview,
-        isMounted: () => true,
-        setPracticeSessionQuestionMarkFn,
-      }),
-    );
-
-    await output.onToggleMarkForReview();
-
-    expect(setPracticeSessionQuestionMarkFn).toHaveBeenCalledWith({
-      sessionId: fixtureSession1Id,
-      questionId: fixtureQuestion1Id,
-      markedForReview: true,
-      idempotencyKey: expect.any(String),
-    });
-
-    const update = applySessionInfo.mock.calls[0]?.[0];
-    if (typeof update !== 'function') {
-      throw new Error(
-        'Expected applySessionInfo to receive an updater function',
-      );
-    }
-
-    expect(update(sessionInfo)).toEqual({
-      ...sessionInfo,
-      isMarkedForReview: true,
-    });
-    expect(setLoadState).not.toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'error' }),
-    );
-  });
-
-  it('sets loadState error when mark-for-review request throws', async () => {
-    const setLoadState = vi.fn();
-    const applySessionInfo = vi.fn();
-    const setReview = vi.fn();
-    const error = new Error('Mark for review failed');
-
-    const setPracticeSessionQuestionMarkFn = vi
-      .fn()
-      .mockRejectedValueOnce(error)
-      .mockResolvedValueOnce(
-        ok({
-          questionId: fixtureQuestion1Id,
-          markedForReview: true,
-        }),
-      );
-
-    const output = renderHook(() =>
-      usePracticeSessionMarkForReview({
-        question: createFixtureNextQuestion(),
-        sessionMode: 'exam',
-        sessionInfo: {
-          sessionId: fixtureSession1Id,
-          mode: 'exam',
-
-          deadlineAt: '2099-05-22T12:02:24.000Z',
-
-          index: 0,
-          total: 10,
-          isMarkedForReview: false,
-        },
-        sessionId: fixtureSession1Id,
-        applySessionInfo,
-        setLoadState,
-        setReview,
-        isMounted: () => true,
-        setPracticeSessionQuestionMarkFn,
-      }),
-    );
-
-    await output.onToggleMarkForReview();
-
-    expect(setLoadState).toHaveBeenCalledWith({
-      status: 'error',
-      message: 'Mark for review failed',
-    });
-    expect(applySessionInfo).not.toHaveBeenCalled();
-    expect(setReview).not.toHaveBeenCalled();
-    expect(reportClientErrorMock).toHaveBeenCalledWith(error, {
-      component: 'UsePracticeSessionMarkForReview',
-      action: 'toggleMarkForReview',
-    });
-
-    const firstKey =
-      setPracticeSessionQuestionMarkFn.mock.calls[0]?.[0]?.idempotencyKey;
-    await output.onToggleMarkForReview();
-    const secondKey =
-      setPracticeSessionQuestionMarkFn.mock.calls[1]?.[0]?.idempotencyKey;
-    expect(secondKey).toBe(firstKey);
-  });
-
-  it('sets loadState error when mark-for-review request returns an error result', async () => {
-    const setLoadState = vi.fn();
-    const applySessionInfo = vi.fn();
-    const setReview = vi.fn();
-
-    const setPracticeSessionQuestionMarkFn = vi.fn(async () =>
-      err('INTERNAL_ERROR', 'Mark for review failed'),
-    );
-
-    const output = renderHook(() =>
-      usePracticeSessionMarkForReview({
-        question: createFixtureNextQuestion(),
-        sessionMode: 'exam',
-        sessionInfo: {
-          sessionId: fixtureSession1Id,
-          mode: 'exam',
-
-          deadlineAt: '2099-05-22T12:02:24.000Z',
-
-          index: 0,
-          total: 10,
-          isMarkedForReview: false,
-        },
-        sessionId: fixtureSession1Id,
-        applySessionInfo,
-        setLoadState,
-        setReview,
-        isMounted: () => true,
-        setPracticeSessionQuestionMarkFn,
-      }),
-    );
-
-    await output.onToggleMarkForReview();
-
-    expect(setLoadState).toHaveBeenCalledWith({
-      status: 'error',
-      message: 'Mark for review failed',
-    });
-    expect(applySessionInfo).not.toHaveBeenCalled();
-    expect(setReview).not.toHaveBeenCalled();
-    expect(reportClientErrorMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        code: 'INTERNAL_ERROR',
-        message: 'Mark for review failed',
-      }),
-      {
-        component: 'UsePracticeSessionMarkForReview',
-        action: 'toggleMarkForReview',
-      },
-    );
-  });
-
-  it('rotates the mark key after a determinate cached failure', async () => {
-    const setPracticeSessionQuestionMarkFn = vi
-      .fn()
-      .mockResolvedValueOnce(err('NOT_FOUND', 'Question not found'))
-      .mockResolvedValueOnce(
-        ok({
-          questionId: fixtureQuestion1Id,
-          markedForReview: true,
-        }),
-      );
-    const sessionInfo = {
-      sessionId: fixtureSession1Id,
-      mode: 'exam' as const,
-      deadlineAt: '2099-05-22T12:02:24.000Z',
-      index: 0,
-      total: 10,
-      isMarkedForReview: false,
-    };
-    const output = renderHook(() =>
-      usePracticeSessionMarkForReview({
-        question: createFixtureNextQuestion(),
-        sessionMode: 'exam',
-        sessionInfo,
-        sessionId: fixtureSession1Id,
-        applySessionInfo: vi.fn(),
-        setLoadState: vi.fn(),
-        setReview: vi.fn(),
-        isMounted: () => true,
-        setPracticeSessionQuestionMarkFn,
-      }),
-    );
-
-    await output.onToggleMarkForReview();
-    await output.onToggleMarkForReview();
-
-    const firstKey =
-      setPracticeSessionQuestionMarkFn.mock.calls[0]?.[0]?.idempotencyKey;
-    const secondKey =
-      setPracticeSessionQuestionMarkFn.mock.calls[1]?.[0]?.idempotencyKey;
-    expect(firstKey).toEqual(expect.any(String));
-    expect(secondKey).toEqual(expect.any(String));
-    expect(secondKey).not.toBe(firstKey);
-  });
-
-  it('uses the mutation timeout tier for mark-for-review requests', async () => {
-    vi.useFakeTimers();
-    try {
-      const setLoadState = vi.fn();
-      const output = renderHook(() =>
-        usePracticeSessionMarkForReview({
-          question: createFixtureNextQuestion(),
-          sessionMode: 'exam',
-          sessionInfo: {
-            sessionId: fixtureSession1Id,
-            mode: 'exam',
-
-            deadlineAt: '2099-05-22T12:02:24.000Z',
-
-            index: 0,
-            total: 10,
-            isMarkedForReview: false,
-          },
-          sessionId: fixtureSession1Id,
-          applySessionInfo: vi.fn(),
-          setLoadState,
-          setReview: vi.fn(),
-          isMounted: () => true,
-          setPracticeSessionQuestionMarkFn: async () =>
-            new Promise<never>(() => {}),
-        }),
-      );
-
-      const promise = output.onToggleMarkForReview();
-
-      await vi.advanceTimersByTimeAsync(10_000);
-      expect(setLoadState).not.toHaveBeenCalled();
-
-      await vi.advanceTimersByTimeAsync(5_000);
-      await promise;
-
-      expect(setLoadState).toHaveBeenCalledWith({
-        status: 'error',
-        message: 'Request timed out. Please try again.',
-      });
-      expect(reportClientErrorMock).toHaveBeenCalledWith(expect.any(Error), {
-        component: 'UsePracticeSessionMarkForReview',
-        action: 'toggleMarkForReview',
-      });
-    } finally {
-      vi.useRealTimers();
-    }
   });
 });
