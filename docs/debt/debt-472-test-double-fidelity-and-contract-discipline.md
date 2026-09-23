@@ -4,6 +4,8 @@
 **Priority:** P2
 **Date:** 2026-08-22
 
+> **2026-09-23 UTC history-hook pointer:** Mark-for-review increment #1028 merged as `cdcbfd65`, with formal exact-head approval and CI **35839978793** (52/52 E2E, no failure/retry markers). Two mocked expanded-state history units now retire behind their named real-hook Browser Mode twins; the other sixteen units retain all 102 assertions. Candidate floors are **16 / 210 / 44** across **7 / 43 / 17** files. See the [history disposition](#history-disclosure-disposition-2026-09-23-utc). Its gate/review and the #1028 milestone promotion remain pending; steps 4–6 stay Open.
+
 > **2026-09-23 08:47 UTC release receipt:** The pending #1027 verification below is complete. Main CI **35837772747** passed `test` at **08:43:06Z** (52/52 E2E, no failure/retry markers). Vercel was Ready at **08:34:32.855Z**, observed STAGED without a production alias at **08:40:14.506Z**, then assigned production at **08:43:08.458Z**. Both trees equal `e3af13fbf56ca23c1b1abddd581c9dd639dc6e58`; production `/` and `/api/health` returned 200 with app/database healthy. The mark-for-review increment remains unlanded.
 
 > **2026-09-23 UTC mark-for-review pointer:** #1025/#1026 are promoted by #1027 (`668d2bec`), after source approval proof and promotion CI **35836560668** (52/52 E2E, no failure/retry markers); post-merge release verification remains pending. The fifth reporter factory now retires through five named Browser Mode replacements plus a business-error negative control. Candidate floors are **17 / 210 / 44** across **8 / 43 / 17** files. See the [mark-for-review disposition](#mark-for-review-reporter-disposition-2026-09-23-utc). This increment and the remaining steps 4–6 are not claimed complete.
@@ -282,6 +284,19 @@ Red proofs on `ce37a4be`, **2026-09-23 UTC**: the old owned-module factory faile
 Sanitized receipts are `/private/tmp/codex-archive-dispositions.c8noac/mark-reporter-*.log`. Own-code factories fall **18 / 9 files → 17 / 8**; cast and maintained-port floors remain **210 / 43** and **44 / 17**. No assertion weakening, allowlist, timeout increase or production change. Full gate, review and promotion of this increment remain pending; the other F6/RepoDb dispositions, three unproven Search cases and steps 5–6 remain Open.
 
 **08:47 UTC fixture correction:** Self-review replaced a constant mounted predicate with the actual `useIsMounted` hook, leaving only the request and Sentry doubles. A deliberate mutation preventing that hook's mount transition failed all six new cases at **08:46:54Z**; byte-identical restoration passed all **11 browser + 1 unit**, typecheck and the ratchet at **08:47:25Z**. The first local gate was intentionally stopped before E2E/push for this correction, not counted as a full pass; no E2E run was interrupted or retried. The complete gate must run again before the first push.
+
+### History disclosure disposition (2026-09-23 UTC)
+
+`history-sessions-tab.test.tsx` no longer replaces the owned `useHistorySessions` hook. Its sixteen initial-render cases use the real hook and retain all **102** assertions. Only two expanded-state units retire, after their named existing Browser Mode twins prove the actual click-to-state path. The browser suite keeps all nine titles and all **23** existing assertions; the flat-panel and chevron constraints move into its accessibility case without changing the UI. The unit file shrinks **737 → 592** physical lines and the browser file grows **595 → 610**, both below the unchanged size rule. No maintained fake or adapter changes; the contract register is unchanged.
+
+| Deleted unit | Real-hook browser twin |
+| --- | --- |
+| `renders expanded breakdown panel as a flat disclosure region` | `wires disclosure accessibility attributes and region semantics on expand` — preserves region identity/name, expanded label, all seven panel-class constraints and the rotated chevron |
+| `does not render a redundant Review session button inside breakdown content` | `does not render a redundant Review session action in the expanded breakdown panel` — first requires a loaded question link, then rejects the redundant link |
+
+Red-first on `a32b20e8`, **2026-09-23 UTC**: omitting the real hook's selected-session transition left all **18 old units green** but failed the browser twin's `aria-expanded` assertion (**08:57:14Z**). The ported assertion then rejected independently removed `border-t` (**08:57:49Z**), added panel background (**08:58:23Z**), added rounded panel (**08:58:52Z**) and removed chevron rotation (**08:59:17Z**). Adding a redundant Review session link failed its named browser twin (**09:00:02Z**). Production restoration was byte-identical before **9 browser + 18 old units** and typecheck passed (**09:00:32Z**), before deletion. The removed floor entry failed against the still-present owned factory (**09:00:55Z**); after deletion, **9 browser + 16 units**, typecheck and the ratchet passed (**09:01:23Z**). An AST comparison preserved the other titles/assertions; filtered mutation commands did not add policy skips.
+
+Sanitized receipts: `/private/tmp/codex-archive-dispositions.c8noac/history-*.log`. Own-code factories fall **17 / 8 files → 16 / 7**; casts **210 / 43** and maintained-port doubles **44 / 17** are unchanged. No production implementation, fake behavior, suppression, timeout or allowlist changes. Full gate, review and promotion remain pending; the remaining F6/RepoDb dispositions, unproven Search replacement and steps 5–6 remain Open.
 
 ## Description
 

@@ -31,9 +31,10 @@
 // fake only Sentry: 18 own-code module factories remain across nine files.
 // 2026-09-23 UTC: Mark-for-review async cases move to real browser state
 // and the real reporter: 17 own-code module factories across eight files.
+// 2026-09-23 UTC: History disclosure behavior uses the real hook in Browser
+// Mode, leaving 16 own-code module factories across seven files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
-  ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
   ['app/(app)/app/layout-shell.test.tsx', 1],
   ['app/(app)/app/practice/practice-page-client.test.tsx', 2],
   ['app/(app)/app/practice/quick/quick-practice-client.test.tsx', 1],
