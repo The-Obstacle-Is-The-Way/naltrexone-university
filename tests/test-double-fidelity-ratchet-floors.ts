@@ -17,6 +17,8 @@
 // 226 enforced sites across 46 files. No client behavior or waiver changes.
 // 2026-09-23 UTC: Real feedback-export SQL coverage retires its cast:
 // 225 enforced sites across 45 files.
+// 2026-09-23 UTC: The lost-session fixture uses public discard, not private
+// state access: 224 enforced sites across 44 files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -125,10 +127,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/repositories/drizzle-user-repository.test.ts', 20],
   [
     'src/adapters/repositories/practice-session-question-state-updater-lock.test.ts',
-    1,
-  ],
-  [
-    'src/application/test-helpers/fakes/fake-practice-session-repository.test.ts',
     1,
   ],
   ['tests/e2e/helpers/bookmark.test.ts', 2],
