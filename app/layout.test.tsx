@@ -1,7 +1,22 @@
 // @vitest-environment jsdom
+import type { ThemeProviderProps } from 'next-themes';
+import type { ComponentProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { parseHtml } from '@/tests/shared/dom-helpers';
+import {
+  restoreProcessEnv,
+  snapshotProcessEnv,
+} from '@/tests/shared/process-env';
+
+const ORIGINAL_ENV = snapshotProcessEnv();
+type ClerkProviderProps = ComponentProps<
+  typeof import('@clerk/nextjs').ClerkProvider
+>;
+
+afterAll(() => {
+  restoreProcessEnv(ORIGINAL_ENV);
+});
 
 vi.mock('next/headers', () => ({
   headers: async () => new Headers({ 'x-nonce': 'nonce-123' }),
@@ -22,32 +37,27 @@ vi.mock('next/font/google', () => ({
   }),
 }));
 
-vi.mock('@/components/providers', () => ({
-  Providers: ({
-    children,
-    nonce,
-  }: {
-    children: React.ReactNode;
-    nonce?: string;
-  }) => (
-    <div data-testid="providers" data-nonce={nonce}>
-      {children}
-    </div>
-  ),
+// Keep both application wrappers real; observe only their vendor-boundary props.
+// This does not claim to simulate Clerk authentication or next-themes behavior.
+vi.mock('next/dynamic', () => ({
+  default: () =>
+    function ClerkProviderBoundary({ children, nonce }: ClerkProviderProps) {
+      return (
+        <div data-testid="providers" data-nonce={nonce}>
+          {children}
+        </div>
+      );
+    },
 }));
 
-vi.mock('@/components/theme-provider', () => ({
+vi.mock('next-themes', () => ({
+  useTheme: () => ({ resolvedTheme: 'dark', forcedTheme: 'dark' }),
   ThemeProvider: ({
     children,
     nonce,
     forcedTheme,
     defaultTheme,
-  }: {
-    children: React.ReactNode;
-    nonce?: string;
-    forcedTheme?: string;
-    defaultTheme?: string;
-  }) => (
+  }: ThemeProviderProps) => (
     <div
       data-testid="theme-provider"
       data-nonce={nonce}
@@ -66,6 +76,7 @@ describe('app/layout', () => {
   let metadata: typeof import('@/app/layout').metadata;
 
   beforeAll(async () => {
+    process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
     const module = await import('@/app/layout');
     RootLayout = module.default;
     NonceBoundProviders = module.NonceBoundProviders;
@@ -127,6 +138,17 @@ describe('app/layout', () => {
     );
 
     expect(html).toContain('data-nonce="nonce-123"');
+    const doc = parseHtml(html);
+    expect(
+      doc
+        .querySelector('[data-testid="theme-provider"]')
+        ?.getAttribute('data-nonce'),
+    ).toBe('nonce-123');
+    expect(
+      doc
+        .querySelector('[data-testid="providers"]')
+        ?.getAttribute('data-nonce'),
+    ).toBe('nonce-123');
   });
 
   it('pins the app to dark mode via forcedTheme (light mode disabled — DEBT-421)', async () => {
