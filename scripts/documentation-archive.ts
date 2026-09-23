@@ -39,6 +39,8 @@ export type DocumentationLink = {
 export type DocumentationAudit = {
   duplicates: string[];
   closedLive: string[];
+  missingArchiveDispositions: string[];
+  invalidLatest: string[];
   missingLiveRows: string[];
   missingRowTargets: string[];
   brokenLive: DocumentationLink[];
@@ -186,15 +188,63 @@ export function documentationLinks(
   return links;
 }
 
-function hasClosedStatus(contents: string): boolean {
-  const status = contents
-    .match(/^\s*(?:>\s*)?\*\*Status:\*\*\s*(.+)$/m)?.[1]
-    ?.replaceAll('**', '')
+function recordStatus(file: string, contents: string): string {
+  const field =
+    /^\s*(?:>\s*)?\*\*(?:Status|Resolution State):?\*\*:?\s*(.+)$/im.exec(
+      contents,
+    );
+  if (!field) return '';
+  const offset = field.index + field[0].indexOf('**');
+  const prefix = contents.slice(0, field.index + field[0].length);
+  // Validate the first candidate's code-block context, not every historical
+  // body. Ambiguous metadata fails closed instead of searching for a later
+  // status that happens to pass. Existing unrelated earlier code is allowed.
+  Markdown({
+    children: prefix,
+    remarkPlugins: [
+      () => (tree: MarkdownNode) => {
+        function visit(node: MarkdownNode): void {
+          if (
+            node.type === 'code' &&
+            (node.position?.end.offset ?? prefix.length) >= offset
+          )
+            throw new Error(
+              `Status metadata inside a code example: ${file}; put the record disposition before examples`,
+            );
+          for (const child of node.children ?? []) visit(child);
+        }
+        visit(tree);
+      },
+    ],
+  });
+  return (field[1] ?? '')
+    .replaceAll('**', '')
+    .replace(/^[^\p{L}\p{N}]+/u, '')
     .trim();
-  if (!status) return false;
-  // Current status precedes its historical explanation. In particular, an
-  // Active record may correctly explain which earlier slices are resolved.
-  return /^(?:resolved|archived|implemented|closed|complete)\b/i.test(status);
+}
+
+// Only the leading disposition counts; explanations may describe earlier work.
+const CLOSED_STATUS =
+  /^(?:resolved|archived|implemented|closed|completed?|fixed|fully addressed)\b/i;
+const HISTORICAL_DISPOSITION =
+  /^(?:accepted|invalidated|decomposed|deferred|decided|won['’]t fix|reclassified|superseded|parked)\b/i;
+
+function latestStanzas(contents: string): number {
+  let count = 0;
+  Markdown({
+    children: contents,
+    remarkPlugins: [
+      () => (tree: MarkdownNode) => {
+        count = (tree.children ?? []).filter(
+          (node) =>
+            node.type === 'paragraph' &&
+            node.children?.[0]?.type === 'strong' &&
+            nodeText(node.children[0]) === 'Latest',
+        ).length;
+      },
+    ],
+  });
+  return count;
 }
 
 export function auditRecordLifecycle(
@@ -206,6 +256,8 @@ export function auditRecordLifecycle(
   const result: DocumentationAudit = {
     duplicates: [],
     closedLive: [],
+    missingArchiveDispositions: [],
+    invalidLatest: [],
     missingLiveRows: [],
     missingRowTargets: [],
     brokenLive: [],
@@ -223,6 +275,12 @@ export function auditRecordLifecycle(
   for (const [register, pattern] of Object.entries(REGISTERS)) {
     const liveDirectory = `docs/${register}`;
     const archiveDirectory = `docs/_archive/${register}`;
+    const indexFile = `${liveDirectory}/index.md`;
+    const latest = latestStanzas(files.get(indexFile) ?? '');
+    // Debt and bugs already use this convention. Other registers need not
+    // adopt update stanzas, but may not carry competing Latest entries.
+    if (latest > 1 || (['debt', 'bugs'].includes(register) && latest !== 1))
+      result.invalidLatest.push(indexFile);
     const records = (directory: string) =>
       [...files.keys()].filter(
         (file) =>
@@ -248,9 +306,14 @@ export function auditRecordLifecycle(
     );
     for (const record of live) {
       if (archivedIds.has(recordId(record))) result.duplicates.push(record);
-      if (hasClosedStatus(files.get(record) ?? ''))
+      if (CLOSED_STATUS.test(recordStatus(record, files.get(record) ?? '')))
         result.closedLive.push(record);
       if (!registered.has(record)) result.missingLiveRows.push(record);
+    }
+    for (const record of archived) {
+      const status = recordStatus(record, files.get(record) ?? '');
+      if (!CLOSED_STATUS.test(status) && !HISTORICAL_DISPOSITION.test(status))
+        result.missingArchiveDispositions.push(record);
     }
     for (const row of rows) {
       if (row.invalidEncoding || !targetExists(row.target))
@@ -387,6 +450,8 @@ export function runDocumentationCommand(
   return [
     result.duplicates,
     result.closedLive,
+    result.missingArchiveDispositions,
+    result.invalidLatest,
     result.missingLiveRows,
     result.missingRowTargets,
     result.brokenLive,

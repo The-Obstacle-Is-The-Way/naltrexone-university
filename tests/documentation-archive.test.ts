@@ -100,6 +100,142 @@ describe('documentation archive convention', () => {
     ).toEqual([]);
   });
 
+  it.each([
+    '**Status:** ✅ RESOLVED 2026-06-11 — shipped',
+    '> **Status:** ✅ **Resolved**',
+    '**Resolution State:** Fixed in PR #289',
+    '**Status:** Completed',
+    '**Status:** Fully Addressed',
+  ])('rejects a live record with the existing metadata form %s', (metadata) => {
+    expect(
+      audit({ 'docs/debt/debt-001-example.md': metadata }).closedLive,
+    ).toEqual(['docs/debt/debt-001-example.md']);
+  });
+
+  it.each(['Active', 'Open', 'Ready', 'In Progress', 'Unclassified', ''])(
+    'reports an archived record without a recognized disposition: %s',
+    (status) => {
+      expect(
+        audit({
+          'docs/_archive/debt/debt-001-example.md': status
+            ? `**Status:** ${status}`
+            : '# No metadata',
+        }),
+      ).toMatchObject({
+        missingArchiveDispositions: ['docs/_archive/debt/debt-001-example.md'],
+      });
+    },
+  );
+
+  it.each([
+    'Resolved',
+    '✅ RESOLVED',
+    'Archived',
+    'Implemented',
+    'Closed',
+    'Complete (MVP)',
+    'Completed',
+    'Fixed',
+    'Fully Addressed',
+    'Deferred',
+    'Invalidated (false positive)',
+    'Superseded',
+    'Decided',
+    'Decomposed',
+    'Accepted risk',
+    'Parked',
+    'Won’t Fix',
+    'Reclassified',
+  ])('accepts the preserved archived disposition %s', (status) => {
+    expect(
+      audit({
+        'docs/_archive/debt/debt-001-example.md': `**Status:** ${status}`,
+      }),
+    ).toMatchObject({ missingArchiveDispositions: [] });
+  });
+
+  it('accepts an archived Resolution State without rewriting historical metadata', () => {
+    expect(
+      audit({
+        'docs/_archive/debt/debt-001-example.md':
+          '**Resolution State:** Fixed in PR #289',
+      }),
+    ).toMatchObject({ missingArchiveDispositions: [] });
+  });
+
+  it('uses the current status rather than a later historical field', () => {
+    expect(
+      audit({
+        'docs/_archive/debt/debt-001-example.md':
+          '**Status:** Open — earlier slice resolved\n\n**Resolution State:** Fixed previously',
+      }),
+    ).toMatchObject({
+      missingArchiveDispositions: ['docs/_archive/debt/debt-001-example.md'],
+    });
+  });
+
+  it.each([
+    'docs/debt/debt-001-example.md',
+    'docs/_archive/debt/debt-001-example.md',
+  ])(
+    'fails closed when the first status field in %s is a fenced example',
+    (file) => {
+      expect(() =>
+        audit({
+          [file]: '```md\n**Status:** Resolved\n```\n\n**Status:** Open',
+        }),
+      ).toThrow(
+        `Status metadata inside a code example: ${file}; put the record disposition before examples`,
+      );
+    },
+  );
+
+  it('accepts historical metadata after an unrelated code block', () => {
+    expect(
+      audit({
+        'docs/_archive/debt/debt-001-example.md':
+          '```ts\nconst example = true;\n```\n\n**Status:** Resolved',
+      }),
+    ).toMatchObject({ missingArchiveDispositions: [] });
+  });
+
+  it.each(['debt', 'bugs', 'specs', 'brainstorming', 'audits', 'qa'])(
+    'rejects duplicate Latest stanzas in %s',
+    (register) => {
+      expect(
+        audit({
+          [`docs/${register}/index.md`]: '**Latest** — new\n\n**Latest** — old',
+        }),
+      ).toMatchObject({
+        invalidLatest: expect.arrayContaining([`docs/${register}/index.md`]),
+      });
+    },
+  );
+
+  it.each(['debt', 'bugs'])(
+    'requires the existing Latest stanza in %s',
+    (register) => {
+      expect(
+        audit({
+          [`docs/${register}/index.md`]: '# Register\n\n**Earlier** — old',
+        }),
+      ).toMatchObject({
+        invalidLatest: expect.arrayContaining([`docs/${register}/index.md`]),
+      });
+    },
+  );
+
+  it('ignores examples and historical labels without requiring new Latest conventions', () => {
+    expect(
+      audit({
+        'docs/debt/index.md':
+          '**Latest** — current\n\n**Earlier** — previous\n\n```md\n**Latest** — example\n```\n\n`**Latest**`\n\n**Latest archival (2026-06-11):** historic',
+        'docs/bugs/index.md': '**Latest** — current',
+        'docs/specs/index.md': '# Register without update stanzas',
+      }),
+    ).toMatchObject({ invalidLatest: [] });
+  });
+
   it('reports a missing register-row destination', () => {
     expect(
       audit({
@@ -248,7 +384,9 @@ describe('documentation archive command', () => {
 
   function populate(root: string, files: Record<string, string>): void {
     for (const register of Object.keys(REGISTERS)) {
-      files[`docs/${register}/index.md`] ??= '# Register';
+      files[`docs/${register}/index.md`] ??= ['debt', 'bugs'].includes(register)
+        ? '# Register\n\n**Latest** — fixture'
+        : '# Register';
     }
     for (const [file, contents] of Object.entries(files)) {
       mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
@@ -256,10 +394,82 @@ describe('documentation archive command', () => {
     }
   }
 
+  it.each([
+    [
+      'closed live',
+      'docs/debt/debt-001-example.md',
+      '**Status:** ✅ RESOLVED',
+      '**Status:** Open',
+    ],
+    [
+      'missing archived disposition',
+      'docs/_archive/debt/debt-001-example.md',
+      '# No disposition',
+      '**Status:** Resolved',
+    ],
+    [
+      'open archived',
+      'docs/_archive/debt/debt-001-example.md',
+      '**Status:** Open',
+      '**Status:** Deferred',
+    ],
+    [
+      'duplicate Latest',
+      'docs/debt/index.md',
+      '**Latest** — A\n\n**Latest** — B',
+      '**Latest** — A\n\n**Earlier** — B',
+    ],
+    [
+      'missing Latest',
+      'docs/debt/index.md',
+      '# Register',
+      '**Latest** — current',
+    ],
+  ])(
+    'fails the command solely for %s and passes after correction',
+    (_kind, file, before, after) => {
+      const root = fixture();
+      const files: Record<string, string> = { [file]: before };
+      if (!file.endsWith('/index.md')) {
+        files['docs/debt/index.md'] =
+          `**Latest** — fixture\n\n| ID | Title |\n| --- | --- |\n| [DEBT-001](${path.posix.relative('docs/debt', file)}) | Example |`;
+      }
+      populate(root, files);
+      const reports: DocumentationAudit[] = [];
+      expect(
+        runDocumentationCommand(root, (json) => reports.push(JSON.parse(json))),
+      ).toBe(1);
+      expect(reports[0]).toMatchObject({
+        duplicates: [],
+        missingLiveRows: [],
+        missingRowTargets: [],
+        brokenLive: [],
+        brokenArchive: [],
+        repairableArchive: [],
+      });
+      writeFileSync(path.join(root, file), after);
+      expect(runDocumentationCommand(root, () => {})).toBe(0);
+    },
+  );
+
+  it('exits nonzero with a diagnostic for ambiguous fenced status metadata', () => {
+    const root = fixture();
+    populate(root, {
+      'docs/_archive/debt/debt-001-example.md':
+        '```md\n**Status:** Resolved\n```\n\n**Status:** Open',
+    });
+    const child = runArchiveCommand(root);
+    expect(child.error).toBeUndefined();
+    expect(child.status).toBe(1);
+    expect(child.stderr).toContain(
+      'Status metadata inside a code example: docs/_archive/debt/debt-001-example.md',
+    );
+  });
+
   it('reports JSON and does not repair without the explicit command argument', () => {
     const root = fixture();
     const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original = '[Source](../../src/example.ts)';
+    const original = '**Status:** Resolved\n\n[Source](../../src/example.ts)';
     populate(root, { [file]: original, 'src/example.ts': 'export {};' });
     const output: string[] = [];
     expect(runDocumentationCommand(root, (json) => output.push(json), [])).toBe(
@@ -273,7 +483,7 @@ describe('documentation archive command', () => {
     'reports malformed encoding in %s as a failing CLI result without a crash or rewrite',
     (file) => {
       const root = fixture();
-      const original = '[Malformed](./assets/100%.png)';
+      const original = '**Status:** Resolved\n\n[Malformed](./assets/100%.png)';
       populate(root, { [file]: original });
       const child = runArchiveCommand(root, ['--repair-archive']);
       expect(child.error).toBeUndefined();
@@ -293,7 +503,7 @@ describe('documentation archive command', () => {
   it('refuses the entire batch if a previously classified target disappears', () => {
     const root = fixture();
     const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original = '[Source](../../src/example.ts)';
+    const original = '**Status:** Resolved\n\n[Source](../../src/example.ts)';
     populate(root, { [file]: original, 'src/example.ts': 'export {};' });
     const repairs = readDocumentation(root).repairableArchive;
     rmSync(path.join(root, 'src/example.ts'));
@@ -313,8 +523,8 @@ describe('documentation archive command', () => {
   ])('exits nonzero for a provable %s archive break', (_kind, url, target) => {
     const root = fixture();
     populate(root, {
-      'docs/_archive/bugs/bug-001-example.md': `[Target](${url})`,
-      [target]: '# Existing target',
+      'docs/_archive/bugs/bug-001-example.md': `**Status:** Resolved\n\n[Target](${url})`,
+      [target]: '# Existing target\n\n**Status:** Resolved',
     });
     expect(runDocumentationCommand(root, () => {})).toBe(1);
     expect(runArchiveCommand(root).status).toBe(1);
@@ -327,6 +537,7 @@ describe('documentation archive command', () => {
       const file = 'docs/_archive/bugs/bug-001-example.md';
       const original = [
         '# Historical record',
+        '**Status:** Resolved',
         '[Source](../../src/example.ts#L7)',
         '[Later](../../debt/debt-001-example.md?view=raw#receipt)',
         '![Asset](../../docs/assets/example.png)',
@@ -341,7 +552,8 @@ describe('documentation archive command', () => {
         'src/example.ts': 'export {};',
         'src/existing.ts': 'export {};',
         'docs/assets/example.png': 'fixture',
-        'docs/_archive/debt/debt-001-example.md': '# Existing record',
+        'docs/_archive/debt/debt-001-example.md':
+          '# Existing record\n\n**Status:** Resolved',
       });
       if (entrypoint === 'function') {
         expect(
@@ -368,7 +580,7 @@ describe('documentation archive command', () => {
   it('leaves a historical missing target unchanged and reported', () => {
     const root = fixture();
     const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original = '[Deleted](../../src/deleted.ts)';
+    const original = '**Status:** Resolved\n\n[Deleted](../../src/deleted.ts)';
     populate(root, { [file]: original });
     const child = runArchiveCommand(root, ['--repair-archive']);
     expect(child.status).toBe(0);
@@ -383,14 +595,14 @@ describe('documentation archive command', () => {
     const root = fixture();
     const file = 'docs/_archive/bugs/bug-001-example.md';
     populate(root, {
-      [file]: `[Source](../../src/${encoded}?view=raw#L7)`,
+      [file]: `**Status:** Resolved\n\n[Source](../../src/${encoded}?view=raw#L7)`,
       [`src/${filename}`]: 'export {};',
     });
     expect(runDocumentationCommand(root, () => {}, ['--repair-archive'])).toBe(
       0,
     );
     expect(readFileSync(path.join(root, file), 'utf8')).toBe(
-      `[Source](../../../src/${encoded}?view=raw#L7)`,
+      `**Status:** Resolved\n\n[Source](../../../src/${encoded}?view=raw#L7)`,
     );
     expect(readDocumentation(root).brokenArchive).toEqual([]);
   });
@@ -399,10 +611,11 @@ describe('documentation archive command', () => {
     const root = fixture();
     const first = 'docs/_archive/bugs/bug-001-example.md';
     const unsupported = 'docs/_archive/bugs/bug-002-example.md';
-    const original = '[Source](../../src/example.ts)';
+    const original = '**Status:** Resolved\n\n[Source](../../src/example.ts)';
     populate(root, {
       [first]: original,
-      [unsupported]: '[Escaped](../../src/part\\(one\\).ts)',
+      [unsupported]:
+        '**Status:** Resolved\n\n[Escaped](../../src/part\\(one\\).ts)',
       'src/example.ts': 'export {};',
       'src/part(one).ts': 'export {};',
     });
@@ -418,11 +631,13 @@ describe('documentation archive command', () => {
   it('does not guess between two existing historical destinations', () => {
     const root = fixture();
     const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original = '[Ambiguous](../../docs/specs/spec-001-example.md)';
+    const original =
+      '**Status:** Resolved\n\n[Ambiguous](../../docs/specs/spec-001-example.md)';
     populate(root, {
       [file]: original,
       'docs/specs/spec-001-example.md': '# First candidate',
-      'docs/_archive/specs/spec-001-example.md': '# Second candidate',
+      'docs/_archive/specs/spec-001-example.md':
+        '# Second candidate\n\n**Status:** Resolved',
     });
     runDocumentationCommand(root, () => {}, ['--repair-archive']);
     expect(readFileSync(path.join(root, file), 'utf8')).toBe(original);
@@ -432,7 +647,8 @@ describe('documentation archive command', () => {
   it('refuses an apparent URL replacement that actually changes a link title', () => {
     const root = fixture();
     const file = 'docs/_archive/bugs/bug-001-example.md';
-    const original = '[Source](../../src/example.ts "../../src/example.ts")';
+    const original =
+      '**Status:** Resolved\n\n[Source](../../src/example.ts "../../src/example.ts")';
     populate(root, {
       [file]: original,
       'src/example.ts': 'export {};',
@@ -451,13 +667,7 @@ describe('documentation archive command', () => {
 
   it('exits nonzero for a broken live link', () => {
     const root = fixture();
-    for (const register of Object.keys(REGISTERS)) {
-      mkdirSync(path.join(root, 'docs', register), { recursive: true });
-      writeFileSync(
-        path.join(root, 'docs', register, 'index.md'),
-        '# Register',
-      );
-    }
+    populate(root, {});
     writeFileSync(path.join(root, 'README.md'), '[Missing](./missing.md)');
     // Cover the same command body with real files and captured reporting.
     const reports: DocumentationAudit[] = [];
@@ -506,6 +716,14 @@ describe('repository documentation', () => {
   it('has working register rows for every live record', () => {
     expect(result.missingLiveRows).toEqual([]);
     expect(result.missingRowTargets).toEqual([]);
+  });
+
+  it('records a disposition in every archived numbered record', () => {
+    expect(result).toMatchObject({ missingArchiveDispositions: [] });
+  });
+
+  it('preserves the single-Latest register convention', () => {
+    expect(result).toMatchObject({ invalidLatest: [] });
   });
 
   it.each(

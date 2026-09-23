@@ -778,7 +778,8 @@ and `docs/qa/`. These live folders are the open-record list.
    demote the prior stanza without rewriting its dated claims.
 6. Run the documentation unit guard and the full pre-push gate. A move is not
    complete until live links resolve, register rows resolve, and no live/archive
-   duplicate or terminal-status live record remains. Follow normal exact-head
+   duplicate or terminal-status live record remains. Every archived numbered
+   record must carry an explicit disposition. Follow normal exact-head
    review and promotion rules; record actual post-promotion evidence.
 
 **Exemptions and scope:** ADRs are **superseded, not archived**. Living guides
@@ -795,6 +796,27 @@ Use Markdown link/image syntax (including reference definitions) for document
 destinations. Raw HTML `href`/`src` attributes are unsupported and fail closed
 with a location diagnostic; do not extend the guard into an HTML resolver.
 Fenced and inline code examples remain examples, not document links.
+
+**2026-09-22 metadata guard clarification:** The first conventional `Status` or
+`Resolution State` field is the current disposition; emoji and bold formatting
+do not change its meaning. Legacy completed labels (including Fixed and Fully
+Addressed) remain readable without rewriting history. Archived records must
+state a recognized completion or historical disposition (accepted-risk,
+invalidated, decomposed, deferred, decided, won't-fix, reclassified, superseded
+or parked); missing or unrecognized values fail closed. This is a metadata
+check, not proof that the work shipped or that its dates are true. Review the
+actual receipts before closing a record.
+
+If the first status-shaped field is inside a code block, the guard reports an
+ambiguous-metadata configuration error rather than searching for a later value.
+Put the actual record disposition before status examples. Unrelated earlier
+code blocks in historical records remain valid.
+
+Debt and bug indexes already use the literal `**Latest**` stanza and must retain
+exactly one. Other registers may omit update stanzas, but must not have multiple
+Latest entries. The guard counts top-level Markdown paragraphs beginning with
+the bold label `Latest`, not code examples or older labels such as “Latest
+archival (date)”.
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)
