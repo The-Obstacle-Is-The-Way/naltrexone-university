@@ -1,5 +1,7 @@
 # Question Review Mode Gap — Brainstorming
 
+**Status:** Resolved — SPEC-023 implemented in #92 (merged 2026-02-12); the register’s historical “implementing” wording is superseded by the dated correction. Register disposition date: not recorded. Receipt: [PR #92](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/92); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-11
 **Triggered by:** Manual walk-through of Dashboard > Recent Activity and History > Questions flows after SPEC-022 merge
 **Scope:** Clicking any previously-answered question (from Dashboard, History, or Session Breakdown) opens a blank re-attempt form instead of showing the user's previous answer with feedback

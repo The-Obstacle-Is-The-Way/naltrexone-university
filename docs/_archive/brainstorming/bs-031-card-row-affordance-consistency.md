@@ -1,5 +1,7 @@
 # BS-031: Card/Row Affordance Consistency Audit
 
+**Status:** Resolved — Resolved as BUG-151. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-23
 **Triggered by:** SPEC-038 hardening added card-level `onClick`/`onKeyDown`/`tabIndex` to history session cards, revealing asymmetry with question cards on the same page
 **Scope:** Audit card/row interactive patterns across the app and propose a unified approach

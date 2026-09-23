@@ -1,5 +1,7 @@
 # BS-012: Question Status Filter for Practice & Quick Practice
 
+**Status:** Resolved — Specced as SPEC-024 (Implemented). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-12
 **Triggered by:** Product analysis of review/reattempt UX — discovered that the Practice Engine has no way to filter questions by attempt status (unanswered, incorrect, marked), which is a foundational feature in every major question bank (UWorld, AMBOSS, BoardVitals)
 **Scope:** Add a Question Status filter to Practice session creation and Quick Practice

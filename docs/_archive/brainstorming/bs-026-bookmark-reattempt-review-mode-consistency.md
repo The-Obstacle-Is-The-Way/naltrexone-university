@@ -1,5 +1,7 @@
 # BS-026: Bookmark Reattempt vs Review Mode Consistency
 
+**Status:** Resolved — Specced as SPEC-036 (Implemented). Bookmarks aligned to review-first contract. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-20
 **Triggered by:** Manual UX audit of the bookmarks page — clicking "Reattempt" opens a fresh attempt form instead of showing the previous answer, which is inconsistent with every other entry point in the system (Dashboard, History, Session Breakdown)
 **Scope:** Bookmarks are the only entry point that bypasses review mode, creating a disjointed mental model for users who expect to see their previous answer before deciding to reattempt

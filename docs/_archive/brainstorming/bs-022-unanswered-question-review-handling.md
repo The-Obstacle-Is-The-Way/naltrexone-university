@@ -1,5 +1,7 @@
 # BS-022: Unanswered Question Review Handling
 
+**Status:** Resolved — Specced as SPEC-034 (Implemented). All 4 layers resolved: auto-reveal, stats consistency, block submission, exam scoring. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-17
 **Triggered by:** Manual QA of exam mode review — unanswered questions present as blank submittable forms instead of revealing the correct answer
 **Scope:** How unanswered questions should behave in review mode across all session-based contexts (tutor, exam) and what the question navigator should display

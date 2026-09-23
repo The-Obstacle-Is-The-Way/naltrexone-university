@@ -1,5 +1,7 @@
 # BS-029: Clerk User ID / Email Upsert Conflict — Unhandled Unique Constraint
 
+**Status:** Resolved — Resolved as BUG-147 (Fix C: catch-and-update for `users_email_uq` in `DrizzleUserRepository`). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-21
 **Triggered by:** Localhost sign-in with Google OAuth crashed with `ApplicationError: CONFLICT — User could not be upserted due to a uniqueness constraint`
 **Scope:** `DrizzleUserRepository.upsertByClerkId` does not handle `emailUq` constraint conflicts; only handles `clerkUserIdUq`

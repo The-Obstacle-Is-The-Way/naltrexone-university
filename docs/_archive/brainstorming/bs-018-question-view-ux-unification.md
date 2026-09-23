@@ -1,5 +1,7 @@
 # BS-018: Question View UX Unification — Navigation, State, and Action Bar Consistency
 
+**Status:** Resolved — Specced as SPEC-030 (Implemented). Residual label/ordering tracked in BS-019. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-16
 **Triggered by:** Live UI audit (Chrome agent walkthrough) + codebase analysis across all 6 question-viewing contexts
 **Scope:** The 6 question-viewing contexts have diverged in navigation placement, action bar composition, and state persistence — creating a disjointed UX that undermines the product's learning experience

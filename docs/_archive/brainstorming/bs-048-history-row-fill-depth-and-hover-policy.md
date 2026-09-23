@@ -1,5 +1,7 @@
 # BS-048: History Row Fill Depth, Hover Policy, and Affordance Cleanup
 
+**Status:** Resolved — Promoted to [DEBT-302](../debt/debt-302-history-row-fill-and-affordance-cleanup.md), resolved 2026-03-10. Parent-aware foreground-ramp tokens were implemented (`/[0.08]` rest on page, `hover:bg-foreground/[0.12]` for navigation rows), and redundant History affordances were removed. Register resolution date: 2026-03-10. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-10
 **Triggered by:** Visual inspection of History page (both tabs) in dark mode after DEBT-301 visual unification
 **Scope:** Session rows appear perceptually darker than Dashboard/Practice rows despite using the same `bg-foreground/5` token (different parent surface). Session row hover and underlines are redundant with chevron disclosure. Questions tab "Review" pill is redundant with row-level navigation.

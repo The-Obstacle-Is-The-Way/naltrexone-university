@@ -1,5 +1,7 @@
 # BS-039: Choice Button Surface Hierarchy and Hover UX
 
+**Status:** Resolved — Promoted to [DEBT-273](../debt/debt-273-choice-button-surface-hierarchy-fix.md). Implemented in PR #170. Register disposition date: not recorded. Receipt: [PR #170](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/170); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-03
 **Triggered by:** Visual inspection of Quick Practice multiple choice view — answer choices show inconsistent dark gradation and an uncanny hover effect
 **Scope:** The `ChoiceButton` component uses `bg-background` (Layer 0) inside a `<Card>` (`bg-card`, Layer 1), creating an inverted visual hierarchy where interactive elements are darker than their container

@@ -1,5 +1,7 @@
 # BS-020: Card Contrast and Hover Consistency — Landing Page vs App
 
+**Status:** Resolved — Specced as SPEC-031 (Implemented). bg-muted→bg-background + hover token fix; residual hover standardization deferred. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-17
 **Triggered by:** Visual audit — dashboard cards lose contrast on hover, blending into the page background; landing page cards don't have this problem
 **Scope:** Background color layering, card hover effects, and visual consistency between the marketing site and the authenticated app, with the landing visual system as the baseline reference

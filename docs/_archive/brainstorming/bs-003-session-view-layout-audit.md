@@ -1,5 +1,7 @@
 # Active Session View Layout Audit
 
+**Status:** Resolved — All 5 layout problems resolved. Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-09
 **Scope:** The practice session page at `/app/practice/[sessionId]` — what users see while actively answering questions in tutor or exam mode.
 **Triggered by:** Visual review showing vestigial Quick Practice copy and scattered button layout in exam mode.

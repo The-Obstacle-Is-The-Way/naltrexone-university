@@ -1,7 +1,9 @@
 # Brainstorming Register
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-21 — archive convention and BS-064 closeout only.
+**Last Updated:** 2026-09-22 — archive disposition metadata only; the archive convention and BS-064 closeout remain dated 2026-09-21.
+
+**2026-09-22 metadata maintenance:** 48 archived records now carry explicit register-backed dispositions. Superseded ideas, deferred polish, consumed decisions and decomposed work retain those meanings; unknown disposition dates remain unknown. BS-057's tool-level statuses remain historical observations, not document-level closure fields. No live record closes. [Evidence and sample](../debt/assets/archive-metadata-2026-09-22/verification.md#brainstorming-and-audit-follow-through).
 
 **Earlier (2026-07-07):** added **BS-064** as the BUG-274 radio-choice modality decision record: pointer choice activation remains instant commit in Tutor/Quick Practice, while keyboard/AT radio selection uses the visible selected-uncommitted Submit/Enter path.
 
@@ -80,7 +82,7 @@ Brainstorming (BS-NNN) → Spec, bug or debt work → Implementation → Promoti
 | [BS-005](../_archive/brainstorming/bs-005-practice-recent-sessions-v2.md) | Practice Recent Sessions v2 | Superseded by SPEC-021 (panel removed) |
 | [BS-006](../_archive/brainstorming/bs-006-review-consistency-audit.md) | Review Consistency Audit | Resolved by SPEC-021; follow-up enhancements deferred |
 | [BS-007](../_archive/brainstorming/bs-007-quick-practice-history-gap.md) | Quick Practice History Gap | Specced as SPEC-022 (implemented) |
-| [BS-008](../_archive/brainstorming/bs-008-question-review-mode-gap.md) | Question Review Mode Gap | Specced as SPEC-023 (PR #92 implementing) |
+| [BS-008](../_archive/brainstorming/bs-008-question-review-mode-gap.md) | Question Review Mode Gap | Specced as SPEC-023 (PR #92 implementing). 2026-09-22 correction: #92 merged on 2026-02-12 as `672b504f`, now an ancestor of main; the earlier “implementing” wording is superseded. |
 | [BS-009](../_archive/brainstorming/bs-009-session-review-navigation-gap.md) | Session Review Navigation Gap | Specced as SPEC-027 (Implemented) |
 | [BS-010](../_archive/brainstorming/bs-010-review-mode-attempt-identity-gap.md) | Review Mode Attempt Identity Gap | Specced as SPEC-027 (Implemented) |
 | [BS-011](../_archive/brainstorming/bs-011-history-review-wiring-and-choice-label-desync.md) Bug A | History Tab Review Wiring | Specced as SPEC-026 (Implemented) |

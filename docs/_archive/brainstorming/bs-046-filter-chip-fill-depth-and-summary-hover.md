@@ -1,5 +1,7 @@
 # BS-046: Filter Chip Fill Depth + Summary Hover Removal
 
+**Status:** Resolved — Promoted to [DEBT-294](../debt/debt-294-filter-chip-fill-depth-and-cursor.md). Chrome visual audit added `cursor-pointer` fix and revised hover to `/[0.10]` (Radix-aligned). Register disposition date: not recorded. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-09
 **Triggered by:** Visual review of DEBT-290/291/292 shipped state — chips look flat/invisible against container, summary hover looks bad
 **Scope:** Two issues: (1) unselected filter chips need a subtle fill to differentiate from container; (2) summary hover effect is redundant with chevron and visually distracting

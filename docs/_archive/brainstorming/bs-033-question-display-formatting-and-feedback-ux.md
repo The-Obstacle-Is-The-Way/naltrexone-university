@@ -1,5 +1,7 @@
 # BS-033: Question Display Formatting and Feedback UX
 
+**Status:** Resolved — All 22 component-layer fixes complete (BUG-152–159, PRs #141–#143). Residual items were decomposed into [DEBT-335](../debt/debt-335-remove-all-or-nothing-wrong-answer-guard.md) (resolved 2026-03-24), [DEBT-336](../debt/debt-336-content-markdown-quality-pass.md), and [DEBT-337](../debt/debt-337-future-feedback-enhancements.md). Register disposition date: not recorded. Receipt: [PR #141](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/141), [PR #142](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/142), [PR #143](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/143); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-02-25
 **Triggered by:** Visual review of Quick Practice question display (zopiclone/methadone question)
 **Scope:** Multiple formatting and UX issues in how practice questions render — spanning MDX content, seed parsing, and React components

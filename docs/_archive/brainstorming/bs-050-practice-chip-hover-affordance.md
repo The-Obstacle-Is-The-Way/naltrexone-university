@@ -1,5 +1,7 @@
 # BS-050: Practice Page Chip Hover Affordance — Border Highlight + Contrast Lift
 
+**Status:** Resolved — Promoted to [DEBT-309](../debt/debt-309-filter-chip-hover-border-affordance.md), resolved by PR #209. Hover border affordance and fill lift implemented on FilterChip. Register disposition date: not recorded. Receipt: [PR #209](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/pull/209); [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-13
 **Triggered by:** Visual review of the Practice page topic/substance/treatment filter chips. On hover, the contrast change is barely perceptible in both dark and light mode (7% → 10% foreground opacity). Meanwhile, the Bookmarks page Remove pill (outline Button variant) gains a noticeably brighter border on hover in dark mode (`dark:hover:border-foreground/70`) alongside a stronger fill change, creating a much clearer hover signal. The practice chips lack this border-level feedback entirely.
 **Scope:** Improve hover affordance on unselected `FilterChip` components used in the Practice Session Starter, so users can clearly see which chip they're about to click.

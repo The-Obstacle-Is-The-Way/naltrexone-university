@@ -1,5 +1,7 @@
 # BS-056: Magic Numbers, Hard-Coded Literals, and Constant Duplication Audit
 
+**Status:** Resolved — Resolved on 2026-03-17 in `debt/magic-numbers-audit`. All F1-F8 were implemented, and `pnpm typecheck`, `pnpm lint`, `pnpm test --run`, `pnpm test:browser`, and `pnpm build` passed before archival. Register resolution date: 2026-03-17. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-03-17
 **Triggered by:** Proactive codebase-wide debt sweep for hard-coded values, magic numbers, and duplicated constant definitions.
 **Scope:** Runtime TypeScript in `app/`, `src/`, `components/`, and `lib/`, plus production-adjacent helper modules when they duplicate canonical runtime constants. Excludes `docs/`, generated files, `db/migrations/`, CSS/Tailwind numeric tokens, marketing copy/content numerals, fixtures, and test-only timeout values in unit/E2E suites.

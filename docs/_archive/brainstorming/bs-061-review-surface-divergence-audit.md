@@ -1,5 +1,7 @@
 # BS-061: Review Surface Divergence Audit — Three Different "Review Your Answers" Experiences
 
+**Status:** Decomposed — Archived 2026-04-17. Fully decomposed and shipped: Direction C → DEBT-350, Direction E → DEBT-351, Direction D7 → DEBT-352 (all archived). Direction A remains tracked in [BS-059](../../brainstorming/bs-059-practice-session-action-bar-button-arrangement.md). Register archival date: 2026-04-17. Receipt: register row only; [register disposition](../../brainstorming/index.md). Metadata backfilled 2026-09-22; historical prose below is unchanged.
+
 **Date:** 2026-04-06
 **Triggered by:** User walkthrough of the exam flow end-to-end. After submitting an exam, clicking "Review your answers" from the Session Summary leads to a different review experience than the pre-submit review flow, and both differ from the History page's review. The user described it as "sloppified" — subtly different button arrangements, bookmark placement, navigation options, and page headers across three surfaces that should feel like the same experience.
 **Scope:** Audit the exam-flow review surfaces — from pre-submit review through post-exam review, session summary, and the summary "Review your answers" handoff — and catalog where the experience breaks consistency.
