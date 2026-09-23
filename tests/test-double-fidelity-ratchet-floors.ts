@@ -13,6 +13,8 @@
 // use typed prepared-query faults: 33 more casts retire, leaving 240 / 48 files.
 // 2026-09-23 UTC: Rate-limiter Postgres replacements retire 12 more casts,
 // leaving 228 enforced sites across 47 files.
+// 2026-09-23 UTC: Portal tests reuse the typed client, retiring two casts:
+// 226 enforced sites across 46 files. No client behavior or waiver changes.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -65,7 +67,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/gateways/stripe/stripe-checkout-sessions-trials.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-customers.test.ts', 7],
-  ['src/adapters/gateways/stripe/stripe-portal.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
   ['src/adapters/repositories/drizzle-bookmark-repository.test.ts', 9],
