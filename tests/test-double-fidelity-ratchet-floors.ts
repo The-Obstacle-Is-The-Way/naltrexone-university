@@ -58,6 +58,8 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // guard and moves every behavior case to real Postgres, retiring its 19 casts.
 // 2026-09-23 UTC: The bookmark unit suite keeps one impossible-driver-response
 // case and moves membership, upsert, removal and ordering to real Postgres.
+// 2026-09-23 UTC: The question-repository unit suite keeps four no-query input
+// guards and moves lookups, ordering, predicates and mapping to real Postgres.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -129,7 +131,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
     1,
   ],
   ['src/adapters/repositories/drizzle-question-feedback-repository.test.ts', 6],
-  ['src/adapters/repositories/drizzle-question-repository.test.ts', 16],
   [
     'src/adapters/repositories/drizzle-renewal-consent-record-repository.test.ts',
     5,
