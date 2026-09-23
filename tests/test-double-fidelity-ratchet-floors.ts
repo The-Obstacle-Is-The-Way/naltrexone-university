@@ -23,6 +23,10 @@
 // not a prototype-dropping cast: 223 enforced sites across 43 files.
 // 2026-09-23 UTC: Observable container wiring replaces private-field checks:
 // 216 enforced sites across 43 files. No SDK/fake behavior changes.
+// 2026-09-23 UTC: Real container transaction coverage retires two more casts
+// and its canned payment gateway: 214 casts / 43 files, 44 port doubles / 17.
+// 2026-09-23 UTC: Four customer fault/request-shape cases reuse the typed
+// maintained client: 210 casts / 43 files. Three Search behavior cases remain.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -51,7 +55,7 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/pricing/page.test.tsx', 1],
   ['db/schema.test.ts', 3],
   ['lib/container.skip-clerk.test.ts', 6],
-  ['lib/container.test.ts', 8],
+  ['lib/container.test.ts', 6],
   ['proxy.test.ts', 28],
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
   [
@@ -73,7 +77,7 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ],
   ['src/adapters/gateways/stripe/stripe-checkout-sessions-trials.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts', 2],
-  ['src/adapters/gateways/stripe/stripe-customers.test.ts', 7],
+  ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
   ['src/adapters/repositories/drizzle-bookmark-repository.test.ts', 9],
@@ -145,7 +149,6 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/api/stripe/webhook/route.test.ts', 7],
   ['app/api/webhooks/clerk/route.test.ts', 2],
   ['app/pricing/page.test.tsx', 6],
-  ['lib/container.test.ts', 1],
   ['lib/logger.test.ts', 1],
   ['src/adapters/controllers/question-view-controller.test.ts', 1],
   [
