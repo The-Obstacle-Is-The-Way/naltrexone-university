@@ -1,4 +1,5 @@
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js/session';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { idempotencyKeys } from '@/db/schema';
 import { DrizzleIdempotencyKeyRepository } from '@/src/adapters/repositories/drizzle-idempotency-key-repository';
 import {
@@ -17,6 +18,7 @@ const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await cleanupAfterEach(db, cleanup);
 });
 
@@ -39,7 +41,19 @@ describe('DrizzleIdempotencyKeyRepository guard paths', () => {
     ).resolves.toBeNull();
   });
 
-  it('returns null from find for an absent key and for an expired key', async () => {
+  it('returns null from find for an absent key', async () => {
+    const user = await createUser(db, cleanup);
+    const repo = new DrizzleIdempotencyKeyRepository(
+      db,
+      () => new Date('2026-02-08T00:00:00.000Z'),
+    );
+
+    await expect(
+      repo.find(user.id, 'it:absent', 'missing'),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null from find for an expired key', async () => {
     const user = await createUser(db, cleanup);
     const now = new Date('2026-02-08T00:00:00.000Z');
     const repo = new DrizzleIdempotencyKeyRepository(db, () => now);
@@ -52,9 +66,6 @@ describe('DrizzleIdempotencyKeyRepository guard paths', () => {
       expiresAt: new Date('2026-02-07T00:00:00.000Z'),
     });
 
-    await expect(
-      repo.find(user.id, 'it:expired', 'missing'),
-    ).resolves.toBeNull();
     await expect(repo.find(user.id, 'it:expired', 'k')).resolves.toBeNull();
   });
 
@@ -101,6 +112,19 @@ describe('DrizzleIdempotencyKeyRepository guard paths', () => {
               error: { code: 'CONFLICT', message: 'Conflict' },
             }),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    },
+  );
+
+  it.each([0, -1, 1.5, Number.NaN])(
+    'returns 0 from pruneExpiredBefore without touching the database when limit is %s',
+    async (limit) => {
+      const execute = vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
+      const repo = new DrizzleIdempotencyKeyRepository(db);
+
+      await expect(
+        repo.pruneExpiredBefore(new Date('2026-02-08T00:00:00.000Z'), limit),
+      ).resolves.toBe(0);
+      expect(execute).not.toHaveBeenCalled();
     },
   );
 });
