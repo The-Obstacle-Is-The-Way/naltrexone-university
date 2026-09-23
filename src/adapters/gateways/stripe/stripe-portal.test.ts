@@ -1,23 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createStripePortalSession } from './stripe-portal';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
 describe('createStripePortalSession', () => {
   it('retries transient failures even when idempotency key is omitted', async () => {
+    const stripe = new FakeStripeCheckoutClient();
     const create = vi
-      .fn()
+      .spyOn(stripe.billingPortal.sessions, 'create')
       .mockRejectedValueOnce(
         Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' }),
-      )
-      .mockResolvedValueOnce({ url: 'https://stripe.test/portal' });
-
-    const stripe = {
-      billingPortal: {
-        sessions: {
-          create,
-        },
-      },
-    } as unknown as Parameters<typeof createStripePortalSession>[0]['stripe'];
+      );
 
     await expect(
       createStripePortalSession({
@@ -28,21 +21,14 @@ describe('createStripePortalSession', () => {
         },
         logger: new FakeLogger(),
       }),
-    ).resolves.toEqual({ url: 'https://stripe.test/portal' });
+    ).resolves.toEqual({ url: 'https://billing.stripe.test/session' });
 
     expect(create).toHaveBeenCalledTimes(2);
   });
 
   it('forwards idempotencyKey when provided', async () => {
-    const create = vi.fn(async () => ({ url: 'https://stripe.test/portal' }));
-
-    const stripe = {
-      billingPortal: {
-        sessions: {
-          create,
-        },
-      },
-    } as unknown as Parameters<typeof createStripePortalSession>[0]['stripe'];
+    const stripe = new FakeStripeCheckoutClient();
+    const create = vi.spyOn(stripe.billingPortal.sessions, 'create');
 
     await expect(
       createStripePortalSession({
@@ -56,7 +42,7 @@ describe('createStripePortalSession', () => {
         },
         logger: new FakeLogger(),
       }),
-    ).resolves.toEqual({ url: 'https://stripe.test/portal' });
+    ).resolves.toEqual({ url: 'https://billing.stripe.test/session' });
 
     expect(create).toHaveBeenCalledWith(
       {
