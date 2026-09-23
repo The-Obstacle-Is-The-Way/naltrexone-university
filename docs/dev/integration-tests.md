@@ -136,7 +136,10 @@ Integration tests are part of every PR and every push to `main`.
 | `tests/integration/rate-limiter.integration.test.ts` | 1 | DrizzleRateLimiter sliding window |
 | `tests/integration/tag-repository.integration.test.ts` | 1 | DrizzleTagRepository ordered listing |
 | `tests/integration/bug-regression.integration.test.ts` | 10 | Bug regression tests (BUG-186, 187, 188, 192, 195) |
-| `tests/integration/controllers.integration.test.ts` | 10 | Controller → repository → DB round trips |
+| `tests/integration/controllers.integration.test.ts` | 4 | Question submission, exam finalization, and transactional rollback |
+| `tests/integration/controllers-history.integration.test.ts` | 3 | Stats aggregation and attempted-question review queries |
+| `tests/integration/controllers-webhooks.integration.test.ts` | 4 | Stripe subscription updates and Clerk deletion/idempotency cleanup |
+| `tests/integration/container-stripe-wiring.integration.test.ts` | 3 | Container price configuration through real SDK/signature handling and Postgres; injected SDK use. Canned HTTP input is wiring-only, not provider parity. |
 | `tests/integration/actions.stripe.integration.test.ts` | 2 | Stripe billing controller actions |
 | `tests/integration/tag-taxonomy-census.integration.test.ts` | 4 | Tag taxonomy validation (requires seed data) |
 
