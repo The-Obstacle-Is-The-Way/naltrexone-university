@@ -634,6 +634,15 @@ For feature PRs into `dev`:
    - False positive → reply with the disproving receipt for the record.
 5. **If CodeRabbit reports a rate limit, STOP.** Do not merge based on a prior partial review, a green CodeRabbit status context, or inline acknowledgements. Wait for the full cooldown shown in the rate-limit message, then explicitly request or wait for a fresh CodeRabbit review on the latest PR head commit.
 6. **Only merge after** CodeRabbit has completed a non-rate-limited review of the latest PR head AND all feedback is addressed
+7. **If a later push leaves the approval on an earlier head, refresh it rather
+   than merge on it.** CodeRabbit reviews incrementally and does not re-approve
+   while its earlier approval still stands, so a follow-up commit with no
+   findings can leave the only APPROVED review on the previous head, which the
+   merge command rejects. Dismiss that stale approval with a comment citing this
+   rule (never dismiss an unaddressed finding), then post
+   `@coderabbitai full review`; the fresh approval lands on the exact head
+   (PR #1038, 2026-09-23). `@coderabbitai review` refuses with "Already reviewed
+   the last commit" in this state.
 
 ### Guard and Scanner Review Discipline
 
