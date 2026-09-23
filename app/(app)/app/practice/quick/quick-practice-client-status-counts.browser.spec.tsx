@@ -113,6 +113,10 @@ test('renders status segmented control below the page heading', async () => {
     .element(screen.getByRole('link', { name: 'Back to Practice' }))
     .toBeVisible();
   await expect.element(statusControl).toBeVisible();
+  expect(statusControl.element().tagName).toBe('FIELDSET');
+  expect(statusControl.element().querySelector('legend')?.textContent).toBe(
+    'Status',
+  );
   await expect
     .element(
       statusControl.getByRole('button', { name: 'Incorrect (3)', exact: true }),

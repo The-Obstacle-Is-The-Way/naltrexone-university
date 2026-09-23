@@ -17,12 +17,14 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => useSearchParamsMock(),
 }));
 
-let QuickPracticeClient: typeof import('./quick-practice-client').default;
-let buildQuickPracticeStatusHref: typeof import('./quick-practice-client').buildQuickPracticeStatusHref;
-let parseStatusParam: typeof import('./quick-practice-client').parseStatusParam;
+let QuickPracticeClient: typeof import('@/app/(app)/app/practice/quick/quick-practice-client').default;
+let buildQuickPracticeStatusHref: typeof import('@/app/(app)/app/practice/quick/quick-practice-client').buildQuickPracticeStatusHref;
+let parseStatusParam: typeof import('@/app/(app)/app/practice/quick/quick-practice-client').parseStatusParam;
 
 beforeAll(async () => {
-  const module = await import('./quick-practice-client');
+  const module = await import(
+    '@/app/(app)/app/practice/quick/quick-practice-client'
+  );
   QuickPracticeClient = module.default;
   buildQuickPracticeStatusHref = module.buildQuickPracticeStatusHref;
   parseStatusParam = module.parseStatusParam;
