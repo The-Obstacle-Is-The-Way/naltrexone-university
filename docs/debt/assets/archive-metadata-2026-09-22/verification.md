@@ -63,3 +63,28 @@ The last run passed on one documented rerun, not its first attempt; #1006's comm
 ## Completion boundary
 
 Seven active debt records remain. This pass does not close any of them, alter a ratchet floor, repair the 41 unproven historical link occurrences, or claim the pending bugs/brainstorming/audit backfills and guard have landed. Per-PR gate, review and merge receipts belong in the corresponding PR bodies.
+
+## Bug register follow-through
+
+**2026-09-22 maintenance, after debt backfill #1008:** the nine-file field census needs a qualification: BUG-234 was already explicitly resolved in a `## Status:` heading, with #271 and its April 9 merge date. It never lacked an in-file disposition. This pass normalizes that field and corrects eight genuinely stale Open statuses; it does not claim nine newly resolved bugs. The prior census's absent field meant the conventional bold field only.
+
+The bug register has no resolution-date column for these records. Its dated archival entries supply the dates below; the September 21 date in the later filename-index rows is only an indexing date. Using that date as a resolution date would be false. The archived records now say **Register archival date**, not newly measured production date. PRs #193, #214, #223, #265, #266 and #271 are all merged, and their merge commits are ancestors of baseline main `66172ad6`. BUG-228 remains **register row only**; no PR is guessed. Its register explicitly records resolution and archival on March 18.
+
+All nine prior status values are preserved as filed, including BUG-234's already-resolved value. Removing only the maintenance status lines restores all nine pre-change bodies exactly. No old unchecked verification box is silently ticked, no historical tracer line is rewritten, and no fresh verification of the old incident is claimed.
+
+| Sampled edit | Date/source | Receipt / preservation check |
+| --- | --- | --- |
+| BUG-204 status | 2026-03-10 archival entry | Existing #193 merged `2a4589bb`; original Open retained. |
+| BUG-212 status | 2026-03-15 archival entry | Existing #214 merged `e55fb2f4`; same dated entry names 212, 213 and 214. |
+| BUG-213 status | 2026-03-15 archival entry | #214; the filing date March 13 is not used as resolution. |
+| BUG-214 status | 2026-03-15 archival entry | #214 merged March 14; March 15 is explicitly the register archival date, not merge time. |
+| BUG-225 status | 2026-03-15 archival entry | Existing #223 merged `7da1ba86`; original Open retained. |
+| BUG-228 status | 2026-03-18 archival entry | Register row only; old Open / production-confirmation wording retained as filed. |
+| BUG-231 status | 2026-04-06 archival entry | Existing #266 merged `7cd46154`; original Open retained. |
+| BUG-233 status | 2026-04-06 archival entry | Existing #265 merged `e05ee772` on April 5; April 6 is the register archival date. |
+| BUG-234 field normalization | 2026-04-09 archival entry and in-file heading | Existing #271 merged `94472d55`; already resolved, not a new closure. |
+| Bug-index maintenance date | 2026-09-22 | Scoped to metadata; the August 28 incident audit is not re-dated. |
+| Bug-index Latest / Earlier | New maintenance entry; old August 28 entry | Earlier stanza's dated claims preserved, only its label changes. BUG-304 stays active. |
+| Debt-index Latest / Earlier | New maintenance entry; prior #1008 entry | Exactly one Latest stanza; seven active debts and Next Debt ID unchanged. |
+
+**Prior step receipt:** #1008 merged into dev as `199de7d851720c464a2130ea121f399edeb28f94`, after exact-head approval `5285399945` on `81ff932e`, zero threads and CI `35800189131` (5,669 unit, 411 browser, 349 integration plus six intentional skips, 52 E2E with no retry markers). It is not yet a production-promotion receipt; the register/guard milestone is still in progress.
