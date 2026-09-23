@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { sql as drizzleSql, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { ClerkAuthGateway } from '@/src/adapters/gateways/clerk-auth-gateway';
@@ -152,6 +152,17 @@ describe('DrizzleUserRepository', () => {
         id: user.id,
         email,
       });
+
+      // FOR UPDATE takes a RowShareLock on the table for the transaction; a
+      // plain select would hold only AccessShareLock.
+      const [locks] = await tx.execute(drizzleSql<{ held: number }>`
+        select count(*)::int as held
+        from pg_locks
+        where relation = 'users'::regclass
+          and pid = pg_backend_pid()
+          and mode = 'RowShareLock'
+      `);
+      expect(locks).toEqual({ held: 1 });
     });
   });
 
@@ -531,5 +542,59 @@ describe('DrizzleUserRepository', () => {
 
     await expect(repo.deleteByClerkId(clerkUserId)).resolves.toBe(true);
     await expect(repo.findByClerkId(clerkUserId)).resolves.toBeNull();
+  });
+
+  it('finds a user by local id and returns null for an absent id', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+    const email = `it-${randomUUID()}@example.com`;
+    const user = await repo.upsertByClerkId(clerkUserId, email);
+    cleanup.userIds.push(user.id);
+
+    await expect(repo.findById(user.id)).resolves.toEqual({
+      id: user.id,
+      email,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
+    await expect(repo.findById(randomUUID())).resolves.toBeNull();
+  });
+
+  it('returns null from lockByClerkId when the user does not exist', async () => {
+    await db.transaction(async (tx) => {
+      const txRepo = new DrizzleUserRepository(tx);
+      await expect(
+        txRepo.lockByClerkId(`user_${randomUUID().replaceAll('-', '')}`),
+      ).resolves.toBeNull();
+    });
+  });
+
+  it('holds the transaction-scoped subscription write lock on the user id until commit', async () => {
+    const repo = new DrizzleUserRepository(db);
+    const clerkUserId = `user_${randomUUID().replaceAll('-', '')}`;
+    const user = await repo.upsertByClerkId(
+      clerkUserId,
+      `it-${randomUUID()}@example.com`,
+    );
+    cleanup.userIds.push(user.id);
+    const heldAdvisoryLocks = drizzleSql<{ held: number }>`
+      select count(*)::int as held
+      from pg_locks
+      where locktype = 'advisory' and pid = pg_backend_pid()
+    `;
+
+    await db.transaction(async (tx) => {
+      const txRepo = new DrizzleUserRepository(tx);
+      await expect(
+        txRepo.acquireSubscriptionWriteLock(user.id),
+      ).resolves.toBeUndefined();
+
+      const [inside] = await tx.execute(heldAdvisoryLocks);
+      expect(inside).toEqual({ held: 1 });
+    });
+
+    // A transaction-scoped lock must not survive the commit.
+    const [outside] = await db.execute(heldAdvisoryLocks);
+    expect(outside).toEqual({ held: 0 });
   });
 });

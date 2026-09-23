@@ -1,448 +1,152 @@
-// @vitest-environment jsdom
-import { eq, type SQL } from 'drizzle-orm';
-import { PgDialect } from 'drizzle-orm/pg-core';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { users } from '@/db/schema';
-import { DrizzleUserRepository } from '@/src/adapters/repositories/drizzle-user-repository';
+import {
+  createTableRelationsHelpers,
+  extractTablesRelationalConfig,
+} from 'drizzle-orm';
+import { PgDatabase, PgDialect, PgTransaction } from 'drizzle-orm/pg-core';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import {
+  PostgresJsPreparedQuery,
+  type PostgresJsQueryResultHKT,
+} from 'drizzle-orm/postgres-js/session';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as schema from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
+import { DrizzleUserRepository } from './drizzle-user-repository';
 
-type RepoDb = ConstructorParameters<typeof DrizzleUserRepository>[0];
+const relational = extractTablesRelationalConfig(
+  schema,
+  createTableRelationsHelpers,
+);
+const schemaConfig = {
+  fullSchema: schema,
+  schema: relational.tables,
+  tableNamesMap: relational.tableNamesMap,
+};
+const repo = new DrizzleUserRepository(drizzle.mock({ schema }));
+type MockDatabase = PgDatabase<
+  PostgresJsQueryResultHKT,
+  typeof schema,
+  typeof relational.tables
+>;
 
-const userId = crypto.randomUUID();
-
-function createDbMock() {
-  const queryFindFirst = vi.fn();
-
-  const insertReturning = vi.fn();
-  const insertOnConflictDoUpdate = vi.fn(() => ({
-    returning: insertReturning,
-  }));
-  const insertValues = vi.fn(() => ({
-    onConflictDoUpdate: insertOnConflictDoUpdate,
-  }));
-  const insert = vi.fn(() => ({ values: insertValues }));
-
-  const updateReturning = vi.fn();
-  const updateWhere = vi.fn(() => ({ returning: updateReturning }));
-  const updateSet = vi.fn(() => ({ where: updateWhere }));
-  const updateFn = vi.fn(() => ({ set: updateSet }));
-
-  const deleteReturning = vi.fn();
-  const deleteWhere = vi.fn(() => ({ returning: deleteReturning }));
-  const deleteFn = vi.fn(() => ({ where: deleteWhere }));
-
-  const db = {
-    query: {
-      users: {
-        findFirst: queryFindFirst,
-      },
-    },
-    insert,
-    update: updateFn,
-    delete: deleteFn,
-    execute: vi.fn(async (_sql: unknown) => undefined),
-  } as const;
-  const transaction = vi.fn(
-    async <T>(fn: (tx: typeof db) => Promise<T>): Promise<T> => fn(db),
-  );
-
-  return {
-    ...db,
-    transaction,
-    _mocks: {
-      queryFindFirst,
-      insertReturning,
-      insertOnConflictDoUpdate,
-      insertValues,
-      updateReturning,
-      updateWhere,
-      updateSet,
-      updateFn,
-      deleteReturning,
-      deleteWhere,
-      deleteFn,
-      transaction,
-    },
-  } as const;
+class StubTransaction extends PgTransaction<
+  PostgresJsQueryResultHKT,
+  typeof schema,
+  typeof relational.tables
+> {
+  override transaction<T>(
+    transaction: (tx: StubTransaction) => Promise<T>,
+  ): Promise<T> {
+    return transaction(this);
+  }
 }
 
-describe('DrizzleUserRepository', () => {
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.restoreAllMocks();
+// Only driver-response and error translation that real Postgres cannot force
+// belongs here. The real prepared-query boundary supplies the fault; SQL
+// behavior (find, lock, upsert clock guard, email ownership conflicts, delete,
+// advisory lock) and transaction commit/rollback are covered in
+// tests/integration/user-repository.integration.test.ts.
+beforeEach(() => {
+  vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
+  // drizzle.mock has no transactional client, so run the callback on a
+  // transaction bound to the same mock session; queries inside it still reach
+  // the spied prepared-query boundary above.
+  vi.spyOn(PgDatabase.prototype, 'transaction').mockImplementation(function (
+    this: MockDatabase,
+    transaction,
+  ) {
+    return transaction(
+      new StubTransaction(new PgDialect(), this._.session, schemaConfig),
+    );
+  });
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('DrizzleUserRepository error translation', () => {
+  it('throws INTERNAL_ERROR when the upsert returning clause yields no rows', async () => {
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockResolvedValueOnce(
+      [],
+    );
+
+    const promise = repo.upsertByClerkId('clerk_1', 'a@example.com');
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
-  describe('findById', () => {
-    it('returns the user needed for a transaction-bound acknowledgment', async () => {
-      const db = createDbMock();
-      const row = {
-        id: userId,
-        clerkUserId: 'clerk_1',
-        email: 'subscriber@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      };
-      db._mocks.queryFindFirst.mockResolvedValue(row);
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(repo.findById(userId)).resolves.toEqual({
-        id: userId,
-        email: row.email,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      });
-      expect(db._mocks.queryFindFirst).toHaveBeenCalledWith({
-        where: eq(users.id, userId),
-      });
+  it('maps a unique violation outside the email constraint to CONFLICT', async () => {
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce({
+      code: '23505',
     });
 
-    it('returns null when the local user id is absent', async () => {
-      const db = createDbMock();
-      db._mocks.queryFindFirst.mockResolvedValue(undefined);
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(repo.findById(userId)).resolves.toBeNull();
-    });
+    const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
-  describe('findByClerkId', () => {
-    it('returns null when user does not exist', async () => {
-      const db = createDbMock();
-      db._mocks.queryFindFirst.mockResolvedValue(null);
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(repo.findByClerkId('clerk_1')).resolves.toBeNull();
-    });
-
-    it('returns the user when found', async () => {
-      const db = createDbMock();
-      const row = {
-        id: userId,
-        clerkUserId: 'clerk_1',
-        email: 'a@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      };
-      db._mocks.queryFindFirst.mockResolvedValue(row);
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(repo.findByClerkId('clerk_1')).resolves.toEqual({
-        id: userId,
-        email: 'a@example.com',
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      });
-    });
-  });
-
-  describe('lockByClerkId', () => {
-    it('returns null when the user does not exist', async () => {
-      const db = {
-        select: () => ({
-          from: () => ({
-            where: () => ({
-              for: async () => [],
-            }),
-          }),
-        }),
-      } as const;
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(repo.lockByClerkId('clerk_missing')).resolves.toBeNull();
-    });
-
-    it('locks and returns the user when found', async () => {
-      const row = {
-        id: userId,
-        email: 'a@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: new Date('2026-02-01T00:00:00Z'),
-      };
-      const forUpdate = vi.fn(async () => [row]);
-      const where = vi.fn(() => ({ for: forUpdate }));
-      const from = vi.fn(() => ({ where }));
-      const select = vi.fn(() => ({ from }));
-
-      const db = { select } as const;
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(repo.lockByClerkId('clerk_1')).resolves.toEqual(row);
-      expect(forUpdate).toHaveBeenCalledWith('update');
-    });
-  });
-
-  describe('upsertByClerkId', () => {
-    it('returns the user row returned by the upsert', async () => {
-      vi.useFakeTimers();
-      const now = new Date('2026-02-01T00:00:00Z');
-      vi.setSystemTime(now);
-
-      const db = createDbMock();
-      const row = {
-        id: userId,
-        clerkUserId: 'clerk_1',
-        email: 'a@example.com',
-        createdAt: now,
-        updatedAt: now,
-      };
-      db._mocks.insertReturning.mockResolvedValue([row]);
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.upsertByClerkId('clerk_1', 'a@example.com'),
-      ).resolves.toEqual({
-        id: row.id,
-        email: row.email,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      });
-
-      expect(db._mocks.insertValues).toHaveBeenCalledWith({
-        clerkUserId: 'clerk_1',
-        email: 'a@example.com',
-        createdAt: now,
-        updatedAt: now,
-      });
-      expect(db._mocks.transaction).toHaveBeenCalledTimes(1);
-    });
-
-    it('uses observedAt for createdAt/updatedAt on insert values', async () => {
-      const observedAt = new Date('2026-02-01T00:30:00Z');
-
-      const db = createDbMock();
-      const row = {
-        id: userId,
-        clerkUserId: 'clerk_1',
-        email: 'a@example.com',
-        createdAt: observedAt,
-        updatedAt: observedAt,
-      };
-      db._mocks.insertReturning.mockResolvedValue([row]);
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.upsertByClerkId('clerk_1', 'a@example.com', { observedAt }),
-      ).resolves.toEqual({
-        id: row.id,
-        email: row.email,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      });
-
-      expect(db._mocks.insertValues).toHaveBeenCalledWith({
-        clerkUserId: 'clerk_1',
-        email: 'a@example.com',
-        createdAt: observedAt,
-        updatedAt: observedAt,
-      });
-    });
-
-    it('throws INTERNAL_ERROR when returning yields no rows', async () => {
-      const db = createDbMock();
-      db._mocks.insertReturning.mockResolvedValue([]);
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      const promise = repo.upsertByClerkId('clerk_1', 'a@example.com');
-      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
-    });
-
-    it('maps Postgres unique violations to CONFLICT', async () => {
-      const db = createDbMock();
-      db._mocks.insertReturning.mockRejectedValue({ code: '23505' });
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
-      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({ code: 'CONFLICT' });
-    });
-
-    it('preserves unknown database errors as the INTERNAL_ERROR cause', async () => {
-      const db = createDbMock();
-      const databaseError = new Error('boom');
-      db._mocks.insertReturning.mockRejectedValue(databaseError);
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
-      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({
-        code: 'INTERNAL_ERROR',
-        cause: databaseError,
-      });
-    });
-
-    it('returns a typed non-mutating conflict when another Clerk identity owns the email', async () => {
-      const observedAt = new Date('2026-02-01T00:30:00Z');
-      const db = createDbMock();
-      const row = {
-        id: userId,
-        email: 'a@example.com',
-        createdAt: new Date('2026-02-01T00:00:00Z'),
-        updatedAt: observedAt,
-      };
-      db._mocks.insertReturning.mockRejectedValue({
+  it('maps an email unique violation whose owner lookup fails to INTERNAL_ERROR with the lookup cause', async () => {
+    const lookupError = new Error('lookup boom');
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute)
+      .mockRejectedValueOnce({
         code: '23505',
-        constraint: 'users_email_uq',
-      });
-      db._mocks.queryFindFirst.mockResolvedValue({
-        clerkUserId: 'clerk_1',
-      });
-      db._mocks.updateReturning.mockResolvedValue([row]);
+        constraint_name: 'users_email_uq',
+      })
+      .mockRejectedValueOnce(lookupError);
 
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      const promise = repo.upsertByClerkId('clerk_2', 'a@example.com', {
-        observedAt,
-      });
-
-      await expect(promise).rejects.toMatchObject({
-        code: 'CONFLICT',
-        existingClerkUserId: 'clerk_1',
-        details: {
-          reason: 'user_email_owned_by_another_identity',
-        },
-      });
-      expect(db._mocks.updateFn).not.toHaveBeenCalled();
-    });
-
-    it('reports the current email owner when the incoming identity already owns another row', async () => {
-      const db = createDbMock();
-      db._mocks.insertReturning.mockRejectedValue({
-        code: '23505',
-        constraint: 'users_email_uq',
-      });
-      db._mocks.queryFindFirst.mockResolvedValue({
-        clerkUserId: 'clerk_1',
-      });
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      const promise = repo.upsertByClerkId('clerk_2', 'a@example.com');
-      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({
-        code: 'CONFLICT',
-        existingClerkUserId: 'clerk_1',
-        details: {
-          reason: 'user_email_owned_by_another_identity',
-        },
-      });
-      expect(db._mocks.updateFn).not.toHaveBeenCalled();
+    const promise = repo.upsertByClerkId('clerk_2', 'a@example.com');
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: lookupError,
     });
   });
 
-  describe('updateEmailByClerkId', () => {
-    it('returns a typed conflict when another Clerk identity owns the target email', async () => {
-      const db = createDbMock();
-      db._mocks.updateReturning.mockRejectedValue({
-        code: '23505',
-        constraint: 'users_email_uq',
-      });
-      db._mocks.queryFindFirst.mockResolvedValue({
-        clerkUserId: 'clerk_owner',
-      });
+  it('preserves unknown database errors as the INTERNAL_ERROR cause', async () => {
+    const databaseError = new Error('boom');
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
+      databaseError,
+    );
 
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.updateEmailByClerkId('clerk_incoming', 'owned@example.com'),
-      ).rejects.toMatchObject({
-        code: 'CONFLICT',
-        existingClerkUserId: 'clerk_owner',
-        details: {
-          reason: 'user_email_owned_by_another_identity',
-        },
-      });
-    });
-
-    it('maps persistence failures to INTERNAL_ERROR', async () => {
-      const db = createDbMock();
-      db._mocks.updateReturning.mockRejectedValue(new Error('boom'));
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(
-        repo.updateEmailByClerkId('clerk_1', 'new@example.com'),
-      ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+    const promise = repo.upsertByClerkId('clerk_1', 'new@example.com');
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: databaseError,
     });
   });
 
-  describe('deleteByClerkId', () => {
-    it('returns false when no user row exists', async () => {
-      const db = createDbMock();
-      db._mocks.deleteReturning.mockResolvedValue([]);
+  it('maps email update persistence failures to INTERNAL_ERROR', async () => {
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
+      new Error('boom'),
+    );
 
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(repo.deleteByClerkId('clerk_1')).resolves.toBe(false);
-    });
-
-    it('returns true when a user row is deleted', async () => {
-      const db = createDbMock();
-      db._mocks.deleteReturning.mockResolvedValue([{ id: userId }]);
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      await expect(repo.deleteByClerkId('clerk_1')).resolves.toBe(true);
-      expect(db._mocks.deleteFn).toHaveBeenCalledTimes(1);
-    });
-
-    it('throws INTERNAL_ERROR when delete query throws', async () => {
-      const db = createDbMock();
-      db._mocks.deleteFn.mockImplementation(() => {
-        throw new Error('boom');
-      });
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      const promise = repo.deleteByClerkId('clerk_1');
-      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
-    });
-
-    it('preserves the driver error as cause so deadlock SQLSTATEs stay observable', async () => {
-      const db = createDbMock();
-      const deadlock = Object.assign(new Error('deadlock detected'), {
-        code: '40P01',
-      });
-      db._mocks.deleteFn.mockImplementation(() => {
-        throw deadlock;
-      });
-
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
-
-      const promise = repo.deleteByClerkId('clerk_1');
-      await expect(promise).rejects.toMatchObject({
-        code: 'INTERNAL_ERROR',
-        cause: deadlock,
-      });
-    });
+    await expect(
+      repo.updateEmailByClerkId('clerk_1', 'new@example.com'),
+    ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
   });
 
-  describe('acquireSubscriptionWriteLock', () => {
-    it('takes the canonical transaction-scoped advisory lock on the user id', async () => {
-      const db = createDbMock();
-      const repo = new DrizzleUserRepository(db as unknown as RepoDb);
+  it('throws INTERNAL_ERROR when the delete query throws', async () => {
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
+      new Error('boom'),
+    );
 
-      await expect(
-        repo.acquireSubscriptionWriteLock(userId),
-      ).resolves.toBeUndefined();
+    const promise = repo.deleteByClerkId('clerk_1');
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+  });
 
-      expect(db.execute).toHaveBeenCalledTimes(1);
-      const query = new PgDialect().sqlToQuery(
-        db.execute.mock.calls[0]?.[0] as SQL,
-      );
-      expect(query.sql).toBe('select pg_advisory_xact_lock(hashtext($1))');
-      expect(query.params).toEqual([userId]);
+  it('preserves the driver error as cause so deadlock SQLSTATEs stay observable', async () => {
+    const deadlock = Object.assign(new Error('deadlock detected'), {
+      code: '40P01',
+    });
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
+      deadlock,
+    );
+
+    await expect(repo.deleteByClerkId('clerk_1')).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      cause: deadlock,
     });
   });
 });
