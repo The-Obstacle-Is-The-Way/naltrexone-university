@@ -37,11 +37,12 @@
 // leaving 15 own-code module factories across six files.
 // 2026-09-23 UTC: Practice starter state uses the real hook and component,
 // leaving 13 own-code module factories across five files.
+// 2026-09-23 UTC: Root-layout tests execute both actual provider wrappers,
+// leaving 11 own-code module factories across four files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout-shell.test.tsx', 1],
   ['app/api/cron/reconcile-stripe-subscriptions/route.test.ts', 4],
-  ['app/layout.test.tsx', 2],
   ['components/auth-nav.test.tsx', 5],
   ['components/marketing/marketing-layout.test.tsx', 1],
 ]);
