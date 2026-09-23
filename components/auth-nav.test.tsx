@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes/fake-gateways';
@@ -16,6 +16,32 @@ const { fixtureUser1Id } = vi.hoisted(() => ({
 
 vi.mock('next/link', () => ({
   default: (props: Record<string, unknown>) => <a {...props} />,
+}));
+
+type UserButtonProps = ComponentProps<
+  typeof import('@clerk/nextjs').UserButton
+>;
+
+// Keep the application AuthUserButton wrapper real; observe only the props it
+// forwards to Clerk's dynamically imported UserButton. This does not simulate
+// Clerk rendering or authentication.
+vi.mock('next/dynamic', () => ({
+  default: () =>
+    function ClerkUserButtonBoundary({ appearance }: UserButtonProps) {
+      const elements: object | undefined = appearance?.elements;
+      const trigger =
+        elements && 'userButtonTrigger' in elements
+          ? elements.userButtonTrigger
+          : undefined;
+      return (
+        <div
+          data-testid="user-button"
+          data-user-button-trigger={
+            typeof trigger === 'string' ? trigger : undefined
+          }
+        />
+      );
+    },
 }));
 
 const ORIGINAL_ENV = snapshotProcessEnv();
@@ -205,10 +231,6 @@ describe('AuthNav', () => {
 
   it('scenario 3: authenticated entitled app pages do not duplicate the Dashboard link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    vi.doMock('./auth-user-button', () => ({
-      AuthUserButton: () => <div data-testid="user-button" />,
-    }));
-
     const { AuthNav } = await import('./auth-nav');
     const { AppLayoutShell } = await import('@/app/(app)/app/layout');
 
@@ -241,10 +263,6 @@ describe('AuthNav', () => {
 
   it('scenario 4: authenticated entitled marketing pages keep a single Dashboard escape hatch', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    vi.doMock('./auth-user-button', () => ({
-      AuthUserButton: () => <div data-testid="user-button" />,
-    }));
-
     const { AuthNav } = await import('./auth-nav');
 
     const user = createUser({ id: fixtureUser1Id });
@@ -277,26 +295,6 @@ describe('AuthNav', () => {
 
   it('passes 44px minimum trigger sizing to Clerk UserButton appearance', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    const authUserButtonMock = vi.fn(
-      (props: {
-        appearance?: {
-          elements?: {
-            userButtonTrigger?: string;
-          };
-        };
-      }) => (
-        <div
-          data-testid="user-button"
-          data-user-button-trigger={
-            props.appearance?.elements?.userButtonTrigger
-          }
-        />
-      ),
-    );
-    vi.doMock('./auth-user-button', () => ({
-      AuthUserButton: authUserButtonMock,
-    }));
-
     const { AuthNav } = await import('./auth-nav');
 
     const user = createUser({ id: fixtureUser1Id });
@@ -318,14 +316,14 @@ describe('AuthNav', () => {
     expect(userButton).not.toBeNull();
     expect(triggerClasses).toContain('min-h-[44px]');
     expect(triggerClasses).toContain('min-w-[44px]');
+    // The real wrapper reserves the same 44px touch target around the trigger.
+    const wrapper = userButton?.parentElement;
+    expect(wrapper?.className).toContain('min-h-[44px]');
+    expect(wrapper?.className).toContain('min-w-[44px]');
   });
 
   it('scenario 5: authenticated non-entitled marketing pages do not duplicate the Pricing link', async () => {
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    vi.doMock('./auth-user-button', () => ({
-      AuthUserButton: () => <div data-testid="user-button" />,
-    }));
-
     const { AuthNav } = await import('./auth-nav');
 
     const user = createUser({ id: fixtureUser1Id });
@@ -359,10 +357,6 @@ describe('AuthNav', () => {
   it('scenario 6: authenticated non-entitled pricing page does not duplicate the Pricing link', async () => {
     setPricingPageEnvDefaults();
     process.env.NEXT_PUBLIC_SKIP_CLERK = 'false';
-    vi.doMock('./auth-user-button', () => ({
-      AuthUserButton: () => <div data-testid="user-button" />,
-    }));
-
     const { AuthNav } = await import('./auth-nav');
     const PricingPage = (await import('@/app/pricing/page')).default;
 
