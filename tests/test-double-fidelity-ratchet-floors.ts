@@ -54,12 +54,15 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-23 UTC: The user-repository unit suite keeps seven typed
 // error-translation cases at the real prepared-query boundary and moves its
 // behavior to real Postgres, retiring its 20 casts.
-// 2026-09-23 UTC: The idempotency-key unit suite keeps only its no-query limit
-// guard and moves every behavior case to real Postgres, retiring its 19 casts.
+// 2026-09-23 UTC: The idempotency-key unit suite retires entirely (19 casts);
+// its behavior cases and its no-query limit guard run against real Postgres in
+// tests/integration/idempotency-key-repository-guards.integration.test.ts.
 // 2026-09-23 UTC: The bookmark unit suite keeps one impossible-driver-response
 // case and moves membership, upsert, removal and ordering to real Postgres.
-// 2026-09-23 UTC: The question-repository unit suite keeps four no-query input
-// guards and moves lookups, ordering, predicates and mapping to real Postgres.
+// 2026-09-23 UTC: The question-repository unit suite retires entirely (16 casts);
+// its lookups, ordering, predicates and mapping run against real Postgres, and
+// its four no-query input guards run with a boundary spy in
+// tests/integration/question-repository-lookups.integration.test.ts.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
