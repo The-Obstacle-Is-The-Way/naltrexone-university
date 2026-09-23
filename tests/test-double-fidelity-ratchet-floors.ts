@@ -15,6 +15,10 @@
 // leaving 228 enforced sites across 47 files.
 // 2026-09-23 UTC: Portal tests reuse the typed client, retiring two casts:
 // 226 enforced sites across 46 files. No client behavior or waiver changes.
+// 2026-09-23 UTC: Real feedback-export SQL coverage retires its cast:
+// 225 enforced sites across 45 files.
+// 2026-09-23 UTC: The lost-session fixture uses public discard, not private
+// state access: 224 enforced sites across 44 files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -45,7 +49,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['lib/container.skip-clerk.test.ts', 6],
   ['lib/container.test.ts', 15],
   ['proxy.test.ts', 28],
-  ['scripts/export-question-feedback.test.ts', 1],
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
   [
     'src/adapters/gateways/stripe/stripe-checkout-sessions-concurrency.test.ts',
@@ -124,10 +127,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/repositories/drizzle-user-repository.test.ts', 20],
   [
     'src/adapters/repositories/practice-session-question-state-updater-lock.test.ts',
-    1,
-  ],
-  [
-    'src/application/test-helpers/fakes/fake-practice-session-repository.test.ts',
     1,
   ],
   ['tests/e2e/helpers/bookmark.test.ts', 2],
