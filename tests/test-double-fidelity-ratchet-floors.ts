@@ -45,10 +45,11 @@
 // 2026-09-23 UTC: The DEBT-421 toggle sentinels moved to Browser Mode twins
 // that watch for the real control, leaving 4 own-code module factories in one
 // file.
+// 2026-09-23 UTC: The reconcile cron route composes a narrow handler seam, so
+// its orchestration tests use typed fakes; no own-code module factories
+// remain.
 
-export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
-  ['app/api/cron/reconcile-stripe-subscriptions/route.test.ts', 4],
-]);
+export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
