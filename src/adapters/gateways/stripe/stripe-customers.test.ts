@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createStripeCustomer } from './stripe-customers';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
 const appUserId = crypto.randomUUID();
 
@@ -49,14 +50,10 @@ describe('createStripeCustomer', () => {
   });
 
   it('throws VALIDATION_ERROR when userId contains unsupported search characters', async () => {
-    const customers = {
-      create: vi.fn(async () => ({ id: 'cus_new' })),
-      search: vi.fn(async () => ({ data: [] })),
-    };
-
-    const stripe = { customers } as unknown as Parameters<
-      typeof createStripeCustomer
-    >[0]['stripe'];
+    const stripe = new FakeStripeCheckoutClient();
+    const customers = stripe.customers;
+    customers.search = vi.fn(async () => ({ data: [] }));
+    vi.spyOn(customers, 'create');
 
     await expect(
       createStripeCustomer({
@@ -129,14 +126,10 @@ describe('createStripeCustomer', () => {
   });
 
   it('throws STRIPE_ERROR when Stripe customer creation returns no id', async () => {
-    const customers = {
-      create: vi.fn(async () => ({ id: '' })),
-      search: vi.fn(async () => ({ data: [] })),
-    };
-
-    const stripe = { customers } as unknown as Parameters<
-      typeof createStripeCustomer
-    >[0]['stripe'];
+    const stripe = new FakeStripeCheckoutClient();
+    const customers = stripe.customers;
+    customers.search = vi.fn(async () => ({ data: [] }));
+    vi.spyOn(customers, 'create').mockResolvedValue({ id: '' });
 
     await expect(
       createStripeCustomer({
@@ -155,14 +148,10 @@ describe('createStripeCustomer', () => {
   });
 
   it('forwards idempotency key to Stripe customer creation', async () => {
-    const customers = {
-      create: vi.fn(async () => ({ id: 'cus_new' })),
-      search: vi.fn(async () => ({ data: [] })),
-    };
-
-    const stripe = { customers } as unknown as Parameters<
-      typeof createStripeCustomer
-    >[0]['stripe'];
+    const stripe = new FakeStripeCheckoutClient();
+    const customers = stripe.customers;
+    customers.search = vi.fn(async () => ({ data: [] }));
+    vi.spyOn(customers, 'create').mockResolvedValue({ id: 'cus_new' });
 
     await expect(
       createStripeCustomer({
@@ -189,24 +178,13 @@ describe('createStripeCustomer', () => {
 
   it('retries Stripe customer creation when no idempotency key is provided', async () => {
     vi.useFakeTimers();
-
-    const customers = {
-      create: vi
-        .fn<
-          (
-            _params: unknown,
-            _options?: { idempotencyKey?: string },
-          ) => Promise<{ id: string }>
-        >()
-        .mockRejectedValueOnce(
-          Object.assign(new Error('upstream timeout'), { code: 'ETIMEDOUT' }),
-        )
-        .mockResolvedValueOnce({ id: 'cus_retry' }),
-    };
-
-    const stripe = { customers } as unknown as Parameters<
-      typeof createStripeCustomer
-    >[0]['stripe'];
+    const stripe = new FakeStripeCheckoutClient();
+    const create = vi
+      .spyOn(stripe.customers, 'create')
+      .mockRejectedValueOnce(
+        Object.assign(new Error('upstream timeout'), { code: 'ETIMEDOUT' }),
+      )
+      .mockResolvedValueOnce({ id: 'cus_retry' });
 
     const promise = createStripeCustomer({
       stripe,
@@ -223,14 +201,10 @@ describe('createStripeCustomer', () => {
     });
 
     await Promise.all([vi.runAllTimersAsync(), expectation]);
-    expect(customers.create).toHaveBeenCalledTimes(2);
+    expect(create).toHaveBeenCalledTimes(2);
 
-    const firstOptions = customers.create.mock.calls[0]?.[1] as
-      | { idempotencyKey?: string }
-      | undefined;
-    const secondOptions = customers.create.mock.calls[1]?.[1] as
-      | { idempotencyKey?: string }
-      | undefined;
+    const firstOptions = create.mock.calls[0]?.[1];
+    const secondOptions = create.mock.calls[1]?.[1];
 
     expect(firstOptions).toMatchObject({
       idempotencyKey: `create_stripe_customer:${appUserId}`,
