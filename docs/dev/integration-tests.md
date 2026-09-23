@@ -139,6 +139,7 @@ Integration tests are part of every PR and every push to `main`.
 | `tests/integration/controllers.integration.test.ts` | 4 | Question submission, exam finalization, and transactional rollback |
 | `tests/integration/controllers-history.integration.test.ts` | 3 | Stats aggregation and attempted-question review queries |
 | `tests/integration/controllers-webhooks.integration.test.ts` | 4 | Stripe subscription updates and Clerk deletion/idempotency cleanup |
+| `tests/integration/container-stripe-wiring.integration.test.ts` | 3 | Container price configuration through real SDK/signature handling and Postgres; injected SDK use. Canned HTTP input is wiring-only, not provider parity. |
 | `tests/integration/actions.stripe.integration.test.ts` | 2 | Stripe billing controller actions |
 | `tests/integration/tag-taxonomy-census.integration.test.ts` | 4 | Tag taxonomy validation (requires seed data) |
 

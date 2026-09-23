@@ -21,6 +21,8 @@
 // state access: 224 enforced sites across 44 files.
 // 2026-09-23 UTC: The transactional controller fault uses a real subclass,
 // not a prototype-dropping cast: 223 enforced sites across 43 files.
+// 2026-09-23 UTC: Observable container wiring replaces private-field checks:
+// 216 enforced sites across 43 files. No SDK/fake behavior changes.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -49,7 +51,7 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/pricing/page.test.tsx', 1],
   ['db/schema.test.ts', 3],
   ['lib/container.skip-clerk.test.ts', 6],
-  ['lib/container.test.ts', 15],
+  ['lib/container.test.ts', 8],
   ['proxy.test.ts', 28],
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
   [
