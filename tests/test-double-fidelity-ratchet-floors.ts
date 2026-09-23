@@ -33,11 +33,13 @@
 // and the real reporter: 17 own-code module factories across eight files.
 // 2026-09-23 UTC: History disclosure behavior uses the real hook in Browser
 // Mode, leaving 16 own-code module factories across seven files.
+// 2026-09-23 UTC: Quick Practice count rendering uses its real hook,
+// leaving 15 own-code module factories across six files.
+// 2026-09-23 UTC: Practice starter state uses the real hook and component,
+// leaving 13 own-code module factories across five files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout-shell.test.tsx', 1],
-  ['app/(app)/app/practice/practice-page-client.test.tsx', 2],
-  ['app/(app)/app/practice/quick/quick-practice-client.test.tsx', 1],
   ['app/api/cron/reconcile-stripe-subscriptions/route.test.ts', 4],
   ['app/layout.test.tsx', 2],
   ['components/auth-nav.test.tsx', 5],
