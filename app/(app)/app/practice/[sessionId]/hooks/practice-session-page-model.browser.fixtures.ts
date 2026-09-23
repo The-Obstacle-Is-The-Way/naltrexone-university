@@ -1,3 +1,5 @@
+import type { PreviousSubmission } from '@/src/application/use-cases/get-next-question';
+
 type PracticeMode = 'tutor' | 'exam';
 type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 
@@ -17,20 +19,6 @@ type ChoiceFixture = {
   sortOrder: number;
 };
 
-type PreviousSubmissionChoiceExplanation = {
-  choiceId: string;
-  displayLabel: string;
-  textMd: string;
-  isCorrect: boolean;
-  explanationMd: string | null;
-};
-
-type PreviousSubmissionFixture = {
-  correctChoiceId: string | null;
-  explanationMd: string | null;
-  choiceExplanations: PreviousSubmissionChoiceExplanation[];
-};
-
 type QuestionSessionFixture = {
   sessionId?: string;
   mode: PracticeMode;
@@ -40,7 +28,7 @@ type QuestionSessionFixture = {
   isMarkedForReview: boolean;
   latestSelectedChoiceId?: string | null;
   latestIsCorrect?: boolean | null;
-  previousSubmission?: PreviousSubmissionFixture;
+  previousSubmission?: PreviousSubmission;
 };
 
 type QuestionFixtureInput = {
