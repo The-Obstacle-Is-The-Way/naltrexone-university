@@ -63,6 +63,8 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // its lookups, ordering, predicates and mapping run against real Postgres, and
 // its four no-query input guards run with a boundary spy in
 // tests/integration/question-repository-lookups.integration.test.ts.
+// 2026-09-23 UTC: The Stripe-customer unit suite keeps two impossible-response
+// cases and moves lookup, upsert and conflict behavior to real Postgres.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -138,7 +140,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
     'src/adapters/repositories/drizzle-renewal-consent-record-repository.test.ts',
     5,
   ],
-  ['src/adapters/repositories/drizzle-stripe-customer-repository.test.ts', 8],
   ['src/adapters/repositories/drizzle-subscription-repository.test.ts', 1],
   ['src/adapters/repositories/drizzle-tag-repository.test.ts', 1],
   [
