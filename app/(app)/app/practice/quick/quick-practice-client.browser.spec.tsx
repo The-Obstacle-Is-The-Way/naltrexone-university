@@ -1,9 +1,9 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import * as quickPracticeStatusCounts from '@/app/(app)/app/practice/hooks/use-quick-practice-status-counts';
 import { ROUTES } from '@/lib/routes';
 import * as bookmarkController from '@/src/adapters/controllers/bookmark-controller';
+import * as practiceController from '@/src/adapters/controllers/practice-controller';
 import * as questionController from '@/src/adapters/controllers/question-controller';
 import { createNextQuestion } from '@/src/application/test-helpers/create-next-question';
 import { ok } from '@/tests/test-helpers/ok';
@@ -20,18 +20,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/src/adapters/controllers/bookmark-controller', { spy: true });
+vi.mock('@/src/adapters/controllers/practice-controller', { spy: true });
 vi.mock('@/src/adapters/controllers/question-controller', { spy: true });
-vi.mock('@/app/(app)/app/practice/hooks/use-quick-practice-status-counts', {
-  spy: true,
-});
 
 const getBookmarkQuestionIds = vi.mocked(
   bookmarkController.getBookmarkQuestionIds,
 );
 const getNextQuestion = vi.mocked(questionController.getNextQuestion);
 const submitAnswer = vi.mocked(questionController.submitAnswer);
-const useQuickPracticeStatusCounts = vi.mocked(
-  quickPracticeStatusCounts.useQuickPracticeStatusCounts,
+const countAvailableQuestions = vi.mocked(
+  practiceController.countAvailableQuestions,
 );
 
 const fixtureQuestionId = crypto.randomUUID();
@@ -46,15 +44,13 @@ test('pushes a new status query param without scrolling', async () => {
   useSearchParamsMock.mockReturnValue(new URLSearchParams(''));
   getNextQuestion.mockResolvedValue(ok(null));
   getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
-  useQuickPracticeStatusCounts.mockReturnValue({
-    unanswered: null,
-    incorrect: null,
-    bookmarked: null,
-  });
+  countAvailableQuestions.mockResolvedValue(ok({ count: 0 }));
 
   const screen = await render(<QuickPracticeClient />);
 
-  await screen.getByRole('button', { name: 'Incorrect' }).click();
+  await screen
+    .getByRole('button', { name: 'Incorrect (0)', exact: true })
+    .click();
 
   expect(pushMock).toHaveBeenCalledWith(
     `${ROUTES.APP_PRACTICE_QUICK}?status=incorrect`,
@@ -66,15 +62,13 @@ test('removes the status query param without scrolling when toggling off', async
   useSearchParamsMock.mockReturnValue(new URLSearchParams('status=incorrect'));
   getNextQuestion.mockResolvedValue(ok(null));
   getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
-  useQuickPracticeStatusCounts.mockReturnValue({
-    unanswered: null,
-    incorrect: null,
-    bookmarked: null,
-  });
+  countAvailableQuestions.mockResolvedValue(ok({ count: 0 }));
 
   const screen = await render(<QuickPracticeClient />);
 
-  await screen.getByRole('button', { name: 'Unanswered' }).click();
+  await screen
+    .getByRole('button', { name: 'Unanswered (0)', exact: true })
+    .click();
 
   expect(pushMock).toHaveBeenCalledWith(ROUTES.APP_PRACTICE_QUICK, {
     scroll: false,
@@ -115,11 +109,7 @@ test('submits a keyboard-selected choice from the visible Submit action', async 
     }),
   );
   getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
-  useQuickPracticeStatusCounts.mockReturnValue({
-    unanswered: null,
-    incorrect: null,
-    bookmarked: null,
-  });
+  countAvailableQuestions.mockResolvedValue(ok({ count: 1 }));
 
   const screen = await render(<QuickPracticeClient />);
   const choiceA = screen.getByRole('radio', { name: 'Choice Alpha' });

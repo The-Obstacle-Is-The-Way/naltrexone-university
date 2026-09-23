@@ -95,6 +95,53 @@ afterEach(async () => {
   vi.resetAllMocks();
 });
 
+test('renders status segmented control below the page heading', async () => {
+  useSearchParamsMock.mockReturnValue(new URLSearchParams('status=incorrect'));
+  getNextQuestion.mockResolvedValue(ok(null));
+  getBookmarkQuestionIds.mockResolvedValue(ok({ questionIds: [] }));
+  setupStatusCounts(() => ({ unanswered: 12, incorrect: 3, bookmarked: 7 }));
+
+  const screen = await render(<QuickPracticeClient />);
+  const heading = screen.getByRole('heading', {
+    name: 'Quick Practice',
+    level: 1,
+  });
+  const statusControl = screen.getByRole('group', { name: 'Status' });
+
+  await expect.element(heading).toBeVisible();
+  await expect
+    .element(screen.getByRole('link', { name: 'Back to Practice' }))
+    .toBeVisible();
+  await expect.element(statusControl).toBeVisible();
+  await expect
+    .element(
+      statusControl.getByRole('button', { name: 'Incorrect (3)', exact: true }),
+    )
+    .toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .element(
+      statusControl.getByRole('button', {
+        name: 'Unanswered (12)',
+        exact: true,
+      }),
+    )
+    .toBeVisible();
+  await expect
+    .element(
+      statusControl.getByRole('button', {
+        name: 'Bookmarked (7)',
+        exact: true,
+      }),
+    )
+    .toBeVisible();
+  const position = heading
+    .element()
+    .compareDocumentPosition(statusControl.element());
+  expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+});
+
 test('refreshes quick-practice status badges after an answer is committed', async () => {
   let unansweredCount = 12;
   setupQuestion();
