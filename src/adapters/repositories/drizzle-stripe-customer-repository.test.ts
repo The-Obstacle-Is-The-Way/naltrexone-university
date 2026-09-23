@@ -1,220 +1,50 @@
-import { describe, expect, it, vi } from 'vitest';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js/session';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as schema from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
 import { DrizzleStripeCustomerRepository } from './drizzle-stripe-customer-repository';
 
+const repo = new DrizzleStripeCustomerRepository(drizzle.mock({ schema }));
 const userId = crypto.randomUUID();
 
-describe('DrizzleStripeCustomerRepository', () => {
-  it('returns null from findByUserId when no mapping exists', async () => {
-    const db = {
-      query: {
-        stripeCustomers: {
-          findFirst: async () => null,
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-    } as const;
+// Only driver responses that real Postgres cannot produce belong here; the
+// real prepared-query boundary supplies them. Lookup, idempotent upsert,
+// strict and authoritative conflict handling and the unique-violation mapping
+// are covered against real Postgres in
+// tests/integration/stripe-customer-repository.integration.test.ts and
+// tests/integration/stripe-repositories.integration.test.ts.
+beforeEach(() => {
+  vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleStripeCustomerRepository
-    >[0];
-    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
-
-    await expect(repo.findByUserId(userId)).resolves.toBeNull();
-  });
-
-  it('returns stripeCustomerId from findByUserId when mapping exists', async () => {
-    const db = {
-      query: {
-        stripeCustomers: {
-          findFirst: async () => ({ stripeCustomerId: 'cus_123' }),
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleStripeCustomerRepository
-    >[0];
-    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
-
-    await expect(repo.findByUserId(userId)).resolves.toEqual({
-      stripeCustomerId: 'cus_123',
-    });
-  });
-
-  it('uses a single upsert statement and does not query on idempotent inserts', async () => {
-    const queryFindFirst = vi.fn(() => {
-      throw new Error('unexpected query');
-    });
-
-    const db = {
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: () => ({
-            returning: async () => [{ stripeCustomerId: 'cus_123' }],
-          }),
-        }),
-      }),
-      query: {
-        stripeCustomers: {
-          findFirst: queryFindFirst,
-        },
-      },
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleStripeCustomerRepository
-    >[0];
-    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
-
-    await expect(repo.insert(userId, 'cus_123')).resolves.toBeUndefined();
-    expect(queryFindFirst).not.toHaveBeenCalled();
-  });
-
-  it('throws CONFLICT when user already has a different stripeCustomerId', async () => {
-    const db = {
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: () => ({
-            returning: async () => [{ stripeCustomerId: 'cus_existing' }],
-          }),
-        }),
-      }),
-      query: {
-        stripeCustomers: {
-          findFirst: async () => null,
-        },
-      },
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleStripeCustomerRepository
-    >[0];
-    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
-
-    await expect(repo.insert(userId, 'cus_new')).rejects.toMatchObject({
-      code: 'CONFLICT',
-      message:
-        'Stripe customer already exists with a different stripeCustomerId',
-    });
-  });
-
-  it('updates user mapping when conflictStrategy is authoritative', async () => {
-    // Return a *different* customer ID to prove authoritative mode skips
-    // the strict mismatch check that would otherwise throw CONFLICT.
-    const db = {
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: () => ({
-            returning: async () => [{ stripeCustomerId: 'cus_existing' }],
-          }),
-        }),
-      }),
-      query: {
-        stripeCustomers: {
-          findFirst: async () => null,
-        },
-      },
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleStripeCustomerRepository
-    >[0];
-    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
-
-    await expect(
-      repo.insert(userId, 'cus_new', { conflictStrategy: 'authoritative' }),
-    ).resolves.toBeUndefined();
-  });
-
+describe('DrizzleStripeCustomerRepository error translation', () => {
   it('throws INTERNAL_ERROR when the upsert returns no row', async () => {
-    const db = {
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: () => ({
-            returning: async () => [],
-          }),
-        }),
-      }),
-      query: {
-        stripeCustomers: {
-          findFirst: async () => null,
-        },
-      },
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleStripeCustomerRepository
-    >[0];
-    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
-
-    await expect(repo.insert(userId, 'cus_123')).rejects.toMatchObject({
-      code: 'INTERNAL_ERROR',
-    });
-  });
-
-  it('throws CONFLICT on unique-constraint violations (e.g., stripeCustomerId already mapped)', async () => {
-    const db = {
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: () => ({
-            returning: async () => {
-              throw { code: '23505' };
-            },
-          }),
-        }),
-      }),
-      query: {
-        stripeCustomers: {
-          findFirst: async () => null,
-        },
-      },
-    } as const;
-
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleStripeCustomerRepository
-    >[0];
-    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
-
-    await expect(repo.insert(userId, 'cus_123')).rejects.toBeInstanceOf(
-      ApplicationError,
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockResolvedValueOnce(
+      [],
     );
-    await expect(repo.insert(userId, 'cus_123')).rejects.toMatchObject({
-      code: 'CONFLICT',
-      message: 'Stripe customer id is already mapped to a different user',
+
+    const promise = repo.insert(userId, 'cus_123');
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to upsert Stripe customer mapping',
     });
+    expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(1);
   });
 
   it('preserves unexpected database failures as the INTERNAL_ERROR cause', async () => {
-    const databaseError = new Error('db down');
-    const db = {
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: () => ({
-            returning: async () => {
-              throw databaseError;
-            },
-          }),
-        }),
-      }),
-      query: {
-        stripeCustomers: {
-          findFirst: async () => null,
-        },
-      },
-    } as const;
+    const databaseError = new Error('boom');
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
+      databaseError,
+    );
 
-    type RepoDb = ConstructorParameters<
-      typeof DrizzleStripeCustomerRepository
-    >[0];
-    const repo = new DrizzleStripeCustomerRepository(db as unknown as RepoDb);
-
-    await expect(repo.insert(userId, 'cus_123')).rejects.toMatchObject({
+    const promise = repo.insert(userId, 'cus_123');
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
       cause: databaseError,
     });
