@@ -19,7 +19,7 @@ class ClearingAfterReadPracticeSessionRepository extends FakePracticeSessionRepo
     Awaited<ReturnType<FakePracticeSessionRepository['findByIdAndUserId']>>
   > {
     const session = await super.findByIdAndUserId(id, userId);
-    (this as unknown as { sessions: readonly [] }).sessions = [];
+    await this.discard(id, userId);
     return session;
   }
 }
