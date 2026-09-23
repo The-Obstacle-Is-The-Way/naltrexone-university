@@ -11,7 +11,7 @@
 // casts in its unit suite: enforced casts are now 273 sites across 49 files.
 // 2026-09-19: Attempt behavior moves to Postgres and five retained error units
 // use typed prepared-query faults: 33 more casts retire, leaving 240 / 48 files.
-// 2026-09-19: Rate-limiter Postgres replacements retire 12 more casts,
+// 2026-09-23 UTC: Rate-limiter Postgres replacements retire 12 more casts,
 // leaving 228 enforced sites across 47 files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([

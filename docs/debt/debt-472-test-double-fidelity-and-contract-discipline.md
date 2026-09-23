@@ -11,6 +11,8 @@
 
 ## Execution re-audit (2026-09-19)
 
+> **2026-09-23 UTC rate-limiter execution pointer:** Published WIP `9446b459` was rebased onto current `dev` `d711454a` on a fresh branch; the published WIP was preserved. All 14 added Postgres cases and the three existing cases pass on this base. Sixteen targeted mutation runs fail as intended, including the retained empty-driver-response unit; the production adapter is byte-identical to `dev`. The candidate cast floor is now **228 / 47 files**, down from **240 / 48**. This disposes the 12 rate-limiter casts, not any additional repository or Stripe seam. The [current deletion map and red receipts](#rate-limiter-f8-disposition-2026-09-23-utc) supersede the unlanded draft's aggregate counts. Review and promotion of this disposition remain pending; steps 4–6 remain Open.
+
 > **2026-09-21 current-tree forward pointer:** #920/#921/#922/#923 are merged and promoted. Five real-Postgres filter twins, the 19-case Stripe-event suite (including `peek` and bounded pruning), and the attempt disposition are complete. The live floors are **22 / 240 / 45** across **13 / 48 / 18** files; textual casts are **278 / 59** files, including fixture strings, and `RepoDb` casts are **138 / 21** files. There are **27** size suppressions. The older Part-A alias-resolution description is superseded by #923's bounded explicit-form/fail-closed classifier, not current resolver behavior. The three browser setup factories remain outside the scanner's test/spec walk, all five type lies remain, and the first live-retrieve fake migration is still outstanding. Step 4 is partially complete, not a mandate to repeat already-landed deletions. Step 5's migration ordering is already recorded in DEBT-468; execution remains. Step 6's index guard convention already exists; the live DEBT-035/444 adjudication remains. No floor or allowlist changed in this audit. [Receipts](./assets/active-audit-2026-09-21/verification.md).
 
 Baseline: `dev` `ed07103f7c40c47ccbe83a0afccee076d25cbd44`. This dated section is the forward pointer for current execution; the filing and Part A/B receipts above and below remain historical. Node 24.16.0, frozen pnpm 11.3.0 install, installed/locked Zod 4.6.0, all eight required E2E key names, and 958 parseable seed files were verified without logging credentials. Migrations and seeding used this clone's resolver-selected local Postgres. Baseline unit: 463 files / 4,272 passing cases.
@@ -95,7 +97,9 @@ Before replacement, 27 assertions failed against the old classifier, including s
 
 **Takeover verification (2026-09-20 UTC, PR #923):** Re-executing the old classifier against these tests reproduces **27 failed / 41 passed**. Seven failures are diagnostic-text changes; normalizing only that message leaves **20 behavior failures / 48 passed** (the seven indirect forms and 13 noncanonical forms above). Restoring the replacement passes **68/68**. Current `dev`, including #922's chronological-bound regression proof and #919/#924's cron/deployment work, is integrated without changing their implementation or tests. The scan still recognizes direct `vi.mock`/`vi.doMock` calls with literal own-code module paths; this replacement bounds second-argument classification, not arbitrary JavaScript receiver or module-path resolution.
 
-### Rate-limiter F8 disposition (2026-09-19)
+### Rate-limiter F8 disposition (2026-09-23 UTC)
+
+Recovered from the unpublished September 19 draft, published for durability as WIP `9446b459` on September 21. The draft was not a shipped receipt. Its code applies cleanly to the present base; this section records the independent current-base verification, not a September 19 release.
 
 The next F8 audit corrects two filing claims without rewriting the historical census:
 
@@ -117,7 +121,24 @@ Fourteen new cases in `rate-limiter-guards.integration.test.ts` replace those ga
 | Atomic bounded prune SQL shape (196) | Existing batch/skip-locked cases plus new `deletes only the oldest key-window pair…`: colliding keys/windows prove both join keys and tie order. Spies observe one real statement and no wrapper transaction; no canned query result or SQL-string matching remains. |
 | Invalid prune limits (235, 247) | Three invalid-limit cases verify zero and no call to the real DB's execute method. |
 
-Only the impossible empty driver-response case (143) remains as a typed prepared-query fault unit. Its error-code mutation fails before the restored source passes. Integration grows **291 → 305**; unit cases fall **4,243 → 4,232**. The cast floor falls **240 → 228** (48 → 47 files), raw casts **278 → 266** (59 → 58 files); own-code/port-double floors stay **22 / 45**, `RepoDb` remains **138 / 21**, and suppressions stay **27**. Twelve of the 23 enumerated F8 doubles are disposed; the remaining eleven and five type lies remain work. `FakeRateLimiter` retains its dated shared-contract waiver; additional real-adapter tests are not fake↔real parity.
+Only the impossible empty driver-response case (143) remains as a typed prepared-query fault unit. Its error-code mutation fails before the restored source passes. Relative to `d711454a`, this change adds **14** integration cases and removes **11** unit cases; the baseline is **349 integration / 5,720 unit**, not the draft's stale 291 / 4,243. The cast floor falls **240 → 228** (48 → 47 files); own-code/port-double floors stay **22 / 45**. Twelve of the 23 enumerated F8 doubles are disposed; the remaining eleven and five type lies remain work. `FakeRateLimiter` retains its dated shared-contract waiver; additional real-adapter tests are not fake↔real parity.
+
+**Current-base red/green receipt (2026-09-23 UTC):** Baseline 17/17 Postgres cases passed at 02:02:26Z before deletion. The original 12-case unit file was present during the integration mutation proofs. From 02:03:13Z to 02:05:10Z, every mutation below exited 1 on its named assertion. After byte-for-byte adapter restoration, 17/17 integration and the one retained unit passed at 02:05:27Z; `pnpm lint:doubles` reported `issues=0`. Filtered mutation invocations omit unrelated cases; no skip was added. Sanitized logs are `/private/tmp/codex-archive-dispositions.c8noac/rate-red-*.log` and `rate-green.log`.
+
+| Production mutation | Independently failing replacement |
+| --- | --- |
+| Retention 24 → 48 hours; automatic bound 100 → 101; strict cutoff `<` → `<=` (three runs) | `prunes at most 100 windows…` fails on the persisted survivor set in each run. |
+| Cleanup on every increment rather than first insert | `increments an existing counter…` detects the deleted expired row. |
+| Remove input validation | All six invalid limit/window cases fail on their result or no-write assertion. |
+| Remove prune-limit validation | All three invalid prune-limit cases fail on execution or rejection. |
+| Warning → info; rethrow cleanup failure (two runs) | `keeps the persisted counter and logs…` detects missing warning and lost successful result separately. |
+| Accept the zero returned by incrementing corrupted stored state | `rejects a non-positive count…` fails because the call resolves. |
+| Remove key join; remove window join; reverse key order; reverse window order (four runs) | `deletes only the oldest key-window pair…` catches excess deletion or the wrong survivors. |
+| Remove `SKIP LOCKED` | Existing `skips locked oldest windows…` hits the bounded PostgreSQL lock timeout instead of making progress. |
+| Remove remaining-count clamp | Existing `increments within a window…` observes a negative remainder instead of zero. |
+| Empty-driver-response error code `INTERNAL_ERROR` → `CONFLICT` | Retained typed error unit fails on the error code. |
+
+Fresh census: raw casts **266 / 58 files** (from 278 / 59); `RepoDb` casts remain **138 / 21**; size suppressions remain **27**. No adapter behavior, fake behavior, schema, policy floor increase, allowlist, timeout or retry policy changes in this disposition.
 
 ## Description
 
