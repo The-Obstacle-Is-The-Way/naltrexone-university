@@ -21,6 +21,7 @@ export default defineConfig({
       'drizzle-orm',
       'drizzle-orm/pg-core',
       'drizzle-orm/postgres-js',
+      'next/server',
       'pino',
       'postgres',
       'resend',

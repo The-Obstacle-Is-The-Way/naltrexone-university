@@ -42,11 +42,12 @@
 // 2026-09-23 UTC: AuthNav tests execute the actual AuthUserButton wrapper and
 // observe Clerk's dynamic-import boundary, leaving 6 own-code module
 // factories across three files.
+// 2026-09-23 UTC: The DEBT-421 toggle sentinels moved to Browser Mode twins
+// that watch for the real control, leaving 4 own-code module factories in one
+// file.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
-  ['app/(app)/app/layout-shell.test.tsx', 1],
   ['app/api/cron/reconcile-stripe-subscriptions/route.test.ts', 4],
-  ['components/marketing/marketing-layout.test.tsx', 1],
 ]);
 
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
