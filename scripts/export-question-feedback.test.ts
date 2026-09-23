@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import * as schema from '../db/schema';
 import {
   restoreProcessEnv,
   snapshotProcessEnv,
@@ -9,7 +8,6 @@ import {
   getQuestionFeedbackExportPrivacyWarnings,
   parseQuestionFeedbackExportArgs,
   type QuestionFeedbackExportRow,
-  readQuestionFeedbackRows,
   runExportQuestionFeedback,
 } from './export-question-feedback';
 
@@ -438,11 +436,9 @@ describe('runExportQuestionFeedback', () => {
     const sql = {
       end: vi.fn().mockResolvedValue(undefined),
     };
-    const fakeDb = createQuestionFeedbackSelectDb([BASE_ROW], {
-      assertTableIdentity: false,
-    });
+    const dbStub = createQuestionFeedbackSelectStub([BASE_ROW]);
     const postgresMock = vi.fn(() => sql);
-    const drizzleMock = vi.fn(() => fakeDb);
+    const drizzleMock = vi.fn(() => dbStub);
 
     vi.doMock('postgres', () => ({ default: postgresMock }));
     vi.doMock('drizzle-orm/postgres-js', () => ({
@@ -464,25 +460,6 @@ describe('runExportQuestionFeedback', () => {
   });
 });
 
-describe('readQuestionFeedbackRows', () => {
-  it('selects feedback rows joined to question slugs in newest-first order', async () => {
-    const selectedRows = [BASE_ROW];
-    const fakeDb = createQuestionFeedbackSelectDb(selectedRows);
-
-    const rows = await readQuestionFeedbackRows(
-      fakeDb as unknown as Parameters<typeof readQuestionFeedbackRows>[0],
-    );
-
-    expect(rows).toEqual(selectedRows);
-    expect(fakeDb.calls).toEqual([
-      'select:id,userId,questionId,questionSlug,attemptId,practiceSessionId,kind,rating,category,comment,createdAt',
-      'from:questionFeedback',
-      'innerJoin:questions',
-      'orderBy:createdAt,id',
-    ]);
-  });
-});
-
 function createWritableSink(): NodeJS.WritableStream & { text(): string } {
   let value = '';
 
@@ -497,37 +474,20 @@ function createWritableSink(): NodeJS.WritableStream & { text(): string } {
   } as NodeJS.WritableStream & { text(): string };
 }
 
-function createQuestionFeedbackSelectDb(
-  rows: QuestionFeedbackExportRow[],
-  options = { assertTableIdentity: true },
-) {
-  const calls: string[] = [];
-
+// This canned result tests CLI dependency wiring, not SQL semantics.
+function createQuestionFeedbackSelectStub(rows: QuestionFeedbackExportRow[]) {
   return {
-    calls,
-    select(selection: Record<string, unknown>) {
-      calls.push(`select:${Object.keys(selection).join(',')}`);
+    select() {
       return {
         from(table: unknown) {
-          if (options.assertTableIdentity) {
-            expect(table).toBe(schema.questionFeedback);
-          } else {
-            expect(table).toBeDefined();
-          }
-          calls.push('from:questionFeedback');
+          expect(table).toBeDefined();
           return {
             innerJoin(tableToJoin: unknown, condition: unknown) {
-              if (options.assertTableIdentity) {
-                expect(tableToJoin).toBe(schema.questions);
-              } else {
-                expect(tableToJoin).toBeDefined();
-              }
+              expect(tableToJoin).toBeDefined();
               expect(condition).toBeDefined();
-              calls.push('innerJoin:questions');
               return {
                 orderBy(...orderings: unknown[]) {
                   expect(orderings).toHaveLength(2);
-                  calls.push('orderBy:createdAt,id');
                   return Promise.resolve(rows);
                 },
               };

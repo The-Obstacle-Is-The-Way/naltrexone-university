@@ -15,6 +15,8 @@
 // leaving 228 enforced sites across 47 files.
 // 2026-09-23 UTC: Portal tests reuse the typed client, retiring two casts:
 // 226 enforced sites across 46 files. No client behavior or waiver changes.
+// 2026-09-23 UTC: Real feedback-export SQL coverage retires its cast:
+// 225 enforced sites across 45 files.
 
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([
   ['app/(app)/app/history/components/history-sessions-tab.test.tsx', 1],
@@ -45,7 +47,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['lib/container.skip-clerk.test.ts', 6],
   ['lib/container.test.ts', 15],
   ['proxy.test.ts', 28],
-  ['scripts/export-question-feedback.test.ts', 1],
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
   [
     'src/adapters/gateways/stripe/stripe-checkout-sessions-concurrency.test.ts',
