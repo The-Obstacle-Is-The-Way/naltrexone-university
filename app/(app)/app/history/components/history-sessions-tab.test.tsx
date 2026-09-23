@@ -1,24 +1,18 @@
 // @vitest-environment jsdom
 import type { ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildHistorySessionsHref } from '@/app/(app)/app/history/history-search-params';
-import type { AsyncLoadStateWithIdle } from '@/app/(app)/app/shared/load-state';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
-import type {
-  GetPracticeSessionReviewOutput,
-  GetSessionHistoryOutput,
-} from '@/src/adapters/controllers/practice-controller';
+import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
 import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
 
 const {
-  fixtureQuestion1Id,
   fixtureSession1Id,
   fixtureSessionExamId,
   fixtureSessionLongId,
   fixtureSessionTutorId,
 } = vi.hoisted(() => ({
-  fixtureQuestion1Id: crypto.randomUUID(),
   fixtureSession1Id: crypto.randomUUID(),
   fixtureSessionExamId: crypto.randomUUID(),
   fixtureSessionLongId: crypto.randomUUID(),
@@ -31,31 +25,6 @@ vi.mock('next/link', () => ({
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
-}));
-
-type MockUseHistorySessionsState = {
-  selectedSessionId: string | null;
-  selectedReview: GetPracticeSessionReviewOutput | null;
-  reviewLoadState: AsyncLoadStateWithIdle;
-  onOpenSession: (sessionId: string) => Promise<void>;
-};
-
-let mockUseHistorySessionsState: MockUseHistorySessionsState;
-
-function createMockUseHistorySessionsState(
-  overrides: Partial<MockUseHistorySessionsState> = {},
-): MockUseHistorySessionsState {
-  return {
-    selectedSessionId: null,
-    selectedReview: null,
-    reviewLoadState: { status: 'idle' },
-    onOpenSession: async () => undefined,
-    ...overrides,
-  };
-}
-
-vi.mock('../hooks/use-history-sessions', () => ({
-  useHistorySessions: () => mockUseHistorySessionsState,
 }));
 
 let HistorySessionsTab: typeof import('./history-sessions-tab').HistorySessionsTab;
@@ -72,10 +41,6 @@ beforeAll(async () => {
   HistorySessionsTab = module.HistorySessionsTab;
   SessionSummaryContent =
     module.SessionSummaryContent as typeof SessionSummaryContent;
-});
-
-beforeEach(() => {
-  mockUseHistorySessionsState = createMockUseHistorySessionsState();
 });
 
 type SessionHistoryResult = ActionResult<GetSessionHistoryOutput>;
@@ -448,116 +413,6 @@ describe('HistorySessionsTab', () => {
     expect(toggle?.getAttribute('aria-label')).toContain(
       'View breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
     );
-  });
-
-  it('renders expanded breakdown panel as a flat disclosure region', () => {
-    mockUseHistorySessionsState = createMockUseHistorySessionsState({
-      selectedSessionId: fixtureSession1Id,
-      selectedReview: {
-        sessionId: fixtureSession1Id,
-        mode: 'exam',
-        totalCount: 1,
-        answeredCount: 1,
-        markedCount: 0,
-        rows: [
-          {
-            questionId: fixtureQuestion1Id,
-            slug: 'q-1',
-            stemMd: 'Stem preview',
-            difficulty: 'easy',
-            order: 1,
-            isAvailable: true,
-            isAnswered: true,
-            isCorrect: true,
-            isOmitted: false,
-            markedForReview: false,
-          },
-        ],
-      },
-      reviewLoadState: { status: 'ready' },
-    });
-
-    const result: SessionHistoryResult = {
-      ok: true,
-      data: {
-        rows: [makeSessionHistoryRow()],
-        total: 1,
-        limit: 20,
-        offset: 0,
-      },
-    };
-
-    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const panel = doc.getElementById(`breakdown-${fixtureSession1Id}`);
-    const toggle = doc.querySelector(
-      `button[aria-controls="breakdown-${fixtureSession1Id}"]`,
-    );
-    const icon = toggle?.querySelector('svg');
-    const panelClassTokens = getClassTokens(panel?.getAttribute('class') ?? '');
-    const iconClassTokens = getClassTokens(icon?.getAttribute('class') ?? '');
-
-    expect(panel).not.toBeNull();
-    expect(panel?.getAttribute('role')).toBe('region');
-    expect(panel?.getAttribute('aria-label')).toBe('Question breakdown');
-    expect(panelClassTokens.has('mt-3')).toBe(true);
-    expect(panelClassTokens.has('pt-3')).toBe(true);
-    expect(panelClassTokens.has('border-t')).toBe(true);
-    expect(panelClassTokens.has('border-border/40')).toBe(true);
-    expect(panelClassTokens.has('dark:border-foreground/40')).toBe(true);
-    expect(panelClassTokens.has('bg-background')).toBe(false);
-    expect(panelClassTokens.has('rounded-lg')).toBe(false);
-    expect(toggle?.getAttribute('aria-expanded')).toBe('true');
-    expect(toggle?.getAttribute('aria-label')).toContain(
-      'Hide breakdown for Exam session: 8/10 correct (80%), 20m, Feb 7, 2026',
-    );
-    expect(iconClassTokens.has('rotate-180')).toBe(true);
-  });
-
-  it('does not render a redundant Review session button inside breakdown content', () => {
-    mockUseHistorySessionsState = createMockUseHistorySessionsState({
-      selectedSessionId: fixtureSession1Id,
-      selectedReview: {
-        sessionId: fixtureSession1Id,
-        mode: 'exam',
-        totalCount: 1,
-        answeredCount: 1,
-        markedCount: 0,
-        rows: [
-          {
-            questionId: fixtureQuestion1Id,
-            slug: 'q-1',
-            stemMd: 'Stem preview',
-            difficulty: 'easy',
-            order: 1,
-            isAvailable: true,
-            isAnswered: true,
-            isCorrect: true,
-            isOmitted: false,
-            markedForReview: false,
-          },
-        ],
-      },
-      reviewLoadState: { status: 'ready' },
-    });
-
-    const result: SessionHistoryResult = {
-      ok: true,
-      data: {
-        rows: [makeSessionHistoryRow()],
-        total: 1,
-        limit: 20,
-        offset: 0,
-      },
-    };
-
-    const html = renderToStaticMarkup(<HistorySessionsTab result={result} />);
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const reviewLink = Array.from(doc.querySelectorAll('a')).find(
-      (link) => link.textContent?.trim() === 'Review session',
-    );
-
-    expect(reviewLink).toBeUndefined();
   });
 
   it('uses SessionSummaryContent for non-link session summaries', () => {

@@ -376,6 +376,21 @@ describe('HistorySessionsTab (browser)', () => {
     await expect
       .element(screen.getByRole('region', { name: 'Question breakdown' }))
       .toHaveAttribute('id', `breakdown-${fixtureSession1Id}`);
+    const panel = screen.getByRole('region', { name: 'Question breakdown' });
+    await expect
+      .element(panel)
+      .toHaveClass(
+        'mt-3',
+        'pt-3',
+        'border-t',
+        'border-border/40',
+        'dark:border-foreground/40',
+      );
+    await expect.element(panel).not.toHaveClass('bg-background');
+    await expect.element(panel).not.toHaveClass('rounded-lg');
+    await expect
+      .element(expandedToggle.querySelector('svg'))
+      .toHaveClass('rotate-180');
   });
 
   it('threads canonical historyHref into breakdown question links', async () => {
