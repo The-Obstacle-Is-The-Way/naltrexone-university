@@ -5,9 +5,24 @@ import type {
   StripeCheckoutSessionRetrieved,
   StripeClient,
   StripeRequestOptions,
+  StripeSubscriptionListParams,
 } from '@/src/adapters/shared/stripe-types';
 
 const CHECKOUT_SESSION_LIFETIME_MS = 24 * 60 * 60 * 1000;
+
+// The fields the adapters read from a Subscription: the checkout preflight
+// reads `id`/`status` from a listing; the webhook normalizer reads the rest
+// from a retrieval.
+export type SeededSubscription = {
+  id: string;
+  customer: string;
+  status: string;
+  cancel_at_period_end?: boolean;
+  metadata?: Record<string, string>;
+  items?: {
+    data: Array<{ current_period_end?: number; price: { id: string } }>;
+  };
+};
 
 type TrackedCheckoutSession = StripeCheckoutSessionRetrieved & {
   customer?: string | undefined;
@@ -207,10 +222,44 @@ export class FakeStripeCheckoutClient implements StripeClient {
     },
   };
 
-  readonly subscriptions: NonNullable<StripeClient['subscriptions']> = {
-    list: async () => ({ data: [] }),
-    retrieve: async () => ({}),
+  // Seeded Subscriptions are listed by exact customer (and status) and
+  // retrieved by id; the list and retrieve shapes are proven against Stripe
+  // TEST mode by the shared contract. `list` reads `this`, as the SDK method
+  // does, so a detached call fails the way an unbound SDK method would.
+  readonly subscriptions: NonNullable<StripeClient['subscriptions']> & {
+    readonly seeded: SeededSubscription[];
+    readonly listCalls: StripeSubscriptionListParams[];
+  } = {
+    seeded: [],
+    listCalls: [],
+    async list(params) {
+      this.listCalls.push({ ...params });
+      const data = this.seeded
+        .filter(
+          (subscription) =>
+            subscription.customer === params.customer &&
+            (params.status === undefined ||
+              params.status === 'all' ||
+              subscription.status === params.status),
+        )
+        .slice(0, params.limit ?? 10)
+        .map((subscription) => structuredClone(subscription));
+      return { data };
+    },
+    async retrieve(subscriptionId) {
+      const subscription = this.seeded.find(
+        (candidate) => candidate.id === subscriptionId,
+      );
+      if (!subscription) {
+        throw new Error(`Missing fake Subscription: ${subscriptionId}`);
+      }
+      return structuredClone(subscription);
+    },
   };
+
+  seedSubscription(subscription: SeededSubscription): void {
+    this.subscriptions.seeded.push(structuredClone(subscription));
+  }
 
   readonly billingPortal: StripeClient['billingPortal'] = {
     sessions: {

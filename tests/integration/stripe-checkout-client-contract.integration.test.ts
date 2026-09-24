@@ -54,6 +54,7 @@ runStripeCheckoutClientContract(
       metadata: { test_contract: 'debt_472_checkout_client' },
     });
     const createdSessionIds = new Set<string>();
+    const createdSubscriptionIds = new Set<string>();
 
     const sessions = {
       create: async (params, options) => {
@@ -68,8 +69,31 @@ runStripeCheckoutClientContract(
         stripe.checkout.sessions.expire(sessionId, params, options),
     } satisfies StripeClient['checkout']['sessions'];
 
+    const subscriptions = {
+      retrieve: (subscriptionId, params, options) =>
+        stripe.subscriptions.retrieve(subscriptionId, params, options),
+      list: (params, options) => stripe.subscriptions.list(params, options),
+    } satisfies NonNullable<StripeClient['subscriptions']>;
+
     return {
       sessions,
+      subscriptions,
+      seedSubscription: async () => {
+        const paymentMethod = await stripe.paymentMethods.attach(
+          'pm_card_visa',
+          { customer: customer.id },
+        );
+        await stripe.customers.update(customer.id, {
+          invoice_settings: { default_payment_method: paymentMethod.id },
+        });
+        const subscription = await stripe.subscriptions.create({
+          customer: customer.id,
+          items: [{ price: stripePriceId }],
+          metadata: { user_id: 'debt472_contract_user' },
+        });
+        createdSubscriptionIds.add(subscription.id);
+        return { id: subscription.id, customer: customer.id };
+      },
       subscriptionParams: {
         mode: 'subscription',
         customer: customer.id,
@@ -91,6 +115,18 @@ runStripeCheckoutClientContract(
           } catch (error) {
             cleanupErrors.push(
               new Error('Failed to clean up a Stripe contract Session', {
+                cause: error,
+              }),
+            );
+          }
+        }
+
+        for (const subscriptionId of createdSubscriptionIds) {
+          try {
+            await stripe.subscriptions.cancel(subscriptionId);
+          } catch (error) {
+            cleanupErrors.push(
+              new Error('Failed to clean up a Stripe contract Subscription', {
                 cause: error,
               }),
             );
