@@ -5,6 +5,7 @@ import type {
   StripeCheckoutSessionRetrieved,
   StripeClient,
   StripeRequestOptions,
+  StripeSetupIntent,
   StripeSubscriptionListParams,
 } from '@/src/adapters/shared/stripe-types';
 
@@ -13,6 +14,10 @@ const CHECKOUT_SESSION_LIFETIME_MS = 24 * 60 * 60 * 1000;
 // The fields the adapters read from a Subscription: the checkout preflight
 // reads `id`/`status` from a listing; the webhook normalizer reads the rest
 // from a retrieval.
+type WebhookEvent = ReturnType<StripeClient['webhooks']['constructEvent']>;
+
+type WebhookCall = { rawBody: string; signature: string; secret: string };
+
 export type SeededSubscription = {
   id: string;
   customer: string;
@@ -246,9 +251,11 @@ export class FakeStripeCheckoutClient implements StripeClient {
   readonly subscriptions: NonNullable<StripeClient['subscriptions']> & {
     readonly seeded: SeededSubscription[];
     readonly listCalls: StripeSubscriptionListParams[];
+    readonly retrieveCalls: string[];
   } = {
     seeded: [],
     listCalls: [],
+    retrieveCalls: [],
     async list(params) {
       this.listCalls.push({ ...params });
       const data = this.seeded
@@ -265,6 +272,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
       return { data };
     },
     async retrieve(subscriptionId) {
+      this.retrieveCalls.push(subscriptionId);
       const subscription = this.seeded.find(
         (candidate) => candidate.id === subscriptionId,
       );
@@ -285,11 +293,50 @@ export class FakeStripeCheckoutClient implements StripeClient {
     },
   };
 
+  // Webhook verification is Stripe's; the fake never verifies. With an event
+  // injected it records the call and hands the event back, otherwise it
+  // throws as before. The recorded call proves the adapter's plumbing of
+  // body, signature and secret; the event shapes stay hand-built test data.
+  readonly webhookCalls: WebhookCall[] = [];
+  private webhookEvent: WebhookEvent | null = null;
+
   readonly webhooks: StripeClient['webhooks'] = {
-    constructEvent: () => {
-      throw new Error('FakeStripeCheckoutClient does not process webhooks');
+    constructEvent: (rawBody, signature, secret) => {
+      this.webhookCalls.push({ rawBody, signature, secret });
+      if (!this.webhookEvent) {
+        throw new Error('FakeStripeCheckoutClient does not process webhooks');
+      }
+      return structuredClone(this.webhookEvent);
     },
   };
+
+  setWebhookEvent(event: WebhookEvent | null): void {
+    this.webhookEvent = event ? structuredClone(event) : null;
+  }
+
+  // Seeded SetupIntents are retrieved by id; the processor reads only the id
+  // and the payment method reference.
+  readonly setupIntents: NonNullable<StripeClient['setupIntents']> & {
+    readonly seeded: StripeSetupIntent[];
+    readonly retrieveCalls: string[];
+  } = {
+    seeded: [],
+    retrieveCalls: [],
+    async retrieve(setupIntentId) {
+      this.retrieveCalls.push(setupIntentId);
+      const intent = this.seeded.find(
+        (candidate) => candidate.id === setupIntentId,
+      );
+      if (!intent) {
+        throw new Error(`Missing fake SetupIntent: ${setupIntentId}`);
+      }
+      return structuredClone(intent);
+    },
+  };
+
+  seedSetupIntent(intent: StripeSetupIntent): void {
+    this.setupIntents.seeded.push(structuredClone(intent));
+  }
 
   markComplete(sessionId: string): void {
     this.setTerminalState(sessionId, 'complete');
