@@ -3,10 +3,43 @@ import { FakeStripeCheckoutClient } from './fake-stripe-checkout-client';
 
 runStripeCheckoutClientContract('FakeStripeCheckoutClient', async () => {
   let nowMs = Date.UTC(2026, 7, 23, 12, 0, 0);
+  let subscriptionSequence = 0;
   const stripe = new FakeStripeCheckoutClient(() => nowMs);
 
   return {
     sessions: stripe.checkout.sessions,
+    subscriptions: stripe.subscriptions,
+    seedSubscription: async () => {
+      subscriptionSequence += 1;
+      const id = `sub_fake_${subscriptionSequence}`;
+      stripe.seedSubscription({
+        id,
+        customer: 'cus_contract',
+        status: 'active',
+        metadata: { user_id: 'debt472_contract_user' },
+        items: {
+          data: [
+            {
+              current_period_end: Math.floor(nowMs / 1000) + 30 * 24 * 3600,
+              price: { id: 'price_contract' },
+            },
+          ],
+        },
+      });
+      return { id, customer: 'cus_contract' };
+    },
+    seedCanceledSubscription: async () => {
+      subscriptionSequence += 1;
+      const id = `sub_fake_${subscriptionSequence}`;
+      stripe.seedSubscription({
+        id,
+        customer: 'cus_contract',
+        status: 'canceled',
+        metadata: { user_id: 'debt472_contract_user' },
+        items: { data: [{ price: { id: 'price_contract' } }] },
+      });
+      return { id, customer: 'cus_contract' };
+    },
     subscriptionParams: {
       mode: 'subscription',
       customer: 'cus_contract',

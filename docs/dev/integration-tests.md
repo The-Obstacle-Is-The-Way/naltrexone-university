@@ -1,6 +1,6 @@
 # Integration Tests
 
-**Last Updated:** 2026-08-26
+**Last Updated:** 2026-09-24
 
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
@@ -63,7 +63,7 @@ If the database is unreachable, the test setup fails fast with a clear error mes
 
 ### Live Stripe Provider Contracts (TEST Mode)
 
-The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its six live Stripe cases are reported as skipped. To request all six cases explicitly, use the dedicated fail-closed entry point:
+The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its seven live Stripe cases are reported as skipped. To request all seven cases explicitly, use the dedicated fail-closed entry point:
 
 ```bash
 pnpm test:stripe-provider
@@ -74,10 +74,10 @@ The runner loads `.env.local` with `override: false`, so an explicitly exported 
 The success receipt is:
 
 ```text
-[stripe-provider] PASS executed=6 passed=6 skipped=0
+[stripe-provider] PASS executed=7 passed=7 skipped=0
 ```
 
-The 2026-08-26 local TEST-mode activation run produced that exact receipt. Any `PROVIDER_KEY_INVALID` or `PROVIDER_PRICE_INVALID` result is a configuration failure; do not treat it as an expected skip and do not use a live-mode key.
+The 2026-09-24 local TEST-mode run produced that exact receipt at 16:53:58Z, after the fifth Checkout contract scenario raised the requirement from six cases; the 2026-08-26 activation run produced the then-current six-case receipt. Any `PROVIDER_KEY_INVALID` or `PROVIDER_PRICE_INVALID` result is a configuration failure; do not treat it as an expected skip and do not use a live-mode key.
 
 ### One-Liner (Full Setup)
 

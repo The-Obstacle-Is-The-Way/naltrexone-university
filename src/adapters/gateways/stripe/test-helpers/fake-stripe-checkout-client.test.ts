@@ -190,6 +190,109 @@ describe('FakeStripeCheckoutClient', () => {
     ).resolves.toEqual(expect.objectContaining({ status: 'open' }));
   });
 
+  it('lists seeded Subscriptions by customer and status and retrieves them by id', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSubscription({
+      id: 'sub_fake_1',
+      customer: 'cus_one',
+      status: 'active',
+      metadata: { user_id: 'user_one' },
+      items: {
+        data: [
+          {
+            current_period_end: 1_700_003_600,
+            price: { id: 'price_contract' },
+          },
+        ],
+      },
+    });
+    stripe.seedSubscription({
+      id: 'sub_fake_2',
+      customer: 'cus_one',
+      status: 'canceled',
+    });
+    stripe.seedSubscription({
+      id: 'sub_fake_3',
+      customer: 'cus_two',
+      status: 'active',
+    });
+    const list = stripe.subscriptions.list;
+    if (!list) throw new Error('Expected the fake to list Subscriptions');
+
+    await expect(
+      stripe.subscriptions.list?.({
+        customer: 'cus_one',
+        status: 'all',
+        limit: 10,
+      }),
+    ).resolves.toEqual({
+      data: [
+        expect.objectContaining({ id: 'sub_fake_1', status: 'active' }),
+        expect.objectContaining({ id: 'sub_fake_2', status: 'canceled' }),
+      ],
+    });
+    await expect(
+      stripe.subscriptions.list?.({ customer: 'cus_one', status: 'active' }),
+    ).resolves.toEqual({
+      data: [expect.objectContaining({ id: 'sub_fake_1', status: 'active' })],
+    });
+    // As on Stripe, an omitted status lists every Subscription except the
+    // canceled ones; only `status: 'all'` includes them.
+    await expect(
+      stripe.subscriptions.list?.({ customer: 'cus_one' }),
+    ).resolves.toEqual({
+      data: [expect.objectContaining({ id: 'sub_fake_1', status: 'active' })],
+    });
+    expect(stripe.subscriptions.listCalls).toEqual([
+      { customer: 'cus_one', status: 'all', limit: 10 },
+      { customer: 'cus_one', status: 'active' },
+      { customer: 'cus_one' },
+    ]);
+    await expect(stripe.subscriptions.retrieve('sub_fake_1')).resolves.toEqual(
+      expect.objectContaining({
+        id: 'sub_fake_1',
+        customer: 'cus_one',
+        status: 'active',
+      }),
+    );
+    await expect(stripe.subscriptions.retrieve('sub_missing')).rejects.toThrow(
+      'Missing fake Subscription: sub_missing',
+    );
+    // Detached like an unbound SDK method, the list has no `this` to read.
+    await expect(list({ customer: 'cus_one' })).rejects.toBeInstanceOf(
+      TypeError,
+    );
+  });
+
+  it('supports create-response overrides without changing the stored Session', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const options = { idempotencyKey: 'key_response_override' };
+    // The override mutates what it is handed, so the case also proves the
+    // saved replay and the stored Session are clones it cannot reach.
+    stripe.setCreateResponseOverride((session) => {
+      session.url = null;
+      return session;
+    });
+
+    const created = await stripe.checkout.sessions.create(setupParams, options);
+
+    expect(created.url).toBeNull();
+    await expect(
+      stripe.checkout.sessions.create(setupParams, options),
+    ).resolves.toEqual(expect.objectContaining({ id: created.id, url: null }));
+    stripe.setCreateResponseOverride(null);
+    await expect(
+      stripe.checkout.sessions.create(setupParams, options),
+    ).resolves.toEqual(
+      expect.objectContaining({ id: created.id, url: expect.any(String) }),
+    );
+    await expect(
+      stripe.checkout.sessions.retrieve(created.id),
+    ).resolves.toEqual(
+      expect.objectContaining({ id: created.id, url: expect.any(String) }),
+    );
+  });
+
   it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
     let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
     const stripe = new FakeStripeCheckoutClient(() => nowMs);

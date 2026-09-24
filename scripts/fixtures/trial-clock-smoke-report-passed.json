@@ -3,8 +3,8 @@
   "numPassedTestSuites": 2,
   "numFailedTestSuites": 0,
   "numPendingTestSuites": 0,
-  "numTotalTests": 6,
-  "numPassedTests": 6,
+  "numTotalTests": 7,
+  "numPassedTests": 7,
   "numFailedTests": 0,
   "numPendingTests": 0,
   "numTodoTests": 0,
@@ -75,6 +75,10 @@
         {
           "status": "passed",
           "title": "rejects an idempotency key reused with different parameters"
+        },
+        {
+          "status": "passed",
+          "title": "lists a customer's Subscriptions by id and status and retrieves them by id"
         }
       ],
       "status": "passed",

@@ -139,9 +139,10 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
   it('uses the listed canonical session when the created session expires before reconciliation', async () => {
     const logger = new FakeLogger();
     const stripe = createFake();
-    // The racer is created two days later, so it outlives the reconciliation
-    // clock below while the created Session (24h lifetime) does not.
-    stageRacingSession(stripe, fixedNowMs + 48 * HOUR_MS);
+    // The racer is created twelve hours later, before the reconciliation clock
+    // below reads hour 25: it is still open then (24h lifetime), while the
+    // created Session, 25 hours old, has expired.
+    stageRacingSession(stripe, fixedNowMs + 12 * HOUR_MS);
     const nowValues = [fixedNowMs, fixedNowMs + 25 * HOUR_MS];
     const nowMs = () => nowValues.shift() ?? fixedNowMs + 25 * HOUR_MS;
 

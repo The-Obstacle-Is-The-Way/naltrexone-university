@@ -21,6 +21,7 @@ describe('Stripe Checkout client contract registration', () => {
       'lists Sessions in reverse chronology with starting_after and has_more',
       'keeps terminal Sessions visible in unfiltered listings',
       'rejects an idempotency key reused with different parameters',
+      "lists a customer's Subscriptions by id and status and retrieves them by id",
     ]);
   });
 });
