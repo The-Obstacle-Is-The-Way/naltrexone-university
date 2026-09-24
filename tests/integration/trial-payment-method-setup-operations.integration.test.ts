@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, like, lt } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { trialPaymentMethodSetupOperations } from '@/db/schema';
 import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
@@ -304,9 +304,10 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     // The prune is table-wide by design, so the two rows sit in a far-past
     // window that no service or other test writes: foreign expired rows can
     // never be eligible ahead of them, even against an existing database.
-    // Only that window is cleared first, because an aborted earlier run of
-    // this case can leave its own rows there; files run sequentially, so
-    // nothing live owns rows in the window.
+    // Only this case's own rows in that window are cleared first (an aborted
+    // earlier run can leave them behind); the delete is scoped by the window
+    // and by the session-id prefix this case alone creates, so an unrelated
+    // row there is never deleted and would instead fail the case below.
     const olderExpiredAt = new Date('1970-01-01T00:00:00Z');
     const newerExpiredAt = new Date('1970-01-01T00:00:01Z');
     const expiredBefore = new Date('1970-01-01T00:00:02Z');
@@ -316,6 +317,7 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
         and(
           eq(trialPaymentMethodSetupOperations.status, 'expired'),
           lt(trialPaymentMethodSetupOperations.expiredAt, expiredBefore),
+          like(trialPaymentMethodSetupOperations.sessionId, 'cs_prune_%'),
         ),
       );
     const older = pendingInput(`cs_prune_older_${randomUUID()}`, user.id);
