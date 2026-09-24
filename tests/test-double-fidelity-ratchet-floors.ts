@@ -79,6 +79,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // impossible-driver-response cases on drizzle.mock; the create guard, discard
 // scoping and end() behavior run on real Postgres in
 // tests/integration/practice-session-writes.integration.test.ts.
+// 2026-09-24 UTC: The practice-session reads and history-summary unit suites
+// retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
+// the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -112,18 +115,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
-  [
-    'src/adapters/repositories/drizzle-practice-session-repository-corrupt-list-reads.test.ts',
-    1,
-  ],
-  [
-    'src/adapters/repositories/drizzle-practice-session-repository-history-summary.test.ts',
-    1,
-  ],
-  [
-    'src/adapters/repositories/drizzle-practice-session-repository-reads.test.ts',
-    4,
-  ],
   ['src/adapters/repositories/drizzle-subscription-repository.test.ts', 1],
   ['src/adapters/repositories/drizzle-tag-repository.test.ts', 1],
   [

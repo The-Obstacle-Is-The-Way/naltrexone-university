@@ -1,290 +1,102 @@
-import { describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
-import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 import {
-  createStateRow,
-  expectStateSelectPredicate,
-  type StateRow,
-} from './drizzle-practice-session-repository-test-helpers';
+  createTableRelationsHelpers,
+  extractTablesRelationalConfig,
+} from 'drizzle-orm';
+import { PgDatabase, PgDialect, PgTransaction } from 'drizzle-orm/pg-core';
+import { RelationalQueryBuilder } from 'drizzle-orm/pg-core/query-builders/query';
+import {
+  drizzle,
+  PostgresJsPreparedQuery,
+  type PostgresJsQueryResultHKT,
+} from 'drizzle-orm/postgres-js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as schema from '@/db/schema';
+import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
 
-const sessionId = crypto.randomUUID();
-const userId = crypto.randomUUID();
-const questionId = crypto.randomUUID();
+const relational = extractTablesRelationalConfig(
+  schema,
+  createTableRelationsHelpers,
+);
+const schemaConfig = {
+  fullSchema: schema,
+  schema: relational.tables,
+  tableNamesMap: relational.tableNamesMap,
+};
+type MockDatabase = PgDatabase<
+  PostgresJsQueryResultHKT,
+  typeof schema,
+  typeof relational.tables
+>;
 
-function createStateSelect(
-  rows: readonly StateRow[],
-  expectedSessionIds: readonly string[],
-) {
-  return vi.fn(() => ({
-    from: () => ({
-      where: (predicate: unknown) => {
-        expectStateSelectPredicate(predicate, expectedSessionIds);
-        return {
-          orderBy: async () => rows,
-        };
-      },
-    }),
-  }));
+class StubTransaction extends PgTransaction<
+  PostgresJsQueryResultHKT,
+  typeof schema,
+  typeof relational.tables
+> {
+  override transaction<T>(
+    transaction: (tx: StubTransaction) => Promise<T>,
+  ): Promise<T> {
+    return transaction(this);
+  }
 }
 
-function createRepeatableReadDb<TTx extends object>(tx: TTx) {
-  const transaction = vi.fn(async (fn: (client: TTx) => Promise<unknown>) =>
-    fn(tx),
-  );
-  const db = {
+// Only an arbitrary driver failure inside the corrupt-row classification,
+// which real Postgres cannot raise on demand, belongs here: the relational
+// session read is answered at the query-builder boundary and the following
+// state-rows read fails at the prepared-query boundary. Corrupt-row skipping
+// and logging run against real Postgres in
+// tests/integration/practice-session-schema-hardening.integration.test.ts and
+// tests/integration/practice-session-reads.integration.test.ts.
+beforeEach(() => {
+  vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
+  vi.spyOn(PgDatabase.prototype, 'transaction').mockImplementation(function (
+    this: MockDatabase,
     transaction,
-    query: {
-      practiceSessions: {
-        findFirst: () => {
-          throw new Error('unexpected root findFirst');
-        },
-        findMany: () => {
-          throw new Error('unexpected root findMany');
-        },
-      },
-    },
-    select: () => {
-      throw new Error('unexpected root select');
-    },
-    insert: () => {
-      throw new Error('unexpected insert');
-    },
-    update: () => {
-      throw new Error('unexpected update');
-    },
-  } as const;
-
-  type RepoDb = ConstructorParameters<
-    typeof DrizzlePracticeSessionRepository
-  >[0];
-  return {
-    db: db as unknown as RepoDb,
-    transaction,
-  };
-}
-
-function createLogger() {
-  return {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  };
-}
-
-function expectRepeatableReadTransaction(
-  transaction: ReturnType<typeof vi.fn>,
-) {
-  expect(transaction).toHaveBeenCalledTimes(1);
-  expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
-    isolationLevel: 'repeatable read',
+  ) {
+    return transaction(
+      new StubTransaction(new PgDialect(), this._.session, schemaConfig),
+    );
   });
-}
+});
 
-describe('DrizzlePracticeSessionRepository corrupt list reads', () => {
-  it('skips and logs a corrupt latest incomplete session row', async () => {
-    const startedAt = new Date('2026-02-01T00:00:00.000Z');
-    const row = {
-      id: sessionId,
-      userId,
-      mode: 'exam',
-      paramsJson: {
-        count: 1,
-        tagSlugs: [],
-        difficulties: [],
-        questionIds: [questionId],
-      },
-      startedAt,
-      endedAt: null,
-    } as const;
-    const tx = {
-      query: {
-        practiceSessions: {
-          findFirst: async () => row,
-        },
-      },
-      select: createStateSelect([], [sessionId]),
-    } as const;
-    const { db, transaction } = createRepeatableReadDb(tx);
-    const logger = createLogger();
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('DrizzlePracticeSessionRepository corrupt-row classification', () => {
+  it('propagates an unrelated driver failure raised while mapping a session instead of logging it as a corrupt row', async () => {
+    const logger = new FakeLogger();
     const repo = new DrizzlePracticeSessionRepository(
-      db,
-      () => new Date('2026-02-01T00:00:00.000Z'),
+      drizzle.mock({ schema }),
+      undefined,
       logger,
     );
-
-    await expect(repo.findLatestIncompleteByUserId(userId)).resolves.toBeNull();
-    const [context, message] = logger.warn.mock.calls[0] ?? [];
-    expect(context).toEqual(
-      expect.objectContaining({
-        sessionId,
-        mode: null,
-        rowMode: 'exam',
-        error: expect.objectContaining({ code: 'INTERNAL_ERROR' }),
-      }),
-    );
-    expect(context).not.toHaveProperty('userId');
-    expect(message).toBe('Skipping corrupt incomplete practice session row');
-    expectRepeatableReadTransaction(transaction);
-  });
-
-  it('does not classify unmarked internal errors by message text', async () => {
-    const internalError = new ApplicationError(
-      'INTERNAL_ERROR',
-      'Unexpected normalized question state helper failure',
-    );
-    const row = {
-      id: sessionId,
-      userId,
-      mode: 'exam',
-      paramsJson: {
-        count: 1,
-        tagSlugs: [],
-        difficulties: [],
-        questionIds: [questionId],
-      },
-      startedAt: new Date('2026-02-01T00:00:00.000Z'),
-      endedAt: null,
-    } as const;
-    const tx = {
-      query: {
-        practiceSessions: {
-          findFirst: async () => row,
-        },
-      },
-      select: () => {
-        throw internalError;
-      },
-    } as const;
-    const { db, transaction } = createRepeatableReadDb(tx);
-    const logger = createLogger();
-    const repo = new DrizzlePracticeSessionRepository(
-      db,
-      () => new Date('2026-02-01T00:00:00.000Z'),
-      logger,
-    );
-
-    await expect(repo.findLatestIncompleteByUserId(userId)).rejects.toBe(
-      internalError,
-    );
-    expect(logger.warn).not.toHaveBeenCalled();
-    expectRepeatableReadTransaction(transaction);
-  });
-
-  it('propagates unrelated internal errors instead of treating them as corrupt rows', async () => {
-    const internalError = new ApplicationError(
-      'INTERNAL_ERROR',
-      'Unexpected query mapper failure',
-    );
-    const row = {
-      id: sessionId,
-      userId,
-      mode: 'exam',
-      paramsJson: {
-        count: 1,
-        tagSlugs: [],
-        difficulties: [],
-        questionIds: [questionId],
-      },
-      startedAt: new Date('2026-02-01T00:00:00.000Z'),
-      endedAt: null,
-    } as const;
-    const tx = {
-      query: {
-        practiceSessions: {
-          findFirst: async () => row,
-        },
-      },
-      select: () => {
-        throw internalError;
-      },
-    } as const;
-    const { db, transaction } = createRepeatableReadDb(tx);
-    const logger = createLogger();
-    const repo = new DrizzlePracticeSessionRepository(
-      db,
-      () => new Date('2026-02-01T00:00:00.000Z'),
-      logger,
-    );
-
-    await expect(repo.findLatestIncompleteByUserId(userId)).rejects.toBe(
-      internalError,
-    );
-    expect(logger.warn).not.toHaveBeenCalled();
-    expectRepeatableReadTransaction(transaction);
-  });
-
-  it('skips and logs corrupt completed session rows while preserving total', async () => {
-    const endedAt = new Date('2026-02-02T00:00:00.000Z');
-    const startedAt = new Date('2026-02-01T23:00:00.000Z');
-    const row = {
-      id: sessionId,
-      userId,
+    const row: typeof schema.practiceSessions.$inferSelect = {
+      id: crypto.randomUUID(),
+      userId: crypto.randomUUID(),
       mode: 'tutor',
       paramsJson: {
         count: 1,
         tagSlugs: [],
         difficulties: [],
-        questionIds: [questionId],
+        questionIds: [crypto.randomUUID()],
       },
-      startedAt,
-      endedAt,
-    } as const;
-    const findMany = vi.fn().mockResolvedValue([row]);
-    const countWhere = vi.fn().mockResolvedValue([{ count: 1 }]);
-    const stateSelect = createStateSelect(
-      [
-        createStateRow({
-          practiceSessionId: sessionId,
-          questionId: crypto.randomUUID(),
-          position: 0,
-        }),
-      ],
-      [sessionId],
+      startedAt: new Date('2026-03-05T10:00:00.000Z'),
+      endedAt: null,
+    };
+    vi.spyOn(RelationalQueryBuilder.prototype, 'findFirst').mockReturnValueOnce(
+      Promise.resolve(row) as never,
     );
-    const select = vi.fn((selection?: unknown) => {
-      if (selection) {
-        return {
-          from: () => ({
-            where: countWhere,
-          }),
-        };
-      }
-
-      return stateSelect();
-    });
-    const tx = {
-      query: {
-        practiceSessions: {
-          findFirst: async () => null,
-          findMany,
-        },
-      },
-      select,
-    } as const;
-    const { db, transaction } = createRepeatableReadDb(tx);
-    const logger = createLogger();
-    const repo = new DrizzlePracticeSessionRepository(
-      db,
-      () => new Date('2026-02-01T00:00:00.000Z'),
-      logger,
+    const failure = new Error('connection reset');
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
+      failure,
     );
 
-    await expect(repo.findCompletedByUserId(userId, 10, 0)).resolves.toEqual({
-      rows: [],
-      total: 1,
-    });
-    const [context, message] = logger.warn.mock.calls[0] ?? [];
-    expect(context).toEqual(
-      expect.objectContaining({
-        sessionId,
-        mode: null,
-        rowMode: 'tutor',
-        error: expect.objectContaining({ code: 'INTERNAL_ERROR' }),
-      }),
+    await expect(repo.findLatestIncompleteByUserId(row.userId)).rejects.toBe(
+      failure,
     );
-    expect(context).not.toHaveProperty('userId');
-    expect(message).toBe('Skipping corrupt completed practice session row');
-    expectRepeatableReadTransaction(transaction);
+    expect(logger.warnCalls).toEqual([]);
+    expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(1);
   });
 });
