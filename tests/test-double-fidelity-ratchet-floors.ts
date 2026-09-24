@@ -70,6 +70,11 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-23 UTC: The question-feedback unit suite keeps two impossible-response
 // cases; the renewal-consent and pending-cleanup suites retire entirely (their
 // prune guard and contract twin run on real Postgres in tests/integration).
+// 2026-09-24 UTC: The practice-session question-state, missing-row and
+// updater-lock unit suites retire entirely behind
+// tests/integration/practice-session-question-state-writes.integration.test.ts
+// and the lock-granularity suite; the statement-cancellation suite keeps its
+// two 57014 cases on drizzle.mock at the real prepared-query boundary.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -112,14 +117,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
     1,
   ],
   [
-    'src/adapters/repositories/drizzle-practice-session-repository-question-state-missing-row.test.ts',
-    1,
-  ],
-  [
-    'src/adapters/repositories/drizzle-practice-session-repository-question-state.test.ts',
-    14,
-  ],
-  [
     'src/adapters/repositories/drizzle-practice-session-repository-reads.test.ts',
     4,
   ],
@@ -127,18 +124,10 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
     'src/adapters/repositories/drizzle-practice-session-repository-session-writes.test.ts',
     13,
   ],
-  [
-    'src/adapters/repositories/drizzle-practice-session-repository-statement-cancellation.test.ts',
-    1,
-  ],
   ['src/adapters/repositories/drizzle-subscription-repository.test.ts', 1],
   ['src/adapters/repositories/drizzle-tag-repository.test.ts', 1],
   [
     'src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository.test.ts',
-    1,
-  ],
-  [
-    'src/adapters/repositories/practice-session-question-state-updater-lock.test.ts',
     1,
   ],
   ['tests/e2e/helpers/bookmark.test.ts', 2],
