@@ -35,6 +35,11 @@ type CreateCall = {
 
 type ListCall = Parameters<StripeClient['checkout']['sessions']['list']>[0];
 
+// A list hook runs after a listing is recorded and before it is answered; a
+// test awaits inside it to sequence concurrent callers. It models no Stripe
+// behavior and is not contract-tested.
+type ListHook = (params: ListCall) => void | Promise<void>;
+
 type RetrieveRequest = {
   sessionId: string;
   params?: { expand?: string[] } | undefined;
@@ -113,6 +118,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
   >();
   private readonly liveSessionsById = new Map<string, TrackedCheckoutSession>();
   private retrieveOverride: RetrieveOverride | null = null;
+  private listHook: ListHook | null = null;
   private createResponseOverride: CreateResponseOverride | null = null;
   private createFault: CreateFault | null = null;
   private expireFault: ExpireFault | null = null;
@@ -175,6 +181,9 @@ export class FakeStripeCheckoutClient implements StripeClient {
       },
       list: async (params) => {
         this.listCalls.push({ ...params });
+        if (this.listHook) {
+          await this.listHook(params);
+        }
         const sorted = Array.from(this.liveSessionsById.values())
           .filter(
             (session) =>
@@ -292,6 +301,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
 
   setRetrieveOverride(override: RetrieveOverride | null): void {
     this.retrieveOverride = override;
+  }
+
+  setListHook(hook: ListHook | null): void {
+    this.listHook = hook;
   }
 
   setCreateResponseOverride(override: CreateResponseOverride | null): void {
