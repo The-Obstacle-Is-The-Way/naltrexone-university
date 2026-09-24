@@ -163,6 +163,33 @@ describe('FakeStripeCheckoutClient', () => {
     );
   });
 
+  it('supports explicit expire fault injection without changing the live state', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const created = await stripe.checkout.sessions.create(setupParams, {
+      idempotencyKey: 'key_expire_fault',
+    });
+    const fault = new Error('expire transport failed');
+    stripe.setExpireFault(() => {
+      throw fault;
+    });
+
+    await expect(
+      stripe.checkout.sessions.expire(created.id, undefined, {
+        idempotencyKey: `expire_checkout_session:${created.id}`,
+      }),
+    ).rejects.toBe(fault);
+
+    expect(stripe.expireCalls).toEqual([
+      {
+        sessionId: created.id,
+        options: { idempotencyKey: `expire_checkout_session:${created.id}` },
+      },
+    ]);
+    await expect(
+      stripe.checkout.sessions.retrieve(created.id),
+    ).resolves.toEqual(expect.objectContaining({ status: 'open' }));
+  });
+
   it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
     let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
     const stripe = new FakeStripeCheckoutClient(() => nowMs);

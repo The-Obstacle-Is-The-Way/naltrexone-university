@@ -30,6 +30,14 @@ type ExpireCall = {
   options?: StripeRequestOptions | undefined;
 };
 
+// An expire fault runs after the call is recorded and before the Session is
+// marked expired; it injects a caller-supplied error by throwing. Like the
+// create fault it models no Stripe fault shape and is not contract-tested.
+type ExpireFault = (
+  sessionId: string,
+  options?: StripeRequestOptions,
+) => void | Promise<void>;
+
 type RetrieveOverride = (
   session: StripeCheckoutSessionRetrieved,
 ) => StripeCheckoutSessionRetrieved | Promise<StripeCheckoutSessionRetrieved>;
@@ -84,6 +92,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
   private readonly liveSessionsById = new Map<string, TrackedCheckoutSession>();
   private retrieveOverride: RetrieveOverride | null = null;
   private createFault: CreateFault | null = null;
+  private expireFault: ExpireFault | null = null;
   private sessionSequence = 0;
 
   constructor(private readonly nowMs: () => number = Date.now) {}
@@ -189,6 +198,9 @@ export class FakeStripeCheckoutClient implements StripeClient {
           sessionId,
           ...(options ? { options: { ...options } } : {}),
         });
+        if (this.expireFault) {
+          await this.expireFault(sessionId, options);
+        }
         this.markExpired(sessionId);
         return this.getLiveSession(sessionId);
       },
@@ -226,6 +238,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
 
   setCreateFault(fault: CreateFault | null): void {
     this.createFault = fault;
+  }
+
+  setExpireFault(fault: ExpireFault | null): void {
+    this.expireFault = fault;
   }
 
   private createOpenSession(
