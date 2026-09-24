@@ -1,544 +1,88 @@
-import type { SQL } from 'drizzle-orm';
-import { PgDialect } from 'drizzle-orm/pg-core';
-import { describe, expect, it, vi } from 'vitest';
-import { ApplicationError } from '@/src/application/errors';
+import { drizzle, PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as schema from '@/db/schema';
+import { installMockTransactionBoundary } from '@/tests/shared/drizzle-mock-transaction';
 import { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
 
-describe('DrizzleSubscriptionRepository', () => {
-  type RepoDb = ConstructorParameters<typeof DrizzleSubscriptionRepository>[0];
+const repo = new DrizzleSubscriptionRepository(drizzle.mock({ schema }), {
+  monthly: 'price_monthly',
+  annual: 'price_annual',
+});
 
-  const subscriptionRowId = crypto.randomUUID();
-  const userId = crypto.randomUUID();
-
-  const createRepo = (
-    db: unknown,
-    priceIds: { monthly: string; annual: string },
-    nowFn?: () => Date,
-  ) =>
-    new DrizzleSubscriptionRepository(db as unknown as RepoDb, priceIds, nowFn);
-
-  const priceIds = {
-    monthly: 'price_monthly',
-    annual: 'price_annual',
-  } as const;
-
-  const createUpsertInput = () => ({
-    userId,
+function upsert() {
+  return repo.upsert({
+    userId: crypto.randomUUID(),
     externalSubscriptionId: 'sub_123',
-    plan: 'monthly' as const,
-    status: 'active' as const,
+    plan: 'monthly',
+    status: 'active',
     currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
     expectedVersion: null,
   });
+}
 
-  const createFailingUpsertDb = (dbError: unknown) => {
-    const tx = {
-      execute: async () => undefined,
-      select: () => ({
-        from: () => ({
-          where: () => ({
-            for: async () => [],
-          }),
-        }),
-      }),
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: async () => {
-            throw dbError;
-          },
-        }),
-      }),
-    };
+// Inside the upsert transaction the advisory lock, the FOR UPDATE read and the
+// insert each reach the prepared-query boundary in that order; the first two
+// are answered and the third carries the failure under test.
+function failInsertWith(failure: unknown) {
+  vi.mocked(PostgresJsPreparedQuery.prototype.execute)
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([])
+    .mockRejectedValueOnce(failure);
+}
 
-    return {
-      transaction: async (callback: (txArg: unknown) => Promise<unknown>) =>
-        callback(tx),
-    };
-  };
+// Only error translation that real Postgres cannot force belongs here: the
+// nested-cause shape of a driver error, a foreign-key violation on a
+// constraint this table does not have, and an arbitrary driver failure. Real
+// lookups, the price mapping, the injected clock, the real users foreign key
+// and the real unique constraints run in tests/integration/
+// subscription-repository.integration.test.ts and stripe-repositories.integration.test.ts.
+beforeEach(() => {
+  installMockTransactionBoundary();
+});
 
-  it('returns null from findByUserId when no subscription row exists', async () => {
-    const db = {
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => null,
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-    } as const;
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds);
-
-    await expect(repo.findByUserId(userId)).resolves.toBeNull();
-  });
-
-  it('maps Stripe price ids to domain plan when loading subscriptions', async () => {
-    const currentPeriodEnd = new Date('2026-12-31T00:00:00.000Z');
-    const createdAt = new Date('2026-01-01T00:00:00.000Z');
-    const updatedAt = new Date('2026-01-01T00:00:00.000Z');
-    const db = {
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => ({
-            id: subscriptionRowId,
-            userId: userId,
-            stripeSubscriptionId: 'sub_123',
-            status: 'active',
-            priceId: 'price_monthly',
-            currentPeriodEnd,
-            cancelAtPeriodEnd: false,
-            createdAt,
-            updatedAt,
-          }),
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-    } as const;
-
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds);
-
-    await expect(repo.findByUserId(userId)).resolves.toMatchObject({
-      id: subscriptionRowId,
-      userId: userId,
-      plan: 'monthly',
-      status: 'active',
-      currentPeriodEnd,
-      cancelAtPeriodEnd: false,
-      createdAt,
-      updatedAt,
-    });
-  });
-
-  it('returns only the external subscription id for a user binding', async () => {
-    const findFirst = vi.fn(
-      async (_input: { columns: unknown; where: unknown }) => ({
-        stripeSubscriptionId: 'sub_123',
-      }),
-    );
-    const db = {
-      query: {
-        stripeSubscriptions: { findFirst },
-      },
-    } as const;
-    const repo = createRepo(db, priceIds);
-
-    await expect(repo.findExternalSubscriptionIdByUserId(userId)).resolves.toBe(
-      'sub_123',
-    );
-    expect(findFirst).toHaveBeenCalledWith({
-      columns: { stripeSubscriptionId: true },
-      where: expect.anything(),
-    });
-    const where = findFirst.mock.calls[0]?.[0].where;
-    if (!where) throw new Error('Expected a subscription lookup predicate');
-    expect(new PgDialect().sqlToQuery(where as SQL)).toMatchObject({
-      sql: expect.stringContaining('"stripe_subscriptions"."user_id" = $1'),
-      params: [userId],
-    });
-  });
-
-  it('throws INTERNAL_ERROR when a stored subscription has an unknown priceId', async () => {
-    const db = {
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => ({
-            id: subscriptionRowId,
-            userId: userId,
-            stripeSubscriptionId: 'sub_123',
-            status: 'active',
-            priceId: 'price_unknown',
-            currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
-            cancelAtPeriodEnd: false,
-            createdAt: new Date('2026-01-01T00:00:00.000Z'),
-            updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-          }),
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-    } as const;
-
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds);
-
-    await expect(repo.findByUserId(userId)).rejects.toBeInstanceOf(
-      ApplicationError,
-    );
-    await expect(repo.findByUserId(userId)).rejects.toMatchObject({
-      code: 'INTERNAL_ERROR',
-    });
-  });
-
-  it('upserts subscriptions by userId and reuses one captured timestamp', async () => {
-    const now = new Date('2026-02-01T02:03:04.000Z');
-    const nowFn = vi.fn(() => now);
-    const onConflictDoUpdate = async () => {};
-    const values = (input: unknown) => ({
-      onConflictDoUpdate: async (conflict: unknown) => {
-        expect(input).toMatchObject({
-          userId: userId,
-          stripeSubscriptionId: 'sub_123',
-          status: 'active',
-          priceId: 'price_monthly',
-          cancelAtPeriodEnd: false,
-          updatedAt: now,
-        });
-        expect(conflict).toMatchObject({
-          target: expect.anything(),
-          set: expect.objectContaining({ updatedAt: now }),
-        });
-        return onConflictDoUpdate;
-      },
-    });
-
-    const tx = {
-      execute: async () => undefined,
-      select: () => ({
-        from: () => ({
-          where: () => ({
-            for: async () => [],
-          }),
-        }),
-      }),
-      insert: () => ({ values }),
-    };
-    const db = {
-      transaction: async (callback: (txArg: unknown) => Promise<unknown>) => {
-        return callback(tx);
-      },
-    };
-
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds, nowFn);
-
-    await expect(
-      repo.upsert({
-        userId: userId,
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
-        cancelAtPeriodEnd: false,
-        expectedVersion: null,
-      }),
-    ).resolves.toEqual({ persisted: true });
-    expect(nowFn).toHaveBeenCalledTimes(1);
-  });
-
-  it('serializes upserts per user before reading the current subscription row', async () => {
-    const operations: string[] = [];
-    const now = new Date('2026-02-01T02:03:04.000Z');
-    const nowFn = vi.fn(() => {
-      operations.push('timestamp');
-      return now;
-    });
-    const forUpdate = vi.fn(async () => {
-      operations.push('row-lock');
-      return [];
-    });
-    const where = vi.fn(() => ({ for: forUpdate }));
-    const from = vi.fn(() => ({ where }));
-    const select = vi.fn(() => ({ from }));
-    const onConflictDoUpdate = vi.fn(async () => {
-      operations.push('write');
-    });
-    const values = vi.fn(() => ({ onConflictDoUpdate }));
-    const insert = vi.fn(() => ({ values }));
-    const tx = {
-      execute: vi.fn(async () => {
-        operations.push('user-lock');
-      }),
-      select,
-      insert,
-    };
-    const db = {
-      transaction: vi.fn(async (callback) => callback(tx)),
-    } as const;
-
-    const repo = createRepo(
-      db,
-      {
-        monthly: 'price_monthly',
-        annual: 'price_annual',
-      },
-      nowFn,
-    );
-
-    await expect(
-      repo.upsert({
-        userId: userId,
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
-        cancelAtPeriodEnd: false,
-        expectedVersion: null,
-      }),
-    ).resolves.toEqual({ persisted: true });
-
-    expect(db.transaction).toHaveBeenCalledTimes(1);
-    expect(tx.execute).toHaveBeenCalledTimes(1);
-    expect(nowFn).toHaveBeenCalledTimes(1);
-    expect(select).toHaveBeenCalledTimes(1);
-    expect(forUpdate).toHaveBeenCalledWith('update');
-    expect(operations).toEqual(['user-lock', 'timestamp', 'row-lock', 'write']);
-  });
-
-  it('throws CONFLICT when the DB reports a unique-constraint violation during upsert', async () => {
-    const tx = {
-      execute: async () => undefined,
-      select: () => ({
-        from: () => ({
-          where: () => ({
-            for: async () => [],
-          }),
-        }),
-      }),
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: async () => {
-            throw { cause: { code: '23505' } };
-          },
-        }),
-      }),
-    };
-    const db = {
-      transaction: async (callback: (txArg: unknown) => Promise<unknown>) => {
-        return callback(tx);
-      },
-    };
-
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds);
-
-    await expect(
-      repo.upsert({
-        userId: userId,
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
-        cancelAtPeriodEnd: false,
-        expectedVersion: null,
-      }),
-    ).rejects.toMatchObject({ code: 'CONFLICT' });
-  });
-
+describe('DrizzleSubscriptionRepository upsert error translation', () => {
   it('throws typed user_missing for the exact users foreign-key violation through a cause chain', async () => {
-    const dbError = {
+    const dbError = new Error('insert failed', {
       cause: {
         cause: {
           code: '23503',
           constraint: 'stripe_subscriptions_user_id_users_id_fk',
         },
       },
-    };
-    const repo = createRepo(createFailingUpsertDb(dbError), priceIds);
+    });
+    failInsertWith(dbError);
 
-    await expect(repo.upsert(createUpsertInput())).rejects.toMatchObject({
-      name: 'SubscriptionUserMissingError',
+    await expect(upsert()).rejects.toMatchObject({
       reason: 'user_missing',
-      userId,
       cause: dbError,
     });
+    expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(3);
   });
 
   it('keeps a different foreign-key violation classified as INTERNAL_ERROR', async () => {
-    const dbError = {
-      cause: {
-        cause: {
-          code: '23503',
-          constraint: 'some_other_user_id_fk',
-        },
-      },
-    };
-    const repo = createRepo(createFailingUpsertDb(dbError), priceIds);
+    const dbError = new Error('insert failed', {
+      cause: { cause: { code: '23503', constraint: 'some_other_user_id_fk' } },
+    });
+    failInsertWith(dbError);
 
-    const promise = repo.upsert(createUpsertInput());
-
-    await expect(promise).rejects.toMatchObject({
+    await expect(upsert()).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
       cause: dbError,
     });
   });
 
-  it('throws INTERNAL_ERROR on unexpected database failures during upsert', async () => {
+  it('wraps an unexpected database failure during upsert in INTERNAL_ERROR with its cause', async () => {
     const dbError = new Error('db down');
-    const tx = {
-      execute: async () => undefined,
-      select: () => ({
-        from: () => ({
-          where: () => ({
-            for: async () => [],
-          }),
-        }),
-      }),
-      insert: () => ({
-        values: () => ({
-          onConflictDoUpdate: async () => {
-            throw dbError;
-          },
-        }),
-      }),
-    };
-    const db = {
-      transaction: async (callback: (txArg: unknown) => Promise<unknown>) => {
-        return callback(tx);
-      },
-    };
+    failInsertWith(dbError);
 
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds);
-
-    let thrown: unknown;
-    try {
-      await repo.upsert({
-        userId: userId,
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
-        cancelAtPeriodEnd: false,
-        expectedVersion: null,
-      });
-      expect.unreachable('Expected upsert to throw');
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(thrown).toBeInstanceOf(ApplicationError);
-    expect(thrown).toMatchObject({ code: 'INTERNAL_ERROR' });
-    expect((thrown as Error).cause).toBe(dbError);
-  });
-
-  it('findByExternalSubscriptionId returns null when missing', async () => {
-    const db = {
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => null,
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-    } as const;
-
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds);
-
-    await expect(
-      repo.findByExternalSubscriptionId('sub_123'),
-    ).resolves.toBeNull();
-  });
-
-  it('findByExternalSubscriptionId maps priceId → plan when found', async () => {
-    const db = {
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => ({
-            id: subscriptionRowId,
-            userId: userId,
-            stripeSubscriptionId: 'sub_123',
-            status: 'active',
-            priceId: 'price_annual',
-            currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
-            cancelAtPeriodEnd: false,
-            createdAt: new Date('2026-01-01T00:00:00.000Z'),
-            updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-          }),
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-    } as const;
-
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds);
-
-    await expect(
-      repo.findByExternalSubscriptionId('sub_123'),
-    ).resolves.toMatchObject({
-      userId: userId,
-      plan: 'annual',
-    });
-  });
-
-  it('findByExternalSubscriptionId throws INTERNAL_ERROR when the stored priceId is unknown', async () => {
-    const db = {
-      query: {
-        stripeSubscriptions: {
-          findFirst: async () => ({
-            id: subscriptionRowId,
-            userId: userId,
-            priceId: 'price_unknown',
-            status: 'active',
-            currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
-            cancelAtPeriodEnd: false,
-            createdAt: new Date('2026-01-01T00:00:00.000Z'),
-            updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-            stripeSubscriptionId: 'sub_123',
-          }),
-        },
-      },
-      insert: () => {
-        throw new Error('unexpected insert');
-      },
-    } as const;
-
-    const priceIds = {
-      monthly: 'price_monthly',
-      annual: 'price_annual',
-    } as const;
-
-    const repo = createRepo(db, priceIds);
-
-    await expect(
-      repo.findByExternalSubscriptionId('sub_123'),
-    ).rejects.toBeInstanceOf(ApplicationError);
-    await expect(
-      repo.findByExternalSubscriptionId('sub_123'),
-    ).rejects.toMatchObject({
+    await expect(upsert()).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
+      cause: dbError,
     });
   });
 });
