@@ -236,9 +236,17 @@ describe('FakeStripeCheckoutClient', () => {
     ).resolves.toEqual({
       data: [expect.objectContaining({ id: 'sub_fake_1', status: 'active' })],
     });
+    // As on Stripe, an omitted status lists every Subscription except the
+    // canceled ones; only `status: 'all'` includes them.
+    await expect(
+      stripe.subscriptions.list?.({ customer: 'cus_one' }),
+    ).resolves.toEqual({
+      data: [expect.objectContaining({ id: 'sub_fake_1', status: 'active' })],
+    });
     expect(stripe.subscriptions.listCalls).toEqual([
       { customer: 'cus_one', status: 'all', limit: 10 },
       { customer: 'cus_one', status: 'active' },
+      { customer: 'cus_one' },
     ]);
     await expect(stripe.subscriptions.retrieve('sub_fake_1')).resolves.toEqual(
       expect.objectContaining({

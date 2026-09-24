@@ -55,6 +55,17 @@ runStripeCheckoutClientContract(
     });
     const createdSessionIds = new Set<string>();
     const createdSubscriptionIds = new Set<string>();
+    let defaultPaymentMethodReady = false;
+    const ensureDefaultPaymentMethod = async () => {
+      if (defaultPaymentMethodReady) return;
+      const paymentMethod = await stripe.paymentMethods.attach('pm_card_visa', {
+        customer: customer.id,
+      });
+      await stripe.customers.update(customer.id, {
+        invoice_settings: { default_payment_method: paymentMethod.id },
+      });
+      defaultPaymentMethodReady = true;
+    };
 
     const sessions = {
       create: async (params, options) => {
@@ -79,19 +90,24 @@ runStripeCheckoutClientContract(
       sessions,
       subscriptions,
       seedSubscription: async () => {
-        const paymentMethod = await stripe.paymentMethods.attach(
-          'pm_card_visa',
-          { customer: customer.id },
-        );
-        await stripe.customers.update(customer.id, {
-          invoice_settings: { default_payment_method: paymentMethod.id },
-        });
+        await ensureDefaultPaymentMethod();
         const subscription = await stripe.subscriptions.create({
           customer: customer.id,
           items: [{ price: stripePriceId }],
           metadata: { user_id: 'debt472_contract_user' },
         });
         createdSubscriptionIds.add(subscription.id);
+        return { id: subscription.id, customer: customer.id };
+      },
+      seedCanceledSubscription: async () => {
+        await ensureDefaultPaymentMethod();
+        const subscription = await stripe.subscriptions.create({
+          customer: customer.id,
+          items: [{ price: stripePriceId }],
+          metadata: { user_id: 'debt472_contract_user' },
+        });
+        // Already terminal, so cleanup has nothing left to cancel.
+        await stripe.subscriptions.cancel(subscription.id);
         return { id: subscription.id, customer: customer.id };
       },
       subscriptionParams: {

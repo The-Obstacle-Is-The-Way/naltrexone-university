@@ -28,6 +28,18 @@ runStripeCheckoutClientContract('FakeStripeCheckoutClient', async () => {
       });
       return { id, customer: 'cus_contract' };
     },
+    seedCanceledSubscription: async () => {
+      subscriptionSequence += 1;
+      const id = `sub_fake_${subscriptionSequence}`;
+      stripe.seedSubscription({
+        id,
+        customer: 'cus_contract',
+        status: 'canceled',
+        metadata: { user_id: 'debt472_contract_user' },
+        items: { data: [{ price: { id: 'price_contract' } }] },
+      });
+      return { id, customer: 'cus_contract' };
+    },
     subscriptionParams: {
       mode: 'subscription',
       customer: 'cus_contract',

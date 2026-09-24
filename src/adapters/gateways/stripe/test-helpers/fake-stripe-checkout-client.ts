@@ -246,9 +246,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
         .filter(
           (subscription) =>
             subscription.customer === params.customer &&
-            (params.status === undefined ||
-              params.status === 'all' ||
-              subscription.status === params.status),
+            (params.status === 'all' ||
+              (params.status === undefined
+                ? subscription.status !== 'canceled'
+                : subscription.status === params.status)),
         )
         .slice(0, params.limit ?? 10)
         .map((subscription) => structuredClone(subscription));

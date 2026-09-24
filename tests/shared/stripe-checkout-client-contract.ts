@@ -27,6 +27,9 @@ export type StripeCheckoutClientContractHarness = {
   // its id and customer; the real half charges the TEST price with a test
   // card, the fake seeds it.
   seedSubscription(): Promise<{ id: string; customer: string }>;
+  // Creates one more Subscription for the same customer and cancels it, so
+  // the listing's status filters can be observed against a canceled one.
+  seedCanceledSubscription(): Promise<{ id: string; customer: string }>;
   cleanup(): Promise<void>;
 };
 
@@ -169,15 +172,28 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       const list = harness.subscriptions.list;
       if (!list) throw new Error('Expected the client to list Subscriptions');
       const seeded = await harness.seedSubscription();
+      const canceledSeed = await harness.seedCanceledSubscription();
 
-      const listed = await list.call(harness.subscriptions, {
+      // Stripe lists full Subscription objects; the port reads id and status.
+      const all = await list.call(harness.subscriptions, {
         customer: seeded.customer,
         status: 'all',
         limit: 10,
       });
-      // Stripe lists full Subscription objects; the port reads id and status.
-      expect(listed.data).toHaveLength(1);
-      expect(listed.data[0]).toEqual(
+      expect(all.data).toHaveLength(2);
+      expect(all.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: seeded.id, status: 'active' }),
+          expect.objectContaining({ id: canceledSeed.id, status: 'canceled' }),
+        ]),
+      );
+      // Without a status, Stripe lists every Subscription except canceled ones.
+      const byDefault = await list.call(harness.subscriptions, {
+        customer: seeded.customer,
+        limit: 10,
+      });
+      expect(byDefault.data).toHaveLength(1);
+      expect(byDefault.data[0]).toEqual(
         expect.objectContaining({ id: seeded.id, status: 'active' }),
       );
       const canceled = await list.call(harness.subscriptions, {
@@ -185,7 +201,10 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
         status: 'canceled',
         limit: 10,
       });
-      expect(canceled.data).toEqual([]);
+      expect(canceled.data).toHaveLength(1);
+      expect(canceled.data[0]).toEqual(
+        expect.objectContaining({ id: canceledSeed.id, status: 'canceled' }),
+      );
 
       const retrieved = (await harness.subscriptions.retrieve(seeded.id)) as {
         id?: string;
