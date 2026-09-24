@@ -1,43 +1,8 @@
-import {
-  createTableRelationsHelpers,
-  extractTablesRelationalConfig,
-} from 'drizzle-orm';
-import { PgDatabase, PgDialect, PgTransaction } from 'drizzle-orm/pg-core';
-import {
-  drizzle,
-  PostgresJsPreparedQuery,
-  type PostgresJsQueryResultHKT,
-} from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
+import { installMockTransactionBoundary } from '@/tests/shared/drizzle-mock-transaction';
 import { DrizzleSubscriptionRepository } from './drizzle-subscription-repository';
-
-const relational = extractTablesRelationalConfig(
-  schema,
-  createTableRelationsHelpers,
-);
-const schemaConfig = {
-  fullSchema: schema,
-  schema: relational.tables,
-  tableNamesMap: relational.tableNamesMap,
-};
-type MockDatabase = PgDatabase<
-  PostgresJsQueryResultHKT,
-  typeof schema,
-  typeof relational.tables
->;
-
-class StubTransaction extends PgTransaction<
-  PostgresJsQueryResultHKT,
-  typeof schema,
-  typeof relational.tables
-> {
-  override transaction<T>(
-    transaction: (tx: StubTransaction) => Promise<T>,
-  ): Promise<T> {
-    return transaction(this);
-  }
-}
 
 const repo = new DrizzleSubscriptionRepository(drizzle.mock({ schema }), {
   monthly: 'price_monthly',
@@ -73,18 +38,7 @@ function failInsertWith(failure: unknown) {
 // and the real unique constraints run in tests/integration/
 // subscription-repository.integration.test.ts and stripe-repositories.integration.test.ts.
 beforeEach(() => {
-  vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
-  // drizzle.mock has no transactional client, so run the callback on a
-  // transaction bound to the same mock session; queries inside it still reach
-  // the spied prepared-query boundary above.
-  vi.spyOn(PgDatabase.prototype, 'transaction').mockImplementation(function (
-    this: MockDatabase,
-    transaction,
-  ) {
-    return transaction(
-      new StubTransaction(new PgDialect(), this._.session, schemaConfig),
-    );
-  });
+  installMockTransactionBoundary();
 });
 
 afterEach(() => {
