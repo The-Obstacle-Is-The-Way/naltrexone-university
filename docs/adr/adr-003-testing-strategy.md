@@ -167,7 +167,7 @@ const mockRepo = {
 
 #### Unit Tests (Adapters — Error Translation Only)
 
-**Amendment (2026-08-23, DEBT-472 Part A):** Adapter unit tests are a narrow category omitted from the original decision. They may isolate error translation that real infrastructure cannot safely or deterministically force. The adapter must accept a client-owned narrow seam, and the test may supply a narrowly typed shape-only stub without `as unknown as`.
+**Amendment (2026-08-23, DEBT-472 Part A):** Adapter unit tests are a narrow category omitted from the original decision. They may isolate error translation that real infrastructure cannot safely or deterministically force. The adapter must accept a client-owned narrow seam, and the test may supply a narrowly typed shape-only stub without `as unknown as`. **Amendment (2026-09-24, DEBT-472 step 6):** the shared `drizzle.mock` boundary in `tests/shared/drizzle-mock-transaction.ts` (the real query builder with a spied prepared-query or relational-query `execute`) is the second accepted shape-only form for repository error translation; hand-built Drizzle call-chain objects are stubs, not fakes, per the adjudication recorded in `.claude/rules/testing.md`.
 
 Adapter unit tests must not claim database or provider behavior such as constraints, state transitions, replay, pagination, ordering, or concurrency. Those claims require real infrastructure or a behavioral fake paired with a fake↔real contract test. The canonical live taxonomy and decision rule are in `.claude/rules/testing.md`.
 
