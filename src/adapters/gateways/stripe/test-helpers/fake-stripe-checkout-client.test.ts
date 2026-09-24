@@ -303,7 +303,10 @@ describe('FakeStripeCheckoutClient', () => {
       release = resolve;
     });
     const order: string[] = [];
+    let recordedWhenHookRan: unknown[] = [];
     stripe.setListHook(async () => {
+      // The call is recorded before the hook runs, so a hook can inspect it.
+      recordedWhenHookRan = [...stripe.listCalls];
       order.push('hook');
       await released;
     });
@@ -322,6 +325,9 @@ describe('FakeStripeCheckoutClient', () => {
       expect.objectContaining({ has_more: false }),
     );
     expect(order).toEqual(['hook', 'release', 'listed']);
+    expect(recordedWhenHookRan).toEqual([
+      { customer: 'cus_fake_checkout', limit: 10 },
+    ]);
     expect(stripe.listCalls).toEqual([
       { customer: 'cus_fake_checkout', limit: 10 },
     ]);
