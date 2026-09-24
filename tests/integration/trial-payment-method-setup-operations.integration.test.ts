@@ -328,20 +328,33 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     // never be eligible ahead of them, even against an existing database.
     // Only this case's own rows in that window are cleared first (an aborted
     // earlier run can leave them behind); the delete is scoped by the window
-    // and by the session-id prefix this case alone creates, so an unrelated
-    // row there is never deleted and would instead fail the case below.
+    // and by the literal session-id prefix this case alone creates (the
+    // underscores are escaped because LIKE treats `_` as a wildcard), so an
+    // unrelated row there is never deleted. The near-match row below sits
+    // inside the window between the two rows: it must survive the cleanup,
+    // and the limit-1 prune must still take the oldest row ahead of it.
     const olderExpiredAt = new Date('1970-01-01T00:00:00Z');
+    const nearMatchExpiredAt = new Date('1970-01-01T00:00:00.500Z');
     const newerExpiredAt = new Date('1970-01-01T00:00:01Z');
     const expiredBefore = new Date('1970-01-01T00:00:02Z');
+    const nearMatch = pendingInput(`csXpruneY_${randomUUID()}`, user.id);
+    await repository.createPending(nearMatch);
+    await repository.markExpired({
+      sessionId: nearMatch.sessionId,
+      expiredAt: nearMatchExpiredAt,
+    });
     await db
       .delete(trialPaymentMethodSetupOperations)
       .where(
         and(
           eq(trialPaymentMethodSetupOperations.status, 'expired'),
           lt(trialPaymentMethodSetupOperations.expiredAt, expiredBefore),
-          like(trialPaymentMethodSetupOperations.sessionId, 'cs_prune_%'),
+          like(trialPaymentMethodSetupOperations.sessionId, 'cs\\_prune\\_%'),
         ),
       );
+    await expect(
+      repository.findBySessionId(nearMatch.sessionId),
+    ).resolves.toEqual(expect.objectContaining({ status: 'expired' }));
     const older = pendingInput(`cs_prune_older_${randomUUID()}`, user.id);
     const newer = pendingInput(`cs_prune_newer_${randomUUID()}`, user.id);
     await repository.createPending(older);
@@ -365,5 +378,8 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     await expect(repository.findBySessionId(newer.sessionId)).resolves.toEqual(
       expect.objectContaining({ status: 'expired' }),
     );
+    await expect(
+      repository.findBySessionId(nearMatch.sessionId),
+    ).resolves.toEqual(expect.objectContaining({ status: 'expired' }));
   });
 });
