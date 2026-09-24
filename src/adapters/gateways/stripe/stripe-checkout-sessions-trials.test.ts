@@ -1,9 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
-import type {
-  CheckoutSessionCreateParams,
-  StripeClient,
-  StripeRequestOptions,
-} from '@/src/adapters/shared/stripe-types';
+import { randomUUID } from 'node:crypto';
+import { describe, expect, it } from 'vitest';
+import type { CheckoutSessionCreateParams } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import {
@@ -12,108 +9,10 @@ import {
   TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT,
 } from './stripe-checkout-sessions';
 import { isValidStripeConsentStateSignature } from './stripe-consent-state';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
-function createStripeMock(overrides?: {
-  openSessionsData?: Array<{ id: string; url: string | null }>;
-  retrievedSessionPriceId?: string | null;
-  retrievedSessionMetadata?: Record<string, string>;
-  retrievedSessionPaymentMethodCollection?: 'always' | 'if_required';
-  shouldThrowOnRetrieve?: boolean;
-  setupCreateResults?: Array<
-    | Error
-    | {
-        id: string;
-        url: string | null;
-        status?: 'open' | 'complete' | 'expired';
-      }
-  >;
-}) {
-  const setupCreateResults = [...(overrides?.setupCreateResults ?? [])];
-  const liveSetupSessions = new Map<
-    string,
-    {
-      id: string;
-      url: string | null;
-      status: 'open' | 'complete' | 'expired';
-    }
-  >();
-  const sessionsCreate = vi.fn(
-    async (
-      params: CheckoutSessionCreateParams,
-      _options?: StripeRequestOptions,
-    ) => {
-      const next = setupCreateResults.shift();
-      if (next instanceof Error) throw next;
-      const result = next ?? {
-        id: 'cs_new',
-        url: 'https://stripe/checkout/new',
-      };
-      if (params.mode === 'setup') {
-        liveSetupSessions.set(result.id, {
-          ...result,
-          status: result.status ?? 'open',
-        });
-      }
-      return result;
-    },
-  );
-  const sessionsRetrieve = vi.fn(async (sessionId: string) => {
-    if (overrides?.shouldThrowOnRetrieve) {
-      throw new Error('retrieve failed');
-    }
-
-    const liveSetupSession = liveSetupSessions.get(sessionId);
-    if (liveSetupSession) return liveSetupSession;
-
-    const lineItemsData =
-      overrides?.retrievedSessionPriceId === null
-        ? []
-        : [
-            {
-              price: {
-                id: overrides?.retrievedSessionPriceId ?? 'price_m',
-              },
-            },
-          ];
-
-    return {
-      id: 'cs_existing',
-      url: 'https://stripe/checkout/existing',
-      status: 'open' as const,
-      expires_at: 1_700_000_001,
-      metadata: overrides?.retrievedSessionMetadata,
-      payment_method_collection:
-        overrides?.retrievedSessionPaymentMethodCollection,
-      line_items: {
-        data: lineItemsData,
-      },
-    };
-  });
-  const sessionsExpire = vi.fn(async () => ({ id: 'cs_existing', url: null }));
-
-  const stripe = {
-    customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
-    checkout: {
-      sessions: {
-        list: vi.fn(async () => ({ data: overrides?.openSessionsData ?? [] })),
-        retrieve: sessionsRetrieve,
-        expire: sessionsExpire,
-        create: sessionsCreate,
-      },
-    },
-    subscriptions: {
-      list: vi.fn(async () => ({ data: [] })),
-      retrieve: vi.fn(async () => ({})),
-    },
-    billingPortal: {
-      sessions: {
-        create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-      },
-    },
-    webhooks: { constructEvent: vi.fn() },
-  } as unknown as StripeClient;
-
-  return { stripe, sessionsCreate, sessionsExpire, sessionsRetrieve };
+function sessionUrl(id: string): string {
+  return `https://checkout.stripe.test/${id}`;
 }
 
 describe('createStripeCheckoutSession trial params', () => {
@@ -132,290 +31,277 @@ describe('createStripeCheckoutSession trial params', () => {
   };
   const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
   const logger = new FakeLogger();
+  // The fake and the adapter share one frozen clock so seeded Sessions stay
+  // open (the fake expires them 24h after creation).
+  const fixedNowMs = 1_700_000_000_000;
+  const nowMs = () => fixedNowMs;
+
+  function createCheckout(
+    stripe: FakeStripeCheckoutClient,
+    checkoutInput: typeof input | typeof trialInput,
+  ): Promise<{ url: string }> {
+    return createStripeCheckoutSession({
+      stripe,
+      input: checkoutInput,
+      priceIds,
+      logger,
+      nowMs,
+    });
+  }
+
+  // Seeds an open Session for the customer through the fake's own `create`,
+  // so the preflight listing, live retrieval and expiry all see real state.
+  async function seedOpenSession(
+    stripe: FakeStripeCheckoutClient,
+    session: {
+      priceId?: string | null;
+      metadata?: Record<string, string>;
+      paymentMethodCollection?: 'always' | 'if_required';
+    } = {},
+  ): Promise<string> {
+    const { priceId = 'price_m', metadata, paymentMethodCollection } = session;
+    const params: CheckoutSessionCreateParams = {
+      mode: 'subscription',
+      customer: 'cus_123',
+      line_items: priceId === null ? [] : [{ price: priceId, quantity: 1 }],
+      success_url: 'https://app/success',
+      cancel_url: 'https://app/cancel',
+      ...(metadata ? { metadata } : {}),
+      ...(paymentMethodCollection
+        ? { payment_method_collection: paymentMethodCollection }
+        : {}),
+    };
+    const created = await stripe.checkout.sessions.create(params, {
+      idempotencyKey: `seed_existing:${randomUUID()}`,
+    });
+    return created.id;
+  }
+
+  function expireCall(sessionId: string) {
+    return {
+      sessionId,
+      options: { idempotencyKey: `expire_checkout_session:${sessionId}` },
+    };
+  }
 
   it('adds no-card trial params when trialPeriodDays is provided', async () => {
-    const { stripe, sessionsCreate } = createStripeMock();
+    const stripe = new FakeStripeCheckoutClient(nowMs);
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input: trialInput,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+    await expect(createCheckout(stripe, trialInput)).resolves.toEqual({
+      url: sessionUrl('cs_fake_1'),
+    });
 
-    expect(sessionsCreate).toHaveBeenCalledWith(
+    expect(stripe.createCalls).toEqual([
       {
-        mode: 'subscription',
-        customer: 'cus_123',
-        line_items: [{ price: 'price_m', quantity: 1 }],
-        allow_promotion_codes: false,
-        billing_address_collection: 'auto',
-        consent_collection: { terms_of_service: 'required' },
-        success_url: 'https://app/success',
-        cancel_url: 'https://app/cancel',
-        client_reference_id: appUserId,
-        metadata: {
-          checkout_variant: 'trial:7',
-          renewal_user_id: appUserId,
-          renewal_plan: 'monthly',
-          renewal_amount_cents: '2900',
-          renewal_currency: 'usd',
-          renewal_frequency: 'month',
-          renewal_disclosure_snapshot: 'Test trial renewal disclosure.',
-          renewal_disclosure_version: '2026-08-05',
-          renewal_terms_version: '2026-08-05',
-          renewal_terms_hash: 'test-terms-hash',
-          renewal_cancellation_method:
-            'Billing page in the app or support@addictionboards.com',
-        },
-        payment_method_collection: 'if_required',
-        subscription_data: {
+        params: {
+          mode: 'subscription',
+          customer: 'cus_123',
+          line_items: [{ price: 'price_m', quantity: 1 }],
+          allow_promotion_codes: false,
+          billing_address_collection: 'auto',
+          consent_collection: { terms_of_service: 'required' },
+          success_url: 'https://app/success',
+          cancel_url: 'https://app/cancel',
+          client_reference_id: appUserId,
           metadata: {
-            user_id: appUserId,
+            checkout_variant: 'trial:7',
+            renewal_user_id: appUserId,
+            renewal_plan: 'monthly',
+            renewal_amount_cents: '2900',
+            renewal_currency: 'usd',
+            renewal_frequency: 'month',
+            renewal_disclosure_snapshot: 'Test trial renewal disclosure.',
+            renewal_disclosure_version: '2026-08-05',
+            renewal_terms_version: '2026-08-05',
+            renewal_terms_hash: 'test-terms-hash',
+            renewal_cancellation_method:
+              'Billing page in the app or support@addictionboards.com',
           },
-          trial_period_days: 7,
-          trial_settings: {
-            end_behavior: {
-              missing_payment_method: 'cancel',
+          payment_method_collection: 'if_required',
+          subscription_data: {
+            metadata: {
+              user_id: appUserId,
+            },
+            trial_period_days: 7,
+            trial_settings: {
+              end_behavior: {
+                missing_payment_method: 'cancel',
+              },
             },
           },
         },
+        options: {
+          idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7`,
+        },
       },
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7`,
-      }),
-    );
+    ]);
   });
 
   it('omits all trial params when trialPeriodDays is absent', async () => {
-    const { stripe, sessionsCreate } = createStripeMock();
+    const stripe = new FakeStripeCheckoutClient(nowMs);
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+    await expect(createCheckout(stripe, input)).resolves.toEqual({
+      url: sessionUrl('cs_fake_1'),
+    });
 
-    expect(sessionsCreate).toHaveBeenCalledWith(
+    expect(stripe.createCalls).toEqual([
       {
-        mode: 'subscription',
-        customer: 'cus_123',
-        line_items: [{ price: 'price_m', quantity: 1 }],
-        allow_promotion_codes: false,
-        billing_address_collection: 'auto',
-        consent_collection: { terms_of_service: 'required' },
-        success_url: 'https://app/success',
-        cancel_url: 'https://app/cancel',
-        client_reference_id: appUserId,
-        metadata: {
-          checkout_variant: 'standard',
-          renewal_user_id: appUserId,
-          renewal_plan: 'monthly',
-          renewal_amount_cents: '2900',
-          renewal_currency: 'usd',
-          renewal_frequency: 'month',
-          renewal_disclosure_snapshot: 'Test immediate renewal disclosure.',
-          renewal_disclosure_version: '2026-08-05',
-          renewal_terms_version: '2026-08-05',
-          renewal_terms_hash: 'test-terms-hash',
-          renewal_cancellation_method:
-            'Billing page in the app or support@addictionboards.com',
-        },
-        subscription_data: {
+        params: {
+          mode: 'subscription',
+          customer: 'cus_123',
+          line_items: [{ price: 'price_m', quantity: 1 }],
+          allow_promotion_codes: false,
+          billing_address_collection: 'auto',
+          consent_collection: { terms_of_service: 'required' },
+          success_url: 'https://app/success',
+          cancel_url: 'https://app/cancel',
+          client_reference_id: appUserId,
           metadata: {
-            user_id: appUserId,
+            checkout_variant: 'standard',
+            renewal_user_id: appUserId,
+            renewal_plan: 'monthly',
+            renewal_amount_cents: '2900',
+            renewal_currency: 'usd',
+            renewal_frequency: 'month',
+            renewal_disclosure_snapshot: 'Test immediate renewal disclosure.',
+            renewal_disclosure_version: '2026-08-05',
+            renewal_terms_version: '2026-08-05',
+            renewal_terms_hash: 'test-terms-hash',
+            renewal_cancellation_method:
+              'Billing page in the app or support@addictionboards.com',
+          },
+          subscription_data: {
+            metadata: {
+              user_id: appUserId,
+            },
           },
         },
+        options: { idempotencyKey: `checkout_session:${appUserId}:monthly` },
       },
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
-
-    const createCalls = sessionsCreate.mock.calls as unknown as Array<
-      [Record<string, unknown>, unknown]
-    >;
-    const params = createCalls[0]?.[0];
-    const subscriptionData = params?.subscription_data as
-      | Record<string, unknown>
-      | undefined;
+    ]);
+    const params = stripe.createCalls[0]?.params;
+    if (!params || params.mode === 'setup') {
+      throw new Error('Expected subscription-mode create params');
+    }
     expect(params).not.toHaveProperty('payment_method_collection');
-    expect(subscriptionData).not.toHaveProperty('trial_period_days');
-    expect(subscriptionData).not.toHaveProperty('trial_settings');
+    expect(params.subscription_data).not.toHaveProperty('trial_period_days');
+    expect(params.subscription_data).not.toHaveProperty('trial_settings');
   });
 
   it('expires an existing same-price trial checkout session when standard checkout is requested', async () => {
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_existing', url: 'https://stripe/checkout/trial' },
-      ],
-      retrievedSessionMetadata: { checkout_variant: 'trial:7' },
+    const stripe = new FakeStripeCheckoutClient(nowMs);
+    const existingId = await seedOpenSession(stripe, {
+      metadata: { checkout_variant: 'trial:7' },
+    });
+    const seededCreates = stripe.createCalls.length;
+
+    await expect(createCheckout(stripe, input)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => 1_700_000_000_000,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_existing',
-    });
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(
+      stripe.createCalls.slice(seededCreates).map(({ options }) => options),
+    ).toEqual([{ idempotencyKey: `checkout_session:${appUserId}:monthly` }]);
   });
 
   it('expires a legacy no-card checkout session without variant metadata when standard checkout is requested', async () => {
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_existing', url: 'https://stripe/checkout/legacy-trial' },
-      ],
-      retrievedSessionPaymentMethodCollection: 'if_required',
+    const stripe = new FakeStripeCheckoutClient(nowMs);
+    const existingId = await seedOpenSession(stripe, {
+      paymentMethodCollection: 'if_required',
+    });
+    const seededCreates = stripe.createCalls.length;
+
+    await expect(createCheckout(stripe, input)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => 1_700_000_000_000,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_existing',
-    });
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(
+      stripe.createCalls.slice(seededCreates).map(({ options }) => options),
+    ).toEqual([{ idempotencyKey: `checkout_session:${appUserId}:monthly` }]);
   });
 
   it('reuses an existing same-price trial checkout session when checkout variant matches', async () => {
-    const { stripe, sessionsCreate, sessionsExpire, sessionsRetrieve } =
-      createStripeMock({
-        openSessionsData: [
-          { id: 'cs_existing', url: 'https://stripe/checkout/trial' },
-        ],
-        retrievedSessionMetadata: {
-          checkout_variant: 'trial:7',
-          renewal_user_id: appUserId,
-          renewal_plan: 'monthly',
-          renewal_amount_cents: '2900',
-          renewal_currency: 'usd',
-          renewal_frequency: 'month',
-          renewal_disclosure_snapshot: 'Test trial renewal disclosure.',
-          renewal_disclosure_version: '2026-08-05',
-          renewal_terms_version: '2026-08-05',
-          renewal_terms_hash: 'test-terms-hash',
-          renewal_cancellation_method:
-            'Billing page in the app or support@addictionboards.com',
-        },
-      });
+    const stripe = new FakeStripeCheckoutClient(nowMs);
+    // A previous trial checkout for this user left its open Session behind.
+    await createCheckout(stripe, trialInput);
+    const seededCreates = stripe.createCalls.length;
+    const seededRetrieves = stripe.retrieveRequests.length;
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input: trialInput,
-        priceIds,
-        logger,
-        nowMs: () => 1_700_000_000_000,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/trial' });
-
-    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
-      expand: ['line_items'],
+    await expect(createCheckout(stripe, trialInput)).resolves.toEqual({
+      url: sessionUrl('cs_fake_1'),
     });
-    expect(sessionsExpire).not.toHaveBeenCalled();
-    expect(sessionsCreate).not.toHaveBeenCalled();
+
+    expect(stripe.retrieveRequests.slice(seededRetrieves)).toEqual([
+      { sessionId: 'cs_fake_1', params: { expand: ['line_items'] } },
+    ]);
+    expect(stripe.expireCalls).toEqual([]);
+    expect(stripe.createCalls.slice(seededCreates)).toEqual([]);
   });
 
   it('expires an open same-price trial Session created before consent evidence metadata existed', async () => {
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_existing', url: 'https://stripe/checkout/pre-consent' },
-      ],
-      retrievedSessionMetadata: { checkout_variant: 'trial:7' },
+    const stripe = new FakeStripeCheckoutClient(nowMs);
+    const existingId = await seedOpenSession(stripe, {
+      metadata: { checkout_variant: 'trial:7' },
+    });
+    const seededCreates = stripe.createCalls.length;
+
+    await expect(createCheckout(stripe, trialInput)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input: trialInput,
-        priceIds,
-        logger,
-        nowMs: () => 1_700_000_000_000,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_existing',
-    });
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(stripe.createCalls.slice(seededCreates)).toHaveLength(1);
   });
 
   it.each([
     {
       name: 'the existing session cannot be retrieved',
-      overrides: { shouldThrowOnRetrieve: true },
+      seed: {},
+      retrieveFails: true,
     },
     {
       name: 'the existing session has a different price',
-      overrides: { retrievedSessionPriceId: 'price_a' },
+      seed: { priceId: 'price_a' },
+      retrieveFails: false,
     },
     {
       name: 'the existing session price cannot be determined',
-      overrides: { retrievedSessionPriceId: null },
+      seed: { priceId: null },
+      retrieveFails: false,
     },
   ])(
     'creates trial checkout with a replacement idempotency key when $name',
-    async ({ overrides }) => {
-      const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-        openSessionsData: [
-          { id: 'cs_existing', url: 'https://stripe/checkout/existing' },
-        ],
-        ...overrides,
+    async ({ seed, retrieveFails }) => {
+      const stripe = new FakeStripeCheckoutClient(nowMs);
+      const existingId = await seedOpenSession(stripe, seed);
+      const seededCreates = stripe.createCalls.length;
+      if (retrieveFails) {
+        stripe.setRetrieveOverride((session) => {
+          if (session.id === existingId) throw new Error('retrieve failed');
+          return session;
+        });
+      }
+
+      await expect(createCheckout(stripe, trialInput)).resolves.toEqual({
+        url: sessionUrl('cs_fake_2'),
       });
 
-      await expect(
-        createStripeCheckoutSession({
-          stripe,
-          input: trialInput,
-          priceIds,
-          logger,
-        }),
-      ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-      expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
-        idempotencyKey: 'expire_checkout_session:cs_existing',
-      });
-      expect(sessionsCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          payment_method_collection: 'if_required',
-          subscription_data: expect.objectContaining({
-            trial_period_days: 7,
+      expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+      expect(stripe.createCalls.slice(seededCreates)).toEqual([
+        {
+          params: expect.objectContaining({
+            payment_method_collection: 'if_required',
+            subscription_data: expect.objectContaining({
+              trial_period_days: 7,
+            }),
           }),
-        }),
-        expect.objectContaining({
-          idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_existing:trial:7`,
-        }),
-      );
+          options: {
+            idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:${existingId}:trial:7`,
+          },
+        },
+      ]);
     },
   );
 });
@@ -442,24 +328,33 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
     cancelUrl:
       'https://app.example.com/app/billing?trial_payment_method=cancel',
   };
+  const stateSecret = 'dedicated-consent-state-secret-32-bytes';
+
+  function createSetupSession(
+    stripe: FakeStripeCheckoutClient,
+    overrides: Partial<typeof setupInput> = {},
+    secret = stateSecret,
+  ) {
+    return createStripeTrialPaymentMethodSetupSession({
+      stripe,
+      logger: new FakeLogger(),
+      stateSecret: secret,
+      input: { ...setupInput, ...overrides },
+    });
+  }
 
   it('creates a customer-less setup Checkout Session with signed server-owned consent state', async () => {
-    const { stripe, sessionsCreate } = createStripeMock();
+    const stripe = new FakeStripeCheckoutClient();
 
     await expect(
-      createStripeTrialPaymentMethodSetupSession({
-        stripe,
-        logger: new FakeLogger(),
-        stateSecret: 'whsec_test_state_secret',
-        input: setupInput,
-      }),
+      createSetupSession(stripe, {}, 'whsec_test_state_secret'),
     ).resolves.toEqual({
-      sessionId: 'cs_new',
-      url: 'https://stripe/checkout/new',
+      sessionId: 'cs_fake_1',
+      url: sessionUrl('cs_fake_1'),
     });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
-    const [params, options] = sessionsCreate.mock.calls[0] ?? [];
+    expect(stripe.createCalls).toHaveLength(1);
+    const { params, options } = stripe.createCalls[0] ?? {};
     expect(params).toMatchObject({
       mode: 'setup',
       currency: 'usd',
@@ -505,126 +400,81 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
   });
 
   it('recovers a changed setup request from Stripe idempotency mismatch', async () => {
-    const mismatch = Object.assign(
-      new Error(
-        'Keys for idempotent requests can only be used with the same parameters they were first used with.',
-      ),
-      {
-        type: 'StripeIdempotencyError',
-        rawType: 'idempotency_error',
-        statusCode: 400,
-      },
-    );
-    const { stripe, sessionsCreate } = createStripeMock({
-      setupCreateResults: [
-        mismatch,
-        { id: 'cs_recovered', url: 'https://stripe/checkout/recovered' },
-      ],
-    });
+    const stripe = new FakeStripeCheckoutClient();
+    // The deterministic key ignores the terms hash, so a rotated hash reuses
+    // it with different parameters and the fake raises the contracted
+    // mismatch error.
+    await createSetupSession(stripe);
+    const seededCreates = stripe.createCalls.length;
 
     await expect(
-      createStripeTrialPaymentMethodSetupSession({
-        stripe,
-        logger: new FakeLogger(),
-        stateSecret: 'dedicated-consent-state-secret-32-bytes',
-        input: { ...setupInput, termsHash: 'rotated-terms-hash' },
-      }),
+      createSetupSession(stripe, { termsHash: 'rotated-terms-hash' }),
     ).resolves.toEqual({
-      sessionId: 'cs_recovered',
-      url: 'https://stripe/checkout/recovered',
+      sessionId: 'cs_fake_2',
+      url: sessionUrl('cs_fake_2'),
     });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(2);
-    expect(sessionsCreate.mock.calls[1]?.[1]?.idempotencyKey).toMatch(
+    const creates = stripe.createCalls.slice(seededCreates);
+    expect(creates).toHaveLength(2);
+    expect(creates[1]?.options?.idempotencyKey).toMatch(
       /^trial_setup_session_recovery:.*:request:[a-f0-9]{16}$/,
     );
   });
 
   it('surfaces a second idempotency mismatch from the request-specific recovery key', async () => {
+    const stripe = new FakeStripeCheckoutClient();
     const mismatch = Object.assign(new Error('same parameters required'), {
       type: 'StripeIdempotencyError',
       rawType: 'idempotency_error',
       statusCode: 400,
     });
-    const { stripe, sessionsCreate } = createStripeMock({
-      setupCreateResults: [mismatch, mismatch],
+    stripe.setCreateFault(() => {
+      throw mismatch;
     });
 
-    await expect(
-      createStripeTrialPaymentMethodSetupSession({
-        stripe,
-        logger: new FakeLogger(),
-        stateSecret: 'dedicated-consent-state-secret-32-bytes',
-        input: setupInput,
-      }),
-    ).rejects.toBe(mismatch);
+    await expect(createSetupSession(stripe)).rejects.toBe(mismatch);
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(2);
-    expect(sessionsCreate.mock.calls[1]?.[1]?.idempotencyKey).toMatch(
+    expect(stripe.createCalls).toHaveLength(2);
+    expect(stripe.createCalls[1]?.options?.idempotencyKey).toMatch(
       /^trial_setup_session_recovery:.*:request:[a-f0-9]{16}$/,
     );
   });
 
   it('creates a fresh setup Session when the idempotent replay is already complete', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
-      setupCreateResults: [
-        { id: 'cs_complete', url: null, status: 'complete' },
-        {
-          id: 'cs_fresh',
-          url: 'https://stripe/checkout/fresh',
-          status: 'open',
-        },
-      ],
+    const stripe = new FakeStripeCheckoutClient();
+    await createSetupSession(stripe);
+    stripe.markComplete('cs_fake_1');
+    const seededCreates = stripe.createCalls.length;
+
+    await expect(createSetupSession(stripe)).resolves.toEqual({
+      sessionId: 'cs_fake_2',
+      url: sessionUrl('cs_fake_2'),
     });
 
-    await expect(
-      createStripeTrialPaymentMethodSetupSession({
-        stripe,
-        logger: new FakeLogger(),
-        stateSecret: 'dedicated-consent-state-secret-32-bytes',
-        input: setupInput,
-      }),
-    ).resolves.toEqual({
-      sessionId: 'cs_fresh',
-      url: 'https://stripe/checkout/fresh',
-    });
-
-    expect(sessionsCreate).toHaveBeenCalledTimes(2);
-    expect(sessionsCreate.mock.calls[1]?.[1]?.idempotencyKey).toMatch(
-      /^trial_setup_session_recovery:.*:cs_complete:attempt:1:[a-f0-9]{16}$/,
+    const creates = stripe.createCalls.slice(seededCreates);
+    expect(creates).toHaveLength(2);
+    expect(creates[1]?.options?.idempotencyKey).toMatch(
+      /^trial_setup_session_recovery:.*:cs_fake_1:attempt:1:[a-f0-9]{16}$/,
     );
   });
 
   it('fails after the bounded recovery chain keeps returning inactive Sessions', async () => {
-    const setupCreateResults = Array.from(
-      {
-        length: TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT + 1,
-      },
-      () => ({
-        id: 'cs_replayed',
-        url: null,
-        status: 'complete' as const,
-      }),
-    );
-    const { stripe, sessionsCreate } = createStripeMock({ setupCreateResults });
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.setRetrieveOverride((session) => ({
+      ...session,
+      status: 'complete',
+    }));
 
-    await expect(
-      createStripeTrialPaymentMethodSetupSession({
-        stripe,
-        logger: new FakeLogger(),
-        stateSecret: 'dedicated-consent-state-secret-32-bytes',
-        input: setupInput,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createSetupSession(stripe)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Stripe Checkout Session is expired or inactive',
     });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(
+    expect(stripe.createCalls).toHaveLength(
       TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT + 1,
     );
-    const idempotencyKeys = sessionsCreate.mock.calls.map(
-      ([, options]) => options?.idempotencyKey,
+    const idempotencyKeys = stripe.createCalls.map(
+      ({ options }) => options?.idempotencyKey,
     );
     expect(new Set(idempotencyKeys).size).toBe(
       TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT + 1,
@@ -634,7 +484,9 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
         { length: TRIAL_SETUP_SESSION_REPLAY_TRAVERSAL_LIMIT },
         (_, index) =>
           expect.stringMatching(
-            new RegExp(`:cs_replayed:attempt:${index + 1}:[a-f0-9]{16}$`),
+            new RegExp(
+              `:cs_fake_${index + 1}:attempt:${index + 1}:[a-f0-9]{16}$`,
+            ),
           ),
       ),
     );
