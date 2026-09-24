@@ -20,6 +20,16 @@ type CreateCall = {
 
 type ListCall = Parameters<StripeClient['checkout']['sessions']['list']>[0];
 
+type RetrieveRequest = {
+  sessionId: string;
+  params?: { expand?: string[] } | undefined;
+};
+
+type ExpireCall = {
+  sessionId: string;
+  options?: StripeRequestOptions | undefined;
+};
+
 type RetrieveOverride = (
   session: StripeCheckoutSessionRetrieved,
 ) => StripeCheckoutSessionRetrieved | Promise<StripeCheckoutSessionRetrieved>;
@@ -60,6 +70,8 @@ export class FakeStripeCheckoutClient implements StripeClient {
   readonly createCalls: CreateCall[] = [];
   readonly listCalls: ListCall[] = [];
   readonly retrieveCalls: string[] = [];
+  readonly retrieveRequests: RetrieveRequest[] = [];
+  readonly expireCalls: ExpireCall[] = [];
 
   private readonly savedResponsesByIdempotencyKey = new Map<
     string,
@@ -157,8 +169,12 @@ export class FakeStripeCheckoutClient implements StripeClient {
           has_more: startIndex + data.length < sorted.length,
         };
       },
-      retrieve: async (sessionId) => {
+      retrieve: async (sessionId, params) => {
         this.retrieveCalls.push(sessionId);
+        this.retrieveRequests.push({
+          sessionId,
+          ...(params ? { params: structuredClone(params) } : {}),
+        });
         const session = this.liveSessionsById.get(sessionId);
         if (!session) {
           throw new Error(`Missing fake Checkout Session: ${sessionId}`);
@@ -168,7 +184,11 @@ export class FakeStripeCheckoutClient implements StripeClient {
           ? cloneSession(await this.retrieveOverride(snapshot))
           : snapshot;
       },
-      expire: async (sessionId) => {
+      expire: async (sessionId, _params, options) => {
+        this.expireCalls.push({
+          sessionId,
+          ...(options ? { options: { ...options } } : {}),
+        });
         this.markExpired(sessionId);
         return this.getLiveSession(sessionId);
       },
