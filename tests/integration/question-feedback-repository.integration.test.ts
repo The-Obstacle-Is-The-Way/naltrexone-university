@@ -391,4 +391,18 @@ describe('DrizzleQuestionFeedbackRepository', () => {
       .where(eq(schema.questionFeedback.userId, user.id));
     expect(rows).toEqual([]);
   });
+
+  it('returns null from findLatestRatingByUser when the user has not rated the question', async () => {
+    const user = await createUser(db, cleanup);
+    const question = await createQuestion(db, cleanup, {
+      slug: `it-q-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const repo = new DrizzleQuestionFeedbackRepository(db);
+
+    await expect(
+      repo.findLatestRatingByUser(user.id, question.id),
+    ).resolves.toBeNull();
+  });
 });
