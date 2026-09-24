@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq, lt } from 'drizzle-orm';
+import { and, eq, like, lt } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { trialPaymentMethodSetupOperations } from '@/db/schema';
 import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
@@ -256,11 +256,10 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
-  it('marks a claimed operation terminal with its reason and rejects a stale claim', async () => {
+  async function claimedOperation(
+    repository: DrizzleTrialPaymentMethodSetupOperationRepository,
+  ) {
     const user = await createUser(db, cleanup);
-    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
-      db,
-    );
     const input = pendingInput(`cs_terminal_${randomUUID()}`, user.id);
     await repository.createPending(input);
     const claimed = await repository.claim({
@@ -270,16 +269,39 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
       staleBefore: new Date(0),
     });
     if (!claimed) throw new Error('Expected the claim to succeed');
-    const terminalAt = new Date('2026-08-06T12:05:00Z');
+    return input;
+  }
+
+  it('rejects markTerminal from a claim that no longer holds the operation', async () => {
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const input = await claimedOperation(repository);
 
     await expect(
       repository.markTerminal({
         sessionId: input.sessionId,
         claimId: 'claim_stale',
         reason: 'billing_ownership_mismatch',
-        terminalAt,
+        terminalAt: new Date('2026-08-06T12:05:00Z'),
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(repository.findBySessionId(input.sessionId)).resolves.toEqual(
+      expect.objectContaining({
+        status: 'processing',
+        claimId: 'claim_terminal',
+        terminalReason: null,
+      }),
+    );
+  });
+
+  it('persists the terminal reason and time for the holding claim', async () => {
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const input = await claimedOperation(repository);
+    const terminalAt = new Date('2026-08-06T12:05:00Z');
+
     await repository.markTerminal({
       sessionId: input.sessionId,
       claimId: 'claim_terminal',
@@ -304,20 +326,35 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     // The prune is table-wide by design, so the two rows sit in a far-past
     // window that no service or other test writes: foreign expired rows can
     // never be eligible ahead of them, even against an existing database.
-    // Only that window is cleared first, because an aborted earlier run of
-    // this case can leave its own rows there; files run sequentially, so
-    // nothing live owns rows in the window.
+    // Only this case's own rows in that window are cleared first (an aborted
+    // earlier run can leave them behind); the delete is scoped by the window
+    // and by the literal session-id prefix this case alone creates (the
+    // underscores are escaped because LIKE treats `_` as a wildcard), so an
+    // unrelated row there is never deleted. The near-match row below sits
+    // inside the window between the two rows: it must survive the cleanup,
+    // and the limit-1 prune must still take the oldest row ahead of it.
     const olderExpiredAt = new Date('1970-01-01T00:00:00Z');
+    const nearMatchExpiredAt = new Date('1970-01-01T00:00:00.500Z');
     const newerExpiredAt = new Date('1970-01-01T00:00:01Z');
     const expiredBefore = new Date('1970-01-01T00:00:02Z');
+    const nearMatch = pendingInput(`csXpruneY_${randomUUID()}`, user.id);
+    await repository.createPending(nearMatch);
+    await repository.markExpired({
+      sessionId: nearMatch.sessionId,
+      expiredAt: nearMatchExpiredAt,
+    });
     await db
       .delete(trialPaymentMethodSetupOperations)
       .where(
         and(
           eq(trialPaymentMethodSetupOperations.status, 'expired'),
           lt(trialPaymentMethodSetupOperations.expiredAt, expiredBefore),
+          like(trialPaymentMethodSetupOperations.sessionId, 'cs\\_prune\\_%'),
         ),
       );
+    await expect(
+      repository.findBySessionId(nearMatch.sessionId),
+    ).resolves.toEqual(expect.objectContaining({ status: 'expired' }));
     const older = pendingInput(`cs_prune_older_${randomUUID()}`, user.id);
     const newer = pendingInput(`cs_prune_newer_${randomUUID()}`, user.id);
     await repository.createPending(older);
@@ -341,5 +378,8 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     await expect(repository.findBySessionId(newer.sessionId)).resolves.toEqual(
       expect.objectContaining({ status: 'expired' }),
     );
+    await expect(
+      repository.findBySessionId(nearMatch.sessionId),
+    ).resolves.toEqual(expect.objectContaining({ status: 'expired' }));
   });
 });
