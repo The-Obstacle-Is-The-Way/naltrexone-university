@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
@@ -133,6 +133,90 @@ function interleaveBeforeRootUpdate(
     },
   });
 }
+
+describe('DrizzlePracticeSessionRepository create', () => {
+  it('returns the mapped session and stores the initial question states', async () => {
+    const user = await createUser(db, cleanup);
+    const first = await createQuestion(db, cleanup, {
+      slug: `it-ps-create-first-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'easy',
+    });
+    const second = await createQuestion(db, cleanup, {
+      slug: `it-ps-create-second-${randomUUID()}`,
+      status: 'published',
+      difficulty: 'hard',
+    });
+    const repo = new DrizzlePracticeSessionRepository(db);
+
+    const created = await repo.create({
+      userId: user.id,
+      mode: 'exam',
+      paramsJson: {
+        count: 2,
+        tagSlugs: ['opioids'],
+        difficulties: ['easy', 'hard'],
+        questionIds: [first.id, second.id],
+      },
+    });
+
+    const initialState = (questionId: string) => ({
+      questionId,
+      markedForReview: false,
+      latestSelectedChoiceId: null,
+      latestIsCorrect: null,
+      latestAnsweredAt: null,
+      draftSelectedChoiceId: null,
+      draftSavedAt: null,
+      draftCumulativeMs: 0,
+    });
+    expect(created).toEqual({
+      id: expect.any(String),
+      userId: user.id,
+      mode: 'exam',
+      questionIds: [first.id, second.id],
+      questionStates: [initialState(first.id), initialState(second.id)],
+      tagFilters: ['opioids'],
+      difficultyFilters: ['easy', 'hard'],
+      startedAt: expect.any(Date),
+      endedAt: null,
+    });
+    const stored = await db
+      .select({
+        questionId: schema.practiceSessionQuestionStates.questionId,
+        position: schema.practiceSessionQuestionStates.position,
+        markedForReview: schema.practiceSessionQuestionStates.markedForReview,
+        latestSelectedChoiceId:
+          schema.practiceSessionQuestionStates.latestSelectedChoiceId,
+        draftCumulativeMs:
+          schema.practiceSessionQuestionStates.draftCumulativeMs,
+        version: schema.practiceSessionQuestionStates.version,
+      })
+      .from(schema.practiceSessionQuestionStates)
+      .where(
+        eq(schema.practiceSessionQuestionStates.practiceSessionId, created.id),
+      )
+      .orderBy(asc(schema.practiceSessionQuestionStates.position));
+    expect(stored).toEqual([
+      {
+        questionId: first.id,
+        position: 0,
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        draftCumulativeMs: 0,
+        version: 0,
+      },
+      {
+        questionId: second.id,
+        position: 1,
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        draftCumulativeMs: 0,
+        version: 0,
+      },
+    ]);
+  });
+});
 
 describe('DrizzlePracticeSessionRepository create guard', () => {
   it('returns VALIDATION_ERROR for invalid paramsJson without issuing a statement', async () => {
