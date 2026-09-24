@@ -1,64 +1,19 @@
-import {
-  createTableRelationsHelpers,
-  extractTablesRelationalConfig,
-} from 'drizzle-orm';
-import { PgDatabase, PgDialect, PgTransaction } from 'drizzle-orm/pg-core';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import {
-  PostgresJsPreparedQuery,
-  type PostgresJsQueryResultHKT,
-} from 'drizzle-orm/postgres-js/session';
+import { drizzle, PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
+import { installMockTransactionBoundary } from '@/tests/shared/drizzle-mock-transaction';
 import { DrizzleUserRepository } from './drizzle-user-repository';
-
-const relational = extractTablesRelationalConfig(
-  schema,
-  createTableRelationsHelpers,
-);
-const schemaConfig = {
-  fullSchema: schema,
-  schema: relational.tables,
-  tableNamesMap: relational.tableNamesMap,
-};
-const repo = new DrizzleUserRepository(drizzle.mock({ schema }));
-type MockDatabase = PgDatabase<
-  PostgresJsQueryResultHKT,
-  typeof schema,
-  typeof relational.tables
->;
-
-class StubTransaction extends PgTransaction<
-  PostgresJsQueryResultHKT,
-  typeof schema,
-  typeof relational.tables
-> {
-  override transaction<T>(
-    transaction: (tx: StubTransaction) => Promise<T>,
-  ): Promise<T> {
-    return transaction(this);
-  }
-}
 
 // Only driver-response and error translation that real Postgres cannot force
 // belongs here. The real prepared-query boundary supplies the fault; SQL
 // behavior (find, lock, upsert clock guard, email ownership conflicts, delete,
 // advisory lock) and transaction commit/rollback are covered in
 // tests/integration/user-repository.integration.test.ts.
+const repo = new DrizzleUserRepository(drizzle.mock({ schema }));
+
 beforeEach(() => {
-  vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
-  // drizzle.mock has no transactional client, so run the callback on a
-  // transaction bound to the same mock session; queries inside it still reach
-  // the spied prepared-query boundary above.
-  vi.spyOn(PgDatabase.prototype, 'transaction').mockImplementation(function (
-    this: MockDatabase,
-    transaction,
-  ) {
-    return transaction(
-      new StubTransaction(new PgDialect(), this._.session, schemaConfig),
-    );
-  });
+  installMockTransactionBoundary();
 });
 afterEach(() => {
   vi.restoreAllMocks();

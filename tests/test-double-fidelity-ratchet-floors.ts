@@ -75,6 +75,10 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // tests/integration/practice-session-question-state-writes.integration.test.ts
 // and the lock-granularity suite; the statement-cancellation suite keeps its
 // two 57014 cases on drizzle.mock at the real prepared-query boundary.
+// 2026-09-24 UTC: The practice-session session-writes unit suite keeps two
+// impossible-driver-response cases on drizzle.mock; the create guard, discard
+// scoping and end() behavior run on real Postgres in
+// tests/integration/practice-session-writes.integration.test.ts.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -119,10 +123,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   [
     'src/adapters/repositories/drizzle-practice-session-repository-reads.test.ts',
     4,
-  ],
-  [
-    'src/adapters/repositories/drizzle-practice-session-repository-session-writes.test.ts',
-    13,
   ],
   ['src/adapters/repositories/drizzle-subscription-repository.test.ts', 1],
   ['src/adapters/repositories/drizzle-tag-repository.test.ts', 1],
