@@ -333,6 +333,47 @@ describe('FakeStripeCheckoutClient', () => {
     ]);
   });
 
+  it('hands back an injected webhook event and records the verification call', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    expect(() =>
+      stripe.webhooks.constructEvent('{}', 'sig_none', 'whsec_none'),
+    ).toThrow('FakeStripeCheckoutClient does not process webhooks');
+    stripe.setWebhookEvent({
+      id: 'evt_fake',
+      type: 'charge.refunded',
+      data: { object: { id: 'ch_fake' } },
+    });
+
+    expect(
+      stripe.webhooks.constructEvent('{"a":1}', 'sig_a', 'whsec_a'),
+    ).toEqual({
+      id: 'evt_fake',
+      type: 'charge.refunded',
+      data: { object: { id: 'ch_fake' } },
+    });
+    expect(stripe.webhookCalls).toEqual([
+      { rawBody: '{}', signature: 'sig_none', secret: 'whsec_none' },
+      { rawBody: '{"a":1}', signature: 'sig_a', secret: 'whsec_a' },
+    ]);
+  });
+
+  it('retrieves seeded SetupIntents by id and records the calls', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSetupIntent({ id: 'seti_fake', payment_method: 'pm_fake' });
+
+    await expect(stripe.setupIntents.retrieve('seti_fake')).resolves.toEqual({
+      id: 'seti_fake',
+      payment_method: 'pm_fake',
+    });
+    await expect(stripe.setupIntents.retrieve('seti_missing')).rejects.toThrow(
+      'Missing fake SetupIntent: seti_missing',
+    );
+    expect(stripe.setupIntents.retrieveCalls).toEqual([
+      'seti_fake',
+      'seti_missing',
+    ]);
+  });
+
   it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
     let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
     const stripe = new FakeStripeCheckoutClient(() => nowMs);
