@@ -1,4 +1,4 @@
-import { RelationalQueryBuilder } from 'drizzle-orm/pg-core/query-builders/query';
+import { PgRelationalQuery } from 'drizzle-orm/pg-core/query-builders/query';
 import { drizzle, PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
@@ -8,8 +8,8 @@ import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-rep
 
 // Only an arbitrary driver failure inside the corrupt-row classification,
 // which real Postgres cannot raise on demand, belongs here: the relational
-// session read is answered at the query-builder boundary and the following
-// state-rows read fails at the prepared-query boundary. Corrupt-row skipping
+// session read is answered at the relational query's execute boundary and the
+// following state-rows read fails at the prepared-query boundary. Corrupt-row skipping
 // and logging run against real Postgres in
 // tests/integration/practice-session-schema-hardening.integration.test.ts and
 // tests/integration/practice-session-reads.integration.test.ts.
@@ -42,9 +42,9 @@ describe('DrizzlePracticeSessionRepository corrupt-row classification', () => {
       startedAt: new Date('2026-03-05T10:00:00.000Z'),
       endedAt: null,
     };
-    vi.spyOn(RelationalQueryBuilder.prototype, 'findFirst').mockReturnValueOnce(
-      Promise.resolve(row) as never,
-    );
+    // Awaiting the relational query routes through its own execute(), so the
+    // session row is answered there without touching the prepared-query spy.
+    vi.spyOn(PgRelationalQuery.prototype, 'execute').mockResolvedValueOnce(row);
     const failure = new Error('connection reset');
     vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
       failure,
