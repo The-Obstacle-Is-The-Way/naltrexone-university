@@ -82,6 +82,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-24 UTC: The live-retrieve suite moves onto FakeStripeCheckoutClient's
+// retrieve-override seam (step 5's zero-cost proof); its inline StripeClient
+// stub and cast retire.
 // 2026-09-24 UTC: The subscription unit suite keeps three error-translation
 // cases on drizzle.mock; the tag and trial payment-method setup unit suites
 // retire entirely behind their integration twins. No repository chain double
@@ -99,10 +102,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
   [
     'src/adapters/gateways/stripe/stripe-checkout-sessions-concurrency.test.ts',
-    1,
-  ],
-  [
-    'src/adapters/gateways/stripe/stripe-checkout-sessions-live-retrieve.test.ts',
     1,
   ],
   [
