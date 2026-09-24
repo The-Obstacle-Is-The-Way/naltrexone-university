@@ -256,11 +256,10 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
-  it('marks a claimed operation terminal with its reason and rejects a stale claim', async () => {
+  async function claimedOperation(
+    repository: DrizzleTrialPaymentMethodSetupOperationRepository,
+  ) {
     const user = await createUser(db, cleanup);
-    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
-      db,
-    );
     const input = pendingInput(`cs_terminal_${randomUUID()}`, user.id);
     await repository.createPending(input);
     const claimed = await repository.claim({
@@ -270,16 +269,39 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
       staleBefore: new Date(0),
     });
     if (!claimed) throw new Error('Expected the claim to succeed');
-    const terminalAt = new Date('2026-08-06T12:05:00Z');
+    return input;
+  }
+
+  it('rejects markTerminal from a claim that no longer holds the operation', async () => {
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const input = await claimedOperation(repository);
 
     await expect(
       repository.markTerminal({
         sessionId: input.sessionId,
         claimId: 'claim_stale',
         reason: 'billing_ownership_mismatch',
-        terminalAt,
+        terminalAt: new Date('2026-08-06T12:05:00Z'),
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(repository.findBySessionId(input.sessionId)).resolves.toEqual(
+      expect.objectContaining({
+        status: 'processing',
+        claimId: 'claim_terminal',
+        terminalReason: null,
+      }),
+    );
+  });
+
+  it('persists the terminal reason and time for the holding claim', async () => {
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const input = await claimedOperation(repository);
+    const terminalAt = new Date('2026-08-06T12:05:00Z');
+
     await repository.markTerminal({
       sessionId: input.sessionId,
       claimId: 'claim_terminal',
