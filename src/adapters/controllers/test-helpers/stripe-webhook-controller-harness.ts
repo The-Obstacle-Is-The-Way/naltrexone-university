@@ -91,8 +91,10 @@ export function createStripeWebhookTestHarness(
 }
 
 // Each transaction runs against staged copies built with the injected fakes'
-// own constructors (so failing subclasses keep failing) and commits them back
-// only when the callback returns, as Postgres would.
+// own zero-argument constructors (so failing subclasses keep failing) and
+// commits them back only when the callback returns, as Postgres would.
+// Constructor arguments are not carried over: a FakeSubscriptionRepository
+// built with its own `now` clock uses the ambient clock inside a transaction.
 export function createRollbackAwareStripeWebhookTestHarness(
   overrides: StripeWebhookTestHarnessOptions,
 ): StripeWebhookTestHarness {
