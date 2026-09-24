@@ -74,10 +74,10 @@ The runner loads `.env.local` with `override: false`, so an explicitly exported 
 The success receipt is:
 
 ```text
-[stripe-provider] PASS executed=6 passed=6 skipped=0
+[stripe-provider] PASS executed=7 passed=7 skipped=0
 ```
 
-The 2026-08-26 local TEST-mode activation run produced that exact receipt. Any `PROVIDER_KEY_INVALID` or `PROVIDER_PRICE_INVALID` result is a configuration failure; do not treat it as an expected skip and do not use a live-mode key.
+The 2026-09-24 local TEST-mode run produced that exact receipt at 16:53:58Z, after the fifth Checkout contract scenario raised the requirement from six cases; the 2026-08-26 activation run produced the then-current six-case receipt. Any `PROVIDER_KEY_INVALID` or `PROVIDER_PRICE_INVALID` result is a configuration failure; do not treat it as an expected skip and do not use a live-mode key.
 
 ### One-Liner (Full Setup)
 
