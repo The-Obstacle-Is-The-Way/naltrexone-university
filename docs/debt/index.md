@@ -973,7 +973,7 @@ All frontend-specific UI/UX debt. Items use `FE-XXX` IDs and are cross-reference
 | [DEBT-032](../_archive/debt/debt-032-incomplete-composition-root.md) | Incomplete Composition Root | P3 | 2026-02-01 |
 | [DEBT-033](../_archive/debt/debt-033-flat-repository-structure.md) | Flat Repository Structure | P3 | 2026-02-01 |
 | [DEBT-034](../_archive/debt/debt-034-test-coverage-gap-critical.md) | Test Coverage Gap — Must Stabilize Before New Features | P1 | 2026-02-01 |
-| [DEBT-035](../_archive/debt/debt-035-inconsistent-repo-test-mocking.md) | Inconsistent Repo Test Mocking (False Positive) | P2 | 2026-02-01 |
+| [DEBT-035](../_archive/debt/debt-035-inconsistent-repo-test-mocking.md) | Inconsistent Repo Test Mocking (False Positive at the time; superseded 2026-09-24 by [DEBT-472](./debt-472-test-double-fidelity-and-contract-discipline.md) step 6, which rules a Drizzle call-chain object a stub) | P2 | 2026-02-01 |
 | [DEBT-036](../_archive/debt/debt-036-specs-register-and-ports-doc-drift.md) | Specs Register and Ports Docs Drift | P2 | 2026-02-01 |
 | [DEBT-037](../_archive/debt/debt-037-attempt-repo-unnecessary-null-checks.md) | Unnecessary Null Checks in Attempt Repository | P3 | 2026-02-02 |
 | [DEBT-038](../_archive/debt/debt-038-question-repo-type-assertion.md) | Misleading Type Assertion in Question Repository | P3 | 2026-02-02 |
