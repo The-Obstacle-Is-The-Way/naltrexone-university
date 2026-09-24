@@ -251,6 +251,42 @@ describe('DrizzlePracticeSessionRepository reads', () => {
     });
   });
 
+  it('ignores a stale embedded questionStates blob and maps the normalized rows', async () => {
+    const user = await createUser(db, cleanup);
+    const [question, orphan] = await createThreeQuestions();
+    const logger = new FakeLogger();
+    const repo = new DrizzlePracticeSessionRepository(db, undefined, logger);
+    const session = await createSession({
+      repo,
+      userId: user.id,
+      questionIds: [question.id],
+    });
+    // Legacy rows carried question states inside params_json; the persisted
+    // contract must keep ignoring that key rather than reading or rejecting it.
+    const staleStates = JSON.stringify([
+      { questionId: question.id, markedForReview: true },
+      { questionId: orphan.id, markedForReview: true },
+    ]);
+    await sql`
+      update practice_sessions
+      set params_json = jsonb_set(params_json, '{questionStates}', ${staleStates}::jsonb)
+      where id = ${session.id}
+    `;
+
+    const byId = await repo.findByIdAndUserId(session.id, user.id);
+    const latest = await repo.findLatestIncompleteByUserId(user.id);
+
+    for (const found of [byId, latest]) {
+      expect(found?.questionStates).toEqual([
+        expect.objectContaining({
+          questionId: question.id,
+          markedForReview: false,
+        }),
+      ]);
+    }
+    expect(logger.warnCalls).toEqual([]);
+  });
+
   describe('completed pages', () => {
     async function createCompletedTrio() {
       const user = await createUser(db, cleanup);
