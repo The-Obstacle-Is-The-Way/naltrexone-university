@@ -1,77 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
-import type {
-  StripeCheckoutSession,
-  StripeClient,
-} from '@/src/adapters/shared/stripe-types';
+import { randomUUID } from 'node:crypto';
+import { describe, expect, it } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
-type TestCheckoutSession = StripeCheckoutSession & {
-  created: number;
-  expires_at?: number;
-};
+const HOUR_MS = 60 * 60 * 1000;
 
-function createReconciliationStripeMock(input: {
-  createdSession: TestCheckoutSession;
-  listedAfterCreate: TestCheckoutSession[];
-  expireError?: unknown;
-}) {
-  let createdMetadata: Record<string, string> | undefined;
-  let listCallCount = 0;
-  const sessionsList = vi.fn(async () => {
-    listCallCount += 1;
-    return {
-      data:
-        listCallCount === 1
-          ? []
-          : input.listedAfterCreate.map((session) => ({
-              ...session,
-              metadata: session.metadata ?? createdMetadata,
-            })),
-    };
-  });
-  const sessionsRetrieve = vi.fn(async () => ({
-    ...input.createdSession,
-    metadata: input.createdSession.metadata ?? createdMetadata,
-  }));
-  const sessionsExpire = vi.fn(async () => {
-    if (input.expireError) throw input.expireError;
-    return { ...input.createdSession, status: 'expired' as const, url: null };
-  });
-  const sessionsCreate = vi.fn(
-    async (params: { metadata?: Record<string, string> }) => {
-      createdMetadata = params.metadata;
-      return { ...input.createdSession, metadata: params.metadata };
-    },
-  );
-
-  const stripe = {
-    customers: { create: vi.fn(async () => ({ id: 'customer-id-1' })) },
-    checkout: {
-      sessions: {
-        list: sessionsList,
-        retrieve: sessionsRetrieve,
-        expire: sessionsExpire,
-        create: sessionsCreate,
-      },
-    },
-    subscriptions: {
-      list: vi.fn(async () => ({ data: [] })),
-      retrieve: vi.fn(async () => ({})),
-    },
-    billingPortal: {
-      sessions: {
-        create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-      },
-    },
-    webhooks: { constructEvent: vi.fn() },
-  } as unknown as StripeClient;
-
-  return {
-    stripe,
-    sessionsExpire,
-  };
+function sessionUrl(id: string): string {
+  return `https://checkout.stripe.test/${id}`;
 }
 
 describe('createStripeCheckoutSession post-create reconciliation', () => {
@@ -88,50 +25,78 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
     annual: 'annual-price-id',
   } as const;
   const fixedNowMs = 1_700_000_000_000;
-  const fixedNowUnix = fixedNowMs / 1000;
+
+  // The fake reads this clock when it creates a Session (its `created` second
+  // and 24h `expires_at`); each case moves it only while staging the racer.
+  let fakeNowMs = fixedNowMs;
+
+  function createFake(): FakeStripeCheckoutClient {
+    fakeNowMs = fixedNowMs;
+    return new FakeStripeCheckoutClient(() => fakeNowMs);
+  }
+
+  // The only Stripe call between the adapter's create and its reconcile
+  // listing is the post-create retrieval, so a racing open Session for the
+  // same customer is created there, once, from the adapter's own create
+  // params under the requested clock. The reconcile listing then sees it;
+  // the preflight listing (limit 1, before the create) never did.
+  function stageRacingSession(
+    stripe: FakeStripeCheckoutClient,
+    racerClockMs: number,
+  ): void {
+    let staged = false;
+    stripe.setRetrieveOverride(async (session) => {
+      if (staged) return session;
+      staged = true;
+      const params = stripe.createCalls[0]?.params;
+      if (!params) throw new Error('Expected the adapter create params');
+      const before = fakeNowMs;
+      fakeNowMs = racerClockMs;
+      await stripe.checkout.sessions.create(params, {
+        idempotencyKey: `race:${randomUUID()}`,
+      });
+      fakeNowMs = before;
+      return session;
+    });
+  }
+
+  function createCheckout(
+    stripe: FakeStripeCheckoutClient,
+    logger: FakeLogger,
+    nowMs: () => number = () => fixedNowMs,
+  ): Promise<{ url: string }> {
+    return createStripeCheckoutSession({
+      stripe,
+      input,
+      priceIds,
+      logger,
+      nowMs,
+    });
+  }
 
   it('treats already-terminal reconcile expire errors as idempotent success', async () => {
     const logger = new FakeLogger();
-    const createdSession = {
-      id: 'checkout-created',
-      url: 'https://stripe/checkout/created',
-      status: 'open' as const,
-      created: 1,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const canonicalSession = {
-      id: 'checkout-canonical',
-      url: 'https://stripe/checkout/canonical',
-      status: 'open' as const,
-      created: 2,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const alreadyExpiredError = Object.assign(
-      new Error('This checkout session has already expired'),
+    const stripe = createFake();
+    // Same second as the created Session: the tie goes to the larger id, so
+    // the racer `cs_fake_2` is canonical and `cs_fake_1` is superseded.
+    stageRacingSession(stripe, fixedNowMs);
+    stripe.setExpireFault(() => {
+      throw Object.assign(
+        new Error('This checkout session has already expired'),
+        { rawType: 'invalid_request_error', code: 'resource_missing' },
+      );
+    });
+
+    await expect(createCheckout(stripe, logger)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
+    });
+
+    expect(stripe.expireCalls).toEqual([
       {
-        rawType: 'invalid_request_error',
-        code: 'resource_missing',
+        sessionId: 'cs_fake_1',
+        options: { idempotencyKey: 'expire_checkout_session:cs_fake_1' },
       },
-    );
-    const { stripe, sessionsExpire } = createReconciliationStripeMock({
-      createdSession,
-      listedAfterCreate: [canonicalSession],
-      expireError: alreadyExpiredError,
-    });
-
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/canonical' });
-
-    expect(sessionsExpire).toHaveBeenCalledWith('checkout-created', undefined, {
-      idempotencyKey: 'expire_checkout_session:checkout-created',
-    });
+    ]);
     expect(logger.infoCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -143,35 +108,13 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
 
   it('throws when reconciliation cannot expire a superseded checkout session', async () => {
     const logger = new FakeLogger();
-    const createdSession = {
-      id: 'checkout-created',
-      url: 'https://stripe/checkout/created',
-      status: 'open' as const,
-      created: 1,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const canonicalSession = {
-      id: 'checkout-canonical',
-      url: 'https://stripe/checkout/canonical',
-      status: 'open' as const,
-      created: 2,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const { stripe } = createReconciliationStripeMock({
-      createdSession,
-      listedAfterCreate: [canonicalSession],
-      expireError: new Error('expire transport failed'),
+    const stripe = createFake();
+    stageRacingSession(stripe, fixedNowMs);
+    stripe.setExpireFault(() => {
+      throw new Error('expire transport failed');
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createCheckout(stripe, logger)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Failed to reconcile open checkout sessions',
     });
@@ -187,73 +130,31 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
 
   it('uses the listed canonical session when the created session expires before reconciliation', async () => {
     const logger = new FakeLogger();
-    const createdSession = {
-      id: 'checkout-created',
-      url: 'https://stripe/checkout/created',
-      status: 'open' as const,
-      created: 1,
-      expires_at: fixedNowUnix + 1,
-    };
-    const canonicalSession = {
-      id: 'checkout-canonical',
-      url: 'https://stripe/checkout/canonical',
-      status: 'open' as const,
-      created: 2,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const { stripe, sessionsExpire } = createReconciliationStripeMock({
-      createdSession,
-      listedAfterCreate: [canonicalSession],
+    const stripe = createFake();
+    // The racer is created two days later, so it outlives the reconciliation
+    // clock below while the created Session (24h lifetime) does not.
+    stageRacingSession(stripe, fixedNowMs + 48 * HOUR_MS);
+    const nowValues = [fixedNowMs, fixedNowMs + 25 * HOUR_MS];
+    const nowMs = () => nowValues.shift() ?? fixedNowMs + 25 * HOUR_MS;
+
+    await expect(createCheckout(stripe, logger, nowMs)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
-    const nowMs = vi
-      .fn<() => number>()
-      .mockReturnValueOnce(fixedNowMs)
-      .mockReturnValueOnce(fixedNowMs + 2_000);
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/canonical' });
-
-    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(stripe.expireCalls).toEqual([]);
   });
 
   it('ignores inactive listed sessions when choosing the canonical checkout session', async () => {
     const logger = new FakeLogger();
-    const createdSession = {
-      id: 'checkout-created',
-      url: 'https://stripe/checkout/created',
-      status: 'open' as const,
-      created: 1,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const inactiveListedSession = {
-      id: 'checkout-expired-listed',
-      url: 'https://stripe/checkout/expired-listed',
-      status: 'open' as const,
-      created: 2,
-      expires_at: fixedNowUnix,
-    };
-    const { stripe, sessionsExpire } = createReconciliationStripeMock({
-      createdSession,
-      listedAfterCreate: [inactiveListedSession],
+    const stripe = createFake();
+    // Created a day earlier, the racer's `expires_at` equals the frozen now,
+    // so the reconciliation treats it as inactive and keeps the created one.
+    stageRacingSession(stripe, fixedNowMs - 24 * HOUR_MS);
+
+    await expect(createCheckout(stripe, logger)).resolves.toEqual({
+      url: sessionUrl('cs_fake_1'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/created' });
-
-    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(stripe.expireCalls).toEqual([]);
   });
 });
