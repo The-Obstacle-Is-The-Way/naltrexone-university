@@ -82,6 +82,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-24 UTC: The webhook-processor suite moves onto the fake with an injected
+// event, seeded SetupIntents and seeded Subscriptions; its signature-failure
+// cast and its typed StripeClient literal (the hand-rolled port double) retire.
 // 2026-09-24 UTC: The concurrency suite moves onto the fake, holding both callers'
 // preflight listings through the list hook until both arrive; its stateful
 // stub and cast retire.
@@ -120,7 +123,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
-  ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
   ['tests/e2e/helpers/bookmark.test.ts', 2],
   [
     'tests/integration/bug-regression-practice-session-transaction-isolation.integration.test.ts',
@@ -144,7 +146,6 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
     'src/adapters/gateways/stripe/stripe-webhook-processor-setup-expiration.test.ts',
     1,
   ],
-  ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
   ['src/adapters/jobs/reconcile-stripe-subscriptions.test.ts', 1],
   ['src/adapters/jobs/reconcile-stripe-subscriptions-version-fence.test.ts', 1],
   [
