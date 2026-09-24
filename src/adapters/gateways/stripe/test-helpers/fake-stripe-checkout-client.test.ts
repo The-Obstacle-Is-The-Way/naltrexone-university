@@ -258,13 +258,26 @@ describe('FakeStripeCheckoutClient', () => {
 
   it('supports create-response overrides without changing the stored Session', async () => {
     const stripe = new FakeStripeCheckoutClient();
-    stripe.setCreateResponseOverride((session) => ({ ...session, url: null }));
-
-    const created = await stripe.checkout.sessions.create(setupParams, {
-      idempotencyKey: 'key_response_override',
+    const options = { idempotencyKey: 'key_response_override' };
+    // The override mutates what it is handed, so the case also proves the
+    // saved replay and the stored Session are clones it cannot reach.
+    stripe.setCreateResponseOverride((session) => {
+      session.url = null;
+      return session;
     });
 
+    const created = await stripe.checkout.sessions.create(setupParams, options);
+
     expect(created.url).toBeNull();
+    await expect(
+      stripe.checkout.sessions.create(setupParams, options),
+    ).resolves.toEqual(expect.objectContaining({ id: created.id, url: null }));
+    stripe.setCreateResponseOverride(null);
+    await expect(
+      stripe.checkout.sessions.create(setupParams, options),
+    ).resolves.toEqual(
+      expect.objectContaining({ id: created.id, url: expect.any(String) }),
+    );
     await expect(
       stripe.checkout.sessions.retrieve(created.id),
     ).resolves.toEqual(
