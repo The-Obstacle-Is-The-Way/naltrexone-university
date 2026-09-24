@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StripeClient } from '@/src/adapters/shared/stripe-types';
+import { randomUUID } from 'node:crypto';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { CheckoutSessionCreateParams } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   createTestCheckoutRenewalMetadata,
@@ -9,137 +10,26 @@ import {
   createStripeCheckoutSession,
   SUBSCRIPTION_LIST_LIMIT,
 } from './stripe-checkout-sessions';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
-function createStripeMock(overrides?: {
-  subscriptionsListData?: Array<{ id?: string; status?: string }>;
-  openSessionsData?: Array<{ id: string; url: string | null }>;
-  retrievedSessionPriceId?: string | null;
-  retrievedSessionStatus?: 'open' | 'complete' | 'expired';
-  retrievedSessionExpiresAtUnix?: number;
-  retrievedSessionMetadata?: Record<string, string>;
-  retrievedSessionResponses?: Array<{
-    id?: string;
-    url?: string | null;
-    status?: 'open' | 'complete' | 'expired';
-    expiresAtUnix?: number;
-  }>;
-  shouldThrowOnRetrieve?: boolean;
-  shouldThrowOnExpire?: boolean;
-  expireErrors?: unknown[];
-  expireError?: unknown;
-  createdSessionUrl?: string | null;
-  createdSessionResponses?: Array<{
-    id?: string;
-    url: string | null;
-    status?: 'open' | 'complete' | 'expired';
-    expiresAtUnix?: number;
-  }>;
-}) {
-  const subscriptionsList = vi.fn(async () => ({
-    data: overrides?.subscriptionsListData ?? [],
-  }));
-  const sessionsList = vi.fn(async () => ({
-    data: overrides?.openSessionsData ?? [],
-  }));
-  let retrieveCallIndex = 0;
-  const sessionsRetrieve = vi.fn(async (sessionId: string) => {
-    const response = overrides?.retrievedSessionResponses?.[retrieveCallIndex];
-    const shouldThrow =
-      overrides?.shouldThrowOnRetrieve && retrieveCallIndex === 0;
-    retrieveCallIndex += 1;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-    if (shouldThrow) {
-      throw new Error('retrieve failed');
-    }
+function sessionUrl(id: string): string {
+  return `https://checkout.stripe.test/${id}`;
+}
 
-    return {
-      id: response?.id ?? sessionId,
-      url: response?.url,
-      status: response?.status ?? overrides?.retrievedSessionStatus,
-      expires_at:
-        response?.expiresAtUnix ?? overrides?.retrievedSessionExpiresAtUnix,
-      metadata: overrides?.retrievedSessionMetadata,
-      line_items:
-        overrides?.retrievedSessionPriceId === null
-          ? { data: [] }
-          : {
-              data: [
-                {
-                  price: {
-                    id: overrides?.retrievedSessionPriceId ?? 'price_m',
-                  },
-                },
-              ],
-            },
-    };
-  });
-  let expireCallIndex = 0;
-  const sessionsExpire = vi.fn(async () => {
-    const expireError = overrides?.expireErrors?.[expireCallIndex];
-    expireCallIndex += 1;
-    if (expireError) {
-      throw expireError;
-    }
-
-    if (overrides?.expireError) {
-      throw overrides.expireError;
-    }
-
-    if (overrides?.shouldThrowOnExpire) {
-      throw new Error('expire failed');
-    }
-
-    return { id: 'cs_old', url: null };
-  });
-  let createCallIndex = 0;
-  const sessionsCreate = vi.fn(async () => {
-    const response = overrides?.createdSessionResponses?.[createCallIndex];
-    createCallIndex += 1;
-
-    const fallbackUrl =
-      overrides && 'createdSessionUrl' in overrides
-        ? overrides.createdSessionUrl
-        : 'https://stripe/checkout/new';
-
-    return {
-      id: response?.id ?? 'cs_new',
-      // Preserve explicit null values to exercise missing-URL branches.
-      url: response?.url !== undefined ? response.url : fallbackUrl,
-      status: response?.status,
-      expires_at: response?.expiresAtUnix,
-    };
-  });
-
-  const stripe = {
-    customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
-    checkout: {
-      sessions: {
-        list: sessionsList,
-        retrieve: sessionsRetrieve,
-        expire: sessionsExpire,
-        create: sessionsCreate,
-      },
-    },
-    subscriptions: {
-      list: subscriptionsList,
-      retrieve: vi.fn(async () => ({})),
-    },
-    billingPortal: {
-      sessions: {
-        create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-      },
-    },
-    webhooks: { constructEvent: vi.fn() },
-  } as unknown as StripeClient;
-
+function expireCall(sessionId: string) {
   return {
-    stripe,
-    subscriptionsList,
-    sessionsList,
-    sessionsRetrieve,
-    sessionsExpire,
-    sessionsCreate,
+    sessionId,
+    options: { idempotencyKey: `expire_checkout_session:${sessionId}` },
   };
+}
+
+function alreadyTerminalError(message: string, code?: string): Error {
+  return Object.assign(new Error(message), {
+    rawType: 'invalid_request_error',
+    ...(code ? { code } : {}),
+  });
 }
 
 describe('createStripeCheckoutSession', () => {
@@ -153,262 +43,211 @@ describe('createStripeCheckoutSession', () => {
   };
   const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
   const fixedNowMs = 1_700_000_000_000;
-  const fixedNowUnix = fixedNowMs / 1000;
+  const nowMs = () => fixedNowMs;
   let logger: FakeLogger;
+  // The fake reads this clock when it creates a Session (`created` second
+  // and 24h `expires_at`); cases move it only while seeding.
+  let fakeNowMs = fixedNowMs;
 
   beforeEach(() => {
     logger = new FakeLogger();
+    fakeNowMs = fixedNowMs;
   });
 
+  function createFake(): FakeStripeCheckoutClient {
+    return new FakeStripeCheckoutClient(() => fakeNowMs);
+  }
+
+  function createCheckout(
+    stripe: FakeStripeCheckoutClient,
+    checkoutInput: typeof input & { trialPeriodDays?: number } = input,
+  ): Promise<{ url: string }> {
+    return createStripeCheckoutSession({
+      stripe,
+      input: checkoutInput,
+      priceIds,
+      logger,
+      nowMs,
+    });
+  }
+
+  // Seeds an open Session for the customer through the fake's own `create`
+  // under the requested clock, so `expires_at` lands where the case needs it.
+  async function seedOpenSession(
+    stripe: FakeStripeCheckoutClient,
+    session: {
+      priceId?: string;
+      metadata?: Record<string, string>;
+      clockMs?: number;
+    } = {},
+  ): Promise<string> {
+    const { priceId = 'price_m', metadata, clockMs = fixedNowMs } = session;
+    const params: CheckoutSessionCreateParams = {
+      mode: 'subscription',
+      customer: 'cus_123',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: 'https://app/success',
+      cancel_url: 'https://app/cancel',
+      ...(metadata ? { metadata } : {}),
+    };
+    const before = fakeNowMs;
+    fakeNowMs = clockMs;
+    const created = await stripe.checkout.sessions.create(params, {
+      idempotencyKey: `seed_existing:${randomUUID()}`,
+    });
+    fakeNowMs = before;
+    return created.id;
+  }
+
+  function failFirstInspection(
+    stripe: FakeStripeCheckoutClient,
+    sessionId: string,
+  ): void {
+    let failed = false;
+    stripe.setRetrieveOverride((session) => {
+      if (session.id === sessionId && !failed) {
+        failed = true;
+        throw new Error('retrieve failed');
+      }
+      return session;
+    });
+  }
+
   it('uses a deterministic fallback idempotency key when caller key is missing', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
-      openSessionsData: [],
-      createdSessionUrl: 'https://stripe/checkout/new',
+    const stripe = createFake();
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_1'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        consent_collection: { terms_of_service: 'required' },
-      }),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
+    expect(stripe.createCalls).toEqual([
+      {
+        params: expect.objectContaining({
+          consent_collection: { terms_of_service: 'required' },
+        }),
+        options: { idempotencyKey: `checkout_session:${appUserId}:monthly` },
+      },
+    ]);
   });
 
   it('creates a fresh session when deterministic fallback key replays a session expiring at the injected nowMs boundary', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
-      openSessionsData: [],
-      createdSessionResponses: [
-        {
-          id: 'cs_expired',
-          url: 'https://stripe/checkout/expired',
-          status: 'open',
-          expiresAtUnix: fixedNowUnix,
-        },
-        {
-          id: 'cs_fresh',
-          url: 'https://stripe/checkout/fresh',
-          status: 'open',
-          expiresAtUnix: fixedNowUnix + 3600,
-        },
-      ],
+    // The first Session the fake creates expires exactly at the frozen now
+    // (its clock sits a day back for that create only); the recovery create
+    // happens at the frozen now.
+    let stripe: FakeStripeCheckoutClient;
+    stripe = new FakeStripeCheckoutClient(() =>
+      stripe.createCalls.length <= 1 ? fixedNowMs - DAY_MS : fixedNowMs,
+    );
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh' });
-
-    expect(sessionsCreate).toHaveBeenCalledTimes(2);
-    expect(sessionsCreate).toHaveBeenNthCalledWith(
-      1,
-      expect.any(Object),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
-    expect(sessionsCreate).toHaveBeenNthCalledWith(
-      2,
-      expect.any(Object),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_expired`,
-      }),
-    );
+    expect(stripe.createCalls.map(({ options }) => options)).toEqual([
+      { idempotencyKey: `checkout_session:${appUserId}:monthly` },
+      {
+        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_fake_1`,
+      },
+    ]);
   });
 
   it('throws STRIPE_ERROR when recovered session is missing URL', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
-      openSessionsData: [],
-      createdSessionResponses: [
-        {
-          id: 'cs_expired',
-          url: 'https://stripe/checkout/expired',
-          status: 'open',
-          expiresAtUnix: fixedNowUnix,
-        },
-        {
-          id: 'cs_recovered',
-          url: null,
-          status: 'open',
-          expiresAtUnix: fixedNowUnix + 3600,
-        },
-      ],
-    });
+    let stripe: FakeStripeCheckoutClient;
+    stripe = new FakeStripeCheckoutClient(() =>
+      stripe.createCalls.length <= 1 ? fixedNowMs - DAY_MS : fixedNowMs,
+    );
+    const withoutUrl = (session: { id: string; url: string | null }) =>
+      session.id === 'cs_fake_2' ? { ...session, url: null } : session;
+    stripe.setCreateResponseOverride(withoutUrl);
+    stripe.setRetrieveOverride(withoutUrl);
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Stripe Checkout Session URL is missing',
     });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(2);
+    expect(stripe.createCalls).toHaveLength(2);
   });
 
   it('preserves this-binding when calling subscriptions.list', async () => {
-    const makeRequest = vi.fn(async (_params: unknown) => ({
-      data: [{ id: 'sub_active', status: 'active' as const }],
-    }));
-
-    const subscriptions = {
-      _makeRequest: makeRequest,
-      retrieve: vi.fn(async () => ({})),
-      list: function (
-        this: { _makeRequest: typeof makeRequest },
-        params: unknown,
-      ) {
-        return this._makeRequest(params);
-      },
-    };
-
-    const stripe = {
-      customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
-      checkout: {
-        sessions: {
-          create: vi.fn(async () => ({
-            id: 'cs_1',
-            url: 'https://stripe/checkout',
-          })),
-          list: vi.fn(async () => ({ data: [] })),
-          retrieve: vi.fn(async () => ({ id: 'cs_1', url: null })),
-          expire: vi.fn(async () => ({ id: 'cs_1', url: null })),
-        },
-      },
-      subscriptions,
-      billingPortal: {
-        sessions: {
-          create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-        },
-      },
-      webhooks: { constructEvent: vi.fn() },
-    } as unknown as StripeClient;
-
-    // If .bind() is missing, subscriptions.list will throw because
-    // `this._makeRequest` will be undefined at runtime.
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).rejects.toMatchObject({ code: 'ALREADY_SUBSCRIBED' });
-
-    expect(makeRequest).toHaveBeenCalledWith({
+    const stripe = createFake();
+    // The fake's `list` reads `this`, as the SDK method does; without the
+    // adapter's `.bind` the call would throw instead of listing.
+    stripe.seedSubscription({
+      id: 'sub_active',
       customer: 'cus_123',
-      status: 'all',
-      limit: SUBSCRIPTION_LIST_LIMIT,
+      status: 'active',
     });
+
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
+      code: 'ALREADY_SUBSCRIBED',
+    });
+
+    expect(stripe.subscriptions.listCalls).toEqual([
+      { customer: 'cus_123', status: 'all', limit: SUBSCRIPTION_LIST_LIMIT },
+    ]);
   });
 
   it('fails closed when Stripe returns an unrecognized subscription status', async () => {
-    const { stripe, sessionsList, sessionsCreate } = createStripeMock({
-      subscriptionsListData: [
-        { id: 'sub_future_status', status: 'future_status' },
-      ],
+    const stripe = createFake();
+    stripe.seedSubscription({
+      id: 'sub_future_status',
+      customer: 'cus_123',
+      status: 'future_status',
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Stripe subscription status is invalid',
     });
 
-    expect(sessionsList).not.toHaveBeenCalled();
-    expect(sessionsCreate).not.toHaveBeenCalled();
+    expect(stripe.listCalls).toEqual([]);
+    expect(stripe.createCalls).toEqual([]);
   });
 
   it('reuses an existing open checkout session when plan price matches and expires after the injected nowMs boundary', async () => {
-    const { stripe, sessionsCreate, sessionsRetrieve } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_m',
-      retrievedSessionStatus: 'open',
-      retrievedSessionExpiresAtUnix: fixedNowUnix + 1,
-      retrievedSessionMetadata: createTestCheckoutRenewalMetadata({
-        userId: appUserId,
-      }),
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe, {
+      metadata: createTestCheckoutRenewalMetadata({ userId: appUserId }),
+      clockMs: fixedNowMs - DAY_MS + 1_000,
+    });
+    const seededCreates = stripe.createCalls.length;
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl(existingId),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/open' });
-
-    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_open', {
-      expand: ['line_items'],
-    });
-    expect(sessionsCreate).not.toHaveBeenCalled();
+    expect(stripe.retrieveRequests).toEqual([
+      { sessionId: existingId, params: { expand: ['line_items'] } },
+    ]);
+    expect(stripe.createCalls.slice(seededCreates)).toEqual([]);
   });
 
   it('expires an existing same-price checkout session when trial terms are requested', async () => {
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_m',
-      retrievedSessionStatus: 'open',
-      retrievedSessionExpiresAtUnix: fixedNowUnix + 1,
-      createdSessionUrl: 'https://stripe/checkout/trial',
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe, {
+      clockMs: fixedNowMs - DAY_MS + 1_000,
     });
+    const seededCreates = stripe.createCalls.length;
 
     await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input: { ...input, trialPeriodDays: 7 },
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/trial' });
+      createCheckout(stripe, { ...input, trialPeriodDays: 7 }),
+    ).resolves.toEqual({ url: sessionUrl('cs_fake_2') });
 
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_open',
-    });
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        payment_method_collection: 'if_required',
-        subscription_data: expect.objectContaining({
-          trial_period_days: 7,
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(stripe.createCalls.slice(seededCreates)).toEqual([
+      {
+        params: expect.objectContaining({
+          payment_method_collection: 'if_required',
+          subscription_data: expect.objectContaining({
+            trial_period_days: 7,
+          }),
         }),
-      }),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_open:trial:7`,
-      }),
-    );
+        options: {
+          idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:${existingId}:trial:7`,
+        },
+      },
+    ]);
     expect(logger.warnCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -419,145 +258,85 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('does not return stale URL when same-price session is already inactive', async () => {
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_m',
-      retrievedSessionResponses: [
-        { status: 'complete' },
-        { status: 'open', url: 'https://stripe/checkout/new' },
-      ],
-      createdSessionUrl: 'https://stripe/checkout/new',
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe);
+    const seededCreates = stripe.createCalls.length;
+    stripe.setRetrieveOverride((session) =>
+      session.id === existingId ? { ...session, status: 'complete' } : session,
+    );
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
-    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(stripe.createCalls.slice(seededCreates)).toHaveLength(1);
+    expect(stripe.expireCalls).toEqual([]);
   });
 
   it('does not return stale URL when same-price session expires at the injected nowMs boundary', async () => {
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_m',
-      retrievedSessionResponses: [
-        { status: 'open', expiresAtUnix: fixedNowUnix },
-        {
-          status: 'open',
-          url: 'https://stripe/checkout/new',
-          expiresAtUnix: fixedNowUnix + 3600,
-        },
-      ],
-      createdSessionUrl: 'https://stripe/checkout/new',
+    const stripe = createFake();
+    await seedOpenSession(stripe, { clockMs: fixedNowMs - DAY_MS });
+    const seededCreates = stripe.createCalls.length;
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
-    expect(sessionsExpire).not.toHaveBeenCalled();
+    expect(stripe.createCalls.slice(seededCreates)).toHaveLength(1);
+    expect(stripe.expireCalls).toEqual([]);
   });
 
   it('expires mismatched open checkout session and creates a new session', async () => {
-    const { stripe, sessionsExpire, sessionsCreate } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_a',
-      createdSessionUrl: 'https://stripe/checkout/new',
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe, { priceId: 'price_a' });
+    const seededCreates = stripe.createCalls.length;
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_open',
-    });
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(
+      stripe.createCalls.slice(seededCreates).map(({ options }) => options),
+    ).toEqual([{ idempotencyKey: `checkout_session:${appUserId}:monthly` }]);
   });
 
   it('throws STRIPE_ERROR when expiring mismatched session fails', async () => {
-    const { stripe } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_a',
-      shouldThrowOnExpire: true,
+    const stripe = createFake();
+    await seedOpenSession(stripe, { priceId: 'price_a' });
+    stripe.setExpireFault(() => {
+      throw new Error('expire failed');
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Failed to expire existing checkout session',
     });
   });
 
   it('treats already-terminal expire error as idempotent success and creates new session', async () => {
-    const alreadyTerminalError = Object.assign(
-      new Error("No such checkout.session: 'cs_open'"),
-      {
-        rawType: 'invalid_request_error',
-        code: 'resource_missing',
-      },
-    );
-
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_a',
-      expireError: alreadyTerminalError,
-      createdSessionUrl: 'https://stripe/checkout/new',
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe, { priceId: 'price_a' });
+    const seededCreates = stripe.createCalls.length;
+    // Stripe reports an already-terminal error only for a Session that is
+    // terminal, so the fault leaves the existing Session expired first.
+    stripe.setExpireFault((sessionId) => {
+      stripe.markExpired(sessionId);
+      throw alreadyTerminalError(
+        `No such checkout.session: '${existingId}'`,
+        'resource_missing',
+      );
     });
 
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
+    });
     await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+      stripe.checkout.sessions.retrieve(existingId),
+    ).resolves.toEqual(expect.objectContaining({ status: 'expired' }));
 
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_open',
-    });
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(stripe.createCalls.slice(seededCreates)).toHaveLength(1);
     expect(logger.infoCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -575,34 +354,22 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('treats expire error as idempotent success via message fallback when code is absent', async () => {
-    const alreadyExpiredError = Object.assign(
-      new Error('This checkout session has already expired'),
-      {
-        rawType: 'invalid_request_error',
-        // No `code` property — exercises the message-pattern fallback branch
-      },
-    );
-
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_a',
-      expireError: alreadyExpiredError,
-      createdSessionUrl: 'https://stripe/checkout/new',
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe, { priceId: 'price_a' });
+    const seededCreates = stripe.createCalls.length;
+    // No `code` property: exercises the message-pattern fallback branch. The
+    // fault leaves the Session expired first, as Stripe's error implies.
+    stripe.setExpireFault((sessionId) => {
+      stripe.markExpired(sessionId);
+      throw alreadyTerminalError('This checkout session has already expired');
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
+    });
 
-    expect(sessionsExpire).toHaveBeenCalledTimes(1);
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(stripe.createCalls.slice(seededCreates)).toHaveLength(1);
     expect(logger.infoCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -613,36 +380,23 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('throws STRIPE_ERROR when the terminal message is present but rawType differs', async () => {
-    const nonTerminalStripeError = Object.assign(
-      new Error('This checkout session has already expired'),
-      {
-        rawType: 'api_error',
-      },
-    );
-
-    const { stripe, sessionsCreate, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      retrievedSessionPriceId: 'price_a',
-      expireError: nonTerminalStripeError,
-      createdSessionUrl: 'https://stripe/checkout/new',
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe, { priceId: 'price_a' });
+    const seededCreates = stripe.createCalls.length;
+    stripe.setExpireFault(() => {
+      throw Object.assign(
+        new Error('This checkout session has already expired'),
+        { rawType: 'api_error' },
+      );
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Failed to expire existing checkout session',
     });
 
-    expect(sessionsExpire).toHaveBeenCalledTimes(1);
-    expect(sessionsCreate).not.toHaveBeenCalled();
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(stripe.createCalls.slice(seededCreates)).toEqual([]);
     expect(logger.infoCalls).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -653,57 +407,51 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('creates a new checkout session when existing session inspection fails', async () => {
-    const { stripe, sessionsCreate, sessionsRetrieve, sessionsExpire } =
-      createStripeMock({
-        openSessionsData: [
-          { id: 'cs_open', url: 'https://stripe/checkout/open' },
-        ],
-        shouldThrowOnRetrieve: true,
-        createdSessionUrl: 'https://stripe/checkout/new',
-      });
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe);
+    const seededCreates = stripe.createCalls.length;
+    const seededRetrieves = stripe.retrieveCalls.length;
+    failFirstInspection(stripe, existingId);
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsRetrieve).toHaveBeenCalledTimes(2);
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_open',
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
     });
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+
+    expect(stripe.retrieveCalls.slice(seededRetrieves)).toEqual([
+      existingId,
+      'cs_fake_2',
+    ]);
+    expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
+    expect(stripe.createCalls.slice(seededCreates)).toHaveLength(1);
   });
 
   it('retries a failed pre-create expire during post-create reconciliation', async () => {
-    const { stripe, sessionsCreate, sessionsRetrieve, sessionsExpire } =
-      createStripeMock({
-        openSessionsData: [
-          { id: 'cs_open', url: 'https://stripe/checkout/open' },
-        ],
-        shouldThrowOnRetrieve: true,
-        expireErrors: [new Error('pre-create expire failed')],
-        createdSessionUrl: 'https://stripe/checkout/new',
-      });
-
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/new' });
-
-    expect(sessionsRetrieve).toHaveBeenCalledTimes(2);
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_open', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_open',
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe);
+    const seededCreates = stripe.createCalls.length;
+    const seededRetrieves = stripe.retrieveCalls.length;
+    failFirstInspection(stripe, existingId);
+    let expireFailures = 0;
+    stripe.setExpireFault(() => {
+      if (expireFailures === 0) {
+        expireFailures += 1;
+        throw new Error('pre-create expire failed');
+      }
     });
-    expect(sessionsExpire).toHaveBeenCalledTimes(2);
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_2'),
+    });
+
+    expect(stripe.retrieveCalls.slice(seededRetrieves)).toEqual([
+      existingId,
+      'cs_fake_2',
+    ]);
+    expect(stripe.expireCalls).toEqual([
+      expireCall(existingId),
+      expireCall(existingId),
+    ]);
+    expect(stripe.createCalls.slice(seededCreates)).toHaveLength(1);
     expect(logger.warnCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -714,44 +462,34 @@ describe('createStripeCheckoutSession', () => {
   });
 
   it('throws when inspection and both expire attempts fail', async () => {
-    const { stripe, sessionsExpire } = createStripeMock({
-      openSessionsData: [
-        { id: 'cs_open', url: 'https://stripe/checkout/open' },
-      ],
-      shouldThrowOnRetrieve: true,
-      shouldThrowOnExpire: true,
-      createdSessionUrl: 'https://stripe/checkout/new',
+    const stripe = createFake();
+    const existingId = await seedOpenSession(stripe);
+    failFirstInspection(stripe, existingId);
+    stripe.setExpireFault(() => {
+      throw new Error('expire failed');
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Failed to reconcile open checkout sessions',
     });
 
-    expect(sessionsExpire).toHaveBeenCalledTimes(2);
+    expect(stripe.expireCalls).toEqual([
+      expireCall(existingId),
+      expireCall(existingId),
+    ]);
   });
 
   it('throws STRIPE_ERROR when created session is missing URL', async () => {
-    const { stripe } = createStripeMock({
-      openSessionsData: [],
-      createdSessionUrl: null,
+    const stripe = createFake();
+    const withoutUrl = (session: { id: string; url: string | null }) => ({
+      ...session,
+      url: null,
     });
+    stripe.setCreateResponseOverride(withoutUrl);
+    stripe.setRetrieveOverride(withoutUrl);
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Stripe Checkout Session URL is missing',
     });
