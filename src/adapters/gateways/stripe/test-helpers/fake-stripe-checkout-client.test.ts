@@ -256,6 +256,22 @@ describe('FakeStripeCheckoutClient', () => {
     );
   });
 
+  it('supports create-response overrides without changing the stored Session', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.setCreateResponseOverride((session) => ({ ...session, url: null }));
+
+    const created = await stripe.checkout.sessions.create(setupParams, {
+      idempotencyKey: 'key_response_override',
+    });
+
+    expect(created.url).toBeNull();
+    await expect(
+      stripe.checkout.sessions.retrieve(created.id),
+    ).resolves.toEqual(
+      expect.objectContaining({ id: created.id, url: expect.any(String) }),
+    );
+  });
+
   it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
     let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
     const stripe = new FakeStripeCheckoutClient(() => nowMs);

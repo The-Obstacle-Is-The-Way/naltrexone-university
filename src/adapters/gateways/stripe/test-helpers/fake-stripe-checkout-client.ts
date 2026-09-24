@@ -57,6 +57,13 @@ type RetrieveOverride = (
   session: StripeCheckoutSessionRetrieved,
 ) => StripeCheckoutSessionRetrieved | Promise<StripeCheckoutSessionRetrieved>;
 
+// A create-response override bends only what `create` returns (fresh or
+// replayed); the stored Session and the saved idempotent response stay as
+// created. It models no Stripe behavior and is not contract-tested.
+type CreateResponseOverride = (
+  session: StripeCheckoutSession,
+) => StripeCheckoutSession | Promise<StripeCheckoutSession>;
+
 // A create fault runs after the call is recorded and before any idempotent
 // replay or session creation; it injects a caller-supplied error by throwing.
 // It models no Stripe fault shape and is not contract-tested: the parameter
@@ -106,6 +113,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
   >();
   private readonly liveSessionsById = new Map<string, TrackedCheckoutSession>();
   private retrieveOverride: RetrieveOverride | null = null;
+  private createResponseOverride: CreateResponseOverride | null = null;
   private createFault: CreateFault | null = null;
   private expireFault: ExpireFault | null = null;
   private sessionSequence = 0;
@@ -147,7 +155,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
                 },
               );
             }
-            return cloneSession(saved);
+            return this.respondToCreate(cloneSession(saved));
           }
         }
 
@@ -163,7 +171,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
             structuredClone(params),
           );
         }
-        return cloneSession(session);
+        return this.respondToCreate(cloneSession(session));
       },
       list: async (params) => {
         this.listCalls.push({ ...params });
@@ -283,6 +291,18 @@ export class FakeStripeCheckoutClient implements StripeClient {
 
   setRetrieveOverride(override: RetrieveOverride | null): void {
     this.retrieveOverride = override;
+  }
+
+  setCreateResponseOverride(override: CreateResponseOverride | null): void {
+    this.createResponseOverride = override;
+  }
+
+  private async respondToCreate(
+    session: StripeCheckoutSession,
+  ): Promise<StripeCheckoutSession> {
+    return this.createResponseOverride
+      ? await this.createResponseOverride(session)
+      : session;
   }
 
   setCreateFault(fault: CreateFault | null): void {
