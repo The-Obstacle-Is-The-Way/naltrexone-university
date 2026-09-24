@@ -1,6 +1,6 @@
 # Integration Tests
 
-**Last Updated:** 2026-08-26
+**Last Updated:** 2026-09-24
 
 Integration tests run against a real PostgreSQL database to verify repository queries, controller actions, and database constraints.
 
@@ -63,7 +63,7 @@ If the database is unreachable, the test setup fails fast with a clear error mes
 
 ### Live Stripe Provider Contracts (TEST Mode)
 
-The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its six live Stripe cases are reported as skipped. To request all six cases explicitly, use the dedicated fail-closed entry point:
+The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its seven live Stripe cases are reported as skipped. To request all seven cases explicitly, use the dedicated fail-closed entry point:
 
 ```bash
 pnpm test:stripe-provider

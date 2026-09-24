@@ -1,6 +1,6 @@
 # Testing Infrastructure
 
-**Last Updated:** 2026-08-28
+**Last Updated:** 2026-09-24
 
 **Retry policy reverified:** 2026-09-20; the remaining sections were not fully re-audited on this date.
 
@@ -245,7 +245,7 @@ The local Docker database makes database state isolated, not the E2E suite herme
 | `stripe-hosted-checkout.ts` — browser navigation and form submission to `checkout.stripe.com` | none | both hosted journeys | 30-second hosted locator/navigation assertions inside a 120-second spec |
 | Production Checkout Session list/retrieve/create/expire and Subscription list | redirect and provider-contract specs | both hosted journeys | production retry policy inside a 120-second spec |
 | Stripe CLI completed-Session trigger and success-sync Session/Subscription retrieval | annual + cardless-trial provider-contract specs | none | 30-second CLI subprocess; 15 seconds/request + one retry; 120-second spec outer bound |
-| `FakeStripeCheckoutClient` fake↔provider contract — Customer and Checkout Session create/retrieve/expire/list | none; normal integration runs skip without the explicit opt-in | weekly/manual `stripe-trial-clock-smoke.yml` provider-contract job via `pnpm test:stripe-provider` | 20-second scheduled test bound plus a five-minute fail-closed process-tree bound inside a ten-minute job |
+| `FakeStripeCheckoutClient` fake↔provider contract — Customer and Checkout Session create/retrieve/expire/list, and Subscription list/retrieve | none; normal integration runs skip without the explicit opt-in | weekly/manual `stripe-trial-clock-smoke.yml` provider-contract job via `pnpm test:stripe-provider` | 20-second scheduled test bound plus a five-minute fail-closed process-tree bound inside a ten-minute job |
 
 `workers: 1` remains deliberate. Parallel workers require proof of independent database users, Clerk sessions, Stripe owner/customer namespaces, rate-limit keys, and cleanup; per-worker usernames alone do not establish that contract.
 
