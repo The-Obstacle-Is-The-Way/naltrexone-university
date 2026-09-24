@@ -67,9 +67,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // cases and moves lookup, upsert and conflict behavior to real Postgres.
 // 2026-09-23 UTC: The Clerk event and tombstone unit suites retire entirely;
 // every case has a real-Postgres twin and no error translation remained.
-// 2026-09-23 UTC: The question-feedback and renewal-consent unit suites keep
-// only impossible-response and no-query cases; the pending-cleanup suite retires
-// entirely behind its contract twin.
+// 2026-09-23 UTC: The question-feedback unit suite keeps two impossible-response
+// cases; the renewal-consent and pending-cleanup suites retire entirely (their
+// prune guard and contract twin run on real Postgres in tests/integration).
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
