@@ -603,6 +603,8 @@ describe('DrizzleUserRepository', () => {
       where locktype = 'advisory'
         and pid = ${pid}
         and objsubid = 1
+        and mode = 'ExclusiveLock'
+        and granted
         and classid::bigint = ((hashtext(${user.id})::bigint >> 32) & 4294967295)
         and objid::bigint = (hashtext(${user.id})::bigint & 4294967295)
     `;

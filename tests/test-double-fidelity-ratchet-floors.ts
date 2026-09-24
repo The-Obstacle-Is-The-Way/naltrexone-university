@@ -65,6 +65,8 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // tests/integration/question-repository-lookups.integration.test.ts.
 // 2026-09-23 UTC: The Stripe-customer unit suite keeps two impossible-response
 // cases and moves lookup, upsert and conflict behavior to real Postgres.
+// 2026-09-23 UTC: The Clerk event and tombstone unit suites retire entirely;
+// every case has a real-Postgres twin and no error translation remained.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -98,11 +100,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
-  ['src/adapters/repositories/drizzle-clerk-event-repository.test.ts', 6],
-  [
-    'src/adapters/repositories/drizzle-deleted-clerk-user-repository.test.ts',
-    5,
-  ],
   [
     'src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository.test.ts',
     6,
