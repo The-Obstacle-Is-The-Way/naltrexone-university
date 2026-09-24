@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { and, eq, lt } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { trialPaymentMethodSetupOperations } from '@/db/schema';
 import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import {
   cleanupAfterEach,
@@ -299,6 +301,19 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
       db,
     );
+    const expiredBefore = new Date('2026-08-03T00:00:00Z');
+    // The prune is table-wide by design. Integration files run sequentially and
+    // rows cascade with their tracked users, but an aborted earlier run can
+    // leave expired rows behind; clear this cutoff's window first so the limit
+    // can only choose between the two rows below.
+    await db
+      .delete(trialPaymentMethodSetupOperations)
+      .where(
+        and(
+          eq(trialPaymentMethodSetupOperations.status, 'expired'),
+          lt(trialPaymentMethodSetupOperations.expiredAt, expiredBefore),
+        ),
+      );
     const older = pendingInput(`cs_prune_older_${randomUUID()}`, user.id);
     const newer = pendingInput(`cs_prune_newer_${randomUUID()}`, user.id);
     await repository.createPending(older);
@@ -313,10 +328,7 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     });
 
     await expect(
-      repository.pruneExpired({
-        expiredBefore: new Date('2026-08-03T00:00:00Z'),
-        limit: 1,
-      }),
+      repository.pruneExpired({ expiredBefore, limit: 1 }),
     ).resolves.toBe(1);
 
     await expect(
