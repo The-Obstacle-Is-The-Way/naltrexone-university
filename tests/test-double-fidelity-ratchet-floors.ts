@@ -82,6 +82,10 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-24 UTC: The subscription unit suite keeps three error-translation
+// cases on drizzle.mock; the tag and trial payment-method setup unit suites
+// retire entirely behind their integration twins. No repository chain double
+// remains.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -115,12 +119,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
-  ['src/adapters/repositories/drizzle-subscription-repository.test.ts', 1],
-  ['src/adapters/repositories/drizzle-tag-repository.test.ts', 1],
-  [
-    'src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository.test.ts',
-    1,
-  ],
   ['tests/e2e/helpers/bookmark.test.ts', 2],
   [
     'tests/integration/bug-regression-practice-session-transaction-isolation.integration.test.ts',

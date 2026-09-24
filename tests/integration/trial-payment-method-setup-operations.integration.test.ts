@@ -1,4 +1,7 @@
+import { randomUUID } from 'node:crypto';
+import { and, eq, lt } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { trialPaymentMethodSetupOperations } from '@/db/schema';
 import { DrizzleTrialPaymentMethodSetupOperationRepository } from '@/src/adapters/repositories/drizzle-trial-payment-method-setup-operation-repository';
 import {
   cleanupAfterEach,
@@ -179,5 +182,164 @@ describe('trial payment-method setup operation persistence', () => {
     await expect(
       repository.findBySessionId('cs_completed'),
     ).resolves.toMatchObject({ status: 'completed' });
+  });
+});
+
+describe('trial payment-method setup operation snapshots and outcomes', () => {
+  function pendingInput(sessionId: string, userId: string) {
+    return {
+      sessionId,
+      userId,
+      stripeCustomerId: 'cus_snapshot',
+      stripeSubscriptionId: 'sub_snapshot',
+      plan: 'monthly' as const,
+      amountCents: 2900,
+      currency: 'usd' as const,
+      frequency: 'month' as const,
+      trialEndsAt: new Date('2026-08-13T12:00:00Z'),
+      disclosureSnapshot: 'Exact disclosure.',
+      disclosureVersion: '2026-08-05',
+      termsVersion: '2026-08-05',
+      termsHash: 'terms-hash',
+      cancellationMethod:
+        'Billing page in the app or support@addictionboards.com',
+    };
+  }
+
+  it('stores the immutable pending snapshot and reads it back', async () => {
+    const user = await createUser(db, cleanup);
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const input = pendingInput(`cs_snapshot_${randomUUID()}`, user.id);
+
+    await repository.createPending(input);
+
+    await expect(repository.findBySessionId(input.sessionId)).resolves.toEqual(
+      expect.objectContaining({
+        ...input,
+        status: 'pending',
+        claimId: null,
+        claimedAt: null,
+        stripePaymentMethodId: null,
+        paymentMethodAttachedAt: null,
+        subscriptionDefaultSetAt: null,
+        completedAt: null,
+        terminalAt: null,
+        terminalReason: null,
+        expiredAt: null,
+      }),
+    );
+  });
+
+  it('resolves an identical createPending replay for the same Checkout Session', async () => {
+    const user = await createUser(db, cleanup);
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const input = pendingInput(`cs_replay_${randomUUID()}`, user.id);
+    await repository.createPending(input);
+
+    await expect(repository.createPending(input)).resolves.toBeUndefined();
+  });
+
+  it('throws CONFLICT when a replay changes the snapshot', async () => {
+    const user = await createUser(db, cleanup);
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const input = pendingInput(`cs_changed_${randomUUID()}`, user.id);
+    await repository.createPending(input);
+
+    await expect(
+      repository.createPending({ ...input, amountCents: 3900 }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
+  it('marks a claimed operation terminal with its reason and rejects a stale claim', async () => {
+    const user = await createUser(db, cleanup);
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    const input = pendingInput(`cs_terminal_${randomUUID()}`, user.id);
+    await repository.createPending(input);
+    const claimed = await repository.claim({
+      sessionId: input.sessionId,
+      claimId: 'claim_terminal',
+      claimedAt: new Date('2026-08-06T12:00:00Z'),
+      staleBefore: new Date(0),
+    });
+    if (!claimed) throw new Error('Expected the claim to succeed');
+    const terminalAt = new Date('2026-08-06T12:05:00Z');
+
+    await expect(
+      repository.markTerminal({
+        sessionId: input.sessionId,
+        claimId: 'claim_stale',
+        reason: 'billing_ownership_mismatch',
+        terminalAt,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await repository.markTerminal({
+      sessionId: input.sessionId,
+      claimId: 'claim_terminal',
+      reason: 'billing_ownership_mismatch',
+      terminalAt,
+    });
+
+    await expect(repository.findBySessionId(input.sessionId)).resolves.toEqual(
+      expect.objectContaining({
+        status: 'terminal',
+        terminalReason: 'billing_ownership_mismatch',
+        terminalAt,
+      }),
+    );
+  });
+
+  it('prunes expired operations oldest first, up to the limit', async () => {
+    const user = await createUser(db, cleanup);
+    const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
+      db,
+    );
+    // The prune is table-wide by design, so the two rows sit in a far-past
+    // window that no service or other test writes: foreign expired rows can
+    // never be eligible ahead of them, even against an existing database.
+    // Only that window is cleared first, because an aborted earlier run of
+    // this case can leave its own rows there; files run sequentially, so
+    // nothing live owns rows in the window.
+    const olderExpiredAt = new Date('1970-01-01T00:00:00Z');
+    const newerExpiredAt = new Date('1970-01-01T00:00:01Z');
+    const expiredBefore = new Date('1970-01-01T00:00:02Z');
+    await db
+      .delete(trialPaymentMethodSetupOperations)
+      .where(
+        and(
+          eq(trialPaymentMethodSetupOperations.status, 'expired'),
+          lt(trialPaymentMethodSetupOperations.expiredAt, expiredBefore),
+        ),
+      );
+    const older = pendingInput(`cs_prune_older_${randomUUID()}`, user.id);
+    const newer = pendingInput(`cs_prune_newer_${randomUUID()}`, user.id);
+    await repository.createPending(older);
+    await repository.createPending(newer);
+    await repository.markExpired({
+      sessionId: older.sessionId,
+      expiredAt: olderExpiredAt,
+    });
+    await repository.markExpired({
+      sessionId: newer.sessionId,
+      expiredAt: newerExpiredAt,
+    });
+
+    await expect(
+      repository.pruneExpired({ expiredBefore, limit: 1 }),
+    ).resolves.toBe(1);
+
+    await expect(
+      repository.findBySessionId(older.sessionId),
+    ).resolves.toBeNull();
+    await expect(repository.findBySessionId(newer.sessionId)).resolves.toEqual(
+      expect.objectContaining({ status: 'expired' }),
+    );
   });
 });
