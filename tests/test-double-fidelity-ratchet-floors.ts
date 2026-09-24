@@ -67,6 +67,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // cases and moves lookup, upsert and conflict behavior to real Postgres.
 // 2026-09-23 UTC: The Clerk event and tombstone unit suites retire entirely;
 // every case has a real-Postgres twin and no error translation remained.
+// 2026-09-23 UTC: The question-feedback unit suite keeps two impossible-response
+// cases; the renewal-consent and pending-cleanup suites retire entirely (their
+// prune guard and contract twin run on real Postgres in tests/integration).
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -101,10 +104,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
   [
-    'src/adapters/repositories/drizzle-pending-stripe-customer-cleanup-repository.test.ts',
-    6,
-  ],
-  [
     'src/adapters/repositories/drizzle-practice-session-repository-corrupt-list-reads.test.ts',
     1,
   ],
@@ -131,11 +130,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   [
     'src/adapters/repositories/drizzle-practice-session-repository-statement-cancellation.test.ts',
     1,
-  ],
-  ['src/adapters/repositories/drizzle-question-feedback-repository.test.ts', 6],
-  [
-    'src/adapters/repositories/drizzle-renewal-consent-record-repository.test.ts',
-    5,
   ],
   ['src/adapters/repositories/drizzle-subscription-repository.test.ts', 1],
   ['src/adapters/repositories/drizzle-tag-repository.test.ts', 1],

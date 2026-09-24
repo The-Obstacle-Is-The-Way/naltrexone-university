@@ -1,239 +1,61 @@
-import type { SQL } from 'drizzle-orm';
-import { PgDialect } from 'drizzle-orm/pg-core';
-import { describe, expect, it, vi } from 'vitest';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js/session';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as schema from '@/db/schema';
 import { ApplicationError } from '@/src/application/errors';
-import {
-  newQuestionRatingFeedback,
-  newQuestionReportFeedback,
-} from '@/src/domain/entities';
+import { newQuestionRatingFeedback } from '@/src/domain/entities';
 import { DrizzleQuestionFeedbackRepository } from './drizzle-question-feedback-repository';
 
-type RepoDb = ConstructorParameters<
-  typeof DrizzleQuestionFeedbackRepository
->[0];
-
+const repo = new DrizzleQuestionFeedbackRepository(drizzle.mock({ schema }));
 const userId = crypto.randomUUID();
 const questionId = crypto.randomUUID();
 
-function createDbMock() {
-  const insertReturning = vi.fn();
-  const insertValues = vi.fn(() => ({ returning: insertReturning }));
-  const insert = vi.fn(() => ({ values: insertValues }));
-  const queryFindFirst = vi.fn();
+// Only driver responses that real Postgres cannot produce belong here; the
+// real prepared-query boundary supplies them. Recording, replay and latest
+// rating behavior is covered against real Postgres in
+// tests/integration/question-feedback-repository.integration.test.ts.
+beforeEach(() => {
+  vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
-  return {
-    insert,
-    query: {
-      questionFeedback: {
-        findFirst: queryFindFirst,
-      },
-    },
-    _mocks: {
-      insertReturning,
-      insertValues,
-      queryFindFirst,
-    },
-  } as const;
-}
+describe('DrizzleQuestionFeedbackRepository error translation', () => {
+  it('throws INTERNAL_ERROR when the insert returns no rows', async () => {
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockResolvedValueOnce(
+      [],
+    );
 
-describe('DrizzleQuestionFeedbackRepository', () => {
-  describe('record', () => {
-    it('inserts and maps a rating event', async () => {
-      const db = createDbMock();
-      const createdAt = new Date('2026-02-10T00:00:00.000Z');
-      db._mocks.insertReturning.mockResolvedValue([
-        {
-          id: 'feedback-1',
-          userId,
-          questionId,
-          attemptId: 'attempt-1',
-          practiceSessionId: 'session-1',
-          kind: 'rating',
-          rating: 'helpful',
-          category: null,
-          comment: null,
-          createdAt,
-        },
-      ]);
-      const repo = new DrizzleQuestionFeedbackRepository(
-        db as unknown as RepoDb,
-      );
-
-      await expect(
-        repo.record(
-          newQuestionRatingFeedback({
-            userId,
-            questionId,
-            attemptId: 'attempt-1',
-            practiceSessionId: 'session-1',
-            rating: 'helpful',
-          }),
-        ),
-      ).resolves.toEqual({
-        id: 'feedback-1',
+    const promise = repo.record(
+      newQuestionRatingFeedback({
         userId,
         questionId,
         attemptId: 'attempt-1',
         practiceSessionId: 'session-1',
-        kind: 'rating',
         rating: 'helpful',
-        category: null,
-        comment: null,
-        createdAt,
-      });
-      expect(db._mocks.insertValues).toHaveBeenCalledWith({
-        userId,
-        questionId,
-        attemptId: 'attempt-1',
-        practiceSessionId: 'session-1',
-        kind: 'rating',
-        rating: 'helpful',
-        category: null,
-        comment: null,
-      });
+      }),
+    );
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to insert question feedback',
     });
-
-    it('inserts and maps a report event', async () => {
-      const db = createDbMock();
-      const createdAt = new Date('2026-02-10T00:00:00.000Z');
-      db._mocks.insertReturning.mockResolvedValue([
-        {
-          id: 'feedback-1',
-          userId,
-          questionId,
-          attemptId: null,
-          practiceSessionId: null,
-          kind: 'report',
-          rating: null,
-          category: 'incorrect_answer',
-          comment: 'The keyed answer appears wrong.',
-          createdAt,
-        },
-      ]);
-      const repo = new DrizzleQuestionFeedbackRepository(
-        db as unknown as RepoDb,
-      );
-
-      await expect(
-        repo.record(
-          newQuestionReportFeedback({
-            userId,
-            questionId,
-            attemptId: null,
-            practiceSessionId: null,
-            category: 'incorrect_answer',
-            comment: 'The keyed answer appears wrong.',
-          }),
-        ),
-      ).resolves.toEqual({
-        id: 'feedback-1',
-        userId,
-        questionId,
-        attemptId: null,
-        practiceSessionId: null,
-        kind: 'report',
-        rating: null,
-        category: 'incorrect_answer',
-        comment: 'The keyed answer appears wrong.',
-        createdAt,
-      });
-    });
-
-    it('throws INTERNAL_ERROR when insert returns no rows', async () => {
-      const db = createDbMock();
-      db._mocks.insertReturning.mockResolvedValue([]);
-      const repo = new DrizzleQuestionFeedbackRepository(
-        db as unknown as RepoDb,
-      );
-
-      const promise = repo.record(
-        newQuestionRatingFeedback({
-          userId,
-          questionId,
-          attemptId: null,
-          practiceSessionId: null,
-          rating: 'helpful',
-        }),
-      );
-
-      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
-    });
+    expect(PostgresJsPreparedQuery.prototype.execute).toHaveBeenCalledTimes(1);
   });
 
-  describe('findLatestRatingByUser', () => {
-    it('returns null when no rating exists', async () => {
-      const db = createDbMock();
-      db._mocks.queryFindFirst.mockResolvedValue(null);
-      const repo = new DrizzleQuestionFeedbackRepository(
-        db as unknown as RepoDb,
-      );
+  it('throws INTERNAL_ERROR with the cause when the latest-rating read fails', async () => {
+    const databaseError = new Error('boom');
+    vi.mocked(PostgresJsPreparedQuery.prototype.execute).mockRejectedValueOnce(
+      databaseError,
+    );
 
-      await expect(
-        repo.findLatestRatingByUser(userId, questionId),
-      ).resolves.toBeNull();
-    });
-
-    it('maps the latest rating row and orders by createdAt then id descending', async () => {
-      const db = createDbMock();
-      const createdAt = new Date('2026-02-10T00:00:00.000Z');
-      db._mocks.queryFindFirst.mockResolvedValue({
-        id: 'feedback-1',
-        userId,
-        questionId,
-        attemptId: null,
-        practiceSessionId: null,
-        kind: 'rating',
-        rating: null,
-        category: null,
-        comment: null,
-        createdAt,
-      });
-      const repo = new DrizzleQuestionFeedbackRepository(
-        db as unknown as RepoDb,
-      );
-
-      await expect(
-        repo.findLatestRatingByUser(userId, questionId),
-      ).resolves.toEqual({
-        id: 'feedback-1',
-        userId,
-        questionId,
-        attemptId: null,
-        practiceSessionId: null,
-        kind: 'rating',
-        rating: null,
-        category: null,
-        comment: null,
-        createdAt,
-      });
-
-      const queryArgs = db._mocks.queryFindFirst.mock.calls[0]?.[0];
-      const orderBy = queryArgs?.orderBy;
-      expect(orderBy).toHaveLength(2);
-      const orderSql = (orderBy as SQL[]).map(
-        (clause) => new PgDialect().sqlToQuery(clause).sql,
-      );
-      expect(orderSql[0]).toMatch(/"question_feedback"\."created_at"\s+desc/i);
-      expect(orderSql[1]).toMatch(/"question_feedback"\."id"\s+desc/i);
-    });
-
-    it('throws INTERNAL_ERROR when the latest-rating read fails', async () => {
-      const db = createDbMock();
-      const dbError = new Error('db down');
-      db._mocks.queryFindFirst.mockRejectedValue(dbError);
-      const repo = new DrizzleQuestionFeedbackRepository(
-        db as unknown as RepoDb,
-      );
-
-      const promise = repo.findLatestRatingByUser(userId, questionId);
-
-      await expect(promise).rejects.toBeInstanceOf(ApplicationError);
-      await expect(promise).rejects.toMatchObject({
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to load latest question rating',
-        cause: dbError,
-      });
+    const promise = repo.findLatestRatingByUser(userId, questionId);
+    await expect(promise).rejects.toBeInstanceOf(ApplicationError);
+    await expect(promise).rejects.toMatchObject({
+      code: 'INTERNAL_ERROR',
+      message: 'Failed to load latest question rating',
+      cause: databaseError,
     });
   });
 });
