@@ -1,45 +1,10 @@
-import {
-  createTableRelationsHelpers,
-  extractTablesRelationalConfig,
-} from 'drizzle-orm';
-import { PgDatabase, PgDialect, PgTransaction } from 'drizzle-orm/pg-core';
 import { RelationalQueryBuilder } from 'drizzle-orm/pg-core/query-builders/query';
-import {
-  drizzle,
-  PostgresJsPreparedQuery,
-  type PostgresJsQueryResultHKT,
-} from 'drizzle-orm/postgres-js';
+import { drizzle, PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
+import { installMockTransactionBoundary } from '@/tests/shared/drizzle-mock-transaction';
 import { DrizzlePracticeSessionRepository } from './drizzle-practice-session-repository';
-
-const relational = extractTablesRelationalConfig(
-  schema,
-  createTableRelationsHelpers,
-);
-const schemaConfig = {
-  fullSchema: schema,
-  schema: relational.tables,
-  tableNamesMap: relational.tableNamesMap,
-};
-type MockDatabase = PgDatabase<
-  PostgresJsQueryResultHKT,
-  typeof schema,
-  typeof relational.tables
->;
-
-class StubTransaction extends PgTransaction<
-  PostgresJsQueryResultHKT,
-  typeof schema,
-  typeof relational.tables
-> {
-  override transaction<T>(
-    transaction: (tx: StubTransaction) => Promise<T>,
-  ): Promise<T> {
-    return transaction(this);
-  }
-}
 
 // Only an arbitrary driver failure inside the corrupt-row classification,
 // which real Postgres cannot raise on demand, belongs here: the relational
@@ -49,15 +14,7 @@ class StubTransaction extends PgTransaction<
 // tests/integration/practice-session-schema-hardening.integration.test.ts and
 // tests/integration/practice-session-reads.integration.test.ts.
 beforeEach(() => {
-  vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
-  vi.spyOn(PgDatabase.prototype, 'transaction').mockImplementation(function (
-    this: MockDatabase,
-    transaction,
-  ) {
-    return transaction(
-      new StubTransaction(new PgDialect(), this._.session, schemaConfig),
-    );
-  });
+  installMockTransactionBoundary();
 });
 
 afterEach(() => {
