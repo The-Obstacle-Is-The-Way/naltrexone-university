@@ -5,6 +5,7 @@ Cross-suite test infrastructure utilities.
 Scope:
 - Environment/process helpers (`process-env`, dotenv loading)
 - Fixture-loading helpers (`load-json-fixture`)
+- The `drizzle.mock` transaction boundary for repository error-translation unit tests (`drizzle-mock-transaction`)
 - Helpers that are suite-agnostic and can be used by unit, browser, integration, or E2E tests
 
 Rules:

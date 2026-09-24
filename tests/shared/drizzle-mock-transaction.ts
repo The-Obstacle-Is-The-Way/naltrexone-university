@@ -61,8 +61,3 @@ export function installMockTransactionBoundary(): void {
     );
   });
 }
-
-/** The spied prepared-query boundary, typed for `vi.mocked` scripting. */
-export function preparedQueryExecute() {
-  return vi.mocked(PostgresJsPreparedQuery.prototype.execute);
-}
