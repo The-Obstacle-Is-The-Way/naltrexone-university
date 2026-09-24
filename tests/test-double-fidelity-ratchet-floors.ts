@@ -82,6 +82,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-24 UTC: The trial-recovery suite moves onto the fake with no new seam:
+// it seeds the existing open Session and bends its inspection through the
+// retrieve override; its stub and cast retire.
 // 2026-09-24 UTC: The trials suite moves onto the fake, seeding existing open
 // Sessions through real creates and reading the fake's recorded retrieve and
 // expire calls; its stub, its spy-call cast and both floor sites retire.
@@ -112,10 +115,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ],
   [
     'src/adapters/gateways/stripe/stripe-checkout-sessions-reconciliation.test.ts',
-    1,
-  ],
-  [
-    'src/adapters/gateways/stripe/stripe-checkout-sessions-trial-recovery.test.ts',
     1,
   ],
   ['src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts', 2],
