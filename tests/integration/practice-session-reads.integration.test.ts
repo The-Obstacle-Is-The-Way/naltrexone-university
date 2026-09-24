@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
+import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   cleanupAfterEach,
@@ -17,6 +18,9 @@ import {
 // mapping, latest-incomplete and completed-page reads, corruption reported by
 // findByIdAndUserId, and history summaries skipped for shape corruption.
 const { db, sql } = createIntegrationDb();
+// A second session commits a competing completed session between the count
+// and page statements of a completed-page read.
+const concurrent = createIntegrationDb();
 const cleanup = createCleanupState();
 
 afterEach(async () => {
@@ -24,6 +28,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
+  await closeConnection(concurrent.sql);
   await closeConnection(sql);
 });
 
@@ -74,6 +79,77 @@ async function insertSurplusStateRow(sessionId: string, questionId: string) {
     practiceSessionId: sessionId,
     questionId,
     position: 2,
+  });
+}
+
+// Defers execution of an awaited Drizzle query until `before` resolves.
+function deferUntil<T extends object>(
+  target: T,
+  before: () => Promise<void>,
+): T {
+  return new Proxy(target, {
+    get(obj, property, receiver) {
+      const value = Reflect.get(obj, property, receiver);
+      if (property === 'then') {
+        if (typeof value !== 'function') return value;
+        return (
+          onFulfilled?: (value: unknown) => unknown,
+          onRejected?: (reason: unknown) => unknown,
+        ) =>
+          before()
+            .then(
+              () =>
+                new Promise((resolve, reject) => {
+                  value.call(obj, resolve, reject);
+                }),
+            )
+            .then(onFulfilled, onRejected);
+      }
+      return value;
+    },
+  });
+}
+
+type SessionQueries = Pick<DrizzleDb, 'query'>;
+
+// Runs `beforeFindMany` immediately before the relational
+// `practiceSessions.findMany` that a completed-page read issues after its
+// count statement, inside the read's own transaction.
+function interleaveBeforeSessionPage<T extends SessionQueries>(
+  target: T,
+  beforeFindMany: () => Promise<void>,
+): T {
+  return new Proxy(target, {
+    get(obj, property, receiver) {
+      const value = Reflect.get(obj, property, receiver);
+      if (property === 'transaction' && typeof value === 'function') {
+        return (
+          fn: (tx: SessionQueries) => Promise<unknown>,
+          config?: unknown,
+        ) =>
+          value.call(
+            obj,
+            (tx: SessionQueries) =>
+              fn(interleaveBeforeSessionPage(tx, beforeFindMany)),
+            config,
+          );
+      }
+      if (property !== 'query') return value;
+      return new Proxy(value as object, {
+        get(queries, table, queriesReceiver) {
+          const tableQuery = Reflect.get(queries, table, queriesReceiver);
+          if (table !== 'practiceSessions') return tableQuery;
+          return new Proxy(tableQuery as object, {
+            get(builder, method, builderReceiver) {
+              const fn = Reflect.get(builder, method, builderReceiver);
+              if (method !== 'findMany' || typeof fn !== 'function') return fn;
+              return (...args: unknown[]) =>
+                deferUntil(fn.apply(builder, args) as object, beforeFindMany);
+            },
+          });
+        },
+      });
+    },
   });
 }
 
@@ -227,6 +303,43 @@ describe('DrizzlePracticeSessionRepository reads', () => {
       await expect(
         repo.findCompletedByUserId(user.id, 10, 50),
       ).resolves.toEqual({ rows: [], total: 3 });
+    });
+
+    it('reads the count and the page from one repeatable-read snapshot', async () => {
+      const { user, repo, ids } = await createCompletedTrio();
+      const competitor = new DrizzlePracticeSessionRepository(concurrent.db);
+      const [question] = await createThreeQuestions();
+      let committedBetween = 0;
+      const hooked = new DrizzlePracticeSessionRepository(
+        interleaveBeforeSessionPage(db, async () => {
+          // Commit a fourth completed session after the count and before the page.
+          const late = await competitor.create({
+            userId: user.id,
+            mode: 'tutor',
+            paramsJson: {
+              count: 1,
+              tagSlugs: [],
+              difficulties: [],
+              questionIds: [question.id],
+            },
+          });
+          await competitor.end(
+            late.id,
+            user.id,
+            new Date('2026-03-03T15:00:00.000Z'),
+          );
+          committedBetween += 1;
+        }),
+      );
+
+      const page = await hooked.findCompletedByUserId(user.id, 10, 0);
+
+      expect(committedBetween).toBe(1);
+      expect(page.total).toBe(3);
+      expect(page.rows.map((row) => row.id)).toEqual([ids[2], ids[1], ids[0]]);
+      await expect(
+        repo.findCompletedByUserId(user.id, 10, 0),
+      ).resolves.toMatchObject({ total: 4 });
     });
 
     it('filters completed sessions by mode', async () => {
