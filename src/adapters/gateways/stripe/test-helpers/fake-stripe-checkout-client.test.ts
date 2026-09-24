@@ -134,6 +134,35 @@ describe('FakeStripeCheckoutClient', () => {
     expect(stripe.createCalls).toHaveLength(2);
   });
 
+  it('records retrieve params and expire options beside the ids', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const created = await stripe.checkout.sessions.create(setupParams, {
+      idempotencyKey: 'key_recorded',
+    });
+
+    await stripe.checkout.sessions.retrieve(created.id, {
+      expand: ['line_items'],
+    });
+    await stripe.checkout.sessions.expire(created.id, undefined, {
+      idempotencyKey: `expire_checkout_session:${created.id}`,
+    });
+
+    expect(stripe.retrieveRequests).toEqual([
+      { sessionId: created.id, params: { expand: ['line_items'] } },
+    ]);
+    expect(stripe.expireCalls).toEqual([
+      {
+        sessionId: created.id,
+        options: { idempotencyKey: `expire_checkout_session:${created.id}` },
+      },
+    ]);
+    await expect(
+      stripe.checkout.sessions.retrieve(created.id),
+    ).resolves.toEqual(
+      expect.objectContaining({ status: 'expired', url: null }),
+    );
+  });
+
   it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
     let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
     const stripe = new FakeStripeCheckoutClient(() => nowMs);
