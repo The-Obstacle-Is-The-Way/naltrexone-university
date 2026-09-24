@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { PostgresJsPreparedQuery } from 'drizzle-orm/postgres-js/session';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import {
   renewalConsentRecords,
   renewalNoticeDeliveries,
@@ -29,6 +30,7 @@ const cleanup = createCleanupState();
 const consentIds: string[] = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   if (consentIds.length > 0) {
     await db
       .delete(renewalConsentRecords)
@@ -359,4 +361,20 @@ describe('renewal consent record persistence', () => {
       }),
     ).resolves.toBe(1);
   });
+
+  it.each([0, -1, 1.5])(
+    'returns 0 from pruneExpired without touching the database when limit is %s',
+    async (limit) => {
+      const execute = vi.spyOn(PostgresJsPreparedQuery.prototype, 'execute');
+      const repository = new DrizzleRenewalConsentRecordRepository(db);
+
+      await expect(
+        repository.pruneExpired({
+          before: new Date('2026-09-01T00:00:00.000Z'),
+          limit,
+        }),
+      ).resolves.toBe(0);
+      expect(execute).not.toHaveBeenCalled();
+    },
+  );
 });
