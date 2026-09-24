@@ -7,6 +7,8 @@
 
 ---
 
+> **Superseded (2026-09-24 UTC, DEBT-472 step 6):** the ruling below is reversed. A hand-built Drizzle call-chain object cast to `RepoDb` is a stub, not a fake; the governing adjudication is in `.claude/rules/testing.md` (Test-Double Fidelity), and DEBT-472 step 4 retired the last such double on 2026-09-24. This record is kept as history only.
+
 ## Summary
 
 This debt was a **false positive**. The repository tests were using the correct pattern all along.
