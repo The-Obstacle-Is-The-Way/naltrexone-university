@@ -206,7 +206,7 @@ export function assertProviderContractsExecuted(
   };
 }
 
-// The two trial-clock cases and four Checkout client contract cases normally
+// The two trial-clock cases and five Checkout client contract cases normally
 // finish in under two minutes. Five minutes bounds a stuck provider process
 // tree while leaving equal headroom inside the workflow's 10-minute job budget.
 const STRIPE_PROVIDER_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;

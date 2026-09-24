@@ -20,8 +20,16 @@ type SubscriptionParams = Omit<PaymentOrSubscriptionParams, 'mode'> & {
 
 export type StripeCheckoutClientContractHarness = {
   sessions: StripeClient['checkout']['sessions'];
+  subscriptions: NonNullable<StripeClient['subscriptions']>;
   subscriptionParams: SubscriptionParams;
   advanceCreationTime(): Promise<void>;
+  // Creates one active Subscription for the harness customer and returns
+  // its id and customer; the real half charges the TEST price with a test
+  // card, the fake seeds it.
+  seedSubscription(): Promise<{ id: string; customer: string }>;
+  // Creates one more Subscription for the same customer and cancels it, so
+  // the listing's status filters can be observed against a canceled one.
+  seedCanceledSubscription(): Promise<{ id: string; customer: string }>;
   cleanup(): Promise<void>;
 };
 
@@ -156,6 +164,66 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
         typeof message === 'string' &&
           message.toLowerCase().includes('same parameters'),
       ).toBe(true);
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[4],
+    async run(harness) {
+      const list = harness.subscriptions.list;
+      if (!list) throw new Error('Expected the client to list Subscriptions');
+      const seeded = await harness.seedSubscription();
+      const canceledSeed = await harness.seedCanceledSubscription();
+
+      // Stripe lists full Subscription objects; the port reads id and status.
+      const all = await list.call(harness.subscriptions, {
+        customer: seeded.customer,
+        status: 'all',
+        limit: 10,
+      });
+      expect(all.data).toHaveLength(2);
+      expect(all.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: seeded.id, status: 'active' }),
+          expect.objectContaining({ id: canceledSeed.id, status: 'canceled' }),
+        ]),
+      );
+      // Without a status, Stripe lists every Subscription except canceled ones.
+      const byDefault = await list.call(harness.subscriptions, {
+        customer: seeded.customer,
+        limit: 10,
+      });
+      expect(byDefault.data).toHaveLength(1);
+      expect(byDefault.data[0]).toEqual(
+        expect.objectContaining({ id: seeded.id, status: 'active' }),
+      );
+      const canceled = await list.call(harness.subscriptions, {
+        customer: seeded.customer,
+        status: 'canceled',
+        limit: 10,
+      });
+      expect(canceled.data).toHaveLength(1);
+      expect(canceled.data[0]).toEqual(
+        expect.objectContaining({ id: canceledSeed.id, status: 'canceled' }),
+      );
+
+      const retrieved = (await harness.subscriptions.retrieve(seeded.id)) as {
+        id?: string;
+        customer?: string;
+        status?: string;
+        metadata?: Record<string, string>;
+        items?: { data?: Array<{ price?: { id?: string } }> };
+      };
+      expect(retrieved).toEqual(
+        expect.objectContaining({
+          id: seeded.id,
+          customer: seeded.customer,
+          status: 'active',
+        }),
+      );
+      expect(retrieved.metadata?.user_id).toBe('debt472_contract_user');
+      expect(retrieved.items?.data?.[0]?.price?.id).toBe(
+        harness.subscriptionParams.line_items[0]?.price,
+      );
     },
   },
 ];

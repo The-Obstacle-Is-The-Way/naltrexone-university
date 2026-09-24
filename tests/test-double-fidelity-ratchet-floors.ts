@@ -82,6 +82,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-24 UTC: The base checkout suite moves onto the fake with seeded
+// Subscriptions (contracted), the create-response override and the fault seams;
+// its StripeClient literal, its spy-call cast and its this-binding stub retire.
 // 2026-09-24 UTC: The reconciliation suite moves onto the fake, staging its racing
 // Session through the retrieve override and injecting expiry errors through
 // the fake's expire-fault seam; its stub and cast retire.
@@ -116,7 +119,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
     'src/adapters/gateways/stripe/stripe-checkout-sessions-concurrency.test.ts',
     1,
   ],
-  ['src/adapters/gateways/stripe/stripe-checkout-sessions.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-webhook-processor.test.ts', 1],
