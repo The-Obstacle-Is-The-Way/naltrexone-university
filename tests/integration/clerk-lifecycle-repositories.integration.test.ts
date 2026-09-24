@@ -160,20 +160,21 @@ describe('DrizzleDeletedClerkUserRepository', () => {
   });
 
   it('holds a transaction-scoped advisory lock keyed by the Clerk user id until commit', async () => {
-    const repo = new DrizzleDeletedClerkUserRepository(db);
     const clerkUserId = newClerkUserId();
     // pg_advisory_xact_lock(bigint) exposes its key as classid (high 32 bits)
     // and objid (low 32 bits) with objsubid 1; hashtextextended(id, 0) is the key.
+    // Filtering on a granted ExclusiveLock keeps a shared-lock regression red.
     const heldTombstoneLocks = (pid: number) => drizzleSql<{ held: number }>`
       select count(*)::int as held
       from pg_locks
       where locktype = 'advisory'
         and pid = ${pid}
         and objsubid = 1
+        and mode = 'ExclusiveLock'
+        and granted
         and classid::bigint = ((hashtextextended(${clerkUserId}, 0) >> 32) & 4294967295)
         and objid::bigint = (hashtextextended(${clerkUserId}, 0) & 4294967295)
     `;
-    void repo;
 
     const backendPid = await db.transaction(async (tx) => {
       const txRepo = new DrizzleDeletedClerkUserRepository(tx);
