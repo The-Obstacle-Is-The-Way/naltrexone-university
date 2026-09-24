@@ -116,6 +116,24 @@ describe('FakeStripeCheckoutClient', () => {
     ).resolves.toEqual(first);
   });
 
+  it('supports explicit create fault injection without saving a response', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const options = { idempotencyKey: 'key_fault' };
+    const fault = new Error('Stripe checkout configuration failed');
+    stripe.setCreateFault(() => {
+      throw fault;
+    });
+
+    await expect(
+      stripe.checkout.sessions.create(setupParams, options),
+    ).rejects.toBe(fault);
+    stripe.setCreateFault(null);
+
+    const created = await stripe.checkout.sessions.create(setupParams, options);
+    expect(created).toMatchObject({ id: 'cs_fake_1', status: 'open' });
+    expect(stripe.createCalls).toHaveLength(2);
+  });
+
   it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
     let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
     const stripe = new FakeStripeCheckoutClient(() => nowMs);

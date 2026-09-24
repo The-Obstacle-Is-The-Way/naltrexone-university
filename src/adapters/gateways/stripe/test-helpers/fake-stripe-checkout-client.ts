@@ -24,6 +24,15 @@ type RetrieveOverride = (
   session: StripeCheckoutSessionRetrieved,
 ) => StripeCheckoutSessionRetrieved | Promise<StripeCheckoutSessionRetrieved>;
 
+// A create fault runs after the call is recorded and before any idempotent
+// replay or session creation; it injects a caller-supplied error by throwing.
+// It models no Stripe fault shape and is not contract-tested: the parameter
+// mismatch error below remains the only contracted create failure.
+type CreateFault = (
+  params: CheckoutSessionCreateParams,
+  options?: StripeRequestOptions,
+) => void | Promise<void>;
+
 function cloneSession(session: TrackedCheckoutSession): TrackedCheckoutSession {
   const lineItems = session.line_items
     ? session.line_items.data
@@ -62,6 +71,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
   >();
   private readonly liveSessionsById = new Map<string, TrackedCheckoutSession>();
   private retrieveOverride: RetrieveOverride | null = null;
+  private createFault: CreateFault | null = null;
   private sessionSequence = 0;
 
   constructor(private readonly nowMs: () => number = Date.now) {}
@@ -77,6 +87,9 @@ export class FakeStripeCheckoutClient implements StripeClient {
           params: structuredClone(params),
           ...(options ? { options: { ...options } } : {}),
         });
+        if (this.createFault) {
+          await this.createFault(params, options);
+        }
 
         const idempotencyKey = options?.idempotencyKey;
         if (idempotencyKey) {
@@ -189,6 +202,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
 
   setRetrieveOverride(override: RetrieveOverride | null): void {
     this.retrieveOverride = override;
+  }
+
+  setCreateFault(fault: CreateFault | null): void {
+    this.createFault = fault;
   }
 
   private createOpenSession(

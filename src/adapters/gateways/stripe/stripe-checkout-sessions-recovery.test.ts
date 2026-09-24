@@ -1,100 +1,31 @@
-import { describe, expect, it, vi } from 'vitest';
-import type {
-  CheckoutSessionCreateParams,
-  StripeCheckoutSession,
-  StripeClient,
-  StripeRequestOptions,
-} from '@/src/adapters/shared/stripe-types';
+import { describe, expect, it } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import {
   createStripeCheckoutSession,
   SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT,
 } from './stripe-checkout-sessions';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
-type SessionResponse = StripeCheckoutSession & {
-  expires_at: number;
-};
+// Every session the fake creates under the frozen clock shares one `created`
+// second, so the production tail scan finds an ambiguous newest match, logs
+// its fallback and walks the bounded recovery-key chain: the same walk the
+// retired stub forced by listing nothing at all.
+const fixedNowMs = 1_700_000_000_000;
+const TAIL_SCAN_FALLBACK =
+  'Falling back to bounded checkout replay traversal after tail scan was inconclusive';
+const RECOVERY_RETRY =
+  'Retrying checkout session creation with recovery idempotency key';
 
-type SessionCreateResult = SessionResponse | Error;
+type CheckoutInput = Parameters<typeof createStripeCheckoutSession>[0]['input'];
 
-function createReplayStripeMock(input: {
-  createdSessions: SessionCreateResult[];
-  retrievedSessions: SessionResponse[];
-}) {
-  let createCallIndex = 0;
-  let retrieveCallIndex = 0;
-  const sessionsCreate = vi.fn(
-    async (
-      _params: CheckoutSessionCreateParams,
-      _options?: StripeRequestOptions,
-    ) => {
-      const session = input.createdSessions[createCallIndex];
-      createCallIndex += 1;
-      if (!session) throw new Error('Unexpected checkout session create.');
-      if (session instanceof Error) throw session;
-      return session;
-    },
-  );
-  const sessionsRetrieve = vi.fn(async () => {
-    const session = input.retrievedSessions[retrieveCallIndex];
-    retrieveCallIndex += 1;
-    if (!session) throw new Error('Unexpected checkout session retrieve.');
-    return session;
-  });
-
-  const stripe = {
-    customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
-    checkout: {
-      sessions: {
-        list: vi.fn(async () => ({ data: [], has_more: false })),
-        retrieve: sessionsRetrieve,
-        expire: vi.fn(async () => ({ id: 'cs_expired', url: null })),
-        create: sessionsCreate,
-      },
-    },
-    subscriptions: {
-      list: vi.fn(async () => ({ data: [] })),
-      retrieve: vi.fn(async () => ({})),
-    },
-    billingPortal: {
-      sessions: {
-        create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-      },
-    },
-    webhooks: { constructEvent: vi.fn() },
-  } as unknown as StripeClient;
-
-  return {
-    stripe,
-    sessionsCreate,
-    sessionsRetrieve,
-  };
-}
-
-function createCompletedReplaySnapshots(count: number): {
-  createdSessions: SessionResponse[];
-  retrievedSessions: SessionResponse[];
-} {
-  const createdSessions = Array.from({ length: count }, (_, index) => ({
-    id: `cs_completed_replay_${index}`,
-    url: `https://stripe/checkout/completed-${index}`,
-    status: 'open' as const,
-    expires_at: 1_700_000_000 + 3600,
-  }));
-
-  return {
-    createdSessions,
-    retrievedSessions: createdSessions.map((session) => ({
-      ...session,
-      status: 'complete' as const,
-    })),
-  };
+function sessionUrl(id: string): string {
+  return `https://checkout.stripe.test/${id}`;
 }
 
 describe('createStripeCheckoutSession recovery', () => {
   const appUserId = crypto.randomUUID();
-  const input = {
+  const input: CheckoutInput = {
     userId: appUserId,
     externalCustomerId: 'cus_123',
     ...createTestRenewalTerms('monthly'),
@@ -102,53 +33,70 @@ describe('createStripeCheckoutSession recovery', () => {
     cancelUrl: 'https://app/cancel',
   };
   const priceIds = { monthly: 'price_m', annual: 'price_a' } as const;
-  const fixedNowMs = 1_700_000_000_000;
-  const fixedNowUnix = fixedNowMs / 1000;
+
+  function createCheckout(
+    stripe: FakeStripeCheckoutClient,
+    overrides: Partial<CheckoutInput> = {},
+    logger = new FakeLogger(),
+  ): Promise<{ url: string }> {
+    return createStripeCheckoutSession({
+      stripe,
+      input: { ...input, ...overrides },
+      priceIds,
+      logger,
+      nowMs: () => fixedNowMs,
+    });
+  }
+
+  function recoveryKey(sessionId: string): string {
+    return `checkout_session_recovery:${appUserId}:monthly:${sessionId}`;
+  }
+
+  // Runs production once, completes its `cs_fake_1`, then chains `count - 1`
+  // completed recovery links at the same second; returns the call counts to
+  // slice the seed away from the act.
+  async function seedTiedCompletedChain(
+    stripe: FakeStripeCheckoutClient,
+    count: number,
+  ): Promise<{ createCallsBefore: number; retrieveCallsBefore: number }> {
+    await createCheckout(stripe);
+    const params = stripe.createCalls[0]?.params;
+    if (!params) throw new Error('Expected the primary create params');
+    let tailId = 'cs_fake_1';
+    stripe.markComplete(tailId);
+    for (let index = 1; index < count; index += 1) {
+      const link = await stripe.checkout.sessions.create(params, {
+        idempotencyKey: recoveryKey(tailId),
+      });
+      stripe.markComplete(link.id);
+      tailId = link.id;
+    }
+    return {
+      createCallsBefore: stripe.createCalls.length,
+      retrieveCallsBefore: stripe.retrieveCalls.length,
+    };
+  }
 
   it('recovers with a deterministic request key when Stripe rejects stale primary key parameters', async () => {
-    const stalePrimaryKeyError = Object.assign(
-      new Error(
-        'Keys for idempotent requests can only be used with the same parameters they were first used with.',
-      ),
-      {
-        type: 'StripeIdempotencyError',
-        rawType: 'idempotency_error',
-        statusCode: 400,
-      },
-    );
-    const freshSession = {
-      id: 'cs_fresh',
-      url: 'https://stripe/checkout/fresh',
-      status: 'open' as const,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const { stripe, sessionsCreate } = createReplayStripeMock({
-      createdSessions: [stalePrimaryKeyError, freshSession],
-      retrievedSessions: [freshSession],
+    const stripe = new FakeStripeCheckoutClient(() => fixedNowMs);
+    // The primary key was first used with different parameters: the same
+    // user, plan and trial, but another customer.
+    await createCheckout(stripe, {
+      externalCustomerId: 'cus_stale',
+      trialPeriodDays: 7,
     });
+    const seededCreates = stripe.createCalls.length;
 
     await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input: { ...input, trialPeriodDays: 7 },
-        priceIds,
-        logger: new FakeLogger(),
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh' });
+      createCheckout(stripe, { trialPeriodDays: 7 }),
+    ).resolves.toEqual({ url: sessionUrl('cs_fake_2') });
 
-    const createOptions = sessionsCreate.mock.calls.map(([, options]) => ({
-      idempotencyKey: options?.idempotencyKey,
-    }));
-    expect(
-      sessionsCreate.mock.calls.map(([params]) => params.consent_collection),
-    ).toEqual([
+    const creates = stripe.createCalls.slice(seededCreates);
+    expect(creates.map(({ params }) => params.consent_collection)).toEqual([
       { terms_of_service: 'required' },
       { terms_of_service: 'required' },
     ]);
-    expect(
-      sessionsCreate.mock.calls.map(([params]) => params.metadata),
-    ).toEqual([
+    expect(creates.map(({ params }) => params.metadata)).toEqual([
       expect.objectContaining({
         renewal_disclosure_version: '2026-08-05',
         renewal_terms_hash: 'test-terms-hash',
@@ -158,197 +106,118 @@ describe('createStripeCheckoutSession recovery', () => {
         renewal_terms_hash: 'test-terms-hash',
       }),
     ]);
-    expect(createOptions[0]).toEqual({
+    expect(creates[0]?.options).toEqual({
       idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7`,
     });
-    expect(createOptions[1]?.idempotencyKey).toMatch(
+    expect(creates[1]?.options?.idempotencyKey).toMatch(
       new RegExp(
         `^checkout_session_recovery:${appUserId}:monthly:request:[a-f0-9]{16}:trial:7$`,
       ),
     );
-    expect(createOptions[1]).not.toEqual(createOptions[0]);
+    expect(creates[1]?.options).not.toEqual(creates[0]?.options);
   });
 
   it('does not retry non-idempotency checkout create errors with a new key', async () => {
+    const stripe = new FakeStripeCheckoutClient(() => fixedNowMs);
     const createError = new Error('Stripe checkout configuration failed');
-    const { stripe, sessionsCreate } = createReplayStripeMock({
-      createdSessions: [createError],
-      retrievedSessions: [],
+    stripe.setCreateFault(() => {
+      throw createError;
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger: new FakeLogger(),
-        nowMs: () => fixedNowMs,
-      }),
-    ).rejects.toThrow('Stripe checkout configuration failed');
+    await expect(createCheckout(stripe)).rejects.toThrow(
+      'Stripe checkout configuration failed',
+    );
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
+    expect(stripe.createCalls).toHaveLength(1);
   });
 
   it('walks the recovery key chain when deterministic keys replay completed checkout sessions', async () => {
-    const { stripe, sessionsCreate, sessionsRetrieve } = createReplayStripeMock(
-      {
-        createdSessions: [
-          {
-            id: 'cs_completed_replay',
-            url: 'https://stripe/checkout/completed',
-            status: 'open',
-            expires_at: fixedNowUnix + 3600,
-          },
-          {
-            id: 'cs_recovered_completed_replay',
-            url: 'https://stripe/checkout/recovered-completed',
-            status: 'open',
-            expires_at: fixedNowUnix + 3600,
-          },
-          {
-            id: 'cs_fresh',
-            url: 'https://stripe/checkout/fresh',
-            status: 'open',
-            expires_at: fixedNowUnix + 3600,
-          },
-        ],
-        retrievedSessions: [
-          {
-            id: 'cs_completed_replay',
-            url: 'https://stripe/checkout/completed',
-            status: 'complete',
-            expires_at: fixedNowUnix + 3600,
-          },
-          {
-            id: 'cs_recovered_completed_replay',
-            url: 'https://stripe/checkout/recovered-completed',
-            status: 'complete',
-            expires_at: fixedNowUnix + 3600,
-          },
-          {
-            id: 'cs_fresh',
-            url: 'https://stripe/checkout/fresh',
-            status: 'open',
-            expires_at: fixedNowUnix + 3600,
-          },
-        ],
-      },
-    );
+    const stripe = new FakeStripeCheckoutClient(() => fixedNowMs);
+    const { createCallsBefore, retrieveCallsBefore } =
+      await seedTiedCompletedChain(stripe, 2);
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger: new FakeLogger(),
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh' });
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_3'),
+    });
 
-    expect(sessionsRetrieve).toHaveBeenCalledTimes(3);
-    expect(sessionsCreate.mock.calls.map(([, options]) => options)).toEqual([
+    expect(stripe.retrieveCalls.slice(retrieveCallsBefore)).toEqual([
+      'cs_fake_1',
+      'cs_fake_2',
+      'cs_fake_3',
+    ]);
+    expect(
+      stripe.createCalls.slice(createCallsBefore).map(({ options }) => options),
+    ).toEqual([
       { idempotencyKey: `checkout_session:${appUserId}:monthly` },
-      {
-        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_completed_replay`,
-      },
-      {
-        idempotencyKey: `checkout_session_recovery:${appUserId}:monthly:cs_recovered_completed_replay`,
-      },
+      { idempotencyKey: recoveryKey('cs_fake_1') },
+      { idempotencyKey: recoveryKey('cs_fake_2') },
     ]);
   });
 
   it('walks six retained completed replays before returning a fresh open Session', async () => {
-    const completedReplays = createCompletedReplaySnapshots(6);
-    const freshSession = {
-      id: 'cs_fresh_after_six',
-      url: 'https://stripe/checkout/fresh-after-six',
-      status: 'open' as const,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const { stripe, sessionsCreate, sessionsRetrieve } = createReplayStripeMock(
-      {
-        createdSessions: [...completedReplays.createdSessions, freshSession],
-        retrievedSessions: [
-          ...completedReplays.retrievedSessions,
-          freshSession,
-        ],
-      },
-    );
+    const stripe = new FakeStripeCheckoutClient(() => fixedNowMs);
+    const { createCallsBefore, retrieveCallsBefore } =
+      await seedTiedCompletedChain(stripe, 6);
     const logger = new FakeLogger();
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger,
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh-after-six' });
+    await expect(createCheckout(stripe, {}, logger)).resolves.toEqual({
+      url: sessionUrl('cs_fake_7'),
+    });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(7);
-    expect(sessionsRetrieve).toHaveBeenCalledTimes(7);
+    expect(stripe.createCalls.length - createCallsBefore).toBe(7);
+    expect(stripe.retrieveCalls.length - retrieveCallsBefore).toBe(7);
     expect(
-      logger.warnCalls.map(({ context }) => context.recoveryAttempt),
+      logger.warnCalls
+        .filter(({ msg }) => msg === RECOVERY_RETRY)
+        .map(({ context }) => context.recoveryAttempt),
     ).toEqual([1, 2, 3, 4]);
     expect(
       logger.errorCalls.map(({ context }) => context.recoveryAttempt),
     ).toEqual([5, 6]);
+    // The only other warning is the tail scan giving up on the tied second.
+    expect(
+      logger.warnCalls
+        .filter(({ msg }) => msg !== RECOVERY_RETRY)
+        .map(({ msg, context }) => ({ msg, reason: context.reason })),
+    ).toEqual([
+      {
+        msg: TAIL_SCAN_FALLBACK,
+        reason: 'newest-matching-second-is-ambiguous',
+      },
+    ]);
   });
 
   it('succeeds when the primary plus L - 1 recoveries are terminal and recovery create L is open', async () => {
-    const completedReplays = createCompletedReplaySnapshots(
+    const stripe = new FakeStripeCheckoutClient(() => fixedNowMs);
+    const { createCallsBefore } = await seedTiedCompletedChain(
+      stripe,
       SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT,
     );
-    const freshSession = {
-      id: 'cs_fresh_at_limit',
-      url: 'https://stripe/checkout/fresh-at-limit',
-      status: 'open' as const,
-      expires_at: fixedNowUnix + 3600,
-    };
-    const { stripe, sessionsCreate } = createReplayStripeMock({
-      createdSessions: [...completedReplays.createdSessions, freshSession],
-      retrievedSessions: [...completedReplays.retrievedSessions, freshSession],
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl(
+        `cs_fake_${SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT + 1}`,
+      ),
     });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger: new FakeLogger(),
-        nowMs: () => fixedNowMs,
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout/fresh-at-limit' });
-
-    expect(sessionsCreate).toHaveBeenCalledTimes(
+    expect(stripe.createCalls.length - createCallsBefore).toBe(
       SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT + 1,
     );
   });
 
   it('throws after the primary plus L recoveries are terminal without issuing recovery create L + 1', async () => {
-    const completedReplays = createCompletedReplaySnapshots(
+    const stripe = new FakeStripeCheckoutClient(() => fixedNowMs);
+    const { createCallsBefore } = await seedTiedCompletedChain(
+      stripe,
       SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT + 1,
     );
-    const { stripe, sessionsCreate } = createReplayStripeMock({
-      createdSessions: completedReplays.createdSessions,
-      retrievedSessions: completedReplays.retrievedSessions,
-    });
 
-    await expect(
-      createStripeCheckoutSession({
-        stripe,
-        input,
-        priceIds,
-        logger: new FakeLogger(),
-        nowMs: () => fixedNowMs,
-      }),
-    ).rejects.toMatchObject({
+    await expect(createCheckout(stripe)).rejects.toMatchObject({
       code: 'STRIPE_ERROR',
       message: 'Stripe Checkout Session is expired or inactive',
     });
 
-    expect(sessionsCreate).toHaveBeenCalledTimes(
+    expect(stripe.createCalls.length - createCallsBefore).toBe(
       SUBSCRIPTION_CHECKOUT_REPLAY_TRAVERSAL_LIMIT + 1,
     );
   });
