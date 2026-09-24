@@ -268,10 +268,12 @@ describe('processStripeWebhookEvent', () => {
     expect(stripe.setupIntents.retrieveCalls).toEqual([]);
   });
 
-  it('throws INVALID_WEBHOOK_SIGNATURE when Stripe signature verification fails', async () => {
+  it('maps a constructEvent failure to INVALID_WEBHOOK_SIGNATURE', async () => {
     const logger = new FakeLogger();
-    // No event is injected, so the fake's verification throws as Stripe's
-    // would for a bad signature.
+    // No event is injected, so the fake's constructEvent throws. This pins the
+    // processor's error mapping and argument forwarding only; rejection of a
+    // real bad signature is proven with Stripe-generated signatures in
+    // tests/integration/webhook-signature-ingress.integration.test.ts.
     const stripe = createStripe({});
 
     await expect(processEvent(stripe, { logger })).rejects.toMatchObject({
