@@ -1,131 +1,42 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  CheckoutSessionCreateParams,
-  StripeCheckoutSession,
-  StripeClient,
-  StripeRequestOptions,
-} from '@/src/adapters/shared/stripe-types';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { createStripeCheckoutSession } from './stripe-checkout-sessions';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
-type RecordedCheckoutSession = StripeCheckoutSession & {
-  created: number;
-  line_items: { data: Array<{ price: { id: string } }> };
-};
+function sessionUrl(id: string): string {
+  return `https://checkout.stripe.test/${id}`;
+}
 
-function createConcurrentStripeMock() {
-  const sessions = new Map<string, RecordedCheckoutSession>();
-  const sessionsByIdempotencyKey = new Map<string, RecordedCheckoutSession>();
-  let createCount = 0;
-  let preCreateListCount = 0;
-  let releasePreCreateLists: (() => void) | null = null;
-  const preCreateListsReleased = new Promise<void>((resolve) => {
-    releasePreCreateLists = resolve;
+// Holds both callers' preflight listings (the only `status: 'open', limit: 1`
+// listings the adapter makes) until the second one arrives, so neither caller
+// can see the other's Session before both have created.
+function holdPreflightListingsUntilBothArrive(
+  stripe: FakeStripeCheckoutClient,
+): void {
+  let arrivals = 0;
+  let release: () => void = () => undefined;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
   });
-
-  function listOpenSessions(): RecordedCheckoutSession[] {
-    return Array.from(sessions.values())
-      .filter((session) => session.status === 'open')
-      .sort((left, right) => {
-        if (right.created !== left.created) return right.created - left.created;
-        return right.id.localeCompare(left.id);
-      });
-  }
-
-  const subscriptionsList = vi.fn(async () => ({ data: [] }));
-  const sessionsList = vi.fn(async () => {
-    preCreateListCount++;
-    if (preCreateListCount <= 2) {
-      const snapshot = listOpenSessions();
-      if (preCreateListCount === 2) releasePreCreateLists?.();
-      await preCreateListsReleased;
-      return { data: snapshot };
-    }
-
-    return { data: listOpenSessions() };
+  stripe.setListHook(async (params) => {
+    if (params.status !== 'open' || params.limit !== 1) return;
+    arrivals += 1;
+    if (arrivals === 2) release();
+    await released;
   });
-  const sessionsRetrieve = vi.fn(async (sessionId: string) => {
-    const session = sessions.get(sessionId);
-    if (!session) throw new Error(`Missing checkout session ${sessionId}`);
-    return session;
+}
+
+async function sessionsByStatus(
+  stripe: FakeStripeCheckoutClient,
+  status: 'open' | 'expired',
+) {
+  const listed = await stripe.checkout.sessions.list({
+    customer: 'cus_123',
+    status,
+    limit: 10,
   });
-  const sessionsExpire = vi.fn(async (sessionId: string) => {
-    const session = sessions.get(sessionId);
-    if (!session) throw new Error(`Missing checkout session ${sessionId}`);
-
-    const expired = { ...session, status: 'expired' as const, url: null };
-    sessions.set(sessionId, expired);
-    return expired;
-  });
-  const sessionsCreate = vi.fn(
-    async (
-      params: CheckoutSessionCreateParams,
-      options?: StripeRequestOptions,
-    ) => {
-      if (params.mode === 'setup') {
-        throw new Error('Unexpected setup-mode Checkout Session');
-      }
-      const key = options?.idempotencyKey;
-      if (key) {
-        const replayed = sessionsByIdempotencyKey.get(key);
-        if (replayed) return replayed;
-      }
-
-      createCount++;
-      const session = {
-        id: `cs_${createCount}`,
-        url: `https://stripe/checkout/cs_${createCount}`,
-        status: 'open' as const,
-        created: createCount,
-        metadata: params.metadata ?? {},
-        line_items: {
-          data: [
-            {
-              price: {
-                id: params.line_items[0]?.price ?? 'price_unknown',
-              },
-            },
-          ],
-        },
-      };
-      sessions.set(session.id, session);
-      if (key) sessionsByIdempotencyKey.set(key, session);
-      return session;
-    },
-  );
-
-  const stripe = {
-    customers: { create: vi.fn(async () => ({ id: 'cus_1' })) },
-    checkout: {
-      sessions: {
-        list: sessionsList,
-        retrieve: sessionsRetrieve,
-        expire: sessionsExpire,
-        create: sessionsCreate,
-      },
-    },
-    subscriptions: {
-      list: subscriptionsList,
-      retrieve: vi.fn(async () => ({})),
-    },
-    billingPortal: {
-      sessions: {
-        create: vi.fn(async () => ({ url: 'https://stripe/portal' })),
-      },
-    },
-    webhooks: { constructEvent: vi.fn() },
-  } as unknown as StripeClient;
-
-  return {
-    stripe,
-    sessionsCreate,
-    getOpenSessions: listOpenSessions,
-    getExpiredSessions: () =>
-      Array.from(sessions.values()).filter(
-        (session) => session.status === 'expired',
-      ),
-  };
+  return listed.data;
 }
 
 describe('createStripeCheckoutSession concurrency', () => {
@@ -145,8 +56,8 @@ describe('createStripeCheckoutSession concurrency', () => {
   });
 
   it('collapses concurrent same-plan creates into one Stripe session', async () => {
-    const { stripe, sessionsCreate, getOpenSessions } =
-      createConcurrentStripeMock();
+    const stripe = new FakeStripeCheckoutClient();
+    holdPreflightListingsUntilBothArrive(stripe);
 
     const [first, second] = await Promise.all([
       createStripeCheckoutSession({
@@ -163,18 +74,18 @@ describe('createStripeCheckoutSession concurrency', () => {
       }),
     ]);
 
-    expect(first).toEqual({ url: 'https://stripe/checkout/cs_1' });
+    expect(first).toEqual({ url: sessionUrl('cs_fake_1') });
     expect(second).toEqual(first);
-    expect(getOpenSessions()).toHaveLength(1);
-    expect(sessionsCreate.mock.calls.map(([, options]) => options)).toEqual([
+    await expect(sessionsByStatus(stripe, 'open')).resolves.toHaveLength(1);
+    expect(stripe.createCalls.map(({ options }) => options)).toEqual([
       { idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7` },
       { idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7` },
     ]);
   });
 
   it('expires superseded concurrent different-plan creates so one completable session survives', async () => {
-    const { stripe, sessionsCreate, getExpiredSessions, getOpenSessions } =
-      createConcurrentStripeMock();
+    const stripe = new FakeStripeCheckoutClient();
+    holdPreflightListingsUntilBothArrive(stripe);
 
     await Promise.all([
       createStripeCheckoutSession({
@@ -199,21 +110,21 @@ describe('createStripeCheckoutSession concurrency', () => {
       }),
     ]);
 
-    expect(getOpenSessions()).toEqual([
+    await expect(sessionsByStatus(stripe, 'open')).resolves.toEqual([
       expect.objectContaining({
-        id: 'cs_2',
+        id: 'cs_fake_2',
         line_items: { data: [{ price: { id: 'price_a' } }] },
         status: 'open',
       }),
     ]);
-    expect(getExpiredSessions()).toEqual([
+    await expect(sessionsByStatus(stripe, 'expired')).resolves.toEqual([
       expect.objectContaining({
-        id: 'cs_1',
+        id: 'cs_fake_1',
         line_items: { data: [{ price: { id: 'price_m' } }] },
         status: 'expired',
       }),
     ]);
-    expect(sessionsCreate.mock.calls.map(([, options]) => options)).toEqual([
+    expect(stripe.createCalls.map(({ options }) => options)).toEqual([
       { idempotencyKey: `checkout_session:${appUserId}:monthly:trial:7` },
       { idempotencyKey: `checkout_session:${appUserId}:annual:trial:7` },
     ]);

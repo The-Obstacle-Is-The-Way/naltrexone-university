@@ -293,6 +293,40 @@ describe('FakeStripeCheckoutClient', () => {
     );
   });
 
+  it('awaits the list hook before answering a listing', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    await stripe.checkout.sessions.create(setupParams, {
+      idempotencyKey: 'key_hooked',
+    });
+    let release: () => void = () => undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const order: string[] = [];
+    stripe.setListHook(async () => {
+      order.push('hook');
+      await released;
+    });
+
+    const listing = stripe.checkout.sessions
+      .list({ customer: 'cus_fake_checkout', limit: 10 })
+      .then((result) => {
+        order.push('listed');
+        return result;
+      });
+    await Promise.resolve();
+    order.push('release');
+    release();
+
+    await expect(listing).resolves.toEqual(
+      expect.objectContaining({ has_more: false }),
+    );
+    expect(order).toEqual(['hook', 'release', 'listed']);
+    expect(stripe.listCalls).toEqual([
+      { customer: 'cus_fake_checkout', limit: 10 },
+    ]);
+  });
+
   it('lists terminal and open Sessions in reverse chronology with cursor pagination', async () => {
     let nowMs = Date.UTC(2026, 7, 17, 12, 0, 0);
     const stripe = new FakeStripeCheckoutClient(() => nowMs);
