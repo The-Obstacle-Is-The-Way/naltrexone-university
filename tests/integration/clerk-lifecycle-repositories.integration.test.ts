@@ -63,6 +63,29 @@ describe('DrizzleClerkEventRepository', () => {
     await expect(repo.peek(`evt_${randomUUID()}`)).resolves.toBeNull();
   });
 
+  it('peeks an existing event without waiting on its row lock', async () => {
+    // The retired unit asserted the query shape (no FOR UPDATE). The Clerk
+    // webhook controller peeks before it locks, so a locking peek would stall
+    // duplicate handling behind another transaction's row lock. A bounded
+    // lock_timeout turns that regression into a failure instead of a hang.
+    const repo = new DrizzleClerkEventRepository(db);
+    const eventId = newEventId();
+    await repo.claim(eventId, 'user.updated');
+    await sql`set lock_timeout = '1s'`;
+
+    try {
+      await lockProbe.sql.begin(async (tx) => {
+        await tx`select id from clerk_events where id = ${eventId} for update`;
+        await expect(repo.peek(eventId)).resolves.toEqual({
+          processedAt: null,
+          error: null,
+        });
+      });
+    } finally {
+      await sql`reset lock_timeout`;
+    }
+  });
+
   it('locks an existing event FOR UPDATE inside a transaction and rejects a missing one', async () => {
     const repo = new DrizzleClerkEventRepository(db);
     const eventId = newEventId();
