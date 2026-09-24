@@ -106,8 +106,11 @@ runStripeCheckoutClientContract(
           items: [{ price: stripePriceId }],
           metadata: { user_id: 'debt472_contract_user' },
         });
-        // Already terminal, so cleanup has nothing left to cancel.
+        // Tracked until the cancel succeeds, so cleanup can still cancel it
+        // if this call fails.
+        createdSubscriptionIds.add(subscription.id);
         await stripe.subscriptions.cancel(subscription.id);
+        createdSubscriptionIds.delete(subscription.id);
         return { id: subscription.id, customer: customer.id };
       },
       subscriptionParams: {
