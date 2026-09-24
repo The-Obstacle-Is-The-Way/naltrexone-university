@@ -80,7 +80,10 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
     // Same second as the created Session: the tie goes to the larger id, so
     // the racer `cs_fake_2` is canonical and `cs_fake_1` is superseded.
     stageRacingSession(stripe, fixedNowMs);
-    stripe.setExpireFault(() => {
+    // Stripe reports "already expired" only for a Session that is terminal,
+    // so the fault leaves the superseded Session expired before it throws.
+    stripe.setExpireFault((sessionId) => {
+      stripe.markExpired(sessionId);
       throw Object.assign(
         new Error('This checkout session has already expired'),
         { rawType: 'invalid_request_error', code: 'resource_missing' },
@@ -90,6 +93,11 @@ describe('createStripeCheckoutSession post-create reconciliation', () => {
     await expect(createCheckout(stripe, logger)).resolves.toEqual({
       url: sessionUrl('cs_fake_2'),
     });
+    await expect(
+      stripe.checkout.sessions.retrieve('cs_fake_1'),
+    ).resolves.toEqual(
+      expect.objectContaining({ status: 'expired', url: null }),
+    );
 
     expect(stripe.expireCalls).toEqual([
       {
