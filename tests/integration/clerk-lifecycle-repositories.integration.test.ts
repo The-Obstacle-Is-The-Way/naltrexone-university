@@ -86,7 +86,7 @@ describe('DrizzleClerkEventRepository', () => {
     }
   });
 
-  it('locks an existing event FOR UPDATE inside a transaction and rejects a missing one', async () => {
+  it('locks an existing event FOR UPDATE inside a transaction', async () => {
     const repo = new DrizzleClerkEventRepository(db);
     const eventId = newEventId();
     await repo.claim(eventId, 'user.deleted');
@@ -103,6 +103,12 @@ describe('DrizzleClerkEventRepository', () => {
           select id from clerk_events where id = ${eventId} for key share nowait
         `,
       ).rejects.toMatchObject({ code: '55P03' });
+    });
+  });
+
+  it('throws NOT_FOUND when locking a missing event inside a transaction', async () => {
+    await db.transaction(async (tx) => {
+      const txRepo = new DrizzleClerkEventRepository(tx);
       await expect(txRepo.lock(`evt_${randomUUID()}`)).rejects.toMatchObject({
         code: 'NOT_FOUND',
       });
