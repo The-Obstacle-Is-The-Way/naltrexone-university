@@ -301,11 +301,15 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     const repository = new DrizzleTrialPaymentMethodSetupOperationRepository(
       db,
     );
-    const expiredBefore = new Date('2026-08-03T00:00:00Z');
-    // The prune is table-wide by design. Integration files run sequentially and
-    // rows cascade with their tracked users, but an aborted earlier run can
-    // leave expired rows behind; clear this cutoff's window first so the limit
-    // can only choose between the two rows below.
+    // The prune is table-wide by design, so the two rows sit in a far-past
+    // window that no service or other test writes: foreign expired rows can
+    // never be eligible ahead of them, even against an existing database.
+    // Only that window is cleared first, because an aborted earlier run of
+    // this case can leave its own rows there; files run sequentially, so
+    // nothing live owns rows in the window.
+    const olderExpiredAt = new Date('1970-01-01T00:00:00Z');
+    const newerExpiredAt = new Date('1970-01-01T00:00:01Z');
+    const expiredBefore = new Date('1970-01-01T00:00:02Z');
     await db
       .delete(trialPaymentMethodSetupOperations)
       .where(
@@ -320,11 +324,11 @@ describe('trial payment-method setup operation snapshots and outcomes', () => {
     await repository.createPending(newer);
     await repository.markExpired({
       sessionId: older.sessionId,
-      expiredAt: new Date('2026-08-01T00:00:00Z'),
+      expiredAt: olderExpiredAt,
     });
     await repository.markExpired({
       sessionId: newer.sessionId,
-      expiredAt: new Date('2026-08-02T00:00:00Z'),
+      expiredAt: newerExpiredAt,
     });
 
     await expect(
