@@ -50,6 +50,8 @@ const userLookup: UserLookup = {
 
 Do not cast a larger call-chain object into the SDK/ORM type. When behavior matters, use the maintained fake plus its shared fake↔real contract scenario instead.
 
+**Drizzle call-chain adjudication (2026-09-24 UTC).** Two archived records answered the repository-unit question differently: [DEBT-035](../../docs/_archive/debt/debt-035-inconsistent-repo-test-mocking.md) ruled a hand-built Drizzle query-builder chain cast to `RepoDb` an acceptable fake, and [DEBT-444](../../docs/_archive/debt/debt-444-hot-path-prune-contention-and-coverage.md) named the same construct a call-chain double that stays green through SQL and predicate regressions. DEBT-444 governs and DEBT-035 is superseded: a call-chain object is a stub, chain-shape and query-behavior assertions belong in `tests/integration/` against real Postgres, and the one sanctioned repository unit pattern is the shared error-translation boundary in `tests/shared/drizzle-mock-transaction.ts` — the real query builder over `drizzle.mock({ schema })` with a spied `PostgresJsPreparedQuery.prototype.execute` (or `PgRelationalQuery.prototype.execute` for relational reads), cast-free and limited to driver failures real infrastructure cannot force. That boundary is the second accepted shape-only form beside the client-owned narrow seam above. DEBT-472 step 4 retired the last chain double on 2026-09-24; `pnpm lint:doubles` keeps it retired.
+
 Do not trust an inline SDK stub to model runtime binding. `.claude/rules/architecture.md:45` records BUG-069/070: detached SDK methods depend on `this`, which `vi.fn()` stubs cannot prove.
 
 **`vi.mock()` exceptions:**
