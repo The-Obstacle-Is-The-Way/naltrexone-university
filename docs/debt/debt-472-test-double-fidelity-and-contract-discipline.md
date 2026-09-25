@@ -770,6 +770,42 @@ The gateway suite falls **991 → 666** lines (15 runtime cases), under the 800-
 
 **2026-09-25 UTC #1100 release receipt:** Webhook section #1099 merged as `d867668650a24c8a7a743b14fc412b05e5168260` at **10:46:14Z** (exact-head approval **5316739933** at 10:44:38Z on `2145f42b`, one accepted finding, the E2E-owner mismatch pinned; one outside-diff routing extension accepted as follow-through; CI **36124787145** with 52/52 E2E, no retries) and is promoted through #1100 (`ac633f974c2253f9cd27fe3c27fbc81f4070a5e3`, merged **10:57:10Z**) after the executable provenance proof and promotion CI **36125797717** (52/52 E2E, no retries). Main CI **36126745171** passed `test` at **11:08:22Z**. Vercel was Ready at **10:58:31.665Z**, observed STAGED without a production alias from **10:59:22Z** through **11:07:36Z**, then assigned production at **11:08:24.770Z**. Both trees equal `10187e512474fe2be728111aa0b084d869c54b7f`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **11:08:39Z**.
 
+### Payment-gateway payment-method section disposition (2026-09-25 UTC)
+
+This is the last of three increments on `stripe-payment-gateway.test.ts`. The suite's six trial payment-method cases were the only users of its hand-built client factories, which answered `{}` from `subscriptions.retrieve` and listed Sessions without `has_more`. Those cases need `paymentMethods` and `subscriptions.update`, and the fake had neither.
+
+**Ground truth first.** A TEST-mode probe measured what the fake would model. It printed shapes only, canceled its Subscription and deleted both Customers.
+- A new card PaymentMethod has no customer.
+- `attach` returns the customer id as a string, and re-attaching to the same customer succeeds.
+- Attaching to a different customer fails with a 400 `invalid_request_error`, with no code and a fixed message.
+- `subscriptions.update` sets `default_payment_method`, visible in the response and on retrieval.
+- `detach` returns `customer: null`, and a second `detach` fails with a 400 and its own fixed message.
+
+**The fake.** `FakeStripeCheckoutClient` now serves PaymentMethods seeded with `seedPaymentMethod`, following those rules, and records every retrieve, attach and detach. `subscriptions.update` sets a seeded Subscription's default and records the call. An attach-override seam bends only an attach response Stripe could not send; it is not contract-tested. Eight fake cases and the seam's case were written red first. The unknown-Subscription update case was added with the implementation.
+
+**The contract.** Two new shared scenarios run on both halves:
+- `attaches a PaymentMethod to one customer only and detaches it once`;
+- `sets a Subscription's default PaymentMethod`.
+
+Four fake mutations each fail their scenario (**10:23:17–10:23:29Z**): moving an attached PaymentMethod, detaching an unattached one, attaching without binding the customer, and ignoring the default. The provider proof now requires eleven cases and passed in TEST mode with `PASS executed=11 passed=11 skipped=0` (**10:21:44–10:23:03Z**), and again on the final head (**11:44:25–11:45:46Z**).
+
+**The migration.** The six cases move onto the fake, with all 15 titles unchanged (**10:24:48Z**). Seven facade mutations fail the migrated suite (**10:25:15–10:25:31Z**):
+- a changed attach key;
+- skipping the already-attached reconcile;
+- skipping the detach ownership check;
+- accepting an unbound attach response;
+- skipping the foreign-owner refusal;
+- calling `detach` unbound;
+- calling `update` unbound.
+
+Main's suite let the last two pass, because its `vi.fn()` stubs have no receiver. That is the BUG-069/070 class the architecture rule warns about. With main's suite restored and its floor entry removed, `pnpm lint:doubles` fails on its eight literals (**10:25:53Z**).
+
+**Verification F5 now holds.** No test double answers `subscriptions.retrieve` with `{}`. The three integration Stripe clients throw on any Session listing and return concrete Subscriptions. `tests/e2e/helpers/checkout-success-provider-resources.test.ts` stubs the SDK's auto-pager for product and price cleanup, not the `StripeClient` port or the Checkout tail scan.
+
+Maintained-port doubles fall **40 / 13 → 32 / 12**; casts stay **27 / 11** and own-code factories **0 / 0**. Every Resolution step is done and every Verification bullet holds, so the closeout follows this increment's promotion. Sanitized receipts: this clone's `.git/claude-debt-resume/gateway-payment-methods/proofs.log`. The local full gate passed on `7f027689` and is re-run on every later head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
+
+**2026-09-25 UTC #1102 release receipt:** Checkout section #1101 merged as `3d59213e46d0894ea0a0aaad155ac3f8d458301f` at **11:30:34Z** (exact-head approval **5317015258** at 11:19:44Z on `241dfdc2`, no findings; CI **36128583735** with 52/52 E2E, no retries) and is promoted through #1102 (`204945744e61bb4f114853b90f78b19d159361c6`, merged **11:44:03Z**) after the executable provenance proof and promotion CI **36129804991** (52/52 E2E, no retries). Main CI **36131005655** passed `test` on attempt 2 at **12:03:02Z**; attempt 1 failed in Build on a Google Fonts fetch, documented on #1102 before the single re-run, and Vercel held production through it. Vercel was Ready at **11:45:33.330Z**, observed STAGED without a production alias from **11:46:16Z** through **12:02:39Z**, then assigned production at **12:03:03.755Z**. Both trees equal `ea41c43835133c1384464ed2c73658883b4e4700`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **12:03:42Z**.
+
 ## Description
 
 **2026-09-23 UTC promotion pointer:** Quick Practice #1031 and Practice starter #1032 are merged and promoted through #1033 (`21912817`, **13:57:00Z**). The executable promotion proof records source approvals **5291471054** / **5291748690** predating both source merges and zero unresolved threads. Promotion CI **35869147932** passed **5,698 unit / 420 browser / 369 integration plus six opt-in skips / 52 E2E** without retries. Main CI **35870656427** and the production gate/health verification are still pending at this update; the earlier pending summaries above are historical, not claims that the source PRs remain open.
