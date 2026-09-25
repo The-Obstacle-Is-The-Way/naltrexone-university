@@ -264,20 +264,20 @@ describe('FakeStripeCheckoutClient', () => {
     );
   });
 
-  it('cancels a seeded Subscription once and rejects a repeat as Stripe does', async () => {
+  function fakeWithActiveSubscription(): FakeStripeCheckoutClient {
     const stripe = new FakeStripeCheckoutClient();
     stripe.seedSubscription({
       id: 'sub_fake_1',
       customer: 'cus_one',
       status: 'active',
     });
-    const cancel = stripe.subscriptions.cancel;
-    if (!cancel) throw new Error('Expected the fake to cancel Subscriptions');
-    const options = { idempotencyKey: 'reconcile_duplicate_subscription:x' };
+    return stripe;
+  }
 
-    await expect(
-      stripe.subscriptions.cancel?.('sub_fake_1', undefined, options),
-    ).resolves.toEqual(
+  it('cancels a seeded Subscription, which stays retrievable and leaves the default listing', async () => {
+    const stripe = fakeWithActiveSubscription();
+
+    await expect(stripe.subscriptions.cancel?.('sub_fake_1')).resolves.toEqual(
       expect.objectContaining({ id: 'sub_fake_1', status: 'canceled' }),
     );
     await expect(stripe.subscriptions.retrieve('sub_fake_1')).resolves.toEqual(
@@ -286,32 +286,53 @@ describe('FakeStripeCheckoutClient', () => {
     await expect(
       stripe.subscriptions.list?.({ customer: 'cus_one' }),
     ).resolves.toEqual({ data: [] });
+  });
 
-    // Stripe answers a second cancel (and an unknown id) with a 404 that
-    // names the Subscription missing, although it is still retrievable.
-    for (const subscriptionId of ['sub_fake_1', 'sub_unknown']) {
-      await expect(
-        stripe.subscriptions.cancel?.(subscriptionId),
-      ).rejects.toMatchObject({
-        type: 'StripeInvalidRequestError',
-        rawType: 'invalid_request_error',
-        code: 'resource_missing',
-        statusCode: 404,
-        param: 'id',
-        message: `No such subscription: '${subscriptionId}'`,
-      });
-    }
-    // The record keeps the options as passed, not the caller's later edits.
+  // Stripe answers a second cancel (and an unknown id) with a 404 that names
+  // the Subscription missing, although a canceled one is still retrievable.
+  it.each([
+    ['a repeat cancel', 'sub_fake_1'],
+    ['an unknown id', 'sub_unknown'],
+  ])('rejects %s as resource_missing', async (_case, subscriptionId) => {
+    const stripe = fakeWithActiveSubscription();
+    await stripe.subscriptions.cancel?.('sub_fake_1');
+
+    await expect(
+      stripe.subscriptions.cancel?.(subscriptionId),
+    ).rejects.toMatchObject({
+      type: 'StripeInvalidRequestError',
+      rawType: 'invalid_request_error',
+      code: 'resource_missing',
+      statusCode: 404,
+      param: 'id',
+      message: `No such subscription: '${subscriptionId}'`,
+    });
+  });
+
+  it('records each cancel with a copy of its options', async () => {
+    const stripe = fakeWithActiveSubscription();
+    const options = { idempotencyKey: 'reconcile_duplicate_subscription:x' };
+
+    await stripe.subscriptions.cancel?.('sub_fake_1', undefined, options);
+    await expect(
+      stripe.subscriptions.cancel?.('sub_fake_1'),
+    ).rejects.toMatchObject({ code: 'resource_missing' });
     options.idempotencyKey = 'changed_after_the_call';
+
     expect(stripe.subscriptions.cancelCalls).toEqual([
       {
         subscriptionId: 'sub_fake_1',
         options: { idempotencyKey: 'reconcile_duplicate_subscription:x' },
       },
       { subscriptionId: 'sub_fake_1' },
-      { subscriptionId: 'sub_unknown' },
     ]);
-    // Detached like an unbound SDK method, cancel has no `this` to read.
+  });
+
+  it('fails a detached cancel the way an unbound SDK method would', async () => {
+    const stripe = fakeWithActiveSubscription();
+    const cancel = stripe.subscriptions.cancel;
+    if (!cancel) throw new Error('Expected the fake to cancel Subscriptions');
+
     await expect(cancel('sub_fake_1')).rejects.toBeInstanceOf(TypeError);
   });
 
