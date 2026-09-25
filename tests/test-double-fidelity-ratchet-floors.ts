@@ -82,6 +82,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-25 UTC: The reconcile suite moves onto the fake (Subscription retrieve
+// override and cancel hook) and splits by concern; its stub-returning helper
+// (the hand-rolled port double) retires.
 // 2026-09-25 UTC: The reconcile version-fence suite moves onto the fake, which
 // now models Subscription cancel (contracted against Stripe TEST mode); its
 // hand-built StripeClient literal (the hand-rolled port double) retires.
@@ -149,7 +152,6 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
     'src/adapters/gateways/stripe/stripe-webhook-processor-setup-expiration.test.ts',
     1,
   ],
-  ['src/adapters/jobs/reconcile-stripe-subscriptions.test.ts', 1],
   [
     'src/adapters/repositories/drizzle-practice-session-repository-corrupt-list-reads.test.ts',
     1,
