@@ -524,5 +524,21 @@ describe('usePracticeSessionQuestionFlow (browser)', () => {
       .poll(() => harness.result.current.question?.session?.sessionId ?? null)
       .toBe(fixtureSession2Id);
     await expect.poll(() => harness.result.current.selectedChoiceId).toBeNull();
+
+    // Session 1 saved this question at 30,000 ms; session 2 serves it with no
+    // draft, so the next save must count only session 2's own elapsed time.
+    const savesBeforeSessionTwoNavigation =
+      saveExamDraftAnswerFn.mock.calls.length;
+    nowMs = 32_000;
+    harness.result.current.onNextQuestion();
+    await expect
+      .poll(() => saveExamDraftAnswerFn.mock.calls.length)
+      .toBeGreaterThan(savesBeforeSessionTwoNavigation);
+    expect(saveExamDraftAnswerFn).toHaveBeenLastCalledWith({
+      sessionId: fixtureSession2Id,
+      questionId: fixtureQ1Id,
+      selectedChoiceId: null,
+      cumulativeMs: 1_000,
+    });
   });
 });
