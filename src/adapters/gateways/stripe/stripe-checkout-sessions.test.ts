@@ -188,6 +188,48 @@ describe('createStripeCheckoutSession', () => {
     ]);
   });
 
+  it.each(['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'paused'])(
+    'rejects checkout with ALREADY_SUBSCRIBED while the customer has a %s Subscription',
+    async (status) => {
+      const stripe = createFake();
+      stripe.seedSubscription({
+        id: 'sub_blocking',
+        customer: 'cus_123',
+        status,
+      });
+
+      await expect(createCheckout(stripe)).rejects.toMatchObject({
+        code: 'ALREADY_SUBSCRIBED',
+      });
+
+      expect(stripe.listCalls).toEqual([]);
+      expect(stripe.createCalls).toEqual([]);
+    },
+  );
+
+  it('creates a checkout session when every Subscription is canceled or incomplete_expired', async () => {
+    const stripe = createFake();
+    stripe.seedSubscription({
+      id: 'sub_canceled',
+      customer: 'cus_123',
+      status: 'canceled',
+    });
+    stripe.seedSubscription({
+      id: 'sub_incomplete_expired',
+      customer: 'cus_123',
+      status: 'incomplete_expired',
+    });
+
+    await expect(createCheckout(stripe)).resolves.toEqual({
+      url: sessionUrl('cs_fake_1'),
+    });
+
+    expect(stripe.subscriptions.listCalls).toEqual([
+      { customer: 'cus_123', status: 'all', limit: SUBSCRIPTION_LIST_LIMIT },
+    ]);
+    expect(stripe.createCalls).toHaveLength(1);
+  });
+
   it('fails closed when Stripe returns an unrecognized subscription status', async () => {
     const stripe = createFake();
     stripe.seedSubscription({
@@ -423,6 +465,13 @@ describe('createStripeCheckoutSession', () => {
     ]);
     expect(stripe.expireCalls).toEqual([expireCall(existingId)]);
     expect(stripe.createCalls.slice(seededCreates)).toHaveLength(1);
+    expect(logger.warnCalls).toContainEqual({
+      context: expect.objectContaining({
+        sessionId: existingId,
+        error: 'retrieve failed',
+      }),
+      msg: 'Failed to inspect existing checkout session',
+    });
   });
 
   it('retries a failed pre-create expire during post-create reconciliation', async () => {

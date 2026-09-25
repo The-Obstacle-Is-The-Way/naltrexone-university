@@ -145,6 +145,8 @@ At `dev` `ed07103f`, all 28 suppression paths above still exist and the count is
 
 **Proxy burn-down (2026-09-25 UTC, with DEBT-472 step 4):** the 890-line `proxy.test.ts` splits by concern into routing and Clerk protection (the original path), `proxy-csp.test.ts` and `proxy-sentry-endpoints.test.ts`, all 33 cases kept and four added for the public-resource bypass, while its 28 casts become real `NextRequest`/`NextFetchEvent` objects. Tracked suppressions fall **21 → 20**. [DEBT-472 disposition](./debt-472-test-double-fidelity-and-contract-discipline.md#proxy-real-request-disposition-2026-09-25-utc).
 
+**Payment-gateway burn-down (2026-09-25 UTC, with DEBT-472 Verification F5):** the 1,537-line `stripe-payment-gateway.test.ts` shrinks to 666 lines. Its webhook and Checkout sections now live at the adapters that own them, on the fake, and the facade keeps only its forwarding and decision cases. The file-size suppression retires, and tracked suppressions fall **20 → 19**. [DEBT-472 disposition](./debt-472-test-double-fidelity-and-contract-discipline.md#payment-gateway-checkout-section-disposition-2026-09-25-utc).
+
 **Rejected alternatives:**
 
 - **`VITE_CONFIG_NATIVE_IGNORE_WARNING=true`** — mutes the messenger; the CJS/ESM mismatch would resurface as a hard break on Vite's next major.
