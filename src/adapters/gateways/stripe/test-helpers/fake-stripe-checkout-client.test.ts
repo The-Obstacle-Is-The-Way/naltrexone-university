@@ -335,6 +335,61 @@ describe('FakeStripeCheckoutClient', () => {
     await expect(cancel('sub_fake_1')).rejects.toBeInstanceOf(TypeError);
   });
 
+  it('bends a recorded Subscription retrieval through the retrieve override', async () => {
+    const stripe = fakeWithActiveSubscription();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    stripe.setSubscriptionRetrieveOverride(async (subscription) => {
+      await held;
+      return { ...subscription, id: 'sub_other' };
+    });
+
+    const retrieval = stripe.subscriptions.retrieve('sub_fake_1');
+    expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_fake_1']);
+    release();
+
+    await expect(retrieval).resolves.toEqual(
+      expect.objectContaining({ id: 'sub_other', status: 'active' }),
+    );
+    stripe.setSubscriptionRetrieveOverride(null);
+    await expect(stripe.subscriptions.retrieve('sub_fake_1')).resolves.toEqual(
+      expect.objectContaining({ id: 'sub_fake_1' }),
+    );
+  });
+
+  it('awaits the cancel hook after recording a cancel and before applying it', async () => {
+    const stripe = fakeWithActiveSubscription();
+    stripe.setSubscriptionCancelHook(() => {
+      throw new Error('cancel transport failed');
+    });
+
+    await expect(stripe.subscriptions.cancel('sub_fake_1')).rejects.toThrow(
+      'cancel transport failed',
+    );
+    expect(stripe.subscriptions.cancelCalls).toEqual([
+      { subscriptionId: 'sub_fake_1' },
+    ]);
+    await expect(stripe.subscriptions.retrieve('sub_fake_1')).resolves.toEqual(
+      expect.objectContaining({ status: 'active' }),
+    );
+  });
+
+  it('answers a Subscription canceled elsewhere before the cancel with the 404', async () => {
+    const stripe = fakeWithActiveSubscription();
+    stripe.setSubscriptionCancelHook((subscriptionId) => {
+      stripe.markSubscriptionCanceled(subscriptionId);
+    });
+
+    await expect(
+      stripe.subscriptions.cancel('sub_fake_1'),
+    ).rejects.toMatchObject({ code: 'resource_missing', statusCode: 404 });
+    expect(() => stripe.markSubscriptionCanceled('sub_unknown')).toThrow(
+      'Missing fake Subscription: sub_unknown',
+    );
+  });
+
   it('supports create-response overrides without changing the stored Session', async () => {
     const stripe = new FakeStripeCheckoutClient();
     const options = { idempotencyKey: 'key_response_override' };

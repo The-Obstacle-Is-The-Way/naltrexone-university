@@ -1,398 +1,83 @@
-// biome-ignore lint/style/noExcessiveLinesPerFile: Keep Stripe pagination, reconciliation, and failure-isolation job contracts together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
-import type { StripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
+import { FakeStripeCheckoutClient } from '@/src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client';
 import { ApplicationError } from '@/src/application/errors';
 import {
-  FakeLogger,
   FakeRenewalConsentRecordRepository,
   FakeStripeCustomerRepository,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
-import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
-import { createDeferred } from '@/tests/test-helpers/create-deferred';
-import { reconcileStripeSubscriptions } from './reconcile-stripe-subscriptions';
+import {
+  createReconciliationTestScenario,
+  createSingleRowScenario,
+  createStripeWithSubscriptions,
+  createUserSubscriptionFixture,
+  expectDryRunSuccess,
+  expectSingleFailure,
+  otherUserId,
+  primaryUserId,
+  row,
+  secondaryUserId,
+  tertiaryUserId,
+} from './test-helpers/reconcile-stripe-subscriptions-harness';
 
-type StripeSubscriptionFixture = {
-  id: string;
-  customer: string;
-  status: StripeSubscriptionStatus;
-  cancel_at_period_end: boolean;
-  metadata?: Record<string, string>;
-  items: {
-    data: Array<{
-      current_period_end: number;
-      price: { id: string };
-    }>;
-  };
-};
-
-type LocalSubscriptionRow = {
-  userId: string;
-  stripeSubscriptionId: string;
-  version: number | null;
-};
-
-const primaryUserId = crypto.randomUUID();
-const secondaryUserId = crypto.randomUUID();
-const tertiaryUserId = crypto.randomUUID();
-const otherUserId = crypto.randomUUID();
-
-type ReconciliationInput = Parameters<typeof reconcileStripeSubscriptions>[0];
-type ReconciliationDeps = Parameters<typeof reconcileStripeSubscriptions>[1];
-type StripeStub = {
-  subscriptions: Record<
-    'retrieve' | 'list' | 'cancel',
-    ReturnType<typeof vi.fn>
-  >;
-};
-
-type ReconciliationTestScenarioInput = {
-  stripe?: ReconciliationDeps['stripe'] | StripeStub;
-  localSubscriptions?: LocalSubscriptionRow[];
-  listLocalSubscriptions?: (input: {
-    limit: number;
-    offset: number;
-  }) => Promise<LocalSubscriptionRow[]>;
-  stripeCustomers?: FakeStripeCustomerRepository | undefined;
-  subscriptions?: FakeSubscriptionRepository;
-  renewalConsentRecords?: FakeRenewalConsentRecordRepository;
-  logger?: FakeLogger;
-  transaction?: ReconciliationDeps['transaction'];
-  webhookE2EOwner?: string | undefined;
-};
-
-function createSubscriptionFixture(input: {
-  id: string;
-  userId: string;
-  customerId?: string | undefined;
-  status?: StripeSubscriptionStatus | undefined;
-  currentPeriodEnd?: number | undefined;
-  priceId?: string | undefined;
-  e2eOwner?: string | undefined;
-}): StripeSubscriptionFixture {
-  const subscriptionEvent = loadJsonFixture<{
-    data: { object: StripeSubscriptionFixture };
-  }>('stripe/customer.subscription.updated.json');
-  const base = subscriptionEvent.data.object;
-  const [baseItem] = base.items.data;
-  if (baseItem === undefined) {
-    throw new Error('Expected Stripe subscription fixture item');
-  }
-
-  return {
-    ...base,
-    id: input.id,
-    customer: input.customerId ?? 'cus_123',
-    status: input.status ?? 'active',
-    metadata: {
-      ...(base.metadata ?? {}),
-      user_id: input.userId,
-      ...(input.e2eOwner ? { e2e_owner: input.e2eOwner } : {}),
-    },
-    items: {
-      ...base.items,
-      data: [
-        {
-          ...baseItem,
-          current_period_end: input.currentPeriodEnd ?? 1_700_000_000,
-          price: {
-            ...baseItem.price,
-            id: input.priceId ?? 'price_m',
-          },
-        },
-      ],
-    },
-  };
-}
-
-function createUserSubscriptionFixture(
-  id: string,
-  input: Omit<
-    Parameters<typeof createSubscriptionFixture>[0],
-    'id' | 'userId'
-  > & {
-    userId?: string;
-  } = {},
-): StripeSubscriptionFixture {
-  return createSubscriptionFixture({
-    id,
-    userId: input.userId ?? primaryUserId,
-    customerId: input.customerId,
-    status: input.status,
-    currentPeriodEnd: input.currentPeriodEnd,
-    priceId: input.priceId,
-    e2eOwner: input.e2eOwner,
-  });
-}
-
-function createStripeStub(input: {
-  subscriptionsById: Record<string, StripeSubscriptionFixture>;
-  listedSubscriptions: Array<{
-    id: string;
-    status: StripeSubscriptionStatus;
-  }>;
-}): StripeStub {
-  return {
-    subscriptions: {
-      retrieve: vi.fn(async (subscriptionId: string) => {
-        const subscription = input.subscriptionsById[subscriptionId];
-        if (!subscription) {
-          throw new Error(`Unknown subscription: ${subscriptionId}`);
-        }
-        return subscription;
-      }),
-      list: vi.fn(async () => ({ data: input.listedSubscriptions })),
-      cancel: vi.fn(async () => ({ id: 'sub_canceled' })),
-    },
-  };
-}
-
-function createStripeFromFixtures(input: {
-  fixtures: Array<{
-    fixture: StripeSubscriptionFixture;
-    key?: string;
-  }>;
-  listedSubscriptions?: Array<{
-    id: string;
-    status: StripeSubscriptionStatus;
-  }>;
-}): StripeStub {
-  const subscriptionsById: Record<string, StripeSubscriptionFixture> = {};
-  for (const { fixture, key } of input.fixtures) {
-    subscriptionsById[key ?? fixture.id] = fixture;
-  }
-
-  return createStripeStub({
-    subscriptionsById,
-    listedSubscriptions:
-      input.listedSubscriptions ??
-      input.fixtures.map(({ fixture }) => ({
-        id: fixture.id,
-        status: fixture.status,
-      })),
-  });
-}
-
-type StripeSubscriptionsApi = StripeStub['subscriptions'];
-
-function createStripeWithSubscriptionOverrides(input: {
-  retrieve: StripeSubscriptionsApi['retrieve'];
-  list: StripeSubscriptionsApi['list'];
-  cancel?: StripeSubscriptionsApi['cancel'];
-}): StripeStub {
-  const base = createStripeStub({
-    subscriptionsById: {},
-    listedSubscriptions: [],
-  });
-  return {
-    ...base,
-    subscriptions: {
-      ...base.subscriptions,
-      retrieve: input.retrieve,
-      list: input.list,
-      cancel: input.cancel ?? base.subscriptions.cancel,
-    },
-  };
-}
-
-function createReconciliationTestScenario(
-  input: ReconciliationTestScenarioInput = {},
-) {
-  const stripeCustomers =
-    input.stripeCustomers ?? new FakeStripeCustomerRepository();
-  const subscriptions = input.subscriptions ?? new FakeSubscriptionRepository();
-  const renewalConsentRecords =
-    input.renewalConsentRecords ?? new FakeRenewalConsentRecordRepository();
-  const logger = input.logger ?? new FakeLogger();
-  const stripe = (input.stripe ??
-    createStripeStub({
-      subscriptionsById: {},
-      listedSubscriptions: [],
-    })) as ReconciliationDeps['stripe'];
-  const listLocalSubscriptions =
-    input.listLocalSubscriptions ??
-    (async () => input.localSubscriptions ?? []);
-  const transactionResources = {
-    stripeCustomers,
-    subscriptions,
-    renewalConsentRecords,
-  };
-  const transaction =
-    input.transaction ?? (async (fn) => fn(transactionResources));
-
-  async function run(overrides: Partial<ReconciliationInput> = {}) {
-    return reconcileStripeSubscriptions(
-      {
-        limit: 10,
-        offset: 0,
-        ...overrides,
-      },
-      {
-        stripe,
-        priceIds: { monthly: 'price_m', annual: 'price_a' },
-        logger,
-        now: () => new Date('2026-08-07T12:00:00.000Z'),
-        webhookE2EOwner: input.webhookE2EOwner,
-        listLocalSubscriptions,
-        transaction,
-      },
-    );
-  }
-
-  return {
-    stripeCustomers,
-    subscriptions,
-    renewalConsentRecords,
-    logger,
-    stripe,
-    listLocalSubscriptions,
-    run,
-  };
-}
-
-function row(
-  userId: string,
-  stripeSubscriptionId: string,
-): LocalSubscriptionRow {
-  return { userId, stripeSubscriptionId, version: null };
-}
-
-function createSingleRowScenario(input: {
-  stripe: ReconciliationDeps['stripe'] | StripeStub;
-  subscriptionId: string;
-  userId?: string;
-  stripeCustomers?: FakeStripeCustomerRepository;
-}) {
-  return createReconciliationTestScenario({
-    stripe: input.stripe,
-    stripeCustomers: input.stripeCustomers,
-    localSubscriptions: [
-      row(input.userId ?? primaryUserId, input.subscriptionId),
-    ],
-  });
-}
-
-async function expectDryRunSuccess(
-  scenario: ReturnType<typeof createReconciliationTestScenario>,
-): Promise<void> {
-  await expect(scenario.run({ dryRun: true })).resolves.toMatchObject({
-    updated: 1,
-    failed: 0,
-  });
-}
-
-function expectSingleFailure(
-  result: Awaited<
-    ReturnType<ReturnType<typeof createReconciliationTestScenario>['run']>
-  >,
-  input: { stripeSubscriptionId: string; error?: string },
-): void {
-  expect(result.updated).toBe(0);
-  expect(result.failed).toBe(1);
-  expect(result.failures).toHaveLength(1);
-  expect(result.failures[0]).toMatchObject(input);
-}
-
-describe('reconcileStripeSubscriptions', () => {
+describe('reconcileStripeSubscriptions batch processing and persistence', () => {
   it('processes rows with bounded concurrency (default 10)', async () => {
-    async function flushUntil(
-      condition: () => boolean,
-      input?: { maxTicks?: number },
-    ) {
-      const maxTicks = input?.maxTicks ?? 50;
-      for (let i = 0; i < maxTicks; i += 1) {
+    async function flushUntil(condition: () => boolean) {
+      for (let i = 0; i < 200; i += 1) {
         if (condition()) return;
         await Promise.resolve();
       }
       throw new Error('Timed out waiting for condition');
     }
 
-    const rows = Array.from({ length: 12 }, (_, i) => ({
-      userId: crypto.randomUUID(),
-      stripeSubscriptionId: `sub_${i + 1}`,
-      version: null,
-    }));
-
-    const subscriptionsById: Record<string, StripeSubscriptionFixture> = {};
-    const subscriptionIdByCustomerId = new Map<string, string>();
-    for (const row of rows) {
-      const customerId = `cus_${row.stripeSubscriptionId}`;
-      subscriptionsById[row.stripeSubscriptionId] =
-        createUserSubscriptionFixture(row.stripeSubscriptionId, {
-          userId: row.userId,
-          customerId,
-          status: 'active',
-        });
-      subscriptionIdByCustomerId.set(customerId, row.stripeSubscriptionId);
-    }
-
+    const rows = Array.from({ length: 12 }, (_, i) =>
+      row(crypto.randomUUID(), `sub_${i + 1}`),
+    );
+    // Each row's Subscription has its own customer, so every listing sees
+    // only that row's Subscription.
+    const stripe = createStripeWithSubscriptions(
+      rows.map(({ userId, stripeSubscriptionId }) =>
+        createUserSubscriptionFixture(stripeSubscriptionId, {
+          userId,
+          customerId: `cus_${stripeSubscriptionId}`,
+        }),
+      ),
+    );
+    // Each retrieval is held open until the case releases it.
     let inFlight = 0;
     let maxInFlight = 0;
-    const deferredBySubscriptionId = new Map<
-      string,
-      ReturnType<typeof createDeferred<StripeSubscriptionFixture>>
-    >();
-
-    const retrieve = vi.fn((subscriptionId: string) => {
+    const releases = new Map<string, () => void>();
+    stripe.setSubscriptionRetrieveOverride(async (subscription) => {
       inFlight += 1;
       maxInFlight = Math.max(maxInFlight, inFlight);
-
-      const deferred = createDeferred<StripeSubscriptionFixture>();
-      deferredBySubscriptionId.set(subscriptionId, deferred);
-
-      return deferred.promise.finally(() => {
-        inFlight -= 1;
+      await new Promise<void>((resolve) => {
+        releases.set(subscription.id, resolve);
       });
+      inFlight -= 1;
+      return subscription;
     });
-
-    const list = vi.fn(async (input: { customer: string }) => {
-      const subscriptionId = subscriptionIdByCustomerId.get(input.customer);
-      if (!subscriptionId) {
-        throw new Error(`Unknown customer: ${input.customer}`);
+    const release = (subscriptionIds: readonly string[]) => {
+      for (const subscriptionId of subscriptionIds) {
+        const resolve = releases.get(subscriptionId);
+        if (!resolve) throw new Error(`Not held: ${subscriptionId}`);
+        resolve();
       }
-      return {
-        data: [{ id: subscriptionId, status: 'active' as const }],
-      };
-    });
-
-    const stripe = createStripeWithSubscriptionOverrides({
-      retrieve,
-      list,
-      cancel: vi.fn(async () => ({ id: 'sub_canceled' })),
-    });
+    };
 
     const scenario = createReconciliationTestScenario({
       stripe,
       localSubscriptions: rows,
     });
-
     const promise = scenario.run({ limit: 20 });
 
-    await flushUntil(() => retrieve.mock.calls.length === 10);
-
-    expect(retrieve).toHaveBeenCalledTimes(10);
+    await flushUntil(() => releases.size === 10);
+    expect(stripe.subscriptions.retrieveCalls).toHaveLength(10);
     expect(maxInFlight).toBe(10);
 
-    for (const row of rows.slice(0, 10)) {
-      const fixture = subscriptionsById[row.stripeSubscriptionId];
-      const deferred = deferredBySubscriptionId.get(row.stripeSubscriptionId);
-      if (!fixture || !deferred) {
-        throw new Error(`Missing data for ${row.stripeSubscriptionId}`);
-      }
-      deferred.resolve(fixture);
-    }
-
-    await flushUntil(() => retrieve.mock.calls.length === 12);
-
-    for (const row of rows.slice(10)) {
-      const fixture = subscriptionsById[row.stripeSubscriptionId];
-      const deferred = deferredBySubscriptionId.get(row.stripeSubscriptionId);
-      if (!fixture || !deferred) {
-        throw new Error(`Missing data for ${row.stripeSubscriptionId}`);
-      }
-      deferred.resolve(fixture);
-    }
+    release(stripe.subscriptions.retrieveCalls.slice(0, 10));
+    await flushUntil(() => releases.size === 12);
+    release(stripe.subscriptions.retrieveCalls.slice(10));
 
     await expect(promise).resolves.toMatchObject({
       scanned: 12,
@@ -402,43 +87,17 @@ describe('reconcileStripeSubscriptions', () => {
   });
 
   it('continues processing remaining rows when one row fails under concurrency', async () => {
-    const goodSub1 = createUserSubscriptionFixture('sub_1', {
-      customerId: 'cus_1',
-    });
-    const goodSub3 = createUserSubscriptionFixture('sub_3', {
-      userId: tertiaryUserId,
-      customerId: 'cus_3',
-    });
-    const badSub = createUserSubscriptionFixture('sub_2', {
-      userId: otherUserId,
-      customerId: 'cus_2',
-    });
-
-    const subscriptionsByCustomer: Record<
-      string,
-      Array<{ id: string; status: 'active' }>
-    > = {
-      cus_1: [{ id: 'sub_1', status: 'active' }],
-      cus_2: [{ id: 'sub_2', status: 'active' }],
-      cus_3: [{ id: 'sub_3', status: 'active' }],
-    };
-
-    const stripe = createStripeWithSubscriptionOverrides({
-      retrieve: vi.fn(async (subscriptionId: string) => {
-        const map: Record<string, StripeSubscriptionFixture> = {
-          sub_1: goodSub1,
-          sub_2: badSub,
-          sub_3: goodSub3,
-        };
-        const sub = map[subscriptionId];
-        if (!sub) throw new Error(`Unknown: ${subscriptionId}`);
-        return sub;
+    const stripe = createStripeWithSubscriptions([
+      createUserSubscriptionFixture('sub_1', { customerId: 'cus_1' }),
+      createUserSubscriptionFixture('sub_2', {
+        userId: otherUserId,
+        customerId: 'cus_2',
       }),
-      list: vi.fn(async (input: { customer: string }) => ({
-        data: subscriptionsByCustomer[input.customer] ?? [],
-      })),
-      cancel: vi.fn(async () => ({ id: 'sub_canceled' })),
-    });
+      createUserSubscriptionFixture('sub_3', {
+        userId: tertiaryUserId,
+        customerId: 'cus_3',
+      }),
+    ]);
 
     const scenario = createReconciliationTestScenario({
       stripe,
@@ -472,14 +131,10 @@ describe('reconcileStripeSubscriptions', () => {
   });
 
   it('throws STRIPE_ERROR when Stripe subscriptions API is unavailable for reconciliation', async () => {
-    const fullStripe = createStripeStub({
-      subscriptionsById: {},
-      listedSubscriptions: [],
-    });
-    const stripe = {
-      ...fullStripe,
-      subscriptions: undefined,
-    } as unknown as ReconciliationDeps['stripe'];
+    // The port's Subscriptions member is optional; a client without it is a
+    // real configuration the job must refuse.
+    const { subscriptions: _omitted, ...stripe } =
+      new FakeStripeCheckoutClient();
 
     const scenario = createReconciliationTestScenario({ stripe });
 
@@ -494,11 +149,8 @@ describe('reconcileStripeSubscriptions', () => {
       'sub_missing_metadata',
     );
     missingMetadataSubscription.metadata = {};
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: missingMetadataSubscription }],
-    });
     const scenario = createSingleRowScenario({
-      stripe,
+      stripe: createStripeWithSubscriptions([missingMetadataSubscription]),
       subscriptionId: 'sub_missing_metadata',
     });
 
@@ -527,17 +179,12 @@ describe('reconcileStripeSubscriptions', () => {
   });
 
   it('keeps reconciliation fail-closed when Stripe subscription e2e owner differs from configured owner', async () => {
-    const ownerMismatchSubscription = createUserSubscriptionFixture(
-      'sub_owner_mismatch',
-      {
-        e2eOwner: 'github-ci',
-      },
-    );
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: ownerMismatchSubscription }],
-    });
     const scenario = createReconciliationTestScenario({
-      stripe,
+      stripe: createStripeWithSubscriptions([
+        createUserSubscriptionFixture('sub_owner_mismatch', {
+          e2eOwner: 'github-ci',
+        }),
+      ]),
       localSubscriptions: [row(primaryUserId, 'sub_owner_mismatch')],
       webhookE2EOwner: 'vercel-dev-preview',
     });
@@ -568,15 +215,10 @@ describe('reconcileStripeSubscriptions', () => {
   });
 
   it('fails loudly when the local subscription list contains holes (internal invariant)', async () => {
-    const sparseRows = new Array<LocalSubscriptionRow>(1);
-    const stripe = createStripeStub({
-      subscriptionsById: {},
-      listedSubscriptions: [],
-    });
-
+    const sparseRows = new Array<ReturnType<typeof row>>(1);
     const scenario = createReconciliationTestScenario({
-      stripe,
-      listLocalSubscriptions: async () => sparseRows as LocalSubscriptionRow[],
+      stripe: new FakeStripeCheckoutClient(),
+      listLocalSubscriptions: async () => sparseRows,
     });
 
     await expect(scenario.run({ concurrency: 1 })).rejects.toThrow(
@@ -585,14 +227,9 @@ describe('reconcileStripeSubscriptions', () => {
   });
 
   it('defaults invalid numeric inputs using safe fallbacks', async () => {
-    const stripe = createStripeStub({
-      subscriptionsById: {},
-      listedSubscriptions: [],
-    });
-
     const listLocalSubscriptions = vi.fn(async () => []);
     const scenario = createReconciliationTestScenario({
-      stripe,
+      stripe: new FakeStripeCheckoutClient(),
       listLocalSubscriptions,
     });
 
@@ -626,20 +263,12 @@ describe('reconcileStripeSubscriptions', () => {
       expectedError: 'Error',
     },
   ])('$name', async ({ thrownValue, expectedError }) => {
-    const baseStripe = createStripeStub({
-      subscriptionsById: {},
-      listedSubscriptions: [],
+    const stripe = createStripeWithSubscriptions([
+      createUserSubscriptionFixture('sub_1'),
+    ]);
+    stripe.setSubscriptionRetrieveOverride(() => {
+      throw thrownValue;
     });
-
-    const stripe = {
-      ...baseStripe,
-      subscriptions: {
-        ...baseStripe.subscriptions,
-        retrieve: vi.fn(async () => {
-          throw thrownValue;
-        }),
-      },
-    } as const;
 
     const scenario = createSingleRowScenario({
       stripe,
@@ -655,35 +284,9 @@ describe('reconcileStripeSubscriptions', () => {
     });
   });
 
-  it('does not attempt canonical selection when Stripe returns no blocking subscriptions', async () => {
-    const canceled = createUserSubscriptionFixture('sub_canceled', {
-      status: 'canceled',
-    });
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: canceled }],
-      listedSubscriptions: [],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: 'sub_canceled',
-    });
-    await expectDryRunSuccess(scenario);
-
-    await expect(
-      scenario.subscriptions.findByUserId(primaryUserId),
-    ).resolves.toMatchObject({
-      status: 'canceled',
-    });
-  });
-
   it('starts consent retention when reconciliation observes a canceled subscription', async () => {
     const canceled = createUserSubscriptionFixture('sub_canceled_retention', {
       status: 'canceled',
-    });
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: canceled }],
-      listedSubscriptions: [],
     });
     const renewalConsentRecords = new FakeRenewalConsentRecordRepository();
     const consent = await renewalConsentRecords.save(
@@ -716,7 +319,7 @@ describe('reconcileStripeSubscriptions', () => {
       }),
     );
     const scenario = createReconciliationTestScenario({
-      stripe,
+      stripe: createStripeWithSubscriptions([canceled]),
       renewalConsentRecords,
       localSubscriptions: [row(primaryUserId, canceled.id)],
     });
@@ -734,88 +337,11 @@ describe('reconcileStripeSubscriptions', () => {
     });
   });
 
-  it('reports a failure when a blocking subscription belongs to a different user', async () => {
-    const local = createUserSubscriptionFixture('sub_local', {
-      customerId: 'cus_1',
-      status: 'active',
-    });
-    const blockingMismatch = createUserSubscriptionFixture('sub_blocking', {
-      userId: otherUserId,
-      customerId: 'cus_1',
-      status: 'active',
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: local }, { fixture: blockingMismatch }],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: local.id,
-    });
-
-    const result = await scenario.run({ dryRun: true });
-
-    expectSingleFailure(result, {
-      stripeSubscriptionId: 'sub_local',
-      error: 'Blocking Stripe subscription user id mismatch',
-    });
-
-    await expect(
-      scenario.subscriptions.findByUserId(primaryUserId),
-    ).resolves.toBeNull();
-    await expect(
-      scenario.stripeCustomers.findByUserId(primaryUserId),
-    ).resolves.toBeNull();
-  });
-
-  it.each([
-    {
-      name: 'reports a failure when the canonical Stripe subscription cannot be determined',
-      createBlocking: () =>
-        createUserSubscriptionFixture('', { status: 'active' }),
-      expectedError: 'Unable to determine canonical Stripe subscription',
-    },
-    {
-      name: 'reports a failure when canonical Stripe subscription data is missing',
-      createBlocking: () =>
-        createUserSubscriptionFixture('sub_other', { status: 'active' }),
-      expectedError: 'Canonical Stripe subscription data is missing',
-    },
-  ])('$name', async ({ createBlocking, expectedError }) => {
-    const localCanceled = createUserSubscriptionFixture('sub_local', {
-      status: 'canceled',
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [
-        { fixture: localCanceled },
-        { fixture: createBlocking(), key: 'sub_blocking' },
-      ],
-      listedSubscriptions: [{ id: 'sub_blocking', status: 'active' }],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: localCanceled.id,
-    });
-
-    const result = await scenario.run({ dryRun: true });
-
-    expectSingleFailure(result, {
-      stripeSubscriptionId: localCanceled.id,
-      error: expectedError,
-    });
-  });
-
   it('upserts subscriptions and customer mappings for local subscriptions', async () => {
-    const subscription = createUserSubscriptionFixture('sub_123');
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: subscription }],
-    });
-
     const scenario = createSingleRowScenario({
-      stripe,
+      stripe: createStripeWithSubscriptions([
+        createUserSubscriptionFixture('sub_123'),
+      ]),
       subscriptionId: 'sub_123',
     });
 
@@ -843,534 +369,6 @@ describe('reconcileStripeSubscriptions', () => {
     expect(scenario.logger.errorCalls).toHaveLength(0);
   });
 
-  // The canonical blocking subscription is selected from the full blocking set:
-  // highest currentPeriodEnd wins, then externalSubscriptionId asc breaks ties.
-  it('cancels duplicate blocking subscriptions when dryRun is disabled', async () => {
-    const keep = createUserSubscriptionFixture('sub_keep', {
-      status: 'active',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const duplicateOne = createUserSubscriptionFixture('sub_dup_1', {
-      status: 'trialing',
-      currentPeriodEnd: 1_700_000_100,
-    });
-    const duplicateTwo = createUserSubscriptionFixture('sub_dup_2', {
-      status: 'past_due',
-      currentPeriodEnd: 1_700_000_200,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [
-        { fixture: keep },
-        { fixture: duplicateOne },
-        { fixture: duplicateTwo },
-      ],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: keep.id,
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expect(result).toEqual({
-      scanned: 1,
-      updated: 1,
-      failed: 0,
-      failures: [],
-    });
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(2);
-    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
-      1,
-      'sub_keep',
-      undefined,
-      {
-        idempotencyKey: 'reconcile_duplicate_subscription:sub_keep',
-      },
-    );
-    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
-      2,
-      'sub_dup_1',
-      undefined,
-      { idempotencyKey: 'reconcile_duplicate_subscription:sub_dup_1' },
-    );
-    await expect(
-      scenario.subscriptions.findByUserId(primaryUserId),
-    ).resolves.toMatchObject({
-      status: 'pastDue',
-      currentPeriodEnd: new Date(1_700_000_200 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_dup_2'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'pastDue',
-      currentPeriodEnd: new Date(1_700_000_200 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_keep'),
-    ).resolves.toBeNull();
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_dup_1'),
-    ).resolves.toBeNull();
-  });
-
-  it('continues canceling remaining duplicates when Stripe reports one duplicate is already canceled', async () => {
-    const keep = createUserSubscriptionFixture('sub_keep', {
-      status: 'active',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const duplicateOne = createUserSubscriptionFixture('sub_dup_1', {
-      status: 'trialing',
-      currentPeriodEnd: 1_700_000_100,
-    });
-    const duplicateTwo = createUserSubscriptionFixture('sub_dup_2', {
-      status: 'past_due',
-      currentPeriodEnd: 1_700_000_200,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [
-        { fixture: keep },
-        { fixture: duplicateOne },
-        { fixture: duplicateTwo },
-      ],
-    });
-    stripe.subscriptions.cancel.mockImplementation(
-      async (subscriptionId: string) => {
-        if (subscriptionId === 'sub_keep') {
-          throw Object.assign(new Error('No such subscription: sub_keep'), {
-            rawType: 'invalid_request_error',
-            code: 'resource_missing',
-          });
-        }
-
-        return { id: `${subscriptionId}_canceled` };
-      },
-    );
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: keep.id,
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expect(result).toEqual({
-      scanned: 1,
-      updated: 1,
-      failed: 0,
-      failures: [],
-    });
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(2);
-    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
-      1,
-      'sub_keep',
-      undefined,
-      {
-        idempotencyKey: 'reconcile_duplicate_subscription:sub_keep',
-      },
-    );
-    expect(stripe.subscriptions.cancel).toHaveBeenNthCalledWith(
-      2,
-      'sub_dup_1',
-      undefined,
-      { idempotencyKey: 'reconcile_duplicate_subscription:sub_dup_1' },
-    );
-    expect(scenario.logger.infoCalls).toEqual([
-      {
-        context: { stripeSubscriptionId: 'sub_keep' },
-        msg: 'Duplicate subscription already canceled externally',
-      },
-    ]);
-  });
-
-  it('excludes already-canceled duplicates from the cancellation summary log', async () => {
-    const keep = createUserSubscriptionFixture('sub_keep', {
-      status: 'active',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const duplicateOne = createUserSubscriptionFixture('sub_dup_1', {
-      status: 'trialing',
-      currentPeriodEnd: 1_700_000_100,
-    });
-    const duplicateTwo = createUserSubscriptionFixture('sub_dup_2', {
-      status: 'past_due',
-      currentPeriodEnd: 1_700_000_200,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [
-        { fixture: keep },
-        { fixture: duplicateOne },
-        { fixture: duplicateTwo },
-      ],
-    });
-    stripe.subscriptions.cancel.mockImplementation(
-      async (subscriptionId: string) => {
-        if (subscriptionId === 'sub_keep') {
-          throw Object.assign(new Error('No such subscription: sub_keep'), {
-            rawType: 'invalid_request_error',
-            code: 'resource_missing',
-          });
-        }
-
-        return { id: `${subscriptionId}_canceled` };
-      },
-    );
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: keep.id,
-    });
-
-    await scenario.run({ dryRun: false });
-
-    expect(scenario.logger.warnCalls).toEqual([
-      {
-        context: {
-          userId: primaryUserId,
-          stripeCustomerId: 'cus_123',
-          keptSubscriptionId: 'sub_dup_2',
-          duplicateSubscriptionIds: ['sub_keep', 'sub_dup_1'],
-          canceledDuplicateSubscriptionIds: ['sub_dup_1'],
-          alreadyCanceledSubscriptionIds: ['sub_keep'],
-          dryRun: false,
-        },
-        msg: 'Canceled duplicate Stripe subscriptions',
-      },
-    ]);
-  });
-
-  it('reports when all duplicates were already canceled externally', async () => {
-    const keep = createUserSubscriptionFixture('sub_keep', {
-      status: 'active',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const duplicateOne = createUserSubscriptionFixture('sub_dup_1', {
-      status: 'trialing',
-      currentPeriodEnd: 1_700_000_100,
-    });
-    const duplicateTwo = createUserSubscriptionFixture('sub_dup_2', {
-      status: 'past_due',
-      currentPeriodEnd: 1_700_000_200,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [
-        { fixture: keep },
-        { fixture: duplicateOne },
-        { fixture: duplicateTwo },
-      ],
-    });
-    stripe.subscriptions.cancel.mockRejectedValue(
-      Object.assign(new Error('No such subscription'), {
-        rawType: 'invalid_request_error',
-        code: 'resource_missing',
-      }),
-    );
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: keep.id,
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expect(result).toEqual({
-      scanned: 1,
-      updated: 1,
-      failed: 0,
-      failures: [],
-    });
-    expect(scenario.logger.warnCalls).toEqual([
-      {
-        context: {
-          userId: primaryUserId,
-          stripeCustomerId: 'cus_123',
-          keptSubscriptionId: 'sub_dup_2',
-          duplicateSubscriptionIds: ['sub_keep', 'sub_dup_1'],
-          canceledDuplicateSubscriptionIds: [],
-          alreadyCanceledSubscriptionIds: ['sub_keep', 'sub_dup_1'],
-          dryRun: false,
-        },
-        msg: 'Duplicate Stripe subscriptions already canceled externally',
-      },
-    ]);
-  });
-
-  it('does not cancel duplicate blocking subscriptions in dry-run mode', async () => {
-    const keep = createUserSubscriptionFixture('sub_keep', {
-      status: 'active',
-    });
-    const duplicate = createUserSubscriptionFixture('sub_dup', {
-      status: 'trialing',
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: keep }, { fixture: duplicate }],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: keep.id,
-    });
-    await expectDryRunSuccess(scenario);
-
-    expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    { stripeStatus: 'unpaid' as const, duplicateId: 'sub_unpaid' },
-    { stripeStatus: 'incomplete' as const, duplicateId: 'sub_incomplete' },
-    { stripeStatus: 'paused' as const, duplicateId: 'sub_paused' },
-  ])(
-    'keeps an active subscription over a later $stripeStatus duplicate',
-    async ({ stripeStatus, duplicateId }) => {
-      const active = createUserSubscriptionFixture('sub_active', {
-        status: 'active',
-        currentPeriodEnd: 1_800_000_000,
-      });
-      const duplicate = createUserSubscriptionFixture(duplicateId, {
-        status: stripeStatus,
-        currentPeriodEnd: 1_900_000_000,
-      });
-
-      const stripe = createStripeFromFixtures({
-        fixtures: [{ fixture: active }, { fixture: duplicate }],
-      });
-
-      const scenario = createSingleRowScenario({
-        stripe,
-        subscriptionId: active.id,
-      });
-
-      const result = await scenario.run({ dryRun: false });
-
-      expect(result).toEqual({
-        scanned: 1,
-        updated: 1,
-        failed: 0,
-        failures: [],
-      });
-      expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
-      expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
-        duplicateId,
-        undefined,
-        {
-          idempotencyKey: `reconcile_duplicate_subscription:${duplicateId}`,
-        },
-      );
-      await expect(
-        scenario.subscriptions.findByExternalSubscriptionId('sub_active'),
-      ).resolves.toMatchObject({
-        userId: primaryUserId,
-        status: 'active',
-        currentPeriodEnd: new Date(1_800_000_000 * 1000),
-      });
-      await expect(
-        scenario.subscriptions.findByExternalSubscriptionId(duplicateId),
-      ).resolves.toBeNull();
-    },
-  );
-
-  it('keeps the local row active over a later unpaid duplicate in dry-run mode', async () => {
-    const active = createUserSubscriptionFixture('sub_active', {
-      status: 'active',
-      currentPeriodEnd: 1_800_000_000,
-    });
-    const unpaid = createUserSubscriptionFixture('sub_unpaid', {
-      status: 'unpaid',
-      currentPeriodEnd: 1_900_000_000,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: active }, { fixture: unpaid }],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: active.id,
-    });
-
-    const result = await scenario.run({ dryRun: true });
-
-    expect(result).toEqual({
-      scanned: 1,
-      updated: 1,
-      failed: 0,
-      failures: [],
-    });
-    expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_active'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'active',
-      currentPeriodEnd: new Date(1_800_000_000 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_unpaid'),
-    ).resolves.toBeNull();
-  });
-
-  it('replaces a stale non-blocking local subscription with the blocking Stripe subscription', async () => {
-    const localCanceled = createUserSubscriptionFixture('sub_local_canceled', {
-      status: 'canceled',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const active = createUserSubscriptionFixture('sub_active', {
-      status: 'active',
-      currentPeriodEnd: 1_700_001_000,
-    });
-    const trialing = createUserSubscriptionFixture('sub_trialing', {
-      status: 'trialing',
-      currentPeriodEnd: 1_700_000_500,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [
-        { fixture: localCanceled },
-        { fixture: active },
-        { fixture: trialing },
-      ],
-      listedSubscriptions: [
-        { id: active.id, status: active.status },
-        { id: trialing.id, status: trialing.status },
-      ],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: localCanceled.id,
-    });
-    await expectDryRunSuccess(scenario);
-
-    await expect(
-      scenario.subscriptions.findByUserId(primaryUserId),
-    ).resolves.toMatchObject({
-      status: 'active',
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId(active.id),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'active',
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId(trialing.id),
-    ).resolves.toBeNull();
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId(localCanceled.id),
-    ).resolves.toBeNull();
-    expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
-  });
-
-  it('still selects the latest period end when only non-entitled candidates exist', async () => {
-    const localUnpaid = createUserSubscriptionFixture('sub_unpaid_old', {
-      status: 'unpaid',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const laterPaused = createUserSubscriptionFixture('sub_paused_later', {
-      status: 'paused',
-      currentPeriodEnd: 1_800_000_000,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: localUnpaid }, { fixture: laterPaused }],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: localUnpaid.id,
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expect(result).toEqual({
-      scanned: 1,
-      updated: 1,
-      failed: 0,
-      failures: [],
-    });
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
-      'sub_unpaid_old',
-      undefined,
-      {
-        idempotencyKey: 'reconcile_duplicate_subscription:sub_unpaid_old',
-      },
-    );
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_paused_later'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'paused',
-      currentPeriodEnd: new Date(1_800_000_000 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_unpaid_old'),
-    ).resolves.toBeNull();
-  });
-
-  it('keeps persisting a different canonical winner over a current entitled row', async () => {
-    const now = new Date('2026-06-12T00:00:00.000Z');
-    const localPeriodEnd = Math.floor(
-      (now.getTime() + 24 * 60 * 60 * 1000) / 1000,
-    );
-    const canonicalPeriodEnd = Math.floor(
-      (now.getTime() + 2 * 24 * 60 * 60 * 1000) / 1000,
-    );
-    const local = createUserSubscriptionFixture('sub_local', {
-      status: 'active',
-      currentPeriodEnd: localPeriodEnd,
-    });
-    const canonical = createUserSubscriptionFixture('sub_canonical', {
-      status: 'past_due',
-      currentPeriodEnd: canonicalPeriodEnd,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: local }, { fixture: canonical }],
-    });
-    const subscriptions = new FakeSubscriptionRepository([], () => now);
-    await subscriptions.upsert({
-      userId: primaryUserId,
-      externalSubscriptionId: local.id,
-      plan: 'monthly',
-      status: 'active',
-      currentPeriodEnd: new Date(localPeriodEnd * 1000),
-      cancelAtPeriodEnd: false,
-      expectedVersion: null,
-    });
-
-    const scenario = createReconciliationTestScenario({
-      stripe,
-      subscriptions,
-      localSubscriptions: [row(primaryUserId, local.id)],
-    });
-
-    const result = await scenario.run({ dryRun: true });
-
-    expect(result).toEqual({
-      scanned: 1,
-      updated: 1,
-      failed: 0,
-      failures: [],
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_canonical'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'pastDue',
-      currentPeriodEnd: new Date(canonicalPeriodEnd * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
-    ).resolves.toBeNull();
-  });
-
   it('acquires the subscription lock before writing the Stripe customer mapping', async () => {
     const calls: string[] = [];
     class OrderedSubscriptionRepository extends FakeSubscriptionRepository {
@@ -1391,7 +389,7 @@ describe('reconcileStripeSubscriptions', () => {
     }
     const local = createUserSubscriptionFixture('sub_lock_order');
     const scenario = createReconciliationTestScenario({
-      stripe: createStripeFromFixtures({ fixtures: [{ fixture: local }] }),
+      stripe: createStripeWithSubscriptions([local]),
       localSubscriptions: [row(primaryUserId, local.id)],
       subscriptions: new OrderedSubscriptionRepository(),
       stripeCustomers: new OrderedStripeCustomerRepository(),
@@ -1405,256 +403,8 @@ describe('reconcileStripeSubscriptions', () => {
     expect(calls).toEqual(['subscriptions.upsert', 'stripeCustomers.insert']);
   });
 
-  it('selects canonical by highest currentPeriodEnd even when local row is blocking', async () => {
-    const local = createUserSubscriptionFixture('sub_local', {
-      status: 'active',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const better = createUserSubscriptionFixture('sub_better', {
-      status: 'active',
-      currentPeriodEnd: 1_800_000_000,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: local }, { fixture: better }],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: local.id,
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expect(result).toEqual({
-      scanned: 1,
-      updated: 1,
-      failed: 0,
-      failures: [],
-    });
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
-      'sub_local',
-      undefined,
-      {
-        idempotencyKey: 'reconcile_duplicate_subscription:sub_local',
-      },
-    );
-    await expect(
-      scenario.subscriptions.findByUserId(primaryUserId),
-    ).resolves.toMatchObject({
-      status: 'active',
-      currentPeriodEnd: new Date(1_800_000_000 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'active',
-      currentPeriodEnd: new Date(1_800_000_000 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
-    ).resolves.toBeNull();
-  });
-
-  it('breaks ties by lexicographically smallest subscription id', async () => {
-    const local = createUserSubscriptionFixture('sub_z', {
-      status: 'active',
-      currentPeriodEnd: 1_800_000_000,
-    });
-    const betterTieBreak = createUserSubscriptionFixture('sub_a', {
-      status: 'active',
-      currentPeriodEnd: 1_800_000_000,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: local }, { fixture: betterTieBreak }],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: local.id,
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expect(result).toEqual({
-      scanned: 1,
-      updated: 1,
-      failed: 0,
-      failures: [],
-    });
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledTimes(1);
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
-      'sub_z',
-      undefined,
-      {
-        idempotencyKey: 'reconcile_duplicate_subscription:sub_z',
-      },
-    );
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_a'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'active',
-      currentPeriodEnd: new Date(1_800_000_000 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_z'),
-    ).resolves.toBeNull();
-  });
-
-  it('fails the row when Stripe cancel returns an unexpected authentication error', async () => {
-    const local = createUserSubscriptionFixture('sub_local', {
-      status: 'active',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const better = createUserSubscriptionFixture('sub_better', {
-      status: 'active',
-      currentPeriodEnd: 1_800_000_000,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: local }, { fixture: better }],
-    });
-    stripe.subscriptions.cancel.mockRejectedValueOnce(
-      Object.assign(new Error('Invalid API Key provided'), {
-        rawType: 'authentication_error',
-      }),
-    );
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: local.id,
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expectSingleFailure(result, {
-      stripeSubscriptionId: local.id,
-      error: 'Invalid API Key provided',
-    });
-    expect(scenario.logger.infoCalls).toEqual([]);
-  });
-
-  it('persists the canonical subscription before attempting duplicate cancellation', async () => {
-    const local = createUserSubscriptionFixture('sub_local', {
-      status: 'active',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const better = createUserSubscriptionFixture('sub_better', {
-      status: 'active',
-      currentPeriodEnd: 1_800_000_000,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: local }, { fixture: better }],
-    });
-    stripe.subscriptions.cancel.mockRejectedValueOnce(
-      new Error('cancel failed'),
-    );
-
-    const subscriptions = new FakeSubscriptionRepository();
-    await subscriptions.upsert({
-      userId: primaryUserId,
-      externalSubscriptionId: local.id,
-      plan: 'monthly',
-      status: 'active',
-      currentPeriodEnd: new Date(1_700_000_000 * 1000),
-      cancelAtPeriodEnd: false,
-      expectedVersion: null,
-    });
-
-    const scenario = createReconciliationTestScenario({
-      stripe,
-      subscriptions,
-      localSubscriptions: [row(primaryUserId, local.id)],
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expectSingleFailure(result, {
-      stripeSubscriptionId: local.id,
-      error: 'cancel failed',
-    });
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith(
-      'sub_local',
-      undefined,
-      {
-        idempotencyKey: 'reconcile_duplicate_subscription:sub_local',
-      },
-    );
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'active',
-      currentPeriodEnd: new Date(1_800_000_000 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
-    ).resolves.toBeNull();
-  });
-
-  it('does not cancel duplicates when persisting the canonical subscription fails', async () => {
-    const local = createUserSubscriptionFixture('sub_local', {
-      status: 'active',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const better = createUserSubscriptionFixture('sub_better', {
-      status: 'active',
-      currentPeriodEnd: 1_800_000_000,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: local }, { fixture: better }],
-    });
-
-    const subscriptions = new FakeSubscriptionRepository();
-    await subscriptions.upsert({
-      userId: primaryUserId,
-      externalSubscriptionId: local.id,
-      plan: 'monthly',
-      status: 'active',
-      currentPeriodEnd: new Date(1_700_000_000 * 1000),
-      cancelAtPeriodEnd: false,
-      expectedVersion: null,
-    });
-
-    const scenario = createReconciliationTestScenario({
-      stripe,
-      subscriptions,
-      localSubscriptions: [row(primaryUserId, local.id)],
-      transaction: async () => {
-        throw new Error('db failed');
-      },
-    });
-
-    const result = await scenario.run({ dryRun: false });
-
-    expectSingleFailure(result, {
-      stripeSubscriptionId: local.id,
-      error: 'db failed',
-    });
-    expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_local'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'active',
-      currentPeriodEnd: new Date(1_700_000_000 * 1000),
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_better'),
-    ).resolves.toBeNull();
-  });
-
   it('logs safe database diagnostics while returning a generic failure string', async () => {
     const subscription = createUserSubscriptionFixture('sub_diagnostics');
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: subscription }],
-    });
     const postgresError = Object.assign(
       new Error('duplicate key exposes raw reconciliation text'),
       {
@@ -1670,7 +420,7 @@ describe('reconcileStripeSubscriptions', () => {
       { cause: postgresError },
     );
     const scenario = createReconciliationTestScenario({
-      stripe,
+      stripe: createStripeWithSubscriptions([subscription]),
       localSubscriptions: [row(primaryUserId, subscription.id)],
       transaction: async () => {
         throw databaseError;
@@ -1700,55 +450,11 @@ describe('reconcileStripeSubscriptions', () => {
     expect(serializedLog).not.toContain('cus_reconcile_raw');
   });
 
-  it('breaks ties deterministically when multiple blocking subscriptions share the same currentPeriodEnd', async () => {
-    const localCanceled = createUserSubscriptionFixture('sub_local_canceled', {
-      status: 'canceled',
-      currentPeriodEnd: 1_700_000_000,
-    });
-    const a = createUserSubscriptionFixture('sub_a', {
-      status: 'active',
-      currentPeriodEnd: 1_700_001_000,
-    });
-    const b = createUserSubscriptionFixture('sub_b', {
-      status: 'active',
-      currentPeriodEnd: 1_700_001_000,
-    });
-
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: localCanceled }, { fixture: a }, { fixture: b }],
-      listedSubscriptions: [
-        { id: b.id, status: b.status },
-        { id: a.id, status: a.status },
-      ],
-    });
-
-    const scenario = createSingleRowScenario({
-      stripe,
-      subscriptionId: localCanceled.id,
-    });
-    await expectDryRunSuccess(scenario);
-
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_a'),
-    ).resolves.toMatchObject({
-      userId: primaryUserId,
-      status: 'active',
-    });
-    await expect(
-      scenario.subscriptions.findByExternalSubscriptionId('sub_b'),
-    ).resolves.toBeNull();
-  });
-
   it('reports a failure when Stripe subscription metadata user id mismatches', async () => {
-    const mismatch = createUserSubscriptionFixture('sub_123', {
-      userId: otherUserId,
-    });
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: mismatch }],
-    });
-
     const scenario = createSingleRowScenario({
-      stripe,
+      stripe: createStripeWithSubscriptions([
+        createUserSubscriptionFixture('sub_123', { userId: otherUserId }),
+      ]),
       subscriptionId: 'sub_123',
     });
 
@@ -1769,18 +475,13 @@ describe('reconcileStripeSubscriptions', () => {
   });
 
   it('overrides an existing stripe customer mapping when reconciliation detects a new customer id', async () => {
-    const subscription = createUserSubscriptionFixture('sub_123', {
-      customerId: 'cus_new',
-    });
-    const stripe = createStripeFromFixtures({
-      fixtures: [{ fixture: subscription }],
-    });
-
     const stripeCustomers = new FakeStripeCustomerRepository();
     await stripeCustomers.insert(primaryUserId, 'cus_old');
 
     const scenario = createSingleRowScenario({
-      stripe,
+      stripe: createStripeWithSubscriptions([
+        createUserSubscriptionFixture('sub_123', { customerId: 'cus_new' }),
+      ]),
       stripeCustomers,
       subscriptionId: 'sub_123',
     });

@@ -45,6 +45,23 @@ type ListCall = Parameters<StripeClient['checkout']['sessions']['list']>[0];
 // behavior and is not contract-tested.
 type ListHook = (params: ListCall) => void | Promise<void>;
 
+// A Subscription retrieve override runs after the retrieval is recorded and
+// bends what it returns: a test awaits inside it to hold a retrieval open, or
+// throws or returns a Subscription Stripe could not send. It models no Stripe
+// behavior and is not contract-tested.
+type SubscriptionRetrieveOverride = (
+  subscription: SeededSubscription,
+) => SeededSubscription | Promise<SeededSubscription>;
+
+// A cancel hook runs after the cancel is recorded and before it is applied:
+// it injects a caller-supplied error by throwing, or stages a Subscription
+// canceled elsewhere (markSubscriptionCanceled), which the contracted 404 then
+// answers. It models no Stripe behavior and is not contract-tested.
+type SubscriptionCancelHook = (
+  subscriptionId: string,
+  options?: StripeRequestOptions,
+) => void | Promise<void>;
+
 type SubscriptionCancelCall = {
   subscriptionId: string;
   options?: StripeRequestOptions | undefined;
@@ -253,10 +270,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
   // by id and canceled once; the list, retrieve and cancel shapes are proven
   // against Stripe TEST mode by the shared contract. A second cancel, like an
   // unknown id, gets Stripe's 404 resource_missing although the canceled
-  // Subscription stays retrievable. Cancel ignores idempotency keys: Stripe
-  // replays a reused key's first result instead. `list` and `cancel` read
-  // `this`, as the SDK methods do, so a detached call fails the way an
-  // unbound SDK method would.
+  // Subscription stays retrievable. Cancel ignores idempotency keys, as Stripe
+  // does for DELETE requests: a repeat under the same key is still a 404.
+  // `list` and `cancel` read `this`, as the SDK methods do, so a detached
+  // call fails the way an unbound SDK method would.
   readonly subscriptions: NonNullable<StripeClient['subscriptions']> &
     Required<
       Pick<NonNullable<StripeClient['subscriptions']>, 'list' | 'cancel'>
@@ -265,16 +282,23 @@ export class FakeStripeCheckoutClient implements StripeClient {
       readonly listCalls: StripeSubscriptionListParams[];
       readonly retrieveCalls: string[];
       readonly cancelCalls: SubscriptionCancelCall[];
+      retrieveOverride: SubscriptionRetrieveOverride | null;
+      cancelHook: SubscriptionCancelHook | null;
     } = {
     seeded: [],
     listCalls: [],
     retrieveCalls: [],
     cancelCalls: [],
+    retrieveOverride: null,
+    cancelHook: null,
     async cancel(subscriptionId, _params, options) {
       this.cancelCalls.push({
         subscriptionId,
         ...(options ? { options: { ...options } } : {}),
       });
+      if (this.cancelHook) {
+        await this.cancelHook(subscriptionId, options);
+      }
       const subscription = this.seeded.find(
         (candidate) => candidate.id === subscriptionId,
       );
@@ -316,12 +340,36 @@ export class FakeStripeCheckoutClient implements StripeClient {
       if (!subscription) {
         throw new Error(`Missing fake Subscription: ${subscriptionId}`);
       }
-      return structuredClone(subscription);
+      const retrieved = structuredClone(subscription);
+      return this.retrieveOverride
+        ? this.retrieveOverride(retrieved)
+        : retrieved;
     },
   };
 
   seedSubscription(subscription: SeededSubscription): void {
     this.subscriptions.seeded.push(structuredClone(subscription));
+  }
+
+  // Cancels a seeded Subscription outside the API, as another actor would.
+  markSubscriptionCanceled(subscriptionId: string): void {
+    const subscription = this.subscriptions.seeded.find(
+      (candidate) => candidate.id === subscriptionId,
+    );
+    if (!subscription) {
+      throw new Error(`Missing fake Subscription: ${subscriptionId}`);
+    }
+    subscription.status = 'canceled';
+  }
+
+  setSubscriptionRetrieveOverride(
+    override: SubscriptionRetrieveOverride | null,
+  ): void {
+    this.subscriptions.retrieveOverride = override;
+  }
+
+  setSubscriptionCancelHook(hook: SubscriptionCancelHook | null): void {
+    this.subscriptions.cancelHook = hook;
   }
 
   readonly billingPortal: StripeClient['billingPortal'] = {
