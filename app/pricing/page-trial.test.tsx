@@ -306,7 +306,6 @@ describe('app/pricing', () => {
     expect(annualCard?.getAttribute('aria-current')).toBe('true');
     expect(annualCard?.textContent).toContain('Selected plan');
     expect(doc.querySelector('dl')).toBeNull();
-    expect(doc.querySelector('dl')).toBeNull();
   });
 
   it('renders trial CTAs for signed-in first-time users', async () => {
