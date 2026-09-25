@@ -103,7 +103,19 @@ runStripeCheckoutClientContract(
         createdSubscriptionIds.delete(subscriptionId);
         return canceled;
       },
+      update: (subscriptionId, params, options) =>
+        stripe.subscriptions.update(subscriptionId, params, options),
     } satisfies NonNullable<StripeClient['subscriptions']>;
+
+    // Attached PaymentMethods go with the Customer that cleanup deletes.
+    const paymentMethods = {
+      retrieve: (paymentMethodId) =>
+        stripe.paymentMethods.retrieve(paymentMethodId),
+      attach: (paymentMethodId, params, options) =>
+        stripe.paymentMethods.attach(paymentMethodId, params, options),
+      detach: (paymentMethodId, params, options) =>
+        stripe.paymentMethods.detach(paymentMethodId, params, options),
+    } satisfies Required<NonNullable<StripeClient['paymentMethods']>>;
 
     const customers = {
       search: (params, options) => stripe.customers.search(params, options),
@@ -113,6 +125,14 @@ runStripeCheckoutClientContract(
       sessions,
       subscriptions,
       customers,
+      paymentMethods,
+      seedPaymentMethod: async () => {
+        const paymentMethod = await stripe.paymentMethods.create({
+          type: 'card',
+          card: { token: 'tok_visa' },
+        });
+        return { id: paymentMethod.id };
+      },
       seedCustomer: async (userId) => {
         const seeded = await stripe.customers.create({
           metadata: {
