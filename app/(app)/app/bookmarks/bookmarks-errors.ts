@@ -22,19 +22,15 @@ export function parseRemoveBookmarkErrorCode(
   return isRemoveBookmarkErrorCode(normalized) ? normalized : undefined;
 }
 
+// A Record keeps every code's message required at compile time.
+const REMOVE_BOOKMARK_ERROR_MESSAGES: Record<RemoveBookmarkErrorCode, string> =
+  {
+    missing_question_id: 'Unable to remove bookmark: missing question id.',
+    remove_failed: 'Unable to remove bookmark. Please try again.',
+  };
+
 export function getRemoveBookmarkErrorMessage(
   code: RemoveBookmarkErrorCode | undefined,
 ): string | null {
-  if (!code) return null;
-
-  switch (code) {
-    case 'missing_question_id':
-      return 'Unable to remove bookmark: missing question id.';
-    case 'remove_failed':
-      return 'Unable to remove bookmark. Please try again.';
-    default: {
-      const _exhaustive: never = code;
-      return _exhaustive;
-    }
-  }
+  return code ? REMOVE_BOOKMARK_ERROR_MESSAGES[code] : null;
 }
