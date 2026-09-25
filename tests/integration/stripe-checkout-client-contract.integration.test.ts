@@ -46,7 +46,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 // Stripe normally indexes a new Customer for Search in under a minute; TEST
-// probes on 2026-09-25 saw 10-29 seconds.
+// probes on 2026-09-25 saw 10-29 seconds. One bound covers all of a case's
+// Search reads, so the case's budget covers the whole wait.
 const CUSTOMER_SEARCH_VISIBILITY_BOUND_MS = 60_000;
 const CUSTOMER_SEARCH_POLL_INTERVAL_MS = 1_000;
 
@@ -61,6 +62,7 @@ runStripeCheckoutClientContract(
     const createdSessionIds = new Set<string>();
     const createdSubscriptionIds = new Set<string>();
     const createdCustomerIds = new Set<string>();
+    let searchDeadline: number | undefined;
     let defaultPaymentMethodReady = false;
     const ensureDefaultPaymentMethod = async () => {
       if (defaultPaymentMethodReady) return;
@@ -122,13 +124,13 @@ runStripeCheckoutClientContract(
         return { id: seeded.id };
       },
       searchUntil: async (params, minimum) => {
-        const deadline = Date.now() + CUSTOMER_SEARCH_VISIBILITY_BOUND_MS;
+        searchDeadline ??= Date.now() + CUSTOMER_SEARCH_VISIBILITY_BOUND_MS;
         for (;;) {
           const result = await stripe.customers.search(params);
           if (result.data.length >= minimum) return result;
-          if (Date.now() >= deadline) {
+          if (Date.now() >= searchDeadline) {
             throw new Error(
-              `Stripe Search returned ${result.data.length} of ${minimum} Customers within ${CUSTOMER_SEARCH_VISIBILITY_BOUND_MS / 1_000} seconds`,
+              `Stripe Search returned ${result.data.length} of ${minimum} Customers within ${CUSTOMER_SEARCH_VISIBILITY_BOUND_MS / 1_000} seconds of the case's first Search`,
             );
           }
           await sleep(CUSTOMER_SEARCH_POLL_INTERVAL_MS);

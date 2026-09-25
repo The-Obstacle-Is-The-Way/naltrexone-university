@@ -29,7 +29,8 @@ type StripeSubscriptionsClient = NonNullable<StripeClient['subscriptions']>;
 type StripeCustomersClient = StripeClient['customers'];
 
 // Stripe indexes a new Customer for Search after a delay, normally under a
-// minute; the Search case's budget covers the real half's bounded wait.
+// minute. The real half shares one 60-second visibility bound across the
+// case's reads, so this budget covers that wait plus the requests.
 const CUSTOMER_SEARCH_CASE_TIMEOUT_MS = 120_000;
 
 // The port marks list and cancel optional; both halves implement them, so
@@ -54,7 +55,8 @@ export type StripeCheckoutClientContractHarness = {
   // Searches until a read returns at least `minimum` Customers and hands that
   // read back. A new Customer reaches Search after a delay, and in TEST mode a
   // later read can briefly miss one an earlier read returned, so the real half
-  // polls within a bound; the fake is immediately consistent and reads once.
+  // polls within one bound shared by the case's reads; the fake is immediately
+  // consistent and reads once.
   searchUntil(
     params: CustomerSearchParams,
     minimum: number,
