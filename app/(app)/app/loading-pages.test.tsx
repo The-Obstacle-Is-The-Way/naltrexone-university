@@ -7,6 +7,9 @@ type LoadingModule = Awaited<typeof import('./loading')>['default'];
 let AppLoading: LoadingModule;
 let DashboardLoading: Awaited<typeof import('./dashboard/loading')>['default'];
 let PracticeLoading: Awaited<typeof import('./practice/loading')>['default'];
+let QuickPracticeLoading: Awaited<
+  typeof import('./practice/quick/loading')
+>['default'];
 let PracticeSessionLoading: Awaited<
   typeof import('./practice/[sessionId]/loading')
 >['default'];
@@ -23,6 +26,7 @@ describe('App route loading UIs', () => {
       AppLoading,
       DashboardLoading,
       PracticeLoading,
+      QuickPracticeLoading,
       PracticeSessionLoading,
       HistoryLoading,
       BookmarksLoading,
@@ -32,6 +36,7 @@ describe('App route loading UIs', () => {
       import('./loading').then((module) => module.default),
       import('./dashboard/loading').then((module) => module.default),
       import('./practice/loading').then((module) => module.default),
+      import('./practice/quick/loading').then((module) => module.default),
       import('./practice/[sessionId]/loading').then((module) => module.default),
       import('./history/loading').then((module) => module.default),
       import('./bookmarks/loading').then((module) => module.default),
@@ -53,6 +58,11 @@ describe('App route loading UIs', () => {
   it('renders practice loading UI', () => {
     const html = renderToStaticMarkup(<PracticeLoading />);
     expect(html).toContain('Loading practice');
+  });
+
+  it('renders quick practice loading UI', () => {
+    const html = renderToStaticMarkup(<QuickPracticeLoading />);
+    expect(html).toContain('Loading quick practice');
   });
 
   it('renders practice session loading UI', () => {
