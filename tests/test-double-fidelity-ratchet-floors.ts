@@ -82,6 +82,8 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-25 UTC: The proxy suite passes real NextRequest/NextFetchEvent objects
+// instead of 28 empty objects cast to them, and splits by concern.
 // 2026-09-25 UTC: The reconcile suite moves onto the fake (Subscription retrieve
 // override and cancel hook) and splits by concern; its stub-returning helper
 // (the hand-rolled port double) retires.
@@ -125,7 +127,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['db/schema.test.ts', 3],
   ['lib/container.skip-clerk.test.ts', 6],
   ['lib/container.test.ts', 6],
-  ['proxy.test.ts', 28],
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
