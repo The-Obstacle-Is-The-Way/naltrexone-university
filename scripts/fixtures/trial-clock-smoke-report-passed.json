@@ -3,8 +3,8 @@
   "numPassedTestSuites": 2,
   "numFailedTestSuites": 0,
   "numPendingTestSuites": 0,
-  "numTotalTests": 9,
-  "numPassedTests": 9,
+  "numTotalTests": 11,
+  "numPassedTests": 11,
   "numFailedTests": 0,
   "numPendingTests": 0,
   "numTodoTests": 0,
@@ -87,6 +87,14 @@
         {
           "status": "passed",
           "title": "finds Customers by whole, case-insensitive metadata value through Search once indexed"
+        },
+        {
+          "status": "passed",
+          "title": "attaches a PaymentMethod to one customer only and detaches it once"
+        },
+        {
+          "status": "passed",
+          "title": "sets a Subscription's default PaymentMethod"
         }
       ],
       "status": "passed",

@@ -6,4 +6,6 @@ export const STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES = [
   "lists a customer's Subscriptions by id and status and retrieves them by id",
   'cancels a Subscription once and rejects a repeat cancel as resource_missing',
   'finds Customers by whole, case-insensitive metadata value through Search once indexed',
+  'attaches a PaymentMethod to one customer only and detaches it once',
+  "sets a Subscription's default PaymentMethod",
 ] as const;

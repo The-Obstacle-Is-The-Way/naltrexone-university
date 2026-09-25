@@ -28,17 +28,21 @@ type StripeSubscriptionsClient = NonNullable<StripeClient['subscriptions']>;
 
 type StripeCustomersClient = StripeClient['customers'];
 
+type StripePaymentMethodsClient = NonNullable<StripeClient['paymentMethods']>;
+
 // Stripe indexes a new Customer for Search after a delay, normally under a
 // minute. The real half shares one 60-second visibility bound across the
 // case's reads, so this budget covers that wait plus the requests.
 const CUSTOMER_SEARCH_CASE_TIMEOUT_MS = 120_000;
 
-// The port marks list and cancel optional; both halves implement them, so
-// the contract requires them instead of guarding at run time.
+// The port marks list, cancel, update and detach optional; both halves
+// implement them, so the contract requires them instead of guarding at run
+// time.
 export type StripeCheckoutClientContractHarness = {
   sessions: StripeClient['checkout']['sessions'];
   subscriptions: StripeSubscriptionsClient &
-    Required<Pick<StripeSubscriptionsClient, 'list' | 'cancel'>>;
+    Required<Pick<StripeSubscriptionsClient, 'list' | 'cancel' | 'update'>>;
+  paymentMethods: Required<StripePaymentMethodsClient>;
   customers: Required<Pick<StripeCustomersClient, 'search'>>;
   subscriptionParams: SubscriptionParams;
   advanceCreationTime(): Promise<void>;
@@ -49,6 +53,9 @@ export type StripeCheckoutClientContractHarness = {
   // Creates one more Subscription for the same customer and cancels it, so
   // the listing's status filters can be observed against a canceled one.
   seedCanceledSubscription(): Promise<{ id: string; customer: string }>;
+  // Creates one card PaymentMethod attached to no customer; the real half
+  // creates it from a TEST card token, the fake seeds it.
+  seedPaymentMethod(): Promise<{ id: string }>;
   // Creates one Customer whose metadata user_id is the given value; the real
   // half creates it in TEST mode, the fake seeds it.
   seedCustomer(userId: string): Promise<{ id: string }>;
@@ -358,6 +365,109 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
         byUserId(`${userId}-unknown`, 10),
       );
       expect(unknown.data).toHaveLength(0);
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[7],
+    async run(harness) {
+      const { paymentMethods } = harness;
+      const { attach, detach } = paymentMethods;
+      const paymentMethod = await harness.seedPaymentMethod();
+      const owner = harness.subscriptionParams.customer;
+      const other = await harness.seedCustomer(
+        `debt472_payment_method_${randomUUID()}`,
+      );
+
+      const unattached = await paymentMethods.retrieve(paymentMethod.id);
+      expect(unattached.customer).toBeNull();
+
+      const attached = await attach.call(
+        paymentMethods,
+        paymentMethod.id,
+        { customer: owner },
+        { idempotencyKey: idempotencyKey('payment_method_attach') },
+      );
+      expect(attached.customer === owner).toBe(true);
+      const retrieved = await paymentMethods.retrieve(paymentMethod.id);
+      expect(retrieved.customer === owner).toBe(true);
+
+      // Attaching again to the same customer succeeds.
+      const reattached = await attach.call(paymentMethods, paymentMethod.id, {
+        customer: owner,
+      });
+      expect(reattached.customer === owner).toBe(true);
+
+      // Stripe refuses to move an attached PaymentMethod to another customer.
+      let moved: unknown;
+      try {
+        await attach.call(paymentMethods, paymentMethod.id, {
+          customer: other.id,
+        });
+      } catch (error) {
+        moved = error;
+      }
+      expect(readErrorField(moved, 'type')).toBe('StripeInvalidRequestError');
+      expect(readErrorField(moved, 'rawType')).toBe('invalid_request_error');
+      expect(readErrorField(moved, 'statusCode')).toBe(400);
+      expect(readErrorField(moved, 'code')).toBeUndefined();
+      expect(readErrorField(moved, 'message')).toBe(
+        'The payment method you provided has already been attached to a customer.',
+      );
+
+      const detached = await detach.call(
+        paymentMethods,
+        paymentMethod.id,
+        undefined,
+        {
+          idempotencyKey: idempotencyKey('payment_method_detach'),
+        },
+      );
+      expect(detached.customer).toBeNull();
+      const afterDetach = await paymentMethods.retrieve(paymentMethod.id);
+      expect(afterDetach.customer).toBeNull();
+
+      // A second detach has nothing to detach.
+      let detachedTwice: unknown;
+      try {
+        await detach.call(paymentMethods, paymentMethod.id);
+      } catch (error) {
+        detachedTwice = error;
+      }
+      expect(readErrorField(detachedTwice, 'type')).toBe(
+        'StripeInvalidRequestError',
+      );
+      expect(readErrorField(detachedTwice, 'rawType')).toBe(
+        'invalid_request_error',
+      );
+      expect(readErrorField(detachedTwice, 'statusCode')).toBe(400);
+      expect(readErrorField(detachedTwice, 'code')).toBeUndefined();
+      expect(readErrorField(detachedTwice, 'message')).toBe(
+        'The payment method you provided is not attached to a customer so detachment is impossible.',
+      );
+    },
+  },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[8],
+    async run(harness) {
+      const seeded = await harness.seedSubscription();
+      const paymentMethod = await harness.seedPaymentMethod();
+      await harness.paymentMethods.attach(paymentMethod.id, {
+        customer: seeded.customer,
+      });
+
+      const updated = (await harness.subscriptions.update.call(
+        harness.subscriptions,
+        seeded.id,
+        { default_payment_method: paymentMethod.id },
+        { idempotencyKey: idempotencyKey('subscription_default') },
+      )) as { id?: string; default_payment_method?: unknown };
+      expect(updated.id === seeded.id).toBe(true);
+      expect(updated.default_payment_method === paymentMethod.id).toBe(true);
+
+      const retrieved = (await harness.subscriptions.retrieve(seeded.id)) as {
+        default_payment_method?: unknown;
+      };
+      expect(retrieved.default_payment_method === paymentMethod.id).toBe(true);
     },
   },
 ];
