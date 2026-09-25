@@ -55,7 +55,7 @@ describe('QuestionView event wiring (browser)', () => {
     expect(onTryAgain).toHaveBeenCalledTimes(1);
   });
 
-  it('offers retry and answer-as-new after a review hydration error', async () => {
+  it('retries loading the previous answer after a review hydration error', async () => {
     const onTryAgain = vi.fn();
     const onAnswerAsNew = vi.fn();
     const screen = await render(
@@ -70,10 +70,29 @@ describe('QuestionView event wiring (browser)', () => {
     );
 
     await screen.getByRole('button', { name: 'Retry load' }).click();
-    await screen.getByRole('button', { name: 'Answer as new' }).click();
 
     expect(onTryAgain).toHaveBeenCalledTimes(1);
+    expect(onAnswerAsNew).not.toHaveBeenCalled();
+  });
+
+  it('answers as new after a review hydration error', async () => {
+    const onTryAgain = vi.fn();
+    const onAnswerAsNew = vi.fn();
+    const screen = await render(
+      <QuestionView
+        {...createBaseProps()}
+        mode="review"
+        question={question}
+        reviewHydrationState="hydration_error"
+        onTryAgain={onTryAgain}
+        onAnswerAsNew={onAnswerAsNew}
+      />,
+    );
+
+    await screen.getByRole('button', { name: 'Answer as new' }).click();
+
     expect(onAnswerAsNew).toHaveBeenCalledTimes(1);
+    expect(onTryAgain).not.toHaveBeenCalled();
   });
 
   it('reports the chosen choice id and pointer origin when a choice is clicked', async () => {
@@ -112,10 +131,11 @@ describe('QuestionView event wiring (browser)', () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
-  it('reattempts and toggles the bookmark from a reviewed answer', async () => {
-    const onReattempt = vi.fn();
-    const onToggleBookmark = vi.fn();
-    const screen = await render(
+  function renderReviewedAnswer(handlers: {
+    onReattempt: () => void;
+    onToggleBookmark: () => void;
+  }) {
+    return render(
       <QuestionView
         {...createBaseProps()}
         mode="review"
@@ -125,16 +145,37 @@ describe('QuestionView event wiring (browser)', () => {
         isBookmarkHydrated={true}
         bookmarkStatus="idle"
         isBookmarked={false}
-        onReattempt={onReattempt}
-        onToggleBookmark={onToggleBookmark}
+        {...handlers}
       />,
     );
+  }
+
+  it('reattempts from a reviewed answer', async () => {
+    const onReattempt = vi.fn();
+    const onToggleBookmark = vi.fn();
+    const screen = await renderReviewedAnswer({
+      onReattempt,
+      onToggleBookmark,
+    });
 
     await screen.getByRole('button', { name: 'Practice Again' }).click();
-    await screen.getByRole('button', { name: 'Bookmark' }).click();
 
     expect(onReattempt).toHaveBeenCalledTimes(1);
+    expect(onToggleBookmark).not.toHaveBeenCalled();
+  });
+
+  it('toggles the bookmark from a reviewed answer', async () => {
+    const onReattempt = vi.fn();
+    const onToggleBookmark = vi.fn();
+    const screen = await renderReviewedAnswer({
+      onReattempt,
+      onToggleBookmark,
+    });
+
+    await screen.getByRole('button', { name: 'Bookmark' }).click();
+
     expect(onToggleBookmark).toHaveBeenCalledTimes(1);
+    expect(onReattempt).not.toHaveBeenCalled();
   });
 
   it('opens the question report dialog through its trigger', async () => {
