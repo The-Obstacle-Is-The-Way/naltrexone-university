@@ -226,6 +226,48 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       );
     },
   },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[5],
+    async run(harness) {
+      const { cancel, list } = harness.subscriptions;
+      if (!cancel || !list) {
+        throw new Error('Expected the client to cancel and list Subscriptions');
+      }
+      const seeded = await harness.seedSubscription();
+
+      const canceled = await cancel.call(harness.subscriptions, seeded.id);
+      expect(canceled).toEqual(
+        expect.objectContaining({ id: seeded.id, status: 'canceled' }),
+      );
+      // A canceled Subscription stays retrievable and leaves the default
+      // listing.
+      await expect(harness.subscriptions.retrieve(seeded.id)).resolves.toEqual(
+        expect.objectContaining({ id: seeded.id, status: 'canceled' }),
+      );
+      const byDefault = await list.call(harness.subscriptions, {
+        customer: seeded.customer,
+        limit: 10,
+      });
+      expect(byDefault.data).toHaveLength(0);
+
+      // Stripe rejects a second cancel as though the Subscription did not
+      // exist; the message names the id.
+      let caught: unknown;
+      try {
+        await cancel.call(harness.subscriptions, seeded.id);
+      } catch (error) {
+        caught = error;
+      }
+      expect(readErrorField(caught, 'type')).toBe('StripeInvalidRequestError');
+      expect(readErrorField(caught, 'rawType')).toBe('invalid_request_error');
+      expect(readErrorField(caught, 'code')).toBe('resource_missing');
+      expect(readErrorField(caught, 'statusCode')).toBe(404);
+      expect(readErrorField(caught, 'param')).toBe('id');
+      expect(readErrorField(caught, 'message')).toBe(
+        `No such subscription: '${seeded.id}'`,
+      );
+    },
+  },
 ];
 
 export function runStripeCheckoutClientContract(

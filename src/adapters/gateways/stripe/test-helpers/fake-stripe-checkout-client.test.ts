@@ -264,6 +264,52 @@ describe('FakeStripeCheckoutClient', () => {
     );
   });
 
+  it('cancels a seeded Subscription once and rejects a repeat as Stripe does', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSubscription({
+      id: 'sub_fake_1',
+      customer: 'cus_one',
+      status: 'active',
+    });
+    const cancel = stripe.subscriptions.cancel;
+    if (!cancel) throw new Error('Expected the fake to cancel Subscriptions');
+    const options = { idempotencyKey: 'reconcile_duplicate_subscription:x' };
+
+    await expect(
+      stripe.subscriptions.cancel?.('sub_fake_1', undefined, options),
+    ).resolves.toEqual(
+      expect.objectContaining({ id: 'sub_fake_1', status: 'canceled' }),
+    );
+    await expect(stripe.subscriptions.retrieve('sub_fake_1')).resolves.toEqual(
+      expect.objectContaining({ status: 'canceled' }),
+    );
+    await expect(
+      stripe.subscriptions.list?.({ customer: 'cus_one' }),
+    ).resolves.toEqual({ data: [] });
+
+    // Stripe answers a second cancel (and an unknown id) with a 404 that
+    // names the Subscription missing, although it is still retrievable.
+    for (const subscriptionId of ['sub_fake_1', 'sub_unknown']) {
+      await expect(
+        stripe.subscriptions.cancel?.(subscriptionId),
+      ).rejects.toMatchObject({
+        type: 'StripeInvalidRequestError',
+        rawType: 'invalid_request_error',
+        code: 'resource_missing',
+        statusCode: 404,
+        param: 'id',
+        message: `No such subscription: '${subscriptionId}'`,
+      });
+    }
+    expect(stripe.subscriptions.cancelCalls).toEqual([
+      { subscriptionId: 'sub_fake_1', options },
+      { subscriptionId: 'sub_fake_1' },
+      { subscriptionId: 'sub_unknown' },
+    ]);
+    // Detached like an unbound SDK method, cancel has no `this` to read.
+    await expect(cancel('sub_fake_1')).rejects.toBeInstanceOf(TypeError);
+  });
+
   it('supports create-response overrides without changing the stored Session', async () => {
     const stripe = new FakeStripeCheckoutClient();
     const options = { idempotencyKey: 'key_response_override' };

@@ -22,6 +22,7 @@ describe('Stripe Checkout client contract registration', () => {
       'keeps terminal Sessions visible in unfiltered listings',
       'rejects an idempotency key reused with different parameters',
       "lists a customer's Subscriptions by id and status and retrieves them by id",
+      'cancels a Subscription once and rejects a repeat cancel as resource_missing',
     ]);
   });
 });
