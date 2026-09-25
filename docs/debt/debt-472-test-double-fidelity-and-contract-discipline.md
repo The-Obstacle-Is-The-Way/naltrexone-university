@@ -784,8 +784,8 @@ This is the last of three increments on `stripe-payment-gateway.test.ts`. The su
 **The fake.** `FakeStripeCheckoutClient` now serves PaymentMethods seeded with `seedPaymentMethod`, following those rules, and records every retrieve, attach and detach. `subscriptions.update` sets a seeded Subscription's default and records the call. An attach-override seam bends only an attach response Stripe could not send; it is not contract-tested. Eight fake cases and the seam's case were written red first. The unknown-Subscription update case was added with the implementation.
 
 **The contract.** Two new shared scenarios run on both halves:
-- `attaches a PaymentMethod to one customer only and detaches it once`;
-- `sets a Subscription's default PaymentMethod`.
+- `attaches a PaymentMethod to one customer only and retires it once detached`;
+- `sets a Subscription's default only to a PaymentMethod on its customer`.
 
 Four fake mutations each fail their scenario (**10:23:17–10:23:29Z**): moving an attached PaymentMethod, detaching an unattached one, attaching without binding the customer, and ignoring the default. The provider proof now requires eleven cases and passed in TEST mode with `PASS executed=11 passed=11 skipped=0` (**10:21:44–10:23:03Z**), and again on the final head (**11:44:25–11:45:46Z**).
 
@@ -799,6 +799,12 @@ Four fake mutations each fail their scenario (**10:23:17–10:23:29Z**): moving 
 - calling `update` unbound.
 
 Main's suite let the last two pass, because its `vi.fn()` stubs have no receiver. That is the BUG-069/070 class the architecture rule warns about. With main's suite restored and its floor entry removed, `pnpm lint:doubles` fails on its eight literals (**10:25:53Z**).
+
+**#1103 review corrections.** CodeRabbit found the fake more permissive than Stripe in two ways, and a TEST probe confirmed both (**12:24:21Z**). First, a Subscription's default must be a PaymentMethod attached to its customer: an unattached, foreign or detached one fails with a 400 naming `payment_method`. Second, a detached PaymentMethod is retired, and attaching it again to any customer fails with a 400.
+- The fake now enforces both rules, and both scenarios check them (the titles above are their corrected names).
+- Removing either rule from the fake fails its scenario (**12:26:22Z**, **12:26:23Z**).
+- The provider proof passed again with the new checks (**12:26:23–12:27:46Z**).
+- The fake's own suite splits by concern into `fake-stripe-checkout-client-payment-methods.test.ts` (225 lines) to stay under the file limit, with all 36 titles unchanged (**12:25:43Z**).
 
 **Verification F5 now holds.** No test double answers `subscriptions.retrieve` with `{}`. The three integration Stripe clients throw on any Session listing and return concrete Subscriptions. `tests/e2e/helpers/checkout-success-provider-resources.test.ts` stubs the SDK's auto-pager for product and price cleanup, not the `StripeClient` port or the Checkout tail scan.
 
