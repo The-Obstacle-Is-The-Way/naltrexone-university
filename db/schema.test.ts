@@ -49,7 +49,11 @@ describe('practiceSessions schema indexes', () => {
     );
 
     expect(index.config.unique).toBe(true);
-    expect(index.config.where).toBeDefined();
+    const predicate = index.config.where;
+    if (!predicate) throw new Error('Expected a partial index predicate');
+    expect(new PgDialect().sqlToQuery(predicate).sql).toContain(
+      'ended_at IS NULL',
+    );
   });
 });
 
@@ -69,8 +73,12 @@ describe('practiceSessionQuestionStates schema checks', () => {
     const { sql, params } = new PgDialect().sqlToQuery(
       draftCumulativeMsCheck.value,
     );
-    expect(sql).toContain(String(DAY_MS));
-    expect(params).not.toContain(DAY_MS);
+    // Exact text: a containment check would also accept a wider bound whose
+    // digits begin with DAY_MS's.
+    expect(sql).toBe(
+      `"practice_session_question_states"."draft_cumulative_ms" BETWEEN 0 AND ${DAY_MS}`,
+    );
+    expect(params).toEqual([]);
   });
 });
 
