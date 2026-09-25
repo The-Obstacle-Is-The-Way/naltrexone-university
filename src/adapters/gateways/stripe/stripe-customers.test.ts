@@ -122,6 +122,31 @@ describe('createStripeCustomer', () => {
     });
   });
 
+  it('creates the customer with its email and both user ids in metadata', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const create = vi
+      .spyOn(stripe.customers, 'create')
+      .mockResolvedValue({ id: 'cus_new' });
+
+    await createStripeCustomer({
+      stripe,
+      input: {
+        userId: appUserId,
+        clerkUserId: 'clerk_1',
+        email: 'user@example.com',
+      },
+      logger: new FakeLogger(),
+    });
+
+    expect(create).toHaveBeenCalledWith(
+      {
+        email: 'user@example.com',
+        metadata: { user_id: appUserId, clerk_user_id: 'clerk_1' },
+      },
+      { idempotencyKey: `create_stripe_customer:${appUserId}` },
+    );
+  });
+
   it('forwards idempotency key to Stripe customer creation', async () => {
     const stripe = new FakeStripeCheckoutClient();
     vi.spyOn(stripe.customers, 'create').mockResolvedValue({ id: 'cus_new' });
