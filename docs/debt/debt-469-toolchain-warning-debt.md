@@ -161,6 +161,14 @@ All 86 test full names, ancestors included, are unchanged (**14:17:39Z**). Main'
 
 Main's two files fail `biome lint --error-on-warnings` without their suppressions (**14:38:55Z**). Tracked suppressions fall **17 → 15**. Sanitized receipts: this clone's `.git/claude-debt-resume/splits-reset-visibility/proofs.log`. The local full gate passed on `b9f9e131` and is re-run on every later head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
 
+**2026-09-25 UTC #1110 release receipt:** Active-exam regression and E2E reset splits #1109 merged as `d50b16fc3a640eb5a0868a87d8232d9068781e4e` at **15:40:42Z** (exact-head approval **5319499844** at 15:28:05Z on `343ebba6`, no findings; CI **36153636381**, passed on attempt 2 after attempt 1 failed in Build on a Google Fonts fetch documented on #1109, with 52/52 E2E) and is promoted through #1110 (`9f34a9b05ea7dc2673f354734666bb24a19e868b`, merged **15:54:34Z**) after a fetched, passing provenance proof and promotion CI **36155819602** (52/52 E2E, no retries). Main CI **36157324964** passed `test` at **16:06:19Z**. Vercel was Ready at **15:56:00.018Z**, held STAGED without a production alias from **15:57:03Z** through **16:06:20Z**, then assigned production at **16:06:22.751Z**. Both trees equal `551d8ffddd32501e5b69c944603a4307feac5551`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **16:07:24Z**.
+
+**Session-attempt repository and practice session page burn-down (2026-09-25 UTC):** two more suites split along concern boundaries they already had.
+- The 1,149-line `session-attempt-repository.integration.test.ts` moves its attempted-question aggregates into `session-attempt-attempted-questions.integration.test.ts`: latest `answeredAt` per question, and the attempted-question listing with its filters and tie-breaker. Writes, lookups and integrity constraints stay. All 23 describe and case titles are unchanged, and the 22 cases pass against Postgres.
+- The 872-line practice session `page.test.tsx` moves its session-summary rendering into `page-summary.test.tsx`. Route assembly, in-run and exam-review rendering stay. Its fixture ids become plain constants, since no `vi.mock` factory reads them. All 22 full names are unchanged.
+
+Main's two files fail `biome lint --error-on-warnings` without their suppressions (**15:22:45Z**, **15:24:06Z**). Tracked suppressions fall **15 → 13**. Sanitized receipts: this clone's `.git/claude-debt-resume/splits-session-page/proofs.log`. The local full gate passed on `fcae0914` and is re-run on every later head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
+
 **Rejected alternatives:**
 
 - **`VITE_CONFIG_NATIVE_IGNORE_WARNING=true`** — mutes the messenger; the CJS/ESM mismatch would resurface as a hard break on Vite's next major.
