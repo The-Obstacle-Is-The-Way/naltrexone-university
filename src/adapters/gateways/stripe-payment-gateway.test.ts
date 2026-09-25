@@ -1,18 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
-import type {
-  CheckoutSessionCreateParams,
-  StripeBillingPortalSession,
-  StripeCheckoutSession,
-  StripeCheckoutSessionList,
-  StripeCheckoutSessionRetrieved,
-  StripeClient,
-  StripeCustomer,
-  StripeCustomerSearchResult,
-  StripeRequestOptions,
-  StripeSubscription,
-  StripeSubscriptionListResult,
-} from '@/src/adapters/shared/stripe-types';
+import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
@@ -98,119 +86,13 @@ function liveSubscription(
   };
 }
 
-function createStripeMockBase() {
-  const customersCreate = vi.fn(
-    async () => ({ id: 'cus_123' }) as StripeCustomer,
-  );
-  const customersSearch = vi.fn(
-    async () => ({ data: [] }) as StripeCustomerSearchResult,
-  );
-  const sessionsCreate = vi.fn(
-    async (
-      _params: CheckoutSessionCreateParams,
-      _options?: StripeRequestOptions,
-    ) =>
-      ({
-        id: 'cs_new',
-        url: 'https://stripe/checkout',
-      }) as StripeCheckoutSession,
-  );
-  const sessionsList = vi.fn(
-    async () => ({ data: [] }) as StripeCheckoutSessionList,
-  );
-  const sessionsRetrieve = vi.fn(
-    async () =>
-      ({
-        id: 'cs_existing',
-        url: 'https://stripe/existing-checkout',
-        line_items: { data: [] },
-      }) as StripeCheckoutSessionRetrieved,
-  );
-  const sessionsExpire = vi.fn(
-    async () =>
-      ({
-        id: 'cs_existing',
-        url: 'https://stripe/existing-checkout',
-      }) as StripeCheckoutSession,
-  );
-  const portalSessionsCreate = vi.fn(
-    async () =>
-      ({ url: 'https://stripe/portal' }) as StripeBillingPortalSession,
-  );
-  const constructEvent = vi.fn<StripeClient['webhooks']['constructEvent']>(
-    () => {
-      throw new Error('unexpected webhook call');
-    },
-  );
-
-  const stripe = {
-    customers: { create: customersCreate, search: customersSearch },
-    checkout: {
-      sessions: {
-        create: sessionsCreate,
-        list: sessionsList,
-        retrieve: sessionsRetrieve,
-        expire: sessionsExpire,
-      },
-    },
-    billingPortal: { sessions: { create: portalSessionsCreate } },
-    webhooks: { constructEvent },
-  } satisfies StripeClient;
-
-  return {
-    stripe,
-    customersCreate,
-    customersSearch,
-    sessionsCreate,
-    sessionsList,
-    sessionsRetrieve,
-    sessionsExpire,
-    portalSessionsCreate,
-    constructEvent,
-  };
-}
-
-function createStripeMockWithSubscriptions() {
-  const base = createStripeMockBase();
-
-  const subscriptionsRetrieve = vi.fn(async () => ({}) as StripeSubscription);
-  const subscriptionsList = vi.fn(
-    async () => ({ data: [] }) as StripeSubscriptionListResult,
-  );
-  const subscriptionsCancel = vi.fn(async () => ({}) as StripeSubscription);
-
-  const stripe = {
-    ...base.stripe,
-    subscriptions: {
-      retrieve: subscriptionsRetrieve,
-      list: subscriptionsList,
-      cancel: subscriptionsCancel,
-    },
-  } satisfies StripeClient;
-
-  return {
-    ...base,
-    stripe,
-    subscriptionsRetrieve,
-    subscriptionsList,
-    subscriptionsCancel,
-  };
-}
-
-function createStripeMock(options?: {
-  withSubscriptions?: false;
-}): ReturnType<typeof createStripeMockBase>;
-function createStripeMock(options: {
-  withSubscriptions: true;
-}): ReturnType<typeof createStripeMockWithSubscriptions>;
-function createStripeMock({
-  withSubscriptions = false,
-}: {
-  withSubscriptions?: boolean;
-} = {}) {
-  return withSubscriptions
-    ? createStripeMockWithSubscriptions()
-    : createStripeMockBase();
+// A fake holding one PaymentMethod, attached to the given customer or none.
+function fakeWithPaymentMethod(
+  customer: string | null,
+): FakeStripeCheckoutClient {
+  const stripe = new FakeStripeCheckoutClient();
+  stripe.seedPaymentMethod({ id: 'pm_123', customer });
+  return stripe;
 }
 
 describe('StripePaymentGateway', () => {
@@ -237,19 +119,12 @@ describe('StripePaymentGateway', () => {
     expect(stripe.createCalls).toEqual([]);
   });
 
+  // PaymentMethod attach/detach and the Subscription default are the fake's,
+  // contracted against Stripe TEST mode; these cases pin the facade's own
+  // reconcile, ownership and idempotency-key rules.
   it('attaches a trial payment method and selects it with Session-derived idempotency keys', async () => {
-    const base = createStripeMock({ withSubscriptions: true });
-    const retrieve = vi.fn(async () => ({ id: 'pm_123', customer: null }));
-    const attach = vi.fn(async () => ({
-      id: 'pm_123',
-      customer: 'cus_123',
-    }));
-    const update = vi.fn(async () => ({}));
-    const stripe: StripeClient = {
-      ...base.stripe,
-      paymentMethods: { retrieve, attach },
-      subscriptions: { ...base.stripe.subscriptions, update },
-    };
+    const stripe = fakeWithPaymentMethod(null);
+    stripe.seedSubscription(liveSubscription());
     const gateway = createGateway(stripe);
 
     await gateway.attachTrialPaymentMethod({
@@ -263,33 +138,29 @@ describe('StripePaymentGateway', () => {
       externalSubscriptionId: 'sub_123',
     });
 
-    expect(attach).toHaveBeenCalledWith(
-      'pm_123',
-      { customer: 'cus_123' },
-      { idempotencyKey: 'trial_setup:cs_setup_123:attach_payment_method' },
-    );
-    expect(retrieve).toHaveBeenCalledWith('pm_123');
-    expect(update).toHaveBeenCalledWith(
-      'sub_123',
-      { default_payment_method: 'pm_123' },
-      { idempotencyKey: 'trial_setup:cs_setup_123:set_subscription_default' },
-    );
+    expect(stripe.paymentMethods.retrieveCalls).toEqual(['pm_123']);
+    expect(stripe.paymentMethods.attachCalls).toEqual([
+      {
+        paymentMethodId: 'pm_123',
+        customer: 'cus_123',
+        options: {
+          idempotencyKey: 'trial_setup:cs_setup_123:attach_payment_method',
+        },
+      },
+    ]);
+    expect(stripe.subscriptions.updateCalls).toEqual([
+      {
+        subscriptionId: 'sub_123',
+        params: { default_payment_method: 'pm_123' },
+        options: {
+          idempotencyKey: 'trial_setup:cs_setup_123:set_subscription_default',
+        },
+      },
+    ]);
   });
 
   it('reconciles an already-attached payment method without issuing a second attach', async () => {
-    const base = createStripeMock({ withSubscriptions: true });
-    const retrieve = vi.fn(async () => ({
-      id: 'pm_123',
-      customer: 'cus_123',
-    }));
-    const attach = vi.fn(async () => ({
-      id: 'pm_123',
-      customer: 'cus_123',
-    }));
-    const stripe: StripeClient = {
-      ...base.stripe,
-      paymentMethods: { retrieve, attach },
-    };
+    const stripe = fakeWithPaymentMethod('cus_123');
 
     await createGateway(stripe).attachTrialPaymentMethod({
       sessionId: 'cs_setup_123',
@@ -297,25 +168,12 @@ describe('StripePaymentGateway', () => {
       externalCustomerId: 'cus_123',
     });
 
-    expect(retrieve).toHaveBeenCalledWith('pm_123');
-    expect(attach).not.toHaveBeenCalled();
+    expect(stripe.paymentMethods.retrieveCalls).toEqual(['pm_123']);
+    expect(stripe.paymentMethods.attachCalls).toEqual([]);
   });
 
   it('detaches a setup payment method with a Session-derived idempotency key', async () => {
-    const base = createStripeMock({ withSubscriptions: true });
-    const retrieve = vi.fn(async () => ({
-      id: 'pm_123',
-      customer: 'cus_unverified',
-    }));
-    const attach = vi.fn(async () => ({
-      id: 'pm_123',
-      customer: 'cus_unverified',
-    }));
-    const detach = vi.fn(async () => ({ id: 'pm_123', customer: null }));
-    const stripe: StripeClient = {
-      ...base.stripe,
-      paymentMethods: { retrieve, attach, detach },
-    };
+    const stripe = fakeWithPaymentMethod('cus_unverified');
 
     await createGateway(stripe).detachTrialPaymentMethod({
       sessionId: 'cs_setup_123',
@@ -323,26 +181,18 @@ describe('StripePaymentGateway', () => {
       externalCustomerId: 'cus_unverified',
     });
 
-    expect(detach).toHaveBeenCalledWith('pm_123', undefined, {
-      idempotencyKey: 'trial_setup:cs_setup_123:detach_payment_method',
-    });
+    expect(stripe.paymentMethods.detachCalls).toEqual([
+      {
+        paymentMethodId: 'pm_123',
+        options: {
+          idempotencyKey: 'trial_setup:cs_setup_123:detach_payment_method',
+        },
+      },
+    ]);
   });
 
   it('does not detach a setup payment method owned by a different customer', async () => {
-    const base = createStripeMock({ withSubscriptions: true });
-    const retrieve = vi.fn(async () => ({
-      id: 'pm_123',
-      customer: 'cus_other',
-    }));
-    const attach = vi.fn(async () => ({
-      id: 'pm_123',
-      customer: 'cus_other',
-    }));
-    const detach = vi.fn(async () => ({ id: 'pm_123', customer: null }));
-    const stripe: StripeClient = {
-      ...base.stripe,
-      paymentMethods: { retrieve, attach, detach },
-    };
+    const stripe = fakeWithPaymentMethod('cus_other');
 
     await createGateway(stripe).detachTrialPaymentMethod({
       sessionId: 'cs_setup_123',
@@ -350,18 +200,17 @@ describe('StripePaymentGateway', () => {
       externalCustomerId: 'cus_expected',
     });
 
-    expect(detach).not.toHaveBeenCalled();
+    expect(stripe.paymentMethods.detachCalls).toEqual([]);
   });
 
   it('rejects an attachment response that is not bound to the verified customer', async () => {
-    const base = createStripeMock({ withSubscriptions: true });
-    const stripe: StripeClient = {
-      ...base.stripe,
-      paymentMethods: {
-        retrieve: vi.fn(async () => ({ id: 'pm_123', customer: null })),
-        attach: vi.fn(async () => ({ id: 'pm_123', customer: 'cus_other' })),
-      },
-    };
+    const stripe = fakeWithPaymentMethod(null);
+    // Stripe binds an attach to the requested customer; this is a response it
+    // could not send.
+    stripe.setPaymentMethodAttachOverride((paymentMethod) => ({
+      ...paymentMethod,
+      customer: 'cus_other',
+    }));
 
     await expect(
       createGateway(stripe).attachTrialPaymentMethod({
@@ -373,21 +222,7 @@ describe('StripePaymentGateway', () => {
   });
 
   it('rejects a payment method already attached to another customer', async () => {
-    const base = createStripeMock({ withSubscriptions: true });
-    const attach = vi.fn(async () => ({
-      id: 'pm_123',
-      customer: 'cus_123',
-    }));
-    const stripe: StripeClient = {
-      ...base.stripe,
-      paymentMethods: {
-        retrieve: vi.fn(async () => ({
-          id: 'pm_123',
-          customer: 'cus_other',
-        })),
-        attach,
-      },
-    };
+    const stripe = fakeWithPaymentMethod('cus_other');
 
     await expect(
       createGateway(stripe).attachTrialPaymentMethod({
@@ -396,7 +231,7 @@ describe('StripePaymentGateway', () => {
         externalCustomerId: 'cus_123',
       }),
     ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
-    expect(attach).not.toHaveBeenCalled();
+    expect(stripe.paymentMethods.attachCalls).toEqual([]);
   });
 
   // Customer, Checkout and portal behavior is pinned at the adapter level, on
