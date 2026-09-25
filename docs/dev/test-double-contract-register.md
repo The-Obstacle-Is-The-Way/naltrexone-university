@@ -44,7 +44,7 @@ The replacement proof is layered: `fake-payment-gateway.test.ts` pins recording/
 
 ## Register
 
-**Controller fixture maintenance (2026-09-23 UTC):** The eleven real-Postgres controller cases split into question/transaction, stats/review, and webhook files. Their unchanged `FakeAuthGateway` constructor helper moves to `tests/integration/helpers.ts`; its snapshot-only limitation and dated waiver stay unchanged. The transaction fault is a subclass of the real Drizzle repository, not a new maintained fake: only `recordQuestionAnswer` throws, while an inherited lookup executes against Postgres. No fake or adapter implementation changes and no new parity claim. [Mutation and preservation receipts](../debt/debt-472-test-double-fidelity-and-contract-discipline.md#controller-transaction-fixture-disposition-2026-09-23-utc).
+**Controller fixture maintenance (2026-09-23 UTC):** The eleven real-Postgres controller cases split into question/transaction, stats/review, and webhook files. Their unchanged `FakeAuthGateway` constructor helper moves to `tests/integration/helpers.ts`; its snapshot-only limitation and dated waiver stay unchanged. The transaction fault is a subclass of the real Drizzle repository, not a new maintained fake: only `recordQuestionAnswer` throws, while an inherited lookup executes against Postgres. No fake or adapter implementation changes and no new parity claim. [Mutation and preservation receipts](../_archive/debt/debt-472-test-double-fidelity-and-contract-discipline.md#controller-transaction-fixture-disposition-2026-09-23-utc).
 
 <!-- fake-contract-register:start -->
 | Double | Verification | Known divergences |
