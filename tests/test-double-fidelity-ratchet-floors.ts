@@ -49,6 +49,11 @@
 // its orchestration tests use typed fakes; no own-code module factories
 // remain.
 
+// 2026-09-25 UTC: The DEBT-469 pricing split moves the three loadPricingData
+// AuthGateway literals into page-actions.test.tsx with their cases, so the
+// pricing floor follows them (6 → 3 + 3). The sites and the total are
+// unchanged; retiring them is left to a behavior-reviewed change, because
+// their throwing requireUser also asserts that the loader never calls it.
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 
 // 2026-09-23 UTC: The user-repository unit suite keeps seven typed
@@ -152,7 +157,8 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout.test.ts', 6],
   ['app/api/stripe/webhook/route.test.ts', 7],
   ['app/api/webhooks/clerk/route.test.ts', 2],
-  ['app/pricing/page.test.tsx', 6],
+  ['app/pricing/page-actions.test.tsx', 3],
+  ['app/pricing/page.test.tsx', 3],
   ['lib/logger.test.ts', 1],
   ['src/adapters/controllers/question-view-controller.test.ts', 1],
   [
