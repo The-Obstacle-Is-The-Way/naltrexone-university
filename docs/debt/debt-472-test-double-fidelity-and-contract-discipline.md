@@ -702,6 +702,41 @@ Maintained-port doubles fall **41 / 14 → 40 / 13**; casts stay **27 / 11** and
 
 **2026-09-25 UTC #1096 release receipt:** Customer Search #1095 merged as `5a3e8c86c5a08b53086de4cdcfde5ebf0538b5cb` at **08:58:04Z** (exact-head approval **5315658154** at 08:55:15Z on `52ab3ec6`, two accepted findings, the timeout fixed with a shared per-case bound instead of the suggested 300 seconds; CI **36114847300** attempt 1 with 52/52 E2E, no retries) and is promoted through #1096 (`a257dfe34f2448f32e62252905e6d0930c5e667c`, merged **09:11:56Z**) after the executable provenance proof and promotion CI **36115851395** (52/52 E2E, no retries). Main CI **36117093141** passed `test` at **09:23:18Z**. Vercel was Ready at **09:13:11.725Z**, observed STAGED without a production alias from **09:13:20Z** through **09:22:35Z**, then assigned production at **09:23:19.890Z**. Both trees equal `9573630eb1b77bac7246b9a22742dae7d33b8c83`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **09:23:38Z**.
 
+### Payment-gateway webhook section disposition (2026-09-25 UTC)
+
+This is the first of three increments on F5's remaining counterexample, `stripe-payment-gateway.test.ts`. That suite tests the `StripePaymentGateway` facade, but 23 of its 44 titles (26 of 52 runtime cases) re-tested webhook normalization through the facade's hand-built client. A read-only twin map of all 44 cases found three things:
+- Several behaviors had no adapter-level case at all: routing for seven subscription event types and `invoice.payment_action_required`, `occurredAt`, the invalid-payload logs, the signature-failure message, and checkout completions with no subscription key.
+- Two facade forwards had no case anywhere: the consent-state secret and the E2E owner.
+- The rest were duplicates.
+
+**Twins first.** `stripe-webhook-processor.test.ts` gains cases on the fake:
+- every subscription event type and every root-referenced event, each with its `occurredAt`;
+- malformed references, and retrieved Subscriptions that fail the schema, each with its error log (the fake's retrieve override supplies an empty item list);
+- `metadata.user_id` missing on the updated, created and checkout paths;
+- a checkout completion without a subscription key;
+- the signature-failure message, added to the existing case.
+
+The suite grows from 18 to 38 runtime cases (715 lines, under the file limit).
+
+Nine mutations against the processor, schemas and normalizer show the effect (**09:37:49–09:38:35Z**):
+- Main's processor suite let all nine pass.
+- The new processor suite fails every one.
+- Main's gateway suite caught eight of them (**09:34:55–09:35:21Z**, **09:38:21–09:38:35Z**) but not the dropped `occurredAt` on root-referenced events.
+
+The normalizer's existing missing-client case fails when its guard is removed (**09:39:08Z**).
+
+**Then retirement.** The facade's 21 duplicated webhook titles retire, each behind a named processor or normalizer twin; the twin list is in the proofs log. Four facade cases remain, all on the fake:
+- the webhook secret and price ids reach verification and normalization;
+- the logger receives verification failures;
+- a correctly signed expired setup Session normalizes, which proves the consent-state secret is forwarded;
+- a Subscription owned by another E2E runner is rejected, which proves the E2E owner is forwarded.
+
+Dropping any of the five forwards fails the new facade cases (**09:38:19–09:38:31Z**). Main's suite let the consent-secret and E2E-owner forwards be dropped (**09:38:23Z**, **09:38:26Z**).
+
+The gateway suite falls from 1,537 to 991 lines and from 52 to 30 runtime cases. Its port-double floor stays **8**: the base client literals and the six payment-method literals remain, and so does its DEBT-469 suppression. The next increment takes the Checkout, customer and portal section; the last adds `paymentMethods` and `subscriptions.update` to the fake under a contract scenario. Sanitized receipts: this clone's `.git/claude-debt-resume/gateway-webhooks/proofs.log`. The local full gate passed on `054cc1d3` and is re-run on every later head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
+
+**2026-09-25 UTC #1098 release receipt:** Setup-expiration #1097 merged as `238fc03242bda1e048fcff5a1355f01c8127f2b5` at **09:44:49Z** (exact-head approval **5316030148** at 09:37:20Z on `48141759`, no findings; CI **36118954054** attempt 1 with 52/52 E2E, no retries) and is promoted through #1098 (`9ef820192377b1a2b8c9e8f2f78da0121cb5e4aa`, merged **09:58:15Z**) after the executable provenance proof and promotion CI **36120189081** (52/52 E2E, no retries). Main CI **36121393331** passed `test` at **10:09:44Z**. Vercel was Ready at **09:59:34.220Z**, observed STAGED without a production alias from **10:00:27Z** through **10:09:42Z**, then assigned production at **10:09:46.566Z**. Both trees equal `1d7803495ea5d97e3cd39c0da8ab6e6e0847a973`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **10:10:45Z**.
+
 ## Description
 
 **2026-09-23 UTC promotion pointer:** Quick Practice #1031 and Practice starter #1032 are merged and promoted through #1033 (`21912817`, **13:57:00Z**). The executable promotion proof records source approvals **5291471054** / **5291748690** predating both source merges and zero unresolved threads. Promotion CI **35869147932** passed **5,698 unit / 420 browser / 369 integration plus six opt-in skips / 52 E2E** without retries. Main CI **35870656427** and the production gate/health verification are still pending at this update; the earlier pending summaries above are historical, not claims that the source PRs remain open.
