@@ -2,9 +2,38 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import { err, ok } from '@/src/adapters/controllers/action-result';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
-import { createAvailableQuestionsCountEffect } from './practice-page-available-count';
+import {
+  createAvailableQuestionsCountEffect,
+  toAvailableQuestionsCountFilters,
+} from './practice-page-available-count';
 
 describe('practice-page-available-count', () => {
+  describe('toAvailableQuestionsCountFilters', () => {
+    it('sends a selected difficulty as a one-item list', () => {
+      expect(
+        toAvailableQuestionsCountFilters({
+          tagSlugs: ['opioids'],
+          difficulty: 'hard',
+          status: 'incorrect',
+        }),
+      ).toEqual({
+        tagSlugs: ['opioids'],
+        difficulties: ['hard'],
+        statuses: ['incorrect'],
+      });
+    });
+
+    it('sends no difficulty filter when none is selected', () => {
+      expect(
+        toAvailableQuestionsCountFilters({
+          tagSlugs: [],
+          difficulty: null,
+          status: 'unanswered',
+        }),
+      ).toEqual({ tagSlugs: [], difficulties: [], statuses: ['unanswered'] });
+    });
+  });
+
   describe('createAvailableQuestionsCountEffect', () => {
     it('loads the available count and transitions to idle', async () => {
       const setAvailableCountStatus = vi.fn();
