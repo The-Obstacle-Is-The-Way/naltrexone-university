@@ -84,6 +84,17 @@ runStripeCheckoutClientContract(
       retrieve: (subscriptionId, params, options) =>
         stripe.subscriptions.retrieve(subscriptionId, params, options),
       list: (params, options) => stripe.subscriptions.list(params, options),
+      // A canceled Subscription is untracked at once: cleanup's own cancel
+      // would otherwise get Stripe's 404 for an already-canceled one.
+      cancel: async (subscriptionId, params, options) => {
+        const canceled = await stripe.subscriptions.cancel(
+          subscriptionId,
+          params,
+          options,
+        );
+        createdSubscriptionIds.delete(subscriptionId);
+        return canceled;
+      },
     } satisfies NonNullable<StripeClient['subscriptions']>;
 
     return {

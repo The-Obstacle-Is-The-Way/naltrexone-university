@@ -45,6 +45,11 @@ type ListCall = Parameters<StripeClient['checkout']['sessions']['list']>[0];
 // behavior and is not contract-tested.
 type ListHook = (params: ListCall) => void | Promise<void>;
 
+type SubscriptionCancelCall = {
+  subscriptionId: string;
+  options?: StripeRequestOptions | undefined;
+};
+
 type RetrieveRequest = {
   sessionId: string;
   params?: { expand?: string[] } | undefined;
@@ -244,18 +249,50 @@ export class FakeStripeCheckoutClient implements StripeClient {
     },
   };
 
-  // Seeded Subscriptions are listed by exact customer (and status) and
-  // retrieved by id; the list and retrieve shapes are proven against Stripe
-  // TEST mode by the shared contract. `list` reads `this`, as the SDK method
-  // does, so a detached call fails the way an unbound SDK method would.
-  readonly subscriptions: NonNullable<StripeClient['subscriptions']> & {
-    readonly seeded: SeededSubscription[];
-    readonly listCalls: StripeSubscriptionListParams[];
-    readonly retrieveCalls: string[];
-  } = {
+  // Seeded Subscriptions are listed by exact customer (and status), retrieved
+  // by id and canceled once; the list, retrieve and cancel shapes are proven
+  // against Stripe TEST mode by the shared contract. A second cancel, like an
+  // unknown id, gets Stripe's 404 resource_missing although the canceled
+  // Subscription stays retrievable. Cancel ignores idempotency keys: Stripe
+  // replays a reused key's first result instead. `list` and `cancel` read
+  // `this`, as the SDK methods do, so a detached call fails the way an
+  // unbound SDK method would.
+  readonly subscriptions: NonNullable<StripeClient['subscriptions']> &
+    Required<
+      Pick<NonNullable<StripeClient['subscriptions']>, 'list' | 'cancel'>
+    > & {
+      readonly seeded: SeededSubscription[];
+      readonly listCalls: StripeSubscriptionListParams[];
+      readonly retrieveCalls: string[];
+      readonly cancelCalls: SubscriptionCancelCall[];
+    } = {
     seeded: [],
     listCalls: [],
     retrieveCalls: [],
+    cancelCalls: [],
+    async cancel(subscriptionId, _params, options) {
+      this.cancelCalls.push({
+        subscriptionId,
+        ...(options ? { options: { ...options } } : {}),
+      });
+      const subscription = this.seeded.find(
+        (candidate) => candidate.id === subscriptionId,
+      );
+      if (!subscription || subscription.status === 'canceled') {
+        throw Object.assign(
+          new Error(`No such subscription: '${subscriptionId}'`),
+          {
+            type: 'StripeInvalidRequestError',
+            rawType: 'invalid_request_error',
+            code: 'resource_missing',
+            statusCode: 404,
+            param: 'id',
+          },
+        );
+      }
+      subscription.status = 'canceled';
+      return structuredClone(subscription);
+    },
     async list(params) {
       this.listCalls.push({ ...params });
       const data = this.seeded
