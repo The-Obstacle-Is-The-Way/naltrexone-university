@@ -1,46 +1,22 @@
 import { createHmac } from 'node:crypto';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { processStripeWebhookEvent } from './stripe-webhook-processor';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
 const consentStateSecret = 'dedicated-consent-state-secret-32-bytes';
 const appUserId = crypto.randomUUID();
 const priceIds = { monthly: 'price_monthly', annual: 'price_annual' } as const;
 
-function createStripeClient(input: {
-  event: ReturnType<StripeClient['webhooks']['constructEvent']>;
-  retrieveSetupIntent?: NonNullable<StripeClient['setupIntents']>['retrieve'];
-  retrieveSubscription?: NonNullable<StripeClient['subscriptions']>['retrieve'];
-}): StripeClient {
-  return {
-    customers: {
-      create: vi.fn(async () => ({ id: 'cus_unused' })),
-    },
-    checkout: {
-      sessions: {
-        create: vi.fn(async () => ({ id: 'cs_unused', url: null })),
-        list: vi.fn(async () => ({ data: [] })),
-        retrieve: vi.fn(async () => ({ id: 'cs_unused', url: null })),
-        expire: vi.fn(async () => ({ id: 'cs_unused', url: null })),
-      },
-    },
-    subscriptions: {
-      retrieve: input.retrieveSubscription ?? vi.fn(async () => ({})),
-    },
-    setupIntents: {
-      retrieve:
-        input.retrieveSetupIntent ?? vi.fn(async () => ({ id: 'seti_unused' })),
-    },
-    billingPortal: {
-      sessions: {
-        create: vi.fn(async () => ({ url: 'https://stripe.test/portal' })),
-      },
-    },
-    webhooks: {
-      constructEvent: vi.fn(() => input.event),
-    },
-  };
+// The fake hands the injected event back from webhook verification and
+// records every SetupIntent and Subscription retrieval.
+function stripeWithEvent(
+  event: ReturnType<StripeClient['webhooks']['constructEvent']>,
+): FakeStripeCheckoutClient {
+  const stripe = new FakeStripeCheckoutClient();
+  stripe.setWebhookEvent(event);
+  return stripe;
 }
 
 function signedSetupMetadata() {
@@ -72,18 +48,16 @@ function signedSetupMetadata() {
 
 describe('expired trial payment-method setup webhook', () => {
   it('ignores a non-setup expired Checkout Session', async () => {
-    const stripe = createStripeClient({
-      event: {
-        id: 'evt_subscription_expired',
-        type: 'checkout.session.expired',
-        created: 1_775_649_600,
-        data: {
-          object: {
-            id: 'cs_subscription_expired',
-            mode: 'subscription',
-            subscription: null,
-            metadata: {},
-          },
+    const stripe = stripeWithEvent({
+      id: 'evt_subscription_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_subscription_expired',
+          mode: 'subscription',
+          subscription: null,
+          metadata: {},
         },
       },
     });
@@ -106,23 +80,17 @@ describe('expired trial payment-method setup webhook', () => {
   });
 
   it('normalizes signed state without retrieving a SetupIntent or subscription', async () => {
-    const retrieveSetupIntent = vi.fn();
-    const retrieveSubscription = vi.fn();
-    const stripe = createStripeClient({
-      event: {
-        id: 'evt_setup_expired',
-        type: 'checkout.session.expired',
-        created: 1_775_649_600,
-        data: {
-          object: {
-            id: 'cs_setup_123',
-            mode: 'setup',
-            metadata: signedSetupMetadata(),
-          },
+    const stripe = stripeWithEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: signedSetupMetadata(),
         },
       },
-      retrieveSetupIntent,
-      retrieveSubscription,
     });
 
     await expect(
@@ -148,22 +116,20 @@ describe('expired trial payment-method setup webhook', () => {
         expiredAt: new Date('2026-04-08T12:00:00.000Z'),
       },
     });
-    expect(retrieveSetupIntent).not.toHaveBeenCalled();
-    expect(retrieveSubscription).not.toHaveBeenCalled();
+    expect(stripe.setupIntents.retrieveCalls).toEqual([]);
+    expect(stripe.subscriptions.retrieveCalls).toEqual([]);
   });
 
   it('fails closed when the dedicated consent-state secret is unavailable', async () => {
-    const stripe = createStripeClient({
-      event: {
-        id: 'evt_setup_expired',
-        type: 'checkout.session.expired',
-        created: 1_775_649_600,
-        data: {
-          object: {
-            id: 'cs_setup_123',
-            mode: 'setup',
-            metadata: signedSetupMetadata(),
-          },
+    const stripe = stripeWithEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: signedSetupMetadata(),
         },
       },
     });
@@ -185,17 +151,15 @@ describe('expired trial payment-method setup webhook', () => {
 
   it('rejects an expired setup Session with incomplete signed state', async () => {
     const logger = new FakeLogger();
-    const stripe = createStripeClient({
-      event: {
-        id: 'evt_setup_expired',
-        type: 'checkout.session.expired',
-        created: 1_775_649_600,
-        data: {
-          object: {
-            id: 'cs_setup_123',
-            mode: 'setup',
-            metadata: {},
-          },
+    const stripe = stripeWithEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: {},
         },
       },
     });
@@ -219,19 +183,17 @@ describe('expired trial payment-method setup webhook', () => {
   });
 
   it('rejects an expired setup Session with a forged state signature', async () => {
-    const stripe = createStripeClient({
-      event: {
-        id: 'evt_setup_expired',
-        type: 'checkout.session.expired',
-        created: 1_775_649_600,
-        data: {
-          object: {
-            id: 'cs_setup_123',
-            mode: 'setup',
-            metadata: {
-              ...signedSetupMetadata(),
-              consent_state_signature: '0'.repeat(64),
-            },
+    const stripe = stripeWithEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
+      data: {
+        object: {
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: {
+            ...signedSetupMetadata(),
+            consent_state_signature: '0'.repeat(64),
           },
         },
       },

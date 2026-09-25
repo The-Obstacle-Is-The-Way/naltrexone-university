@@ -684,6 +684,24 @@ Casts fall **30 / 12 → 27 / 11**; maintained-port doubles stay **41 / 14** and
 
 **2026-09-25 UTC #1094 release receipt:** Schema #1093 merged as `9265bcc9fbb5cb1449443fc7152941b7a04c2b36` at **07:51:18Z** (exact-head approval **5314968283** at 07:41:48Z on `b4266867`, two accepted findings, the suggested containment check strengthened to exact text; CI **36108741246** attempt 1 with 52/52 E2E, no retries) and is promoted through #1094 (`148e440d6968c00d02559c8e783f0fc80085ddd0`, merged **08:03:47Z**) after the executable provenance proof and promotion CI **36109834809** (52/52 E2E, no retries). CodeRabbit's one promotion finding, to pin the partial-index predicate exactly, is accepted as follow-through in this increment's first commit (see [the schema disposition](#schema-public-config-disposition-2026-09-25-utc)). Main CI **36110882154** passed `test` at **08:13:38Z**. Vercel was Ready at **08:05:06.568Z**, observed STAGED without a production alias from **08:06:05Z** through **08:13:17Z**, then assigned production at **08:13:40.580Z**. Both trees equal `86b11af7dfa858db231b8cfcd232cba6fcf6c3b6`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **08:15:49Z**.
 
+### Setup-expiration fake migration disposition (2026-09-25 UTC)
+
+This is the smaller of Verification F5's two counterexamples from the [closeout audit](#customer-search-contract-disposition-2026-09-25-utc). `stripe-webhook-processor-setup-expiration.test.ts` (5 cases) built a typed `StripeClient` literal. Its `subscriptions.retrieve` answered `{}`, its Session listing omitted `has_more`, and two cases passed `vi.fn()` retrievals to prove none happened.
+
+The suite now runs on `FakeStripeCheckoutClient` with no new seam. The injected webhook event (`setWebhookEvent`) supplies each expired Session. The fake's recorded `setupIntents.retrieveCalls` and `subscriptions.retrieveCalls` prove that the signed-state path retrieves nothing. All five titles are unchanged (**08:59:00Z**).
+
+Four mutations against `stripe-webhook-processor.ts` each fail their case:
+- retrieving a Subscription during expiration normalization (**08:59:33Z**);
+- normalizing without the dedicated secret (**08:59:35Z**);
+- treating any expired Session as a setup Session (**08:59:36Z**);
+- accepting a forged state signature (**08:59:51Z**).
+
+The same four also fail main's suite (**08:59:37–08:59:52Z**), so the migration preserves detection rather than adding it. Production was restored byte-identically. With main's suite restored and its floor entry removed, `pnpm lint:doubles` fails on the literal (**09:00:18Z**).
+
+Maintained-port doubles fall **41 / 14 → 40 / 13**; casts stay **27 / 11** and own-code factories **0 / 0**. F5's one remaining counterexample is `stripe-payment-gateway.test.ts`. Sanitized receipts: this clone's `.git/claude-debt-resume/setup-expiration/proofs.log`. The local full gate passed on `48a78ffd` and is re-run on every later head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
+
+**2026-09-25 UTC #1096 release receipt:** Customer Search #1095 merged as `5a3e8c86c5a08b53086de4cdcfde5ebf0538b5cb` at **08:58:04Z** (exact-head approval **5315658154** at 08:55:15Z on `52ab3ec6`, two accepted findings, the timeout fixed with a shared per-case bound instead of the suggested 300 seconds; CI **36114847300** attempt 1 with 52/52 E2E, no retries) and is promoted through #1096 (`a257dfe34f2448f32e62252905e6d0930c5e667c`, merged **09:11:56Z**) after the executable provenance proof and promotion CI **36115851395** (52/52 E2E, no retries). Main CI **36117093141** passed `test` at **09:23:18Z**. Vercel was Ready at **09:13:11.725Z**, observed STAGED without a production alias from **09:13:20Z** through **09:22:35Z**, then assigned production at **09:23:19.890Z**. Both trees equal `9573630eb1b77bac7246b9a22742dae7d33b8c83`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **09:23:38Z**.
+
 ## Description
 
 **2026-09-23 UTC promotion pointer:** Quick Practice #1031 and Practice starter #1032 are merged and promoted through #1033 (`21912817`, **13:57:00Z**). The executable promotion proof records source approvals **5291471054** / **5291748690** predating both source merges and zero unresolved threads. Promotion CI **35869147932** passed **5,698 unit / 420 browser / 369 integration plus six opt-in skips / 52 E2E** without retries. Main CI **35870656427** and the production gate/health verification are still pending at this update; the earlier pending summaries above are historical, not claims that the source PRs remain open.
