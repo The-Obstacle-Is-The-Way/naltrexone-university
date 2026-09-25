@@ -63,7 +63,7 @@ If the database is unreachable, the test setup fails fast with a clear error mes
 
 ### Live Stripe Provider Contracts (TEST Mode)
 
-The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its eight live Stripe cases are reported as skipped. To request all eight cases explicitly, use the dedicated fail-closed entry point:
+The ordinary integration lane remains provider-credential-free: with both `RUN_STRIPE_*` flags off, its nine live Stripe cases are reported as skipped. To request all nine cases explicitly, use the dedicated fail-closed entry point:
 
 ```bash
 pnpm test:stripe-provider
@@ -74,7 +74,7 @@ The runner loads `.env.local` with `override: false`, so an explicitly exported 
 The success receipt is:
 
 ```text
-[stripe-provider] PASS executed=8 passed=8 skipped=0
+[stripe-provider] PASS executed=9 passed=9 skipped=0
 ```
 
 The 2026-09-25 local TEST-mode run produced that exact receipt (00:13:39Z–00:14:19Z) after the sixth Checkout contract scenario, Subscription cancel, raised the requirement from seven cases; the 2026-09-24 run produced the then-current seven-case receipt at 16:53:58Z, and the 2026-08-26 activation run the six-case one. Any `PROVIDER_KEY_INVALID` or `PROVIDER_PRICE_INVALID` result is a configuration failure; do not treat it as an expected skip and do not use a live-mode key.
