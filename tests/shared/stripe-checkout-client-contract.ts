@@ -236,7 +236,15 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       const { cancel, list } = harness.subscriptions;
       const seeded = await harness.seedSubscription();
 
-      const canceled = await cancel.call(harness.subscriptions, seeded.id);
+      // Stripe ignores idempotency keys on DELETE, so reusing the first
+      // cancel's key below does not replay its result.
+      const options = { idempotencyKey: idempotencyKey('cancel') };
+      const canceled = await cancel.call(
+        harness.subscriptions,
+        seeded.id,
+        undefined,
+        options,
+      );
       expect(canceled).toEqual(
         expect.objectContaining({ id: seeded.id, status: 'canceled' }),
       );
@@ -251,11 +259,11 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       });
       expect(byDefault.data).toHaveLength(0);
 
-      // Stripe rejects a second cancel as though the Subscription did not
-      // exist; the message names the id.
+      // Stripe rejects a second cancel, even under the same idempotency key,
+      // as though the Subscription did not exist; the message names the id.
       let caught: unknown;
       try {
-        await cancel.call(harness.subscriptions, seeded.id);
+        await cancel.call(harness.subscriptions, seeded.id, undefined, options);
       } catch (error) {
         caught = error;
       }

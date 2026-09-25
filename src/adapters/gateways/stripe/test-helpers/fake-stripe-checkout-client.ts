@@ -253,10 +253,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
   // by id and canceled once; the list, retrieve and cancel shapes are proven
   // against Stripe TEST mode by the shared contract. A second cancel, like an
   // unknown id, gets Stripe's 404 resource_missing although the canceled
-  // Subscription stays retrievable. Cancel ignores idempotency keys: Stripe
-  // replays a reused key's first result instead. `list` and `cancel` read
-  // `this`, as the SDK methods do, so a detached call fails the way an
-  // unbound SDK method would.
+  // Subscription stays retrievable. Cancel ignores idempotency keys, as Stripe
+  // does for DELETE requests: a repeat under the same key is still a 404.
+  // `list` and `cancel` read `this`, as the SDK methods do, so a detached
+  // call fails the way an unbound SDK method would.
   readonly subscriptions: NonNullable<StripeClient['subscriptions']> &
     Required<
       Pick<NonNullable<StripeClient['subscriptions']>, 'list' | 'cancel'>
