@@ -20,7 +20,14 @@ import {
 } from '@/src/application/test-helpers/renewal-terms';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
 import { SUBSCRIPTION_LIST_LIMIT } from './stripe/stripe-checkout-sessions';
-import { isValidStripeConsentStateSignature } from './stripe/stripe-consent-state';
+import {
+  createStripeConsentStateSignature,
+  isValidStripeConsentStateSignature,
+} from './stripe/stripe-consent-state';
+import {
+  FakeStripeCheckoutClient,
+  type SeededSubscription,
+} from './stripe/test-helpers/fake-stripe-checkout-client';
 import { StripePaymentGateway } from './stripe-payment-gateway';
 
 const TEST_WEBHOOK_SECRET = 'whsec_1';
@@ -54,7 +61,11 @@ function withSubscriptionUserId<T extends StripeSubscriptionFixtureObject>(
 
 function createGateway(
   stripe: StripeClient,
-  options?: { logger?: FakeLogger; consentStateSecret?: string },
+  options?: {
+    logger?: FakeLogger;
+    consentStateSecret?: string;
+    webhookE2EOwner?: string;
+  },
 ) {
   return new StripePaymentGateway({
     stripe,
@@ -63,7 +74,32 @@ function createGateway(
       options?.consentStateSecret ?? 'consent-state-secret-at-least-32-bytes',
     priceIds: TEST_PRICE_IDS,
     logger: options?.logger ?? new FakeLogger(),
+    ...(options?.webhookE2EOwner
+      ? { webhookE2EOwner: options.webhookE2EOwner }
+      : {}),
   });
+}
+
+// The live Subscription the fake serves: the monthly TEST price, owned by the
+// test user unless the metadata says otherwise.
+function liveSubscription(
+  metadata: Record<string, string> = { user_id: appUserId },
+): SeededSubscription {
+  return {
+    id: 'sub_123',
+    customer: 'cus_123',
+    status: 'active',
+    cancel_at_period_end: false,
+    metadata,
+    items: {
+      data: [
+        {
+          current_period_end: 1_700_000_000,
+          price: { id: TEST_PRICE_IDS.monthly },
+        },
+      ],
+    },
+  };
 }
 
 function createStripeMockBase() {
@@ -831,20 +867,23 @@ describe('StripePaymentGateway', () => {
     });
   });
 
-  it('verifies webhook signatures and normalizes subscription update events', async () => {
+  // Webhook normalization is pinned at the adapter level, on the fake, in
+  // stripe/stripe-webhook-processor.test.ts. These cases pin only what the
+  // facade forwards to it: the webhook secret, price ids, logger, consent-state
+  // secret and E2E owner.
+  it('verifies webhook signatures with the configured secret and normalizes subscription events', async () => {
     const event = loadJsonFixture<
       StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
     >('stripe/customer.subscription.updated.json');
-    const subscription = withSubscriptionUserId(event.data.object);
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.setWebhookEvent({
+      ...event,
+      data: { object: withSubscriptionUserId(event.data.object) },
     });
-    constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const gateway = createGateway(stripe);
+    stripe.seedSubscription(liveSubscription());
 
     await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
+      createGateway(stripe).processWebhookEvent('raw_body', 'sig_1'),
     ).resolves.toEqual({
       eventId: 'evt_1',
       occurredAt: new Date(1_700_000_000 * 1000),
@@ -859,679 +898,94 @@ describe('StripePaymentGateway', () => {
         cancelAtPeriodEnd: false,
       },
     });
-
-    expect(constructEvent).toHaveBeenCalledWith('raw_body', 'sig_1', 'whsec_1');
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-  });
-
-  it('normalizes customer.subscription.trial_will_end events', async () => {
-    const event = loadJsonFixture<
-      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
-    >('stripe/customer.subscription.updated.json');
-    const subscription = withSubscriptionUserId(event.data.object);
-    const constructedEvent = {
-      ...event,
-      id: 'evt_trial_will_end_1',
-      type: 'customer.subscription.trial_will_end',
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(
-      withSubscriptionUserId(event.data.object),
-    );
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_trial_will_end_1',
-      occurredAt: new Date(1_700_000_000 * 1000),
-      type: 'customer.subscription.trial_will_end',
-      subscriptionUpdate: {
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
-  });
-
-  it('normalizes customer.subscription.deleted events', async () => {
-    const subscriptionEvent = loadJsonFixture<{
-      data: { object: { id: string; status: string; [key: string]: unknown } };
-    }>('stripe/customer.subscription.updated.json');
-
-    const subscription = withSubscriptionUserId({
-      ...subscriptionEvent.data.object,
-      status: 'canceled',
-    });
-
-    const constructedEvent = {
-      ...subscriptionEvent,
-      id: 'evt_deleted_1',
-      type: 'customer.subscription.deleted',
-      data: {
-        object: subscription,
-      },
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_deleted_1',
-      occurredAt: new Date(1_700_000_000 * 1000),
-      type: 'customer.subscription.deleted',
-      subscriptionUpdate: expect.objectContaining({
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'canceled',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      }),
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
-  });
-
-  it.each([
-    ['checkout.session.completed', 'evt_checkout_1'],
-    ['invoice.payment_failed', 'evt_invoice_1'],
-    ['invoice.payment_succeeded', 'evt_invoice_success_1'],
-    ['invoice.payment_action_required', 'evt_invoice_action_required_1'],
-  ] as const)(
-    'normalizes %s events by retrieving the subscription',
-    async (type, eventId) => {
-      const subscriptionEvent = loadJsonFixture<{
-        data: { object: { id: string } };
-      }>('stripe/customer.subscription.updated.json');
-      const subscription = withSubscriptionUserId(
-        subscriptionEvent.data.object,
-      );
-
-      const constructedEvent = {
-        id: eventId,
-        type,
-        data: {
-          object: {
-            subscription: subscription.id,
-          },
-        },
-      };
-      const { stripe, constructEvent, subscriptionsRetrieve } =
-        createStripeMock({
-          withSubscriptions: true,
-        });
-      constructEvent.mockReturnValue(constructedEvent);
-      subscriptionsRetrieve.mockResolvedValue(subscription);
-      const gateway = createGateway(stripe);
-
-      await expect(
-        gateway.processWebhookEvent('raw_body', 'sig_1'),
-      ).resolves.toEqual({
-        eventId,
-        type,
-        subscriptionUpdate: {
-          userId: appUserId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          status: 'active',
-          currentPeriodEnd: new Date(1_700_000_000 * 1000),
-          cancelAtPeriodEnd: false,
-        },
-      });
-
-      expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
-    },
-  );
-
-  it('normalizes invoice.payment_succeeded events with a nested Clover subscription reference', async () => {
-    const subscriptionEvent = loadJsonFixture<{
-      data: { object: { id: string } };
-    }>('stripe/customer.subscription.updated.json');
-    const subscription = withSubscriptionUserId(subscriptionEvent.data.object);
-
-    const constructedEvent = {
-      id: 'evt_invoice_success_nested_1',
-      type: 'invoice.payment_succeeded',
-      data: {
-        object: {
-          id: 'in_test_REDACTED',
-          object: 'invoice',
-          subscription: null,
-          parent: {
-            type: 'subscription_details',
-            subscription_details: {
-              subscription: subscription.id,
-            },
-          },
-        },
-      },
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_invoice_success_nested_1',
-      type: 'invoice.payment_succeeded',
-      subscriptionUpdate: {
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith(subscription.id);
-  });
-
-  it('throws INVALID_WEBHOOK_PAYLOAD when invoice.payment_failed payload shape is invalid', async () => {
-    const constructedEvent = {
-      id: 'evt_bad_invoice_payload',
-      type: 'invoice.payment_failed',
-      data: { object: { subscription: 123 } },
-    };
-    const logger = new FakeLogger();
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockReturnValue(constructedEvent);
-    const gateway = createGateway(stripe, { logger });
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
-
-    expect(logger.errorCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_bad_invoice_payload',
-        type: 'invoice.payment_failed',
-      }),
-      msg: 'Invalid Stripe invoice.payment_failed webhook payload',
-    });
-  });
-
-  it('throws INVALID_WEBHOOK_PAYLOAD when invoice.payment_failed subscription payload is invalid', async () => {
-    const constructedEvent = {
-      id: 'evt_bad_invoice_subscription_payload',
-      type: 'invoice.payment_failed',
-      data: { object: { subscription: 'sub_123' } },
-    };
-    const logger = new FakeLogger();
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue({ id: 123 });
-    const gateway = createGateway(stripe, { logger });
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-    expect(logger.errorCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_bad_invoice_subscription_payload',
-        type: 'invoice.payment_failed',
-        stripeSubscriptionId: 'sub_123',
-      }),
-      msg: 'Invalid Stripe subscription payload retrieved from invoice.payment_failed',
-    });
-  });
-
-  it('ignores invoice.payment_failed events when no subscription is present', async () => {
-    const constructedEvent = {
-      id: 'evt_invoice_no_subscription',
-      type: 'invoice.payment_failed',
-      data: { object: { subscription: null } },
-    };
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockReturnValue(constructedEvent);
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_invoice_no_subscription',
-      type: 'invoice.payment_failed',
-    });
-  });
-
-  it('throws STRIPE_ERROR when invoice.payment_failed is missing the subscriptions client', async () => {
-    const constructedEvent = {
-      id: 'evt_invoice_no_subscriptions_client',
-      type: 'invoice.payment_failed',
-      data: { object: { subscription: 'sub_123' } },
-    };
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockReturnValue(constructedEvent);
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
-  });
-
-  it('throws INVALID_WEBHOOK_PAYLOAD when checkout.session.completed payload shape is invalid', async () => {
-    const constructedEvent = {
-      id: 'evt_bad_checkout_payload',
-      type: 'checkout.session.completed',
-      data: { object: { subscription: 123 } },
-    };
-    const logger = new FakeLogger();
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockReturnValue(constructedEvent);
-    const gateway = createGateway(stripe, { logger });
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
-
-    expect(logger.errorCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_bad_checkout_payload',
-        type: 'checkout.session.completed',
-      }),
-      msg: 'Invalid Stripe checkout.session.completed webhook payload',
-    });
-  });
-
-  it('throws INVALID_WEBHOOK_PAYLOAD when checkout.session.completed subscription payload is invalid', async () => {
-    const constructedEvent = {
-      id: 'evt_bad_subscription_payload',
-      type: 'checkout.session.completed',
-      data: { object: { subscription: 'sub_123' } },
-    };
-    const logger = new FakeLogger();
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue({ id: 123 });
-    const gateway = createGateway(stripe, { logger });
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-    expect(logger.errorCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_bad_subscription_payload',
-        type: 'checkout.session.completed',
-        stripeSubscriptionId: 'sub_123',
-      }),
-      msg: 'Invalid Stripe subscription payload retrieved from checkout.session.completed',
-    });
-  });
-
-  it('throws INVALID_WEBHOOK_PAYLOAD when subscription payload shape is invalid', async () => {
-    const constructedEvent = {
-      id: 'evt_bad',
-      type: 'customer.subscription.updated',
-      data: { object: { id: 123 } },
-    };
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockReturnValue(constructedEvent);
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
-  });
-
-  it('normalizes customer.subscription.paused events', async () => {
-    const event = loadJsonFixture<
-      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
-    >('stripe/customer.subscription.paused.json');
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(
-      withSubscriptionUserId(event.data.object),
-    );
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_2',
-      occurredAt: new Date(1_700_000_001 * 1000),
-      type: 'customer.subscription.paused',
-      subscriptionUpdate: {
-        userId: appUserId,
-        externalCustomerId: 'cus_456',
-        externalSubscriptionId: 'sub_456',
-        plan: 'annual',
-        status: 'paused',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_456');
-  });
-
-  it('normalizes customer.subscription.resumed events', async () => {
-    const event = loadJsonFixture<
-      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
-    >('stripe/customer.subscription.resumed.json');
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(
-      withSubscriptionUserId(event.data.object),
-    );
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_3',
-      occurredAt: new Date(1_700_000_002 * 1000),
-      type: 'customer.subscription.resumed',
-      subscriptionUpdate: {
-        userId: appUserId,
-        externalCustomerId: 'cus_789',
-        externalSubscriptionId: 'sub_789',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_789');
-  });
-
-  it('normalizes customer.subscription.pending_update_applied events', async () => {
-    const event = loadJsonFixture<
-      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
-    >('stripe/customer.subscription.pending_update_applied.json');
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(
-      withSubscriptionUserId(event.data.object),
-    );
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_4',
-      occurredAt: new Date(1_700_000_003 * 1000),
-      type: 'customer.subscription.pending_update_applied',
-      subscriptionUpdate: {
-        userId: appUserId,
-        externalCustomerId: 'cus_901',
-        externalSubscriptionId: 'sub_901',
-        plan: 'annual',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_901');
-  });
-
-  it('normalizes customer.subscription.pending_update_expired events', async () => {
-    const event = loadJsonFixture<
-      StripeWebhookEventFixture<{ id: string; [key: string]: unknown }>
-    >('stripe/customer.subscription.pending_update_expired.json');
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue(event);
-    subscriptionsRetrieve.mockResolvedValue(
-      withSubscriptionUserId(event.data.object),
-    );
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_5',
-      occurredAt: new Date(1_700_000_004 * 1000),
-      type: 'customer.subscription.pending_update_expired',
-      subscriptionUpdate: {
-        userId: appUserId,
-        externalCustomerId: 'cus_902',
-        externalSubscriptionId: 'sub_902',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date(1_700_000_000 * 1000),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_902');
-  });
-
-  it('throws INVALID_WEBHOOK_SIGNATURE when webhook signature verification fails', async () => {
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockImplementation(() => {
-      throw new Error('Invalid signature');
-    });
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({
-      code: 'INVALID_WEBHOOK_SIGNATURE',
-    });
-  });
-
-  it('includes original error message when webhook signature verification fails', async () => {
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockImplementation(() => {
-      throw new Error('Signature timestamp too old');
-    });
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({
-      code: 'INVALID_WEBHOOK_SIGNATURE',
-      message: expect.stringContaining('Signature timestamp too old'),
-    });
+    expect(stripe.webhookCalls).toEqual([
+      { rawBody: 'raw_body', signature: 'sig_1', secret: 'whsec_1' },
+    ]);
+    expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
   });
 
   it('calls logger.error when webhook verification fails', async () => {
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockImplementation(() => {
-      throw new Error('Invalid signature');
-    });
+    // No event is injected, so the fake's verification throws.
+    const stripe = new FakeStripeCheckoutClient();
     const logger = new FakeLogger();
-    const gateway = createGateway(stripe, { logger });
 
     await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({
-      code: 'INVALID_WEBHOOK_SIGNATURE',
-    });
+      createGateway(stripe, { logger }).processWebhookEvent(
+        'raw_body',
+        'sig_1',
+      ),
+    ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_SIGNATURE' });
 
     expect(logger.errorCalls).toContainEqual({
-      context: { error: 'Invalid signature' },
+      context: { error: 'FakeStripeCheckoutClient does not process webhooks' },
       msg: 'Webhook signature verification failed',
     });
   });
 
-  it('throws when a subscription update event is missing required metadata.user_id', async () => {
-    const subscription = {
-      id: 'sub_123',
-      customer: 'cus_123',
-      status: 'active',
-      cancel_at_period_end: false,
-      metadata: {},
-      items: {
-        data: [
-          {
-            current_period_end: 1_700_000_000,
-            price: { id: 'price_m' },
-          },
-        ],
-      },
+  it('forwards the consent-state secret to webhook processing', async () => {
+    const consentStateSecret = 'consent-state-secret-at-least-32-bytes';
+    const metadata = {
+      consent_user_id: appUserId,
+      consent_customer_id: 'cus_123',
+      consent_subscription_id: 'sub_123',
+      consent_plan: 'monthly',
+      consent_amount_cents: '2900',
+      consent_currency: 'usd',
+      consent_frequency: 'month',
+      consent_trial_ends_at: '2026-08-13T12:00:00.000Z',
+      consent_disclosure_version: '2026-08-05',
+      consent_terms_version: '2026-08-05',
+      consent_terms_hash: 'terms-hash',
     };
-    const logger = new FakeLogger();
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue({
-      id: 'evt_1',
-      type: 'customer.subscription.updated',
-      data: {
-        object: subscription,
-      },
-    });
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const gateway = createGateway(stripe, { logger });
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({
-      code: 'STRIPE_ERROR',
-      message: 'Stripe subscription metadata.user_id is required',
-    });
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-    expect(logger.errorCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_1',
-        type: 'customer.subscription.updated',
-        stripeSubscriptionId: 'sub_123',
-        stripeCustomerId: 'cus_123',
-      }),
-      msg: 'Stripe subscription metadata.user_id is required',
-    });
-  });
-
-  it('throws when customer.subscription.created events are missing metadata.user_id', async () => {
-    const subscription = {
-      id: 'sub_123',
-      customer: 'cus_123',
-      status: 'active',
-      cancel_at_period_end: false,
-      metadata: {},
-      items: {
-        data: [
-          {
-            current_period_end: 1_700_000_000,
-            price: { id: 'price_m' },
-          },
-        ],
-      },
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
-    });
-    constructEvent.mockReturnValue({
-      id: 'evt_1',
-      type: 'customer.subscription.created',
-      data: {
-        object: subscription,
-      },
-    });
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const logger = new FakeLogger();
-    const gateway = createGateway(stripe, { logger });
-
-    await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-    expect(logger.errorCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_1',
-        stripeSubscriptionId: 'sub_123',
-        stripeCustomerId: 'cus_123',
-      }),
-      msg: 'Stripe subscription metadata.user_id is required',
-    });
-  });
-
-  it('throws when checkout.session.completed subscription metadata.user_id is missing', async () => {
-    const subscriptionEvent = loadJsonFixture<{
-      data: { object: { id: string; metadata?: Record<string, string> } };
-    }>('stripe/customer.subscription.updated.json');
-    const subscription = {
-      ...subscriptionEvent.data.object,
-      metadata: {},
-    };
-
-    const constructedEvent = {
-      id: 'evt_checkout_missing_meta_1',
-      type: 'checkout.session.completed',
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.setWebhookEvent({
+      id: 'evt_setup_expired',
+      type: 'checkout.session.expired',
+      created: 1_775_649_600,
       data: {
         object: {
-          subscription: subscription.id,
+          id: 'cs_setup_123',
+          mode: 'setup',
+          metadata: {
+            ...metadata,
+            consent_state_signature: createStripeConsentStateSignature(
+              metadata,
+              consentStateSecret,
+            ),
+          },
         },
       },
-    };
-    const { stripe, constructEvent, subscriptionsRetrieve } = createStripeMock({
-      withSubscriptions: true,
     });
-    constructEvent.mockReturnValue(constructedEvent);
-    subscriptionsRetrieve.mockResolvedValue(subscription);
-    const logger = new FakeLogger();
-    const gateway = createGateway(stripe, { logger });
 
     await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
-
-    expect(subscriptionsRetrieve).toHaveBeenCalledWith('sub_123');
-    expect(logger.errorCalls).toContainEqual({
-      context: expect.objectContaining({
-        eventId: 'evt_checkout_missing_meta_1',
-        stripeSubscriptionId: 'sub_123',
-        stripeCustomerId: 'cus_123',
-      }),
-      msg: 'Stripe subscription metadata.user_id is required',
+      createGateway(stripe, { consentStateSecret }).processWebhookEvent(
+        'raw_body',
+        'sig_1',
+      ),
+    ).resolves.toMatchObject({
+      eventId: 'evt_setup_expired',
+      trialPaymentMethodSetupExpiration: {
+        sessionId: 'cs_setup_123',
+        userId: appUserId,
+      },
     });
   });
 
-  it('ignores checkout.session.completed events (no subscription update extracted)', async () => {
-    const { stripe, constructEvent } = createStripeMock();
-    constructEvent.mockReturnValue({
-      id: 'evt_1',
-      type: 'checkout.session.completed',
-      data: { object: { id: 'cs_test_1' } },
+  it('forwards the E2E owner to webhook processing', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.setWebhookEvent({
+      id: 'evt_foreign_owner',
+      type: 'customer.subscription.updated',
+      data: { object: liveSubscription() },
     });
-    const gateway = createGateway(stripe);
+    stripe.seedSubscription(
+      liveSubscription({ user_id: appUserId, e2e_owner: 'github-ci' }),
+    );
 
     await expect(
-      gateway.processWebhookEvent('raw_body', 'sig_1'),
-    ).resolves.toEqual({
-      eventId: 'evt_1',
-      type: 'checkout.session.completed',
-    });
+      createGateway(stripe, {
+        webhookE2EOwner: 'vercel-dev-preview',
+      }).processWebhookEvent('raw_body', 'sig_1'),
+    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
   });
 });
