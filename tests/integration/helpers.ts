@@ -3,6 +3,7 @@ import { inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
+import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -127,7 +128,7 @@ export function createAuthGateway(input: { id: string; email: string }) {
 }
 
 export async function createTag(
-  db: IntegrationDb,
+  db: DrizzleDb,
   cleanup: CleanupState,
   input: {
     slug: string;
@@ -153,7 +154,7 @@ export async function createTag(
 }
 
 export async function createQuestion(
-  db: IntegrationDb,
+  db: DrizzleDb,
   cleanup: CleanupState,
   input: {
     id?: string;
