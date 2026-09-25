@@ -29,7 +29,8 @@ const STRIPE_PROVIDER_CONTRACT_CASE_TITLES = [
 
 // The live trial-clock proof has healthy cases just over the ordinary
 // integration lane's 10-second budget. Keep this scheduled-only allowance
-// below the five-minute process-tree bound and out of the hermetic lane.
+// below the five-minute process-tree bound and out of the hermetic lane. The
+// customer Search case registers its own longer budget for Stripe's indexing.
 const STRIPE_PROVIDER_CONTRACT_TEST_TIMEOUT_MS = 20_000;
 
 type SmokeEnvironment = Readonly<Record<string, string | undefined>>;
@@ -206,8 +207,9 @@ export function assertProviderContractsExecuted(
   };
 }
 
-// The two trial-clock cases and six Checkout client contract cases normally
-// finish in under two minutes (the eight-case run took 40 seconds locally). Five minutes bounds a stuck provider process
+// The two trial-clock cases and seven Checkout client contract cases normally
+// finish in under two minutes (the nine-case runs took 61 and 70 seconds
+// locally). Five minutes bounds a stuck provider process
 // tree while leaving equal headroom inside the workflow's 10-minute job budget.
 const STRIPE_PROVIDER_PROCESS_TIMEOUT_MS = 5 * 60 * 1000;
 const STRIPE_PROVIDER_SIGNAL_GRACE_MS = 10 * 1000;

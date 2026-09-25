@@ -9,6 +9,12 @@ runStripeCheckoutClientContract('FakeStripeCheckoutClient', async () => {
   return {
     sessions: stripe.checkout.sessions,
     subscriptions: stripe.subscriptions,
+    customers: stripe.customers,
+    seedCustomer: async (userId) => ({
+      id: stripe.seedCustomer({ user_id: userId }),
+    }),
+    // Immediately consistent: the first read is the settled answer.
+    searchUntil: (params) => stripe.customers.search(params),
     seedSubscription: async () => {
       subscriptionSequence += 1;
       const id = `sub_fake_${subscriptionSequence}`;

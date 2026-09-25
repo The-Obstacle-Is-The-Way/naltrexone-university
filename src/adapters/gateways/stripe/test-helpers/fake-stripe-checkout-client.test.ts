@@ -190,6 +190,85 @@ describe('FakeStripeCheckoutClient', () => {
     ).resolves.toEqual(expect.objectContaining({ status: 'open' }));
   });
 
+  it('answers a metadata Search with the seeded Customers whose whole value matches', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const first = stripe.seedCustomer({ user_id: 'user_one' });
+    const second = stripe.seedCustomer({ user_id: 'user_one' });
+    stripe.seedCustomer({ user_id: 'user_one-other' });
+    stripe.seedCustomer({ user_id: 'user_two' });
+    stripe.seedCustomer({ clerk_user_id: 'user_one' });
+
+    await expect(
+      stripe.customers.search({
+        query: "metadata['user_id']:'user_one'",
+        limit: 10,
+      }),
+    ).resolves.toEqual({ data: [{ id: first }, { id: second }] });
+  });
+
+  it('matches metadata values case-insensitively, as Stripe does', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const seeded = stripe.seedCustomer({ user_id: 'User_One' });
+
+    await expect(
+      stripe.customers.search({ query: "metadata['user_id']:'USER_ONE'" }),
+    ).resolves.toEqual({ data: [{ id: seeded }] });
+  });
+
+  it('answers a Search with no match with an empty page', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedCustomer({ user_id: 'user_one' });
+
+    await expect(
+      stripe.customers.search({ query: "metadata['user_id']:'user_two'" }),
+    ).resolves.toEqual({ data: [] });
+  });
+
+  it('caps Search results at the limit, defaulting to ten', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    for (let index = 0; index < 11; index += 1) {
+      stripe.seedCustomer({ user_id: 'user_one' });
+    }
+    const query = "metadata['user_id']:'user_one'";
+
+    const limited = await stripe.customers.search({ query, limit: 1 });
+    const byDefault = await stripe.customers.search({ query });
+
+    expect(limited.data).toHaveLength(1);
+    expect(byDefault.data).toHaveLength(10);
+  });
+
+  it('records each Search with a copy of its params', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const params = { query: "metadata['user_id']:'user_one'", limit: 2 };
+
+    await stripe.customers.search(params);
+    params.limit = 5;
+
+    expect(stripe.customers.searchCalls).toEqual([
+      { query: "metadata['user_id']:'user_one'", limit: 2 },
+    ]);
+  });
+
+  it('rejects a Search query it does not model', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+
+    await expect(
+      stripe.customers.search({ query: "email:'user@example.com'" }),
+    ).rejects.toThrow(
+      "FakeStripeCheckoutClient models only a single metadata exact-match Search: email:'user@example.com'",
+    );
+  });
+
+  it('fails a detached Search the way an unbound SDK method would', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const search = stripe.customers.search;
+
+    await expect(
+      search({ query: "metadata['user_id']:'user_one'" }),
+    ).rejects.toBeInstanceOf(TypeError);
+  });
+
   it('lists seeded Subscriptions by customer and status and retrieves them by id', async () => {
     const stripe = new FakeStripeCheckoutClient();
     stripe.seedSubscription({

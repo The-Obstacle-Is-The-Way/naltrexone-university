@@ -3,8 +3,8 @@
   "numPassedTestSuites": 2,
   "numFailedTestSuites": 0,
   "numPendingTestSuites": 0,
-  "numTotalTests": 8,
-  "numPassedTests": 6,
+  "numTotalTests": 9,
+  "numPassedTests": 7,
   "numFailedTests": 0,
   "numPendingTests": 2,
   "numTodoTests": 0,
@@ -83,6 +83,10 @@
         {
           "status": "passed",
           "title": "cancels a Subscription once and rejects a repeat cancel as resource_missing"
+        },
+        {
+          "status": "passed",
+          "title": "finds Customers by whole, case-insensitive metadata value through Search once indexed"
         }
       ],
       "status": "passed",

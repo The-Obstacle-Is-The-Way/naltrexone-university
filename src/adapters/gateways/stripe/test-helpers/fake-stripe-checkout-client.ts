@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from 'node:util';
 import type {
   CheckoutSessionCreateParams,
+  CustomerSearchParams,
   StripeCheckoutSession,
   StripeCheckoutSessionRetrieved,
   StripeClient,
@@ -10,6 +11,13 @@ import type {
 } from '@/src/adapters/shared/stripe-types';
 
 const CHECKOUT_SESSION_LIFETIME_MS = 24 * 60 * 60 * 1000;
+
+// Stripe's Search page size when a request sets no limit.
+const DEFAULT_SEARCH_LIMIT = 10;
+
+// The one Search clause the customer adapter sends: an exact match on one
+// metadata key.
+const METADATA_EXACT_MATCH_QUERY = /^metadata\['([^']+)'\]:'([^']*)'$/;
 
 // The fields the adapters read from a Subscription: the checkout preflight
 // reads `id`/`status` from a listing; the webhook normalizer reads the rest
@@ -28,6 +36,8 @@ export type SeededSubscription = {
     data: Array<{ current_period_end?: number; price: { id: string } }>;
   };
 };
+
+type SeededCustomer = { id: string; metadata: Record<string, string> };
 
 type TrackedCheckoutSession = StripeCheckoutSessionRetrieved & {
   customer?: string | undefined;
@@ -150,12 +160,50 @@ export class FakeStripeCheckoutClient implements StripeClient {
   private createFault: CreateFault | null = null;
   private expireFault: ExpireFault | null = null;
   private sessionSequence = 0;
+  private customerSequence = 0;
 
   constructor(private readonly nowMs: () => number = Date.now) {}
 
-  readonly customers: StripeClient['customers'] = {
+  // Search answers from seeded Customers at once. Stripe indexes a new
+  // Customer after a delay, normally under a minute, and in TEST mode a later
+  // read can briefly miss one an earlier read returned; the contract's seventh
+  // scenario proves the settled answers match. `create` stays a canned id.
+  readonly customers: StripeClient['customers'] &
+    Required<Pick<StripeClient['customers'], 'search'>> & {
+      readonly seeded: SeededCustomer[];
+      readonly searchCalls: CustomerSearchParams[];
+    } = {
+    seeded: [],
+    searchCalls: [],
     create: async () => ({ id: 'cus_fake_checkout' }),
+    async search(params) {
+      this.searchCalls.push({ ...params });
+      const clause = METADATA_EXACT_MATCH_QUERY.exec(params.query);
+      if (!clause) {
+        throw new Error(
+          `FakeStripeCheckoutClient models only a single metadata exact-match Search: ${params.query}`,
+        );
+      }
+      const [, key = '', value = ''] = clause;
+      // Stripe's exact-match operator compares case-insensitively.
+      const data = this.seeded
+        .filter(
+          (customer) =>
+            customer.metadata[key]?.toLowerCase() === value.toLowerCase(),
+        )
+        .slice(0, params.limit ?? DEFAULT_SEARCH_LIMIT)
+        .map((customer) => ({ id: customer.id }));
+      return { data };
+    },
   };
+
+  // Seeds a Customer that Search can find; returns its id.
+  seedCustomer(metadata: Record<string, string>): string {
+    this.customerSequence += 1;
+    const id = `cus_fake_${this.customerSequence}`;
+    this.customers.seeded.push({ id, metadata: { ...metadata } });
+    return id;
+  }
 
   readonly checkout: StripeClient['checkout'] = {
     sessions: {

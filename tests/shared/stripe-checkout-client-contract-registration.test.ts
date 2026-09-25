@@ -23,6 +23,32 @@ describe('Stripe Checkout client contract registration', () => {
       'rejects an idempotency key reused with different parameters',
       "lists a customer's Subscriptions by id and status and retrieves them by id",
       'cancels a Subscription once and rejects a repeat cancel as resource_missing',
+      'finds Customers by whole, case-insensitive metadata value through Search once indexed',
+    ]);
+  });
+
+  it('gives only the Search case a budget beyond Stripe indexing', () => {
+    const budgets: Array<number | undefined> = [];
+
+    runStripeCheckoutClientContract(
+      'registration probe',
+      async () => {
+        throw new Error('Registration must not create a harness');
+      },
+      (_name, registerCases) => registerCases(),
+      (_name, _run, timeoutMs) => {
+        budgets.push(timeoutMs);
+      },
+    );
+
+    expect(budgets).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      120_000,
     ]);
   });
 });
