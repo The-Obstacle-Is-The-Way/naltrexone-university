@@ -737,6 +737,39 @@ The gateway suite falls from 1,537 to 991 lines and from 52 to 30 runtime cases.
 
 **2026-09-25 UTC #1098 release receipt:** Setup-expiration #1097 merged as `238fc03242bda1e048fcff5a1355f01c8127f2b5` at **09:44:49Z** (exact-head approval **5316030148** at 09:37:20Z on `48141759`, no findings; CI **36118954054** attempt 1 with 52/52 E2E, no retries) and is promoted through #1098 (`9ef820192377b1a2b8c9e8f2f78da0121cb5e4aa`, merged **09:58:15Z**) after the executable provenance proof and promotion CI **36120189081** (52/52 E2E, no retries). Main CI **36121393331** passed `test` at **10:09:44Z**. Vercel was Ready at **09:59:34.220Z**, observed STAGED without a production alias from **10:00:27Z** through **10:09:42Z**, then assigned production at **10:09:46.566Z**. Both trees equal `1d7803495ea5d97e3cd39c0da8ab6e6e0847a973`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **10:10:45Z**.
 
+### Payment-gateway Checkout section disposition (2026-09-25 UTC)
+
+This is the second of three increments on `stripe-payment-gateway.test.ts`, following the [webhook section](#payment-gateway-webhook-section-disposition-2026-09-25-utc). Its customer, Checkout and portal section re-tested adapter behavior through the facade's hand-built client, and the twin map found four behaviors that only the facade suite pinned.
+
+**Twins first.**
+- `stripe-checkout-sessions.test.ts` now covers all six blocking Subscription statuses; before this, only `active` had an adapter case.
+- The same suite covers the canceled-only path, where a Checkout Session is still created.
+- It also asserts the inspection-failure warning.
+- `stripe-customers.test.ts` pins the create call's email and both user ids in metadata.
+
+Four mutations prove the gap and the fix (**09:46:36–09:46:48Z**): removing `paused` from the blocking statuses, making `canceled` block, renaming the inspection warning, and dropping `clerk_user_id` from the create metadata. Main's adapter suites let all four pass; main's gateway suite and the new adapter cases catch all four.
+
+**Then retirement.** Ten duplicated facade cases retire:
+- the three customer cases;
+- the six-status blocking case and the canceled-only case;
+- four Checkout reuse, expire and URL cases;
+- the inspection-failure case.
+
+Each has a named twin. Seven twin-confirmation mutations fail both the twin and the retired case (**09:49:46–09:50:02Z**). Skipping the pre-create expire is masked by post-create reconciliation in both the retired case and its twin, so detection is exactly preserved.
+
+Five facade cases move onto the fake:
+- the consent-secret fail-closed check;
+- the caller's idempotency key for customers;
+- the deterministic Checkout key with the configured price ids;
+- setup-Session signing with the consent-state secret rather than the webhook secret;
+- the caller's key for portal Sessions.
+
+Five facade mutations fail the new cases (**09:48:45–09:48:56Z**). Main's suite let two of them pass: dropping the customer and portal caller keys.
+
+The gateway suite falls **991 → 666** lines (15 runtime cases), under the 800-line limit, so its DEBT-469 file-size suppression retires. Its port-double floor stays **8** until the payment-method increment. Sanitized receipts: this clone's `.git/claude-debt-resume/gateway-checkout/proofs.log`. The local full gate passed on `e5cec7c6` and is re-run on every later head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
+
+**2026-09-25 UTC #1100 release receipt:** Webhook section #1099 merged as `d867668650a24c8a7a743b14fc412b05e5168260` at **10:46:14Z** (exact-head approval **5316739933** at 10:44:38Z on `2145f42b`, one accepted finding, the E2E-owner mismatch pinned; one outside-diff routing extension accepted as follow-through; CI **36124787145** with 52/52 E2E, no retries) and is promoted through #1100 (`ac633f974c2253f9cd27fe3c27fbc81f4070a5e3`, merged **10:57:10Z**) after the executable provenance proof and promotion CI **36125797717** (52/52 E2E, no retries). Main CI **36126745171** passed `test` at **11:08:22Z**. Vercel was Ready at **10:58:31.665Z**, observed STAGED without a production alias from **10:59:22Z** through **11:07:36Z**, then assigned production at **11:08:24.770Z**. Both trees equal `10187e512474fe2be728111aa0b084d869c54b7f`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **11:08:39Z**.
+
 ## Description
 
 **2026-09-23 UTC promotion pointer:** Quick Practice #1031 and Practice starter #1032 are merged and promoted through #1033 (`21912817`, **13:57:00Z**). The executable promotion proof records source approvals **5291471054** / **5291748690** predating both source merges and zero unresolved threads. Promotion CI **35869147932** passed **5,698 unit / 420 browser / 369 integration plus six opt-in skips / 52 E2E** without retries. Main CI **35870656427** and the production gate/health verification are still pending at this update; the earlier pending summaries above are historical, not claims that the source PRs remain open.
