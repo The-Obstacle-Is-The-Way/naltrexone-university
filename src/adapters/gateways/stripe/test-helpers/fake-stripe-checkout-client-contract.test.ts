@@ -4,12 +4,20 @@ import { FakeStripeCheckoutClient } from './fake-stripe-checkout-client';
 runStripeCheckoutClientContract('FakeStripeCheckoutClient', async () => {
   let nowMs = Date.UTC(2026, 7, 23, 12, 0, 0);
   let subscriptionSequence = 0;
+  let paymentMethodSequence = 0;
   const stripe = new FakeStripeCheckoutClient(() => nowMs);
 
   return {
     sessions: stripe.checkout.sessions,
     subscriptions: stripe.subscriptions,
     customers: stripe.customers,
+    paymentMethods: stripe.paymentMethods,
+    seedPaymentMethod: async () => {
+      paymentMethodSequence += 1;
+      const id = `pm_fake_${paymentMethodSequence}`;
+      stripe.seedPaymentMethod({ id, customer: null });
+      return { id };
+    },
     seedCustomer: async (userId) => ({
       id: stripe.seedCustomer({ user_id: userId }),
     }),
