@@ -185,6 +185,14 @@ Main's two files fail `biome lint --error-on-warnings` without their suppression
 
 Main's two files fail `biome lint --error-on-warnings` without their suppressions (**16:40:34Z**, **16:43:40Z**). Tracked suppressions fall **11 → 9**. Sanitized receipts: this clone's `.git/claude-debt-resume/splits-checkout-question/proofs.log`. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
 
+**2026-09-25 UTC #1116 release receipt:** Checkout success and practice session logic splits #1115 merged as `8adf7f2fdc8707eee0bed7a6fc9fe43693886acb` at **18:24:35Z** (exact-head approval **5321113902** at 18:16:15Z on `8cdf2ccd`, no findings; CI **36171851341**, with 52/52 E2E) and is promoted through #1116 (`6a3e6935b98e5a56c014595cd1a6fd49d0ce54c5`, merged **18:38:04Z**) after a fetched, passing provenance proof and promotion CI **36173273812** (52/52 E2E, no retries). Main CI **36174670135** passed `test` at **18:49:58Z**. Vercel was Ready at **18:39:23.644Z**, held STAGED without a production alias from **18:40:22Z** through **18:49:38Z**, then assigned production at **18:49:59.949Z**. Both trees equal `dfd83f53c097836f542023a02292214ccddfeb51`; production `/` and `/api/health` returned 200 with `{"ok":true,"db":true}` at **18:50:41Z**.
+
+**Question page logic and question flow actions burn-down (2026-09-25 UTC):** two more logic suites split along concern boundaries they already had.
+- The 1,233-line `question-page-logic.test.ts` keeps review-identifier normalization and question loading (312 lines). `loadPreviousAttempt` moves to `question-page-logic-previous-attempt.test.ts` (337), and answer eligibility, submission and reattempt to `question-page-logic-submission.test.ts` (642). The 22-line `createQuestionOutput` fixture is copied unchanged into the loading and submission files; two copies stay below the rule of three. All 41 full names are unchanged.
+- The 1,265-line `question-flow-actions.test.ts` keeps time-spent and question-load flow (492 lines). The submit flow moves to `question-flow-actions-submit.test.ts` (331), and the exam draft save before navigation to `question-flow-actions-draft-save.test.ts` (450). All 33 full names are unchanged.
+
+Main's two files fail `biome lint --error-on-warnings` without their suppressions (**16:45:42Z**, **16:46:41Z**). Tracked suppressions fall **9 → 7**. Sanitized receipts: this clone's `.git/claude-debt-resume/splits-checkout-question/proofs.log`. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
+
 **Rejected alternatives:**
 
 - **`VITE_CONFIG_NATIVE_IGNORE_WARNING=true`** — mutes the messenger; the CJS/ESM mismatch would resurface as a hard break on Vite's next major.
