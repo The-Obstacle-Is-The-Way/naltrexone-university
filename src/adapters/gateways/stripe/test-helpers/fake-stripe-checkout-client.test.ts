@@ -277,7 +277,7 @@ describe('FakeStripeCheckoutClient', () => {
   it('cancels a seeded Subscription, which stays retrievable and leaves the default listing', async () => {
     const stripe = fakeWithActiveSubscription();
 
-    await expect(stripe.subscriptions.cancel?.('sub_fake_1')).resolves.toEqual(
+    await expect(stripe.subscriptions.cancel('sub_fake_1')).resolves.toEqual(
       expect.objectContaining({ id: 'sub_fake_1', status: 'canceled' }),
     );
     await expect(stripe.subscriptions.retrieve('sub_fake_1')).resolves.toEqual(
@@ -295,10 +295,10 @@ describe('FakeStripeCheckoutClient', () => {
     ['an unknown id', 'sub_unknown'],
   ])('rejects %s as resource_missing', async (_case, subscriptionId) => {
     const stripe = fakeWithActiveSubscription();
-    await stripe.subscriptions.cancel?.('sub_fake_1');
+    await stripe.subscriptions.cancel('sub_fake_1');
 
     await expect(
-      stripe.subscriptions.cancel?.(subscriptionId),
+      stripe.subscriptions.cancel(subscriptionId),
     ).rejects.toMatchObject({
       type: 'StripeInvalidRequestError',
       rawType: 'invalid_request_error',
@@ -313,9 +313,9 @@ describe('FakeStripeCheckoutClient', () => {
     const stripe = fakeWithActiveSubscription();
     const options = { idempotencyKey: 'reconcile_duplicate_subscription:x' };
 
-    await stripe.subscriptions.cancel?.('sub_fake_1', undefined, options);
+    await stripe.subscriptions.cancel('sub_fake_1', undefined, options);
     await expect(
-      stripe.subscriptions.cancel?.('sub_fake_1'),
+      stripe.subscriptions.cancel('sub_fake_1'),
     ).rejects.toMatchObject({ code: 'resource_missing' });
     options.idempotencyKey = 'changed_after_the_call';
 
@@ -331,7 +331,6 @@ describe('FakeStripeCheckoutClient', () => {
   it('fails a detached cancel the way an unbound SDK method would', async () => {
     const stripe = fakeWithActiveSubscription();
     const cancel = stripe.subscriptions.cancel;
-    if (!cancel) throw new Error('Expected the fake to cancel Subscriptions');
 
     await expect(cancel('sub_fake_1')).rejects.toBeInstanceOf(TypeError);
   });

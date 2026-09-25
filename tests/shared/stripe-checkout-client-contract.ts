@@ -18,9 +18,14 @@ type SubscriptionParams = Omit<PaymentOrSubscriptionParams, 'mode'> & {
   mode: 'subscription';
 };
 
+type StripeSubscriptionsClient = NonNullable<StripeClient['subscriptions']>;
+
+// The port marks list and cancel optional; both halves implement them, so
+// the contract requires them instead of guarding at run time.
 export type StripeCheckoutClientContractHarness = {
   sessions: StripeClient['checkout']['sessions'];
-  subscriptions: NonNullable<StripeClient['subscriptions']>;
+  subscriptions: StripeSubscriptionsClient &
+    Required<Pick<StripeSubscriptionsClient, 'list' | 'cancel'>>;
   subscriptionParams: SubscriptionParams;
   advanceCreationTime(): Promise<void>;
   // Creates one active Subscription for the harness customer and returns
@@ -170,7 +175,6 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
     name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[4],
     async run(harness) {
       const list = harness.subscriptions.list;
-      if (!list) throw new Error('Expected the client to list Subscriptions');
       const seeded = await harness.seedSubscription();
       const canceledSeed = await harness.seedCanceledSubscription();
 
@@ -230,9 +234,6 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
     name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[5],
     async run(harness) {
       const { cancel, list } = harness.subscriptions;
-      if (!cancel || !list) {
-        throw new Error('Expected the client to cancel and list Subscriptions');
-      }
       const seeded = await harness.seedSubscription();
 
       const canceled = await cancel.call(harness.subscriptions, seeded.id);

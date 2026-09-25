@@ -257,12 +257,15 @@ export class FakeStripeCheckoutClient implements StripeClient {
   // replays a reused key's first result instead. `list` and `cancel` read
   // `this`, as the SDK methods do, so a detached call fails the way an
   // unbound SDK method would.
-  readonly subscriptions: NonNullable<StripeClient['subscriptions']> & {
-    readonly seeded: SeededSubscription[];
-    readonly listCalls: StripeSubscriptionListParams[];
-    readonly retrieveCalls: string[];
-    readonly cancelCalls: SubscriptionCancelCall[];
-  } = {
+  readonly subscriptions: NonNullable<StripeClient['subscriptions']> &
+    Required<
+      Pick<NonNullable<StripeClient['subscriptions']>, 'list' | 'cancel'>
+    > & {
+      readonly seeded: SeededSubscription[];
+      readonly listCalls: StripeSubscriptionListParams[];
+      readonly retrieveCalls: string[];
+      readonly cancelCalls: SubscriptionCancelCall[];
+    } = {
     seeded: [],
     listCalls: [],
     retrieveCalls: [],
