@@ -90,11 +90,11 @@
         },
         {
           "status": "passed",
-          "title": "attaches a PaymentMethod to one customer only and detaches it once"
+          "title": "attaches a PaymentMethod to one customer only and retires it once detached"
         },
         {
           "status": "passed",
-          "title": "sets a Subscription's default PaymentMethod"
+          "title": "sets a Subscription's default only to a PaymentMethod on its customer"
         }
       ],
       "status": "passed",

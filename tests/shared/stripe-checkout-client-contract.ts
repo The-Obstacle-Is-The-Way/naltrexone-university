@@ -444,6 +444,23 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       expect(readErrorField(detachedTwice, 'message')).toBe(
         'The payment method you provided is not attached to a customer so detachment is impossible.',
       );
+
+      // A detached PaymentMethod is retired: it cannot be attached again.
+      let retired: unknown;
+      try {
+        await attach.call(paymentMethods, paymentMethod.id, {
+          customer: owner,
+        });
+      } catch (error) {
+        retired = error;
+      }
+      expect(readErrorField(retired, 'type')).toBe('StripeInvalidRequestError');
+      expect(readErrorField(retired, 'rawType')).toBe('invalid_request_error');
+      expect(readErrorField(retired, 'statusCode')).toBe(400);
+      expect(readErrorField(retired, 'code')).toBeUndefined();
+      expect(readErrorField(retired, 'message')).toBe(
+        'This PaymentMethod was previously used without being attached to a Customer or was detached from a Customer, and may not be used again.',
+      );
     },
   },
   {
@@ -451,9 +468,32 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
     async run(harness) {
       const seeded = await harness.seedSubscription();
       const paymentMethod = await harness.seedPaymentMethod();
+      const unattached = await harness.seedPaymentMethod();
       await harness.paymentMethods.attach(paymentMethod.id, {
         customer: seeded.customer,
       });
+
+      // Stripe refuses a default the Subscription's customer does not hold.
+      let refused: unknown;
+      try {
+        await harness.subscriptions.update.call(
+          harness.subscriptions,
+          seeded.id,
+          { default_payment_method: unattached.id },
+        );
+      } catch (error) {
+        refused = error;
+      }
+      expect(readErrorField(refused, 'type')).toBe('StripeInvalidRequestError');
+      expect(readErrorField(refused, 'rawType')).toBe('invalid_request_error');
+      expect(readErrorField(refused, 'statusCode')).toBe(400);
+      expect(readErrorField(refused, 'param')).toBe('payment_method');
+      expect(readErrorField(refused, 'code')).toBeUndefined();
+      // Compared without printing the id in a failure message.
+      expect(
+        readErrorField(refused, 'message') ===
+          `The customer does not have a payment method with the ID ${unattached.id}. The payment method must be attached to the customer.`,
+      ).toBe(true);
 
       const updated = (await harness.subscriptions.update.call(
         harness.subscriptions,

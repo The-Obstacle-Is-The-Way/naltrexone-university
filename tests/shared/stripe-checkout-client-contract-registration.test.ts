@@ -24,8 +24,8 @@ describe('Stripe Checkout client contract registration', () => {
       "lists a customer's Subscriptions by id and status and retrieves them by id",
       'cancels a Subscription once and rejects a repeat cancel as resource_missing',
       'finds Customers by whole, case-insensitive metadata value through Search once indexed',
-      'attaches a PaymentMethod to one customer only and detaches it once',
-      "sets a Subscription's default PaymentMethod",
+      'attaches a PaymentMethod to one customer only and retires it once detached',
+      "sets a Subscription's default only to a PaymentMethod on its customer",
     ]);
   });
 
