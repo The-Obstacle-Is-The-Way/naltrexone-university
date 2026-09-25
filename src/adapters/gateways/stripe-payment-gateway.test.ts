@@ -1,4 +1,3 @@
-// biome-ignore lint/style/noExcessiveLinesPerFile: Keep subscription, Checkout, portal, and retry adapter contracts together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
 import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type {
@@ -15,12 +14,8 @@ import type {
   StripeSubscriptionListResult,
 } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
-import {
-  createTestCheckoutRenewalMetadata,
-  createTestRenewalTerms,
-} from '@/src/application/test-helpers/renewal-terms';
+import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
-import { SUBSCRIPTION_LIST_LIMIT } from './stripe/stripe-checkout-sessions';
 import {
   createStripeConsentStateSignature,
   isValidStripeConsentStateSignature,
@@ -220,9 +215,7 @@ function createStripeMock({
 
 describe('StripePaymentGateway', () => {
   it('keeps trial consent Session creation fail-closed until the dedicated secret is configured', async () => {
-    const { stripe, sessionsCreate } = createStripeMock({
-      withSubscriptions: true,
-    });
+    const stripe = new FakeStripeCheckoutClient();
     const gateway = new StripePaymentGateway({
       stripe,
       webhookSecret: TEST_WEBHOOK_SECRET,
@@ -241,7 +234,7 @@ describe('StripePaymentGateway', () => {
         cancelUrl: 'https://app.example.com/cancel',
       }),
     ).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
-    expect(sessionsCreate).not.toHaveBeenCalled();
+    expect(stripe.createCalls).toEqual([]);
   });
 
   it('attaches a trial payment method and selects it with Session-derived idempotency keys', async () => {
@@ -406,97 +399,42 @@ describe('StripePaymentGateway', () => {
     expect(attach).not.toHaveBeenCalled();
   });
 
-  it('creates a Stripe customer with the correct Stripe parameters', async () => {
-    const { stripe, customersCreate, customersSearch } = createStripeMock();
-    const gateway = createGateway(stripe);
+  // Customer, Checkout and portal behavior is pinned at the adapter level, on
+  // the fake, in stripe/stripe-customers.test.ts, the stripe-checkout-sessions
+  // suites and stripe/stripe-portal.test.ts. These cases pin only what the
+  // facade decides: which caller options reach each adapter, the price ids,
+  // and which secret signs setup-Session state.
+  it("creates a Stripe customer with the caller's idempotency key", async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const create = vi
+      .spyOn(stripe.customers, 'create')
+      .mockResolvedValue({ id: 'cus_123' });
 
     await expect(
-      gateway.createCustomer({
-        userId: appUserId,
-        clerkUserId: 'clerk_1',
-        email: 'user@example.com',
-      }),
-    ).resolves.toEqual({ externalCustomerId: 'cus_123' });
-
-    expect(customersCreate).toHaveBeenCalledWith(
-      {
-        email: 'user@example.com',
-        metadata: { user_id: appUserId, clerk_user_id: 'clerk_1' },
-      },
-      {
-        idempotencyKey: `create_stripe_customer:${appUserId}`,
-      },
-    );
-    expect(customersSearch).toHaveBeenCalledWith({
-      query: `metadata['user_id']:'${appUserId}'`,
-      limit: 2,
-    });
-  });
-
-  it('reuses an existing Stripe customer when one is found by metadata', async () => {
-    const { stripe, customersCreate, customersSearch } = createStripeMock();
-    customersCreate.mockResolvedValue({ id: 'cus_new' });
-    customersSearch.mockResolvedValue({ data: [{ id: 'cus_123' }] });
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.createCustomer({
-        userId: appUserId,
-        clerkUserId: 'clerk_1',
-        email: 'user@example.com',
-      }),
-    ).resolves.toEqual({ externalCustomerId: 'cus_123' });
-
-    expect(customersSearch).toHaveBeenCalledWith({
-      query: `metadata['user_id']:'${appUserId}'`,
-      limit: 2,
-    });
-    expect(customersCreate).toHaveBeenCalledTimes(0);
-  });
-
-  it('retries Stripe customer creation on transient errors when an idempotency key is provided', async () => {
-    const { stripe, customersCreate } = createStripeMock();
-    customersCreate
-      .mockRejectedValueOnce(
-        Object.assign(new Error('reset'), { code: 'ECONNRESET' }),
-      )
-      .mockResolvedValueOnce({ id: 'cus_123' });
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.createCustomer(
+      createGateway(stripe).createCustomer(
         {
           userId: appUserId,
           clerkUserId: 'clerk_1',
           email: 'user@example.com',
         },
-        { idempotencyKey: '11111111-1111-1111-1111-111111111111' },
+        { idempotencyKey: 'caller_customer_key' },
       ),
     ).resolves.toEqual({ externalCustomerId: 'cus_123' });
 
-    expect(customersCreate).toHaveBeenCalledTimes(2);
-  });
-
-  it('throws STRIPE_ERROR when a Stripe customer id is missing', async () => {
-    const { stripe, customersCreate } = createStripeMock();
-    customersCreate.mockResolvedValue({});
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.createCustomer({
-        userId: appUserId,
-        clerkUserId: 'clerk_1',
-        email: 'user@example.com',
-      }),
-    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+    expect(stripe.customers.searchCalls).toEqual([
+      { query: `metadata['user_id']:'${appUserId}'`, limit: 2 },
+    ]);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'user@example.com' }),
+      { idempotencyKey: 'caller_customer_key' },
+    );
   });
 
   it('uses a deterministic checkout idempotency key regardless of provided options', async () => {
-    const { stripe, sessionsCreate } = createStripeMock();
-    const gateway = createGateway(stripe);
+    const stripe = new FakeStripeCheckoutClient();
 
     await expect(
-      gateway.createCheckoutSession(
+      createGateway(stripe).createCheckoutSession(
         {
           userId: appUserId,
           externalCustomerId: 'cus_123',
@@ -506,35 +444,32 @@ describe('StripePaymentGateway', () => {
         },
         { idempotencyKey: 'checkout_idem_custom_1' },
       ),
-    ).resolves.toEqual({ url: 'https://stripe/checkout' });
+    ).resolves.toEqual({ url: 'https://checkout.stripe.test/cs_fake_1' });
 
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: 'subscription',
-        customer: 'cus_123',
-        line_items: [{ price: 'price_m', quantity: 1 }],
-        allow_promotion_codes: false,
-        billing_address_collection: 'auto',
-        success_url: 'https://app/success',
-        cancel_url: 'https://app/cancel',
-        client_reference_id: appUserId,
-        subscription_data: {
-          metadata: { user_id: appUserId },
-        },
-      }),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
-    );
+    expect(stripe.createCalls).toEqual([
+      {
+        params: expect.objectContaining({
+          mode: 'subscription',
+          customer: 'cus_123',
+          line_items: [{ price: TEST_PRICE_IDS.monthly, quantity: 1 }],
+          allow_promotion_codes: false,
+          billing_address_collection: 'auto',
+          success_url: 'https://app/success',
+          cancel_url: 'https://app/cancel',
+          client_reference_id: appUserId,
+          subscription_data: {
+            metadata: { user_id: appUserId },
+          },
+        }),
+        options: expect.objectContaining({
+          idempotencyKey: `checkout_session:${appUserId}:monthly`,
+        }),
+      },
+    ]);
   });
 
   it('creates the trial payment-method setup Session through the customer-less setup seam', async () => {
-    const { stripe, sessionsCreate, sessionsRetrieve } = createStripeMock();
-    sessionsRetrieve.mockResolvedValue({
-      id: 'cs_new',
-      url: 'https://stripe/checkout',
-      status: 'open',
-    });
+    const stripe = new FakeStripeCheckoutClient();
     const consentStateSecret = 'dedicated-consent-state-secret-32-bytes';
     const gateway = createGateway(stripe, { consentStateSecret });
 
@@ -558,21 +493,21 @@ describe('StripePaymentGateway', () => {
         cancelUrl: 'https://app/cancel',
       }),
     ).resolves.toEqual({
-      sessionId: 'cs_new',
-      url: 'https://stripe/checkout',
+      sessionId: 'cs_fake_1',
+      url: 'https://checkout.stripe.test/cs_fake_1',
     });
 
-    expect(sessionsCreate).toHaveBeenCalledWith(
+    const params = stripe.createCalls[0]?.params;
+    expect(params).toEqual(
       expect.objectContaining({
         mode: 'setup',
         currency: 'usd',
         consent_collection: { terms_of_service: 'required' },
       }),
-      expect.any(Object),
     );
-    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_new');
-    expect(sessionsCreate.mock.calls[0]?.[0]).not.toHaveProperty('customer');
-    const metadata = sessionsCreate.mock.calls[0]?.[0].metadata;
+    expect(params).not.toHaveProperty('customer');
+    expect(stripe.retrieveCalls).toContain('cs_fake_1');
+    const metadata = params?.metadata;
     if (!metadata) throw new Error('Expected signed setup metadata');
     const { consent_state_signature: signature, ...signedMetadata } = metadata;
     expect(
@@ -591,281 +526,21 @@ describe('StripePaymentGateway', () => {
     ).toBe(false);
   });
 
-  it.each([
-    'active',
-    'trialing',
-    'past_due',
-    'unpaid',
-    'incomplete',
-    'paused',
-  ] as const)(
-    'throws ALREADY_SUBSCRIBED when Stripe has a %s subscription for the customer',
-    async (status) => {
-      const { stripe, sessionsCreate, subscriptionsList } = createStripeMock({
-        withSubscriptions: true,
-      });
-      subscriptionsList.mockResolvedValue({
-        data: [{ id: 'sub_blocking_1', status }],
-      });
-      const gateway = createGateway(stripe);
-
-      await expect(
-        gateway.createCheckoutSession({
-          userId: appUserId,
-          externalCustomerId: 'cus_123',
-          ...createTestRenewalTerms('monthly'),
-          successUrl: 'https://app/success',
-          cancelUrl: 'https://app/cancel',
-        }),
-      ).rejects.toMatchObject({ code: 'ALREADY_SUBSCRIBED' });
-
-      expect(subscriptionsList).toHaveBeenCalledWith({
-        customer: 'cus_123',
-        status: 'all',
-        limit: SUBSCRIPTION_LIST_LIMIT,
-      });
-      expect(sessionsCreate).not.toHaveBeenCalled();
-    },
-  );
-
-  it('creates a checkout session when Stripe subscriptions are only ended or canceled', async () => {
-    const { stripe, sessionsCreate, subscriptionsList } = createStripeMock({
-      withSubscriptions: true,
-    });
-    subscriptionsList.mockResolvedValue({
-      data: [
-        { id: 'sub_ended_1', status: 'canceled' as const },
-        { id: 'sub_ended_2', status: 'incomplete_expired' as const },
-      ],
-    });
-    const gateway = createGateway(stripe);
+  it("creates a billing portal session with the caller's idempotency key", async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const create = vi.spyOn(stripe.billingPortal.sessions, 'create');
 
     await expect(
-      gateway.createCheckoutSession({
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        ...createTestRenewalTerms('monthly'),
-        successUrl: 'https://app/success',
-        cancelUrl: 'https://app/cancel',
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/checkout' });
+      createGateway(stripe).createPortalSession(
+        { externalCustomerId: 'cus_123', returnUrl: 'https://app/return' },
+        { idempotencyKey: 'caller_portal_key' },
+      ),
+    ).resolves.toEqual({ url: 'https://billing.stripe.test/session' });
 
-    expect(subscriptionsList).toHaveBeenCalledWith({
-      customer: 'cus_123',
-      status: 'all',
-      limit: SUBSCRIPTION_LIST_LIMIT,
-    });
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
-  });
-
-  it('reuses an existing open checkout session when present', async () => {
-    const {
-      stripe,
-      sessionsCreate,
-      sessionsExpire,
-      sessionsList,
-      sessionsRetrieve,
-    } = createStripeMock();
-    sessionsList.mockResolvedValue({
-      data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
-    });
-    sessionsRetrieve.mockResolvedValue({
-      id: 'cs_existing',
-      url: 'https://stripe/existing-checkout',
-      metadata: createTestCheckoutRenewalMetadata({
-        userId: appUserId,
-        plan: 'annual',
-      }),
-      line_items: { data: [{ price: { id: 'price_a' } }] },
-    });
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.createCheckoutSession({
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        ...createTestRenewalTerms('annual'),
-        successUrl: 'https://app/success',
-        cancelUrl: 'https://app/cancel',
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/existing-checkout' });
-
-    expect(sessionsList).toHaveBeenCalledWith({
-      customer: 'cus_123',
-      status: 'open',
-      limit: 1,
-    });
-    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
-      expand: ['line_items'],
-    });
-    expect(sessionsExpire).not.toHaveBeenCalled();
-    expect(sessionsCreate).not.toHaveBeenCalled();
-  });
-
-  it('expires an existing open checkout session when the plan does not match', async () => {
-    const {
-      stripe,
-      sessionsCreate,
-      sessionsExpire,
-      sessionsList,
-      sessionsRetrieve,
-    } = createStripeMock();
-    sessionsList.mockResolvedValue({
-      data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
-    });
-    sessionsRetrieve.mockResolvedValue({
-      id: 'cs_existing',
-      url: 'https://stripe/existing-checkout',
-      line_items: { data: [{ price: { id: 'price_a' } }] },
-    });
-    sessionsCreate.mockResolvedValue({
-      id: 'cs_new',
-      url: 'https://stripe/new-checkout',
-    });
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.createCheckoutSession({
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        ...createTestRenewalTerms('monthly'),
-        successUrl: 'https://app/success',
-        cancelUrl: 'https://app/cancel',
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/new-checkout' });
-
-    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
-      expand: ['line_items'],
-    });
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_existing',
-    });
-    expect(sessionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        line_items: [{ price: 'price_m', quantity: 1 }],
-      }),
-      expect.objectContaining({
-        idempotencyKey: `checkout_session:${appUserId}:monthly`,
-      }),
+    expect(create).toHaveBeenCalledWith(
+      { customer: 'cus_123', return_url: 'https://app/return' },
+      { idempotencyKey: 'caller_portal_key' },
     );
-  });
-
-  it('returns a new checkout session when inspecting an existing session fails', async () => {
-    const logger = new FakeLogger();
-    const {
-      stripe,
-      sessionsCreate,
-      sessionsExpire,
-      sessionsList,
-      sessionsRetrieve,
-    } = createStripeMock();
-    sessionsList.mockResolvedValue({
-      data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
-    });
-    sessionsRetrieve.mockRejectedValue(new Error('inspect failed'));
-    sessionsCreate.mockResolvedValue({
-      id: 'cs_new',
-      url: 'https://stripe/new-checkout',
-    });
-    const gateway = createGateway(stripe, { logger });
-
-    const result = await gateway.createCheckoutSession({
-      userId: appUserId,
-      externalCustomerId: 'cus_123',
-      ...createTestRenewalTerms('monthly'),
-      successUrl: 'https://app/success',
-      cancelUrl: 'https://app/cancel',
-    });
-
-    expect(result).toEqual({ url: 'https://stripe/new-checkout' });
-
-    expect(sessionsRetrieve).toHaveBeenCalledWith('cs_existing', {
-      expand: ['line_items'],
-    });
-    expect(sessionsExpire).toHaveBeenCalledWith('cs_existing', undefined, {
-      idempotencyKey: 'expire_checkout_session:cs_existing',
-    });
-    expect(sessionsCreate).toHaveBeenCalledTimes(1);
-    expect(logger.warnCalls).toContainEqual({
-      context: expect.objectContaining({
-        sessionId: 'cs_existing',
-        error: 'inspect failed',
-      }),
-      msg: 'Failed to inspect existing checkout session',
-    });
-  });
-
-  it('throws STRIPE_ERROR when expiring a mismatched checkout session fails', async () => {
-    const logger = new FakeLogger();
-    const {
-      stripe,
-      sessionsCreate,
-      sessionsExpire,
-      sessionsList,
-      sessionsRetrieve,
-    } = createStripeMock();
-    sessionsList.mockResolvedValue({
-      data: [{ id: 'cs_existing', url: 'https://stripe/existing-checkout' }],
-    });
-    sessionsRetrieve.mockResolvedValue({
-      id: 'cs_existing',
-      url: 'https://stripe/existing-checkout',
-      line_items: {
-        data: [{ price: { id: 'price_a' } }],
-      },
-    });
-    sessionsExpire.mockRejectedValue(new Error('expire failed'));
-    sessionsCreate.mockResolvedValue({
-      id: 'cs_new',
-      url: 'https://stripe/new-checkout',
-    });
-    const gateway = createGateway(stripe, { logger });
-
-    await expect(
-      gateway.createCheckoutSession({
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        ...createTestRenewalTerms('monthly'),
-        successUrl: 'https://app/success',
-        cancelUrl: 'https://app/cancel',
-      }),
-    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
-
-    expect(sessionsExpire).toHaveBeenCalledTimes(1);
-    expect(sessionsCreate).not.toHaveBeenCalled();
-  });
-
-  it('throws STRIPE_ERROR when a checkout session URL is missing', async () => {
-    const { stripe, sessionsCreate } = createStripeMock();
-    sessionsCreate.mockResolvedValue({ id: 'cs_new', url: null });
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.createCheckoutSession({
-        userId: appUserId,
-        externalCustomerId: 'cus_123',
-        ...createTestRenewalTerms('monthly'),
-        successUrl: 'https://app/success',
-        cancelUrl: 'https://app/cancel',
-      }),
-    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
-  });
-
-  it('creates a billing portal session with the correct Stripe parameters', async () => {
-    const { stripe, portalSessionsCreate } = createStripeMock();
-    const gateway = createGateway(stripe);
-
-    await expect(
-      gateway.createPortalSession({
-        externalCustomerId: 'cus_123',
-        returnUrl: 'https://app/return',
-      }),
-    ).resolves.toEqual({ url: 'https://stripe/portal' });
-
-    expect(portalSessionsCreate).toHaveBeenCalledWith({
-      customer: 'cus_123',
-      return_url: 'https://app/return',
-    });
   });
 
   // Webhook normalization is pinned at the adapter level, on the fake, in
