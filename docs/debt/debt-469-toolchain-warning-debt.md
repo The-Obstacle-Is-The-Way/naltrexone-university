@@ -147,6 +147,12 @@ At `dev` `ed07103f`, all 28 suppression paths above still exist and the count is
 
 **Payment-gateway burn-down (2026-09-25 UTC, with DEBT-472 Verification F5):** the 1,537-line `stripe-payment-gateway.test.ts` shrinks to 666 lines. Its webhook and Checkout sections now live at the adapters that own them, on the fake, and the facade keeps only its forwarding and decision cases. The file-size suppression retires, and tracked suppressions fall **20 → 19**. [DEBT-472 disposition](../_archive/debt/debt-472-test-double-fidelity-and-contract-discipline.md#payment-gateway-checkout-section-disposition-2026-09-25-utc).
 
+**Attempt-fake and feedback-actions burn-down (2026-09-25 UTC):** two more suites split along concern boundaries they already had.
+- The 877-line `fake-attempt-repository.test.ts` moves its active-exam visibility fidelity block into `fake-attempt-repository-active-exam-visibility.test.ts`. The seed builders both suites use move into `fake-attempt-repository-seeds.ts`.
+- The 853-line `question-feedback-actions.test.ts` moves its request-identity-across-the-idempotency-wrapper block into `question-feedback-actions-idempotency.test.ts`.
+
+All 86 test full names, ancestors included, are unchanged (**14:17:39Z**). Main's two files fail `biome lint --error-on-warnings` without their suppressions (**14:17:39Z**), while all five new files pass unsuppressed. Tracked suppressions fall **19 → 17**. Sanitized receipts: this clone's `.git/claude-debt-resume/splits-feedback-attempt/proofs.log`. The local full gate passed on `6005b271` and is re-run on every later head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
+
 **Rejected alternatives:**
 
 - **`VITE_CONFIG_NATIVE_IGNORE_WARNING=true`** — mutes the messenger; the CJS/ESM mismatch would resurface as a hard break on Vite's next major.
