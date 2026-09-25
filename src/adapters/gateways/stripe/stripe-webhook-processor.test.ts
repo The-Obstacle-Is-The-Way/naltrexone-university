@@ -278,6 +278,8 @@ describe('processStripeWebhookEvent', () => {
 
     await expect(processEvent(stripe, { logger })).rejects.toMatchObject({
       code: 'INVALID_WEBHOOK_SIGNATURE',
+      message:
+        'Invalid webhook signature: FakeStripeCheckoutClient does not process webhooks',
     });
 
     expect(logger.errorCalls).toHaveLength(1);
@@ -540,4 +542,174 @@ describe('processStripeWebhookEvent', () => {
     expect(errorCall.context).toHaveProperty('error');
     expect(stripe.subscriptions.retrieveCalls).toEqual([]);
   });
+  it.each([
+    'customer.subscription.created',
+    'customer.subscription.updated',
+    'customer.subscription.deleted',
+    'customer.subscription.paused',
+    'customer.subscription.resumed',
+    'customer.subscription.trial_will_end',
+    'customer.subscription.pending_update_applied',
+    'customer.subscription.pending_update_expired',
+  ])(
+    'normalizes %s events from the live Subscription, stamped with the event time',
+    async (type) => {
+      const stripe = createStripe({
+        event: {
+          id: `evt_${type}`,
+          type,
+          created: 1_700_000_000,
+          data: { object: subscriptionFixture() },
+        },
+        subscriptionIds: ['sub_123'],
+      });
+
+      await expect(processEvent(stripe)).resolves.toEqual({
+        eventId: `evt_${type}`,
+        type,
+        occurredAt: new Date(1_700_000_000 * 1000),
+        subscriptionUpdate: subscriptionUpdateFor('sub_123'),
+      });
+      expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
+    },
+  );
+
+  it.each([
+    'checkout.session.completed',
+    'invoice.payment_failed',
+    'invoice.payment_succeeded',
+    'invoice.payment_action_required',
+  ])(
+    'retrieves the Subscription referenced at the root of %s events, stamped with the event time',
+    async (type) => {
+      const stripe = createStripe({
+        event: {
+          id: `evt_${type}`,
+          type,
+          created: 1_700_000_000,
+          data: { object: { subscription: 'sub_123' } },
+        },
+        subscriptionIds: ['sub_123'],
+      });
+
+      await expect(processEvent(stripe)).resolves.toEqual({
+        eventId: `evt_${type}`,
+        type,
+        occurredAt: new Date(1_700_000_000 * 1000),
+        subscriptionUpdate: subscriptionUpdateFor('sub_123'),
+      });
+      expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
+    },
+  );
+
+  it('returns base result for checkout completion without a subscription key', async () => {
+    const stripe = createStripe({
+      event: {
+        id: 'evt_checkout_no_key',
+        type: 'checkout.session.completed',
+        data: { object: { id: 'cs_test_1' } },
+      },
+    });
+
+    await expect(processEvent(stripe)).resolves.toEqual({
+      eventId: 'evt_checkout_no_key',
+      type: 'checkout.session.completed',
+    });
+    expect(stripe.subscriptions.retrieveCalls).toEqual([]);
+  });
+
+  it.each(['invoice.payment_failed', 'checkout.session.completed'])(
+    'rejects and logs %s payloads whose subscription reference is malformed',
+    async (type) => {
+      const logger = new FakeLogger();
+      const stripe = createStripe({
+        event: {
+          id: 'evt_bad_reference',
+          type,
+          data: { object: { subscription: 123 } },
+        },
+      });
+
+      await expect(processEvent(stripe, { logger })).rejects.toMatchObject({
+        code: 'INVALID_WEBHOOK_PAYLOAD',
+      });
+      expect(logger.errorCalls).toContainEqual({
+        context: expect.objectContaining({
+          eventId: 'evt_bad_reference',
+          type,
+        }),
+        msg: `Invalid Stripe ${type} webhook payload`,
+      });
+      expect(stripe.subscriptions.retrieveCalls).toEqual([]);
+    },
+  );
+
+  it.each(['invoice.payment_failed', 'checkout.session.completed'])(
+    'rejects and logs a Subscription retrieved for %s events that fails the schema',
+    async (type) => {
+      const logger = new FakeLogger();
+      const stripe = createStripe({
+        event: {
+          id: 'evt_bad_subscription',
+          type,
+          data: { object: { subscription: 'sub_123' } },
+        },
+        subscriptionIds: ['sub_123'],
+      });
+      // Stripe always lists at least one item; an empty list fails the schema.
+      stripe.setSubscriptionRetrieveOverride((subscription) => ({
+        ...subscription,
+        items: { data: [] },
+      }));
+
+      await expect(processEvent(stripe, { logger })).rejects.toMatchObject({
+        code: 'INVALID_WEBHOOK_PAYLOAD',
+      });
+      expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
+      expect(logger.errorCalls).toContainEqual({
+        context: expect.objectContaining({
+          eventId: 'evt_bad_subscription',
+          type,
+          stripeSubscriptionId: 'sub_123',
+        }),
+        msg: `Invalid Stripe subscription payload retrieved from ${type}`,
+      });
+    },
+  );
+
+  it.each([
+    [
+      'customer.subscription.updated',
+      { ...subscriptionFixture(), metadata: {} },
+    ],
+    [
+      'customer.subscription.created',
+      { ...subscriptionFixture(), metadata: {} },
+    ],
+    ['checkout.session.completed', { subscription: 'sub_123' }],
+  ] as const)(
+    'rejects and logs %s events whose live Subscription has no metadata.user_id',
+    async (type, object) => {
+      const logger = new FakeLogger();
+      const stripe = createStripe({
+        event: { id: 'evt_missing_user', type, data: { object } },
+      });
+      stripe.seedSubscription({ ...subscriptionFixture(), metadata: {} });
+
+      await expect(processEvent(stripe, { logger })).rejects.toMatchObject({
+        code: 'STRIPE_ERROR',
+        message: 'Stripe subscription metadata.user_id is required',
+      });
+      expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
+      expect(logger.errorCalls).toContainEqual({
+        context: expect.objectContaining({
+          eventId: 'evt_missing_user',
+          type,
+          stripeSubscriptionId: 'sub_123',
+          stripeCustomerId: 'cus_123',
+        }),
+        msg: 'Stripe subscription metadata.user_id is required',
+      });
+    },
+  );
 });
