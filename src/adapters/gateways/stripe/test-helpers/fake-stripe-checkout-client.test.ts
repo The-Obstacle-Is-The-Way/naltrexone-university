@@ -301,8 +301,13 @@ describe('FakeStripeCheckoutClient', () => {
         message: `No such subscription: '${subscriptionId}'`,
       });
     }
+    // The record keeps the options as passed, not the caller's later edits.
+    options.idempotencyKey = 'changed_after_the_call';
     expect(stripe.subscriptions.cancelCalls).toEqual([
-      { subscriptionId: 'sub_fake_1', options },
+      {
+        subscriptionId: 'sub_fake_1',
+        options: { idempotencyKey: 'reconcile_duplicate_subscription:x' },
+      },
       { subscriptionId: 'sub_fake_1' },
       { subscriptionId: 'sub_unknown' },
     ]);

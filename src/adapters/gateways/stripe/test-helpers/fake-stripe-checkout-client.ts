@@ -270,7 +270,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
     async cancel(subscriptionId, _params, options) {
       this.cancelCalls.push({
         subscriptionId,
-        ...(options === undefined ? {} : { options }),
+        ...(options ? { options: { ...options } } : {}),
       });
       const subscription = this.seeded.find(
         (candidate) => candidate.id === subscriptionId,
