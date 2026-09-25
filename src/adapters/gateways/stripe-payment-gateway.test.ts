@@ -1,5 +1,6 @@
 // biome-ignore lint/style/noExcessiveLinesPerFile: Keep subscription, Checkout, portal, and retry adapter contracts together — split tracked by DEBT-469.
 import { describe, expect, it, vi } from 'vitest';
+import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import type {
   CheckoutSessionCreateParams,
   StripeBillingPortalSession,
@@ -986,6 +987,11 @@ describe('StripePaymentGateway', () => {
       createGateway(stripe, {
         webhookE2EOwner: 'vercel-dev-preview',
       }).processWebhookEvent('raw_body', 'sig_1'),
-    ).rejects.toMatchObject({ code: 'STRIPE_ERROR' });
+    ).rejects.toMatchObject({
+      code: 'STRIPE_ERROR',
+      fieldErrors: {
+        [STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD]: ['mismatch'],
+      },
+    });
   });
 });
