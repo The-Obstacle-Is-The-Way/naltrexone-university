@@ -82,6 +82,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-25 UTC: The customer suite's three Search cases move onto the fake,
+// which now models metadata Search (contracted against Stripe TEST mode); its
+// three casts retire.
 // 2026-09-25 UTC: The schema suite reads indexes and checks through Drizzle's
 // public getTableConfig/PgDialect instead of casting tables to reach private
 // symbols; its three casts retire.
@@ -130,7 +133,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['lib/container.skip-clerk.test.ts', 6],
   ['lib/container.test.ts', 6],
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
-  ['src/adapters/gateways/stripe/stripe-customers.test.ts', 3],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['tests/e2e/helpers/bookmark.test.ts', 2],
   [

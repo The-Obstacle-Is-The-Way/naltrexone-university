@@ -10,25 +10,12 @@ describe('createStripeCustomer', () => {
     vi.useRealTimers();
   });
 
+  // The fake's Search, like the SDK's, needs its receiver, so these cases also
+  // pin the adapter's binding of the detached method.
   it('returns externalCustomerId when a matching Stripe customer exists', async () => {
-    const makeRequest = vi.fn(async (_params: unknown) => ({
-      data: [{ id: 'cus_123' }],
-    }));
-
-    const customers = {
-      _makeRequest: makeRequest,
-      create: vi.fn(async () => ({ id: 'cus_new' })),
-      search: function (
-        this: { _makeRequest: typeof makeRequest },
-        params: unknown,
-      ) {
-        return this._makeRequest(params);
-      },
-    };
-
-    const stripe = { customers } as unknown as Parameters<
-      typeof createStripeCustomer
-    >[0]['stripe'];
+    const stripe = new FakeStripeCheckoutClient();
+    const existingId = stripe.seedCustomer({ user_id: appUserId });
+    const create = vi.spyOn(stripe.customers, 'create');
 
     await expect(
       createStripeCustomer({
@@ -40,20 +27,17 @@ describe('createStripeCustomer', () => {
         },
         logger: new FakeLogger(),
       }),
-    ).resolves.toEqual({ externalCustomerId: 'cus_123' });
+    ).resolves.toEqual({ externalCustomerId: existingId });
 
-    expect(makeRequest).toHaveBeenCalledWith({
-      query: `metadata['user_id']:'${appUserId}'`,
-      limit: 2,
-    });
-    expect(customers.create).not.toHaveBeenCalled();
+    expect(stripe.customers.searchCalls).toEqual([
+      { query: `metadata['user_id']:'${appUserId}'`, limit: 2 },
+    ]);
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('throws VALIDATION_ERROR when userId contains unsupported search characters', async () => {
     const stripe = new FakeStripeCheckoutClient();
-    const customers = stripe.customers;
-    customers.search = vi.fn(async () => ({ data: [] }));
-    vi.spyOn(customers, 'create');
+    const create = vi.spyOn(stripe.customers, 'create');
 
     await expect(
       createStripeCustomer({
@@ -67,19 +51,16 @@ describe('createStripeCustomer', () => {
       }),
     ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
 
-    expect(customers.search).not.toHaveBeenCalled();
-    expect(customers.create).not.toHaveBeenCalled();
+    expect(stripe.customers.searchCalls).toEqual([]);
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('creates a new customer when metadata search returns no matches', async () => {
-    const customers = {
-      create: vi.fn(async () => ({ id: 'cus_new' })),
-      search: vi.fn(async () => ({ data: [] })),
-    };
-
-    const stripe = { customers } as unknown as Parameters<
-      typeof createStripeCustomer
-    >[0]['stripe'];
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedCustomer({ user_id: crypto.randomUUID() });
+    const create = vi
+      .spyOn(stripe.customers, 'create')
+      .mockResolvedValue({ id: 'cus_new' });
 
     await expect(
       createStripeCustomer({
@@ -93,19 +74,15 @@ describe('createStripeCustomer', () => {
       }),
     ).resolves.toEqual({ externalCustomerId: 'cus_new' });
 
-    expect(customers.search).toHaveBeenCalledTimes(1);
-    expect(customers.create).toHaveBeenCalledTimes(1);
+    expect(stripe.customers.searchCalls).toHaveLength(1);
+    expect(create).toHaveBeenCalledTimes(1);
   });
 
   it('throws STRIPE_ERROR when metadata search returns multiple matches', async () => {
-    const customers = {
-      create: vi.fn(async () => ({ id: 'cus_new' })),
-      search: vi.fn(async () => ({ data: [{ id: 'cus_1' }, { id: 'cus_2' }] })),
-    };
-
-    const stripe = { customers } as unknown as Parameters<
-      typeof createStripeCustomer
-    >[0]['stripe'];
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedCustomer({ user_id: appUserId });
+    stripe.seedCustomer({ user_id: appUserId });
+    const create = vi.spyOn(stripe.customers, 'create');
 
     await expect(
       createStripeCustomer({
@@ -122,14 +99,12 @@ describe('createStripeCustomer', () => {
       message: 'Multiple Stripe customers found for this user',
     });
 
-    expect(customers.create).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('throws STRIPE_ERROR when Stripe customer creation returns no id', async () => {
     const stripe = new FakeStripeCheckoutClient();
-    const customers = stripe.customers;
-    customers.search = vi.fn(async () => ({ data: [] }));
-    vi.spyOn(customers, 'create').mockResolvedValue({ id: '' });
+    vi.spyOn(stripe.customers, 'create').mockResolvedValue({ id: '' });
 
     await expect(
       createStripeCustomer({
@@ -149,9 +124,7 @@ describe('createStripeCustomer', () => {
 
   it('forwards idempotency key to Stripe customer creation', async () => {
     const stripe = new FakeStripeCheckoutClient();
-    const customers = stripe.customers;
-    customers.search = vi.fn(async () => ({ data: [] }));
-    vi.spyOn(customers, 'create').mockResolvedValue({ id: 'cus_new' });
+    vi.spyOn(stripe.customers, 'create').mockResolvedValue({ id: 'cus_new' });
 
     await expect(
       createStripeCustomer({
@@ -166,7 +139,7 @@ describe('createStripeCustomer', () => {
       }),
     ).resolves.toEqual({ externalCustomerId: 'cus_new' });
 
-    expect(customers.create).toHaveBeenCalledWith(
+    expect(stripe.customers.create).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'user@example.com',
       }),

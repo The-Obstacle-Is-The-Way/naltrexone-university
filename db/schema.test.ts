@@ -51,9 +51,9 @@ describe('practiceSessions schema indexes', () => {
     expect(index.config.unique).toBe(true);
     const predicate = index.config.where;
     if (!predicate) throw new Error('Expected a partial index predicate');
-    expect(new PgDialect().sqlToQuery(predicate).sql).toContain(
-      'ended_at IS NULL',
-    );
+    // Exact text: a containment check would also accept a predicate that
+    // disables the index, such as `ended_at IS NULL AND false`.
+    expect(new PgDialect().sqlToQuery(predicate).sql).toBe('ended_at IS NULL');
   });
 });
 
