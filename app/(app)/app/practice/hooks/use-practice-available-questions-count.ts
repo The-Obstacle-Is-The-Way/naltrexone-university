@@ -7,6 +7,7 @@ import {
   type AvailableQuestionsCountFilters,
   type AvailableQuestionsCountStatus,
   createAvailableQuestionsCountEffect,
+  toAvailableQuestionsCountFilters,
 } from '../practice-page-available-count';
 import type { PracticeFilters } from '../practice-page-logic';
 
@@ -23,11 +24,12 @@ export function usePracticeAvailableQuestionsCount(input: {
   const [availableCount, setAvailableCount] = useState<number | null>(null);
 
   const serverFilters: AvailableQuestionsCountFilters = useMemo(
-    () => ({
-      tagSlugs: input.filters.tagSlugs,
-      difficulties: input.filters.difficulty ? [input.filters.difficulty] : [],
-      statuses: [input.filters.status],
-    }),
+    () =>
+      toAvailableQuestionsCountFilters({
+        tagSlugs: input.filters.tagSlugs,
+        difficulty: input.filters.difficulty,
+        status: input.filters.status,
+      }),
     [input.filters.tagSlugs, input.filters.difficulty, input.filters.status],
   );
 
