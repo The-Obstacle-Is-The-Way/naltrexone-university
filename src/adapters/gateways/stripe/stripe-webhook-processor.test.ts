@@ -576,6 +576,7 @@ describe('processStripeWebhookEvent', () => {
 
   it.each([
     'checkout.session.completed',
+    'checkout.session.expired',
     'invoice.payment_failed',
     'invoice.payment_succeeded',
     'invoice.payment_action_required',
@@ -601,6 +602,24 @@ describe('processStripeWebhookEvent', () => {
       expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
     },
   );
+
+  it('retrieves the Subscription from an object-form reference', async () => {
+    const stripe = createStripe({
+      event: {
+        id: 'evt_checkout_object_reference',
+        type: 'checkout.session.completed',
+        data: { object: { subscription: { id: 'sub_123' } } },
+      },
+      subscriptionIds: ['sub_123'],
+    });
+
+    await expect(processEvent(stripe)).resolves.toEqual({
+      eventId: 'evt_checkout_object_reference',
+      type: 'checkout.session.completed',
+      subscriptionUpdate: subscriptionUpdateFor('sub_123'),
+    });
+    expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
+  });
 
   it('returns base result for checkout completion without a subscription key', async () => {
     const stripe = createStripe({
