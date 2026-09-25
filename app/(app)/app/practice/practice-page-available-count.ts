@@ -18,6 +18,18 @@ export type AvailableQuestionsCountFilters = {
   statuses: readonly QuestionProgressStatus[];
 };
 
+export function toAvailableQuestionsCountFilters(filters: {
+  tagSlugs: readonly string[];
+  difficulty: QuestionDifficulty | null;
+  status: QuestionProgressStatus;
+}): AvailableQuestionsCountFilters {
+  return {
+    tagSlugs: filters.tagSlugs,
+    difficulties: filters.difficulty ? [filters.difficulty] : [],
+    statuses: [filters.status],
+  };
+}
+
 export function createAvailableQuestionsCountEffect(input: {
   countAvailableQuestionsFn: (
     input: AvailableQuestionsCountFilters,

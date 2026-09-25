@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from 'react-dom/server';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { findMainLandmarkById, parseHtml } from '@/tests/shared/dom-helpers';
 import {
   restoreProcessEnv,
@@ -18,6 +26,10 @@ describe('app/sign-up/[[...sign-up]]', () => {
       throw new Error('Publishable key not valid.');
     });
     SignUpPage = (await import('@/app/sign-up/[[...sign-up]]/page')).default;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   afterAll(() => {
@@ -41,5 +53,17 @@ describe('app/sign-up/[[...sign-up]]', () => {
     expect(headingClass).toContain('font-heading');
     expect(headingClass).toContain('tracking-tight');
     expect(headingClass).toContain('text-foreground');
+  });
+
+  it('renders the Clerk sign-up loading placeholder inside the main landmark when Clerk is enabled', () => {
+    vi.stubEnv('NEXT_PUBLIC_SKIP_CLERK', 'false');
+
+    const html = renderToStaticMarkup(<SignUpPage />);
+    const main = findMainLandmarkById(parseHtml(html), 'main-content');
+
+    expect(main?.textContent).toContain('Loading sign-up…');
+    expect(html).not.toContain(
+      'Authentication unavailable in this environment.',
+    );
   });
 });
