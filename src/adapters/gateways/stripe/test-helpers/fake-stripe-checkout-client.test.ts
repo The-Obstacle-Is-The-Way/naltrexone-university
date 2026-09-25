@@ -264,6 +264,77 @@ describe('FakeStripeCheckoutClient', () => {
     );
   });
 
+  function fakeWithActiveSubscription(): FakeStripeCheckoutClient {
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSubscription({
+      id: 'sub_fake_1',
+      customer: 'cus_one',
+      status: 'active',
+    });
+    return stripe;
+  }
+
+  it('cancels a seeded Subscription, which stays retrievable and leaves the default listing', async () => {
+    const stripe = fakeWithActiveSubscription();
+
+    await expect(stripe.subscriptions.cancel('sub_fake_1')).resolves.toEqual(
+      expect.objectContaining({ id: 'sub_fake_1', status: 'canceled' }),
+    );
+    await expect(stripe.subscriptions.retrieve('sub_fake_1')).resolves.toEqual(
+      expect.objectContaining({ status: 'canceled' }),
+    );
+    await expect(
+      stripe.subscriptions.list?.({ customer: 'cus_one' }),
+    ).resolves.toEqual({ data: [] });
+  });
+
+  // Stripe answers a second cancel (and an unknown id) with a 404 that names
+  // the Subscription missing, although a canceled one is still retrievable.
+  it.each([
+    ['a repeat cancel', 'sub_fake_1'],
+    ['an unknown id', 'sub_unknown'],
+  ])('rejects %s as resource_missing', async (_case, subscriptionId) => {
+    const stripe = fakeWithActiveSubscription();
+    await stripe.subscriptions.cancel('sub_fake_1');
+
+    await expect(
+      stripe.subscriptions.cancel(subscriptionId),
+    ).rejects.toMatchObject({
+      type: 'StripeInvalidRequestError',
+      rawType: 'invalid_request_error',
+      code: 'resource_missing',
+      statusCode: 404,
+      param: 'id',
+      message: `No such subscription: '${subscriptionId}'`,
+    });
+  });
+
+  it('records each cancel with a copy of its options', async () => {
+    const stripe = fakeWithActiveSubscription();
+    const options = { idempotencyKey: 'reconcile_duplicate_subscription:x' };
+
+    await stripe.subscriptions.cancel('sub_fake_1', undefined, options);
+    await expect(
+      stripe.subscriptions.cancel('sub_fake_1'),
+    ).rejects.toMatchObject({ code: 'resource_missing' });
+    options.idempotencyKey = 'changed_after_the_call';
+
+    expect(stripe.subscriptions.cancelCalls).toEqual([
+      {
+        subscriptionId: 'sub_fake_1',
+        options: { idempotencyKey: 'reconcile_duplicate_subscription:x' },
+      },
+      { subscriptionId: 'sub_fake_1' },
+    ]);
+  });
+
+  it('fails a detached cancel the way an unbound SDK method would', async () => {
+    const stripe = fakeWithActiveSubscription();
+    const cancel = stripe.subscriptions.cancel;
+
+    await expect(cancel('sub_fake_1')).rejects.toBeInstanceOf(TypeError);
+  });
+
   it('supports create-response overrides without changing the stored Session', async () => {
     const stripe = new FakeStripeCheckoutClient();
     const options = { idempotencyKey: 'key_response_override' };
