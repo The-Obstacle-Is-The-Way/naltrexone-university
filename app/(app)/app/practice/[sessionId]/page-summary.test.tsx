@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES } from '@/lib/routes';
+import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
 
 const fixtureQuestion0Id = crypto.randomUUID();
 const fixtureQuestion1Id3 = crypto.randomUUID();
@@ -114,9 +115,12 @@ describe('app/(app)/app/practice/[sessionId]', () => {
 
     expect(html).toContain('Question breakdown');
     expect(html).toContain('Stem for q1');
-    expect(html).toContain(
-      `href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=${fixtureSession1Id}"`,
-    );
+    expect(
+      findAnchorByHref(
+        parseHtml(html),
+        `/app/questions/q-1?from=summary&mode=review&sessionId=${fixtureSession1Id}`,
+      ),
+    ).not.toBeNull();
     expect(html).toContain('[Question no longer available]');
   });
 
@@ -184,9 +188,12 @@ describe('app/(app)/app/practice/[sessionId]', () => {
       'New Session',
     ]);
     expect(html).toContain('Review Answers');
-    expect(html).toContain(
-      `href="/app/questions/q-1?from=summary&amp;mode=review&amp;sessionId=${fixtureSession1Id}"`,
-    );
+    expect(
+      findAnchorByHref(
+        parseHtml(html),
+        `/app/questions/q-1?from=summary&mode=review&sessionId=${fixtureSession1Id}`,
+      ),
+    ).not.toBeNull();
     expect(html).not.toContain('Practice missed questions');
     expect(html).not.toContain('href="/app/practice/quick?status=incorrect"');
   });
