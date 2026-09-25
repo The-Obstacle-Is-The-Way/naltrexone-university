@@ -120,6 +120,36 @@ describe('processClerkWebhook user.updated', () => {
     });
   });
 
+  it('fails closed without mutating either row when Clerk has no record of the email owner', async () => {
+    // The harness's default lookup finds no Clerk user.
+    const deps = createClerkWebhookTestDeps();
+    const originalOwner = await seedOwnerHoldingEmail(deps);
+
+    await expect(
+      processClerkWebhook(
+        deps,
+        incomingClaimsHeldEmail('evt_user_updated_owner_missing_in_clerk'),
+      ),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      existingClerkUserId: 'clerk_owner',
+    });
+    await expect(
+      deps.userRepository.findByClerkId('clerk_owner'),
+    ).resolves.toEqual(originalOwner);
+    await expect(
+      deps.userRepository.findByClerkId('clerk_incoming'),
+    ).resolves.toBeNull();
+    expect(deps.logger.warnCalls).toContainEqual({
+      context: {
+        existingClerkUserId: 'clerk_owner',
+        incomingClerkUserId: 'clerk_incoming',
+        resolution: 'blocked_existing_identity_missing',
+      },
+      msg: 'Blocked Clerk user email ownership conflict',
+    });
+  });
+
   it('releases the webhook transaction before resolving an email ownership conflict through Clerk', async () => {
     const baseDeps = createClerkWebhookTestDeps();
     await seedOwnerHoldingEmail(baseDeps);
