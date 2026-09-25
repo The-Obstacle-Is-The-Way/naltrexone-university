@@ -31,6 +31,7 @@ export type SeededSubscription = {
   customer: string;
   status: string;
   cancel_at_period_end?: boolean;
+  default_payment_method?: string | null;
   metadata?: Record<string, string>;
   items?: {
     data: Array<{ current_period_end?: number; price: { id: string } }>;
@@ -71,6 +72,56 @@ type SubscriptionCancelHook = (
   subscriptionId: string,
   options?: StripeRequestOptions,
 ) => void | Promise<void>;
+
+type SubscriptionUpdateCall = {
+  subscriptionId: string;
+  params: { default_payment_method: string };
+  options?: StripeRequestOptions | undefined;
+};
+
+type SeededPaymentMethod = { id: string; customer: string | null };
+
+type PaymentMethodAttachCall = {
+  paymentMethodId: string;
+  customer: string;
+  options?: StripeRequestOptions | undefined;
+};
+
+// An attach override bends only what `paymentMethods.attach` returns (a case
+// hands back a response Stripe could not send); the stored PaymentMethod
+// stays attached as requested. It models no Stripe behavior and is not
+// contract-tested.
+type PaymentMethodAttachOverride = (
+  paymentMethod: SeededPaymentMethod,
+) => SeededPaymentMethod;
+
+type PaymentMethodDetachCall = {
+  paymentMethodId: string;
+  options?: StripeRequestOptions | undefined;
+};
+
+// Stripe's 400 for a PaymentMethod request its state forbids; the fields and
+// messages are verified against TEST mode by the contract's eighth scenario.
+function invalidPaymentMethodRequest(message: string): Error {
+  return Object.assign(new Error(message), {
+    type: 'StripeInvalidRequestError',
+    rawType: 'invalid_request_error',
+    statusCode: 400,
+  });
+}
+
+function requirePaymentMethod(
+  seeded: SeededPaymentMethod[],
+  paymentMethodId: string,
+): SeededPaymentMethod {
+  const paymentMethod = seeded.find(
+    (candidate) => candidate.id === paymentMethodId,
+  );
+  if (!paymentMethod) {
+    throw new Error(`Missing fake PaymentMethod: ${paymentMethodId}`);
+  }
+  return paymentMethod;
+}
 
 type SubscriptionCancelCall = {
   subscriptionId: string;
@@ -324,12 +375,16 @@ export class FakeStripeCheckoutClient implements StripeClient {
   // call fails the way an unbound SDK method would.
   readonly subscriptions: NonNullable<StripeClient['subscriptions']> &
     Required<
-      Pick<NonNullable<StripeClient['subscriptions']>, 'list' | 'cancel'>
+      Pick<
+        NonNullable<StripeClient['subscriptions']>,
+        'list' | 'cancel' | 'update'
+      >
     > & {
       readonly seeded: SeededSubscription[];
       readonly listCalls: StripeSubscriptionListParams[];
       readonly retrieveCalls: string[];
       readonly cancelCalls: SubscriptionCancelCall[];
+      readonly updateCalls: SubscriptionUpdateCall[];
       retrieveOverride: SubscriptionRetrieveOverride | null;
       cancelHook: SubscriptionCancelHook | null;
     } = {
@@ -337,6 +392,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
     listCalls: [],
     retrieveCalls: [],
     cancelCalls: [],
+    updateCalls: [],
     retrieveOverride: null,
     cancelHook: null,
     async cancel(subscriptionId, _params, options) {
@@ -363,6 +419,21 @@ export class FakeStripeCheckoutClient implements StripeClient {
         );
       }
       subscription.status = 'canceled';
+      return structuredClone(subscription);
+    },
+    async update(subscriptionId, params, options) {
+      this.updateCalls.push({
+        subscriptionId,
+        params: { ...params },
+        ...(options ? { options: { ...options } } : {}),
+      });
+      const subscription = this.seeded.find(
+        (candidate) => candidate.id === subscriptionId,
+      );
+      if (!subscription) {
+        throw new Error(`Missing fake Subscription: ${subscriptionId}`);
+      }
+      subscription.default_payment_method = params.default_payment_method;
       return structuredClone(subscription);
     },
     async list(params) {
@@ -394,6 +465,72 @@ export class FakeStripeCheckoutClient implements StripeClient {
         : retrieved;
     },
   };
+
+  // Seeded PaymentMethods are retrieved, attached and detached by id; attach
+  // and detach follow Stripe's rules for a PaymentMethod's customer, as the
+  // contract's eighth scenario proves against TEST mode.
+  readonly paymentMethods: Required<
+    NonNullable<StripeClient['paymentMethods']>
+  > & {
+    readonly seeded: SeededPaymentMethod[];
+    readonly retrieveCalls: string[];
+    readonly attachCalls: PaymentMethodAttachCall[];
+    readonly detachCalls: PaymentMethodDetachCall[];
+    attachOverride: PaymentMethodAttachOverride | null;
+  } = {
+    seeded: [],
+    retrieveCalls: [],
+    attachCalls: [],
+    detachCalls: [],
+    attachOverride: null,
+    async retrieve(paymentMethodId) {
+      this.retrieveCalls.push(paymentMethodId);
+      return { ...requirePaymentMethod(this.seeded, paymentMethodId) };
+    },
+    async attach(paymentMethodId, params, options) {
+      this.attachCalls.push({
+        paymentMethodId,
+        customer: params.customer,
+        ...(options ? { options: { ...options } } : {}),
+      });
+      const paymentMethod = requirePaymentMethod(this.seeded, paymentMethodId);
+      if (
+        paymentMethod.customer &&
+        paymentMethod.customer !== params.customer
+      ) {
+        throw invalidPaymentMethodRequest(
+          'The payment method you provided has already been attached to a customer.',
+        );
+      }
+      paymentMethod.customer = params.customer;
+      const attached = { ...paymentMethod };
+      return this.attachOverride ? this.attachOverride(attached) : attached;
+    },
+    async detach(paymentMethodId, _params, options) {
+      this.detachCalls.push({
+        paymentMethodId,
+        ...(options ? { options: { ...options } } : {}),
+      });
+      const paymentMethod = requirePaymentMethod(this.seeded, paymentMethodId);
+      if (!paymentMethod.customer) {
+        throw invalidPaymentMethodRequest(
+          'The payment method you provided is not attached to a customer so detachment is impossible.',
+        );
+      }
+      paymentMethod.customer = null;
+      return { ...paymentMethod };
+    },
+  };
+
+  seedPaymentMethod(paymentMethod: SeededPaymentMethod): void {
+    this.paymentMethods.seeded.push({ ...paymentMethod });
+  }
+
+  setPaymentMethodAttachOverride(
+    override: PaymentMethodAttachOverride | null,
+  ): void {
+    this.paymentMethods.attachOverride = override;
+  }
 
   seedSubscription(subscription: SeededSubscription): void {
     this.subscriptions.seeded.push(structuredClone(subscription));
