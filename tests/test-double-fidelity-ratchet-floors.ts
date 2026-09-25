@@ -82,6 +82,9 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // 2026-09-24 UTC: The practice-session reads and history-summary unit suites
 // retire entirely behind tests/integration/practice-session-reads.integration.test.ts;
 // the corrupt-list-reads suite keeps one driver-failure case on drizzle.mock.
+// 2026-09-25 UTC: The schema suite reads indexes and checks through Drizzle's
+// public getTableConfig/PgDialect instead of casting tables to reach private
+// symbols; its three casts retire.
 // 2026-09-25 UTC: The proxy suite passes real NextRequest/NextFetchEvent objects
 // instead of 28 empty objects cast to them, and splits by concern.
 // 2026-09-25 UTC: The reconcile suite moves onto the fake (Subscription retrieve
@@ -124,7 +127,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/questions/[slug]/page.test.tsx', 1],
   ['app/api/stripe/webhook/route.test.ts', 2],
   ['app/pricing/page.test.tsx', 1],
-  ['db/schema.test.ts', 3],
   ['lib/container.skip-clerk.test.ts', 6],
   ['lib/container.test.ts', 6],
   ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
