@@ -78,7 +78,7 @@ describe('createStripeProviderContractInvocation', () => {
     expect(invocation.env.STRIPE_CHECKOUT_CONTRACT_PRICE_ID).toBe(
       'price_contract_only',
     );
-    expect(STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES).toHaveLength(6);
+    expect(STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES).toHaveLength(7);
   });
 
   it('targets only the provider contracts through a database-free config', () => {
@@ -127,8 +127,8 @@ describe('captured Vitest reporter payload fixtures', () => {
     const report = await loadFixture('trial-clock-smoke-report-passed.json');
 
     expect(assertProviderContractsExecuted(report)).toEqual({
-      executed: 8,
-      passed: 8,
+      executed: 9,
+      passed: 9,
       skipped: 0,
     });
   });
@@ -195,7 +195,7 @@ describe('runStripeProviderContracts execution proof', () => {
 
     await expect(
       runStripeProviderContracts({ env: validEnvironment(), runVitest }),
-    ).resolves.toEqual({ executed: 8, passed: 8, skipped: 0 });
+    ).resolves.toEqual({ executed: 9, passed: 9, skipped: 0 });
     expect(runVitest).toHaveBeenCalledOnce();
   });
 

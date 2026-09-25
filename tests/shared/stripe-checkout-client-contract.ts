@@ -2,12 +2,18 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type {
   CheckoutSessionCreateParams,
+  CustomerSearchParams,
   StripeClient,
+  StripeCustomerSearchResult,
 } from '@/src/adapters/shared/stripe-types';
 import { STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES } from './stripe-checkout-client-contract-cases';
 
 type ContractSuite = (name: string, factory: () => void) => void;
-type ContractCase = (name: string, run: () => Promise<void>) => unknown;
+type ContractCase = (
+  name: string,
+  run: () => Promise<void>,
+  timeoutMs?: number,
+) => unknown;
 
 type PaymentOrSubscriptionParams = Extract<
   CheckoutSessionCreateParams,
@@ -20,12 +26,19 @@ type SubscriptionParams = Omit<PaymentOrSubscriptionParams, 'mode'> & {
 
 type StripeSubscriptionsClient = NonNullable<StripeClient['subscriptions']>;
 
+type StripeCustomersClient = StripeClient['customers'];
+
+// Stripe indexes a new Customer for Search after a delay, normally under a
+// minute; the Search case's budget covers the real half's bounded wait.
+const CUSTOMER_SEARCH_CASE_TIMEOUT_MS = 120_000;
+
 // The port marks list and cancel optional; both halves implement them, so
 // the contract requires them instead of guarding at run time.
 export type StripeCheckoutClientContractHarness = {
   sessions: StripeClient['checkout']['sessions'];
   subscriptions: StripeSubscriptionsClient &
     Required<Pick<StripeSubscriptionsClient, 'list' | 'cancel'>>;
+  customers: Required<Pick<StripeCustomersClient, 'search'>>;
   subscriptionParams: SubscriptionParams;
   advanceCreationTime(): Promise<void>;
   // Creates one active Subscription for the harness customer and returns
@@ -35,11 +48,23 @@ export type StripeCheckoutClientContractHarness = {
   // Creates one more Subscription for the same customer and cancels it, so
   // the listing's status filters can be observed against a canceled one.
   seedCanceledSubscription(): Promise<{ id: string; customer: string }>;
+  // Creates one Customer whose metadata user_id is the given value; the real
+  // half creates it in TEST mode, the fake seeds it.
+  seedCustomer(userId: string): Promise<{ id: string }>;
+  // Searches until a read returns at least `minimum` Customers and hands that
+  // read back. A new Customer reaches Search after a delay, and in TEST mode a
+  // later read can briefly miss one an earlier read returned, so the real half
+  // polls within a bound; the fake is immediately consistent and reads once.
+  searchUntil(
+    params: CustomerSearchParams,
+    minimum: number,
+  ): Promise<StripeCustomerSearchResult>;
   cleanup(): Promise<void>;
 };
 
 type ContractScenario = {
   name: (typeof STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES)[number];
+  timeoutMs?: number;
   run(harness: StripeCheckoutClientContractHarness): Promise<void>;
 };
 
@@ -54,6 +79,23 @@ function changedSuccessUrl(
     ...params,
     success_url: 'https://app.example.com/a-different-success',
   };
+}
+
+// Compares ids without printing them in a failure message.
+function hasExactlyIds(
+  result: StripeCustomerSearchResult,
+  ids: readonly string[],
+): boolean {
+  const found = result.data.map((customer) => customer.id).sort();
+  const expected = [...ids].sort();
+  return (
+    found.length === expected.length &&
+    expected.every((id, index) => found[index] === id)
+  );
+}
+
+function byUserId(userId: string, limit: number): CustomerSearchParams {
+  return { query: `metadata['user_id']:'${userId}'`, limit };
 }
 
 function readErrorField(error: unknown, field: string): unknown {
@@ -277,6 +319,45 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
       );
     },
   },
+  {
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[6],
+    timeoutMs: CUSTOMER_SEARCH_CASE_TIMEOUT_MS,
+    async run(harness) {
+      const userId = `debt472_search_${randomUUID()}`;
+      // Created first: a value that extends the searched one, which a whole-
+      // value match must not return.
+      const extended = await harness.seedCustomer(`${userId}-other`);
+      const first = await harness.seedCustomer(userId);
+      const second = await harness.seedCustomer(userId);
+
+      const extendedRead = await harness.searchUntil(
+        byUserId(`${userId}-other`, 10),
+        1,
+      );
+      expect(hasExactlyIds(extendedRead, [extended.id])).toBe(true);
+
+      const exact = await harness.searchUntil(byUserId(userId, 10), 2);
+      expect(hasExactlyIds(exact, [first.id, second.id])).toBe(true);
+
+      const upperCased = await harness.searchUntil(
+        byUserId(userId.toUpperCase(), 10),
+        2,
+      );
+      expect(hasExactlyIds(upperCased, [first.id, second.id])).toBe(true);
+
+      const capped = await harness.searchUntil(byUserId(userId, 1), 1);
+      expect(capped.data).toHaveLength(1);
+      expect(
+        capped.data[0]?.id === first.id || capped.data[0]?.id === second.id,
+      ).toBe(true);
+
+      // A value no Customer carries is an empty page, not an error.
+      const unknown = await harness.customers.search(
+        byUserId(`${userId}-unknown`, 10),
+      );
+      expect(unknown.data).toHaveLength(0);
+    },
+  },
 ];
 
 export function runStripeCheckoutClientContract(
@@ -287,14 +368,18 @@ export function runStripeCheckoutClientContract(
 ): void {
   suite(`${adapterName} Stripe Checkout client contract`, () => {
     for (const scenario of stripeCheckoutClientContractScenarios) {
-      contractCase(scenario.name, async () => {
-        const harness = await createHarness();
-        try {
-          await scenario.run(harness);
-        } finally {
-          await harness.cleanup();
-        }
-      });
+      contractCase(
+        scenario.name,
+        async () => {
+          const harness = await createHarness();
+          try {
+            await scenario.run(harness);
+          } finally {
+            await harness.cleanup();
+          }
+        },
+        scenario.timeoutMs,
+      );
     }
   });
 }

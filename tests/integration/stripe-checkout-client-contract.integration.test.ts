@@ -45,6 +45,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Stripe normally indexes a new Customer for Search in under a minute; TEST
+// probes on 2026-09-25 saw 10-29 seconds.
+const CUSTOMER_SEARCH_VISIBILITY_BOUND_MS = 60_000;
+const CUSTOMER_SEARCH_POLL_INTERVAL_MS = 1_000;
+
 runStripeCheckoutClientContract(
   `real Stripe TEST mode${providerGate.mode === 'skip' ? ` (skipped: ${providerGate.reason})` : ''}`,
   async () => {
@@ -55,6 +60,7 @@ runStripeCheckoutClientContract(
     });
     const createdSessionIds = new Set<string>();
     const createdSubscriptionIds = new Set<string>();
+    const createdCustomerIds = new Set<string>();
     let defaultPaymentMethodReady = false;
     const ensureDefaultPaymentMethod = async () => {
       if (defaultPaymentMethodReady) return;
@@ -97,9 +103,37 @@ runStripeCheckoutClientContract(
       },
     } satisfies NonNullable<StripeClient['subscriptions']>;
 
+    const customers = {
+      search: (params, options) => stripe.customers.search(params, options),
+    } satisfies Required<Pick<StripeClient['customers'], 'search'>>;
+
     return {
       sessions,
       subscriptions,
+      customers,
+      seedCustomer: async (userId) => {
+        const seeded = await stripe.customers.create({
+          metadata: {
+            test_contract: 'debt_472_checkout_client',
+            user_id: userId,
+          },
+        });
+        createdCustomerIds.add(seeded.id);
+        return { id: seeded.id };
+      },
+      searchUntil: async (params, minimum) => {
+        const deadline = Date.now() + CUSTOMER_SEARCH_VISIBILITY_BOUND_MS;
+        for (;;) {
+          const result = await stripe.customers.search(params);
+          if (result.data.length >= minimum) return result;
+          if (Date.now() >= deadline) {
+            throw new Error(
+              `Stripe Search returned ${result.data.length} of ${minimum} Customers within ${CUSTOMER_SEARCH_VISIBILITY_BOUND_MS / 1_000} seconds`,
+            );
+          }
+          await sleep(CUSTOMER_SEARCH_POLL_INTERVAL_MS);
+        }
+      },
       seedSubscription: async () => {
         await ensureDefaultPaymentMethod();
         const subscription = await stripe.subscriptions.create({
@@ -159,6 +193,21 @@ runStripeCheckoutClientContract(
               new Error('Failed to clean up a Stripe contract Subscription', {
                 cause: error,
               }),
+            );
+          }
+        }
+
+        for (const customerId of createdCustomerIds) {
+          try {
+            await stripe.customers.del(customerId);
+          } catch (error) {
+            cleanupErrors.push(
+              new Error(
+                'Failed to clean up a Stripe contract Search Customer',
+                {
+                  cause: error,
+                },
+              ),
             );
           }
         }
