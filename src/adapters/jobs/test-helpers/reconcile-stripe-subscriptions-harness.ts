@@ -56,9 +56,6 @@ export function createUserSubscriptionFixture(
   }>('stripe/customer.subscription.updated.json');
   const base = subscriptionEvent.data.object;
   const [baseItem] = base.items.data;
-  if (baseItem === undefined) {
-    throw new Error('Expected Stripe subscription fixture item');
-  }
 
   return {
     ...base,
@@ -76,7 +73,7 @@ export function createUserSubscriptionFixture(
         {
           ...baseItem,
           current_period_end: input.currentPeriodEnd ?? 1_700_000_000,
-          price: { ...baseItem.price, id: 'price_m' },
+          price: { ...baseItem?.price, id: 'price_m' },
         },
       ],
     },
