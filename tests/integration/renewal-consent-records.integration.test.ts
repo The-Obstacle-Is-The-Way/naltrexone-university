@@ -8,8 +8,8 @@ import {
   stripeSubscriptions,
   users,
 } from '@/db/schema';
+import { FakeStripeCheckoutClient } from '@/src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
-import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
@@ -270,46 +270,9 @@ describe('renewal consent record persistence', () => {
         ],
       },
     };
-    const stripe = {
-      customers: {
-        create: async () => {
-          throw new Error('Unexpected customers.create');
-        },
-      },
-      checkout: {
-        sessions: {
-          create: async () => {
-            throw new Error('Unexpected checkout.sessions.create');
-          },
-          list: async () => {
-            throw new Error('Unexpected checkout.sessions.list');
-          },
-          retrieve: async () => {
-            throw new Error('Unexpected checkout.sessions.retrieve');
-          },
-          expire: async () => {
-            throw new Error('Unexpected checkout.sessions.expire');
-          },
-        },
-      },
-      subscriptions: {
-        retrieve: async () => canceledSubscription,
-        list: async () => ({ data: [] }),
-        cancel: async () => canceledSubscription,
-      },
-      billingPortal: {
-        sessions: {
-          create: async () => {
-            throw new Error('Unexpected billingPortal.sessions.create');
-          },
-        },
-      },
-      webhooks: {
-        constructEvent: () => {
-          throw new Error('Unexpected webhooks.constructEvent');
-        },
-      },
-    } satisfies ReconcileStripeSubscriptionsDeps['stripe'];
+    // Stripe already canceled the Subscription the missed webhook announced.
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSubscription(canceledSubscription);
 
     await expect(
       reconcileStripeSubscriptions(
