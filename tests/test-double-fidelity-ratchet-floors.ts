@@ -138,6 +138,11 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // reflection, not port doubles, and source-scan modules sit outside this
 // test-file scope. The contract suite now has none, so its floor entry is
 // removed rather than left above its count.
+// 2026-09-26 UTC: DEBT-468's payment-gateway residual makes every StripeClient
+// member required, as the SDK always provides them. The normalizer suite's
+// case for a client without Subscriptions is deleted as unrepresentable, and
+// its two remaining cases seed FakeStripeCheckoutClient, so all three casts
+// retire and the entry is removed: 22 sites across 9 files.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -146,7 +151,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/pricing/page.test.tsx', 1],
   ['lib/container.skip-clerk.test.ts', 6],
   ['lib/container.test.ts', 6],
-  ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['tests/e2e/helpers/bookmark.test.ts', 2],
   [
     'tests/integration/bug-regression-practice-session-transaction-isolation.integration.test.ts',

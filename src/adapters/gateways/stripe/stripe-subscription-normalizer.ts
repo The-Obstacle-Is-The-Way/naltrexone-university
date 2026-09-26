@@ -124,12 +124,6 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
       : input.subscriptionRef.id;
 
   const stripeSubscriptions = input.stripe.subscriptions;
-  if (!stripeSubscriptions) {
-    throw new ApplicationError(
-      'STRIPE_ERROR',
-      'Stripe subscriptions client is unavailable',
-    );
-  }
 
   const family = SERVER_SPAN_FAMILIES.stripe.subscriptionRetrieve;
   const subscription = await startServerSpan(family, {}, async (span) => {

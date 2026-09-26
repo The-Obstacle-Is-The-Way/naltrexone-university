@@ -41,45 +41,41 @@ export async function createStripeCustomer({
     },
   } satisfies CustomerCreateParams;
 
-  const customersSearch = stripe.customers.search?.bind(stripe.customers);
-  if (customersSearch) {
-    assertSafeStripeSearchMetadataValue(input.userId);
-    const query = `metadata['user_id']:'${input.userId}'`;
-    const existing = await callStripeWithRetry({
-      operation: 'customers.search',
-      fn: () =>
-        customersSearch({
-          query,
-          limit: 2,
-        }),
-      logger,
-    });
+  assertSafeStripeSearchMetadataValue(input.userId);
+  const query = `metadata['user_id']:'${input.userId}'`;
+  const existing = await callStripeWithRetry({
+    operation: 'customers.search',
+    fn: () =>
+      stripe.customers.search({
+        query,
+        limit: 2,
+      }),
+    logger,
+  });
 
-    const matches = existing.data.filter(
-      (customer): customer is { id: string } => typeof customer.id === 'string',
+  const matches = existing.data.filter(
+    (customer): customer is { id: string } => typeof customer.id === 'string',
+  );
+
+  if (matches.length > 1) {
+    logger.error(
+      {
+        userId: input.userId,
+        clerkUserId: input.clerkUserId,
+        matchCount: matches.length,
+      },
+      'Multiple Stripe customers found for user metadata.user_id',
     );
-
-    if (matches.length > 1) {
-      logger.error(
-        {
-          userId: input.userId,
-          clerkUserId: input.clerkUserId,
-          matchCount: matches.length,
-        },
-        'Multiple Stripe customers found for user metadata.user_id',
-      );
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Multiple Stripe customers found for this user',
-      );
-    }
-
-    const existingId = matches[0]?.id;
-    if (existingId) {
-      return { externalCustomerId: existingId };
-    }
+    throw new ApplicationError(
+      'STRIPE_ERROR',
+      'Multiple Stripe customers found for this user',
+    );
   }
 
+  const existingId = matches[0]?.id;
+  if (existingId) {
+    return { externalCustomerId: existingId };
+  }
   const idempotencyKey =
     options?.idempotencyKey ?? `create_stripe_customer:${input.userId}`;
   const customer = await callStripeWithRetry({

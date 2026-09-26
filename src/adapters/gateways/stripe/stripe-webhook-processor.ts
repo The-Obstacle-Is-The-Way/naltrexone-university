@@ -179,13 +179,7 @@ async function getTrialPaymentMethodSetupCompletion(input: {
     );
   }
 
-  const setupIntents = input.stripe.setupIntents;
-  if (!setupIntents) {
-    throw new ApplicationError(
-      'STRIPE_ERROR',
-      'Stripe SetupIntent retrieval is unavailable',
-    );
-  }
+  const { setupIntents } = input.stripe;
   const setupIntent = stripeSetupIntentSchema.safeParse(
     await setupIntents.retrieve(expandableId(parsed.data.setup_intent)),
   );

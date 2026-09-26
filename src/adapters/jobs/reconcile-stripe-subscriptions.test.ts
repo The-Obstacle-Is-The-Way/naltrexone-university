@@ -130,20 +130,6 @@ describe('reconcileStripeSubscriptions batch processing and persistence', () => 
     expect(scenario.logger.errorCalls.length).toBeGreaterThan(0);
   });
 
-  it('throws STRIPE_ERROR when Stripe subscriptions API is unavailable for reconciliation', async () => {
-    // The port's Subscriptions member is optional; a client without it is a
-    // real configuration the job must refuse.
-    const { subscriptions: _omitted, ...stripe } =
-      new FakeStripeCheckoutClient();
-
-    const scenario = createReconciliationTestScenario({ stripe });
-
-    await expect(scenario.run()).rejects.toMatchObject({
-      code: 'STRIPE_ERROR',
-      message: 'Stripe subscriptions API is unavailable for reconciliation',
-    });
-  });
-
   it('keeps reconciliation fail-closed when Stripe subscription metadata.user_id is missing', async () => {
     const missingMetadataSubscription = createUserSubscriptionFixture(
       'sub_missing_metadata',

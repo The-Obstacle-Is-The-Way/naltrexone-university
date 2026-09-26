@@ -1,12 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
-import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   normalizeStripeSubscriptionUpdate,
   retrieveAndNormalizeStripeSubscription,
 } from './stripe-subscription-normalizer';
+import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
 
 const priceIds: StripePriceIds = {
   monthly: 'price_monthly',
@@ -221,39 +221,17 @@ describe('normalizeStripeSubscriptionUpdate', () => {
 });
 
 describe('retrieveAndNormalizeStripeSubscription', () => {
-  it('throws STRIPE_ERROR when Stripe subscriptions client is unavailable', async () => {
-    const logger = new FakeLogger();
-    const stripe = {
-      subscriptions: undefined,
-    } as unknown as StripeClient;
-
-    await expect(
-      retrieveAndNormalizeStripeSubscription({
-        stripe,
-        subscriptionRef: 'sub_123',
-        event: { id: 'evt_1', type: 'invoice.payment_succeeded' },
-        priceIds,
-        logger,
-      }),
-    ).rejects.toMatchObject({
-      code: 'STRIPE_ERROR',
-    });
-  });
-
   it('throws INVALID_WEBHOOK_PAYLOAD when retrieved subscription is invalid', async () => {
     const logger = new FakeLogger();
-    const stripe = {
-      subscriptions: {
-        retrieve: vi.fn(async () => ({
-          id: 'sub_123',
-          customer: 'cus_123',
-          status: 'active',
-          cancel_at_period_end: false,
-          metadata: { user_id: appUserId },
-          items: { data: [] },
-        })),
-      },
-    } as unknown as StripeClient;
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSubscription({
+      id: 'sub_123',
+      customer: 'cus_123',
+      status: 'active',
+      cancel_at_period_end: false,
+      metadata: { user_id: appUserId },
+      items: { data: [] },
+    });
 
     await expect(
       retrieveAndNormalizeStripeSubscription({
@@ -279,10 +257,11 @@ describe('retrieveAndNormalizeStripeSubscription', () => {
 
   it('retrieves and normalizes a subscription reference object', async () => {
     const logger = new FakeLogger();
-    const retrieve = vi.fn(async () => createSubscriptionFixture());
-    const stripe = {
-      subscriptions: { retrieve },
-    } as unknown as StripeClient;
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSubscription({
+      ...createSubscriptionFixture(),
+      metadata: { user_id: appUserId },
+    });
 
     const result = await retrieveAndNormalizeStripeSubscription({
       stripe,
@@ -300,6 +279,6 @@ describe('retrieveAndNormalizeStripeSubscription', () => {
       status: 'active',
       cancelAtPeriodEnd: false,
     });
-    expect(retrieve).toHaveBeenCalledWith('sub_123');
+    expect(stripe.subscriptions.retrieveCalls).toEqual(['sub_123']);
   });
 });
