@@ -168,6 +168,7 @@ describe('merge command', () => {
         }),
       )
       .mockReturnValueOnce(JSON.stringify([[review()]]))
+      .mockReturnValueOnce('')
       .mockReturnValueOnce('merged');
   }
 
@@ -215,6 +216,30 @@ describe('merge command', () => {
       ],
       expect.any(Object),
     );
+  });
+
+  it('keeps the verified receipt on the PR before merging', () => {
+    responses();
+    runMergeReviewedPr(['987', '--merge'], () => {});
+    const calls = vi.mocked(execFileSync).mock.calls;
+    expect(calls.map(([, args]) => args?.slice(0, 2))).toEqual([
+      ['api', 'graphql'],
+      ['api', '--paginate'],
+      ['pr', 'comment'],
+      ['pr', 'merge'],
+    ]);
+    expect(calls[2]?.[1]).toEqual([
+      'pr',
+      'comment',
+      '987',
+      '--repo',
+      'The-Obstacle-Is-The-Way/naltrexone-university',
+      '--body-file',
+      '-',
+    ]);
+    expect(calls[2]?.[2]).toMatchObject({
+      input: expect.stringContaining(`"head":"${HEAD}"`),
+    });
   });
 
   it('never calls merge after a missing approval', () => {

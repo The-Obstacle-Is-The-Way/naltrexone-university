@@ -8,29 +8,52 @@ import {
   readMergeEvidence,
 } from './merge-reviewed-pr';
 
+const RECEIPT_START = '<!-- verify-promotion:start -->';
+const RECEIPT_END = '<!-- verify-promotion:end -->';
+
+// Writes the receipt into its marked section, replacing an earlier one, so a
+// refreshed proof never stacks beside a stale one.
+export function withPromotionReceipt(body: string, receipt: string) {
+  const section = `${RECEIPT_START}\n${receipt}\n${RECEIPT_END}`;
+  const start = body.indexOf(RECEIPT_START);
+  const end = body.indexOf(RECEIPT_END);
+  if (start === -1 && end === -1) return `${body.trimEnd()}\n\n${section}\n`;
+  if (start === -1 || end < start) {
+    throw new Error('Malformed promotion receipt markers');
+  }
+  return `${body.slice(0, start)}${section}${body.slice(end + RECEIPT_END.length)}`;
+}
+
 export function runVerifyPromotion(
   args: string[],
   write: (value: string) => void = console.log,
 ) {
   const number = args[0];
   if (
-    args.length !== 1 ||
     !number ||
     !/^[1-9]\d*$/.test(number) ||
-    !Number.isSafeInteger(Number(number))
+    !Number.isSafeInteger(Number(number)) ||
+    args.length > 2 ||
+    (args[1] !== undefined && args[1] !== '--merge')
   ) {
-    throw new Error('Usage: tsx scripts/verify-promotion.ts PR_NUMBER');
+    throw new Error(
+      'Usage: tsx scripts/verify-promotion.ts PR_NUMBER [--merge]',
+    );
   }
-  const evidence = readMergeEvidence(number);
-  const pr = checkPromotionReadiness(evidence.pullRequest);
-  if (pr.number !== Number(number)) throw new Error('Promotion number changed');
-  const run = (file: string, command: string[]) =>
+  const merge = args[1] === '--merge';
+  const run = (file: string, command: string[], input?: string) =>
     execFileSync(file, command, {
       encoding: 'utf8',
       timeout: 30_000,
       maxBuffer: 32 * 1024 * 1024,
+      input,
     });
-  // Fetch origin before invoking this command; missing local objects fail closed.
+  // Without --merge, fetch origin before invoking this command; missing local
+  // objects fail closed. --merge fetches first itself.
+  if (merge) run('git', ['fetch', '--quiet', 'origin']);
+  const evidence = readMergeEvidence(number);
+  const pr = checkPromotionReadiness(evidence.pullRequest);
+  if (pr.number !== Number(number)) throw new Error('Promotion number changed');
   run('git', [
     '--no-pager',
     'merge-base',
@@ -85,6 +108,44 @@ export function runVerifyPromotion(
     'Promotion CI test is successful and posted threads are resolved. Its own CodeRabbit approval is not required. Refresh this proof if either branch moves; merge only the verified head with --match-head-commit.',
   ].join('\n');
   write(receipt);
+  if (merge) {
+    // AGENTS.md step 1 before step 4: the body shows the proof before the
+    // merge, so GitHub alone can show the order.
+    const readBody = () =>
+      run('gh', [
+        'pr',
+        'view',
+        number,
+        '--repo',
+        REPOSITORY,
+        '--json',
+        'body',
+        '--jq',
+        '.body',
+      ]);
+    run(
+      'gh',
+      ['pr', 'edit', number, '--repo', REPOSITORY, '--body-file', '-'],
+      withPromotionReceipt(readBody(), receipt),
+    );
+    if (!readBody().includes(receipt)) {
+      throw new Error(
+        'Promotion body does not show the receipt; refusing to merge',
+      );
+    }
+    write(
+      run('gh', [
+        'pr',
+        'merge',
+        number,
+        '--repo',
+        REPOSITORY,
+        '--merge',
+        '--match-head-commit',
+        pr.headRefOid,
+      ]),
+    );
+  }
   return receipt;
 }
 
