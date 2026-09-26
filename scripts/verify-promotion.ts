@@ -146,6 +146,17 @@ export function runVerifyPromotion(
         'Promotion body does not show the receipt; refusing to merge',
       );
     }
+    // --match-head-commit pins only the head; a base that moved since the
+    // proof would leave the receipt naming a stale base (#1138 review).
+    const latest = checkPromotionReadiness(
+      readMergeEvidence(number).pullRequest,
+    );
+    if (
+      latest.baseRefOid !== pr.baseRefOid ||
+      latest.headRefOid !== pr.headRefOid
+    ) {
+      throw new Error('Promotion base or head changed; refusing to merge');
+    }
     write(
       run('gh', [
         'pr',

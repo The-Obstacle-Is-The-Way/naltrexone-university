@@ -351,6 +351,11 @@ describe('promotion proof command', () => {
   it('records the receipt in the promotion body before merging the verified head', () => {
     vi.mocked(execFileSync).mockReturnValueOnce('');
     responses();
+    const verified = promotion();
+    verified.headRefOid = MERGE;
+    const verifiedCommit = verified.commits.nodes[0]?.commit;
+    if (!verifiedCommit) throw new Error('Missing fixture');
+    verifiedCommit.oid = MERGE;
     const recorded: string[] = [];
     vi.mocked(execFileSync)
       .mockReturnValueOnce('Promotion summary\n')
@@ -359,6 +364,10 @@ describe('promotion proof command', () => {
         return '';
       })
       .mockImplementationOnce(() => recorded[0] ?? '')
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: verified } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[]]))
       .mockReturnValueOnce('merged\n');
     const output: string[] = [];
 
@@ -368,12 +377,16 @@ describe('promotion proof command', () => {
       .mocked(execFileSync)
       .mock.calls.map(([file, args]) => [file, ...(args ?? [])].join(' '));
     expect(commands[0]).toBe('git fetch --quiet origin');
-    expect(commands.slice(-4)).toEqual([
+    expect(commands.slice(-6, -3)).toEqual([
       `gh pr view 990 --repo ${REPOSITORY} --json body --jq .body`,
       `gh pr edit 990 --repo ${REPOSITORY} --body-file -`,
       `gh pr view 990 --repo ${REPOSITORY} --json body --jq .body`,
-      `gh pr merge 990 --repo ${REPOSITORY} --merge --match-head-commit ${MERGE}`,
     ]);
+    // The PR is re-read after the body shows the proof and before the merge.
+    expect(commands.at(-3)).toMatch(/^gh api graphql /);
+    expect(commands.at(-1)).toBe(
+      `gh pr merge 990 --repo ${REPOSITORY} --merge --match-head-commit ${MERGE}`,
+    );
     expect(recorded[0]).toMatch(
       /^Promotion summary\n\n<!-- verify-promotion:start -->\n## Reviewed promotion provenance[\s\S]*\| #987 \|[\s\S]*<!-- verify-promotion:end -->\n$/,
     );
@@ -390,6 +403,38 @@ describe('promotion proof command', () => {
 
     expect(() => runVerifyPromotion(['990', '--merge'], () => {})).toThrow(
       'Promotion body does not show the receipt; refusing to merge',
+    );
+    expect(
+      vi
+        .mocked(execFileSync)
+        .mock.calls.some(([, args]) => args?.[1] === 'merge'),
+    ).toBe(false);
+  });
+
+  it('does not merge when the promotion base moved after verification', () => {
+    vi.mocked(execFileSync).mockReturnValueOnce('');
+    responses();
+    const recorded: string[] = [];
+    const moved = promotion();
+    moved.headRefOid = MERGE;
+    moved.baseRefOid = 'd'.repeat(40);
+    const movedCommit = moved.commits.nodes[0]?.commit;
+    if (!movedCommit) throw new Error('Missing fixture');
+    movedCommit.oid = MERGE;
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce('Promotion summary\n')
+      .mockImplementationOnce((_file, _args, options) => {
+        recorded.push(String((options as { input?: string }).input));
+        return '';
+      })
+      .mockImplementationOnce(() => recorded[0] ?? '')
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: moved } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[]]));
+
+    expect(() => runVerifyPromotion(['990', '--merge'], () => {})).toThrow(
+      'Promotion base or head changed; refusing to merge',
     );
     expect(
       vi

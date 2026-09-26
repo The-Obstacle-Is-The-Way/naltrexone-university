@@ -732,8 +732,9 @@ For each promotion:
    request another promotion review or wait for its CodeRabbit status alone.
 4. Merge with `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER> --merge`.
    It fetches `origin`, re-runs the proof, writes the output into a marked
-   section of the PR body, confirms the body shows it, and only then merges
-   the verified head with `--match-head-commit`. GitHub's body-edit history
+   section of the PR body, confirms the body shows it, re-reads the PR and
+   refuses if its base or head moved, and only then merges the verified head
+   with `--match-head-commit`. GitHub's body-edit history
    therefore shows the proof before the merge; ten 2026-09-25/26 promotions
    recorded it after (adversarial review F3). If either branch moves, the
    merge is refused; refresh CI and run it again. No `--admin` or ruleset
