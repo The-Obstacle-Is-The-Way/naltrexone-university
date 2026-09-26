@@ -192,6 +192,19 @@ describe('Playwright E2E lane policy', () => {
     ).toBe(true);
   });
 
+  it('gives the E2E server a test-only consent-state secret unless one is set', () => {
+    // Trial add-card signs its Checkout consent state; production and preview
+    // carry their own CONSENT_STATE_SECRET, the isolated E2E server this one.
+    const webServer = playwrightConfig.webServer;
+    const env = Array.isArray(webServer) ? undefined : webServer?.env;
+
+    expect(env?.CONSENT_STATE_SECRET).toMatch(/^.{32,}$/);
+    expect(env?.CONSENT_STATE_SECRET).toBe(
+      process.env.CONSENT_STATE_SECRET ??
+        'e2e-only-consent-state-secret-not-for-production',
+    );
+  });
+
   it('routes required and hosted commands to mutually exclusive projects', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
       'tsx scripts/run-local-e2e.ts --project=chromium --project=mobile-smoke',
