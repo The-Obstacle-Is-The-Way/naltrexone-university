@@ -1,16 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { createSubscriptionWriteCandidate } from '../test-helpers';
 import {
   compareCanonicalSubscriptionCandidates,
   subscriptionEntitlementTier,
 } from './subscription-canonicalization';
-
-function candidate(overrides: {
-  subscriptionIdentity: string;
-  status: Parameters<typeof subscriptionEntitlementTier>[0];
-  currentPeriodEnd: Date;
-}) {
-  return overrides;
-}
 
 describe('subscription canonicalization', () => {
   it('ranks entitled statuses above non-entitled statuses', () => {
@@ -24,12 +17,12 @@ describe('subscription canonicalization', () => {
 
   it('sorts entitled candidates ahead of later non-entitled candidates', () => {
     const sorted = [
-      candidate({
+      createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_unpaid',
         status: 'unpaid',
         currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
       }),
-      candidate({
+      createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_active',
         status: 'active',
         currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),
@@ -44,12 +37,12 @@ describe('subscription canonicalization', () => {
 
   it('sorts by later period end within the same entitlement tier', () => {
     const sorted = [
-      candidate({
+      createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_a',
         status: 'active',
         currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),
       }),
-      candidate({
+      createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_b',
         status: 'pastDue',
         currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
@@ -64,12 +57,12 @@ describe('subscription canonicalization', () => {
 
   it('breaks complete ties by lexicographically smallest subscription id', () => {
     const sorted = [
-      candidate({
+      createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_z',
         status: 'active',
         currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),
       }),
-      candidate({
+      createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_a',
         status: 'active',
         currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),

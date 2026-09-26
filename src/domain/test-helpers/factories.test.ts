@@ -5,6 +5,7 @@ import {
   createPracticeSession,
   createQuestionRatingFeedback,
   createQuestionReportFeedback,
+  createSubscriptionWriteCandidate,
 } from './index';
 
 const UUID_PATTERN =
@@ -222,5 +223,36 @@ describe('createQuestionReportFeedback', () => {
       kind: 'report',
       rating: null,
     });
+  });
+});
+
+describe('createSubscriptionWriteCandidate', () => {
+  const currentPeriodEnd = new Date('2026-07-12T12:00:00.000Z');
+
+  it('defaults the identity and status around the given period end', () => {
+    expect(createSubscriptionWriteCandidate({ currentPeriodEnd })).toEqual({
+      subscriptionIdentity: 'sub_current',
+      status: 'active',
+      currentPeriodEnd,
+    });
+  });
+
+  it('applies identity and status overrides', () => {
+    expect(
+      createSubscriptionWriteCandidate({
+        subscriptionIdentity: 'sub_other',
+        status: 'canceled',
+        currentPeriodEnd,
+      }),
+    ).toEqual({
+      subscriptionIdentity: 'sub_other',
+      status: 'canceled',
+      currentPeriodEnd,
+    });
+  });
+
+  it('requires the period end every write-guard decision compares', () => {
+    // @ts-expect-error a candidate must state its currentPeriodEnd
+    createSubscriptionWriteCandidate({ status: 'active' });
   });
 });

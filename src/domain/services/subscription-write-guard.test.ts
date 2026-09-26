@@ -1,31 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { createSubscriptionWriteCandidate } from '../test-helpers';
 import type { SubscriptionStatus } from '../value-objects';
-import {
-  type SubscriptionWriteCandidate,
-  shouldPersistSubscriptionWrite,
-} from './subscription-write-guard';
+import { shouldPersistSubscriptionWrite } from './subscription-write-guard';
 
 const NOW = new Date('2026-06-12T12:00:00.000Z');
 const FUTURE = new Date('2026-07-12T12:00:00.000Z');
 const PAST = new Date('2026-05-12T12:00:00.000Z');
-
-function candidate(
-  overrides: Partial<SubscriptionWriteCandidate> = {},
-): SubscriptionWriteCandidate {
-  return {
-    subscriptionIdentity: 'sub_current',
-    status: 'active',
-    currentPeriodEnd: FUTURE,
-    ...overrides,
-  };
-}
 
 describe('shouldPersistSubscriptionWrite', () => {
   it.each([
     {
       name: 'allows the first subscription row',
       stored: null,
-      incoming: candidate({
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_first',
         status: 'canceled',
         currentPeriodEnd: PAST,
@@ -34,8 +21,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
     {
       name: 'allows same-subscription terminal lifecycle transitions',
-      stored: candidate({ subscriptionIdentity: 'sub_current' }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        subscriptionIdentity: 'sub_current',
+        currentPeriodEnd: FUTURE,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_current',
         status: 'canceled',
         currentPeriodEnd: PAST,
@@ -44,8 +34,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
     {
       name: 'rejects a superseded canceled subscription over a current active row',
-      stored: candidate({ status: 'active' }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        status: 'active',
+        currentPeriodEnd: FUTURE,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_superseded',
         status: 'canceled',
         currentPeriodEnd: PAST,
@@ -54,8 +47,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
     {
       name: 'rejects a superseded incomplete_expired subscription over a current trial row',
-      stored: candidate({ status: 'inTrial' }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        status: 'inTrial',
+        currentPeriodEnd: FUTURE,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_superseded',
         status: 'paymentFailed',
         currentPeriodEnd: PAST,
@@ -64,8 +60,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
     {
       name: 'rejects a superseded terminal subscription over a current past-due grace row',
-      stored: candidate({ status: 'pastDue' }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        status: 'pastDue',
+        currentPeriodEnd: FUTURE,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_superseded',
         status: 'canceled',
         currentPeriodEnd: PAST,
@@ -74,8 +73,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
     {
       name: 'allows terminal writes when the stored entitled period has ended',
-      stored: candidate({ status: 'active', currentPeriodEnd: PAST }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        status: 'active',
+        currentPeriodEnd: PAST,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_superseded',
         status: 'canceled',
         currentPeriodEnd: PAST,
@@ -83,9 +85,27 @@ describe('shouldPersistSubscriptionWrite', () => {
       expected: true,
     },
     {
+      // The stored period is over at the instant it ends, so a row ending
+      // exactly now no longer blocks even a weaker replacement.
+      name: 'treats a stored period that ends exactly now as ended',
+      stored: createSubscriptionWriteCandidate({
+        status: 'active',
+        currentPeriodEnd: NOW,
+      }),
+      incoming: createSubscriptionWriteCandidate({
+        subscriptionIdentity: 'sub_replacement',
+        status: 'active',
+        currentPeriodEnd: PAST,
+      }),
+      expected: true,
+    },
+    {
       name: 'allows churned resubscribe over a canceled row',
-      stored: candidate({ status: 'canceled', currentPeriodEnd: PAST }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        status: 'canceled',
+        currentPeriodEnd: PAST,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_resubscribe',
         status: 'active',
         currentPeriodEnd: FUTURE,
@@ -94,8 +114,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
     {
       name: 'allows reconcile to replace the row with a different blocking canonical winner',
-      stored: candidate({ status: 'active' }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        status: 'active',
+        currentPeriodEnd: FUTURE,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_canonical',
         status: 'active',
         currentPeriodEnd: FUTURE,
@@ -104,8 +127,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
     {
       name: 'allows unpaid rows because they are recoverable rather than terminal',
-      stored: candidate({ status: 'unpaid' }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        status: 'unpaid',
+        currentPeriodEnd: FUTURE,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_superseded',
         status: 'canceled',
         currentPeriodEnd: PAST,
@@ -114,8 +140,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
     {
       name: 'allows paused rows because they are recoverable rather than terminal',
-      stored: candidate({ status: 'paused' }),
-      incoming: candidate({
+      stored: createSubscriptionWriteCandidate({
+        status: 'paused',
+        currentPeriodEnd: FUTURE,
+      }),
+      incoming: createSubscriptionWriteCandidate({
         subscriptionIdentity: 'sub_superseded',
         status: 'canceled',
         currentPeriodEnd: PAST,
@@ -133,8 +162,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     (status) => {
       expect(
         shouldPersistSubscriptionWrite({
-          stored: candidate({ status: 'active' }),
-          incoming: candidate({
+          stored: createSubscriptionWriteCandidate({
+            status: 'active',
+            currentPeriodEnd: FUTURE,
+          }),
+          incoming: createSubscriptionWriteCandidate({
             subscriptionIdentity: 'sub_recoverable',
             status,
             currentPeriodEnd: FUTURE,
@@ -150,8 +182,11 @@ describe('shouldPersistSubscriptionWrite', () => {
     (status) => {
       expect(
         shouldPersistSubscriptionWrite({
-          stored: candidate({ status: 'active' }),
-          incoming: candidate({
+          stored: createSubscriptionWriteCandidate({
+            status: 'active',
+            currentPeriodEnd: FUTURE,
+          }),
+          incoming: createSubscriptionWriteCandidate({
             subscriptionIdentity: 'sub_canonical',
             status,
             currentPeriodEnd: FUTURE,
@@ -165,12 +200,12 @@ describe('shouldPersistSubscriptionWrite', () => {
   it('rejects a different current-entitled write that loses canonical ordering', () => {
     expect(
       shouldPersistSubscriptionWrite({
-        stored: candidate({
+        stored: createSubscriptionWriteCandidate({
           subscriptionIdentity: 'sub_current',
           status: 'active',
           currentPeriodEnd: FUTURE,
         }),
-        incoming: candidate({
+        incoming: createSubscriptionWriteCandidate({
           subscriptionIdentity: 'sub_shorter',
           status: 'active',
           currentPeriodEnd: new Date('2026-06-20T12:00:00.000Z'),
@@ -185,11 +220,12 @@ describe('shouldPersistSubscriptionWrite', () => {
     (status) => {
       expect(
         shouldPersistSubscriptionWrite({
-          stored: candidate({
+          stored: createSubscriptionWriteCandidate({
             subscriptionIdentity: 'sub_current',
             status: 'active',
+            currentPeriodEnd: FUTURE,
           }),
-          incoming: candidate({
+          incoming: createSubscriptionWriteCandidate({
             subscriptionIdentity: 'sub_current',
             status,
             currentPeriodEnd: FUTURE,
@@ -203,8 +239,11 @@ describe('shouldPersistSubscriptionWrite', () => {
   it('allows a different unpaid write when the stored active period has expired', () => {
     expect(
       shouldPersistSubscriptionWrite({
-        stored: candidate({ status: 'active', currentPeriodEnd: PAST }),
-        incoming: candidate({
+        stored: createSubscriptionWriteCandidate({
+          status: 'active',
+          currentPeriodEnd: PAST,
+        }),
+        incoming: createSubscriptionWriteCandidate({
           subscriptionIdentity: 'sub_recoverable',
           status: 'unpaid',
           currentPeriodEnd: FUTURE,
