@@ -193,7 +193,7 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ],
   ['tests/integration/renewal-consent-records.integration.test.ts', 1],
   [
-    'tests/integration/stripe-subscription-writer-lock-order.integration.test.ts',
+    'tests/integration/stripe-subscription-writer-lock-order-reconcile.integration.test.ts',
     1,
   ],
 ]);
