@@ -12,6 +12,7 @@ import {
   FakeTransactionalEmailGateway,
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import { DispatchRenewalNoticeDeliveryUseCase } from '@/src/application/use-cases';
 import type { NewRenewalNoticeDelivery } from '@/src/domain/entities';
 import {
@@ -42,15 +43,10 @@ function checkoutEvent(userId: string) {
   return {
     eventId: 'evt_checkout_ack',
     type: 'checkout.session.completed',
-    subscriptionUpdate: {
+    subscriptionUpdate: createTestWebhookSubscriptionUpdate({
       userId,
-      externalCustomerId: 'cus_123',
-      externalSubscriptionId: 'sub_123',
-      plan: 'monthly' as const,
-      status: 'active' as const,
       currentPeriodEnd: new Date('2026-09-07T12:00:00.000Z'),
-      cancelAtPeriodEnd: false,
-    },
+    }),
     initialSubscriptionConsent: {
       checkoutSessionId: 'cs_123',
       userId,

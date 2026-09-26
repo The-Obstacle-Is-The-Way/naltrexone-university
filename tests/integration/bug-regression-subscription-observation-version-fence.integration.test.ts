@@ -14,6 +14,7 @@ import {
   FakeLogger,
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import { runSubscriptionObservationVersionContract } from '@/tests/shared/subscription-observation-version-contract';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
@@ -120,15 +121,13 @@ function normalizedWebhookResult(input: {
   return {
     eventId: input.eventId,
     type: 'customer.subscription.updated',
-    subscriptionUpdate: {
+    subscriptionUpdate: createTestWebhookSubscriptionUpdate({
       userId: input.userId,
       externalCustomerId: input.externalCustomerId,
       externalSubscriptionId: input.externalSubscriptionId,
-      plan: 'monthly',
       status: input.status,
       currentPeriodEnd: input.currentPeriodEnd,
-      cancelAtPeriodEnd: false,
-    },
+    }),
   };
 }
 
