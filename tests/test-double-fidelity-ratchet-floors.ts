@@ -157,6 +157,10 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
 // pricing floor follows them (6 → 3 + 3). The sites and the total are
 // unchanged; retiring them is left to a behavior-reviewed change, because
 // their throwing requireUser also asserts that the loader never calls it.
+// 2026-09-26 UTC: The corrupt-list-reads suite has had no port double since
+// a4eaf21e (2026-09-24) answered its relational read at the execute boundary,
+// but its floor of 1 stayed and would have let one regrow. The entry is
+// removed; the map now equals the live count, 31 sites across 12 files.
 export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout.test.ts', 6],
   ['app/api/stripe/webhook/route.test.ts', 7],
@@ -168,10 +172,6 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   [
     'src/adapters/controllers/stripe-webhook-controller-renewal-acknowledgment.test.ts',
     2,
-  ],
-  [
-    'src/adapters/repositories/drizzle-practice-session-repository-corrupt-list-reads.test.ts',
-    1,
   ],
   ['tests/integration/actions.stripe.integration.test.ts', 3],
   [
