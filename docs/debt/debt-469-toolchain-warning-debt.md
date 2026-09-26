@@ -215,6 +215,12 @@ Main's two files fail `biome lint --error-on-warnings` without their suppression
 
 **#1122 review follow-through (2026-09-25 UTC):** CodeRabbit's one Trivial finding on that promotion is accepted with a correction. The assertion it cited does not exist, but the moved `clears local exam draft state when the sessionId changes` case never proved the session-change reset of the draft timer. It now navigates once more after the change and asserts the save carries only session 2's own 1,000 ms. Removing the reset makes that save carry 31,000 ms: the strengthened case fails, while `main`'s version still passes.
 
+**Feedback render suite burn-down (2026-09-25 UTC):** the first of the three helper-bound suites splits once its helpers are made fully coverable.
+- A trial extraction of `components/question/feedback.test.tsx`'s DOM helpers left missed guard lines and nine partial branches. Most were `getAttribute('class') ?? ''` fallbacks, and one narrowing guard after `expect` let `expectNodeBefore` pass when a node was `null`. The helpers now read `element.className`, assert presence through a helper, delegate ordering to the canonical `isNodeBefore`, and require the styled-card answer that every call passes. They move to `feedback-test-helpers.ts`, which runs 37/37 statements and 19/19 functions with no partial branches.
+- Verdict, card styling, correct-answer details and references stay (680 lines), and answer sections and fallbacks move to `feedback-answer-sections.test.tsx` (435). All 37 full names are unchanged, and dropping `border-destructive` from the component still fails four cases.
+
+Main's file fails `biome lint --error-on-warnings` without its suppression (**22:54:07Z**). Tracked suppressions fall **3 → 2**; the controller datetime scanner and the writer lock-order harness remain, each needing its helper's own branches exercised first. Sanitized receipts: this clone's `.git/claude-debt-resume/splits-checkout-question/proofs.log`. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending.
+
 **Rejected alternatives:**
 
 - **`VITE_CONFIG_NATIVE_IGNORE_WARNING=true`** — mutes the messenger; the CJS/ESM mismatch would resurface as a hard break on Vite's next major.

@@ -89,7 +89,7 @@ describe('ErrorBoundaryPage (browser)', () => {
     await expect
       .element(withDigest.getByText('Error ID: digest-123'))
       .toBeVisible();
-    withDigest.unmount();
+    await withDigest.unmount();
 
     const withoutDigest = await renderBoundary();
     await expect
