@@ -11,17 +11,30 @@ import {
 const RECEIPT_START = '<!-- verify-promotion:start -->';
 const RECEIPT_END = '<!-- verify-promotion:end -->';
 
+// The receipt between the markers, or null when the body has none. Anything
+// but exactly one well-ordered pair of markers fails closed.
+export function readPromotionReceipt(body: string): string | null {
+  const starts = body.split(RECEIPT_START).length - 1;
+  const ends = body.split(RECEIPT_END).length - 1;
+  if (starts === 0 && ends === 0) return null;
+  const start = body.indexOf(RECEIPT_START);
+  const end = body.indexOf(RECEIPT_END);
+  if (starts !== 1 || ends !== 1 || end < start) {
+    throw new Error('Malformed promotion receipt markers');
+  }
+  return body.slice(start + RECEIPT_START.length + 1, end - 1);
+}
+
 // Writes the receipt into its marked section, replacing an earlier one, so a
 // refreshed proof never stacks beside a stale one.
 export function withPromotionReceipt(body: string, receipt: string) {
   const section = `${RECEIPT_START}\n${receipt}\n${RECEIPT_END}`;
-  const start = body.indexOf(RECEIPT_START);
-  const end = body.indexOf(RECEIPT_END);
-  if (start === -1 && end === -1) return `${body.trimEnd()}\n\n${section}\n`;
-  if (start === -1 || end < start) {
-    throw new Error('Malformed promotion receipt markers');
+  if (readPromotionReceipt(body) === null) {
+    return `${body.trimEnd()}\n\n${section}\n`;
   }
-  return `${body.slice(0, start)}${section}${body.slice(end + RECEIPT_END.length)}`;
+  const start = body.indexOf(RECEIPT_START);
+  const end = body.indexOf(RECEIPT_END) + RECEIPT_END.length;
+  return `${body.slice(0, start)}${section}${body.slice(end)}`;
 }
 
 export function runVerifyPromotion(
@@ -128,7 +141,7 @@ export function runVerifyPromotion(
       ['pr', 'edit', number, '--repo', REPOSITORY, '--body-file', '-'],
       withPromotionReceipt(readBody(), receipt),
     );
-    if (!readBody().includes(receipt)) {
+    if (readPromotionReceipt(readBody()) !== receipt) {
       throw new Error(
         'Promotion body does not show the receipt; refusing to merge',
       );

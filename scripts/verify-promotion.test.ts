@@ -398,6 +398,33 @@ describe('promotion proof command', () => {
     ).toBe(false);
   });
 
+  it('does not merge when the marked section is stale although the receipt appears elsewhere', () => {
+    vi.mocked(execFileSync).mockReturnValueOnce('');
+    responses();
+    const recorded: string[] = [];
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce('Promotion summary\n')
+      .mockImplementationOnce((_file, _args, options) => {
+        recorded.push(String((options as { input?: string }).input));
+        return '';
+      })
+      .mockImplementationOnce(() => {
+        const receipt = (recorded[0] ?? '')
+          .split('<!-- verify-promotion:start -->\n')[1]
+          ?.split('\n<!-- verify-promotion:end -->')[0];
+        return `<!-- verify-promotion:start -->\nOld\n<!-- verify-promotion:end -->\n${receipt}`;
+      });
+
+    expect(() => runVerifyPromotion(['990', '--merge'], () => {})).toThrow(
+      'Promotion body does not show the receipt; refusing to merge',
+    );
+    expect(
+      vi
+        .mocked(execFileSync)
+        .mock.calls.some(([, args]) => args?.[1] === 'merge'),
+    ).toBe(false);
+  });
+
   it.each([[], ['0'], ['990', '--force'], ['990', '--merge', 'now']])(
     'refuses unsupported proof arguments %j',
     (...args) => {
@@ -433,12 +460,14 @@ describe('promotion body receipt', () => {
     ).toBe(`Summary\n\n${START}\nNew\n${END}\nTail\n`);
   });
 
-  it.each([`${END}\n${START}`, `${START}\nOld`, `${END}\nOld`])(
-    'fails closed on malformed receipt markers %j',
-    (body) => {
-      expect(() => withPromotionReceipt(body, 'New')).toThrow(
-        'Malformed promotion receipt markers',
-      );
-    },
-  );
+  it.each([
+    `${END}\n${START}`,
+    `${START}\nOld`,
+    `${END}\nOld`,
+    `${START}\nA\n${END}\n${START}\nB\n${END}`,
+  ])('fails closed on malformed receipt markers %j', (body) => {
+    expect(() => withPromotionReceipt(body, 'New')).toThrow(
+      'Malformed promotion receipt markers',
+    );
+  });
 });
