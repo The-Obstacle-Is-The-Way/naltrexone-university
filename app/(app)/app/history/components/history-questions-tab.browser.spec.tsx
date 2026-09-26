@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { createAvailableAttemptedQuestionRow } from '@/src/application/test-helpers/view-rows';
 import { ok } from '@/tests/test-helpers/ok';
 import { buildHistoryQuestionsHref } from '../history-search-params';
 import { HistoryQuestionsTab } from './history-questions-tab';
@@ -19,20 +20,7 @@ function createAttemptedQuestionsResult(input?: {
   offset?: number;
 }) {
   return ok({
-    rows: [
-      {
-        isAvailable: true as const,
-        questionId: fixtureQ1Id,
-        isCorrect: false,
-        sessionId: null,
-        sessionMode: null,
-        slug: 'q-1',
-        stemMd: 'Stem for q1',
-        difficulty: 'easy' as const,
-        tagSlugs: [],
-        lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-      },
-    ],
+    rows: [createAvailableAttemptedQuestionRow({ questionId: fixtureQ1Id })],
     totalCount: 41,
     limit: input?.limit ?? 20,
     offset: input?.offset ?? 0,

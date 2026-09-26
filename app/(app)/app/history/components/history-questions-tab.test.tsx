@@ -8,6 +8,7 @@ import {
 import { toQuestionRoute } from '@/lib/routes';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
+import { createAvailableAttemptedQuestionRow as createAvailableAttemptedQuestionRowShared } from '@/src/application/test-helpers/view-rows';
 
 const {
   fixtureQuestion1Id,
@@ -63,22 +64,14 @@ type AvailableAttemptedQuestionRow = Extract<
   { isAvailable: true }
 >;
 
+// The suite's rows keep its fixture questionId unless a case passes another.
 function createAvailableAttemptedQuestionRow(
   overrides: Partial<AvailableAttemptedQuestionRow> = {},
 ): AvailableAttemptedQuestionRow {
-  return {
-    isAvailable: true,
+  return createAvailableAttemptedQuestionRowShared({
     questionId: fixtureQuestion1Id,
-    isCorrect: false,
-    sessionId: null,
-    sessionMode: null,
-    slug: 'q-1',
-    stemMd: 'Stem for q1',
-    difficulty: 'easy',
-    tagSlugs: [],
-    lastAnsweredAt: '2026-02-01T00:00:00.000Z',
     ...overrides,
-  };
+  });
 }
 
 describe('HistoryQuestionsTab', () => {

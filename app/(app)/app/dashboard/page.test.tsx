@@ -2,6 +2,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ROUTES, toQuestionRoute } from '@/lib/routes';
+import { createSessionHistoryRow } from '@/src/application/test-helpers/view-rows';
 import { findAnchorByHref } from '@/tests/shared/dom-helpers';
 
 const {
@@ -187,9 +188,8 @@ describe('app/(app)/app/dashboard', () => {
           ok: true,
           data: {
             rows: [
-              {
+              createSessionHistoryRow({
                 sessionId: fixtureSession1Id,
-                mode: 'exam',
                 questionCount: 20,
                 firstQuestionSlug: 'q-correct',
                 answered: 20,
@@ -198,7 +198,7 @@ describe('app/(app)/app/dashboard', () => {
                 durationSeconds: 1800,
                 startedAt: '2026-02-01T00:00:00.000Z',
                 endedAt: '2026-02-01T00:30:00.000Z',
-              },
+              }),
             ],
             total: 1,
             limit: 3,
@@ -293,9 +293,8 @@ describe('app/(app)/app/dashboard', () => {
           ok: true,
           data: {
             rows: [
-              {
+              createSessionHistoryRow({
                 sessionId: fixtureSession1Id,
-                mode: 'exam',
                 questionCount: 20,
                 firstQuestionSlug: 'q-correct',
                 answered: 20,
@@ -304,7 +303,7 @@ describe('app/(app)/app/dashboard', () => {
                 durationSeconds: 1800,
                 startedAt: '2026-02-01T00:00:00.000Z',
                 endedAt: '2026-02-01T00:30:00.000Z',
-              },
+              }),
             ],
             total: 1,
             limit: 3,
@@ -342,9 +341,8 @@ describe('app/(app)/app/dashboard', () => {
           ok: true,
           data: {
             rows: [
-              {
+              createSessionHistoryRow({
                 sessionId: fixtureSession1Id,
-                mode: 'exam',
                 questionCount: 20,
                 firstQuestionSlug: null,
                 answered: 20,
@@ -353,7 +351,7 @@ describe('app/(app)/app/dashboard', () => {
                 durationSeconds: 1800,
                 startedAt: '2026-02-01T00:00:00.000Z',
                 endedAt: '2026-02-01T00:30:00.000Z',
-              },
+              }),
             ],
             total: 1,
             limit: 3,
@@ -389,7 +387,7 @@ describe('app/(app)/app/dashboard', () => {
           ok: true,
           data: {
             rows: [
-              {
+              createSessionHistoryRow({
                 sessionId: fixtureSession1Id,
                 mode: 'tutor',
                 questionCount: 5,
@@ -400,7 +398,7 @@ describe('app/(app)/app/dashboard', () => {
                 durationSeconds: 1800,
                 startedAt: '2026-02-01T00:00:00.000Z',
                 endedAt: '2026-02-01T00:30:00.000Z',
-              },
+              }),
             ],
             total: 1,
             limit: 3,
@@ -611,9 +609,8 @@ describe('app/(app)/app/dashboard', () => {
           ok: true,
           data: {
             rows: [
-              {
+              createSessionHistoryRow({
                 sessionId: fixtureSession1Id,
-                mode: 'exam',
                 questionCount: 20,
                 firstQuestionSlug: 'q-correct',
                 answered: 20,
@@ -622,7 +619,7 @@ describe('app/(app)/app/dashboard', () => {
                 durationSeconds: 1800,
                 startedAt: '2026-02-01T00:00:00.000Z',
                 endedAt: '2026-02-01T00:30:00.000Z',
-              },
+              }),
             ],
             total: 1,
             limit: 3,
