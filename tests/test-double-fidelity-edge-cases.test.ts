@@ -3,6 +3,7 @@ import {
   collectHandRolledPortDoubleOccurrences,
   collectMaintainedFakePortNames,
   collectOwnCodeModuleMockOccurrences,
+  collectRatchetFloorIssues,
   collectRatchetGrowthIssues,
   collectUnknownDoubleCastOccurrences,
   readMaintainedFakePortNames,
@@ -20,10 +21,25 @@ describe('test-double fidelity scan edge cases', () => {
     'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.setup.ts',
     'src/adapters/controllers/practice-controller-test-helpers.ts',
     'app/(app)/app/questions/[slug]/hooks/use-question-page-model-test-helpers.tsx',
+    'src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment.ts',
+    'src/application/test-helpers/fakes/fake-user-repository.ts',
+    'tests/shared/dom-helpers.ts',
+    'tests/integration/helpers.ts',
   ])('includes support source %s in the repository census', (filePath) => {
     expect(
       readTestSources().some((source) => source.filePath === filePath),
     ).toBe(true);
+  });
+
+  it('leaves the guard implementations at the tests root out of the census', () => {
+    const filePaths = readTestSources().map((source) => source.filePath);
+
+    expect(filePaths).not.toContain(
+      'tests/controller-output-datetime-source-scan.ts',
+    );
+    expect(filePaths).not.toContain(
+      'tests/test-double-fidelity-source-scan.ts',
+    );
   });
 
   it('reads the repository test estate and maintained fake ports', () => {
@@ -206,6 +222,42 @@ const db = {
       ),
     ).toEqual([
       'a.test.ts has 1 module factory site(s), above its ratchet floor of 0 (new at line 2).',
+    ]);
+  });
+
+  it('reports floors above their live count so removed sites cannot return', () => {
+    const occurrences: TestDoubleOccurrence[] = [
+      { filePath: 'b.test.ts', lineNumber: 1, detail: 'kept' },
+      { filePath: 'b.test.ts', lineNumber: 2, detail: 'kept' },
+      { filePath: 'c.test.ts', lineNumber: 1, detail: 'kept' },
+    ];
+
+    expect(
+      collectRatchetFloorIssues(
+        'module factory',
+        occurrences,
+        new Map([
+          ['z.test.ts', 1],
+          ['b.test.ts', 3],
+          ['c.test.ts', 1],
+        ]),
+      ),
+    ).toEqual([
+      'b.test.ts has 2 module factory site(s), below its ratchet floor of 3; lower the floor to 2 so the removed sites cannot return.',
+      'z.test.ts has no module factory sites, below its ratchet floor of 1; remove the entry so the removed sites cannot return.',
+    ]);
+  });
+
+  it('reports growth before slack', () => {
+    expect(
+      collectRatchetFloorIssues(
+        'module factory',
+        [{ filePath: 'a.test.ts', lineNumber: 3, detail: 'new' }],
+        new Map([['b.test.ts', 1]]),
+      ),
+    ).toEqual([
+      'a.test.ts has 1 module factory site(s), above its ratchet floor of 0 (new at line 3).',
+      'b.test.ts has no module factory sites, below its ratchet floor of 1; remove the entry so the removed sites cannot return.',
     ]);
   });
 

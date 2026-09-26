@@ -7,7 +7,7 @@ import {
 import {
   collectHandRolledPortDoubleOccurrences,
   collectOwnCodeModuleMockOccurrences,
-  collectRatchetGrowthIssues,
+  collectRatchetFloorIssues,
   collectUnknownDoubleCastOccurrences,
   readMaintainedFakePortNames,
   readRepositoryCompilerOptions,
@@ -24,17 +24,17 @@ export function collectLiveTestDoubleRatchetIssues(): LiveTestDoubleRatchetIssue
   const sources = readTestSources();
 
   return {
-    ownCodeModuleMocks: collectRatchetGrowthIssues(
+    ownCodeModuleMocks: collectRatchetFloorIssues(
       'own-code module mock',
       collectOwnCodeModuleMockOccurrences(sources),
       OWN_CODE_MODULE_MOCK_FLOORS,
     ),
-    unknownDoubleCasts: collectRatchetGrowthIssues(
+    unknownDoubleCasts: collectRatchetFloorIssues(
       'unknown double cast',
       collectUnknownDoubleCastOccurrences(sources),
       UNKNOWN_DOUBLE_CAST_FLOORS,
     ),
-    handRolledPortDoubles: collectRatchetGrowthIssues(
+    handRolledPortDoubles: collectRatchetFloorIssues(
       'hand-rolled maintained-port double',
       collectHandRolledPortDoubleOccurrences(
         sources,
