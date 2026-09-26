@@ -217,6 +217,50 @@ html {
   }
 }
 
+/*
+  Self-hosted layout fonts: app/layout-fonts.ts declares the faces. These
+  fallbacks keep the metric overrides next/font/google generated for the same
+  files, so text does not shift when a font swaps in. The html rule replaces
+  the class next/font put on <html>.
+*/
+@font-face {
+  font-family: 'Manrope Fallback';
+  src: local('Arial');
+  ascent-override: 103.31%;
+  descent-override: 29.07%;
+  line-gap-override: 0%;
+  size-adjust: 103.19%;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans Fallback';
+  src: local('Arial');
+  ascent-override: 98.88%;
+  descent-override: 21.15%;
+  line-gap-override: 0%;
+  size-adjust: 104.98%;
+}
+
+@font-face {
+  font-family: 'Instrument Sans Fallback';
+  src: local('Arial');
+  ascent-override: 94.42%;
+  descent-override: 24.33%;
+  line-gap-override: 0%;
+  size-adjust: 102.74%;
+}
+
+:root {
+  --font-manrope: 'Manrope', 'Manrope Fallback';
+  --font-plus-jakarta-sans: 'Plus Jakarta Sans', 'Plus Jakarta Sans Fallback';
+  --font-instrument-sans: 'Instrument Sans', 'Instrument Sans Fallback';
+}
+
+html {
+  font-family: var(--font-manrope);
+  font-style: normal;
+}
+
 /* Font utility classes */
 .font-display {
   font-family: var(--font-plus-jakarta-sans), var(--font-manrope), system-ui,

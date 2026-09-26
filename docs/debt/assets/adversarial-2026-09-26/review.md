@@ -73,3 +73,12 @@
 4. **Promotion receipt order (F3).** Reaffirm the documented order: body edit, then merge, in one `&&` chain.
 5. **Mobile project (F10).** A tagged smoke subset costs a fraction of the ≈30% a full second E2E pass adds to every hosted run.
 6. **Self-hosted fonts (F19).** The licensing and failure premises hold once the sheet's times are corrected.
+
+**Resolved 2026-09-26 UTC** by the owner's delegate, at the owner's direction. All six are accepted as recommended, and each lands in its own PR:
+
+1. The lock-order harness's guards are narrowed or exercised before the split, as was done for the datetime scanner. The Stripe-literal migration stays DEBT-468 Part 3 (a) work.
+2. A floor above its live count fails `pnpm lint:doubles` like growth.
+3. The ratchet also reads every `test-helpers/` directory and `tests/` subdirectory.
+4. `scripts/verify-promotion.ts --merge` writes the proof into the body before it merges. #1132 already followed that order by hand.
+5. A tagged mobile smoke subset joins hosted E2E, and its added minutes are measured on its first run.
+6. The layout fonts are self-hosted (`app/fonts/README.md`). The failure times above are the corrected ones.
