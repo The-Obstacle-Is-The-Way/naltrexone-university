@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { eq, inArray } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
-import type { ClerkWebhookEvent } from '@/src/adapters/controllers/clerk-webhook-controller';
 import { processClerkWebhook } from '@/src/adapters/controllers/clerk-webhook-controller';
 import type { StripeWebhookInput } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
@@ -20,7 +19,10 @@ import {
   FakeLogger,
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
-
+import {
+  clerkUserDeletedEvent,
+  clerkUserUpdatedEvent,
+} from '@/tests/shared/clerk-events';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -227,11 +229,10 @@ describe('clerk webhook controller (integration)', () => {
       logger: new FakeLogger(),
     };
 
-    const event: ClerkWebhookEvent = {
+    const event = clerkUserDeletedEvent({
       eventId,
-      type: 'user.deleted',
-      data: { id: user.clerkUserId },
-    };
+      clerkUserId: user.clerkUserId,
+    });
 
     cleanup.clerkEventIds.push(eventId);
     cleanup.deletedClerkUserIds.push(user.clerkUserId);
@@ -313,11 +314,10 @@ describe('clerk webhook controller (integration)', () => {
       logger: new FakeLogger(),
     };
 
-    const event: ClerkWebhookEvent = {
+    const event = clerkUserDeletedEvent({
       eventId,
-      type: 'user.deleted',
-      data: { id: user.clerkUserId },
-    };
+      clerkUserId: user.clerkUserId,
+    });
 
     cleanup.clerkEventIds.push(eventId);
     cleanup.deletedClerkUserIds.push(user.clerkUserId);
@@ -394,18 +394,12 @@ describe('clerk webhook controller (integration)', () => {
       logger: new FakeLogger(),
     };
 
-    const updatedEvent: ClerkWebhookEvent = {
+    const updatedEvent = clerkUserUpdatedEvent({
       eventId: updatedEventId,
-      type: 'user.updated',
-      data: {
-        id: clerkUserId,
-        primary_email_address_id: 'email_1',
-        updated_at: 1769904000000,
-        email_addresses: [
-          { id: 'email_1', email_address: `it-${randomUUID()}@example.com` },
-        ],
-      },
-    };
+      clerkUserId,
+      email: `it-${randomUUID()}@example.com`,
+      updatedAt: 1769904000000,
+    });
 
     await processClerkWebhook(deps, updatedEvent);
 
@@ -415,11 +409,10 @@ describe('clerk webhook controller (integration)', () => {
       cleanup.userIds.push(createdUser.id);
     }
 
-    await processClerkWebhook(deps, {
-      eventId: deletedEventId,
-      type: 'user.deleted',
-      data: { id: clerkUserId },
-    });
+    await processClerkWebhook(
+      deps,
+      clerkUserDeletedEvent({ eventId: deletedEventId, clerkUserId }),
+    );
 
     await processClerkWebhook(deps, updatedEvent);
 

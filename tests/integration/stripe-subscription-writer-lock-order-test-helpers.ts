@@ -23,6 +23,7 @@ import {
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
 import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
+import { clerkUserDeletedEvent } from '@/tests/shared/clerk-events';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
   cleanupAfterEach,
@@ -364,11 +365,10 @@ export function createLockOrderHarness() {
         getClerkUserById,
         logger: new FakeLogger(),
       },
-      {
+      clerkUserDeletedEvent({
         eventId: input.eventId,
-        type: 'user.deleted',
-        data: { id: input.clerkUserId },
-      },
+        clerkUserId: input.clerkUserId,
+      }),
     );
     expect(getClerkUserById).not.toHaveBeenCalled();
   }
