@@ -1,4 +1,6 @@
 // Scaffolding shared by the QuestionView suites in question-page-client*.test.tsx.
+import { vi } from 'vitest';
+
 export const fixtureSession123Id = crypto.randomUUID();
 
 export function createBaseProps() {
@@ -10,10 +12,10 @@ export function createBaseProps() {
     sessionNavigation: null,
     canSubmit: false,
     isPending: false,
-    onTryAgain: () => undefined,
-    onSelectChoice: () => undefined,
-    onSubmit: () => undefined,
-    onReattempt: () => undefined,
+    onTryAgain: vi.fn(),
+    onSelectChoice: vi.fn(),
+    onSubmit: vi.fn(),
+    onReattempt: vi.fn(),
   };
 }
 
