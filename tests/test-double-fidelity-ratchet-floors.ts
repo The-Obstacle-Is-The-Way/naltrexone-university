@@ -170,6 +170,10 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
 // for suites that are not about renewal notices. It stays as a shape-only
 // stub at 1: the maintained fake would need each caller to seed the user the
 // webhook looks up. 32 sites across 13 files.
+// 2026-09-26 UTC: The DEBT-469 lock-order split keeps the reconciliation
+// job's hand-built Stripe client in the reconcile suite, the only file that
+// builds it, so its floor of 1 moves there with it. The site and the total are
+// unchanged; migrating it to FakeStripeCheckoutClient stays DEBT-468 Part 3 (a).
 export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout.test.ts', 6],
   ['app/api/stripe/webhook/route.test.ts', 7],
