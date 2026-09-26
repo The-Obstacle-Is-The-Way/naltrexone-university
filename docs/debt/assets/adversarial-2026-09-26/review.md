@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-26 UTC. **Reviewed tree:** `main` and `dev` at `656d98ad` / `906c9279`, both tree `34ab857184cd9f0c48af166f52d0e3ec5f6e305d`.
 
-**Scope:** the campaign's own report (ten feature PRs and ten promotions), the live [DEBT-468](../../debt-468-test-estate-coverage-and-fixture-debt.md) and [DEBT-469](../../debt-469-toolchain-warning-debt.md) records, and the [debt index](../../index.md).
+**Scope:** the campaign's own report (ten feature PRs and ten promotions), the live [DEBT-468](../../debt-468-test-estate-coverage-and-fixture-debt.md) and [DEBT-469](../../../_archive/debt/debt-469-toolchain-warning-debt.md) records, and the [debt index](../../index.md).
 
 **Method:** every claim was treated as unproven and re-derived from four sources: GitHub (reviews, threads, body-edit history, runs, attempts, job logs), the Vercel v13 deployment API, git, and local re-runs in this clone. Local re-runs used the unit, browser and integration lanes, coverage, mutation and `tsc`. The campaign's proof logs were used only as leads. Every mutation was reverted byte-identically, and `git diff --exit-code` was checked after each run. Severity runs from P0 (production or security harm) to P3 (record accuracy or hygiene). No P0 or P1 finding survived.
 
