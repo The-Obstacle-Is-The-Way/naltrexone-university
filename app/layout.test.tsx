@@ -22,19 +22,8 @@ vi.mock('next/headers', () => ({
   headers: async () => new Headers({ 'x-nonce': 'nonce-123' }),
 }));
 
-vi.mock('next/font/google', () => ({
-  Instrument_Sans: () => ({
-    className: 'instrument-sans',
-    variable: '--font-instrument-sans',
-  }),
-  Manrope: () => ({
-    className: 'manrope',
-    variable: '--font-manrope',
-  }),
-  Plus_Jakarta_Sans: () => ({
-    className: 'plus-jakarta-sans',
-    variable: '--font-plus-jakarta-sans',
-  }),
+vi.mock('next/font/local', () => ({
+  default: () => ({ className: '', style: {} }),
 }));
 
 // Keep both application wrappers real; observe only their vendor-boundary props.

@@ -1077,7 +1077,7 @@ Clerk auth-surface radius/interaction differences are an accepted third-party se
 
 ### 12.1 Font Families
 
-Three Google Fonts loaded via `next/font/google` in `app/layout.tsx`:
+Three Google Fonts families, self-hosted from `app/fonts/` through `next/font/local` in `app/layout-fonts.ts` so builds never fetch fonts (Biome rejects `next/font/google`; provenance and licenses in `app/fonts/README.md`):
 
 | Class | Font Family | Fallback Chain | Weights | Role |
 |-------|------------|----------------|---------|------|
@@ -1085,7 +1085,7 @@ Three Google Fonts loaded via `next/font/google` in `app/layout.tsx`:
 | `font-heading` | Instrument Sans | Manrope, system-ui, sans-serif | All (variable) | Page headings (H1, H2, H3), card section titles |
 | `font-display` | Plus Jakarta Sans | Manrope, system-ui, sans-serif | 700, 800 only | Large numeric values, stat card numbers, pricing amounts |
 
-**Source:** Font loading in `app/layout.tsx:13-22`. CSS classes in `app/globals.css:240-249`. Body font-family in `app/globals.css:82-86`.
+**Source:** Font faces in `app/layout-fonts.ts`. Fallback faces and `--font-*` variables in `app/globals.css:220-262`. CSS classes in `app/globals.css:264-273`. Body font-family in `app/globals.css:95-97`.
 
 **Rule:** Never use `font-sans` or other Tailwind font utilities. The three classes above are the only font-family selectors.
 
