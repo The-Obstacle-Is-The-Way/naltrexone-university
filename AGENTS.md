@@ -691,7 +691,7 @@ review on the current SHA to be APPROVED. It also requires zero unresolved
 threads, successful CI `test`, green checks, and a clean, mergeable, non-draft
 PR. Incomplete/truncated thread or check data fails closed. The merge uses
 `--match-head-commit` so a subsequent push cannot substitute unreviewed code.
-Keep the emitted SHA/review-ID receipt with the PR. No override flag exists.
+With `--merge` it posts the SHA/review-ID receipt as a PR comment before merging, so the receipt stays with the PR. No override flag exists.
 This is mandatory operator tooling, not a claim that GitHub's zero-approval
 ruleset enforces CodeRabbit itself. Promotions use the following distinct proof.
 
@@ -714,13 +714,14 @@ PR still requires normal exact-head approval before entering `dev`.
 
 For each promotion:
 
-1. Fetch `origin`. Wait for promotion CI `test` to pass. Run
-   `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER>` and put its complete
-   output in the promotion PR body. The command verifies same-repository
-   `dev` → `main`, up-to-date ancestry, every first-parent merge's source PR,
-   the actual second-parent head, formal approval predating the source merge,
-   and zero unresolved source/promotion threads. Direct commits, ambiguous PR
-   associations, missing approvals or incomplete evidence fail closed.
+1. Wait for promotion CI `test` to pass. The read-only proof is
+   `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER>` (fetch `origin`
+   first). It verifies same-repository `dev` → `main`, up-to-date ancestry,
+   every first-parent merge's source PR, the actual second-parent head, formal
+   approval predating the source merge, and zero unresolved source/promotion
+   threads. Direct commits, ambiguous PR associations, missing approvals or
+   incomplete evidence fail closed. Its complete output must be in the
+   promotion PR body before the merge.
 2. Source-thread counts are current API observations; GitHub cannot reconstruct
    their historical count from that response. Preserve source merge receipts;
    the enforced thread-resolution ruleset covers the merge-time requirement.
@@ -729,9 +730,14 @@ For each promotion:
    on an older promotion head may be dismissed with a comment citing this rule
    and the current source proof; never dismiss an unaddressed finding. Do not
    request another promotion review or wait for its CodeRabbit status alone.
-4. Merge with `gh pr merge <PR_NUMBER> --merge --match-head-commit <VERIFIED_HEAD>`.
-   If either branch moves, refresh the proof and CI before merging. No `--admin`
-   or ruleset bypass. A feature/hotfix branch into `main` is not this exception.
+4. Merge with `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER> --merge`.
+   It fetches `origin`, re-runs the proof, writes the output into a marked
+   section of the PR body, confirms the body shows it, and only then merges
+   the verified head with `--match-head-commit`. GitHub's body-edit history
+   therefore shows the proof before the merge; ten 2026-09-25/26 promotions
+   recorded it after (adversarial review F3). If either branch moves, the
+   merge is refused; refresh CI and run it again. No `--admin` or ruleset
+   bypass. A feature/hotfix branch into `main` is not this exception.
 5. Verify main CI, production-domain assignment after main's `test`, matching
    dev/main trees, and production health as required below.
 

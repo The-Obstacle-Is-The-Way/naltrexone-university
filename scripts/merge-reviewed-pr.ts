@@ -149,11 +149,12 @@ const query = `query($number:Int!) {
   }
 }`;
 
-function gh(args: string[]): string {
+function gh(args: string[], input?: string): string {
   return execFileSync('gh', args, {
     encoding: 'utf8',
     timeout: 30_000,
     maxBuffer: 32 * 1024 * 1024,
+    input,
   });
 }
 
@@ -207,6 +208,12 @@ export function runMergeReviewedPr(
     throw new Error('PR number changed during verification');
   write(JSON.stringify(receipt));
   if (args[1] === '--merge') {
+    // AGENTS.md keeps this receipt with the PR; posting it first puts it on
+    // GitHub before the merge it justifies.
+    gh(
+      ['pr', 'comment', number, '--repo', REPOSITORY, '--body-file', '-'],
+      `Reviewed-merge receipt (\`scripts/merge-reviewed-pr.ts ${number} --merge\`), verified before merging:\n\n\`\`\`json\n${JSON.stringify(receipt)}\n\`\`\`\n`,
+    );
     write(
       gh([
         'pr',
