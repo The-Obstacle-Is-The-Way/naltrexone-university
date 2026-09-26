@@ -11,9 +11,16 @@ type PlaywrightProjectPolicy = {
   name?: string;
   retries?: number;
   teardown?: string;
+  dependencies?: string[];
+  grep?: RegExp | RegExp[];
   testIgnore?: FilePattern;
   testMatch?: FilePattern;
-  use?: { storageState?: unknown };
+  use?: {
+    storageState?: unknown;
+    viewport?: { width: number; height: number } | null;
+    isMobile?: boolean;
+    hasTouch?: boolean;
+  };
 };
 
 const STRIPE_HOSTED_SELECTOR_ALLOWLIST = [
@@ -125,7 +132,7 @@ describe('Playwright E2E lane policy', () => {
     expect(playwrightConfig.retries).toBe(0);
   });
 
-  it.each(['chromium', 'stripe-hosted', 'cleanup'])(
+  it.each(['chromium', 'mobile-smoke', 'stripe-hosted', 'cleanup'])(
     'does not retry a failure in the %s project',
     (name) => {
       const project = getProject(name);
@@ -158,9 +165,36 @@ describe('Playwright E2E lane policy', () => {
     );
   });
 
+  it('runs tagged journeys again on a phone-width touch viewport', () => {
+    const project = getProject('mobile-smoke');
+
+    expect(project.use).toMatchObject({
+      viewport: { width: 375, height: 667 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    expect(project.grep).toEqual(/@mobile-smoke/);
+    expect(project.dependencies).toEqual(['setup']);
+    expect(matchesRegexPattern(project.testIgnore, hostedSpec)).toBe(true);
+  });
+
+  it('keeps the phone-width layout probe out of the desktop project', () => {
+    const mobileLayoutSpec = 'tests/e2e/mobile-layout.spec.ts';
+
+    expect(
+      matchesRegexPattern(getProject('chromium').testIgnore, mobileLayoutSpec),
+    ).toBe(true);
+    expect(
+      matchesRegexPattern(
+        getProject('mobile-smoke').testMatch,
+        mobileLayoutSpec,
+      ),
+    ).toBe(true);
+  });
+
   it('routes required and hosted commands to mutually exclusive projects', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
-      'tsx scripts/run-local-e2e.ts --project=chromium',
+      'tsx scripts/run-local-e2e.ts --project=chromium --project=mobile-smoke',
     );
     expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
       'tsx scripts/run-local-e2e.ts --project=stripe-hosted',

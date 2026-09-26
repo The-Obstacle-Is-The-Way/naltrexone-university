@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test('unauthenticated pricing CTA links to sign-up with selected plan context', async ({
-  page,
-}) => {
+test('unauthenticated pricing CTA links to sign-up with selected plan context', {
+  tag: '@mobile-smoke',
+}, async ({ page }) => {
   await page.goto('/pricing');
   await expect(page.getByRole('heading', { name: 'Pricing' })).toBeVisible();
 

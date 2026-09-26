@@ -40,6 +40,20 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
       testMatch: /.*\.spec\.ts/,
+      testIgnore: [
+        /global\.setup\.ts/,
+        /stripe-hosted-.*\.spec\.ts/,
+        /mobile-layout\.spec\.ts/,
+      ],
+    },
+    {
+      // DEBT-468: re-runs the @mobile-smoke journeys, plus the layout probe,
+      // at the 375×667 width QA-002 checks by hand.
+      name: 'mobile-smoke',
+      use: { ...devices['Pixel 5'], viewport: { width: 375, height: 667 } },
+      dependencies: ['setup'],
+      grep: /@mobile-smoke/,
+      testMatch: /.*\.spec\.ts/,
       testIgnore: [/global\.setup\.ts/, /stripe-hosted-.*\.spec\.ts/],
     },
     {

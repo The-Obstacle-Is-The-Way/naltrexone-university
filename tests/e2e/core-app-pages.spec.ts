@@ -23,9 +23,9 @@ test.describe('core app pages', () => {
     await runE2EUserStateReset();
   });
 
-  test('subscribed user can navigate dashboard, billing, bookmarks, and history', async ({
-    page,
-  }) => {
+  test('subscribed user can navigate dashboard, billing, bookmarks, and history', {
+    tag: '@mobile-smoke',
+  }, async ({ page }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
     await assertQuestionSlugExists(page, QUESTION_SLUG);
