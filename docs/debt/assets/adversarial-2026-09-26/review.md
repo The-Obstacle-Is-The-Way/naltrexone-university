@@ -67,7 +67,7 @@
 
 ## Owner decisions
 
-1. **Lock-order split (F1).** Narrow or exercise the harness's 15 non-literal gaps, as was done for the datetime scanner. Alternatively, split so the three cases that run the reconciliation writer share a file and the literal stays out of any shared module. The migration alone does not unblock the move.
+1. **Lock-order split (F1).** Narrow or exercise the harness's 15 non-literal gaps, as was done for the datetime scanner. Alternatively, split so the three cases that run the reconciliation writer share a file and the literal stays out of any shared module. The migration is neither required nor sufficient.
 2. **Ratchet exactness (F2).** Should `pnpm lint:doubles` also fail when a floor exceeds its live count? That check would have caught F2. It widens a guard, so it needs approval.
 3. **Ratchet scope (F17).** Should the scan also read files in `test-helpers/` directories?
 4. **Promotion receipt order (F3).** Reaffirm the documented order: body edit, then merge, in one `&&` chain.
