@@ -67,6 +67,14 @@ describe('self-hosted layout fonts', () => {
     expect(faces.every((face) => face.adjustFontFallback === false)).toBe(true);
   });
 
+  it('gives body text the metric-adjusted Manrope fallback', () => {
+    // #1134 review: a body rule naming "Manrope" directly skipped the
+    // fallback face, so text shifted when the font swapped in.
+    expect(globalsCss).toMatch(
+      /body \{\s*font-family: var\(--font-manrope\), Arial, Helvetica, sans-serif;/,
+    );
+  });
+
   it('preloads only the Latin subset of each family', () => {
     const preloaded = faces.filter((face) => face.preload !== false);
 
