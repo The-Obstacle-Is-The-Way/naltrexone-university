@@ -48,18 +48,6 @@
 // 2026-09-23 UTC: The reconcile cron route composes a narrow handler seam, so
 // its orchestration tests use typed fakes; no own-code module factories
 // remain.
-
-// 2026-09-25 UTC: The DEBT-469 pricing split moves the three loadPricingData
-// AuthGateway literals into page-actions.test.tsx with their cases, so the
-// pricing floor follows them (6 → 3 + 3). The sites and the total are
-// unchanged; retiring them is left to a behavior-reviewed change, because
-// their throwing requireUser also asserts that the loader never calls it.
-// 2026-09-26 UTC: The DEBT-469 datetime contract split moves the controller
-// output scanner into tests/controller-output-datetime-source-scan.ts. Its
-// two `as unknown as` reads of Zod internals go with it; they are library
-// reflection, not port doubles, and source-scan modules sit outside this
-// test-file scope. The contract suite now has none, so its floor entry is
-// removed rather than left above its count.
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 
 // 2026-09-23 UTC: The user-repository unit suite keeps seven typed
@@ -142,6 +130,12 @@ export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 // cases on drizzle.mock; the tag and trial payment-method setup unit suites
 // retire entirely behind their integration twins. No repository chain double
 // remains.
+// 2026-09-26 UTC: The DEBT-469 datetime contract split moves the controller
+// output scanner into tests/controller-output-datetime-source-scan.ts. Its
+// two `as unknown as` reads of Zod internals go with it; they are library
+// reflection, not port doubles, and source-scan modules sit outside this
+// test-file scope. The contract suite now has none, so its floor entry is
+// removed rather than left above its count.
 export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/(app)/app/billing/page.test.tsx', 1],
   ['app/(app)/app/practice/[sessionId]/page.test.tsx', 1],
@@ -158,6 +152,11 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ],
 ]);
 
+// 2026-09-25 UTC: The DEBT-469 pricing split moves the three loadPricingData
+// AuthGateway literals into page-actions.test.tsx with their cases, so the
+// pricing floor follows them (6 → 3 + 3). The sites and the total are
+// unchanged; retiring them is left to a behavior-reviewed change, because
+// their throwing requireUser also asserts that the loader never calls it.
 export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout.test.ts', 6],
   ['app/api/stripe/webhook/route.test.ts', 7],
