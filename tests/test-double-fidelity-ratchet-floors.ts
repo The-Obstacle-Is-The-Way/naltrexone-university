@@ -54,6 +54,12 @@
 // pricing floor follows them (6 → 3 + 3). The sites and the total are
 // unchanged; retiring them is left to a behavior-reviewed change, because
 // their throwing requireUser also asserts that the loader never calls it.
+// 2026-09-26 UTC: The DEBT-469 datetime contract split moves the controller
+// output scanner into tests/controller-output-datetime-source-scan.ts. Its
+// two `as unknown as` reads of Zod internals go with it; they are library
+// reflection, not port doubles, and source-scan modules sit outside this
+// test-file scope. The contract suite now has none, so its floor entry is
+// removed rather than left above its count.
 export const OWN_CODE_MODULE_MOCK_FLOORS = new Map<string, number>([]);
 
 // 2026-09-23 UTC: The user-repository unit suite keeps seven typed
@@ -144,7 +150,6 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
   ['app/pricing/page.test.tsx', 1],
   ['lib/container.skip-clerk.test.ts', 6],
   ['lib/container.test.ts', 6],
-  ['src/adapters/controllers/controller-output-datetime-contract.test.ts', 2],
   ['src/adapters/gateways/stripe/stripe-subscription-normalizer.test.ts', 3],
   ['tests/e2e/helpers/bookmark.test.ts', 2],
   [
