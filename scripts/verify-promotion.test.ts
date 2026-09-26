@@ -1,11 +1,13 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { REPOSITORY } from './merge-reviewed-pr';
 import {
   checkPromotionReadiness,
   checkSourceProvenance,
   firstParentMerges,
   runVerifyPromotion,
   sourcePrNumber,
+  withPromotionReceipt,
 } from './verify-promotion';
 
 vi.mock('node:child_process', async (importOriginal) => ({
@@ -346,7 +348,84 @@ describe('promotion proof command', () => {
     );
   });
 
-  it.each([[], ['0'], ['990', '--merge']])(
+  it('records the receipt in the promotion body before merging the verified head', () => {
+    vi.mocked(execFileSync).mockReturnValueOnce('');
+    responses();
+    const recorded: string[] = [];
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce('Promotion summary\n')
+      .mockImplementationOnce((_file, _args, options) => {
+        recorded.push(String((options as { input?: string }).input));
+        return '';
+      })
+      .mockImplementationOnce(() => recorded[0] ?? '')
+      .mockReturnValueOnce('merged\n');
+    const output: string[] = [];
+
+    runVerifyPromotion(['990', '--merge'], (value) => output.push(value));
+
+    const commands = vi
+      .mocked(execFileSync)
+      .mock.calls.map(([file, args]) => [file, ...(args ?? [])].join(' '));
+    expect(commands[0]).toBe('git fetch --quiet origin');
+    expect(commands.slice(-4)).toEqual([
+      `gh pr view 990 --repo ${REPOSITORY} --json body --jq .body`,
+      `gh pr edit 990 --repo ${REPOSITORY} --body-file -`,
+      `gh pr view 990 --repo ${REPOSITORY} --json body --jq .body`,
+      `gh pr merge 990 --repo ${REPOSITORY} --merge --match-head-commit ${MERGE}`,
+    ]);
+    expect(recorded[0]).toMatch(
+      /^Promotion summary\n\n<!-- verify-promotion:start -->\n## Reviewed promotion provenance[\s\S]*\| #987 \|[\s\S]*<!-- verify-promotion:end -->\n$/,
+    );
+    expect(output.at(-1)).toBe('merged\n');
+  });
+
+  it('does not merge when the promotion body does not show the receipt', () => {
+    vi.mocked(execFileSync).mockReturnValueOnce('');
+    responses();
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce('Promotion summary\n')
+      .mockReturnValueOnce('')
+      .mockReturnValueOnce('Promotion summary\n');
+
+    expect(() => runVerifyPromotion(['990', '--merge'], () => {})).toThrow(
+      'Promotion body does not show the receipt; refusing to merge',
+    );
+    expect(
+      vi
+        .mocked(execFileSync)
+        .mock.calls.some(([, args]) => args?.[1] === 'merge'),
+    ).toBe(false);
+  });
+
+  it('does not merge when the marked section is stale although the receipt appears elsewhere', () => {
+    vi.mocked(execFileSync).mockReturnValueOnce('');
+    responses();
+    const recorded: string[] = [];
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce('Promotion summary\n')
+      .mockImplementationOnce((_file, _args, options) => {
+        recorded.push(String((options as { input?: string }).input));
+        return '';
+      })
+      .mockImplementationOnce(() => {
+        const receipt = (recorded[0] ?? '')
+          .split('<!-- verify-promotion:start -->\n')[1]
+          ?.split('\n<!-- verify-promotion:end -->')[0];
+        return `<!-- verify-promotion:start -->\nOld\n<!-- verify-promotion:end -->\n${receipt}`;
+      });
+
+    expect(() => runVerifyPromotion(['990', '--merge'], () => {})).toThrow(
+      'Promotion body does not show the receipt; refusing to merge',
+    );
+    expect(
+      vi
+        .mocked(execFileSync)
+        .mock.calls.some(([, args]) => args?.[1] === 'merge'),
+    ).toBe(false);
+  });
+
+  it.each([[], ['0'], ['990', '--force'], ['990', '--merge', 'now']])(
     'refuses unsupported proof arguments %j',
     (...args) => {
       expect(() => runVerifyPromotion(args, () => {})).toThrow('Usage');
@@ -362,5 +441,33 @@ describe('promotion proof command', () => {
     );
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('Usage: tsx scripts/verify-promotion.ts');
+  });
+});
+
+describe('promotion body receipt', () => {
+  const START = '<!-- verify-promotion:start -->';
+  const END = '<!-- verify-promotion:end -->';
+
+  it('appends the receipt section to a body without one', () => {
+    expect(withPromotionReceipt('Summary\n\n', 'Receipt')).toBe(
+      `Summary\n\n${START}\nReceipt\n${END}\n`,
+    );
+  });
+
+  it('replaces an earlier receipt instead of stacking a second one', () => {
+    expect(
+      withPromotionReceipt(`Summary\n\n${START}\nOld\n${END}\nTail\n`, 'New'),
+    ).toBe(`Summary\n\n${START}\nNew\n${END}\nTail\n`);
+  });
+
+  it.each([
+    `${END}\n${START}`,
+    `${START}\nOld`,
+    `${END}\nOld`,
+    `${START}\nA\n${END}\n${START}\nB\n${END}`,
+  ])('fails closed on malformed receipt markers %j', (body) => {
+    expect(() => withPromotionReceipt(body, 'New')).toThrow(
+      'Malformed promotion receipt markers',
+    );
   });
 });
