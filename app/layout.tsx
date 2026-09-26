@@ -1,11 +1,11 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Instrument_Sans, Manrope, Plus_Jakarta_Sans } from 'next/font/google';
 import { headers } from 'next/headers';
 import { Suspense } from 'react';
 import { Providers } from '@/components/providers';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PUBLIC_SITE_ORIGIN } from '@/lib/public-routes';
+import './layout-fonts';
 
 export const metadata: Metadata = {
   metadataBase: new URL(PUBLIC_SITE_ORIGIN),
@@ -17,17 +17,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: '#090909',
 };
-
-const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['700', '800'],
-  variable: '--font-plus-jakarta-sans',
-});
-const instrumentSans = Instrument_Sans({
-  subsets: ['latin'],
-  variable: '--font-instrument-sans',
-});
 
 export function RootProvidersShell({
   children,
@@ -96,7 +85,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={`dark ${manrope.className} ${manrope.variable} ${plusJakartaSans.variable} ${instrumentSans.variable}`}
+      className="dark"
       style={{ colorScheme: 'dark' }}
       suppressHydrationWarning
     >

@@ -39,7 +39,8 @@
           "level": "error",
           "options": {
             "paths": {
-              "@sentry/nextjs": "Use the typed server-tracing boundary instead of importing the SDK directly."
+              "@sentry/nextjs": "Use the typed server-tracing boundary instead of importing the SDK directly.",
+              "next/font/google": "Builds must not fetch fonts: add the files to app/fonts and declare them in app/layout-fonts.ts."
             }
           }
         }
