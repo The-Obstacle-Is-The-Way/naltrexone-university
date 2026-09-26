@@ -1081,7 +1081,7 @@ Three Google Fonts families, self-hosted from `app/fonts/` through `next/font/lo
 
 | Class | Font Family | Fallback Chain | Weights | Role |
 |-------|------------|----------------|---------|------|
-| _(body default)_ | Manrope | Arial, Helvetica, sans-serif | All (variable) | Body text, UI labels, all default text |
+| _(body default)_ | Manrope | Manrope Fallback (metric-adjusted Arial), Arial, Helvetica, sans-serif | All (variable) | Body text, UI labels, all default text |
 | `font-heading` | Instrument Sans | Manrope, system-ui, sans-serif | All (variable) | Page headings (H1, H2, H3), card section titles |
 | `font-display` | Plus Jakarta Sans | Manrope, system-ui, sans-serif | 700, 800 only | Large numeric values, stat card numbers, pricing amounts |
 

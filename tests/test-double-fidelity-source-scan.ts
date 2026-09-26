@@ -55,6 +55,13 @@ const TEST_FILE_GLOBS = [
   '**/*.setup.tsx',
   '**/*-test-helpers.ts',
   '**/*-test-helpers.tsx',
+  // Support modules count by where they live, not only by suffix: every
+  // test-helpers/ directory and every tests/ subdirectory. Modules at the
+  // tests/ root are guard implementations, whose own suites match above.
+  '**/test-helpers/**/*.ts',
+  '**/test-helpers/**/*.tsx',
+  'tests/*/**/*.ts',
+  'tests/*/**/*.tsx',
 ];
 
 const TEST_FILE_IGNORE_GLOBS = [
@@ -407,6 +414,41 @@ export function collectRatchetGrowthIssues(
         `${filePath} has ${fileOccurrences.length} ${label} site(s), above its ratchet floor of ${floor} (${newSite}).`,
       ];
     });
+}
+
+// A floor above its live count is slack that would let removed sites return
+// unnoticed, so floors must equal their counts.
+function collectRatchetSlackIssues(
+  label: string,
+  occurrences: readonly TestDoubleOccurrence[],
+  floors: ReadonlyMap<string, number>,
+): string[] {
+  const counts = new Map<string, number>();
+  for (const occurrence of occurrences) {
+    counts.set(occurrence.filePath, (counts.get(occurrence.filePath) ?? 0) + 1);
+  }
+
+  return [...floors]
+    .filter(([filePath, floor]) => (counts.get(filePath) ?? 0) < floor)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([filePath, floor]) => {
+      const count = counts.get(filePath) ?? 0;
+      const fix =
+        count === 0 ? 'remove the entry' : `lower the floor to ${count}`;
+      const sites = count === 0 ? 'no' : `${count}`;
+      return `${filePath} has ${sites} ${label} site${count === 0 ? 's' : '(s)'}, below its ratchet floor of ${floor}; ${fix} so the removed sites cannot return.`;
+    });
+}
+
+export function collectRatchetFloorIssues(
+  label: string,
+  occurrences: readonly TestDoubleOccurrence[],
+  floors: ReadonlyMap<string, number>,
+): string[] {
+  return [
+    ...collectRatchetGrowthIssues(label, occurrences, floors),
+    ...collectRatchetSlackIssues(label, occurrences, floors),
+  ];
 }
 
 function parseSource(source: TestSourceFile): ts.SourceFile {

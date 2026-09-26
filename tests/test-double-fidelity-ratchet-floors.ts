@@ -1,7 +1,9 @@
 // DEBT-472 Part A baseline measured at dev 01fd55b8 on 2026-08-23.
-// These are growth-only per-file floors, not zero-violation allowlists. Later
-// migration parts may lower or remove entries; no unrelated change may raise
-// them or add a new file. The raw unknown-double-cast census is 325 sites in
+// These are per-file floors, not zero-violation allowlists. Each must equal
+// its live count: growth fails, and since 2026-09-26 so does a floor left
+// above its count, so a change that retires sites lowers or removes its entry
+// in the same patch. No unrelated change may raise them or add a new file. The
+// raw unknown-double-cast census is 325 sites in
 // 60 files. Six documented allowlist categories exclude 36 shape-only or
 // intentional-invalid sites, leaving 289 enforced sites in 50 files. The
 // other baselines are 22 own-code module factories in 13 files (17 vi.mock
@@ -161,6 +163,13 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
 // a4eaf21e (2026-09-24) answered its relational read at the execute boundary,
 // but its floor of 1 stayed and would have let one regrow. The entry is
 // removed; the map now equals the live count, 31 sites across 12 files.
+// 2026-09-26 UTC: The scan now reads every test-helpers/ directory and tests/
+// subdirectory, and a floor above its live count fails like growth, so every
+// floor equals its count. The wider scope finds one site the suffix globs
+// missed: the renewal-acknowledgment helper's users.findById, a canned answer
+// for suites that are not about renewal notices. It stays as a shape-only
+// stub at 1: the maintained fake would need each caller to seed the user the
+// webhook looks up. 32 sites across 13 files.
 export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout.test.ts', 6],
   ['app/api/stripe/webhook/route.test.ts', 7],
@@ -169,6 +178,10 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/pricing/page.test.tsx', 3],
   ['lib/logger.test.ts', 1],
   ['src/adapters/controllers/question-view-controller.test.ts', 1],
+  [
+    'src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment.ts',
+    1,
+  ],
   [
     'src/adapters/controllers/stripe-webhook-controller-renewal-acknowledgment.test.ts',
     2,
