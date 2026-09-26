@@ -59,7 +59,7 @@ Do not trust an inline SDK stub to model runtime binding. `.claude/rules/archite
 - External SDK/framework modules that cannot be injected, such as `@clerk/nextjs`, `next/link`, and `server-only`.
 - Browser Mode sealed ESM controller boundaries, using only `vi.mock(path, { spy: true })`; factory form replaces real exports and is not the repository pattern.
 
-The executable DEBT-472 ratchet runs through `pnpm lint:doubles` and blocks growth in own-code module mocks, unknown double casts, and hand-rolled doubles for ports with maintained fakes. Local `pnpm lint` and required CI invoke it; it is deliberately not a Vitest `globalSetup` tax.
+The executable DEBT-472 ratchet runs through `pnpm lint:doubles` and blocks growth in own-code module mocks, unknown double casts, and hand-rolled doubles for ports with maintained fakes. It scans test files, `*-test-helpers` modules, every `test-helpers/` directory and every `tests/` subdirectory. Each per-file floor must equal its live count: a change that removes a site lowers or deletes its floor in the same patch, so the site cannot return. Local `pnpm lint` and required CI invoke it; it is deliberately not a Vitest `globalSetup` tax.
 
 The live fake↔real evidence, dated waivers, and explicit known divergences are in `docs/dev/test-double-contract-register.md`. Update that register whenever a maintained fake or its corresponding adapter changes; a missing note is not equivalent to “no known divergence.”
 
