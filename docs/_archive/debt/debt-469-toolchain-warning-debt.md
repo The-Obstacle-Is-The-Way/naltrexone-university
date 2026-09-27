@@ -1,13 +1,33 @@
 # DEBT-469: Toolchain Warning Debt — Restore the Abandoned Test-File-Size Policy and Gate on Zero Actionable Warnings
 
-**Status:** Open (warning fixes and ratchets complete; suppression burn-down remains)
+**Status:** Resolved — 2026-09-27; all seven Resolution steps complete and every Verification bullet re-verified on `main` before archival; W5's observation duty stays Deferred
 **Priority:** P3
 **Date:** 2026-08-14
 **Source:** Owner-directed estate investigation (2026-08-14): every quality-gate lane was executed on this branch with output captured and every warning line classified — all root-caused except W5, which remains an observed-but-unroot-caused startup flake carrying an observation duty — `pnpm typecheck`, `pnpm lint`, `pnpm test:coverage` (436 files / 3,853 tests), `pnpm test:browser:coverage` (64 / 398), `pnpm db:test:up && pnpm test:integration:coverage` (38+1 skipped / 244+2 skipped), `pnpm build` (exit 0), plus the 2026-08-14 full-gate E2E log. A config experiment (restore-then-revert on `biome.json`) verified the headline fix before filing.
 **Execution audit:** Re-run on current `dev` (`83873d6b`, 2026-08-15) before implementation; command-level receipts are recorded below. DEBT-466 Part A has landed since filing, so W6 is now a resolved historical failure signature rather than a gate exception.
-**Implementation:** Resolution steps 1–4, 6, and the documentation-only step 7 completed on 2026-08-15. Step 5 is the explicitly separate split burn-down and remains Open.
+**Implementation:** Resolution steps 1–4, 6, and the documentation-only step 7 completed on 2026-08-15. Step 5, the explicitly separate split burn-down, completed on 2026-09-26 with the lock-order split #1139.
+**Updated:** 2026-09-27 — verified closeout below; step 5 completed 2026-09-26.
 
 ---
+
+## Verified closeout — 2026-09-27 UTC
+
+All seven Resolution steps are complete:
+- Steps 1–4 and 6 shipped on 2026-08-15.
+- Step 7 is documentation.
+- Step 5, the suppression burn-down, ends with the lock-order split #1139. That split merged as `SPLIT_MERGE` and was promoted through #SPLIT_PROMO (`SPLIT_PROMO_MERGE`). Its release was verified: main CI **SPLIT_MAIN_CI** `test` **SPLIT_TEST_AT**, production assigned **SPLIT_ALIAS_AT**, matching trees, healthy production.
+
+Each Verification bullet below was re-checked on `main` at `VERIFY_SHA` before archival:
+- `pnpm lint` and `pnpm lint:ci` exit 0 with `--error-on-warnings`.
+- The three Vitest lanes run with no configLoader warning.
+- `git ls-files '*.ts' '*.tsx' | xargs grep -l noExcessiveLinesPerFile` finds **no** suppression. The 28-file ledger reached zero, and no new oversized file carries one.
+- The W1 condition cannot recur. The original `stripe-webhook-processor.test.ts` suppression was proven load-bearing before its suite moved under the limit, and the lint gate fails any oversized test file that lacks a reasoned suppression.
+- The `NO_COLOR` conflict is gone from focused smoke.
+- W3/W4 are documented, and the W5 observation note remains in `AGENTS.md`.
+
+The "remain pending" sentences in the dated burn-down paragraphs are historical execution receipts, superseded by this section.
+
+**Deferred tail:** W5's observation duty stays in `AGENTS.md` until the browser-lane bootstrap failure reproduces (file it then) or until **2027-02-15** passes without a recurrence (then drop the exception note). The index Deferred table carries it.
 
 ## Description
 
