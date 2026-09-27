@@ -6,7 +6,7 @@ import type {
 } from '@/src/application/ports';
 import {
   escapeRenewalNoticeHtml,
-  formatRenewalNoticeDate,
+  formatRenewalNoticeCutoff,
   RENEWAL_NOTICE_BUSINESS_CONTACT,
   RENEWAL_NOTICE_FROM,
   RENEWAL_NOTICE_REPLY_TO,
@@ -35,7 +35,7 @@ function createPayload(input: {
   const termsUrl = new URL('/terms', input.appUrl).toString();
   const privacyUrl = new URL('/privacy', input.appUrl).toString();
   const trial = consent.trialEndsAt
-    ? `Trial ends: ${formatRenewalNoticeDate(consent.trialEndsAt)}.`
+    ? `Trial ends: ${formatRenewalNoticeCutoff(consent.trialEndsAt)}.`
     : 'No introductory trial was recorded.';
   const lines = [
     'Thank you for confirming your Addiction Boards subscription terms.',
@@ -43,7 +43,7 @@ function createPayload(input: {
     `Accepted renewal terms: ${consent.disclosureSnapshot}`,
     `Price and frequency: ${formatAmount(consent)}.`,
     trial,
-    `Cancellation deadline: ${formatRenewalNoticeDate(consent.cancellationDeadline)}.`,
+    `Cancellation deadline: ${formatRenewalNoticeCutoff(consent.cancellationDeadline)}.`,
     `How to cancel: ${consent.cancellationMethod}`,
     `Accepted: ${consent.acceptedAt.toISOString()}.`,
     `Terms version: ${consent.termsVersion}.`,

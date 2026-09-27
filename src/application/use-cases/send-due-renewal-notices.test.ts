@@ -130,6 +130,70 @@ describe('SendDueRenewalNoticesUseCase', () => {
     expect(gateway.sendInputs).toHaveLength(1);
   });
 
+  // DEBT-414 F06: the notice must say renewal happens unless canceled, give
+  // the exact cutoff with its zone, link the online cancellation route, and
+  // state the cancellation policy the Terms publish.
+  it('states automatic renewal, the exact cutoff and the cancellation policy, with working links', async () => {
+    const { hasher, repository, useCase } = await createHarness();
+
+    await useCase.execute({ notices: [scheduledNotice()], limit: 100 });
+
+    const record = repository.records[0];
+    const payload = parseTransactionalEmailPayloadSnapshot(
+      {
+        snapshot: record?.payloadSnapshot ?? '',
+        hash: record?.payloadHash ?? '',
+        destination: record?.destination ?? '',
+      },
+      hasher,
+    );
+    expect(payload.text).toContain(
+      'Your Addiction Boards Pro Annual subscription renews automatically unless you cancel.',
+    );
+    expect(payload.text).toContain(
+      'Cancel before September 6, 2026 at 12:00 PM UTC (8:00 AM Eastern, 5:00 AM Pacific) to avoid the renewal charge.',
+    );
+    expect(payload.text).toContain(
+      'Cancel online on the Billing page: https://addictionboards.com/app/billing',
+    );
+    expect(payload.text).toContain(
+      'Cancellation takes effect at the end of your current billing period, and you keep access until then.',
+    );
+    expect(payload.text).toContain(
+      'Except where the law requires otherwise, payments are non-refundable.',
+    );
+    expect(payload.html).toContain(
+      '<a href="https://addictionboards.com/app/billing">https://addictionboards.com/app/billing</a>',
+    );
+    expect(payload.html).toContain(
+      '<a href="mailto:support@addictionboards.com">support@addictionboards.com</a>',
+    );
+    expect(payload.html).toContain(
+      '<a href="https://addictionboards.com/terms">https://addictionboards.com/terms</a>',
+    );
+  });
+
+  it('escapes notice text before linking it into HTML', async () => {
+    const { hasher, repository, useCase } = await createHarness();
+
+    await useCase.execute({
+      notices: [scheduledNotice({ planName: 'Pro <Annual>' })],
+      limit: 100,
+    });
+
+    const record = repository.records[0];
+    const payload = parseTransactionalEmailPayloadSnapshot(
+      {
+        snapshot: record?.payloadSnapshot ?? '',
+        hash: record?.payloadHash ?? '',
+        destination: record?.destination ?? '',
+      },
+      hasher,
+    );
+    expect(payload.html).toContain('Pro &lt;Annual&gt;');
+    expect(payload.html).not.toContain('Pro <Annual>');
+  });
+
   it('creates separate annual-reminder and renewal-notice identities and deduplicates cron replay', async () => {
     const { gateway, repository, useCase } = await createHarness();
     const notices = [

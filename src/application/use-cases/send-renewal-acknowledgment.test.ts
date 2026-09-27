@@ -90,6 +90,13 @@ describe('SendRenewalAcknowledgmentUseCase', () => {
     expect(payload.text).toContain(consent.disclosureSnapshot);
     expect(payload.text).toContain('$29.00 USD every month');
     expect(payload.text).toContain('August 14, 2026');
+    // DEBT-414 F06: deadlines carry their time and zone, not a UTC date.
+    expect(payload.text).toContain(
+      'Trial ends: August 14, 2026 at 12:00 PM UTC (8:00 AM Eastern, 5:00 AM Pacific).',
+    );
+    expect(payload.text).toContain(
+      'Cancellation deadline: August 14, 2026 at 12:00 PM UTC (8:00 AM Eastern, 5:00 AM Pacific).',
+    );
     expect(payload.text).toContain(consent.cancellationMethod);
     expect(payload.text).toContain('John H. Jung, MD, MS');
     expect(payload.text).toContain('support@addictionboards.com');
