@@ -72,8 +72,10 @@ test.describe('trial add-card', () => {
       .getByRole('button', { name: 'Add a card to keep access' })
       .click();
 
-    // Stripe owns everything after this origin boundary. Required CI stops here.
-    await expect(page).toHaveURL(/^https:\/\/checkout\.stripe\.com\//, {
+    // Stripe owns everything after this origin boundary. Required CI stops at
+    // the committed URL and does not wait on Stripe's own page load.
+    await page.waitForURL(/^https:\/\/checkout\.stripe\.com\//, {
+      waitUntil: 'commit',
       timeout: 30_000,
     });
     const [, sessionId] = page.url().match(CHECKOUT_SESSION_ID_PATTERN) ?? [];
