@@ -87,6 +87,9 @@ export const renewalNoticeKindEnum = pgEnum('renewal_notice_kind', [
   'renewal_notice',
   'material_change',
   'fee_change',
+  // DEBT-414 F02: added unused; the step that writes it widens the
+  // scheduled-notice index and key-shape check.
+  'anniversary_reminder',
 ]);
 
 export const renewalNoticeDeliveryStatusEnum = pgEnum(

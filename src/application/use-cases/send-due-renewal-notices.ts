@@ -30,7 +30,12 @@ const MAX_BATCH_LIMIT = 500;
 export const RENEWAL_NOTICE_DISPATCH_CONCURRENCY = 4;
 
 export type ScheduledRenewalNotice = {
-  noticeKind: Exclude<RenewalNoticeKind, 'acknowledgment'>;
+  // DEBT-414 F02 schedules 'anniversary_reminder' in its second step, with
+  // its content; until then the kind exists only in the database enum.
+  noticeKind: Exclude<
+    RenewalNoticeKind,
+    'acknowledgment' | 'anniversary_reminder'
+  >;
   externalSubscriptionId: string;
   applicableAt: Date;
   disclosureVersion: string;

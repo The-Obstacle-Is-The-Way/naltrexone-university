@@ -1,5 +1,5 @@
 {
-  "id": "32da407a-f9c0-4abe-8f32-7afd34034546",
+  "id": "94a1f888-6e5a-45fb-9055-bac9c361894b",
   "prevId": "2c20eb23-51ba-41c8-9fa6-4111a91e9aac",
   "version": "7",
   "dialect": "postgresql",
@@ -3385,7 +3385,8 @@
         "annual_reminder",
         "renewal_notice",
         "material_change",
-        "fee_change"
+        "fee_change",
+        "anniversary_reminder"
       ]
     },
     "public.stripe_subscription_status": {

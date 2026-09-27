@@ -9,6 +9,7 @@ import {
   renewalConsentSourceEnum,
   renewalNoticeDeliveries,
   renewalNoticeDeliveryStatusEnum,
+  renewalNoticeKindEnum,
 } from './schema';
 
 describe('renewal consent schema', () => {
@@ -52,6 +53,21 @@ describe('renewal consent schema', () => {
     const columns = getTableColumns(renewalNoticeDeliveries);
     expect(columns.requeueAudit.notNull).toBe(true);
     expect(columns.requeueAudit.hasDefault).toBe(true);
+  });
+
+  // DEBT-414 F02: the kind a yearly reminder for a monthly plan will use. It
+  // is added unused (expand); the scheduled-notice index and key-shape check
+  // below name it only in the later step that writes it, because Postgres
+  // cannot use an enum value in the transaction that adds it.
+  it('appends the anniversary reminder kind', () => {
+    expect(renewalNoticeKindEnum.enumValues).toEqual([
+      'acknowledgment',
+      'annual_reminder',
+      'renewal_notice',
+      'material_change',
+      'fee_change',
+      'anniversary_reminder',
+    ]);
   });
 
   it('uses separate partial unique indexes for acknowledgments and scheduled notices', () => {
