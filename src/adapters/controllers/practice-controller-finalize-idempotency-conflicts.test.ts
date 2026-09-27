@@ -5,7 +5,7 @@ import {
   practiceSessionStateChangedConcurrentlyError,
 } from '@/src/application/errors';
 import { finalizeExamAnswers } from './practice-controller';
-import { createDeps } from './practice-controller-test-helpers';
+import { createDeps } from './test-helpers/practice-controller-test-helpers';
 
 describe('practice-controller finalizeExamAnswers idempotency conflicts', () => {
   it('does not cache transient practice-session state conflicts under the finalize idempotency key', async () => {

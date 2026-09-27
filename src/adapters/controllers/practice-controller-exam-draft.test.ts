@@ -4,7 +4,7 @@ import { MAX_DRAFT_CUMULATIVE_MS } from '@/src/adapters/shared/validation-limits
 import { ApplicationError } from '@/src/application/errors';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import { saveExamDraftAnswer } from './practice-controller';
-import { createDeps } from './practice-controller-test-helpers';
+import { createDeps } from './test-helpers/practice-controller-test-helpers';
 
 describe('practice-controller', () => {
   describe('saveExamDraftAnswer', () => {

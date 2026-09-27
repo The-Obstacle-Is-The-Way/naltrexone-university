@@ -14,7 +14,7 @@ import {
   FakeQuestionRepository,
   passthroughTransaction,
   SubmitAnswerUseCase,
-} from './submit-answer-test-helpers';
+} from '../test-helpers/submit-answer-test-helpers';
 
 describe('SubmitAnswerUseCase', () => {
   it('rejects active exam sessions before inserting an attempt or recording an answer', async () => {

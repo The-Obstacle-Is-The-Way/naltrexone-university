@@ -10,7 +10,7 @@ import {
   createTestDeps,
   SESSION_ID,
   USER_ID,
-} from './get-next-question-test-helpers';
+} from '../test-helpers/get-next-question-test-helpers';
 
 describe('GetNextQuestionUseCase', () => {
   it('returns a specific session question when questionId is provided', async () => {
