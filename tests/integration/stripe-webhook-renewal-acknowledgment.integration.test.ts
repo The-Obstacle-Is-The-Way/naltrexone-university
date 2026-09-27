@@ -135,6 +135,10 @@ function createDeps(input: {
     dispatchRenewalNoticeDelivery: new DispatchRenewalNoticeDeliveryUseCase(
       deliveryRepository,
       new FakeTransactionalEmailGateway({ configured: false }),
+      {
+        subscriptions: new DrizzleSubscriptionRepository(db, priceIds),
+        users: new DrizzleUserRepository(db),
+      },
       hasher,
       new FakeLogger(),
       () => now,

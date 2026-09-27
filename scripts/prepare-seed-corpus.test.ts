@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import {
-  chmod,
   mkdir,
   mkdtemp,
   readdir,
@@ -110,22 +109,25 @@ describe('prepareSeedCorpus', () => {
 
   it('keeps the current tree when it cannot be moved aside', async () => {
     await writeImported('current.mdx', 'current');
-    const questionsRoot = path.join(contentRoot, 'questions');
-    // A read-only parent refuses the rename that parks the current tree.
-    await chmod(questionsRoot, 0o500);
-    try {
-      await expect(
-        prepareSeedCorpus({
-          contentRoot,
-          runImport: async (args) => {
-            if (isDryRun(args)) return;
-            await writeFile(path.join(outArgument(args), 'new.mdx'), 'new');
-          },
-        }),
-      ).rejects.toMatchObject({ code: 'EACCES' });
-    } finally {
-      await chmod(questionsRoot, 0o755);
-    }
+    // #1154 review: an injected failure, unlike a read-only parent, also
+    // holds for a root runner. Only parking the current tree fails.
+    const refuseParking = async (from: string, to: string) => {
+      if (from === importedRoot) {
+        throw Object.assign(new Error('rename failed'), { code: 'EACCES' });
+      }
+      await rename(from, to);
+    };
+
+    await expect(
+      prepareSeedCorpus({
+        contentRoot,
+        rename: refuseParking,
+        runImport: async (args) => {
+          if (isDryRun(args)) return;
+          await writeFile(path.join(outArgument(args), 'new.mdx'), 'new');
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'EACCES' });
 
     expect(await readdir(importedRoot)).toEqual(['current.mdx']);
     expect(await readdir(contentRoot)).toEqual(['questions']);

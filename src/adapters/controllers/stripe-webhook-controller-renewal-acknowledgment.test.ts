@@ -11,6 +11,7 @@ import {
   FakeSubscriptionRepository,
   FakeTransactionalEmailGateway,
   FakeTrialPaymentMethodSetupOperationRepository,
+  FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
 import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import { DispatchRenewalNoticeDeliveryUseCase } from '@/src/application/use-cases';
@@ -108,6 +109,11 @@ function createHarness(input?: {
   const providerDispatch = new DispatchRenewalNoticeDeliveryUseCase(
     renewalDeliveries,
     emailGateway,
+    // Acknowledgments are never revalidated against these.
+    {
+      subscriptions: new FakeSubscriptionRepository(),
+      users: new FakeUserRepository(),
+    },
     hasher,
     new FakeLogger(),
     () => now,

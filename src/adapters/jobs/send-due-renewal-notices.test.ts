@@ -14,10 +14,13 @@ import {
 
 const now = new Date('2026-08-07T12:00:00.000Z');
 
+type AnnualRenewals = SendDueRenewalNoticesJobDeps['annualRenewals'];
+
 function createDeps(): {
   deps: SendDueRenewalNoticesJobDeps;
-  listAnnualSubscriptionsDue: ReturnType<
-    typeof vi.fn<SendDueRenewalNoticesJobDeps['listAnnualSubscriptionsDue']>
+  listDue: ReturnType<typeof vi.fn<AnnualRenewals['listDue']>>;
+  listPastNoticeDeadline: ReturnType<
+    typeof vi.fn<AnnualRenewals['listPastNoticeDeadline']>
   >;
   execute: ReturnType<
     typeof vi.fn<
@@ -31,9 +34,7 @@ function createDeps(): {
   >;
   logger: FakeLogger;
 } {
-  const listAnnualSubscriptionsDue = vi.fn<
-    SendDueRenewalNoticesJobDeps['listAnnualSubscriptionsDue']
-  >(async () => [
+  const listDue = vi.fn<AnnualRenewals['listDue']>(async () => [
     {
       externalSubscriptionId: 'sub_annual_123',
       renewalAt: new Date('2026-09-06T12:00:00.000Z'),
@@ -56,17 +57,21 @@ function createDeps(): {
     .fn<() => number>()
     .mockReturnValueOnce(1_000)
     .mockReturnValueOnce(1_250);
+  const listPastNoticeDeadline = vi.fn<
+    AnnualRenewals['listPastNoticeDeadline']
+  >(async () => []);
   const pruneExpiredTrialPaymentMethodSetups = vi.fn(async () => 3);
   const logger = new FakeLogger();
   return {
-    listAnnualSubscriptionsDue,
+    listDue,
+    listPastNoticeDeadline,
     execute,
     pruneExpiredTrialPaymentMethodSetups,
     logger,
     deps: {
       now: () => now,
       monotonicNow,
-      listAnnualSubscriptionsDue,
+      annualRenewals: { listDue, listPastNoticeDeadline },
       sendDueRenewalNotices: { execute },
       pruneExpiredTrialPaymentMethodSetups,
       logger,
@@ -84,20 +89,80 @@ function createDeps(): {
 }
 
 describe('sendDueRenewalNotices job', () => {
-  it('selects active annual renewals in the pinned 15-to-45-day window', async () => {
-    const { deps, listAnnualSubscriptionsDue } = createDeps();
+  // DEBT-414 F01: the strictest applicable annual-notice window is 30-40 days
+  // before the renewal (CO 25-40, VT/IL/DE/GA/HI 30-60, CA/NY 15-45). The job
+  // first selects a renewal at 35 days and retries daily down to 30.
+  it('selects active annual renewals 30 to 35 days out, targeting 35', async () => {
+    const { deps, listDue } = createDeps();
 
     await sendDueRenewalNotices(
       { subscriptionLimit: 50, dispatchLimit: 100 },
       deps,
     );
 
-    expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith({
-      renewalAtOrAfter: new Date('2026-08-22T12:00:00.000Z'),
-      renewalAtOrBefore: new Date('2026-09-21T12:00:00.000Z'),
+    expect(listDue).toHaveBeenCalledWith({
+      renewalAtOrAfter: new Date('2026-09-06T12:00:00.000Z'),
+      renewalAtOrBefore: new Date('2026-09-11T12:00:00.000Z'),
       disclosureVersion: '2026-08-05',
       limit: 40,
     });
+  });
+
+  it('alerts on renewals inside 30 days that lack delivered notices, after dispatching', async () => {
+    const { deps, execute, listPastNoticeDeadline, logger } = createDeps();
+    listPastNoticeDeadline.mockImplementation(async () => {
+      expect(execute).toHaveBeenCalledOnce();
+      return [
+        {
+          externalSubscriptionId: 'sub_late_1',
+          renewalAt: new Date('2026-08-27T12:00:00.000Z'),
+        },
+      ];
+    });
+
+    await sendDueRenewalNotices(
+      { subscriptionLimit: 50, dispatchLimit: 100 },
+      deps,
+    );
+
+    expect(listPastNoticeDeadline).toHaveBeenCalledWith({
+      renewalAfter: now,
+      renewalAtOrBefore: new Date('2026-09-06T12:00:00.000Z'),
+      limit: 40,
+    });
+    expect(logger.errorCalls).toEqual([
+      {
+        msg: 'Annual renewal notice deadline missed',
+        context: { count: 1, externalSubscriptionIds: ['sub_late_1'] },
+      },
+    ]);
+  });
+
+  it('raises no alert when every renewal inside 30 days has delivered notices', async () => {
+    const { deps, logger } = createDeps();
+
+    await sendDueRenewalNotices(
+      { subscriptionLimit: 50, dispatchLimit: 100 },
+      deps,
+    );
+
+    expect(logger.errorCalls).toEqual([]);
+  });
+
+  it('reports a failed deadline check without failing the run', async () => {
+    const { deps, execute, listPastNoticeDeadline, logger } = createDeps();
+    listPastNoticeDeadline.mockRejectedValueOnce(new Error('query failed'));
+
+    await expect(
+      sendDueRenewalNotices({ subscriptionLimit: 40, dispatchLimit: 80 }, deps),
+    ).resolves.toMatchObject({ queued: 2 });
+    expect(execute).toHaveBeenCalledOnce();
+    expect(logger.errorCalls).toEqual([
+      {
+        msg: 'Annual renewal notice deadline check failed',
+        context: { error: expect.any(Object) },
+      },
+    ]);
   });
 
   it('queues one annual reminder and one annual renewal notice per subscription', async () => {
@@ -173,14 +238,14 @@ describe('sendDueRenewalNotices job', () => {
   });
 
   it('clamps unsafe limits before querying or dispatching', async () => {
-    const { deps, listAnnualSubscriptionsDue, execute } = createDeps();
+    const { deps, listDue, execute } = createDeps();
 
     await sendDueRenewalNotices(
       { subscriptionLimit: 50_000, dispatchLimit: 50_000 },
       deps,
     );
 
-    expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith(
+    expect(listDue).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 40 }),
     );
     expect(execute).toHaveBeenCalledWith(
@@ -218,11 +283,11 @@ describe('sendDueRenewalNotices job', () => {
       expectedSubscriptionLimit,
       expectedDispatchLimit,
     }) => {
-      const { deps, listAnnualSubscriptionsDue, execute } = createDeps();
+      const { deps, listDue, execute } = createDeps();
 
       await sendDueRenewalNotices({ subscriptionLimit, dispatchLimit }, deps);
 
-      expect(listAnnualSubscriptionsDue).toHaveBeenCalledWith(
+      expect(listDue).toHaveBeenCalledWith(
         expect.objectContaining({ limit: expectedSubscriptionLimit }),
       );
       expect(execute).toHaveBeenCalledWith(

@@ -7,7 +7,10 @@ import {
   users,
 } from '@/db/schema';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
-import { listAnnualSubscriptionsDue } from '@/src/adapters/jobs/send-due-renewal-notices';
+import {
+  listAnnualRenewalsPastNoticeDeadline,
+  listAnnualSubscriptionsDue,
+} from '@/src/adapters/jobs/send-due-renewal-notices';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
@@ -322,5 +325,175 @@ describe('renewal notice job query', () => {
         destination: earlierUser.email,
       },
     ]);
+  });
+});
+
+describe('renewal notice deadline query', () => {
+  const annualPriceId = 'price_test_annual';
+  const now = new Date('2026-08-07T12:00:00.000Z');
+  const deadline = new Date('2026-09-06T12:00:00.000Z');
+  const window = { renewalAfter: now, renewalAtOrBefore: deadline, limit: 100 };
+
+  async function insertSubscription(input: {
+    status?: 'active' | 'canceled';
+    priceId?: string;
+    cancelAtPeriodEnd?: boolean;
+    currentPeriodEnd: Date;
+  }) {
+    const user = await createUser(db, cleanup);
+    const externalSubscriptionId = `sub_deadline_${randomUUID().replaceAll('-', '')}`;
+    await db.insert(stripeSubscriptions).values({
+      userId: user.id,
+      stripeSubscriptionId: externalSubscriptionId,
+      status: input.status ?? 'active',
+      priceId: input.priceId ?? annualPriceId,
+      cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
+      currentPeriodEnd: input.currentPeriodEnd,
+    });
+    return { externalSubscriptionId, email: user.email, userId: user.id };
+  }
+
+  async function insertNotice(input: {
+    noticeKind: 'annual_reminder' | 'renewal_notice';
+    externalSubscriptionId: string;
+    applicableAt: Date;
+    destination: string;
+    status: 'queued' | 'delivered' | 'terminal_failure';
+  }) {
+    const id = randomUUID();
+    deliveryIds.push(id);
+    const payload = createTransactionalEmailPayloadSnapshot(
+      {
+        from: 'Addiction Boards <notices@addictionboards.com>',
+        to: input.destination,
+        replyTo: 'support@addictionboards.com',
+        subject: `Scheduled notice: ${input.noticeKind}`,
+        html: `<p>Scheduled notice: ${input.noticeKind}</p>`,
+        text: `Scheduled notice: ${input.noticeKind}`,
+      },
+      hasher,
+    );
+    await db.insert(renewalNoticeDeliveries).values({
+      id,
+      noticeKind: input.noticeKind,
+      consentRecordId: null,
+      stripeSubscriptionId: input.externalSubscriptionId,
+      applicableAt: input.applicableAt,
+      disclosureVersion: '2026-08-05',
+      destination: input.destination,
+      providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(id),
+      payloadSnapshot: payload.snapshot,
+      payloadHash: payload.hash,
+      status: input.status,
+    });
+    return id;
+  }
+
+  it('flags active renewing annual subscriptions inside the deadline that lack delivered notices', async () => {
+    const renewal = new Date('2026-08-27T12:00:00.000Z');
+    const flagged = await insertSubscription({ currentPeriodEnd: renewal });
+    await insertSubscription({
+      priceId: 'price_test_monthly',
+      currentPeriodEnd: renewal,
+    });
+    await insertSubscription({ status: 'canceled', currentPeriodEnd: renewal });
+    await insertSubscription({
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: renewal,
+    });
+    await insertSubscription({
+      currentPeriodEnd: new Date('2026-09-07T12:00:00.000Z'),
+    });
+    await insertSubscription({
+      currentPeriodEnd: new Date('2026-08-06T12:00:00.000Z'),
+    });
+
+    await expect(
+      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+    ).resolves.toEqual([
+      {
+        externalSubscriptionId: flagged.externalSubscriptionId,
+        renewalAt: renewal,
+      },
+    ]);
+  });
+
+  it('clears a renewal only when both notice kinds are delivered for that renewal', async () => {
+    const renewal = new Date('2026-09-06T12:00:00.000Z');
+    const subscription = await insertSubscription({
+      currentPeriodEnd: renewal,
+    });
+    const notice = {
+      externalSubscriptionId: subscription.externalSubscriptionId,
+      applicableAt: renewal,
+      destination: subscription.email,
+    };
+    await insertNotice({
+      ...notice,
+      noticeKind: 'annual_reminder',
+      status: 'delivered',
+    });
+    const failedNoticeId = await insertNotice({
+      ...notice,
+      noticeKind: 'renewal_notice',
+      status: 'terminal_failure',
+    });
+    // A delivered notice for an earlier renewal does not cover this one.
+    await insertNotice({
+      ...notice,
+      applicableAt: new Date('2025-09-06T12:00:00.000Z'),
+      noticeKind: 'renewal_notice',
+      status: 'delivered',
+    });
+
+    await expect(
+      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+    ).resolves.toEqual([
+      {
+        externalSubscriptionId: subscription.externalSubscriptionId,
+        renewalAt: renewal,
+      },
+    ]);
+
+    // A failed notice is requeued in place, never duplicated; model its
+    // eventual delivery on the same row.
+    await db
+      .update(renewalNoticeDeliveries)
+      .set({ status: 'delivered' })
+      .where(eq(renewalNoticeDeliveries.id, failedNoticeId));
+
+    await expect(
+      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+    ).resolves.toEqual([]);
+  });
+
+  // #1155 review: dispatch refuses a notice whose destination is no longer the
+  // account email (destination_changed), so a delivered notice reached the
+  // address of record when it was sent. A later email change does not unmeet
+  // the deadline; the scheduler resends to the new address only inside its
+  // selection window.
+  it('keeps counting notices delivered to the address of record after the email changes', async () => {
+    const renewal = new Date('2026-09-06T12:00:00.000Z');
+    const subscription = await insertSubscription({
+      currentPeriodEnd: renewal,
+    });
+    for (const noticeKind of ['annual_reminder', 'renewal_notice'] as const) {
+      await insertNotice({
+        noticeKind,
+        externalSubscriptionId: subscription.externalSubscriptionId,
+        applicableAt: renewal,
+        destination: subscription.email,
+        status: 'delivered',
+      });
+    }
+
+    await db
+      .update(users)
+      .set({ email: `changed-${randomUUID()}@example.test` })
+      .where(eq(users.id, subscription.userId));
+
+    await expect(
+      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+    ).resolves.toEqual([]);
   });
 });

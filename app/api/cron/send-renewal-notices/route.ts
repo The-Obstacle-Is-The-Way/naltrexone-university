@@ -5,6 +5,7 @@ import {
   PRICING_DATA,
 } from '@/lib/pricing-data';
 import {
+  listAnnualRenewalsPastNoticeDeadline,
   listAnnualSubscriptionsDue,
   SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
   SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
@@ -50,11 +51,20 @@ export function createSendRenewalNoticesCronHandler(
               container
                 .createTrialPaymentMethodSetupOperationRepository()
                 .pruneExpired(input),
-            listAnnualSubscriptionsDue: (input) =>
-              listAnnualSubscriptionsDue(input, {
-                db: container.db,
-                annualPriceId: container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
-              }),
+            annualRenewals: {
+              listDue: (input) =>
+                listAnnualSubscriptionsDue(input, {
+                  db: container.db,
+                  annualPriceId:
+                    container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
+                }),
+              listPastNoticeDeadline: (input) =>
+                listAnnualRenewalsPastNoticeDeadline(input, {
+                  db: container.db,
+                  annualPriceId:
+                    container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
+                }),
+            },
           },
         ),
     };

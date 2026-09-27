@@ -222,7 +222,9 @@ The managed environment seed (`pnpm db:seed:all`) follows the same boundary thro
 directory, outside the seed glob, and replaces `content/questions/imported/` only
 after the whole import succeeds, with two directory renames. A failed import leaves
 the current imported tree unchanged. If the final rename fails, the previous tree is
-restored. This closes the delete-before-regenerate window. It is not a database
+restored. If restoring it also fails, it is not restored: it stays at the parked
+`content/.import-previous-*/imported` path that the error names, and the operator
+recovers it from there. This closes the delete-before-regenerate window. It is not a database
 release: seed still commits per question.
 
 The `--status published` flag changes generated frontmatter only; it does not

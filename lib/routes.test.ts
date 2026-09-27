@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { RENEWAL_NOTICE_BILLING_PATH } from '@/src/application/shared/renewal-notice-email-format';
 import {
   AUTH_REDIRECT_QUERY_PARAM,
   PRICING_QUERY_PARAMS,
@@ -10,6 +11,10 @@ import {
 } from './routes';
 
 describe('lib/routes', () => {
+  it('keeps the renewal-notice Billing link on the app Billing route', () => {
+    expect(RENEWAL_NOTICE_BILLING_PATH).toBe(ROUTES.APP_BILLING);
+  });
+
   it('builds question routes from a slash-free base constant', () => {
     expect(ROUTES.APP_QUESTIONS).toBe('/app/questions');
     expect(toQuestionRoute('opioid-use-disorder')).toBe(

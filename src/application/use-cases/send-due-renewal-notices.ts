@@ -6,11 +6,17 @@ import type {
   TransactionalEmailPayload,
 } from '@/src/application/ports';
 import {
-  escapeRenewalNoticeHtml,
+  formatRenewalNoticeCutoff,
   formatRenewalNoticeDate,
+  RENEWAL_NOTICE_BILLING_PATH,
   RENEWAL_NOTICE_BUSINESS_CONTACT,
   RENEWAL_NOTICE_FROM,
   RENEWAL_NOTICE_REPLY_TO,
+  RENEWAL_NOTICE_SUPPORT_EMAIL,
+  type RenewalNoticeLine,
+  renderRenewalNoticeHtml,
+  renderRenewalNoticeText,
+  renewalNoticeLink,
 } from '@/src/application/shared/renewal-notice-email-format';
 import {
   createTransactionalEmailPayloadSnapshot,
@@ -67,40 +73,62 @@ function createPayload(
   notice: ScheduledRenewalNotice,
   appUrl: string,
 ): TransactionalEmailPayload {
-  const termsUrl = new URL('/terms', appUrl).toString();
-  const privacyUrl = new URL('/privacy', appUrl).toString();
   const heading = getHeading(notice.noticeKind);
-  const detail =
+  const isChangeNotice =
     notice.noticeKind === 'material_change' ||
-    notice.noticeKind === 'fee_change'
-      ? [
+    notice.noticeKind === 'fee_change';
+  // DEBT-414 F06: renewal notices say renewal happens unless canceled, give
+  // the exact cutoff with its zone, link the online cancellation route, and
+  // restate the cancellation policy the Terms publish.
+  const detail: RenewalNoticeLine[] = isChangeNotice
+    ? [
+        [
           `${notice.noticeKind === 'fee_change' ? 'Fee change' : 'Material change'} effective: ${formatRenewalNoticeDate(notice.applicableAt)}.`,
-          `Change: ${notice.changeDescription ?? ''}`,
-        ]
-      : [
-          `Renewal date: ${formatRenewalNoticeDate(notice.applicableAt)}.`,
-          `Renewal amount and frequency: ${formatAmount(notice)}.`,
-        ];
-  const lines = [
-    `${heading} for ${notice.planName}.`,
+        ],
+        [`Change: ${notice.changeDescription ?? ''}`],
+      ]
+    : [
+        [
+          `Your Addiction Boards ${notice.planName} subscription renews automatically unless you cancel.`,
+        ],
+        [
+          `Cancel before ${formatRenewalNoticeCutoff(notice.applicableAt)} to avoid the renewal charge.`,
+        ],
+        [`Renewal amount and frequency: ${formatAmount(notice)}.`],
+      ];
+  const lines: RenewalNoticeLine[] = [
+    [`${heading} for ${notice.planName}.`],
     ...detail,
-    `How to cancel before the applicable date: ${notice.cancellationMethod}`,
-    `Business contact: ${RENEWAL_NOTICE_BUSINESS_CONTACT}.`,
-    `Terms: ${termsUrl}`,
-    `Privacy: ${privacyUrl}`,
+    [`How to cancel: ${notice.cancellationMethod}.`],
+    [
+      'Cancel online on the Billing page: ',
+      renewalNoticeLink(
+        new URL(RENEWAL_NOTICE_BILLING_PATH, appUrl).toString(),
+      ),
+    ],
+    [
+      'Or email ',
+      {
+        href: `mailto:${RENEWAL_NOTICE_SUPPORT_EMAIL}`,
+        label: RENEWAL_NOTICE_SUPPORT_EMAIL,
+      },
+      ' from the email address on your account.',
+    ],
+    [
+      'Cancellation takes effect at the end of your current billing period, and you keep access until then. Except where the law requires otherwise, payments are non-refundable.',
+    ],
+    [`Business contact: ${RENEWAL_NOTICE_BUSINESS_CONTACT}.`],
+    ['Terms: ', renewalNoticeLink(new URL('/terms', appUrl).toString())],
+    ['Privacy: ', renewalNoticeLink(new URL('/privacy', appUrl).toString())],
   ];
-  const text = lines.join('\n');
-  const html = lines
-    .map((line) => `<p>${escapeRenewalNoticeHtml(line)}</p>`)
-    .join('');
 
   return {
     from: RENEWAL_NOTICE_FROM,
     to: notice.destination,
     replyTo: RENEWAL_NOTICE_REPLY_TO,
     subject: `Addiction Boards — ${heading}`,
-    html,
-    text,
+    html: renderRenewalNoticeHtml(lines),
+    text: renderRenewalNoticeText(lines),
   };
 }
 
