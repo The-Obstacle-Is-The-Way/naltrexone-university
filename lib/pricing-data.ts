@@ -17,6 +17,8 @@ export const CANCELLATION_METHOD =
 
 export const TRIAL_PAYMENT_DISCLOSURE_VERSION = '2026-08-05';
 export const ANNUAL_RENEWAL_NOTICE_VERSION = '2026-08-05';
+// DEBT-414 F02: a monthly subscriber's yearly reminder.
+export const MONTHLY_ANNIVERSARY_NOTICE_VERSION = '2026-09-27';
 const CHECKOUT_DISCLOSURE_VERSION = '2026-09-16';
 
 const PRICING_PLANS = {

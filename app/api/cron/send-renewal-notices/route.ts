@@ -2,11 +2,14 @@ import { createContainer } from '@/lib/container';
 import {
   ANNUAL_RENEWAL_NOTICE_VERSION,
   CANCELLATION_METHOD,
+  MONTHLY_ANNIVERSARY_NOTICE_VERSION,
   PRICING_DATA,
 } from '@/lib/pricing-data';
 import {
+  listActiveMonthlySubscriptions,
   listAnnualRenewalsPastNoticeDeadline,
   listAnnualSubscriptionsDue,
+  listSentAnniversaryReminders,
   SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
   SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
   sendDueRenewalNotices,
@@ -45,13 +48,21 @@ export function createSendRenewalNoticesCronHandler(
               disclosureVersion: ANNUAL_RENEWAL_NOTICE_VERSION,
               cancellationMethod: CANCELLATION_METHOD,
             },
+            monthlyPlan: {
+              planName: PRICING_DATA.monthly.name,
+              amountCents: PRICING_DATA.monthly.amountCents,
+              currency: PRICING_DATA.monthly.currency,
+              frequency: PRICING_DATA.monthly.frequency,
+              disclosureVersion: MONTHLY_ANNIVERSARY_NOTICE_VERSION,
+              cancellationMethod: CANCELLATION_METHOD,
+            },
             sendDueRenewalNotices:
               container.createSendDueRenewalNoticesUseCase(),
             pruneExpiredTrialPaymentMethodSetups: (input) =>
               container
                 .createTrialPaymentMethodSetupOperationRepository()
                 .pruneExpired(input),
-            annualRenewals: {
+            renewalQueries: {
               listDue: (input) =>
                 listAnnualSubscriptionsDue(input, {
                   db: container.db,
@@ -64,6 +75,14 @@ export function createSendRenewalNoticesCronHandler(
                   annualPriceId:
                     container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL,
                 }),
+              listActiveMonthly: (input) =>
+                listActiveMonthlySubscriptions(input, {
+                  db: container.db,
+                  monthlyPriceId:
+                    container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
+                }),
+              listSentAnniversaryReminders: (input) =>
+                listSentAnniversaryReminders(input, { db: container.db }),
             },
           },
         ),
