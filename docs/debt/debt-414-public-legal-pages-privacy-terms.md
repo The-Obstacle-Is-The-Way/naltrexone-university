@@ -615,3 +615,17 @@ The owner authorized the proposed code and configuration work (F01-F07, F15) on 
 - The deadline query has two real-Postgres cases. It excludes monthly, canceled, cancel-at-period-end and out-of-window subscriptions. It clears a renewal only when both notice kinds are delivered *for that renewal*, so a delivered notice for an earlier renewal does not count.
 - The two queries now form one `annualRenewals` port, so the unit test adds no extra stub (`.claude/rules/testing.md` rule 5).
 
+**F07, stale or late notices (first part).** A queued renewal notice is immutable, but the facts it states can change before it is sent or retried. Dispatch now reads the current subscription and account before any scheduled notice. It supersedes the notice, with failure class `notice_superseded` and no provider call, when any of these holds:
+- the subscription is gone or no longer active;
+- the subscription is set to cancel at period end;
+- it renews on a different date;
+- the account email no longer matches the notice's destination.
+
+A renewal reminder is refused once its send-by cutoff, 30 days before renewal, has passed (failure class `notice_deadline_passed`), and the refusal is logged as an error. The job and dispatch share that minimum (`RENEWAL_NOTICE_MINIMUM_DAYS`), so they cannot drift apart. Acknowledgments record consent already given and are not revalidated.
+
+Receipts:
+- The revalidation suite was red first. With only the new dependency wired, the five supersession cases and the cutoff case failed. The three still-send cases passed: a matching notice, a notice exactly at the cutoff, and an acknowledgment.
+- Existing suites now name the subscriptions they notify, through `createMatchingRenewalNoticeTargets`, which is built on the maintained fakes.
+
+**Still open under F07:** the provider-acceptance label. Resend accepting a message is still stored as `delivered`. The fix is expand-only: add an `accepted` status that both old and new code tolerate, then later record delivery and bounce evidence from Resend webhooks, which needs a webhook endpoint and secret configured in Resend.
+
