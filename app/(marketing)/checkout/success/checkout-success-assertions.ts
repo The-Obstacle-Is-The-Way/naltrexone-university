@@ -1,4 +1,5 @@
 import { isValidStripeSubscriptionStatus } from '@/src/adapters/gateways/stripe';
+import { stripeTimestampSchema } from '@/src/adapters/gateways/stripe/stripe-webhook-schemas';
 import type { StripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
 
 type AssertionContext = Record<string, unknown>;
@@ -14,7 +15,7 @@ export type CheckoutSuccessAssertions = {
     reason: string,
     context: AssertionContext,
   ) => asserts value is string;
-  assertNumber: (
+  assertStripeTimestamp: (
     value: unknown,
     reason: string,
     context: AssertionContext,
@@ -56,12 +57,14 @@ export function createCheckoutSuccessAssertions(
     }
   }
 
-  function assertNumber(
+  // A Stripe timestamp that converts to a valid Date (#1167 review): the
+  // same rule the webhook schema applies.
+  function assertStripeTimestamp(
     value: unknown,
     reason: string,
     context: Record<string, unknown>,
   ): asserts value is number {
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
+    if (!stripeTimestampSchema.safeParse(value).success) {
       fail(reason, context);
     }
   }
@@ -89,7 +92,7 @@ export function createCheckoutSuccessAssertions(
   return {
     assertNotNull,
     assertNonEmptyString,
-    assertNumber,
+    assertStripeTimestamp,
     assertBoolean,
     assertStripeSubscriptionStatus,
   };

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractSubscriptionRef,
   stripeEventWithSubscriptionRefSchema,
+  stripeSubscriptionSchema,
 } from './stripe-webhook-schemas';
 
 const CLOVER_NESTED_SUBSCRIPTION_REF = 'sub_test_REDACTED_nested';
@@ -86,5 +87,53 @@ describe('stripeEventWithSubscriptionRefSchema', () => {
       },
     });
     expect(extractSubscriptionRef(parsed)).toBe(CLOVER_NESTED_SUBSCRIPTION_REF);
+  });
+});
+
+// #1167 review: a timestamp outside the JavaScript Date range would become an
+// Invalid Date deep in the write path; it must fail here, as an invalid payload.
+describe('stripeSubscriptionSchema timestamps', () => {
+  const subscription = (overrides: Record<string, unknown>) => ({
+    id: 'sub_123',
+    customer: 'cus_123',
+    status: 'active',
+    cancel_at_period_end: false,
+    start_date: 1_696_000_000,
+    billing_cycle_anchor: 1_696_604_800,
+    items: {
+      data: [{ current_period_end: 1_800_000_000, price: { id: 'price_1' } }],
+    },
+    ...overrides,
+  });
+
+  it('accepts the latest timestamp a Date can hold', () => {
+    expect(
+      stripeSubscriptionSchema.safeParse(
+        subscription({ start_date: 8_640_000_000_000 }),
+      ).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['a start date past the Date range', { start_date: 8_640_000_000_001 }],
+    ['a fractional billing anchor', { billing_cycle_anchor: 1_696_604_800.5 }],
+    ['a negative billing anchor', { billing_cycle_anchor: -1 }],
+    [
+      'a period end past the Date range',
+      {
+        items: {
+          data: [
+            {
+              current_period_end: 8_640_000_000_001,
+              price: { id: 'price_1' },
+            },
+          ],
+        },
+      },
+    ],
+  ])('rejects %s', (_label, overrides) => {
+    expect(
+      stripeSubscriptionSchema.safeParse(subscription(overrides)).success,
+    ).toBe(false);
   });
 });

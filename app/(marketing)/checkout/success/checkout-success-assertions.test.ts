@@ -60,39 +60,36 @@ describe('checkout success assertions', () => {
     ).not.toThrow();
   });
 
-  it('assertNumber rejects NaN', () => {
+  // #1167 review: a Stripe timestamp must convert to a valid Date.
+  it.each([
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['a value past the Date range', 8_640_000_000_001],
+    ['a fraction', 1_696_000_000.5],
+    ['a negative value', -1],
+    ['a string', '1696000000'],
+  ])('assertStripeTimestamp rejects %s', (_label, value) => {
     const assertions = createCheckoutSuccessAssertions((reason) => {
       throw new Error(reason);
     });
 
     expect(() =>
-      assertions.assertNumber(Number.NaN, 'Expected finite number', {}),
-    ).toThrow('Expected finite number');
+      assertions.assertStripeTimestamp(value, 'Expected timestamp', {}),
+    ).toThrow('Expected timestamp');
   });
 
-  it('assertNumber rejects Infinity', () => {
-    const assertions = createCheckoutSuccessAssertions((reason) => {
-      throw new Error(reason);
-    });
+  it.each([0, 1_696_000_000, 8_640_000_000_000])(
+    'assertStripeTimestamp accepts %s',
+    (value) => {
+      const assertions = createCheckoutSuccessAssertions((reason) => {
+        throw new Error(reason);
+      });
 
-    expect(() =>
-      assertions.assertNumber(
-        Number.POSITIVE_INFINITY,
-        'Expected finite number',
-        {},
-      ),
-    ).toThrow('Expected finite number');
-  });
-
-  it('assertNumber accepts finite numbers', () => {
-    const assertions = createCheckoutSuccessAssertions((reason) => {
-      throw new Error(reason);
-    });
-
-    expect(() =>
-      assertions.assertNumber(123, 'Expected finite number', {}),
-    ).not.toThrow();
-  });
+      expect(() =>
+        assertions.assertStripeTimestamp(value, 'Expected timestamp', {}),
+      ).not.toThrow();
+    },
+  );
 
   it('assertBoolean rejects non-boolean values', () => {
     const assertions = createCheckoutSuccessAssertions((reason) => {

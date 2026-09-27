@@ -216,7 +216,7 @@ export async function syncCheckoutSuccess(
     const subscriptionItem = subscription.items?.data?.[0];
     const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
     // Entitlement depends on a current billing period end timestamp.
-    assertions.assertNumber(
+    assertions.assertStripeTimestamp(
       currentPeriodEndSeconds,
       'missing_current_period_end',
       {
@@ -239,12 +239,12 @@ export async function syncCheckoutSuccess(
     // DEBT-414 F02: the service start and billing anchor locate the yearly
     // reminder for a monthly plan.
     const startDateSeconds = subscription.start_date;
-    assertions.assertNumber(startDateSeconds, 'missing_start_date', {
+    assertions.assertStripeTimestamp(startDateSeconds, 'missing_start_date', {
       sessionId,
       startDateSeconds: startDateSeconds ?? null,
     });
     const billingCycleAnchorSeconds = subscription.billing_cycle_anchor;
-    assertions.assertNumber(
+    assertions.assertStripeTimestamp(
       billingCycleAnchorSeconds,
       'missing_billing_cycle_anchor',
       {

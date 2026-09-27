@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { stripeSubscriptions } from '@/db/schema';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
 import { FakeStripeCheckoutClient } from '@/src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client';
@@ -172,6 +173,70 @@ async function runWebhook(input: {
 }
 
 describe('BUG-287 real PostgreSQL interleavings', () => {
+  // #1167 review: the daily reconcile is how rows stored before DEBT-414 F02
+  // gain their service start and billing anchor; prove it on the real upsert.
+  it('backfills the service start and billing anchor of a row stored without them', async () => {
+    const user = await createUser(db, cleanup);
+    const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
+    const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+    await db.insert(stripeSubscriptions).values({
+      userId: user.id,
+      stripeSubscriptionId: externalSubscriptionId,
+      status: 'active',
+      priceId: priceIds.monthly,
+      currentPeriodEnd: new Date(1_893_456_000 * 1000),
+      cancelAtPeriodEnd: false,
+      startedAt: null,
+      billingCycleAnchor: null,
+      version: 1,
+    });
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSubscription(
+      stripeSubscription({
+        userId: user.id,
+        externalCustomerId,
+        externalSubscriptionId,
+        status: 'active',
+        currentPeriodEnd: 1_893_456_000,
+      }),
+    );
+
+    await expect(
+      reconcileStripeSubscriptions(
+        { limit: 1, offset: 0, dryRun: true, concurrency: 1 },
+        {
+          stripe,
+          priceIds,
+          logger: new FakeLogger(),
+          now: () => new Date('2026-07-11T00:00:00.000Z'),
+          listLocalSubscriptions: async () => [
+            {
+              userId: user.id,
+              stripeSubscriptionId: externalSubscriptionId,
+              version: 1,
+            },
+          ],
+          transaction: (fn) =>
+            db.transaction((tx) =>
+              fn({
+                subscriptions: new DrizzleSubscriptionRepository(tx, priceIds),
+                stripeCustomers: new DrizzleStripeCustomerRepository(tx),
+                renewalConsentRecords:
+                  new DrizzleRenewalConsentRecordRepository(tx),
+              }),
+            ),
+        },
+      ),
+    ).resolves.toMatchObject({ updated: 1, failed: 0 });
+
+    await expect(
+      new DrizzleSubscriptionRepository(db, priceIds).findByUserId(user.id),
+    ).resolves.toMatchObject({
+      startedAt: new Date(1_696_000_000 * 1000),
+      billingCycleAnchor: new Date(1_696_604_800 * 1000),
+    });
+  });
+
   it('rejects a stale reconcile Phase-4 write and re-retrieves to convergence', async () => {
     const user = await createUser(db, cleanup);
     const externalCustomerId = `cus_${randomUUID().replaceAll('-', '')}`;
