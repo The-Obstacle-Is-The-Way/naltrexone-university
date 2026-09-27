@@ -35,14 +35,19 @@ test.describe('trial add-card', () => {
     await runE2EUserStateReset();
   });
 
+  // The shared user's row matters to every later test; an open Session only
+  // lapses on its own. Restore first, and expire the Session even if that fails.
   test.afterEach(async () => {
-    if (setupSessionId) {
-      await createStripeTestClient().checkout.sessions.expire(setupSessionId);
-      setupSessionId = null;
-    }
-    if (entitlementSnapshot) {
-      await restoreE2EUserEntitlement(entitlementSnapshot);
-      entitlementSnapshot = null;
+    const snapshot = entitlementSnapshot;
+    const sessionId = setupSessionId;
+    entitlementSnapshot = null;
+    setupSessionId = null;
+    try {
+      if (snapshot) await restoreE2EUserEntitlement(snapshot);
+    } finally {
+      if (sessionId) {
+        await createStripeTestClient().checkout.sessions.expire(sessionId);
+      }
     }
   });
 
