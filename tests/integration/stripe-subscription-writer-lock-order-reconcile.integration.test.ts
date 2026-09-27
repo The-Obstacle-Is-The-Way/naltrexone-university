@@ -5,8 +5,8 @@ import {
   type CheckoutSuccessDeps,
   syncCheckoutSuccess,
 } from '@/app/(marketing)/checkout/success/checkout-success-sync';
+import { FakeStripeCheckoutClient } from '@/src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
-import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
@@ -97,41 +97,14 @@ function stripeSubscription(input: {
   };
 }
 
+// The reconciliation job retrieves and lists this one Subscription; the
+// maintained fake answers both from its seeded state.
 function createReconciliationStripeClient(
   subscription: ReturnType<typeof stripeSubscription>,
-): ReconcileStripeSubscriptionsDeps['stripe'] {
-  function unexpectedCall(operation: string): never {
-    throw new Error(`Unexpected Stripe call: ${operation}`);
-  }
-
-  return {
-    customers: {
-      create: async () => unexpectedCall('customers.create'),
-    },
-    checkout: {
-      sessions: {
-        create: async () => unexpectedCall('checkout.sessions.create'),
-        list: async () => unexpectedCall('checkout.sessions.list'),
-        retrieve: async () => unexpectedCall('checkout.sessions.retrieve'),
-        expire: async () => unexpectedCall('checkout.sessions.expire'),
-      },
-    },
-    subscriptions: {
-      retrieve: async () => subscription,
-      list: async () => ({
-        data: [{ id: subscription.id, status: subscription.status }],
-      }),
-      cancel: async () => subscription,
-    },
-    billingPortal: {
-      sessions: {
-        create: async () => unexpectedCall('billingPortal.sessions.create'),
-      },
-    },
-    webhooks: {
-      constructEvent: () => unexpectedCall('webhooks.constructEvent'),
-    },
-  };
+): FakeStripeCheckoutClient {
+  const stripe = new FakeStripeCheckoutClient();
+  stripe.seedSubscription(subscription);
+  return stripe;
 }
 
 async function runCheckoutSuccessWriter(input: {

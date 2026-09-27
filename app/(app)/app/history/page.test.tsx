@@ -8,6 +8,10 @@ import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practic
 import type { GetAttemptedQuestionsOutput } from '@/src/adapters/controllers/review-controller';
 import type { GetTagsOutput } from '@/src/adapters/controllers/tag-controller';
 import {
+  createAvailableAttemptedQuestionRow,
+  createSessionHistoryRow,
+} from '@/src/application/test-helpers/view-rows';
+import {
   findElementByText,
   isNodeBefore,
   parseHtml,
@@ -211,20 +215,7 @@ describe('app/(app)/app/history/page', () => {
 
   it('passes session history data to the client component when tab=sessions', async () => {
     const output: GetSessionHistoryOutput = {
-      rows: [
-        {
-          sessionId: fixtureSession1Id,
-          mode: 'exam',
-          questionCount: 10,
-          firstQuestionSlug: 'q-1',
-          answered: 10,
-          correct: 8,
-          accuracy: 0.8,
-          durationSeconds: 1200,
-          startedAt: '2026-02-07T00:00:00.000Z',
-          endedAt: '2026-02-07T00:20:00.000Z',
-        },
-      ],
+      rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
       total: 1,
       limit: 20,
       offset: 0,
@@ -246,18 +237,7 @@ describe('app/(app)/app/history/page', () => {
   it('passes attempted questions data to the client component when tab=questions', async () => {
     const output: GetAttemptedQuestionsOutput = {
       rows: [
-        {
-          isAvailable: true,
-          questionId: fixtureQuestion1Id,
-          isCorrect: false,
-          sessionId: null,
-          sessionMode: null,
-          slug: 'q-1',
-          stemMd: 'Stem for q1',
-          difficulty: 'easy',
-          tagSlugs: [],
-          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-        },
+        createAvailableAttemptedQuestionRow({ questionId: fixtureQuestion1Id }),
       ],
       totalCount: 1,
       limit: 20,
@@ -308,18 +288,12 @@ describe('app/(app)/app/history/page', () => {
   it('excludes diagnosis kind from tag options', async () => {
     const output: GetAttemptedQuestionsOutput = {
       rows: [
-        {
-          isAvailable: true,
+        createAvailableAttemptedQuestionRow({
           questionId: fixtureQuestionVisibleId,
           isCorrect: true,
-          sessionId: null,
-          sessionMode: null,
           slug: 'q-visible',
           stemMd: 'Visible question',
-          difficulty: 'easy',
-          tagSlugs: [],
-          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-        },
+        }),
       ],
       totalCount: 1,
       limit: 20,
@@ -412,42 +386,24 @@ describe('app/(app)/app/history/page', () => {
   it('passes incorrect-first sort to attempted questions fetch and renders backend order', async () => {
     const output: GetAttemptedQuestionsOutput = {
       rows: [
-        {
-          isAvailable: true,
+        createAvailableAttemptedQuestionRow({
           questionId: fixtureQuestionCorrectRecentId,
           isCorrect: true,
-          sessionId: null,
-          sessionMode: null,
           slug: 'q-correct-recent',
           stemMd: 'Correct recent',
-          difficulty: 'easy',
-          tagSlugs: [],
           lastAnsweredAt: '2026-02-03T00:00:00.000Z',
-        },
-        {
-          isAvailable: true,
+        }),
+        createAvailableAttemptedQuestionRow({
           questionId: fixtureQuestionIncorrectOldId,
-          isCorrect: false,
-          sessionId: null,
-          sessionMode: null,
           slug: 'q-incorrect-old',
           stemMd: 'Incorrect old',
-          difficulty: 'easy',
-          tagSlugs: [],
-          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-        },
-        {
-          isAvailable: true,
+        }),
+        createAvailableAttemptedQuestionRow({
           questionId: fixtureQuestionIncorrectRecentId,
-          isCorrect: false,
-          sessionId: null,
-          sessionMode: null,
           slug: 'q-incorrect-recent',
           stemMd: 'Incorrect recent',
-          difficulty: 'easy',
-          tagSlugs: [],
           lastAnsweredAt: '2026-02-02T00:00:00.000Z',
-        },
+        }),
       ],
       totalCount: 3,
       limit: 20,
@@ -499,42 +455,26 @@ describe('app/(app)/app/history/page', () => {
   it('passes difficulty sort to attempted questions fetch and renders backend order', async () => {
     const output: GetAttemptedQuestionsOutput = {
       rows: [
-        {
-          isAvailable: true,
+        createAvailableAttemptedQuestionRow({
           questionId: fixtureQuestionEasyId,
           isCorrect: true,
-          sessionId: null,
-          sessionMode: null,
           slug: 'q-easy',
           stemMd: 'Easy question',
-          difficulty: 'easy',
-          tagSlugs: [],
           lastAnsweredAt: '2026-02-03T00:00:00.000Z',
-        },
-        {
-          isAvailable: true,
+        }),
+        createAvailableAttemptedQuestionRow({
           questionId: fixtureQuestionHardId,
-          isCorrect: false,
-          sessionId: null,
-          sessionMode: null,
           slug: 'q-hard',
           stemMd: 'Hard question',
           difficulty: 'hard',
-          tagSlugs: [],
-          lastAnsweredAt: '2026-02-01T00:00:00.000Z',
-        },
-        {
-          isAvailable: true,
+        }),
+        createAvailableAttemptedQuestionRow({
           questionId: fixtureQuestionMediumId,
-          isCorrect: false,
-          sessionId: null,
-          sessionMode: null,
           slug: 'q-medium',
           stemMd: 'Medium question',
           difficulty: 'medium',
-          tagSlugs: [],
           lastAnsweredAt: '2026-02-02T00:00:00.000Z',
-        },
+        }),
       ],
       totalCount: 3,
       limit: 20,

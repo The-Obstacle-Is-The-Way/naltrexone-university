@@ -73,6 +73,12 @@ type SubscriptionCancelHook = (
   options?: StripeRequestOptions,
 ) => void | Promise<void>;
 
+// Awaited after a Subscription listing is recorded and before it is answered,
+// so a case can hold a caller inside its listing.
+type SubscriptionListHook = (
+  params: StripeSubscriptionListParams,
+) => void | Promise<void>;
+
 type SubscriptionUpdateCall = {
   subscriptionId: string;
   params: { default_payment_method: string };
@@ -395,6 +401,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
       ) => string | null;
       retrieveOverride: SubscriptionRetrieveOverride | null;
       cancelHook: SubscriptionCancelHook | null;
+      listHook: SubscriptionListHook | null;
     } = {
     seeded: [],
     listCalls: [],
@@ -407,6 +414,7 @@ export class FakeStripeCheckoutClient implements StripeClient {
       )?.customer ?? null,
     retrieveOverride: null,
     cancelHook: null,
+    listHook: null,
     async cancel(subscriptionId, _params, options) {
       this.cancelCalls.push({
         subscriptionId,
@@ -459,6 +467,9 @@ export class FakeStripeCheckoutClient implements StripeClient {
     },
     async list(params) {
       this.listCalls.push({ ...params });
+      if (this.listHook) {
+        await this.listHook(params);
+      }
       const data = this.seeded
         .filter(
           (subscription) =>
@@ -590,6 +601,10 @@ export class FakeStripeCheckoutClient implements StripeClient {
 
   setSubscriptionCancelHook(hook: SubscriptionCancelHook | null): void {
     this.subscriptions.cancelHook = hook;
+  }
+
+  setSubscriptionListHook(hook: SubscriptionListHook | null): void {
+    this.subscriptions.listHook = hook;
   }
 
   readonly billingPortal: StripeClient['billingPortal'] = {

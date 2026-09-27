@@ -13,7 +13,7 @@ import type {
 import type { Subscription } from '../entities/subscription';
 import type { Tag } from '../entities/tag';
 import type { User } from '../entities/user';
-import { DAY_MS } from '../services';
+import { DAY_MS, type SubscriptionWriteCandidate } from '../services';
 import type {
   AnswerOutcome,
   ChoiceLabel,
@@ -187,6 +187,19 @@ export function createSubscription(
     cancelAtPeriodEnd: false,
     createdAt: now,
     updatedAt: now,
+    ...overrides,
+  };
+}
+
+// The period end is required: every write-guard decision compares it, so a
+// case states it rather than inheriting a default relative to some clock.
+export function createSubscriptionWriteCandidate(
+  overrides: Pick<SubscriptionWriteCandidate, 'currentPeriodEnd'> &
+    Partial<SubscriptionWriteCandidate>,
+): SubscriptionWriteCandidate {
+  return {
+    subscriptionIdentity: 'sub_current',
+    status: 'active',
     ...overrides,
   };
 }

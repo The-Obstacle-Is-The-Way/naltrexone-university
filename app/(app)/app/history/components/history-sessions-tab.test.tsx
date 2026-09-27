@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildHistorySessionsHref } from '@/app/(app)/app/history/history-search-params';
 import type { ActionResult } from '@/src/adapters/controllers/action-result';
 import type { GetSessionHistoryOutput } from '@/src/adapters/controllers/practice-controller';
+import { createSessionHistoryRow as createSessionHistoryRowShared } from '@/src/application/test-helpers/view-rows';
 import { findAnchorByHref, parseHtml } from '@/tests/shared/dom-helpers';
 
 const {
@@ -46,22 +47,14 @@ beforeAll(async () => {
 type SessionHistoryResult = ActionResult<GetSessionHistoryOutput>;
 type SessionHistoryRow = GetSessionHistoryOutput['rows'][number];
 
+// The suite's rows keep its fixture sessionId unless a case passes another.
 function makeSessionHistoryRow(
   overrides: Partial<SessionHistoryRow> = {},
 ): SessionHistoryRow {
-  return {
+  return createSessionHistoryRowShared({
     sessionId: fixtureSession1Id,
-    mode: 'exam',
-    questionCount: 10,
-    firstQuestionSlug: 'q-1',
-    answered: 10,
-    correct: 8,
-    accuracy: 0.8,
-    durationSeconds: 1200,
-    startedAt: '2026-02-07T00:00:00.000Z',
-    endedAt: '2026-02-07T00:20:00.000Z',
     ...overrides,
-  };
+  });
 }
 
 function getClassTokens(className: string): Set<string> {

@@ -174,6 +174,11 @@ export const UNKNOWN_DOUBLE_CAST_FLOORS = new Map<string, number>([
 // job's hand-built Stripe client in the reconcile suite, the only file that
 // builds it, so its floor of 1 moves there with it. The site and the total are
 // unchanged; migrating it to FakeStripeCheckoutClient stays DEBT-468 Part 3 (a).
+// 2026-09-26 UTC: DEBT-468 Part 3 (a) moves the three integration suites that
+// hand-built a StripeClient for the reconciliation job (the version-fence,
+// renewal-consent and lock-order reconcile suites) onto the maintained
+// FakeStripeCheckoutClient, so their three entries are removed: 29 sites
+// across 10 files.
 export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
   ['app/(app)/app/layout.test.ts', 6],
   ['app/api/stripe/webhook/route.test.ts', 7],
@@ -191,13 +196,4 @@ export const HAND_ROLLED_PORT_DOUBLE_FLOORS = new Map<string, number>([
     2,
   ],
   ['tests/integration/actions.stripe.integration.test.ts', 3],
-  [
-    'tests/integration/bug-regression-subscription-observation-version-fence.integration.test.ts',
-    1,
-  ],
-  ['tests/integration/renewal-consent-records.integration.test.ts', 1],
-  [
-    'tests/integration/stripe-subscription-writer-lock-order-reconcile.integration.test.ts',
-    1,
-  ],
 ]);

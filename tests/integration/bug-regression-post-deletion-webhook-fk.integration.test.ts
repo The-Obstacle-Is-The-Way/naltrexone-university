@@ -19,6 +19,7 @@ import {
   FakeRateLimiter,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -152,15 +153,11 @@ describe('BUG-296 post-deletion Stripe subscription webhook', () => {
       webhookResult: {
         eventId,
         type: 'customer.subscription.updated',
-        subscriptionUpdate: {
+        subscriptionUpdate: createTestWebhookSubscriptionUpdate({
           userId: missingUserId,
           externalCustomerId: `cus_${randomUUID().replaceAll('-', '')}`,
           externalSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
-          plan: 'monthly',
-          status: 'active',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
+        }),
       },
     });
     const subscriptions = new FakeSubscriptionRepository();

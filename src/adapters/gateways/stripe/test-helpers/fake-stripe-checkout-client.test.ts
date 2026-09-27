@@ -438,6 +438,46 @@ describe('FakeStripeCheckoutClient', () => {
     );
   });
 
+  it('awaits the Subscription list hook after recording a listing and before answering it', async () => {
+    const stripe = fakeWithActiveSubscription();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const order: string[] = [];
+    let recordedWhenHookRan: unknown[] = [];
+    stripe.setSubscriptionListHook(async () => {
+      // The call is recorded before the hook runs, so a hook can inspect it.
+      recordedWhenHookRan = [...stripe.subscriptions.listCalls];
+      order.push('hook');
+      await held;
+    });
+
+    const listing = stripe.subscriptions
+      .list({ customer: 'cus_one', status: 'all' })
+      .then((result) => {
+        order.push('listed');
+        return result;
+      });
+    await Promise.resolve();
+    order.push('release');
+    release();
+
+    await expect(listing).resolves.toEqual({
+      data: [expect.objectContaining({ id: 'sub_fake_1' })],
+    });
+    expect(order).toEqual(['hook', 'release', 'listed']);
+    expect(recordedWhenHookRan).toEqual([
+      { customer: 'cus_one', status: 'all' },
+    ]);
+    stripe.setSubscriptionListHook(null);
+    await expect(
+      stripe.subscriptions.list({ customer: 'cus_one' }),
+    ).resolves.toEqual({
+      data: [expect.objectContaining({ id: 'sub_fake_1' })],
+    });
+  });
+
   it('awaits the cancel hook after recording a cancel and before applying it', async () => {
     const stripe = fakeWithActiveSubscription();
     stripe.setSubscriptionCancelHook(() => {

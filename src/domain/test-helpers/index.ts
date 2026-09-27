@@ -7,6 +7,7 @@ export {
   createQuestionRatingFeedback,
   createQuestionReportFeedback,
   createSubscription,
+  createSubscriptionWriteCandidate,
   createTag,
   createUser,
 } from './factories';
