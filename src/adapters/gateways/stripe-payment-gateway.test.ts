@@ -74,6 +74,8 @@ function liveSubscription(
     customer: 'cus_123',
     status: 'active',
     cancel_at_period_end: false,
+    start_date: 1_696_000_000,
+    billing_cycle_anchor: 1_696_604_800,
     metadata,
     items: {
       data: [
@@ -407,6 +409,8 @@ describe('StripePaymentGateway', () => {
         status: 'active',
         currentPeriodEnd: new Date(1_700_000_000 * 1000),
         cancelAtPeriodEnd: false,
+        startedAt: new Date(1_696_000_000 * 1000),
+        billingCycleAnchor: new Date(1_696_604_800 * 1000),
       },
     });
     expect(stripe.webhookCalls).toEqual([

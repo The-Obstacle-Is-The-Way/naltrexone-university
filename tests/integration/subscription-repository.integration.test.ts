@@ -153,6 +153,8 @@ describe('DrizzleSubscriptionRepository upsert', () => {
         plan: 'monthly',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
+        startedAt: new Date('2026-01-22T00:00:00.000Z'),
+        billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
       }),
     ).resolves.toEqual({ persisted: true });
     await expect(storedRow(user.id)).resolves.toMatchObject({
@@ -170,6 +172,8 @@ describe('DrizzleSubscriptionRepository upsert', () => {
         plan: 'annual',
         currentPeriodEnd: new Date('2027-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
+        startedAt: new Date('2026-01-22T00:00:00.000Z'),
+        billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
       }),
     ).resolves.toEqual({ persisted: true });
     await expect(storedRow(user.id)).resolves.toMatchObject({
@@ -193,6 +197,8 @@ describe('DrizzleSubscriptionRepository upsert', () => {
         plan: 'monthly',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
+        startedAt: new Date('2026-01-22T00:00:00.000Z'),
+        billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
       })
       .then(
         () => null,

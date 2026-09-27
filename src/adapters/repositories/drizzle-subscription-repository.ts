@@ -57,6 +57,8 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
       status: stripeSubscriptionStatusToSubscriptionStatus(row.status),
       currentPeriodEnd: row.currentPeriodEnd,
       cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+      startedAt: row.startedAt,
+      billingCycleAnchor: row.billingCycleAnchor,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -155,6 +157,8 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
             priceId,
             currentPeriodEnd: input.currentPeriodEnd,
             cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+            startedAt: input.startedAt,
+            billingCycleAnchor: input.billingCycleAnchor,
             version: nextVersion,
             updatedAt,
           })
@@ -166,6 +170,8 @@ export class DrizzleSubscriptionRepository implements SubscriptionRepository {
               priceId,
               currentPeriodEnd: input.currentPeriodEnd,
               cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+              startedAt: input.startedAt,
+              billingCycleAnchor: input.billingCycleAnchor,
               version: nextVersion,
               updatedAt,
             },

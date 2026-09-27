@@ -17,6 +17,8 @@ function upsert() {
     status: 'active',
     currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
+    startedAt: new Date('2026-01-22T00:00:00.000Z'),
+    billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     expectedVersion: null,
   });
 }

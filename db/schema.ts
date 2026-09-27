@@ -235,6 +235,12 @@ export const stripeSubscriptions = pgTable(
       withTimezone: true,
     }).notNull(),
     cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    // DEBT-414 F02: Stripe's start_date and billing_cycle_anchor. Nullable
+    // until every row has been rewritten by the new code (expand step).
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    billingCycleAnchor: timestamp('billing_cycle_anchor', {
+      withTimezone: true,
+    }),
     version: integer('version').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

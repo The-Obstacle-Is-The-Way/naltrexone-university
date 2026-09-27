@@ -50,6 +50,8 @@ function createUpsertInput(
     status: 'active',
     currentPeriodEnd: new Date('2030-01-01T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
+    startedAt: new Date('2029-01-24T15:00:00.000Z'),
+    billingCycleAnchor: new Date('2029-01-31T15:00:00.000Z'),
     expectedVersion,
     ...overrides,
   };
@@ -281,6 +283,40 @@ export const subscriptionObservationVersionContractScenarios: readonly ContractS
         await expect(
           harness.repository.findObservationVersionByUserId(harness.userId),
         ).resolves.toBe(1);
+      },
+    },
+    {
+      // DEBT-414 F02: the yearly reminder for a monthly plan is located from
+      // the service start and the billing anchor, so both are stored and
+      // replaced by each later observation.
+      name: 'stores the service start and billing anchor of each observation',
+      async run(harness) {
+        const externalSubscriptionId = harness.externalSubscriptionId('anchor');
+        await harness.repository.upsert(
+          createUpsertInput(harness, externalSubscriptionId, null),
+        );
+
+        await expect(
+          harness.repository.findByUserId(harness.userId),
+        ).resolves.toMatchObject({
+          startedAt: new Date('2029-01-24T15:00:00.000Z'),
+          billingCycleAnchor: new Date('2029-01-31T15:00:00.000Z'),
+        });
+
+        await harness.repository.upsert(
+          createUpsertInput(harness, externalSubscriptionId, 1, {
+            billingCycleAnchor: new Date('2029-03-15T15:00:00.000Z'),
+          }),
+        );
+
+        await expect(
+          harness.repository.findByExternalSubscriptionId(
+            externalSubscriptionId,
+          ),
+        ).resolves.toMatchObject({
+          startedAt: new Date('2029-01-24T15:00:00.000Z'),
+          billingCycleAnchor: new Date('2029-03-15T15:00:00.000Z'),
+        });
       },
     },
   ];

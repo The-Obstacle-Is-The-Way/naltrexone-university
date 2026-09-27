@@ -80,6 +80,8 @@ describe('BUG-296 post-deletion Stripe subscription webhook', () => {
       status: 'canceled' as const,
       currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     };
     const paymentGateway = new FakePaymentGateway({
       externalCustomerId: 'cus_unused',

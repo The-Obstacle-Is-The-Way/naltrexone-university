@@ -602,6 +602,8 @@ describe('theme token regression', () => {
           status: 'active',
           currentPeriodEnd: new Date('2026-12-31T00:00:00Z'),
           cancelAtPeriodEnd: true,
+          startedAt: null,
+          billingCycleAnchor: null,
           createdAt: new Date('2026-01-01T00:00:00Z'),
           updatedAt: new Date('2026-01-01T00:00:00Z'),
         }}

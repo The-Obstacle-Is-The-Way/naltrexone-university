@@ -331,6 +331,8 @@ describe('Stripe webhook renewal acknowledgment', () => {
       status: 'inTrial',
       currentPeriodEnd: trialEndsAt,
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
       expectedVersion: null,
     });
     await harness.stripeCustomers.insert(harness.userId, 'cus_123');
