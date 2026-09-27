@@ -385,7 +385,7 @@ describe('package scripts', () => {
 
   it('routes both E2E lanes through the database-isolated local orchestrator', () => {
     expect(packageJson.scripts['test:e2e']).toBe(
-      'tsx scripts/run-local-e2e.ts --project=chromium',
+      'tsx scripts/run-local-e2e.ts --project=chromium --project=mobile-smoke',
     );
     expect(packageJson.scripts['test:e2e:stripe-hosted']).toBe(
       'tsx scripts/run-local-e2e.ts --project=stripe-hosted',

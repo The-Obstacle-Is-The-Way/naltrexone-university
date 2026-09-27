@@ -108,9 +108,9 @@ test.describe('practice', () => {
     await runE2EUserStateReset();
   });
 
-  test('subscribed user can run a tutor session and end on summary', async ({
-    page,
-  }) => {
+  test('subscribed user can run a tutor session and end on summary', {
+    tag: '@mobile-smoke',
+  }, async ({ page }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
 
@@ -190,7 +190,9 @@ test.describe('practice', () => {
     ).toBeVisible({ timeout: 30_000 });
   });
 
-  test('quick practice submit shows correctness feedback', async ({ page }) => {
+  test('quick practice submit shows correctness feedback', {
+    tag: '@mobile-smoke',
+  }, async ({ page }) => {
     await signInWithClerkPassword(page);
     await ensureSubscribed(page);
 

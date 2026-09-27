@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import {
   exactHeadApproval,
+  hasSuccessfulCheckRun,
   pullRequestSchema,
   REPOSITORY,
   readMergeEvidence,
@@ -205,16 +206,11 @@ export function checkPromotionReadiness(input: unknown) {
   if (pr.reviewThreads.nodes.some((thread) => !thread.isResolved)) {
     throw new Error('Promotion has unresolved review findings');
   }
-  if (
-    !contexts.nodes.some(
-      (check) =>
-        check.__typename === 'CheckRun' &&
-        check.name === 'test' &&
-        check.status === 'COMPLETED' &&
-        check.conclusion === 'SUCCESS',
-    )
-  ) {
+  if (!hasSuccessfulCheckRun(contexts.nodes, 'test')) {
     throw new Error('Promotion CI test has not succeeded');
+  }
+  if (!hasSuccessfulCheckRun(contexts.nodes, 'codecov/patch')) {
+    throw new Error('Promotion codecov/patch has not succeeded');
   }
   if (
     contexts.nodes.some((check) => {

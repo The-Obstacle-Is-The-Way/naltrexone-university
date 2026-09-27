@@ -32,7 +32,7 @@
 
 ### Shared Tab-Switch Container
 
-- Container classes: `inline-flex rounded-lg border border-border bg-muted p-1`
+- Container classes: `inline-flex rounded-lg border border-border bg-muted p-1 flex-wrap` (the options wrap rather than overflow a narrow parent; Pattern Registry I-5)
 - The shared `dark:border-foreground/40` override remains removed from `tabSwitchContainerClasses`
 
 ---

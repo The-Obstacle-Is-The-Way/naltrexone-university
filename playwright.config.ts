@@ -40,6 +40,20 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
       testMatch: /.*\.spec\.ts/,
+      testIgnore: [
+        /global\.setup\.ts/,
+        /stripe-hosted-.*\.spec\.ts/,
+        /mobile-layout\.spec\.ts/,
+      ],
+    },
+    {
+      // DEBT-468: re-runs the @mobile-smoke journeys, plus the layout probe,
+      // at the 375×667 width QA-002 checks by hand.
+      name: 'mobile-smoke',
+      use: { ...devices['Pixel 5'], viewport: { width: 375, height: 667 } },
+      dependencies: ['setup'],
+      grep: /@mobile-smoke/,
+      testMatch: /.*\.spec\.ts/,
       testIgnore: [/global\.setup\.ts/, /stripe-hosted-.*\.spec\.ts/],
     },
     {
@@ -51,6 +65,19 @@ export default defineConfig({
   ],
   webServer: {
     command: process.env.CI ? 'pnpm start' : 'pnpm build && pnpm start',
+    // Trial add-card signs its Checkout consent state. Production and preview
+    // carry their own CONSENT_STATE_SECRET; the isolated E2E server gets a
+    // test-only one unless the environment supplies it.
+    env: {
+      ...Object.fromEntries(
+        Object.entries(process.env).filter(
+          (entry): entry is [string, string] => entry[1] !== undefined,
+        ),
+      ),
+      CONSENT_STATE_SECRET:
+        process.env.CONSENT_STATE_SECRET ??
+        'e2e-only-consent-state-secret-not-for-production',
+    },
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
     timeout: 120000,

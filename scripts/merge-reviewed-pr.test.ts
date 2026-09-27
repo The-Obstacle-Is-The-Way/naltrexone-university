@@ -48,6 +48,12 @@ const pullRequest = () => ({
                   context: 'CodeRabbit',
                   state: 'SUCCESS',
                 },
+                {
+                  __typename: 'CheckRun',
+                  name: 'codecov/patch',
+                  status: 'COMPLETED',
+                  conclusion: 'SUCCESS',
+                },
               ],
               pageInfo: { hasNextPage: false },
             },
@@ -141,6 +147,21 @@ describe('feature merge decision', () => {
       expect(() => checkFeatureMerge(pr, [[review()]])).toThrow('CI test');
     },
   );
+
+  it('refuses a head without a successful codecov/patch status', () => {
+    const pr = pullRequest();
+    const contexts = pr.commits.nodes[0]?.commit.statusCheckRollup.contexts;
+    if (!contexts) throw new Error('Missing fixture');
+    // ADR-020: patch coverage is the one coverage gate, so its absence (a
+    // failed or skipped upload) must block like a red status would.
+    contexts.nodes = contexts.nodes.filter(
+      (check) => !('name' in check) || check.name !== 'codecov/patch',
+    );
+
+    expect(() => checkFeatureMerge(pr, [[review()]])).toThrow(
+      'codecov/patch has not succeeded',
+    );
+  });
 
   it('refuses another failing check', () => {
     const pr = pullRequest();

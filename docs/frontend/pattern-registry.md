@@ -383,8 +383,10 @@ Tab-switch for mode selection, history tab bar, etc.
 
 **Container:**
 ```
-inline-flex rounded-lg border border-border bg-muted p-1
+inline-flex rounded-lg border border-border bg-muted p-1 flex-wrap
 ```
+
+`flex-wrap` (2026-09-27, DEBT-468 phone-width probe): when the items do not fit their parent, they continue on a second row inside the same muted container, so every option stays visible at its full label and tap size. Before this, the practice Status control (Unanswered / Incorrect / Bookmarked) could not shrink or wrap: at 375px it extended past its card's border, and at 360px the page scrolled sideways. At widths where the items fit, the control renders exactly as before. Do not replace wrapping with inner horizontal scroll (it hides options off-screen) or with smaller text or padding (it trades legibility and tap size for one breakpoint).
 
 **Item base:**
 ```
