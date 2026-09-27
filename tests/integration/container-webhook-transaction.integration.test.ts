@@ -81,14 +81,29 @@ describe('container webhook transaction wiring', () => {
         // client (including its connection configuration) into the test log.
         expect(transactionDb === db, 'a transaction, not the pool').toBe(false);
         expect(createStripeEventRepository).toHaveBeenCalledTimes(1);
-        expect(createSubscriptionRepository).toHaveBeenCalledTimes(2);
+        // Besides the version reads, renewal-notice dispatch reads the current
+        // subscription from the pool after commit (DEBT-414 F07), so calls are
+        // identified by their database, not their position.
+        const subscriptionTargets = createSubscriptionRepository.mock.calls.map(
+          ([dbOverride]) => dbOverride ?? db,
+        );
+        const transactionIndex = subscriptionTargets.findIndex(
+          (target) => target === transactionDb,
+        );
         expect(
           (createSubscriptionRepository.mock.calls[0]?.[0] ?? db) === db,
           'version reads use the outside-transaction pool',
         ).toBe(true);
         expect(
-          createSubscriptionRepository.mock.calls[1]?.[0] === transactionDb,
-          'subscriptions use the callback transaction',
+          subscriptionTargets.filter((target) => target === transactionDb)
+            .length,
+          'exactly one subscriptions repository uses the callback transaction',
+        ).toBe(1);
+        expect(
+          subscriptionTargets.every(
+            (target) => target === db || target === transactionDb,
+          ),
+          'every other subscriptions repository uses the pool',
         ).toBe(true);
         expect(
           createStripeCustomerRepository.mock.calls[0]?.[0] === transactionDb,
@@ -106,7 +121,7 @@ describe('container webhook transaction wiring', () => {
         ).toBe(true);
         expect(
           repositories.subscriptions ===
-            createSubscriptionRepository.mock.results[1]?.value,
+            createSubscriptionRepository.mock.results[transactionIndex]?.value,
           'subscriptions come from the override',
         ).toBe(true);
         expect(

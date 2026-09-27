@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, lte, notExists, or } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, lte, notExists, or } from 'drizzle-orm';
 import {
   renewalNoticeDeliveries,
   stripeSubscriptions,
@@ -7,6 +7,7 @@ import {
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { Logger } from '@/src/application/ports';
+import { RENEWAL_NOTICE_MINIMUM_DAYS } from '@/src/application/shared/renewal-notice-schedule';
 import type {
   ScheduledRenewalNotice,
   SendDueRenewalNoticesResult,
@@ -20,8 +21,10 @@ export const SEND_RENEWAL_NOTICES_MAX_LIMIT = 40;
 export const SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT = 80;
 export const SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS = 300;
 export const SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO = 0.7;
-const ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS = 15;
-const ANNUAL_RENEWAL_NOTICE_LATEST_DAYS = 45;
+// DEBT-414 F01: renewals are first selected at 35 days and retried daily down
+// to the shared 30-day minimum (RENEWAL_NOTICE_MINIMUM_DAYS); one inside that
+// minimum without delivered notices is alerted, and dispatch refuses it (F07).
+const ANNUAL_RENEWAL_NOTICE_TARGET_DAYS = 35;
 const EXPIRED_SETUP_OPERATION_RETENTION_DAYS = 30;
 const EXPIRED_SETUP_OPERATION_PRUNE_LIMIT = 100;
 
@@ -112,21 +115,88 @@ export async function listAnnualSubscriptionsDue(
     .limit(input.limit);
 }
 
-export type SendDueRenewalNoticesJobDeps = {
-  now: () => Date;
-  monotonicNow: () => number;
-  listAnnualSubscriptionsDue: (input: {
+export type AnnualRenewalPastNoticeDeadline = {
+  externalSubscriptionId: string;
+  renewalAt: Date;
+};
+
+// The annual-renewal reads the job schedules from and checks deadlines with.
+export type AnnualRenewalQueries = {
+  listDue: (input: {
     renewalAtOrAfter: Date;
     renewalAtOrBefore: Date;
     disclosureVersion: string;
     limit: number;
   }) => Promise<AnnualSubscriptionDueForNotice[]>;
+  listPastNoticeDeadline: (input: {
+    renewalAfter: Date;
+    renewalAtOrBefore: Date;
+    limit: number;
+  }) => Promise<AnnualRenewalPastNoticeDeadline[]>;
+};
+
+// Unlike listAnnualSubscriptionsDue, a delivered notice counts whatever its
+// destination: dispatch refuses a notice whose destination is no longer the
+// account email (F07), so a delivered one reached the address of record.
+export async function listAnnualRenewalsPastNoticeDeadline(
+  input: { renewalAfter: Date; renewalAtOrBefore: Date; limit: number },
+  deps: { db: DrizzleDb; annualPriceId: string },
+): Promise<AnnualRenewalPastNoticeDeadline[]> {
+  const deliveredNotice = (noticeKind: 'annual_reminder' | 'renewal_notice') =>
+    deps.db
+      .select({ id: renewalNoticeDeliveries.id })
+      .from(renewalNoticeDeliveries)
+      .where(
+        and(
+          eq(renewalNoticeDeliveries.noticeKind, noticeKind),
+          eq(
+            renewalNoticeDeliveries.stripeSubscriptionId,
+            stripeSubscriptions.stripeSubscriptionId,
+          ),
+          eq(
+            renewalNoticeDeliveries.applicableAt,
+            stripeSubscriptions.currentPeriodEnd,
+          ),
+          eq(renewalNoticeDeliveries.status, 'delivered'),
+        ),
+      );
+
+  return deps.db
+    .select({
+      externalSubscriptionId: stripeSubscriptions.stripeSubscriptionId,
+      renewalAt: stripeSubscriptions.currentPeriodEnd,
+    })
+    .from(stripeSubscriptions)
+    .where(
+      and(
+        eq(stripeSubscriptions.status, 'active'),
+        eq(stripeSubscriptions.priceId, deps.annualPriceId),
+        eq(stripeSubscriptions.cancelAtPeriodEnd, false),
+        gt(stripeSubscriptions.currentPeriodEnd, input.renewalAfter),
+        lte(stripeSubscriptions.currentPeriodEnd, input.renewalAtOrBefore),
+        or(
+          notExists(deliveredNotice('annual_reminder')),
+          notExists(deliveredNotice('renewal_notice')),
+        ),
+      ),
+    )
+    .orderBy(
+      asc(stripeSubscriptions.currentPeriodEnd),
+      asc(stripeSubscriptions.stripeSubscriptionId),
+    )
+    .limit(input.limit);
+}
+
+export type SendDueRenewalNoticesJobDeps = {
+  now: () => Date;
+  monotonicNow: () => number;
+  annualRenewals: AnnualRenewalQueries;
   sendDueRenewalNotices: Pick<SendDueRenewalNoticesUseCase, 'execute'>;
   pruneExpiredTrialPaymentMethodSetups: (input: {
     expiredBefore: Date;
     limit: number;
   }) => Promise<number>;
-  logger: Pick<Logger, 'warn'>;
+  logger: Pick<Logger, 'warn' | 'error'>;
   annualPlan: Pick<
     ScheduledRenewalNotice,
     | 'planName'
@@ -181,12 +251,13 @@ export async function sendDueRenewalNotices(
       'Expired trial setup-operation pruning failed',
     );
   }
-  const subscriptions = await deps.listAnnualSubscriptionsDue({
-    renewalAtOrAfter: new Date(
-      observedAt.getTime() + ANNUAL_RENEWAL_NOTICE_EARLIEST_DAYS * DAY_MS,
-    ),
+  const noticeDeadline = new Date(
+    observedAt.getTime() + RENEWAL_NOTICE_MINIMUM_DAYS * DAY_MS,
+  );
+  const subscriptions = await deps.annualRenewals.listDue({
+    renewalAtOrAfter: noticeDeadline,
     renewalAtOrBefore: new Date(
-      observedAt.getTime() + ANNUAL_RENEWAL_NOTICE_LATEST_DAYS * DAY_MS,
+      observedAt.getTime() + ANNUAL_RENEWAL_NOTICE_TARGET_DAYS * DAY_MS,
     ),
     disclosureVersion: deps.annualPlan.disclosureVersion,
     limit: subscriptionLimit,
@@ -211,10 +282,46 @@ export async function sendDueRenewalNotices(
     notices,
     limit: dispatchLimit,
   });
+  await alertOnMissedNoticeDeadlines(
+    { renewalAfter: observedAt, renewalAtOrBefore: noticeDeadline },
+    subscriptionLimit,
+    deps,
+  );
   return {
     subscriptions: subscriptions.length,
     expiredSetupOperationsPruned,
     ...result,
     durationMs: Math.max(0, deps.monotonicNow() - startedAt),
   };
+}
+
+// Runs after dispatch, so a notice delivered in this run is not flagged.
+async function alertOnMissedNoticeDeadlines(
+  window: { renewalAfter: Date; renewalAtOrBefore: Date },
+  limit: number,
+  deps: SendDueRenewalNoticesJobDeps,
+): Promise<void> {
+  let missed: AnnualRenewalPastNoticeDeadline[];
+  try {
+    missed = await deps.annualRenewals.listPastNoticeDeadline({
+      ...window,
+      limit,
+    });
+  } catch (error) {
+    deps.logger.error(
+      { error: projectSafeErrorDiagnostics(error) },
+      'Annual renewal notice deadline check failed',
+    );
+    return;
+  }
+  if (missed.length === 0) return;
+  deps.logger.error(
+    {
+      count: missed.length,
+      externalSubscriptionIds: missed.map(
+        (renewal) => renewal.externalSubscriptionId,
+      ),
+    },
+    'Annual renewal notice deadline missed',
+  );
 }

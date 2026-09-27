@@ -2,11 +2,15 @@ import { ApplicationError } from '@/src/application/errors';
 import type {
   RenewalNoticeDeliveryRepository,
   Sha256Hasher,
+  SubscriptionRepository,
   TransactionalEmailGateway,
   TransactionalEmailPayload,
   TransactionalEmailSendResult,
 } from '@/src/application/ports';
 import type { Logger } from '@/src/application/ports/logger';
+import type { RenewalNoticeFailureClass } from '@/src/application/ports/renewal-notice-delivery-repository';
+import type { UserRepository } from '@/src/application/ports/user-repository';
+import { renewalNoticeSendByCutoff } from '@/src/application/shared/renewal-notice-schedule';
 import {
   getRenewalNoticeProviderIdempotencyKey,
   getRenewalNoticeRetryAt,
@@ -22,10 +26,18 @@ export type DispatchRenewalNoticeDeliveryResult =
   | { outcome: 'claim_lost'; delivery: null }
   | { outcome: 'attempted'; delivery: RenewalNoticeDelivery };
 
+// The current facts a scheduled notice restates: its subscription and the
+// account address it is sent to.
+export type RenewalNoticeTargets = {
+  subscriptions: Pick<SubscriptionRepository, 'findByExternalSubscriptionId'>;
+  users: Pick<UserRepository, 'findById'>;
+};
+
 export class DispatchRenewalNoticeDeliveryUseCase {
   constructor(
     private readonly deliveryRepository: RenewalNoticeDeliveryRepository,
     private readonly emailGateway: TransactionalEmailGateway,
+    private readonly noticeTargets: RenewalNoticeTargets,
     private readonly hasher: Sha256Hasher,
     private readonly logger: Pick<Logger, 'error'>,
     private readonly now: () => Date = () => new Date(),
@@ -47,8 +59,9 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       delivery.id,
     );
     if (delivery.providerIdempotencyKey !== expectedProviderKey) {
-      return this.quarantineIntegrityFailure(
+      return this.terminate(
         delivery,
+        'payload_integrity_failure',
         'provider_idempotency_key_mismatch',
       );
     }
@@ -64,9 +77,19 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       );
     } catch (error) {
       if (!(error instanceof ApplicationError)) throw error;
-      return this.quarantineIntegrityFailure(
+      return this.terminate(
         delivery,
+        'payload_integrity_failure',
         'payload_snapshot_integrity_failure',
+      );
+    }
+
+    const refusal = await this.refusalBeforeSend(delivery);
+    if (refusal) {
+      return this.terminate(
+        delivery,
+        refusal.failureClass,
+        refusal.failureCode,
       );
     }
 
@@ -102,8 +125,71 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     };
   }
 
-  private async quarantineIntegrityFailure(
+  // DEBT-414 F07: the queued payload is immutable, but the facts it states can
+  // change before it is sent. An acknowledgment records consent already given
+  // and is always sent; a scheduled notice is revalidated first.
+  private async refusalBeforeSend(delivery: RenewalNoticeDelivery): Promise<{
+    failureClass: RenewalNoticeFailureClass;
+    failureCode: string;
+  } | null> {
+    if (delivery.externalSubscriptionId === null) return null;
+    const supersededBy = await this.supersededReason(
+      delivery,
+      delivery.externalSubscriptionId,
+    );
+    if (supersededBy) {
+      return { failureClass: 'notice_superseded', failureCode: supersededBy };
+    }
+    if (
+      isRenewalReminder(delivery) &&
+      delivery.applicableAt !== null &&
+      this.now() > renewalNoticeSendByCutoff(delivery.applicableAt)
+    ) {
+      try {
+        this.logger.error(
+          { deliveryId: delivery.id, noticeKind: delivery.noticeKind },
+          'Renewal notice send-by cutoff passed',
+        );
+      } catch {
+        // Alerting failure must not undo the refusal.
+      }
+      return {
+        failureClass: 'notice_deadline_passed',
+        failureCode: 'send_by_cutoff_passed',
+      };
+    }
+    return null;
+  }
+
+  private async supersededReason(
     delivery: RenewalNoticeDelivery,
+    externalSubscriptionId: string,
+  ): Promise<string | null> {
+    const subscription =
+      await this.noticeTargets.subscriptions.findByExternalSubscriptionId(
+        externalSubscriptionId,
+      );
+    if (!subscription) return 'subscription_missing';
+    if (subscription.status !== 'active') return 'subscription_not_active';
+    const account = await this.noticeTargets.users.findById(
+      subscription.userId,
+    );
+    if (account?.email !== delivery.destination) return 'destination_changed';
+    if (isRenewalReminder(delivery)) {
+      if (subscription.cancelAtPeriodEnd) return 'subscription_canceling';
+      if (
+        subscription.currentPeriodEnd.getTime() !==
+        delivery.applicableAt?.getTime()
+      ) {
+        return 'renewal_date_changed';
+      }
+    }
+    return null;
+  }
+
+  private async terminate(
+    delivery: RenewalNoticeDelivery,
+    failureClass: RenewalNoticeFailureClass,
     failureCode: string,
   ): Promise<DispatchRenewalNoticeDeliveryResult> {
     const startedAt = this.now();
@@ -120,7 +206,7 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       delivery: await this.deliveryRepository.markTerminalFailure({
         id: claimed.id,
         attemptId,
-        failureClass: 'payload_integrity_failure',
+        failureClass,
         failureCode,
         failedAt: this.now(),
       }),
@@ -185,4 +271,11 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     }
     return delivery;
   }
+}
+
+function isRenewalReminder(delivery: RenewalNoticeDelivery): boolean {
+  return (
+    delivery.noticeKind === 'annual_reminder' ||
+    delivery.noticeKind === 'renewal_notice'
+  );
 }

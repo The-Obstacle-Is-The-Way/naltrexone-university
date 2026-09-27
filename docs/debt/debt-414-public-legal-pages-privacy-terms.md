@@ -292,7 +292,7 @@ Immediately after verified consent, send a retainable acknowledgment containing 
 Implement a daily idempotent notice job with:
 
 - California annual reminder content for annual subscriptions;
-- California and New York annual-term notice 15–45 days before renewal/cancellation deadline;
+- California and New York annual-term notice 15–45 days before renewal/cancellation deadline (2026-09-27 forward pointer: superseded by F01. The job now targets 35 days inside the strictest 30–40-day window; see [Engineering remediation](#engineering-remediation-2026-09-27-and-later));
 - New York material-change notice at least 5 business days, but no more than 30 days, before change;
 - California fee-change notice 7–30 days before change;
 - retainable material-change notice and cancellation link;
@@ -605,3 +605,42 @@ Measured 2026-09-17 against `https://addictionboards.com/privacy`, HTTP 200, aft
 - `https://addictionboards.com/terms` still showed "Last updated: August 9, 2026", so the frozen `TERMS_VERSION` and content hash were unchanged at that time.
 
 This record covers published copy as observed on 2026-09-17 and nothing else. It is not evidence about deployed notice delivery, queue or cron behavior, or any other open finding, and it does not assert anything about the route after that date.
+
+## Engineering remediation (2026-09-27 and later)
+
+The owner authorized the proposed code and configuration work (F01-F07, F15) on 2026-09-27, by lifting the campaign hold. Each finding below lands test-first, in its own reviewed PR. Counsel's questions (Q1-Q7) and the Terms drafting decisions (F10, F16) remain open. A green build here is engineering evidence, not legal sign-off.
+
+**F01, annual notice window.** The job selected annual renewals 15-45 days out, and its unit test pinned that window, so passing tests preserved the defect. It now first selects a renewal 35 days out and retries daily down to 30. That places every notice inside the strictest window the covered states share: 30-40 days (CO 25-40; VT, IL, DE, GA, HI 30-60; CA, NY 15-45). After each dispatch, the job lists active renewing annual subscriptions within 30 days of renewal that lack a *delivered* annual reminder or renewal notice, and logs each as `Annual renewal notice deadline missed`. The check runs after dispatch, so a notice delivered in the same run is not flagged, and a failed check is logged without stopping notices. The job does not auto-send a notice later than the 30-day minimum; the remedy for a missed statutory deadline is a counsel question. Receipts:
+- The unit test was changed red-first: the window and the two alert cases failed on the old code.
+- The deadline query has two real-Postgres cases. It excludes monthly, canceled, cancel-at-period-end and out-of-window subscriptions. It clears a renewal only when both notice kinds are delivered *for that renewal*, so a delivered notice for an earlier renewal does not count.
+- The two queries now form one `annualRenewals` port, so the unit test adds no extra stub (`.claude/rules/testing.md` rule 5).
+
+**F07, stale or late notices (first part).** A queued renewal notice is immutable, but the facts it states can change before it is sent or retried. Dispatch now reads the current subscription and account before any scheduled notice. It supersedes the notice, with failure class `notice_superseded` and no provider call, when any of these holds:
+- the subscription is gone or no longer active;
+- the subscription is set to cancel at period end;
+- it renews on a different date;
+- the account email no longer matches the notice's destination.
+
+A renewal reminder is refused once its send-by cutoff, 30 days before renewal, has passed (failure class `notice_deadline_passed`), and the refusal is logged as an error. The job and dispatch share that minimum (`RENEWAL_NOTICE_MINIMUM_DAYS`), so they cannot drift apart. Acknowledgments record consent already given and are not revalidated.
+
+Receipts:
+- The revalidation suite was red first. With only the new dependency wired, the five supersession cases and the cutoff case failed. The three still-send cases passed: a matching notice, a notice exactly at the cutoff, and an acknowledgment.
+- Existing suites now name the subscriptions they notify, through `createMatchingRenewalNoticeTargets`, which is built on the maintained fakes.
+
+**Still open under F07:** the provider-acceptance label. Resend accepting a message is still stored as `delivered`. The fix is expand-only: add an `accepted` status that both old and new code tolerate, then later record delivery and bounce evidence from Resend webhooks, which needs a webhook endpoint and secret configured in Resend.
+
+**F06, notice content.** Scheduled notices said only "Renewal date" with a UTC date, escaped every line into a plain paragraph and linked nothing. Annual reminders and renewal notices now:
+- say the plan "renews automatically unless you cancel";
+- give the cancellation cutoff as an instant: UTC time, then Eastern and Pacific times with their zone abbreviations (EDT or EST, PDT or PST, so the repeated fall-back hour is unambiguous), naming the local date when it differs (a deadline on the previous US evening) and its year when that differs too;
+- state the renewal amount and frequency;
+- link the Billing page, support mail, Terms and Privacy as anchors in HTML and as URLs in text;
+- restate the Terms' own policy: cancellation takes effect at period end with access until then, and payments are non-refundable except where the law requires otherwise.
+
+The acknowledgment's trial end and cancellation deadline use the same cutoff format. Its cancellation policy and links belong to F15.
+
+Receipts:
+- Red first: the rendered-content case and both formatter cases failed on the old code.
+- An escaping case confirms that interpolated text stays escaped inside the linked HTML.
+- `lib/routes.test.ts` pins the notice's Billing path to `ROUTES.APP_BILLING`.
+- The notice template's disclosure version is unchanged: the immutable payload snapshot already records what each message said. A version bump would have re-queued notices for renewals already notified.
+
