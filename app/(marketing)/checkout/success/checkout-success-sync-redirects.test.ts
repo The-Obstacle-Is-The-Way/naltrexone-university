@@ -80,6 +80,31 @@ describe('syncCheckoutSuccess', () => {
       subscription: { cancel_at_period_end: undefined },
     },
     {
+      reason: 'missing_start_date',
+      input: { sessionId: 'cs_test' },
+      session: { customer: 'cus_123', subscription: 'sub_123' },
+      subscription: { start_date: undefined },
+    },
+    {
+      reason: 'missing_billing_cycle_anchor',
+      input: { sessionId: 'cs_test' },
+      session: { customer: 'cus_123', subscription: 'sub_123' },
+      subscription: { billing_cycle_anchor: undefined },
+    },
+    // #1167 review: a timestamp outside the Date range is not a usable value.
+    {
+      reason: 'missing_start_date',
+      input: { sessionId: 'cs_test' },
+      session: { customer: 'cus_123', subscription: 'sub_123' },
+      subscription: { start_date: 8_640_000_000_001 },
+    },
+    {
+      reason: 'missing_billing_cycle_anchor',
+      input: { sessionId: 'cs_test' },
+      session: { customer: 'cus_123', subscription: 'sub_123' },
+      subscription: { billing_cycle_anchor: 8_640_000_000_001 },
+    },
+    {
       reason: 'missing_price_id',
       input: { sessionId: 'cs_test' },
       session: { customer: 'cus_123', subscription: 'sub_123' },
@@ -144,6 +169,8 @@ describe('syncCheckoutSuccess', () => {
                 customer: 'cus_123',
                 status: 'active',
                 cancel_at_period_end: false,
+                start_date: 1_997_000_000,
+                billing_cycle_anchor: 1_997_604_800,
                 metadata: { user_id: fixtureUser1Id },
                 items: {
                   data: [
@@ -228,6 +255,8 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'incomplete',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -309,6 +338,8 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'incomplete_expired',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -390,6 +421,8 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'canceled',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [

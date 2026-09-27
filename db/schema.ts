@@ -87,6 +87,9 @@ export const renewalNoticeKindEnum = pgEnum('renewal_notice_kind', [
   'renewal_notice',
   'material_change',
   'fee_change',
+  // DEBT-414 F02: added unused; the step that writes it widens the
+  // scheduled-notice index and key-shape check.
+  'anniversary_reminder',
 ]);
 
 export const renewalNoticeDeliveryStatusEnum = pgEnum(
@@ -235,6 +238,12 @@ export const stripeSubscriptions = pgTable(
       withTimezone: true,
     }).notNull(),
     cancelAtPeriodEnd: boolean('cancel_at_period_end').notNull().default(false),
+    // DEBT-414 F02: Stripe's start_date and billing_cycle_anchor. Nullable
+    // until every row has been rewritten by the new code (expand step).
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    billingCycleAnchor: timestamp('billing_cycle_anchor', {
+      withTimezone: true,
+    }),
     version: integer('version').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

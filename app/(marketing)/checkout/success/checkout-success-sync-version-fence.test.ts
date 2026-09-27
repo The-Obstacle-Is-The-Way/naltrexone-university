@@ -65,6 +65,8 @@ function currentSubscription(): Subscription {
     status: 'active',
     currentPeriodEnd: new Date('2099-01-01T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
+    startedAt: null,
+    billingCycleAnchor: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   };
@@ -105,6 +107,8 @@ function createHarness(subscriptions: FakeSubscriptionRepository): {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: user.id },
             items: {
               data: [

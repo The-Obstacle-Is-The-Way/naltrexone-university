@@ -181,6 +181,31 @@ describe('reconcileStripeSubscriptions canonical selection', () => {
     ).resolves.toBeNull();
   });
 
+  // DEBT-414 F02: the daily reconcile rewrites every canonical subscription,
+  // which is how rows stored before the anchor columns existed backfill.
+  it('stores the canonical subscription service start and billing anchor', async () => {
+    const stripe = createStripeWithSubscriptions([
+      {
+        ...createUserSubscriptionFixture('sub_anchor'),
+        start_date: 1_696_000_000,
+        billing_cycle_anchor: 1_696_604_800,
+      },
+    ]);
+    const scenario = createSingleRowScenario({
+      stripe,
+      subscriptionId: 'sub_anchor',
+    });
+
+    await expectDryRunSuccess(scenario);
+
+    await expect(
+      scenario.subscriptions.findByUserId(primaryUserId),
+    ).resolves.toMatchObject({
+      startedAt: new Date(1_696_000_000 * 1000),
+      billingCycleAnchor: new Date(1_696_604_800 * 1000),
+    });
+  });
+
   it('replaces a stale non-blocking local subscription with the blocking Stripe subscription', async () => {
     const stripe = createStripeWithSubscriptions([
       createUserSubscriptionFixture('sub_local_canceled', {
@@ -287,6 +312,8 @@ describe('reconcileStripeSubscriptions canonical selection', () => {
       status: 'active',
       currentPeriodEnd: new Date(localPeriodEnd * 1000),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
       expectedVersion: null,
     });
 

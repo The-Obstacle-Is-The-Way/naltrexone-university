@@ -580,6 +580,8 @@ async function processSubscriptionWebhook(
               status: nextSubscriptionUpdate.status,
               currentPeriodEnd: nextSubscriptionUpdate.currentPeriodEnd,
               cancelAtPeriodEnd: nextSubscriptionUpdate.cancelAtPeriodEnd,
+              startedAt: nextSubscriptionUpdate.startedAt,
+              billingCycleAnchor: nextSubscriptionUpdate.billingCycleAnchor,
               expectedVersion,
             });
             if (!write.persisted && write.reason === 'version_conflict') {

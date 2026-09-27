@@ -3,7 +3,8 @@ export type RenewalNoticeKind =
   | 'annual_reminder'
   | 'renewal_notice'
   | 'material_change'
-  | 'fee_change';
+  | 'fee_change'
+  | 'anniversary_reminder';
 
 export type RenewalNoticeDeliveryStatus =
   | 'queued'

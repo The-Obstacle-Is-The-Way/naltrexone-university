@@ -15,6 +15,8 @@ export type StripeSubscriptionFixture = {
   customer: string;
   status: StripeSubscriptionStatus;
   cancel_at_period_end: boolean;
+  start_date: number;
+  billing_cycle_anchor: number;
   metadata?: Record<string, string>;
   items: {
     data: Array<{

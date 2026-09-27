@@ -260,6 +260,8 @@ describe('renewal consent record persistence', () => {
       customer: externalCustomerId,
       status: 'canceled' as const,
       cancel_at_period_end: false,
+      start_date: 1_696_000_000,
+      billing_cycle_anchor: 1_696_604_800,
       metadata: { user_id: user.id },
       items: {
         data: [

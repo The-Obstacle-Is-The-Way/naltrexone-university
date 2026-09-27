@@ -5,9 +5,20 @@ const stripeSubscriptionRefSchema = z.union([
   z.object({ id: z.string() }).passthrough(),
 ]);
 
+// A Stripe Unix timestamp that converts to a valid Date: a whole number of
+// seconds from the epoch within the ECMAScript Date range (±8.64e15 ms).
+// Anything else must fail here as an invalid payload, not later as an
+// Invalid Date inside a write (#1167 review).
+export const STRIPE_TIMESTAMP_MAX_SECONDS = 8_640_000_000_000;
+export const stripeTimestampSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(STRIPE_TIMESTAMP_MAX_SECONDS);
+
 export const stripeSubscriptionItemSchema = z
   .object({
-    current_period_end: z.number(),
+    current_period_end: stripeTimestampSchema,
     price: z.object({
       id: z.string(),
     }),
@@ -20,6 +31,8 @@ export const stripeSubscriptionSchema = z
     customer: z.string(),
     status: z.string(),
     cancel_at_period_end: z.boolean(),
+    start_date: stripeTimestampSchema,
+    billing_cycle_anchor: stripeTimestampSchema,
     metadata: z.record(z.string(), z.string()).optional(),
     items: z.object({
       data: z.array(stripeSubscriptionItemSchema).min(1),

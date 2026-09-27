@@ -113,6 +113,9 @@ export type WebhookEventResult = {
     status: SubscriptionStatus;
     currentPeriodEnd: Date;
     cancelAtPeriodEnd: boolean;
+    // DEBT-414 F02: service start and billing anchor, for yearly reminders.
+    startedAt: Date;
+    billingCycleAnchor: Date;
   };
   initialSubscriptionConsent?: RenewalTermsSnapshot & {
     checkoutSessionId: string;

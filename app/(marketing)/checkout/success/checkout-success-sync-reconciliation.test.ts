@@ -80,6 +80,8 @@ describe('syncCheckoutSuccess retry logging', () => {
                 customer: 'cus_123',
                 status: 'active',
                 cancel_at_period_end: false,
+                start_date: 1_997_000_000,
+                billing_cycle_anchor: 1_997_604_800,
                 metadata: { user_id: fixtureUser1Id },
                 items: {
                   data: [
@@ -168,6 +170,8 @@ describe('syncCheckoutSuccess retry logging', () => {
               customer: 'cus_123',
               status: 'active',
               cancel_at_period_end: false,
+              start_date: 1_997_000_000,
+              billing_cycle_anchor: 1_997_604_800,
               metadata: { user_id: fixtureUser1Id },
               items: {
                 data: [
@@ -240,6 +244,8 @@ describe('syncCheckoutSuccess', () => {
       status: 'active',
       currentPeriodEnd: protectedPeriodEnd,
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     const deps = {
@@ -267,6 +273,8 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'canceled',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -331,6 +339,8 @@ describe('syncCheckoutSuccess', () => {
       status: 'active',
       currentPeriodEnd: protectedPeriodEnd,
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     const deps = {
@@ -358,6 +368,8 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'unpaid',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -438,6 +450,8 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'past_due',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -518,6 +532,8 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_123',
             status: 'trialing',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -556,6 +572,9 @@ describe('syncCheckoutSuccess', () => {
       userId: fixtureUser1Id,
       status: 'inTrial',
       plan: 'monthly',
+      // DEBT-414 F02: the eager sync stores the service start and anchor too.
+      startedAt: new Date(1_997_000_000 * 1000),
+      billingCycleAnchor: new Date(1_997_604_800 * 1000),
     });
   });
 
@@ -597,6 +616,8 @@ describe('syncCheckoutSuccess', () => {
             customer: 'cus_checkout',
             status: 'active',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
