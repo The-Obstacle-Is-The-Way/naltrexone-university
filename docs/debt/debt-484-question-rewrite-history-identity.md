@@ -1,6 +1,6 @@
 # DEBT-484: Substantive Rewrites Can Reinterpret Historical Attempts
 
-**Status:** In Progress — initial guard merged in #951; immutable revision and review milestones remain open
+**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); immutable revision and review milestones remain open
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED behavior boundary; affected production attempts unknown
@@ -150,6 +150,15 @@ retains the mutation evidence for canonical whitespace coverage. The
 separates that dev merge from the release readback. Immutable revision binding,
 active-session behavior and archived-question review remain open regardless of
 that deployment milestone.
+
+## Decision — 2026-09-27
+
+[ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) decides the structure this record asks for:
+- **Revisions.** Learner-visible content moves into immutable `question_revisions`. Each choice belongs to one revision, and existing choice IDs attach to revision 1 so every stored selection still resolves.
+- **Binding.** Session states bind each item's revision when the session is created, and attempts bind the revision they graded. Grading uses the bound revision, which closes the active-session race.
+- **Review.** History, session review, previous-attempt and bookmark reads resolve content through the bound revision, not `status = 'published'`. A withdrawn question stays reviewable, with a visible withdrawal notice, by learners who attempted it, following COPE retraction practice. The notice needs a Pattern Registry entry before its UI lands.
+
+This record closes after ADR-021's phases 1–3: revisions, binding and review, then the contract step that makes the bindings `NOT NULL` and drops the legacy text columns. The #951 guard stays in force until revisions replace it.
 
 ## Related
 

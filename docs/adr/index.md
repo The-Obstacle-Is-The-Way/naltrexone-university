@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-09-27
 
 ---
 
@@ -37,6 +37,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
 | [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Proposed | 2026-08-13 |
 | [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
+| [ADR-021](./adr-021-question-revisions-and-content-releases.md) | Immutable Question Revisions and Atomic Content Releases | Accepted, except the release-zero hash form | 2026-09-27 |
 
 ## ADR Statuses
 
@@ -197,6 +198,10 @@ Four practices that audit and specify the ADR-003 suite from the outside: a CRAP
 ### ADR-020: Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold
 
 No per-lane `coverage.thresholds` or project target. The existing `codecov/patch` status, at its default `auto` target, is the one coverage gate: a change's measured patch coverage may not fall below the base target. Both merge tools require it green by name, so a missing status blocks like a failed one. Assertion strength is judged by mutation evidence. Closes DEBT-468 Part 4.
+
+### ADR-021: Immutable Question Revisions and Atomic Content Releases
+
+Learner-visible question content lives in immutable revisions; attempts and session states bind the revision they showed, so grading and review never re-read rewritten content, and a withdrawn question stays reviewable, with a notice, by learners who attempted it. Content becomes visible through verified releases activated in one transaction, with withdrawals and holds kept as a current overlay that rollback cannot resurrect. Five expand/contract phases; the release-zero hash form is an open owner question. Closes DEBT-484 after phases 1–3 and DEBT-483 after phase 4.
 
 ---
 
