@@ -243,7 +243,7 @@ Ordered so that each guard lands with a red test for the forbidden state (F9). S
 
 ## Related
 
-- Origin of the wrapper-around-the-suite shape: [DEBT-468](../../debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 1 item 1; the incident F10 re-exposes: [DEBT-411](debt-411-local-e2e-flakiness-and-error-masking.md) (local E2E targeted remote Neon via `.env.local`).
+- Origin of the wrapper-around-the-suite shape: [DEBT-468](debt-468-test-estate-coverage-and-fixture-debt.md) Part 1 item 1; the incident F10 re-exposes: [DEBT-411](debt-411-local-e2e-flakiness-and-error-masking.md) (local E2E targeted remote Neon via `.env.local`).
 - Scheduled-only Stripe lanes and the required-CI boundary: [DEBT-471](debt-471-e2e-ci-external-fragility.md) F1; the six-case runner: [DEBT-472](./debt-472-test-double-fidelity-and-contract-discipline.md) Part B, F7, step 6.
 - Split out of this debt by the PR #831 review: [DEBT-474](./debt-474-ci-secret-scope-and-action-immutability.md) (job-scoped secrets, mutable action tags, safe dependency-PR verification). Found alongside it: [DEBT-475](./debt-475-toolchain-coherence.md) (the wider toolchain census).
 - Governance: [BUG-248](../bugs/bug-248-main-branch-has-no-github-merge-gate.md) (zero approvals by design).

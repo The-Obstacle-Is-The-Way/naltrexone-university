@@ -9,7 +9,7 @@
 
 ## Context
 
-[DEBT-468](../debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4 proposed per-lane Vitest `coverage.thresholds` just below the measured floors (unit statements 82 / branches 78; browser and integration pinned after a re-measure), plus `coverage.include` globs so unimported files are measured. The goal was regression-proofing, not target-chasing, and ADR-019 requires a new ADR before any numeric metric gates CI.
+[DEBT-468](../_archive/debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4 proposed per-lane Vitest `coverage.thresholds` just below the measured floors (unit statements 82 / branches 78; browser and integration pinned after a re-measure), plus `coverage.include` globs so unimported files are measured. The goal was regression-proofing, not target-chasing, and ADR-019 requires a new ADR before any numeric metric gates CI.
 
 Three facts decide the question:
 
@@ -34,6 +34,6 @@ Three facts decide the question:
 ## Related
 
 - [ADR-019](./adr-019-test-quality-practices.md), the binding observational posture this refines
-- [DEBT-468](../debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4, closed by this record
+- [DEBT-468](../_archive/debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4, closed by this record
 - [DEBT-465](../debt/debt-465-test-quality-practices-adoption.md), mutation testing as the measure of assertion strength
 - `scripts/merge-reviewed-pr.ts`, `scripts/verify-promotion.ts` (`test` and `codecov/patch` required green by name)
