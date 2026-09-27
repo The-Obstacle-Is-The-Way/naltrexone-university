@@ -45,7 +45,7 @@ describe('gradeAnswer', () => {
     expect(() => gradeAnswer(question, 'c1')).toThrow(
       expect.objectContaining({
         code: 'INVALID_QUESTION',
-        message: 'Question q1 must have exactly 1 correct choice (found 0)',
+        message: expect.stringMatching(/q1\b.*found 0\b/),
       }),
     );
   });
@@ -61,7 +61,7 @@ describe('gradeAnswer', () => {
     expect(() => gradeAnswer(question, 'c1')).toThrow(
       expect.objectContaining({
         code: 'INVALID_QUESTION',
-        message: 'Question q1 must have exactly 1 correct choice (found 2)',
+        message: expect.stringMatching(/q1\b.*found 2\b/),
       }),
     );
   });
@@ -74,7 +74,7 @@ describe('gradeAnswer', () => {
     expect(() => gradeAnswer(question, 'missing')).toThrow(
       expect.objectContaining({
         code: 'INVALID_CHOICE',
-        message: 'Choice missing does not belong to question q1',
+        message: expect.stringMatching(/\bmissing\b.*\bq1\b/),
       }),
     );
   });

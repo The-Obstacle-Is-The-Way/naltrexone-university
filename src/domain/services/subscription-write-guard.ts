@@ -43,6 +43,6 @@ export function shouldPersistSubscriptionWrite(input: {
     input.incoming,
     input.stored,
   );
-  // Stryker disable next-line EqualityOperator: ordering is 0 only for identical identities, which returned above, so <= 0 is equivalent
+  // Stryker disable next-line EqualityOperator: the comparator is a total order (0 only for identical identities, which returned above), so <= 0 is equivalent; >= 0 is killed
   return canonicalOrdering < 0;
 }

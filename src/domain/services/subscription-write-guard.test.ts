@@ -197,6 +197,33 @@ describe('shouldPersistSubscriptionWrite', () => {
     },
   );
 
+  // #1160 review: distinct identities that compare equal under the locale
+  // (NFC and NFD spellings) still order strictly, so exactly one direction of
+  // the write persists and the guard's `< 0` has no equal case to decide.
+  it.each([
+    { stored: 'sub_\u00e9', incoming: 'sub_e\u0301', persists: true },
+    { stored: 'sub_e\u0301', incoming: 'sub_\u00e9', persists: false },
+  ])(
+    'orders locale-equal identities strictly: $incoming over $stored persists=$persists',
+    ({ stored, incoming, persists }) => {
+      expect(
+        shouldPersistSubscriptionWrite({
+          stored: createSubscriptionWriteCandidate({
+            subscriptionIdentity: stored,
+            status: 'active',
+            currentPeriodEnd: FUTURE,
+          }),
+          incoming: createSubscriptionWriteCandidate({
+            subscriptionIdentity: incoming,
+            status: 'active',
+            currentPeriodEnd: FUTURE,
+          }),
+          now: NOW,
+        }),
+      ).toBe(persists);
+    },
+  );
+
   it('rejects a different current-entitled write that loses canonical ordering', () => {
     expect(
       shouldPersistSubscriptionWrite({

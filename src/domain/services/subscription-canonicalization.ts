@@ -31,5 +31,12 @@ export function compareCanonicalSubscriptionCandidates(
     b.currentPeriodEnd.getTime() - a.currentPeriodEnd.getTime();
   if (periodDiff !== 0) return periodDiff;
 
-  return a.subscriptionIdentity.localeCompare(b.subscriptionIdentity);
+  const identityOrder = a.subscriptionIdentity.localeCompare(
+    b.subscriptionIdentity,
+  );
+  if (identityOrder !== 0) return identityOrder;
+  // localeCompare treats canonically equivalent spellings (NFC and NFD) as
+  // equal; code units break that tie, so only identical identities are equal.
+  if (a.subscriptionIdentity === b.subscriptionIdentity) return 0;
+  return a.subscriptionIdentity < b.subscriptionIdentity ? -1 : 1;
 }
