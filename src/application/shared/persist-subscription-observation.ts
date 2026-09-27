@@ -51,9 +51,11 @@ export async function persistSubscriptionObservation<TObservation>(
       ? await input.readVersion(expectedUserId)
       : input.initialExpectedVersion;
 
-  // Every attempt either returns, retries, or throws on the last one, so the
-  // loop is unbounded by construction and needs no unreachable fallback.
-  for (let attempt = 1; ; attempt += 1) {
+  for (
+    let attempt = 1;
+    attempt <= SUBSCRIPTION_OBSERVATION_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
     const observation = await input.retrieve();
     if (input.getUserId(observation) !== expectedUserId) {
       throw new ApplicationError(
@@ -75,4 +77,14 @@ export async function persistSubscriptionObservation<TObservation>(
 
     expectedVersion = await input.readVersion(expectedUserId);
   }
+
+  // The bound keeps a lost exhaustion throw from retrying forever, and the
+  // type checker needs this return path; the last attempt throws above, so
+  // it is unreachable and its message mutants are equivalent.
+  // Stryker disable StringLiteral: unreachable while the last attempt throws inside the loop
+  throw new ApplicationError(
+    'INTERNAL_ERROR',
+    'Subscription observation retry loop exited unexpectedly',
+  );
+  // Stryker restore StringLiteral
 }
