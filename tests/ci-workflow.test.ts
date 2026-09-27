@@ -554,11 +554,20 @@ describe('Stripe provider contract workflow', () => {
 
 // DEBT-465 Part 2: mutation testing reports weekly and never gates (ADR-019).
 // #1160 review: a job-level `permissions` block overrides the workflow's, so
-// read-only means the workflow-level block is the file's only one.
+// read-only means exactly `contents: read` at the top and no job-level block.
+// Parsed as YAML (#1161 review): `permissions :` is the same key as
+// `permissions:`, so a text match cannot decide this.
 function readsRepositoryOnly(source: string): boolean {
-  const blocks = source.match(/^\s*permissions:/gm) ?? [];
+  const workflow = parse(source) as {
+    permissions?: unknown;
+    jobs?: Record<string, { permissions?: unknown }>;
+  };
+  const jobs = Object.values(workflow.jobs ?? {});
   return (
-    blocks.length === 1 && source.includes('\npermissions:\n  contents: read\n')
+    JSON.stringify(workflow.permissions) ===
+      JSON.stringify({ contents: 'read' }) &&
+    jobs.length > 0 &&
+    jobs.every((job) => job.permissions === undefined)
   );
 }
 
@@ -585,10 +594,27 @@ describe('Mutation workflow', () => {
     expect(source).not.toContain('secrets.');
   });
 
-  it('treats a job-level permissions override as not read-only', () => {
+  it.each([
+    ['a job-level override', '    permissions:\n      contents: write\n'],
+    [
+      'a job-level override spelled with a space before the colon',
+      '    permissions :\n      contents: write\n',
+    ],
+    ['a job-level write-all', '    permissions: write-all\n'],
+  ])('treats %s as not read-only', (_name, jobPermissions) => {
     const widened = workflow().replace(
       '    runs-on: ubuntu-24.04\n',
-      '    runs-on: ubuntu-24.04\n    permissions:\n      contents: write\n',
+      `    runs-on: ubuntu-24.04\n${jobPermissions}`,
+    );
+
+    expect(widened).not.toBe(workflow());
+    expect(readsRepositoryOnly(widened)).toBe(false);
+  });
+
+  it('treats wider workflow-level permissions as not read-only', () => {
+    const widened = workflow().replace(
+      'permissions:\n  contents: read\n',
+      'permissions:\n  contents: read\n  pull-requests: write\n',
     );
 
     expect(widened).not.toBe(workflow());
