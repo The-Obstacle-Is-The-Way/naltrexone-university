@@ -292,7 +292,7 @@ Immediately after verified consent, send a retainable acknowledgment containing 
 Implement a daily idempotent notice job with:
 
 - California annual reminder content for annual subscriptions;
-- California and New York annual-term notice 15–45 days before renewal/cancellation deadline;
+- California and New York annual-term notice 15–45 days before renewal/cancellation deadline (2026-09-27 forward pointer: superseded by F01. The job now targets 35 days inside the strictest 30–40-day window; see [Engineering remediation](#engineering-remediation-2026-09-27-and-later));
 - New York material-change notice at least 5 business days, but no more than 30 days, before change;
 - California fee-change notice 7–30 days before change;
 - retainable material-change notice and cancellation link;
@@ -605,3 +605,13 @@ Measured 2026-09-17 against `https://addictionboards.com/privacy`, HTTP 200, aft
 - `https://addictionboards.com/terms` still showed "Last updated: August 9, 2026", so the frozen `TERMS_VERSION` and content hash were unchanged at that time.
 
 This record covers published copy as observed on 2026-09-17 and nothing else. It is not evidence about deployed notice delivery, queue or cron behavior, or any other open finding, and it does not assert anything about the route after that date.
+
+## Engineering remediation (2026-09-27 and later)
+
+The owner authorized the proposed code and configuration work (F01-F07, F15) on 2026-09-27, by lifting the campaign hold. Each finding below lands test-first, in its own reviewed PR. Counsel's questions (Q1-Q7) and the Terms drafting decisions (F10, F16) remain open. A green build here is engineering evidence, not legal sign-off.
+
+**F01, annual notice window.** The job selected annual renewals 15-45 days out, and its unit test pinned that window, so passing tests preserved the defect. It now first selects a renewal 35 days out and retries daily down to 30. That places every notice inside the strictest window the covered states share: 30-40 days (CO 25-40; VT, IL, DE, GA, HI 30-60; CA, NY 15-45). After each dispatch, the job lists active renewing annual subscriptions within 30 days of renewal that lack a *delivered* annual reminder or renewal notice, and logs each as `Annual renewal notice deadline missed`. The check runs after dispatch, so a notice delivered in the same run is not flagged, and a failed check is logged without stopping notices. The job does not auto-send a notice later than the 30-day minimum; the remedy for a missed statutory deadline is a counsel question. Receipts:
+- The unit test was changed red-first: the window and the two alert cases failed on the old code.
+- The deadline query has two real-Postgres cases. It excludes monthly, canceled, cancel-at-period-end and out-of-window subscriptions. It clears a renewal only when both notice kinds are delivered *for that renewal*, so a delivered notice for an earlier renewal does not count.
+- The two queries now form one `annualRenewals` port, so the unit test adds no extra stub (`.claude/rules/testing.md` rule 5).
+
