@@ -282,8 +282,8 @@ Tracked suppressions fall **1 → 0**, which completes Resolution step 5. Under 
 
 - [x] `pnpm lint` and `pnpm lint:ci` exit 0 **with `--error-on-warnings` active** on a clean tree
 - [x] `pnpm test --run`, `pnpm test:browser`, `pnpm test:integration` produce no Vite configLoader warning; existing file/test collection is preserved plus the 3 intentional unit contract cases
-- [x] `stripe-webhook-processor.test.ts:1` suppression is load-bearing (removing it locally makes lint fail) — the W1 condition cannot recur
-- [x] Every Biome-effective oversized test file carries a reasoned head suppression referencing this item; the 28-file ledger is recorded above and decreases with each split PR
+- [x] `stripe-webhook-processor.test.ts:1` suppression is load-bearing (removing it locally makes lint fail) — the W1 condition cannot recur (2026-09-27 closeout: that suppression and every other one are now retired; the lint gate itself keeps W1 from recurring, since any oversized test file without a reasoned suppression fails)
+- [x] Every Biome-effective oversized test file carries a reasoned head suppression referencing this item; the 28-file ledger is recorded above and decreases with each split PR (2026-09-27 closeout: the ledger reached zero with #1139; no oversized test file and no suppression remain)
 - [x] With caller `NO_COLOR=1`, `pnpm test:e2e tests/e2e/smoke.spec.ts` emits no `NO_COLOR`/`FORCE_COLOR` warning
 - [x] W3/W4 documented as expected; W5 observation note remains present in `AGENTS.md`
 

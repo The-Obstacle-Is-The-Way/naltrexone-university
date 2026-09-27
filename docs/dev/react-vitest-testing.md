@@ -4,7 +4,7 @@
 
 This document exists because we got burned. Every claim is validated against official sources.
 
-Coverage reports are observational in this repo: do not add or chase numeric coverage thresholds as a quality gate; TDD discipline and behavior assertions are the enforcement mechanism. The one exception is `codecov/patch`: its default target binds through the merge tools, so a change's own lines may not lower coverage ([ADR-020](../adr/adr-020-coverage-patch-gate.md)).
+Coverage reports are observational in this repo: do not add or chase numeric coverage thresholds as a quality gate; TDD discipline and behavior assertions are the enforcement mechanism. The one exception is `codecov/patch`: the merge tools refuse it when it is not green, so a change's measured patch coverage may not fall below the base target ([ADR-020](../adr/adr-020-coverage-patch-gate.md)).
 
 ---
 
