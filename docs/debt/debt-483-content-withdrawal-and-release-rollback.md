@@ -346,6 +346,8 @@ location wrote 948 files byte-identical to the current imported tree (0 differin
 files), and the directory was then removed. No database or remote target was
 touched.
 
+If the swap-in fails and restoring the parked tree also fails, the parked tree is the last copy of the current corpus. It is kept, and the error names its path (#1153 review). An injected rename forces this double failure: before the fix, the cleanup deleted the only copy.
+
 **Remaining boundary:** a crash between the two renames leaves
 `content/questions/imported` absent and the previous tree parked in
 `content/.import-previous-*` for manual recovery. The window is two syscalls, not a

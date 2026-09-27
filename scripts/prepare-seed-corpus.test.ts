@@ -5,6 +5,7 @@ import {
   mkdtemp,
   readdir,
   readFile,
+  rename,
   rm,
   writeFile,
 } from 'node:fs/promises';
@@ -143,6 +144,38 @@ describe('prepareSeedCorpus', () => {
 
     expect(existsSync(importedRoot)).toBe(false);
     expect(await readdir(contentRoot)).toEqual(['questions']);
+  });
+
+  // #1153 review: if the restoring rename also fails, the parked tree is the
+  // only copy of the current corpus, so it must survive for manual recovery.
+  it('keeps the parked tree and names it when restoring it also fails', async () => {
+    await writeImported('current.mdx', 'current');
+    const renameUnlessPlacing = async (from: string, to: string) => {
+      if (to === importedRoot)
+        throw Object.assign(new Error('rename failed'), { code: 'EIO' });
+      await rename(from, to);
+    };
+
+    const failure = await prepareSeedCorpus({
+      contentRoot,
+      rename: renameUnlessPlacing,
+      runImport: async (args) => {
+        if (isDryRun(args)) return;
+        await writeFile(path.join(outArgument(args), 'new.mdx'), 'new');
+      },
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    const parkedRoot = (await readdir(contentRoot)).find((entry) =>
+      entry.startsWith('.import-previous-'),
+    );
+    expect(parkedRoot).toBeDefined();
+    const parked = path.join(contentRoot, String(parkedRoot), 'imported');
+    expect(await readFile(path.join(parked, 'current.mdx'), 'utf8')).toBe(
+      'current',
+    );
+    expect((failure as Error).message).toContain(parked);
+    expect(existsSync(importedRoot)).toBe(false);
   });
 
   it('restores the current tree when the new tree cannot be moved into place', async () => {

@@ -2,6 +2,7 @@ import { mkdtemp, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 export type SeedCorpusImport = (args: readonly string[]) => Promise<void>;
+export type SeedCorpusRename = (from: string, to: string) => Promise<void>;
 
 // DEBT-483: the managed seed used to delete content/questions/imported before
 // regenerating it, so a failed import left no tree or a partial one. It now
@@ -11,14 +12,17 @@ export type SeedCorpusImport = (args: readonly string[]) => Promise<void>;
 export async function prepareSeedCorpus(input: {
   contentRoot: string;
   runImport: SeedCorpusImport;
+  // Injected only to force the double-failure path; defaults to fs.rename.
+  rename?: SeedCorpusRename;
 }): Promise<void> {
+  const move = input.rename ?? rename;
   const importedRoot = path.join(input.contentRoot, 'questions', 'imported');
   const staging = await mkdtemp(
     path.join(input.contentRoot, '.import-staging-'),
   );
   try {
     await input.runImport(['--status', 'published', '--out', staging]);
-    await swapInto(staging, importedRoot, input.contentRoot);
+    await swapInto(staging, importedRoot, input.contentRoot, move);
   } finally {
     await rm(staging, { recursive: true, force: true });
   }
@@ -28,25 +32,42 @@ async function swapInto(
   next: string,
   current: string,
   contentRoot: string,
+  move: SeedCorpusRename,
 ): Promise<void> {
   const previous = await mkdtemp(path.join(contentRoot, '.import-previous-'));
   const parked = path.join(previous, 'imported');
+  // True only when the parked tree is the last copy of the current corpus.
+  let stranded = false;
   try {
-    const hadCurrent = await moveIfPresent(current, parked);
+    const hadCurrent = await moveIfPresent(current, parked, move);
     try {
-      await rename(next, current);
+      await move(next, current);
     } catch (error) {
-      if (hadCurrent) await rename(parked, current);
+      if (hadCurrent) {
+        try {
+          await move(parked, current);
+        } catch {
+          stranded = true;
+          throw new Error(
+            `Seed corpus swap failed and the previous tree could not be restored; it is preserved at ${parked}.`,
+            { cause: error },
+          );
+        }
+      }
       throw error;
     }
   } finally {
-    await rm(previous, { recursive: true, force: true });
+    if (!stranded) await rm(previous, { recursive: true, force: true });
   }
 }
 
-async function moveIfPresent(from: string, to: string): Promise<boolean> {
+async function moveIfPresent(
+  from: string,
+  to: string,
+  move: SeedCorpusRename,
+): Promise<boolean> {
   try {
-    await rename(from, to);
+    await move(from, to);
     return true;
   } catch (error) {
     // Node's fs rejections are ErrnoExceptions; only a missing tree is benign.
