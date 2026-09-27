@@ -30,12 +30,7 @@ const MAX_BATCH_LIMIT = 500;
 export const RENEWAL_NOTICE_DISPATCH_CONCURRENCY = 4;
 
 export type ScheduledRenewalNotice = {
-  // DEBT-414 F02 schedules 'anniversary_reminder' in its second step, with
-  // its content; until then the kind exists only in the database enum.
-  noticeKind: Exclude<
-    RenewalNoticeKind,
-    'acknowledgment' | 'anniversary_reminder'
-  >;
+  noticeKind: Exclude<RenewalNoticeKind, 'acknowledgment'>;
   externalSubscriptionId: string;
   applicableAt: Date;
   disclosureVersion: string;
@@ -71,7 +66,26 @@ function getHeading(noticeKind: ScheduledRenewalNotice['noticeKind']): string {
       return 'Material subscription change';
     case 'fee_change':
       return 'Subscription fee change';
+    case 'anniversary_reminder':
+      return 'Yearly reminder about your monthly subscription';
   }
+}
+
+// DEBT-414 F02: a monthly subscriber's yearly reminder, before the renewal
+// that carries the subscription past another twelve months.
+function anniversaryDetail(
+  notice: ScheduledRenewalNotice,
+): RenewalNoticeLine[] {
+  return [
+    [
+      `Your Addiction Boards ${notice.planName} subscription renews automatically every ${notice.frequency} unless you cancel.`,
+    ],
+    [
+      `This is your yearly reminder: the renewal on ${formatRenewalNoticeCutoff(notice.applicableAt)} continues your subscription into another year.`,
+    ],
+    ['Cancel before that time to avoid the renewal charge.'],
+    [`Renewal amount and frequency: ${formatAmount(notice)}.`],
+  ];
 }
 
 function createPayload(
@@ -85,22 +99,25 @@ function createPayload(
   // DEBT-414 F06: renewal notices say renewal happens unless canceled, give
   // the exact cutoff with its zone, link the online cancellation route, and
   // restate the cancellation policy the Terms publish.
-  const detail: RenewalNoticeLine[] = isChangeNotice
-    ? [
-        [
-          `${notice.noticeKind === 'fee_change' ? 'Fee change' : 'Material change'} effective: ${formatRenewalNoticeDate(notice.applicableAt)}.`,
-        ],
-        [`Change: ${notice.changeDescription ?? ''}`],
-      ]
-    : [
-        [
-          `Your Addiction Boards ${notice.planName} subscription renews automatically unless you cancel.`,
-        ],
-        [
-          `Cancel before ${formatRenewalNoticeCutoff(notice.applicableAt)} to avoid the renewal charge.`,
-        ],
-        [`Renewal amount and frequency: ${formatAmount(notice)}.`],
-      ];
+  const detail: RenewalNoticeLine[] =
+    notice.noticeKind === 'anniversary_reminder'
+      ? anniversaryDetail(notice)
+      : isChangeNotice
+        ? [
+            [
+              `${notice.noticeKind === 'fee_change' ? 'Fee change' : 'Material change'} effective: ${formatRenewalNoticeDate(notice.applicableAt)}.`,
+            ],
+            [`Change: ${notice.changeDescription ?? ''}`],
+          ]
+        : [
+            [
+              `Your Addiction Boards ${notice.planName} subscription renews automatically unless you cancel.`,
+            ],
+            [
+              `Cancel before ${formatRenewalNoticeCutoff(notice.applicableAt)} to avoid the renewal charge.`,
+            ],
+            [`Renewal amount and frequency: ${formatAmount(notice)}.`],
+          ];
   const lines: RenewalNoticeLine[] = [
     [`${heading} for ${notice.planName}.`],
     ...detail,
