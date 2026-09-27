@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
 import { STRIPE_SUBSCRIPTION_METADATA_E2E_OWNER_FIELD } from '@/src/adapters/shared/stripe-subscription-errors';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
@@ -7,6 +7,16 @@ import {
   retrieveAndNormalizeStripeSubscription,
 } from './stripe-subscription-normalizer';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
+
+describe('retrieveAndNormalizeStripeSubscription Stripe port', () => {
+  it('receives only the Subscriptions API', () => {
+    expectTypeOf<
+      keyof Parameters<
+        typeof retrieveAndNormalizeStripeSubscription
+      >[0]['stripe']
+    >().toEqualTypeOf<'subscriptions'>();
+  });
+});
 
 const priceIds: StripePriceIds = {
   monthly: 'price_monthly',

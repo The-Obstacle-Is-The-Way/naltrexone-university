@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { FakeStripeCheckoutClient } from '@/src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client';
 import { ApplicationError } from '@/src/application/errors';
 import {
@@ -7,6 +7,7 @@ import {
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
+import type { ReconcileStripeSubscriptionsDeps } from './reconcile-stripe-subscriptions-types';
 import {
   createReconciliationTestScenario,
   createSingleRowScenario,
@@ -20,6 +21,16 @@ import {
   secondaryUserId,
   tertiaryUserId,
 } from './test-helpers/reconcile-stripe-subscriptions-harness';
+
+// #1145 review: reconciliation reads Subscriptions only, so its port cannot
+// reach customer creation, Checkout or the portal.
+describe('reconcileStripeSubscriptions Stripe port', () => {
+  it('receives only the Subscriptions API', () => {
+    expectTypeOf<
+      keyof ReconcileStripeSubscriptionsDeps['stripe']
+    >().toEqualTypeOf<'subscriptions'>();
+  });
+});
 
 describe('reconcileStripeSubscriptions batch processing and persistence', () => {
   it('processes rows with bounded concurrency (default 10)', async () => {

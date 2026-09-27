@@ -1,5 +1,5 @@
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
-import type { StripeClient } from '@/src/adapters/shared/stripe-types';
+import type { StripeSubscriptionsClient } from '@/src/adapters/shared/stripe-types';
 import type { Logger } from '@/src/application/ports/logger';
 import type {
   RenewalConsentRecordRepository,
@@ -28,7 +28,7 @@ export type ReconcileStripeSubscriptionsOutput = {
 };
 
 export type ReconcileStripeSubscriptionsDeps = {
-  stripe: StripeClient;
+  stripe: StripeSubscriptionsClient;
   priceIds: StripePriceIds;
   logger: Logger;
   now: () => Date;

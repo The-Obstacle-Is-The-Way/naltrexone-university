@@ -11,7 +11,7 @@ import {
 } from '@/src/adapters/shared/stripe-subscription-errors';
 import {
   isValidStripeSubscriptionStatus,
-  type StripeClient,
+  type StripeSubscriptionsClient,
 } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
@@ -111,7 +111,7 @@ export function normalizeStripeSubscriptionUpdate(input: {
 }
 
 export async function retrieveAndNormalizeStripeSubscription(input: {
-  stripe: StripeClient;
+  stripe: StripeSubscriptionsClient;
   subscriptionRef: StripeSubscriptionRef;
   event: { id: string; type: string };
   priceIds: StripePriceIds;
