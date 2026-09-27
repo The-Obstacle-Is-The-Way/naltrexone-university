@@ -54,7 +54,10 @@ projects: [
 webServer: {
   command: process.env.CI ? 'pnpm start' : 'pnpm build && pnpm start',
   // process.env plus a test-only CONSENT_STATE_SECRET unless one is set
-  env: { ...process.env, CONSENT_STATE_SECRET: '…' },
+  env: {
+    ...process.env,
+    CONSENT_STATE_SECRET: process.env.CONSENT_STATE_SECRET ?? '<test-only value>',
+  },
   url: `${baseURL}/api/health`,
   reuseExistingServer: false,
   timeout: 120000,
