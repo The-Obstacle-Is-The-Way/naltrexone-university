@@ -42,7 +42,11 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
     "src/domain/services/shuffle.ts",
     "src/application/shared/shuffled-choice-views.ts",
     "src/application/shared/persist-subscription-observation.ts",
-    "src/application/use-cases/validate-feedback-context.ts"
+    "src/application/use-cases/validate-feedback-context.ts",
+    "src/domain/services/session-stats.ts",
+    "src/domain/value-objects/subscription-status.ts",
+    "src/application/use-cases/start-practice-session.ts",
+    "src/adapters/controllers/shared/idempotency-error-policy.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
   "incremental": true,
@@ -75,7 +79,7 @@ Chosen 2026-08-13 for consequence-per-minute: small, fast, unit-tested, mostly p
 | `src/application/shared/persist-subscription-observation.ts` | Retry-loop bounds + version-conflict discriminator; wrong can mean a nonterminating conflict retry or a lost write | Attempt-counter reversal times out; the defensive fallback is `NoCoverage` |
 | `src/application/use-cases/validate-feedback-context.ts` (15 tests) | BUG-260 ownership/integrity boundary with a compound negated clause | Condition removal in the both-ID and retry-provenance ladder |
 
-Second wave once the pilot is triaged: `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts`, `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy), then production files across `src/domain/**`, then `src/application/{use-cases,shared}/**`, subject to the §2 exclusions.
+The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). Next come production files across `src/domain/**`, then `src/application/{use-cases,shared}/**`, subject to the §2 exclusions.
 
 ## 5. Triage — what each survivor means
 
@@ -120,5 +124,15 @@ The pilot baseline ran on 2026-09-27 with Stryker 9.6.1 against the unit lane. T
 | `src/application/shared/persist-subscription-observation.ts` | 94.74% | 100.00% |
 | `src/application/use-cases/validate-feedback-context.ts` | 96.83% | 100.00% |
 | **All nine files** | **91.77%** | **100.00%** |
+
+The second wave ran on 2026-09-27 the same way:
+
+| File | Baseline | After triage |
+|---|---:|---:|
+| `src/domain/services/session-stats.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/subscription-status.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/start-practice-session.ts` | 86.36% | 100.00% |
+| `src/adapters/controllers/shared/idempotency-error-policy.ts` | 89.68% | 100.00% |
+| **All four files** | **91.44%** | **100.00%** |
 
 The after-triage scores exclude four suppressed equivalent mutants, each with its reason in the source, and the two siblings those comments also cover (§5). 100% here is what triage left, not a target. Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.
