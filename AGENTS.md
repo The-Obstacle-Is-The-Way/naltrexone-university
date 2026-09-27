@@ -734,7 +734,8 @@ For each promotion:
    It fetches `origin`, re-runs the proof, writes the output into a marked
    section of the PR body, confirms the body shows it, re-reads the PR and
    refuses if its base or head moved, and only then merges the verified head
-   with `--match-head-commit`. GitHub's body-edit history
+   with `--match-head-commit`. GitHub cannot pin the base at merge time, so
+   the recorded base is the one observed immediately before the merge. GitHub's body-edit history
    therefore shows the proof before the merge; ten 2026-09-25/26 promotions
    recorded it after (adversarial review F3). If either branch moves, the
    merge is refused; refresh CI and run it again. No `--admin` or ruleset

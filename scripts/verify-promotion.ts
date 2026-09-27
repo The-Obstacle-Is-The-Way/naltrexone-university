@@ -146,8 +146,10 @@ export function runVerifyPromotion(
         'Promotion body does not show the receipt; refusing to merge',
       );
     }
-    // --match-head-commit pins only the head; a base that moved since the
-    // proof would leave the receipt naming a stale base (#1138 review).
+    // --match-head-commit pins only the head, and GitHub offers no way to pin
+    // the base at merge time. This re-read is the last observation before the
+    // merge: a base that moved since the proof is refused here, so the
+    // receipt's base is current as of this read (#1138 and #1139 reviews).
     const latest = checkPromotionReadiness(
       readMergeEvidence(number).pullRequest,
     );
