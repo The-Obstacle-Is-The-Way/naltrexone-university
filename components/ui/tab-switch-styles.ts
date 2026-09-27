@@ -8,8 +8,11 @@ import { compactControlShellClasses } from './control-shell-styles';
  * Visual styling is shared here to prevent drift.
  */
 
-/** Outer container wrapping all tab items. */
-export const tabSwitchContainerClasses = compactControlShellClasses;
+/**
+ * Outer container wrapping all tab items. Items wrap to a second row instead
+ * of overflowing a parent too narrow for them (a phone-width card).
+ */
+export const tabSwitchContainerClasses = `${compactControlShellClasses} flex-wrap`;
 
 /** Base classes for each tab item (active or inactive). */
 export const tabSwitchItemBaseClasses =
