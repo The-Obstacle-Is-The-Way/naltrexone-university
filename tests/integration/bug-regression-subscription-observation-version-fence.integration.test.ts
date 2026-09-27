@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { processStripeWebhook } from '@/src/adapters/controllers/stripe-webhook-controller';
 import { createStripeWebhookRenewalAcknowledgmentTestDeps } from '@/src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment';
+import { FakeStripeCheckoutClient } from '@/src/adapters/gateways/stripe/test-helpers/fake-stripe-checkout-client';
 import { reconcileStripeSubscriptions } from '@/src/adapters/jobs/reconcile-stripe-subscriptions';
-import type { ReconcileStripeSubscriptionsDeps } from '@/src/adapters/jobs/reconcile-stripe-subscriptions-types';
 import { DrizzleRenewalConsentRecordRepository } from '@/src/adapters/repositories/drizzle-renewal-consent-record-repository';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleStripeEventRepository } from '@/src/adapters/repositories/drizzle-stripe-event-repository';
@@ -14,6 +14,7 @@ import {
   FakeLogger,
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import { runSubscriptionObservationVersionContract } from '@/tests/shared/subscription-observation-version-contract';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
@@ -120,15 +121,13 @@ function normalizedWebhookResult(input: {
   return {
     eventId: input.eventId,
     type: 'customer.subscription.updated',
-    subscriptionUpdate: {
+    subscriptionUpdate: createTestWebhookSubscriptionUpdate({
       userId: input.userId,
       externalCustomerId: input.externalCustomerId,
       externalSubscriptionId: input.externalSubscriptionId,
-      plan: 'monthly',
       status: input.status,
       currentPeriodEnd: input.currentPeriodEnd,
-      cancelAtPeriodEnd: false,
-    },
+    }),
   };
 }
 
@@ -194,8 +193,6 @@ describe('BUG-287 real PostgreSQL interleavings', () => {
 
     const reconcileWindowOpen = createDeferred<void>();
     const releaseReconcile = createDeferred<void>();
-    let retrieveCount = 0;
-    let listCount = 0;
     const staleSubscription = stripeSubscription({
       userId: user.id,
       externalCustomerId,
@@ -210,56 +207,15 @@ describe('BUG-287 real PostgreSQL interleavings', () => {
       status: 'canceled',
       currentPeriodEnd: 1_767_139_200,
     });
-    const stripe: ReconcileStripeSubscriptionsDeps['stripe'] = {
-      customers: {
-        create: async () => {
-          throw new Error('Unexpected customers.create');
-        },
-      },
-      checkout: {
-        sessions: {
-          create: async () => {
-            throw new Error('Unexpected checkout.sessions.create');
-          },
-          list: async () => {
-            throw new Error('Unexpected checkout.sessions.list');
-          },
-          retrieve: async () => {
-            throw new Error('Unexpected checkout.sessions.retrieve');
-          },
-          expire: async () => {
-            throw new Error('Unexpected checkout.sessions.expire');
-          },
-        },
-      },
-      subscriptions: {
-        retrieve: async () => {
-          retrieveCount += 1;
-          return retrieveCount === 1 ? staleSubscription : freshSubscription;
-        },
-        list: async () => {
-          listCount += 1;
-          if (listCount === 1) {
-            reconcileWindowOpen.resolve();
-            await releaseReconcile.promise;
-          }
-          return { data: [] };
-        },
-        cancel: async () => freshSubscription,
-      },
-      billingPortal: {
-        sessions: {
-          create: async () => {
-            throw new Error('Unexpected billingPortal.sessions.create');
-          },
-        },
-      },
-      webhooks: {
-        constructEvent: () => {
-          throw new Error('Unexpected webhooks.constructEvent');
-        },
-      },
-    };
+    // Stripe still reports the active Subscription until the webhook lands.
+    // The first listing holds reconciliation inside its read window.
+    const stripe = new FakeStripeCheckoutClient();
+    stripe.seedSubscription(staleSubscription);
+    stripe.setSubscriptionListHook(async () => {
+      if (stripe.subscriptions.listCalls.length > 1) return;
+      reconcileWindowOpen.resolve();
+      await releaseReconcile.promise;
+    });
 
     const reconcilePromise = reconcileStripeSubscriptions(
       { limit: 1, offset: 0, dryRun: true, concurrency: 1 },
@@ -305,6 +261,9 @@ describe('BUG-287 real PostgreSQL interleavings', () => {
         writer: writerB.db,
         eventId,
       });
+      // The webhook announced Stripe's cancellation; Stripe now reports it.
+      stripe.markSubscriptionCanceled(externalSubscriptionId);
+      stripe.setSubscriptionRetrieveOverride(() => freshSubscription);
     } finally {
       releaseReconcile.resolve();
     }
@@ -320,8 +279,8 @@ describe('BUG-287 real PostgreSQL interleavings', () => {
     await expect(
       repository.findObservationVersionByUserId(user.id),
     ).resolves.toBe(3);
-    expect(retrieveCount).toBe(2);
-    expect(listCount).toBe(2);
+    expect(stripe.subscriptions.retrieveCalls).toHaveLength(2);
+    expect(stripe.subscriptions.listCalls).toHaveLength(2);
   });
 
   it('rejects the reverse-commit webhook observation and retries with current state', async () => {

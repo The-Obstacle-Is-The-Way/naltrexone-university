@@ -24,6 +24,7 @@ import {
   FakePaymentGateway,
   FakeTransactionalEmailGateway,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import { DispatchRenewalNoticeDeliveryUseCase } from '@/src/application/use-cases';
 import type { NewRenewalNoticeDelivery } from '@/src/domain/entities';
 import {
@@ -94,15 +95,12 @@ function createDeps(input: {
     webhookResult: {
       eventId: input.eventId,
       type: 'checkout.session.completed',
-      subscriptionUpdate: {
+      subscriptionUpdate: createTestWebhookSubscriptionUpdate({
         userId: input.userId,
         externalCustomerId: `cus_${input.eventId}`,
         externalSubscriptionId: `sub_${input.eventId}`,
-        plan: 'monthly',
-        status: 'active',
         currentPeriodEnd: new Date('2026-09-07T12:00:00.000Z'),
-        cancelAtPeriodEnd: false,
-      },
+      }),
       initialSubscriptionConsent: {
         checkoutSessionId: input.checkoutSessionId,
         userId: input.userId,

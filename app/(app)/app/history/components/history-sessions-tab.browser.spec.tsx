@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import * as practiceController from '@/src/adapters/controllers/practice-controller';
+import { createSessionHistoryRow } from '@/src/application/test-helpers/view-rows';
 import { ok } from '@/tests/test-helpers/ok';
 import { HistorySessionsTab } from './history-sessions-tab';
 
@@ -44,20 +45,7 @@ describe('HistorySessionsTab (browser)', () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
-          rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
+          rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
           total: 1,
           limit: 20,
           offset: 0,
@@ -78,20 +66,7 @@ describe('HistorySessionsTab (browser)', () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
-          rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
+          rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
           total: 1,
           limit: 20,
           offset: 0,
@@ -140,20 +115,7 @@ describe('HistorySessionsTab (browser)', () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
-          rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
+          rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
           total: 1,
           limit: 20,
           offset: 0,
@@ -203,20 +165,7 @@ describe('HistorySessionsTab (browser)', () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
-          rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
+          rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
           total: 1,
           limit: 20,
           offset: 0,
@@ -266,20 +215,7 @@ describe('HistorySessionsTab (browser)', () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
-          rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
+          rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
           total: 1,
           limit: 20,
           offset: 0,
@@ -325,20 +261,7 @@ describe('HistorySessionsTab (browser)', () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
-          rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
+          rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
           total: 1,
           limit: 20,
           offset: 0,
@@ -421,20 +344,7 @@ describe('HistorySessionsTab (browser)', () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
-          rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
+          rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
           total: 1,
           limit: 20,
           offset: 0,
@@ -479,20 +389,7 @@ describe('HistorySessionsTab (browser)', () => {
     const screen = await render(
       <HistorySessionsTab
         result={ok({
-          rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-          ],
+          rows: [createSessionHistoryRow({ sessionId: fixtureSession1Id })],
           total: 1,
           limit: 20,
           offset: 0,
@@ -564,22 +461,10 @@ describe('HistorySessionsTab (browser)', () => {
       <HistorySessionsTab
         result={ok({
           rows: [
-            {
-              sessionId: fixtureSession1Id,
-              mode: 'exam',
-              questionCount: 10,
-              firstQuestionSlug: 'q-1',
-              answered: 10,
-              correct: 8,
-              accuracy: 0.8,
-              durationSeconds: 1200,
-              startedAt: '2026-02-07T00:00:00.000Z',
-              endedAt: '2026-02-07T00:20:00.000Z',
-            },
-            {
+            createSessionHistoryRow({ sessionId: fixtureSession1Id }),
+            createSessionHistoryRow({
               sessionId: fixtureSession2Id,
               mode: 'tutor',
-              questionCount: 10,
               firstQuestionSlug: 'q-2',
               answered: 0,
               correct: 0,
@@ -587,7 +472,7 @@ describe('HistorySessionsTab (browser)', () => {
               durationSeconds: 180,
               startedAt: '2026-02-08T00:00:00.000Z',
               endedAt: '2026-02-08T00:03:00.000Z',
-            },
+            }),
           ],
           total: 2,
           limit: 20,

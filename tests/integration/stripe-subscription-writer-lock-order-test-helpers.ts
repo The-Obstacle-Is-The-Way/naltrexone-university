@@ -22,6 +22,8 @@ import {
   FakeLogger,
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
+import { clerkUserDeletedEvent } from '@/tests/shared/clerk-events';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
   cleanupAfterEach,
@@ -278,15 +280,12 @@ export function createLockOrderHarness() {
       webhookResult: {
         eventId: input.eventId,
         type: 'customer.subscription.updated',
-        subscriptionUpdate: {
+        subscriptionUpdate: createTestWebhookSubscriptionUpdate({
           userId: input.userId,
           externalCustomerId: input.externalCustomerId,
           externalSubscriptionId: input.externalSubscriptionId,
-          plan: 'monthly',
-          status: 'active',
           currentPeriodEnd: new Date('2030-01-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
+        }),
       },
     });
     const acknowledgment = createStripeWebhookRenewalAcknowledgmentTestDeps();
@@ -366,11 +365,10 @@ export function createLockOrderHarness() {
         getClerkUserById,
         logger: new FakeLogger(),
       },
-      {
+      clerkUserDeletedEvent({
         eventId: input.eventId,
-        type: 'user.deleted',
-        data: { id: input.clerkUserId },
-      },
+        clerkUserId: input.clerkUserId,
+      }),
     );
     expect(getClerkUserById).not.toHaveBeenCalled();
   }

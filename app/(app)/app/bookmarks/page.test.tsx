@@ -23,6 +23,7 @@ import {
   FakeSetBookmarkUseCase,
   FakeSubscriptionRepository,
 } from '@/src/application/test-helpers/fakes';
+import { createAvailableBookmarkRow as createAvailableBookmarkRowShared } from '@/src/application/test-helpers/view-rows';
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
@@ -52,18 +53,14 @@ type AvailableBookmarkRow = Extract<
   { isAvailable: true }
 >;
 
+// The suite's rows keep its fixture questionId unless a case passes another.
 function createAvailableBookmarkRow(
   overrides: Partial<AvailableBookmarkRow> = {},
 ): AvailableBookmarkRow {
-  return {
-    isAvailable: true,
+  return createAvailableBookmarkRowShared({
     questionId: fixtureQuestion1Id,
-    slug: 'q-1',
-    stemMd: 'Stem for q1',
-    difficulty: 'easy',
-    bookmarkedAt: '2026-02-01T00:00:00.000Z',
     ...overrides,
-  };
+  });
 }
 
 function createBookmarksSuccessResult(

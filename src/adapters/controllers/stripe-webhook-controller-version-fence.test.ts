@@ -17,6 +17,7 @@ import {
   FakeSubscriptionRepository,
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import { createStripeWebhookRenewalAcknowledgmentTestDeps } from './test-helpers/stripe-webhook-renewal-acknowledgment';
 
 class AlwaysConflictingSubscriptionRepository extends FakeSubscriptionRepository {
@@ -45,15 +46,10 @@ describe('processStripeWebhook observation-version fence', () => {
       webhookResult: {
         eventId,
         type: 'customer.subscription.updated',
-        subscriptionUpdate: {
+        subscriptionUpdate: createTestWebhookSubscriptionUpdate({
           userId,
-          externalCustomerId: 'cus_123',
-          externalSubscriptionId: 'sub_123',
-          plan: 'monthly',
-          status: 'active',
           currentPeriodEnd: new Date('2030-01-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
+        }),
       },
     });
     const stripeEvents = new FakeStripeEventRepository();

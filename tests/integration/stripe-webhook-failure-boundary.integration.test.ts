@@ -14,6 +14,7 @@ import {
   FakeLogger,
   FakePaymentGateway,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -53,15 +54,12 @@ describe('Stripe webhook failure boundary', () => {
       webhookResult: {
         eventId,
         type: 'customer.subscription.updated',
-        subscriptionUpdate: {
+        subscriptionUpdate: createTestWebhookSubscriptionUpdate({
           userId: processingUser.id,
           externalCustomerId,
           externalSubscriptionId: `sub_${randomUUID().replaceAll('-', '')}`,
-          plan: 'monthly',
-          status: 'active',
           currentPeriodEnd: new Date('2027-03-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
+        }),
       },
     });
     const priceIds = {

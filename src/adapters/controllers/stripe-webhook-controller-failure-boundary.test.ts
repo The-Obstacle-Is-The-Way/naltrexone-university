@@ -9,6 +9,7 @@ import {
   FakeSubscriptionRepository,
   FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
+import { createTestWebhookSubscriptionUpdate } from '@/src/application/test-helpers/webhook-event-results';
 import { newRenewalConsentRecord } from '@/src/domain/entities';
 import {
   processStripeWebhook,
@@ -37,15 +38,7 @@ function createPaymentGateway(
     webhookResult: {
       eventId,
       type: 'customer.subscription.updated',
-      subscriptionUpdate: {
-        userId,
-        externalCustomerId: 'cus_123',
-        externalSubscriptionId: 'sub_123',
-        plan: 'monthly',
-        status: 'active',
-        currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-        cancelAtPeriodEnd: false,
-      },
+      subscriptionUpdate: createTestWebhookSubscriptionUpdate({ userId }),
     },
   });
 }
@@ -243,15 +236,12 @@ describe('processStripeWebhook failure boundary', () => {
         eventId: 'evt_deleted_user',
         type: 'customer.subscription.deleted',
         occurredAt,
-        subscriptionUpdate: {
+        subscriptionUpdate: createTestWebhookSubscriptionUpdate({
           userId,
           externalCustomerId: 'cus_deleted_user',
           externalSubscriptionId: 'sub_deleted_user',
-          plan: 'monthly',
           status: 'canceled',
-          currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
-          cancelAtPeriodEnd: false,
-        },
+        }),
       },
     });
     const stripeEvents = new FakeStripeEventRepository();
