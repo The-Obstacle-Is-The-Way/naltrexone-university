@@ -2,6 +2,7 @@ import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import dotenv from 'dotenv';
+import { prepareSeedCorpus } from './prepare-seed-corpus';
 import type {
   SeedEnvironmentDependencies,
   VercelSeedEnvironment,
@@ -106,20 +107,11 @@ export async function readDatabaseUrlFromFile(
 }
 
 async function prepareCorpus(): Promise<void> {
-  await runProcess(
-    'pnpm',
-    ['content:import:drafts', '--', '--status', 'published', '--dry-run'],
-    process.env,
-  );
-  await rm(path.join('content', 'questions', 'imported'), {
-    recursive: true,
-    force: true,
+  await prepareSeedCorpus({
+    contentRoot: 'content',
+    runImport: (args) =>
+      runProcess('pnpm', ['content:import:drafts', '--', ...args], process.env),
   });
-  await runProcess(
-    'pnpm',
-    ['content:import:drafts', '--', '--status', 'published'],
-    process.env,
-  );
 }
 
 async function seedDatabase(databaseUrl: string): Promise<void> {
