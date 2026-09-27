@@ -2,6 +2,7 @@ import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import dotenv from 'dotenv';
+import { prepareSeedCorpus } from './prepare-seed-corpus';
 import type {
   SeedEnvironmentDependencies,
   VercelSeedEnvironment,
@@ -37,13 +38,26 @@ const readSeedEnvironmentFile: SeedEnvironmentFileReader = (filePath) =>
 
 export function createSeedEnvironmentRuntime(
   tempDirectory: string,
+  corpus: { contentRoot?: string; spawnProcess?: SeedProcessSpawner } = {},
 ): SeedEnvironmentRuntime {
+  const { contentRoot = 'content', spawnProcess = spawnSeedProcess } = corpus;
   return {
     dependencies: {
       readLocalDatabaseUrl: () => readDatabaseUrlFromFile('.env.local'),
       pullDatabaseUrl: (environment) =>
         pullVercelDatabaseUrl(tempDirectory, environment),
-      prepareCorpus,
+      prepareCorpus: () =>
+        prepareSeedCorpus({
+          contentRoot,
+          runImport: (args) =>
+            runProcess(
+              'pnpm',
+              ['content:import:drafts', '--', ...args],
+              process.env,
+              false,
+              spawnProcess,
+            ),
+        }),
       seedDatabase,
       log: console.info,
     },
@@ -103,23 +117,6 @@ export async function readDatabaseUrlFromFile(
     throw new Error(`DATABASE_URL is missing from ${filePath}.`);
   }
   return databaseUrl;
-}
-
-async function prepareCorpus(): Promise<void> {
-  await runProcess(
-    'pnpm',
-    ['content:import:drafts', '--', '--status', 'published', '--dry-run'],
-    process.env,
-  );
-  await rm(path.join('content', 'questions', 'imported'), {
-    recursive: true,
-    force: true,
-  });
-  await runProcess(
-    'pnpm',
-    ['content:import:drafts', '--', '--status', 'published'],
-    process.env,
-  );
 }
 
 async function seedDatabase(databaseUrl: string): Promise<void> {

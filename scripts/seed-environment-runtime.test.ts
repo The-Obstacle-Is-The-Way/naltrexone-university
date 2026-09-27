@@ -1,7 +1,11 @@
 import { ChildProcess, execFileSync } from 'node:child_process';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import packageJson from '../package.json';
 import {
+  createSeedEnvironmentRuntime,
   pullVercelDatabaseUrl,
   readDatabaseUrlFromFile,
   runProcess,
@@ -162,6 +166,47 @@ describe('seed environment runtime', () => {
       timeout: SEED_ENVIRONMENT_COMMAND_TIMEOUT_MS,
       killSignal: 'SIGTERM',
     });
+  });
+
+  it('prepares the corpus by importing published drafts into fresh staging', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'seed-runtime-corpus-'));
+    const contentRoot = path.join(root, 'content');
+    await mkdir(path.join(contentRoot, 'questions'), { recursive: true });
+    const spawnProcess = vi.fn<SeedProcessSpawner>(
+      (_command, args, _options) => {
+        const child = new ChildProcess();
+        const out = String(args[args.indexOf('--out') + 1]);
+        void writeFile(path.join(out, 'question.mdx'), 'q').then(() =>
+          child.emit('exit', 0, null),
+        );
+        return child;
+      },
+    );
+
+    try {
+      await createSeedEnvironmentRuntime(root, {
+        contentRoot,
+        spawnProcess,
+      }).dependencies.prepareCorpus();
+
+      expect(spawnProcess).toHaveBeenCalledWith(
+        'pnpm',
+        [
+          'content:import:drafts',
+          '--',
+          '--status',
+          'published',
+          '--out',
+          expect.stringContaining(path.join(contentRoot, '.import-staging-')),
+        ],
+        expect.objectContaining({ stdio: 'inherit' }),
+      );
+      expect(
+        await readdir(path.join(contentRoot, 'questions', 'imported')),
+      ).toEqual(['question.mdx']);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it('rejects when a timed-out child exits through the termination signal', async () => {
