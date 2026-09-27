@@ -84,6 +84,9 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       );
     }
 
+    // A refusal is a fact about the notice, not the provider: a superseded or
+    // late notice is never sendable, so it is recorded (and a missed cutoff
+    // alerts) whether or not the provider is configured.
     const refusal = await this.refusalBeforeSend(delivery);
     if (refusal) {
       return this.terminate(
@@ -176,6 +179,9 @@ export class DispatchRenewalNoticeDeliveryUseCase {
     );
     if (account?.email !== delivery.destination) return 'destination_changed';
     if (isRenewalReminder(delivery)) {
+      // Every scheduled renewal notice states the annual amount and yearly
+      // frequency today; DEBT-414 F02 makes this "the plan it was built for".
+      if (subscription.plan !== 'annual') return 'subscription_plan_changed';
       if (subscription.cancelAtPeriodEnd) return 'subscription_canceling';
       if (
         subscription.currentPeriodEnd.getTime() !==

@@ -619,9 +619,12 @@ The owner authorized the proposed code and configuration work (F01-F07, F15) on 
 - the subscription is gone or no longer active;
 - the subscription is set to cancel at period end;
 - it renews on a different date;
+- it is no longer on the annual plan, whose amount and yearly frequency every scheduled notice states (`subscription_plan_changed`, from the #1156 review; F02 turns this into "the plan the notice was built for");
 - the account email no longer matches the notice's destination.
 
 A renewal reminder is refused once its send-by cutoff, 30 days before renewal, has passed (failure class `notice_deadline_passed`), and the refusal is logged as an error. The job and dispatch share that minimum (`RENEWAL_NOTICE_MINIMUM_DAYS`), so they cannot drift apart. Acknowledgments record consent already given and are not revalidated.
+
+Refusals run before the email-provider configuration check, by design (#1156 review). A superseded or late notice is never sendable, so it is recorded as such, and a missed cutoff is logged at error level, even while no Resend key is set. A still-valid notice stays `queued` until the provider is configured. Three dispatch cases pin that order: moving the check after the configuration guard fails two of them.
 
 Receipts:
 - The revalidation suite was red first. With only the new dependency wired, the five supersession cases and the cutoff case failed. The three still-send cases passed: a matching notice, a notice exactly at the cutoff, and an acknowledgment.
