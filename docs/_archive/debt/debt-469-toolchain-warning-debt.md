@@ -50,7 +50,7 @@ The repository's standing practice has been to note warnings as "pre-existing" i
 Institutional (not printed warnings, but the reason warnings persist):
 
 - Before this implementation, `lint` / `lint:ci` (`biome check .` / `biome ci .`) exited 0 on warning-level diagnostics. Both scripts now pass `--error-on-warnings`; installed Biome 2.5.6 exposes that flag on both commands.
-- Coverage is collected on all three Vitest lanes and uploaded to Codecov. **2026-09-21 correction:** `codecov.yml` exists and ignores `tests/e2e`; it defines no numeric thresholds, and none is configured in Vitest. The ruleset requires `test`, not `codecov/patch`; a displayed Codecov verdict is not a required merge check. The proposed threshold ratchet belongs to [DEBT-468](../../debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4 and requires ADR-019's separate authorization.
+- Coverage is collected on all three Vitest lanes and uploaded to Codecov. **2026-09-21 correction:** `codecov.yml` exists and ignores `tests/e2e`; it defines no numeric thresholds, and none is configured in Vitest. The ruleset requires `test`, not `codecov/patch`; a displayed Codecov verdict is not a required merge check. The proposed threshold ratchet belongs to [DEBT-468](debt-468-test-estate-coverage-and-fixture-debt.md) Part 4 and requires ADR-019's separate authorization.
 
 ### W1 history — a policy lost in an upgrade, not a decision
 
@@ -289,7 +289,7 @@ Tracked suppressions fall **1 → 0**, which completes Resolution step 5. Under 
 
 ## Related
 
-- [DEBT-468](../../debt/debt-468-test-estate-coverage-and-fixture-debt.md) — fixture extraction shrinks the same oversized files this item splits; coverage-threshold ratchet lives there
+- [DEBT-468](debt-468-test-estate-coverage-and-fixture-debt.md) — fixture extraction shrinks the same oversized files this item splits; coverage-threshold ratchet lives there
 - [DEBT-466](debt-466-checkout-idempotency-replay-chain-exhaustion.md) / [DEBT-470](debt-470-checkout-replay-tail-jump.md) — Part A resolved historical depth-3 W6; DEBT-470 resolves the later depth-10 recurrence and retires the count-bearing local exception, so every `pricing?checkout=error&plan=monthly` remains a defect signal
 - [DEBT-465](../../debt/debt-465-test-quality-practices-adoption.md) — the practices campaign this investigation extends
 - `c6d94e80`, `d3d3e558`, `a4464f2f` — the W1 timeline receipts
