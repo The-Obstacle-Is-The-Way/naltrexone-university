@@ -629,3 +629,18 @@ Receipts:
 
 **Still open under F07:** the provider-acceptance label. Resend accepting a message is still stored as `delivered`. The fix is expand-only: add an `accepted` status that both old and new code tolerate, then later record delivery and bounce evidence from Resend webhooks, which needs a webhook endpoint and secret configured in Resend.
 
+**F06, notice content.** Scheduled notices said only "Renewal date" with a UTC date, escaped every line into a plain paragraph and linked nothing. Annual reminders and renewal notices now:
+- say the plan "renews automatically unless you cancel";
+- give the cancellation cutoff as an instant: UTC time, then Eastern and Pacific times, naming the local date when it differs (a deadline on the previous US evening);
+- state the renewal amount and frequency;
+- link the Billing page, support mail, Terms and Privacy as anchors in HTML and as URLs in text;
+- restate the Terms' own policy: cancellation takes effect at period end with access until then, and payments are non-refundable except where the law requires otherwise.
+
+The acknowledgment's trial end and cancellation deadline use the same cutoff format. Its cancellation policy and links belong to F15.
+
+Receipts:
+- Red first: the rendered-content case and both formatter cases failed on the old code.
+- An escaping case confirms that interpolated text stays escaped inside the linked HTML.
+- `lib/routes.test.ts` pins the notice's Billing path to `ROUTES.APP_BILLING`.
+- The notice template's disclosure version is unchanged: the immutable payload snapshot already records what each message said. A version bump would have re-queued notices for renewals already notified.
+
