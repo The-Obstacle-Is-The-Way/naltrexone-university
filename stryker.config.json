@@ -12,7 +12,11 @@
     "src/domain/services/shuffle.ts",
     "src/application/shared/shuffled-choice-views.ts",
     "src/application/shared/persist-subscription-observation.ts",
-    "src/application/use-cases/validate-feedback-context.ts"
+    "src/application/use-cases/validate-feedback-context.ts",
+    "src/domain/services/session-stats.ts",
+    "src/domain/value-objects/subscription-status.ts",
+    "src/application/use-cases/start-practice-session.ts",
+    "src/adapters/controllers/shared/idempotency-error-policy.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
   "incremental": true,
