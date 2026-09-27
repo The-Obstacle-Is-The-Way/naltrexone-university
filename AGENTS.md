@@ -154,7 +154,7 @@ rg '^(CLERK_SECRET_KEY|NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY|E2E_CLERK_USER_USERNAME
 pnpm test:e2e
 ```
 
-`pnpm test:e2e` selects only the required `chromium` project. Stripe-owned Checkout DOM journeys use the `stripe-hosted-*.spec.ts` prefix and run only through the scheduled/manual `pnpm test:e2e:stripe-hosted` compatibility lane; they are observational and are not part of the pre-push or merge gate. Required E2E may assert the redirect reached the `checkout.stripe.com` origin but must not act on or assert against Stripe-owned markup.
+`pnpm test:e2e` selects the required `chromium` and `mobile-smoke` projects (`mobile-smoke` re-runs the `@mobile-smoke` journeys and the sideways-scroll probe at 375×667). Stripe-owned Checkout DOM journeys use the `stripe-hosted-*.spec.ts` prefix and run only through the scheduled/manual `pnpm test:e2e:stripe-hosted` compatibility lane; they are observational and are not part of the pre-push or merge gate. Required E2E may assert the redirect reached the `checkout.stripe.com` origin but must not act on or assert against Stripe-owned markup.
 
 Product and cleanup projects have zero retries; never override that to obtain a
 green run. Only bootstrap has bounded retries. Report and inspect any recovered
