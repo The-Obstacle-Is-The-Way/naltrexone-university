@@ -23,6 +23,8 @@ describe('test-double fidelity scan edge cases', () => {
     'app/(app)/app/questions/[slug]/hooks/use-question-page-model-test-helpers.tsx',
     'src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment.ts',
     'src/application/test-helpers/fakes/fake-user-repository.ts',
+    'src/application/test-helpers/get-next-question-test-helpers.ts',
+    'src/application/test-helpers/submit-answer-test-helpers.ts',
     'tests/shared/dom-helpers.ts',
     'tests/integration/helpers.ts',
     // The suffixes Biome, the architecture scan and the CRAP report already
