@@ -12,12 +12,12 @@ import {
 } from '@/src/domain/test-helpers';
 import { ApplicationError } from '../errors';
 import type { QuestionFilters } from '../ports/repositories';
+import { GetNextQuestionUseCase } from '../use-cases/get-next-question';
 import {
   FakeAttemptRepository,
   FakePracticeSessionRepository,
   FakeQuestionRepository,
-} from '../test-helpers/fakes';
-import { GetNextQuestionUseCase } from './get-next-question';
+} from './fakes';
 
 export const USER_ID = 'user-1';
 export const SESSION_ID = 'session-1';

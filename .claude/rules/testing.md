@@ -103,3 +103,15 @@ Tests and test helpers that create boundary-shaped fixtures MUST keep applicatio
 | Hook (async/interactive) | `*.browser.spec.tsx` colocated | `pnpm test:browser` |
 | Integration | `tests/integration/*.integration.test.ts` | `pnpm test:integration` |
 | E2E | `tests/e2e/*.spec.ts` | `pnpm test:e2e` |
+
+## Test Support Locations
+
+Shared test support (factories, fakes, fixtures, render helpers, harnesses) lives where the path-scoped rules and tool globs expect it:
+
+| Area | Location and name | Why |
+|------|-------------------|-----|
+| `src/**` | The layer's `test-helpers/` directory: `src/domain/test-helpers/`, `src/application/test-helpers/` (fakes in `fakes/`), `src/adapters/**/test-helpers/` | `src/**/test-helpers/**` is what Biome, the architecture scan and `fixture-integrity.md` match. `tests/test-support-location-policy.test.ts` fails on a `src/` helper outside one. |
+| `app/**`, `components/**` | Beside the suites that use it: `<subject>-test-helpers.ts(x)`, data fixtures `*.fixtures.ts`, Browser Mode probes `*.browser.probes.tsx` | Every folder under `app/` is a route segment, so these areas use suffixes, not folders. The suffixes are what Biome (including the raw-`<button>` exemption), the architecture scan, the CRAP report and the doubles ratchet match. |
+| `tests/integration/` | Beside the suites: `helpers.ts`, `*-test-helpers.ts` | One flat lane folder |
+| `tests/e2e/` | `tests/e2e/helpers/` | Playwright-only helpers |
+| Cross-lane | `tests/shared/` for shared infrastructure (`dom-helpers.ts`, `process-env.ts`); `tests/test-helpers/` for generic primitives (`createDeferred`, `ok`) | See `tests/test-helpers/README.md` |

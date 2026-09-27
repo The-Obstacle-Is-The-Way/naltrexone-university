@@ -33,7 +33,7 @@ import type {
 import { CheckEntitlementUseCase } from '@/src/application/use-cases/check-entitlement';
 import type { User } from '@/src/domain/entities';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
-import type { PracticeControllerDeps } from './practice-controller';
+import type { PracticeControllerDeps } from '../practice-controller';
 
 export type PracticeControllerTestDeps = PracticeControllerDeps & {
   countAvailableQuestionsUseCase: FakeCountAvailableQuestionsUseCase;

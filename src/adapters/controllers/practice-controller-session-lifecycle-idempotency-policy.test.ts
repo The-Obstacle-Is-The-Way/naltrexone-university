@@ -11,7 +11,7 @@ import {
   discardPracticeSession,
   endPracticeSession,
 } from './practice-controller';
-import { createDeps } from './practice-controller-test-helpers';
+import { createDeps } from './test-helpers/practice-controller-test-helpers';
 
 function createOneTimeFailureUseCase<I, O>(input: {
   output: O;

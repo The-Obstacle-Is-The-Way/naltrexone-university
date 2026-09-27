@@ -19,12 +19,18 @@ function source(filePath: string, contents: string): TestSourceFile {
 describe('test-double fidelity scan edge cases', () => {
   it.each([
     'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.setup.ts',
-    'src/adapters/controllers/practice-controller-test-helpers.ts',
+    'src/adapters/controllers/test-helpers/practice-controller-test-helpers.ts',
     'app/(app)/app/questions/[slug]/hooks/use-question-page-model-test-helpers.tsx',
     'src/adapters/controllers/test-helpers/stripe-webhook-renewal-acknowledgment.ts',
     'src/application/test-helpers/fakes/fake-user-repository.ts',
+    'src/application/test-helpers/get-next-question-test-helpers.ts',
+    'src/application/test-helpers/submit-answer-test-helpers.ts',
     'tests/shared/dom-helpers.ts',
     'tests/integration/helpers.ts',
+    // The suffixes Biome, the architecture scan and the CRAP report already
+    // treat as test support.
+    'app/(app)/app/practice/[sessionId]/components/post-exam-review-view.fixtures.ts',
+    'app/(app)/app/practice/[sessionId]/hooks/practice-session-page-model.browser.probes.tsx',
   ])('includes support source %s in the repository census', (filePath) => {
     expect(
       readTestSources().some((source) => source.filePath === filePath),
