@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('public pages load', async ({ page }) => {
+test('public pages load', { tag: '@mobile-smoke' }, async ({ page }) => {
   await page.goto('/');
   await expect(
     page.getByRole('heading', { name: 'Master the Addiction Boards.' }),

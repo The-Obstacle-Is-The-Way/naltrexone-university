@@ -13,7 +13,11 @@ describe('tab-switch-styles', () => {
     expect(compactControlShellClasses).toBe(
       'inline-flex rounded-lg border border-border bg-muted p-1',
     );
-    expect(tabSwitchContainerClasses).toBe(compactControlShellClasses);
+    // Items wrap to a second row rather than overflow a narrow parent
+    // (DEBT-468 phone-width probe: the practice Status control at 360px).
+    expect(tabSwitchContainerClasses).toBe(
+      `${compactControlShellClasses} flex-wrap`,
+    );
     expect(compactControlShellClasses).not.toContain(
       'dark:border-foreground/40',
     );

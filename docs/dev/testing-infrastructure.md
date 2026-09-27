@@ -22,7 +22,7 @@ This document covers our E2E testing tools: Playwright and Vercel's agent-browse
 
 ### Configuration
 
-**File:** `playwright.config.ts`
+**File:** `playwright.config.ts` (abridged excerpt; the file is authoritative)
 
 ```ts
 testDir: './tests/e2e',
@@ -36,6 +36,13 @@ projects: [
   {
     name: 'chromium',
     dependencies: ['setup'],
+    testIgnore: [/stripe-hosted-.*\.spec\.ts/, /mobile-layout\.spec\.ts/],
+  },
+  {
+    name: 'mobile-smoke',
+    use: { ...devices['Pixel 5'], viewport: { width: 375, height: 667 } },
+    dependencies: ['setup'],
+    grep: /@mobile-smoke/,
     testIgnore: /stripe-hosted-.*\.spec\.ts/,
   },
   {
@@ -46,6 +53,16 @@ projects: [
 ],
 webServer: {
   command: process.env.CI ? 'pnpm start' : 'pnpm build && pnpm start',
+  // process.env plus a test-only CONSENT_STATE_SECRET unless one is set
+  env: {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
+    CONSENT_STATE_SECRET:
+      process.env.CONSENT_STATE_SECRET ?? '<test-only value>',
+  },
   url: `${baseURL}/api/health`,
   reuseExistingServer: false,
   timeout: 120000,
@@ -53,8 +70,9 @@ webServer: {
 ```
 
 - Uses `NEXT_PUBLIC_APP_URL` or defaults to `http://127.0.0.1:3000`
-- Runs Chromium only (for now)
-- `pnpm test:e2e` selects the required `chromium` project and excludes every `stripe-hosted-*.spec.ts` file
+- Runs Chromium only, in two required projects: `chromium` (Desktop Chrome) and `mobile-smoke` (Pixel 5 touch and mobile rendering at 375×667, the width QA-002 checks by hand)
+- `pnpm test:e2e` selects both required projects and excludes every `stripe-hosted-*.spec.ts` file. `mobile-smoke` re-runs only the journeys tagged `@mobile-smoke` (public pages, the pricing CTA, a tutor session, quick practice and subscriber navigation) plus `mobile-layout.spec.ts`, which fails if a public (signed out and signed in) or subscriber page scrolls sideways at 375px or 360px; `chromium` ignores that probe
+- The isolated E2E server receives a test-only `CONSENT_STATE_SECRET` unless the environment sets one, so the trial banner's add-card action can sign its Checkout consent state; production and preview carry their own secret
 - The `stripe-hosted` project is an observational compatibility probe for Stripe-owned Checkout markup; it is scheduled/manual and never a pull-request or push check
 - The HTML report is retained as an artifact and configured with `open: 'never'`, so a locally recovered flaky run cannot hold the process open. Both E2E workflows keep tracing local, upload the HTML report after every non-cancelled run, upload `test-results/` only after an E2E failure, and exclude auth state plus trace archives from both artifacts. [BUG-307](../_archive/bugs/bug-307-public-playwright-artifacts-expose-test-session-credentials.md) is resolved after the promoted one-file report contained zero auth-state files, traces, or unredacted credential-shape files under a non-printing scan.
 - Starts a production server for E2E runs (`pnpm build && pnpm start` locally, `pnpm start` in CI)

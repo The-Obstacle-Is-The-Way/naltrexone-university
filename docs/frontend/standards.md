@@ -205,7 +205,7 @@ All tab-switch / segmented-control components MUST use shared visual constants f
 
 | Constant | Classes | Usage |
 |----------|---------|-------|
-| `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1` | Outer wrapper |
+| `tabSwitchContainerClasses` | `inline-flex rounded-lg border border-border bg-muted p-1 flex-wrap` | Outer wrapper; items wrap to a second row when the parent is too narrow (Pattern Registry I-5) |
 | `tabSwitchItemBaseClasses` | `rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]` | Every tab item |
 | `tabSwitchItemActiveClasses` | `bg-primary text-primary-foreground shadow-sm` | Selected item |
 | `tabSwitchItemInactiveClasses` | `text-muted-foreground hover:bg-muted/50 hover:text-foreground` | Unselected items |
