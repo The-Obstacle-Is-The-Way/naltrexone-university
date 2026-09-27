@@ -1,6 +1,6 @@
 # DEBT-483: No Complete Content Withdrawal or Release Rollback
 
-**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; release milestones remain open
+**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; the release design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); release milestones remain open
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED implementation gap; production incident not established
@@ -354,6 +354,12 @@ If the swap-in fails and restoring the parked tree also fails, the parked tree i
 whole import. Seeding still commits per question. Immutable release identity,
 all-or-nothing activation and revocation-aware rollback stay open under SPEC-007,
 as does archived-question review under DEBT-484.
+
+## Decision — 2026-09-27
+
+[ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) decides the app's side of SPEC-007. Content becomes visible only through a verified release, recorded with its manifest hash and parent, staged invisibly and activated in one transaction that compares the active-release pointer; any failure leaves the previous release active. Withdrawals and holds are a current overlay keyed by question and revision, so a rollback to an older release never resurrects a revoked item, and today's explicit-QID withdrawal command becomes a writer to that overlay. Selection reads the active release, and `questions.status` is retired in a contract step.
+
+This record closes after ADR-021's phase 4 (releases, overlay and rollback), with the Verification above demonstrated on disposable databases. Release zero, the inventory of what is live, waits on the owner's answer to the ADR's content-hash question.
 
 ## Related
 
