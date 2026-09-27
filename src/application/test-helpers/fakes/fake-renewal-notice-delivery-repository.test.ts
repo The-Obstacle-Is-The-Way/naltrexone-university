@@ -221,7 +221,7 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     });
 
     await expect(
-      repository.markDelivered({
+      repository.markAccepted({
         id: deliveryId,
         attemptId: 'other-attempt',
         providerEventId: 'email_wrong',
@@ -256,14 +256,14 @@ describe('FakeRenewalNoticeDeliveryRepository', () => {
     });
 
     await expect(
-      repository.markDelivered({
+      repository.markAccepted({
         id: deliveryId,
         attemptId: 'attempt-1',
         providerEventId: 'email_123',
         completedAt: now,
       }),
     ).resolves.toMatchObject({
-      status: 'delivered',
+      status: 'accepted',
       providerEventId: 'email_123',
       nextAttemptAt: null,
     });

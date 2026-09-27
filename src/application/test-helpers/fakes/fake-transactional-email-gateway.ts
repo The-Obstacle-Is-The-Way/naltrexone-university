@@ -43,7 +43,7 @@ export class FakeTransactionalEmailGateway
     await this.onSend?.(input);
     return (
       this.results.shift() ?? {
-        status: 'delivered',
+        status: 'accepted',
         providerEventId: 'fake-email-event',
       }
     );

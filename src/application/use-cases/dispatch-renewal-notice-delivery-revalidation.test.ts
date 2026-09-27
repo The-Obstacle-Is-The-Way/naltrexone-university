@@ -108,7 +108,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
 
     await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
       outcome: 'attempted',
-      delivery: { status: 'delivered' },
+      delivery: { status: 'accepted' },
     });
     expect(gateway.sendInputs).toHaveLength(1);
   });

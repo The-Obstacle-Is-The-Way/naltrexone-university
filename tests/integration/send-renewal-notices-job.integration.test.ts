@@ -358,7 +358,7 @@ describe('renewal notice deadline query', () => {
     externalSubscriptionId: string;
     applicableAt: Date;
     destination: string;
-    status: 'queued' | 'delivered' | 'terminal_failure';
+    status: 'queued' | 'accepted' | 'delivered' | 'terminal_failure';
   }) {
     const id = randomUUID();
     deliveryIds.push(id);
@@ -418,7 +418,7 @@ describe('renewal notice deadline query', () => {
     ]);
   });
 
-  it('clears a renewal only when both notice kinds are delivered for that renewal', async () => {
+  it('clears a renewal only when both notice kinds were sent for that renewal', async () => {
     const renewal = new Date('2026-09-06T12:00:00.000Z');
     const subscription = await insertSubscription({
       currentPeriodEnd: renewal,
@@ -431,7 +431,7 @@ describe('renewal notice deadline query', () => {
     await insertNotice({
       ...notice,
       noticeKind: 'annual_reminder',
-      status: 'delivered',
+      status: 'accepted',
     });
     const failedNoticeId = await insertNotice({
       ...notice,
@@ -456,7 +456,8 @@ describe('renewal notice deadline query', () => {
     ]);
 
     // A failed notice is requeued in place, never duplicated; model its
-    // eventual delivery on the same row.
+    // eventual delivery evidence on the same row. Acceptance (above) and
+    // delivery evidence both count as sent.
     await db
       .update(renewalNoticeDeliveries)
       .set({ status: 'delivered' })

@@ -474,8 +474,8 @@ describe('send renewal notices cron route', () => {
     ]);
     expect(deliveries).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ status: 'delivered' }),
-        expect.objectContaining({ status: 'delivered' }),
+        expect.objectContaining({ status: 'accepted' }),
+        expect.objectContaining({ status: 'accepted' }),
       ]),
     );
     expect(email.sendInputs).toHaveLength(2);

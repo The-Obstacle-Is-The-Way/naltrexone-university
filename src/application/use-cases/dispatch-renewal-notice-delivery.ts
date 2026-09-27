@@ -226,8 +226,8 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       );
     }
 
-    if (result.status === 'delivered') {
-      return this.deliveryRepository.markDelivered({
+    if (result.status === 'accepted') {
+      return this.deliveryRepository.markAccepted({
         id: claimed.id,
         attemptId,
         providerEventId: result.providerEventId,
