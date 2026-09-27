@@ -78,8 +78,13 @@ export async function persistSubscriptionObservation<TObservation>(
     expectedVersion = await input.readVersion(expectedUserId);
   }
 
+  // The bound keeps a lost exhaustion throw from retrying forever, and the
+  // type checker needs this return path; the last attempt throws above, so
+  // it is unreachable and its message mutants are equivalent.
+  // Stryker disable StringLiteral: unreachable while the last attempt throws inside the loop
   throw new ApplicationError(
     'INTERNAL_ERROR',
     'Subscription observation retry loop exited unexpectedly',
   );
+  // Stryker restore StringLiteral
 }

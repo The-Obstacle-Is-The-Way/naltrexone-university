@@ -10,7 +10,7 @@
 
 ## Description
 
-**2026-09-21 audit forward pointer.** Part 1 is shipped: `package.json` exposes `quality:crap`, and the reporter requires all three Istanbul inputs. The top-25 table below is the **2026-08-22 baseline**, not a fresh measurement of today's tree. The opening 556-file census and “no ranked report” observation are likewise filing history. Parts 2–4 remain unimplemented: no Stryker configuration/dependencies or acceptance directory exists, and QA-001/QA-002 both remain Draft without their required two complete evidenced runs. ADR-019 still requires a new ADR before a metric gates CI. The existing entitlement-loss E2E means that particular item in the older QA-gap inventory is no longer absent. [Current-tree audit and limits](./assets/active-audit-2026-09-21/verification.md).
+**2026-09-21 audit forward pointer.** Part 1 is shipped: `package.json` exposes `quality:crap`, and the reporter requires all three Istanbul inputs. The top-25 table below is the **2026-08-22 baseline**, not a fresh measurement of today's tree. The opening 556-file census and “no ranked report” observation are likewise filing history. Part 2's pilot and second wave shipped on 2026-09-27 (below); widening to `src/domain/**` and the application layer remains. Parts 3–4 remain unimplemented: no acceptance directory exists, and QA-001/QA-002 both remain Draft without their required two complete evidenced runs. ADR-019 still requires a new ADR before a metric gates CI. The existing entitlement-loss E2E means that particular item in the older QA-gap inventory is no longer absent. [Current-tree audit and limits](./assets/active-audit-2026-09-21/verification.md).
 
 The suite ADR-003 built is broad (556 test files, ~151k lines, four lanes) but nothing audits or specifies it from the outside. The audit made the gap concrete:
 
@@ -35,6 +35,8 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 `docs/dev/mutation-testing.md`. Install `@stryker-mutator/core` + `@stryker-mutator/vitest-runner`, land `stryker.config.json` with the 8 pinned pilot targets (`subscription-write-guard`, `entitlement`, `grading`, `exam-timer`, `statistics`, `shuffle` + `shuffled-choice-views` counted as one combined target, `persist-subscription-observation`, `validate-feedback-context` — nine files, eight targets; the config and verification checklist must use this same count), run the baseline, triage every survivor (missing test / equivalent-suppress-with-reason / dead code / wrong-lane / no-coverage descope), then widen to `src/domain/**` and add the weekly scheduled workflow. `typescript-checker` stays deferred behind the DEBT-460 TS6/TS7 seam.
 
+**2026-09-27:** the pilot shipped. The dependencies, `stryker.config.json`, `pnpm test:mutation` and the weekly workflow landed, and every baseline survivor is triaged (below). The second wave followed the same day. Widening remains.
+
 ### Part 3 — Acceptance-test harness
 
 `docs/dev/acceptance-testing.md` §8. Install `@amiceli/vitest-cucumber`, build `tests/acceptance/support/application-driver.ts` verb-by-verb, land features #1 and #4 (session-start conflict; tutor/exam feedback split), then #2/#3/#10 (entitlement + trial). Update the Test Locations tables (`AGENTS.md`, `.claude/rules/testing.md`) in the first feature's PR. From then on new business rules ship their feature file first.
@@ -46,7 +48,10 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 ## Verification
 
 - [x] Part 1: `scripts/crap-report.ts` + colocated test landed; baseline top-25 recorded below; hotspot table reconciled
-- [ ] Part 2: pilot baseline scores recorded below; zero un-triaged survivors in pilot modules; weekly workflow live
+- [x] Part 2 pilot: baseline and after-triage scores recorded below; zero un-triaged survivors in the nine pilot files (2026-09-27)
+- [ ] Part 2 weekly workflow live: `.github/workflows/mutation.yml` landed with the pilot; check this once a run on `main` is recorded
+- [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
+- [ ] Part 2 widening: production files across `src/domain/**`, then `src/application/{use-cases,shared}/**`
 - [ ] Part 3: driver + features #1/#4 landed with spec-sync verified (rename-a-step fails); revenue features #2/#3/#10 landed; location tables updated
 - [ ] Part 4: QA-001 and QA-002 Active with evidence; operator-checklist item 8 references the register
 - [ ] Standing: no numeric gate introduced anywhere without a new ADR (ADR-019 Compliance)
@@ -56,7 +61,35 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 | Measure | Date | Result |
 |---|---|---|
 | CRAP top-25 snapshot | 2026-08-22 | Required three-lane merged baseline (unit + browser + integration): 445 files / 2,177 functions; 6 scores ≥30, none >100; highest `QuestionView` at 84.00. Full measured snapshot below. |
-| Mutation pilot scores | — | — |
+| Mutation second wave | 2026-09-27 | Four files: baseline 91.44% (187 mutants), after triage 100.00% (168), no suppression. Triage below. |
+| Mutation pilot scores | 2026-09-27 | Stryker 9.6.1, unit lane, nine files. Baseline 91.77%: 286 killed, 4 timed out, 24 survived and 2 without coverage, of 316 mutants. After triage 100.00%: 286 killed and 3 timed out, of 289 scored; 6 more are suppressed. Both are full `--force` runs. Per-file scores are in the runbook's §7; the triage is below. |
+
+### Part 2 mutation pilot triage — 2026-09-27
+
+Every one of the 26 undetected baseline mutants was classified under the runbook's §5. The instrumented count fell from 316 to 295, mostly because deleted code carries no mutants.
+
+| File | Missing test (11) | Dead or redundant code, deleted (11) | Equivalent, suppressed with reason (4) |
+|---|---|---|---|
+| `subscription-write-guard.ts` | — | Two early returns that the canonical ordering already decides (2), and the terminal-status list and predicate only they used (3) | `< 0` versus `<= 0` on the canonical ordering: it is 0 only for identical identities, which return earlier |
+| `grading.ts` | Error codes and messages (3) | A redundant `correct === undefined` clause; the guard is rewritten so each clause is needed (1) | — |
+| `statistics.ts` | An attempt at `now` with a zero-day window, and the cutoff boundary (3) | Two `computeStreak` guards the loop already handles (2) | — |
+| `shuffle.ts` | — | The length ≤ 1 early return, which the loop already handles (3) | Loop bound `i > 0` versus `i >= 0`: at `i = 0` the only swap is with itself, which the guard skips |
+| `shuffled-choice-views.ts` | The error message, input immutability and `sortOrder` precedence (3) | — | — |
+| `persist-subscription-observation.ts` | — | — | The two message literals of the fallback throw after the bounded retry loop (2 without coverage). The last attempt throws inside the loop, so the fallback is unreachable, but the bound keeps a lost exhaustion throw from retrying forever and the type checker needs the return path. |
+| `validate-feedback-context.ts` | An in-session attempt without a session, and a `history`-origin retry (2) | — | — |
+
+Two corrections came from the full run. First, the pilot had deleted that fallback and made the loop unbounded; emptying the exhaustion block then retried forever and crashed the test runner, so the bound and its fallback stay. Second, a `Stryker disable` comment names a mutator, not one replacement, so each equality suppression also hides its non-equivalent sibling. A run with both comments removed timed out on `i <= 0`, killed `canonicalOrdering >= 0`, and left exactly the two equivalent mutants surviving. That is why six mutants are suppressed for four equivalent ones.
+
+The archived DEBT-468 (f) recorded two write-guard survivors as equivalent for this pilot. Triage found the early returns behind them redundant and deleted them. The guard's only remaining equivalent mutant is the ordering comparison above.
+
+### Part 2 second wave triage — 2026-09-27
+
+Full `--force` runs over the runbook's four second-wave files: baseline 91.44% (169 killed, 2 timed out, 16 survived, of 187), after triage 100.00% (167 killed, 1 timed out, of 168), with no suppression. `session-stats.ts` and `subscription-status.ts` were already at 100%.
+
+| File | Missing test (9) | Dead or redundant code, removed (7) |
+|---|---|---|
+| `start-practice-session.ts` | The use case's own incomplete-session check, including its message (3). The fake repository enforces the same one-incomplete-session rule as Postgres, so only a conflict that must win over empty filters distinguishes the check. | — |
+| `idempotency-error-policy.ts` | The cacheable outcomes are code-and-reason pairs: a non-`CONFLICT` error carrying a terminal-session reason is not cached (1), and the incomplete-session conflict is cached only for starting a session and only as a `CONFLICT` (4). The trial-setup helper had no unit test (1). | A three-way disposition whose two cache labels no caller distinguished, now a boolean with the reasons kept as comments (3); `new Set([])` for the billing actions, now `new Set()` (3); a `typeof` guard that `Set.has` already covers, now a set typed to accept an absent reason (1). |
 
 ### Part 1 CRAP top-25 baseline — 2026-08-22
 

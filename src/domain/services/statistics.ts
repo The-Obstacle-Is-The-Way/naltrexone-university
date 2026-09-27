@@ -22,13 +22,10 @@ export function computeStreak(
   attemptDates: readonly Date[],
   now: Date,
 ): number {
-  if (attemptDates.length === 0) return 0;
-
   const uniqueDays = new Set(attemptDates.map(utcDayNumber));
   const today = utcDayNumber(now);
 
-  if (!uniqueDays.has(today)) return 0;
-
+  // The walk starts at today, so no attempts, or none today, give 0.
   let streak = 0;
   for (let day = today; uniqueDays.has(day); day -= 1) {
     streak += 1;

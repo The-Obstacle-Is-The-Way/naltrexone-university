@@ -21,11 +21,6 @@ export const IdempotentActionNames = {
 export type IdempotentActionName =
   (typeof IdempotentActionNames)[keyof typeof IdempotentActionNames];
 
-export type IdempotencyErrorDisposition =
-  | 'abort'
-  | 'cache_determinate'
-  | 'cache_indeterminate_fence';
-
 type PublicActionError = {
   code: ApplicationErrorCode;
   details?: { reason?: string } | undefined;
@@ -49,9 +44,9 @@ const determinateCodesByAction: Record<
   // cached outcome outlives the state it was derived from: ALREADY_SUBSCRIBED
   // depends on currentPeriodEnd > now and portal NOT_FOUND on a customer that
   // a later checkout can create. Nothing user-mutable is cacheable here.
-  [IdempotentActionNames.Checkout]: new Set([]),
-  [IdempotentActionNames.Portal]: new Set([]),
-  [IdempotentActionNames.TrialPaymentMethodSetup]: new Set([]),
+  [IdempotentActionNames.Checkout]: new Set(),
+  [IdempotentActionNames.Portal]: new Set(),
+  [IdempotentActionNames.TrialPaymentMethodSetup]: new Set(),
   [IdempotentActionNames.Bookmark]: new Set(['NOT_FOUND']),
   [IdempotentActionNames.QuestionRating]: new Set([
     'VALIDATION_ERROR',
@@ -75,10 +70,13 @@ const determinateCodesByAction: Record<
   ]),
 };
 
-const terminalPracticeSessionReasons = new Set<string>([
-  PracticeSessionConflictReasons.AlreadyEnded,
-  PracticeSessionConflictReasons.ExamTimeExpired,
-]);
+// Typed to accept an absent reason, which is never terminal.
+const terminalPracticeSessionReasons: ReadonlySet<string | undefined> = new Set(
+  [
+    PracticeSessionConflictReasons.AlreadyEnded,
+    PracticeSessionConflictReasons.ExamTimeExpired,
+  ],
+);
 
 function isDeterminateCachedError(
   action: IdempotentActionName,
@@ -91,10 +89,7 @@ function isDeterminateCachedError(
       action === IdempotentActionNames.QuestionMark) &&
     error.code === 'CONFLICT'
   ) {
-    const reason = error.details?.reason;
-    return (
-      typeof reason === 'string' && terminalPracticeSessionReasons.has(reason)
-    );
+    return terminalPracticeSessionReasons.has(error.details?.reason);
   }
 
   if (
@@ -110,31 +105,26 @@ function isDeterminateCachedError(
   return false;
 }
 
-export function classifyIdempotencyExecutionError(
-  action: IdempotentActionName,
-  error: unknown,
-): IdempotencyErrorDisposition {
-  if (isRollbackCertainPersistenceError(error)) return 'abort';
+// Whether a failed action's outcome is cached under its idempotency key. A
+// determinate outcome is cached so a retry replays it. SubmitAnswer also
+// caches an indeterminate one, as a fence against a duplicate attempt.
+// Everything else aborts the claim so a retry re-executes.
+function shouldCache(action: IdempotentActionName, error: unknown): boolean {
+  if (isRollbackCertainPersistenceError(error)) return false;
 
   if (!isApplicationError(error)) {
-    return action === IdempotentActionNames.SubmitAnswer
-      ? 'cache_indeterminate_fence'
-      : 'abort';
+    return action === IdempotentActionNames.SubmitAnswer;
   }
 
-  if (isDeterminateCachedError(action, error)) return 'cache_determinate';
+  if (isDeterminateCachedError(action, error)) return true;
 
-  if (
+  // Unscoped attempts do not yet persist a request token. An INTERNAL_ERROR
+  // can straddle COMMIT, so retain the claim outcome rather than risk a
+  // duplicate attempt. Only owner-classified rollback-certain errors abort.
+  return (
     action === IdempotentActionNames.SubmitAnswer &&
     error.code === 'INTERNAL_ERROR'
-  ) {
-    // Unscoped attempts do not yet persist a request token. An INTERNAL_ERROR
-    // can straddle COMMIT, so retain the claim outcome rather than risk a
-    // duplicate attempt. Only owner-classified rollback-certain errors abort.
-    return 'cache_indeterminate_fence';
-  }
-
-  return 'abort';
+  );
 }
 
 export function shouldRotateIdempotencyKeyAfterActionError(
@@ -177,10 +167,6 @@ export function rotateGeneratedIdempotencyKeyAfterDeterminateError(
       ? () => setIdempotencyKey(createIdempotencyKey())
       : undefined,
   );
-}
-
-function shouldCache(action: IdempotentActionName, error: unknown): boolean {
-  return classifyIdempotencyExecutionError(action, error) !== 'abort';
 }
 
 export const shouldCacheCheckoutSessionError = (error: unknown): boolean =>

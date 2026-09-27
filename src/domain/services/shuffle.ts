@@ -5,10 +5,6 @@
 export function shuffleWithSeed<T>(items: readonly T[], seed: number): T[] {
   const result = [...items];
 
-  if (result.length <= 1) {
-    return result;
-  }
-
   let state = seed | 0;
 
   // Mulberry32 PRNG
@@ -19,6 +15,7 @@ export function shuffleWithSeed<T>(items: readonly T[], seed: number): T[] {
     return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
   };
 
+  // Stryker disable next-line EqualityOperator: at i = 0 the only j is 0, which the i === j guard skips, so i >= 0 is equivalent
   for (let i = result.length - 1; i > 0; i -= 1) {
     const j = Math.floor(random() * (i + 1));
     if (i === j) continue;
