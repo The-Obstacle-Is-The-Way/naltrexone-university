@@ -15,14 +15,14 @@
 All seven Resolution steps are complete:
 - Steps 1–4 and 6 shipped on 2026-08-15.
 - Step 7 is documentation.
-- Step 5, the suppression burn-down, ends with the lock-order split #1139. That split merged as `SPLIT_MERGE` and was promoted through #SPLIT_PROMO (`SPLIT_PROMO_MERGE`). Its release was verified: main CI **SPLIT_MAIN_CI** `test` **SPLIT_TEST_AT**, production assigned **SPLIT_ALIAS_AT**, matching trees, healthy production.
+- Step 5, the suppression burn-down, ends with the lock-order split #1139. That split merged as `5f2546e2` (exact-head approval **5328253925**) and was promoted through #1140 (`b8ddcda0`). The promotion's first CI attempt failed on a transient Stripe TEST-mode and Clerk outage, which was documented on #1140 before its single re-run passed. Its release was verified: main CI **36284407823** `test` **01:15:44Z** on 2026-09-27, production assigned **01:15:46.321Z**, matching trees `b5b67d65`, healthy production at 01:16:41Z.
 
-Each Verification bullet below was re-checked on `main` at `VERIFY_SHA` before archival:
+Each Verification bullet below was re-checked on `main` at `b8ddcda0` before archival:
 - `pnpm lint` and `pnpm lint:ci` exit 0 with `--error-on-warnings`.
 - The three Vitest lanes run with no configLoader warning.
 - `git ls-files '*.ts' '*.tsx' | xargs grep -l noExcessiveLinesPerFile` finds **no** suppression. The 28-file ledger reached zero, and no new oversized file carries one.
 - The W1 condition cannot recur. The original `stripe-webhook-processor.test.ts` suppression was proven load-bearing before its suite moved under the limit, and the lint gate fails any oversized test file that lacks a reasoned suppression.
-- The `NO_COLOR` conflict is gone from focused smoke.
+- With caller `NO_COLOR=1`, `pnpm test:e2e tests/e2e/smoke.spec.ts` passes and emits no `NO_COLOR` or `FORCE_COLOR` warning.
 - W3/W4 are documented, and the W5 observation note remains in `AGENTS.md`.
 
 The "remain pending" sentences in the dated burn-down paragraphs are historical execution receipts, superseded by this section.
