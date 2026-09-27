@@ -62,3 +62,8 @@ content/drafts/questions/*
 !content/drafts/questions/*.md
 !content/drafts/questions/*.MD
 content/imports/
+
+# Stryker mutation testing (DEBT-465 Part 2)
+.stryker-tmp/
+.stryker-incremental.json
+reports/

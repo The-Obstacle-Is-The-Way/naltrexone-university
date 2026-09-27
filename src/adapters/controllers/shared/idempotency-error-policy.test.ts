@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ApplicationConflictReasons,
   ApplicationError,
+  PracticeSessionConflictReasons,
   practiceSessionAlreadyEndedError,
   practiceSessionStateChangedConcurrentlyError,
   rollbackCertainPersistenceError,
@@ -19,6 +20,7 @@ import {
   shouldCacheQuestionReportError,
   shouldCacheStartPracticeSessionError,
   shouldCacheSubmitAnswerError,
+  shouldCacheTrialPaymentMethodSetupSessionError,
   shouldRotateIdempotencyKeyAfterActionError,
 } from './idempotency-error-policy';
 
@@ -37,6 +39,10 @@ const transientCases = [
 describe.each([
   ['checkout', shouldCacheCheckoutSessionError],
   ['portal', shouldCachePortalSessionError],
+  [
+    'trial payment method setup',
+    shouldCacheTrialPaymentMethodSetupSessionError,
+  ],
   ['bookmark', shouldCacheBookmarkError],
   ['question rating', shouldCacheQuestionRatingError],
   ['question report', shouldCacheQuestionReportError],
@@ -116,6 +122,32 @@ describe('start-practice-session idempotency error policy', () => {
       ),
     ).toBe(false);
   });
+
+  // DEBT-465 second wave: the cacheable outcome is the pair of a CONFLICT code
+  // and the incomplete-session reason, for starting a session only.
+  it('aborts a non-conflict error that carries the incomplete-session reason', () => {
+    expect(
+      shouldCacheStartPracticeSessionError(
+        new ApplicationError('RATE_LIMITED', 'Slow down', undefined, {
+          details: {
+            reason: ApplicationConflictReasons.IncompleteSessionExists,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('does not cache the incomplete-session conflict for another action', () => {
+    expect(
+      shouldCacheBookmarkError(
+        new ApplicationError('CONFLICT', 'Incomplete session', undefined, {
+          details: {
+            reason: ApplicationConflictReasons.IncompleteSessionExists,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe.each([
@@ -176,6 +208,32 @@ describe('submit-answer idempotency error policy', () => {
       ),
     ).toBe(false);
   });
+
+  // DEBT-465 second wave: only a CONFLICT whose typed reason is a terminal
+  // practice-session state is determinate.
+  it('aborts a typed conflict whose reason is not a terminal session state', () => {
+    expect(
+      shouldCacheSubmitAnswerError(
+        new ApplicationError('CONFLICT', 'Incomplete session', undefined, {
+          details: {
+            reason: ApplicationConflictReasons.IncompleteSessionExists,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('aborts a non-conflict error that carries a terminal session reason', () => {
+    expect(
+      shouldCacheSubmitAnswerError(
+        new ApplicationError('RATE_LIMITED', 'Slow down', undefined, {
+          details: {
+            reason: PracticeSessionConflictReasons.AlreadyEnded,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('question-mark idempotency error policy', () => {
@@ -221,6 +279,32 @@ describe('question-mark idempotency error policy', () => {
     expect(
       shouldCacheQuestionMarkError(
         new ApplicationError('CONFLICT', 'Unclassified conflict'),
+      ),
+    ).toBe(false);
+  });
+
+  // DEBT-465 second wave: only a CONFLICT whose typed reason is a terminal
+  // practice-session state is determinate.
+  it('aborts a typed conflict whose reason is not a terminal session state', () => {
+    expect(
+      shouldCacheQuestionMarkError(
+        new ApplicationError('CONFLICT', 'Incomplete session', undefined, {
+          details: {
+            reason: ApplicationConflictReasons.IncompleteSessionExists,
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it('aborts a non-conflict error that carries a terminal session reason', () => {
+    expect(
+      shouldCacheQuestionMarkError(
+        new ApplicationError('RATE_LIMITED', 'Slow down', undefined, {
+          details: {
+            reason: PracticeSessionConflictReasons.AlreadyEnded,
+          },
+        }),
       ),
     ).toBe(false);
   });

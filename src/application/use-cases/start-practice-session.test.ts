@@ -287,6 +287,39 @@ describe('StartPracticeSessionUseCase', () => {
     });
   });
 
+  // DEBT-465 second wave: the repository enforces one incomplete session too,
+  // so only the use case's own check makes the conflict win over empty filters.
+  it('reports the incomplete session before looking for questions', async () => {
+    const userId = 'user-1';
+    const questionRepository = new FakeQuestionRepository([]);
+    const practiceSessionRepository = new FakePracticeSessionRepository([
+      createPracticeSession({
+        id: 'session-incomplete',
+        userId,
+        endedAt: null,
+      }),
+    ]);
+    const useCase = new StartPracticeSessionUseCase(
+      questionRepository,
+      practiceSessionRepository,
+    );
+
+    await expect(
+      useCase.execute({
+        userId,
+        mode: 'tutor',
+        count: 10,
+        tagSlugs: ['no-such-tag'],
+        difficulties: [],
+      }),
+    ).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message:
+        'You already have an incomplete practice session. Resume or abandon it before starting a new one.',
+      details: { reason: 'incomplete_practice_session_exists' },
+    });
+  });
+
   it('can create after another session starts and ends between the incomplete check and create', async () => {
     const userId = 'user-1';
     const questions = [

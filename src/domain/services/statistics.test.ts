@@ -83,8 +83,27 @@ describe('filterAttemptsInWindow', () => {
   });
 
   it('returns empty for non-positive day window', () => {
-    const attempts = [{ answeredAt: new Date('2026-01-31T00:00:00Z') }];
+    // An attempt at exactly `now` separates "no window" from a zero-width one.
+    const attempts = [
+      { answeredAt: new Date('2026-01-31T00:00:00Z') },
+      { answeredAt: now },
+    ];
     expect(filterAttemptsInWindow(attempts, 0, now)).toEqual([]);
     expect(filterAttemptsInWindow(attempts, -1, now)).toEqual([]);
+  });
+
+  it('includes an attempt exactly at the window cutoff', () => {
+    const atCutoff = {
+      answeredAt: new Date('2026-01-24T12:00:00Z'),
+      id: 'edge',
+    };
+    const justBefore = {
+      answeredAt: new Date('2026-01-24T11:59:59.999Z'),
+      id: 'before',
+    };
+
+    const result = filterAttemptsInWindow([atCutoff, justBefore], 7, now);
+
+    expect(result.map((a) => a.id)).toEqual(['edge']);
   });
 });

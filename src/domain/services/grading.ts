@@ -24,8 +24,8 @@ export function gradeAnswer(
   }
 
   const correctChoices = question.choices.filter((c) => c.isCorrect);
-  const [correct] = correctChoices;
-  if (correctChoices.length !== 1 || correct === undefined) {
+  const [correct, ...otherCorrect] = correctChoices;
+  if (correct === undefined || otherCorrect.length > 0) {
     throw new DomainError(
       'INVALID_QUESTION',
       `Question ${question.id} must have exactly 1 correct choice (found ${correctChoices.length})`,

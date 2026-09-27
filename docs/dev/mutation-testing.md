@@ -1,6 +1,6 @@
 # Mutation Testing (StrykerJS)
 
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-09-27
 
 Mutation testing primarily audits the **tests** by changing the code: Stryker seeds small faults ("mutants" — `<=` → `<`, `&&` → `||`, deleted statements, flipped booleans) into production source, runs selected tests against each, and reports which mutants the suite **killed** (a test failed) versus which **survived** (every selected test still passed). A surviving mutant is either a behavior change no test noticed or an equivalent change; triage distinguishes the two. The **mutation score** = detected ÷ valid mutants.
 
@@ -10,11 +10,7 @@ Coverage says a line was *executed*; mutation tests whether selected behavior ch
 
 ## 1. Tooling and compatibility
 
-```bash
-pnpm add -D @stryker-mutator/core@9.6.1 @stryker-mutator/vitest-runner@9.6.1
-```
-
-(9.6.1 is the version every compatibility receipt below was measured on; Stryker 10.0.0 has since shipped — re-verify those receipts before adopting a newer major.)
+`@stryker-mutator/core` and `@stryker-mutator/vitest-runner` are pinned at 9.6.1 in `package.json`. Every compatibility receipt below was measured on that version; Stryker 10.0.0 has since shipped, so re-verify these receipts before adopting a newer major.
 
 - A fresh 2026-08-13 install resolved StrykerJS core and Vitest runner 9.6.1. The runner peer-accepts `vitest >= 2.0.0`; the pilot ran against the repo's installed Vitest 4.1.x.
 - The runner **enforces per-test coverage analysis internally** (`coverageAnalysis` is ignored) and by default asks Vitest for tests *related* to each mutated file (`vitest.related: true`). Related selection follows the import graph and can include far more than the colocated `foo.test.ts`. The explicit `plugins` entry below is required in this pnpm layout; wildcard auto-discovery did not load the runner.
@@ -46,7 +42,11 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
     "src/domain/services/shuffle.ts",
     "src/application/shared/shuffled-choice-views.ts",
     "src/application/shared/persist-subscription-observation.ts",
-    "src/application/use-cases/validate-feedback-context.ts"
+    "src/application/use-cases/validate-feedback-context.ts",
+    "src/domain/services/session-stats.ts",
+    "src/domain/value-objects/subscription-status.ts",
+    "src/application/use-cases/start-practice-session.ts",
+    "src/adapters/controllers/shared/idempotency-error-policy.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
   "incremental": true,
@@ -60,8 +60,8 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
 
 - **`"break": null` is policy, not an oversight.** Coverage-adjacent metrics are observational in this repo (`docs/dev/react-vitest-testing.md`); `high`/`low` only color the report. Introducing a breaking gate requires an ADR amending ADR-019 with measured baselines.
 - `incremental: true` reuses unchanged mutant results, but the initial related-test coverage run still executes on every re-run.
-- Add `.stryker-tmp/`, `.stryker-incremental.json`, and `reports/` to `.gitignore` in the adoption PR. The incremental file lives at the repo root deliberately: Stryker cleans `tempDirName` between runs, so state stored inside `.stryker-tmp/` would be destroyed.
-- Add a script: `"test:mutation": "stryker run"`. Focused loop while fixing one module: `pnpm exec stryker run --mutate src/domain/services/grading.ts`.
+- `.gitignore` covers `.stryker-tmp/`, `.stryker-incremental.json` and `reports/`. The incremental file lives at the repo root deliberately: Stryker cleans `tempDirName` between runs, so state stored inside `.stryker-tmp/` would be destroyed.
+- `pnpm test:mutation` runs `stryker run` over every target. Focused loop while fixing one module: `pnpm exec stryker run --mutate src/domain/services/grading.ts`. Add `--force` to ignore incremental results when recording a baseline.
 - The sandbox copy requires the `ignorePatterns` above because the committed agent-skill symlink trees fail copying on macOS. Do not use `--inPlace`; it mutates the working tree during the run.
 
 ## 4. Pilot targets (baseline wave)
@@ -79,7 +79,7 @@ Chosen 2026-08-13 for consequence-per-minute: small, fast, unit-tested, mostly p
 | `src/application/shared/persist-subscription-observation.ts` | Retry-loop bounds + version-conflict discriminator; wrong can mean a nonterminating conflict retry or a lost write | Attempt-counter reversal times out; the defensive fallback is `NoCoverage` |
 | `src/application/use-cases/validate-feedback-context.ts` (15 tests) | BUG-260 ownership/integrity boundary with a compound negated clause | Condition removal in the both-ID and retry-provenance ladder |
 
-Second wave once the pilot is triaged: `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts`, `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy), then production files across `src/domain/**`, then `src/application/{use-cases,shared}/**`, subject to the §2 exclusions.
+The second wave, triaged on 2026-09-27, added `src/domain/services/session-stats.ts`, `src/domain/value-objects/subscription-status.ts`, `src/application/use-cases/start-practice-session.ts` and `src/adapters/controllers/shared/idempotency-error-policy.ts` (a unit-pinned adapter policy). Next come production files across `src/domain/**`, then `src/application/{use-cases,shared}/**`, subject to the §2 exclusions.
 
 ## 5. Triage — what each survivor means
 
@@ -92,7 +92,7 @@ Work the HTML report per file; classify every survivor and `NoCoverage` mutant:
    // Stryker disable next-line EqualityOperator: `<` and `<=` equivalent here — set is deduplicated above
    ```
 
-   Suppressions without a stated reason are review-rejectable.
+   Suppressions without a stated reason are review-rejectable. A comment names a mutator, not one replacement, so it also silences that mutator's other replacements on the line: prove those are killed with a run that omits the comment, and record it with the triage.
 3. **Dead code** → delete the code, not the mutant.
 4. **Wrong-lane pin** (behavior is actually pinned by a browser/integration test) → remove the file from `mutate`, or move/duplicate the pinning test into the unit lane if it belongs there.
 5. **`NoCoverage` mutants** → those locations are not exercised by the selected unit tests; cross-check the CRAP report (`docs/dev/code-quality-metrics.md`) and decide test-or-descope explicitly.
@@ -104,31 +104,35 @@ Timeouts count as detected. **Do not chase 100%** — equivalent mutants exist a
 Mutation runs range from tens of seconds to minutes per module — they do **not** enter the per-PR pipeline initially.
 
 - **Local, on demand:** whenever you touch a mutated module, `pnpm exec stryker run --mutate <that file>` before pushing.
-- **Scheduled CI:** a separate workflow (weekly + `workflow_dispatch`), not a step in `ci.yml`:
+- **Scheduled CI:** `.github/workflows/mutation.yml` runs `pnpm exec stryker run` on Mondays at 06:00 UTC and on `workflow_dispatch`. It is a separate workflow, not a step in `ci.yml`. It reads the repository only, uses no secrets, restores `.stryker-incremental.json` from the Actions cache, and uploads `reports/mutation` as the `mutation-report` artifact. Every action is pinned to a full commit SHA with its release version in a comment, and `tests/ci-workflow.test.ts` enforces the pins, the triggers, the permissions and the absence of secrets.
 
-  ```yaml
-  name: Mutation
-  on:
-    schedule: [{ cron: "0 6 * * 1" }]   # Mondays 06:00 UTC
-    workflow_dispatch:
-  jobs:
-    mutation:
-      runs-on: ubuntu-24.04
-      steps:
-        # checkout / pnpm / node 24 setup identical to ci.yml
-        - run: pnpm install --frozen-lockfile
-        - uses: actions/cache@<pinned-sha>
-          with:
-            path: .stryker-incremental.json
-            key: stryker-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}
-            restore-keys: stryker-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-        - run: pnpm exec stryker run
-        - uses: actions/upload-artifact@<pinned-sha>
-          with: { name: mutation-report, path: reports/mutation }
-  ```
-
-  Pin every action to a full commit SHA with its release version in a comment, following `ci.yml`'s convention. The run **reports; it does not gate** (`break: null`). Once runtimes and baselines are known, a per-PR incremental variant scoped to changed files (`--mutate` from the diff) can be evaluated — via ADR, like any gate.
+  The run **reports; it does not gate** (`break: null`). Once runtimes and baselines are known, a per-PR incremental variant scoped to changed files (`--mutate` from the diff) can be evaluated — via ADR, like any gate.
 
 ## 7. Score policy
 
-Baseline scores are recorded in DEBT-465 Part 2's Verification checklist when the owner runs the adoption baseline; thereafter this doc carries a small per-module baseline table (add it after the first real run — no invented numbers before then). Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.
+The pilot baseline ran on 2026-09-27 with Stryker 9.6.1 against the unit lane. The per-file table below is the ratchet: a change to one of these files must not lower its score. DEBT-465 records the triage of every mutant.
+
+| File | Baseline | After triage |
+|---|---:|---:|
+| `src/domain/services/subscription-write-guard.ts` | 83.78% | 100.00% |
+| `src/domain/services/entitlement.ts` | 100.00% | 100.00% |
+| `src/domain/services/grading.ts` | 85.19% | 100.00% |
+| `src/domain/services/exam-timer.ts` | 100.00% | 100.00% |
+| `src/domain/services/statistics.ts` | 85.71% | 100.00% |
+| `src/domain/services/shuffle.ts` | 88.57% | 100.00% |
+| `src/application/shared/shuffled-choice-views.ts` | 82.35% | 100.00% |
+| `src/application/shared/persist-subscription-observation.ts` | 94.74% | 100.00% |
+| `src/application/use-cases/validate-feedback-context.ts` | 96.83% | 100.00% |
+| **All nine files** | **91.77%** | **100.00%** |
+
+The second wave ran on 2026-09-27 the same way:
+
+| File | Baseline | After triage |
+|---|---:|---:|
+| `src/domain/services/session-stats.ts` | 100.00% | 100.00% |
+| `src/domain/value-objects/subscription-status.ts` | 100.00% | 100.00% |
+| `src/application/use-cases/start-practice-session.ts` | 86.36% | 100.00% |
+| `src/adapters/controllers/shared/idempotency-error-policy.ts` | 89.68% | 100.00% |
+| **All four files** | **91.44%** | **100.00%** |
+
+The after-triage scores exclude four suppressed equivalent mutants, each with its reason in the source, and the two siblings those comments also cover (§5). 100% here is what triage left, not a target. Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.
