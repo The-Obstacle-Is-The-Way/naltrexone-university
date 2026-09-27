@@ -267,6 +267,13 @@
       "when": 1790538645614,
       "tag": "0037_right_living_lightning",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790540100365,
+      "tag": "0038_funny_baron_strucker",
+      "breakpoints": true
     }
   ]
 }

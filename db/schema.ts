@@ -87,8 +87,7 @@ export const renewalNoticeKindEnum = pgEnum('renewal_notice_kind', [
   'renewal_notice',
   'material_change',
   'fee_change',
-  // DEBT-414 F02: added unused; the step that writes it widens the
-  // scheduled-notice index and key-shape check.
+  // DEBT-414 F02: a monthly subscriber's yearly reminder.
   'anniversary_reminder',
 ]);
 
@@ -498,7 +497,10 @@ export const renewalNoticeDeliveries = pgTable(
         t.destination,
       )
       .where(
-        sql`${t.noticeKind} IN ('annual_reminder', 'renewal_notice', 'material_change', 'fee_change')`,
+        // Every kind but the acknowledgment is scheduled. Naming only
+        // 'acknowledgment' keeps this valid in the transaction that adds a
+        // kind: Postgres rejects a new enum value used before it commits.
+        sql`${t.noticeKind} <> 'acknowledgment'`,
       ),
     statusNextAttemptIdx: index(
       'renewal_notice_deliveries_status_next_attempt_idx',
@@ -506,7 +508,7 @@ export const renewalNoticeDeliveries = pgTable(
     keyShapeChk: check(
       'renewal_notice_deliveries_key_shape_chk',
       sql`(${t.noticeKind} = 'acknowledgment' AND ${t.consentRecordId} IS NOT NULL AND ${t.stripeSubscriptionId} IS NULL AND ${t.applicableAt} IS NULL)
-          OR (${t.noticeKind} IN ('annual_reminder', 'renewal_notice', 'material_change', 'fee_change') AND ${t.consentRecordId} IS NULL AND ${t.stripeSubscriptionId} IS NOT NULL AND ${t.applicableAt} IS NOT NULL)`,
+          OR (${t.noticeKind} <> 'acknowledgment' AND ${t.consentRecordId} IS NULL AND ${t.stripeSubscriptionId} IS NOT NULL AND ${t.applicableAt} IS NOT NULL)`,
     ),
     attemptCountChk: check(
       'renewal_notice_deliveries_attempt_count_chk',
