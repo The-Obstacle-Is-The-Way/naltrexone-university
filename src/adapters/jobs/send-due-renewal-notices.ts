@@ -135,6 +135,9 @@ export type AnnualRenewalQueries = {
   }) => Promise<AnnualRenewalPastNoticeDeadline[]>;
 };
 
+// Unlike listAnnualSubscriptionsDue, a delivered notice counts whatever its
+// destination: dispatch refuses a notice whose destination is no longer the
+// account email (F07), so a delivered one reached the address of record.
 export async function listAnnualRenewalsPastNoticeDeadline(
   input: { renewalAfter: Date; renewalAtOrBefore: Date; limit: number },
   deps: { db: DrizzleDb; annualPriceId: string },

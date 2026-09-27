@@ -151,7 +151,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       'Your Addiction Boards Pro Annual subscription renews automatically unless you cancel.',
     );
     expect(payload.text).toContain(
-      'Cancel before September 6, 2026 at 12:00 PM UTC (8:00 AM Eastern, 5:00 AM Pacific) to avoid the renewal charge.',
+      'Cancel before September 6, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT) to avoid the renewal charge.',
     );
     expect(payload.text).toContain(
       'Cancel online on the Billing page: https://addictionboards.com/app/billing',

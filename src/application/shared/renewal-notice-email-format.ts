@@ -23,15 +23,16 @@ export function formatRenewalNoticeDate(value: Date): string {
   }).format(value);
 }
 
-const CUTOFF_ZONES = [
-  { label: 'Eastern', timeZone: 'America/New_York' },
-  { label: 'Pacific', timeZone: 'America/Los_Angeles' },
-] as const;
+const CUTOFF_TIME_ZONES = ['America/New_York', 'America/Los_Angeles'] as const;
 
+// The zone abbreviation (UTC, EDT, EST, PDT, PST) tells the two 1:30 AM
+// instants of a fall-back night apart.
 function formatTime(value: Date, timeZone: string): string {
   return new Intl.DateTimeFormat('en-US', {
-    timeStyle: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
     timeZone,
+    timeZoneName: 'short',
   }).format(value);
 }
 
@@ -48,14 +49,12 @@ function formatMonthDay(value: Date, timeZone: string): string {
 // differs from the UTC date (a deadline on the previous US evening).
 export function formatRenewalNoticeCutoff(value: Date): string {
   const utcMonthDay = formatMonthDay(value, 'UTC');
-  const local = CUTOFF_ZONES.map(({ label, timeZone }) => {
+  const local = CUTOFF_TIME_ZONES.map((timeZone) => {
     const monthDay = formatMonthDay(value, timeZone);
     const time = formatTime(value, timeZone);
-    return monthDay === utcMonthDay
-      ? `${time} ${label}`
-      : `${monthDay} at ${time} ${label}`;
+    return monthDay === utcMonthDay ? time : `${monthDay} at ${time}`;
   });
-  return `${formatRenewalNoticeDate(value)} at ${formatTime(value, 'UTC')} UTC (${local.join(', ')})`;
+  return `${formatRenewalNoticeDate(value)} at ${formatTime(value, 'UTC')} (${local.join(', ')})`;
 }
 
 // A notice line mixes text with links; links render as anchors in HTML and as

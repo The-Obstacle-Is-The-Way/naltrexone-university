@@ -92,10 +92,10 @@ describe('SendRenewalAcknowledgmentUseCase', () => {
     expect(payload.text).toContain('August 14, 2026');
     // DEBT-414 F06: deadlines carry their time and zone, not a UTC date.
     expect(payload.text).toContain(
-      'Trial ends: August 14, 2026 at 12:00 PM UTC (8:00 AM Eastern, 5:00 AM Pacific).',
+      'Trial ends: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).',
     );
     expect(payload.text).toContain(
-      'Cancellation deadline: August 14, 2026 at 12:00 PM UTC (8:00 AM Eastern, 5:00 AM Pacific).',
+      'Cancellation deadline: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).',
     );
     expect(payload.text).toContain(consent.cancellationMethod);
     expect(payload.text).toContain('John H. Jung, MD, MS');

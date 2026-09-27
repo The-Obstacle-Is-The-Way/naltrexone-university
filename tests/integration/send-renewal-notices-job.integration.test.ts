@@ -350,7 +350,7 @@ describe('renewal notice deadline query', () => {
       cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
       currentPeriodEnd: input.currentPeriodEnd,
     });
-    return { externalSubscriptionId, email: user.email };
+    return { externalSubscriptionId, email: user.email, userId: user.id };
   }
 
   async function insertNotice(input: {
@@ -461,6 +461,36 @@ describe('renewal notice deadline query', () => {
       .update(renewalNoticeDeliveries)
       .set({ status: 'delivered' })
       .where(eq(renewalNoticeDeliveries.id, failedNoticeId));
+
+    await expect(
+      listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
+    ).resolves.toEqual([]);
+  });
+
+  // #1155 review: dispatch refuses a notice whose destination is no longer the
+  // account email (destination_changed), so a delivered notice reached the
+  // address of record when it was sent. A later email change does not unmeet
+  // the deadline; the scheduler resends to the new address only inside its
+  // selection window.
+  it('keeps counting notices delivered to the address of record after the email changes', async () => {
+    const renewal = new Date('2026-09-06T12:00:00.000Z');
+    const subscription = await insertSubscription({
+      currentPeriodEnd: renewal,
+    });
+    for (const noticeKind of ['annual_reminder', 'renewal_notice'] as const) {
+      await insertNotice({
+        noticeKind,
+        externalSubscriptionId: subscription.externalSubscriptionId,
+        applicableAt: renewal,
+        destination: subscription.email,
+        status: 'delivered',
+      });
+    }
+
+    await db
+      .update(users)
+      .set({ email: `changed-${randomUUID()}@example.test` })
+      .where(eq(users.id, subscription.userId));
 
     await expect(
       listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
