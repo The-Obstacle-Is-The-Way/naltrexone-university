@@ -12,6 +12,16 @@ overrides:
   # as of 2026-08-07 (published 2026-07-24).
   postcss: 8.5.23
   uuid: 14.0.0
+  # Security: GHSA-q8mj-m7cp-5q26 (CVE-2026-8723; alert #64) — qs.stringify
+  # throws on null/undefined entries in comma-format arrays with
+  # encodeValuesOnly; GHSA-4mjr-xmp4-gh2g — stringify calls an attacker-set,
+  # non-callable constructor.isBuffer; GHSA-x5fp-wj9c-mxmx — bracket keys bypass
+  # arrayLimit when comma parsing is on. All three are DoS or limit bypasses,
+  # fixed together in 6.16.0. Dev-only: typed-rest-client@2.3.1 pins qs 6.15.1
+  # exactly for Stryker's dashboard reporter, which this repo does not
+  # configure, so defense-in-depth; 6.16.0 is a semver-minor step on the same
+  # API. Aged past the 7-day gate (published 2026-08-29).
+  qs: 6.16.0
   esbuild: '>=0.28.1'
   # Security: GHSA-8xcm-r25x-g524, GHSA-4cwx-7wf7-3272,
   # GHSA-jr45-8vmc-qm54, GHSA-v3r7-h72x-cjcm, and GHSA-m8rv-5g2x-5cg5 —
