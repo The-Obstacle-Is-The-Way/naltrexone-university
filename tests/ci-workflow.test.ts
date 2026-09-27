@@ -8,6 +8,7 @@ const STRIPE_HOSTED_WORKFLOW_PATH =
   '.github/workflows/stripe-hosted-checkout-smoke.yml';
 const STRIPE_PROVIDER_WORKFLOW_PATH =
   '.github/workflows/stripe-trial-clock-smoke.yml';
+const MUTATION_WORKFLOW_PATH = '.github/workflows/mutation.yml';
 const HUMAN_SAME_REPO_PR_CONDITION =
   "github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository";
 const DEPENDABOT_ACTOR_GUARD = "github.actor != 'dependabot[bot]'";
@@ -21,6 +22,7 @@ const WORKFLOW_PATHS = [
   CI_WORKFLOW_PATH,
   STRIPE_HOSTED_WORKFLOW_PATH,
   STRIPE_PROVIDER_WORKFLOW_PATH,
+  MUTATION_WORKFLOW_PATH,
 ] as const;
 
 type WorkflowStep = {
@@ -547,5 +549,40 @@ describe('Stripe provider contract workflow', () => {
 
     expect(stepBlock).toContain('run: pnpm test:stripe-provider');
     expect(stepBlock).not.toContain('scripts/run-trial-clock-smoke.ts');
+  });
+});
+
+// DEBT-465 Part 2: mutation testing reports weekly and never gates (ADR-019).
+describe('Mutation workflow', () => {
+  const workflow = () => readFileSync(MUTATION_WORKFLOW_PATH, 'utf8');
+
+  it('runs weekly or on dispatch, never for pull requests or pushes', () => {
+    const source = workflow();
+    const triggerBlock = source.slice(
+      source.indexOf('on:'),
+      source.indexOf('\npermissions:'),
+    );
+
+    expect(triggerBlock).toContain("- cron: '0 6 * * 1'");
+    expect(triggerBlock).toContain('workflow_dispatch:');
+    expect(triggerBlock).not.toContain('pull_request:');
+    expect(triggerBlock).not.toContain('push:');
+  });
+
+  it('reads the repository only and uses no secrets', () => {
+    const source = workflow();
+
+    expect(source).toContain('permissions:\n  contents: read');
+    expect(source).not.toContain('secrets.');
+  });
+
+  it('runs Stryker and uploads its report without a breaking threshold', () => {
+    const source = workflow();
+
+    expect(source).toContain('run: pnpm exec stryker run');
+    expect(source).toContain(`uses: ${PINNED_UPLOAD_ARTIFACT} # v`);
+    expect(
+      JSON.parse(readFileSync('stryker.config.json', 'utf8')).thresholds.break,
+    ).toBeNull();
   });
 });

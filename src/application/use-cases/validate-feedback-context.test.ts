@@ -415,4 +415,46 @@ describe('validateFeedbackContext', () => {
       practiceSessionId: sessionId,
     });
   });
+
+  it('accepts a session-scoped attempt when no session is supplied', async () => {
+    const attemptId = crypto.randomUUID();
+    const attempts = attemptsWith({
+      id: attemptId,
+      userId,
+      questionId: 'q1',
+      practiceSessionId: crypto.randomUUID(),
+    });
+
+    await expect(
+      validateFeedbackContext(
+        { userId, questionId: 'q1', attemptId, practiceSessionId: null },
+        { attempts, sessions: sessionsWith() },
+      ),
+    ).resolves.toEqual({ attemptId, practiceSessionId: null });
+  });
+
+  it('rejects a standalone retry from another origin that points at the session', async () => {
+    const attemptId = crypto.randomUUID();
+    const sessionId = crypto.randomUUID();
+    const attempts = attemptsWith({
+      id: attemptId,
+      userId,
+      questionId: 'q1',
+      practiceSessionId: null,
+      retryOrigin: 'history',
+      retrySessionId: sessionId,
+    });
+    const sessions = sessionsWith({
+      id: sessionId,
+      userId,
+      questionIds: ['q1'],
+    });
+
+    await expect(
+      validateFeedbackContext(
+        { userId, questionId: 'q1', attemptId, practiceSessionId: sessionId },
+        { attempts, sessions },
+      ),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
 });

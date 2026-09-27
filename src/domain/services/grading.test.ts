@@ -42,7 +42,12 @@ describe('gradeAnswer', () => {
     ];
     const question = createQuestion({ id: questionId, choices });
 
-    expect(() => gradeAnswer(question, 'c1')).toThrow();
+    expect(() => gradeAnswer(question, 'c1')).toThrow(
+      expect.objectContaining({
+        code: 'INVALID_QUESTION',
+        message: 'Question q1 must have exactly 1 correct choice (found 0)',
+      }),
+    );
   });
 
   it('throws if multiple correct choices exist', () => {
@@ -53,7 +58,12 @@ describe('gradeAnswer', () => {
     ];
     const question = createQuestion({ id: questionId, choices });
 
-    expect(() => gradeAnswer(question, 'c1')).toThrow();
+    expect(() => gradeAnswer(question, 'c1')).toThrow(
+      expect.objectContaining({
+        code: 'INVALID_QUESTION',
+        message: 'Question q1 must have exactly 1 correct choice (found 2)',
+      }),
+    );
   });
 
   it('throws if selected choice not found', () => {
@@ -61,6 +71,11 @@ describe('gradeAnswer', () => {
     const choices = [createChoice({ id: 'c1', questionId, label: 'A' })];
     const question = createQuestion({ id: questionId, choices });
 
-    expect(() => gradeAnswer(question, 'missing')).toThrow();
+    expect(() => gradeAnswer(question, 'missing')).toThrow(
+      expect.objectContaining({
+        code: 'INVALID_CHOICE',
+        message: 'Choice missing does not belong to question q1',
+      }),
+    );
   });
 });

@@ -220,7 +220,59 @@ describe('buildShuffledChoiceViews', () => {
     expect(() => buildShuffledChoiceViews(question, 'user-1')).toThrow(
       expect.objectContaining({
         code: 'INTERNAL_ERROR',
+        message: 'Question question-many has too many choices',
       }),
     );
+  });
+
+  it("leaves the question's own choice order untouched", () => {
+    const choices = [3, 1, 2].map((sortOrder) =>
+      createChoice({
+        id: `choice-${sortOrder}`,
+        sortOrder,
+        isCorrect: sortOrder === 1,
+        questionId: 'question-order',
+      }),
+    );
+    // createQuestion sorts its choices, so restore the unsorted order to
+    // prove the build sorts a copy rather than the question's own array.
+    const question = {
+      ...createQuestion({ id: 'question-order', choices }),
+      choices,
+    };
+
+    buildShuffledChoiceViews(question, 'user-1');
+
+    expect(question.choices.map((choice) => choice.id)).toEqual([
+      'choice-3',
+      'choice-1',
+      'choice-2',
+    ]);
+  });
+
+  it('orders by sortOrder before the id tiebreak', () => {
+    const viewsFor = (aOrder: number, bOrder: number) =>
+      buildShuffledChoiceViews(
+        createQuestion({
+          id: 'question-precedence',
+          choices: [
+            createChoice({
+              id: 'choice-a',
+              sortOrder: aOrder,
+              isCorrect: true,
+            }),
+            createChoice({
+              id: 'choice-b',
+              sortOrder: bOrder,
+              isCorrect: false,
+            }),
+          ],
+        }),
+        'user-1',
+      ).map((view) => view.choiceId);
+
+    // Same seed, opposite sortOrders: the stable inputs are mirrored, so the
+    // shuffled outputs must differ. An id-only order would make them equal.
+    expect(viewsFor(1, 2)).not.toEqual(viewsFor(2, 1));
   });
 });

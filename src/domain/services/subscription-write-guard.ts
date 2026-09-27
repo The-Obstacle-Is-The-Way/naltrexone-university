@@ -10,15 +10,6 @@ export type SubscriptionWriteCandidate = {
   currentPeriodEnd: Date;
 };
 
-const TerminalSubscriptionStatuses: readonly SubscriptionStatus[] = [
-  'canceled',
-  'paymentFailed',
-];
-
-function isTerminalSubscriptionStatus(status: SubscriptionStatus): boolean {
-  return TerminalSubscriptionStatuses.includes(status);
-}
-
 function isCurrentEntitledSubscription(
   candidate: SubscriptionWriteCandidate,
   now: Date,
@@ -45,12 +36,13 @@ export function shouldPersistSubscriptionWrite(input: {
     return true;
   }
 
-  if (isTerminalSubscriptionStatus(input.incoming.status)) return false;
-  if (!hasEntitledSubscriptionTier(input.incoming.status)) return false;
-
+  // The stored subscription is current and entitled here. Canonical ordering
+  // ranks entitlement first, so a non-entitled incoming status (including the
+  // terminal canceled and paymentFailed) always orders after it and is refused.
   const canonicalOrdering = compareCanonicalSubscriptionCandidates(
     input.incoming,
     input.stored,
   );
+  // Stryker disable next-line EqualityOperator: ordering is 0 only for identical identities, which returned above, so <= 0 is equivalent
   return canonicalOrdering < 0;
 }
