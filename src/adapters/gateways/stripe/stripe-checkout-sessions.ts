@@ -774,46 +774,41 @@ export async function createStripeCheckoutSession({
   const priceId = getStripePriceId(input.plan, priceIds);
   const trialRequested = input.trialPeriodDays !== undefined;
   const requestedCheckoutVariant = getRequestedCheckoutSessionVariant(input);
-  const subscriptionsList = stripe.subscriptions?.list?.bind(
-    stripe.subscriptions,
-  );
-  if (subscriptionsList) {
-    const subscriptions = await callStripeWithRetry({
-      operation: 'subscriptions.list',
-      fn: () =>
-        subscriptionsList({
-          customer: input.externalCustomerId,
-          status: 'all',
-          limit: SUBSCRIPTION_LIST_LIMIT,
-        }),
-      logger,
-    });
+  const subscriptions = await callStripeWithRetry({
+    operation: 'subscriptions.list',
+    fn: () =>
+      stripe.subscriptions.list({
+        customer: input.externalCustomerId,
+        status: 'all',
+        limit: SUBSCRIPTION_LIST_LIMIT,
+      }),
+    logger,
+  });
 
-    let blockingSubscription: StripeListedSubscription | null = null;
-    let blockingStatus: StripeSubscriptionStatus | null = null;
-    for (const subscription of subscriptions.data) {
-      const status = getBlockingSubscriptionStatus(subscription);
-      if (!status) continue;
-      blockingSubscription = subscription;
-      blockingStatus = status;
-      break;
-    }
+  let blockingSubscription: StripeListedSubscription | null = null;
+  let blockingStatus: StripeSubscriptionStatus | null = null;
+  for (const subscription of subscriptions.data) {
+    const status = getBlockingSubscriptionStatus(subscription);
+    if (!status) continue;
+    blockingSubscription = subscription;
+    blockingStatus = status;
+    break;
+  }
 
-    if (blockingSubscription && blockingStatus) {
-      logger.warn(
-        {
-          userId: input.userId,
-          externalCustomerId: input.externalCustomerId,
-          externalSubscriptionId: blockingSubscription.id ?? null,
-          subscriptionStatus: blockingStatus,
-        },
-        'Stripe already has a blocking subscription for customer',
-      );
-      throw new ApplicationError(
-        'ALREADY_SUBSCRIBED',
-        'Subscription already exists for this customer',
-      );
-    }
+  if (blockingSubscription && blockingStatus) {
+    logger.warn(
+      {
+        userId: input.userId,
+        externalCustomerId: input.externalCustomerId,
+        externalSubscriptionId: blockingSubscription.id ?? null,
+        subscriptionStatus: blockingStatus,
+      },
+      'Stripe already has a blocking subscription for customer',
+    );
+    throw new ApplicationError(
+      'ALREADY_SUBSCRIBED',
+      'Subscription already exists for this customer',
+    );
   }
 
   const existing = await callStripeWithRetry({

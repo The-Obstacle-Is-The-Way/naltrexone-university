@@ -156,7 +156,7 @@ export type StripeClient = {
       params: CustomerCreateParams,
       options?: StripeRequestOptions,
     ): Promise<StripeCustomer>;
-    search?: (
+    search: (
       params: CustomerSearchParams,
       options?: StripeRequestOptions,
     ) => Promise<StripeCustomerSearchResult>;
@@ -181,38 +181,38 @@ export type StripeClient = {
       ): Promise<StripeCheckoutSession>;
     };
   };
-  subscriptions?: {
+  subscriptions: {
     retrieve(
       subscriptionId: string,
       params?: undefined,
       options?: StripeRequestOptions,
     ): Promise<StripeSubscription>;
-    list?(
+    list(
       params: StripeSubscriptionListParams,
       options?: StripeRequestOptions,
     ): Promise<StripeSubscriptionListResult>;
-    cancel?(
+    cancel(
       subscriptionId: string,
       params?: undefined,
       options?: StripeRequestOptions,
     ): Promise<StripeSubscription>;
-    update?(
+    update(
       subscriptionId: string,
       params: { default_payment_method: string },
       options?: StripeRequestOptions,
     ): Promise<StripeSubscription>;
   };
-  setupIntents?: {
+  setupIntents: {
     retrieve(setupIntentId: string): Promise<StripeSetupIntent>;
   };
-  paymentMethods?: {
+  paymentMethods: {
     retrieve(paymentMethodId: string): Promise<StripePaymentMethod>;
     attach(
       paymentMethodId: string,
       params: { customer: string },
       options?: StripeRequestOptions,
     ): Promise<StripePaymentMethod>;
-    detach?(
+    detach(
       paymentMethodId: string,
       params?: undefined,
       options?: StripeRequestOptions,
@@ -239,3 +239,6 @@ export type StripeClient = {
     };
   };
 };
+
+/** The Subscriptions API alone, for consumers that must not reach customers, Checkout or the portal. */
+export type StripeSubscriptionsClient = Pick<StripeClient, 'subscriptions'>;

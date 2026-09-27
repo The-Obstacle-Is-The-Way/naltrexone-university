@@ -73,16 +73,10 @@ export async function reconcileStripeSubscriptions(
   });
 
   const subscriptionsClient = deps.stripe.subscriptions;
-  const listSubscriptions =
-    subscriptionsClient?.list?.bind(subscriptionsClient);
+  // Bound so the detached SDK methods keep their client (BUG-069/070).
+  const listSubscriptions = subscriptionsClient.list.bind(subscriptionsClient);
   const cancelSubscription =
-    subscriptionsClient?.cancel?.bind(subscriptionsClient);
-  if (!listSubscriptions || !cancelSubscription) {
-    throw new ApplicationError(
-      'STRIPE_ERROR',
-      'Stripe subscriptions API is unavailable for reconciliation',
-    );
-  }
+    subscriptionsClient.cancel.bind(subscriptionsClient);
 
   const results = await mapWithConcurrencyLimit(
     rows,
