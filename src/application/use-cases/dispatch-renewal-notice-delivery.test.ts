@@ -137,7 +137,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     let stateObservedDuringSend: unknown;
     const gateway = new FakeTransactionalEmailGateway({
       configured: true,
-      results: [{ status: 'delivered', providerEventId: 'email_123' }],
+      results: [{ status: 'accepted', providerEventId: 'email_123' }],
       onSend: () => {
         stateObservedDuringSend = structuredClone(repository.records[0]);
       },
@@ -147,7 +147,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
       outcome: 'attempted',
       delivery: {
-        status: 'delivered',
+        status: 'accepted',
         providerEventId: 'email_123',
         attemptCount: 1,
         attemptId: 'attempt-1',
@@ -228,7 +228,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     await repository.saveQueued(createDelivery());
     const gateway = new FakeTransactionalEmailGateway({
       configured: true,
-      results: [{ status: 'delivered', providerEventId: 'email_123' }],
+      results: [{ status: 'accepted', providerEventId: 'email_123' }],
     });
     const useCase = createUseCase({ repository, gateway });
 
@@ -242,7 +242,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       results.filter(
         (result) =>
           result.outcome === 'attempted' &&
-          result.delivery.status === 'delivered',
+          result.delivery.status === 'accepted',
       ),
     ).toHaveLength(1);
     expect(
@@ -259,7 +259,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
       configured: true,
       results: [
         { status: 'transient_failure', failureCode: 'rate_limit_exceeded' },
-        { status: 'delivered', providerEventId: 'email_123' },
+        { status: 'accepted', providerEventId: 'email_123' },
       ],
     });
     const useCase = new DispatchRenewalNoticeDeliveryUseCase(
@@ -279,7 +279,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     expect(gateway.sendInputs).toHaveLength(2);
     expect(gateway.sendInputs[1]).toEqual(gateway.sendInputs[0]);
     expect(repository.records[0]).toMatchObject({
-      status: 'delivered',
+      status: 'accepted',
       attemptCount: 2,
     });
   });

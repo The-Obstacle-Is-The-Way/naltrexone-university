@@ -1,4 +1,14 @@
-import { and, asc, eq, gt, gte, lte, notExists, or } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  lte,
+  notExists,
+  or,
+} from 'drizzle-orm';
 import {
   renewalNoticeDeliveries,
   stripeSubscriptions,
@@ -23,7 +33,7 @@ export const SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS = 300;
 export const SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO = 0.7;
 // DEBT-414 F01: renewals are first selected at 35 days and retried daily down
 // to the shared 30-day minimum (RENEWAL_NOTICE_MINIMUM_DAYS); one inside that
-// minimum without delivered notices is alerted, and dispatch refuses it (F07).
+// minimum without a sent notice is alerted, and dispatch refuses it (F07).
 const ANNUAL_RENEWAL_NOTICE_TARGET_DAYS = 35;
 const EXPIRED_SETUP_OPERATION_RETENTION_DAYS = 30;
 const EXPIRED_SETUP_OPERATION_PRUNE_LIMIT = 100;
@@ -135,9 +145,9 @@ export type AnnualRenewalQueries = {
   }) => Promise<AnnualRenewalPastNoticeDeadline[]>;
 };
 
-// Unlike listAnnualSubscriptionsDue, a delivered notice counts whatever its
+// Unlike listAnnualSubscriptionsDue, a sent notice counts whatever its
 // destination: dispatch refuses a notice whose destination is no longer the
-// account email (F07), so a delivered one reached the address of record.
+// account email (F07), so a sent one went to the address of record.
 export async function listAnnualRenewalsPastNoticeDeadline(
   input: { renewalAfter: Date; renewalAtOrBefore: Date; limit: number },
   deps: { db: DrizzleDb; annualPriceId: string },
@@ -157,7 +167,8 @@ export async function listAnnualRenewalsPastNoticeDeadline(
             renewalNoticeDeliveries.applicableAt,
             stripeSubscriptions.currentPeriodEnd,
           ),
-          eq(renewalNoticeDeliveries.status, 'delivered'),
+          // Provider acceptance, or later delivery evidence, counts as sent.
+          inArray(renewalNoticeDeliveries.status, ['accepted', 'delivered']),
         ),
       );
 
@@ -295,7 +306,7 @@ export async function sendDueRenewalNotices(
   };
 }
 
-// Runs after dispatch, so a notice delivered in this run is not flagged.
+// Runs after dispatch, so a notice sent in this run is not flagged.
 async function alertOnMissedNoticeDeadlines(
   window: { renewalAfter: Date; renewalAtOrBefore: Date },
   limit: number,

@@ -111,7 +111,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       applicableAt: renewalAt,
       disclosureVersion: '2026-08-05',
       destination: 'subscriber@example.com',
-      status: 'delivered',
+      status: 'accepted',
     });
     const payload = parseTransactionalEmailPayloadSnapshot(
       {
@@ -329,7 +329,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
 
     expect(gateway.sendInputs).toHaveLength(1);
     expect(repository.records).toHaveLength(1);
-    expect(repository.records[0]?.status).toBe('delivered');
+    expect(repository.records[0]?.status).toBe('accepted');
   });
 
   it('bounds provider dispatch concurrency', async () => {
@@ -419,7 +419,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
     expect(gateway.sendInputs).toHaveLength(1);
     expect(repository.records).toEqual([
       expect.objectContaining({ status: 'queued' }),
-      expect.objectContaining({ status: 'delivered' }),
+      expect.objectContaining({ status: 'accepted' }),
     ]);
   });
 
@@ -450,7 +450,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
     expect(repository.records).toEqual([
       expect.objectContaining({
         externalSubscriptionId: 'sub_healthy',
-        status: 'delivered',
+        status: 'accepted',
       }),
     ]);
     expect(gateway.sendInputs).toHaveLength(1);
@@ -526,7 +526,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
     expect(repository.records).toEqual([
       expect.objectContaining({
         externalSubscriptionId: 'sub_healthy',
-        status: 'delivered',
+        status: 'accepted',
       }),
     ]);
     expect(gateway.sendInputs).toHaveLength(1);

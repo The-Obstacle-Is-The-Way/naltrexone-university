@@ -126,7 +126,7 @@ export class ResendTransactionalEmailGateway
         };
       }
       if (data && typeof data.id === 'string' && data.id.length > 0) {
-        return { status: 'delivered', providerEventId: data.id };
+        return { status: 'accepted', providerEventId: data.id };
       }
       return {
         status: 'outcome_unknown',

@@ -164,14 +164,14 @@ export class DrizzleRenewalNoticeDeliveryRepository
     return row ? toDelivery(row) : null;
   }
 
-  markDelivered(input: {
+  markAccepted(input: {
     id: string;
     attemptId: string;
     providerEventId: string;
     completedAt: Date;
   }): Promise<RenewalNoticeDelivery> {
     return this.updateOwnedClaim(input.id, input.attemptId, {
-      status: 'delivered',
+      status: 'accepted',
       providerEventId: input.providerEventId,
       nextAttemptAt: null,
       failureClass: null,

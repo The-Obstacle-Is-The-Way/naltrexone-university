@@ -76,7 +76,7 @@ function createHarness(input?: {
   userId?: string;
   webhookResult?: WebhookEventResult;
   providerResult?:
-    | { status: 'delivered'; providerEventId: string }
+    | { status: 'accepted'; providerEventId: string }
     | { status: 'transient_failure'; failureCode: string };
 }) {
   const userId = input?.userId ?? crypto.randomUUID();
@@ -207,7 +207,7 @@ describe('Stripe webhook renewal acknowledgment', () => {
         noticeKind: 'acknowledgment',
         consentRecordId: harness.renewalConsents.snapshot()[0]?.id,
         destination: 'subscriber@example.com',
-        status: 'delivered',
+        status: 'accepted',
       }),
     ]);
     expect(harness.renewalDeliveries.savedDuringTransaction).toBe(true);

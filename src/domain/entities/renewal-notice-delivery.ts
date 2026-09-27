@@ -11,7 +11,8 @@ export type RenewalNoticeDeliveryStatus =
   | 'delivered'
   | 'transient_failure'
   | 'terminal_failure'
-  | 'outcome_unknown';
+  | 'outcome_unknown'
+  | 'accepted';
 
 export type RenewalNoticeRequeueAuditEntry = {
   reason: string;

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."renewal_notice_delivery_status" ADD VALUE 'accepted';

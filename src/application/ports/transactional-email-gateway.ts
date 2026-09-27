@@ -13,7 +13,8 @@ export type TransactionalEmailSendInput = {
 };
 
 export type TransactionalEmailSendResult =
-  | { status: 'delivered'; providerEventId: string }
+  // The provider accepted the message; this is not inbox-delivery evidence.
+  | { status: 'accepted'; providerEventId: string }
   | { status: 'transient_failure'; failureCode: string }
   | { status: 'terminal_failure'; failureCode: string }
   | { status: 'outcome_unknown'; failureCode: string };

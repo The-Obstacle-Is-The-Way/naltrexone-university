@@ -98,6 +98,9 @@ export const renewalNoticeDeliveryStatusEnum = pgEnum(
     'transient_failure',
     'terminal_failure',
     'outcome_unknown',
+    // DEBT-414 F07: the provider accepted the message. 'delivered' is kept for
+    // delivery evidence; rows before this value existed recorded acceptance.
+    'accepted',
   ],
 );
 

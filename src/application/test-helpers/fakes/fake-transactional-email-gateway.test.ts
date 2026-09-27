@@ -26,11 +26,11 @@ describe('FakeTransactionalEmailGateway', () => {
   it('records the immutable send input and returns the configured outcome', async () => {
     const gateway = new FakeTransactionalEmailGateway({
       configured: true,
-      results: [{ status: 'delivered', providerEventId: 'email_123' }],
+      results: [{ status: 'accepted', providerEventId: 'email_123' }],
     });
 
     await expect(gateway.send(input)).resolves.toEqual({
-      status: 'delivered',
+      status: 'accepted',
       providerEventId: 'email_123',
     });
     expect(gateway.sendInputs).toEqual([input]);
