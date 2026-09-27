@@ -14,7 +14,9 @@ export type RenewalNoticeFailureClass =
   | 'provider_non_acceptance'
   | 'provider_terminal_failure'
   | 'provider_outcome_unknown'
-  | 'stale_processing_claim';
+  | 'stale_processing_claim'
+  | 'notice_superseded'
+  | 'notice_deadline_passed';
 
 export type MarkRenewalNoticeDeliveryFailureInput = {
   id: string;

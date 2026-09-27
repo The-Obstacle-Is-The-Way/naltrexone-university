@@ -7,7 +7,9 @@ import {
   FakeLogger,
   FakeRenewalNoticeDeliveryRepository,
   FakeSha256Hasher,
+  FakeSubscriptionRepository,
   FakeTransactionalEmailGateway,
+  FakeUserRepository,
 } from '@/src/application/test-helpers/fakes';
 import type { NewRenewalNoticeDelivery } from '@/src/domain/entities';
 import { DispatchRenewalNoticeDeliveryUseCase } from './dispatch-renewal-notice-delivery';
@@ -23,6 +25,11 @@ const payload = {
   text: 'Renewal terms',
 };
 const hasher = new FakeSha256Hasher();
+// These cases dispatch acknowledgments, which are never revalidated.
+const noticeTargets = {
+  subscriptions: new FakeSubscriptionRepository(),
+  users: new FakeUserRepository(),
+};
 
 function createDelivery(
   overrides: Partial<NewRenewalNoticeDelivery> = {},
@@ -55,6 +62,7 @@ function createUseCase(input: {
   return new DispatchRenewalNoticeDeliveryUseCase(
     input.repository,
     input.gateway,
+    noticeTargets,
     hasher,
     input.logger ?? new FakeLogger(),
     input.currentTime ?? (() => now),
@@ -257,6 +265,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase', () => {
     const useCase = new DispatchRenewalNoticeDeliveryUseCase(
       repository,
       gateway,
+      noticeTargets,
       hasher,
       new FakeLogger(),
       () => currentTime,

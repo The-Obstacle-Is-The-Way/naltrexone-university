@@ -7,6 +7,7 @@ import {
   FakeSha256Hasher,
   FakeTransactionalEmailGateway,
 } from '@/src/application/test-helpers/fakes';
+import { createMatchingRenewalNoticeTargets } from '@/src/application/test-helpers/renewal-notice-targets';
 import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import { DispatchRenewalNoticeDeliveryUseCase } from './dispatch-renewal-notice-delivery';
 import {
@@ -37,9 +38,22 @@ function scheduledNotice(
   };
 }
 
-function createHarness(input?: {
+// Dispatch revalidates scheduled notices (DEBT-414 F07), so each case names
+// the subscriptions it notifies; all still match their notices.
+function matchingNoticeTargets(
+  externalSubscriptionIds: readonly string[] = ['sub_annual_123'],
+) {
+  return createMatchingRenewalNoticeTargets({
+    externalSubscriptionIds,
+    renewalAt,
+    destination: 'subscriber@example.com',
+  });
+}
+
+async function createHarness(input?: {
   configured?: boolean;
   onSend?: () => void | Promise<void>;
+  externalSubscriptionIds?: readonly string[];
 }) {
   const hasher = new FakeSha256Hasher();
   const repository = new FakeRenewalNoticeDeliveryRepository(() => now, hasher);
@@ -53,6 +67,7 @@ function createHarness(input?: {
   const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
     repository,
     gateway,
+    await matchingNoticeTargets(input?.externalSubscriptionIds),
     hasher,
     new FakeLogger(),
     () => now,
@@ -73,7 +88,7 @@ function createHarness(input?: {
 
 describe('SendDueRenewalNoticesUseCase', () => {
   it('queues and dispatches the annual renewal notice with statutory content', async () => {
-    const { gateway, hasher, repository, useCase } = createHarness();
+    const { gateway, hasher, repository, useCase } = await createHarness();
 
     const result = await useCase.execute({
       notices: [scheduledNotice()],
@@ -116,7 +131,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
   });
 
   it('creates separate annual-reminder and renewal-notice identities and deduplicates cron replay', async () => {
-    const { gateway, repository, useCase } = createHarness();
+    const { gateway, repository, useCase } = await createHarness();
     const notices = [
       scheduledNotice({ noticeKind: 'annual_reminder' }),
       scheduledNotice({ noticeKind: 'renewal_notice' }),
@@ -141,7 +156,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
   });
 
   it('renders the pinned material-change and fee-change instructions', async () => {
-    const { hasher, repository, useCase } = createHarness({
+    const { hasher, repository, useCase } = await createHarness({
       configured: false,
     });
 
@@ -183,7 +198,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
   });
 
   it('leaves selected rows queued and makes no provider call when Resend is unconfigured', async () => {
-    const { gateway, repository, useCase } = createHarness({
+    const { gateway, repository, useCase } = await createHarness({
       configured: false,
     });
 
@@ -198,7 +213,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
   });
 
   it('moves stale processing claims to outcome_unknown without resending them', async () => {
-    const { gateway, repository, useCase } = createHarness();
+    const { gateway, repository, useCase } = await createHarness();
     await useCase.execute({
       notices: [scheduledNotice()],
       limit: 100,
@@ -233,7 +248,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
   it('allows only one provider call across two concurrent workers', async () => {
     const sendStarted = createDeferred<void>();
     const allowSend = createDeferred<void>();
-    const { gateway, repository, useCase } = createHarness({
+    const { gateway, repository, useCase } = await createHarness({
       onSend: async () => {
         sendStarted.resolve(undefined);
         await allowSend.promise;
@@ -258,7 +273,11 @@ describe('SendDueRenewalNoticesUseCase', () => {
     const allWorkersStarted = createDeferred<void>();
     let active = 0;
     let maxActive = 0;
-    const { useCase } = createHarness({
+    const { useCase } = await createHarness({
+      externalSubscriptionIds: Array.from(
+        { length: 12 },
+        (_, index) => `sub_annual_${index}`,
+      ),
       onSend: async () => {
         active += 1;
         maxActive = Math.max(maxActive, active);
@@ -292,6 +311,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
     const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
       repository,
       gateway,
+      await matchingNoticeTargets(['sub_poisoned', 'sub_healthy']),
       hasher,
       new FakeLogger(),
       () => now,
@@ -340,7 +360,9 @@ describe('SendDueRenewalNoticesUseCase', () => {
   });
 
   it('rejects malformed source notices without blocking healthy queueing or due dispatch', async () => {
-    const { gateway, repository, useCase } = createHarness();
+    const { gateway, repository, useCase } = await createHarness({
+      externalSubscriptionIds: ['sub_healthy'],
+    });
 
     const result = await useCase.execute({
       notices: [
@@ -403,6 +425,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
     const dispatch = new DispatchRenewalNoticeDeliveryUseCase(
       repository,
       gateway,
+      await matchingNoticeTargets(['sub_conflict', 'sub_healthy']),
       hasher,
       new FakeLogger(),
       () => now,

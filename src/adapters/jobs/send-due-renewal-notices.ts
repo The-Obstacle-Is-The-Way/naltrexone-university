@@ -7,6 +7,7 @@ import {
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { projectSafeErrorDiagnostics } from '@/src/adapters/shared/safe-error-diagnostics';
 import type { Logger } from '@/src/application/ports';
+import { RENEWAL_NOTICE_MINIMUM_DAYS } from '@/src/application/shared/renewal-notice-schedule';
 import type {
   ScheduledRenewalNotice,
   SendDueRenewalNoticesResult,
@@ -20,11 +21,9 @@ export const SEND_RENEWAL_NOTICES_MAX_LIMIT = 40;
 export const SEND_RENEWAL_NOTICES_MAX_DISPATCH_LIMIT = 80;
 export const SEND_RENEWAL_NOTICES_MAX_DURATION_SECONDS = 300;
 export const SEND_RENEWAL_NOTICES_PROVIDER_BUDGET_RATIO = 0.7;
-// DEBT-414 F01: every covered state's annual-notice window contains 30-40
-// days before renewal (CO 25-40; VT, IL, DE, GA, HI 30-60; CA, NY 15-45).
-// Renewals are first selected at 35 days and retried daily down to the
-// 30-day minimum; one inside 30 days without delivered notices is alerted.
-const ANNUAL_RENEWAL_NOTICE_MINIMUM_DAYS = 30;
+// DEBT-414 F01: renewals are first selected at 35 days and retried daily down
+// to the shared 30-day minimum (RENEWAL_NOTICE_MINIMUM_DAYS); one inside that
+// minimum without delivered notices is alerted, and dispatch refuses it (F07).
 const ANNUAL_RENEWAL_NOTICE_TARGET_DAYS = 35;
 const EXPIRED_SETUP_OPERATION_RETENTION_DAYS = 30;
 const EXPIRED_SETUP_OPERATION_PRUNE_LIMIT = 100;
@@ -250,7 +249,7 @@ export async function sendDueRenewalNotices(
     );
   }
   const noticeDeadline = new Date(
-    observedAt.getTime() + ANNUAL_RENEWAL_NOTICE_MINIMUM_DAYS * DAY_MS,
+    observedAt.getTime() + RENEWAL_NOTICE_MINIMUM_DAYS * DAY_MS,
   );
   const subscriptions = await deps.annualRenewals.listDue({
     renewalAtOrAfter: noticeDeadline,
