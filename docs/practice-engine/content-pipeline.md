@@ -217,6 +217,14 @@ write can leave an incomplete **staging** directory; successful parsing alone is
 not a completed artifact. No atomic release/rollback interface is provided here.
 See [DEBT-483](../debt/debt-483-content-withdrawal-and-release-rollback.md).
 
+The managed environment seed (`pnpm db:seed:all`) follows the same boundary through
+`scripts/prepare-seed-corpus.ts`. It imports into a fresh `content/.import-staging-*`
+directory, outside the seed glob, and replaces `content/questions/imported/` only
+after the whole import succeeds, with two directory renames. A failed import leaves
+the current imported tree unchanged. If the final rename fails, the previous tree is
+restored. This closes the delete-before-regenerate window. It is not a database
+release: seed still commits per question.
+
 The `--status published` flag changes generated frontmatter only; it does not
 approve content or publish it to the database. Choose the intended status during
 the approved generation step, using a new empty destination for each bundle.

@@ -1,6 +1,6 @@
 # DEBT-483: No Complete Content Withdrawal or Release Rollback
 
-**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed staging and release milestones remain open
+**Status:** In Progress — initial safeguards merged in #952/#953/#954; managed-caller staging landed 2026-09-27; release milestones remain open
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED implementation gap; production incident not established
@@ -313,6 +313,47 @@ still do not implicitly withdraw database rows. Use the explicit withdrawal
 command, and keep release identity, all-or-nothing activation and revocation-aware
 rollback open under private SPEC-007. No production content/database mutation was
 performed.
+
+## Managed-caller staging — 2026-09-27
+
+**CONFIRMED:** the managed environment seed no longer deletes the imported tree
+before regenerating it. `prepareCorpus` in `scripts/seed-environment-runtime.ts`
+used to dry-run, remove `content/questions/imported`, then import into it. A
+failed import therefore left no tree or a partial one for the next seed. That
+sequence now lives in `scripts/prepare-seed-corpus.ts`, which imports into a fresh
+`content/.import-staging-*` directory. The directory sits beside
+`content/questions/`, so it is outside the seed glob and on the same filesystem.
+The module swaps the result into place with two renames only after the whole
+import succeeds. The separate dry-run is gone, because the staged import runs the
+same full preflight before it writes anything.
+
+Test-first, `scripts/prepare-seed-corpus.test.ts` runs against a real temporary
+filesystem. The same interface was first given the old algorithm, extracted as-is,
+and the cases went **3 failed / 1 passed**:
+
+- staging outside the seed glob;
+- the current tree surviving an import that fails after a partial write;
+- the current tree restored when the final rename fails.
+
+The first-import case passed on both algorithms. With the new module the result is
+**4/4**. Two more cases pin the remaining paths. A tree that cannot be moved aside,
+because of a read-only parent (`EACCES`), stays in place. A first import that cannot
+be placed leaves neither a tree nor a temporary directory. The module is covered at
+100% of its statements, branches and functions. The runtime's `prepareCorpus`
+wiring, the `content:import:drafts -- --status published --out <staging>` command,
+is tested through an injected spawner and content root. A real importer run into a throwaway staging directory at the managed
+location wrote 948 files byte-identical to the current imported tree (0 differing
+files), and the directory was then removed. No database or remote target was
+touched.
+
+If the swap-in fails and restoring the parked tree also fails, the parked tree is the last copy of the current corpus. It is kept, and the error names its path (#1153 review). An injected rename forces this double failure: before the fix, the cleanup deleted the only copy.
+
+**Remaining boundary:** a crash between the two renames leaves
+`content/questions/imported` absent and the previous tree parked in
+`content/.import-previous-*` for manual recovery. The window is two syscalls, not a
+whole import. Seeding still commits per question. Immutable release identity,
+all-or-nothing activation and revocation-aware rollback stay open under SPEC-007,
+as does archived-question review under DEBT-484.
 
 ## Related
 
