@@ -48,6 +48,15 @@ describe('renewal notice email format', () => {
     ).toBe('January 15, 2027 at 12:00 PM UTC (7:00 AM EST, 4:00 AM PST)');
   });
 
+  // #1155 review: a US evening before a UTC new year is in the previous year.
+  it('names the local year when a cutoff falls on the previous US new year eve', () => {
+    expect(
+      formatRenewalNoticeCutoff(new Date('2027-01-01T02:00:00.000Z')),
+    ).toBe(
+      'January 1, 2027 at 2:00 AM UTC (December 31, 2026 at 9:00 PM EST, December 31, 2026 at 6:00 PM PST)',
+    );
+  });
+
   // #1155 review: 1:30 AM Eastern happens twice on the night clocks fall back,
   // so each local time carries its zone abbreviation.
   it('distinguishes both occurrences of the repeated fall-back hour', () => {

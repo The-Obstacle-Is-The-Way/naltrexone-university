@@ -631,7 +631,7 @@ Receipts:
 
 **F06, notice content.** Scheduled notices said only "Renewal date" with a UTC date, escaped every line into a plain paragraph and linked nothing. Annual reminders and renewal notices now:
 - say the plan "renews automatically unless you cancel";
-- give the cancellation cutoff as an instant: UTC time, then Eastern and Pacific times with their zone abbreviations (EDT or EST, PDT or PST, so the repeated fall-back hour is unambiguous), naming the local date when it differs (a deadline on the previous US evening);
+- give the cancellation cutoff as an instant: UTC time, then Eastern and Pacific times with their zone abbreviations (EDT or EST, PDT or PST, so the repeated fall-back hour is unambiguous), naming the local date when it differs (a deadline on the previous US evening) and its year when that differs too;
 - state the renewal amount and frequency;
 - link the Billing page, support mail, Terms and Privacy as anchors in HTML and as URLs in text;
 - restate the Terms' own policy: cancellation takes effect at period end with access until then, and payments are non-refundable except where the law requires otherwise.

@@ -44,15 +44,27 @@ function formatMonthDay(value: Date, timeZone: string): string {
   }).format(value);
 }
 
+function formatYear(value: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone }).format(
+    value,
+  );
+}
+
 // DEBT-414 F06: a cancellation or trial deadline is an instant. State it in
 // UTC, then in US Eastern and Pacific time, naming the local date whenever it
-// differs from the UTC date (a deadline on the previous US evening).
+// differs from the UTC date (a deadline on the previous US evening), with its
+// year when that differs too (the evening before a UTC new year).
 export function formatRenewalNoticeCutoff(value: Date): string {
   const utcMonthDay = formatMonthDay(value, 'UTC');
+  const utcYear = formatYear(value, 'UTC');
   const local = CUTOFF_TIME_ZONES.map((timeZone) => {
     const monthDay = formatMonthDay(value, timeZone);
+    const year = formatYear(value, timeZone);
     const time = formatTime(value, timeZone);
-    return monthDay === utcMonthDay ? time : `${monthDay} at ${time}`;
+    if (monthDay === utcMonthDay) return time;
+    return year === utcYear
+      ? `${monthDay} at ${time}`
+      : `${monthDay}, ${year} at ${time}`;
   });
   return `${formatRenewalNoticeDate(value)} at ${formatTime(value, 'UTC')} (${local.join(', ')})`;
 }
