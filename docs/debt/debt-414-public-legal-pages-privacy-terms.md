@@ -619,15 +619,20 @@ The owner authorized the proposed code and configuration work (F01-F07, F15) on 
 - the subscription is gone or no longer active;
 - the subscription is set to cancel at period end;
 - it renews on a different date;
+- it is no longer on the annual plan, whose amount and yearly frequency every scheduled notice states (`subscription_plan_changed`, from the #1156 review; F02 turns this into "the plan the notice was built for");
 - the account email no longer matches the notice's destination.
 
 A renewal reminder is refused once its send-by cutoff, 30 days before renewal, has passed (failure class `notice_deadline_passed`), and the refusal is logged as an error. The job and dispatch share that minimum (`RENEWAL_NOTICE_MINIMUM_DAYS`), so they cannot drift apart. Acknowledgments record consent already given and are not revalidated.
+
+Refusals run before the email-provider configuration check, by design (#1156 review). A superseded or late notice is never sendable, so it is recorded as such, and a missed cutoff is logged at error level, even while no Resend key is set. A still-valid notice stays `queued` until the provider is configured. Three dispatch cases pin that order: moving the check after the configuration guard fails two of them.
 
 Receipts:
 - The revalidation suite was red first. With only the new dependency wired, the five supersession cases and the cutoff case failed. The three still-send cases passed: a matching notice, a notice exactly at the cutoff, and an acknowledgment.
 - Existing suites now name the subscriptions they notify, through `createMatchingRenewalNoticeTargets`, which is built on the maintained fakes.
 
-**Still open under F07:** the provider-acceptance label. Resend accepting a message is still stored as `delivered`. The fix is expand-only: add an `accepted` status that both old and new code tolerate, then later record delivery and bounce evidence from Resend webhooks, which needs a webhook endpoint and secret configured in Resend.
+**F07, second part: acceptance is not delivery.** Resend accepting a message was stored as `delivered`, which overstates what the record proves. The status enum gains `accepted` in an expand-only migration (`0036`, `ALTER TYPE ... ADD VALUE`). The serving code never writes the new value, so the N-1 deployment keeps working through the overlap. The gateway port and Resend adapter now report `accepted`, and the repository's `markDelivered` became `markAccepted`, in the fake and the Drizzle adapter together (contract register updated). The deadline query counts `accepted` or `delivered` as sent, and one real-Postgres case holds a row of each. `delivered` is reserved for delivery evidence. Rows written before this change record acceptance under the old label, which is described here rather than rewritten, because a migration-time backfill could not see rows the serving code still writes. The schema test now pins the seven-state machine; it was red against the new enum first.
+
+**Still open under F07:** delivery and bounce evidence. It needs a Resend webhook endpoint, which the owner must configure in Resend with its signing secret, to move `accepted` rows to `delivered` or a bounce state.
 
 **F06, notice content.** Scheduled notices said only "Renewal date" with a UTC date, escaped every line into a plain paragraph and linked nothing. Annual reminders and renewal notices now:
 - say the plan "renews automatically unless you cancel";

@@ -368,7 +368,7 @@ describe('renewal notice delivery persistence', () => {
     });
 
     await expect(
-      repository.markDelivered({
+      repository.markAccepted({
         id: saved.id,
         attemptId: 'other-attempt',
         providerEventId: 'email_wrong',
@@ -419,14 +419,14 @@ describe('renewal notice delivery persistence', () => {
     });
 
     await expect(
-      repository.markDelivered({
+      repository.markAccepted({
         id: delivered.id,
         attemptId: 'delivered-attempt',
         providerEventId: 'email_123',
         completedAt: now,
       }),
     ).resolves.toMatchObject({
-      status: 'delivered',
+      status: 'accepted',
       providerEventId: 'email_123',
       attemptId: 'delivered-attempt',
       attemptStartedAt: now,
@@ -535,7 +535,7 @@ describe('renewal notice delivery persistence', () => {
       attemptId: 'delivered-attempt',
       startedAt: now,
     });
-    await repository.markDelivered({
+    await repository.markAccepted({
       id: saved.id,
       attemptId: 'delivered-attempt',
       providerEventId: 'email_delivered',

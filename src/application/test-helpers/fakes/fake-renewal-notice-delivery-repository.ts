@@ -176,7 +176,7 @@ export class FakeRenewalNoticeDeliveryRepository
     return cloneDelivery(record);
   }
 
-  async markDelivered(input: {
+  async markAccepted(input: {
     id: string;
     attemptId: string;
     providerEventId: string;
@@ -184,7 +184,7 @@ export class FakeRenewalNoticeDeliveryRepository
   }): Promise<RenewalNoticeDelivery> {
     const record = this.requireOwnedClaim(input.id, input.attemptId);
     Object.assign(record, {
-      status: 'delivered' as const,
+      status: 'accepted' as const,
       providerEventId: input.providerEventId,
       nextAttemptAt: null,
       failureClass: null,

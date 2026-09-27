@@ -63,6 +63,7 @@ async function arrange(input: {
   subscription?: Partial<Subscription> | null;
   accountEmail?: string;
   currentTime?: Date;
+  providerConfigured?: boolean;
 }) {
   const users = new FakeUserRepository();
   const user = await users.upsertByClerkId(
@@ -88,7 +89,9 @@ async function arrange(input: {
   );
   const repository = new FakeRenewalNoticeDeliveryRepository(() => now);
   await repository.saveQueued(input.delivery ?? renewalNotice());
-  const gateway = new FakeTransactionalEmailGateway({ configured: true });
+  const gateway = new FakeTransactionalEmailGateway({
+    configured: input.providerConfigured ?? true,
+  });
   const logger = new FakeLogger();
   const useCase = new DispatchRenewalNoticeDeliveryUseCase(
     repository,
@@ -108,7 +111,7 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
 
     await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
       outcome: 'attempted',
-      delivery: { status: 'delivered' },
+      delivery: { status: 'accepted' },
     });
     expect(gateway.sendInputs).toHaveLength(1);
   });
@@ -142,6 +145,12 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
       label: 'the account email changed',
       arrangement: { accountEmail: 'new-address@example.com' },
       failureCode: 'destination_changed',
+    },
+    // #1156 review: the notice states the annual amount and yearly frequency.
+    {
+      label: 'the subscription moved off the annual plan',
+      arrangement: { subscription: { plan: 'monthly' as const } },
+      failureCode: 'subscription_plan_changed',
     },
   ])(
     'supersedes the notice without a provider call when $label',
@@ -181,6 +190,52 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
         context: { deliveryId, noticeKind: 'renewal_notice' },
       },
     ]);
+  });
+
+  // #1156 review: a refusal is a fact about the notice, not the provider, so it
+  // is recorded, and a missed cutoff alerts, before the configuration check.
+  it('supersedes a stale notice even when no email provider is configured', async () => {
+    const { useCase, gateway } = await arrange({
+      subscription: { cancelAtPeriodEnd: true },
+      providerConfigured: false,
+    });
+
+    await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+      outcome: 'attempted',
+      delivery: {
+        status: 'terminal_failure',
+        failureClass: 'notice_superseded',
+        failureCode: 'subscription_canceling',
+      },
+    });
+    expect(gateway.sendInputs).toEqual([]);
+  });
+
+  it('refuses and alerts on a missed cutoff even when no email provider is configured', async () => {
+    const { useCase, gateway, logger } = await arrange({
+      currentTime: new Date(renewal.getTime() - 30 * DAY_MS + 1),
+      providerConfigured: false,
+    });
+
+    await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+      outcome: 'attempted',
+      delivery: {
+        status: 'terminal_failure',
+        failureClass: 'notice_deadline_passed',
+      },
+    });
+    expect(gateway.sendInputs).toEqual([]);
+    expect(logger.errorCalls).toHaveLength(1);
+  });
+
+  it('leaves a still-valid notice queued when no email provider is configured', async () => {
+    const { useCase, gateway } = await arrange({ providerConfigured: false });
+
+    await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+      outcome: 'skipped_unconfigured',
+      delivery: { status: 'queued' },
+    });
+    expect(gateway.sendInputs).toEqual([]);
   });
 
   it('still sends exactly at the cutoff', async () => {

@@ -36,7 +36,9 @@ describe('renewal consent schema', () => {
     ]);
   });
 
-  it('pins the six-state delivery machine', () => {
+  it('pins the seven-state delivery machine', () => {
+    // DEBT-414 F07: 'accepted' records provider acceptance; 'delivered' is
+    // reserved for delivery evidence.
     expect(renewalNoticeDeliveryStatusEnum.enumValues).toEqual([
       'queued',
       'processing',
@@ -44,6 +46,7 @@ describe('renewal consent schema', () => {
       'transient_failure',
       'terminal_failure',
       'outcome_unknown',
+      'accepted',
     ]);
 
     const columns = getTableColumns(renewalNoticeDeliveries);

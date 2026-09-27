@@ -253,6 +253,13 @@
       "when": 1786131930532,
       "tag": "0035_warm_havok",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1790522148296,
+      "tag": "0036_amazing_junta",
+      "breakpoints": true
     }
   ]
 }

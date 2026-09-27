@@ -36,7 +36,7 @@ export interface RenewalNoticeDeliveryRepository {
   claim(
     input: ClaimRenewalNoticeDeliveryInput,
   ): Promise<RenewalNoticeDelivery | null>;
-  markDelivered(input: {
+  markAccepted(input: {
     id: string;
     attemptId: string;
     providerEventId: string;

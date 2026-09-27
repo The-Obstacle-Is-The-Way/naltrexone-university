@@ -55,7 +55,7 @@ describe('ResendTransactionalEmailGateway', () => {
     const gateway = new ResendTransactionalEmailGateway({ apiKey: 're_test' });
 
     await expect(gateway.send(input)).resolves.toEqual({
-      status: 'delivered',
+      status: 'accepted',
       providerEventId: 'email_123',
     });
     expect(resendSdk.constructorInputs).toEqual(['re_test']);

@@ -142,7 +142,7 @@ describe('RequeueRenewalNoticeDeliveryUseCase', () => {
     if (!existing) throw new Error('Expected a delivery fixture');
     repository.records[0] = {
       ...existing,
-      status: 'delivered',
+      status: 'accepted',
     };
     await expect(
       useCase.execute({
