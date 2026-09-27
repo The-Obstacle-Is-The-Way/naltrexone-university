@@ -72,6 +72,8 @@ function stripeSubscription(input: {
     customer: input.externalCustomerId,
     status: input.status,
     cancel_at_period_end: false,
+    start_date: 1_696_000_000,
+    billing_cycle_anchor: 1_696_604_800,
     metadata: { user_id: input.userId },
     items: {
       data: [
