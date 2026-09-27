@@ -8,7 +8,7 @@ import {
   countAvailableQuestions,
   setPracticeSessionQuestionMark,
 } from './practice-controller';
-import { createDeps } from './practice-controller-test-helpers';
+import { createDeps } from './test-helpers/practice-controller-test-helpers';
 
 describe('practice-controller', () => {
   describe('setPracticeSessionQuestionMark', () => {

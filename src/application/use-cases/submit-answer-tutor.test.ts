@@ -17,7 +17,7 @@ import {
   passthroughTransaction,
   STATE_CHANGED_CONCURRENTLY_MESSAGE,
   SubmitAnswerUseCase,
-} from './submit-answer-test-helpers';
+} from '../test-helpers/submit-answer-test-helpers';
 
 describe('SubmitAnswerUseCase', () => {
   it('updates the persisted tutor session question state with the latest answer', async () => {

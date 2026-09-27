@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import type { FinalizeExamAnswersOutput } from '@/src/application/use-cases';
 import { endPracticeSession, finalizeExamAnswers } from './practice-controller';
-import { createDeps } from './practice-controller-test-helpers';
+import { createDeps } from './test-helpers/practice-controller-test-helpers';
 
 describe('practice-controller session admission', () => {
   it('limits a fresh keyed end before executing the use case', async () => {

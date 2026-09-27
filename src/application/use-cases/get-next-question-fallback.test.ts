@@ -22,7 +22,7 @@ import {
   shuffleQuickPracticeCandidates,
   shuffleWithSeed,
   USER_ID,
-} from './get-next-question-test-helpers';
+} from '../test-helpers/get-next-question-test-helpers';
 
 describe('GetNextQuestionUseCase', () => {
   it('returns null when no questions match filters', async () => {

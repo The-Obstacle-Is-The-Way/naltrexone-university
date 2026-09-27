@@ -11,7 +11,7 @@ import {
   FakeQuestionRepository,
   SubmitAnswerUseCase,
   shuffleWithSeed,
-} from './submit-answer-test-helpers';
+} from '../test-helpers/submit-answer-test-helpers';
 
 describe('SubmitAnswerUseCase', () => {
   it('returns choice explanations in deterministic display order', async () => {

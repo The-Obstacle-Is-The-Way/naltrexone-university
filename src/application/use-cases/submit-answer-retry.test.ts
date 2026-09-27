@@ -11,7 +11,7 @@ import {
   FakeQuestionRepository,
   SubmitAnswerUseCase,
   ThrowingInfoLogger,
-} from './submit-answer-test-helpers';
+} from '../test-helpers/submit-answer-test-helpers';
 
 describe('SubmitAnswerUseCase', () => {
   describe('retry provenance', () => {

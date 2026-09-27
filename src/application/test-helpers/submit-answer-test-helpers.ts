@@ -7,15 +7,15 @@ import {
 } from '@/src/domain/test-helpers';
 import { AllChoiceLabels } from '@/src/domain/value-objects';
 import { ApplicationError } from '../errors';
+import type { SubmitAnswerWriteTransaction } from '../use-cases/submit-answer';
+import { SubmitAnswerUseCase } from '../use-cases/submit-answer';
 import {
   FakeAttemptRepository,
   FakeLogger,
   FakePracticeSessionRepository,
   FakeQuestionRepository,
   STATE_CHANGED_CONCURRENTLY_MESSAGE,
-} from '../test-helpers/fakes';
-import type { SubmitAnswerWriteTransaction } from './submit-answer';
-import { SubmitAnswerUseCase } from './submit-answer';
+} from './fakes';
 
 function passthroughTransaction(
   attempts: FakeAttemptRepository,
