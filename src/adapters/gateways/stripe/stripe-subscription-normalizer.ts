@@ -11,7 +11,7 @@ import {
 } from '@/src/adapters/shared/stripe-subscription-errors';
 import {
   isValidStripeSubscriptionStatus,
-  type StripeClient,
+  type StripeSubscriptionsClient,
 } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
@@ -111,7 +111,7 @@ export function normalizeStripeSubscriptionUpdate(input: {
 }
 
 export async function retrieveAndNormalizeStripeSubscription(input: {
-  stripe: StripeClient;
+  stripe: StripeSubscriptionsClient;
   subscriptionRef: StripeSubscriptionRef;
   event: { id: string; type: string };
   priceIds: StripePriceIds;
@@ -124,12 +124,6 @@ export async function retrieveAndNormalizeStripeSubscription(input: {
       : input.subscriptionRef.id;
 
   const stripeSubscriptions = input.stripe.subscriptions;
-  if (!stripeSubscriptions) {
-    throw new ApplicationError(
-      'STRIPE_ERROR',
-      'Stripe subscriptions client is unavailable',
-    );
-  }
 
   const family = SERVER_SPAN_FAMILIES.stripe.subscriptionRetrieve;
   const subscription = await startServerSpan(family, {}, async (span) => {

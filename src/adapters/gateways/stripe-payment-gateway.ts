@@ -80,13 +80,7 @@ export class StripePaymentGateway implements PaymentGateway {
   async attachTrialPaymentMethod(
     input: AttachTrialPaymentMethodInput,
   ): Promise<void> {
-    const paymentMethods = this.deps.stripe.paymentMethods;
-    if (!paymentMethods) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe PaymentMethod API is unavailable',
-      );
-    }
+    const { paymentMethods } = this.deps.stripe;
     const current = await callStripeWithRetry({
       operation: 'payment_methods.retrieve_trial_setup',
       fn: () => paymentMethods.retrieve(input.externalPaymentMethodId),
@@ -131,14 +125,7 @@ export class StripePaymentGateway implements PaymentGateway {
   async detachTrialPaymentMethod(
     input: DetachTrialPaymentMethodInput,
   ): Promise<void> {
-    const paymentMethods = this.deps.stripe.paymentMethods;
-    const detach = paymentMethods?.detach?.bind(paymentMethods);
-    if (!paymentMethods || !detach) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe PaymentMethod API is unavailable',
-      );
-    }
+    const { paymentMethods } = this.deps.stripe;
     const current = await callStripeWithRetry({
       operation: 'payment_methods.retrieve_trial_setup_for_detach',
       fn: () => paymentMethods.retrieve(input.externalPaymentMethodId),
@@ -153,7 +140,7 @@ export class StripePaymentGateway implements PaymentGateway {
     await callStripeWithRetry({
       operation: 'payment_methods.detach_trial_setup',
       fn: () =>
-        detach(input.externalPaymentMethodId, undefined, {
+        paymentMethods.detach(input.externalPaymentMethodId, undefined, {
           idempotencyKey: `trial_setup:${input.sessionId}:detach_payment_method`,
         }),
       logger: this.deps.logger,
@@ -163,18 +150,11 @@ export class StripePaymentGateway implements PaymentGateway {
   async setTrialSubscriptionDefaultPaymentMethod(
     input: SetTrialSubscriptionDefaultPaymentMethodInput,
   ): Promise<void> {
-    const subscriptions = this.deps.stripe.subscriptions;
-    const updateSubscription = subscriptions?.update?.bind(subscriptions);
-    if (!updateSubscription) {
-      throw new ApplicationError(
-        'STRIPE_ERROR',
-        'Stripe Subscription update API is unavailable',
-      );
-    }
+    const { subscriptions } = this.deps.stripe;
     await callStripeWithRetry({
       operation: 'subscriptions.set_trial_setup_default_payment_method',
       fn: () =>
-        updateSubscription(
+        subscriptions.update(
           input.externalSubscriptionId,
           { default_payment_method: input.externalPaymentMethodId },
           {
