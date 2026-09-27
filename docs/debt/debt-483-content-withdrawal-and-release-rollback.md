@@ -336,7 +336,12 @@ and the cases went **3 failed / 1 passed**:
 - the current tree restored when the final rename fails.
 
 The first-import case passed on both algorithms. With the new module the result is
-**4/4**. A real importer run into a throwaway staging directory at the managed
+**4/4**. Two more cases pin the remaining paths. A tree that cannot be moved aside,
+because of a read-only parent (`EACCES`), stays in place. A first import that cannot
+be placed leaves neither a tree nor a temporary directory. The module is covered at
+100% of its statements, branches and functions. The runtime's `prepareCorpus`
+wiring, the `content:import:drafts -- --status published --out <staging>` command,
+is tested through an injected spawner and content root. A real importer run into a throwaway staging directory at the managed
 location wrote 948 files byte-identical to the current imported tree (0 differing
 files), and the directory was then removed. No database or remote target was
 touched.

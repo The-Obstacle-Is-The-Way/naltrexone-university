@@ -31,31 +31,26 @@ async function swapInto(
 ): Promise<void> {
   const previous = await mkdtemp(path.join(contentRoot, '.import-previous-'));
   const parked = path.join(previous, 'imported');
-  let hadCurrent = true;
   try {
-    await rename(current, parked);
-  } catch (error) {
-    if (!isMissing(error)) {
-      await rm(previous, { recursive: true, force: true });
+    const hadCurrent = await moveIfPresent(current, parked);
+    try {
+      await rename(next, current);
+    } catch (error) {
+      if (hadCurrent) await rename(parked, current);
       throw error;
     }
-    hadCurrent = false;
-  }
-  try {
-    await rename(next, current);
-  } catch (error) {
-    if (hadCurrent) await rename(parked, current);
+  } finally {
     await rm(previous, { recursive: true, force: true });
-    throw error;
   }
-  await rm(previous, { recursive: true, force: true });
 }
 
-function isMissing(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === 'ENOENT'
-  );
+async function moveIfPresent(from: string, to: string): Promise<boolean> {
+  try {
+    await rename(from, to);
+    return true;
+  } catch (error) {
+    // Node's fs rejections are ErrnoExceptions; only a missing tree is benign.
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  }
 }
