@@ -22,7 +22,7 @@ This document covers our E2E testing tools: Playwright and Vercel's agent-browse
 
 ### Configuration
 
-**File:** `playwright.config.ts`
+**File:** `playwright.config.ts` (abridged excerpt; the file is authoritative)
 
 ```ts
 testDir: './tests/e2e',
@@ -55,8 +55,13 @@ webServer: {
   command: process.env.CI ? 'pnpm start' : 'pnpm build && pnpm start',
   // process.env plus a test-only CONSENT_STATE_SECRET unless one is set
   env: {
-    ...process.env,
-    CONSENT_STATE_SECRET: process.env.CONSENT_STATE_SECRET ?? '<test-only value>',
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
+    CONSENT_STATE_SECRET:
+      process.env.CONSENT_STATE_SECRET ?? '<test-only value>',
   },
   url: `${baseURL}/api/health`,
   reuseExistingServer: false,
