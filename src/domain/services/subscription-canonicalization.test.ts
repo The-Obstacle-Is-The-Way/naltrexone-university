@@ -74,4 +74,28 @@ describe('subscription canonicalization', () => {
       'sub_z',
     ]);
   });
+
+  // #1160 review: localeCompare treats the NFC and NFD spellings of the same
+  // text as equal, so distinct identities could tie. A total order keeps
+  // canonical selection deterministic and makes "equal" mean "identical".
+  it('orders distinct identities that compare equal under the locale', () => {
+    const composed = createSubscriptionWriteCandidate({
+      subscriptionIdentity: 'sub_\u00e9',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),
+    });
+    const decomposed = createSubscriptionWriteCandidate({
+      subscriptionIdentity: 'sub_e\u0301',
+      status: 'active',
+      currentPeriodEnd: new Date('2026-07-01T00:00:00.000Z'),
+    });
+
+    expect(compareCanonicalSubscriptionCandidates(decomposed, composed)).toBe(
+      -1,
+    );
+    expect(compareCanonicalSubscriptionCandidates(composed, decomposed)).toBe(
+      1,
+    );
+    expect(compareCanonicalSubscriptionCandidates(composed, composed)).toBe(0);
+  });
 });

@@ -49,7 +49,7 @@ Four parts. Each part's step-by-step lives in its runbook (canonical); this doc 
 
 - [x] Part 1: `scripts/crap-report.ts` + colocated test landed; baseline top-25 recorded below; hotspot table reconciled
 - [x] Part 2 pilot: baseline and after-triage scores recorded below; zero un-triaged survivors in the nine pilot files (2026-09-27)
-- [ ] Part 2 weekly workflow live: `.github/workflows/mutation.yml` landed with the pilot; check this once a run on `main` is recorded
+- [x] Part 2 weekly workflow live: `.github/workflows/mutation.yml` reached `main` through #1160; a dispatched run on `main` at `f036da70` ([36344618005](https://github.com/The-Obstacle-Is-The-Way/naltrexone-university/actions/runs/36344618005), 19:30:51Z–19:37:07Z) instrumented 13 files with 463 mutants and scored 100% (454 killed, 3 timed out, 6 suppressed), matching the local runs, and uploaded its `mutation-report` artifact. Mondays at 06:00 UTC from then on.
 - [x] Part 2 second wave: the runbook §4 second-wave files, baseline and after-triage scores recorded below (2026-09-27)
 - [ ] Part 2 widening: production files across `src/domain/**`, then `src/application/{use-cases,shared}/**`
 - [ ] Part 3: driver + features #1/#4 landed with spec-sync verified (rename-a-step fails); revenue features #2/#3/#10 landed; location tables updated
@@ -81,6 +81,12 @@ Every one of the 26 undetected baseline mutants was classified under the runbook
 Two corrections came from the full run. First, the pilot had deleted that fallback and made the loop unbounded; emptying the exhaustion block then retried forever and crashed the test runner, so the bound and its fallback stay. Second, a `Stryker disable` comment names a mutator, not one replacement, so each equality suppression also hides its non-equivalent sibling. A run with both comments removed timed out on `i <= 0`, killed `canonicalOrdering >= 0`, and left exactly the two equivalent mutants surviving. That is why six mutants are suppressed for four equivalent ones.
 
 The archived DEBT-468 (f) recorded two write-guard survivors as equivalent for this pilot. Triage found the early returns behind them redundant and deleted them. The guard's only remaining equivalent mutant is the ordering comparison above.
+
+**#1160 review corrections (2026-09-27).** The promotion's review found four weaknesses, fixed in the next feature PR:
+- **A false suppression reason.** The write guard's equivalent-mutant reason ("ordering is 0 only for identical identities") was false: the canonical comparator ended in `localeCompare`, which returns 0 for the NFC and NFD spellings of the same id. The comparator now breaks that residual tie by code units, so it is a total order and the reason holds. Every realistic Stripe id orders as before. A write-guard case is red on the old comparator, and a Stryker run without the suppression killed `>= 0` and left only `<= 0`, now genuinely equivalent.
+- **Over-pinned wording.** The grading cases matched whole error sentences. They now match the diagnostic values (question id, choice id, correct-choice count), which still kill the message mutants.
+- **A stale weekly score.** Incremental results can survive a change to an unmutated import. The weekly workflow now runs `--force` and restores no incremental file.
+- **A permissions check a job could bypass.** The workflow test now requires the read-only block to be the file's only `permissions:` key. A variant with a job-level `contents: write` fails it.
 
 ### Part 2 second wave triage — 2026-09-27
 

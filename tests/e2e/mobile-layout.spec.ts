@@ -15,11 +15,22 @@ const PUBLIC_PATHS = ['/', '/pricing', '/privacy', '/terms'];
 // phone; wide content such as legal tables must scroll inside its own box.
 const PHONE_WIDTHS = [375, 360];
 
+// A best-effort pause for late client data before measuring. It never fails
+// the test: signed-in pages can keep the network busy (Clerk session refresh,
+// Link prefetch), and an unbounded networkidle wait once exhausted the whole
+// test budget on main (#1160).
+const LATE_CONTENT_SETTLE_MS = 5_000;
+
 async function expectNoSidewaysScroll(page: Page, path: string) {
-  await page.goto(path);
-  await page.waitForLoadState('networkidle');
-  // One load per path: resizing re-lays out the same page, and it avoids a
-  // second networkidle wait, which Link prefetch can stretch past 20s.
+  await page.goto(path, { waitUntil: 'load' });
+  await expect(page.locator('main').first()).toBeVisible();
+  await page
+    .waitForLoadState('networkidle', { timeout: LATE_CONTENT_SETTLE_MS })
+    .catch(() => undefined);
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+  });
+  // One load per path: resizing re-lays out the same page.
   for (const viewportWidth of PHONE_WIDTHS) {
     await page.setViewportSize({ width: viewportWidth, height: 667 });
     const width = await page.evaluate(async () => {
