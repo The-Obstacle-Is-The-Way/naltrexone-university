@@ -20,7 +20,7 @@ Three facts decide the question:
 ## Decision
 
 1. **No per-lane `coverage.thresholds` and no project-level coverage target.** DEBT-468 Part 4's floors are declined, and Part 4 closes on this record.
-2. **`codecov/patch` stays as it is, and is now documented as a gate.** It keeps the default `auto` target. The merge tools refuse it when it is posted and not green. They do not yet require it to be posted, and CI uploads with `fail_ci_if_error: false`, so a failed upload would silently remove the gate. The tools will therefore require `codecov/patch` by name, landing in the next change to them. This ADR adds no Codecov configuration. Changing the target, or making the status informational, needs a new ADR.
+2. **`codecov/patch` stays as it is, and is now documented as a gate.** It keeps the default `auto` target. Both merge tools require a successful `codecov/patch` check by name, so a missing status blocks a merge just as a failed one does. That matters because CI uploads with `fail_ci_if_error: false`: a failed upload leaves no status rather than a red one. (The by-name requirement landed in the next change to the tools, on 2026-09-27; until then they refused the status only when it was posted and not green.) This ADR adds no Codecov configuration. Changing the target, or making the status informational, needs a new ADR.
 3. **Coverage stays a diagnostic everywhere else.** Use it to find untested code and to prove an extracted helper is exercised. Assertion strength is judged by mutation evidence: named break-it proofs per change now, and DEBT-465's pilot when the owner starts it.
 4. **Unimported files remain unmeasured by design.** Vitest 4 measures loaded files only. A runtime file no test imports is caught by review and by `codecov/patch` only once a test loads it. Adding `coverage.include` for every runtime source would make coverage a completeness gate, which point 1 declines.
 
@@ -36,4 +36,4 @@ Three facts decide the question:
 - [ADR-019](./adr-019-test-quality-practices.md), the binding observational posture this refines
 - [DEBT-468](../debt/debt-468-test-estate-coverage-and-fixture-debt.md) Part 4, closed by this record
 - [DEBT-465](../debt/debt-465-test-quality-practices-adoption.md), mutation testing as the measure of assertion strength
-- `scripts/merge-reviewed-pr.ts`, `scripts/verify-promotion.ts` (all checks green, `codecov/patch` included)
+- `scripts/merge-reviewed-pr.ts`, `scripts/verify-promotion.ts` (`test` and `codecov/patch` required green by name)
