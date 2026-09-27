@@ -55,6 +55,10 @@ const TEST_FILE_GLOBS = [
   '**/*.setup.tsx',
   '**/*-test-helpers.ts',
   '**/*-test-helpers.tsx',
+  // Colocated fixtures and Browser Mode probes, the other test-support
+  // suffixes Biome and the architecture scan already exempt.
+  '**/*.fixtures.ts',
+  '**/*.probes.tsx',
   // Support modules count by where they live, not only by suffix: every
   // test-helpers/ directory and every tests/ subdirectory. Modules at the
   // tests/ root are guard implementations, whose own suites match above.
