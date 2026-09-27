@@ -68,3 +68,4 @@ Adopt four practices, each with a canonical runbook, tracked as DEBT-465 (one pa
 - Dave Farley — four-layer acceptance-test model (spec → DSL → driver → SUT)
 - Robert C. Martin — TDD, Clean Code, and Clean Architecture
 - ADR-003 (Testing Strategy); `docs/dev/react-vitest-testing.md` (coverage-as-observational policy)
+- [ADR-020](./adr-020-coverage-patch-gate.md) (2026-09-26): coverage stays a patch-level signal; no per-lane thresholds

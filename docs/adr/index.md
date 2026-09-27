@@ -36,6 +36,7 @@ Architecture Decision Records document significant architectural decisions along
 | [ADR-017](./adr-017-webhook-processing-lifecycle.md) | Webhook Processing Lifecycle | Accepted | 2026-02-07 |
 | [ADR-018](./adr-018-resilience-patterns.md) | Resilience Patterns (Retry and Backoff) | Accepted | 2026-02-07 |
 | [ADR-019](./adr-019-test-quality-practices.md) | Test Quality Practices (CRAP, Mutation, Acceptance, UI QA) | Proposed | 2026-08-13 |
+| [ADR-020](./adr-020-coverage-patch-gate.md) | Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold | Accepted | 2026-09-26 |
 
 ## ADR Statuses
 
@@ -192,6 +193,10 @@ Generic `retry()` with exponential backoff for transient external errors. Only r
 ### ADR-019: Test Quality Practices (CRAP, Mutation, Acceptance, UI QA)
 
 Four practices that audit and specify the ADR-003 suite from the outside: a CRAP-metric report (`scripts/crap-report.ts`) ranking under-tested complexity, StrykerJS mutation testing scoped to the unit lane, Gherkin acceptance tests bound to the application layer via the existing fakes (`tests/acceptance/`), and a `docs/qa/` register of scripted UI QA procedures. All metrics are **observational ratchets** — converting any into a CI gate requires a new ADR. Adoption tracked as DEBT-465; runbooks in `docs/dev/`.
+
+### ADR-020: Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold
+
+No per-lane `coverage.thresholds` or project target. The existing `codecov/patch` status, at its default `auto` target, is the one coverage gate: a change's measured patch coverage may not fall below the base target. The merge tools refuse it when it is not green and will require it by name. Assertion strength is judged by mutation evidence. Closes DEBT-468 Part 4.
 
 ---
 
