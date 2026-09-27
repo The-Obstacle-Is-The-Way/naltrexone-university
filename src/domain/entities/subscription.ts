@@ -13,6 +13,10 @@ export type Subscription = {
   readonly status: SubscriptionStatus;
   readonly currentPeriodEnd: Date;
   readonly cancelAtPeriodEnd: boolean;
+  // When service began and the instant renewals are counted from. Null only
+  // for a row stored before these were recorded (DEBT-414 F02).
+  readonly startedAt: Date | null;
+  readonly billingCycleAnchor: Date | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 };

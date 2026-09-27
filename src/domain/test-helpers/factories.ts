@@ -185,6 +185,8 @@ export function createSubscription(
     status: 'active' satisfies SubscriptionStatus,
     currentPeriodEnd: new Date(now.getTime() + DAY_MS),
     cancelAtPeriodEnd: false,
+    startedAt: null,
+    billingCycleAnchor: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,

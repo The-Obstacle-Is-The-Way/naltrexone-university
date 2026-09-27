@@ -76,6 +76,8 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -159,6 +161,8 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -253,6 +257,8 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -332,6 +338,8 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'active',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [
@@ -419,6 +427,8 @@ describe('runCheckoutSuccessPage', () => {
             customer: 'cus_123',
             status: 'trialing',
             cancel_at_period_end: false,
+            start_date: 1_997_000_000,
+            billing_cycle_anchor: 1_997_604_800,
             metadata: { user_id: fixtureUser1Id },
             items: {
               data: [

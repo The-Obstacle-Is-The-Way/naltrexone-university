@@ -279,6 +279,8 @@ describe('Stripe repositories', () => {
       plan: 'monthly',
       currentPeriodEnd: periodEnd1,
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     const byUser1 = await repo.findByUserId(user.id);
@@ -306,6 +308,8 @@ describe('Stripe repositories', () => {
       plan: 'annual',
       currentPeriodEnd: periodEnd2,
       cancelAtPeriodEnd: true,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     const byUser2 = await repo.findByUserId(user.id);
@@ -351,6 +355,8 @@ describe('Stripe repositories', () => {
       plan: 'annual',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     await repo.upsert({
@@ -361,6 +367,8 @@ describe('Stripe repositories', () => {
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-05-31T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     await expect(repo.findByUserId(user.id)).resolves.toMatchObject({
@@ -403,6 +411,8 @@ describe('Stripe repositories', () => {
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     await repo.upsert({
@@ -413,6 +423,8 @@ describe('Stripe repositories', () => {
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-05-31T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     await expect(
@@ -444,6 +456,8 @@ describe('Stripe repositories', () => {
       plan: 'monthly',
       currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     await expect(
@@ -455,6 +469,8 @@ describe('Stripe repositories', () => {
         plan: 'monthly',
         currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
         cancelAtPeriodEnd: false,
+        startedAt: new Date('2026-01-22T00:00:00.000Z'),
+        billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
       }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });

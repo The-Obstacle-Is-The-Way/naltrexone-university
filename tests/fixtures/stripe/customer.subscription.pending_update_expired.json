@@ -14,6 +14,8 @@
       "customer": "cus_902",
       "status": "active",
       "cancel_at_period_end": false,
+      "start_date": 1697321600,
+      "billing_cycle_anchor": 1697321600,
       "metadata": { "user_id": "user_5" },
       "items": {
         "object": "list",

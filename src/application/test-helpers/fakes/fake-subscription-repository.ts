@@ -26,10 +26,16 @@ type FakeSubscriptionSeed =
       version?: number;
     };
 
+function cloneDate(value: Date | null): Date | null {
+  return value === null ? null : new Date(value);
+}
+
 function cloneSubscription(subscription: Subscription): Subscription {
   return {
     ...subscription,
     currentPeriodEnd: new Date(subscription.currentPeriodEnd),
+    startedAt: cloneDate(subscription.startedAt),
+    billingCycleAnchor: cloneDate(subscription.billingCycleAnchor),
     createdAt: new Date(subscription.createdAt),
     updatedAt: new Date(subscription.updatedAt),
   };
@@ -169,6 +175,8 @@ export class FakeSubscriptionRepository implements SubscriptionRepository {
       status: input.status,
       currentPeriodEnd: input.currentPeriodEnd,
       cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+      startedAt: input.startedAt,
+      billingCycleAnchor: input.billingCycleAnchor,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };

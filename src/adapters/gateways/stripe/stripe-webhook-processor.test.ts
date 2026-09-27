@@ -22,6 +22,8 @@ function subscriptionFixture(id = 'sub_123') {
     customer: 'cus_123',
     status: 'active',
     cancel_at_period_end: false,
+    start_date: 1_696_000_000,
+    billing_cycle_anchor: 1_696_604_800,
     metadata: { user_id: appUserId },
     items: {
       data: [
@@ -188,6 +190,8 @@ function subscriptionUpdateFor(externalSubscriptionId: string) {
     status: 'active',
     currentPeriodEnd: new Date(1_800_000_000 * 1000),
     cancelAtPeriodEnd: false,
+    startedAt: new Date(1_696_000_000 * 1000),
+    billingCycleAnchor: new Date(1_696_604_800 * 1000),
   };
 }
 

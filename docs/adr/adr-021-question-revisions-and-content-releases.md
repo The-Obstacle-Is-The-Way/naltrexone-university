@@ -38,6 +38,7 @@ Constraints:
 
 - `attempts.question_revision_id` and `practice_session_question_states.question_revision_id` are added, nullable at first. A session binds each item's revision when it is created, and an attempt binds the revision it graded.
 - Submitting an answer grades against the session state's bound revision, never whatever is current. A content change during a session therefore cannot re-key a learner's answer. This closes the active-session race.
+- **A selected choice must belong to the bound revision, and the database enforces it** (#1166 review). The existing `(choice id, question id)` foreign keys cannot: a choice from another revision of the same question satisfies them. So `choices` gains a unique key on `(id, question_revision_id)`. Attempts and session states (latest and draft selections) gain composite foreign keys `(selected choice id, question_revision_id) → choices(id, question_revision_id)` once their revision column is bound. Grading and the session writers validate first, for a clear error, rather than relying on the constraint violation alone. The `(choice id, question id)` keys stay until the contract phase.
 - After a re-runnable backfill sweep covers every row, the columns become `NOT NULL` in a later contract migration.
 
 ### 3. Review reads the bound revision, including for withdrawn questions
@@ -74,7 +75,7 @@ Each phase is its own reviewed PR series with an N-1 answer. No phase claims SPE
 | Phase | Change | N-1 answer |
 |---|---|---|
 | 1 | Add `question_revisions`, `choices.question_revision_id`, and the nullable revision columns on attempts and session states. Backfill revision 1. The seed writes a new revision for changed content. | Serving code ignores the new columns, and the backfill adds rows without altering existing ones. Rows the serving code writes during the overlap are covered by a re-runnable sweep. |
-| 2 | Sessions and attempts bind revisions; grading and every review read use them. Add the withdrawal notice for attempted withdrawn questions. | Old code still reads the unchanged legacy columns. |
+| 2 | Sessions and attempts bind revisions; grading and every review read use them. The `(choice, revision)` unique key and composite foreign keys land here. Add the withdrawal notice for attempted withdrawn questions. | Old code still reads the unchanged legacy columns. |
 | 3 | Contract: `NOT NULL` revision columns after a verified sweep; drop the legacy text columns from `questions`. | Only after N-1 code that reads legacy columns can no longer serve. |
 | 4 | Releases, staging, atomic activation, the withdrawal and hold overlay, and rollback. Selection reads the active release. | The legacy `status` stays in step until the release pointer is authoritative. |
 | 5 | Release zero, the inventory of what is live: blocked on the open question below. | Read-only export. |

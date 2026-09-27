@@ -31,6 +31,8 @@ export type SeededSubscription = {
   customer: string;
   status: string;
   cancel_at_period_end?: boolean;
+  start_date?: number;
+  billing_cycle_anchor?: number;
   default_payment_method?: string | null;
   metadata?: Record<string, string>;
   items?: {

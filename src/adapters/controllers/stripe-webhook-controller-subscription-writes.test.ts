@@ -76,6 +76,8 @@ async function expectCurrentActiveRowSurvives(event: {
     status: 'active',
     currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
+    startedAt: new Date('2026-01-22T00:00:00.000Z'),
+    billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     expectedVersion: null,
   });
   const paymentGateway = createWebhookPaymentGateway({
@@ -284,6 +286,33 @@ describe('processStripeWebhook subscription writes', () => {
 
     await expect(stripeCustomers.findByUserId(userId)).resolves.toEqual({
       stripeCustomerId: 'cus_new',
+    });
+  });
+
+  // DEBT-414 F02: the yearly reminder for a monthly plan is located from the
+  // service start and billing anchor, so the webhook write stores both.
+  it('stores the service start and billing anchor with the subscription', async () => {
+    const userId = crypto.randomUUID();
+    const startedAt = new Date('2026-01-24T15:00:00.000Z');
+    const billingCycleAnchor = new Date('2026-01-31T15:00:00.000Z');
+    const paymentGateway = createWebhookPaymentGateway({
+      eventId: 'evt_subscription_anchor',
+      type: 'customer.subscription.updated',
+      subscriptionUpdate: createTestWebhookSubscriptionUpdate({
+        userId,
+        startedAt,
+        billingCycleAnchor,
+      }),
+    });
+    const { deps, subscriptions } = createStripeWebhookTestHarness({
+      paymentGateway,
+    });
+
+    await processStripeWebhook(deps, { rawBody: 'raw', signature: 'sig' });
+
+    await expect(subscriptions.findByUserId(userId)).resolves.toMatchObject({
+      startedAt,
+      billingCycleAnchor,
     });
   });
 });

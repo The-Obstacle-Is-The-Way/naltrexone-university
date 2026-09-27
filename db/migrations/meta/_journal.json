@@ -260,6 +260,13 @@
       "when": 1790522148296,
       "tag": "0036_amazing_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1790538645614,
+      "tag": "0037_right_living_lightning",
+      "breakpoints": true
     }
   ]
 }

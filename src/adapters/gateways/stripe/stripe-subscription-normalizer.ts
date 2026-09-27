@@ -107,6 +107,10 @@ export function normalizeStripeSubscriptionUpdate(input: {
     status,
     currentPeriodEnd: new Date(currentPeriodEndSeconds * MS_PER_SECOND),
     cancelAtPeriodEnd,
+    startedAt: new Date(subscription.start_date * MS_PER_SECOND),
+    billingCycleAnchor: new Date(
+      subscription.billing_cycle_anchor * MS_PER_SECOND,
+    ),
   };
 }
 

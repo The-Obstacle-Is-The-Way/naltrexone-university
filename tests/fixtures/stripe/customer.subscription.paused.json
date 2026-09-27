@@ -14,6 +14,8 @@
       "customer": "cus_456",
       "status": "paused",
       "cancel_at_period_end": false,
+      "start_date": 1697321600,
+      "billing_cycle_anchor": 1697321600,
       "metadata": { "user_id": "user_2" },
       "items": {
         "object": "list",

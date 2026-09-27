@@ -44,6 +44,8 @@ function createSubscriptionFixture(overrides?: {
     customer: 'cus_123',
     status: overrides?.status ?? 'active',
     cancel_at_period_end: false,
+    start_date: 1_770_000_000,
+    billing_cycle_anchor: 1_770_604_800,
     metadata,
     items: {
       data: [
@@ -77,6 +79,10 @@ describe('normalizeStripeSubscriptionUpdate', () => {
       status: 'active',
       currentPeriodEnd: new Date(1_800_000_000 * 1000),
       cancelAtPeriodEnd: false,
+      // DEBT-414 F02: the service start and billing anchor locate each
+      // monthly subscription's yearly reminder.
+      startedAt: new Date(1_770_000_000 * 1000),
+      billingCycleAnchor: new Date(1_770_604_800 * 1000),
     });
   });
 

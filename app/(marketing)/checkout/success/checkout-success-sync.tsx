@@ -216,7 +216,7 @@ export async function syncCheckoutSuccess(
     const subscriptionItem = subscription.items?.data?.[0];
     const currentPeriodEndSeconds = subscriptionItem?.current_period_end;
     // Entitlement depends on a current billing period end timestamp.
-    assertions.assertNumber(
+    assertions.assertStripeTimestamp(
       currentPeriodEndSeconds,
       'missing_current_period_end',
       {
@@ -233,6 +233,23 @@ export async function syncCheckoutSuccess(
       {
         sessionId,
         cancelAtPeriodEnd: cancelAtPeriodEnd ?? null,
+      },
+    );
+
+    // DEBT-414 F02: the service start and billing anchor locate the yearly
+    // reminder for a monthly plan.
+    const startDateSeconds = subscription.start_date;
+    assertions.assertStripeTimestamp(startDateSeconds, 'missing_start_date', {
+      sessionId,
+      startDateSeconds: startDateSeconds ?? null,
+    });
+    const billingCycleAnchorSeconds = subscription.billing_cycle_anchor;
+    assertions.assertStripeTimestamp(
+      billingCycleAnchorSeconds,
+      'missing_billing_cycle_anchor',
+      {
+        sessionId,
+        billingCycleAnchorSeconds: billingCycleAnchorSeconds ?? null,
       },
     );
 
@@ -254,6 +271,8 @@ export async function syncCheckoutSuccess(
     return {
       cancelAtPeriodEnd,
       currentPeriodEnd: new Date(currentPeriodEndSeconds * MS_PER_SECOND),
+      startedAt: new Date(startDateSeconds * MS_PER_SECOND),
+      billingCycleAnchor: new Date(billingCycleAnchorSeconds * MS_PER_SECOND),
       externalSubscriptionId: subscriptionId,
       plan,
       status,
@@ -281,6 +300,8 @@ export async function syncCheckoutSuccess(
             status: subscription.status,
             currentPeriodEnd: subscription.currentPeriodEnd,
             cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+            startedAt: subscription.startedAt,
+            billingCycleAnchor: subscription.billingCycleAnchor,
             expectedVersion,
           });
 

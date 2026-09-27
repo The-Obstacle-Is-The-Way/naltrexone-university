@@ -398,6 +398,8 @@ export function createLockOrderHarness() {
       expectedVersion: null,
       currentPeriodEnd: new Date('2029-01-01T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     });
 
     const counterpartyLockHeld = createDeferred<void>();

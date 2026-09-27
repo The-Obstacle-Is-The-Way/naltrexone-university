@@ -263,6 +263,8 @@ export async function reconcileStripeSubscriptions(
                   status: canonical.status,
                   currentPeriodEnd: canonical.currentPeriodEnd,
                   cancelAtPeriodEnd: canonical.cancelAtPeriodEnd,
+                  startedAt: canonical.startedAt,
+                  billingCycleAnchor: canonical.billingCycleAnchor,
                   expectedVersion,
                 });
                 if (!write.persisted && write.reason === 'version_conflict') {

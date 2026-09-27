@@ -100,6 +100,8 @@ describe('stripe webhook controller (integration)', () => {
       status: 'active' as const,
       currentPeriodEnd: new Date('2026-03-01T00:00:00.000Z'),
       cancelAtPeriodEnd: false,
+      startedAt: new Date('2026-01-22T00:00:00.000Z'),
+      billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     };
 
     const paymentGateway = new FakePaymentGateway({
@@ -161,6 +163,13 @@ describe('stripe webhook controller (integration)', () => {
     });
     expect(subscription?.currentPeriodEnd.toISOString()).toBe(
       subscriptionUpdate.currentPeriodEnd.toISOString(),
+    );
+    // DEBT-414 F02: the service start and billing anchor reach the real row.
+    expect(subscription?.startedAt?.toISOString()).toBe(
+      subscriptionUpdate.startedAt.toISOString(),
+    );
+    expect(subscription?.billingCycleAnchor?.toISOString()).toBe(
+      subscriptionUpdate.billingCycleAnchor.toISOString(),
     );
 
     const event = await db.query.stripeEvents.findFirst({

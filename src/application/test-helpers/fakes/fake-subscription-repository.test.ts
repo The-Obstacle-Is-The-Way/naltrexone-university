@@ -12,6 +12,8 @@ function makeUpsertInput(
     status: 'active',
     currentPeriodEnd: new Date('2026-12-31T00:00:00.000Z'),
     cancelAtPeriodEnd: false,
+    startedAt: new Date('2026-01-22T00:00:00.000Z'),
+    billingCycleAnchor: new Date('2026-02-01T00:00:00.000Z'),
     expectedVersion: null,
     ...overrides,
   };
@@ -233,6 +235,8 @@ describe('FakeSubscriptionRepository', () => {
               status: 'active',
               currentPeriodEnd: new Date('2026-06-13T00:00:00.000Z'),
               cancelAtPeriodEnd: false,
+              startedAt: null,
+              billingCycleAnchor: null,
               createdAt: now,
               updatedAt: now,
             },
