@@ -553,6 +553,15 @@ describe('Stripe provider contract workflow', () => {
 });
 
 // DEBT-465 Part 2: mutation testing reports weekly and never gates (ADR-019).
+// #1160 review: a job-level `permissions` block overrides the workflow's, so
+// read-only means the workflow-level block is the file's only one.
+function readsRepositoryOnly(source: string): boolean {
+  const blocks = source.match(/^\s*permissions:/gm) ?? [];
+  return (
+    blocks.length === 1 && source.includes('\npermissions:\n  contents: read\n')
+  );
+}
+
 describe('Mutation workflow', () => {
   const workflow = () => readFileSync(MUTATION_WORKFLOW_PATH, 'utf8');
 
@@ -572,14 +581,28 @@ describe('Mutation workflow', () => {
   it('reads the repository only and uses no secrets', () => {
     const source = workflow();
 
-    expect(source).toContain('permissions:\n  contents: read');
+    expect(readsRepositoryOnly(source)).toBe(true);
     expect(source).not.toContain('secrets.');
   });
 
-  it('runs Stryker and uploads its report without a breaking threshold', () => {
+  it('treats a job-level permissions override as not read-only', () => {
+    const widened = workflow().replace(
+      '    runs-on: ubuntu-24.04\n',
+      '    runs-on: ubuntu-24.04\n    permissions:\n      contents: write\n',
+    );
+
+    expect(widened).not.toBe(workflow());
+    expect(readsRepositoryOnly(widened)).toBe(false);
+  });
+
+  // #1160 review: incremental results survive a change to an unmutated import,
+  // so the weekly report is a full run with no restored incremental file.
+  it('runs a full Stryker measurement and uploads its report without a breaking threshold', () => {
     const source = workflow();
 
-    expect(source).toContain('run: pnpm exec stryker run');
+    expect(source).toContain('run: pnpm exec stryker run --force');
+    expect(source).not.toContain('actions/cache');
+    expect(source).not.toContain('.stryker-incremental.json');
     expect(source).toContain(`uses: ${PINNED_UPLOAD_ARTIFACT} # v`);
     expect(
       JSON.parse(readFileSync('stryker.config.json', 'utf8')).thresholds.break,

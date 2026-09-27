@@ -59,7 +59,7 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
 ```
 
 - **`"break": null` is policy, not an oversight.** Coverage-adjacent metrics are observational in this repo (`docs/dev/react-vitest-testing.md`); `high`/`low` only color the report. Introducing a breaking gate requires an ADR amending ADR-019 with measured baselines.
-- `incremental: true` reuses unchanged mutant results, but the initial related-test coverage run still executes on every re-run.
+- `incremental: true` reuses unchanged mutant results, but the initial related-test coverage run still executes on every re-run. It is for local focused loops only: Stryker 9.6.1 does not invalidate a result when an unmutated file the mutant's module imports changes, so an incremental score can be stale. Every recorded score and the weekly workflow use `--force` (#1160 review).
 - `.gitignore` covers `.stryker-tmp/`, `.stryker-incremental.json` and `reports/`. The incremental file lives at the repo root deliberately: Stryker cleans `tempDirName` between runs, so state stored inside `.stryker-tmp/` would be destroyed.
 - `pnpm test:mutation` runs `stryker run` over every target. Focused loop while fixing one module: `pnpm exec stryker run --mutate src/domain/services/grading.ts`. Add `--force` to ignore incremental results when recording a baseline.
 - The sandbox copy requires the `ignorePatterns` above because the committed agent-skill symlink trees fail copying on macOS. Do not use `--inPlace`; it mutates the working tree during the run.
@@ -104,7 +104,7 @@ Timeouts count as detected. **Do not chase 100%** — equivalent mutants exist a
 Mutation runs range from tens of seconds to minutes per module — they do **not** enter the per-PR pipeline initially.
 
 - **Local, on demand:** whenever you touch a mutated module, `pnpm exec stryker run --mutate <that file>` before pushing.
-- **Scheduled CI:** `.github/workflows/mutation.yml` runs `pnpm exec stryker run` on Mondays at 06:00 UTC and on `workflow_dispatch`. It is a separate workflow, not a step in `ci.yml`. It reads the repository only, uses no secrets, restores `.stryker-incremental.json` from the Actions cache, and uploads `reports/mutation` as the `mutation-report` artifact. Every action is pinned to a full commit SHA with its release version in a comment, and `tests/ci-workflow.test.ts` enforces the pins, the triggers, the permissions and the absence of secrets.
+- **Scheduled CI:** `.github/workflows/mutation.yml` runs `pnpm exec stryker run --force` on Mondays at 06:00 UTC and on `workflow_dispatch`. It is a separate workflow, not a step in `ci.yml`. The workflow-level `permissions: contents: read` is its only permissions block, so no job can widen it; it uses no secrets, restores no incremental file, and uploads `reports/mutation` as the `mutation-report` artifact. Every action is pinned to a full commit SHA with its release version in a comment. `tests/ci-workflow.test.ts` enforces the pins, the triggers, the single read-only permissions block, `--force` and the absence of secrets.
 
   The run **reports; it does not gate** (`break: null`). Once runtimes and baselines are known, a per-PR incremental variant scoped to changed files (`--mutate` from the diff) can be evaluated — via ADR, like any gate.
 

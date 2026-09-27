@@ -40,15 +40,10 @@ jobs:
       - name: Install deps
         run: pnpm install --frozen-lockfile
 
-      - name: Restore incremental results
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .stryker-incremental.json
-          key: stryker-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}
-          restore-keys: stryker-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
-
+      # A full run: incremental results can survive a change to an unmutated
+      # import, which would report a stale score (#1160 review).
       - name: Run Stryker
-        run: pnpm exec stryker run
+        run: pnpm exec stryker run --force
 
       - name: Upload mutation report
         if: always()
