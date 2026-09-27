@@ -5,8 +5,10 @@ paths:
   - "**/*.spec.ts"
   - "**/*.spec.tsx"
   - "tests/**"
-  - "src/domain/test-helpers/**"
-  - "src/application/test-helpers/**"
+  - "src/**/test-helpers/**"
+  - "**/*-test-helpers.ts"
+  - "**/*-test-helpers.tsx"
+  - "**/*.fixtures.ts"
 ---
 
 # Fixture Integrity Rules

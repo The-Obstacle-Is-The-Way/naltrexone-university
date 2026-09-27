@@ -422,6 +422,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 - **E2E tests:** `tests/e2e/*.spec.ts` (Playwright)
 - **Hosted-provider compatibility tests:** `tests/e2e/stripe-hosted-*.spec.ts` (scheduled/manual only; never required PR CI)
 - **E2E timeout policy:** `docs/dev/testing-infrastructure.md` → "Playwright Timeout Policy"
+- **Shared test support:** in `src/**`, it lives in the layer's `test-helpers/` directory. `app/**` and `components/**` colocate `*-test-helpers.ts(x)`, `*.fixtures.ts` and `*.browser.probes.tsx` files beside their suites, since every folder under `app/` is a route segment. The full table is in `.claude/rules/testing.md` → Test Support Locations, and `tests/test-support-location-policy.test.ts` enforces the `src/` rule.
 - **Planned test-quality practices (ADR-019, tracked as DEBT-465):** Gherkin acceptance tests (`tests/acceptance/` — `docs/dev/acceptance-testing.md`), mutation testing (`docs/dev/mutation-testing.md`), CRAP report (`docs/dev/code-quality-metrics.md`), UI QA procedures (`docs/qa/` — `docs/dev/qa-procedures.md`). All metrics observational — no numeric gates without a new ADR.
 
 ### Playwright E2E Conventions
