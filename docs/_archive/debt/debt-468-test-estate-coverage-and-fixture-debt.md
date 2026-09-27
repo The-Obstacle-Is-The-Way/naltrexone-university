@@ -30,7 +30,7 @@ Each Verification bullet was re-checked on `main` at `59b96438`:
 
 The dated sections below keep their original "open" and "remains" wording as historical execution receipts, superseded by this section.
 
-**Deferred tail:** twelve `*-test-helpers.ts(x)` modules live outside any `test-helpers/` directory (Part 3 consistency note: eleven on 2026-09-26, plus the #1139 lock-order harness, which follows `tests/integration/`'s sibling pattern). Each folds into a standard location when its suite is next edited; the index Deferred table carries this. DEBT-465 keeps the write guard's two equivalent mutants for its mutation pilot, and the index's DEBT-472 remainder row carries the ratcheted casts and doubles.
+**Deferred tail** (2026-09-27 UTC: resolved the same day. The three `src/` outliers moved into `test-helpers/` directories. The convention, `app/**` and `components/**` keeping suffix-named helpers beside their suites since every `app/` folder is a route segment, is written down in `.claude/rules/testing.md` and guarded by `tests/test-support-location-policy.test.ts`): twelve `*-test-helpers.ts(x)` modules live outside any `test-helpers/` directory (Part 3 consistency note: eleven on 2026-09-26, plus the #1139 lock-order harness, which follows `tests/integration/`'s sibling pattern). Each folds into a standard location when its suite is next edited; the index Deferred table carries this. DEBT-465 keeps the write guard's two equivalent mutants for its mutation pilot, and the index's DEBT-472 remainder row carries the ratcheted casts and doubles.
 
 ---
 
