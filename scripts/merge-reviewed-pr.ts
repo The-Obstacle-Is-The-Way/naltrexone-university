@@ -58,6 +58,18 @@ const reviewPagesSchema = z.array(
   ),
 );
 
+type CheckNodes = z.infer<typeof checks>['nodes'];
+
+export function hasSuccessfulCheckRun(nodes: CheckNodes, name: string) {
+  return nodes.some(
+    (check) =>
+      check.__typename === 'CheckRun' &&
+      check.name === name &&
+      check.status === 'COMPLETED' &&
+      check.conclusion === 'SUCCESS',
+  );
+}
+
 export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
   const parsed = pullRequestSchema.safeParse(input);
   if (!parsed.success) throw new Error('Invalid GitHub merge response');
@@ -82,16 +94,13 @@ export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
     throw new Error('PR has unresolved review threads');
   }
   const approval = exactHeadApproval(reviewPages, pr.headRefOid);
-  if (
-    !contexts.nodes.some(
-      (check) =>
-        check.__typename === 'CheckRun' &&
-        check.name === 'test' &&
-        check.status === 'COMPLETED' &&
-        check.conclusion === 'SUCCESS',
-    )
-  ) {
+  if (!hasSuccessfulCheckRun(contexts.nodes, 'test')) {
     throw new Error('CI test has not succeeded on the exact head');
+  }
+  // ADR-020: patch coverage is the one coverage gate, and CI's upload is
+  // non-blocking, so a missing status must block like a red one.
+  if (!hasSuccessfulCheckRun(contexts.nodes, 'codecov/patch')) {
+    throw new Error('codecov/patch has not succeeded on the exact head');
   }
   if (
     contexts.nodes.some((check) =>

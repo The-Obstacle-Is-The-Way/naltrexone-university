@@ -688,8 +688,8 @@ pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER> --merge
 
 The command reads all review pages and requires the latest decisive CodeRabbit
 review on the current SHA to be APPROVED. It also requires zero unresolved
-threads, successful CI `test`, green checks, and a clean, mergeable, non-draft
-PR. Incomplete/truncated thread or check data fails closed. The merge uses
+threads, successful CI `test` and `codecov/patch` (a missing status blocks, per
+ADR-020), green checks, and a clean, mergeable, non-draft PR. Incomplete/truncated thread or check data fails closed. The merge uses
 `--match-head-commit` so a subsequent push cannot substitute unreviewed code.
 With `--merge` it posts the SHA/review-ID receipt as a PR comment before merging, so the receipt stays with the PR. No override flag exists.
 This is mandatory operator tooling, not a claim that GitHub's zero-approval
@@ -718,8 +718,8 @@ For each promotion:
    `pnpm exec tsx scripts/verify-promotion.ts <PR_NUMBER>` (fetch `origin`
    first). It verifies same-repository `dev` → `main`, up-to-date ancestry,
    every first-parent merge's source PR, the actual second-parent head, formal
-   approval predating the source merge, and zero unresolved source/promotion
-   threads. Direct commits, ambiguous PR associations, missing approvals or
+   approval predating the source merge, zero unresolved source/promotion
+   threads, and successful `test` and `codecov/patch` checks on the promotion. Direct commits, ambiguous PR associations, missing approvals or
    incomplete evidence fail closed. Its complete output must be in the
    promotion PR body before the merge.
 2. Source-thread counts are current API observations; GitHub cannot reconstruct

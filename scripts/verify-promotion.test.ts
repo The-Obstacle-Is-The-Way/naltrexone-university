@@ -75,6 +75,12 @@ const promotion = () => ({
                   context: 'CodeRabbit',
                   state: 'PENDING',
                 },
+                {
+                  __typename: 'CheckRun',
+                  name: 'codecov/patch',
+                  status: 'COMPLETED',
+                  conclusion: 'SUCCESS',
+                },
               ],
               pageInfo: { hasNextPage: false },
             },
@@ -120,6 +126,19 @@ describe('promotion readiness', () => {
         },
       }),
     ).toThrow('unresolved');
+  });
+
+  it('requires a successful codecov/patch status on the promotion', () => {
+    const pr = promotion();
+    const contexts = pr.commits.nodes[0]?.commit.statusCheckRollup.contexts;
+    if (!contexts) throw new Error('Missing fixture');
+    contexts.nodes = contexts.nodes.filter(
+      (check) => !('name' in check) || check.name !== 'codecov/patch',
+    );
+
+    expect(() => checkPromotionReadiness(pr)).toThrow(
+      'codecov/patch has not succeeded',
+    );
   });
 
   it('still requires successful main-promotion CI', () => {
