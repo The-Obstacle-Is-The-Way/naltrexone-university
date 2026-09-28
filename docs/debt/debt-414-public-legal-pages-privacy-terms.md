@@ -724,3 +724,22 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
   - A verified request takes effect when received, and refunding any renewal charged after it is company policy. Counsel has not yet confirmed the legal rule (#1179 review).
 - **What stays manual.** The spec is observational, not a required check, because Stripe does not support automating its hosted pages. The email route depends on the owner following the procedure.
 
+**F03, a separate renewal opt-in: design (2026-09-28).** The finding asks for bold, complete renewal terms and a separate, unchecked, affirmative opt-in to automatic renewal. It asks for both at checkout and at every trial-to-paid entry (VT 9 § 2454a(a)(1)-(2)). Stripe Checkout's own required checkbox accepts the general Terms, not the renewal. Decided under the owner's 2026-09-28 delegation:
+- **Every offer, not only annual.** Vermont's trigger is an annual term, but one uniform opt-in is simpler and stricter. Each checkout offer gets an unchecked, required checkbox whose label is the offer's renewal statement in bold:
+  - a paid plan: "I agree that Pro Monthly renews automatically at $29 per month until I cancel.";
+  - a no-card trial, where renewal needs a payment method: "I agree that, if I add a payment method, Pro Monthly renews automatically at $29 per month after my trial until I cancel.".
+- **A native control.** It is a native checkbox, recorded as Pattern Registry I-7. The browser blocks submission until it is checked, and the server rejects any submission without `renewalOptIn`, as it rejects one without the displayed offer's identity.
+- **Evidence.** The statement joins the consent text between the terms and the closing sentence. That changes the checkout disclosure version to `2026-09-28.2`. The controller now accepts a same-day revision suffix, `YYYY-MM-DD.N`, because a version names a text, and two texts adopted on one day need two names. The four new texts are registered and pinned in `lib/checkout-disclosures.ts`.
+- **Two steps.** F03a covers checkout. F03b moves the trial add-card offer from the banner's paragraph into the same consent dialog, with bold rows and the same opt-in, because the banner has no room for either.
+
+**F03a, the checkout opt-in (2026-09-28).**
+- **Copy.** Each checkout offer's consent adds its opt-in statement, recorded in [`f03-consent-ruling-data.json`](./assets/debt-414/f03-consent-ruling-data.json). The texts run 597–778 characters under version `2026-09-28.2`, and the registry pins all four. Sessions still carry them by hash (F15).
+- **Dialog.** An unchecked, required native checkbox (I-7) sits between the terms and the closing sentence, labelled with the statement in bold. Reopening the dialog never carries it over.
+- **Server.** The subscribe action returns an error to pricing without `renewalOptIn=yes`. The billing controller requires `renewalOptIn: true` as it requires the displayed offer, and it now accepts a same-day version suffix.
+- **Tests.**
+  - **Red first:** the opt-in copy and version (3 cases), the four new registry entries (4), the controller's missing, non-affirmative and suffixed cases (3), the action's missing and non-affirmative cases, and the dialog's opt-in markup (4). A real-browser case, written after the markup and so never red, proves the form does not submit until the box is checked.
+  - **Updated:** every other checkout caller (unit, integration, the four E2E flows) now ticks the box, and the hosted lane's helper reads the label into the displayed consent.
+  - **Housekeeping:** the controller test's dependency builder moved to `test-helpers/` to keep that file under the 800-line cap.
+  - **Design-system guard:** as the frontend rules require for any non-Button control that copies the canonical focus ring, `theme-token-regression.test.tsx` now pins the opt-in's ring and `accent-primary`. Removing the token fails it.
+- **Captures.** Twelve captures of the local production build (dark, DPR 1): both plans, both variants, at 1440×900, 390×844 and 390×667. All show zero axe violations and no horizontal overflow, with submit reachable by scrolling. The standard dialog now scrolls at 390×667 (764 px of content in 633 px), as the trial dialog already did. [Trial](./assets/debt-414/f03a-trial-measurements.json) and [standard](./assets/debt-414/f03a-standard-measurements.json) measurements, with the `f03a-dialog-*` screenshots beside them.
+

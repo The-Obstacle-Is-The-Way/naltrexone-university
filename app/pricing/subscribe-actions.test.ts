@@ -22,6 +22,7 @@ function createConsentForm(): FormData {
   const data = new FormData();
   data.set('hasTrial', 'true');
   data.set('disclosureVersion', '2026-09-16');
+  data.set('renewalOptIn', 'yes');
   return data;
 }
 
@@ -46,6 +47,7 @@ describe('app/pricing/subscribe-actions', () => {
       plan: 'monthly',
       idempotencyKey: undefined,
       expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+      renewalOptIn: true,
     });
   });
 
@@ -69,6 +71,7 @@ describe('app/pricing/subscribe-actions', () => {
       plan: 'annual',
       idempotencyKey: undefined,
       expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+      renewalOptIn: true,
     });
   });
 
@@ -101,6 +104,7 @@ describe('app/pricing/subscribe-actions', () => {
       plan: 'monthly',
       idempotencyKey: undefined,
       expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+      renewalOptIn: true,
     });
   });
 
@@ -125,6 +129,7 @@ describe('app/pricing/subscribe-actions', () => {
       plan: 'monthly',
       idempotencyKey: undefined,
       expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+      renewalOptIn: true,
     });
   });
 
@@ -148,6 +153,7 @@ describe('app/pricing/subscribe-actions', () => {
       plan: 'monthly',
       idempotencyKey: undefined,
       expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+      renewalOptIn: true,
     });
   });
 
@@ -170,6 +176,7 @@ describe('app/pricing/subscribe-actions', () => {
       plan: 'monthly',
       idempotencyKey: '11111111-1111-1111-1111-111111111111',
       expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+      renewalOptIn: true,
     });
   });
 
@@ -183,6 +190,30 @@ describe('app/pricing/subscribe-actions', () => {
       await expect(
         action(new FormData(), { createCheckoutSessionFn, redirectFn }),
       ).rejects.toThrow('redirect:/pricing?checkout=error&plan=');
+      expect(createCheckoutSessionFn).not.toHaveBeenCalled();
+    },
+  );
+
+  // DEBT-414 F03: the browser requires the opt-in; the server does too.
+  it.each([
+    ['missing', null],
+    ['not the affirmative value', 'no'],
+  ])(
+    'rejects a submission whose renewal opt-in is %s without creating Checkout',
+    async (_case, value) => {
+      const createCheckoutSessionFn = vi.fn(async () =>
+        ok({ url: 'https://checkout/monthly' }),
+      );
+      const redirectFn = createRedirectFn();
+      const form = createConsentForm();
+      if (value === null) form.delete('renewalOptIn');
+      else form.set('renewalOptIn', value);
+
+      await expect(
+        subscribeMonthlyAction(form, { createCheckoutSessionFn, redirectFn }),
+      ).rejects.toMatchObject({
+        message: `redirect:${toPricingRoute({ checkout: 'error', plan: 'monthly' })}`,
+      });
       expect(createCheckoutSessionFn).not.toHaveBeenCalled();
     },
   );
@@ -219,7 +250,7 @@ describe('app/pricing/subscribe-actions', () => {
 
       await expect(
         runSubscribeAction(
-          { plan: 'monthly', idempotencyKey: 'idem_1' },
+          { plan: 'monthly', idempotencyKey: 'idem_1', renewalOptIn: true },
           {
             createCheckoutSessionFn,
             redirectFn,

@@ -42,9 +42,13 @@ const CreateCheckoutSessionInputSchema = z
     expectedOffer: z
       .object({
         hasTrial: z.boolean(),
-        disclosureVersion: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        // A date, with a revision suffix when a second text is adopted the
+        // same day (DEBT-414 F03).
+        disclosureVersion: z.string().regex(/^\d{4}-\d{2}-\d{2}(\.\d+)?$/),
       })
       .strict(),
+    // DEBT-414 F03: the separate, affirmative renewal opt-in.
+    renewalOptIn: z.literal(true),
   })
   .strict();
 

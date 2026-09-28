@@ -127,6 +127,7 @@ describe('billing controllers (integration)', () => {
       {
         plan: 'monthly',
         expectedOffer: { hasTrial: true, disclosureVersion: '2026-08-05' },
+        renewalOptIn: true,
       },
       {
         authGateway: new FakeAuthGateway(user),
@@ -211,6 +212,7 @@ describe('billing controllers (integration)', () => {
       {
         plan: 'annual',
         expectedOffer: { hasTrial: true, disclosureVersion: '2026-08-05' },
+        renewalOptIn: true,
       },
       {
         authGateway: new FakeAuthGateway(user),

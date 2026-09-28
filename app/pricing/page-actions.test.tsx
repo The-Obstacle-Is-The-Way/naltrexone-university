@@ -340,7 +340,7 @@ describe('app/pricing', () => {
 
     const action = async () =>
       runSubscribeAction(
-        { plan: 'monthly' },
+        { plan: 'monthly', renewalOptIn: true },
         {
           createCheckoutSessionFn,
           redirectFn,
@@ -350,7 +350,7 @@ describe('app/pricing', () => {
     await expect(action()).rejects.toThrow('https://stripe.test/checkout');
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
-      idempotencyKey: undefined,
+      renewalOptIn: true,
     });
   });
 
@@ -368,7 +368,7 @@ describe('app/pricing', () => {
 
     const action = async () =>
       runSubscribeAction(
-        { plan: 'annual' },
+        { plan: 'annual', renewalOptIn: true },
         {
           createCheckoutSessionFn,
           redirectFn,
@@ -380,7 +380,7 @@ describe('app/pricing', () => {
     );
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'annual',
-      idempotencyKey: undefined,
+      renewalOptIn: true,
     });
   });
 
@@ -398,7 +398,7 @@ describe('app/pricing', () => {
 
     const action = async () =>
       runSubscribeAction(
-        { plan: 'monthly' },
+        { plan: 'monthly', renewalOptIn: true },
         {
           createCheckoutSessionFn,
           redirectFn,
@@ -408,7 +408,7 @@ describe('app/pricing', () => {
     await expect(action()).rejects.toThrow('/pricing?reason=manage_billing');
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
-      idempotencyKey: undefined,
+      renewalOptIn: true,
     });
   });
 
@@ -426,7 +426,7 @@ describe('app/pricing', () => {
 
     const action = async () =>
       runSubscribeAction(
-        { plan: 'monthly' },
+        { plan: 'monthly', renewalOptIn: true },
         {
           createCheckoutSessionFn,
           redirectFn,
@@ -436,7 +436,7 @@ describe('app/pricing', () => {
     await expect(action()).rejects.toThrow('/pricing?checkout=rate_limited');
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
-      idempotencyKey: undefined,
+      renewalOptIn: true,
     });
   });
 
@@ -454,7 +454,7 @@ describe('app/pricing', () => {
 
     const action = async () =>
       runSubscribeAction(
-        { plan: 'monthly' },
+        { plan: 'monthly', renewalOptIn: true },
         {
           createCheckoutSessionFn,
           redirectFn,
@@ -466,7 +466,7 @@ describe('app/pricing', () => {
     );
     expect(createCheckoutSessionFn).toHaveBeenCalledWith({
       plan: 'monthly',
-      idempotencyKey: undefined,
+      renewalOptIn: true,
     });
   });
 });

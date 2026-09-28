@@ -20,7 +20,8 @@ export const TRIAL_PAYMENT_DISCLOSURE_VERSION = '2026-09-28';
 export const ANNUAL_RENEWAL_NOTICE_VERSION = '2026-08-05';
 // DEBT-414 F02: a monthly subscriber's yearly reminder.
 export const MONTHLY_ANNIVERSARY_NOTICE_VERSION = '2026-09-27';
-const CHECKOUT_DISCLOSURE_VERSION = '2026-09-28';
+// DEBT-414 F03: a same-day revision of the 2026-09-28 text adds the opt-in.
+const CHECKOUT_DISCLOSURE_VERSION = '2026-09-28.2';
 
 const PRICING_PLANS = {
   monthly: {
@@ -54,6 +55,8 @@ type SubscriptionPlan = 'monthly' | 'annual';
 
 export type CheckoutConsent = {
   rows: ReadonlyArray<{ label: string; value: string }>;
+  // DEBT-414 F03: the separate, unchecked renewal opt-in's label.
+  optIn: string;
   sentence: string;
   buttonLabel: string;
 };
@@ -89,6 +92,7 @@ function createPlanConsent(
         },
         cancellationAndRefundsRow,
       ],
+      optIn: `I agree that, if I add a payment method, ${pricing.name} renews automatically at ${pricing.price} per ${pricing.frequency} after my trial until I cancel.`,
       sentence:
         'By selecting "Start free trial", you agree to these renewal terms. Review our Terms of Service and Privacy Policy.',
       buttonLabel: 'Start free trial',
@@ -106,6 +110,7 @@ function createPlanConsent(
         },
         cancellationAndRefundsRow,
       ],
+      optIn: `I agree that ${pricing.name} renews automatically at ${pricing.price} per ${pricing.frequency} until I cancel.`,
       sentence: `By selecting "Subscribe", you authorize recurring ${plan} charges. Review our Terms of Service and Privacy Policy.`,
       buttonLabel: 'Subscribe',
     },
@@ -126,7 +131,7 @@ export const PRICING_DATA = {
 export function serializeCheckoutConsent(consent: CheckoutConsent): string {
   return consent.rows
     .map(({ label, value }) => `${label}: ${value}`)
-    .concat(consent.sentence)
+    .concat(consent.optIn, consent.sentence)
     .join('\n');
 }
 

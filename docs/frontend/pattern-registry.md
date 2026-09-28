@@ -416,6 +416,29 @@ focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]
 
 ---
 
+### I-7: Consent Opt-In Checkbox
+
+A separate, unchecked, required opt-in to automatic renewal inside a consent form (DEBT-414 F03). It is a native checkbox for four reasons: the browser blocks submission until it is checked, FormData carries it without JavaScript, assistive technology announces it as a checkbox with its label, and the `<Button>` mandate does not apply to a form control.
+
+```
+<label class="flex items-start gap-3 text-sm font-bold text-foreground">
+  <input type="checkbox" name="renewalOptIn" value="yes" required
+    class="mt-0.5 size-4 shrink-0 rounded-sm accent-primary focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]" />
+  <span>{the offer's opt-in statement}</span>
+</label>
+```
+
+**Source:** `app/pricing/plan-consent-dialog.tsx`
+
+**Rules:**
+- Never pre-checked.
+- The label is the offer's full renewal statement, set in bold so it is conspicuous, and it is recorded verbatim in the consent evidence.
+- The browser's native `required` check is the first line, not the only one: the server rejects any submission without `renewalOptIn`.
+- `accent-primary` colors the native control with the primary token in both themes.
+- The focus ring is the canonical non-Button ring (X-2).
+
+---
+
 ## Part 4: Link Patterns
 
 ### L-1: Nav Link
@@ -1527,6 +1550,7 @@ Compact lookup for code reviews and implementation.
 | I-4 | Filter Chip | `hover:bg-foreground/[0.12] hover:text-foreground` | `rounded-md` | borderless tonal fill |
 | I-5 | Tab Switch Item | `hover:bg-muted/50` | `rounded-md` | Container uses `border-border` |
 | I-6 | Icon Toggle | `hover:text-foreground` | — | — |
+| I-7 | Consent Opt-In Checkbox | native control (`accent-primary`) | `rounded-sm` | — |
 | L-1 | Nav Link | `hover:text-foreground` | `rounded-md` | — |
 | L-2 | Content Link | `hover:underline` | `rounded-sm` | — |
 | L-3 | Header Action Link | `hover:text-foreground` | — | — |
