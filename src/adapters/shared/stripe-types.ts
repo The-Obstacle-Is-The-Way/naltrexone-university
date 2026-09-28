@@ -47,6 +47,8 @@ export type CheckoutSessionCreateParams =
   | (CheckoutSessionCreateParamsBase & {
       mode: 'setup';
       currency: string;
+      // Prefills the email field; a setup Session names no customer.
+      customer_email?: string;
     });
 
 export type StripeCheckoutSessionStatus = 'open' | 'complete' | 'expired';

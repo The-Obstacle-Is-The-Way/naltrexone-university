@@ -13,6 +13,7 @@ const CONSENT_STATE_SECRET = 'dedicated-consent-state-secret-32-bytes';
 
 const setupInput = {
   userId: '8e27561f-f383-4fe9-b3f9-738b44adf8fe',
+  email: 'learner@example.com',
   externalCustomerId: 'cus_test',
   externalSubscriptionId: 'sub_test',
   plan: 'monthly' as const,

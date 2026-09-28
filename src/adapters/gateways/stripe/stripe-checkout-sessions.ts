@@ -278,6 +278,9 @@ export async function createStripeTrialPaymentMethodSetupSession({
     mode: 'setup',
     currency: input.currency,
     consent_collection: { terms_of_service: 'required' },
+    // BUG-308: prefills the learner's email without naming a customer; the
+    // webhook attaches the card only after verifying ownership.
+    customer_email: input.email,
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
     client_reference_id: input.userId,

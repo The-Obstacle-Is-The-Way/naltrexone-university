@@ -7,10 +7,15 @@ import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
 import { MobileNav } from '@/components/mobile-nav';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
+import { createDepsResolver, loadAppContainer } from '@/lib/controller-helpers';
+import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import type { CheckEntitlementUseCase } from '@/src/application/ports/use-cases';
+import type {
+  CheckEntitlementUseCase,
+  CheckTrialSavedCardUseCase,
+} from '@/src/application/ports/use-cases';
 import type {
   SubscriptionPlan,
   SubscriptionStatus,
@@ -24,13 +29,24 @@ export const maxDuration = 30;
 export type AppLayoutDeps = {
   authGateway: AuthGateway;
   checkEntitlementUseCase: CheckEntitlementUseCase;
+  checkTrialSavedCardUseCase: CheckTrialSavedCardUseCase;
 };
 
 export type EntitledAppUser = {
   subscriptionStatus: SubscriptionStatus | null;
   plan: SubscriptionPlan | null;
   trialEndsAt: Date | null;
+  // BUG-308: whether the trial already renews on a card the learner saved.
+  trialCardSaved: boolean;
 };
+
+const getCheckTrialSavedCardUseCase = createDepsResolver<
+  CheckTrialSavedCardUseCase,
+  { createCheckTrialSavedCardUseCase: () => CheckTrialSavedCardUseCase }
+>(
+  (container) => container.createCheckTrialSavedCardUseCase(),
+  loadAppContainer,
+);
 
 export async function enforceEntitledAppUser(
   deps?: AppLayoutDeps,
@@ -47,10 +63,24 @@ export async function enforceEntitledAppUser(
     redirectFn(`${ROUTES.PRICING}?reason=${reason}`);
   }
 
+  const subscriptionStatus = authState.entitlement.subscriptionStatus ?? null;
+  // Only a trial can be waiting for a card, so only a trial pays for the query.
+  const trialCardSaved =
+    subscriptionStatus === 'inTrial'
+      ? (
+          await (
+            await getCheckTrialSavedCardUseCase(
+              deps?.checkTrialSavedCardUseCase,
+            )
+          ).execute({ userId: authState.user.id })
+        ).cardSaved
+      : false;
+
   return {
-    subscriptionStatus: authState.entitlement.subscriptionStatus ?? null,
+    subscriptionStatus,
     plan: authState.entitlement.plan ?? null,
     trialEndsAt: authState.entitlement.trialEndsAt ?? null,
+    trialCardSaved,
   };
 }
 
@@ -129,27 +159,49 @@ export function AppLayoutShell({
 export function TrialCountdownBanner({
   daysLeft,
   plan,
+  cardSaved,
   createTrialPaymentMethodActionFn,
 }: {
   daysLeft: number;
   plan: SubscriptionPlan;
+  cardSaved: boolean;
   createTrialPaymentMethodActionFn: (formData: FormData) => Promise<void>;
 }) {
   const countdown =
     daysLeft === 1 ? '1 day left in trial' : `${daysLeft} days left in trial`;
+  const pricing = PRICING_DATA[plan];
   return (
     // Server-rendered at page load; no live-region role needed.
     <div className="block border-b border-border bg-card px-4 py-3 text-sm text-muted-foreground">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3">
         <span className="font-medium text-foreground">{countdown}</span>
-        <span className="text-foreground">
-          Add a card before your trial ends to keep access.
-        </span>
-        {/* DEBT-414 F03b: the add-card terms and opt-in live in this dialog. */}
-        <TrialPaymentConsentDialog
-          plan={plan}
-          createTrialPaymentMethodActionFn={createTrialPaymentMethodActionFn}
-        />
+        {cardSaved ? (
+          <>
+            {/* BUG-308: the trial already renews on the learner's card. */}
+            <span className="text-foreground">
+              {`${pricing.name} renews at ${pricing.price} per ${pricing.frequency} on your saved card when your trial ends.`}
+            </span>
+            <Link
+              href={ROUTES.APP_BILLING}
+              className="underline font-medium transition-colors hover:text-foreground"
+            >
+              Manage billing
+            </Link>
+          </>
+        ) : (
+          <>
+            <span className="text-foreground">
+              Add a card before your trial ends to keep access.
+            </span>
+            {/* DEBT-414 F03b: the add-card terms and opt-in live in this dialog. */}
+            <TrialPaymentConsentDialog
+              plan={plan}
+              createTrialPaymentMethodActionFn={
+                createTrialPaymentMethodActionFn
+              }
+            />
+          </>
+        )}
       </div>
     </div>
   );
@@ -188,7 +240,7 @@ export async function renderAppLayout(input: {
     input.createTrialPaymentMethodActionFn ?? createTrialPaymentMethodAction;
   const nowFn = input.nowFn ?? (() => new Date());
 
-  const [{ subscriptionStatus, plan, trialEndsAt }, authNav] =
+  const [{ subscriptionStatus, plan, trialEndsAt, trialCardSaved }, authNav] =
     await Promise.all([enforceEntitledAppUserFn(), authNavFn()]);
   const banner =
     subscriptionStatus === 'pastDue' ? (
@@ -197,6 +249,7 @@ export async function renderAppLayout(input: {
       <TrialCountdownBanner
         daysLeft={getTrialDaysLeft(trialEndsAt, nowFn())}
         plan={plan}
+        cardSaved={trialCardSaved}
         createTrialPaymentMethodActionFn={createTrialPaymentMethodActionFn}
       />
     ) : undefined;

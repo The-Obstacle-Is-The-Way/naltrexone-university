@@ -26,6 +26,8 @@ export type TrialRenewalTerms = Pick<
 
 export type CreateTrialPaymentMethodSetupSessionInput = {
   userId: string;
+  // BUG-308: prefilled on Stripe's setup page.
+  email: string;
   // DEBT-414 F03b: the disclosure version the learner was shown.
   expectedDisclosureVersion: string;
   successUrl: string;
@@ -91,6 +93,7 @@ export class CreateTrialPaymentMethodSetupSessionUseCase {
 
     const setupInput = {
       userId: input.userId,
+      email: input.email,
       externalCustomerId: customer.stripeCustomerId,
       externalSubscriptionId,
       plan: subscription.plan,

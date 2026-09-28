@@ -2,10 +2,13 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { loadBillingData } from '@/app/(app)/app/billing/page';
+import type { SubscriptionRepository } from '@/src/application/ports/repositories';
 import {
   FakeAuthGateway,
   FakeSubscriptionRepository,
+  FakeTrialPaymentMethodSetupOperationRepository,
 } from '@/src/application/test-helpers/fakes';
+import { CheckTrialSavedCardUseCase } from '@/src/application/use-cases';
 import { createSubscription, createUser } from '@/src/domain/test-helpers';
 import { findHeadingByText, parseHtml } from '@/tests/shared/dom-helpers';
 
@@ -48,6 +51,14 @@ function createTrackedThenable<T>(value: T) {
   };
 }
 
+// BUG-308: the saved-card check over the maintained fakes, with no card.
+function checkTrialSavedCard(subscriptionRepository: SubscriptionRepository) {
+  return new CheckTrialSavedCardUseCase(
+    subscriptionRepository,
+    new FakeTrialPaymentMethodSetupOperationRepository(),
+  );
+}
+
 describe('app/(app)/app/billing/page', () => {
   describe('loadBillingData', () => {
     it('loads the subscription for the current user', async () => {
@@ -59,7 +70,13 @@ describe('app/(app)/app/billing/page', () => {
       ]);
 
       await expect(
-        loadBillingData({ authGateway, subscriptionRepository }),
+        loadBillingData({
+          authGateway,
+          subscriptionRepository,
+          checkTrialSavedCardUseCase: checkTrialSavedCard(
+            subscriptionRepository,
+          ),
+        }),
       ).resolves.toMatchObject({
         userId: user.id,
         subscription: { status: 'active', plan: 'monthly' },
@@ -77,7 +94,13 @@ describe('app/(app)/app/billing/page', () => {
       const subscriptionRepository = new FakeSubscriptionRepository();
 
       const element = await BillingPage({
-        deps: { authGateway, subscriptionRepository },
+        deps: {
+          authGateway,
+          subscriptionRepository,
+          checkTrialSavedCardUseCase: checkTrialSavedCard(
+            subscriptionRepository,
+          ),
+        },
       });
       const html = renderToStaticMarkup(element);
 
@@ -96,7 +119,13 @@ describe('app/(app)/app/billing/page', () => {
       ]);
 
       const element = await BillingPage({
-        deps: { authGateway, subscriptionRepository },
+        deps: {
+          authGateway,
+          subscriptionRepository,
+          checkTrialSavedCardUseCase: checkTrialSavedCard(
+            subscriptionRepository,
+          ),
+        },
         searchParams: Promise.resolve({ error: 'portal_failed' }),
       });
       const html = renderToStaticMarkup(element);
@@ -118,7 +147,13 @@ describe('app/(app)/app/billing/page', () => {
       ]);
 
       const element = await BillingPage({
-        deps: { authGateway, subscriptionRepository },
+        deps: {
+          authGateway,
+          subscriptionRepository,
+          checkTrialSavedCardUseCase: checkTrialSavedCard(
+            subscriptionRepository,
+          ),
+        },
         searchParams: Promise.resolve({
           error: 'trial_payment_method_failed',
         }),
@@ -157,7 +192,13 @@ describe('app/(app)/app/billing/page', () => {
       });
 
       const pagePromise = BillingPage({
-        deps: { authGateway, subscriptionRepository },
+        deps: {
+          authGateway,
+          subscriptionRepository,
+          checkTrialSavedCardUseCase: checkTrialSavedCard(
+            subscriptionRepository,
+          ),
+        },
         searchParams: searchParams as unknown as Promise<{
           error?: string | string[];
         }>,
@@ -188,7 +229,13 @@ describe('app/(app)/app/billing/page', () => {
       ]);
 
       const element = await BillingPage({
-        deps: { authGateway, subscriptionRepository },
+        deps: {
+          authGateway,
+          subscriptionRepository,
+          checkTrialSavedCardUseCase: checkTrialSavedCard(
+            subscriptionRepository,
+          ),
+        },
         searchParams: Promise.resolve({ error: ['portal_failed'] }),
       });
       const html = renderToStaticMarkup(element);
@@ -211,8 +258,7 @@ describe('app/(app)/app/billing/page', () => {
       );
 
       expect(html).toContain('Manage in Stripe');
-      expect(html).toContain('monthly');
-      expect(html).toContain('active');
+      expect(html).toContain('Pro Monthly · Active');
     });
 
     it('renders cancelAtPeriodEnd banner when cancellation is scheduled', async () => {

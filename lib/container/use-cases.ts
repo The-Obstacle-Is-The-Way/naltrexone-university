@@ -18,6 +18,7 @@ import {
 } from '@/src/application/errors';
 import {
   CheckEntitlementUseCase,
+  CheckTrialSavedCardUseCase,
   CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
@@ -201,6 +202,11 @@ export function createUseCaseFactories(input: {
       new CheckEntitlementUseCase(
         repositories.createSubscriptionRepository(),
         primitives.now,
+      ),
+    createCheckTrialSavedCardUseCase: () =>
+      new CheckTrialSavedCardUseCase(
+        repositories.createSubscriptionRepository(),
+        repositories.createTrialPaymentMethodSetupOperationRepository(),
       ),
     createCheckoutSessionUseCase: () =>
       new CreateCheckoutSessionUseCase(

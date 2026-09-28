@@ -79,6 +79,13 @@ export type MarkTrialPaymentMethodSetupExpiredInput = {
   expiredAt: Date;
 };
 
+// BUG-308: a trial has a saved card once an add-card operation for that
+// learner and that Stripe subscription set it as the subscription's default.
+export type TrialSubscriptionDefaultQuery = {
+  userId: string;
+  stripeSubscriptionId: string;
+};
+
 export type PruneExpiredTrialPaymentMethodSetupsInput = {
   expiredBefore: Date;
   limit: number;
@@ -103,6 +110,9 @@ export interface TrialPaymentMethodSetupOperationRepository {
   ): Promise<void>;
   markTerminal(input: MarkTrialPaymentMethodSetupTerminalInput): Promise<void>;
   markExpired(input: MarkTrialPaymentMethodSetupExpiredInput): Promise<boolean>;
+  hasSubscriptionDefaultSet(
+    input: TrialSubscriptionDefaultQuery,
+  ): Promise<boolean>;
   pruneExpired(
     input: PruneExpiredTrialPaymentMethodSetupsInput,
   ): Promise<number>;

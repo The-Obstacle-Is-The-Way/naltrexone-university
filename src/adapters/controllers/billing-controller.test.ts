@@ -28,6 +28,8 @@ describe('billing-controller', () => {
       expect(deps.createTrialPaymentMethodSetupSessionUseCase.inputs).toEqual([
         {
           userId: deps._fixtures.userId,
+          // BUG-308: prefilled on Stripe's setup page.
+          email: 'user@example.com',
           expectedDisclosureVersion: '2026-09-28.2',
           successUrl:
             'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
