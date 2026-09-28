@@ -675,7 +675,7 @@ export const questions = pgTable(
 // question_revisions (ADR-021): learner-visible content by revision. Phase 1
 // is the expand step of a parallel change: revision 1 mirrors each question's
 // legacy row, kept in sync by sync_question_revision_v1 (migration 0039).
-// Phase 2 makes revisions append-only and immutable.
+// Phase 2b makes revisions append-only and immutable.
 export const QUESTION_REVISIONS_ID_QUESTION_ID_UQ =
   'question_revisions_id_question_id_uq';
 export const QUESTION_REVISION_CANONICALIZATION_VERSIONS = [
@@ -888,7 +888,7 @@ export const practiceSessionQuestionStates = pgTable(
     draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
     draftCumulativeMs: integer('draft_cumulative_ms').notNull().default(0),
     // ADR-021 phase 1: the revision this session item shows. Nullable until
-    // the contract phase; phase 2 binds it at session creation.
+    // the contract phase; phase 2a binds it at session creation.
     questionRevisionId: uuid('question_revision_id'),
     version: integer('version').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -991,7 +991,7 @@ export const attempts = pgTable(
     retryOrigin: attemptRetryOriginEnum('retry_origin'),
     retrySessionId: uuid('retry_session_id'),
     // ADR-021 phase 1: the revision this attempt graded. Nullable until the
-    // contract phase; phase 2 binds it when grading.
+    // contract phase; phase 2a binds it when grading.
     questionRevisionId: uuid('question_revision_id'),
     answeredAt: timestamp('answered_at', { withTimezone: true })
       .notNull()

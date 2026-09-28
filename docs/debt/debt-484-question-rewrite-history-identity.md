@@ -183,7 +183,7 @@ ADR-021 phase 1 is the expand step of a parallel change. Its [phasing note](../a
   - refusal of a choice attached to another question's revision (`23503` on `choices_question_revision_fk`);
   - deletion of a question with its revisions;
   - four seed cases (a new question, a rewrite, a restored pointer on an unchanged skip, and a legacy question rewritten). The four seed cases were red before the seed called the sync.
-- **What does not change.** Readers still read the legacy columns and choices by question, so nothing a learner sees changes. The #951 guard still governs rewrites. Revisions become append-only and immutable in phase 2, when sessions and attempts bind them.
+- **What does not change.** Readers still read the legacy columns and choices by question, so nothing a learner sees changes. The #951 guard still governs rewrites. Sessions and attempts bind revisions and readers switch in phase 2a; revisions become append-only and immutable in phase 2b, a later deploy (#1177 review).
 
 ## Related
 

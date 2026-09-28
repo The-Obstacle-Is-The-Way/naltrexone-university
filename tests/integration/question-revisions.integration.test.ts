@@ -128,16 +128,33 @@ describe('stored-fields-json-v1 in SQL', () => {
     );
   });
 
-  it('hashes every question in the corpus exactly as the reference implementation does', async () => {
+  // The seeded corpus when present, and always one hard question of the
+  // test's own, so the check never passes vacuously on an empty database.
+  async function corpusQuestionIds(): Promise<string[]> {
+    await insertHardQuestion();
     await sql`SELECT sweep_question_revisions_v1()`;
     const questions = await db
-      .select({
-        id: schema.questions.id,
-        currentRevisionId: schema.questions.currentRevisionId,
-      })
+      .select({ id: schema.questions.id })
       .from(schema.questions);
-    expect(questions.length).toBeGreaterThan(0);
+    return questions.map(({ id }) => id);
+  }
 
+  it('serializes every question in the corpus exactly as the reference implementation does', async () => {
+    const mismatches: string[] = [];
+    for (const questionId of await corpusQuestionIds()) {
+      const expected = canonicalQuestionRevisionJson(
+        await legacyFields(questionId),
+      );
+      if ((await sqlContentJson(questionId)) !== expected) {
+        mismatches.push(questionId);
+      }
+    }
+
+    expect(mismatches).toEqual([]);
+  });
+
+  it('stores the reference hash for every question in the corpus', async () => {
+    const questionIds = await corpusQuestionIds();
     const revisions = new Map(
       (await db.select().from(schema.questionRevisions)).map((revision) => [
         revision.id,
@@ -145,19 +162,20 @@ describe('stored-fields-json-v1 in SQL', () => {
       ]),
     );
     const mismatches: string[] = [];
-    for (const question of questions) {
-      const fields = await legacyFields(question.id);
-      const revision = question.currentRevisionId
+    for (const questionId of questionIds) {
+      const question = await db.query.questions.findFirst({
+        where: eq(schema.questions.id, questionId),
+      });
+      const revision = question?.currentRevisionId
         ? revisions.get(question.currentRevisionId)
         : undefined;
-      if (
-        (await sqlContentJson(question.id)) !==
-          canonicalQuestionRevisionJson(fields) ||
-        revision?.contentHash !== questionRevisionContentHash(fields, hasher)
-      ) {
-        mismatches.push(question.id);
-      }
+      const expected = questionRevisionContentHash(
+        await legacyFields(questionId),
+        hasher,
+      );
+      if (revision?.contentHash !== expected) mismatches.push(questionId);
     }
+
     expect(mismatches).toEqual([]);
   });
 });
@@ -338,8 +356,22 @@ function seedFile(slug: string, stem: string) {
   };
 }
 
+// The seed creates any tag it does not find. Only the tags a call created
+// are removed afterwards, so a seeded corpus keeps its own.
 async function seedQuestion(slug: string, stem: string): Promise<string> {
+  const tagsBefore = new Set(
+    (await db.select({ id: schema.tags.id }).from(schema.tags)).map(
+      ({ id }) => id,
+    ),
+  );
   await syncQuestionsFromFiles(db, [seedFile(slug, stem)]);
+  for (const { id } of await db
+    .select({ id: schema.tags.id })
+    .from(schema.tags)) {
+    if (!tagsBefore.has(id) && !cleanup.tagIds.includes(id)) {
+      cleanup.tagIds.push(id);
+    }
+  }
   const question = await db.query.questions.findFirst({
     where: eq(schema.questions.slug, slug),
   });

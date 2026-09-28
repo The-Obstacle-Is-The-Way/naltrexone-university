@@ -29,7 +29,7 @@ Constraints:
 
 - A new `question_revisions` table holds everything a learner reads: `stem_md`, `explanation_md`, `reference_md` and `difficulty`, plus `canonicalization_version` and `content_hash` (in the `stored-fields-json-v1` form defined below).
 - `choices` gains `question_revision_id`. A choice belongs to exactly one revision, and its label and sort-order uniqueness move from `question_id` to `question_revision_id`. `question_id` stays, because the attempt and session-state foreign keys are composite `(choice id, question id)`.
-- A revision is never updated. Changed content is a new revision; the old one stays addressable. This holds from phase 2 onward; in phase 1, revision 1 is a mirror that is refreshed (see Phasing).
+- A revision is never updated. Changed content is a new revision; the old one stays addressable. This holds from phase 2b onward; until then, revision 1 is a mirror that is refreshed (see Phasing).
 - `questions` keeps the stable identity (`id`, `slug`) and gains `current_revision_id`, the revision new selections use. Its text columns become legacy and are dropped in a later contract step.
 
 **Backfill.** Revision 1 of each existing question copies its current row. Its choices *keep their existing UUIDs* and are attached to it, so every `selected_choice_id`, `latest_selected_choice_id` and `draft_selected_choice_id` still resolves, now to a specific revision.
@@ -75,17 +75,18 @@ Each phase is its own reviewed PR series with an N-1 answer. No phase claims SPE
 | Phase | Change | N-1 answer |
 |---|---|---|
 | 1 | Expand, as a parallel change. Add `question_revisions`, `choices.question_revision_id`, `questions.current_revision_id`, and the nullable revision columns on attempts and session states. Revision 1 mirrors each question's legacy row: migration `0039` backfills it, the seed re-syncs it after every write, and the re-runnable `sweep_question_revisions_v1()` repairs rows any other writer changed. | Serving code ignores the new columns. The history-table keys are added `NOT VALID`, so N-1 writes of NULL pass, and legacy content that N-1 code changes is repaired by the sweep. |
-| 2 | Writers become append-only: a content change is a new revision with its own choice rows, per-revision label and sort-order keys replace the per-question ones, and a trigger rejects every update to a revision. Sessions and attempts bind revisions; grading and every review read use them. The `(choice, revision)` unique key and composite foreign keys land here. Add the withdrawal notice for attempted withdrawn questions. | Old code still reads the unchanged legacy columns. |
+| 2a | Readers switch, with one revision still per question. Selection, grading and every review read resolve content and choices through a revision: the session state's or attempt's bound revision, else the question's current one. Sessions bind each item's revision at creation and attempts bind the revision they graded; the `(choice, revision)` unique key and composite foreign keys land here. Add the withdrawal notice for attempted withdrawn questions. The migration re-runs the sweep first. | Old code still reads the legacy columns and choices by `question_id`, which is correct while every question has exactly one revision. |
+| 2b | Writers become append-only, in a later deploy than 2a. A content change is a new revision with its own choice rows, per-revision label and sort-order keys replace the per-question ones, and a trigger rejects every update to a revision. | N-1 is phase 2a, whose readers already use revisions. The seed refuses to append a revision until the 2b migration has committed, so no legacy reader can meet two revisions' choices (#1177 review). |
 | 3 | Contract: `NOT NULL` revision columns after a verified sweep; drop the legacy text columns from `questions`. | Only after N-1 code that reads legacy columns can no longer serve. |
 | 4 | Releases, staging, atomic activation, the withdrawal and hold overlay, and rollback. Selection reads the active release. | The legacy `status` stays in step until the release pointer is authoritative. |
 | 5 | Release zero, the inventory of what is live, hashed in `stored-fields-json-v1`. | Read-only export. |
 
 ### Why phase 1 mirrors instead of appending (2026-09-28)
 
-Phase 1 was first written as "the seed writes a new revision for changed content". That cannot be done safely before phase 2, because the serving code reads a question's choices by `question_id` and choices are unique per `(question_id, label)`. There are three options, and only one is sound:
+Phase 1 was first written as "the seed writes a new revision for changed content". That cannot be done safely before the readers switch (phase 2a), because the serving code reads a question's choices by `question_id` and choices are unique per `(question_id, label)`. There are three options, and only one is sound:
 - **Append in phase 1.** A second revision's choice rows would either collide with the per-question keys or, once those keys move, show a question with both revisions' choices. Re-keying choices early would also detach in-progress drafts and key-corrected attempts from the text they refer to, until phase 2 binds them.
 - **Freeze content rewrites until phase 2.** This would block the explicit answer-key correction the #951 guard keeps for medical errors, and that path must stay open.
-- **Mirror (chosen).** This is Fowler's parallel change. The new structure is written beside the old one and kept faithful to it, readers are unchanged, and the switch to append-only writes and revision reads happens in phase 2. Nothing a learner sees changes, and at every point the stored hash states exactly what content is live.
+- **Mirror (chosen).** This is Fowler's parallel change. The new structure is written beside the old one and kept faithful to it, readers are unchanged, and the switch to revision reads and then append-only writes happens in phases 2a and 2b. Nothing a learner sees changes. After every seed write and every sweep, the stored hash states exactly what content is live. A change made by another writer, such as an N-1 seed during a deploy overlap, stays stale until the next sweep. So the phase 2a migration re-runs the sweep before any reader depends on revisions (#1177 review).
 
 ## Release-zero content hash: `stored-fields-json-v1` (decided 2026-09-28)
 
@@ -110,7 +111,7 @@ The app stores parsed fields after two transformations, draft → MDX → rows, 
 
 - DEBT-484 closes after phases 1–3: rewrites become revisions, history and sessions bind them, and withdrawn questions are reviewable with a notice.
 - DEBT-483 closes after phase 4. Release zero follows once the content repository computes `stored-fields-json-v1` too.
-- Every history read path changes in phase 2. Each gains a real-Postgres case, and the existing unavailable-row UI becomes the withdrawal-notice UI.
+- Every history read path changes in phase 2a. Each gains a real-Postgres case, and the existing unavailable-row UI becomes the withdrawal-notice UI.
 - Revisit this record if SPEC-007's manifest fields change, or if the content repository cannot adopt `stored-fields-json-v1`.
 
 ## Related

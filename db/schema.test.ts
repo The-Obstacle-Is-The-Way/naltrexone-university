@@ -149,10 +149,18 @@ describe('question revision keys', () => {
     expect(reference && getTableConfig(reference.foreignTable).name).toBe(
       'questions',
     );
+  });
+
+  it('gives every revision a unique (id, question_id) key for the composite references', () => {
+    const { config } = findIndex(
+      questionRevisions,
+      QUESTION_REVISIONS_ID_QUESTION_ID_UQ,
+    );
+
+    expect(config.unique).toBe(true);
     expect(
-      findIndex(questionRevisions, QUESTION_REVISIONS_ID_QUESTION_ID_UQ).config
-        .unique,
-    ).toBe(true);
+      config.columns.map((column) => ('name' in column ? column.name : null)),
+    ).toEqual(['id', 'question_id']);
   });
 
   it.each([
