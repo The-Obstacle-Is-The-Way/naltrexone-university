@@ -31,6 +31,19 @@ Three facts decide the question:
 - `docs/dev/react-vitest-testing.md`'s rule that coverage is observational now carries one stated exception: `codecov/patch` binds through the merge tools.
 - Revisit this record if Codecov stops posting `codecov/patch` on every PR, or if DEBT-465's mutation pilot shows that patch coverage is passing tests that catch no defects.
 
+## Amendment: PRs with nothing to measure (2026-09-28)
+
+The revisit condition above occurred. Under the owner's 2026-09-19 ruling, Dependabot PRs run every lane except E2E, without secrets. So their Codecov upload has no token, and `codecov/patch` never posts. The first batch under this record, #1187–#1191, could not merge.
+- **The rule.** `scripts/merge-reviewed-pr.ts` excuses a **missing** `codecov/patch` only when both hold:
+  - the PR's changed-file list is complete;
+  - every changed path is `package.json`, `pnpm-lock.yaml` or under `.github/`.
+- **Why it holds.** Coverage measures none of those paths, so the gate's invariant, that measured patch coverage must not fall below the base target, holds vacuously.
+- **What it does not relax.**
+  - A posted `codecov/patch` must still succeed.
+  - A truncated file list, or any other changed path, still requires it.
+  - Promotions carry secrets, so `scripts/verify-promotion.ts` still requires it by name on every promotion, including one that promotes dependency updates.
+  - The target and the gate's binding status are unchanged.
+
 ## Related
 
 - [ADR-019](./adr-019-test-quality-practices.md), the binding observational posture this refines

@@ -197,7 +197,7 @@ Four practices that audit and specify the ADR-003 suite from the outside: a CRAP
 
 ### ADR-020: Coverage Stays a Patch-Level Signal, Not a Per-Lane Threshold
 
-No per-lane `coverage.thresholds` or project target. The existing `codecov/patch` status, at its default `auto` target, is the one coverage gate: a change's measured patch coverage may not fall below the base target. Both merge tools require it green by name, so a missing status blocks like a failed one. Assertion strength is judged by mutation evidence. Closes DEBT-468 Part 4.
+No per-lane `coverage.thresholds` or project target. The existing `codecov/patch` status, at its default `auto` target, is the one coverage gate: a change's measured patch coverage may not fall below the base target. Both merge tools require it green by name, so a missing status blocks like a failed one. The 2026-09-28 amendment excuses a missing status only on a feature PR whose complete file list is dependency manifests or CI workflows, where Codecov cannot post and nothing is measured. Assertion strength is judged by mutation evidence. Closes DEBT-468 Part 4.
 
 ### ADR-021: Immutable Question Revisions and Atomic Content Releases
 

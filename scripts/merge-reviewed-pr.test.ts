@@ -29,6 +29,10 @@ const pullRequest = () => ({
     nodes: [{ isResolved: true }],
     pageInfo: { hasNextPage: false },
   },
+  files: {
+    nodes: [{ path: 'src/example.ts' }],
+    pageInfo: { hasNextPage: false },
+  },
   commits: {
     nodes: [
       {
@@ -161,6 +165,69 @@ describe('feature merge decision', () => {
     expect(() => checkFeatureMerge(pr, [[review()]])).toThrow(
       'codecov/patch has not succeeded',
     );
+  });
+
+  function withoutCodecov(paths: string[], hasNextPage = false) {
+    const pr = pullRequest();
+    const contexts = pr.commits.nodes[0]?.commit.statusCheckRollup.contexts;
+    if (!contexts) throw new Error('Missing fixture');
+    contexts.nodes = contexts.nodes.filter(
+      (check) => !('name' in check) || check.name !== 'codecov/patch',
+    );
+    pr.files = {
+      nodes: paths.map((path) => ({ path })),
+      pageInfo: { hasNextPage },
+    };
+    return pr;
+  }
+
+  // ADR-020 amendment (2026-09-28): Dependabot PRs run without secrets, so
+  // Codecov cannot post on them, and a change to dependency manifests or CI
+  // workflows has no line that coverage measures.
+  it('accepts a missing codecov/patch when only dependency manifests or workflows change', () => {
+    const pr = withoutCodecov([
+      'package.json',
+      'pnpm-lock.yaml',
+      '.github/workflows/ci.yml',
+    ]);
+
+    expect(checkFeatureMerge(pr, [[review()]])).toMatchObject({
+      number: 987,
+      head: HEAD,
+    });
+  });
+
+  it('still requires codecov/patch when any other file changes', () => {
+    const pr = withoutCodecov(['package.json', 'src/example.ts']);
+
+    expect(() => checkFeatureMerge(pr, [[review()]])).toThrow(
+      'codecov/patch has not succeeded',
+    );
+  });
+
+  it('still requires codecov/patch when the changed-file list is truncated', () => {
+    const pr = withoutCodecov(['pnpm-lock.yaml'], true);
+
+    expect(() => checkFeatureMerge(pr, [[review()]])).toThrow(
+      'codecov/patch has not succeeded',
+    );
+  });
+
+  it('still refuses a failed codecov/patch for a dependency-only change', () => {
+    const pr = pullRequest();
+    pr.files = {
+      nodes: [{ path: 'pnpm-lock.yaml' }],
+      pageInfo: { hasNextPage: false },
+    };
+    const codecov =
+      pr.commits.nodes[0]?.commit.statusCheckRollup.contexts.nodes.find(
+        (check) => 'name' in check && check.name === 'codecov/patch',
+      );
+    if (!codecov || !('conclusion' in codecov))
+      throw new Error('Missing fixture');
+    codecov.conclusion = 'FAILURE';
+
+    expect(() => checkFeatureMerge(pr, [[review()]])).toThrow();
   });
 
   it('refuses another failing check', () => {
