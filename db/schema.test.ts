@@ -10,9 +10,13 @@ import type {
 import {
   ATTEMPTS_QUESTION_REVISION_FK,
   ATTEMPTS_SELECTED_CHOICE_QUESTION_IDX,
+  ATTEMPTS_SELECTED_CHOICE_REVISION_FK,
   attempts,
+  CHOICES_ID_QUESTION_REVISION_ID_UQ,
   CHOICES_QUESTION_REVISION_FK,
   choices,
+  PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_REVISION_FK,
+  PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_REVISION_FK,
   PRACTICE_SESSION_QUESTION_STATES_QUESTION_REVISION_FK,
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
   practiceSessionQuestionStates,
@@ -196,6 +200,45 @@ describe('question revision keys', () => {
         foreignTable: 'question_revisions',
         foreignColumns: ['id', 'question_id'],
         onDelete,
+      });
+    },
+  );
+
+  // ADR-021 phase 2a: a history row can select only a choice of the revision
+  // it is bound to.
+  it('gives every choice a unique (id, question_revision_id) key for the selection references', () => {
+    const { config } = findIndex(choices, CHOICES_ID_QUESTION_REVISION_ID_UQ);
+
+    expect(config.unique).toBe(true);
+    expect(
+      config.columns.map((column) => ('name' in column ? column.name : null)),
+    ).toEqual(['id', 'question_revision_id']);
+  });
+
+  it.each([
+    [
+      ATTEMPTS_SELECTED_CHOICE_REVISION_FK,
+      attempts,
+      ['selected_choice_id', 'question_revision_id'],
+    ],
+    [
+      PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_REVISION_FK,
+      practiceSessionQuestionStates,
+      ['latest_selected_choice_id', 'question_revision_id'],
+    ],
+    [
+      PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_REVISION_FK,
+      practiceSessionQuestionStates,
+      ['draft_selected_choice_id', 'question_revision_id'],
+    ],
+  ] as const)(
+    '%s selects only a choice of the bound revision',
+    (name, table, columns) => {
+      expect(describeForeignKey(table, name)).toEqual({
+        columns,
+        foreignTable: 'choices',
+        foreignColumns: ['id', 'question_revision_id'],
+        onDelete: 'restrict',
       });
     },
   );

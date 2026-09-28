@@ -13,6 +13,7 @@ import {
 import {
   ATTEMPTS_SESSION_QUESTION_UQ,
   attempts,
+  practiceSessionQuestionStates,
   practiceSessions,
   questions,
   questionTags,
@@ -184,6 +185,18 @@ export class DrizzleAttemptRepository implements AttemptRepository {
           retryOfAttemptId: input.retryOfAttemptId ?? null,
           retryOrigin: input.retryOrigin ?? null,
           retrySessionId: input.retrySessionId ?? null,
+          // ADR-021 phase 2a: the revision this attempt graded, which is the
+          // session item's bound revision, else the question's current one
+          // (outside a session, or in a session the N-1 deployment created).
+          questionRevisionId: sql`COALESCE(
+            (SELECT ${practiceSessionQuestionStates.questionRevisionId}
+               FROM ${practiceSessionQuestionStates}
+              WHERE ${practiceSessionQuestionStates.practiceSessionId} = ${input.practiceSessionId}
+                AND ${practiceSessionQuestionStates.questionId} = ${input.questionId}),
+            (SELECT ${questions.currentRevisionId}
+               FROM ${questions}
+              WHERE ${questions.id} = ${input.questionId})
+          )`,
         })
         .returning();
     } catch (error) {

@@ -778,7 +778,7 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
     - replays Stripe's real completion event through the signed webhook route.
 
     It then asserts that the recorded consent equals the text the dialog showed, under `2026-09-28.2` with the Terms version and hash and three-year retention, and that the trial's Stripe subscription now renews on the saved card. It passed locally on 2026-09-28. Each run starts and ends with the first-timer reset, which detaches the card, then restores the shared paid subscription. The card-entry steps moved from the paid journey into a shared helper.
-  - **Found by that journey:** after the card was saved, the banner still asked the learner to add one. The defect predates F03b and is filed as [BUG-308](../bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md), to be fixed next.
+  - **Found by that journey:** after the card was saved, the banner still asked the learner to add one. The defect predates F03b and is filed as [BUG-308](../_archive/bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md), to be fixed next.
   - **Design-system guard:** the theme regression guard now renders `ConsentTerms` for both offers. Removing `accent-primary` fails both cases.
 - **Captures.** Taken of the local production build (dark, DPR 1) for both plans, at 1440×900, 390×844 and 390×667 ([measurements](./assets/debt-414/f03b-add-card-measurements.json)):
   - The dialog is 512 px wide at 1440×900, where it fits without scrolling. On a phone it is 358 px with 16 px gutters, and it scrolls: 893 px of monthly content in 810 px at 390×844, and in 633 px at 390×667.
