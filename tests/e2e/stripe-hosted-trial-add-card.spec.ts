@@ -96,12 +96,20 @@ test.describe('trial add-card', () => {
     expect(sessionId, 'Checkout URL carries a test-mode Session id').toMatch(
       /^cs_test_/,
     );
-    const { emailTyped } = await completeHostedCardSetup(
+    const learnerEmail = String(process.env.E2E_CLERK_USER_USERNAME);
+    const { emailTyped, emailShown } = await completeHostedCardSetup(
       page,
-      String(process.env.E2E_CLERK_USER_USERNAME),
+      learnerEmail,
     );
-    // BUG-308: Stripe shows the learner's email; they never retype it.
+    // BUG-308: the Session carries the learner's email, Stripe shows it, and
+    // the learner never retypes it (#1185 review).
+    const setupSession =
+      await createStripeTestClient().checkout.sessions.retrieve(
+        String(sessionId),
+      );
+    expect(setupSession.customer_email).toBe(learnerEmail);
     expect(emailTyped).toBe(false);
+    if (emailShown !== null) expect(emailShown).toBe(learnerEmail);
     await expect(page).toHaveURL(
       /\/app\/billing\?(?:.*&)?trial_payment_method=success(?:&|$)/,
       {

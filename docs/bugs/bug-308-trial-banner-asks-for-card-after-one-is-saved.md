@@ -57,7 +57,7 @@ Two smaller defects sit on the same path:
   - Red first: the contract, the use case, the entitled-user cases, the banner, the seven Billing cases, the setup Session's parameters, and the use case's email.
   - The controller's email assertion was proved live by removing the line.
 - **Hosted proof.** `stripe-hosted-trial-add-card.spec.ts` now also asserts:
-  - Stripe showed the email prefilled, so the helper typed nothing;
+  - the Session carries the learner's email as `customer_email`, and Stripe showed it prefilled, so the helper typed nothing, and any visible field held that exact address (#1185 review);
   - Billing said "Stripe is confirming" until the real event was replayed, then "Your card is saved." with the renewal line;
   - the dashboard banner states the renewal, with no add-card button.
 
