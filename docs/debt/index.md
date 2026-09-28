@@ -3,20 +3,18 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-28 UTC
 
-**Latest** — 2026-09-28 UTC: this increment fixes [BUG-308](../bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md), which F03b's hosted journey found: after a trialing learner saved a card, the app kept asking them to add one.
-- **Banner.** Once the add-card flow has set a card as the trial's default, the banner states the renewal beside a "Manage billing" link instead of offering the add-card dialog.
-- **Billing.** Billing names the plan and status instead of raw values, and says whether the trial renews on a saved card. It acknowledges the return from Stripe: saved, still confirming, or cancelled.
-- **Email.** Stripe's setup page now shows the learner's email already filled in.
-- **Proof.** A fake↔real contract (seven scenarios) was red first. The hosted journey proves each part in Stripe test mode, and the captures show zero axe violations.
-- **Previous increment.** #1183 (F03b) merged as `23743736` with exact-head approval **5337764111**. Four findings over three rounds were all accepted:
-  - scope the replay key to the displayed version;
-  - a human add-card step in QA-002;
-  - neutral wording for the add-card error;
-  - limit the Billing claim to failures that return there.
-
-  It is promoted through #1184 (`85e51515`), whose review approved with no findings. The promotion's proof was written into its body at 11:34:32Z, before the merge at 11:34:37Z. Release verified: main CI **36416470979** `test` **11:47:04Z**; Ready **11:36:17.013Z**, held without alias until its check completed; production assigned **11:47:06.894Z**; matching trees; healthy production.
+**Latest** — 2026-09-28 UTC: ADR-021 phase 2a begins for DEBT-484. Every new practice session item and attempt now binds the question revision the learner was shown and graded against.
+- **Binding.** A new session reads each question's current revision inside its creation transaction. A new attempt binds its session item's revision, else the question's current one. [DEBT-484 phase 2a](./debt-484-question-rewrite-history-identity.md#phase-2a-first-increment-new-sessions-and-attempts-bind-a-revision--2026-09-28).
+- **Keys.** Migration `0040` re-runs the revision sweep, adds the choices `(id, question_revision_id)` key, and adds `NOT VALID` keys so an attempt or session selection can name only a choice of its bound revision. The N-1 deployment's NULL revisions remain valid.
+- **Proof.** Nine real-Postgres cases, seven red first. On a seeded scratch copy, `0040` logged `0 created, 0 refreshed, 958 unchanged` and left the keys `NOT VALID`.
+- **BUG-308 closed.** It is archived with its release receipts. The hosted journey now requires Stripe's page to visibly show the learner's email, the fix for a finding raised on its promotion.
+- **Previous increment.** #1185 (BUG-308) merged as `022750ef` with exact-head approval **5338626750**; its one finding was accepted.
+  - It is promoted through #1186 (`98651366`), whose one finding is fixed in this increment.
+  - The promotion's proof was written into its body at 12:51:36Z, before the merge at 12:51:41Z. Release verified: main CI **36424566226** `test` **13:04:38Z**; Ready **12:53:03.413Z**, held without alias until its check completed; production assigned **13:04:41.148Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-28 UTC [BUG-308](../_archive/bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md), which F03b's hosted journey found, is fixed: once a trial has a saved card, the banner and Billing state the renewal instead of asking for a card, Billing confirms the return from Stripe, and Stripe shows the learner's email. The previous increment, #1183 (F03b), merged as `23743736` and is promoted through #1184 (`85e51515`). Release verified: main CI **36416470979** `test` **11:47:04Z**; Ready **11:36:17.013Z**, held without alias until its check completed; production assigned **11:47:06.894Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-28 UTC DEBT-414 F03b moves the trial add-card offer into the same consent dialog as checkout, with a separate, unchecked, required renewal opt-in, and refuses add-card terms that changed after they were displayed. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later). The previous increment, #1181 (F03a), merged as `c78c0879` and is promoted through #1182 (`b0fecc6c`). Release verified: main CI **36403616006** `test` **09:37:20Z**; Ready **09:28:54.339Z**, held without alias until its check completed; production assigned **09:37:22.800Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
