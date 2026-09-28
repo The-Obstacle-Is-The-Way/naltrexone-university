@@ -5,7 +5,7 @@
 
 **Latest** — 2026-09-28 UTC: DEBT-414 F05 sets the billing portal's features in code. A trial learner can now add a first card only through the add-card flow, which records consent to be charged.
 - **Gap.** Every portal session used the Dashboard's default configuration. In TEST mode that configuration enables payment-method updates, and the August 13 record says live also enables plan changes. A trial learner could add a card in the portal and convert to paid without the add-card consent record. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later).
-- **Fix.** The use case opens the portal with a profile: `trial` during a trial or before any subscription is recorded, `paid` otherwise. On every session the adapter names its own versioned configuration, found by metadata or created under a version-scoped idempotency key.
+- **Fix.** The use case opens the portal with a profile: `trial` during a trial or before any subscription is recorded, `paid` otherwise. On every session the adapter names its own versioned configuration, found by metadata or created under a key unique to that creation, so a deactivated configuration is never replayed (#1175 review).
   - The trial profile has no payment-method update.
   - Neither profile allows plan changes while existing-subscriber prices are frozen.
   - Cancellation stays in both.

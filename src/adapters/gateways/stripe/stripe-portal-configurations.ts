@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type {
   BillingPortalConfigurationCreateParams,
   StripeBillingPortalConfiguration,
@@ -62,8 +63,10 @@ function isProfileConfiguration(
 }
 
 // Finds the active configuration for the profile and version, or creates it.
-// Concurrent first requests share one idempotency key; if two were created
-// anyway, the oldest is chosen every time.
+// Each creation has its own idempotency key, reused only across its retries:
+// a shared key would replay the saved response of a configuration deactivated
+// since (#1175 review). Concurrent first requests may therefore create two; the
+// oldest is chosen every time.
 export async function resolvePortalConfigurationId({
   stripe,
   profile,
@@ -99,11 +102,12 @@ export async function resolvePortalConfigurationId({
   const [oldest] = matches.sort((a, b) => a.created - b.created);
   if (oldest) return oldest.id;
 
+  const idempotencyKey = `portal_configuration:${profile}:${PORTAL_CONFIGURATION_VERSION}:${randomUUID()}`;
   const created = await callStripeWithRetry({
     operation: 'billingPortal.configurations.create',
     fn: () =>
       configurations.create(portalConfigurationParams(profile), {
-        idempotencyKey: `portal_configuration:${profile}:${PORTAL_CONFIGURATION_VERSION}`,
+        idempotencyKey,
       }),
     logger,
   });

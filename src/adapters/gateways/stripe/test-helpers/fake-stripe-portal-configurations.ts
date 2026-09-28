@@ -53,6 +53,16 @@ export class FakeStripePortalConfigurations implements PortalConfigurations {
     }).id;
   }
 
+  // Models a Dashboard deactivation, an action outside the adapter. A saved
+  // idempotent response still reports the configuration as it was created.
+  deactivate(id: string): void {
+    const configuration = this.configurations.find(
+      (candidate) => candidate.id === id,
+    );
+    if (!configuration) throw new Error(`Unknown portal configuration: ${id}`);
+    configuration.active = false;
+  }
+
   create = async (
     params: BillingPortalConfigurationCreateParams,
     options?: StripeRequestOptions,

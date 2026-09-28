@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
   PORTAL_CONFIGURATION_VERSION,
@@ -54,7 +54,7 @@ describe('portalConfigurationParams', () => {
 });
 
 describe('resolvePortalConfigurationId', () => {
-  it('creates the profile configuration under a version-scoped key when none exists', async () => {
+  it('creates the profile configuration under a fresh versioned key when none exists', async () => {
     const stripe = new FakeStripeCheckoutClient();
 
     const id = await resolve(stripe, 'trial');
@@ -62,7 +62,11 @@ describe('resolvePortalConfigurationId', () => {
     expect(stripe.portalConfigurations.createCalls).toEqual([
       {
         params: portalConfigurationParams('trial'),
-        options: { idempotencyKey: 'portal_configuration:trial:2026-09-28' },
+        options: {
+          idempotencyKey: expect.stringMatching(
+            /^portal_configuration:trial:2026-09-28:[0-9a-f-]{36}$/,
+          ),
+        },
       },
     ]);
     const [created] = (
@@ -118,6 +122,40 @@ describe('resolvePortalConfigurationId', () => {
     await expect(resolve(stripe, 'paid')).resolves.toBe(wanted);
     expect(stripe.portalConfigurations.listCalls).toHaveLength(2);
     expect(stripe.portalConfigurations.createCalls).toEqual([]);
+  });
+
+  // #1175 review: a fixed key would replay the saved response of a
+  // configuration deactivated since, which reports it as still active.
+  it('creates a new configuration after the one it created was deactivated', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const first = await resolve(stripe, 'paid');
+    stripe.portalConfigurations.deactivate(first);
+
+    const second = await resolve(stripe, 'paid');
+
+    expect(second).not.toBe(first);
+    const active = await stripe.billingPortal.configurations.list({
+      active: true,
+      limit: 100,
+    });
+    expect(active.data.map(({ id }) => id)).toEqual([second]);
+  });
+
+  it('reuses one key across the retries of a creation', async () => {
+    const stripe = new FakeStripeCheckoutClient();
+    const create = vi
+      .spyOn(stripe.billingPortal.configurations, 'create')
+      .mockRejectedValueOnce(
+        Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' }),
+      );
+
+    await resolve(stripe, 'trial');
+
+    const keys = create.mock.calls.map(
+      ([, options]) => options?.idempotencyKey,
+    );
+    expect(keys).toHaveLength(2);
+    expect(keys[1]).toBe(keys[0]);
   });
 
   it('picks the oldest match when concurrent first requests created two', async () => {
