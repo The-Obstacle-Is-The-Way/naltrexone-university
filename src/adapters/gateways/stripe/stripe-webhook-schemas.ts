@@ -67,13 +67,29 @@ export const stripeSubscriptionCheckoutConsentSessionSchema = z
         renewal_amount_cents: z.string().regex(/^[1-9]\d*$/),
         renewal_currency: z.literal('usd'),
         renewal_frequency: z.enum(['month', 'year']),
-        renewal_disclosure_snapshot: z.string().min(1),
+        // DEBT-414 F15: the consent text travels verbatim, or, when it is
+        // longer than Stripe's 500-character metadata value limit, as its
+        // SHA-256 for the webhook to verify against the disclosure registry.
+        renewal_disclosure_snapshot: z.string().min(1).optional(),
+        renewal_disclosure_hash: z
+          .string()
+          .regex(/^[0-9a-f]{64}$/)
+          .optional(),
         renewal_disclosure_version: z.string().min(1),
         renewal_terms_version: z.string().min(1),
         renewal_terms_hash: z.string().min(1),
         renewal_cancellation_method: z.string().min(1),
       })
-      .strict(),
+      .strict()
+      .refine(
+        (metadata) =>
+          (metadata.renewal_disclosure_snapshot === undefined) !==
+          (metadata.renewal_disclosure_hash === undefined),
+        {
+          message:
+            'Consent metadata must carry exactly one of the disclosure text and its hash',
+        },
+      ),
   })
   .passthrough();
 

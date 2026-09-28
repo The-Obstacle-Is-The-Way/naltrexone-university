@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { processStripeWebhookEvent } from './stripe-webhook-processor';
@@ -70,6 +71,8 @@ describe('expired trial payment-method setup webhook', () => {
       signature: 'sig_test',
       priceIds,
       logger: new FakeLogger(),
+      resolveCheckoutDisclosure: () => null,
+      sha256Hasher: new NobleSha256Hasher(),
     });
 
     expect(result).toEqual({
@@ -102,6 +105,8 @@ describe('expired trial payment-method setup webhook', () => {
         signature: 'sig_test',
         priceIds,
         logger: new FakeLogger(),
+        resolveCheckoutDisclosure: () => null,
+        sha256Hasher: new NobleSha256Hasher(),
       }),
     ).resolves.toMatchObject({
       eventId: 'evt_setup_expired',
@@ -142,6 +147,8 @@ describe('expired trial payment-method setup webhook', () => {
         signature: 'sig_test',
         priceIds,
         logger: new FakeLogger(),
+        resolveCheckoutDisclosure: () => null,
+        sha256Hasher: new NobleSha256Hasher(),
       }),
     ).rejects.toMatchObject({
       code: 'INTERNAL_ERROR',
@@ -173,6 +180,8 @@ describe('expired trial payment-method setup webhook', () => {
         signature: 'sig_test',
         priceIds,
         logger,
+        resolveCheckoutDisclosure: () => null,
+        sha256Hasher: new NobleSha256Hasher(),
       }),
     ).rejects.toMatchObject({ code: 'INVALID_WEBHOOK_PAYLOAD' });
     expect(logger.errorCalls).toEqual([
@@ -208,6 +217,8 @@ describe('expired trial payment-method setup webhook', () => {
         signature: 'sig_test',
         priceIds,
         logger: new FakeLogger(),
+        resolveCheckoutDisclosure: () => null,
+        sha256Hasher: new NobleSha256Hasher(),
       }),
     ).rejects.toMatchObject({
       code: 'INVALID_WEBHOOK_PAYLOAD',

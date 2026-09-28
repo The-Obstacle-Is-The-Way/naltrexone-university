@@ -3,7 +3,9 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { syncCheckoutSuccess } from '@/app/(marketing)/checkout/success/checkout-success-sync';
 import * as schema from '@/db/schema';
+import { resolveCheckoutDisclosure } from '@/lib/checkout-disclosures';
 import { createCheckoutRenewalTerms, PRICING_DATA } from '@/lib/pricing-data';
+import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import { StripePaymentGateway } from '@/src/adapters/gateways/stripe-payment-gateway';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
@@ -135,6 +137,8 @@ export async function runCheckoutSuccessProviderContract(
       webhookSecret: 'whsec_unused_by_checkout_contract',
       priceIds,
       logger,
+      resolveCheckoutDisclosure,
+      sha256Hasher: new NobleSha256Hasher(),
     });
     const createCheckout = new CreateCheckoutSessionUseCase(
       stripeCustomers,

@@ -4,6 +4,7 @@ import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { createTestRenewalTerms } from '@/src/application/test-helpers/renewal-terms';
 import { loadJsonFixture } from '@/tests/shared/load-json-fixture';
+import { NobleSha256Hasher } from './noble-sha256-hasher';
 import {
   createStripeConsentStateSignature,
   isValidStripeConsentStateSignature,
@@ -58,6 +59,8 @@ function createGateway(
       options?.consentStateSecret ?? 'consent-state-secret-at-least-32-bytes',
     priceIds: TEST_PRICE_IDS,
     logger: options?.logger ?? new FakeLogger(),
+    resolveCheckoutDisclosure: () => null,
+    sha256Hasher: new NobleSha256Hasher(),
     ...(options?.webhookE2EOwner
       ? { webhookE2EOwner: options.webhookE2EOwner }
       : {}),
@@ -105,6 +108,8 @@ describe('StripePaymentGateway', () => {
       webhookSecret: TEST_WEBHOOK_SECRET,
       priceIds: TEST_PRICE_IDS,
       logger: new FakeLogger(),
+      resolveCheckoutDisclosure: () => null,
+      sha256Hasher: new NobleSha256Hasher(),
     });
 
     await expect(
