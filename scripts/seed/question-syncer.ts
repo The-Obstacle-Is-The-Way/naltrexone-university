@@ -180,6 +180,16 @@ function prepareSeedQuestions(files: readonly SeedSourceFile[]) {
   });
 }
 
+// ADR-021 phase 1: a question's revision 1 mirrors its legacy row. The SQL
+// function from migration 0039 creates, refreshes or re-points it and attaches
+// the choices, inside the caller's transaction.
+async function syncQuestionRevision(
+  tx: PostgresJsDatabase<typeof schema>,
+  questionId: string,
+): Promise<void> {
+  await tx.execute(sql`SELECT sync_question_revision_v1(${questionId}::uuid)`);
+}
+
 async function moveExistingChoicesToTemporarySortOrders(
   tx: PostgresJsDatabase<typeof schema>,
   existingChoices: ReadonlyArray<{ id: string; sortOrder: number }>,
@@ -252,6 +262,7 @@ export async function syncQuestionsFromFiles(
                 })(),
             })),
           );
+          await syncQuestionRevision(tx, createdQuestion.id);
         });
 
         inserted += 1;
@@ -303,6 +314,7 @@ export async function syncQuestionsFromFiles(
 
         const dbHash = sha256Hex(canonicalJsonString(seedFromDb));
         if (dbHash === fileHash) {
+          await syncQuestionRevision(tx, lockedQuestion.id);
           return 'skipped' as const;
         }
 
@@ -459,6 +471,7 @@ export async function syncQuestionsFromFiles(
               })(),
           })),
         );
+        await syncQuestionRevision(tx, lockedQuestion.id);
 
         return 'updated' as const;
       });

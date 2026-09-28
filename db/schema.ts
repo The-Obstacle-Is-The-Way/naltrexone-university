@@ -2,6 +2,7 @@
 
 import { desc, relations, sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   boolean,
   check,
   foreignKey,
@@ -630,6 +631,8 @@ export const idempotencyKeys = pgTable(
 );
 
 // questions
+export const QUESTIONS_CURRENT_REVISION_FK = 'questions_current_revision_fk';
+
 export const questions = pgTable(
   'questions',
   {
@@ -640,6 +643,9 @@ export const questions = pgTable(
     referenceMd: text('reference_md'),
     difficulty: questionDifficultyEnum('difficulty').notNull(),
     status: questionStatusEnum('status').notNull(),
+    // ADR-021 phase 1: the revision new selections use. Nullable until the
+    // contract phase; the revision sweep fills it.
+    currentRevisionId: uuid('current_revision_id'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -649,6 +655,12 @@ export const questions = pgTable(
   },
   (t) => ({
     slugUq: uniqueIndex('questions_slug_uq').on(t.slug),
+    // The current revision must be one of this question's revisions.
+    currentRevisionFk: foreignKey({
+      name: QUESTIONS_CURRENT_REVISION_FK,
+      columns: [t.currentRevisionId, t.id],
+      foreignColumns: [questionRevisions.id, questionRevisions.questionId],
+    }),
     statusDifficultyIdx: index('questions_status_difficulty_idx').on(
       t.status,
       t.difficulty,
@@ -660,8 +672,60 @@ export const questions = pgTable(
   }),
 );
 
+// question_revisions (ADR-021): learner-visible content by revision. Phase 1
+// is the expand step of a parallel change: revision 1 mirrors each question's
+// legacy row, kept in sync by sync_question_revision_v1 (migration 0039).
+// Phase 2 makes revisions append-only and immutable.
+export const QUESTION_REVISIONS_ID_QUESTION_ID_UQ =
+  'question_revisions_id_question_id_uq';
+export const QUESTION_REVISION_CANONICALIZATION_VERSIONS = [
+  'stored-fields-json-v1',
+] as const;
+
+export const questionRevisions = pgTable(
+  'question_revisions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    questionId: uuid('question_id')
+      .notNull()
+      .references((): AnyPgColumn => questions.id, { onDelete: 'cascade' }),
+    revisionNumber: integer('revision_number').notNull(),
+    stemMd: text('stem_md').notNull(),
+    explanationMd: text('explanation_md').notNull(),
+    referenceMd: text('reference_md'),
+    difficulty: questionDifficultyEnum('difficulty').notNull(),
+    canonicalizationVersion: text('canonicalization_version').notNull(),
+    contentHash: varchar('content_hash', { length: 64 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => ({
+    idQuestionIdUq: uniqueIndex(QUESTION_REVISIONS_ID_QUESTION_ID_UQ).on(
+      t.id,
+      t.questionId,
+    ),
+    questionRevisionNumberUq: uniqueIndex(
+      'question_revisions_question_id_revision_number_uq',
+    ).on(t.questionId, t.revisionNumber),
+    revisionNumberChk: check(
+      'question_revisions_revision_number_chk',
+      sql`${t.revisionNumber} >= 1`,
+    ),
+    canonicalizationVersionChk: check(
+      'question_revisions_canonicalization_version_chk',
+      sql`${t.canonicalizationVersion} = 'stored-fields-json-v1'`,
+    ),
+    contentHashChk: check(
+      'question_revisions_content_hash_chk',
+      sql`${t.contentHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+  }),
+);
+
 // choices
 export const CHOICES_ID_QUESTION_ID_UQ = 'choices_id_question_id_uq';
+export const CHOICES_QUESTION_REVISION_FK = 'choices_question_revision_fk';
 
 export const choices = pgTable(
   'choices',
@@ -675,11 +739,22 @@ export const choices = pgTable(
     isCorrect: boolean('is_correct').notNull(),
     explanationMd: text('explanation_md'),
     sortOrder: integer('sort_order').notNull(), // 1..N
+    // ADR-021 phase 1: the revision this choice belongs to. Nullable until
+    // the contract phase; the revision sweep fills it.
+    questionRevisionId: uuid('question_revision_id'),
   },
   (t) => ({
     idQuestionIdUq: uniqueIndex(CHOICES_ID_QUESTION_ID_UQ).on(
       t.id,
       t.questionId,
+    ),
+    questionRevisionFk: foreignKey({
+      name: CHOICES_QUESTION_REVISION_FK,
+      columns: [t.questionRevisionId, t.questionId],
+      foreignColumns: [questionRevisions.id, questionRevisions.questionId],
+    }).onDelete('cascade'),
+    questionRevisionIdx: index('choices_question_revision_id_idx').on(
+      t.questionRevisionId,
     ),
     questionIdIdx: index('choices_question_id_idx').on(t.questionId),
     questionLabelUq: uniqueIndex('choices_question_id_label_uq').on(
@@ -780,6 +855,8 @@ export const PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_QUESTION_FK =
   'practice_session_question_states_latest_choice_question_fk';
 export const PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_QUESTION_FK =
   'practice_session_question_states_draft_choice_question_fk';
+export const PRACTICE_SESSION_QUESTION_STATES_QUESTION_REVISION_FK =
+  'practice_session_question_states_question_revision_fk';
 export const PRACTICE_SESSION_QUESTION_STATES_LATEST_ANSWER_CHK =
   'practice_session_question_states_latest_answer_chk';
 export const PRACTICE_SESSION_QUESTION_STATES_DRAFT_SAVED_CHK =
@@ -810,6 +887,9 @@ export const practiceSessionQuestionStates = pgTable(
     draftSelectedChoiceId: uuid('draft_selected_choice_id'),
     draftSavedAt: timestamp('draft_saved_at', { withTimezone: true }),
     draftCumulativeMs: integer('draft_cumulative_ms').notNull().default(0),
+    // ADR-021 phase 1: the revision this session item shows. Nullable until
+    // the contract phase; phase 2 binds it at session creation.
+    questionRevisionId: uuid('question_revision_id'),
     version: integer('version').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -848,6 +928,11 @@ export const practiceSessionQuestionStates = pgTable(
       columns: [t.draftSelectedChoiceId, t.questionId],
       foreignColumns: [choices.id, choices.questionId],
     }).onDelete('restrict'),
+    questionRevisionFk: foreignKey({
+      name: PRACTICE_SESSION_QUESTION_STATES_QUESTION_REVISION_FK,
+      columns: [t.questionRevisionId, t.questionId],
+      foreignColumns: [questionRevisions.id, questionRevisions.questionId],
+    }).onDelete('restrict'),
     draftCumulativeMsChk: check(
       'practice_session_question_states_draft_cumulative_ms_chk',
       sql`${t.draftCumulativeMs} BETWEEN 0 AND ${sql.raw(String(DAY_MS))}`,
@@ -880,6 +965,7 @@ export const ATTEMPTS_SELECTED_CHOICE_QUESTION_IDX =
   'attempts_selected_choice_question_idx';
 export const ATTEMPTS_SELECTED_CHOICE_QUESTION_FK =
   'attempts_selected_choice_question_fk';
+export const ATTEMPTS_QUESTION_REVISION_FK = 'attempts_question_revision_fk';
 
 export const attempts = pgTable(
   'attempts',
@@ -904,6 +990,9 @@ export const attempts = pgTable(
     retryOfAttemptId: uuid('retry_of_attempt_id'),
     retryOrigin: attemptRetryOriginEnum('retry_origin'),
     retrySessionId: uuid('retry_session_id'),
+    // ADR-021 phase 1: the revision this attempt graded. Nullable until the
+    // contract phase; phase 2 binds it when grading.
+    questionRevisionId: uuid('question_revision_id'),
     answeredAt: timestamp('answered_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -954,6 +1043,11 @@ export const attempts = pgTable(
       name: ATTEMPTS_SELECTED_CHOICE_QUESTION_FK,
       columns: [t.selectedChoiceId, t.questionId],
       foreignColumns: [choices.id, choices.questionId],
+    }).onDelete('restrict'),
+    questionRevisionFk: foreignKey({
+      name: ATTEMPTS_QUESTION_REVISION_FK,
+      columns: [t.questionRevisionId, t.questionId],
+      foreignColumns: [questionRevisions.id, questionRevisions.questionId],
     }).onDelete('restrict'),
   }),
 );
