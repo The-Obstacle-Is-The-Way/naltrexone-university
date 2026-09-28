@@ -206,6 +206,7 @@ This increment:
   - Every existing history row has a NULL revision, so no row can violate the new keys.
   - On a scratch copy at `0039`, seeded with the 958-question corpus, `0040` logged `0 created, 0 refreshed, 958 unchanged`. It left the three keys `NOT VALID` and no question or choice without a revision, and a second sweep returned `0 created, 0 refreshed, 958 unchanged`.
   - The shared per-clone test database was not migrated; this branch was proved on scratch databases while an earlier PR was still in the queue.
+  - In production, the build applied `0040` on 2026-09-28 and logged `0 created, 0 refreshed, 958 unchanged`; the migration ledger matched the checkout afterwards (#1192).
 - **Tests.**
   - Nine real-Postgres cases in `question-revision-binding.integration.test.ts`: session items; a session attempt; an attempt outside a session; an attempt in an unbound session; the N-1 NULL write; refusal of a mixed-revision attempt, latest selection and draft selection (`23503` on each new key); and the fixture mirror.
   - The seven binding and refusal cases were red first.
