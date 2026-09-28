@@ -756,7 +756,8 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
 - **Stale-offer guard.** The form posts the displayed version and the opt-in:
   - the action requires `renewalOptIn=yes` and a well-formed version;
   - the billing controller requires `renewalOptIn: true` and the displayed version;
-  - the use case refuses a version that is not the current one, before any Stripe call.
+  - the use case refuses a version that is not the current one, before any Stripe call;
+  - a replayed idempotency key is scoped to the displayed version, as checkout's is, so a request for other terms cannot reuse a cached Session and must pass that check (#1183 review).
 
   A page loaded before a copy change therefore cannot record consent to text the learner never saw. It returns the learner to Billing with the add-card error, and the reloaded banner shows the current terms. A page loaded before this release posts neither field and is refused the same way.
 - **Billing shows the refusal.** Billing had ignored the add-card error code, so every add-card failure, the new refusal included, came back as a silent page. It now shows "Couldn't open Stripe to add your card. Review the terms from the trial banner and try again." The case was red first.
@@ -783,4 +784,4 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
   - The dialog is 512 px wide at 1440×900, where it fits without scrolling. On a phone it is 358 px with 16 px gutters, and it scrolls: 893 px of monthly content in 810 px at 390×844, and in 633 px at 390×667.
   - Every capture has zero axe violations, no horizontal overflow, a blocked unchecked submission, and the submit button reachable by scrolling.
   - The `f03b-dialog-*` and `f03b-banner-*` screenshots sit beside the measurements.
-- **Also updated:** the Pattern Registry (I-7's source, the plan consent composition and F-10's banner) and the billing QA script (both dialogs).
+- **Also updated:** the Pattern Registry (I-7's source, the plan consent composition and F-10's banner) and the billing QA script. The QA script covers both dialogs, and it now has a human step that completes the add-card on Stripe and checks the saved card (#1183 review).

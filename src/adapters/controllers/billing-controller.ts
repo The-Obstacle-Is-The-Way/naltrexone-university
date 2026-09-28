@@ -156,7 +156,11 @@ export const createTrialPaymentMethodSetupSession = createAction({
   getDeps,
   execute: async (input, d) => {
     const user = await d.authGateway.requireUser();
-    const { idempotencyKey } = input;
+    // As checkout does, a replay is scoped to the displayed terms, so another
+    // version always reaches the use case's current-terms check.
+    const idempotencyKey = input.idempotencyKey
+      ? `${input.idempotencyKey}:${input.expectedDisclosureVersion}`
+      : input.idempotencyKey;
 
     async function createNewSession(): Promise<CreateTrialPaymentMethodSetupSessionOutput> {
       const setupInput = {

@@ -60,6 +60,33 @@ describe('createTrialPaymentMethodSetupSession consent', () => {
     },
   );
 
+  // #1183 review: as checkout does, a replayed key is scoped to the displayed
+  // version, so a different version cannot reuse a Session made for other
+  // terms and must pass the use case's current-terms check.
+  it('does not replay a Session for a reused key with a different displayed version', async () => {
+    const deps = createBillingControllerDeps();
+    const idempotencyKey = crypto.randomUUID();
+
+    await createTrialPaymentMethodSetupSession(
+      { idempotencyKey, renewalOptIn: true, ...displayed },
+      deps,
+    );
+    await createTrialPaymentMethodSetupSession(
+      {
+        idempotencyKey,
+        renewalOptIn: true,
+        expectedDisclosureVersion: '2026-09-29',
+      },
+      deps,
+    );
+
+    expect(
+      deps.createTrialPaymentMethodSetupSessionUseCase.inputs.map(
+        (input) => input.expectedDisclosureVersion,
+      ),
+    ).toEqual(['2026-09-28.2', '2026-09-29']);
+  });
+
   it('passes the displayed version to the use case, which compares it with the current terms', async () => {
     const deps = createBillingControllerDeps();
 
