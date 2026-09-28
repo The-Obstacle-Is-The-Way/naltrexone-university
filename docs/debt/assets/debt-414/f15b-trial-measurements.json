@@ -1,0 +1,170 @@
+[
+  {
+    "plan": "monthly",
+    "variant": "trial",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "dialog": {
+      "width": 511.2135009765625,
+      "height": 634.0245361328125,
+      "top": 132.9877471923828,
+      "bottom": 767.0122833251953
+    },
+    "scroll": {
+      "scrollHeight": 633,
+      "clientHeight": 633
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Monthly",
+      "Trial: 7 days free; no payment method required. Without one, trial ends with no charge.",
+      "After trial: If you add a payment method before trial end: $29 per month, renewing automatically every month until canceled.",
+      "Cancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "monthly",
+    "variant": "trial",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "dialog": {
+      "width": 346.27569580078125,
+      "height": 785.407470703125,
+      "top": 29.296262741088867,
+      "bottom": 814.7037334442139
+    },
+    "scroll": {
+      "scrollHeight": 837,
+      "clientHeight": 810
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Monthly",
+      "Trial: 7 days free; no payment method required. Without one, trial ends with no charge.",
+      "After trial: If you add a payment method before trial end: $29 per month, renewing automatically every month until canceled.",
+      "Cancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "monthly",
+    "variant": "trial",
+    "viewport": {
+      "width": 390,
+      "height": 667
+    },
+    "dialog": {
+      "width": 353.36663818359375,
+      "height": 626.7816162109375,
+      "top": 20.109203338623047,
+      "bottom": 646.8908195495605
+    },
+    "scroll": {
+      "scrollHeight": 837,
+      "clientHeight": 633
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Monthly",
+      "Trial: 7 days free; no payment method required. Without one, trial ends with no charge.",
+      "After trial: If you add a payment method before trial end: $29 per month, renewing automatically every month until canceled.",
+      "Cancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "variant": "trial",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "dialog": {
+      "width": 505.380615234375,
+      "height": 626.7904052734375,
+      "top": 136.6048126220703,
+      "bottom": 763.3952178955078
+    },
+    "scroll": {
+      "scrollHeight": 633,
+      "clientHeight": 633
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Annual",
+      "Trial: 7 days free; no payment method required. Without one, trial ends with no charge.",
+      "After trial: If you add a payment method before trial end: $199 per year, renewing automatically every year until canceled.",
+      "Cancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "variant": "trial",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "dialog": {
+      "width": 346.27569580078125,
+      "height": 785.407470703125,
+      "top": 29.296262741088867,
+      "bottom": 814.7037334442139
+    },
+    "scroll": {
+      "scrollHeight": 837,
+      "clientHeight": 810
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Annual",
+      "Trial: 7 days free; no payment method required. Without one, trial ends with no charge.",
+      "After trial: If you add a payment method before trial end: $199 per year, renewing automatically every year until canceled.",
+      "Cancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "variant": "trial",
+    "viewport": {
+      "width": 390,
+      "height": 667
+    },
+    "dialog": {
+      "width": 353.37158203125,
+      "height": 626.7904052734375,
+      "top": 20.104812622070312,
+      "bottom": 646.8952178955078
+    },
+    "scroll": {
+      "scrollHeight": 837,
+      "clientHeight": 633
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Annual",
+      "Trial: 7 days free; no payment method required. Without one, trial ends with no charge.",
+      "After trial: If you add a payment method before trial end: $199 per year, renewing automatically every year until canceled.",
+      "Cancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  }
+]

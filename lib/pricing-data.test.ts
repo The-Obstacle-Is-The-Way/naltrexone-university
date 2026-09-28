@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { termsContent } from '@/app/(marketing)/terms/terms-content';
-import consentRuling from '@/docs/debt/assets/debt-478/consent-ruling-data.json';
+import consentRuling from '@/docs/debt/assets/debt-414/f15-consent-ruling-data.json';
 import {
   ANNUAL_RENEWAL_NOTICE_VERSION,
   CANCELLATION_METHOD,
@@ -13,6 +13,7 @@ import {
   TERMS_VERSION,
   TRIAL_PAYMENT_DISCLOSURE_VERSION,
 } from '@/lib/pricing-data';
+import { CANCELLATION_AND_REFUND_POLICY } from '@/src/application/shared/renewal-notice-email-format';
 
 // ROSCA / NY GBL § 527-a: the renewal disclosure must accurately describe the
 // simple cancellation mechanism. The app's actual path is the "Billing" nav
@@ -62,18 +63,23 @@ describe('PRICING_DATA renewal disclosures', () => {
     },
   );
 
-  it.each(['monthly', 'annual'] as const)(
-    'keeps every %s consent snapshot within the 480-character metadata budget',
-    (plan) => {
-      for (const snapshot of [
-        createCheckoutRenewalTerms(plan, true),
-        createCheckoutRenewalTerms(plan, false),
-        createTrialPaymentRenewalTerms(plan),
-      ]) {
-        expect(snapshot.disclosureSnapshot.length).toBeLessThanOrEqual(480);
-      }
+  // DEBT-414 F15: the operative cancellation and refund policy sits next to
+  // every consent, quoted from Terms § 4. Checkout Sessions carry these texts
+  // by hash (lib/checkout-disclosures.ts), so their length is not bounded by
+  // Stripe's 500-character metadata values.
+  it.each(disclosures)(
+    '%s states the cancellation and refund policy',
+    (_name, disclosure) => {
+      expect(disclosure).toContain(CANCELLATION_AND_REFUND_POLICY);
     },
   );
+
+  it('quotes each clause of the policy from Terms § 4', () => {
+    const terms = termsContent.bodyMarkdown.replaceAll('**', '');
+    for (const clause of CANCELLATION_AND_REFUND_POLICY.split(/(?<=\.) /)) {
+      expect(terms).toContain(clause.replace(/\.$/, ''));
+    }
+  });
 
   it('pins machine-readable renewal terms to the rendered disclosure and Terms version', () => {
     expect(CANCELLATION_METHOD).toBe(
@@ -83,13 +89,13 @@ describe('PRICING_DATA renewal disclosures', () => {
       amountCents: 2900,
       currency: 'usd',
       frequency: 'month',
-      disclosureVersion: '2026-09-16',
+      disclosureVersion: '2026-09-28',
     });
     expect(PRICING_DATA.annual).toMatchObject({
       amountCents: 19900,
       currency: 'usd',
       frequency: 'year',
-      disclosureVersion: '2026-09-16',
+      disclosureVersion: '2026-09-28',
     });
     expect(TERMS_VERSION).toBe('2026-08-09');
     expect(TERMS_CONTENT_SHA256).toBe(
@@ -116,7 +122,7 @@ describe('PRICING_DATA renewal disclosures', () => {
         expect(createCheckoutRenewalTerms(plan, hasTrial)).toMatchObject({
           plan,
           disclosureSnapshot: ruling?.snapshot,
-          disclosureVersion: '2026-09-16',
+          disclosureVersion: consentRuling.disclosureVersion,
           termsVersion: TERMS_VERSION,
           termsHash: TERMS_CONTENT_SHA256,
           cancellationMethod: CANCELLATION_METHOD,
@@ -125,9 +131,20 @@ describe('PRICING_DATA renewal disclosures', () => {
     },
   );
 
-  it('keeps unchanged add-card and annual-notice versions independent of checkout consent', () => {
+  it('records the exact proposed add-card text under its own new version', () => {
+    expect(TRIAL_PAYMENT_DISCLOSURE_VERSION).toBe(
+      consentRuling.trialPaymentDisclosureVersion,
+    );
+    expect(PRICING_DATA.monthly.trialPaymentDisclosure).toBe(
+      consentRuling.trialPaymentDisclosures.monthly,
+    );
+    expect(PRICING_DATA.annual.trialPaymentDisclosure).toBe(
+      consentRuling.trialPaymentDisclosures.annual,
+    );
+  });
+
+  it('keeps the annual-notice version independent of checkout consent', () => {
     expect(ANNUAL_RENEWAL_NOTICE_VERSION).toBe('2026-08-05');
-    expect(TRIAL_PAYMENT_DISCLOSURE_VERSION).toBe('2026-08-05');
     expect(ANNUAL_RENEWAL_NOTICE_VERSION).not.toBe(
       PRICING_DATA.annual.disclosureVersion,
     );

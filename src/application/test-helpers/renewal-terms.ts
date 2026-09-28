@@ -20,10 +20,13 @@ export function createTestRenewalTerms(
   };
 }
 
+// Checkout Sessions carry the consent text as its SHA-256 (DEBT-414 F15);
+// the caller supplies the digest of the text it expects.
 export function createTestCheckoutRenewalMetadata(input: {
   userId: string;
   plan?: 'monthly' | 'annual';
   hasTrial?: boolean;
+  hashDisclosure: (disclosureSnapshot: string) => string;
 }): Record<string, string> {
   const terms = createTestRenewalTerms(
     input.plan ?? 'monthly',
@@ -36,7 +39,7 @@ export function createTestCheckoutRenewalMetadata(input: {
     renewal_amount_cents: String(terms.amountCents),
     renewal_currency: terms.currency,
     renewal_frequency: terms.frequency,
-    renewal_disclosure_snapshot: terms.disclosureSnapshot,
+    renewal_disclosure_hash: input.hashDisclosure(terms.disclosureSnapshot),
     renewal_disclosure_version: terms.disclosureVersion,
     renewal_terms_version: terms.termsVersion,
     renewal_terms_hash: terms.termsHash,

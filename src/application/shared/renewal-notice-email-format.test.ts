@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CANCELLATION_AND_REFUND_POLICY,
   escapeRenewalNoticeHtml,
   formatRenewalNoticeCutoff,
   formatRenewalNoticeDate,
@@ -12,6 +13,12 @@ describe('renewal notice email format', () => {
   it('pins the sender identity', () => {
     expect(RENEWAL_NOTICE_FROM).toBe(
       'Addiction Boards <notices@addictionboards.com>',
+    );
+  });
+
+  it('quotes the Terms § 4 cancellation and refund policy', () => {
+    expect(CANCELLATION_AND_REFUND_POLICY).toBe(
+      'Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.',
     );
   });
 
