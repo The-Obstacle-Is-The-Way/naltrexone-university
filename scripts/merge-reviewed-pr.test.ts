@@ -450,6 +450,45 @@ describe('merge command', () => {
     ]);
   });
 
+  it('reads no diffs for a Dependabot PR approved on its current head', () => {
+    const pr = pullRequest();
+    pr.author = { login: 'dependabot' };
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[review('APPROVED', HEAD)]]));
+
+    const receipt = runMergeReviewedPr(['987'], () => {});
+
+    expect(receipt).not.toHaveProperty('carriedFrom');
+    expect(execFileSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses to carry when a compare reaches GitHub’s 300-file ceiling', () => {
+    const pr = pullRequest();
+    pr.author = { login: 'dependabot' };
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[review('APPROVED', OLD_HEAD)]]))
+      .mockReturnValueOnce(
+        JSON.stringify({
+          files: Array.from({ length: 300 }, (_, index) => ({
+            filename: `file-${index}.ts`,
+            status: 'modified',
+            patch: 'x',
+          })),
+        }),
+      );
+
+    expect(() => runMergeReviewedPr(['987', '--merge'], () => {})).toThrow(
+      'may be truncated',
+    );
+    expect(execFileSync).toHaveBeenCalledTimes(3);
+  });
+
   it('exits nonzero for unsupported direct CLI arguments without calling GitHub', () => {
     const result = spawnSync(
       process.execPath,
