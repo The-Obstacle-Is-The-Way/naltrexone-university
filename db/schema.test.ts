@@ -10,10 +10,13 @@ import type {
 import {
   ATTEMPTS_QUESTION_REVISION_FK,
   ATTEMPTS_SELECTED_CHOICE_QUESTION_IDX,
+  ATTEMPTS_SELECTED_CHOICE_REVISION_FK,
   attempts,
   CHOICES_ID_QUESTION_REVISION_ID_UQ,
   CHOICES_QUESTION_REVISION_FK,
   choices,
+  PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_REVISION_FK,
+  PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_REVISION_FK,
   PRACTICE_SESSION_QUESTION_STATES_QUESTION_REVISION_FK,
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
   practiceSessionQuestionStates,
@@ -214,17 +217,17 @@ describe('question revision keys', () => {
 
   it.each([
     [
-      'attempts_selected_choice_revision_fk',
+      ATTEMPTS_SELECTED_CHOICE_REVISION_FK,
       attempts,
       ['selected_choice_id', 'question_revision_id'],
     ],
     [
-      'practice_session_question_states_latest_choice_revision_fk',
+      PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_REVISION_FK,
       practiceSessionQuestionStates,
       ['latest_selected_choice_id', 'question_revision_id'],
     ],
     [
-      'practice_session_question_states_draft_choice_revision_fk',
+      PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_REVISION_FK,
       practiceSessionQuestionStates,
       ['draft_selected_choice_id', 'question_revision_id'],
     ],

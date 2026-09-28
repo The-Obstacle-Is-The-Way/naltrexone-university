@@ -240,7 +240,7 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
       .catch((caught: unknown) => caught);
 
     expect(foreignKeyViolation(error)).toBe(
-      'attempts_selected_choice_revision_fk',
+      schema.ATTEMPTS_SELECTED_CHOICE_REVISION_FK,
     );
   });
 
@@ -252,12 +252,12 @@ describe('ADR-021 phase 2a: new sessions and attempts bind a revision', () => {
         latestIsCorrect: true,
         latestAnsweredAt: new Date(),
       },
-      'practice_session_question_states_latest_choice_revision_fk',
+      schema.PRACTICE_SESSION_QUESTION_STATES_LATEST_CHOICE_REVISION_FK,
     ],
     [
       'draft',
       { draftSelectedChoiceId: 'choice', draftSavedAt: new Date() },
-      'practice_session_question_states_draft_choice_revision_fk',
+      schema.PRACTICE_SESSION_QUESTION_STATES_DRAFT_CHOICE_REVISION_FK,
     ],
   ] as const)(
     'refuses a %s session selection that belongs to another revision',
