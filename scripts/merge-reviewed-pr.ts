@@ -111,6 +111,7 @@ function codecovNotApplicable(
 const compareFilesSchema = z.array(
   z.object({
     filename: z.string(),
+    previous_filename: z.string().optional(),
     status: z.string(),
     patch: z.string().optional(),
   }),
@@ -135,9 +136,15 @@ function isDependabot(author: { login: string } | null): boolean {
 function reviewableDiffIsIdentical(evidence: DependabotCarryEvidence) {
   const approved = compareFilesSchema.parse(evidence.approved);
   const current = compareFilesSchema.parse(evidence.current);
+  // Only the lockfile's own diff is skipped; a rename onto its path would
+  // hide the removal of the renamed file.
   const reviewable = (files: typeof approved) =>
     files
-      .filter((file) => file.filename !== CODERABBIT_UNREVIEWED_PATH)
+      .filter(
+        (file) =>
+          file.filename !== CODERABBIT_UNREVIEWED_PATH ||
+          file.previous_filename !== undefined,
+      )
       .sort((a, b) => a.filename.localeCompare(b.filename));
   const before = reviewable(approved);
   const after = reviewable(current);
@@ -149,11 +156,26 @@ function reviewableDiffIsIdentical(evidence: DependabotCarryEvidence) {
         file.patch !== undefined &&
         other !== undefined &&
         other.filename === file.filename &&
+        other.previous_filename === file.previous_filename &&
         other.status === file.status &&
         other.patch === file.patch
       );
     })
   );
+}
+
+// CodeRabbit's latest approval, change request or dismissal, on any head.
+function latestDecisiveCodeRabbitReview(
+  pages: z.infer<typeof reviewPagesSchema>,
+) {
+  return pages
+    .flat()
+    .filter(
+      (entry) =>
+        entry.user?.login === 'coderabbitai[bot]' &&
+        ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(entry.state),
+    )
+    .at(-1);
 }
 
 // Dependabot PRs: CodeRabbit reviews once, when the PR opens, and skips a
@@ -168,14 +190,7 @@ function carriedDependabotApproval(
 ) {
   const reviews = reviewPagesSchema.safeParse(reviewPages);
   if (!reviews.success) throw new Error('Invalid GitHub review response');
-  const latest = reviews.data
-    .flat()
-    .filter(
-      (entry) =>
-        entry.user?.login === 'coderabbitai[bot]' &&
-        ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(entry.state),
-    )
-    .at(-1);
+  const latest = latestDecisiveCodeRabbitReview(reviews.data);
   if (
     !isDependabot(author) ||
     !evidence ||
@@ -199,14 +214,7 @@ export function latestCodeRabbitApprovalHead(
 ): string | null {
   const reviews = reviewPagesSchema.safeParse(reviewPages);
   if (!reviews.success) return null;
-  const latest = reviews.data
-    .flat()
-    .filter(
-      (entry) =>
-        entry.user?.login === 'coderabbitai[bot]' &&
-        ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(entry.state),
-    )
-    .at(-1);
+  const latest = latestDecisiveCodeRabbitReview(reviews.data);
   return latest?.state === 'APPROVED' ? latest.commit_id : null;
 }
 

@@ -693,7 +693,8 @@ CodeRabbit reviews a Dependabot PR when it opens and skips a later rebase whose
 only new change is the lockfile, which its path filters exclude. For a
 Dependabot-authored PR only, its latest decisive review may be an approval on an
 earlier head, provided GitHub's compare API shows every file except
-`pnpm-lock.yaml` with a byte-identical diff and status at both heads. The
+`pnpm-lock.yaml` itself with a byte-identical diff, status and rename source at
+both heads; a rename onto the lockfile path is compared like any other file. The
 receipt then names the approved head as `carriedFrom`. It also requires zero unresolved
 threads, successful CI `test` and `codecov/patch` (a missing status blocks, per
 ADR-020, except on a complete changed-file list confined to `package.json`,

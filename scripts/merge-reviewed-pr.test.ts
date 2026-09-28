@@ -327,6 +327,41 @@ describe('Dependabot approval carried across a rebase', () => {
     ).toThrow('exact-head CodeRabbit approval');
   });
 
+  it('refuses when a renamed file now comes from another path', () => {
+    const renamed = (previous: string) => ({
+      filename: 'src/config.ts',
+      previous_filename: previous,
+      status: 'renamed',
+      patch: '@@ -1 +1 @@\n-a\n+b',
+    });
+
+    expect(() =>
+      checkFeatureMerge(dependabotPr(), [[review('APPROVED', OLD_HEAD)]], {
+        approvedHead: OLD_HEAD,
+        approved: [manifest, renamed('src/a.ts'), lockfile('original')],
+        current: [manifest, renamed('src/b.ts'), lockfile('rebased')],
+      }),
+    ).toThrow('exact-head CodeRabbit approval');
+  });
+
+  it('refuses when a file was renamed onto the lockfile path', () => {
+    expect(() =>
+      checkFeatureMerge(
+        dependabotPr(),
+        [[review('APPROVED', OLD_HEAD)]],
+        evidence([
+          manifest,
+          {
+            filename: 'pnpm-lock.yaml',
+            previous_filename: 'src/secret.ts',
+            status: 'renamed',
+            patch: 'rebased',
+          },
+        ]),
+      ),
+    ).toThrow('exact-head CodeRabbit approval');
+  });
+
   it('refuses when a reviewable diff is unavailable', () => {
     const { patch: _omitted, ...withoutPatch } = manifest;
 
