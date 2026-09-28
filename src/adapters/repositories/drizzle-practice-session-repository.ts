@@ -285,10 +285,13 @@ export class DrizzlePracticeSessionRepository
   private initialQuestionStateRows(input: {
     sessionId: string;
     questionIds: readonly string[];
+    revisionIdByQuestionId: ReadonlyMap<string, string | null>;
   }): Array<typeof practiceSessionQuestionStates.$inferInsert> {
     return input.questionIds.map((questionId, position) => ({
       practiceSessionId: input.sessionId,
       questionId,
+      // ADR-021 phase 2a: each item binds the revision the learner is shown.
+      questionRevisionId: input.revisionIdByQuestionId.get(questionId) ?? null,
       position,
       markedForReview: false,
       latestSelectedChoiceId: null,
@@ -566,12 +569,26 @@ export class DrizzlePracticeSessionRepository
 
         if (!row) return undefined;
 
+        const revisions = await tx
+          .select({
+            questionId: questions.id,
+            revisionId: questions.currentRevisionId,
+          })
+          .from(questions)
+          .where(inArray(questions.id, params.questionIds));
+
         const stateRows = await tx
           .insert(practiceSessionQuestionStates)
           .values(
             this.initialQuestionStateRows({
               sessionId: row.id,
               questionIds: params.questionIds,
+              revisionIdByQuestionId: new Map(
+                revisions.map((revision) => [
+                  revision.questionId,
+                  revision.revisionId,
+                ]),
+              ),
             }),
           )
           .returning();

@@ -725,6 +725,10 @@ export const questionRevisions = pgTable(
 
 // choices
 export const CHOICES_ID_QUESTION_ID_UQ = 'choices_id_question_id_uq';
+// ADR-021 phase 2a: the target of the (selected choice, revision) keys, so a
+// history row can only select a choice of the revision it is bound to.
+export const CHOICES_ID_QUESTION_REVISION_ID_UQ =
+  'choices_id_question_revision_id_uq';
 export const CHOICES_QUESTION_REVISION_FK = 'choices_question_revision_fk';
 
 export const choices = pgTable(
@@ -747,6 +751,10 @@ export const choices = pgTable(
     idQuestionIdUq: uniqueIndex(CHOICES_ID_QUESTION_ID_UQ).on(
       t.id,
       t.questionId,
+    ),
+    idQuestionRevisionIdUq: uniqueIndex(CHOICES_ID_QUESTION_REVISION_ID_UQ).on(
+      t.id,
+      t.questionRevisionId,
     ),
     questionRevisionFk: foreignKey({
       name: CHOICES_QUESTION_REVISION_FK,
@@ -933,6 +941,17 @@ export const practiceSessionQuestionStates = pgTable(
       columns: [t.questionRevisionId, t.questionId],
       foreignColumns: [questionRevisions.id, questionRevisions.questionId],
     }).onDelete('restrict'),
+    // ADR-021 phase 2a: a selection must belong to the bound revision.
+    latestChoiceRevisionFk: foreignKey({
+      name: 'practice_session_question_states_latest_choice_revision_fk',
+      columns: [t.latestSelectedChoiceId, t.questionRevisionId],
+      foreignColumns: [choices.id, choices.questionRevisionId],
+    }).onDelete('restrict'),
+    draftChoiceRevisionFk: foreignKey({
+      name: 'practice_session_question_states_draft_choice_revision_fk',
+      columns: [t.draftSelectedChoiceId, t.questionRevisionId],
+      foreignColumns: [choices.id, choices.questionRevisionId],
+    }).onDelete('restrict'),
     draftCumulativeMsChk: check(
       'practice_session_question_states_draft_cumulative_ms_chk',
       sql`${t.draftCumulativeMs} BETWEEN 0 AND ${sql.raw(String(DAY_MS))}`,
@@ -1048,6 +1067,12 @@ export const attempts = pgTable(
       name: ATTEMPTS_QUESTION_REVISION_FK,
       columns: [t.questionRevisionId, t.questionId],
       foreignColumns: [questionRevisions.id, questionRevisions.questionId],
+    }).onDelete('restrict'),
+    // ADR-021 phase 2a: the graded choice must belong to the bound revision.
+    selectedChoiceRevisionFk: foreignKey({
+      name: 'attempts_selected_choice_revision_fk',
+      columns: [t.selectedChoiceId, t.questionRevisionId],
+      foreignColumns: [choices.id, choices.questionRevisionId],
     }).onDelete('restrict'),
   }),
 );
