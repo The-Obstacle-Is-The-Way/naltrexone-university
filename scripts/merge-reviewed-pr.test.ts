@@ -1,6 +1,10 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { checkFeatureMerge, runMergeReviewedPr } from './merge-reviewed-pr';
+import {
+  checkFeatureMerge,
+  type DependabotCarryEvidence,
+  runMergeReviewedPr,
+} from './merge-reviewed-pr';
 
 vi.mock('node:child_process', async (importOriginal) => ({
   ...(await importOriginal<typeof import('node:child_process')>()),
@@ -29,6 +33,7 @@ const pullRequest = () => ({
     nodes: [{ isResolved: true }],
     pageInfo: { hasNextPage: false },
   },
+  author: { login: 'The-Obstacle-Is-The-Way' },
   files: {
     nodes: [{ path: 'src/example.ts' }],
     pageInfo: { hasNextPage: false },
@@ -247,6 +252,127 @@ describe('feature merge decision', () => {
   });
 });
 
+// CodeRabbit reviews a Dependabot PR once, when it opens, and skips a later
+// rebase whose only new change is the lockfile, which its path filters exclude.
+// Its approval carries to the rebased head only when every other file's diff is
+// byte-identical at both heads.
+describe('Dependabot approval carried across a rebase', () => {
+  const manifest = {
+    filename: 'package.json',
+    status: 'modified',
+    patch: '@@ -1 +1 @@\n-"resend": "6.18.0"\n+"resend": "6.28.1"',
+  };
+  const lockfile = (patch: string) => ({
+    filename: 'pnpm-lock.yaml',
+    status: 'modified',
+    patch,
+  });
+  const dependabotPr = () => {
+    const pr = pullRequest();
+    pr.author = { login: 'dependabot' };
+    pr.files = {
+      nodes: [{ path: 'package.json' }, { path: 'pnpm-lock.yaml' }],
+      pageInfo: { hasNextPage: false },
+    };
+    return pr;
+  };
+  const evidence = (
+    current: DependabotCarryEvidence['current'] = [
+      manifest,
+      lockfile('rebased'),
+    ],
+  ): DependabotCarryEvidence => ({
+    approvedHead: OLD_HEAD,
+    approved: [manifest, lockfile('original')],
+    current,
+  });
+
+  it('carries the approval when only the lockfile changed since it', () => {
+    expect(
+      checkFeatureMerge(
+        dependabotPr(),
+        [[review('APPROVED', OLD_HEAD)]],
+        evidence(),
+      ),
+    ).toMatchObject({
+      head: HEAD,
+      approvalId: 123,
+      carriedFrom: OLD_HEAD,
+    });
+  });
+
+  it('refuses when a reviewable file changed since the approval', () => {
+    const changed = { ...manifest, patch: `${manifest.patch}\n+"extra": "1"` };
+
+    expect(() =>
+      checkFeatureMerge(
+        dependabotPr(),
+        [[review('APPROVED', OLD_HEAD)]],
+        evidence([changed, lockfile('rebased')]),
+      ),
+    ).toThrow('exact-head CodeRabbit approval');
+  });
+
+  it('refuses when a reviewable file was added since the approval', () => {
+    expect(() =>
+      checkFeatureMerge(
+        dependabotPr(),
+        [[review('APPROVED', OLD_HEAD)]],
+        evidence([
+          manifest,
+          lockfile('rebased'),
+          { filename: 'src/new.ts', status: 'added', patch: '+x' },
+        ]),
+      ),
+    ).toThrow('exact-head CodeRabbit approval');
+  });
+
+  it('refuses when a reviewable diff is unavailable', () => {
+    const { patch: _omitted, ...withoutPatch } = manifest;
+
+    expect(() =>
+      checkFeatureMerge(dependabotPr(), [[review('APPROVED', OLD_HEAD)]], {
+        approvedHead: OLD_HEAD,
+        approved: [withoutPatch, lockfile('original')],
+        current: [withoutPatch, lockfile('rebased')],
+      }),
+    ).toThrow('exact-head CodeRabbit approval');
+  });
+
+  it('refuses a PR that Dependabot did not author', () => {
+    const pr = dependabotPr();
+    pr.author = { login: 'The-Obstacle-Is-The-Way' };
+
+    expect(() =>
+      checkFeatureMerge(pr, [[review('APPROVED', OLD_HEAD)]], evidence()),
+    ).toThrow('exact-head CodeRabbit approval');
+  });
+
+  it('refuses when CodeRabbit last requested changes', () => {
+    expect(() =>
+      checkFeatureMerge(
+        dependabotPr(),
+        [
+          [
+            review('APPROVED', OLD_HEAD),
+            { ...review('CHANGES_REQUESTED', OLD_HEAD), id: 124 },
+          ],
+        ],
+        evidence(),
+      ),
+    ).toThrow('exact-head CodeRabbit approval');
+  });
+
+  it('refuses evidence for another approved head', () => {
+    expect(() =>
+      checkFeatureMerge(dependabotPr(), [[review('APPROVED', OLD_HEAD)]], {
+        ...evidence(),
+        approvedHead: 'c'.repeat(40),
+      }),
+    ).toThrow('exact-head CodeRabbit approval');
+  });
+});
+
 describe('merge command', () => {
   function responses() {
     vi.mocked(execFileSync)
@@ -275,6 +401,53 @@ describe('merge command', () => {
       'PR number',
     );
     expect(execFileSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads both diffs for a rebased Dependabot PR and records the carried approval', () => {
+    const pr = pullRequest();
+    pr.author = { login: 'dependabot' };
+    pr.files = {
+      nodes: [{ path: 'package.json' }, { path: 'pnpm-lock.yaml' }],
+      pageInfo: { hasNextPage: false },
+    };
+    const manifest = {
+      filename: 'package.json',
+      status: 'modified',
+      patch: '-"a": "1"\n+"a": "2"',
+    };
+    vi.mocked(execFileSync)
+      .mockReturnValueOnce(
+        JSON.stringify({ data: { repository: { pullRequest: pr } } }),
+      )
+      .mockReturnValueOnce(JSON.stringify([[review('APPROVED', OLD_HEAD)]]))
+      .mockReturnValueOnce(
+        JSON.stringify({
+          files: [
+            manifest,
+            { filename: 'pnpm-lock.yaml', status: 'modified', patch: 'x' },
+          ],
+        }),
+      )
+      .mockReturnValueOnce(
+        JSON.stringify({
+          files: [
+            manifest,
+            { filename: 'pnpm-lock.yaml', status: 'modified', patch: 'y' },
+          ],
+        }),
+      );
+
+    const receipt = runMergeReviewedPr(['987'], () => {});
+
+    expect(receipt).toMatchObject({ carriedFrom: OLD_HEAD, head: HEAD });
+    expect(vi.mocked(execFileSync).mock.calls[2]?.[1]).toEqual([
+      'api',
+      `repos/The-Obstacle-Is-The-Way/naltrexone-university/compare/dev...${OLD_HEAD}`,
+    ]);
+    expect(vi.mocked(execFileSync).mock.calls[3]?.[1]).toEqual([
+      'api',
+      `repos/The-Obstacle-Is-The-Way/naltrexone-university/compare/dev...${HEAD}`,
+    ]);
   });
 
   it('exits nonzero for unsupported direct CLI arguments without calling GitHub', () => {

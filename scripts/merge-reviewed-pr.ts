@@ -46,8 +46,10 @@ export const pullRequestSchema = z.object({
     ]),
   }),
 });
-// Feature merges also read the changed files (the promotion schema does not).
+// Feature merges also read the author and changed files (the promotion schema
+// does not).
 const featurePullRequestSchema = pullRequestSchema.extend({
+  author: z.object({ login: z.string() }).nullable(),
   files: z.object({
     pageInfo,
     nodes: z.array(z.object({ path: z.string() })),
@@ -106,7 +108,113 @@ function codecovNotApplicable(
   );
 }
 
-export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
+const compareFilesSchema = z.array(
+  z.object({
+    filename: z.string(),
+    status: z.string(),
+    patch: z.string().optional(),
+  }),
+);
+
+// A PR's own diff at two heads, each against its merge base with the PR's base
+// branch, from GitHub's compare API.
+export type DependabotCarryEvidence = {
+  approvedHead: string;
+  approved: z.infer<typeof compareFilesSchema>;
+  current: z.infer<typeof compareFilesSchema>;
+};
+
+// CodeRabbit's path filters exclude the lockfile, so it is the one file that
+// may differ between the reviewed head and the current one.
+const CODERABBIT_UNREVIEWED_PATH = 'pnpm-lock.yaml';
+
+function isDependabot(author: { login: string } | null): boolean {
+  return author?.login === 'dependabot' || author?.login === 'dependabot[bot]';
+}
+
+function reviewableDiffIsIdentical(evidence: DependabotCarryEvidence) {
+  const approved = compareFilesSchema.parse(evidence.approved);
+  const current = compareFilesSchema.parse(evidence.current);
+  const reviewable = (files: typeof approved) =>
+    files
+      .filter((file) => file.filename !== CODERABBIT_UNREVIEWED_PATH)
+      .sort((a, b) => a.filename.localeCompare(b.filename));
+  const before = reviewable(approved);
+  const after = reviewable(current);
+  return (
+    before.length === after.length &&
+    before.every((file, index) => {
+      const other = after[index];
+      return (
+        file.patch !== undefined &&
+        other !== undefined &&
+        other.filename === file.filename &&
+        other.status === file.status &&
+        other.patch === file.patch
+      );
+    })
+  );
+}
+
+// Dependabot PRs: CodeRabbit reviews once, when the PR opens, and skips a
+// rebase whose only new change is the lockfile. Its approval carries to the
+// current head only when it is CodeRabbit's latest decisive review and every
+// other file's diff is byte-identical at both heads.
+function carriedDependabotApproval(
+  author: { login: string } | null,
+  reviewPages: unknown,
+  head: string,
+  evidence: DependabotCarryEvidence | undefined,
+) {
+  const reviews = reviewPagesSchema.safeParse(reviewPages);
+  if (!reviews.success) throw new Error('Invalid GitHub review response');
+  const latest = reviews.data
+    .flat()
+    .filter(
+      (entry) =>
+        entry.user?.login === 'coderabbitai[bot]' &&
+        ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(entry.state),
+    )
+    .at(-1);
+  if (
+    !isDependabot(author) ||
+    !evidence ||
+    latest?.state !== 'APPROVED' ||
+    !latest.submitted_at ||
+    latest.commit_id === head ||
+    evidence.approvedHead !== latest.commit_id ||
+    !reviewableDiffIsIdentical(evidence)
+  ) {
+    throw new Error('Missing current exact-head CodeRabbit approval');
+  }
+  return {
+    id: latest.id,
+    submitted_at: latest.submitted_at,
+    carriedFrom: latest.commit_id,
+  };
+}
+
+export function latestCodeRabbitApprovalHead(
+  reviewPages: unknown,
+): string | null {
+  const reviews = reviewPagesSchema.safeParse(reviewPages);
+  if (!reviews.success) return null;
+  const latest = reviews.data
+    .flat()
+    .filter(
+      (entry) =>
+        entry.user?.login === 'coderabbitai[bot]' &&
+        ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED'].includes(entry.state),
+    )
+    .at(-1);
+  return latest?.state === 'APPROVED' ? latest.commit_id : null;
+}
+
+export function checkFeatureMerge(
+  input: unknown,
+  reviewPages: unknown,
+  carry?: DependabotCarryEvidence,
+) {
   const parsed = featurePullRequestSchema.safeParse(input);
   if (!parsed.success) throw new Error('Invalid GitHub merge response');
   const pr = parsed.data;
@@ -129,7 +237,18 @@ export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
   if (pr.reviewThreads.nodes.some((thread) => !thread.isResolved)) {
     throw new Error('PR has unresolved review threads');
   }
-  const approval = exactHeadApproval(reviewPages, pr.headRefOid);
+  let approval: { id: number; submitted_at: string; carriedFrom?: string };
+  try {
+    approval = exactHeadApproval(reviewPages, pr.headRefOid);
+  } catch (error) {
+    if (carry === undefined) throw error;
+    approval = carriedDependabotApproval(
+      pr.author,
+      reviewPages,
+      pr.headRefOid,
+      carry,
+    );
+  }
   if (!hasSuccessfulCheckRun(contexts.nodes, 'test')) {
     throw new Error('CI test has not succeeded on the exact head');
   }
@@ -155,6 +274,7 @@ export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
     head: pr.headRefOid,
     approvalId: approval.id,
     approvedAt: approval.submitted_at,
+    ...(approval.carriedFrom ? { carriedFrom: approval.carriedFrom } : {}),
     unresolvedThreads: 0,
   };
 }
@@ -183,6 +303,7 @@ const query = `query($number:Int!) {
       number state isDraft baseRefName headRefOid mergeable mergeStateStatus
       baseRefOid headRefName headRepository { nameWithOwner }
       mergeCommit { oid } mergedAt
+      author { login }
       reviewThreads(first:100) { nodes { isResolved } pageInfo { hasNextPage } }
       files(first:100) { nodes { path } pageInfo { hasNextPage } }
       commits(last:1) { nodes { commit { oid statusCheckRollup {
@@ -235,6 +356,42 @@ export function readMergeEvidence(number: string) {
   return { pullRequest: response.data.repository.pullRequest, reviewPages };
 }
 
+// GitHub's compare API lists at most 300 files; a list that long may be
+// truncated, so it cannot prove two diffs identical.
+const COMPARE_FILE_LIMIT = 300;
+
+function readCompareFiles(base: string, head: string) {
+  const { files } = z
+    .object({ files: compareFilesSchema })
+    .parse(
+      JSON.parse(gh(['api', `repos/${REPOSITORY}/compare/${base}...${head}`])),
+    );
+  if (files.length >= COMPARE_FILE_LIMIT) {
+    throw new Error('Compare response may be truncated; refusing to carry');
+  }
+  return files;
+}
+
+// Reads the carry evidence only for a Dependabot PR whose latest CodeRabbit
+// verdict is an approval on an earlier head.
+export function readDependabotCarryEvidence(
+  pullRequest: unknown,
+  reviewPages: unknown,
+): DependabotCarryEvidence | undefined {
+  const parsed = featurePullRequestSchema.safeParse(pullRequest);
+  if (!parsed.success || !isDependabot(parsed.data.author)) return undefined;
+  const approvedHead = latestCodeRabbitApprovalHead(reviewPages);
+  if (!approvedHead || approvedHead === parsed.data.headRefOid) {
+    return undefined;
+  }
+  const base = parsed.data.baseRefName;
+  return {
+    approvedHead,
+    approved: readCompareFiles(base, approvedHead),
+    current: readCompareFiles(base, parsed.data.headRefOid),
+  };
+}
+
 export function runMergeReviewedPr(
   args: string[],
   write: (value: string) => void = console.log,
@@ -252,7 +409,11 @@ export function runMergeReviewedPr(
     );
   }
   const evidence = readMergeEvidence(number);
-  const receipt = checkFeatureMerge(evidence.pullRequest, evidence.reviewPages);
+  const receipt = checkFeatureMerge(
+    evidence.pullRequest,
+    evidence.reviewPages,
+    readDependabotCarryEvidence(evidence.pullRequest, evidence.reviewPages),
+  );
   if (receipt.number !== Number(number))
     throw new Error('PR number changed during verification');
   write(JSON.stringify(receipt));
