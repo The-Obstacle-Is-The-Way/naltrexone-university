@@ -16,7 +16,10 @@ describe('billing-controller', () => {
         appUrl: 'https://app.example.com',
       });
 
-      const result = await createTrialPaymentMethodSetupSession({}, deps);
+      const result = await createTrialPaymentMethodSetupSession(
+        { expectedDisclosureVersion: '2026-09-28.2', renewalOptIn: true },
+        deps,
+      );
 
       expect(result).toEqual({
         ok: true,
@@ -25,6 +28,7 @@ describe('billing-controller', () => {
       expect(deps.createTrialPaymentMethodSetupSessionUseCase.inputs).toEqual([
         {
           userId: deps._fixtures.userId,
+          expectedDisclosureVersion: '2026-09-28.2',
           successUrl:
             'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
           cancelUrl:
@@ -36,7 +40,10 @@ describe('billing-controller', () => {
     it('returns UNAUTHENTICATED without creating a setup session', async () => {
       const deps = createBillingControllerDeps({ user: null });
 
-      const result = await createTrialPaymentMethodSetupSession({}, deps);
+      const result = await createTrialPaymentMethodSetupSession(
+        { expectedDisclosureVersion: '2026-09-28.2', renewalOptIn: true },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
@@ -57,7 +64,10 @@ describe('billing-controller', () => {
         }),
       });
 
-      const result = await createTrialPaymentMethodSetupSession({}, deps);
+      const result = await createTrialPaymentMethodSetupSession(
+        { expectedDisclosureVersion: '2026-09-28.2', renewalOptIn: true },
+        deps,
+      );
 
       expect(result).toMatchObject({
         ok: false,
@@ -72,7 +82,9 @@ describe('billing-controller', () => {
       const deps = createBillingControllerDeps();
       const input = {
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
-      };
+        expectedDisclosureVersion: '2026-09-28.2',
+        renewalOptIn: true,
+      } as const;
 
       const [first, second] = await Promise.all([
         createTrialPaymentMethodSetupSession(input, deps),

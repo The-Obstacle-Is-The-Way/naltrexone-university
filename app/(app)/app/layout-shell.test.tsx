@@ -244,46 +244,34 @@ describe('app/(app)/app/layout (shell)', () => {
     const doc = parseHtml(html);
     const shell = doc.body.firstElementChild;
     const banner = shell?.children[0];
-    const disclosure = banner
+    const summary = banner
       ? findElementByText(
           banner,
           'span',
-          PRICING_DATA.annual.trialPaymentDisclosure,
+          'Add a card before your trial ends to keep access.',
         )
       : null;
     const actionButton = banner
       ? findButtonByText(banner, 'Add a card to keep access')
       : null;
-    const termsLink = banner ? findAnchorByHref(banner, ROUTES.TERMS) : null;
-    const privacyLink = banner
-      ? findAnchorByHref(banner, ROUTES.PRIVACY)
-      : null;
 
     expect(
       banner ? findElementByText(banner, 'span', '4 days left in trial') : null,
     ).not.toBeNull();
-    expect(disclosure).not.toBeNull();
+    expect(summary).not.toBeNull();
     expect(actionButton).not.toBeNull();
-    expect(termsLink).not.toBeNull();
-    expect(privacyLink).not.toBeNull();
     expect(
-      disclosure && actionButton
-        ? isNodeBefore(disclosure, actionButton)
-        : false,
+      summary && actionButton ? isNodeBefore(summary, actionButton) : false,
     ).toBe(true);
-    expect(
-      termsLink && actionButton ? isNodeBefore(termsLink, actionButton) : false,
-    ).toBe(true);
-    expect(
-      privacyLink && actionButton
-        ? isNodeBefore(privacyLink, actionButton)
-        : false,
-    ).toBe(true);
+    // DEBT-414 F03b: the terms, legal links and form live in the consent
+    // dialog the button opens, not in the banner.
+    expect(banner?.textContent).not.toContain(
+      PRICING_DATA.annual.trialPaymentConsent.optIn,
+    );
+    expect(banner ? findAnchorByHref(banner, ROUTES.TERMS) : null).toBeNull();
+    expect(banner?.querySelector('form')).toBeNull();
     expect(banner?.textContent).toContain('days left in trial');
     expect(shell?.children[1]?.tagName).toBe('HEADER');
-    expect(banner?.querySelector('input[name="idempotencyKey"]')).not.toBe(
-      null,
-    );
     expect(html).not.toContain('Your payment failed');
     expect(html).toContain('Child content');
   });

@@ -34,9 +34,9 @@ Known environment quirk (not a bug): in Clerk development mode, the redirect bac
 
 | # | Action | Expected |
 |---|--------|----------|
-| 8 | ⚠ As a first-timer, press **Start 7-day free trial** | Hosted Stripe Checkout opens; **no card required** for the trial path |
+| 8 | ⚠ As a first-timer, press **Start 7-day free trial**, review the consent dialog, check the unchecked renewal opt-in, and press **Start free trial** | The dialog's **Start free trial** does nothing until the opt-in is checked (DEBT-414 F03); then hosted Stripe Checkout opens, and **no card is required** for the trial path |
 | 9 | ⚠ Accept the hosted Terms/Privacy checkbox and press the hosted start-trial/subscribe/continue button | Land on `/checkout/success` with the trial-started heading, then forwarded to `/app/dashboard` |
-| 10 | Check the app shell | Trial banner shows days remaining and **"Add a card to keep access"** |
+| 10 | Check the app shell, then press **Add a card to keep access** | Trial banner shows days remaining and the button, which opens the add-card consent dialog: the plan's terms in bold and an unchecked renewal opt-in; **Add a card** does nothing until the opt-in is checked (DEBT-414 F03b). Press **Cancel** to close it |
 | 11 | ⚠ As the separate prior-subscriber who is non-entitled now, start a paid checkout and **cancel** from the Stripe page | Returned to `/pricing?checkout=cancel` with the cancel banner; user remains non-entitled |
 | 12 | ⚠ human: With that prior-subscriber, start a paid checkout and pay with test card `4242 4242 4242 4242`, any future expiry, and any three-digit CVC | `/checkout/success` syncs entitlement; `/app/dashboard` loads without the trial banner |
 

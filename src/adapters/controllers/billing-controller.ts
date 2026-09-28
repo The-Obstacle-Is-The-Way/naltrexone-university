@@ -7,7 +7,7 @@ import {
   CHECKOUT_SESSION_RATE_LIMIT,
   PORTAL_SESSION_RATE_LIMIT,
 } from '@/src/adapters/shared/rate-limits';
-import { zUuid } from '@/src/adapters/shared/zod-schemas';
+import { zDisclosureVersion, zUuid } from '@/src/adapters/shared/zod-schemas';
 import { ApplicationError } from '@/src/application/errors';
 import type {
   AuthGateway,
@@ -42,9 +42,7 @@ const CreateCheckoutSessionInputSchema = z
     expectedOffer: z
       .object({
         hasTrial: z.boolean(),
-        // A date, with a revision suffix when a second text is adopted the
-        // same day (DEBT-414 F03).
-        disclosureVersion: z.string().regex(/^\d{4}-\d{2}-\d{2}(\.\d+)?$/),
+        disclosureVersion: zDisclosureVersion,
       })
       .strict(),
     // DEBT-414 F03: the separate, affirmative renewal opt-in.
@@ -61,6 +59,10 @@ const CreatePortalSessionInputSchema = z
 const CreateTrialPaymentMethodSetupSessionInputSchema = z
   .object({
     idempotencyKey: zIdempotencyKey.optional(),
+    // DEBT-414 F03b: the add-card terms the learner was shown, and the same
+    // separate, affirmative renewal opt-in as checkout.
+    expectedDisclosureVersion: zDisclosureVersion,
+    renewalOptIn: z.literal(true),
   })
   .strict();
 
@@ -159,6 +161,7 @@ export const createTrialPaymentMethodSetupSession = createAction({
     async function createNewSession(): Promise<CreateTrialPaymentMethodSetupSessionOutput> {
       const setupInput = {
         userId: user.id,
+        expectedDisclosureVersion: input.expectedDisclosureVersion,
         successUrl: toTrialPaymentMethodReturnUrl(d.appUrl, 'success'),
         cancelUrl: toTrialPaymentMethodReturnUrl(d.appUrl, 'cancel'),
       } as const;

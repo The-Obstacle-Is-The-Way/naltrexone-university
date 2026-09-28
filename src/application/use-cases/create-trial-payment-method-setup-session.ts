@@ -26,6 +26,8 @@ export type TrialRenewalTerms = Pick<
 
 export type CreateTrialPaymentMethodSetupSessionInput = {
   userId: string;
+  // DEBT-414 F03b: the disclosure version the learner was shown.
+  expectedDisclosureVersion: string;
   successUrl: string;
   cancelUrl: string;
 };
@@ -76,6 +78,14 @@ export class CreateTrialPaymentMethodSetupSessionUseCase {
       throw new ApplicationError(
         'INTERNAL_ERROR',
         'Trial renewal terms do not match the subscription plan',
+      );
+    }
+    // A page loaded before the terms changed would otherwise record consent
+    // to text the learner never saw (DEBT-414 F03b).
+    if (input.expectedDisclosureVersion !== terms.disclosureVersion) {
+      throw new ApplicationError(
+        'VALIDATION_ERROR',
+        'The displayed add-card terms have changed. Review the current terms before continuing.',
       );
     }
 
