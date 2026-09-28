@@ -91,22 +91,19 @@ export async function validateFeedbackContext(
   }
 
   // When both are supplied, the attempt must have a real relationship to the
-  // supplied session. Session-review retries are standalone attempts that point
-  // back to the reviewed session through retry provenance.
+  // supplied session. A session-review retry is a STANDALONE attempt (no
+  // session of its own) that points back to the reviewed session via retry
+  // provenance; an attempt that already belongs to a different session must
+  // not qualify.
+  const isSessionReviewRetry =
+    attemptSessionId === null &&
+    attemptRetryOrigin === 'session_review' &&
+    attemptRetrySessionId === input.practiceSessionId;
   if (
     input.attemptId !== null &&
     input.practiceSessionId !== null &&
     attemptSessionId !== input.practiceSessionId &&
-    !(
-      // A session-review retry is a STANDALONE attempt (no session of its own)
-      // that points back to the reviewed session via retry provenance. An
-      // attempt that already belongs to a different session must not qualify.
-      (
-        attemptSessionId === null &&
-        attemptRetryOrigin === 'session_review' &&
-        attemptRetrySessionId === input.practiceSessionId
-      )
-    )
+    !isSessionReviewRetry
   ) {
     throw new ApplicationError(
       'VALIDATION_ERROR',
