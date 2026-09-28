@@ -8,11 +8,19 @@ import type {
   pendingStripeCancellations,
 } from './schema';
 import {
+  ATTEMPTS_QUESTION_REVISION_FK,
   ATTEMPTS_SELECTED_CHOICE_QUESTION_IDX,
   attempts,
+  CHOICES_QUESTION_REVISION_FK,
+  choices,
+  PRACTICE_SESSION_QUESTION_STATES_QUESTION_REVISION_FK,
   PRACTICE_SESSIONS_USER_INCOMPLETE_UQ,
   practiceSessionQuestionStates,
   practiceSessions,
+  QUESTION_REVISIONS_ID_QUESTION_ID_UQ,
+  QUESTIONS_CURRENT_REVISION_FK,
+  questionRevisions,
+  questions,
   stripeSubscriptions,
 } from './schema';
 
@@ -111,4 +119,84 @@ describe('stripeSubscriptions schema', () => {
       notNull: true,
     });
   });
+});
+
+// ADR-021 phase 1: every pointer at a revision is keyed by (revision id,
+// question id), so a row can point only at a revision of its own question.
+describe('question revision keys', () => {
+  function describeForeignKey(
+    table: Parameters<typeof getTableConfig>[0],
+    name: string,
+  ) {
+    const foreignKey = getTableConfig(table).foreignKeys.find(
+      (candidate) => candidate.getName() === name,
+    );
+    if (!foreignKey) throw new Error(`Missing foreign key: ${name}`);
+    const reference = foreignKey.reference();
+    return {
+      columns: reference.columns.map((column) => column.name),
+      foreignTable: getTableConfig(reference.foreignTable).name,
+      foreignColumns: reference.foreignColumns.map((column) => column.name),
+      onDelete: foreignKey.onDelete,
+    };
+  }
+
+  it('deletes a question together with its revisions', () => {
+    const [toQuestion] = getTableConfig(questionRevisions).foreignKeys;
+    const reference = toQuestion?.reference();
+
+    expect(toQuestion?.onDelete).toBe('cascade');
+    expect(reference && getTableConfig(reference.foreignTable).name).toBe(
+      'questions',
+    );
+  });
+
+  it('gives every revision a unique (id, question_id) key for the composite references', () => {
+    const { config } = findIndex(
+      questionRevisions,
+      QUESTION_REVISIONS_ID_QUESTION_ID_UQ,
+    );
+
+    expect(config.unique).toBe(true);
+    expect(
+      config.columns.map((column) => ('name' in column ? column.name : null)),
+    ).toEqual(['id', 'question_id']);
+  });
+
+  it.each([
+    [
+      QUESTIONS_CURRENT_REVISION_FK,
+      questions,
+      ['current_revision_id', 'id'],
+      'no action',
+    ],
+    [
+      CHOICES_QUESTION_REVISION_FK,
+      choices,
+      ['question_revision_id', 'question_id'],
+      'cascade',
+    ],
+    [
+      ATTEMPTS_QUESTION_REVISION_FK,
+      attempts,
+      ['question_revision_id', 'question_id'],
+      'restrict',
+    ],
+    [
+      PRACTICE_SESSION_QUESTION_STATES_QUESTION_REVISION_FK,
+      practiceSessionQuestionStates,
+      ['question_revision_id', 'question_id'],
+      'restrict',
+    ],
+  ] as const)(
+    '%s points only at a revision of its own question',
+    (name, table, columns, onDelete) => {
+      expect(describeForeignKey(table, name)).toEqual({
+        columns,
+        foreignTable: 'question_revisions',
+        foreignColumns: ['id', 'question_id'],
+        onDelete,
+      });
+    },
+  );
 });

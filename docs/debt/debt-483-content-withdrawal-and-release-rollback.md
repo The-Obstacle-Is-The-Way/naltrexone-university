@@ -359,7 +359,7 @@ as does archived-question review under DEBT-484.
 
 [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) decides the app's side of SPEC-007. Content becomes visible only through a verified release, recorded with its manifest hash and parent, staged invisibly and activated in one transaction that compares the active-release pointer; any failure leaves the previous release active. Withdrawals and holds are a current overlay keyed by question and revision, so a rollback to an older release never resurrects a revoked item, and today's explicit-QID withdrawal command becomes a writer to that overlay. Selection reads the active release, and `questions.status` is retired in a contract step.
 
-This record closes after ADR-021's phase 4 (releases, overlay and rollback), with the Verification above demonstrated on disposable databases. Release zero, the inventory of what is live, waits on the owner's answer to the ADR's content-hash question.
+This record closes after ADR-021's phase 4 (releases, overlay and rollback), with the Verification above demonstrated on disposable databases. Release zero, the inventory of what is live, uses the `stored-fields-json-v1` hash form decided in the ADR on 2026-09-28, and waits for the content repository to compute that form too.
 
 ## Related
 
