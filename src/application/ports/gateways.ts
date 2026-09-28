@@ -81,9 +81,15 @@ export type SetTrialSubscriptionDefaultPaymentMethodInput = {
   externalSubscriptionId: string;
 };
 
+// DEBT-414 F05: which self-service features the billing portal offers. A
+// trial offers no payment-method update, so a first card can be added only
+// through the add-card flow that records consent to be charged.
+export type PortalProfile = 'trial' | 'paid';
+
 export type PortalSessionInput = {
   externalCustomerId: string; // opaque external id
   returnUrl: string;
+  profile: PortalProfile;
 };
 
 export type PortalSessionOutput = { url: string };

@@ -12,6 +12,7 @@ runStripeCheckoutClientContract('FakeStripeCheckoutClient', async () => {
     subscriptions: stripe.subscriptions,
     customers: stripe.customers,
     paymentMethods: stripe.paymentMethods,
+    portalConfigurations: stripe.billingPortal.configurations,
     seedPaymentMethod: async () => {
       paymentMethodSequence += 1;
       const id = `pm_fake_${paymentMethodSequence}`;

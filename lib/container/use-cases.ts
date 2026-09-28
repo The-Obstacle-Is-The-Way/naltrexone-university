@@ -214,6 +214,7 @@ export function createUseCaseFactories(input: {
     createPortalSessionUseCase: () =>
       new CreatePortalSessionUseCase(
         repositories.createStripeCustomerRepository(),
+        repositories.createSubscriptionRepository(),
         gateways.createPaymentGateway(),
       ),
     createTrialPaymentMethodSetupSessionUseCase: () =>

@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { portalConfigurationParams } from '@/src/adapters/gateways/stripe/stripe-portal-configurations';
 import type {
   CheckoutSessionCreateParams,
   CustomerSearchParams,
+  StripeBillingPortalConfiguration,
   StripeClient,
   StripeCustomerSearchResult,
 } from '@/src/adapters/shared/stripe-types';
@@ -44,6 +46,7 @@ export type StripeCheckoutClientContractHarness = {
     Required<Pick<StripeSubscriptionsClient, 'list' | 'cancel' | 'update'>>;
   paymentMethods: Required<StripePaymentMethodsClient>;
   customers: Required<Pick<StripeCustomersClient, 'search'>>;
+  portalConfigurations: StripeClient['billingPortal']['configurations'];
   subscriptionParams: SubscriptionParams;
   advanceCreationTime(): Promise<void>;
   // Creates one active Subscription for the harness customer and returns
@@ -508,6 +511,68 @@ const stripeCheckoutClientContractScenarios: readonly ContractScenario[] = [
         default_payment_method?: unknown;
       };
       expect(retrieved.default_payment_method === paymentMethod.id).toBe(true);
+    },
+  },
+  {
+    // DEBT-414 F05: the adapter finds its portal configuration among the
+    // active ones and creates it under a version-scoped idempotency key. The
+    // production trial features are sent, so the real half also proves Stripe
+    // accepts them; a contract marker replaces the app's metadata, so the app
+    // never selects a configuration this case creates.
+    name: STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES[9],
+    async run(harness) {
+      const marker = `debt414_f05_${randomUUID()}`;
+      const params = {
+        ...portalConfigurationParams('trial'),
+        metadata: { contract_marker: marker },
+      };
+      const options = {
+        idempotencyKey: idempotencyKey('portal_configuration'),
+      };
+
+      const first = await harness.portalConfigurations.create(params, options);
+      expect(first.active).toBe(true);
+      expect(first.metadata?.contract_marker).toBe(marker);
+      expect(first.features.payment_method_update.enabled).toBe(false);
+      expect(first.features.subscription_update.enabled).toBe(false);
+
+      const replay = await harness.portalConfigurations.create(params, options);
+      expect(replay.id === first.id).toBe(true);
+
+      let mismatch: unknown;
+      try {
+        await harness.portalConfigurations.create(
+          {
+            ...params,
+            features: {
+              ...params.features,
+              payment_method_update: { enabled: true },
+            },
+          },
+          options,
+        );
+      } catch (error) {
+        mismatch = error;
+      }
+      expect(readErrorField(mismatch, 'rawType')).toBe('idempotency_error');
+      expect(readErrorField(mismatch, 'statusCode')).toBe(400);
+
+      const listed: StripeBillingPortalConfiguration[] = [];
+      let startingAfter: string | undefined;
+      do {
+        const page = await harness.portalConfigurations.list({
+          active: true,
+          limit: 100,
+          ...(startingAfter ? { starting_after: startingAfter } : {}),
+        });
+        listed.push(...page.data);
+        startingAfter = page.has_more ? page.data.at(-1)?.id : undefined;
+      } while (startingAfter);
+      const found = listed.filter(
+        (configuration) => configuration.metadata?.contract_marker === marker,
+      );
+      expect(found).toHaveLength(1);
+      expect(found[0]?.id === first.id).toBe(true);
     },
   },
 ];

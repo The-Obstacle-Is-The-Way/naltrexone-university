@@ -9,6 +9,7 @@ import type {
   StripeSetupIntent,
   StripeSubscriptionListParams,
 } from '@/src/adapters/shared/stripe-types';
+import { FakeStripePortalConfigurations } from './fake-stripe-portal-configurations';
 
 const CHECKOUT_SESSION_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
@@ -609,10 +610,16 @@ export class FakeStripeCheckoutClient implements StripeClient {
     this.subscriptions.listHook = hook;
   }
 
+  // The clock is read lazily: class fields initialize before `nowMs` is set.
+  readonly portalConfigurations = new FakeStripePortalConfigurations(() =>
+    this.nowMs(),
+  );
+
   readonly billingPortal: StripeClient['billingPortal'] = {
     sessions: {
       create: async () => ({ url: 'https://billing.stripe.test/session' }),
     },
+    configurations: this.portalConfigurations,
   };
 
   // Webhook verification is Stripe's; the fake never verifies. With an event

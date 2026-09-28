@@ -121,11 +121,27 @@ runStripeCheckoutClientContract(
       search: (params, options) => stripe.customers.search(params, options),
     } satisfies Required<Pick<StripeClient['customers'], 'search'>>;
 
+    // Stripe cannot delete a portal configuration; cleanup deactivates each
+    // one this case created.
+    const createdPortalConfigurationIds = new Set<string>();
+    const portalConfigurations = {
+      list: (params) => stripe.billingPortal.configurations.list(params),
+      create: async (params, options) => {
+        const configuration = await stripe.billingPortal.configurations.create(
+          params,
+          options,
+        );
+        createdPortalConfigurationIds.add(configuration.id);
+        return configuration;
+      },
+    } satisfies StripeClient['billingPortal']['configurations'];
+
     return {
       sessions,
       subscriptions,
       customers,
       paymentMethods,
+      portalConfigurations,
       seedPaymentMethod: async () => {
         const paymentMethod = await stripe.paymentMethods.create({
           type: 'card',
@@ -215,6 +231,21 @@ runStripeCheckoutClientContract(
               new Error('Failed to clean up a Stripe contract Subscription', {
                 cause: error,
               }),
+            );
+          }
+        }
+
+        for (const configurationId of createdPortalConfigurationIds) {
+          try {
+            await stripe.billingPortal.configurations.update(configurationId, {
+              active: false,
+            });
+          } catch (error) {
+            cleanupErrors.push(
+              new Error(
+                'Failed to clean up a Stripe contract portal configuration',
+                { cause: error },
+              ),
             );
           }
         }
