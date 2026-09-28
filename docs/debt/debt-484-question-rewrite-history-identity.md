@@ -215,6 +215,24 @@ This increment:
 - **Test doubles.** The attempt and session fakes do not model binding. The register records that as a known divergence, proved in Postgres instead, because no domain type carries the revision until reads switch (increment 3).
 - **What does not change.** Readers, grading and the seed behave exactly as before. A seed rewrite still refreshes revision 1 in place; increment 4 stops that while an incomplete session binds it.
 
+## Phase 2a, second increment: older history binds to its revision — 2026-09-28
+
+Since the first increment, every new session state and attempt is bound. The serving deployment writes no unbound row, so the rows written before it are a fixed set. The ADR asks for a bounded, batched job to bind them.
+- **Function.** `bind_history_revisions_v1(p_limit)` binds at most `p_limit` unbound rows per table and returns the rows bound and the rows still unbound. It follows the rule new rows follow: a session state binds its question's current revision, and an attempt binds its session state's revision, else its question's current one.
+- **Skipped rows.** A row is bound only if its selections are choices of that revision, so the `(selected choice, revision)` keys can never reject the update. Any other row stays unbound and is counted. Phase 2b's migration refuses to run while any row remains unbound, so an anomaly surfaces loudly instead of failing a deploy here.
+- **Migration `0041`.**
+  - It runs the function once, capped at 50,000 rows per table, and logs the counts. Production's build log therefore measures its real history sizes, without anyone holding production credentials. Any remainder is bound by a later run before phase 2b.
+  - It validates the five history keys that `0039` and `0040` added `NOT VALID`. `VALIDATE` takes a lock that blocks neither reads nor writes, and unbound rows' NULL revisions satisfy the `MATCH SIMPLE` keys.
+- **Pre-flight data proof.** On a copy of the shared per-clone test database, its two E2E session states and two attempts were written before binding existed. `0041` logged `2 session states and 2 attempts bound; 0 and 0 remain unbound`, left no revision key `NOT VALID`, and a second run bound nothing. The copy was then dropped. The shared database itself was not migrated while other PRs were ahead in the queue.
+- **Tests.** Six real-Postgres cases in `question-revision-backfill.integration.test.ts`, all red first:
+  - an older session state and its attempt;
+  - an older attempt outside a session;
+  - the batch bound, with its remainder reported;
+  - a second run that binds nothing;
+  - a row whose selection is a choice of another revision, left unbound and reported;
+  - all five keys validated.
+- **What does not change.** Readers, grading and the seed behave as before.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
