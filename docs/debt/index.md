@@ -3,19 +3,22 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-28 UTC
 
-**Latest** — 2026-09-28 UTC: DEBT-414 F03b moves the trial add-card offer into the same consent dialog as checkout, with a separate, unchecked, required opt-in to automatic renewal, and refuses add-card terms that changed after they were displayed.
-- **Dialog.** The trial banner's button now opens the scrollable consent dialog. It shows the add-card terms in bold rows, the I-7 opt-in, and the closing sentence with the legal links, rendered by the same `ConsentTerms` as checkout.
-  - The recorded snapshot is the serialized consent the dialog renders, under version `2026-09-28.2`.
-  - With F03a, both of F03's entry points now carry the opt-in. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later).
-- **Guard.** The form posts the displayed version, and the action, controller and use case each check the submission before any Stripe call. They refuse a missing opt-in, and the use case refuses a version other than the current one, so a stale page cannot record consent to text the learner never saw.
-- **Proof.** Run over the pre-F03b code, 21 of the new or updated tests fail. Eight dialog captures show zero axe violations and a blocked unchecked submission, and two more capture the new one-line banner.
-  - A new hosted Stripe journey saves a real test card through the dialog. The consent recorded is exactly the text shown, and the trial renews on that card.
-  - The same journey found that the banner still asks for a card once one is saved. That defect predates F03b; it is filed as [BUG-308](../bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md) and is the next increment.
-- **Previous increment.** #1181 (F03a) merged as `c78c0879` with exact-head approval **5336251680** and no findings.
-  - Its first local gate predated three commits (two record-only commits and the theme guard). The full gate and all 60 E2E tests were therefore rerun on the exact head before merging, and the PR body was corrected.
-  - It is promoted through #1182 (`b0fecc6c`), whose review approved with no findings. The promotion's proof was written into its body at 09:27:21Z, before the merge at 09:27:26Z. Release verified: main CI **36403616006** `test` **09:37:20Z**; Ready **09:28:54.339Z**, held without alias until its check completed; production assigned **09:37:22.800Z**; matching trees; healthy production.
+**Latest** — 2026-09-28 UTC: this increment fixes [BUG-308](../bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md), which F03b's hosted journey found: after a trialing learner saved a card, the app kept asking them to add one.
+- **Banner.** Once the add-card flow has set a card as the trial's default, the banner states the renewal beside a "Manage billing" link instead of offering the add-card dialog.
+- **Billing.** Billing names the plan and status instead of raw values, and says whether the trial renews on a saved card. It acknowledges the return from Stripe: saved, still confirming, or cancelled.
+- **Email.** Stripe's setup page now shows the learner's email already filled in.
+- **Proof.** A fake↔real contract (seven scenarios) was red first. The hosted journey proves each part in Stripe test mode, and the captures show zero axe violations.
+- **Previous increment.** #1183 (F03b) merged as `23743736` with exact-head approval **5337764111**. Four findings over three rounds were all accepted:
+  - scope the replay key to the displayed version;
+  - a human add-card step in QA-002;
+  - neutral wording for the add-card error;
+  - limit the Billing claim to failures that return there.
+
+  It is promoted through #1184 (`85e51515`), whose review approved with no findings. The promotion's proof was written into its body at 11:34:32Z, before the merge at 11:34:37Z. Release verified: main CI **36416470979** `test` **11:47:04Z**; Ready **11:36:17.013Z**, held without alias until its check completed; production assigned **11:47:06.894Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-28 UTC DEBT-414 F03b moves the trial add-card offer into the same consent dialog as checkout, with a separate, unchecked, required renewal opt-in, and refuses add-card terms that changed after they were displayed. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later). The previous increment, #1181 (F03a), merged as `c78c0879` and is promoted through #1182 (`b0fecc6c`). Release verified: main CI **36403616006** `test` **09:37:20Z**; Ready **09:28:54.339Z**, held without alias until its check completed; production assigned **09:37:22.800Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-28 UTC DEBT-414 F03a adds a separate, unchecked, required opt-in to automatic renewal to every checkout offer, recorded verbatim in the consent evidence. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later). The previous increment, #1179 (F04), merged as `14b4da2b` and is promoted through #1180 (`f5a75091`). Release verified: main CI **36397376874** `test` **08:37:50Z**; Ready **08:28:11.828Z**, held without alias until its check completed; production assigned **08:37:52.589Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
