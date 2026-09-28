@@ -1,6 +1,6 @@
 # BUG-308: The Trial Banner Asks for a Card After One Is Saved
 
-**Status:** Open
+**Status:** Open — fix in review; closes after release verification
 **Severity:** P3
 **Date:** 2026-09-28
 **Confirmed:** 2026-09-28 (hosted Stripe test-mode run on this clone, during DEBT-414 F03b)
@@ -40,3 +40,26 @@ Two smaller defects sit on the same path:
 3. **Billing.** Acknowledge the return: confirm a saved card, say it is still being confirmed while the webhook is pending, and handle `cancel` as well. Name the plan and state the trial's end, and whether it renews on a saved card, instead of printing raw domain values.
 4. **Email.** Prefill the learner's email on the setup Session. Verify the parameter against Stripe's setup-mode contract first, because the Session deliberately names no customer until the webhook has verified ownership.
 5. **Tests.** Red-first unit and component cases for each change. Extend the hosted add-card journey to assert the banner after the card is saved.
+
+## Fix (2026-09-28)
+
+- **Saved-card query.** The setup-operation port gains `hasSubscriptionDefaultSet({ userId, stripeSubscriptionId })`: an operation of that learner, for that subscription, whose `subscription_default_set_at` is set. That is the point at which Stripe will charge the card, even if completion has not yet been recorded.
+  - The fake and the Drizzle adapter answer it identically across seven scenarios in `tests/integration/trial-saved-card-contract.integration.test.ts`, which was red first: nothing saved, pending, attached only, default set, completed, an earlier subscription, and another learner.
+  - The existing `user_id` index covers the query.
+- **Use case.** `CheckTrialSavedCardUseCase` resolves the learner's current Stripe subscription and asks that question. The app shell and Billing call it only for a subscription in trial.
+- **Banner.** With a saved card, the F-10 banner states the renewal, for example "Pro Monthly renews at $29 per month on your saved card when your trial ends.", beside an L-5 "Manage billing" link. It renders no add-card button.
+- **Billing.**
+  - The subscription line names the plan and status, such as "Pro Monthly · Free trial".
+  - A trial adds its renewal line: on the saved card, or "No card on file…".
+  - The add-card return is acknowledged in a status notice: "Your card is saved.", "Stripe is confirming your card. Refresh this page in a moment." while the webhook is pending, or "No card was added. Your trial continues."
+- **Email.** The setup Session sends `customer_email` and still names no customer. A test-mode probe confirmed that Stripe accepts it in setup mode, echoes it, and creates no customer (`customer_creation=if_required`).
+- **Tests.**
+  - Red first: the contract, the use case, the entitled-user cases, the banner, the seven Billing cases, the setup Session's parameters, and the use case's email.
+  - The controller's email assertion was proved live by removing the line.
+- **Hosted proof.** `stripe-hosted-trial-add-card.spec.ts` now also asserts:
+  - Stripe showed the email prefilled, so the helper typed nothing;
+  - Billing said "Stripe is confirming" until the real event was replayed, then "Your card is saved." with the renewal line;
+  - the dashboard banner states the renewal, with no add-card button.
+
+  It passed locally in test mode on 2026-09-28.
+
