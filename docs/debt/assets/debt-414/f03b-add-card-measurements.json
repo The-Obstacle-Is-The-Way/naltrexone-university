@@ -1,0 +1,182 @@
+[
+  {
+    "plan": "monthly",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "dialog": {
+      "width": 512,
+      "height": 671,
+      "top": 114.5,
+      "bottom": 785.5
+    },
+    "scroll": {
+      "scrollHeight": 669,
+      "clientHeight": 669
+    },
+    "horizontalOverflow": false,
+    "focusedTitle": "Keep access after your trial",
+    "rows": [
+      "Plan: Pro Monthly",
+      "After trial: $29 per month when your trial ends, renewing automatically every month until canceled.",
+      "Without a card: Your trial ends and you are not charged.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "optIn": "I agree that Pro Monthly renews automatically at $29 per month when my trial ends, until I cancel.",
+    "uncheckedSubmitBlocked": true,
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "monthly",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "dialog": {
+      "width": 358,
+      "height": 812,
+      "top": 16,
+      "bottom": 828
+    },
+    "scroll": {
+      "scrollHeight": 893,
+      "clientHeight": 810
+    },
+    "horizontalOverflow": false,
+    "focusedTitle": "Keep access after your trial",
+    "rows": [
+      "Plan: Pro Monthly",
+      "After trial: $29 per month when your trial ends, renewing automatically every month until canceled.",
+      "Without a card: Your trial ends and you are not charged.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "optIn": "I agree that Pro Monthly renews automatically at $29 per month when my trial ends, until I cancel.",
+    "uncheckedSubmitBlocked": true,
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "monthly",
+    "viewport": {
+      "width": 390,
+      "height": 667
+    },
+    "dialog": {
+      "width": 358,
+      "height": 635,
+      "top": 16,
+      "bottom": 651
+    },
+    "scroll": {
+      "scrollHeight": 893,
+      "clientHeight": 633
+    },
+    "horizontalOverflow": false,
+    "focusedTitle": "Keep access after your trial",
+    "rows": [
+      "Plan: Pro Monthly",
+      "After trial: $29 per month when your trial ends, renewing automatically every month until canceled.",
+      "Without a card: Your trial ends and you are not charged.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "optIn": "I agree that Pro Monthly renews automatically at $29 per month when my trial ends, until I cancel.",
+    "uncheckedSubmitBlocked": true,
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "dialog": {
+      "width": 512,
+      "height": 651,
+      "top": 124.5,
+      "bottom": 775.5
+    },
+    "scroll": {
+      "scrollHeight": 649,
+      "clientHeight": 649
+    },
+    "horizontalOverflow": false,
+    "focusedTitle": "Keep access after your trial",
+    "rows": [
+      "Plan: Pro Annual",
+      "After trial: $199 per year when your trial ends, renewing automatically every year until canceled.",
+      "Without a card: Your trial ends and you are not charged.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "optIn": "I agree that Pro Annual renews automatically at $199 per year when my trial ends, until I cancel.",
+    "uncheckedSubmitBlocked": true,
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "dialog": {
+      "width": 358,
+      "height": 812,
+      "top": 16,
+      "bottom": 828
+    },
+    "scroll": {
+      "scrollHeight": 873,
+      "clientHeight": 810
+    },
+    "horizontalOverflow": false,
+    "focusedTitle": "Keep access after your trial",
+    "rows": [
+      "Plan: Pro Annual",
+      "After trial: $199 per year when your trial ends, renewing automatically every year until canceled.",
+      "Without a card: Your trial ends and you are not charged.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "optIn": "I agree that Pro Annual renews automatically at $199 per year when my trial ends, until I cancel.",
+    "uncheckedSubmitBlocked": true,
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "viewport": {
+      "width": 390,
+      "height": 667
+    },
+    "dialog": {
+      "width": 358,
+      "height": 635,
+      "top": 16,
+      "bottom": 651
+    },
+    "scroll": {
+      "scrollHeight": 873,
+      "clientHeight": 633
+    },
+    "horizontalOverflow": false,
+    "focusedTitle": "Keep access after your trial",
+    "rows": [
+      "Plan: Pro Annual",
+      "After trial: $199 per year when your trial ends, renewing automatically every year until canceled.",
+      "Without a card: Your trial ends and you are not charged.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "optIn": "I agree that Pro Annual renews automatically at $199 per year when my trial ends, until I cancel.",
+    "uncheckedSubmitBlocked": true,
+    "submitReachable": true,
+    "axeViolations": []
+  }
+]

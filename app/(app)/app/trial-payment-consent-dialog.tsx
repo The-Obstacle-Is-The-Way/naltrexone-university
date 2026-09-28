@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef } from 'react';
-import type { PricingAction } from '@/app/pricing/pricing-auth-cta';
 import { ConsentSubmitButton } from '@/components/consent-submit-button';
 import { ConsentTerms } from '@/components/consent-terms';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
@@ -16,43 +15,34 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { PRICING_DATA } from '@/lib/pricing-data';
-import type { PricingPlan } from '@/lib/routes';
+import {
+  PRICING_DATA,
+  TRIAL_PAYMENT_DISCLOSURE_VERSION,
+} from '@/lib/pricing-data';
+import type { SubscriptionPlan } from '@/src/domain/value-objects';
 
-type PlanConsentDetailsProps = { plan: PricingPlan; hasTrial: boolean };
-
-export function PlanConsentDetails({
+// DEBT-414 F03b: the trial add-card offer, in the same S-4 consent dialog as
+// checkout: bold terms, a separate unchecked renewal opt-in, and the displayed
+// version, which the server compares with the current one before Stripe.
+export function TrialPaymentConsentDialog({
   plan,
-  hasTrial,
-}: PlanConsentDetailsProps) {
-  return (
-    <ConsentTerms
-      consent={PRICING_DATA[plan].consent[hasTrial ? 'trial' : 'standard']}
-    />
-  );
-}
-
-export function PlanConsentDialog({
-  plan,
-  hasTrial,
-  initiallyOpen = false,
-  subscribeAction,
-}: PlanConsentDetailsProps & {
-  initiallyOpen?: boolean;
-  subscribeAction: PricingAction;
+  createTrialPaymentMethodActionFn,
+}: {
+  plan: SubscriptionPlan;
+  createTrialPaymentMethodActionFn: (formData: FormData) => Promise<void>;
 }) {
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const pricing = PRICING_DATA[plan];
-  const consent = pricing.consent[hasTrial ? 'trial' : 'standard'];
+  const consent = PRICING_DATA[plan].trialPaymentConsent;
   return (
-    <Dialog defaultOpen={initiallyOpen}>
+    <Dialog>
       <DialogTrigger asChild>
-        <Button className="mt-8 h-auto w-full rounded-full py-3 text-base">
-          {hasTrial
-            ? pricing.trialCta
-            : plan === 'monthly'
-              ? 'Subscribe monthly'
-              : 'Subscribe annual'}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="rounded-full"
+        >
+          Add a card to keep access
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -68,29 +58,24 @@ export function PlanConsentDialog({
             tabIndex={-1}
             className="rounded-sm ring-focus"
           >
-            {hasTrial
-              ? 'Start your 7-day free trial'
-              : `Subscribe to ${pricing.name}`}
+            Keep access after your trial
           </DialogTitle>
           <DialogDescription>
-            {hasTrial
-              ? 'Review the terms, then start. No payment method is needed today.'
-              : 'Review the terms, then subscribe.'}
+            Review the terms, then add a card on Stripe's secure page.
           </DialogDescription>
         </DialogHeader>
         <form
-          action={subscribeAction}
-          aria-label={`Subscribe ${plan} plan`}
+          action={createTrialPaymentMethodActionFn}
+          aria-label="Add a card"
           className="space-y-4"
         >
           <IdempotencyKeyField />
           <input
             type="hidden"
             name="disclosureVersion"
-            value={pricing.disclosureVersion}
+            value={TRIAL_PAYMENT_DISCLOSURE_VERSION}
           />
-          <input type="hidden" name="hasTrial" value={String(hasTrial)} />
-          <PlanConsentDetails plan={plan} hasTrial={hasTrial} />
+          <ConsentTerms consent={consent} />
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline">

@@ -23,9 +23,9 @@ type PlaywrightProjectPolicy = {
   };
 };
 
+// Hosted journeys drive Stripe-owned markup only through this helper.
 const STRIPE_HOSTED_SELECTOR_ALLOWLIST = [
   'tests/e2e/helpers/stripe-hosted-checkout.ts',
-  'tests/e2e/stripe-hosted-paid-checkout.spec.ts',
 ] as const;
 
 const STRIPE_HOSTED_SELECTOR_MARKERS = [
@@ -38,6 +38,7 @@ const STRIPE_HOSTED_SELECTOR_MARKERS = [
   '/zip|postal code/i',
   '/I agree to .*Terms of Service and Privacy Policy/i',
   '/start (free )?trial|subscribe|continue/i',
+  '/^(save|set up|confirm|continue)\\b/i',
 ] as const;
 
 const NETWORKED_STRIPE_HELPERS = [
@@ -310,9 +311,9 @@ describe('Playwright E2E lane policy', () => {
     );
   });
 
-  it('uses a resilient CVC accessible-name fallback in the hosted paid smoke', () => {
+  it('uses a resilient CVC accessible-name fallback in hosted card entry', () => {
     const source = readFileSync(
-      'tests/e2e/stripe-hosted-paid-checkout.spec.ts',
+      'tests/e2e/helpers/stripe-hosted-checkout.ts',
       'utf8',
     );
 

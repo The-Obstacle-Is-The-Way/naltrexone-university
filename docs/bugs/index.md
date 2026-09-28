@@ -1,9 +1,11 @@
 # Bug Reports
 
 **Project:** Naltrexone University
-**Last Updated:** 2026-09-22 — archive metadata maintenance only; the BUG-304/305/306 audit remains dated 2026-08-28.
+**Last Updated:** 2026-09-28 — BUG-308 filed from the DEBT-414 F03b hosted add-card run.
 
-**Latest** — 2026-09-22 archive metadata backfill: eight archived records still marked Open now carry their existing register dispositions, dates and receipts. BUG-234 already had a resolved heading; its metadata format is normalized, not newly closed. Historical status values and all other historical prose are retained. [Verification sample](../debt/assets/archive-metadata-2026-09-22/verification.md#bug-register-follow-through). BUG-304 remains the only active bug; no runtime fix or new bug closure is claimed. Next Bug ID remains BUG-308.
+**Latest** — 2026-09-28: **BUG-308 (P3, Open).** After a trialing learner saves a card, the app still tells them to add one. The DEBT-414 F03b hosted add-card journey saved a real test card; the consent record matched the dialog, and the Stripe subscription renewed on the card. The dashboard banner nevertheless still showed "Add a card to keep access". Returning from Stripe shows no confirmation, and Stripe's setup page asks for an email the app already knows. No wrong charge or access loss results, but every learner who adds a card is misled, and following the prompt again attaches a second card and records a second consent. [BUG-308](./bug-308-trial-banner-asks-for-card-after-one-is-saved.md) carries the evidence, the cause and the fix, which is the next increment. BUG-304 and BUG-308 are the active bugs. **Next Bug ID is BUG-309.**
+
+**Earlier 2026-09-22 update (forward pointer: the 2026-09-28 Latest stanza files BUG-308):** archive metadata backfill: eight archived records still marked Open now carry their existing register dispositions, dates and receipts. BUG-234 already had a resolved heading; its metadata format is normalized, not newly closed. Historical status values and all other historical prose are retained. [Verification sample](../debt/assets/archive-metadata-2026-09-22/verification.md#bug-register-follow-through). BUG-304 remains the only active bug; no runtime fix or new bug closure is claimed. Next Bug ID remains BUG-308.
 
 **Earlier 2026-08-28 update:** **The BUG-304/305/306 tail is re-audited and BUG-307 is resolved after promoted-artifact verification.** BUG-304 stays P3/Open: its original cause is unproven and the current application still has a reachable superseded-handler no-op, while the shipped render barrier protects only Playwright. BUG-305 is Resolved and archived after the promoted console redaction, a 70/70 clean post-redaction CI-log rescan, 4,585 successful TEST-session revocations with zero active sessions afterward, and deletion of its three named runs. BUG-306 is Resolved and archived as “cause unproven; mitigation verified”: its one-suite-session lifecycle, fail-closed auth state, cleanup, auth-loss diagnostic, and owner backlog containment are proven; no cause is invented for the original redirect. BUG-307 (P2/Resolved) corrects the log census to 455/1,210 scanned CI logs (452/1,106 excluding Dependabot branches) and closes the separate public artifact surface: source PR #865 and promotion #866 were exact-head approved, main run `33227567754` passed required CI and deploy, and its one-file Playwright report contained zero auth-state files, traces, or unredacted Clerk/Stripe credential-shape files under a non-printing scan. All 23 known trace-bearing artifacts remain deleted. Hosted failures `33110618884` and `33175157228` confirmed DEBT-471 F1 drift; repair validation `33213317375` passed 4/4 on promoted `main`. BUG-304 is the only active bug. **Next Bug ID is BUG-308.**
 
@@ -42,7 +44,7 @@ Bug reports document issues discovered in the codebase along with their root cau
 - **2026-09-21 convention correction:** branch-local fixes still need red-first proof, normal review/CI, and promotion receipts before the record closes and moves. This supersedes the former pre-merge archival exception. State that the defect was branch-local so readers do not infer a production incident.
 - Invalidated candidates may be archived as false positives when the doc records the source-level reason the claimed bug is unreachable or already handled.
 
-**Next Bug ID:** BUG-308
+**Next Bug ID:** BUG-309
 
 ## Fix-wave-5 terminal close (2026-07-18)
 
@@ -472,6 +474,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
+| [BUG-308](./bug-308-trial-banner-asks-for-card-after-one-is-saved.md) | The trial banner asks for a card after one is saved | P3 | Open | Found by the DEBT-414 F03b hosted add-card journey. The banner shows for every `inTrial` subscription regardless of a saved card; Billing ignores the add-card return; Stripe asks for the learner's email. The fix is the next increment. |
 | [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.

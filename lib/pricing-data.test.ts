@@ -133,6 +133,22 @@ describe('PRICING_DATA renewal disclosures', () => {
     },
   );
 
+  // DEBT-414 F03b: the add-card offer is structured consent with its own
+  // separate opt-in, shown in the same dialog as checkout.
+  it.each(['monthly', 'annual'] as const)(
+    'records the exact %s add-card consent, opt-in included',
+    (plan) => {
+      const ruling = consentRuling.trialPaymentConsents[plan];
+      const consent = PRICING_DATA[plan].trialPaymentConsent;
+
+      expect(consent.rows).toEqual(ruling.rows);
+      expect(consent.optIn).toBe(ruling.optIn);
+      expect(consent.sentence).toBe(ruling.sentence);
+      expect(consent.buttonLabel).toBe(ruling.button);
+      expect(PRICING_DATA[plan].trialPaymentDisclosure).toBe(ruling.snapshot);
+    },
+  );
+
   it('records the exact proposed add-card text under its own new version', () => {
     expect(TRIAL_PAYMENT_DISCLOSURE_VERSION).toBe(
       consentRuling.trialPaymentDisclosureVersion,

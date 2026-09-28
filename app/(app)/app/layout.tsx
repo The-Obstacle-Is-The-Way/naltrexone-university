@@ -1,14 +1,12 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
+import { TrialPaymentConsentDialog } from '@/app/(app)/app/trial-payment-consent-dialog';
 import { createTrialPaymentMethodAction } from '@/app/(app)/app/trial-payment-method-actions';
 import { AppDesktopNav } from '@/components/app-desktop-nav';
 import { AuthNav } from '@/components/auth-nav';
-import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { MobileNav } from '@/components/mobile-nav';
-import { Button } from '@/components/ui/button';
 import { getRequestAuthState } from '@/lib/auth-request-cache';
-import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
@@ -144,37 +142,14 @@ export function TrialCountdownBanner({
     <div className="block border-b border-border bg-card px-4 py-3 text-sm text-muted-foreground">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3">
         <span className="font-medium text-foreground">{countdown}</span>
-        <div className="max-w-3xl leading-relaxed text-foreground">
-          <span>{PRICING_DATA[plan].trialPaymentDisclosure}</span>{' '}
-          <span className="text-muted-foreground">
-            Review the{' '}
-            <Link
-              href={ROUTES.TERMS}
-              className="rounded-sm font-medium text-foreground hover:underline ring-focus"
-            >
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link
-              href={ROUTES.PRIVACY}
-              className="rounded-sm font-medium text-foreground hover:underline ring-focus"
-            >
-              Privacy Policy
-            </Link>
-            .
-          </span>
-        </div>
-        <form action={createTrialPaymentMethodActionFn}>
-          <IdempotencyKeyField />
-          <Button
-            type="submit"
-            variant="outline"
-            size="sm"
-            className="rounded-full"
-          >
-            Add a card to keep access
-          </Button>
-        </form>
+        <span className="text-foreground">
+          Add a card before your trial ends to keep access.
+        </span>
+        {/* DEBT-414 F03b: the add-card terms and opt-in live in this dialog. */}
+        <TrialPaymentConsentDialog
+          plan={plan}
+          createTrialPaymentMethodActionFn={createTrialPaymentMethodActionFn}
+        />
       </div>
     </div>
   );

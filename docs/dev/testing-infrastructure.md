@@ -149,6 +149,8 @@ Current repo posture:
 | `tests/e2e/checkout-success-provider.spec.ts` | Required real-Stripe contract for application-created Session parameters/open rejection plus CLI-triggered completion → real success sync → Postgres persistence → entitlement |
 | `tests/e2e/stripe-hosted-trial-start.spec.ts` | Scheduled/manual observational no-card hosted Checkout journey |
 | `tests/e2e/stripe-hosted-paid-checkout.spec.ts` | Scheduled/manual observational paid annual hosted Checkout journey |
+| `tests/e2e/stripe-hosted-trial-add-card.spec.ts` | Scheduled/manual observational trial add-card journey: opt-in, hosted setup-mode card save, replayed completion, recorded consent and renewing card (DEBT-414 F03b) |
+| `tests/e2e/stripe-hosted-portal-cancellation.spec.ts` | Scheduled/manual observational Billing-portal cancellation for paid and trial subscriptions (DEBT-414 F04) |
 | `tests/e2e/subscribe-and-practice.spec.ts` | Subscribe + answer a question |
 | `tests/e2e/practice.spec.ts` | Practice session answering flow |
 | `tests/e2e/session-continuation.spec.ts` | Resume incomplete session |

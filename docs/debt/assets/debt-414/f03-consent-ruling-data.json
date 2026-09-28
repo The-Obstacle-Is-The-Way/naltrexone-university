@@ -1,7 +1,7 @@
 {
-  "status": "Decided under DEBT-414 F03 (2026-09-28) under the owner's 2026-09-28 delegation; supersedes the F15 checkout texts.",
+  "status": "Decided under DEBT-414 F03 (2026-09-28) under the owner's 2026-09-28 delegation; F03a covers checkout, F03b the trial add-card offer.",
   "disclosureVersion": "2026-09-28.2",
-  "trialPaymentDisclosureVersion": "2026-09-28",
+  "trialPaymentDisclosureVersion": "2026-09-28.2",
   "cancellationAndRefundPolicy": "Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.",
   "cases": [
     {
@@ -118,7 +118,65 @@
     }
   ],
   "trialPaymentDisclosures": {
-    "monthly": "Pro Monthly starts at $29 per month when your trial ends and renews automatically every month until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable. By selecting Add a card to keep access and completing Stripe, you authorize recurring monthly charges after the trial.",
-    "annual": "Pro Annual starts at $199 per year when your trial ends and renews automatically every year until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable. By selecting Add a card to keep access and completing Stripe, you authorize recurring annual charges after the trial."
+    "monthly": "Plan: Pro Monthly\nAfter trial: $29 per month when your trial ends, renewing automatically every month until canceled.\nWithout a card: Your trial ends and you are not charged.\nCancel: Before your next billing date via the Billing page or support@addictionboards.com.\nCancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.\nI agree that Pro Monthly renews automatically at $29 per month when my trial ends, until I cancel.\nBy selecting \"Add a card\" and completing Stripe, you authorize recurring monthly charges after the trial. Review our Terms of Service and Privacy Policy.",
+    "annual": "Plan: Pro Annual\nAfter trial: $199 per year when your trial ends, renewing automatically every year until canceled.\nWithout a card: Your trial ends and you are not charged.\nCancel: Before your next billing date via the Billing page or support@addictionboards.com.\nCancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.\nI agree that Pro Annual renews automatically at $199 per year when my trial ends, until I cancel.\nBy selecting \"Add a card\" and completing Stripe, you authorize recurring annual charges after the trial. Review our Terms of Service and Privacy Policy."
+  },
+  "trialPaymentConsents": {
+    "monthly": {
+      "button": "Add a card",
+      "rows": [
+        {
+          "label": "Plan",
+          "value": "Pro Monthly"
+        },
+        {
+          "label": "After trial",
+          "value": "$29 per month when your trial ends, renewing automatically every month until canceled."
+        },
+        {
+          "label": "Without a card",
+          "value": "Your trial ends and you are not charged."
+        },
+        {
+          "label": "Cancel",
+          "value": "Before your next billing date via the Billing page or support@addictionboards.com."
+        },
+        {
+          "label": "Cancellation and refunds",
+          "value": "Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+        }
+      ],
+      "optIn": "I agree that Pro Monthly renews automatically at $29 per month when my trial ends, until I cancel.",
+      "sentence": "By selecting \"Add a card\" and completing Stripe, you authorize recurring monthly charges after the trial. Review our Terms of Service and Privacy Policy.",
+      "snapshot": "Plan: Pro Monthly\nAfter trial: $29 per month when your trial ends, renewing automatically every month until canceled.\nWithout a card: Your trial ends and you are not charged.\nCancel: Before your next billing date via the Billing page or support@addictionboards.com.\nCancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.\nI agree that Pro Monthly renews automatically at $29 per month when my trial ends, until I cancel.\nBy selecting \"Add a card\" and completing Stripe, you authorize recurring monthly charges after the trial. Review our Terms of Service and Privacy Policy."
+    },
+    "annual": {
+      "button": "Add a card",
+      "rows": [
+        {
+          "label": "Plan",
+          "value": "Pro Annual"
+        },
+        {
+          "label": "After trial",
+          "value": "$199 per year when your trial ends, renewing automatically every year until canceled."
+        },
+        {
+          "label": "Without a card",
+          "value": "Your trial ends and you are not charged."
+        },
+        {
+          "label": "Cancel",
+          "value": "Before your next billing date via the Billing page or support@addictionboards.com."
+        },
+        {
+          "label": "Cancellation and refunds",
+          "value": "Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+        }
+      ],
+      "optIn": "I agree that Pro Annual renews automatically at $199 per year when my trial ends, until I cancel.",
+      "sentence": "By selecting \"Add a card\" and completing Stripe, you authorize recurring annual charges after the trial. Review our Terms of Service and Privacy Policy.",
+      "snapshot": "Plan: Pro Annual\nAfter trial: $199 per year when your trial ends, renewing automatically every year until canceled.\nWithout a card: Your trial ends and you are not charged.\nCancel: Before your next billing date via the Billing page or support@addictionboards.com.\nCancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.\nI agree that Pro Annual renews automatically at $199 per year when my trial ends, until I cancel.\nBy selecting \"Add a card\" and completing Stripe, you authorize recurring annual charges after the trial. Review our Terms of Service and Privacy Policy."
+    }
   }
 }

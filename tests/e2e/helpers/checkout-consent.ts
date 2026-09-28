@@ -156,3 +156,122 @@ async function deliverLocalCheckoutEvent(
   await replayStripeEventToLocalApp(page, event);
   return session.id;
 }
+
+// DEBT-414 F03b: the trial add-card offer records the consent its dialog
+// showed when Stripe completes the setup-mode Session.
+export async function expectE2ETrialPaymentConsent(
+  page: Page,
+  expected: DisplayedConsent & {
+    plan: 'monthly' | 'annual';
+    setupSessionId: string;
+  },
+): Promise<void> {
+  const databaseUrl = process.env.DATABASE_URL;
+  const email = process.env.E2E_CLERK_USER_USERNAME;
+  if (!databaseUrl || !email)
+    throw new Error(
+      'The isolated E2E database and user must be configured before checking consent.',
+    );
+  if (!['localhost', '127.0.0.1'].includes(new URL(databaseUrl).hostname)) {
+    throw new Error(
+      'Consent evidence requires the isolated local E2E database.',
+    );
+  }
+  const { setupSessionId, ...consent } = expected;
+  const stripe = createStripeTestClient();
+  const session = await stripe.checkout.sessions.retrieve(setupSessionId, {
+    expand: ['setup_intent'],
+  });
+  // The setup Session names no customer; the webhook attaches the card to
+  // the one in its signed metadata.
+  const customer = await stripe.customers.retrieve(
+    String(session.metadata?.consent_customer_id),
+  );
+  if (
+    session.livemode ||
+    session.mode !== 'setup' ||
+    session.status !== 'complete' ||
+    customer.deleted ||
+    !process.env.E2E_STRIPE_OWNER ||
+    customer.metadata.e2e_owner !== process.env.E2E_STRIPE_OWNER
+  ) {
+    throw new Error(
+      'Add-card evidence must be a completed setup Session of this E2E Stripe test owner.',
+    );
+  }
+  const event = await findLatestStripeEvent({
+    stripe,
+    type: 'checkout.session.completed',
+    objectId: setupSessionId,
+    createdSince: session.created,
+  });
+  // Stripe cannot push to localhost. Replay its actual event through the
+  // signed HTTP route, which attaches the card and records the consent.
+  await replayStripeEventToLocalApp(page, event);
+
+  const sql = postgres(databaseUrl, { max: 1 });
+  try {
+    await expect
+      .poll(
+        async () => {
+          const rows = await sql`
+        SELECT consent.plan,
+          consent.disclosure_snapshot AS "disclosureSnapshot",
+          consent.disclosure_version AS "disclosureVersion",
+          consent.terms_version AS "termsVersion",
+          consent.terms_hash AS "termsHash",
+          consent.retain_until >= consent.accepted_at + interval '3 years' AS "retainedForThreeYears"
+        FROM users app_user
+        JOIN renewal_consent_records consent ON consent.user_id = app_user.id
+        WHERE app_user.email = ${email}
+          AND consent.setup_session_id = ${setupSessionId}
+          AND consent.consent_source = 'stripe_setup'
+      `;
+          return rows.length === 1 ? rows[0] : rows.length;
+        },
+        { timeout: 15_000 },
+      )
+      .toEqual({
+        ...consent,
+        termsVersion: TERMS_VERSION,
+        termsHash: TERMS_CONTENT_SHA256,
+        retainedForThreeYears: true,
+      });
+
+    // The trial now renews on the card the learner saved.
+    const setupIntent = session.setup_intent;
+    const savedCard =
+      setupIntent && typeof setupIntent !== 'string'
+        ? setupIntent.payment_method
+        : null;
+    expect(savedCard).not.toBeNull();
+    const [subscription] = await sql`
+      SELECT subscription.stripe_subscription_id AS id
+      FROM users app_user
+      JOIN stripe_subscriptions subscription ON subscription.user_id = app_user.id
+      WHERE app_user.email = ${email}
+    `;
+    const stripeSubscription = await stripe.subscriptions.retrieve(
+      String(subscription?.id),
+    );
+    expect(stripeSubscription.status).toBe('trialing');
+    expect(stripeSubscription.default_payment_method).toBe(
+      typeof savedCard === 'string' ? savedCard : savedCard?.id,
+    );
+  } finally {
+    try {
+      // Keep consent evidence, but remove this run's queued test email so a
+      // later integration cron cannot consume an unrelated E2E delivery.
+      await sql`
+        DELETE FROM renewal_notice_deliveries delivery
+        USING renewal_consent_records consent, users app_user
+        WHERE delivery.consent_record_id = consent.id
+          AND consent.user_id = app_user.id AND app_user.email = ${email}
+          AND consent.setup_session_id = ${setupSessionId}
+          AND delivery.notice_kind = 'acknowledgment'
+      `;
+    } finally {
+      await sql.end({ timeout: 5 });
+    }
+  }
+}

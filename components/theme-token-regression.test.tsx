@@ -16,6 +16,7 @@ import {
   collectRawButtonExemptionIssues,
   readProductionUiSources,
 } from '@/components/theme-token-regression-source-scan';
+import { PRICING_DATA } from '@/lib/pricing-data';
 import { ROUTES } from '@/lib/routes';
 import {
   findAnchorByHref,
@@ -51,7 +52,7 @@ let Feedback: typeof import('@/components/question/feedback').Feedback;
 let QuestionRatingFooter: typeof import('@/components/question/question-rating-footer').QuestionRatingFooter;
 let BillingContent: typeof import('@/app/(app)/app/billing/page').BillingContent;
 let LegalDocument: typeof import('@/components/legal/legal-document').LegalDocument;
-let PlanConsentDetails: typeof import('@/app/pricing/plan-consent-dialog').PlanConsentDetails;
+let ConsentTerms: typeof import('@/components/consent-terms').ConsentTerms;
 
 function extractBlock(source: string, selector: ':root' | '.dark'): string {
   const selectorEscaped = selector.replace('.', '\\.');
@@ -176,9 +177,7 @@ describe('theme token regression', () => {
     ));
     ({ BillingContent } = await import('@/app/(app)/app/billing/page'));
     ({ LegalDocument } = await import('@/components/legal/legal-document'));
-    ({ PlanConsentDetails } = await import(
-      '@/app/pricing/plan-consent-dialog'
-    ));
+    ({ ConsentTerms } = await import('@/components/consent-terms'));
   });
 
   beforeEach(() => {
@@ -296,37 +295,47 @@ describe('theme token regression', () => {
 
   // Pattern Registry I-7 (DEBT-414 F03): the renewal opt-in is a native
   // checkbox, so it carries the canonical non-Button focus ring itself.
-  it('uses the canonical focus ring and primary accent on the renewal opt-in', () => {
-    const doc = parseHtml(
-      renderToStaticMarkup(
-        <PlanConsentDetails plan="annual" hasTrial={false} />,
-      ),
-    );
-    const optIn = doc.querySelector(
-      'input[type="checkbox"][name="renewalOptIn"]',
-    );
+  // Checkout and the trial add-card offer both render it through
+  // ConsentTerms.
+  it.each([
+    ['checkout', PRICING_DATA.annual.consent.standard],
+    ['add-card', PRICING_DATA.annual.trialPaymentConsent],
+  ])(
+    'uses the canonical focus ring and primary accent on the %s renewal opt-in',
+    (_surface, consent) => {
+      const doc = parseHtml(
+        renderToStaticMarkup(<ConsentTerms consent={consent} />),
+      );
+      const optIn = doc.querySelector(
+        'input[type="checkbox"][name="renewalOptIn"]',
+      );
 
-    for (const token of [
-      'focus-visible:outline-none',
-      'focus-visible:ring-ring/50',
-      'focus-visible:ring-[3px]',
-      'accent-primary',
-    ]) {
-      expect(optIn?.classList.contains(token)).toBe(true);
-    }
-  });
+      for (const token of [
+        'focus-visible:outline-none',
+        'focus-visible:ring-ring/50',
+        'focus-visible:ring-[3px]',
+        'accent-primary',
+      ]) {
+        expect(optIn?.classList.contains(token)).toBe(true);
+      }
+    },
+  );
 
-  it('uses the shared focus ring utility on pricing legal-consent links', () => {
-    const html = renderToStaticMarkup(
-      <PlanConsentDetails plan="monthly" hasTrial />,
-    );
-    const doc = parseHtml(html);
+  it.each([
+    ['checkout', PRICING_DATA.monthly.consent.trial],
+    ['add-card', PRICING_DATA.monthly.trialPaymentConsent],
+  ])(
+    'uses the shared focus ring utility on %s legal-consent links',
+    (_surface, consent) => {
+      const html = renderToStaticMarkup(<ConsentTerms consent={consent} />);
+      const doc = parseHtml(html);
 
-    for (const href of [ROUTES.TERMS, ROUTES.PRIVACY]) {
-      const link = findAnchorByHref(doc, href);
-      expect(link?.classList.contains('ring-focus')).toBe(true);
-    }
-  });
+      for (const href of [ROUTES.TERMS, ROUTES.PRIVACY]) {
+        const link = findAnchorByHref(doc, href);
+        expect(link?.classList.contains('ring-focus')).toBe(true);
+      }
+    },
+  );
 
   it('reports a synthetic undocumented arbitrary opacity token with file and line context', () => {
     const issues = collectOpacityIssues([

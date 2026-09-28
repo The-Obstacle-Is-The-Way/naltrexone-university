@@ -256,9 +256,9 @@ General-purpose dialogs reuse the same overlay and card class strings as alert d
 needs a scroll-safe mobile variant or any other overlay/card change, document the S-4 variant here
 before adding new production UI classes.
 
-**Scrollable consent variant (DEBT-478):** `DialogContent` adds `max-h-[calc(100dvh-2rem)] overflow-y-auto`. Since DEBT-414 F15 added the cancellation and refund row, the five trial rows exceed the space available at 390×844 as well as 390×667, and the four standard rows exceed it at 390×667; scrolling the card preserves access to all terms and both footer buttons without clipping. Keep the existing `max-w-lg` surface, overlay, focus trap, and Escape/trigger focus behavior. Initially focus the dialog title (`tabIndex={-1}`, `rounded-sm ring-focus`) so short viewports start at the terms heading rather than scrolling to the legal links near the footer. Use the canonical ring on this programmatic focus target instead of the browser's native heading outline.
+**Scrollable consent variant (DEBT-478; also the trial add-card consent since DEBT-414 F03b):** `DialogContent` adds `max-h-[calc(100dvh-2rem)] overflow-y-auto`. Since DEBT-414 F15 added the cancellation and refund row, the five trial rows exceed the space available at 390×844 as well as 390×667, and the four standard rows exceed it at 390×667; scrolling the card preserves access to all terms and both footer buttons without clipping. Keep the existing `max-w-lg` surface, overlay, focus trap, and Escape/trigger focus behavior. Initially focus the dialog title (`tabIndex={-1}`, `rounded-sm ring-focus`) so short viewports start at the terms heading rather than scrolling to the legal links near the footer. Use the canonical ring on this programmatic focus target instead of the browser's native heading outline.
 
-**Plan consent composition:** `app/pricing/plan-consent-dialog.tsx` uses `DialogHeader`, a labeled form, and `DialogFooter`. The form has `space-y-4`, the idempotency key and displayed-offer identity, `<dl className="text-sm">`, and the exact consent sentence. Each row wrapper is `grid gap-x-6 gap-y-1 border-t border-border/40 py-3 sm:grid-cols-3`; `dt` uses `text-sm text-muted-foreground`, includes its colon, and `dd` uses `text-sm font-bold text-foreground sm:col-span-2`. Bold values make renewal terms conspicuous. The sentence uses `text-sm text-muted-foreground` with L-2 legal links; it measures 4.94:1 on `bg-card`. All row/sentence text comes from `PRICING_DATA[plan].consent`, the same object serialized as consent evidence. Buttons keep standard `rounded-md`, outline Cancel and default submit. Signed-out visitors retain a direct signup link. Only authenticated plan views render the eligibility footnote (`mt-6 text-center text-sm text-muted-foreground`); no personalized content enters cached fragments.
+**Plan consent composition:** `app/pricing/plan-consent-dialog.tsx` uses `DialogHeader`, a labeled form, and `DialogFooter`. The form has `space-y-4`, the idempotency key and displayed-offer identity, then `ConsentTerms` (`components/consent-terms.tsx`): `<dl className="text-sm">`, the I-7 opt-in, and the exact consent sentence. The trial add-card consent dialog (`app/(app)/app/trial-payment-consent-dialog.tsx`, DEBT-414 F03b) uses the same composition with its displayed disclosure version in place of the offer identity. Each row wrapper is `grid gap-x-6 gap-y-1 border-t border-border/40 py-3 sm:grid-cols-3`; `dt` uses `text-sm text-muted-foreground`, includes its colon, and `dd` uses `text-sm font-bold text-foreground sm:col-span-2`. Bold values make renewal terms conspicuous. The sentence uses `text-sm text-muted-foreground` with L-2 legal links; it measures 4.94:1 on `bg-card`. All row/sentence text comes from `PRICING_DATA[plan].consent`, the same object serialized as consent evidence. Buttons keep standard `rounded-md`, outline Cancel and default submit. Signed-out visitors retain a direct signup link. Only authenticated plan views render the eligibility footnote (`mt-6 text-center text-sm text-muted-foreground`); no personalized content enters cached fragments.
 
 Action buttons inside dialogs use `buttonVariants` from `components/ui/button.tsx` (not ad-hoc dialog button styles).
 
@@ -428,7 +428,7 @@ A separate, unchecked, required opt-in to automatic renewal inside a consent for
 </label>
 ```
 
-**Source:** `app/pricing/plan-consent-dialog.tsx`
+**Source:** `components/consent-terms.tsx`, rendered by checkout's plan consent dialog and, since DEBT-414 F03b, the trial add-card consent dialog.
 
 **Rules:**
 - Never pre-checked.
@@ -863,7 +863,9 @@ mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
 
 **Countdown phrase:** `font-medium text-foreground` (e.g. "7 days left in trial") — emphasized against the muted wrapper so the number reads at a glance.
 
-**Action:** `<Button type="submit" variant="outline" size="sm" className="rounded-full">` ("Add a card to keep access") inside a `<form>` posting the protected app billing portal action. Button primitive supplies the canonical focus ring; pill shape follows the Pill Shape Convention (Part 5).
+**Summary line:** `text-foreground`, one short sentence ("Add a card before your trial ends to keep access."). The full terms live in the dialog, not the banner (DEBT-414 F03b).
+
+**Action:** `<Button type="button" variant="outline" size="sm" className="rounded-full">` ("Add a card to keep access"), the trigger of the S-4 scrollable consent dialog (`app/(app)/app/trial-payment-consent-dialog.tsx`). That dialog shows the add-card terms in bold, the separate renewal opt-in (I-7), and the closing sentence with the Terms and Privacy links, then posts the protected trial payment-method action with the displayed disclosure version. The Button primitive supplies the canonical focus ring; the pill shape follows the Pill Shape Convention (Part 5).
 
 **Rules:**
 - Semantic tokens only; no opacity-scale values at all (`bg-card` is a solid surface fill), so the banner adds nothing to the source-scan allowlist.

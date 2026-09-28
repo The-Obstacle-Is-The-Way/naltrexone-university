@@ -71,6 +71,15 @@ test.describe('trial add-card', () => {
     await page
       .getByRole('button', { name: 'Add a card to keep access' })
       .click();
+    // DEBT-414 F03b: the add-card terms and a separate, unchecked renewal
+    // opt-in, in the same consent dialog as checkout.
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('checkbox')).not.toBeChecked();
+    await dialog.getByRole('checkbox').check();
+    await dialog
+      .getByRole('button', { name: 'Add a card', exact: true })
+      .click();
 
     // Stripe owns everything after this origin boundary. Required CI stops at
     // the committed URL and does not wait on Stripe's own page load.

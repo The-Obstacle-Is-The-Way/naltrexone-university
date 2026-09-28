@@ -90,6 +90,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     await expect(
       useCase.execute({
         userId,
+        expectedDisclosureVersion: '2026-08-05',
         successUrl:
           'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
         cancelUrl:
@@ -137,6 +138,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     const { operations, useCase } = await createUseCase();
     const input = {
       userId,
+      expectedDisclosureVersion: '2026-08-05',
       successUrl: 'https://app.example.com/success',
       cancelUrl: 'https://app.example.com/cancel',
     };
@@ -176,6 +178,25 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     });
   });
 
+  // DEBT-414 F03b: a page loaded before the terms changed must not record
+  // consent to text the learner never saw.
+  it('refuses before Stripe when the displayed add-card terms are not the current ones', async () => {
+    const { operations, payments, useCase } = await createUseCase();
+
+    await expect(
+      useCase.execute({
+        userId,
+        expectedDisclosureVersion: '2026-01-01',
+        successUrl: 'https://app.example.com/app/billing',
+        cancelUrl: 'https://app.example.com/app/billing',
+      }),
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+    expect(payments.trialSetupInputs).toEqual([]);
+    await expect(
+      operations.findBySessionId('cs_setup_123'),
+    ).resolves.toBeNull();
+  });
+
   it('fails closed when the local subscription is not an unexpired trial', async () => {
     const active = await createUseCase({ status: 'active' });
     const expired = await createUseCase({
@@ -186,6 +207,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     });
     const input = {
       userId,
+      expectedDisclosureVersion: '2026-08-05',
       successUrl: 'https://app.example.com/success',
       cancelUrl: 'https://app.example.com/cancel',
     };
@@ -212,6 +234,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     await expect(
       useCase.execute({
         userId,
+        expectedDisclosureVersion: '2026-08-05',
         successUrl: 'https://app.example.com/success',
         cancelUrl: 'https://app.example.com/cancel',
       }),
