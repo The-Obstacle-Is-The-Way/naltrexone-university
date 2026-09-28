@@ -46,6 +46,13 @@ export const pullRequestSchema = z.object({
     ]),
   }),
 });
+// Feature merges also read the changed files (the promotion schema does not).
+const featurePullRequestSchema = pullRequestSchema.extend({
+  files: z.object({
+    pageInfo,
+    nodes: z.array(z.object({ path: z.string() })),
+  }),
+});
 const reviewPagesSchema = z.array(
   z.array(
     z.object({
@@ -70,8 +77,37 @@ export function hasSuccessfulCheckRun(nodes: CheckNodes, name: string) {
   );
 }
 
+// ADR-020 amendment (2026-09-28): Dependabot PRs run without secrets, so
+// Codecov cannot post codecov/patch on them, and a change confined to
+// dependency manifests or CI workflows has no line coverage measures. Only a
+// missing status is excused, only for a complete file list, and only when
+// every changed path is one of these.
+function isDependencyOrWorkflowPath(path: string): boolean {
+  return (
+    path === 'package.json' ||
+    path === 'pnpm-lock.yaml' ||
+    path.startsWith('.github/')
+  );
+}
+
+function codecovNotApplicable(
+  files: z.infer<typeof featurePullRequestSchema>['files'],
+  nodes: CheckNodes,
+): boolean {
+  const codecovPosted = nodes.some(
+    (check) =>
+      check.__typename === 'CheckRun' && check.name === 'codecov/patch',
+  );
+  return (
+    !codecovPosted &&
+    !files.pageInfo.hasNextPage &&
+    files.nodes.length > 0 &&
+    files.nodes.every((file) => isDependencyOrWorkflowPath(file.path))
+  );
+}
+
 export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
-  const parsed = pullRequestSchema.safeParse(input);
+  const parsed = featurePullRequestSchema.safeParse(input);
   if (!parsed.success) throw new Error('Invalid GitHub merge response');
   const pr = parsed.data;
   if (
@@ -99,7 +135,10 @@ export function checkFeatureMerge(input: unknown, reviewPages: unknown) {
   }
   // ADR-020: patch coverage is the one coverage gate, and CI's upload is
   // non-blocking, so a missing status must block like a red one.
-  if (!hasSuccessfulCheckRun(contexts.nodes, 'codecov/patch')) {
+  if (
+    !hasSuccessfulCheckRun(contexts.nodes, 'codecov/patch') &&
+    !codecovNotApplicable(pr.files, contexts.nodes)
+  ) {
     throw new Error('codecov/patch has not succeeded on the exact head');
   }
   if (
@@ -145,6 +184,7 @@ const query = `query($number:Int!) {
       baseRefOid headRefName headRepository { nameWithOwner }
       mergeCommit { oid } mergedAt
       reviewThreads(first:100) { nodes { isResolved } pageInfo { hasNextPage } }
+      files(first:100) { nodes { path } pageInfo { hasNextPage } }
       commits(last:1) { nodes { commit { oid statusCheckRollup {
         contexts(first:100) {
           pageInfo { hasNextPage }
