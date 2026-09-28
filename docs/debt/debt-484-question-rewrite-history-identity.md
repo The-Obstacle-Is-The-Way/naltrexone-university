@@ -185,6 +185,35 @@ ADR-021 phase 1 is the expand step of a parallel change. Its [phasing note](../a
   - four seed cases (a new question, a rewrite, a restored pointer on an unchanged skip, and a legacy question rewritten). The four seed cases were red before the seed called the sync.
 - **What does not change.** Readers still read the legacy columns and choices by question, so nothing a learner sees changes. The #951 guard still governs rewrites. Sessions and attempts bind revisions and readers switch in phase 2a; revisions become append-only and immutable in phase 2b, a later deploy (#1177 review).
 
+## Phase 2a, first increment: new sessions and attempts bind a revision — 2026-09-28
+
+ADR-021 phase 2a switches readers to revisions. It lands as five reviewed increments, each safe with the N-1 deployment:
+1. bind new rows (this increment);
+2. bind older rows in a bounded, batched job, then validate the keys;
+3. switch selection, grading and review reads to the bound revision;
+4. refresh revision 1 only while no incomplete session binds it;
+5. show the withdrawal notice to learners who attempted a withdrawn question.
+
+This increment:
+- **Binding.** A new practice session binds each item to its question's `current_revision_id`, read inside the creation transaction. A new attempt binds the revision it graded: the session item's bound revision, else the question's current one. The "else" covers an attempt outside a session, and one in a session the N-1 deployment created. While every question has exactly one revision, both are the content the learner was shown and graded against.
+- **Schema (migration `0040`).**
+  - It re-runs `sweep_question_revisions_v1()` first, so a question an N-1 writer changed since `0039` is mirrored before new code binds to it.
+  - It adds the unique key `choices (id, question_revision_id)`.
+  - It adds three keys: `attempts (selected_choice_id, question_revision_id)`, and the session states' latest and draft selections, each referencing that choices key. They are `NOT VALID`, so there is no scan, while every later write is checked: an attempt or a session selection can name only a choice of its bound revision (#1166 review).
+- **N-1.** The serving deployment leaves the revision NULL, and `MATCH SIMPLE` keys accept it; a real-Postgres case proves this. Its readers are unchanged.
+- **Pre-flight data proof.**
+  - `choices.id` is already the primary key, so the new unique key cannot collide.
+  - Every existing history row has a NULL revision, so no row can violate the new keys.
+  - On a scratch copy at `0039`, seeded with the 958-question corpus, `0040` logged `0 created, 0 refreshed, 958 unchanged`. It left the three keys `NOT VALID` and no question or choice without a revision, and a second sweep returned `0 created, 0 refreshed, 958 unchanged`.
+  - The shared per-clone test database was not migrated; this branch was proved on scratch databases while an earlier PR was still in the queue.
+- **Tests.**
+  - Nine real-Postgres cases in `question-revision-binding.integration.test.ts`: session items; a session attempt; an attempt outside a session; an attempt in an unbound session; the N-1 NULL write; refusal of a mixed-revision attempt, latest selection and draft selection (`23503` on each new key); and the fixture mirror.
+  - The seven binding and refusal cases were red first.
+  - The schema contract pins the new key and the three foreign keys.
+  - The integration `createQuestion` fixture now mirrors each question into its revision, as the seed does. The full integration suite passed on a seeded scratch database, except one suite that by design refuses any database other than the resolver's own.
+- **Test doubles.** The attempt and session fakes do not model binding. The register records that as a known divergence, proved in Postgres instead, because no domain type carries the revision until reads switch (increment 3).
+- **What does not change.** Readers, grading and the seed behave exactly as before. A seed rewrite still refreshes revision 1 in place; increment 4 stops that while an incomplete session binds it.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)
