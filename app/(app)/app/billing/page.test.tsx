@@ -105,6 +105,35 @@ describe('app/(app)/app/billing/page', () => {
       expect(html).toContain('Manage in Stripe');
     });
 
+    // DEBT-414 F03b: the add-card action returns here when it cannot open
+    // Stripe, including when the terms changed after they were displayed.
+    it('renders the add-card error when redirected back with trial_payment_method_failed', async () => {
+      const BillingPage = (await import('@/app/(app)/app/billing/page'))
+        .default;
+      const user = createUser({ id: fixtureUser1Id });
+
+      const authGateway = new FakeAuthGateway(user);
+      const subscriptionRepository = new FakeSubscriptionRepository([
+        createSubscription({ userId: user.id, status: 'inTrial' }),
+      ]);
+
+      const element = await BillingPage({
+        deps: { authGateway, subscriptionRepository },
+        searchParams: Promise.resolve({
+          error: 'trial_payment_method_failed',
+        }),
+      });
+      const html = renderToStaticMarkup(element);
+
+      // #1183 review: a stale-terms refusal never reaches Stripe, so the
+      // message names no cause.
+      const alert = parseHtml(html).querySelector('[role="alert"]');
+      expect(alert?.textContent).toBe(
+        "We couldn't start adding your card. Review the current terms from the trial banner and try again.",
+      );
+      expect(html).not.toContain('open the billing portal');
+    });
+
     it('starts searchParams before billing data resolves', async () => {
       const BillingPage = (await import('@/app/(app)/app/billing/page'))
         .default;

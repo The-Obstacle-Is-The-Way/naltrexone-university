@@ -16,7 +16,8 @@ export const TERMS_CONTENT_SHA256 =
 export const CANCELLATION_METHOD =
   'Billing page in the app or support@addictionboards.com';
 
-export const TRIAL_PAYMENT_DISCLOSURE_VERSION = '2026-09-28';
+// DEBT-414 F03b: the add-card offer becomes structured consent with an opt-in.
+export const TRIAL_PAYMENT_DISCLOSURE_VERSION = '2026-09-28.2';
 export const ANNUAL_RENEWAL_NOTICE_VERSION = '2026-08-05';
 // DEBT-414 F02: a monthly subscriber's yearly reminder.
 export const MONTHLY_ANNIVERSARY_NOTICE_VERSION = '2026-09-27';
@@ -34,7 +35,6 @@ const PRICING_PLANS = {
     disclosureVersion: CHECKOUT_DISCLOSURE_VERSION,
     features: MONTHLY_PLAN_FEATURES,
     trialCta: 'Start 7-day free trial',
-    trialPaymentDisclosure: `Pro Monthly starts at $29 per month when your trial ends and renews automatically every month until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. ${CANCELLATION_AND_REFUND_POLICY} By selecting Add a card to keep access and completing Stripe, you authorize recurring monthly charges after the trial.`,
   },
   annual: {
     name: 'Pro Annual',
@@ -47,7 +47,6 @@ const PRICING_PLANS = {
     savings: 'Save $149 per year',
     features: ANNUAL_PLAN_FEATURES,
     trialCta: 'Start 7-day free trial',
-    trialPaymentDisclosure: `Pro Annual starts at $199 per year when your trial ends and renews automatically every year until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. ${CANCELLATION_AND_REFUND_POLICY} By selecting Add a card to keep access and completing Stripe, you authorize recurring annual charges after the trial.`,
   },
 } as const;
 
@@ -117,15 +116,53 @@ function createPlanConsent(
   };
 }
 
+// DEBT-414 F03b: the trial add-card offer, shown in the same consent dialog
+// as checkout, with its own separate renewal opt-in.
+function createTrialPaymentConsent(
+  plan: SubscriptionPlan,
+  pricing: { name: string; price: string; frequency: string },
+): CheckoutConsent {
+  return {
+    rows: [
+      { label: 'Plan', value: pricing.name },
+      {
+        label: 'After trial',
+        value: `${pricing.price} per ${pricing.frequency} when your trial ends, renewing automatically every ${pricing.frequency} until canceled.`,
+      },
+      {
+        label: 'Without a card',
+        value: 'Your trial ends and you are not charged.',
+      },
+      {
+        label: 'Cancel',
+        value:
+          'Before your next billing date via the Billing page or support@addictionboards.com.',
+      },
+      {
+        label: 'Cancellation and refunds',
+        value: CANCELLATION_AND_REFUND_POLICY,
+      },
+    ],
+    optIn: `I agree that ${pricing.name} renews automatically at ${pricing.price} per ${pricing.frequency} when my trial ends, until I cancel.`,
+    sentence: `By selecting "Add a card" and completing Stripe, you authorize recurring ${plan} charges after the trial. Review our Terms of Service and Privacy Policy.`,
+    buttonLabel: 'Add a card',
+  };
+}
+
+function createPlanData<Plan extends SubscriptionPlan>(plan: Plan) {
+  const pricing = PRICING_PLANS[plan];
+  const trialPaymentConsent = createTrialPaymentConsent(plan, pricing);
+  return {
+    ...pricing,
+    consent: createPlanConsent(plan, pricing),
+    trialPaymentConsent,
+    trialPaymentDisclosure: serializeCheckoutConsent(trialPaymentConsent),
+  };
+}
+
 export const PRICING_DATA = {
-  monthly: {
-    ...PRICING_PLANS.monthly,
-    consent: createPlanConsent('monthly', PRICING_PLANS.monthly),
-  },
-  annual: {
-    ...PRICING_PLANS.annual,
-    consent: createPlanConsent('annual', PRICING_PLANS.annual),
-  },
+  monthly: createPlanData('monthly'),
+  annual: createPlanData('annual'),
 } as const;
 
 export function serializeCheckoutConsent(consent: CheckoutConsent): string {
