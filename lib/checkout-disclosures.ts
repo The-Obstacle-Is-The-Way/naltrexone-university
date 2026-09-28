@@ -19,6 +19,21 @@ type RegisteredDisclosures = Readonly<
 export const CHECKOUT_DISCLOSURE_REGISTRY: Readonly<
   Record<string, RegisteredDisclosures>
 > = {
+  // DEBT-414 F15: adds the Terms § 4 cancellation and refund policy.
+  '2026-09-28': {
+    monthly: {
+      trial:
+        'Plan: Pro Monthly\nTrial: 7 days free; no payment method required. Without one, trial ends with no charge.\nAfter trial: If you add a payment method before trial end: $29 per month, renewing automatically every month until canceled.\nCancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.\nCancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.\nBy selecting "Start free trial", you agree to these renewal terms. Review our Terms of Service and Privacy Policy.',
+      standard:
+        'Plan: Pro Monthly\nBilling: $29 per month, charged today and renewing automatically every month until canceled.\nCancel: Before your next billing date via the Billing page or support@addictionboards.com.\nCancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.\nBy selecting "Subscribe", you authorize recurring monthly charges. Review our Terms of Service and Privacy Policy.',
+    },
+    annual: {
+      trial:
+        'Plan: Pro Annual\nTrial: 7 days free; no payment method required. Without one, trial ends with no charge.\nAfter trial: If you add a payment method before trial end: $199 per year, renewing automatically every year until canceled.\nCancel: Before trial ends or your next billing date via the Billing page or support@addictionboards.com.\nCancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.\nBy selecting "Start free trial", you agree to these renewal terms. Review our Terms of Service and Privacy Policy.',
+      standard:
+        'Plan: Pro Annual\nBilling: $199 per year, charged today and renewing automatically every year until canceled.\nCancel: Before your next billing date via the Billing page or support@addictionboards.com.\nCancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.\nBy selecting "Subscribe", you authorize recurring annual charges. Review our Terms of Service and Privacy Policy.',
+    },
+  },
   '2026-09-16': {
     monthly: {
       trial:

@@ -1,3 +1,4 @@
+import { CANCELLATION_AND_REFUND_POLICY } from '@/src/application/shared/renewal-notice-email-format';
 export const MONTHLY_PLAN_FEATURES = [
   'Access to all questions',
   'Detailed explanations',
@@ -15,11 +16,11 @@ export const TERMS_CONTENT_SHA256 =
 export const CANCELLATION_METHOD =
   'Billing page in the app or support@addictionboards.com';
 
-export const TRIAL_PAYMENT_DISCLOSURE_VERSION = '2026-08-05';
+export const TRIAL_PAYMENT_DISCLOSURE_VERSION = '2026-09-28';
 export const ANNUAL_RENEWAL_NOTICE_VERSION = '2026-08-05';
 // DEBT-414 F02: a monthly subscriber's yearly reminder.
 export const MONTHLY_ANNIVERSARY_NOTICE_VERSION = '2026-09-27';
-const CHECKOUT_DISCLOSURE_VERSION = '2026-09-16';
+const CHECKOUT_DISCLOSURE_VERSION = '2026-09-28';
 
 const PRICING_PLANS = {
   monthly: {
@@ -32,8 +33,7 @@ const PRICING_PLANS = {
     disclosureVersion: CHECKOUT_DISCLOSURE_VERSION,
     features: MONTHLY_PLAN_FEATURES,
     trialCta: 'Start 7-day free trial',
-    trialPaymentDisclosure:
-      'Pro Monthly starts at $29 per month when your trial ends and renews automatically every month until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Add a card to keep access and completing Stripe, you authorize recurring monthly charges after the trial.',
+    trialPaymentDisclosure: `Pro Monthly starts at $29 per month when your trial ends and renews automatically every month until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. ${CANCELLATION_AND_REFUND_POLICY} By selecting Add a card to keep access and completing Stripe, you authorize recurring monthly charges after the trial.`,
   },
   annual: {
     name: 'Pro Annual',
@@ -46,8 +46,7 @@ const PRICING_PLANS = {
     savings: 'Save $149 per year',
     features: ANNUAL_PLAN_FEATURES,
     trialCta: 'Start 7-day free trial',
-    trialPaymentDisclosure:
-      'Pro Annual starts at $199 per year when your trial ends and renews automatically every year until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. By selecting Add a card to keep access and completing Stripe, you authorize recurring annual charges after the trial.',
+    trialPaymentDisclosure: `Pro Annual starts at $199 per year when your trial ends and renews automatically every year until canceled. If you do not add a payment method, your trial ends and you are not charged. Cancel before the next billing date from the Billing page in the app, or contact support@addictionboards.com. ${CANCELLATION_AND_REFUND_POLICY} By selecting Add a card to keep access and completing Stripe, you authorize recurring annual charges after the trial.`,
   },
 } as const;
 
@@ -66,6 +65,11 @@ function createPlanConsent(
   const planRow = { label: 'Plan', value: pricing.name };
   const cancellationPath =
     'via the Billing page or support@addictionboards.com.';
+  // DEBT-414 F15: the operative policy, quoted from Terms § 4, next to consent.
+  const cancellationAndRefundsRow = {
+    label: 'Cancellation and refunds',
+    value: CANCELLATION_AND_REFUND_POLICY,
+  };
   return {
     trial: {
       rows: [
@@ -83,6 +87,7 @@ function createPlanConsent(
           label: 'Cancel',
           value: `Before trial ends or your next billing date ${cancellationPath}`,
         },
+        cancellationAndRefundsRow,
       ],
       sentence:
         'By selecting "Start free trial", you agree to these renewal terms. Review our Terms of Service and Privacy Policy.',
@@ -99,6 +104,7 @@ function createPlanConsent(
           label: 'Cancel',
           value: `Before your next billing date ${cancellationPath}`,
         },
+        cancellationAndRefundsRow,
       ],
       sentence: `By selecting "Subscribe", you authorize recurring ${plan} charges. Review our Terms of Service and Privacy Policy.`,
       buttonLabel: 'Subscribe',

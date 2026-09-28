@@ -11,6 +11,16 @@ const sha256 = (text: string) =>
 
 // DEBT-414 F15: registered consent texts are evidence and never change.
 const PINNED_SHA256: Record<string, Record<string, string>> = {
+  '2026-09-28': {
+    'monthly/trial':
+      'bc08681b7842244856f23b63b2646dd06a8033d5f07e1ce252cb533fe95f0bd6',
+    'monthly/standard':
+      'f81cc5013a81061efbf31c2335cdbc205ebcbcd0db9e7a71adb381f4fc0fe8ae',
+    'annual/trial':
+      'b64a1a65390ef264bdaa744bc9253597b431804a3fbfbd21eb24897ec7df623b',
+    'annual/standard':
+      'adef3ab5abb885438dcd4ef7f0d87ae4899d8b5755719656726a5724573cd88a',
+  },
   '2026-09-16': {
     'monthly/trial':
       '74cbc34b184c2652a3d693dc19516f86de80a16d0dbf8a426bbf0c07371df632',

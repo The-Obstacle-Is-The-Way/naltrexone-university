@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
 import { describe, expect, it, vi } from 'vitest';
+import { createCheckoutRenewalTerms } from '@/lib/pricing-data';
 import {
   classifyOpenSessionRejection,
   cleanStripeProducts,
@@ -10,6 +12,7 @@ import {
   redirectForProviderContract,
   type StripeCheckoutSessionLookup,
   type StripeProductCleanupClient,
+  sessionHasExpectedRenewalTerms,
 } from './checkout-success-provider-resources';
 
 function captureRedirect(url: string): unknown {
@@ -293,5 +296,68 @@ describe('classifyOpenSessionRejection', () => {
     expect(() =>
       classifyOpenSessionRejection(captureRedirect('/sign-in')),
     ).toThrow('[E2E_PROVIDER_CONTRACT:UNEXPECTED_REDIRECT] /sign-in');
+  });
+});
+
+describe('sessionHasExpectedRenewalTerms', () => {
+  const userId = crypto.randomUUID();
+
+  function renewalMetadata(shape: 'annual' | 'monthly-trial') {
+    const plan = shape === 'annual' ? 'annual' : 'monthly';
+    const terms = createCheckoutRenewalTerms(plan, shape === 'monthly-trial');
+    return {
+      checkout_variant: shape === 'annual' ? 'standard' : 'trial:7',
+      renewal_user_id: userId,
+      renewal_plan: plan,
+      renewal_amount_cents: String(terms.amountCents),
+      renewal_currency: terms.currency,
+      renewal_frequency: terms.frequency,
+      renewal_disclosure_hash: createHash('sha256')
+        .update(terms.disclosureSnapshot, 'utf8')
+        .digest('hex'),
+      renewal_disclosure_version: terms.disclosureVersion,
+      renewal_terms_version: terms.termsVersion,
+      renewal_terms_hash: terms.termsHash,
+      renewal_cancellation_method: terms.cancellationMethod,
+    };
+  }
+
+  it.each(['annual', 'monthly-trial'] as const)(
+    'accepts a %s Session carrying the registered consent text as its SHA-256',
+    (shape) => {
+      expect(
+        sessionHasExpectedRenewalTerms(
+          { metadata: renewalMetadata(shape) },
+          userId,
+          shape,
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it('rejects a Session whose hash is of other text', () => {
+    const metadata = {
+      ...renewalMetadata('annual'),
+      renewal_disclosure_hash: createHash('sha256')
+        .update('Other text.', 'utf8')
+        .digest('hex'),
+    };
+
+    expect(sessionHasExpectedRenewalTerms({ metadata }, userId, 'annual')).toBe(
+      false,
+    );
+  });
+
+  // DEBT-414 F15: the text no longer fits Stripe's 500-character metadata limit.
+  it('rejects a Session that still carries the consent text verbatim', () => {
+    const metadata = {
+      ...renewalMetadata('annual'),
+      renewal_disclosure_snapshot: createCheckoutRenewalTerms('annual', false)
+        .disclosureSnapshot,
+    };
+
+    expect(sessionHasExpectedRenewalTerms({ metadata }, userId, 'annual')).toBe(
+      false,
+    );
   });
 });
