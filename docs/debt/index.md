@@ -3,13 +3,20 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-28 UTC
 
-**Latest** — 2026-09-28 UTC: feedback validation names its session-review retry condition, a behavior-preserving refactor. Biome 2.5.13 requires the parentheses around the old inline expression, and 2.5.14 (Dependabot #1189) removes them, so no text of it satisfied both formatters. Each clause keeps its own test.
-- **Previous increment.** #1190 (ADR-021 phase 2a, first increment, with BUG-308's closeout) merged as `858fba5f` with exact-head approval **5339637353**. Two findings were accepted: named constants for the three key names, and "displays" rather than "prefills" for Stripe's email.
-  - It is promoted through #1192 (`6847def5`), whose review approved with no findings. The promotion's proof was written into its body at 14:12:37Z, before the merge at 14:12:42Z.
-  - The production build applied migration `0040`, logged `ADR-021 phase 2a revision sweep: 0 created, 0 refreshed, 958 unchanged`, and the ledger matched the checkout.
-  - Release verified: main CI **36434264263** `test` **14:24:59Z**; Ready **14:14:23.999Z**, held without alias until its check completed; production assigned **14:25:03.768Z**; matching trees; healthy production.
+**Latest** — 2026-09-28 UTC: ADR-021 phase 2a's second increment binds older history to its revision. Rows written before the first increment are a fixed set, and a bounded, batched function binds them by the rule new rows follow.
+- **Function and migration.** Migration `0041` runs the function once, capped at 50,000 rows per table, and logs the counts, so the deploy measures production's history. It validates the five history keys `0039` and `0040` added `NOT VALID`. A row whose selection is a choice of another revision stays unbound and is reported; phase 2b refuses to run while any remains. [DEBT-484 phase 2a](./debt-484-question-rewrite-history-identity.md#phase-2a-second-increment-older-history-binds-to-its-revision--2026-09-28).
+- **Proof.** Six real-Postgres cases, all red first. On a copy of the shared test database, `0041` bound its two older session states and two attempts, left none unbound, and validated all five keys.
+- **Review coverage.** CodeRabbit's path filters had excluded all of `db/migrations/`, so no migration SQL had had AI review. It now skips only the generated `meta/` files and reviews each `.sql` against the migration-authoring checklist.
+- **Previous increment.** Promotion #1195 (`cc01062b`) released four reviewed merges:
+  - #1193, the Biome-compatible refactor;
+  - #1194, the ADR-020 amendment, under which the merge tool excuses a missing `codecov/patch` only where nothing is measurable;
+  - Dependabot #1187 (codecov-action 7.1.1) and #1189 (Biome 2.5.14).
+
+  Its one finding, an imprecise ADR-index summary, is fixed here. The promotion's proof was written into its body at 18:17:14Z, before the merge at 18:17:19Z. Release verified: main CI **36464138853** `test` **18:30:29Z**; Ready **18:19:34.776Z**, held without alias until its check completed; production assigned **18:30:32.601Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-28 UTC feedback validation names its session-review retry condition, so Biome 2.5.13 and 2.5.14 format it identically. The previous increment, #1190 (ADR-021 phase 2a, first increment, with BUG-308's closeout), merged as `858fba5f` and is promoted through #1192 (`6847def5`); production applied migration `0040` (`0 created, 0 refreshed, 958 unchanged`). Release verified: main CI **36434264263** `test` **14:24:59Z**; Ready **14:14:23.999Z**, held without alias until its check completed; production assigned **14:25:03.768Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-28 UTC ADR-021 phase 2a begins for DEBT-484: every new practice session item and attempt binds the question revision the learner was shown and graded against, and `NOT VALID` keys let an attempt or session selection name only a choice of its bound revision. [DEBT-484 phase 2a](./debt-484-question-rewrite-history-identity.md#phase-2a-first-increment-new-sessions-and-attempts-bind-a-revision--2026-09-28). BUG-308 is closed and archived. The previous increment, #1185 (BUG-308), merged as `022750ef` and is promoted through #1186 (`98651366`). Release verified: main CI **36424566226** `test` **13:04:38Z**; Ready **12:53:03.413Z**, held without alias until its check completed; production assigned **13:04:41.148Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
