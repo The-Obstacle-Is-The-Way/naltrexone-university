@@ -129,6 +129,19 @@ reviews:
         Schema changes require running pnpm db:generate.
         Tables should have appropriate indexes for query patterns.
 
+    # Migration SQL runs in the Vercel build before the new deployment serves.
+    - path: "db/migrations/*.sql"
+      instructions: |
+        Review against docs/dev/migration-authoring.md. Applied migrations are
+        immutable: flag any edit to an existing file. For a new file, check:
+        every statement is safe while the previous (N-1) deployment still
+        serves; data cleanup or backfill runs before the constraint that
+        depends on it; lock scope is stated in a comment for live tables
+        (FOREIGN KEY adds on growing tables use NOT VALID, with VALIDATE
+        later); data-mutating statements log affected-row counts with
+        RAISE NOTICE; and constraint names match the exported constants in
+        db/schema.ts.
+
   finishing_touches:
     docstrings:
       enabled: false
@@ -137,7 +150,9 @@ reviews:
     - "!**/pnpm-lock.yaml"
     - "!**/.next/**"
     - "!**/dist/**"
-    - "!db/migrations/**"
+    # Review migration SQL; skip only drizzle-kit's generated snapshots and
+    # journal (ADR-021 adds a migration per increment).
+    - "!db/migrations/meta/**"
 
   # Focus on these tools
   tools:

@@ -288,6 +288,13 @@
       "when": 1790597193104,
       "tag": "0040_first_reavers",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1790607386951,
+      "tag": "0041_bind_history_revisions",
+      "breakpoints": true
     }
   ]
 }
