@@ -1,3 +1,4 @@
+import { resolveCheckoutDisclosure } from '@/lib/checkout-disclosures';
 import {
   ClerkAuthGateway,
   type ClerkUserLike,
@@ -6,6 +7,7 @@ import {
   ResendTransactionalEmailGateway,
   StripePaymentGateway,
 } from '@/src/adapters/gateways';
+
 import type {
   ContainerPrimitives,
   GatewayFactories,
@@ -44,6 +46,8 @@ export function createGatewayFactories(input: {
         webhookE2EOwner: primitives.env.STRIPE_WEBHOOK_E2E_OWNER,
         priceIds: stripePriceIds,
         logger: primitives.logger,
+        resolveCheckoutDisclosure,
+        sha256Hasher: primitives.sha256Hasher,
       }),
     createRateLimiter: () =>
       new DrizzleRateLimiter(primitives.db, primitives.now, primitives.logger),
