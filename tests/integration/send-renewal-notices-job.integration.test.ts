@@ -9,9 +9,9 @@ import {
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import {
   listActiveMonthlySubscriptions,
+  listAnniversaryReminders,
   listAnnualRenewalsPastNoticeDeadline,
   listAnnualSubscriptionsDue,
-  listSentAnniversaryReminders,
 } from '@/src/adapters/jobs/send-due-renewal-notices';
 import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
 import {
@@ -585,7 +585,7 @@ describe('monthly anniversary queries', () => {
     ]);
   });
 
-  it('lists only sent anniversary reminders, and stores the kind once per renewal', async () => {
+  it('lists stored anniversary reminders in every status, and stores the kind once per renewal', async () => {
     const monthlyPriceId = `price_monthly_${randomUUID()}`;
     const subscription = await insertMonthly({ monthlyPriceId, idPrefix: 's' });
     const renewal = new Date('2026-09-10T12:00:00.000Z');
@@ -636,15 +636,26 @@ describe('monthly anniversary queries', () => {
       noticeKind: 'annual_reminder',
     });
 
-    const sent = await listSentAnniversaryReminders(
+    const stored = await listAnniversaryReminders(
       { externalSubscriptionIds: [subscription.externalSubscriptionId] },
       { db },
     );
+    // Every stored anniversary reminder, in any status and any year, with
+    // the keys scheduling matches on; never another kind.
     expect(
-      sent.map((reminder) => reminder.applicableAt.toISOString()).sort(),
-    ).toEqual(['2025-09-10T12:00:00.000Z', '2026-09-10T12:00:00.000Z']);
+      stored
+        .map(
+          (reminder) =>
+            `${reminder.applicableAt.toISOString()} ${reminder.status} ${reminder.disclosureVersion} ${reminder.destination === subscription.email}`,
+        )
+        .sort(),
+    ).toEqual([
+      '2025-09-10T12:00:00.000Z delivered 2026-09-27 true',
+      '2026-09-10T12:00:00.000Z accepted 2026-09-27 true',
+      '2027-09-10T12:00:00.000Z queued 2026-09-27 true',
+    ]);
     await expect(
-      listSentAnniversaryReminders({ externalSubscriptionIds: [] }, { db }),
+      listAnniversaryReminders({ externalSubscriptionIds: [] }, { db }),
     ).resolves.toEqual([]);
 
     // The scheduled-notice unique index covers the new kind.

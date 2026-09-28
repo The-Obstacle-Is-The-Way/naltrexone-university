@@ -7,9 +7,9 @@ import {
 } from '@/lib/pricing-data';
 import {
   listActiveMonthlySubscriptions,
+  listAnniversaryReminders,
   listAnnualRenewalsPastNoticeDeadline,
   listAnnualSubscriptionsDue,
-  listSentAnniversaryReminders,
   SEND_RENEWAL_NOTICES_DEFAULT_DISPATCH_LIMIT,
   SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT,
   sendDueRenewalNotices,
@@ -81,8 +81,8 @@ export function createSendRenewalNoticesCronHandler(
                   monthlyPriceId:
                     container.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY,
                 }),
-              listSentAnniversaryReminders: (input) =>
-                listSentAnniversaryReminders(input, { db: container.db }),
+              listAnniversaryReminders: (input) =>
+                listAnniversaryReminders(input, { db: container.db }),
             },
           },
         ),

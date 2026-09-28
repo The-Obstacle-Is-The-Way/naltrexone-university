@@ -5,7 +5,6 @@ import {
   gt,
   gte,
   inArray,
-  isNotNull,
   lte,
   notExists,
   or,
@@ -24,6 +23,7 @@ import type {
   SendDueRenewalNoticesResult,
   SendDueRenewalNoticesUseCase,
 } from '@/src/application/use-cases';
+import type { RenewalNoticeDeliveryStatus } from '@/src/domain/entities';
 import { DAY_MS, nextAnniversaryRenewalAt } from '@/src/domain/services';
 
 export const SEND_RENEWAL_NOTICES_DEFAULT_SUBSCRIPTION_LIMIT = 40;
@@ -141,10 +141,19 @@ export type ActiveMonthlySubscription = {
   billingCycleAnchor: Date | null;
 };
 
-export type SentAnniversaryReminder = {
+// An anniversary reminder already stored, in any status.
+export type AnniversaryReminderRecord = {
   externalSubscriptionId: string;
   applicableAt: Date;
+  disclosureVersion: string;
+  destination: string;
+  status: RenewalNoticeDeliveryStatus;
 };
+
+const SENT_STATUSES: ReadonlySet<RenewalNoticeDeliveryStatus> = new Set([
+  'accepted',
+  'delivered',
+]);
 
 // The renewal reads the job schedules from and checks deadlines with.
 export type RenewalNoticeQueries = {
@@ -163,9 +172,9 @@ export type RenewalNoticeQueries = {
     afterExternalSubscriptionId: string | null;
     limit: number;
   }) => Promise<ActiveMonthlySubscription[]>;
-  listSentAnniversaryReminders: (input: {
+  listAnniversaryReminders: (input: {
     externalSubscriptionIds: readonly string[];
-  }) => Promise<SentAnniversaryReminder[]>;
+  }) => Promise<AnniversaryReminderRecord[]>;
 };
 
 // DEBT-414 F02: active, renewing monthly subscriptions in id order, with the
@@ -200,17 +209,21 @@ export async function listActiveMonthlySubscriptions(
     .limit(input.limit);
 }
 
-// Anniversary reminders the provider accepted or delivered, for the given
-// subscriptions and any year; the caller matches the renewal.
-export async function listSentAnniversaryReminders(
+// Every stored anniversary reminder for the given subscriptions, any year
+// and any status: scheduling skips renewals that already have one, and the
+// deadline check counts only accepted or delivered ones.
+export async function listAnniversaryReminders(
   input: { externalSubscriptionIds: readonly string[] },
   deps: { db: DrizzleDb },
-): Promise<SentAnniversaryReminder[]> {
+): Promise<AnniversaryReminderRecord[]> {
   if (input.externalSubscriptionIds.length === 0) return [];
   const rows = await deps.db
     .select({
       externalSubscriptionId: renewalNoticeDeliveries.stripeSubscriptionId,
       applicableAt: renewalNoticeDeliveries.applicableAt,
+      disclosureVersion: renewalNoticeDeliveries.disclosureVersion,
+      destination: renewalNoticeDeliveries.destination,
+      status: renewalNoticeDeliveries.status,
     })
     .from(renewalNoticeDeliveries)
     .where(
@@ -219,20 +232,20 @@ export async function listSentAnniversaryReminders(
         inArray(renewalNoticeDeliveries.stripeSubscriptionId, [
           ...input.externalSubscriptionIds,
         ]),
-        inArray(renewalNoticeDeliveries.status, ['accepted', 'delivered']),
-        isNotNull(renewalNoticeDeliveries.applicableAt),
       ),
     );
-  return rows.flatMap((row) =>
-    row.externalSubscriptionId !== null && row.applicableAt !== null
-      ? [
-          {
-            externalSubscriptionId: row.externalSubscriptionId,
-            applicableAt: row.applicableAt,
-          },
-        ]
-      : [],
-  );
+  // The key-shape check requires both for every scheduled kind.
+  return rows.filter(isKeyedReminder);
+}
+
+function isKeyedReminder(row: {
+  externalSubscriptionId: string | null;
+  applicableAt: Date | null;
+  disclosureVersion: string;
+  destination: string;
+  status: RenewalNoticeDeliveryStatus;
+}): row is AnniversaryReminderRecord {
+  return row.externalSubscriptionId !== null && row.applicableAt !== null;
 }
 
 // Unlike listAnnualSubscriptionsDue, a sent notice counts whatever its
@@ -385,11 +398,11 @@ export async function sendDueRenewalNotices(
       })),
   );
   const monthly = await readActiveMonthlySubscriptions(deps);
-  const anniversaryNotices = scheduleAnniversaryReminders(
+  const anniversaryNotices = await scheduleAnniversaryReminders(
     monthly ?? [],
     { atOrAfter: noticeDeadline, atOrBefore: renewalNoticeWindowEnd },
     subscriptionLimit,
-    deps.monthlyPlan,
+    deps,
   );
   const result = await deps.sendDueRenewalNotices.execute({
     notices: [...annualNotices, ...anniversaryNotices],
@@ -520,14 +533,27 @@ async function readActiveMonthlySubscriptions(
   return monthly;
 }
 
-// The anniversary renewals inside the notice window, earliest first.
-function scheduleAnniversaryReminders(
+function reminderKey(
+  externalSubscriptionId: string,
+  applicableAt: Date,
+  destination?: string,
+): string {
+  return `${externalSubscriptionId}|${applicableAt.getTime()}|${destination ?? ''}`;
+}
+
+// The anniversary renewals inside the notice window that have no reminder
+// yet, earliest first, up to the limit. Like the annual query, a renewal with
+// a stored reminder for this version and destination is skipped before the
+// limit applies, so reminders queued on earlier runs cannot take the slots of
+// renewals entering the window (#1169 review).
+async function scheduleAnniversaryReminders(
   monthly: readonly ActiveMonthlySubscription[],
   window: { atOrAfter: Date; atOrBefore: Date },
   limit: number,
-  plan: PlanNoticeTerms,
-): ScheduledRenewalNotice[] {
-  return knownAnniversaries(monthly)
+  deps: SendDueRenewalNoticesJobDeps,
+): Promise<ScheduledRenewalNotice[]> {
+  const plan = deps.monthlyPlan;
+  const inWindow = knownAnniversaries(monthly)
     .map((known) => ({
       subscription: known.subscription,
       renewalAt: nextAnniversaryRenewalAt({
@@ -536,7 +562,46 @@ function scheduleAnniversaryReminders(
         notBefore: window.atOrAfter,
       }),
     }))
-    .filter(({ renewalAt }) => renewalAt <= window.atOrBefore)
+    .filter(({ renewalAt }) => renewalAt <= window.atOrBefore);
+  if (inWindow.length === 0) return [];
+  let stored: AnniversaryReminderRecord[];
+  try {
+    stored = await deps.renewalQueries.listAnniversaryReminders({
+      externalSubscriptionIds: inWindow.map(
+        ({ subscription }) => subscription.externalSubscriptionId,
+      ),
+    });
+  } catch (error) {
+    deps.logger.error(
+      { error: projectSafeErrorDiagnostics(error) },
+      'Monthly anniversary selection failed',
+    );
+    return [];
+  }
+  const scheduled = new Set(
+    stored
+      .filter(
+        (reminder) => reminder.disclosureVersion === plan.disclosureVersion,
+      )
+      .map((reminder) =>
+        reminderKey(
+          reminder.externalSubscriptionId,
+          reminder.applicableAt,
+          reminder.destination,
+        ),
+      ),
+  );
+  return inWindow
+    .filter(
+      ({ subscription, renewalAt }) =>
+        !scheduled.has(
+          reminderKey(
+            subscription.externalSubscriptionId,
+            renewalAt,
+            subscription.destination,
+          ),
+        ),
+    )
     .sort(
       (a, b) =>
         a.renewalAt.getTime() - b.renewalAt.getTime() ||
@@ -580,9 +645,9 @@ async function alertOnMissedAnniversaryReminders(
     }))
     .filter(({ renewalAt }) => renewalAt <= window.renewalAtOrBefore);
   if (due.length === 0) return;
-  let sent: SentAnniversaryReminder[];
+  let stored: AnniversaryReminderRecord[];
   try {
-    sent = await deps.renewalQueries.listSentAnniversaryReminders({
+    stored = await deps.renewalQueries.listAnniversaryReminders({
       externalSubscriptionIds: due.map(
         (anniversary) => anniversary.externalSubscriptionId,
       ),
@@ -594,16 +659,18 @@ async function alertOnMissedAnniversaryReminders(
     );
     return;
   }
+  // Sent to the address of record when it was sent, as for annual notices.
   const sentKeys = new Set(
-    sent.map(
-      (reminder) =>
-        `${reminder.externalSubscriptionId}|${reminder.applicableAt.getTime()}`,
-    ),
+    stored
+      .filter((reminder) => SENT_STATUSES.has(reminder.status))
+      .map((reminder) =>
+        reminderKey(reminder.externalSubscriptionId, reminder.applicableAt),
+      ),
   );
   const missed = due.filter(
     (anniversary) =>
       !sentKeys.has(
-        `${anniversary.externalSubscriptionId}|${anniversary.renewalAt.getTime()}`,
+        reminderKey(anniversary.externalSubscriptionId, anniversary.renewalAt),
       ),
   );
   if (missed.length === 0) return;

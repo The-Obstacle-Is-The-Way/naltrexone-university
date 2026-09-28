@@ -25,8 +25,8 @@ function createDeps(): {
   listActiveMonthly: ReturnType<
     typeof vi.fn<AnnualRenewals['listActiveMonthly']>
   >;
-  listSentAnniversaryReminders: ReturnType<
-    typeof vi.fn<AnnualRenewals['listSentAnniversaryReminders']>
+  listAnniversaryReminders: ReturnType<
+    typeof vi.fn<AnnualRenewals['listAnniversaryReminders']>
   >;
   execute: ReturnType<
     typeof vi.fn<
@@ -69,8 +69,8 @@ function createDeps(): {
   const listActiveMonthly = vi.fn<AnnualRenewals['listActiveMonthly']>(
     async () => [],
   );
-  const listSentAnniversaryReminders = vi.fn<
-    AnnualRenewals['listSentAnniversaryReminders']
+  const listAnniversaryReminders = vi.fn<
+    AnnualRenewals['listAnniversaryReminders']
   >(async () => []);
   const pruneExpiredTrialPaymentMethodSetups = vi.fn(async () => 3);
   const logger = new FakeLogger();
@@ -78,7 +78,7 @@ function createDeps(): {
     listDue,
     listPastNoticeDeadline,
     listActiveMonthly,
-    listSentAnniversaryReminders,
+    listAnniversaryReminders,
     execute,
     pruneExpiredTrialPaymentMethodSetups,
     logger,
@@ -89,7 +89,7 @@ function createDeps(): {
         listDue,
         listPastNoticeDeadline,
         listActiveMonthly,
-        listSentAnniversaryReminders,
+        listAnniversaryReminders,
       },
       sendDueRenewalNotices: { execute },
       pruneExpiredTrialPaymentMethodSetups,
@@ -113,6 +113,21 @@ function createDeps(): {
           'Cancel on the Billing page in the app or email support@addictionboards.com.',
       },
     },
+  };
+}
+
+// An anniversary reminder already stored for a monthly subscription.
+function reminderRecord(
+  externalSubscriptionId: string,
+  applicableAt: string,
+  status: 'queued' | 'accepted' | 'delivered' | 'terminal_failure',
+) {
+  return {
+    externalSubscriptionId,
+    applicableAt: new Date(applicableAt),
+    disclosureVersion: '2026-09-27',
+    destination: `${externalSubscriptionId}@example.com`,
+    status,
   };
 }
 
@@ -421,6 +436,88 @@ describe('sendDueRenewalNotices job', () => {
       ]);
     });
 
+    // #1169 review: renewals already queued on earlier runs stay in the
+    // five-day window; they must not take the slots of renewals entering it.
+    it('schedules renewals entering the window ahead of ones already queued', async () => {
+      const { deps, execute, listActiveMonthly, listAnniversaryReminders } =
+        createDeps();
+      const queued = Array.from({ length: 40 }, (_, index) =>
+        monthlySubscription(
+          `sub_queued_${String(index).padStart(2, '0')}`,
+          '2025-09-07T12:00:00.000Z',
+        ),
+      );
+      listActiveMonthly.mockResolvedValueOnce([
+        ...queued,
+        monthlySubscription('sub_new_b', '2025-09-11T12:00:00.000Z'),
+        monthlySubscription('sub_new_a', '2025-09-11T12:00:00.000Z'),
+      ]);
+      listAnniversaryReminders.mockResolvedValueOnce(
+        queued.map((subscription) =>
+          reminderRecord(
+            subscription.externalSubscriptionId,
+            '2026-09-07T12:00:00.000Z',
+            'queued',
+          ),
+        ),
+      );
+
+      await sendDueRenewalNotices(
+        { subscriptionLimit: 50, dispatchLimit: 100 },
+        deps,
+      );
+
+      expect(
+        (execute.mock.calls[0]?.[0].notices ?? [])
+          .filter((notice) => notice.noticeKind === 'anniversary_reminder')
+          .map((notice) => notice.externalSubscriptionId),
+      ).toEqual(['sub_new_a', 'sub_new_b']);
+    });
+
+    it('stops reading monthly subscriptions when a page makes no progress', async () => {
+      const { deps, execute, listActiveMonthly, logger } = createDeps();
+      const page = Array.from({ length: 500 }, () =>
+        monthlySubscription('sub_same', null),
+      );
+      listActiveMonthly.mockResolvedValue(page);
+
+      await sendDueRenewalNotices(
+        { subscriptionLimit: 50, dispatchLimit: 100 },
+        deps,
+      );
+
+      expect(listActiveMonthly).toHaveBeenCalledTimes(2);
+      expect(execute.mock.calls[0]?.[0].notices).toHaveLength(2);
+      expect(logger.errorCalls).toEqual([
+        {
+          msg: 'Monthly anniversary selection failed',
+          context: { error: expect.any(Object) },
+        },
+      ]);
+    });
+
+    it('reports a failed anniversary deadline check without failing the run', async () => {
+      const { deps, listActiveMonthly, listAnniversaryReminders, logger } =
+        createDeps();
+      listActiveMonthly.mockResolvedValueOnce([
+        monthlySubscription('sub_late', '2025-09-05T12:00:00.000Z'),
+      ]);
+      listAnniversaryReminders.mockRejectedValueOnce(new Error('query failed'));
+
+      await expect(
+        sendDueRenewalNotices(
+          { subscriptionLimit: 50, dispatchLimit: 100 },
+          deps,
+        ),
+      ).resolves.toMatchObject({ queued: 2 });
+      expect(logger.errorCalls).toEqual([
+        {
+          msg: 'Monthly anniversary reminder deadline check failed',
+          context: { error: expect.any(Object) },
+        },
+      ]);
+    });
+
     it('still sends the annual notices when the monthly read fails', async () => {
       const { deps, execute, listActiveMonthly, logger } = createDeps();
       listActiveMonthly.mockRejectedValueOnce(new Error('query failed'));
@@ -461,25 +558,21 @@ describe('sendDueRenewalNotices job', () => {
         deps,
         execute,
         listActiveMonthly,
-        listSentAnniversaryReminders,
+        listAnniversaryReminders,
         logger,
       } = createDeps();
       listActiveMonthly.mockResolvedValueOnce([
         monthlySubscription('sub_late', '2025-09-05T12:00:00.000Z'),
         monthlySubscription('sub_sent', '2025-08-20T12:00:00.000Z'),
       ]);
-      listSentAnniversaryReminders.mockImplementation(async () => {
+      listAnniversaryReminders.mockImplementation(async () => {
         expect(execute).toHaveBeenCalledOnce();
         return [
-          {
-            externalSubscriptionId: 'sub_sent',
-            applicableAt: new Date('2026-08-20T12:00:00.000Z'),
-          },
+          reminderRecord('sub_sent', '2026-08-20T12:00:00.000Z', 'accepted'),
           // A reminder sent for an earlier year does not cover this one.
-          {
-            externalSubscriptionId: 'sub_late',
-            applicableAt: new Date('2025-09-05T12:00:00.000Z'),
-          },
+          reminderRecord('sub_late', '2025-09-05T12:00:00.000Z', 'delivered'),
+          // Nor does one that was queued but never sent.
+          reminderRecord('sub_late', '2026-09-05T12:00:00.000Z', 'queued'),
         ];
       });
 
@@ -488,7 +581,7 @@ describe('sendDueRenewalNotices job', () => {
         deps,
       );
 
-      expect(listSentAnniversaryReminders).toHaveBeenCalledWith({
+      expect(listAnniversaryReminders).toHaveBeenCalledWith({
         externalSubscriptionIds: ['sub_late', 'sub_sent'],
       });
       expect(logger.errorCalls).toEqual([
