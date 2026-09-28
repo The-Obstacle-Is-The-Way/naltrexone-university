@@ -165,6 +165,7 @@ export const createTrialPaymentMethodSetupSession = createAction({
     async function createNewSession(): Promise<CreateTrialPaymentMethodSetupSessionOutput> {
       const setupInput = {
         userId: user.id,
+        email: user.email,
         expectedDisclosureVersion: input.expectedDisclosureVersion,
         successUrl: toTrialPaymentMethodReturnUrl(d.appUrl, 'success'),
         cancelUrl: toTrialPaymentMethodReturnUrl(d.appUrl, 'cancel'),

@@ -53,6 +53,7 @@ describe('FakePaymentGateway', () => {
       const gateway = createGateway();
       const input = {
         userId: 'user_1',
+        email: 'learner@example.com',
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly' as const,
@@ -93,6 +94,7 @@ describe('FakePaymentGateway', () => {
       await expect(
         gateway.createTrialPaymentMethodSetupSession({
           userId: 'user_1',
+          email: 'learner@example.com',
           externalCustomerId: 'cus_123',
           externalSubscriptionId: 'sub_123',
           plan: 'monthly',

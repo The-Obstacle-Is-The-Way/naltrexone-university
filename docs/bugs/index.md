@@ -474,7 +474,7 @@ Every one of these was confirmed against the other branch's actual live registry
 
 | ID | Title | Severity | Status | Summary |
 |----|-------|----------|--------|---------|
-| [BUG-308](./bug-308-trial-banner-asks-for-card-after-one-is-saved.md) | The trial banner asks for a card after one is saved | P3 | Open | Found by the DEBT-414 F03b hosted add-card journey. The banner shows for every `inTrial` subscription regardless of a saved card; Billing ignores the add-card return; Stripe asks for the learner's email. The fix is the next increment. |
+| [BUG-308](./bug-308-trial-banner-asks-for-card-after-one-is-saved.md) | The trial banner asks for a card after one is saved | P3 | Open — fix in review | Found by the DEBT-414 F03b hosted add-card journey. The banner showed for every `inTrial` subscription regardless of a saved card; Billing ignored the add-card return; Stripe asked for the learner's email. The fix detects the saved card, under a fake↔real contract, states the renewal in the banner and on Billing, acknowledges the return, and prefills the email; the hosted journey proves each part. It closes after release verification. |
 | [BUG-304](./bug-304-practice-session-start-no-navigation.md) | Practice session Start can click without navigation or error | P3 | Open | The diagnostic blind spot and two navigation-observation races are promoted and production-verified; the original no-navigation event remains unproven, so the bug stays Open for causal recurrence evidence. |
 
 **Prior stable baseline (2026-07-18):** there were no active must-fix bugs.

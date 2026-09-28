@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
 import type { AuthGateway } from '@/src/application/ports/gateways';
-import { FakeAuthGateway } from '@/src/application/test-helpers/fakes';
+import {
+  FakeAuthGateway,
+  FakeSubscriptionRepository,
+  FakeTrialPaymentMethodSetupOperationRepository,
+} from '@/src/application/test-helpers/fakes';
+import { seedTrialSetupOperation } from '@/src/application/test-helpers/trial-payment-method-setup-operations';
+import { CheckTrialSavedCardUseCase } from '@/src/application/use-cases';
+import {
+  createUser as createDomainUser,
+  createSubscription,
+} from '@/src/domain/test-helpers';
 import { enforceEntitledAppUser, getTrialDaysLeft } from './layout';
 
 const { fixtureUser1Id } = vi.hoisted(() => ({
@@ -24,6 +34,31 @@ function createUser(): UserLike {
   };
 }
 
+// BUG-308: the real use case over the maintained fakes, with or without a
+// card that the add-card flow set as the trial subscription's default.
+async function createCheckTrialSavedCardUseCase(cardSaved = false) {
+  const operations = new FakeTrialPaymentMethodSetupOperationRepository();
+  if (cardSaved) {
+    await seedTrialSetupOperation(operations, {
+      userId: fixtureUser1Id,
+      stripeSubscriptionId: 'sub_trial',
+      stage: 'completed',
+    });
+  }
+  return new CheckTrialSavedCardUseCase(
+    new FakeSubscriptionRepository([
+      {
+        subscription: createSubscription({
+          userId: fixtureUser1Id,
+          status: 'inTrial',
+        }),
+        externalSubscriptionId: 'sub_trial',
+      },
+    ]),
+    operations,
+  );
+}
+
 describe('app/(app)/app/layout', () => {
   it('uses maxDuration without exporting incompatible dynamic route config', async () => {
     const mod = await import('./layout');
@@ -44,6 +79,7 @@ describe('app/(app)/app/layout', () => {
       enforceEntitledAppUser({
         authGateway,
         checkEntitlementUseCase,
+        checkTrialSavedCardUseCase: await createCheckTrialSavedCardUseCase(),
       }),
     ).rejects.toEqual(
       new ApplicationError('UNAUTHENTICATED', 'User not authenticated'),
@@ -73,7 +109,11 @@ describe('app/(app)/app/layout', () => {
 
     await expect(
       enforceEntitledAppUser(
-        { authGateway, checkEntitlementUseCase },
+        {
+          authGateway,
+          checkEntitlementUseCase,
+          checkTrialSavedCardUseCase: await createCheckTrialSavedCardUseCase(),
+        },
         redirectFn as never,
       ),
     ).rejects.toMatchObject({
@@ -110,7 +150,11 @@ describe('app/(app)/app/layout', () => {
     });
 
     const result = await enforceEntitledAppUser(
-      { authGateway, checkEntitlementUseCase },
+      {
+        authGateway,
+        checkEntitlementUseCase,
+        checkTrialSavedCardUseCase: await createCheckTrialSavedCardUseCase(),
+      },
       redirectFn as never,
     );
 
@@ -118,6 +162,7 @@ describe('app/(app)/app/layout', () => {
       subscriptionStatus: 'active',
       plan: 'monthly',
       trialEndsAt: null,
+      trialCardSaved: false,
     });
     expect(checkEntitlementUseCase.execute).toHaveBeenCalledWith({
       userId: fixtureUser1Id,
@@ -149,7 +194,11 @@ describe('app/(app)/app/layout', () => {
     });
 
     const result = await enforceEntitledAppUser(
-      { authGateway, checkEntitlementUseCase },
+      {
+        authGateway,
+        checkEntitlementUseCase,
+        checkTrialSavedCardUseCase: await createCheckTrialSavedCardUseCase(),
+      },
       redirectFn as never,
     );
 
@@ -157,9 +206,45 @@ describe('app/(app)/app/layout', () => {
       subscriptionStatus: 'inTrial',
       plan: 'annual',
       trialEndsAt,
+      trialCardSaved: false,
     });
     expect(redirectFn).not.toHaveBeenCalled();
   });
+
+  // BUG-308: the banner must not ask for a card the learner already saved.
+  it.each([
+    ['inTrial', true, true],
+    ['inTrial', false, false],
+    ['active', true, false],
+  ] as const)(
+    'reports trialCardSaved for a %s learner with a saved card=%s as %s',
+    async (subscriptionStatus, cardSaved, expected) => {
+      const authGateway = new FakeAuthGateway(
+        createDomainUser({ id: fixtureUser1Id }),
+      );
+      const checkEntitlementUseCase = {
+        execute: async () => ({
+          isEntitled: true,
+          reason: null,
+          subscriptionStatus,
+          plan: 'monthly' as const,
+          trialEndsAt:
+            subscriptionStatus === 'inTrial'
+              ? new Date('2026-02-08T00:00:00Z')
+              : null,
+        }),
+      };
+
+      const result = await enforceEntitledAppUser({
+        authGateway,
+        checkEntitlementUseCase,
+        checkTrialSavedCardUseCase:
+          await createCheckTrialSavedCardUseCase(cardSaved),
+      });
+
+      expect(result.trialCardSaved).toBe(expected);
+    },
+  );
 
   it('returns subscriptionStatus pastDue when pastDue user is entitled', async () => {
     const user = createUser();
@@ -183,7 +268,11 @@ describe('app/(app)/app/layout', () => {
     });
 
     const result = await enforceEntitledAppUser(
-      { authGateway, checkEntitlementUseCase },
+      {
+        authGateway,
+        checkEntitlementUseCase,
+        checkTrialSavedCardUseCase: await createCheckTrialSavedCardUseCase(),
+      },
       redirectFn as never,
     );
 
@@ -191,6 +280,7 @@ describe('app/(app)/app/layout', () => {
       subscriptionStatus: 'pastDue',
       plan: 'monthly',
       trialEndsAt: null,
+      trialCardSaved: false,
     });
     expect(redirectFn).not.toHaveBeenCalled();
   });
@@ -258,7 +348,11 @@ describe('app/(app)/app/layout', () => {
 
     await expect(
       enforceEntitledAppUser(
-        { authGateway, checkEntitlementUseCase },
+        {
+          authGateway,
+          checkEntitlementUseCase,
+          checkTrialSavedCardUseCase: await createCheckTrialSavedCardUseCase(),
+        },
         redirectFn as never,
       ),
     ).rejects.toMatchObject({
@@ -291,7 +385,11 @@ describe('app/(app)/app/layout', () => {
 
     await expect(
       enforceEntitledAppUser(
-        { authGateway, checkEntitlementUseCase },
+        {
+          authGateway,
+          checkEntitlementUseCase,
+          checkTrialSavedCardUseCase: await createCheckTrialSavedCardUseCase(),
+        },
         redirectFn as never,
       ),
     ).rejects.toMatchObject({

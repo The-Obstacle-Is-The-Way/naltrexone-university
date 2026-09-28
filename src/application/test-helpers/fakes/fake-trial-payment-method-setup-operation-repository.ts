@@ -10,6 +10,7 @@ import type {
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationInput,
   TrialPaymentMethodSetupOperationRepository,
+  TrialSubscriptionDefaultQuery,
 } from '@/src/application/ports/trial-payment-method-setup-operation-repository';
 
 function cloneOperation(
@@ -104,6 +105,18 @@ export class FakeTrialPaymentMethodSetupOperationRepository
   ): Promise<TrialPaymentMethodSetupOperation | null> {
     const operation = this.bySessionId.get(sessionId);
     return operation ? cloneOperation(operation) : null;
+  }
+
+  async hasSubscriptionDefaultSet({
+    userId,
+    stripeSubscriptionId,
+  }: TrialSubscriptionDefaultQuery): Promise<boolean> {
+    return Array.from(this.bySessionId.values()).some(
+      (operation) =>
+        operation.userId === userId &&
+        operation.stripeSubscriptionId === stripeSubscriptionId &&
+        operation.subscriptionDefaultSetAt !== null,
+    );
   }
 
   async claim({
