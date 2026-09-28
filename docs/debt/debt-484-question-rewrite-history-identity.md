@@ -224,6 +224,7 @@ Since the first increment, every new session state and attempt is bound. The ser
   - It runs the function once, capped at 50,000 rows per table, and logs the counts. Production's build log therefore measures its real history sizes, without anyone holding production credentials. Any remainder is bound by a later run before phase 2b.
   - It validates the five history keys that `0039` and `0040` added `NOT VALID`. `VALIDATE` takes a lock that blocks neither reads nor writes, and unbound rows' NULL revisions satisfy the `MATCH SIMPLE` keys.
 - **Pre-flight data proof.** On a copy of the shared per-clone test database, its two E2E session states and two attempts were written before binding existed. `0041` logged `2 session states and 2 attempts bound; 0 and 0 remain unbound`, left no revision key `NOT VALID`, and a second run bound nothing. The copy was then dropped. The shared database itself was not migrated while other PRs were ahead in the queue.
+- **Production.** On 2026-09-28 the build applied `0041` and logged `306 session states and 249 attempts bound; 0 and 0 remain unbound`. The five history keys validated, and the migration ledger matched the checkout afterwards (#1197). Every production history row is now bound to the revision it was shown or graded against, which is phase 2b's precondition.
 - **Tests.** Six real-Postgres cases in `question-revision-backfill.integration.test.ts`, all red first:
   - an older session state and its attempt;
   - an older attempt outside a session;

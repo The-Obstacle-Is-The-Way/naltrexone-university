@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { sql as drizzleSql, eq, inArray } from 'drizzle-orm';
-import { afterAll, afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as schema from '@/db/schema';
 import { DrizzleAttemptRepository } from '@/src/adapters/repositories/drizzle-attempt-repository';
 import { DrizzlePracticeSessionRepository } from '@/src/adapters/repositories/drizzle-practice-session-repository';
@@ -25,6 +25,19 @@ afterEach(async () => {
 
 afterAll(async () => {
   await closeConnection(sql);
+});
+
+// The function binds globally, so rows another run left behind would compete
+// for the batch (#1197 review). Each case starts by binding every bindable
+// row, and counts what stays unbound as its baseline.
+let baseline: { states: number; attempts: number };
+
+beforeEach(async () => {
+  const drained = await bindHistoryRevisions(1_000_000);
+  baseline = {
+    states: drained.statesRemaining,
+    attempts: drained.attemptsRemaining,
+  };
 });
 
 type BindResult = {
@@ -140,9 +153,12 @@ describe('ADR-021 phase 2a: binding older history to its revision', () => {
       revision,
     ]);
     await expect(attemptRevisionId(legacy.attempt.id)).resolves.toBe(revision);
-    expect(result.statesBound).toBeGreaterThanOrEqual(1);
-    expect(result.attemptsBound).toBeGreaterThanOrEqual(1);
-    expect(result).toMatchObject({ statesRemaining: 0, attemptsRemaining: 0 });
+    expect(result).toEqual({
+      statesBound: 1,
+      attemptsBound: 1,
+      statesRemaining: baseline.states,
+      attemptsRemaining: baseline.attempts,
+    });
   });
 
   it("binds an older attempt outside a session to the question's revision", async () => {
@@ -172,11 +188,11 @@ describe('ADR-021 phase 2a: binding older history to its revision', () => {
 
     const result = await bindHistoryRevisions(1);
 
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       statesBound: 1,
       attemptsBound: 1,
-      statesRemaining: 1,
-      attemptsRemaining: 1,
+      statesRemaining: baseline.states + 1,
+      attemptsRemaining: baseline.attempts + 1,
     });
     const bound = await stateRevisionIds([first.session.id, second.session.id]);
     expect(bound.filter((id) => id !== null)).toHaveLength(1);
@@ -189,8 +205,8 @@ describe('ADR-021 phase 2a: binding older history to its revision', () => {
     await expect(bindHistoryRevisions(1_000)).resolves.toEqual({
       statesBound: 0,
       attemptsBound: 0,
-      statesRemaining: 0,
-      attemptsRemaining: 0,
+      statesRemaining: baseline.states,
+      attemptsRemaining: baseline.attempts,
     });
   });
 
@@ -238,7 +254,7 @@ describe('ADR-021 phase 2a: binding older history to its revision', () => {
     await expect(stateRevisionIds([legacy.session.id])).resolves.toEqual([
       null,
     ]);
-    expect(result.statesRemaining).toBe(1);
+    expect(result.statesRemaining).toBe(baseline.states + 1);
   });
 
   it('validates every history revision key', async () => {
