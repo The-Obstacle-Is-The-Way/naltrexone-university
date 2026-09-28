@@ -294,6 +294,28 @@ describe('theme token regression', () => {
     expect(emphasis?.classList.contains('text-foreground')).toBe(true);
   });
 
+  // Pattern Registry I-7 (DEBT-414 F03): the renewal opt-in is a native
+  // checkbox, so it carries the canonical non-Button focus ring itself.
+  it('uses the canonical focus ring and primary accent on the renewal opt-in', () => {
+    const doc = parseHtml(
+      renderToStaticMarkup(
+        <PlanConsentDetails plan="annual" hasTrial={false} />,
+      ),
+    );
+    const optIn = doc.querySelector(
+      'input[type="checkbox"][name="renewalOptIn"]',
+    );
+
+    for (const token of [
+      'focus-visible:outline-none',
+      'focus-visible:ring-ring/50',
+      'focus-visible:ring-[3px]',
+      'accent-primary',
+    ]) {
+      expect(optIn?.classList.contains(token)).toBe(true);
+    }
+  });
+
   it('uses the shared focus ring utility on pricing legal-consent links', () => {
     const html = renderToStaticMarkup(
       <PlanConsentDetails plan="monthly" hasTrial />,
