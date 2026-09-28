@@ -39,6 +39,26 @@ describe('plan consent rendering', () => {
         ).toBeNull();
       });
 
+      // DEBT-414 F03: a separate, unchecked, required renewal opt-in.
+      it(`offers an unchecked, required ${plan} ${hasTrial ? 'trial' : 'standard'} renewal opt-in`, () => {
+        const doc = parseHtml(
+          renderToStaticMarkup(
+            <PlanConsentDetails plan={plan} hasTrial={hasTrial} />,
+          ),
+        );
+        const checkbox = doc.querySelector<HTMLInputElement>(
+          'input[type="checkbox"]',
+        );
+
+        expect(checkbox?.name).toBe('renewalOptIn');
+        expect(checkbox?.value).toBe('yes');
+        expect(checkbox?.required).toBe(true);
+        expect(checkbox?.checked).toBe(false);
+        expect(checkbox?.closest('label')?.textContent).toBe(
+          PRICING_DATA[plan].consent[hasTrial ? 'trial' : 'standard'].optIn,
+        );
+      });
+
       it(`renders ${plan} ${hasTrial ? 'trial' : 'standard'} terms exactly as recorded`, () => {
         const doc = parseHtml(
           renderToStaticMarkup(
@@ -51,9 +71,13 @@ describe('plan consent rendering', () => {
             `${row.querySelector('dt')?.textContent} ${row.querySelector('dd')?.textContent}`,
         );
         expect(rows).toHaveLength(hasTrial ? 5 : 4);
-        expect([...rows, doc.querySelector('p')?.textContent].join('\n')).toBe(
-          createCheckoutRenewalTerms(plan, hasTrial).disclosureSnapshot,
-        );
+        expect(
+          [
+            ...rows,
+            doc.querySelector('label')?.textContent,
+            doc.querySelector('p')?.textContent,
+          ].join('\n'),
+        ).toBe(createCheckoutRenewalTerms(plan, hasTrial).disclosureSnapshot);
         expect(
           doc.querySelector(`a[href="${ROUTES.TERMS}"]`)?.textContent,
         ).toBe('Terms of Service');

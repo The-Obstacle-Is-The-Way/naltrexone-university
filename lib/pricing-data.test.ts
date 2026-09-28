@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { termsContent } from '@/app/(marketing)/terms/terms-content';
-import consentRuling from '@/docs/debt/assets/debt-414/f15-consent-ruling-data.json';
+import consentRuling from '@/docs/debt/assets/debt-414/f03-consent-ruling-data.json';
 import {
   ANNUAL_RENEWAL_NOTICE_VERSION,
   CANCELLATION_METHOD,
@@ -89,13 +89,13 @@ describe('PRICING_DATA renewal disclosures', () => {
       amountCents: 2900,
       currency: 'usd',
       frequency: 'month',
-      disclosureVersion: '2026-09-28',
+      disclosureVersion: '2026-09-28.2',
     });
     expect(PRICING_DATA.annual).toMatchObject({
       amountCents: 19900,
       currency: 'usd',
       frequency: 'year',
-      disclosureVersion: '2026-09-28',
+      disclosureVersion: '2026-09-28.2',
     });
     expect(TERMS_VERSION).toBe('2026-08-09');
     expect(TERMS_CONTENT_SHA256).toBe(
@@ -117,6 +117,8 @@ describe('PRICING_DATA renewal disclosures', () => {
           PRICING_DATA[plan].consent[hasTrial ? 'trial' : 'standard'];
         expect(ruling).toBeDefined();
         expect(consent.rows).toEqual(ruling?.rows);
+        // DEBT-414 F03: the separate renewal opt-in, recorded verbatim.
+        expect(consent.optIn).toBe(ruling?.optIn);
         expect(consent.sentence).toBe(ruling?.sentence);
         expect(consent.buttonLabel).toBe(ruling?.button);
         expect(createCheckoutRenewalTerms(plan, hasTrial)).toMatchObject({

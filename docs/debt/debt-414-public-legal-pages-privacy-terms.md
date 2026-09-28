@@ -724,3 +724,11 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
   - A verified request takes effect when received, and refunding any renewal charged after it is company policy. Counsel has not yet confirmed the legal rule (#1179 review).
 - **What stays manual.** The spec is observational, not a required check, because Stripe does not support automating its hosted pages. The email route depends on the owner following the procedure.
 
+**F03, a separate renewal opt-in: design (2026-09-28).** The finding asks for bold, complete renewal terms and a separate, unchecked, affirmative opt-in to automatic renewal. It asks for both at checkout and at every trial-to-paid entry (VT 9 § 2454a(a)(1)-(2)). Stripe Checkout's own required checkbox accepts the general Terms, not the renewal. Decided under the owner's 2026-09-28 delegation:
+- **Every offer, not only annual.** Vermont's trigger is an annual term, but one uniform opt-in is simpler and stricter. Each checkout offer gets an unchecked, required checkbox whose label is the offer's renewal statement in bold:
+  - a paid plan: "I agree that Pro Monthly renews automatically at $29 per month until I cancel.";
+  - a no-card trial, where renewal needs a payment method: "I agree that, if I add a payment method, Pro Monthly renews automatically at $29 per month after my trial until I cancel.".
+- **A native control.** It is a native checkbox, recorded as Pattern Registry I-7. The browser blocks submission until it is checked, and the server rejects any submission without `renewalOptIn`, as it rejects one without the displayed offer's identity.
+- **Evidence.** The statement joins the consent text between the terms and the closing sentence. That changes the checkout disclosure version to `2026-09-28.2`. The controller now accepts a same-day revision suffix, `YYYY-MM-DD.N`, because a version names a text, and two texts adopted on one day need two names. The four new texts are registered and pinned in `lib/checkout-disclosures.ts`.
+- **Two steps.** F03a covers checkout. F03b moves the trial add-card offer from the banner's paragraph into the same consent dialog, with bold rows and the same opt-in, because the banner has no room for either.
+

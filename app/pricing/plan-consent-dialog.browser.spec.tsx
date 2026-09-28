@@ -72,6 +72,7 @@ test('submits the displayed offer and a fresh idempotency key after reopening a 
     exact: true,
   });
   await trigger.click();
+  await screen.getByRole('dialog').getByRole('checkbox').click();
   await screen
     .getByRole('dialog')
     .getByRole('button', { name: 'Subscribe', exact: true })
@@ -79,11 +80,17 @@ test('submits the displayed offer and a fresh idempotency key after reopening a 
   await expect.poll(() => submit.mock.calls.length).toBe(1);
   const first = submit.mock.calls[0]?.[0];
   expect(first?.get('idempotencyKey')).toMatch(/^[0-9a-f-]{36}$/);
-  expect(first?.get('disclosureVersion')).toBe('2026-09-28');
+  expect(first?.get('disclosureVersion')).toBe('2026-09-28.2');
   expect(first?.get('hasTrial')).toBe('false');
+  expect(first?.get('renewalOptIn')).toBe('yes');
   await userEvent.keyboard('{Escape}');
   await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
   await trigger.click();
+  // Reopening never carries the opt-in over.
+  await expect
+    .element(screen.getByRole('dialog').getByRole('checkbox'))
+    .not.toBeChecked();
+  await screen.getByRole('dialog').getByRole('checkbox').click();
   await screen
     .getByRole('dialog')
     .getByRole('button', { name: 'Subscribe', exact: true })
@@ -92,6 +99,32 @@ test('submits the displayed offer and a fresh idempotency key after reopening a 
   expect(submit.mock.calls[1]?.[0].get('idempotencyKey')).not.toBe(
     first?.get('idempotencyKey'),
   );
+});
+
+// DEBT-414 F03: the browser will not submit consent without the opt-in.
+test('does not submit until the renewal opt-in is checked', async () => {
+  const submit = vi.fn(async (_formData: FormData) => undefined);
+  const screen = await render(
+    <PlanConsentDialog plan="monthly" hasTrial subscribeAction={submit} />,
+  );
+  await screen.getByRole('button', { name: 'Start 7-day free trial' }).click();
+  const dialog = screen.getByRole('dialog');
+  const optIn = dialog.getByRole('checkbox');
+
+  await dialog
+    .getByRole('button', { name: 'Start free trial', exact: true })
+    .click();
+
+  expect((optIn.element() as HTMLInputElement).validity.valueMissing).toBe(
+    true,
+  );
+  expect(submit).not.toHaveBeenCalled();
+  await optIn.click();
+  await dialog
+    .getByRole('button', { name: 'Start free trial', exact: true })
+    .click();
+  await expect.poll(() => submit.mock.calls.length).toBe(1);
+  expect(submit.mock.calls[0]?.[0].get('renewalOptIn')).toBe('yes');
 });
 
 test('disables the commit button while the checkout request is pending', async () => {
@@ -104,6 +137,7 @@ test('disables the commit button while the checkout request is pending', async (
     />,
   );
   await screen.getByRole('button', { name: 'Start 7-day free trial' }).click();
+  await screen.getByRole('dialog').getByRole('checkbox').click();
   try {
     await screen
       .getByRole('dialog')

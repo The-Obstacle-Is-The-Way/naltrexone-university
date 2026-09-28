@@ -1,120 +1,20 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { ApplicationError } from '@/src/application/errors';
-import type { RateLimiter } from '@/src/application/ports/gateways';
+import { FakeRateLimiter } from '@/src/application/test-helpers/fakes';
 import {
-  FakeAuthGateway,
-  FakeCreateCheckoutSessionUseCase,
-  FakeCreatePortalSessionUseCase,
-  FakeCreateTrialPaymentMethodSetupSessionUseCase,
-  FakeIdempotencyKeyRepository,
-  FakeLogger,
-  FakeRateLimiter,
-} from '@/src/application/test-helpers/fakes';
-import type {
-  CreateCheckoutSessionOutput,
-  CreatePortalSessionOutput,
-} from '@/src/application/use-cases';
-import type { User } from '@/src/domain/entities';
-import { createUser } from '@/src/domain/test-helpers';
-import {
-  type BillingControllerDeps,
   createCheckoutSession,
   createPortalSession,
   createTrialPaymentMethodSetupSession,
 } from './billing-controller';
-
-type BillingControllerTestDeps = BillingControllerDeps & {
-  createCheckoutSessionUseCase: FakeCreateCheckoutSessionUseCase;
-  createPortalSessionUseCase: FakeCreatePortalSessionUseCase;
-  createTrialPaymentMethodSetupSessionUseCase: FakeCreateTrialPaymentMethodSetupSessionUseCase;
-  _calls: {
-    clerkCalls: Array<undefined>;
-  };
-  _fixtures: {
-    userId: string;
-  };
-};
-
-function createDeps(overrides?: {
-  user?: User | null;
-  appUrl?: string;
-  clerkUserId?: string | null;
-  checkoutOutput?: CreateCheckoutSessionOutput;
-  checkoutThrows?: unknown;
-  portalOutput?: CreatePortalSessionOutput;
-  portalThrows?: unknown;
-  setupThrows?: unknown;
-  rateLimiter?: RateLimiter;
-  now?: () => Date;
-}): BillingControllerTestDeps {
-  const user =
-    overrides?.user === undefined
-      ? createUser({
-          email: 'user@example.com',
-          createdAt: new Date('2026-02-01T00:00:00Z'),
-          updatedAt: new Date('2026-02-01T00:00:00Z'),
-        })
-      : overrides.user;
-  const userId = user?.id ?? crypto.randomUUID();
-
-  const appUrl = overrides?.appUrl ?? 'https://app.example.com';
-  const clerkUserId =
-    overrides?.clerkUserId === undefined ? 'clerk_1' : overrides.clerkUserId;
-
-  const now = overrides?.now ?? (() => new Date('2026-02-01T00:00:00Z'));
-
-  const authGateway = new FakeAuthGateway(user);
-
-  const createCheckoutSessionUseCase = new FakeCreateCheckoutSessionUseCase(
-    overrides?.checkoutOutput ?? { url: 'https://stripe/checkout' },
-    overrides?.checkoutThrows,
-  );
-
-  const createPortalSessionUseCase = new FakeCreatePortalSessionUseCase(
-    overrides?.portalOutput ?? { url: 'https://stripe/portal' },
-    overrides?.portalThrows,
-  );
-  const createTrialPaymentMethodSetupSessionUseCase =
-    new FakeCreateTrialPaymentMethodSetupSessionUseCase(
-      {
-        url: 'https://stripe/setup',
-      },
-      overrides?.setupThrows,
-    );
-
-  const rateLimiter: RateLimiter =
-    overrides?.rateLimiter ?? new FakeRateLimiter();
-
-  const clerkCalls: Array<undefined> = [];
-
-  return {
-    authGateway,
-    logger: new FakeLogger(),
-    createCheckoutSessionUseCase,
-    createPortalSessionUseCase,
-    createTrialPaymentMethodSetupSessionUseCase,
-    idempotencyKeyRepository: new FakeIdempotencyKeyRepository(now),
-    rateLimiter,
-    getClerkUserId: async () => {
-      clerkCalls.push(undefined);
-      return clerkUserId;
-    },
-    appUrl,
-    now,
-    _calls: {
-      clerkCalls,
-    },
-    _fixtures: {
-      userId,
-    },
-  };
-}
+import { createBillingControllerDeps } from './test-helpers/billing-controller-deps';
 
 describe('billing-controller', () => {
   describe('createTrialPaymentMethodSetupSession', () => {
     it('passes only the authenticated user and server-owned return URLs', async () => {
-      const deps = createDeps({ appUrl: 'https://app.example.com' });
+      const deps = createBillingControllerDeps({
+        appUrl: 'https://app.example.com',
+      });
 
       const result = await createTrialPaymentMethodSetupSession({}, deps);
 
@@ -134,7 +34,7 @@ describe('billing-controller', () => {
     });
 
     it('returns UNAUTHENTICATED without creating a setup session', async () => {
-      const deps = createDeps({ user: null });
+      const deps = createBillingControllerDeps({ user: null });
 
       const result = await createTrialPaymentMethodSetupSession({}, deps);
 
@@ -148,7 +48,7 @@ describe('billing-controller', () => {
     });
 
     it('returns RATE_LIMITED without creating a setup session', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         rateLimiter: new FakeRateLimiter({
           success: false,
           limit: 10,
@@ -169,7 +69,7 @@ describe('billing-controller', () => {
     });
 
     it('replays the cached setup URL for a reused idempotency key', async () => {
-      const deps = createDeps();
+      const deps = createBillingControllerDeps();
       const input = {
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       };
@@ -197,7 +97,7 @@ describe('billing-controller', () => {
     };
 
     it('returns VALIDATION_ERROR without creating Checkout when the displayed offer is omitted', async () => {
-      const deps = createDeps();
+      const deps = createBillingControllerDeps();
 
       const result = await createCheckoutSession({ plan: 'monthly' }, deps);
 
@@ -212,11 +112,75 @@ describe('billing-controller', () => {
       expect(deps._calls.clerkCalls).toEqual([]);
     });
 
-    it('returns VALIDATION_ERROR when input is invalid', async () => {
-      const deps = createDeps();
+    // DEBT-414 F03: a separate, affirmative renewal opt-in is required.
+    it.each([
+      ['omitted', {}],
+      ['not affirmative', { renewalOptIn: false }],
+    ])(
+      'returns VALIDATION_ERROR without creating Checkout when the renewal opt-in is %s',
+      async (_case, optIn) => {
+        const deps = createBillingControllerDeps();
+
+        const result = await createCheckoutSession(
+          { plan: 'monthly', expectedOffer, ...optIn },
+          deps,
+        );
+
+        expect(result).toMatchObject({
+          ok: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            fieldErrors: { renewalOptIn: expect.any(Array) },
+          },
+        });
+        expect(deps.createCheckoutSessionUseCase.inputs).toEqual([]);
+      },
+    );
+
+    it('accepts a same-day revision of a disclosure version', async () => {
+      const deps = createBillingControllerDeps();
 
       const result = await createCheckoutSession(
-        { plan: 'weekly', expectedOffer },
+        {
+          plan: 'monthly',
+          expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-28.2' },
+          renewalOptIn: true,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({ ok: true });
+      expect(deps.createCheckoutSessionUseCase.inputs).toMatchObject([
+        {
+          expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-28.2' },
+        },
+      ]);
+    });
+
+    it('returns VALIDATION_ERROR for a malformed disclosure version', async () => {
+      const deps = createBillingControllerDeps();
+
+      const result = await createCheckoutSession(
+        {
+          plan: 'monthly',
+          expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-28.x' },
+          renewalOptIn: true,
+        },
+        deps,
+      );
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'VALIDATION_ERROR' },
+      });
+      expect(deps.createCheckoutSessionUseCase.inputs).toEqual([]);
+    });
+
+    it('returns VALIDATION_ERROR when input is invalid', async () => {
+      const deps = createBillingControllerDeps();
+
+      const result = await createCheckoutSession(
+        { plan: 'weekly', expectedOffer, renewalOptIn: true },
         deps,
       );
 
@@ -231,10 +195,10 @@ describe('billing-controller', () => {
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
-      const deps = createDeps({ user: null });
+      const deps = createBillingControllerDeps({ user: null });
 
       const result = await createCheckoutSession(
-        { plan: 'monthly', expectedOffer },
+        { plan: 'monthly', expectedOffer, renewalOptIn: true },
         deps,
       );
 
@@ -246,7 +210,7 @@ describe('billing-controller', () => {
     });
 
     it('returns RATE_LIMITED when checkout is rate limited', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         rateLimiter: new FakeRateLimiter({
           success: false,
           limit: 10,
@@ -256,7 +220,7 @@ describe('billing-controller', () => {
       });
 
       const result = await createCheckoutSession(
-        { plan: 'monthly', expectedOffer },
+        { plan: 'monthly', expectedOffer, renewalOptIn: true },
         deps,
       );
 
@@ -268,10 +232,12 @@ describe('billing-controller', () => {
     });
 
     it('returns checkout URL when inputs are valid', async () => {
-      const deps = createDeps({ appUrl: 'https://app.example.com' });
+      const deps = createBillingControllerDeps({
+        appUrl: 'https://app.example.com',
+      });
 
       const result = await createCheckoutSession(
-        { plan: 'annual', expectedOffer },
+        { plan: 'annual', expectedOffer, renewalOptIn: true },
         deps,
       );
 
@@ -295,11 +261,12 @@ describe('billing-controller', () => {
     });
 
     it('returns the cached checkout session when idempotencyKey is reused', async () => {
-      const deps = createDeps();
+      const deps = createBillingControllerDeps();
 
       const input = {
         plan: 'monthly',
         expectedOffer,
+        renewalOptIn: true,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -316,24 +283,28 @@ describe('billing-controller', () => {
     });
 
     it('scopes replay and provider keys to the plan and displayed offer', async () => {
-      const deps = createDeps();
+      const deps = createBillingControllerDeps();
       const idempotencyKey = '11111111-1111-1111-1111-111111111111';
       const offers = [
         {
           plan: 'monthly',
           expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+          renewalOptIn: true,
         },
         {
           plan: 'annual',
           expectedOffer: { hasTrial: true, disclosureVersion: '2026-09-16' },
+          renewalOptIn: true,
         },
         {
           plan: 'annual',
           expectedOffer: { hasTrial: false, disclosureVersion: '2026-09-16' },
+          renewalOptIn: true,
         },
         {
           plan: 'annual',
           expectedOffer: { hasTrial: false, disclosureVersion: '2026-09-17' },
+          renewalOptIn: true,
         },
       ];
       for (const offer of offers) {
@@ -358,7 +329,7 @@ describe('billing-controller', () => {
     });
 
     it('does not cache RATE_LIMITED under the checkout idempotency key', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         rateLimiter: new FakeRateLimiter([
           {
             success: false,
@@ -377,6 +348,7 @@ describe('billing-controller', () => {
       const input = {
         plan: 'monthly',
         expectedOffer,
+        renewalOptIn: true,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -395,7 +367,7 @@ describe('billing-controller', () => {
     });
 
     it('replays a cached checkout session while the reused key is rate limited', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         rateLimiter: new FakeRateLimiter([
           {
             success: true,
@@ -414,6 +386,7 @@ describe('billing-controller', () => {
       const input = {
         plan: 'monthly',
         expectedOffer,
+        renewalOptIn: true,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -431,11 +404,12 @@ describe('billing-controller', () => {
     });
 
     it('returns the cached checkout session when same-form double submit races with the same idempotencyKey', async () => {
-      const deps = createDeps();
+      const deps = createBillingControllerDeps();
 
       const input = {
         plan: 'monthly',
         expectedOffer,
+        renewalOptIn: true,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -457,7 +431,7 @@ describe('billing-controller', () => {
     });
 
     it('returns ALREADY_SUBSCRIBED when use case throws ApplicationError', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         checkoutThrows: new ApplicationError(
           'ALREADY_SUBSCRIBED',
           'Already subscribed',
@@ -465,7 +439,7 @@ describe('billing-controller', () => {
       });
 
       const result = await createCheckoutSession(
-        { plan: 'monthly', expectedOffer },
+        { plan: 'monthly', expectedOffer, renewalOptIn: true },
         deps,
       );
 
@@ -479,7 +453,7 @@ describe('billing-controller', () => {
       // ALREADY_SUBSCRIBED depends on currentPeriodEnd > now, which can lapse
       // within the cache TTL while the billing surface's mount-fixed key
       // never rotates — so the claim aborts and every retry re-evaluates.
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         checkoutThrows: new ApplicationError(
           'ALREADY_SUBSCRIBED',
           'Already subscribed',
@@ -488,6 +462,7 @@ describe('billing-controller', () => {
       const input = {
         plan: 'monthly',
         expectedOffer,
+        renewalOptIn: true,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -503,7 +478,7 @@ describe('billing-controller', () => {
     });
 
     it('re-executes checkout after a transient INTERNAL_ERROR under the same key', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         checkoutThrows: new ApplicationError(
           'INTERNAL_ERROR',
           'Stripe temporarily unavailable',
@@ -512,6 +487,7 @@ describe('billing-controller', () => {
       const input = {
         plan: 'monthly',
         expectedOffer,
+        renewalOptIn: true,
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
       } as const;
 
@@ -525,7 +501,7 @@ describe('billing-controller', () => {
 
   describe('createPortalSession', () => {
     it('returns VALIDATION_ERROR when input is invalid', async () => {
-      const deps = createDeps();
+      const deps = createBillingControllerDeps();
 
       const result = await createPortalSession(undefined, deps);
 
@@ -537,7 +513,7 @@ describe('billing-controller', () => {
     });
 
     it('returns UNAUTHENTICATED when unauthenticated', async () => {
-      const deps = createDeps({ user: null });
+      const deps = createBillingControllerDeps({ user: null });
 
       const result = await createPortalSession({}, deps);
 
@@ -549,7 +525,7 @@ describe('billing-controller', () => {
     });
 
     it('returns RATE_LIMITED when portal session creation is rate limited', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         rateLimiter: new FakeRateLimiter({
           success: false,
           limit: 20,
@@ -568,7 +544,9 @@ describe('billing-controller', () => {
     });
 
     it('returns portal URL when inputs are valid', async () => {
-      const deps = createDeps({ appUrl: 'https://app.example.com' });
+      const deps = createBillingControllerDeps({
+        appUrl: 'https://app.example.com',
+      });
 
       const result = await createPortalSession({}, deps);
 
@@ -585,7 +563,7 @@ describe('billing-controller', () => {
     });
 
     it('returns VALIDATION_ERROR when fresh portal session output is invalid', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         portalOutput: { url: '' },
       });
 
@@ -608,7 +586,7 @@ describe('billing-controller', () => {
 
     it('replays identical field errors when keyed portal output is invalid', async () => {
       const rateLimiter = new FakeRateLimiter();
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         portalOutput: { url: '' },
         rateLimiter,
       });
@@ -635,7 +613,7 @@ describe('billing-controller', () => {
     });
 
     it('returns the cached portal session when idempotencyKey is reused', async () => {
-      const deps = createDeps();
+      const deps = createBillingControllerDeps();
 
       const input = {
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
@@ -660,7 +638,7 @@ describe('billing-controller', () => {
     });
 
     it('replays a cached portal session while the reused key is rate limited', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         rateLimiter: new FakeRateLimiter([
           {
             success: true,
@@ -707,7 +685,7 @@ describe('billing-controller', () => {
           retryAfterSeconds: 0,
         },
       ]);
-      const deps = createDeps({ rateLimiter });
+      const deps = createBillingControllerDeps({ rateLimiter });
 
       const input = {
         idempotencyKey: '11111111-1111-1111-1111-111111111111',
@@ -728,7 +706,7 @@ describe('billing-controller', () => {
     });
 
     it('returns NOT_FOUND when use case throws ApplicationError', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         portalThrows: new ApplicationError(
           'NOT_FOUND',
           'Stripe customer not found',
@@ -747,7 +725,7 @@ describe('billing-controller', () => {
       // A Stripe customer can be created by a later checkout while the
       // billing page's mount-fixed key is still live; the retry must
       // re-evaluate rather than replay a stale not-found for the TTL.
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         portalThrows: new ApplicationError(
           'NOT_FOUND',
           'Stripe customer not found',
@@ -769,7 +747,7 @@ describe('billing-controller', () => {
     });
 
     it('re-executes portal creation after a transient STRIPE_ERROR under the same key', async () => {
-      const deps = createDeps({
+      const deps = createBillingControllerDeps({
         portalThrows: new ApplicationError(
           'STRIPE_ERROR',
           'Stripe temporarily unavailable',

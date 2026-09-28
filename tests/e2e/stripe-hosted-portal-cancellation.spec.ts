@@ -149,6 +149,8 @@ test.describe
         .getByRole('button', { name: 'Start 7-day free trial' })
         .first()
         .click();
+      // DEBT-414 F03: the separate renewal opt-in.
+      await page.getByRole('dialog').getByRole('checkbox').check();
       await page
         .getByRole('dialog')
         .getByRole('button', { name: 'Start free trial', exact: true })

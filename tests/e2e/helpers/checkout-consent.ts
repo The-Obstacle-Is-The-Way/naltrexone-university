@@ -25,9 +25,11 @@ export async function readDisplayedPlanConsent(
           `${row.querySelector('dt')?.textContent?.trim()} ${row.querySelector('dd')?.textContent?.trim()}`,
       ),
     );
+  // DEBT-414 F03: the renewal opt-in's label is part of the consent text.
+  const optIn = await dialog.locator('form > label').innerText();
   const sentence = await dialog.locator('form > p').innerText();
   return {
-    disclosureSnapshot: [...rows, sentence].join('\n'),
+    disclosureSnapshot: [...rows, optIn, sentence].join('\n'),
     disclosureVersion: await dialog
       .locator('input[name="disclosureVersion"]')
       .inputValue(),

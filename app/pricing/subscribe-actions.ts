@@ -12,7 +12,7 @@ type CreateCheckoutSessionFn = (
   input: Pick<
     CreateCheckoutSessionInput,
     'plan' | 'idempotencyKey' | 'expectedOffer'
-  >,
+  > & { renewalOptIn: true },
 ) => Promise<ActionResult<{ url: string }>>;
 
 export type SubscribeActionsDeps = {
@@ -56,10 +56,14 @@ async function subscribeToPlan(
   const idempotencyKey = typeof rawKey === 'string' ? rawKey : undefined;
   const disclosureVersion = formData.get('disclosureVersion');
   const hasTrial = formData.get('hasTrial');
+  // DEBT-414 F03: the separate renewal opt-in, required here as well as by
+  // the browser.
+  const renewalOptIn = formData.get('renewalOptIn');
   if (
     typeof disclosureVersion !== 'string' ||
     !disclosureVersion ||
-    (hasTrial !== 'true' && hasTrial !== 'false')
+    (hasTrial !== 'true' && hasTrial !== 'false') ||
+    renewalOptIn !== 'yes'
   ) {
     return d.redirectFn(toPricingRoute({ checkout: 'error', plan }));
   }
@@ -69,6 +73,7 @@ async function subscribeToPlan(
       plan,
       ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
       expectedOffer: { disclosureVersion, hasTrial: hasTrial === 'true' },
+      renewalOptIn: true,
     },
     d,
   );
