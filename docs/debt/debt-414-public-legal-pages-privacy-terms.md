@@ -743,3 +743,36 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
   - **Design-system guard:** as the frontend rules require for any non-Button control that copies the canonical focus ring, `theme-token-regression.test.tsx` now pins the opt-in's ring and `accent-primary`. Removing the token fails it.
 - **Captures.** Twelve captures of the local production build (dark, DPR 1): both plans, both variants, at 1440×900, 390×844 and 390×667. All show zero axe violations and no horizontal overflow, with submit reachable by scrolling. The standard dialog now scrolls at 390×667 (764 px of content in 633 px), as the trial dialog already did. [Trial](./assets/debt-414/f03a-trial-measurements.json) and [standard](./assets/debt-414/f03a-standard-measurements.json) measurements, with the `f03a-dialog-*` screenshots beside them.
 
+
+**F03b, the trial add-card opt-in (2026-09-28).**
+- **Banner.** The trial banner's paragraph becomes one line, "Add a card before your trial ends to keep access.", beside the unchanged "Add a card to keep access" button. The button now opens a consent dialog instead of posting straight to Stripe.
+- **Dialog.** "Keep access after your trial" uses checkout's scrollable S-4 consent composition and the same shared `ConsentTerms`:
+  - five bold rows: Plan, After trial, Without a card, Cancel, and Cancellation and refunds;
+  - an unchecked, required native checkbox (I-7): "I agree that Pro Monthly renews automatically at $29 per month when my trial ends, until I cancel.";
+  - the closing sentence: 'By selecting "Add a card" and completing Stripe, you authorize recurring monthly charges after the trial.', followed by the Terms and Privacy links.
+- **Evidence.** The recorded snapshot is the serialized consent the dialog renders, 724 characters for monthly and 720 for annual, under version `2026-09-28.2`. The copy is in [`f03-consent-ruling-data.json`](./assets/debt-414/f03-consent-ruling-data.json).
+  - The setup session's metadata carries only the version. The text itself is stored in the pending setup operation's `text` column, so Stripe's 500-character limit does not apply and no registry is needed.
+  - An operation created before the release keeps the snapshot it was created with.
+- **Stale-offer guard.** The form posts the displayed version and the opt-in:
+  - the action requires `renewalOptIn=yes` and a well-formed version;
+  - the billing controller requires `renewalOptIn: true` and the displayed version;
+  - the use case refuses a version that is not the current one, before any Stripe call.
+
+  A page loaded before a copy change therefore cannot record consent to text the learner never saw. It returns the learner to Billing with the add-card error, and the reloaded banner shows the current terms. A page loaded before this release posts neither field and is refused the same way.
+- **Tests.**
+  - **Red against the pre-F03b code:** 21 cases fail when the new tests run over the extraction commit's production code:
+    - the controller's five consent cases;
+    - the action's four rejection cases and its forwarding case;
+    - the use case's refusal;
+    - the three copy and version cases;
+    - the two add-card theme-guard cases;
+    - the banner case;
+    - four existing controller cases, updated to send the opt-in and version, which the old strict schema rejects.
+  - **Real browser:** three cases, written with the component, show both plans' rows and an unchecked opt-in. They prove the form does not submit unchecked and, once checked, posts the opt-in, the displayed version and an idempotency key.
+  - **E2E:** the required add-card E2E checks the dialog and ticks the box before reaching Stripe.
+  - **Design-system guard:** the theme regression guard now renders `ConsentTerms` for both offers. Removing `accent-primary` fails both cases.
+- **Captures.** Taken of the local production build (dark, DPR 1) for both plans, at 1440×900, 390×844 and 390×667 ([measurements](./assets/debt-414/f03b-add-card-measurements.json)):
+  - The dialog is 512 px wide at 1440×900, where it fits without scrolling. On a phone it is 358 px with 16 px gutters, and it scrolls: 893 px of monthly content in 810 px at 390×844, and in 633 px at 390×667.
+  - Every capture has zero axe violations, no horizontal overflow, a blocked unchecked submission, and the submit button reachable by scrolling.
+  - The `f03b-dialog-*` and `f03b-banner-*` screenshots sit beside the measurements.
+- **Also updated:** the Pattern Registry (I-7's source, the plan consent composition and F-10's banner) and the billing QA script (both dialogs).
