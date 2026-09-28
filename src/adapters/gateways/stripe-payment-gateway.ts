@@ -25,7 +25,9 @@ import type {
   WebhookEventResult,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { callStripeWithRetry } from './stripe/stripe-retry';
+import type { CheckoutDisclosureResolver } from './stripe/stripe-webhook-processor';
 
 export type StripePaymentGatewayDeps = {
   stripe: StripeClient;
@@ -34,6 +36,9 @@ export type StripePaymentGatewayDeps = {
   priceIds: StripePriceIds;
   logger: Logger;
   webhookE2EOwner?: string | undefined;
+  // DEBT-414 F15: verifies a consent text carried as its SHA-256.
+  resolveCheckoutDisclosure: CheckoutDisclosureResolver;
+  sha256Hasher: Sha256Hasher;
 };
 
 export class StripePaymentGateway implements PaymentGateway {
@@ -190,6 +195,8 @@ export class StripePaymentGateway implements PaymentGateway {
       priceIds: this.deps.priceIds,
       logger: this.deps.logger,
       webhookE2EOwner: this.deps.webhookE2EOwner,
+      resolveCheckoutDisclosure: this.deps.resolveCheckoutDisclosure,
+      sha256Hasher: this.deps.sha256Hasher,
     });
   }
 

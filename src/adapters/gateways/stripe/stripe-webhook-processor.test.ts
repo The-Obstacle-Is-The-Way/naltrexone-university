@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { StripePriceIds } from '@/src/adapters/config/stripe-prices';
+import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import { processStripeWebhookEvent } from './stripe-webhook-processor';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
@@ -65,6 +66,10 @@ function processEvent(
     signature: 'sig_test',
     priceIds,
     logger: overrides.logger ?? new FakeLogger(),
+    // Sessions here carry their consent text verbatim; the hash-carried
+    // path is stripe-webhook-processor-consent-disclosure.test.ts.
+    resolveCheckoutDisclosure: () => null,
+    sha256Hasher: new NobleSha256Hasher(),
   });
 }
 

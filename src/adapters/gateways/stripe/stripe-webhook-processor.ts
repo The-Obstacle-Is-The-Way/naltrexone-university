@@ -15,6 +15,7 @@ import type { StripeClient } from '@/src/adapters/shared/stripe-types';
 import { ApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import { isValidStripeConsentStateSignature } from './stripe-consent-state';
 
 function isSetupSessionPayload(payload: unknown): boolean {
@@ -69,10 +70,52 @@ function checkoutSessionId(payload: unknown): string | null {
   return typeof id === 'string' && id.length > 0 ? id : null;
 }
 
+// DEBT-414 F15: rebuilds a checkout consent text from the disclosure
+// registry by version, plan and variant; null when none is registered.
+export type CheckoutDisclosureResolver = (input: {
+  disclosureVersion: string;
+  plan: 'monthly' | 'annual';
+  hasTrial: boolean;
+}) => string | null;
+
+// The text carried verbatim, or the registered text a carried SHA-256
+// verifies; null when a carried hash cannot be verified.
+function acceptedDisclosureText(
+  metadata: {
+    checkout_variant: string;
+    renewal_plan: 'monthly' | 'annual';
+    renewal_disclosure_version: string;
+    renewal_disclosure_snapshot?: string | undefined;
+    renewal_disclosure_hash?: string | undefined;
+  },
+  deps: {
+    resolveCheckoutDisclosure: CheckoutDisclosureResolver;
+    sha256Hasher: Sha256Hasher;
+  },
+): string | null {
+  if (metadata.renewal_disclosure_snapshot !== undefined) {
+    return metadata.renewal_disclosure_snapshot;
+  }
+  const registered = deps.resolveCheckoutDisclosure({
+    disclosureVersion: metadata.renewal_disclosure_version,
+    plan: metadata.renewal_plan,
+    hasTrial: metadata.checkout_variant !== 'standard',
+  });
+  if (
+    registered === null ||
+    deps.sha256Hasher.hash(registered) !== metadata.renewal_disclosure_hash
+  ) {
+    return null;
+  }
+  return registered;
+}
+
 function getInitialSubscriptionConsent(input: {
   event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   subscriptionUpdate: NonNullable<WebhookEventResult['subscriptionUpdate']>;
   logger: Logger;
+  resolveCheckoutDisclosure: CheckoutDisclosureResolver;
+  sha256Hasher: Sha256Hasher;
 }): NonNullable<WebhookEventResult['initialSubscriptionConsent']> | undefined {
   if (!hasInitialSubscriptionConsentMarker(input.event.data.object)) {
     return undefined;
@@ -120,6 +163,20 @@ function getInitialSubscriptionConsent(input: {
     return undefined;
   }
 
+  const disclosureSnapshot = acceptedDisclosureText(metadata, input);
+  if (disclosureSnapshot === null) {
+    input.logger.warn(
+      {
+        eventId: input.event.id,
+        type: input.event.type,
+        sessionId: parsed.data.id,
+        reason: 'consent_disclosure_unverified',
+      },
+      'Stripe subscription Checkout consent text is not a registered disclosure',
+    );
+    return undefined;
+  }
+
   return {
     checkoutSessionId: parsed.data.id,
     userId: update.userId,
@@ -129,7 +186,7 @@ function getInitialSubscriptionConsent(input: {
     amountCents: Number(metadata.renewal_amount_cents),
     currency: metadata.renewal_currency,
     frequency: metadata.renewal_frequency,
-    disclosureSnapshot: metadata.renewal_disclosure_snapshot,
+    disclosureSnapshot,
     disclosureVersion: metadata.renewal_disclosure_version,
     termsVersion: metadata.renewal_terms_version,
     termsHash: metadata.renewal_terms_hash,
@@ -314,6 +371,8 @@ export async function processStripeWebhookEvent({
   priceIds,
   logger,
   webhookE2EOwner,
+  resolveCheckoutDisclosure,
+  sha256Hasher,
 }: {
   stripe: StripeClient;
   webhookSecret: string;
@@ -323,6 +382,8 @@ export async function processStripeWebhookEvent({
   priceIds: StripePriceIds;
   logger: Logger;
   webhookE2EOwner?: string | undefined;
+  resolveCheckoutDisclosure: CheckoutDisclosureResolver;
+  sha256Hasher: Sha256Hasher;
 }): Promise<WebhookEventResult> {
   let event: ReturnType<StripeClient['webhooks']['constructEvent']>;
   try {
@@ -422,6 +483,8 @@ export async function processStripeWebhookEvent({
             event,
             subscriptionUpdate,
             logger,
+            resolveCheckoutDisclosure,
+            sha256Hasher,
           })
         : undefined;
     if (
