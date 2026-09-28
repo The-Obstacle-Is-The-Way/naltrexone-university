@@ -34,6 +34,7 @@ import {
 } from '@/src/application/test-helpers/fakes';
 import {
   CheckEntitlementUseCase,
+  CheckTrialSavedCardUseCase,
   CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
@@ -290,6 +291,9 @@ describe('container factories', () => {
 
     expect(container.createCheckEntitlementUseCase()).toBeInstanceOf(
       CheckEntitlementUseCase,
+    );
+    expect(container.createCheckTrialSavedCardUseCase()).toBeInstanceOf(
+      CheckTrialSavedCardUseCase,
     );
     expect(container.createGetNextQuestionUseCase()).toBeInstanceOf(
       GetNextQuestionUseCase,

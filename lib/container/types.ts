@@ -37,6 +37,7 @@ import type { Sha256Hasher } from '@/src/application/ports/sha256-hasher';
 import type { TransactionalEmailGateway } from '@/src/application/ports/transactional-email-gateway';
 import type {
   CheckEntitlementUseCase,
+  CheckTrialSavedCardUseCase,
   CountAvailableQuestionsUseCase,
   CreateCheckoutSessionUseCase,
   CreatePortalSessionUseCase,
@@ -140,6 +141,7 @@ export type GatewayFactories = {
 
 export type UseCaseFactories = {
   createCheckEntitlementUseCase: () => CheckEntitlementUseCase;
+  createCheckTrialSavedCardUseCase: () => CheckTrialSavedCardUseCase;
   createCheckoutSessionUseCase: () => CreateCheckoutSessionUseCase;
   createPortalSessionUseCase: () => CreatePortalSessionUseCase;
   createTrialPaymentMethodSetupSessionUseCase: () => CreateTrialPaymentMethodSetupSessionUseCase;

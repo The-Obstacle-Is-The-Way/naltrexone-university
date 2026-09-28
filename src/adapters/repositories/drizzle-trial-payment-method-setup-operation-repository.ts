@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, or } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, lt, or } from 'drizzle-orm';
 import { trialPaymentMethodSetupOperations } from '@/db/schema';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
 import { ApplicationError } from '@/src/application/errors';
@@ -13,6 +13,7 @@ import type {
   TrialPaymentMethodSetupOperation,
   TrialPaymentMethodSetupOperationInput,
   TrialPaymentMethodSetupOperationRepository,
+  TrialSubscriptionDefaultQuery,
 } from '@/src/application/ports/repositories';
 
 type OperationRow = typeof trialPaymentMethodSetupOperations.$inferSelect;
@@ -126,6 +127,26 @@ export class DrizzleTrialPaymentMethodSetupOperationRepository
       },
     );
     return row ? toOperation(row) : null;
+  }
+
+  async hasSubscriptionDefaultSet({
+    userId,
+    stripeSubscriptionId,
+  }: TrialSubscriptionDefaultQuery): Promise<boolean> {
+    const row = await this.db.query.trialPaymentMethodSetupOperations.findFirst(
+      {
+        columns: { sessionId: true },
+        where: and(
+          eq(trialPaymentMethodSetupOperations.userId, userId),
+          eq(
+            trialPaymentMethodSetupOperations.stripeSubscriptionId,
+            stripeSubscriptionId,
+          ),
+          isNotNull(trialPaymentMethodSetupOperations.subscriptionDefaultSetAt),
+        ),
+      },
+    );
+    return row !== undefined;
   }
 
   async claim({

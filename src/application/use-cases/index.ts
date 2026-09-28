@@ -4,6 +4,11 @@ export {
   CheckEntitlementUseCase,
 } from './check-entitlement';
 export {
+  type CheckTrialSavedCardInput,
+  type CheckTrialSavedCardOutput,
+  CheckTrialSavedCardUseCase,
+} from './check-trial-saved-card';
+export {
   type CountAvailableQuestionsInput,
   type CountAvailableQuestionsOutput,
   CountAvailableQuestionsUseCase,
