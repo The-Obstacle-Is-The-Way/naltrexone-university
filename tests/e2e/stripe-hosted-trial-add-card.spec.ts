@@ -101,15 +101,15 @@ test.describe('trial add-card', () => {
       page,
       learnerEmail,
     );
-    // BUG-308: the Session carries the learner's email, Stripe shows it, and
-    // the learner never retypes it (#1185 review).
+    // BUG-308: the Session carries the learner's email, Stripe visibly shows
+    // it, and the learner never retypes it (#1185 and #1186 reviews).
     const setupSession =
       await createStripeTestClient().checkout.sessions.retrieve(
         String(sessionId),
       );
     expect(setupSession.customer_email).toBe(learnerEmail);
+    expect(emailShown).toBe(learnerEmail);
     expect(emailTyped).toBe(false);
-    if (emailShown !== null) expect(emailShown).toBe(learnerEmail);
     await expect(page).toHaveURL(
       /\/app\/billing\?(?:.*&)?trial_payment_method=success(?:&|$)/,
       {
