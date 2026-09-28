@@ -274,6 +274,13 @@
       "when": 1790540100365,
       "tag": "0038_funny_baron_strucker",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1790568914293,
+      "tag": "0039_breezy_mantis",
+      "breakpoints": true
     }
   ]
 }

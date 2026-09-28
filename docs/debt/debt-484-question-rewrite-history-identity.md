@@ -1,6 +1,6 @@
 # DEBT-484: Substantive Rewrites Can Reinterpret Historical Attempts
 
-**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); immutable revision and review milestones remain open
+**Status:** In Progress — initial guard merged in #951; the revision design is decided in [ADR-021](../adr/adr-021-question-revisions-and-content-releases.md) (2026-09-27); phase 1 (revisions mirror the live rows) landed 2026-09-28; immutable revision binding and review milestones remain open
 **Priority:** P1
 **Date:** 2026-09-20
 **Confidence:** CONFIRMED behavior boundary; affected production attempts unknown
@@ -159,6 +159,31 @@ that deployment milestone.
 - **Review.** History, session review, previous-attempt and bookmark reads resolve content through the bound revision, not `status = 'published'`. A withdrawn question stays reviewable, with a visible withdrawal notice, by learners who attempted it, following COPE retraction practice. The notice needs a Pattern Registry entry before its UI lands.
 
 This record closes after ADR-021's phases 1–3: revisions, binding and review, then the contract step that makes the bindings `NOT NULL` and drops the legacy text columns. The #951 guard stays in force until revisions replace it.
+
+## Phase 1: revisions mirror the live rows — 2026-09-28
+
+ADR-021 phase 1 is the expand step of a parallel change. Its [phasing note](../adr/adr-021-question-revisions-and-content-releases.md#why-phase-1-mirrors-instead-of-appending-2026-09-28) records why phase 1 mirrors content rather than appending revisions.
+- **Schema (migration `0039`).**
+  - `question_revisions` holds each question's stem, explanation, reference and difficulty, with its canonicalization version and `stored-fields-json-v1` content hash. A check constraint requires the hash to be lowercase hex.
+  - `questions.current_revision_id`, `choices.question_revision_id`, `attempts.question_revision_id` and `practice_session_question_states.question_revision_id` are added, all nullable.
+  - Each is keyed by `(revision id, question id)`, so a row can point only at a revision of its own question.
+  - The two history-table keys are added `NOT VALID`: no scan, while every later write is checked. The contract phase validates them without blocking writes.
+- **Mirror.** `sync_question_revision_v1(question)` creates revision 1 from the legacy row, refreshes it when the legacy content changed, re-points the question and attaches its choices. It returns `created`, `refreshed` or `unchanged`. Choices keep their ids, so every stored selection resolves to a revision.
+  - The seed calls it inside the transaction of every insert, rewrite and unchanged skip.
+  - `sweep_question_revisions_v1()` runs it over every question and repairs rows any other writer changed.
+  - The migration runs the sweep once and logs its counts, so the deploy log records production's counts.
+- **Pre-flight data proof.** The keys are new and all their columns start NULL, so no existing row can violate them. The rows the backfill writes are the content corpus: 958 questions and 3,832 choices locally, the same corpus production is seeded from. On a scratch copy of the test database at migration `0038`, seeded with that corpus, the migration logged `958 created, 0 refreshed, 0 unchanged`, left no question or choice without a revision, and a second sweep returned `0 created, 0 refreshed, 958 unchanged`. The shared per-clone test database was not migrated until this branch was the gated one.
+- **Equivalence.** The SQL form is byte-identical to the reference implementation in `lib/content/question-revision-hash.ts`, whose tests pin digests computed independently with Python's standard library. An integration case checks this on hard strings (quotes, backslashes, control characters, a line separator, non-ASCII text and an emoji). Another checks it on every question in the corpus, both the canonical text and the stored hash.
+- **Tests.** Twelve real-Postgres cases:
+  - SQL↔TypeScript equivalence on hard strings and on the whole corpus;
+  - creation;
+  - refresh after another writer's change;
+  - attachment of a later choice;
+  - refusal of an unknown question;
+  - refusal of a choice attached to another question's revision (`23503` on `choices_question_revision_fk`);
+  - deletion of a question with its revisions;
+  - four seed cases (a new question, a rewrite, a restored pointer on an unchanged skip, and a legacy question rewritten). The four seed cases were red before the seed called the sync.
+- **What does not change.** Readers still read the legacy columns and choices by question, so nothing a learner sees changes. The #951 guard still governs rewrites. Sessions and attempts bind revisions and readers switch in phase 2a; revisions become append-only and immutable in phase 2b, a later deploy (#1177 review).
 
 ## Related
 
