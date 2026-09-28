@@ -1,0 +1,82 @@
+[
+  {
+    "state": "no-card",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "bannerText": "5 days left in trial Add a card before your trial ends to keep access. Add a card to keep access",
+    "billingText": "Billing Manage your subscription and billing details. Subscription Pro Monthly · Free trial No card on file. Your trial ends without a charge unless you add a card from the trial banner. Manage in Stripe",
+    "horizontalOverflow": false,
+    "axeMain": []
+  },
+  {
+    "state": "no-card",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "surface": "banner",
+    "axeBanner": []
+  },
+  {
+    "state": "no-card",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "bannerText": "5 days left in trial Add a card before your trial ends to keep access. Add a card to keep access",
+    "billingText": "Billing Manage your subscription and billing details. Subscription Pro Monthly · Free trial No card on file. Your trial ends without a charge unless you add a card from the trial banner. Manage in Stripe",
+    "horizontalOverflow": false,
+    "axeMain": []
+  },
+  {
+    "state": "no-card",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "surface": "banner",
+    "axeBanner": []
+  },
+  {
+    "state": "saved",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "bannerText": "5 days left in trial Pro Monthly renews at $29 per month on your saved card when your trial ends. Manage billing",
+    "billingText": "Billing Manage your subscription and billing details. Your card is saved. Subscription Pro Monthly · Free trial Renews at $29 per month on your saved card when your trial ends, until you cancel. Manage in Stripe",
+    "horizontalOverflow": false,
+    "axeMain": []
+  },
+  {
+    "state": "saved",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "surface": "banner",
+    "axeBanner": []
+  },
+  {
+    "state": "saved",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "bannerText": "5 days left in trial Pro Monthly renews at $29 per month on your saved card when your trial ends. Manage billing",
+    "billingText": "Billing Manage your subscription and billing details. Your card is saved. Subscription Pro Monthly · Free trial Renews at $29 per month on your saved card when your trial ends, until you cancel. Manage in Stripe",
+    "horizontalOverflow": false,
+    "axeMain": []
+  },
+  {
+    "state": "saved",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "surface": "banner",
+    "axeBanner": []
+  }
+]

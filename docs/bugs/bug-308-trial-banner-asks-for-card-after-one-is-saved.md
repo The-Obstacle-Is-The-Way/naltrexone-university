@@ -62,4 +62,6 @@ Two smaller defects sit on the same path:
   - the dashboard banner states the renewal, with no add-card button.
 
   It passed locally in test mode on 2026-09-28.
-
+- **Captures.** The banner and Billing were captured without and with a saved card, on the local production build (dark, DPR 1) at 1440×900 and 390×844.
+  - Every capture has zero axe violations on the banner and on Billing's main region, and no horizontal overflow.
+  - The screenshots and [measurements](./assets/bug-308/bug308-measurements.json) are in `assets/bug-308/`.
