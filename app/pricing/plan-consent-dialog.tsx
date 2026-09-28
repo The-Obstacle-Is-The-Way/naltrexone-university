@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useRef } from 'react';
-import { useFormStatus } from 'react-dom';
 import type { PricingAction } from '@/app/pricing/pricing-auth-cta';
+import { ConsentSubmitButton } from '@/components/consent-submit-button';
+import { ConsentTerms } from '@/components/consent-terms';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,10 +17,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { PRICING_DATA } from '@/lib/pricing-data';
-import { type PricingPlan, ROUTES } from '@/lib/routes';
-
-const legalLinkClassName =
-  'rounded-sm font-medium text-foreground hover:underline ring-focus';
+import type { PricingPlan } from '@/lib/routes';
 
 type PlanConsentDetailsProps = { plan: PricingPlan; hasTrial: boolean };
 
@@ -28,63 +25,10 @@ export function PlanConsentDetails({
   plan,
   hasTrial,
 }: PlanConsentDetailsProps) {
-  const consent = PRICING_DATA[plan].consent[hasTrial ? 'trial' : 'standard'];
   return (
-    <>
-      <dl className="text-sm">
-        {consent.rows.map(({ label, value }) => (
-          <div
-            key={label}
-            className="grid gap-x-6 gap-y-1 border-t border-border/40 py-3 sm:grid-cols-3"
-          >
-            <dt className="text-sm text-muted-foreground">{label}:</dt>
-            <dd className="text-sm font-bold text-foreground sm:col-span-2">
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      {/* Pattern Registry I-7: DEBT-414 F03's separate renewal opt-in. */}
-      <label className="flex items-start gap-3 text-sm font-bold text-foreground">
-        <input
-          type="checkbox"
-          name="renewalOptIn"
-          value="yes"
-          required
-          className="mt-0.5 size-4 shrink-0 rounded-sm accent-primary focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-        />
-        <span>{consent.optIn}</span>
-      </label>
-      <p className="text-sm text-muted-foreground">
-        {consent.sentence
-          .split(/(Terms of Service|Privacy Policy)/)
-          .map((part) => {
-            if (part === 'Terms of Service' || part === 'Privacy Policy') {
-              return (
-                <Link
-                  key={part}
-                  href={
-                    part === 'Terms of Service' ? ROUTES.TERMS : ROUTES.PRIVACY
-                  }
-                  className={legalLinkClassName}
-                >
-                  {part}
-                </Link>
-              );
-            }
-            return part;
-          })}
-      </p>
-    </>
-  );
-}
-
-function ConsentSubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? 'Processing...' : label}
-    </Button>
+    <ConsentTerms
+      consent={PRICING_DATA[plan].consent[hasTrial ? 'trial' : 'standard']}
+    />
   );
 }
 
