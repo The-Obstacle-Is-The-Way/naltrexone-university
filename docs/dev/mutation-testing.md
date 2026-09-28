@@ -46,7 +46,8 @@ Never mutate: `src/**/test-helpers/**` (fakes/factories are test support), `src/
     "src/domain/services/session-stats.ts",
     "src/domain/value-objects/subscription-status.ts",
     "src/application/use-cases/start-practice-session.ts",
-    "src/adapters/controllers/shared/idempotency-error-policy.ts"
+    "src/adapters/controllers/shared/idempotency-error-policy.ts",
+    "src/domain/services/subscription-anniversary.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
   "incremental": true,
@@ -134,5 +135,11 @@ The second wave ran on 2026-09-27 the same way:
 | `src/application/use-cases/start-practice-session.ts` | 86.36% | 100.00% |
 | `src/adapters/controllers/shared/idempotency-error-policy.ts` | 89.68% | 100.00% |
 | **All four files** | **91.44%** | **100.00%** |
+
+Modules written after the pilot join the list with their first run:
+
+| File | First run | Score |
+|---|---|---:|
+| `src/domain/services/subscription-anniversary.ts` | 2026-09-27, DEBT-414 F02 | 100.00% (39 mutants: 18 killed, 21 timed out) |
 
 The after-triage scores exclude four suppressed equivalent mutants, each with its reason in the source, and the two siblings those comments also cover (§5). 100% here is what triage left, not a target. Do not predict thresholds from test counts alone: `grading.ts` and `subscription-write-guard.ts` deliberately sample a 5-test suite and a 21-case table because mutation testing reveals strength or gaps that raw counts cannot.

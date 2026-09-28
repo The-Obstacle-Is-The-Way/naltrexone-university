@@ -33,6 +33,10 @@ export {
   filterAttemptsInWindow,
 } from './statistics';
 export {
+  addBillingMonths,
+  nextAnniversaryRenewalAt,
+} from './subscription-anniversary';
+export {
   type CanonicalSubscriptionCandidate,
   compareCanonicalSubscriptionCandidates,
   hasEntitledSubscriptionTier,

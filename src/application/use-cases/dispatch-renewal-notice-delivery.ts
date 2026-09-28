@@ -17,6 +17,7 @@ import {
   parseTransactionalEmailPayloadSnapshot,
 } from '@/src/application/shared/transactional-email-payload';
 import type { RenewalNoticeDelivery } from '@/src/domain/entities';
+import { nextAnniversaryRenewalAt } from '@/src/domain/services';
 
 export type DispatchRenewalNoticeDeliveryResult =
   | {
@@ -178,15 +179,34 @@ export class DispatchRenewalNoticeDeliveryUseCase {
       subscription.userId,
     );
     if (account?.email !== delivery.destination) return 'destination_changed';
-    if (isRenewalReminder(delivery)) {
-      // Every scheduled renewal notice states the annual amount and yearly
-      // frequency today; DEBT-414 F02 makes this "the plan it was built for".
+    if (isAnnualRenewalReminder(delivery)) {
+      // The annual kinds state the annual amount and yearly frequency.
       if (subscription.plan !== 'annual') return 'subscription_plan_changed';
       if (subscription.cancelAtPeriodEnd) return 'subscription_canceling';
       if (
         subscription.currentPeriodEnd.getTime() !==
         delivery.applicableAt?.getTime()
       ) {
+        return 'renewal_date_changed';
+      }
+    }
+    if (delivery.noticeKind === 'anniversary_reminder') {
+      // DEBT-414 F02: the monthly amount, and the renewal recomputed from the
+      // current service start and billing anchor.
+      if (subscription.plan !== 'monthly') return 'subscription_plan_changed';
+      if (subscription.cancelAtPeriodEnd) return 'subscription_canceling';
+      if (
+        subscription.startedAt === null ||
+        subscription.billingCycleAnchor === null
+      ) {
+        return 'anniversary_unknown';
+      }
+      const renewal = nextAnniversaryRenewalAt({
+        startedAt: subscription.startedAt,
+        billingCycleAnchor: subscription.billingCycleAnchor,
+        notBefore: this.now(),
+      });
+      if (renewal.getTime() !== delivery.applicableAt?.getTime()) {
         return 'renewal_date_changed';
       }
     }
@@ -279,9 +299,17 @@ export class DispatchRenewalNoticeDeliveryUseCase {
   }
 }
 
-function isRenewalReminder(delivery: RenewalNoticeDelivery): boolean {
+function isAnnualRenewalReminder(delivery: RenewalNoticeDelivery): boolean {
   return (
     delivery.noticeKind === 'annual_reminder' ||
     delivery.noticeKind === 'renewal_notice'
+  );
+}
+
+// Every scheduled reminder of a renewal has the same send-by cutoff.
+function isRenewalReminder(delivery: RenewalNoticeDelivery): boolean {
+  return (
+    isAnnualRenewalReminder(delivery) ||
+    delivery.noticeKind === 'anniversary_reminder'
   );
 }

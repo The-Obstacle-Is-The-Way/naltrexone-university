@@ -16,7 +16,8 @@
     "src/domain/services/session-stats.ts",
     "src/domain/value-objects/subscription-status.ts",
     "src/application/use-cases/start-practice-session.ts",
-    "src/adapters/controllers/shared/idempotency-error-policy.ts"
+    "src/adapters/controllers/shared/idempotency-error-policy.ts",
+    "src/domain/services/subscription-anniversary.ts"
   ],
   "ignorePatterns": ["/.agents/**", "/.claude/**", "/.codex/**"],
   "incremental": true,

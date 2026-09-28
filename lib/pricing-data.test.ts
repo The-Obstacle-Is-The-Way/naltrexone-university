@@ -7,6 +7,7 @@ import {
   CANCELLATION_METHOD,
   createCheckoutRenewalTerms,
   createTrialPaymentRenewalTerms,
+  MONTHLY_ANNIVERSARY_NOTICE_VERSION,
   PRICING_DATA,
   TERMS_CONTENT_SHA256,
   TERMS_VERSION,
@@ -129,6 +130,16 @@ describe('PRICING_DATA renewal disclosures', () => {
     expect(TRIAL_PAYMENT_DISCLOSURE_VERSION).toBe('2026-08-05');
     expect(ANNUAL_RENEWAL_NOTICE_VERSION).not.toBe(
       PRICING_DATA.annual.disclosureVersion,
+    );
+  });
+
+  // DEBT-414 F02: the monthly subscriber's yearly reminder has its own
+  // disclosure version, so its wording can change without re-queuing the
+  // annual notices.
+  it('versions the monthly anniversary reminder separately', () => {
+    expect(MONTHLY_ANNIVERSARY_NOTICE_VERSION).toBe('2026-09-27');
+    expect(MONTHLY_ANNIVERSARY_NOTICE_VERSION).not.toBe(
+      ANNUAL_RENEWAL_NOTICE_VERSION,
     );
   });
 

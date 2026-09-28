@@ -55,10 +55,10 @@ describe('renewal consent schema', () => {
     expect(columns.requeueAudit.hasDefault).toBe(true);
   });
 
-  // DEBT-414 F02: the kind a yearly reminder for a monthly plan will use. It
-  // is added unused (expand); the scheduled-notice index and key-shape check
-  // below name it only in the later step that writes it, because Postgres
-  // cannot use an enum value in the transaction that adds it.
+  // DEBT-414 F02: the kind of a monthly subscriber's yearly reminder. The
+  // index and check below cover it by naming only 'acknowledgment', because
+  // Postgres cannot use an enum value in the transaction that adds it, and a
+  // fresh database applies every migration in one transaction.
   it('appends the anniversary reminder kind', () => {
     expect(renewalNoticeKindEnum.enumValues).toEqual([
       'acknowledgment',
@@ -97,7 +97,7 @@ describe('renewal consent schema', () => {
       `"renewal_notice_deliveries"."notice_kind" = 'acknowledgment'`,
     );
     expect(scheduledPredicate).toContain(
-      `"renewal_notice_deliveries"."notice_kind" IN ('annual_reminder', 'renewal_notice', 'material_change', 'fee_change')`,
+      `"renewal_notice_deliveries"."notice_kind" <> 'acknowledgment'`,
     );
 
     const consentForeignKey = tableConfig.foreignKeys.find(
@@ -120,6 +120,9 @@ describe('renewal consent schema', () => {
     );
     expect(checkSql).toContain(
       '"consent_record_id" IS NULL AND "stripe_subscription_id" IS NOT NULL',
+    );
+    expect(checkSql).toContain(
+      `OR ("notice_kind" <> 'acknowledgment' AND "consent_record_id" IS NULL`,
     );
   });
 });

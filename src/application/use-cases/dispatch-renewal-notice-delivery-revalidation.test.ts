@@ -263,4 +263,91 @@ describe('DispatchRenewalNoticeDeliveryUseCase revalidation', () => {
 
     expect(gateway.sendInputs).toHaveLength(1);
   });
+
+  // DEBT-414 F02: a monthly subscriber's yearly reminder is revalidated
+  // against the renewal recomputed from the current service start and anchor.
+  describe('anniversary reminder', () => {
+    const anchor = new Date(renewal.getTime());
+    anchor.setUTCFullYear(anchor.getUTCFullYear() - 1);
+    const monthly = {
+      plan: 'monthly' as const,
+      startedAt: anchor,
+      billingCycleAnchor: anchor,
+      currentPeriodEnd: new Date(renewal.getTime() - 30 * DAY_MS),
+    };
+    const anniversaryNotice = () =>
+      renewalNotice({ noticeKind: 'anniversary_reminder' });
+
+    it('sends when the recomputed renewal still matches', async () => {
+      const { useCase, gateway } = await arrange({
+        delivery: anniversaryNotice(),
+        subscription: monthly,
+      });
+
+      await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+        delivery: { status: 'accepted' },
+      });
+      expect(gateway.sendInputs).toHaveLength(1);
+    });
+
+    it.each([
+      {
+        label: 'the subscription moved to the annual plan',
+        subscription: { ...monthly, plan: 'annual' as const },
+        failureCode: 'subscription_plan_changed',
+      },
+      {
+        label: 'the subscription is set to cancel at period end',
+        subscription: { ...monthly, cancelAtPeriodEnd: true },
+        failureCode: 'subscription_canceling',
+      },
+      {
+        label: 'the billing anchor moved the renewal',
+        subscription: {
+          ...monthly,
+          billingCycleAnchor: new Date(anchor.getTime() + DAY_MS),
+        },
+        failureCode: 'renewal_date_changed',
+      },
+      {
+        label: 'the service start or anchor is unknown',
+        subscription: { ...monthly, startedAt: null },
+        failureCode: 'anniversary_unknown',
+      },
+    ])(
+      'supersedes without a provider call when $label',
+      async ({ subscription, failureCode }) => {
+        const { useCase, gateway } = await arrange({
+          delivery: anniversaryNotice(),
+          subscription,
+        });
+
+        await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+          delivery: {
+            status: 'terminal_failure',
+            failureClass: 'notice_superseded',
+            failureCode,
+          },
+        });
+        expect(gateway.sendInputs).toEqual([]);
+      },
+    );
+
+    it('refuses and alerts once the send-by cutoff has passed', async () => {
+      const { useCase, gateway, logger } = await arrange({
+        delivery: anniversaryNotice(),
+        subscription: monthly,
+        currentTime: new Date(renewal.getTime() - 30 * DAY_MS + 1),
+      });
+
+      await expect(useCase.execute({ deliveryId })).resolves.toMatchObject({
+        delivery: {
+          status: 'terminal_failure',
+          failureClass: 'notice_deadline_passed',
+        },
+      });
+      expect(gateway.sendInputs).toEqual([]);
+      expect(logger.errorCalls).toHaveLength(1);
+    });
+  });
 });

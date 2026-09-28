@@ -1,0 +1,5 @@
+ALTER TABLE "renewal_notice_deliveries" DROP CONSTRAINT "renewal_notice_deliveries_key_shape_chk";--> statement-breakpoint
+DROP INDEX "renewal_notice_deliveries_scheduled_uq";--> statement-breakpoint
+CREATE UNIQUE INDEX "renewal_notice_deliveries_scheduled_uq" ON "renewal_notice_deliveries" USING btree ("notice_kind","stripe_subscription_id","applicable_at","disclosure_version","destination") WHERE "renewal_notice_deliveries"."notice_kind" <> 'acknowledgment';--> statement-breakpoint
+ALTER TABLE "renewal_notice_deliveries" ADD CONSTRAINT "renewal_notice_deliveries_key_shape_chk" CHECK (("renewal_notice_deliveries"."notice_kind" = 'acknowledgment' AND "renewal_notice_deliveries"."consent_record_id" IS NOT NULL AND "renewal_notice_deliveries"."stripe_subscription_id" IS NULL AND "renewal_notice_deliveries"."applicable_at" IS NULL)
+          OR ("renewal_notice_deliveries"."notice_kind" <> 'acknowledgment' AND "renewal_notice_deliveries"."consent_record_id" IS NULL AND "renewal_notice_deliveries"."stripe_subscription_id" IS NOT NULL AND "renewal_notice_deliveries"."applicable_at" IS NOT NULL));
