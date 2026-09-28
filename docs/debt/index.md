@@ -3,18 +3,18 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-28 UTC
 
-**Latest** — 2026-09-28 UTC: ADR-021 phase 2a's second increment binds older history to its revision. Rows written before the first increment are a fixed set, and a bounded, batched function binds them by the rule new rows follow.
-- **Function and migration.** Migration `0041` runs the function once, capped at 50,000 rows per table, and logs the counts, so the deploy measures production's history. It validates the five history keys `0039` and `0040` added `NOT VALID`. A row whose selection is a choice of another revision stays unbound and is reported; phase 2b refuses to run while any remains. [DEBT-484 phase 2a](./debt-484-question-rewrite-history-identity.md#phase-2a-second-increment-older-history-binds-to-its-revision--2026-09-28).
-- **Proof.** Six real-Postgres cases, all red first. On a copy of the shared test database, `0041` bound its two older session states and two attempts, left none unbound, and validated all five keys.
-- **Review coverage.** CodeRabbit's path filters had excluded all of `db/migrations/`, so no migration SQL had had AI review. It now skips only the generated `meta/` files and reviews each `.sql` against the migration-authoring checklist.
-- **Previous increment.** Promotion #1195 (`cc01062b`) released four reviewed merges:
-  - #1193, the Biome-compatible refactor;
-  - #1194, the ADR-020 amendment, under which the merge tool excuses a missing `codecov/patch` only where nothing is measurable;
-  - Dependabot #1187 (codecov-action 7.1.1) and #1189 (Biome 2.5.14).
-
-  Its one finding, an imprecise ADR-index summary, is fixed here. The promotion's proof was written into its body at 18:17:14Z, before the merge at 18:17:19Z. Release verified: main CI **36464138853** `test` **18:30:29Z**; Ready **18:19:34.776Z**, held without alias until its check completed; production assigned **18:30:32.601Z**; matching trees; healthy production.
+**Latest** — 2026-09-28 UTC: the reviewed-merge tool carries a Dependabot approval across a rebase that changes nothing but the lockfile. CodeRabbit reviews a Dependabot PR when it opens, ignores review commands on it, and skips a lockfile-only rebase. So a Dependabot PR that had to be rebased after another merged could never gain an exact-head approval.
+- **The rule.** For Dependabot-authored PRs only, CodeRabbit's latest decisive review may be an approval on an earlier head, if GitHub's compare API shows every file except `pnpm-lock.yaml` with a byte-identical diff and status at both heads. The receipt names the head as `carriedFrom`. Any other difference, a missing diff, a truncated compare, another author, or a later change request still refuses.
+- **Proof.** Six refusal cases and one carried case, plus the command-level flow. A dry run against #1188 carried its approval, because only the lockfile differs. A break-it proof: ignoring patch contents fails two refusal cases.
+- **Also.** Promotion #1197's finding is fixed: the backfill suite now drains bindable rows and asserts relative to a baseline. With planted leftovers, it passed 6/6 and the previous version failed 4 of 6.
+- **Previous increment.** #1196 (ADR-021 phase 2a, second increment) merged as `e4610230` with exact-head approval **5343358545** and no findings. CodeRabbit reviewed `0041`'s SQL under the new filters.
+  - It is promoted through #1197 (`46fb8546`). Its one finding is fixed here. The promotion's proof was written into its body at 19:24:57Z, before the merge at 19:25:02Z; a first merge attempt exited with an uncaptured error before merging.
+  - The production build logged `306 session states and 249 attempts bound; 0 and 0 remain unbound`, validated the five history keys, and the ledger matched.
+  - Release verified: main CI **36472088029** `test` **19:37:53Z**; Ready **19:26:58.149Z**, held without alias until its check completed; production assigned **19:37:56.115Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-28 UTC ADR-021 phase 2a's second increment binds older history to its revision in bounded batches and validates the history keys; CodeRabbit now reviews migration SQL. The previous increment, promotion #1195 (`cc01062b`), released #1193, #1194 and Dependabot #1187 and #1189. Release verified: main CI **36464138853** `test` **18:30:29Z**; Ready **18:19:34.776Z**, held without alias until its check completed; production assigned **18:30:32.601Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-28 UTC feedback validation names its session-review retry condition, so Biome 2.5.13 and 2.5.14 format it identically. The previous increment, #1190 (ADR-021 phase 2a, first increment, with BUG-308's closeout), merged as `858fba5f` and is promoted through #1192 (`6847def5`); production applied migration `0040` (`0 created, 0 refreshed, 958 unchanged`). Release verified: main CI **36434264263** `test` **14:24:59Z**; Ready **14:14:23.999Z**, held without alias until its check completed; production assigned **14:25:03.768Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 

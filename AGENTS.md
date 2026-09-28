@@ -688,7 +688,14 @@ pnpm exec tsx scripts/merge-reviewed-pr.ts <PR_NUMBER> --merge
 ```
 
 The command reads all review pages and requires the latest decisive CodeRabbit
-review on the current SHA to be APPROVED. It also requires zero unresolved
+review on the current SHA to be APPROVED. One exception covers Dependabot:
+CodeRabbit reviews a Dependabot PR when it opens and skips a later rebase whose
+only new change is the lockfile, which its path filters exclude. For a
+Dependabot-authored PR only, its latest decisive review may be an approval on an
+earlier head, provided GitHub's compare API shows every file except
+`pnpm-lock.yaml` itself with a byte-identical diff, status and rename source at
+both heads; a rename onto the lockfile path is compared like any other file. The
+receipt then names the approved head as `carriedFrom`. It also requires zero unresolved
 threads, successful CI `test` and `codecov/patch` (a missing status blocks, per
 ADR-020, except on a complete changed-file list confined to `package.json`,
 `pnpm-lock.yaml` and `.github/`, where Codecov cannot post and nothing is
