@@ -44,6 +44,17 @@ export function PlanConsentDetails({
           </div>
         ))}
       </dl>
+      {/* Pattern Registry I-7: DEBT-414 F03's separate renewal opt-in. */}
+      <label className="flex items-start gap-3 text-sm font-bold text-foreground">
+        <input
+          type="checkbox"
+          name="renewalOptIn"
+          value="yes"
+          required
+          className="mt-0.5 size-4 shrink-0 rounded-sm accent-primary focus-visible:outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+        />
+        <span>{consent.optIn}</span>
+      </label>
       <p className="text-sm text-muted-foreground">
         {consent.sentence
           .split(/(Terms of Service|Privacy Policy)/)

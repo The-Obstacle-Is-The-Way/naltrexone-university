@@ -9,7 +9,7 @@ type LogErrorFn = (context: Record<string, unknown>, msg: string) => void;
 type SubscribeActionInput = Pick<
   CreateCheckoutSessionInput,
   'plan' | 'idempotencyKey' | 'expectedOffer'
->;
+> & { renewalOptIn: true };
 
 type SubscribeActionDeps = {
   createCheckoutSessionFn: (
@@ -26,6 +26,7 @@ export async function runSubscribeAction(
   const result = await deps.createCheckoutSessionFn({
     plan: input.plan,
     ...(input.expectedOffer ? { expectedOffer: input.expectedOffer } : {}),
+    renewalOptIn: input.renewalOptIn,
     ...(input.idempotencyKey !== undefined
       ? { idempotencyKey: input.idempotencyKey }
       : {}),

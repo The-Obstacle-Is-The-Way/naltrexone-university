@@ -46,6 +46,8 @@ test.describe
         .getByRole('button', { name: 'Subscribe annual', exact: true })
         .click();
       const displayedConsent = await readDisplayedPlanConsent(page);
+      // DEBT-414 F03: the separate renewal opt-in.
+      await page.getByRole('dialog').getByRole('checkbox').check();
       await page
         .getByRole('dialog')
         .getByRole('button', { name: 'Subscribe', exact: true })

@@ -1,0 +1,164 @@
+[
+  {
+    "plan": "monthly",
+    "variant": "standard",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "dialog": {
+      "width": 508.222900390625,
+      "height": 581.677001953125,
+      "top": 159.16148376464844,
+      "bottom": 740.8384857177734
+    },
+    "scroll": {
+      "scrollHeight": 584,
+      "clientHeight": 584
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Monthly",
+      "Billing: $29 per month, charged today and renewing automatically every month until canceled.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "monthly",
+    "variant": "standard",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "dialog": {
+      "width": 350.40240478515625,
+      "height": 749.74365234375,
+      "top": 47.1281623840332,
+      "bottom": 796.8718147277832
+    },
+    "scroll": {
+      "scrollHeight": 764,
+      "clientHeight": 764
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Monthly",
+      "Billing: $29 per month, charged today and renewing automatically every month until canceled.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "monthly",
+    "variant": "standard",
+    "viewport": {
+      "width": 390,
+      "height": 667
+    },
+    "dialog": {
+      "width": 353.37738037109375,
+      "height": 626.8006591796875,
+      "top": 20.099666595458984,
+      "bottom": 646.9003257751465
+    },
+    "scroll": {
+      "scrollHeight": 764,
+      "clientHeight": 633
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Monthly",
+      "Billing: $29 per month, charged today and renewing automatically every month until canceled.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "variant": "standard",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "dialog": {
+      "width": 508.2283935546875,
+      "height": 581.683349609375,
+      "top": 159.15834045410156,
+      "bottom": 740.8416900634766
+    },
+    "scroll": {
+      "scrollHeight": 584,
+      "clientHeight": 584
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Annual",
+      "Billing: $199 per year, charged today and renewing automatically every year until canceled.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "variant": "standard",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "dialog": {
+      "width": 353.3570556640625,
+      "height": 756.065673828125,
+      "top": 43.96717834472656,
+      "bottom": 800.0328521728516
+    },
+    "scroll": {
+      "scrollHeight": 764,
+      "clientHeight": 764
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Annual",
+      "Billing: $199 per year, charged today and renewing automatically every year until canceled.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  },
+  {
+    "plan": "annual",
+    "variant": "standard",
+    "viewport": {
+      "width": 390,
+      "height": 667
+    },
+    "dialog": {
+      "width": 353.3724365234375,
+      "height": 626.7918701171875,
+      "top": 20.10403823852539,
+      "bottom": 646.8959083557129
+    },
+    "scroll": {
+      "scrollHeight": 764,
+      "clientHeight": 633
+    },
+    "horizontalOverflow": false,
+    "rows": [
+      "Plan: Pro Annual",
+      "Billing: $199 per year, charged today and renewing automatically every year until canceled.",
+      "Cancel: Before your next billing date via the Billing page or support@addictionboards.com.",
+      "Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable."
+    ],
+    "submitReachable": true,
+    "axeViolations": []
+  }
+]
