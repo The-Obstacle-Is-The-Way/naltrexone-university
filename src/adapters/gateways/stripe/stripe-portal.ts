@@ -8,6 +8,7 @@ import type {
   PortalSessionInput,
 } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
+import { resolvePortalConfigurationId } from './stripe-portal-configurations';
 import { callStripeWithRetry } from './stripe-retry';
 
 export async function createStripePortalSession({
@@ -21,9 +22,17 @@ export async function createStripePortalSession({
   options?: PaymentGatewayRequestOptions | undefined;
   logger: Logger;
 }): Promise<{ url: string }> {
+  // DEBT-414 F05: every session names the app's configuration for its
+  // profile, never the Dashboard's default.
+  const configuration = await resolvePortalConfigurationId({
+    stripe,
+    profile: input.profile,
+    logger,
+  });
   const params = {
     customer: input.externalCustomerId,
     return_url: input.returnUrl,
+    configuration,
   } satisfies BillingPortalSessionCreateParams;
 
   const idempotencyKey = options?.idempotencyKey;

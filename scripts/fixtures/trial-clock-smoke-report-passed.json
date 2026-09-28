@@ -95,6 +95,10 @@
         {
           "status": "passed",
           "title": "sets a Subscription's default only to a PaymentMethod on its customer"
+        },
+        {
+          "status": "passed",
+          "title": "creates a portal configuration once per idempotency key and lists it among the active ones"
         }
       ],
       "status": "passed",
