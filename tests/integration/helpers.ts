@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { inArray } from 'drizzle-orm';
+import { sql as drizzleSql, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from '@/db/schema';
@@ -223,6 +223,12 @@ export async function createQuestion(
   if (!correctChoice || !incorrectChoice) {
     throw new Error('Failed to insert choices');
   }
+
+  // ADR-021: like the seed, mirror the question into its revision 1, so
+  // fixtures carry the current revision that sessions and attempts bind.
+  await db.execute(
+    drizzleSql`SELECT sync_question_revision_v1(${question.id}::uuid)`,
+  );
 
   if (input.tagIds && input.tagIds.length > 0) {
     await db.insert(schema.questionTags).values(
