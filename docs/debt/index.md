@@ -3,21 +3,21 @@
 **Project:** Naltrexone University
 **Last Updated:** 2026-09-28 UTC
 
-**Latest** — 2026-09-28 UTC: DEBT-414 F03a adds a separate, unchecked, required opt-in to automatic renewal to every checkout offer, recorded verbatim in the consent evidence.
-- **Opt-in.** Each offer's renewal statement sits in bold beside a native checkbox (Pattern Registry I-7, registered before use).
-  - The browser blocks submission until it is checked, and the subscribe action and billing controller reject a submission without it.
-  - The statement joins the consent text, so the checkout disclosure becomes `2026-09-28.2`, a same-day revision the controller now accepts. The registry pins the four new texts. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later).
-- **Proof.** The hosted Stripe lane recorded consent that includes the opt-in the learner ticked. Twelve dialog captures show zero axe violations. F03b next moves the trial add-card offer into the same dialog, with the opt-in and a stale-offer guard.
-- **Previous increment.** #1179 (F04) merged as `14b4da2b` with exact-head approval **5335695760**, and all five findings were accepted:
-  - narrow the security-program sentence;
-  - confirm mailbox control before an email cancellation;
-  - require both payment facts for a locked-out learner;
-  - state the post-request refund as company policy;
-  - page through Stripe events.
-
-  It is promoted through #1180 (`f5a75091`), whose review approved with no findings. The promotion's proof was written into its body at 08:26:23Z, before the merge at 08:26:28Z. Release verified: main CI **36397376874** `test` **08:37:50Z**; Ready **08:28:11.828Z**, held without alias until its check completed; production assigned **08:37:52.589Z**; matching trees; healthy production.
+**Latest** — 2026-09-28 UTC: DEBT-414 F03b moves the trial add-card offer into the same consent dialog as checkout, with a separate, unchecked, required opt-in to automatic renewal, and refuses add-card terms that changed after they were displayed.
+- **Dialog.** The trial banner's button now opens the scrollable consent dialog. It shows the add-card terms in bold rows, the I-7 opt-in, and the closing sentence with the legal links, rendered by the same `ConsentTerms` as checkout.
+  - The recorded snapshot is the serialized consent the dialog renders, under version `2026-09-28.2`.
+  - With F03a, both of F03's entry points now carry the opt-in. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later).
+- **Guard.** The form posts the displayed version, and the action, controller and use case each check the submission before any Stripe call. They refuse a missing opt-in, and the use case refuses a version other than the current one, so a stale page cannot record consent to text the learner never saw.
+- **Proof.** Run over the pre-F03b code, 21 of the new or updated tests fail. Eight dialog captures show zero axe violations and a blocked unchecked submission, and two more capture the new one-line banner.
+  - A new hosted Stripe journey saves a real test card through the dialog. The consent recorded is exactly the text shown, and the trial renews on that card.
+  - The same journey found that the banner still asks for a card once one is saved. That defect predates F03b; it is filed as [BUG-308](../bugs/bug-308-trial-banner-asks-for-card-after-one-is-saved.md) and is the next increment.
+- **Previous increment.** #1181 (F03a) merged as `c78c0879` with exact-head approval **5336251680** and no findings.
+  - Its first local gate predated three commits (two record-only commits and the theme guard). The full gate and all 60 E2E tests were therefore rerun on the exact head before merging, and the PR body was corrected.
+  - It is promoted through #1182 (`b0fecc6c`), whose review approved with no findings. The promotion's proof was written into its body at 09:27:21Z, before the merge at 09:27:26Z. Release verified: main CI **36403616006** `test` **09:37:20Z**; Ready **09:28:54.339Z**, held without alias until its check completed; production assigned **09:37:22.800Z**; matching trees; healthy production.
 
 The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
+
+**Earlier** — 2026-09-28 UTC DEBT-414 F03a adds a separate, unchecked, required opt-in to automatic renewal to every checkout offer, recorded verbatim in the consent evidence. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later). The previous increment, #1179 (F04), merged as `14b4da2b` and is promoted through #1180 (`f5a75091`). Release verified: main CI **36397376874** `test` **08:37:50Z**; Ready **08:28:11.828Z**, held without alias until its check completed; production assigned **08:37:52.589Z**; matching trees; healthy production. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
 **Earlier** — 2026-09-28 UTC DEBT-414 F04 proves a learner can cancel, and fixes a failure the proof uncovered: the app missed every cancellation made in Stripe's Billing portal, because the portal schedules one through `cancel_at` and the app read only `cancel_at_period_end`. [Remediation](./debt-414-public-legal-pages-privacy-terms.md#engineering-remediation-2026-09-27-and-later). The previous increment, #1177 (ADR-021 phase 1), merged as `275decf3` and is promoted through #1178 (`bf76219e`). Release verified: main CI **36391234919** `test` **07:34:26Z**; Ready **07:23:10.784Z**, held without alias until its check completed; production assigned **07:34:28.685Z**; matching trees; healthy production; migration `0039` applied with 958 revisions created. The local full gate is run on every head before it is pushed; hosted CI, exact-head approval, merge and promotion remain pending. **4 Active records; Next Debt ID remains DEBT-489.**
 
