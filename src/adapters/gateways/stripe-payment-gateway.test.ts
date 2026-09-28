@@ -370,17 +370,31 @@ describe('StripePaymentGateway', () => {
 
   it("creates a billing portal session with the caller's idempotency key", async () => {
     const stripe = new FakeStripeCheckoutClient();
+    const paid = stripe.portalConfigurations.seed({
+      metadata: {
+        app_portal_profile: 'paid',
+        app_portal_version: '2026-09-28',
+      },
+    });
     const create = vi.spyOn(stripe.billingPortal.sessions, 'create');
 
     await expect(
       createGateway(stripe).createPortalSession(
-        { externalCustomerId: 'cus_123', returnUrl: 'https://app/return' },
+        {
+          externalCustomerId: 'cus_123',
+          returnUrl: 'https://app/return',
+          profile: 'paid',
+        },
         { idempotencyKey: 'caller_portal_key' },
       ),
     ).resolves.toEqual({ url: 'https://billing.stripe.test/session' });
 
     expect(create).toHaveBeenCalledWith(
-      { customer: 'cus_123', return_url: 'https://app/return' },
+      {
+        customer: 'cus_123',
+        return_url: 'https://app/return',
+        configuration: paid,
+      },
       { idempotencyKey: 'caller_portal_key' },
     );
   });

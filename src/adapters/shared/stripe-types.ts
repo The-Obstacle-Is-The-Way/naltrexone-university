@@ -110,9 +110,58 @@ export type StripeCheckoutSessionRetrieved = StripeCheckoutSession & {
 export type BillingPortalSessionCreateParams = {
   customer: string;
   return_url: string;
+  configuration?: string;
 };
 
 export type StripeBillingPortalSession = { url: string | null };
+
+// The portal features this app sets explicitly (DEBT-414 F05). Stripe keeps
+// separate configurations per mode; the adapter owns the ones it uses.
+export type BillingPortalConfigurationCreateParams = {
+  features: {
+    customer_update: {
+      enabled: boolean;
+      allowed_updates: Array<'address' | 'email' | 'name' | 'phone'>;
+    };
+    invoice_history: { enabled: boolean };
+    payment_method_update: { enabled: boolean };
+    subscription_cancel: {
+      enabled: boolean;
+      mode: 'at_period_end';
+      proration_behavior: 'none';
+      cancellation_reason: {
+        enabled: boolean;
+        options: Array<
+          'other' | 'switched_service' | 'too_expensive' | 'unused'
+        >;
+      };
+    };
+    subscription_update: { enabled: boolean };
+  };
+  metadata: Record<string, string>;
+};
+
+export type StripeBillingPortalConfiguration = {
+  id: string;
+  active: boolean;
+  created: number;
+  metadata: Record<string, string> | null;
+  features: {
+    payment_method_update: { enabled: boolean };
+    subscription_update: { enabled: boolean };
+  };
+};
+
+export type BillingPortalConfigurationListParams = {
+  active: true;
+  limit: number;
+  starting_after?: string;
+};
+
+export type StripeBillingPortalConfigurationList = {
+  data: StripeBillingPortalConfiguration[];
+  has_more: boolean;
+};
 
 export type StripeSubscription = unknown;
 export const STRIPE_SUBSCRIPTION_STATUSES = [
@@ -224,6 +273,15 @@ export type StripeClient = {
         params: BillingPortalSessionCreateParams,
         options?: StripeRequestOptions,
       ): Promise<StripeBillingPortalSession>;
+    };
+    configurations: {
+      list(
+        params: BillingPortalConfigurationListParams,
+      ): Promise<StripeBillingPortalConfigurationList>;
+      create(
+        params: BillingPortalConfigurationCreateParams,
+        options?: StripeRequestOptions,
+      ): Promise<StripeBillingPortalConfiguration>;
     };
   };
   webhooks: {

@@ -8,4 +8,5 @@ export const STRIPE_CHECKOUT_CLIENT_CONTRACT_CASE_TITLES = [
   'finds Customers by whole, case-insensitive metadata value through Search once indexed',
   'attaches a PaymentMethod to one customer only and retires it once detached',
   "sets a Subscription's default only to a PaymentMethod on its customer",
+  'creates a portal configuration once per idempotency key and lists it among the active ones',
 ] as const;

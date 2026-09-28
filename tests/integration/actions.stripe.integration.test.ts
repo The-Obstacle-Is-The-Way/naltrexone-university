@@ -119,6 +119,7 @@ describe('billing controllers (integration)', () => {
     );
     const createPortalSessionUseCase = new CreatePortalSessionUseCase(
       stripeCustomerRepository,
+      new FakeSubscriptionRepository(),
       paymentGateway,
     );
 
@@ -202,6 +203,7 @@ describe('billing controllers (integration)', () => {
     );
     const createPortalSessionUseCase = new CreatePortalSessionUseCase(
       stripeCustomerRepository,
+      new FakeSubscriptionRepository(),
       paymentGateway,
     );
 
@@ -267,8 +269,11 @@ describe('billing controllers (integration)', () => {
       data: { url: 'https://stripe.test/portal2' },
     });
     expect(paymentGateway.portalInputs).toHaveLength(1);
+    // No subscription is recorded, so the portal fails closed to the trial
+    // profile (DEBT-414 F05).
     expect(paymentGateway.portalInputs[0]).toMatchObject({
       externalCustomerId: 'cus_test_2',
+      profile: 'trial',
     });
     expect(paymentGateway.portalInputs[0]?.returnUrl).toBe(
       'http://localhost:3000/app/billing',

@@ -119,6 +119,7 @@ describe('FakePaymentGateway', () => {
       const input = {
         externalCustomerId: 'cus_123',
         returnUrl: 'https://app/return',
+        profile: 'paid' as const,
       };
 
       await expect(gateway.createPortalSession(input)).resolves.toEqual({
