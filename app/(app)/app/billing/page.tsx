@@ -5,10 +5,13 @@ import { awaitRequestBoundary } from '@/app/(app)/app/request-boundary';
 import { ErrorCard } from '@/components/error-card';
 import { IdempotencyKeyField } from '@/components/idempotency-key-field';
 import { Card } from '@/components/ui/card';
+import { PRICING_DATA } from '@/lib/pricing-data';
 import { normalizeSearchParam } from '@/lib/search-params';
 import type { AuthGateway } from '@/src/application/ports/gateways';
 import type { SubscriptionRepository } from '@/src/application/ports/repositories';
+import type { CheckTrialSavedCardUseCase } from '@/src/application/ports/use-cases';
 import type { Subscription } from '@/src/domain/entities';
+import type { SubscriptionStatus } from '@/src/domain/value-objects';
 
 export const maxDuration = 30;
 
@@ -27,9 +30,22 @@ function formatBillingDate(date: Date): string {
   return billingDateFormatter.format(date);
 }
 
+// BUG-308: learner-facing names for the domain's subscription statuses.
+const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
+  paymentProcessing: 'Payment processing',
+  paymentFailed: 'Payment failed',
+  inTrial: 'Free trial',
+  active: 'Active',
+  canceled: 'Canceled',
+  unpaid: 'Unpaid',
+  paused: 'Paused',
+  pastDue: 'Payment past due',
+};
+
 export type BillingPageDeps = {
   authGateway: AuthGateway;
   subscriptionRepository: SubscriptionRepository;
+  checkTrialSavedCardUseCase: CheckTrialSavedCardUseCase;
 };
 
 async function getDeps(deps?: BillingPageDeps): Promise<BillingPageDeps> {
@@ -41,16 +57,24 @@ async function getDeps(deps?: BillingPageDeps): Promise<BillingPageDeps> {
   return {
     authGateway: container.createAuthGateway(),
     subscriptionRepository: container.createSubscriptionRepository(),
+    checkTrialSavedCardUseCase: container.createCheckTrialSavedCardUseCase(),
   };
 }
 
-export async function loadBillingData(
-  deps?: BillingPageDeps,
-): Promise<{ userId: string; subscription: Subscription | null }> {
+export async function loadBillingData(deps?: BillingPageDeps): Promise<{
+  userId: string;
+  subscription: Subscription | null;
+  trialCardSaved: boolean;
+}> {
   const d = await getDeps(deps);
   const user = await d.authGateway.requireUser();
   const subscription = await d.subscriptionRepository.findByUserId(user.id);
-  return { userId: user.id, subscription };
+  const trialCardSaved =
+    subscription?.status === 'inTrial'
+      ? (await d.checkTrialSavedCardUseCase.execute({ userId: user.id }))
+          .cardSaved
+      : false;
+  return { userId: user.id, subscription, trialCardSaved };
 }
 
 /** Extracted for testing (Server Components can't be directly tested) */
@@ -58,8 +82,30 @@ export type BillingContentProps =
   | {
       subscription: Subscription;
       manageBillingAction: (formData: FormData) => Promise<void>;
+      trialCardSaved?: boolean;
     }
-  | { subscription: null; manageBillingAction?: never };
+  | {
+      subscription: null;
+      manageBillingAction?: never;
+      trialCardSaved?: never;
+    };
+
+function TrialRenewalLine({
+  subscription,
+  cardSaved,
+}: {
+  subscription: Subscription;
+  cardSaved: boolean;
+}) {
+  const pricing = PRICING_DATA[subscription.plan];
+  return (
+    <div className="text-sm text-muted-foreground">
+      {cardSaved
+        ? `Renews at ${pricing.price} per ${pricing.frequency} on your saved card when your trial ends, until you cancel.`
+        : 'No card on file. Your trial ends without a charge unless you add a card from the trial banner.'}
+    </div>
+  );
+}
 
 export function BillingContent(props: BillingContentProps) {
   const subscription = props.subscription;
@@ -72,9 +118,18 @@ export function BillingContent(props: BillingContentProps) {
             Subscription
           </div>
           {subscription ? (
-            <div className="text-sm text-muted-foreground">
-              {subscription.plan} · {subscription.status}
-            </div>
+            <>
+              <div className="text-sm text-muted-foreground">
+                {PRICING_DATA[subscription.plan].name} ·{' '}
+                {SUBSCRIPTION_STATUS_LABELS[subscription.status]}
+              </div>
+              {subscription.status === 'inTrial' ? (
+                <TrialRenewalLine
+                  subscription={subscription}
+                  cardSaved={props.trialCardSaved ?? false}
+                />
+              ) : null}
+            </>
           ) : (
             <div className="text-sm text-muted-foreground">
               No subscription found.
@@ -109,6 +164,23 @@ export function BillingContent(props: BillingContentProps) {
 type BillingPageErrorCode = 'portal_failed' | 'trial_payment_method_failed';
 
 type BillingBanner = { tone: 'error'; message: string };
+
+// BUG-308: the add-card flow returns here with its outcome.
+function getTrialPaymentMethodNotice(
+  outcome: string | string[] | undefined,
+  trialCardSaved: boolean,
+): string | null {
+  switch (normalizeSearchParam(outcome)) {
+    case 'success':
+      return trialCardSaved
+        ? 'Your card is saved.'
+        : 'Stripe is confirming your card. Refresh this page in a moment.';
+    case 'cancel':
+      return 'No card was added. Your trial continues.';
+    default:
+      return null;
+  }
+}
 
 function parseBillingErrorCode(
   error: string | string[] | undefined,
@@ -146,10 +218,11 @@ function getBillingBanner(
 
 export type BillingPageViewProps = BillingContentProps & {
   banner?: BillingBanner | null;
+  notice?: string | null;
 };
 
 export function BillingPageView(props: BillingPageViewProps) {
-  const { banner, ...contentProps } = props;
+  const { banner, notice, ...contentProps } = props;
 
   return (
     <div className="space-y-6">
@@ -163,6 +236,11 @@ export function BillingPageView(props: BillingPageViewProps) {
       </div>
 
       {banner ? <ErrorCard>{banner.message}</ErrorCard> : null}
+      {notice ? (
+        <Card role="status" className="gap-0 rounded-2xl p-4 text-sm shadow-sm">
+          {notice}
+        </Card>
+      ) : null}
 
       <BillingContent {...contentProps} />
     </div>
@@ -171,7 +249,10 @@ export function BillingPageView(props: BillingPageViewProps) {
 
 export type BillingPageProps = {
   deps?: BillingPageDeps;
-  searchParams?: Promise<{ error?: string | string[] }>;
+  searchParams?: Promise<{
+    error?: string | string[];
+    trial_payment_method?: string | string[];
+  }>;
 };
 
 export default async function BillingPage(props?: BillingPageProps) {
@@ -181,10 +262,8 @@ export default async function BillingPage(props?: BillingPageProps) {
 
   await requestBoundary;
 
-  const [{ subscription }, resolvedSearchParams] = await Promise.all([
-    billingDataPromise,
-    searchParamsPromise,
-  ]);
+  const [{ subscription, trialCardSaved }, resolvedSearchParams] =
+    await Promise.all([billingDataPromise, searchParamsPromise]);
   const banner = getBillingBanner(
     parseBillingErrorCode(resolvedSearchParams?.error),
   );
@@ -197,7 +276,12 @@ export default async function BillingPage(props?: BillingPageProps) {
     <BillingPageView
       subscription={subscription}
       manageBillingAction={manageBillingAction}
+      trialCardSaved={trialCardSaved}
       banner={banner}
+      notice={getTrialPaymentMethodNotice(
+        resolvedSearchParams?.trial_payment_method,
+        trialCardSaved,
+      )}
     />
   );
 }

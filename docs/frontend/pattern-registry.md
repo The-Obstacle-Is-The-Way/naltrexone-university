@@ -154,6 +154,7 @@ bg-card text-card-foreground flex flex-col gap-0 rounded-2xl border p-6 shadow-s
 | Standard | (none) | Stats, containers, summaries |
 | Dense | `p-4` over default `p-6` | Navigator grids, filter panels, compact layouts |
 | Warning-tinted | `border-warning/50 bg-warning/5` | Inline status cards (unanswered reveal) |
+| Status notice | Dense (`p-4`) plus `text-sm` and `role="status"` | A non-error page notice, such as Billing's acknowledgement of the add-card return (BUG-308); errors use F-3 `ErrorCard` |
 
 **Non-interactive cards have NO hover classes.** This is intentional — "less is more." Only genuinely clickable surfaces should respond to interaction.
 
@@ -501,7 +502,7 @@ Inline action link inside status banners/alerts where persistent affordance is r
 underline font-medium transition-colors hover:text-foreground
 ```
 
-**Source:** `app/(app)/app/layout.tsx` (past-due billing banner)
+**Source:** `app/(app)/app/layout.tsx` (past-due billing banner; the trial banner's saved-card "Manage billing" link, BUG-308)
 
 **Design rationale:** In warning banners, persistent underline is preferred over hover-only affordance so the action remains obvious at a glance.
 
@@ -864,6 +865,8 @@ mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-3
 **Countdown phrase:** `font-medium text-foreground` (e.g. "7 days left in trial") — emphasized against the muted wrapper so the number reads at a glance.
 
 **Summary line:** `text-foreground`, one short sentence ("Add a card before your trial ends to keep access."). The full terms live in the dialog, not the banner (DEBT-414 F03b).
+
+**Saved-card state (BUG-308):** once the add-card flow has set a card as the trial subscription's default, the summary line states the renewal instead ("Pro Monthly renews at $29 per month on your saved card when your trial ends."). An L-5 banner inline link, "Manage billing", replaces the action and keeps cancellation one click away. No add-card button is rendered.
 
 **Action:** `<Button type="button" variant="outline" size="sm" className="rounded-full">` ("Add a card to keep access"), the trigger of the S-4 scrollable consent dialog (`app/(app)/app/trial-payment-consent-dialog.tsx`). That dialog shows the add-card terms in bold, the separate renewal opt-in (I-7), and the closing sentence with the Terms and Privacy links, then posts the protected trial payment-method action with the displayed disclosure version. The Button primitive supplies the canonical focus ring; the pill shape follows the Pill Shape Convention (Part 5).
 
