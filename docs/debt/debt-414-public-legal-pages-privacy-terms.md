@@ -718,6 +718,9 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
   - The fix: `stripeSubscriptionEndsByPeriodEnd` counts a `cancel_at` at or before the current period end as a scheduled cancellation, and all three writers use it. A later `cancel_at` still renews once, so it does not count.
   - Red first: the rule's six cases, the normalizer's portal case and the checkout-success case. A real-Postgres case sends a portal-shaped event through the signed webhook and the real SDK; before the fix it stored `cancel_at_period_end = false`.
   - Rows stored before the fix are corrected by the next event or by the daily reconcile, which re-reads every live subscription from Stripe.
-- **Email route.** The [support cancellation procedure](../security/support-cancellation-procedure.md) covers the Terms' email route. A request from the account's address is completed within one business day, with a written confirmation. A locked-out learner is verified by two facts checked against Stripe, and the confirmation goes to both addresses. A verified request takes effect when received, so any renewal charged after it is refunded.
+- **Email route.** The [support cancellation procedure](../security/support-cancellation-procedure.md) covers the Terms' email route.
+  - A request from the account's address is acted on once the learner confirms from that mailbox, because a `From` header can be forged. It is completed within one business day, with a written confirmation.
+  - A locked-out learner must match both payment facts in Stripe, and the confirmation goes to both addresses.
+  - A verified request takes effect when received, and refunding any renewal charged after it is company policy. Counsel has not yet confirmed the legal rule (#1179 review).
 - **What stays manual.** The spec is observational, not a required check, because Stripe does not support automating its hosted pages. The email route depends on the owner following the procedure.
 

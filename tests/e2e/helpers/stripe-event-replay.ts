@@ -19,12 +19,16 @@ export async function findLatestStripeEvent(input: {
   await expect
     .poll(
       async () => {
-        const events = await stripe.events.list({
-          type: input.type,
-          created: { gte: input.createdSince },
-          limit: 100,
-        });
-        found = events.data.find(
+        // Other test runs share the account's event stream, so every page
+        // since createdSince is searched, up to a bound (#1179 review).
+        const events = await stripe.events
+          .list({
+            type: input.type,
+            created: { gte: input.createdSince },
+            limit: 100,
+          })
+          .autoPagingToArray({ limit: 2_000 });
+        found = events.find(
           (candidate) =>
             (candidate.data.object as { id?: string }).id === input.objectId,
         );
