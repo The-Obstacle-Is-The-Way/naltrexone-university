@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation';
 import { ROUTES } from '@/lib/routes';
 import { getSubscriptionPlanFromPriceId } from '@/src/adapters/config/stripe-prices';
-import { stripeSubscriptionStatusToSubscriptionStatus } from '@/src/adapters/gateways/stripe';
+import {
+  stripeSubscriptionEndsByPeriodEnd,
+  stripeSubscriptionStatusToSubscriptionStatus,
+} from '@/src/adapters/gateways/stripe';
 import { isTransientExternalError, retry } from '@/src/adapters/shared/retry';
 import { DEFAULT_RETRY_OPTIONS } from '@/src/adapters/shared/retry-defaults';
 import { isSubscriptionObservationAttemptsExhaustedError } from '@/src/application/errors';
@@ -269,7 +272,12 @@ export async function syncCheckoutSuccess(
     });
 
     return {
-      cancelAtPeriodEnd,
+      // DEBT-414 F04: a cancellation scheduled through cancel_at counts too.
+      cancelAtPeriodEnd: stripeSubscriptionEndsByPeriodEnd({
+        cancel_at_period_end: cancelAtPeriodEnd,
+        cancel_at: subscription.cancel_at,
+        current_period_end: currentPeriodEndSeconds,
+      }),
       currentPeriodEnd: new Date(currentPeriodEndSeconds * MS_PER_SECOND),
       startedAt: new Date(startDateSeconds * MS_PER_SECOND),
       billingCycleAnchor: new Date(billingCycleAnchorSeconds * MS_PER_SECOND),

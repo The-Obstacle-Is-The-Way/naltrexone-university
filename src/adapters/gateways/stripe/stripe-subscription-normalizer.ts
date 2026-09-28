@@ -17,6 +17,7 @@ import { ApplicationError, isApplicationError } from '@/src/application/errors';
 import type { WebhookEventResult } from '@/src/application/ports/gateways';
 import type { Logger } from '@/src/application/ports/logger';
 import { MS_PER_SECOND } from '@/src/domain/services';
+import { stripeSubscriptionEndsByPeriodEnd } from './stripe-cancellation';
 import { callStripeWithRetry } from './stripe-retry';
 import { stripeSubscriptionStatusToSubscriptionStatus } from './stripe-subscription-status';
 import {
@@ -88,7 +89,11 @@ export function normalizeStripeSubscriptionUpdate(input: {
     );
   }
   const currentPeriodEndSeconds = subscriptionItem.current_period_end;
-  const cancelAtPeriodEnd = subscription.cancel_at_period_end;
+  const cancelAtPeriodEnd = stripeSubscriptionEndsByPeriodEnd({
+    cancel_at_period_end: subscription.cancel_at_period_end,
+    cancel_at: subscription.cancel_at,
+    current_period_end: currentPeriodEndSeconds,
+  });
   const priceId = subscriptionItem.price.id;
 
   const plan = getSubscriptionPlanFromPriceId(priceId, input.priceIds);

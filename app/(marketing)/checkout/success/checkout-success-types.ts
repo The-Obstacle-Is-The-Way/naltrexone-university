@@ -16,6 +16,7 @@ export type StripeSubscriptionLike = {
   customer?: unknown;
   status?: string;
   cancel_at_period_end?: boolean;
+  cancel_at?: number | null;
   start_date?: number;
   billing_cycle_anchor?: number;
   metadata?: Record<string, string>;
