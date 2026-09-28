@@ -51,6 +51,8 @@ export type CheckoutSessionOutput = { url: string };
 
 export type TrialPaymentMethodSetupSessionInput = RenewalTermsSnapshot & {
   userId: string;
+  // BUG-308: prefilled on Stripe's page, which otherwise asks for it.
+  email: string;
   externalCustomerId: string;
   externalSubscriptionId: string;
   trialEndsAt: Date;

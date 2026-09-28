@@ -115,6 +115,7 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.createTrialPaymentMethodSetupSession({
         userId: appUserId,
+        email: 'learner@example.com',
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         ...createTestRenewalTerms('monthly', true),
@@ -318,6 +319,7 @@ describe('StripePaymentGateway', () => {
     await expect(
       gateway.createTrialPaymentMethodSetupSession({
         userId: appUserId,
+        email: 'learner@example.com',
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',

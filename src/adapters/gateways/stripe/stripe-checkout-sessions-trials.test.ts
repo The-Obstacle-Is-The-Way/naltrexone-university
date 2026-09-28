@@ -312,6 +312,7 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
   const appUserId = crypto.randomUUID();
   const setupInput = {
     userId: appUserId,
+    email: 'learner@example.com',
     externalCustomerId: 'cus_123',
     externalSubscriptionId: 'sub_123',
     plan: 'monthly' as const,
@@ -361,6 +362,8 @@ describe('createStripeTrialPaymentMethodSetupSession', () => {
       mode: 'setup',
       currency: 'usd',
       consent_collection: { terms_of_service: 'required' },
+      // BUG-308: Stripe prefills the learner's email, still with no customer.
+      customer_email: 'learner@example.com',
       success_url:
         'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
       cancel_url:

@@ -91,6 +91,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
       useCase.execute({
         userId,
         expectedDisclosureVersion: '2026-08-05',
+        email: 'learner@example.com',
         successUrl:
           'https://app.example.com/app/billing?trial_payment_method=success&session_id={CHECKOUT_SESSION_ID}',
         cancelUrl:
@@ -101,6 +102,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     expect(payments.trialSetupInputs).toEqual([
       {
         userId,
+        email: 'learner@example.com',
         externalCustomerId: 'cus_123',
         externalSubscriptionId: 'sub_123',
         plan: 'monthly',
@@ -139,6 +141,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     const input = {
       userId,
       expectedDisclosureVersion: '2026-08-05',
+      email: 'learner@example.com',
       successUrl: 'https://app.example.com/success',
       cancelUrl: 'https://app.example.com/cancel',
     };
@@ -187,6 +190,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
       useCase.execute({
         userId,
         expectedDisclosureVersion: '2026-01-01',
+        email: 'learner@example.com',
         successUrl: 'https://app.example.com/app/billing',
         cancelUrl: 'https://app.example.com/app/billing',
       }),
@@ -208,6 +212,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
     const input = {
       userId,
       expectedDisclosureVersion: '2026-08-05',
+      email: 'learner@example.com',
       successUrl: 'https://app.example.com/success',
       cancelUrl: 'https://app.example.com/cancel',
     };
@@ -235,6 +240,7 @@ describe('CreateTrialPaymentMethodSetupSessionUseCase', () => {
       useCase.execute({
         userId,
         expectedDisclosureVersion: '2026-08-05',
+        email: 'learner@example.com',
         successUrl: 'https://app.example.com/success',
         cancelUrl: 'https://app.example.com/cancel',
       }),
