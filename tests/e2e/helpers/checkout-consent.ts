@@ -1,7 +1,10 @@
 import { expect, type Page } from '@playwright/test';
 import postgres from 'postgres';
-import type Stripe from 'stripe';
 import { TERMS_CONTENT_SHA256, TERMS_VERSION } from '@/lib/pricing-data';
+import {
+  findLatestStripeEvent,
+  replayStripeEventToLocalApp,
+} from './stripe-event-replay';
 import { createStripeTestClient } from './stripe-test-client';
 
 type DisplayedConsent = {
@@ -115,18 +118,6 @@ async function deliverLocalCheckoutEvent(
   subscriptionId: string,
   userId: string,
 ) {
-  const appUrl = new URL(page.url());
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!['localhost', '127.0.0.1'].includes(appUrl.hostname) || !webhookSecret) {
-    throw new Error(
-      'Consent evidence replay requires a local app and its webhook secret.',
-    );
-  }
-  if (process.env.RESEND_API_KEY) {
-    throw new Error(
-      'Disable email delivery before replaying hosted Checkout evidence.',
-    );
-  }
   const stripe = createStripeTestClient();
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   const customer = await stripe.customers.retrieve(
@@ -152,43 +143,14 @@ async function deliverLocalCheckoutEvent(
   const session = sessions.data[0];
   if (session?.status !== 'complete')
     throw new Error('Expected a completed hosted Checkout session.');
-  let event: Stripe.Event | undefined;
-  await expect
-    .poll(
-      async () => {
-        const events = await stripe.events.list({
-          type: 'checkout.session.completed',
-          created: { gte: session.created },
-          limit: 100,
-        });
-        event = events.data.find(
-          (candidate) =>
-            candidate.type === 'checkout.session.completed' &&
-            candidate.data.object.id === session.id,
-        );
-        return event?.id;
-      },
-      { timeout: 15_000 },
-    )
-    .toBeTruthy();
-  if (!event || event.livemode)
-    throw new Error('Expected a real Stripe test Checkout completion event.');
+  const event = await findLatestStripeEvent({
+    stripe,
+    type: 'checkout.session.completed',
+    objectId: session.id,
+    createdSince: session.created,
+  });
   // Stripe cannot push to localhost. Replay its actual event through the signed
   // HTTP route; eager success sync grants access but does not write consent.
-  const payload = JSON.stringify(event);
-  const response = await page.request.post(
-    new URL('/api/stripe/webhook', appUrl).href,
-    {
-      data: payload,
-      headers: {
-        'content-type': 'application/json',
-        'stripe-signature': stripe.webhooks.generateTestHeaderString({
-          payload,
-          secret: webhookSecret,
-        }),
-      },
-    },
-  );
-  expect(response.ok()).toBe(true);
+  await replayStripeEventToLocalApp(page, event);
   return session.id;
 }

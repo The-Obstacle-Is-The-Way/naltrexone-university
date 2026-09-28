@@ -86,6 +86,42 @@ describe('normalizeStripeSubscriptionUpdate', () => {
     });
   });
 
+  // DEBT-414 F04: the Billing portal schedules a cancellation through
+  // cancel_at, at the period end, and leaves cancel_at_period_end false.
+  it('records a cancellation the Billing portal scheduled through cancel_at', () => {
+    const subscription = {
+      ...createSubscriptionFixture(),
+      cancel_at: 1_800_000_000,
+    };
+
+    const result = normalizeStripeSubscriptionUpdate({
+      subscription,
+      eventId: 'evt_portal_cancel',
+      type: 'customer.subscription.updated',
+      priceIds,
+      logger: new FakeLogger(),
+    });
+
+    expect(result.cancelAtPeriodEnd).toBe(true);
+  });
+
+  it('keeps renewing when cancel_at falls after the current period end', () => {
+    const subscription = {
+      ...createSubscriptionFixture(),
+      cancel_at: 1_800_000_001,
+    };
+
+    const result = normalizeStripeSubscriptionUpdate({
+      subscription,
+      eventId: 'evt_later_cancel',
+      type: 'customer.subscription.updated',
+      priceIds,
+      logger: new FakeLogger(),
+    });
+
+    expect(result.cancelAtPeriodEnd).toBe(false);
+  });
+
   it('throws STRIPE_ERROR when metadata.user_id is missing', () => {
     const logger = new FakeLogger();
 
