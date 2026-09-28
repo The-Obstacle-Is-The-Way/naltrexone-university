@@ -1,8 +1,8 @@
 # ADR-021: Immutable Question Revisions and Atomic Content Releases
 
-**Status:** Accepted, except the release-zero content-hash form (open question below)
-**Date:** 2026-09-27
-**Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. The release-zero hash form awaits the owner's answer to the open question below.
+**Status:** Accepted
+**Date:** 2026-09-27; release-zero hash form decided 2026-09-28
+**Decision Makers:** The owner, who authorized paying down DEBT-483 and DEBT-484 on 2026-09-27. On 2026-09-28 the owner delegated open engineering decisions ("do what the best physicians and the best programmers in the world ... would do"). Under that delegation the release-zero hash form was decided as recommended; see below.
 **Depends On:** ADR-003 (Testing Strategy); the content repository's SPEC-007 (Release and Withdrawal Interface, Draft) and SPEC-005 (content identity)
 
 ---
@@ -27,7 +27,7 @@ Constraints:
 
 ### 1. Content lives in immutable revisions
 
-- A new `question_revisions` table holds everything a learner reads: `stem_md`, `explanation_md`, `reference_md` and `difficulty`, plus `canonicalization_version` and `content_hash`.
+- A new `question_revisions` table holds everything a learner reads: `stem_md`, `explanation_md`, `reference_md` and `difficulty`, plus `canonicalization_version` and `content_hash` (in the `stored-fields-json-v1` form defined below).
 - `choices` gains `question_revision_id`. A choice belongs to exactly one revision, and its label and sort-order uniqueness move from `question_id` to `question_revision_id`. `question_id` stays, because the attempt and session-state foreign keys are composite `(choice id, question id)`.
 - A revision is never updated. Changed content is a new revision; the old one stays addressable.
 - `questions` keeps the stable identity (`id`, `slug`) and gains `current_revision_id`, the revision new selections use. Its text columns become legacy and are dropped in a later contract step.
@@ -78,24 +78,33 @@ Each phase is its own reviewed PR series with an N-1 answer. No phase claims SPE
 | 2 | Sessions and attempts bind revisions; grading and every review read use them. The `(choice, revision)` unique key and composite foreign keys land here. Add the withdrawal notice for attempted withdrawn questions. | Old code still reads the unchanged legacy columns. |
 | 3 | Contract: `NOT NULL` revision columns after a verified sweep; drop the legacy text columns from `questions`. | Only after N-1 code that reads legacy columns can no longer serve. |
 | 4 | Releases, staging, atomic activation, the withdrawal and hold overlay, and rollback. Selection reads the active release. | The legacy `status` stays in step until the release pointer is authoritative. |
-| 5 | Release zero, the inventory of what is live: blocked on the open question below. | Read-only export. |
+| 5 | Release zero, the inventory of what is live, hashed in `stored-fields-json-v1`. | Read-only export. |
 
-## Open question for the owner: the release-zero content hash
+## Release-zero content hash: `stored-fields-json-v1` (decided 2026-09-28)
 
 SPEC-007 asks the app to export each live question "in the form SPEC-005 hashes", which is `parsed-block-json-v1`. That form is SHA-256 over sorted-key JSON of `{metadata, body}` as the content repository's `scripts/content_io.py` parses a **draft block**.
 
 The app stores parsed fields after two transformations, draft → MDX → rows, and does not retain the draft's YAML and Markdown layout. A draft-form export rebuilt from stored fields would make every whitespace or ordering normalization look like content drift.
 
-**Recommendation:** agree a second canonical form in both repositories, `stored-fields-json-v1`: sorted-key JSON of exactly the fields the app stores and renders. The content repository computes it from each parsed block through the importer's own mapping, and the app computes it from rows. Release zero then compares like with like. A true discrepancy, meaning a live body edited after import, is still caught.
+**Decision.** Both repositories hash a second canonical form, `stored-fields-json-v1`, built from exactly the fields the app stores and renders. The content repository computes it from each parsed block through the importer's own mapping; the app computes it from rows. Release zero then compares like with like, and a true discrepancy, such as a live body edited after import, is still caught. Hashing a lossy reconstruction would instead report false drift, which trains everyone to ignore the check.
 
-This is a change to the content repository's SPEC-005/SPEC-007, so the owner decides it. The app will not edit that repository.
+**Definition.**
+- The value is a JSON object with the keys `stem_md`, `explanation_md`, `reference_md` (string or `null`), `difficulty` (`easy`, `medium` or `hard`) and `choices`.
+- `choices` is an array ordered by `sort_order` ascending. Each element has the keys `label`, `sort_order` (integer), `text_md`, `is_correct` (boolean) and `explanation_md` (string or `null`).
+- Keys are sorted at every level, there is no insignificant whitespace, and strings are escaped as ECMAScript's `JSON.stringify` escapes them. The text is encoded as UTF-8 and hashed with SHA-256, written as lowercase hex.
+- The form is byte-identical to Python's `json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`, so the content repository can compute it in one line.
+- Row identities (question, revision and choice ids), the slug, the status and taxonomy are not content and are left out.
+
+**Reference implementation.** `lib/content/question-revision-hash.ts` is the app's implementation. Its tests pin the canonical text and digests of two vectors computed independently with Python's standard library, one of them with quotes, backslashes, control characters, a line separator, non-ASCII text and an emoji. Phase 1's backfill must produce the same bytes, and must prove it against this implementation.
+
+**Follow-up outside this repository.** The content repository's SPEC-005 and SPEC-007 must adopt `stored-fields-json-v1` for release zero before phase 5 can run. The app does not edit that repository.
 
 ## Consequences
 
 - DEBT-484 closes after phases 1–3: rewrites become revisions, history and sessions bind them, and withdrawn questions are reviewable with a notice.
-- DEBT-483 closes after phase 4, and release zero once the open question is settled.
+- DEBT-483 closes after phase 4. Release zero follows once the content repository computes `stored-fields-json-v1` too.
 - Every history read path changes in phase 2. Each gains a real-Postgres case, and the existing unavailable-row UI becomes the withdrawal-notice UI.
-- Revisit this record if SPEC-007's manifest fields change, or if the owner chooses the draft-form hash.
+- Revisit this record if SPEC-007's manifest fields change, or if the content repository cannot adopt `stored-fields-json-v1`.
 
 ## Related
 

@@ -838,7 +838,7 @@ archival (date)”.
 
 - `docs/specs/master_spec.md` — Complete technical specification (SSOT)
 - `docs/specs/index.md` — Spec register (numbered implementations archived; deferred tails and the living master contract remain discoverable)
-- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018 and ADR-020 accepted; ADR-019 proposed; ADR-021 accepted except its release-zero hash form)
+- `docs/adr/` — Architecture Decision Records (ADR-001 through ADR-018 and ADR-020 accepted; ADR-019 proposed; ADR-021 accepted)
 - `docs/debt/index.md` — Technical debt register (active + resolved)
 - `docs/bugs/index.md` — Bug report register
 - `docs/qa/index.md` — UI QA procedure register (QA-NNN scripted UI verification; method in `docs/dev/qa-procedures.md`)
