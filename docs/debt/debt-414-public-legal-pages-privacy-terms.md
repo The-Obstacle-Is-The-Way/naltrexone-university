@@ -759,6 +759,7 @@ The change lands reader-first. F15a adds `lib/checkout-disclosures.ts`, an appen
   - the use case refuses a version that is not the current one, before any Stripe call.
 
   A page loaded before a copy change therefore cannot record consent to text the learner never saw. It returns the learner to Billing with the add-card error, and the reloaded banner shows the current terms. A page loaded before this release posts neither field and is refused the same way.
+- **Billing shows the refusal.** Billing had ignored the add-card error code, so every add-card failure, the new refusal included, came back as a silent page. It now shows "Couldn't open Stripe to add your card. Review the terms from the trial banner and try again." The case was red first.
 - **Tests.**
   - **Red against the pre-F03b code:** 21 cases fail when the new tests run over the extraction commit's production code:
     - the controller's five consent cases;

@@ -106,7 +106,7 @@ export function BillingContent(props: BillingContentProps) {
   );
 }
 
-type BillingPageErrorCode = 'portal_failed';
+type BillingPageErrorCode = 'portal_failed' | 'trial_payment_method_failed';
 
 type BillingBanner = { tone: 'error'; message: string };
 
@@ -114,7 +114,9 @@ function parseBillingErrorCode(
   error: string | string[] | undefined,
 ): BillingPageErrorCode | undefined {
   const value = normalizeSearchParam(error);
-  if (value === 'portal_failed') return value;
+  if (value === 'portal_failed' || value === 'trial_payment_method_failed') {
+    return value;
+  }
   return undefined;
 }
 
@@ -127,6 +129,14 @@ function getBillingBanner(
       return {
         tone: 'error',
         message: "Couldn't open the billing portal. Please try again.",
+      };
+    // DEBT-414 F03b: the add-card action returns here when it cannot open
+    // Stripe, including when the terms changed after they were displayed.
+    case 'trial_payment_method_failed':
+      return {
+        tone: 'error',
+        message:
+          "Couldn't open Stripe to add your card. Review the terms from the trial banner and try again.",
       };
   }
 
