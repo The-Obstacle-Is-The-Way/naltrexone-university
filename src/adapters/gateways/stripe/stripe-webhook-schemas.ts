@@ -31,6 +31,9 @@ export const stripeSubscriptionSchema = z
     customer: z.string(),
     status: z.string(),
     cancel_at_period_end: z.boolean(),
+    // DEBT-414 F04: Stripe always sends cancel_at, null when nothing is
+    // scheduled; the Billing portal schedules cancellation through it.
+    cancel_at: stripeTimestampSchema.nullable().optional(),
     start_date: stripeTimestampSchema,
     billing_cycle_anchor: stripeTimestampSchema,
     metadata: z.record(z.string(), z.string()).optional(),

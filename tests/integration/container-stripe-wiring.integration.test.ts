@@ -106,6 +106,65 @@ describe('container Stripe configuration', () => {
     },
   );
 
+  // DEBT-414 F04: the Billing portal schedules a cancellation by setting
+  // cancel_at to the period end; cancel_at_period_end stays false.
+  it('stores a Billing-portal cancellation scheduled through cancel_at', async () => {
+    const user = await createUser(db, cleanup);
+    const base = structuredClone(subscriptionEvent.data.object);
+    base.metadata.user_id = user.id;
+    const item = base.items.data[0];
+    if (!item) throw new Error('Subscription fixture has no item');
+    item.price.id = PRICE_IDS.monthly;
+    const subscription = {
+      ...base,
+      cancel_at_period_end: false,
+      cancel_at: item.current_period_end,
+    };
+    const stripe = new Stripe('container-test-key', {
+      apiVersion: STRIPE_API_VERSION,
+      maxNetworkRetries: 0,
+      httpClient: Stripe.createFetchHttpClient(
+        async () => new Response(JSON.stringify(subscription), { status: 200 }),
+      ),
+    });
+    const container = createContainer({
+      primitives: {
+        db,
+        env: {
+          ...env,
+          NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY: PRICE_IDS.monthly,
+          NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL: PRICE_IDS.annual,
+          STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
+        },
+        getStripe: () => stripe,
+      },
+    });
+    const payload = JSON.stringify({
+      ...subscriptionEvent,
+      data: { object: subscription },
+    });
+
+    const result = await container.createPaymentGateway().processWebhookEvent(
+      payload,
+      stripe.webhooks.generateTestHeaderString({
+        payload,
+        secret: WEBHOOK_SECRET,
+      }),
+    );
+    if (!result.subscriptionUpdate) {
+      throw new Error('Gateway did not return a subscription update');
+    }
+    await container
+      .createSubscriptionRepository()
+      .upsert({ ...result.subscriptionUpdate, expectedVersion: null });
+
+    await expect(
+      db.query.stripeSubscriptions.findFirst({
+        where: eq(stripeSubscriptions.userId, user.id),
+      }),
+    ).resolves.toMatchObject({ status: 'active', cancelAtPeriodEnd: true });
+  });
+
   it('uses the injected SDK to verify the signature through the public gateway', async () => {
     const stripe = new Stripe('container-test-key', {
       apiVersion: STRIPE_API_VERSION,

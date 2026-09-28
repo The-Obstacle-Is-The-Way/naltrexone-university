@@ -62,6 +62,7 @@ At minimum, review:
 - A security review is required before adding authentication, sensitive inputs, endpoints, payment features, or a new provider.
 - The owner completes and records security-practice training at adoption and annually. Employee training and management are currently not applicable because the business has no employees; before any employee, contractor, or delegated administrator receives access, the owner must document role-specific onboarding, confidentiality/security duties, least-privilege access, supervision, recurring training, and access removal.
 - Security-relevant incidents and near misses are recorded and reviewed for program changes.
+- Cancellation requests by email follow the [support cancellation procedure](./support-cancellation-procedure.md). Control of the account's mailbox is confirmed, or both payment facts are checked against Stripe, before acting, and every cancellation is confirmed in writing. Other account actions by email are not yet covered by a written procedure.
 - The owner reviews this program at least annually and after a material incident, provider change, data-practice change, or business-structure change.
 
 **OPEN before adoption:**

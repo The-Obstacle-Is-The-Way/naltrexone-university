@@ -1,4 +1,5 @@
 export { isValidStripeSubscriptionStatus } from '@/src/adapters/shared/stripe-types';
+export { stripeSubscriptionEndsByPeriodEnd } from './stripe-cancellation';
 export {
   createStripeCheckoutSession,
   createStripeTrialPaymentMethodSetupSession,
