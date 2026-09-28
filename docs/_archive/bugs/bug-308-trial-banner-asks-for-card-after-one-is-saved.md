@@ -1,6 +1,7 @@
 # BUG-308: The Trial Banner Asks for a Card After One Is Saved
 
-**Status:** Open — fix in review; closes after release verification
+**Status:** Resolved
+**Resolution State:** Promoted to `main` through #1186; production release verified 2026-09-28 (see Resolution)
 **Severity:** P3
 **Date:** 2026-09-28
 **Confirmed:** 2026-09-28 (hosted Stripe test-mode run on this clone, during DEBT-414 F03b)
@@ -57,11 +58,21 @@ Two smaller defects sit on the same path:
   - Red first: the contract, the use case, the entitled-user cases, the banner, the seven Billing cases, the setup Session's parameters, and the use case's email.
   - The controller's email assertion was proved live by removing the line.
 - **Hosted proof.** `stripe-hosted-trial-add-card.spec.ts` now also asserts:
-  - the Session carries the learner's email as `customer_email`, and Stripe showed it prefilled, so the helper typed nothing, and any visible field held that exact address (#1185 review);
+  - the Session carries the learner's email as `customer_email`, and Stripe visibly shows that exact address (as text on its setup page), so nothing was typed (#1185 and #1186 reviews);
   - Billing said "Stripe is confirming" until the real event was replayed, then "Your card is saved." with the renewal line;
   - the dashboard banner states the renewal, with no add-card button.
 
   It passed locally in test mode on 2026-09-28.
 - **Captures.** The banner and Billing were captured without and with a saved card, on the local production build (dark, DPR 1) at 1440×900 and 390×844.
   - Every capture has zero axe violations on the banner and on Billing's main region, and no horizontal overflow.
-  - The screenshots and [measurements](./assets/bug-308/bug308-measurements.json) are in `assets/bug-308/`.
+  - The screenshots and [measurements](../../bugs/assets/bug-308/bug308-measurements.json) are in `docs/bugs/assets/bug-308/`.
+
+## Resolution (2026-09-28)
+
+- **Shipped.** #1185 merged as `022750ef` with exact-head approval **5338626750** on `02466f9c`. Its one finding was accepted and strengthened: check the email's value, and read `customer_email` back from Stripe.
+  - Hosted CI 36421506371 passed.
+  - The local full gate, all 60 E2E tests and the hosted Stripe lane (7/7) passed on that exact head.
+- **Promoted and released.** Promoted through #1186 (`98651366`); the promotion's proof was written at 12:51:36Z, before the merge at 12:51:41Z.
+  - Its review raised one finding: the hosted journey checked no UI when Stripe shows the email as text. It was accepted and fixed before this record closed; the journey now requires the address to be visibly shown.
+  - Release verified: main CI **36424566226** `test` **13:04:38Z**; Ready **12:53:03.413Z**, held without alias until its check completed; production assigned **13:04:41.148Z**; matching trees `9a26a22e`; healthy production.
+
