@@ -484,6 +484,80 @@ describe('send renewal notices cron route', () => {
   });
 });
 
+// DEBT-414 F02: a monthly subscriber's yearly reminder through the
+// production wiring: real selection SQL, scheduling, dispatch revalidation.
+describe('send renewal notices cron route: monthly anniversary', () => {
+  it('queues and sends the yearly reminder before the renewal that starts another year', async () => {
+    const user = await createUser(db, cleanup);
+    const externalSubscriptionId = `sub_${randomUUID().replaceAll('-', '')}`;
+    renewalSubscriptionIds.push(externalSubscriptionId);
+    // Service and billing began 2025-09-17, so the renewal carrying service
+    // into a second year is 2026-09-17: 32 days after NOW.
+    const anchor = new Date('2025-09-17T12:00:00.000Z');
+    await db.insert(schema.stripeSubscriptions).values({
+      userId: user.id,
+      stripeSubscriptionId: externalSubscriptionId,
+      status: 'active',
+      priceId: MONTHLY_PRICE_ID,
+      currentPeriodEnd: new Date('2026-08-17T12:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+      startedAt: anchor,
+      billingCycleAnchor: anchor,
+    });
+    const email = new FakeTransactionalEmailGateway({ configured: true });
+    cleanup.rateLimitKeys.push('cron:send-renewal-notices');
+    const handler = createSendRenewalNoticesCronHandler(() =>
+      createContainer({
+        primitives: {
+          db,
+          env: createTestEnv(),
+          now: () => NOW,
+        },
+        gateways: {
+          createTransactionalEmailGateway: () => email,
+        },
+      }),
+    );
+
+    const response = await handler(
+      authorizedRequest('http://localhost/api/cron/send-renewal-notices'),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      anniversaries: 1,
+      queued: 1,
+      dispatchFailures: 0,
+    });
+    const deliveries = await db
+      .select()
+      .from(schema.renewalNoticeDeliveries)
+      .where(
+        eq(
+          schema.renewalNoticeDeliveries.stripeSubscriptionId,
+          externalSubscriptionId,
+        ),
+      );
+    expect(deliveries).toEqual([
+      expect.objectContaining({
+        noticeKind: 'anniversary_reminder',
+        applicableAt: new Date('2026-09-17T12:00:00.000Z'),
+        destination: user.email,
+        status: 'accepted',
+      }),
+    ]);
+    expect(email.sendInputs).toEqual([
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          to: user.email,
+          subject:
+            'Addiction Boards — Yearly reminder about your monthly subscription',
+        }),
+      }),
+    ]);
+  });
+});
+
 describe('reconcile Stripe subscriptions route exports', () => {
   it.each([
     { method: 'GET', invoke: reconcileGet },

@@ -173,6 +173,56 @@ describe('SendDueRenewalNoticesUseCase', () => {
     );
   });
 
+  // DEBT-414 F02: a monthly subscriber's yearly reminder names the renewal
+  // that carries the subscription into another year, and its cutoff.
+  it('reminds a monthly subscriber before the renewal that starts another year', async () => {
+    const { hasher, repository, useCase } = await createHarness();
+
+    await useCase.execute({
+      notices: [
+        scheduledNotice({
+          noticeKind: 'anniversary_reminder',
+          externalSubscriptionId: 'sub_monthly_123',
+          planName: 'Pro Monthly',
+          amountCents: 2900,
+          frequency: 'month',
+        }),
+      ],
+      limit: 100,
+    });
+
+    const record = repository.records[0];
+    const payload = parseTransactionalEmailPayloadSnapshot(
+      {
+        snapshot: record?.payloadSnapshot ?? '',
+        hash: record?.payloadHash ?? '',
+        destination: record?.destination ?? '',
+      },
+      hasher,
+    );
+    expect(payload.subject).toBe(
+      'Addiction Boards — Yearly reminder about your monthly subscription',
+    );
+    expect(payload.text).toContain(
+      'Your Addiction Boards Pro Monthly subscription renews automatically every month unless you cancel.',
+    );
+    expect(payload.text).toContain(
+      'This is your yearly reminder: the renewal on September 6, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT) continues your subscription into another year.',
+    );
+    expect(payload.text).toContain(
+      'Cancel before that time to avoid the renewal charge.',
+    );
+    expect(payload.text).toContain(
+      'Renewal amount and frequency: $29.00 USD every month.',
+    );
+    expect(payload.text).toContain(
+      'Cancel online on the Billing page: https://addictionboards.com/app/billing',
+    );
+    expect(payload.text).toContain(
+      'Except where the law requires otherwise, payments are non-refundable.',
+    );
+  });
+
   it('escapes notice text before linking it into HTML', async () => {
     const { hasher, repository, useCase } = await createHarness();
 

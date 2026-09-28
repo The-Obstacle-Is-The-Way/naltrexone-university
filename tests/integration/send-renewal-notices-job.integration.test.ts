@@ -8,9 +8,12 @@ import {
 } from '@/db/schema';
 import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import {
+  listActiveMonthlySubscriptions,
+  listAnniversaryReminders,
   listAnnualRenewalsPastNoticeDeadline,
   listAnnualSubscriptionsDue,
 } from '@/src/adapters/jobs/send-due-renewal-notices';
+import { getPostgresErrorCode } from '@/src/adapters/repositories/postgres-errors';
 import {
   createTransactionalEmailPayloadSnapshot,
   getRenewalNoticeProviderIdempotencyKey,
@@ -496,5 +499,170 @@ describe('renewal notice deadline query', () => {
     await expect(
       listAnnualRenewalsPastNoticeDeadline(window, { db, annualPriceId }),
     ).resolves.toEqual([]);
+  });
+});
+
+// DEBT-414 F02: the reads behind monthly subscribers' yearly reminders.
+describe('monthly anniversary queries', () => {
+  async function insertMonthly(input: {
+    monthlyPriceId: string;
+    idPrefix: string;
+    status?: 'active' | 'canceled';
+    priceId?: string;
+    cancelAtPeriodEnd?: boolean;
+    anchor?: Date | null;
+  }) {
+    const user = await createUser(db, cleanup);
+    const externalSubscriptionId = `sub_${input.idPrefix}_${randomUUID().replaceAll('-', '')}`;
+    const anchor =
+      input.anchor === undefined
+        ? new Date('2025-09-10T12:00:00.000Z')
+        : input.anchor;
+    await db.insert(stripeSubscriptions).values({
+      userId: user.id,
+      stripeSubscriptionId: externalSubscriptionId,
+      status: input.status ?? 'active',
+      priceId: input.priceId ?? input.monthlyPriceId,
+      cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
+      currentPeriodEnd: new Date('2026-09-10T12:00:00.000Z'),
+      startedAt: anchor,
+      billingCycleAnchor: anchor,
+    });
+    return { externalSubscriptionId, email: user.email, anchor };
+  }
+
+  it('lists active, renewing monthly subscriptions in id order, after a cursor', async () => {
+    const monthlyPriceId = `price_monthly_${randomUUID()}`;
+    const first = await insertMonthly({ monthlyPriceId, idPrefix: 'a' });
+    const unknown = await insertMonthly({
+      monthlyPriceId,
+      idPrefix: 'b',
+      anchor: null,
+    });
+    await insertMonthly({ monthlyPriceId, idPrefix: 'c', status: 'canceled' });
+    await insertMonthly({
+      monthlyPriceId,
+      idPrefix: 'd',
+      cancelAtPeriodEnd: true,
+    });
+    await insertMonthly({
+      monthlyPriceId,
+      idPrefix: 'e',
+      priceId: `price_annual_${randomUUID()}`,
+    });
+
+    await expect(
+      listActiveMonthlySubscriptions(
+        { afterExternalSubscriptionId: null, limit: 10 },
+        { db, monthlyPriceId },
+      ),
+    ).resolves.toEqual([
+      {
+        externalSubscriptionId: first.externalSubscriptionId,
+        destination: first.email,
+        startedAt: first.anchor,
+        billingCycleAnchor: first.anchor,
+      },
+      {
+        externalSubscriptionId: unknown.externalSubscriptionId,
+        destination: unknown.email,
+        startedAt: null,
+        billingCycleAnchor: null,
+      },
+    ]);
+    await expect(
+      listActiveMonthlySubscriptions(
+        {
+          afterExternalSubscriptionId: first.externalSubscriptionId,
+          limit: 10,
+        },
+        { db, monthlyPriceId },
+      ),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        externalSubscriptionId: unknown.externalSubscriptionId,
+      }),
+    ]);
+  });
+
+  it('lists stored anniversary reminders in every status, and stores the kind once per renewal', async () => {
+    const monthlyPriceId = `price_monthly_${randomUUID()}`;
+    const subscription = await insertMonthly({ monthlyPriceId, idPrefix: 's' });
+    const renewal = new Date('2026-09-10T12:00:00.000Z');
+    const insert = async (input: {
+      status: 'queued' | 'accepted' | 'delivered';
+      applicableAt: Date;
+      noticeKind?: 'anniversary_reminder' | 'annual_reminder';
+    }) => {
+      const id = randomUUID();
+      deliveryIds.push(id);
+      const payload = createTransactionalEmailPayloadSnapshot(
+        {
+          from: 'Addiction Boards <notices@addictionboards.com>',
+          to: subscription.email,
+          replyTo: 'support@addictionboards.com',
+          subject: 'Yearly reminder',
+          html: '<p>Yearly reminder</p>',
+          text: 'Yearly reminder',
+        },
+        hasher,
+      );
+      await db.insert(renewalNoticeDeliveries).values({
+        id,
+        noticeKind: input.noticeKind ?? 'anniversary_reminder',
+        consentRecordId: null,
+        stripeSubscriptionId: subscription.externalSubscriptionId,
+        applicableAt: input.applicableAt,
+        disclosureVersion: '2026-09-27',
+        destination: subscription.email,
+        providerIdempotencyKey: getRenewalNoticeProviderIdempotencyKey(id),
+        payloadSnapshot: payload.snapshot,
+        payloadHash: payload.hash,
+        status: input.status,
+      });
+    };
+    await insert({ status: 'accepted', applicableAt: renewal });
+    await insert({
+      status: 'delivered',
+      applicableAt: new Date('2025-09-10T12:00:00.000Z'),
+    });
+    await insert({
+      status: 'queued',
+      applicableAt: new Date('2027-09-10T12:00:00.000Z'),
+    });
+    await insert({
+      status: 'accepted',
+      applicableAt: renewal,
+      noticeKind: 'annual_reminder',
+    });
+
+    const stored = await listAnniversaryReminders(
+      { externalSubscriptionIds: [subscription.externalSubscriptionId] },
+      { db },
+    );
+    // Every stored anniversary reminder, in any status and any year, with
+    // the keys scheduling matches on; never another kind.
+    expect(
+      stored
+        .map(
+          (reminder) =>
+            `${reminder.applicableAt.toISOString()} ${reminder.status} ${reminder.disclosureVersion} ${reminder.destination === subscription.email}`,
+        )
+        .sort(),
+    ).toEqual([
+      '2025-09-10T12:00:00.000Z delivered 2026-09-27 true',
+      '2026-09-10T12:00:00.000Z accepted 2026-09-27 true',
+      '2027-09-10T12:00:00.000Z queued 2026-09-27 true',
+    ]);
+    await expect(
+      listAnniversaryReminders({ externalSubscriptionIds: [] }, { db }),
+    ).resolves.toEqual([]);
+
+    // The scheduled-notice unique index covers the new kind.
+    const duplicate = await insert({
+      status: 'queued',
+      applicableAt: renewal,
+    }).catch((error: unknown) => error);
+    expect(getPostgresErrorCode(duplicate)).toBe('23505');
   });
 });
