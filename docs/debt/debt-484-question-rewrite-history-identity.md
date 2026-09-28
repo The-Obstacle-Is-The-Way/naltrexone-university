@@ -255,6 +255,26 @@ This part:
   The first three were red first. The refusal case was red against the legacy fallback, which this part removed. Restoring the legacy difficulty column in the filter fails the difficulty case.
 - **What does not change.** Grading, history and review reads, and the seed.
 
+## Phase 2a, third increment, part two: a session shows and grades its bound revision — 2026-09-28
+
+What a session shows, what it grades and what its attempt records are now one revision: the one the item was bound to when the session began, else (an item an older deployment left unbound) the question's current one. That is the rule attempts already bind by.
+- **Domain.** A session item carries `questionRevisionId`, and a question carries the `revisionId` whose content it holds.
+- **Port.** The two session lookups take the session item, not a question id. The compiler therefore finds every caller, and none can drop the binding by accident. The adapter reads the bound revision's content and choices, and refuses a binding that is not a revision of the question with `INTERNAL_ERROR`; the session state's composite key already prevents one from being stored.
+- **Use cases.**
+  - The next-question read in a session shows the item's revision, with today's refusal of a question withdrawn since the session began kept; the withdrawal notice is increment 5.
+  - Submitting an answer in a session grades against the item's revision. Its error order is unchanged: the session is read first, and a missing session or a question outside it is still refused by the existing checks.
+  - Saving an exam draft and finalizing an exam validate and grade against the item's revision.
+- **What learners were exposed to.** None yet, because each question has one revision. Once phase 2b adds a second, a session begun before the change would have shown the new text, and answering or saving a draft with the new revision's choice would have failed as a server error when the database's composite key refused the write. Both are now correct by construction.
+- **Found while doing it.** The exam-draft controller spread the whole session item into its strict output schema. The new field would have failed every draft save, so the serializer now names each field the client receives, and the item's revision stays internal. The controller tests now give the item a bound revision, and they failed before the fix.
+- **Request cache.** The per-render cache keys a session item by its binding, so an unbound and a bound read of the same question never share a cache entry.
+- **Fakes.** `FakeQuestionRepository` models revisions: each listed question is one revision, the first listed per id is current, and a session item reads its bound one.
+- **Tests.**
+  - Six real-Postgres cases in `question-revision-session-reads.integration.test.ts`, with revision 2 made current after the session began: the item carries its binding; the next question shows revision 1; an unbound item shows revision 2; a tutor answer is graded against revision 1 and its attempt records revision 1; revision 2's choice is refused as not found and writes nothing; an exam draft of revision 2's choice is refused, revision 1's is saved, and finalizing grades it against revision 1.
+  - Five of the six were red first. The unbound case passed already, because unbound items read the current revision, as the serving deployment does.
+  - Four use-case cases on the fakes, and fake and request-cache cases for the binding.
+  - Break-it proofs: dropping the binding in the next-question read, the submission or the draft save fails its use-case case, and dropping it in finalize fails the Postgres finalize case.
+- **What does not change.** Attempts still bind in SQL by the same rule, and history and review reads are part 3c.
+
 ## Related
 
 - [DEBT-483](debt-483-content-withdrawal-and-release-rollback.md)

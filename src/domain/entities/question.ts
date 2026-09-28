@@ -7,6 +7,8 @@ import type { Tag } from './tag';
  */
 export type Question = {
   readonly id: string;
+  /** The revision whose content this carries (ADR-021). */
+  readonly revisionId: string;
   readonly slug: string;
   readonly stemMd: string;
   readonly explanationMd: string;

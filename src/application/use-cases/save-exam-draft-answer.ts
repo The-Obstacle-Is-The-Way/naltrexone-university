@@ -74,14 +74,14 @@ export class SaveExamDraftAnswerUseCase {
       );
     }
 
-    const questionBelongsToSession = session.questionStates.some(
+    const item = session.questionStates.find(
       (state) => state.questionId === input.questionId,
     );
-    if (!questionBelongsToSession) {
+    if (!item) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }
 
-    const question = await this.questions.findByIdForSession(input.questionId);
+    const question = await this.questions.findByIdForSession(item);
     if (!question) {
       throw new ApplicationError('NOT_FOUND', 'Question not found');
     }

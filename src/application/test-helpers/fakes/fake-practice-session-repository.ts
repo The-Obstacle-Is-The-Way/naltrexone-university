@@ -51,12 +51,16 @@ export class FakePracticeSessionRepository
       Partial<
         Pick<
           PracticeSession['questionStates'][number],
-          'draftSelectedChoiceId' | 'draftSavedAt' | 'draftCumulativeMs'
+          | 'questionRevisionId'
+          | 'draftSelectedChoiceId'
+          | 'draftSavedAt'
+          | 'draftCumulativeMs'
         >
       >,
   ): PracticeSession['questionStates'][number] {
     return {
       questionId: state.questionId,
+      questionRevisionId: state.questionRevisionId ?? null,
       markedForReview: state.markedForReview,
       latestSelectedChoiceId: state.latestSelectedChoiceId,
       latestIsCorrect: state.latestIsCorrect,

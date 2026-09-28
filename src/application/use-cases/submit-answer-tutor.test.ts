@@ -19,7 +19,80 @@ import {
   SubmitAnswerUseCase,
 } from '../test-helpers/submit-answer-test-helpers';
 
+// ADR-021: the current revision offers c3/c4, the item was bound to c1/c2.
+function createRevisedSessionFixture() {
+  const userId = 'user-1';
+  const sessionId = 'session-1';
+  const questionId = 'q1';
+  const current = createQuestion({
+    id: questionId,
+    explanationMd: 'Current explanation',
+    choices: [
+      createChoice({ id: 'c3', questionId, label: 'C', isCorrect: true }),
+      createChoice({ id: 'c4', questionId, label: 'D', isCorrect: false }),
+    ],
+  });
+  const bound = createQuestion({
+    id: questionId,
+    explanationMd: 'Bound explanation',
+    choices: [
+      createChoice({ id: 'c1', questionId, label: 'A', isCorrect: false }),
+      createChoice({ id: 'c2', questionId, label: 'B', isCorrect: true }),
+    ],
+  });
+  const session = createPracticeSession({
+    id: sessionId,
+    userId,
+    mode: 'tutor',
+    endedAt: null,
+    questionIds: [questionId],
+    questionStates: [
+      {
+        questionId,
+        questionRevisionId: bound.revisionId,
+        markedForReview: false,
+        latestSelectedChoiceId: null,
+        latestIsCorrect: null,
+        latestAnsweredAt: null,
+      },
+    ],
+  });
+  const attempts = new FakeAttemptRepository();
+  const sessions = new FakePracticeSessionRepository([session]);
+  const useCase = new SubmitAnswerUseCase(
+    new FakeQuestionRepository([current, bound]),
+    attempts,
+    sessions,
+    new FakeLogger(),
+    passthroughTransaction(attempts, sessions),
+  );
+  return { userId, sessionId, questionId, attempts, useCase };
+}
+
 describe('SubmitAnswerUseCase', () => {
+  it('grades a session answer against the revision the item was bound to', async () => {
+    const { userId, sessionId, questionId, useCase } =
+      createRevisedSessionFixture();
+
+    await expect(
+      useCase.execute({ userId, questionId, choiceId: 'c2', sessionId }),
+    ).resolves.toMatchObject({
+      isCorrect: true,
+      correctChoiceId: 'c2',
+      explanationMd: 'Bound explanation',
+    });
+  });
+
+  it('refuses a choice of another revision in a session bound to an older one', async () => {
+    const { userId, sessionId, questionId, attempts, useCase } =
+      createRevisedSessionFixture();
+
+    await expect(
+      useCase.execute({ userId, questionId, choiceId: 'c3', sessionId }),
+    ).rejects.toEqual(new ApplicationError('NOT_FOUND', 'Choice not found'));
+    expect(attempts.getAll()).toEqual([]);
+  });
+
   it('updates the persisted tutor session question state with the latest answer', async () => {
     const userId = 'user-1';
     const sessionId = 'session-1';
@@ -63,6 +136,7 @@ describe('SubmitAnswerUseCase', () => {
     expect(updated?.questionStates).toEqual([
       {
         questionId,
+        questionRevisionId: null,
         markedForReview: false,
         latestSelectedChoiceId: 'c2',
         latestIsCorrect: true,

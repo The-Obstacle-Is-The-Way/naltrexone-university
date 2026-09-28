@@ -42,6 +42,7 @@ export function createDefaultQuestionState(
 ): PracticeSessionQuestionState {
   return {
     questionId,
+    questionRevisionId: null,
     markedForReview: false,
     latestSelectedChoiceId: null,
     latestIsCorrect: null,

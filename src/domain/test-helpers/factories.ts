@@ -155,6 +155,7 @@ export function createQuestion(overrides: Partial<Question> = {}): Question {
   const now = new Date();
   const question: Question = {
     id: createUuid(),
+    revisionId: createUuid(),
     slug: 'question-1',
     stemMd: 'Stem',
     explanationMd: 'Explanation',
@@ -219,7 +220,10 @@ export function createPracticeSession(
       Partial<
         Pick<
           PracticeSessionQuestionState,
-          'draftSelectedChoiceId' | 'draftSavedAt' | 'draftCumulativeMs'
+          | 'questionRevisionId'
+          | 'draftSelectedChoiceId'
+          | 'draftSavedAt'
+          | 'draftCumulativeMs'
         >
       >)[];
   } = {},
@@ -229,6 +233,7 @@ export function createPracticeSession(
     overrides.questionStates ??
     questionIds.map((questionId) => ({
       questionId,
+      questionRevisionId: null,
       markedForReview: false,
       latestSelectedChoiceId: null,
       latestIsCorrect: null,
@@ -240,6 +245,7 @@ export function createPracticeSession(
   const normalizedQuestionStates: PracticeSessionQuestionState[] =
     questionStates.map((state) => ({
       questionId: state.questionId,
+      questionRevisionId: state.questionRevisionId ?? null,
       markedForReview: state.markedForReview,
       latestSelectedChoiceId: state.latestSelectedChoiceId,
       latestIsCorrect: state.latestIsCorrect,
