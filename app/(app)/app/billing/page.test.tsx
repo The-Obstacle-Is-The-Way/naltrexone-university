@@ -125,8 +125,11 @@ describe('app/(app)/app/billing/page', () => {
       });
       const html = renderToStaticMarkup(element);
 
-      expect(html).toContain(
-        'open Stripe to add your card. Review the terms from the trial banner and try again.',
+      // #1183 review: a stale-terms refusal never reaches Stripe, so the
+      // message names no cause.
+      const alert = parseHtml(html).querySelector('[role="alert"]');
+      expect(alert?.textContent).toBe(
+        "We couldn't start adding your card. Review the current terms from the trial banner and try again.",
       );
       expect(html).not.toContain('open the billing portal');
     });

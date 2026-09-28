@@ -130,13 +130,14 @@ function getBillingBanner(
         tone: 'error',
         message: "Couldn't open the billing portal. Please try again.",
       };
-    // DEBT-414 F03b: the add-card action returns here when it cannot open
-    // Stripe, including when the terms changed after they were displayed.
+    // DEBT-414 F03b: the add-card action returns here when it cannot start,
+    // including when the terms changed after they were displayed, which is
+    // refused before Stripe is contacted, so the message names no cause.
     case 'trial_payment_method_failed':
       return {
         tone: 'error',
         message:
-          "Couldn't open Stripe to add your card. Review the terms from the trial banner and try again.",
+          "We couldn't start adding your card. Review the current terms from the trial banner and try again.",
       };
   }
 
