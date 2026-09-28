@@ -18,19 +18,23 @@ export async function completeNoCardTrialCheckout(page: Page): Promise<void> {
 }
 
 // DEBT-414 F03b: the trial add-card offer's setup-mode Checkout saves a card
-// without charging it. The Session names no customer, so Stripe asks for the
-// learner's email.
+// without charging it. BUG-308: the Session prefills the learner's email, so
+// the helper types it only if Stripe left the field empty, and says so.
 export async function completeHostedCardSetup(
   page: Page,
   email: string,
-): Promise<void> {
+): Promise<{ emailTyped: boolean }> {
   await expect(page).toHaveURL(/checkout\.stripe\.com/, { timeout: 30_000 });
-  const emailField = page.getByRole('textbox', { name: 'Email' });
-  await expect(emailField).toBeVisible({ timeout: 30_000 });
-  if ((await emailField.inputValue()) === '') {
-    await emailField.fill(email);
-  }
   await fillHostedCheckoutTestCard(page);
+  const emailField = page.getByRole('textbox', { name: 'Email' });
+  let emailTyped = false;
+  if (
+    (await emailField.isVisible()) &&
+    (await emailField.inputValue()) === ''
+  ) {
+    await emailField.fill(email);
+    emailTyped = true;
+  }
   await acceptHostedCheckoutTerms(page);
 
   const saveButton = page
@@ -38,6 +42,7 @@ export async function completeHostedCardSetup(
     .first();
   await expect(saveButton).toBeVisible({ timeout: 30_000 });
   await saveButton.click();
+  return { emailTyped };
 }
 
 export async function fillHostedCheckoutTestCard(page: Page): Promise<void> {

@@ -60,7 +60,7 @@ test.describe('trial add-card', () => {
     }
   });
 
-  test('a trialing learner opts in, saves a card, and the recorded consent is the text shown', async ({
+  test('a trialing learner opts in, saves a card, the recorded consent is the text shown, and the app confirms the card', async ({
     page,
   }) => {
     await signInWithClerkPassword(page);
@@ -96,21 +96,48 @@ test.describe('trial add-card', () => {
     expect(sessionId, 'Checkout URL carries a test-mode Session id').toMatch(
       /^cs_test_/,
     );
-    await completeHostedCardSetup(
+    const { emailTyped } = await completeHostedCardSetup(
       page,
       String(process.env.E2E_CLERK_USER_USERNAME),
     );
+    // BUG-308: Stripe shows the learner's email; they never retype it.
+    expect(emailTyped).toBe(false);
     await expect(page).toHaveURL(
       /\/app\/billing\?(?:.*&)?trial_payment_method=success(?:&|$)/,
       {
         timeout: 30_000,
       },
     );
+    // BUG-308: until Stripe's event arrives, Billing says so.
+    await expect(
+      page.getByText(
+        'Stripe is confirming your card. Refresh this page in a moment.',
+      ),
+    ).toBeVisible();
 
     await expectE2ETrialPaymentConsent(page, {
       plan: 'monthly',
       setupSessionId: String(sessionId),
       ...displayedConsent,
     });
+
+    // BUG-308: once the card is saved, Billing confirms it, and the banner
+    // states the renewal instead of asking for a card.
+    await page.reload();
+    await expect(page.getByText('Your card is saved.')).toBeVisible();
+    await expect(
+      page.getByText(
+        'Renews at $29 per month on your saved card when your trial ends, until you cancel.',
+      ),
+    ).toBeVisible();
+    await page.goto('/app/dashboard');
+    await expect(
+      page.getByText(
+        'Pro Monthly renews at $29 per month on your saved card when your trial ends.',
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Add a card to keep access' }),
+    ).toHaveCount(0);
   });
 });
