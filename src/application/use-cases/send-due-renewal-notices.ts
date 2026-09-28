@@ -6,6 +6,7 @@ import type {
   TransactionalEmailPayload,
 } from '@/src/application/ports';
 import {
+  CANCELLATION_AND_REFUND_POLICY,
   formatRenewalNoticeCutoff,
   formatRenewalNoticeDate,
   RENEWAL_NOTICE_BILLING_PATH,
@@ -136,9 +137,7 @@ function createPayload(
       },
       ' from the email address on your account.',
     ],
-    [
-      'Cancellation takes effect at the end of your current billing period, and you keep access until then. Except where the law requires otherwise, payments are non-refundable.',
-    ],
+    [CANCELLATION_AND_REFUND_POLICY],
     [`Business contact: ${RENEWAL_NOTICE_BUSINESS_CONTACT}.`],
     ['Terms: ', renewalNoticeLink(new URL('/terms', appUrl).toString())],
     ['Privacy: ', renewalNoticeLink(new URL('/privacy', appUrl).toString())],

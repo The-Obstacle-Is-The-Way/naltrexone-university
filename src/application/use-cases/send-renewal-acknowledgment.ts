@@ -5,6 +5,7 @@ import type {
   TransactionalEmailPayload,
 } from '@/src/application/ports';
 import {
+  CANCELLATION_AND_REFUND_POLICY,
   escapeRenewalNoticeHtml,
   formatRenewalNoticeCutoff,
   RENEWAL_NOTICE_BUSINESS_CONTACT,
@@ -45,6 +46,7 @@ function createPayload(input: {
     trial,
     `Cancellation deadline: ${formatRenewalNoticeCutoff(consent.cancellationDeadline)}.`,
     `How to cancel: ${consent.cancellationMethod}`,
+    `Cancellation and refunds: ${CANCELLATION_AND_REFUND_POLICY}`,
     `Accepted: ${consent.acceptedAt.toISOString()}.`,
     `Terms version: ${consent.termsVersion}.`,
     `Business contact: ${RENEWAL_NOTICE_BUSINESS_CONTACT}.`,

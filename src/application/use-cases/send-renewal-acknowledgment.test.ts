@@ -98,6 +98,11 @@ describe('SendRenewalAcknowledgmentUseCase', () => {
       'Cancellation deadline: August 14, 2026 at 12:00 PM UTC (8:00 AM EDT, 5:00 AM PDT).',
     );
     expect(payload.text).toContain(consent.cancellationMethod);
+    // DEBT-414 F15: the policy itself, for every consent, including ones
+    // accepted before the consent copy stated it.
+    expect(payload.text).toContain(
+      'Cancellation and refunds: Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.',
+    );
     expect(payload.text).toContain('John H. Jung, MD, MS');
     expect(payload.text).toContain('support@addictionboards.com');
     expect(payload.text).toContain('https://addictionboards.com/terms');

@@ -79,7 +79,7 @@ test('submits the displayed offer and a fresh idempotency key after reopening a 
   await expect.poll(() => submit.mock.calls.length).toBe(1);
   const first = submit.mock.calls[0]?.[0];
   expect(first?.get('idempotencyKey')).toMatch(/^[0-9a-f-]{36}$/);
-  expect(first?.get('disclosureVersion')).toBe('2026-09-16');
+  expect(first?.get('disclosureVersion')).toBe('2026-09-28');
   expect(first?.get('hasTrial')).toBe('false');
   await userEvent.keyboard('{Escape}');
   await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();

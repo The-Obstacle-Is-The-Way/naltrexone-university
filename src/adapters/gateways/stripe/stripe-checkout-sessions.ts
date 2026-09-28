@@ -79,6 +79,9 @@ const STRIPE_IDEMPOTENCY_PARAMETER_MISMATCH_MESSAGE_PATTERNS = [
 const CHECKOUT_SESSION_VARIANT_METADATA_KEY = 'checkout_variant';
 const STANDARD_CHECKOUT_SESSION_VARIANT = 'standard';
 
+// DEBT-414 F15: the consent text itself may exceed Stripe's 500-character
+// metadata values, so the Session carries its SHA-256; the webhook rebuilds
+// the text from the disclosure registry and verifies the hash.
 function checkoutRenewalMetadata(
   input: CheckoutSessionInput,
 ): Record<string, string> {
@@ -90,7 +93,9 @@ function checkoutRenewalMetadata(
     renewal_amount_cents: String(input.amountCents),
     renewal_currency: input.currency,
     renewal_frequency: input.frequency,
-    renewal_disclosure_snapshot: input.disclosureSnapshot,
+    renewal_disclosure_hash: createHash('sha256')
+      .update(input.disclosureSnapshot, 'utf8')
+      .digest('hex'),
     renewal_disclosure_version: input.disclosureVersion,
     renewal_terms_version: input.termsVersion,
     renewal_terms_hash: input.termsHash,
@@ -118,7 +123,7 @@ function hasCheckoutRenewalMetadata(session: StripeCheckoutSession): boolean {
     'renewal_amount_cents',
     'renewal_currency',
     'renewal_frequency',
-    'renewal_disclosure_snapshot',
+    'renewal_disclosure_hash',
     'renewal_disclosure_version',
     'renewal_terms_version',
     'renewal_terms_hash',

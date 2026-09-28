@@ -110,7 +110,8 @@ describe('createStripeCheckoutSession trial params', () => {
             renewal_amount_cents: '2900',
             renewal_currency: 'usd',
             renewal_frequency: 'month',
-            renewal_disclosure_snapshot: 'Test trial renewal disclosure.',
+            renewal_disclosure_hash:
+              'bf3592e2e228119b4ee78844f3099d8684c6e446bd9c667cdc4e60f547fbc2e1',
             renewal_disclosure_version: '2026-08-05',
             renewal_terms_version: '2026-08-05',
             renewal_terms_hash: 'test-terms-hash',
@@ -163,7 +164,8 @@ describe('createStripeCheckoutSession trial params', () => {
             renewal_amount_cents: '2900',
             renewal_currency: 'usd',
             renewal_frequency: 'month',
-            renewal_disclosure_snapshot: 'Test immediate renewal disclosure.',
+            renewal_disclosure_hash:
+              '148a9626e90a71fd3c3d2a417f74a3c4b820a2f5aac85e399eb7bc2f40f37b5a',
             renewal_disclosure_version: '2026-08-05',
             renewal_terms_version: '2026-08-05',
             renewal_terms_hash: 'test-terms-hash',

@@ -3,11 +3,13 @@ import { eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import { syncCheckoutSuccess } from '@/app/(marketing)/checkout/success/checkout-success-sync';
 import * as schema from '@/db/schema';
+import { resolveCheckoutDisclosure } from '@/lib/checkout-disclosures';
 import { createCheckoutRenewalTerms } from '@/lib/pricing-data';
 import {
   getSubscriptionPlanFromPriceId,
   type StripePriceIds,
 } from '@/src/adapters/config/stripe-prices';
+import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import { DrizzleStripeCustomerRepository } from '@/src/adapters/repositories/drizzle-stripe-customer-repository';
 import { DrizzleSubscriptionRepository } from '@/src/adapters/repositories/drizzle-subscription-repository';
 import type { DrizzleDb } from '@/src/adapters/shared/database-types';
@@ -141,27 +143,39 @@ export async function finalizeProviderContract(input: {
 }
 
 export function sessionHasExpectedRenewalTerms(
-  session: Stripe.Checkout.Session,
+  session: Pick<Stripe.Checkout.Session, 'metadata'>,
   userId: string,
   shape: ContractShape,
 ): boolean {
   const plan = shape === 'annual' ? 'annual' : 'monthly';
-  const terms = createCheckoutRenewalTerms(plan, shape === 'monthly-trial');
+  const hasTrial = shape === 'monthly-trial';
+  const terms = createCheckoutRenewalTerms(plan, hasTrial);
+  // DEBT-414 F15: the Session carries the consent text as its SHA-256, which
+  // must verify against the registered text the webhook will rebuild.
+  const registeredText = resolveCheckoutDisclosure({
+    disclosureVersion: terms.disclosureVersion,
+    plan,
+    hasTrial,
+  });
+  if (registeredText === null) return false;
   const expectedMetadata = {
-    checkout_variant: shape === 'annual' ? 'standard' : 'trial:7',
+    checkout_variant: hasTrial ? 'trial:7' : 'standard',
     renewal_user_id: userId,
     renewal_plan: plan,
     renewal_amount_cents: String(terms.amountCents),
     renewal_currency: terms.currency,
     renewal_frequency: terms.frequency,
-    renewal_disclosure_snapshot: terms.disclosureSnapshot,
+    renewal_disclosure_hash: new NobleSha256Hasher().hash(registeredText),
     renewal_disclosure_version: terms.disclosureVersion,
     renewal_terms_version: terms.termsVersion,
     renewal_terms_hash: terms.termsHash,
     renewal_cancellation_method: terms.cancellationMethod,
   };
-  return Object.entries(expectedMetadata).every(
-    ([key, value]) => session.metadata?.[key] === value,
+  return (
+    session.metadata?.renewal_disclosure_snapshot === undefined &&
+    Object.entries(expectedMetadata).every(
+      ([key, value]) => session.metadata?.[key] === value,
+    )
   );
 }
 

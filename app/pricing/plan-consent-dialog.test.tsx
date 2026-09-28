@@ -50,7 +50,7 @@ describe('plan consent rendering', () => {
           (row) =>
             `${row.querySelector('dt')?.textContent} ${row.querySelector('dd')?.textContent}`,
         );
-        expect(rows).toHaveLength(hasTrial ? 4 : 3);
+        expect(rows).toHaveLength(hasTrial ? 5 : 4);
         expect([...rows, doc.querySelector('p')?.textContent].join('\n')).toBe(
           createCheckoutRenewalTerms(plan, hasTrial).disclosureSnapshot,
         );

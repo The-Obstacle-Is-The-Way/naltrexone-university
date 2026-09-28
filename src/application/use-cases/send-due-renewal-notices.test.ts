@@ -157,7 +157,7 @@ describe('SendDueRenewalNoticesUseCase', () => {
       'Cancel online on the Billing page: https://addictionboards.com/app/billing',
     );
     expect(payload.text).toContain(
-      'Cancellation takes effect at the end of your current billing period, and you keep access until then.',
+      'Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then.',
     );
     expect(payload.text).toContain(
       'Except where the law requires otherwise, payments are non-refundable.',

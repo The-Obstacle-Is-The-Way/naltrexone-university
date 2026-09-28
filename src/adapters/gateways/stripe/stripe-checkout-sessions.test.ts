@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { NobleSha256Hasher } from '@/src/adapters/gateways/noble-sha256-hasher';
 import type { CheckoutSessionCreateParams } from '@/src/adapters/shared/stripe-types';
 import { FakeLogger } from '@/src/application/test-helpers/fakes';
 import {
@@ -11,6 +12,8 @@ import {
   SUBSCRIPTION_LIST_LIMIT,
 } from './stripe-checkout-sessions';
 import { FakeStripeCheckoutClient } from './test-helpers/fake-stripe-checkout-client';
+
+const sha256Hasher = new NobleSha256Hasher();
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -112,6 +115,26 @@ describe('createStripeCheckoutSession', () => {
       return session;
     });
   }
+
+  // DEBT-414 F15: a consent text can exceed Stripe's 500-character metadata
+  // values, so a Session carries its SHA-256 and the webhook verifies it
+  // against the disclosure registry.
+  it('carries the consent text as its SHA-256, keeping every metadata value within Stripe limits', async () => {
+    const stripe = createFake();
+    const disclosureSnapshot = `Long consent text. ${'x'.repeat(630)}`;
+
+    await createCheckout(stripe, { ...input, disclosureSnapshot });
+
+    const metadata = stripe.createCalls[0]?.params.metadata ?? {};
+    expect(metadata).toMatchObject({
+      renewal_disclosure_hash: sha256Hasher.hash(disclosureSnapshot),
+      renewal_disclosure_version: input.disclosureVersion,
+    });
+    expect(metadata).not.toHaveProperty('renewal_disclosure_snapshot');
+    for (const value of Object.values(metadata)) {
+      expect(String(value).length).toBeLessThanOrEqual(500);
+    }
+  });
 
   it('uses a deterministic fallback idempotency key when caller key is missing', async () => {
     const stripe = createFake();
@@ -250,7 +273,10 @@ describe('createStripeCheckoutSession', () => {
   it('reuses an existing open checkout session when plan price matches and expires after the injected nowMs boundary', async () => {
     const stripe = createFake();
     const existingId = await seedOpenSession(stripe, {
-      metadata: createTestCheckoutRenewalMetadata({ userId: appUserId }),
+      metadata: createTestCheckoutRenewalMetadata({
+        userId: appUserId,
+        hashDisclosure: (text) => sha256Hasher.hash(text),
+      }),
       clockMs: fixedNowMs - DAY_MS + 1_000,
     });
     const seededCreates = stripe.createCalls.length;

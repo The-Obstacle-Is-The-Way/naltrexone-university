@@ -6,6 +6,10 @@ export const RENEWAL_NOTICE_SUPPORT_EMAIL = 'support@addictionboards.com';
 export const RENEWAL_NOTICE_BILLING_PATH = '/app/billing';
 export const RENEWAL_NOTICE_BUSINESS_CONTACT =
   'John H. Jung, MD, MS, sole proprietor — support@addictionboards.com';
+// The cancellation and refund policy quoted from Terms § 4 (DEBT-414 F06,
+// F15): stated next to consent, in the acknowledgment and in every notice.
+export const CANCELLATION_AND_REFUND_POLICY =
+  'Cancellation takes effect at the end of the current trial or paid billing period; you keep access until then. Except where the law requires otherwise, payments are non-refundable.';
 
 export function escapeRenewalNoticeHtml(value: string): string {
   return value
