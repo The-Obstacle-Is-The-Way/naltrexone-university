@@ -14,7 +14,11 @@
   - It is promoted through #1225 (`cec105e1`). The promotion's one finding asked for a flag the page could not act on; it was declined with the trace, and its thread is resolved.
   - The promotion's proof was written into its body at 20:32:34Z, before the merge at 20:32:39Z.
   - Release verified: main CI **36627082996** `test` **20:45:06Z**; Ready **20:34:08.515Z**, held without alias until its check completed; production assigned **20:45:08.819Z**; matching trees (`c191ca97`); healthy production.
-- **Open decision for the owner.** Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
+- **Also promoted with this increment.** #1226 (approval **5358747299**, no findings) teaches the hosted-journey helper Stripe's new Checkout layout. The layout arrived on 2026-09-29 and failed the hosted lane twice.
+  - The same page showed the trial add-card flow offering non-card payment methods. That is being filed as BUG-310.
+- **Open decisions for the owner.**
+  - Scoring of an exam item withdrawn mid-session (DEBT-484 part one). The active-session navigator and Review & Submit rows wait on it.
+  - Which payment methods the paid subscription Checkout should accept.
 
 This entry was written before this increment's own checks ran. Its local full gate runs on its head before it is pushed; its hosted CI, exact-head approval, merge and promotion were pending, and the next entry records them. **4 Active records; Next Debt ID remains DEBT-489.**
 
