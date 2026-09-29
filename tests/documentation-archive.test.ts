@@ -16,6 +16,7 @@ import {
   auditRecordLifecycle,
   brokenDocumentationLinks,
   type DocumentationAudit,
+  REGISTER_FILE_BUDGET_BYTES,
   REGISTERS,
   readDocumentation,
   readDocumentationFiles,
@@ -172,6 +173,20 @@ describe('documentation archive convention', () => {
     ).toMatchObject({
       missingArchiveDispositions: ['docs/_archive/debt/debt-001-example.md'],
     });
+  });
+
+  // Every form a CommonMark code block can take, so the audit's fast path
+  // for code-free metadata cannot skip one.
+  it.each([
+    ['a tilde fence', '~~~md\n**Status:** Resolved\n~~~'],
+    ['an indented block', 'Intro.\n\n    **Status:** Resolved'],
+    ['a tab-indented block', 'Intro.\n\n\t**Status:** Resolved'],
+    ['an indented block inside a block quote', '>     **Status:** Resolved'],
+  ])('fails closed when the first status field is %s', (_form, example) => {
+    const file = 'docs/debt/debt-001-example.md';
+    expect(() => audit({ [file]: `${example}\n\n**Status:** Open` })).toThrow(
+      `Status metadata inside a code example: ${file}`,
+    );
   });
 
   it.each([
@@ -665,6 +680,22 @@ describe('documentation archive command', () => {
     );
   });
 
+  it('exits nonzero for a register history file over its budget', () => {
+    const root = fixture();
+    const history = 'docs/debt/register-history-2026-09.md';
+    populate(root, {
+      [history]: 'a'.repeat(REGISTER_FILE_BUDGET_BYTES + 1),
+    });
+    const reports: DocumentationAudit[] = [];
+
+    expect(
+      runDocumentationCommand(root, (report) =>
+        reports.push(JSON.parse(report)),
+      ),
+    ).toBe(1);
+    expect(reports[0]?.oversized).toEqual([history]);
+  });
+
   it('exits nonzero for a broken live link', () => {
     const root = fixture();
     populate(root, {});
@@ -700,10 +731,13 @@ describe('repository documentation', () => {
   const exists = (file: string) => existsSync(path.resolve(file));
   let result: DocumentationAudit;
 
+  // Lifecycle needs all record names/statuses, but only the six index ASTs.
+  // The register file budget bounds that work: about 2 s locally under
+  // coverage. The ceiling allows for slower, loaded CI runners; the default
+  // 15 s hook timeout is meant for hangs.
   beforeAll(() => {
-    // Lifecycle needs all record names/statuses, but only the six index ASTs.
     result = auditRecordLifecycle(files, exists);
-  });
+  }, 30_000);
 
   it('has no record in both live and archived folders', () => {
     expect(result.duplicates).toEqual([]);
@@ -724,6 +758,10 @@ describe('repository documentation', () => {
 
   it('preserves the single-Latest register convention', () => {
     expect(result).toMatchObject({ invalidLatest: [] });
+  });
+
+  it('keeps every register index and history file within its size budget', () => {
+    expect(result.oversized).toEqual([]);
   });
 
   it.each(
