@@ -16,6 +16,7 @@ import {
   restoreProcessEnv,
   snapshotProcessEnv,
 } from '@/tests/shared/process-env';
+import { createDeferred } from '@/tests/test-helpers/create-deferred';
 import {
   cleanupAfterEach,
   closeConnection,
@@ -24,7 +25,7 @@ import {
   createQuestion,
   createUser,
 } from './helpers';
-import { source } from './seed-test-helpers';
+import { source, waitForBlockedQuestionLock } from './seed-test-helpers';
 
 // ADR-021 phase 2a, fourth increment: the seed refreshes a question's
 // revision 1 only while no incomplete session binds it. #951's guard covers
@@ -131,6 +132,50 @@ describe('ADR-021 phase 2a: the seed waits for incomplete sessions', () => {
     expect((await revisionSnapshot(question.id)).revision?.stemMd).toBe(
       'A corrected clinical task.',
     );
+  });
+
+  it('makes session creation wait for a seed transaction holding the question row', async () => {
+    // A seed transaction locks the question row before counting sessions, so
+    // a session that reads the revision unlocked could bind it just after the
+    // count and see the refresh (#1208 review). Creation must wait.
+    const question = await arrangeSeededQuestion('race');
+    const user = await createUser(db, cleanup);
+    const { sql: blockerSql } = createIntegrationDb();
+    const { sql: monitorSql } = createIntegrationDb();
+    const lockReady = createDeferred<number>();
+    const releaseLock = createDeferred<void>();
+    const blocker = blockerSql.begin(async (tx) => {
+      const [backend] = await tx<{ pid: number }[]>`
+        SELECT pg_backend_pid()::int AS pid
+      `;
+      await tx`SELECT id FROM questions WHERE id = ${question.id} FOR UPDATE`;
+      lockReady.resolve(backend?.pid ?? 0);
+      await releaseLock.promise;
+    });
+    const blockerPid = await lockReady.promise;
+    const creation = sessions.create({
+      userId: user.id,
+      mode: 'tutor',
+      paramsJson: {
+        count: 1,
+        tagSlugs: [],
+        difficulties: [],
+        questionIds: [question.id],
+      },
+    });
+
+    try {
+      await waitForBlockedQuestionLock({ monitorSql, blockerPid });
+      releaseLock.resolve();
+      await expect(creation).resolves.toMatchObject({ userId: user.id });
+    } finally {
+      releaseLock.resolve();
+      await Promise.allSettled([blocker, creation]);
+      await Promise.allSettled([
+        closeConnection(blockerSql),
+        closeConnection(monitorSql),
+      ]);
+    }
   });
 
   it('still applies the run’s other questions', async () => {

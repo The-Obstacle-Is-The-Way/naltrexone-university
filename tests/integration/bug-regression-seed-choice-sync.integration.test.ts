@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { setTimeout as sleep } from 'node:timers/promises';
 import { and, asc, eq } from 'drizzle-orm';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import * as schema from '@/db/schema';
@@ -17,10 +16,10 @@ import {
   createQuestion,
   createUser,
 } from './helpers';
+import { waitForBlockedQuestionLock } from './seed-test-helpers';
 
 const { db, sql } = createIntegrationDb();
 const cleanup = createCleanupState();
-const LOCK_WAIT_TIMEOUT_MS = 5_000;
 const ORIGINAL_ENV = snapshotProcessEnv();
 
 afterEach(async () => {
@@ -247,31 +246,6 @@ function createDeferred<T = void>() {
   });
 
   return { promise, resolve };
-}
-
-async function waitForBlockedQuestionLock(input: {
-  monitorSql: typeof sql;
-  blockerPid: number;
-}): Promise<void> {
-  const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
-
-  while (Date.now() < deadline) {
-    const rows = await input.monitorSql<{ count: number }[]>`
-      SELECT count(*)::int AS count
-      FROM pg_stat_activity
-      WHERE wait_event_type = 'Lock'
-        AND query ILIKE '%"questions"%'
-        AND ${input.blockerPid} = ANY(pg_blocking_pids(pid))
-    `;
-    if ((rows.at(0)?.count ?? 0) > 0) {
-      return;
-    }
-    await sleep(25);
-  }
-
-  throw new Error(
-    'Timed out waiting for seed sync to block on question row lock',
-  );
 }
 
 async function insertGradedAttempt(input: {

@@ -1,5 +1,7 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import type * as schema from '@/db/schema';
 import type { QuestionDifficulty } from '@/src/domain/value-objects';
+import type { IntegrationSql } from './helpers';
 
 // A seed source file for integration tests, with optional content edits.
 export type ContentEdits = {
@@ -54,4 +56,33 @@ export function source(slug: string, edits: ContentEdits = {}) {
       edits.reference ?? 'Original synthetic reference.',
     ].join('\n'),
   };
+}
+
+const LOCK_WAIT_TIMEOUT_MS = 5_000;
+
+// Resolves once another backend waits on a `questions` row lock held by
+// `blockerPid`; rejects after five seconds.
+export async function waitForBlockedQuestionLock(input: {
+  monitorSql: IntegrationSql;
+  blockerPid: number;
+}): Promise<void> {
+  const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const rows = await input.monitorSql<{ count: number }[]>`
+      SELECT count(*)::int AS count
+      FROM pg_stat_activity
+      WHERE wait_event_type = 'Lock'
+        AND query ILIKE '%"questions"%'
+        AND ${input.blockerPid} = ANY(pg_blocking_pids(pid))
+    `;
+    if ((rows.at(0)?.count ?? 0) > 0) {
+      return;
+    }
+    await sleep(25);
+  }
+
+  throw new Error(
+    'Timed out waiting for a query to block on the question row lock',
+  );
 }

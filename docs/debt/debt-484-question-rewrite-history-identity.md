@@ -326,6 +326,11 @@ Until phase 2b, a content correction still refreshes revision 1 in place. #951's
 - **Tests.**
   - Four real-Postgres cases in `seed-active-session-deferral.integration.test.ts`: a rewrite deferred with nothing changed; a difficulty-only change deferred; the same rewrite applied once the session ends; and the run's other questions still applied. All four were red first; the first showed the rewrite applied under the active session.
   - Unit cases for the seed's report.
+- **Review (#1208).**
+  - Session creation read the question's current revision without a lock, so a session created while a seed transaction was running could bind the revision just after the seed counted sessions, and see the refresh.
+  - It now reads the question rows `FOR SHARE`. Session creations still run concurrently, but each waits for, or blocks, a seed transaction's `FOR UPDATE`.
+  - A Postgres case holding the seed's lock shows creation waiting; it was red first.
+  - **Residual, recorded.** Grading an answer outside a session reads the question before the attempt is written, so a seed refresh landing in that window could bind the attempt to refreshed content. That is the pre-existing #951 race class, not introduced here. Phase 2b removes it: revisions become immutable, so nothing is refreshed in place.
 
 ## Related
 
